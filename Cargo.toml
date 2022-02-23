@@ -1,0 +1,25 @@
+[package]
+name = "r3bl_rs_utils"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Rust language utilities inspired by Kotlin scope functions, TUI utilities, and useful data structures"
+authors = ["Nazmul Idris <nazmul@r3bl.com>"]
+repository = "https://github.com/r3bl-org/r3bl-rs-utils"
+readme = "README.md"
+homepage = "https://r3bl.com"
+keywords = ["TUI", "color console", "terminal", "Kotlin scope functions"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+# https://stackoverflow.com/a/57767413/2085356
+
+[lib]
+name = "r3bl_rs_utils"
+path = "src/lib.rs"
+
+[dependencies]
+
+rand = "0.8.4"
+ansi_term = "0.12.1"
+chrono = "0.4.0"
