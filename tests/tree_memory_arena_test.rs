@@ -6,7 +6,7 @@ use std::{
 
 /// Rust book: https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory
 use r3bl_rs_utils::{
-  tree_memory_arena::{Arena, MTArena, ResultUidList},
+  tree_memory_arena::{Arena, HasId, MTArena, ResultUidList},
   utils::{style_primary, style_prompt},
 };
 
@@ -46,7 +46,7 @@ fn test_can_add_nodes_to_tree() {
   // Can add child to node_1.
   {
     let node_1_id = 0 as usize;
-    let node_2_id = arena.add_new_node(node_2_value, Some(&node_1_id));
+    let node_2_id = arena.add_new_node(node_2_value, node_1_id.into_some());
     let node_2_ref = dbg!(arena.get_node_arc(&node_2_id).unwrap());
     let node_2_ref_weak = arena.get_node_arc_weak(&node_2_id).unwrap();
     assert_eq!(node_2_ref.read().unwrap().payload, node_2_value);
@@ -79,10 +79,10 @@ fn test_can_walk_tree_and_delete_nodes_from_tree() {
   //   +- child2
 
   let root = arena.add_new_node("root".to_string(), None);
-  let child1 = arena.add_new_node("child1".to_string(), Some(&root));
-  let gc_1_id = arena.add_new_node("gc1".to_string(), Some(&child1));
-  let gc_2_id = arena.add_new_node("gc2".to_string(), Some(&child1));
-  let child_2_id = arena.add_new_node("child2".to_string(), Some(&root));
+  let child1 = arena.add_new_node("child1".to_string(), root.into_some());
+  let gc_1_id = arena.add_new_node("gc1".to_string(), child1.into_some());
+  let gc_2_id = arena.add_new_node("gc2".to_string(), child1.into_some());
+  let child_2_id = arena.add_new_node("child2".to_string(), root.into_some());
   println!("{}, {:#?}", style_primary("arena"), arena);
 
   // Test that the data is correct for each node.
@@ -155,10 +155,10 @@ fn test_can_search_nodes_in_tree_with_filter_lambda() {
   //   +- child2
 
   let root = arena.add_new_node("root".to_string(), None);
-  let child1 = arena.add_new_node("child1".to_string(), Some(&root));
-  let _gc_1_id = arena.add_new_node("gc1".to_string(), Some(&child1));
-  let _gc_2_id = arena.add_new_node("gc2".to_string(), Some(&child1));
-  let _child_2_id = arena.add_new_node("child2".to_string(), Some(&root));
+  let child1 = arena.add_new_node("child1".to_string(), root.into_some());
+  let _gc_1_id = arena.add_new_node("gc1".to_string(), child1.into_some());
+  let _gc_2_id = arena.add_new_node("gc2".to_string(), child1.into_some());
+  let _child_2_id = arena.add_new_node("child2".to_string(), root.into_some());
   println!("{}, {:#?}", style_primary("arena"), &arena);
   println!(
     "{}, {:#?}",
@@ -225,7 +225,7 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
           }
         });
       let parent_id = parent.unwrap().first().unwrap().clone();
-      let child = arena_write.add_new_node("bar".to_string(), Some(&parent_id));
+      let child = arena_write.add_new_node("bar".to_string(), parent_id.into_some());
       vec![parent_id, child]
     });
 
@@ -246,7 +246,7 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
           }
         });
       let parent_id = parent.unwrap().first().unwrap().clone();
-      let child = arena_write.add_new_node("baz".to_string(), Some(&parent_id));
+      let child = arena_write.add_new_node("baz".to_string(), parent_id.into_some());
       vec![parent_id, child]
     });
 

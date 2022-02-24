@@ -49,12 +49,16 @@ impl<T> HasId for Node<T>
 where
   T: Debug + Clone + Send + Sync + 'static,
 {
+  type IdType = usize;
+
+  /// Delegate this to `self.id`, which is type `usize`.
   fn get_id(&self) -> usize {
-    self.id
+    self.id.get_id()
   }
 
-  fn into_some(&self) -> Option<usize> {
-    Some(self.get_id())
+  /// Delegate this to `self.id`, which is type `usize`.
+  fn into_some(&self) -> Option<&(dyn HasId<IdType = usize>)> {
+    self.id.into_some()
   }
 }
 
@@ -92,7 +96,7 @@ where
   /// If `node_id` can't be found, returns `None`.
   pub fn get_children_of(
     &self,
-    node_id: &dyn HasId,
+    node_id: &dyn HasId<IdType = usize>,
   ) -> ResultUidList {
     if !self.node_exists(node_id) {
       return None;
@@ -106,7 +110,7 @@ where
   /// If `node_id` can't be found, returns `None`.
   pub fn get_parent_of(
     &self,
-    node_id: &dyn HasId,
+    node_id: &dyn HasId<IdType = usize>,
   ) -> Option<usize> {
     if !self.node_exists(node_id) {
       return None;
@@ -118,14 +122,14 @@ where
 
   pub fn node_exists(
     &self,
-    node_id: &dyn HasId,
+    node_id: &dyn HasId<IdType = usize>,
   ) -> bool {
     self.map.read().unwrap().contains_key(&node_id.get_id())
   }
 
   pub fn has_parent(
     &self,
-    node_id: &dyn HasId,
+    node_id: &dyn HasId<IdType = usize>,
   ) -> bool {
     if self.node_exists(node_id) {
       let parent_id_opt = self.get_parent_of(node_id);
@@ -140,7 +144,7 @@ where
   /// If `node_id` can't be found, returns `None`.
   pub fn delete_node(
     &self,
-    node_id: &dyn HasId,
+    node_id: &dyn HasId<IdType = usize>,
   ) -> ResultUidList {
     if !self.node_exists(node_id) {
       return None;
@@ -176,7 +180,7 @@ where
   /// DFS tree walking: <https://stephenweiss.dev/algorithms-depth-first-search-dfs#handling-non-binary-trees>
   pub fn tree_walk_dfs(
     &self,
-    node_id: &dyn HasId,
+    node_id: &dyn HasId<IdType = usize>,
   ) -> ResultUidList {
     if !self.node_exists(node_id) {
       return None;
@@ -204,7 +208,7 @@ where
   /// More info on `Option.map()`: <https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=d5a54a042fea085ef8c9122b7ea47c6a>
   pub fn get_node_arc_weak(
     &self,
-    node_id: &dyn HasId,
+    node_id: &dyn HasId<IdType = usize>,
   ) -> Option<WeakNodeRef<T>> {
     if !self.node_exists(node_id) {
       return None;
@@ -221,7 +225,7 @@ where
   /// More info on `Option.map()`: <https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=d5a54a042fea085ef8c9122b7ea47c6a>
   pub fn get_node_arc(
     &self,
-    node_id: &dyn HasId,
+    node_id: &dyn HasId<IdType = usize>,
   ) -> Option<NodeRef<T>> {
     if !self.node_exists(node_id) {
       return None;
@@ -239,7 +243,7 @@ where
   pub fn add_new_node(
     &mut self,
     data: T,
-    parent_id_opt: Option<&dyn HasId>,
+    parent_id_opt: Option<&dyn HasId<IdType = usize>>,
   ) -> usize {
     let parent_id_arg_provided = parent_id_opt.is_some();
 

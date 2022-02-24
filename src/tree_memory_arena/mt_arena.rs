@@ -53,7 +53,7 @@ where
   /// 2. Scoped threads: <https://docs.rs/crossbeam/0.3.0/crossbeam/struct.Scope.html>
   pub fn tree_walk_parallel(
     &self,
-    node_id: &'static dyn HasId,
+    node_id: &'static dyn HasId<IdType = usize>,
     walker_fn: Arc<WalkerFn<T>>,
   ) -> JoinHandle<ResultUidList> {
     let arena_arc = self.get_arena_arc();

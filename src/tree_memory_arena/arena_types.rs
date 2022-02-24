@@ -24,17 +24,26 @@ use std::{
 use super::{Arena, Node};
 
 pub trait HasId: Sync + Send + 'static {
-  fn get_id(&self) -> usize;
-  fn into_some(&self) -> Option<usize>;
+  type IdType;
+
+  /// Returns (a clone of) the id.
+  fn get_id(&self) -> Self::IdType;
+  /// Returns an `Option::Some` containing *a clone of) the id.
+  fn into_some(&self) -> Option<&dyn HasId<IdType = Self::IdType>>;
 }
 
 impl HasId for usize {
+  type IdType = usize;
+
+  /// Returns a clone of the id.
   fn get_id(&self) -> usize {
-    *self
+    self.clone()
   }
 
-  fn into_some(&self) -> Option<usize> {
-    Some(self.get_id())
+  /// Returns an `Option::Some` containing a clone of the id.
+  fn into_some(&self) -> Option<&(dyn HasId<IdType = usize>)> {
+    let self_clone = Clone::clone(&self) as &dyn HasId<IdType = usize>;
+    Some(self_clone)
   }
 }
 
