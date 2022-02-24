@@ -23,8 +23,19 @@ use std::{
 
 use super::{Arena, Node};
 
-pub trait HasId {
+pub trait HasId: Sync + Send + 'static {
   fn get_id(&self) -> usize;
+  fn into_some(&self) -> Option<usize>;
+}
+
+impl HasId for usize {
+  fn get_id(&self) -> usize {
+    *self
+  }
+
+  fn into_some(&self) -> Option<usize> {
+    Some(self.get_id())
+  }
 }
 
 // Type aliases for readability.

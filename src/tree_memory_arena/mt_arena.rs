@@ -18,7 +18,7 @@
 //! Also supports tree walking on a separate thread w/ a lambda that's supplied.
 
 use super::arena::Arena;
-use super::{Node, ReadGuarded, ResultUidList, ShreableArena, WalkerFn};
+use super::{HasId, Node, ReadGuarded, ResultUidList, ShreableArena, WalkerFn};
 use std::fmt::Debug;
 use std::marker::{Send, Sync};
 use std::sync::{Arc, RwLock};
@@ -53,7 +53,7 @@ where
   /// 2. Scoped threads: <https://docs.rs/crossbeam/0.3.0/crossbeam/struct.Scope.html>
   pub fn tree_walk_parallel(
     &self,
-    node_id: usize,
+    node_id: &'static dyn HasId,
     walker_fn: Arc<WalkerFn<T>>,
   ) -> JoinHandle<ResultUidList> {
     let arena_arc = self.get_arena_arc();
@@ -66,7 +66,7 @@ where
       // While walking the tree, in a separate thread, call the `walker_fn` for each node.
       if let Some(result_list) = return_value.clone() {
         result_list.clone().into_iter().for_each(|uid| {
-          let node_arc_opt = read_guard.get_node_arc(uid);
+          let node_arc_opt = read_guard.get_node_arc(&uid.get_id());
           if let Some(node_arc) = node_arc_opt {
             let node_ref: ReadGuarded<Node<T>> = node_arc.read().unwrap();
             walker_fn_arc(uid, node_ref.payload.clone());

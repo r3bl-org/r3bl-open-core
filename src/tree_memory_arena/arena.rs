@@ -52,6 +52,10 @@ where
   fn get_id(&self) -> usize {
     self.id
   }
+
+  fn into_some(&self) -> Option<usize> {
+    Some(self.get_id())
+  }
 }
 
 // Arena.
@@ -88,7 +92,7 @@ where
   /// If `node_id` can't be found, returns `None`.
   pub fn get_children_of(
     &self,
-    node_id: usize,
+    node_id: &dyn HasId,
   ) -> ResultUidList {
     if !self.node_exists(node_id) {
       return None;
@@ -102,7 +106,7 @@ where
   /// If `node_id` can't be found, returns `None`.
   pub fn get_parent_of(
     &self,
-    node_id: usize,
+    node_id: &dyn HasId,
   ) -> Option<usize> {
     if !self.node_exists(node_id) {
       return None;
@@ -114,19 +118,20 @@ where
 
   pub fn node_exists(
     &self,
-    node_id: usize,
+    node_id: &dyn HasId,
   ) -> bool {
-    self.map.read().unwrap().contains_key(&node_id)
+    self.map.read().unwrap().contains_key(&node_id.get_id())
   }
 
   pub fn has_parent(
     &self,
-    node_id: usize,
+    node_id: &dyn HasId,
   ) -> bool {
     if self.node_exists(node_id) {
       let parent_id_opt = self.get_parent_of(node_id);
       if parent_id_opt.is_some() {
-        return self.node_exists(parent_id_opt.unwrap());
+        let parent_id = parent_id_opt.unwrap();
+        return self.node_exists(&parent_id.get_id());
       }
     }
     return false;
@@ -135,7 +140,7 @@ where
   /// If `node_id` can't be found, returns `None`.
   pub fn delete_node(
     &self,
-    node_id: usize,
+    node_id: &dyn HasId,
   ) -> ResultUidList {
     if !self.node_exists(node_id) {
       return None;
@@ -144,9 +149,11 @@ where
 
     // Note - this lambda expects that `parent_id` exists.
     let remove_node_id_from_parent = |parent_id: usize| {
-      let parent_node_arc_opt = self.get_node_arc(parent_id);
+      let parent_node_arc_opt = self.get_node_arc(&parent_id.get_id());
       unwrap_arc_write_lock_and_call(&parent_node_arc_opt.unwrap(), &mut |parent_node| {
-        parent_node.children.retain(|child_id| *child_id != node_id);
+        parent_node
+          .children
+          .retain(|child_id| *child_id != node_id.get_id());
       });
     };
 
@@ -169,18 +176,18 @@ where
   /// DFS tree walking: <https://stephenweiss.dev/algorithms-depth-first-search-dfs#handling-non-binary-trees>
   pub fn tree_walk_dfs(
     &self,
-    node_id: usize,
+    node_id: &dyn HasId,
   ) -> ResultUidList {
     if !self.node_exists(node_id) {
       return None;
     }
     let mut collected_nodes: Vec<usize> = vec![];
-    let mut stack: Vec<usize> = vec![node_id];
+    let mut stack: Vec<usize> = vec![node_id.get_id().clone()];
 
     while let Some(node_id) = stack.pop() {
       // Question mark operator works below, since it returns a `Option` to `while let ...`.
       // Basically skip to the next item in the `stack` if `node_id` can't be found.
-      let node_ref = self.get_node_arc(node_id)?;
+      let node_ref = self.get_node_arc(&node_id.get_id())?;
       unwrap_arc_read_lock_and_call(&node_ref, &mut |node| {
         collected_nodes.push(node.get_id());
         stack.extend(node.children.iter().cloned());
@@ -197,7 +204,7 @@ where
   /// More info on `Option.map()`: <https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=d5a54a042fea085ef8c9122b7ea47c6a>
   pub fn get_node_arc_weak(
     &self,
-    node_id: usize,
+    node_id: &dyn HasId,
   ) -> Option<WeakNodeRef<T>> {
     if !self.node_exists(node_id) {
       return None;
@@ -206,7 +213,7 @@ where
       .map
       .read()
       .unwrap()
-      .get(&node_id) // Returns `None` if `node_id` doesn't exist.
+      .get(&node_id.get_id()) // Returns `None` if `node_id` doesn't exist.
       .map(|node_ref| Arc::downgrade(&node_ref)) // Runs if `node_ref` is some, else returns `None`.
   }
 
@@ -214,7 +221,7 @@ where
   /// More info on `Option.map()`: <https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=d5a54a042fea085ef8c9122b7ea47c6a>
   pub fn get_node_arc(
     &self,
-    node_id: usize,
+    node_id: &dyn HasId,
   ) -> Option<NodeRef<T>> {
     if !self.node_exists(node_id) {
       return None;
@@ -223,7 +230,7 @@ where
       .map
       .read()
       .unwrap()
-      .get(&node_id) // Returns `None` if `node_id` doesn't exist.
+      .get(&node_id.get_id()) // Returns `None` if `node_id` doesn't exist.
       .map(|node_ref| Arc::clone(&node_ref)) // Runs if `node_ref` is some, else returns `None`.
   }
 
@@ -232,13 +239,16 @@ where
   pub fn add_new_node(
     &mut self,
     data: T,
-    parent_id_opt: Option<usize>,
+    parent_id_opt: Option<&dyn HasId>,
   ) -> usize {
     let parent_id_arg_provided = parent_id_opt.is_some();
 
     // Check to see if `parent_id` exists.
-    if parent_id_arg_provided && !self.node_exists(parent_id_opt.unwrap()) {
-      panic!("Parent node doesn't exist.");
+    if parent_id_arg_provided {
+      let parent_id = parent_id_opt.unwrap();
+      if !self.node_exists(parent_id) {
+        panic!("Parent node doesn't exist.");
+      }
     }
 
     let new_node_id = self.generate_uid();
@@ -247,7 +257,8 @@ where
       let value = Arc::new(RwLock::new(Node {
         id: new_node_id,
         parent: if parent_id_arg_provided {
-          Some(parent_id_opt.unwrap())
+          let parent_id = parent_id_opt.unwrap();
+          Some(parent_id.get_id())
         } else {
           None
         },
