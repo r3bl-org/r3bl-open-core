@@ -1,7 +1,8 @@
 [package]
 name = "r3bl_rs_utils"
 description = "Rust language utilities inspired by Kotlin scope functions, TUI utilities, and useful data structures"
-keywords = ["tui", "color", "terminal", "console", "tty", "Kotlin-scope-functions", "cli"]
+# At most 4 keywords w/ no spaces.
+keywords = ["tui", "color", "terminal", "Kotlin-scope-functions", "non-binary-tree"]
 categories = ["algorithms", "data-structures"]
 version = "0.1.0"
 edition = "2021"
