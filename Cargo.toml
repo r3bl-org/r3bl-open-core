@@ -4,7 +4,7 @@ description = "Rust language utilities inspired by Kotlin scope functions, TUI u
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["tui", "color", "terminal", "kotlin", "non-binary-tree"]
 categories = ["algorithms", "data-structures"]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
 readme = "README.md" # This is not included in cargo docs.
