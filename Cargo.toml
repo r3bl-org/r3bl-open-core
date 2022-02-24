@@ -1,14 +1,16 @@
 [package]
 name = "r3bl_rs_utils"
+description = "Rust language utilities inspired by Kotlin scope functions, TUI utilities, and useful data structures"
+keywords = ["tui", "color", "terminal", "console", "tty", "Kotlin-scope-functions", "cli"]
+categories = ["algorithms", "data-structures"]
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "Rust language utilities inspired by Kotlin scope functions, TUI utilities, and useful data structures"
-authors = ["Nazmul Idris <nazmul@r3bl.com>"]
+readme = "README.md" # This is not included in cargo docs.
+authors = ["R3BL LLC <support@r3bl.com>", "Nazmul Idris <nazmul@r3bl.com>"]
 repository = "https://github.com/r3bl-org/r3bl-rs-utils"
-readme = "README.md"
+documentation = "https://docs.rs/r3bl_rs_utils"
 homepage = "https://r3bl.com"
-keywords = ["TUI", "color console", "terminal", "Kotlin scope functions"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
