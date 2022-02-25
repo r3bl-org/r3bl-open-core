@@ -14,7 +14,11 @@
  limitations under the License.
 */
 
+//! This module contains a lot of utility functions that are meant to increase the ergonomics of
+//! using wrapped values in Rust, along w/ colorizing console output.
+
 pub mod color_text;
+pub mod safe_unwrap;
 pub mod tty;
 pub mod type_utils;
 
@@ -28,5 +32,6 @@ pub use color_text::color_text::styles::style_dimmed;
 pub use color_text::color_text::styles::style_error;
 pub use color_text::color_text::styles::style_primary;
 pub use color_text::color_text::styles::style_prompt;
+pub use safe_unwrap::*;
 pub use tty::tty::readline;
-pub use type_utils::type_utils::type_of;
+pub use type_utils::type_utils::type_of; // Helper functions to unwrap safely & execute lambda.

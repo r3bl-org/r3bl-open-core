@@ -27,12 +27,14 @@ use std::{
   sync::{atomic::AtomicUsize, Arc, RwLock},
 };
 
-use super::{
-  arena_types::HasId, call_if_some, unwrap_arc_read_lock_and_call,
-  unwrap_arc_write_lock_and_call, with_mut, ArenaMap, FilterFn, NodeRef, ReadGuarded,
-  ResultUidList, WeakNodeRef, WriteGuarded,
+use crate::utils::{
+  call_if_some, unwrap_arc_read_lock_and_call, unwrap_arc_write_lock_and_call, with_mut,
 };
+use crate::utils::{ReadGuarded, WriteGuarded};
 
+use super::{
+  arena_types::HasId, ArenaMap, FilterFn, NodeRef, ResultUidList, WeakNodeRef,
+};
 // Node.
 #[derive(Debug, Clone)]
 pub struct Node<T>

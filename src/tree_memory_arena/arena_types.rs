@@ -18,7 +18,7 @@
 
 use std::{
   collections::HashMap,
-  sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard, Weak},
+  sync::{Arc, RwLock, Weak},
 };
 
 use super::{Arena, Node};
@@ -50,8 +50,6 @@ impl HasId for usize {
 // Type aliases for readability.
 pub type NodeRef<T> = Arc<RwLock<Node<T>>>;
 pub type WeakNodeRef<T> = Weak<RwLock<Node<T>>>;
-pub type ReadGuarded<'a, T> = RwLockReadGuard<'a, T>;
-pub type WriteGuarded<'a, T> = RwLockWriteGuard<'a, T>;
 pub type ArenaMap<T> = HashMap<usize, NodeRef<T>>;
 
 pub type ResultUidList = Option<Vec<usize>>;

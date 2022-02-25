@@ -17,8 +17,10 @@
 //! Built on top of [`super::arena::Arena`] but with support for sharing the arena between threads.
 //! Also supports tree walking on a separate thread w/ a lambda that's supplied.
 
+use crate::utils::ReadGuarded;
+
 use super::arena::Arena;
-use super::{HasId, Node, ReadGuarded, ResultUidList, ShreableArena, WalkerFn};
+use super::{HasId, Node, ResultUidList, ShreableArena, WalkerFn};
 use std::fmt::Debug;
 use std::marker::{Send, Sync};
 use std::sync::{Arc, RwLock};

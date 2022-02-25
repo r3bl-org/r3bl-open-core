@@ -22,10 +22,11 @@
 
 use std::{
   fmt::Debug,
-  sync::{Arc, RwLock},
+  sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
-use super::{ReadGuarded, WriteGuarded};
+pub type ReadGuarded<'a, T> = RwLockReadGuard<'a, T>;
+pub type WriteGuarded<'a, T> = RwLockWriteGuard<'a, T>;
 
 pub fn unwrap_arc_read_lock_and_call<T, F, R>(
   arc_lock_wrapped_value: &Arc<RwLock<T>>,

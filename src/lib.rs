@@ -28,3 +28,4 @@
 // Attach the following files to the library module.
 pub mod tree_memory_arena;
 pub mod utils;
+pub mod tui;
