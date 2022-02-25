@@ -12,7 +12,7 @@ end
 # More info about cargo-watch: https://crates.io/crates/cargo-watch
 
 # 2. Make sure to install cargo-limit via `cargo install cargo-limit`.
-# More info about carg-limit: https://crates.io/crates/cargo-limit
+# More info about cargo-limit: https://crates.io/crates/cargo-limit
 
 # More info about cargo test: https://doc.rust-lang.org/book/ch11-02-running-tests.html
 # 2 sets of options:
