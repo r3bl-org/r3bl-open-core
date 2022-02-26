@@ -2,10 +2,13 @@
 
 This library provides utility functions:
 
-1. Functions to unwrap deeply nested objects Inspired by by Kotlin scope functions.
-2. Non binary tree data structure inspired by memory arenas, that is threadsafe and supports
+1. Functions to unwrap deeply nested objects inspired by Kotlin scope functions.
+2. Non binary tree data structure inspired by memory arenas, that is thread safe and supports
    parallel tree walking.
 3. Capabilities to make it easier to build TUIs (Text User Interface apps) in Rust.
+
+> To learn more about this library, please read how it was built on
+> [developerlife.com](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
 
 The equivalent of this library is available for TypeScript and is called
 [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/).
@@ -16,7 +19,7 @@ Please add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.5.0"
+r3bl_rs_utils = "0.5.1"
 ```
 
 ## Stability
