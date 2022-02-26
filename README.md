@@ -16,7 +16,7 @@ Please add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.3.0"
+r3bl_rs_utils = "0.4.0"
 ```
 
 ## Stability
