@@ -6,6 +6,7 @@ This library provides utility functions:
 2. Non binary tree data structure inspired by memory arenas, that is thread safe and supports
    parallel tree walking.
 3. Capabilities to make it easier to build TUIs (Text User Interface apps) in Rust.
+4. And more.
 
 > To learn more about this library, please read how it was built on
 > [developerlife.com](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
@@ -19,7 +20,7 @@ Please add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.5.1"
+r3bl_rs_utils = "0.5.2"
 ```
 
 ## Stability

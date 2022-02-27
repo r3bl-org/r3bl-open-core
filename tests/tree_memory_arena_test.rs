@@ -1,4 +1,5 @@
 //! Integration tests for the `tree_memory_arena` module.
+
 use std::{
   sync::Arc,
   thread::{self, JoinHandle},

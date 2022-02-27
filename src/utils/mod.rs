@@ -14,10 +14,15 @@
  limitations under the License.
 */
 
-//! This module contains a lot of utility functions that are meant to increase the ergonomics of
-//! using wrapped values in Rust, along w/ colorizing console output.
+//! This module contains a lot of utility functions that are meant to:
+//! 1. Increase the ergonomics of using wrapped values in Rust
+//! 2. Colorizing console output.
+//! 3. Easy to work w/ lazy hash maps.
+//! 4. Easy to work w/ readline.
+//! 5. Interrogation of types.
 
 pub mod color_text;
+pub mod lazy;
 pub mod safe_unwrap;
 pub mod tty;
 pub mod type_utils;
@@ -26,12 +31,9 @@ pub mod type_utils;
 // <https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html#documentation-comments-as-tests>
 
 // Re-export the following modules:
-pub use color_text::color_text::print_header;
-pub use color_text::color_text::print_header2;
-pub use color_text::color_text::styles::style_dimmed;
-pub use color_text::color_text::styles::style_error;
-pub use color_text::color_text::styles::style_primary;
-pub use color_text::color_text::styles::style_prompt;
+pub use color_text::color_text::styles::*;
+pub use color_text::color_text::*;
+pub use lazy::*;
 pub use safe_unwrap::*;
-pub use tty::tty::readline;
-pub use type_utils::type_utils::type_of; // Helper functions to unwrap safely & execute lambda.
+pub use tty::tty::*;
+pub use type_utils::type_utils::*;
