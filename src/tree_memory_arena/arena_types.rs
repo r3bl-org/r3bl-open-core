@@ -58,5 +58,5 @@ pub type ResultUidList = Option<Vec<usize>>;
 pub type FilterFn<T> = dyn Fn(usize, T) -> bool + Send + Sync + 'static;
 
 // Parallel support.
-pub type ShreableArena<T> = Arc<RwLock<Arena<T>>>;
+pub type ShareableArena<T> = Arc<RwLock<Arena<T>>>;
 pub type WalkerFn<T> = dyn Fn(usize, T) + Send + Sync + 'static;

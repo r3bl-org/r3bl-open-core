@@ -92,7 +92,7 @@
 use crate::utils::ReadGuarded;
 
 use super::arena::Arena;
-use super::{HasId, Node, ResultUidList, ShreableArena, WalkerFn};
+use super::{HasId, Node, ResultUidList, ShareableArena, WalkerFn};
 use std::fmt::Debug;
 use std::marker::{Send, Sync};
 use std::sync::{Arc, RwLock};
@@ -103,7 +103,7 @@ pub struct MTArena<T>
 where
   T: 'static + Debug + Send + Sync + Clone,
 {
-  arena_arc: ShreableArena<T>,
+  arena_arc: ShareableArena<T>,
 }
 
 impl<T> MTArena<T>
@@ -116,7 +116,7 @@ where
     }
   }
 
-  pub fn get_arena_arc(&self) -> ShreableArena<T> {
+  pub fn get_arena_arc(&self) -> ShareableArena<T> {
     self.arena_arc.clone()
   }
 
