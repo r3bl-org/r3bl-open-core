@@ -75,3 +75,13 @@ where
 {
   receiver_fn(arg)
 }
+
+pub fn with<T, F, R>(
+  arg: T,
+  receiver_fn: F,
+) -> R
+where
+  F: Fn(T) -> R,
+{
+  receiver_fn(arg)
+}
