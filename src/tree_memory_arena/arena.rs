@@ -14,11 +14,11 @@
  limitations under the License.
 */
 
-//! Data structure to store & manipulate a (non-binary) tree of data in memory. The [`super::arena`] can be
-//! used to implement a pletohora of different data structures. The non-binary tree is just one
-//! example of what can be built using the underlying code.
+//! Data structure to store & manipulate a (non-binary) tree of data in memory. The [`super::arena`]
+//! can be used to implement a plethora of different data structures. The non-binary tree is just
+//! one example of what can be built using the underlying code.
 //!
-//! 1. [Wikipedia definiion of memory
+//! 1. [Wikipedia definition of memory
 //!    arena](https://en.wikipedia.org/wiki/Region-based_memory_management)
 //! 2. You can learn more about how this library was built from this [developerlife.com
 //!    article](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
