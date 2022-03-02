@@ -31,9 +31,9 @@ pub mod type_utils;
 // <https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html#documentation-comments-as-tests>
 
 // Re-export the following modules:
-pub use color_text::color_text::styles::*;
-pub use color_text::color_text::*;
+pub use color_text::styles::*;
+pub use color_text::*;
 pub use lazy::*;
 pub use safe_unwrap::*;
-pub use tty::tty::*;
-pub use type_utils::type_utils::*;
+pub use tty::*;
+pub use type_utils::*;

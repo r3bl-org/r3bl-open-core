@@ -5,7 +5,7 @@ description = "Rust language utilities inspired by Kotlin scope functions, TUI u
 keywords = ["tui", "color", "terminal", "kotlin", "non-binary-tree"]
 categories = ["algorithms", "data-structures"]
 # When you change this, make sure to update `README.md` as well.
-version = "0.5.3"
+version = "0.5.4"
 edition = "2021"
 license = "Apache-2.0"
 readme = "README.md" # This is not included in cargo docs.
@@ -28,3 +28,5 @@ path = "src/lib.rs"
 rand = "0.8.4"
 ansi_term = "0.12.1"
 chrono = "0.4.0"
+atty = "0.2.14"
+

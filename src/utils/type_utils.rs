@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-pub mod type_utils {
-  /// Mimics the typeof operator in JavaScript.
-  /// <https://stackoverflow.com/a/58119924/2085356>
-  pub fn type_of<T>(_: &T) -> String {
-    format!("{}", std::any::type_name::<T>())
-  }
+/// Mimics the typeof operator in JavaScript.
+/// <https://stackoverflow.com/a/58119924/2085356>
+pub fn type_of<T>(_: &T) -> String {
+  format!("{}", std::any::type_name::<T>())
 }
