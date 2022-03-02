@@ -14,70 +14,7 @@
  limitations under the License.
 */
 
-//! Data structure to store & manipulate a (non-binary) tree of data in memory. The [`super::arena`]
-//! can be used to implement a plethora of different data structures. The non-binary tree is just
-//! one example of what can be built using the underlying code.
-//!
-//! 1. [Wikipedia definition of memory
-//!    arena](https://en.wikipedia.org/wiki/Region-based_memory_management)
-//! 2. You can learn more about how this library was built from this [developerlife.com
-//!    article](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
-//!
-//! # Examples
-//!
-//! ## Basic usage
-//!
-//! ```rust
-//! use r3bl_rs_utils::{
-//!   tree_memory_arena::{Arena, HasId, MTArena, ResultUidList},
-//!   utils::{style_primary, style_prompt},
-//! };
-//!
-//! let mut arena = Arena::<usize>::new();
-//! let node_1_value = 42 as usize;
-//! let node_1_id = arena.add_new_node(node_1_value, None);
-//! println!("{} {:#?}", style_primary("node_1_id"), node_1_id);
-//! assert_eq!(node_1_id, 0);
-//! ```
-//!
-//! ## Get weak and strong references from the arena (tree), and tree walking
-//!
-//! ```rust
-//! use r3bl_rs_utils::{
-//!   tree_memory_arena::{Arena, HasId, MTArena, ResultUidList},
-//!   utils::{style_primary, style_prompt},
-//! };
-//!
-//! let mut arena = Arena::<usize>::new();
-//! let node_1_value = 42 as usize;
-//! let node_1_id = arena.add_new_node(node_1_value, None);
-//!
-//! {
-//!   assert!(arena.get_node_arc(&node_1_id).is_some());
-//!   let node_1_ref = dbg!(arena.get_node_arc(&node_1_id).unwrap());
-//!   let node_1_ref_weak = arena.get_node_arc_weak(&node_1_id).unwrap();
-//!   assert_eq!(node_1_ref.read().unwrap().payload, node_1_value);
-//!   assert_eq!(
-//!     node_1_ref_weak.upgrade().unwrap().read().unwrap().payload,
-//!     42
-//!   );
-//! }
-//!
-//! {
-//!   let node_id_dne = 200 as usize;
-//!   assert!(arena.get_node_arc(&node_id_dne).is_none());
-//! }
-//!
-//! {
-//!   let node_1_id = 0 as usize;
-//!   let node_list = dbg!(arena.tree_walk_dfs(&node_1_id).unwrap());
-//!   assert_eq!(node_list.len(), 1);
-//!   assert_eq!(node_list, vec![0]);
-//! }
-//! ```
-//! 📜 There are more complex ways of using this `Arena`. Please look at these extensive integration
-//! tests that put the `Arena` API thru its paces
-//! [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
+//! [`Arena`] is defined here.
 
 use std::{
   collections::HashMap,
@@ -93,7 +30,9 @@ use crate::utils::{ReadGuarded, WriteGuarded};
 use super::{
   arena_types::HasId, ArenaMap, FilterFn, NodeRef, ResultUidList, WeakNodeRef,
 };
-// Node.
+/// This struct represents a node in a tree. It may have a parent. It can hold multiple children.
+/// And it has a payload. It also has an id that uniquely identifies it. An [`Arena`] or
+/// [`super::MTArena`] is used to hold nodes.
 #[derive(Debug, Clone)]
 pub struct Node<T>
 where
@@ -122,7 +61,70 @@ where
   }
 }
 
-// Arena.
+/// Data structure to store & manipulate a (non-binary) tree of data in memory. It can be used as
+/// the basis to implement a plethora of different data structures. The non-binary tree is just one
+/// example of what can be built using the underlying code.
+///
+/// 1. [Wikipedia definition of memory
+///    arena](https://en.wikipedia.org/wiki/Region-based_memory_management)
+/// 2. You can learn more about how this library was built from this [developerlife.com
+///    article](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
+///
+/// # Examples
+///
+/// ## Basic usage
+///
+/// ```rust
+/// use r3bl_rs_utils::{
+///   tree_memory_arena::{Arena, HasId, MTArena, ResultUidList},
+///   utils::{style_primary, style_prompt},
+/// };
+///
+/// let mut arena = Arena::<usize>::new();
+/// let node_1_value = 42 as usize;
+/// let node_1_id = arena.add_new_node(node_1_value, None);
+/// println!("{} {:#?}", style_primary("node_1_id"), node_1_id);
+/// assert_eq!(node_1_id, 0);
+/// ```
+///
+/// ## Get weak and strong references from the arena (tree), and tree walking
+///
+/// ```rust
+/// use r3bl_rs_utils::{
+///   tree_memory_arena::{Arena, HasId, MTArena, ResultUidList},
+///   utils::{style_primary, style_prompt},
+/// };
+///
+/// let mut arena = Arena::<usize>::new();
+/// let node_1_value = 42 as usize;
+/// let node_1_id = arena.add_new_node(node_1_value, None);
+///
+/// {
+///   assert!(arena.get_node_arc(&node_1_id).is_some());
+///   let node_1_ref = dbg!(arena.get_node_arc(&node_1_id).unwrap());
+///   let node_1_ref_weak = arena.get_node_arc_weak(&node_1_id).unwrap();
+///   assert_eq!(node_1_ref.read().unwrap().payload, node_1_value);
+///   assert_eq!(
+///     node_1_ref_weak.upgrade().unwrap().read().unwrap().payload,
+///     42
+///   );
+/// }
+///
+/// {
+///   let node_id_dne = 200 as usize;
+///   assert!(arena.get_node_arc(&node_id_dne).is_none());
+/// }
+///
+/// {
+///   let node_1_id = 0 as usize;
+///   let node_list = dbg!(arena.tree_walk_dfs(&node_1_id).unwrap());
+///   assert_eq!(node_list.len(), 1);
+///   assert_eq!(node_list, vec![0]);
+/// }
+/// ```
+/// 📜 There are more complex ways of using [`Arena`] and [`super::MTArena`]. Please look at these
+/// extensive integration tests that put them thru their paces
+/// [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
 #[derive(Debug)]
 pub struct Arena<T>
 where

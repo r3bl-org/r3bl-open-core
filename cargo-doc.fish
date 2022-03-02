@@ -6,4 +6,5 @@
 # 2. Make sure to install cargo-limit via `cargo install cargo-limit`.
 # More info about cargo-limit: https://crates.io/crates/cargo-limit
 
-cargo doc --open
+# cargo doc --open
+cargo watch -x check -x 'ldoc -q --color always' -c -q

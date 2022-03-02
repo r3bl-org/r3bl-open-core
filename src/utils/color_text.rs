@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
+//! ANSI colorized text <https://github.com/ogham/rust-ansi-term> helper methods.
+
 use ansi_term::Colour::Purple;
 
-/// ANSI colorized text:
-/// - <https://github.com/ogham/rust-ansi-term>
 ///
 /// Equivalent for template string literal. One way to do this using `format!`
 /// 1. <https://doc.rust-lang.org/std/fmt/>

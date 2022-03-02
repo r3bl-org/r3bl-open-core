@@ -14,42 +14,43 @@
  limitations under the License.
 */
 
-//! The `LazyMemoValues` struct allows users to create a lazy hash map. A function must be provided
-//! that computes the values when they are first requested. These values are cached for the lifetime
-//! this struct.
-//!
-//! # Examples
-//!
-//! ```rust
-//! use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
-//! use r3bl_rs_utils::utils::LazyMemoValues;
-//!
-//! // These are copied in the closure below.
-//! let arc_atomic_count = AtomicUsize::new(0);
-//! let mut a_variable = 123;
-//! let mut a_flag = false;
-//!
-//! let mut generate_value_fn = LazyMemoValues::new(|it| {
-//!   arc_atomic_count.fetch_add(1, SeqCst);
-//!   a_variable = 12;
-//!   a_flag = true;
-//!   a_variable + it
-//! });
-//!
-//! assert_eq!(arc_atomic_count.load(SeqCst), 0);
-//! assert_eq!(generate_value_fn.get_ref(&1), &13);
-//! assert_eq!(arc_atomic_count.load(SeqCst), 1);
-//! assert_eq!(generate_value_fn.get_ref(&1), &13); // Won't regenerate the value.
-//! assert_eq!(arc_atomic_count.load(SeqCst), 1); // Doesn't change.
-//! assert_eq!(generate_value_fn.get_ref(&2), &14);
-//! assert_eq!(arc_atomic_count.load(SeqCst), 2);
-//! assert_eq!(generate_value_fn.get_ref(&2), &14);
-//! assert_eq!(generate_value_fn.get_copy(&2), 14);
-//! assert_eq!(a_variable, 12);
-//! assert_eq!(a_flag, true);
-//! ```
+//! Data structures to make it easier to work w/ lazily computed values and caching them.
+
 use std::{collections::HashMap, hash::Hash};
 
+/// This struct allows users to create a lazy hash map. A function must be provided that computes
+/// the values when they are first requested. These values are cached for the lifetime this struct.
+///
+/// # Examples
+///
+/// ```rust
+/// use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
+/// use r3bl_rs_utils::utils::LazyMemoValues;
+///
+/// // These are copied in the closure below.
+/// let arc_atomic_count = AtomicUsize::new(0);
+/// let mut a_variable = 123;
+/// let mut a_flag = false;
+///
+/// let mut generate_value_fn = LazyMemoValues::new(|it| {
+///   arc_atomic_count.fetch_add(1, SeqCst);
+///   a_variable = 12;
+///   a_flag = true;
+///   a_variable + it
+/// });
+///
+/// assert_eq!(arc_atomic_count.load(SeqCst), 0);
+/// assert_eq!(generate_value_fn.get_ref(&1), &13);
+/// assert_eq!(arc_atomic_count.load(SeqCst), 1);
+/// assert_eq!(generate_value_fn.get_ref(&1), &13); // Won't regenerate the value.
+/// assert_eq!(arc_atomic_count.load(SeqCst), 1); // Doesn't change.
+/// assert_eq!(generate_value_fn.get_ref(&2), &14);
+/// assert_eq!(arc_atomic_count.load(SeqCst), 2);
+/// assert_eq!(generate_value_fn.get_ref(&2), &14);
+/// assert_eq!(generate_value_fn.get_copy(&2), 14);
+/// assert_eq!(a_variable, 12);
+/// assert_eq!(a_flag, true);
+/// ```
 #[derive(Debug)]
 pub struct LazyMemoValues<F, T, V>
 where

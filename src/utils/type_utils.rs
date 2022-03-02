@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//! Helper methods to with with the type system.
+
 /// Mimics the typeof operator in JavaScript.
 /// <https://stackoverflow.com/a/58119924/2085356>
 pub fn type_of<T>(_: &T) -> String {

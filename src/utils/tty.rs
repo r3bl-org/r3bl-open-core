@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//! This module contains a set of functions to make it easier to work with terminals.
+
 use crate::utils::style_error;
 use std::io::stdin;
 
