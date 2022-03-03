@@ -16,8 +16,11 @@
 
 //! This module contains a set of functions to make it easier to work with terminals.
 
-use crate::utils::style_error;
-use std::io::stdin;
+use crate::utils::{style_error, style_prompt};
+use std::{
+  error::Error,
+  io::{stdin, stdout, Write},
+};
 
 /// Return String not &str due to "struct lifetime"
 /// - <https://stackoverflow.com/a/29026565/2085356>
@@ -37,6 +40,13 @@ pub fn readline() -> (usize, String) {
       (0, "".to_string())
     }
   }
+}
+
+/// Prints a prompt to the terminal (no buffering / immediately) without a newline.
+pub fn print_prompt(prompt: &str) -> Result<(), Box<dyn Error>> {
+  print!("{}", style_prompt(prompt));
+  stdout().lock().flush()?;
+  Ok(())
 }
 
 /// If you run `echo "test" | cargo run` the following will return true.

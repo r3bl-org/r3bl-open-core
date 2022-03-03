@@ -22,7 +22,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.5.6"
+r3bl_rs_utils = "0.5.7"
 ```
 
 ## tree_memory_arena (non-binary tree data structure)
@@ -218,6 +218,14 @@ fn make_a_guess() -> String {
 }
 ```
 
+Here's a list of functions available in this module:
+
+- `readline()`
+- `print_prompt()`
+- `is_tty()`
+- `is_stdout_piped()`
+- `is_stdin_piped()`
+
 ### safe_unwrap
 
 Functions that make it easy to unwrap a value safely. These functions are provided to improve the
@@ -285,6 +293,14 @@ fn make_a_guess() -> String {
   guess
 }
 ```
+
+Here's a list of functions available in this module:
+
+- `print_header()`
+- `style_prompt()`
+- `style_primary()`
+- `style_dimmed()`
+- `style_error()`
 
 ## tui (experimental)
 
