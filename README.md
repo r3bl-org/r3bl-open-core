@@ -22,7 +22,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.5.5"
+r3bl_rs_utils = "0.5.6"
 ```
 
 ## tree_memory_arena (non-binary tree data structure)
@@ -224,7 +224,9 @@ Functions that make it easy to unwrap a value safely. These functions are provid
 ergonomics of using wrapped values in Rust. Examples of wrapped values are `<Arc<RwLock<T>>`, and
 `<Option>`. These functions are inspired by Kotlin scope functions & TypeScript expression based
 language library which can be found
-[here on `r3bl-ts-utils`](https://github.com/r3bl-org/r3bl-ts-utils). Here are some examples.
+[here on `r3bl-ts-utils`](https://github.com/r3bl-org/r3bl-ts-utils).
+
+Here are some examples.
 
 ```rust
 use r3bl_rs_utils::utils::{
@@ -244,6 +246,22 @@ if let Some(parent_id) = parent_id_opt {
   });
 }
 ```
+
+Here's a list of functions that are provided:
+
+- `call_if_some()`
+- `call_if_none()`
+- `call_if_ok()`
+- `call_if_err()`
+- `with()`
+- `with_mut()`
+- `unwrap_arc_write_lock_and_call()`
+- `unwrap_arc_read_lock_and_call()`
+
+Here's a list of type aliases provided for better readability:
+
+- `ReadGuarded<T>`
+- `WriteGuarded<T>`
 
 ### color_text
 

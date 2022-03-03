@@ -54,18 +54,6 @@ where
   receiver_fn(&mut write_guard)
 }
 
-pub fn call_if_some<T, F>(
-  option_wrapped_value: &Option<T>,
-  receiver_fn: &F,
-) where
-  F: Fn(&T),
-  T: 'static + Send + Sync + Clone + Debug,
-{
-  if let Some(value) = option_wrapped_value {
-    receiver_fn(value);
-  }
-}
-
 pub fn with_mut<T, F, R>(
   arg: &mut T,
   receiver_fn: &mut F,
@@ -84,4 +72,52 @@ where
   F: Fn(T) -> R,
 {
   receiver_fn(arg)
+}
+
+pub fn call_if_some<T, F>(
+  option_wrapped_value: &Option<T>,
+  receiver_fn: &F,
+) where
+  F: Fn(&T),
+  T: 'static + Send + Sync + Clone + Debug,
+{
+  if let Some(value) = option_wrapped_value {
+    receiver_fn(value);
+  }
+}
+
+pub fn call_if_none<T, F>(
+  option_wrapped_value: &Option<T>,
+  receiver_fn: &F,
+) where
+  F: Fn(),
+  T: 'static + Send + Sync + Clone + Debug,
+{
+  if (option_wrapped_value).is_none() {
+    receiver_fn();
+  }
+}
+
+pub fn call_if_ok<T, F, E>(
+  option_wrapped_value: &Result<T, E>,
+  receiver_fn: &F,
+) where
+  F: Fn(&T),
+  T: 'static + Send + Sync + Clone + Debug,
+{
+  if let Ok(value) = option_wrapped_value {
+    receiver_fn(value);
+  }
+}
+
+pub fn call_if_err<T, F, E>(
+  option_wrapped_value: &Result<T, E>,
+  receiver_fn: &F,
+) where
+  F: Fn(&E),
+  T: 'static + Send + Sync + Clone + Debug,
+{
+  if option_wrapped_value.is_err() {
+    receiver_fn(option_wrapped_value.as_ref().unwrap_err());
+  }
 }
