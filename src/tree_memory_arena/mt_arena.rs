@@ -63,7 +63,7 @@ use std::thread::{spawn, JoinHandle};
 ///   thread.join().unwrap();
 /// }
 ///
-/// // Perform tree walking in parallel. Note the lamda does capture many enclosing variable context.
+/// // Perform tree walking in parallel. Note the lambda does capture many enclosing variable context.
 /// {
 ///   let arena_arc = arena.get_arena_arc();
 ///   let fn_arc = Arc::new(move |uid, payload| {
