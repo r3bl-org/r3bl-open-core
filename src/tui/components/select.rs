@@ -1,4 +1,4 @@
-use crate::tui::{Render, VDOMElement};
+use crate::tui::{Render, VirtualDomElement};
 
 /// `Select` component that implements `Render` trait.
 pub struct Select {
@@ -7,12 +7,12 @@ pub struct Select {
 }
 
 impl Render for Select {
-  fn render(&self) -> VDOMElement {
+  fn render(&self) -> VirtualDomElement {
     let options_to_vdom = self
       .options
       .iter()
-      .map(|option| VDOMElement::new("option").value(option))
-      .collect::<Vec<VDOMElement>>();
-    VDOMElement::new("select").set_children(options_to_vdom)
+      .map(|option| VirtualDomElement::new("option").value(option))
+      .collect::<Vec<VirtualDomElement>>();
+    VirtualDomElement::new("select").set_children(options_to_vdom)
   }
 }

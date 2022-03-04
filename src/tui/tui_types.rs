@@ -6,17 +6,17 @@ use crate::tui::{Button, Select, Text};
 
 /// Virtual DOM struct.
 #[derive(Debug)]
-pub struct VDOMElement {
+pub struct VirtualDomElement {
   pub tag: String,
   pub value: Option<String>,
-  pub children: Option<VDOMChildren>,
+  pub children: Option<VirtualDomChildren>,
 }
-pub type VDOMChildren = Vec<VDOMElement>;
+pub type VirtualDomChildren = Vec<VirtualDomElement>;
 
 /// Virtual DOM builder.
-impl VDOMElement {
-  pub fn new(name: &str) -> VDOMElement {
-    VDOMElement {
+impl VirtualDomElement {
+  pub fn new(name: &str) -> VirtualDomElement {
+    VirtualDomElement {
       tag: name.to_string(),
       value: None,
       children: None,
@@ -26,15 +26,15 @@ impl VDOMElement {
   pub fn value(
     mut self,
     value: &str,
-  ) -> VDOMElement {
+  ) -> VirtualDomElement {
     self.value = Some(value.to_string());
     self
   }
 
   pub fn add_child(
     mut self,
-    child: VDOMElement,
-  ) -> VDOMElement {
+    child: VirtualDomElement,
+  ) -> VirtualDomElement {
     if let Some(ref mut children) = self.children {
       children.push(child);
     } else {
@@ -45,8 +45,8 @@ impl VDOMElement {
 
   pub fn set_children(
     mut self,
-    children: VDOMChildren,
-  ) -> VDOMElement {
+    children: VirtualDomChildren,
+  ) -> VirtualDomElement {
     self.children = Some(children);
     self
   }
@@ -69,7 +69,7 @@ impl VDOMElement {
 
 /// `Render` trait & `Component` type.
 pub trait Render {
-  fn render(&self) -> VDOMElement;
+  fn render(&self) -> VirtualDomElement;
 }
 pub type Component = Box<dyn Render>;
 
@@ -78,7 +78,7 @@ pub struct Screen {
   pub components: Vec<Component>,
 }
 impl Screen {
-  pub fn render_all(&self) -> VDOMChildren {
+  pub fn render_all(&self) -> VirtualDomChildren {
     self
       .components
       .iter()
@@ -88,7 +88,7 @@ impl Screen {
 }
 
 #[test]
-fn test_vdom_react_prototype() {
+fn test_virtual_dom_react_prototype() {
   // Create a screen, add some components, and then render.
   let screen = Screen {
     components: vec![

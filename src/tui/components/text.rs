@@ -1,4 +1,4 @@
-use crate::tui::{Render, VDOMElement};
+use crate::tui::{Render, VirtualDomElement};
 
 /// `Text` component that implements `Render` trait.
 pub struct Text {
@@ -6,7 +6,7 @@ pub struct Text {
 }
 
 impl Render for Text {
-  fn render(&self) -> VDOMElement {
-    VDOMElement::new("text").value(&self.text)
+  fn render(&self) -> VirtualDomElement {
+    VirtualDomElement::new("text").value(&self.text)
   }
 }
