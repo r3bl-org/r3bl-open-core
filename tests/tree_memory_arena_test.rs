@@ -27,10 +27,10 @@ fn test_can_add_nodes_to_tree() {
   // Can find node_1 by id.
   {
     let node_1_id = 0 as usize;
-    assert!(arena.get_node_arc(&node_1_id).is_some());
+    assert!(arena.get_node_arc(node_1_id).is_some());
 
-    let node_1_ref = dbg!(arena.get_node_arc(&node_1_id).unwrap());
-    let node_1_ref_weak = arena.get_node_arc_weak(&node_1_id).unwrap();
+    let node_1_ref = dbg!(arena.get_node_arc(node_1_id).unwrap());
+    let node_1_ref_weak = arena.get_node_arc_weak(node_1_id).unwrap();
     assert_eq!(node_1_ref.read().unwrap().payload, node_1_value);
     assert_eq!(
       node_1_ref_weak.upgrade().unwrap().read().unwrap().payload,
@@ -41,15 +41,15 @@ fn test_can_add_nodes_to_tree() {
   // Can't find node by id that doesn't exist.
   {
     let node_id_dne = 200 as usize;
-    assert!(arena.get_node_arc(&node_id_dne).is_none());
+    assert!(arena.get_node_arc(node_id_dne).is_none());
   }
 
   // Can add child to node_1.
   {
     let node_1_id = 0 as usize;
-    let node_2_id = arena.add_new_node(node_2_value, node_1_id.into_some());
-    let node_2_ref = dbg!(arena.get_node_arc(&node_2_id).unwrap());
-    let node_2_ref_weak = arena.get_node_arc_weak(&node_2_id).unwrap();
+    let node_2_id = arena.add_new_node(node_2_value, Some(node_1_id));
+    let node_2_ref = dbg!(arena.get_node_arc(node_2_id).unwrap());
+    let node_2_ref_weak = arena.get_node_arc_weak(node_2_id).unwrap();
     assert_eq!(node_2_ref.read().unwrap().payload, node_2_value);
     assert_eq!(
       node_2_ref_weak.upgrade().unwrap().read().unwrap().payload,
@@ -62,7 +62,7 @@ fn test_can_add_nodes_to_tree() {
     let node_1_id = 0 as usize;
     let node_2_id = 1 as usize;
 
-    let node_list = dbg!(arena.tree_walk_dfs(&node_1_id).unwrap());
+    let node_list = dbg!(arena.tree_walk_dfs(node_1_id).unwrap());
 
     assert_eq!(node_list.len(), 2);
     assert_eq!(node_list, vec![node_1_id, node_2_id]);
@@ -93,35 +93,35 @@ fn test_can_walk_tree_and_delete_nodes_from_tree() {
   assert_node_data_is_eq(&arena, gc_2_id, "gc2");
   assert_node_data_is_eq(&arena, child_2_id, "child2");
 
-  assert_eq!(arena.get_children_of(&root).unwrap().len(), 2);
-  assert_eq!(arena.get_parent_of(&root).is_none(), true);
+  assert_eq!(arena.get_children_of(root).unwrap().len(), 2);
+  assert_eq!(arena.get_parent_of(root).is_none(), true);
 
-  assert_eq!(arena.get_children_of(&child1).unwrap().len(), 2);
-  assert_eq!(arena.get_parent_of(&child1).unwrap(), root);
+  assert_eq!(arena.get_children_of(child1).unwrap().len(), 2);
+  assert_eq!(arena.get_parent_of(child1).unwrap(), root);
 
   // Test that tree walking works correctly for nodes.
-  assert_eq!(arena.tree_walk_dfs(&root).unwrap().len(), 5);
+  assert_eq!(arena.tree_walk_dfs(root).unwrap().len(), 5);
 
-  let child1_and_descendants = arena.tree_walk_dfs(&child1).unwrap();
+  let child1_and_descendants = arena.tree_walk_dfs(child1).unwrap();
   assert_eq!(child1_and_descendants.len(), 3);
   assert!(child1_and_descendants.contains(&child1));
   assert!(child1_and_descendants.contains(&gc_1_id));
   assert!(child1_and_descendants.contains(&gc_2_id));
 
-  assert_eq!(arena.tree_walk_dfs(&child_2_id).unwrap().len(), 1);
+  assert_eq!(arena.tree_walk_dfs(child_2_id).unwrap().len(), 1);
   assert!(arena
-    .tree_walk_dfs(&child_2_id)
+    .tree_walk_dfs(child_2_id)
     .unwrap()
     .contains(&child_2_id));
 
-  // Test that node deletion works correclty.
+  // Test that node deletion works correctly.
   {
     println!(
       "{} {:?}",
       style_primary("root -before- ==>"),
-      arena.tree_walk_dfs(&root).unwrap()
+      arena.tree_walk_dfs(root).unwrap()
     );
-    let deletion_list = arena.delete_node(&child1);
+    let deletion_list = arena.delete_node(child1);
     assert_eq!(deletion_list.as_ref().unwrap().len(), 3);
     assert!(deletion_list.as_ref().unwrap().contains(&gc_1_id));
     assert!(deletion_list.as_ref().unwrap().contains(&gc_2_id));
@@ -129,9 +129,9 @@ fn test_can_walk_tree_and_delete_nodes_from_tree() {
     println!(
       "{} {:?}",
       style_prompt("root -after- <=="),
-      arena.tree_walk_dfs(&root).unwrap()
+      arena.tree_walk_dfs(root).unwrap()
     );
-    assert_eq!(dbg!(arena.tree_walk_dfs(&root).unwrap()).len(), 2);
+    assert_eq!(dbg!(arena.tree_walk_dfs(root).unwrap()).len(), 2);
   }
 
   // Helper functions.
@@ -140,7 +140,7 @@ fn test_can_walk_tree_and_delete_nodes_from_tree() {
     node_id: usize,
     expected_name: &str,
   ) {
-    let child_ref = arena.get_node_arc(&node_id).unwrap();
+    let child_ref = arena.get_node_arc(node_id).unwrap();
     assert_eq!(child_ref.read().unwrap().payload, expected_name.to_string());
   }
 }
@@ -164,7 +164,7 @@ fn test_can_search_nodes_in_tree_with_filter_lambda() {
   println!(
     "{}, {:#?}",
     style_primary("root"),
-    arena.get_node_arc(&root)
+    arena.get_node_arc(root)
   );
 
   // Search entire arena for root.get_id().
@@ -277,7 +277,7 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
     // Walk tree w/ a new thread using arc to lambda.
     {
       let thread_handle: JoinHandle<ResultUidList> =
-        arena.tree_walk_parallel(&0, fn_arc.clone());
+        arena.tree_walk_parallel(0, fn_arc.clone());
 
       let result_node_list = thread_handle.join().unwrap();
       println!("{:#?}", result_node_list);
@@ -286,7 +286,7 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
     // Walk tree w/ a new thread using arc to lambda.
     {
       let thread_handle: JoinHandle<ResultUidList> =
-        arena.tree_walk_parallel(&1, fn_arc.clone());
+        arena.tree_walk_parallel(1, fn_arc.clone());
 
       let result_node_list = thread_handle.join().unwrap();
       println!("{:#?}", result_node_list);

@@ -19,7 +19,7 @@
 use crate::utils::ReadGuarded;
 
 use super::arena::Arena;
-use super::{HasId, Node, ResultUidList, ShareableArena, WalkerFn};
+use super::{Node, ResultUidList, ShareableArena, WalkerFn};
 use std::fmt::Debug;
 use std::marker::{Send, Sync};
 use std::sync::{Arc, RwLock};
@@ -80,7 +80,7 @@ use std::thread::{spawn, JoinHandle};
 ///   // Walk tree w/ a new thread using arc to lambda.
 ///   {
 ///     let thread_handle: JoinHandle<ResultUidList> =
-///       arena.tree_walk_parallel(&0, fn_arc.clone());
+///       arena.tree_walk_parallel(0, fn_arc.clone());
 ///
 ///     let result_node_list = thread_handle.join().unwrap();
 ///     println!("{:#?}", result_node_list);
@@ -89,7 +89,7 @@ use std::thread::{spawn, JoinHandle};
 ///   // Walk tree w/ a new thread using arc to lambda.
 ///   {
 ///     let thread_handle: JoinHandle<ResultUidList> =
-///       arena.tree_walk_parallel(&1, fn_arc.clone());
+///       arena.tree_walk_parallel(1, fn_arc.clone());
 ///
 ///     let result_node_list = thread_handle.join().unwrap();
 ///     println!("{:#?}", result_node_list);
@@ -128,7 +128,7 @@ where
   /// 2. Scoped threads: <https://docs.rs/crossbeam/0.3.0/crossbeam/struct.Scope.html>
   pub fn tree_walk_parallel(
     &self,
-    node_id: &'static dyn HasId<IdType = usize>,
+    node_id: usize,
     walker_fn: Arc<WalkerFn<T>>,
   ) -> JoinHandle<ResultUidList> {
     let arena_arc = self.get_arena_arc();
@@ -141,7 +141,7 @@ where
       // While walking the tree, in a separate thread, call the `walker_fn` for each node.
       if let Some(result_list) = return_value.clone() {
         result_list.clone().into_iter().for_each(|uid| {
-          let node_arc_opt = read_guard.get_node_arc(&uid.get_id());
+          let node_arc_opt = read_guard.get_node_arc(uid);
           if let Some(node_arc) = node_arc_opt {
             let node_ref: ReadGuarded<Node<T>> = node_arc.read().unwrap();
             walker_fn_arc(uid, node_ref.payload.clone());

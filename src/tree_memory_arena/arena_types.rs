@@ -28,8 +28,9 @@ pub trait HasId: Sync + Send + 'static {
 
   /// Returns (a clone of) the id.
   fn get_id(&self) -> Self::IdType;
+
   /// Returns an `Option::Some` containing *a clone of) the id.
-  fn into_some(&self) -> Option<&dyn HasId<IdType = Self::IdType>>;
+  fn into_some(&self) -> Option<Self::IdType>;
 }
 
 impl HasId for usize {
@@ -41,9 +42,8 @@ impl HasId for usize {
   }
 
   /// Returns an `Option::Some` containing a clone of the id.
-  fn into_some(&self) -> Option<&(dyn HasId<IdType = usize>)> {
-    let self_clone = Clone::clone(&self) as &dyn HasId<IdType = usize>;
-    Some(self_clone)
+  fn into_some(&self) -> Option<Self::IdType> {
+    Some(self.get_id())
   }
 }
 
