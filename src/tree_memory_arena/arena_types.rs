@@ -26,10 +26,10 @@ use super::{Arena, Node};
 pub trait HasId: Sync + Send {
   type IdType;
 
-  /// Returns (a clone of) the id.
+  /// Returns a clone of the id.
   fn get_id(&self) -> Self::IdType;
 
-  /// Returns an `Option::Some` containing *a clone of) the id.
+  /// Returns an `Option::Some` containing a clone of the id.
   fn into_some(&self) -> Option<Self::IdType>;
 }
 
