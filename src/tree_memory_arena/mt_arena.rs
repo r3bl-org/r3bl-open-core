@@ -102,14 +102,14 @@ use std::thread::{spawn, JoinHandle};
 #[derive(Debug)]
 pub struct MTArena<T>
 where
-  T: 'static + Debug + Send + Sync + Clone,
+  T: Debug + Send + Sync + Clone + 'static,
 {
   arena_arc: ShareableArena<T>,
 }
 
 impl<T> MTArena<T>
 where
-  T: 'static + Debug + Send + Sync + Clone,
+  T: Debug + Send + Sync + Clone + 'static,
 {
   pub fn new() -> Self {
     MTArena {

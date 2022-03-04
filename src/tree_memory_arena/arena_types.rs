@@ -23,7 +23,7 @@ use std::{
 
 use super::{Arena, Node};
 
-pub trait HasId: Sync + Send + 'static {
+pub trait HasId: Sync + Send {
   type IdType;
 
   /// Returns (a clone of) the id.
@@ -55,8 +55,8 @@ pub type ArenaMap<T> = HashMap<usize, NodeRef<T>>;
 pub type ResultUidList = Option<Vec<usize>>;
 
 // Filter lambda signature.
-pub type FilterFn<T> = dyn Fn(usize, T) -> bool + Send + Sync + 'static;
+pub type FilterFn<T> = dyn Fn(usize, T) -> bool + Send + Sync;
 
 // Parallel support.
 pub type ShareableArena<T> = Arc<RwLock<Arena<T>>>;
-pub type WalkerFn<T> = dyn Fn(usize, T) + Send + Sync + 'static;
+pub type WalkerFn<T> = dyn Fn(usize, T) + Send + Sync;

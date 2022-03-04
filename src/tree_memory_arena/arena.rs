@@ -36,7 +36,7 @@ use super::{
 #[derive(Debug, Clone)]
 pub struct Node<T>
 where
-  T: Debug + Clone + Send + Sync + 'static,
+  T: Debug + Clone + Send + Sync,
 {
   pub id: usize,
   pub parent: Option<usize>,
@@ -46,7 +46,7 @@ where
 
 impl<T> HasId for Node<T>
 where
-  T: Debug + Clone + Send + Sync + 'static,
+  T: Debug + Clone + Send + Sync,
 {
   type IdType = usize;
 
@@ -128,7 +128,7 @@ where
 #[derive(Debug)]
 pub struct Arena<T>
 where
-  T: Debug + Clone + Send + Sync + 'static,
+  T: Debug + Clone + Send + Sync,
 {
   map: RwLock<ArenaMap<T>>,
   atomic_counter: AtomicUsize,
@@ -136,7 +136,7 @@ where
 
 impl<T> Arena<T>
 where
-  T: Debug + Clone + Send + Sync + 'static,
+  T: Debug + Clone + Send + Sync,
 {
   /// If no matching nodes can be found returns `None`.
   pub fn filter_all_nodes_by(
