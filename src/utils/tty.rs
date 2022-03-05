@@ -49,6 +49,12 @@ pub fn print_prompt(prompt: &str) -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
+/// Prints and prompt and then waits for input from the terminal.
+pub fn readline_with_prompt(prompt: &str) -> Result<String, Box<dyn Error>> {
+  print_prompt(prompt)?;
+  Ok(readline().1)
+}
+
 /// If you run `echo "test" | cargo run` the following will return true.
 pub fn is_stdin_piped() -> bool {
   atty::isnt(atty::Stream::Stdin)

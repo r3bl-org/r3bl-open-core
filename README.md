@@ -22,7 +22,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.6.0"
+r3bl_rs_utils = "0.6.1"
 ```
 
 ## tree_memory_arena (non-binary tree data structure)
@@ -220,8 +220,9 @@ fn make_a_guess() -> String {
 
 Here's a list of functions available in this module:
 
-- `readline()`
+- `readline_with_prompt()`
 - `print_prompt()`
+- `readline()`
 - `is_tty()`
 - `is_stdout_piped()`
 - `is_stdin_piped()`
