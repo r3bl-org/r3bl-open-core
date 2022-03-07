@@ -34,7 +34,6 @@ pub fn unwrap_arc_read_lock_and_call<T, F, R>(
 ) -> R
 where
   F: FnMut(&T) -> R,
-  T: Send + Sync + Clone + Debug,
 {
   let arc_copy = arc_lock_wrapped_value.clone();
   let read_guard: ReadGuarded<T> = arc_copy.read().unwrap();
@@ -47,7 +46,6 @@ pub fn unwrap_arc_write_lock_and_call<T, F, R>(
 ) -> R
 where
   F: FnMut(&mut T) -> R,
-  T: Send + Sync + Clone + Debug,
 {
   let arc_copy = arc_lock_wrapped_value.clone();
   let mut write_guard: WriteGuarded<T> = arc_copy.write().unwrap();
@@ -79,7 +77,6 @@ pub fn call_if_some<T, F>(
   receiver_fn: &F,
 ) where
   F: Fn(&T),
-  T: Send + Sync + Clone + Debug,
 {
   if let Some(value) = option_wrapped_value {
     receiver_fn(value);
@@ -91,7 +88,6 @@ pub fn call_if_none<T, F>(
   receiver_fn: &F,
 ) where
   F: Fn(),
-  T: Send + Sync + Clone + Debug,
 {
   if (option_wrapped_value).is_none() {
     receiver_fn();
@@ -103,7 +99,6 @@ pub fn call_if_ok<T, F, E>(
   receiver_fn: &F,
 ) where
   F: Fn(&T),
-  T: Send + Sync + Clone + Debug,
 {
   if let Ok(value) = option_wrapped_value {
     receiver_fn(value);
@@ -115,7 +110,7 @@ pub fn call_if_err<T, F, E>(
   receiver_fn: &F,
 ) where
   F: Fn(&E),
-  T: Send + Sync + Clone + Debug,
+  T: Debug,
 {
   if option_wrapped_value.is_err() {
     receiver_fn(option_wrapped_value.as_ref().unwrap_err());

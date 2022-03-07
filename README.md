@@ -22,7 +22,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.6.1"
+r3bl_rs_utils = "0.6.2"
 ```
 
 ## tree_memory_arena (non-binary tree data structure)
