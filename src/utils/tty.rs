@@ -18,9 +18,12 @@
 
 use crate::utils::{style_error, style_prompt};
 use std::{
+  env::{args, Args},
   error::Error,
   io::{stdin, stdout, Write},
 };
+
+use super::with;
 
 /// Return String not &str due to "struct lifetime"
 /// - <https://stackoverflow.com/a/29026565/2085356>
@@ -70,4 +73,21 @@ pub fn is_tty() -> bool {
   atty::is(atty::Stream::Stdin)
     && atty::is(atty::Stream::Stdout)
     && atty::is(atty::Stream::Stderr)
+}
+
+/// Helper trait and impl to convert [std::env::Args][Args] to a `Vec<String>` after removing the
+/// first item (which is the path to the executable)..
+pub trait ArgsToStrings {
+  fn filter_and_convert_to_strings(&self) -> Vec<String>;
+}
+
+impl ArgsToStrings for Args {
+  fn filter_and_convert_to_strings(&self) -> Vec<String> {
+    with(args().collect::<Vec<String>>(), |mut list| {
+      if list.len() > 0 {
+        list.remove(0);
+      }
+      list
+    })
+  }
 }
