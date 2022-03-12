@@ -2,11 +2,13 @@
 
 This library provides utility functions:
 
-1. Functions to unwrap deeply nested objects inspired by Kotlin scope functions.
-2. Non binary tree data structure inspired by memory arenas, that is thread safe and supports
+1. Thread safe asynchronous Redux library (uses `tokio` to run subscribers and middleware in
+   parallel). The reducer functions are run single threaded.
+2. Functions to unwrap deeply nested objects inspired by Kotlin scope functions.
+3. Non binary tree data structure inspired by memory arenas, that is thread safe and supports
    parallel tree walking.
-3. Capabilities to make it easier to build TUIs (Text User Interface apps) in Rust.
-4. And more.
+4. Capabilities to make it easier to build TUIs (Text User Interface apps) in Rust.
+5. And more.
 
 > 💡 To learn more about this library, please read how it was built on
 > [developerlife.com](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
@@ -22,7 +24,132 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.6.3"
+r3bl_rs_utils = "0.6.4"
+```
+
+## Redux
+
+[`Store`] is a thread safe asynchronous Redux library that uses `tokio` to run subscribers and
+middleware in parallel. The reducer functions are run single threaded. Here's an example of how to
+use it. Let's say we have the following action enum, and state struct.
+
+```rust
+/// Action enum.
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub enum Action {
+  Add(i32, i32),
+  AddPop(i32),
+  Clear,
+  MiddlewareCreateClearAction,
+}
+
+/// State.
+#[derive(Clone, Default, PartialEq, Debug, Hash)]
+pub struct State {
+  pub stack: Vec<i32>,
+}
+```
+
+Here's an example of the reducer function.
+
+```rust
+// Reducer function (pure).
+let reducer_fn = |state: &State, action: &Action| match action {
+  Action::Add(a, b) => {
+    let sum = a + b;
+    State { stack: vec![sum] }
+  }
+  Action::AddPop(a) => {
+    let sum = a + state.stack[0];
+    State { stack: vec![sum] }
+  }
+  Action::Clear => State { stack: vec![] },
+  _ => state.clone(),
+};
+```
+
+Here's an example of an async subscriber function (which are run in parallel after an action is
+dispatched). The following example uses a lambda that captures a shared object. This is a pretty
+common pattern that you might encounter when creating subscribers that share state in your enclosing
+block or scope.
+
+```rust
+// This shared object is used to collect results from the subscriber function & test it later.
+let shared_object = Arc::new(Mutex::new(Vec::<i32>::new()));
+// This subscriber function is curried to capture a reference to the shared object.
+let subscriber_fn = with(shared_object.clone(), |it| {
+  let curried_fn = move |state: State| {
+    let mut stack = it.lock().unwrap();
+    stack.push(state.stack[0]);
+  };
+  curried_fn
+});
+```
+
+Here are two types of async middleware functions. One that returns an action (which will get
+dispatched once this middleware returns), and another that doesn't return anything (like a logger
+middleware that just dumps the current action to the console). Note that both these functions share
+the `shared_object` reference from above.
+
+```rust
+// This middleware function is curried to capture a reference to the shared object.
+let mw_returns_none = with(shared_object.clone(), |it| {
+  let curried_fn = move |action: Action| {
+    let mut stack = it.lock().unwrap();
+    match action {
+      Action::Add(_, _) => stack.push(-1),
+      Action::AddPop(_) => stack.push(-2),
+      Action::Clear => stack.push(-3),
+      _ => {}
+    }
+    None
+  };
+  curried_fn
+});
+
+// This middleware function is curried to capture a reference to the shared object.
+let mw_returns_action = with(shared_object.clone(), |it| {
+  let curried_fn = move |action: Action| {
+    let mut stack = it.lock().unwrap();
+    match action {
+      Action::MiddlewareCreateClearAction => stack.push(-4),
+      _ => {}
+    }
+    Some(Action::Clear)
+  };
+  curried_fn
+});
+```
+
+Here's how you can setup a store with the above reducer, middleware, and subscriber functions.
+
+```rust
+// Setup store.
+let mut store = Store::<State, Action>::new();
+store
+  .add_reducer(ReducerFnWrapper::new(reducer_fn))
+  .add_subscriber(SafeSubscriberFnWrapper::new(subscriber_fn))
+  .add_middleware(SafeMiddlewareFnWrapper::new(mw_returns_none));
+```
+
+Finally here's an example of how to dispatch an action in a test.
+
+```rust
+// Test reducer and subscriber by dispatching Add and AddPop actions asynchronously.
+store.dispatch(&Action::Add(1, 2)).await;
+assert_eq!(shared_object.lock().unwrap().pop(), Some(3));
+store.dispatch(&Action::AddPop(1)).await;
+assert_eq!(shared_object.lock().unwrap().pop(), Some(4));
+store.clear_subscribers();
+
+// Test async middleware: mw_returns_action.
+shared_object.lock().unwrap().clear();
+store
+  .add_middleware(SafeMiddlewareFnWrapper::new(mw_returns_action))
+  .dispatch(&Action::MiddlewareCreateClearAction)
+  .await;
+assert_eq!(store.get_state().stack.len(), 0);
+assert_eq!(shared_object.lock().unwrap().pop(), Some(-4));
 ```
 
 ## tree_memory_arena (non-binary tree data structure)
