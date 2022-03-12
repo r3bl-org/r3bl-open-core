@@ -2,7 +2,7 @@
 name = "r3bl_rs_utils"
 description = "Rust language utilities inspired by Kotlin scope functions, TUI utilities, and useful data structures"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
-keywords = ["tui", "color", "terminal", "kotlin", "non-binary-tree"]
+keywords = ["tui", "color", "terminal", "redux", "non-binary-tree"]
 categories = ["algorithms", "data-structures"]
 # When you change this, make sure to update `README.md` as well.
 version = "0.6.4"
