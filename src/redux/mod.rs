@@ -1,14 +1,12 @@
-pub mod store;
-pub mod state_manager;
-pub mod list_manager;
+pub mod store_mod;
+pub mod async_list_manager;
 pub mod async_middleware;
-pub mod async_subscribers;
+pub mod async_subscriber;
 pub mod sync_reducers;
 
 // Re-export the following modules:
-pub use store::*;
-pub use state_manager::*;
-pub use list_manager::*;
+pub use store_mod::*;
+pub use async_list_manager::*;
 pub use async_middleware::*;
-pub use async_subscribers::*;
+pub use async_subscriber::*;
 pub use sync_reducers::*;

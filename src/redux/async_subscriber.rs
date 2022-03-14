@@ -1,5 +1,5 @@
-use std::sync::{Arc, RwLock};
-use tokio::task::JoinHandle;
+use std::sync::Arc;
+use tokio::{task::JoinHandle, sync::RwLock};
 
 /// Subscriber function.
 pub type SafeSubscriberFn<S> = Arc<RwLock<dyn FnMut(S) + Sync + Send>>;
@@ -9,7 +9,7 @@ pub struct SafeSubscriberFnWrapper<S> {
 }
 
 impl<S: Sync + Send + 'static> SafeSubscriberFnWrapper<S> {
-  pub fn new(
+  pub fn from(
     fn_mut: impl FnMut(S) -> () + Send + Sync + 'static
   ) -> SafeSubscriberFnWrapper<S> {
     SafeSubscriberFnWrapper::set(Arc::new(RwLock::new(fn_mut)))
@@ -29,7 +29,8 @@ impl<S: Sync + Send + 'static> SafeSubscriberFnWrapper<S> {
   ) -> JoinHandle<()> {
     let arc_lock_fn_mut = self.get();
     tokio::spawn(async move {
-      let mut fn_mut = arc_lock_fn_mut.write().unwrap();
+      // Actually run function.
+      let mut fn_mut = arc_lock_fn_mut.write().await;
       fn_mut(state)
     })
   }

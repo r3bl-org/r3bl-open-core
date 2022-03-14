@@ -24,12 +24,12 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.6.4"
+r3bl_rs_utils = "0.6.5"
 ```
 
-## Redux
+## redux
 
-[`Store`] is a thread safe asynchronous Redux library that uses `tokio` to run subscribers and
+`Store` is a thread safe asynchronous Redux library that uses `tokio` to run subscribers and
 middleware in parallel. The reducer functions are run single threaded. Here's an example of how to
 use it. Let's say we have the following action enum, and state struct.
 
@@ -128,19 +128,26 @@ Here's how you can setup a store with the above reducer, middleware, and subscri
 let mut store = Store::<State, Action>::new();
 store
   .add_reducer(ReducerFnWrapper::new(reducer_fn))
+  .await
   .add_subscriber(SafeSubscriberFnWrapper::new(subscriber_fn))
-  .add_middleware(SafeMiddlewareFnWrapper::new(mw_returns_none));
+  .await
+  .add_middleware(SafeMiddlewareFnWrapper::new(mw_returns_none))
+  .await;
 ```
 
-Finally here's an example of how to dispatch an action in a test.
+Finally here's an example of how to dispatch an action in a test. You can dispatch actions
+asynchronously using `dispatch_spawn()` which is "fire and forget" meaning that the caller won't
+block or wait for the `dispatch_spawn()` to return. Then you can dispatch actions synchronously if
+that's what you would like using `dispatch()`.
 
 ```rust
 // Test reducer and subscriber by dispatching Add and AddPop actions asynchronously.
+store.dispatch_spawn(Action::Add(10, 10)).await;
 store.dispatch(&Action::Add(1, 2)).await;
 assert_eq!(shared_object.lock().unwrap().pop(), Some(3));
 store.dispatch(&Action::AddPop(1)).await;
-assert_eq!(shared_object.lock().unwrap().pop(), Some(4));
-store.clear_subscribers();
+assert_eq!(shared_object.lock().unwrap().pop(), Some(21));
+store.clear_subscribers().await;
 
 // Test async middleware: mw_returns_action.
 shared_object.lock().unwrap().clear();

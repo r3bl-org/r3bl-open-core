@@ -1,9 +1,9 @@
 // Imports.
 use std::{
   marker::{Send, Sync},
-  sync::{Arc, RwLock},
+  sync::Arc,
 };
-use tokio::task::JoinHandle;
+use tokio::{task::JoinHandle, sync::RwLock};
 
 /// Excellent resources on lifetimes and returning references:
 /// 1. https://stackoverflow.com/questions/59442080/rust-pass-a-function-reference-to-threads
@@ -19,7 +19,7 @@ pub struct SafeMiddlewareFnWrapper<A> {
 }
 
 impl<A: Sync + Send + 'static> SafeMiddlewareFnWrapper<A> {
-  pub fn new(
+  pub fn from(
     fn_mut: impl FnMut(A) -> Option<A> + Send + Sync + 'static
   ) -> SafeMiddlewareFnWrapper<A> {
     SafeMiddlewareFnWrapper::set(Arc::new(RwLock::new(fn_mut)))
@@ -41,7 +41,8 @@ impl<A: Sync + Send + 'static> SafeMiddlewareFnWrapper<A> {
   ) -> JoinHandle<Option<A>> {
     let arc_lock_fn_mut = self.get();
     tokio::spawn(async move {
-      let mut fn_mut = arc_lock_fn_mut.write().unwrap();
+      // Actually run function.
+      let mut fn_mut = arc_lock_fn_mut.write().await;
       fn_mut(action)
     })
   }

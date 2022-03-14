@@ -1,14 +1,9 @@
-// Integration tests
-// Functions that are in scope: <https://stackoverflow.com/a/45151641/2085356>
-// About integration tests: <https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory>
-// Tokio test macro: <https://docs.rs/tokio/latest/tokio/attr.test.html>
-
 // Imports.
-use r3bl_rs_utils::redux::{
-  ReducerFnWrapper, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper, Store,
-};
 use r3bl_rs_utils::utils::with;
 use std::sync::{Arc, Mutex};
+use r3bl_rs_utils::redux::{
+  Store, ReducerFnWrapper, SafeSubscriberFnWrapper, SafeMiddlewareFnWrapper,
+};
 
 /// Action enum.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
@@ -85,16 +80,20 @@ async fn test_redux_store_works_for_main_use_cases() {
   // Setup store.
   let mut store = Store::<State, Action>::new();
   store
-    .add_reducer(ReducerFnWrapper::new(reducer_fn))
-    .add_subscriber(SafeSubscriberFnWrapper::new(subscriber_fn))
-    .add_middleware(SafeMiddlewareFnWrapper::new(mw_returns_none));
+    .add_reducer(ReducerFnWrapper::from(reducer_fn))
+    .await
+    .add_subscriber(SafeSubscriberFnWrapper::from(subscriber_fn))
+    .await
+    .add_middleware(SafeMiddlewareFnWrapper::from(mw_returns_none))
+    .await;
 
-  // Test reducer and subscriber by dispatching Add and AddPop actions asynchronously.
+  // Test reducer and subscriber by dispatching Add and AddPop actions sync & async.
+  store.dispatch_spawn(Action::Add(10, 10)).await;
   store.dispatch(&Action::Add(1, 2)).await;
   assert_eq!(shared_object.lock().unwrap().pop(), Some(3));
   store.dispatch(&Action::AddPop(1)).await;
-  assert_eq!(shared_object.lock().unwrap().pop(), Some(4));
-  store.clear_subscribers();
+  assert_eq!(shared_object.lock().unwrap().pop(), Some(21));
+  store.clear_subscribers().await;
 
   // Test async middleware: mw_returns_none.
   store.dispatch(&Action::Add(1, 2)).await;
@@ -103,14 +102,15 @@ async fn test_redux_store_works_for_main_use_cases() {
   assert_eq!(shared_object.lock().unwrap().pop(), Some(-2));
   store.dispatch(&Action::Clear).await;
   assert_eq!(shared_object.lock().unwrap().pop(), Some(-3));
-  store.clear_middleware();
+  store.clear_middleware().await;
 
   // Test async middleware: mw_returns_action.
   shared_object.lock().unwrap().clear();
   store
-    .add_middleware(SafeMiddlewareFnWrapper::new(mw_returns_action))
+    .add_middleware(SafeMiddlewareFnWrapper::from(mw_returns_action))
+    .await
     .dispatch(&Action::MiddlewareCreateClearAction)
     .await;
-  assert_eq!(store.get_state().stack.len(), 0);
+  assert_eq!(store.get_state().await.stack.len(), 0);
   assert_eq!(shared_object.lock().unwrap().pop(), Some(-4));
 }
