@@ -15,9 +15,12 @@
 */
 
 use core::{hash::Hash, fmt::Debug};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use crate::redux::{
   SafeListManager, SafeSubscriberFnWrapper, SafeMiddlewareFnWrapper, ReducerFnWrapper,
+  iterate_over_vec_with_async,
 };
 
 pub struct StoreStateMachine<S, A>
@@ -56,6 +59,10 @@ where
   S: Clone + Default + PartialEq + Debug + Hash + Sync + Send + 'static,
   A: Clone + Send + Sync + 'static,
 {
+  pub fn get_state_clone(&self) -> S {
+    self.state.clone()
+  }
+
   pub async fn dispatch_action(
     &mut self,
     action: &A,
@@ -89,11 +96,21 @@ where
 
     // Run subscribers.
     {
-      let locked_list = self.subscriber_manager.get();
-      let list = locked_list.read().await;
-      for subscriber_fn in list.iter() {
-        subscriber_fn.spawn(self.state.clone()).await.unwrap();
-      }
+      // Simple way.
+      // let locked_list = self.subscriber_manager.get();
+      // let list = locked_list.read().await;
+      // for subscriber_fn in list.iter() {
+      //   subscriber_fn.spawn(self.state.clone()).await.unwrap();
+      // }
+
+      // Use macro.
+      let state_clone = &self.get_state_clone();
+      iterate_over_vec_with_async!(
+        self.subscriber_manager,
+        |subscriber_fn: SafeSubscriberFnWrapper<S>| async move {
+          subscriber_fn.spawn(state_clone.clone()).await.unwrap();
+        }
+      );
     }
 
     // Update history.
@@ -124,19 +141,34 @@ where
     &mut self,
     action: &A,
   ) -> Vec<A> {
-    let mut results: Vec<A> = vec![];
-    let locked_list = self.middleware_manager.get();
-    let list = locked_list.read().await;
-    for middleware_fn in list.iter() {
-      let result = middleware_fn.spawn(action.clone()).await;
-      if let Ok(option) = result {
-        if let Some(action) = option {
-          results.push(action);
+    // Simple way.
+    // let mut results = vec![];
+    // let locked_list = self.middleware_manager.get();
+    // let list = locked_list.read().await;
+    // for middleware_fn in list.iter() {
+    //   let result = middleware_fn.spawn(action.clone()).await;
+    //   if let Ok(option) = result {
+    //     if let Some(action) = option {
+    //       results_og.lock().await.push(action);
+    //     }
+    //   }
+    // }
+
+    // Use macro.
+    let results: Arc<Mutex<Vec<A>>> = Arc::new(Mutex::new(vec![]));
+    let results_clone = results.as_ref().clone();
+    iterate_over_vec_with_async!(
+      self.middleware_manager,
+      |middleware_fn: SafeMiddlewareFnWrapper<A>| async move {
+        let result = middleware_fn.spawn(action.clone()).await;
+        if let Ok(option) = result {
+          if let Some(action) = option {
+            results_clone.clone().lock().await.push(action);
+          }
         }
       }
-    }
-    results
+    );
+    let locked_results = results.as_ref().lock().await;
+    locked_results.to_vec()
   }
 }
-
-

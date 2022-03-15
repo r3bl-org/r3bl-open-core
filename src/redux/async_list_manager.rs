@@ -60,3 +60,20 @@ where
     locked_list.clear();
   }
 }
+
+// Define macro.
+// https://stackoverflow.com/questions/28953262/pass-member-function-body-as-macro-parameter
+// https://cheats.rs/#tooling-directives
+// https://dhghomon.github.io/easy_rust/Chapter_61.html
+// https://stackoverflow.com/questions/26731243/how-do-i-use-a-macro-across-module-files
+macro_rules! iterate_over_vec_with_async {
+  ($locked_list_arc:expr, $receiver_fn:expr) => {
+    let locked_list = $locked_list_arc.get();
+    let list = locked_list.read().await;
+    for (_i, list_item) in list.iter().enumerate() {
+      $receiver_fn(list_item.clone()).await;
+    }
+  };
+}
+
+pub(crate) use iterate_over_vec_with_async;
