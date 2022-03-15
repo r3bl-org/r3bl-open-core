@@ -20,11 +20,15 @@ use tokio::{task::JoinHandle, sync::RwLock};
 /// Subscriber function.
 pub type SafeSubscriberFn<S> = Arc<RwLock<dyn FnMut(S) + Sync + Send>>;
 
+#[derive(Clone)]
 pub struct SafeSubscriberFnWrapper<S> {
   fn_mut: SafeSubscriberFn<S>,
 }
 
-impl<S: Sync + Send + 'static> SafeSubscriberFnWrapper<S> {
+impl<S> SafeSubscriberFnWrapper<S>
+where
+  S: Sync + Send + 'static,
+{
   pub fn from(
     fn_mut: impl FnMut(S) -> () + Send + Sync + 'static
   ) -> SafeSubscriberFnWrapper<S> {

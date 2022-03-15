@@ -30,11 +30,15 @@ pub type SafeMiddlewareFn<A> = Arc<RwLock<dyn FnMut(A) -> Option<A> + Sync + Sen
 //                             Safe to pass      Declare`FnMut` has thread safety
 //                             around.           requirement to rust compiler.
 
+#[derive(Clone)]
 pub struct SafeMiddlewareFnWrapper<A> {
   fn_mut: SafeMiddlewareFn<A>,
 }
 
-impl<A: Sync + Send + 'static> SafeMiddlewareFnWrapper<A> {
+impl<A> SafeMiddlewareFnWrapper<A>
+where
+  A: Sync + Send + 'static,
+{
   pub fn from(
     fn_mut: impl FnMut(A) -> Option<A> + Send + Sync + 'static
   ) -> SafeMiddlewareFnWrapper<A> {

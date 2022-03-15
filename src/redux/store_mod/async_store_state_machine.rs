@@ -79,7 +79,7 @@ where
     // Run reducers.
     {
       let locked_list = self.reducer_manager.get();
-      let list = locked_list.write().await;
+      let list = locked_list.read().await;
       list.iter().for_each(|reducer_fn| {
         let new_state = reducer_fn.invoke(&self.state, &action);
         update_history(&mut self.history, &new_state);
@@ -90,7 +90,7 @@ where
     // Run subscribers.
     {
       let locked_list = self.subscriber_manager.get();
-      let list = locked_list.write().await;
+      let list = locked_list.read().await;
       for subscriber_fn in list.iter() {
         subscriber_fn.spawn(self.state.clone()).await.unwrap();
       }
@@ -126,7 +126,7 @@ where
   ) -> Vec<A> {
     let mut results: Vec<A> = vec![];
     let locked_list = self.middleware_manager.get();
-    let list = locked_list.write().await;
+    let list = locked_list.read().await;
     for middleware_fn in list.iter() {
       let result = middleware_fn.spawn(action.clone()).await;
       if let Ok(option) = result {
@@ -138,3 +138,5 @@ where
     results
   }
 }
+
+

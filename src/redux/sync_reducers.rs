@@ -20,6 +20,7 @@ use std::sync::{Arc, Mutex};
 pub type ReducerFn<S, A> = dyn Fn(&S, &A) -> S;
 pub type SafeReducerFn<S, A> = Arc<Mutex<dyn Fn(&S, &A) -> S + Send + Sync + 'static>>;
 
+#[derive(Clone)]
 pub struct ReducerFnWrapper<S, A>
 where
   S: Sync + Send + 'static,
