@@ -61,19 +61,38 @@ where
   }
 }
 
-// Define macro.
+// Define macros.
 // https://stackoverflow.com/questions/28953262/pass-member-function-body-as-macro-parameter
 // https://cheats.rs/#tooling-directives
 // https://dhghomon.github.io/easy_rust/Chapter_61.html
 // https://stackoverflow.com/questions/26731243/how-do-i-use-a-macro-across-module-files
+
 macro_rules! iterate_over_vec_with_async {
-  ($locked_list_arc:expr, $receiver_fn:expr) => {
+  ($this:ident, $locked_list_arc:expr, $lambda:expr) => {
     let locked_list = $locked_list_arc.get();
-    let list = locked_list.read().await;
-    for (_i, list_item) in list.iter().enumerate() {
-      $receiver_fn(list_item.clone()).await;
+    let list_r = locked_list.read().await;
+    for item_fn in list_r.iter() {
+      $lambda(&item_fn).await;
     }
   };
 }
 
+macro_rules! iterate_over_vec_with_results_async {
+  ($locked_list_arc:expr, $lambda:expr, $results:ident) => {
+    let locked_list = $locked_list_arc.get();
+    let list_r = locked_list.read().await;
+    for item_fn in list_r.iter() {
+      let result = $lambda(&item_fn).await;
+      if let Ok(action) = result {
+        if let Some(action) = action {
+          $results.push(action);
+        }
+      };
+    }
+    // The following line would create a function that returns from the block where its used.
+    // return $results;
+  };
+}
+
 pub(crate) use iterate_over_vec_with_async;
+pub(crate) use iterate_over_vec_with_results_async;

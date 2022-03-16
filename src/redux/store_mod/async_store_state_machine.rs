@@ -15,12 +15,9 @@
 */
 
 use core::{hash::Hash, fmt::Debug};
-use std::sync::Arc;
-use tokio::sync::Mutex;
-
 use crate::redux::{
   SafeListManager, SafeSubscriberFnWrapper, SafeMiddlewareFnWrapper, ReducerFnWrapper,
-  iterate_over_vec_with_async,
+  iterate_over_vec_with_async, iterate_over_vec_with_results_async,
 };
 
 pub struct StoreStateMachine<S, A>
@@ -79,7 +76,7 @@ where
     }
   }
 
-  pub async fn actually_dispatch_action(
+  pub async fn actually_dispatch_action<'a>(
     &mut self,
     action: &A,
   ) {
@@ -106,8 +103,9 @@ where
       // Use macro.
       let state_clone = &self.get_state_clone();
       iterate_over_vec_with_async!(
+        self,
         self.subscriber_manager,
-        |subscriber_fn: SafeSubscriberFnWrapper<S>| async move {
+        |subscriber_fn: &'a SafeSubscriberFnWrapper<S>| async move {
           subscriber_fn.spawn(state_clone.clone()).await.unwrap();
         }
       );
@@ -137,7 +135,7 @@ where
 
   /// Run middleware and return a list of resulting actions. If a middleware produces `None` that
   /// isn't added to the list that's returned.
-  pub async fn middleware_runner(
+  pub async fn middleware_runner<'a>(
     &mut self,
     action: &A,
   ) -> Vec<A> {
@@ -155,20 +153,14 @@ where
     // }
 
     // Use macro.
-    let results: Arc<Mutex<Vec<A>>> = Arc::new(Mutex::new(vec![]));
-    let results_clone = results.as_ref().clone();
-    iterate_over_vec_with_async!(
+    let mut return_vec = vec![];
+    iterate_over_vec_with_results_async!(
       self.middleware_manager,
-      |middleware_fn: SafeMiddlewareFnWrapper<A>| async move {
-        let result = middleware_fn.spawn(action.clone()).await;
-        if let Ok(option) = result {
-          if let Some(action) = option {
-            results_clone.clone().lock().await.push(action);
-          }
-        }
-      }
+      |middleware_fn: &'a SafeMiddlewareFnWrapper<A>| async move {
+        middleware_fn.spawn(action.clone()).await
+      },
+      return_vec
     );
-    let locked_results = results.as_ref().lock().await;
-    locked_results.to_vec()
+    return return_vec;
   }
 }
