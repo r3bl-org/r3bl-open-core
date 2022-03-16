@@ -18,6 +18,7 @@ use core::{hash::Hash, fmt::Debug};
 use crate::redux::{
   SafeListManager, SafeSubscriberFnWrapper, SafeMiddlewareFnWrapper, ReducerFnWrapper,
   iterate_over_vec_with_async, iterate_over_vec_with_results_async,
+  iterate_over_vec_with,
 };
 
 pub type ReducerManager<S, A> = SafeListManager<ReducerFnWrapper<S, A>>;
@@ -86,13 +87,15 @@ where
   ) {
     // Run reducers.
     {
-      let locked_list = self.reducer_manager.get();
-      let list = locked_list.read().await;
-      list.iter().for_each(|reducer_fn| {
-        let new_state = reducer_fn.invoke(&self.state, &action);
-        self.update_history(&new_state);
-        self.state = new_state;
-      });
+      iterate_over_vec_with!(
+        self,
+        self.reducer_manager,
+        |reducer_fn: &'a ReducerFnWrapper<S, A>| {
+          let new_state = reducer_fn.invoke(&self.state, &action);
+          self.update_history(&new_state);
+          self.state = new_state;
+        }
+      );
     }
 
     // Run subscribers.
