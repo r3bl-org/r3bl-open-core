@@ -95,9 +95,9 @@ where
     &mut self,
     subscriber_fn: SafeSubscriberFnWrapper<S>,
   ) -> &mut Store<S, A> {
-    let my_state_manager_arc = self.get();
-    let mut my_state_manager = my_state_manager_arc.write().await;
-    my_state_manager
+    let my_state_machine_arc = self.get();
+    let mut my_state_machine_w = my_state_machine_arc.write().await;
+    my_state_machine_w
       .subscriber_manager
       .push(subscriber_fn)
       .await;
@@ -105,9 +105,9 @@ where
   }
 
   pub async fn clear_subscribers(&mut self) -> &mut Store<S, A> {
-    let my_state_manager_arc = self.get();
-    let mut my_state_manager = my_state_manager_arc.write().await;
-    my_state_manager.subscriber_manager.clear().await;
+    let my_state_machine_arc = self.get();
+    let mut my_state_machine_w = my_state_machine_arc.write().await;
+    my_state_machine_w.subscriber_manager.clear().await;
     self
   }
 
@@ -115,9 +115,9 @@ where
     &mut self,
     middleware_fn: SafeMiddlewareFnWrapper<A>,
   ) -> &mut Store<S, A> {
-    let my_state_manager_arc = self.get();
-    let mut my_state_manager = my_state_manager_arc.write().await;
-    my_state_manager
+    let my_state_machine_arc = self.get();
+    let mut my_state_machine_w = my_state_machine_arc.write().await;
+    my_state_machine_w
       .middleware_manager
       .push(middleware_fn)
       .await;
@@ -125,9 +125,9 @@ where
   }
 
   pub async fn clear_middleware(&mut self) -> &mut Store<S, A> {
-    let my_state_manager_arc = self.get();
-    let mut my_state_manager = my_state_manager_arc.write().await;
-    my_state_manager.middleware_manager.clear().await;
+    let my_state_machine_arc = self.get();
+    let mut my_state_machine_w = my_state_machine_arc.write().await;
+    my_state_machine_w.middleware_manager.clear().await;
     self
   }
 
@@ -135,9 +135,9 @@ where
     &mut self,
     reducer_fn: ReducerFnWrapper<S, A>,
   ) -> &mut Store<S, A> {
-    let my_state_manager_arc = self.get();
-    let mut my_state_manager = my_state_manager_arc.write().await;
-    my_state_manager.reducer_manager.push(reducer_fn).await;
+    let my_state_machine_arc = self.get();
+    let mut my_state_machine_w = my_state_machine_arc.write().await;
+    my_state_machine_w.reducer_manager.push(reducer_fn).await;
     self
   }
 }
