@@ -20,6 +20,8 @@ use crate::redux::{
   iterate_over_vec_with_async, iterate_over_vec_with_results_async,
 };
 
+pub type ReducerManager<S, A> = SafeListManager<ReducerFnWrapper<S, A>>;
+
 pub struct StoreStateMachine<S, A>
 where
   S: Sync + Send + 'static,
@@ -29,7 +31,7 @@ where
   pub history: Vec<S>,
   pub subscriber_manager: SafeListManager<SafeSubscriberFnWrapper<S>>,
   pub middleware_manager: SafeListManager<SafeMiddlewareFnWrapper<A>>,
-  pub reducer_manager: SafeListManager<ReducerFnWrapper<S, A>>,
+  pub reducer_manager: ReducerManager<S, A>,
 }
 
 impl<S, A> Default for StoreStateMachine<S, A>

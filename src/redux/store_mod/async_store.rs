@@ -15,11 +15,15 @@
 */
 
 use std::{fmt::Debug, hash::Hash, sync::Arc};
-use tokio::{task::JoinHandle, sync::RwLock};
+use tokio::{
+  task::JoinHandle,
+  sync::{RwLock},
+};
 
 use crate::redux::{
   StoreStateMachine, async_subscriber::SafeSubscriberFnWrapper,
   async_middleware::SafeMiddlewareFnWrapper, sync_reducers::ReducerFnWrapper,
+  ReducerManager,
 };
 
 /// Thread safe and async Redux store (using [`tokio`]). This is built atop [`StoreData`] (which
@@ -131,13 +135,30 @@ where
     self
   }
 
-  pub async fn add_reducer(
+  pub async fn add_reducer<'a>(
     &mut self,
     reducer_fn: ReducerFnWrapper<S, A>,
   ) -> &mut Store<S, A> {
-    let my_state_machine_arc = self.get();
-    let mut my_state_machine_w = my_state_machine_arc.write().await;
-    my_state_machine_w.reducer_manager.push(reducer_fn).await;
+    // Use macro.
+    with_reducer_manager_w!(self, |it: &'a mut ReducerManager<S, A>| async {
+      it.push(reducer_fn).await;
+    });
+
+    // Simple way.
+    // let my_state_machine_arc = self.get();
+    // let mut my_state_machine_w = my_state_machine_arc.write().await;
+    // let my_reducer_manager = my_state_machine_w.reducer_manager;
+    // my_reducer_manager.push(reducer_fn).await;
     self
   }
 }
+
+macro_rules! with_reducer_manager_w {
+  ($this:ident, $lambda:expr) => {
+    let arc = $this.get();
+    let mut my_state_machine_w = arc.write().await;
+    $lambda(&mut my_state_machine_w.reducer_manager).await;
+  };
+}
+
+pub(crate) use with_reducer_manager_w;
