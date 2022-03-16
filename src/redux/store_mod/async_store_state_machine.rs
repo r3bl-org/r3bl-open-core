@@ -21,6 +21,8 @@ use crate::redux::{
 };
 
 pub type ReducerManager<S, A> = SafeListManager<ReducerFnWrapper<S, A>>;
+pub type MiddlewareManager<A> = SafeListManager<SafeMiddlewareFnWrapper<A>>;
+pub type SubscriberManager<S> = SafeListManager<SafeSubscriberFnWrapper<S>>;
 
 pub struct StoreStateMachine<S, A>
 where
@@ -95,14 +97,6 @@ where
 
     // Run subscribers.
     {
-      // Simple way.
-      // let locked_list = self.subscriber_manager.get();
-      // let list = locked_list.read().await;
-      // for subscriber_fn in list.iter() {
-      //   subscriber_fn.spawn(self.state.clone()).await.unwrap();
-      // }
-
-      // Use macro.
       let state_clone = &self.get_state_clone();
       iterate_over_vec_with_async!(
         self,
@@ -141,20 +135,6 @@ where
     &mut self,
     action: &A,
   ) -> Vec<A> {
-    // Simple way.
-    // let mut results = vec![];
-    // let locked_list = self.middleware_manager.get();
-    // let list = locked_list.read().await;
-    // for middleware_fn in list.iter() {
-    //   let result = middleware_fn.spawn(action.clone()).await;
-    //   if let Ok(option) = result {
-    //     if let Some(action) = option {
-    //       results_og.lock().await.push(action);
-    //     }
-    //   }
-    // }
-
-    // Use macro.
     let mut return_vec = vec![];
     iterate_over_vec_with_results_async!(
       self.middleware_manager,
