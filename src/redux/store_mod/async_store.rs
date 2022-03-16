@@ -72,11 +72,10 @@ where
     &self,
     action: A,
   ) -> JoinHandle<()> {
-    let action_clone = action.clone();
-    let self_arc_clone = self.get();
+    let my_arc = self.get();
     tokio::spawn(async move {
-      let mut state_manager = self_arc_clone.write().await;
-      state_manager.dispatch_action(&action_clone).await;
+      let mut state_manager = my_arc.write().await;
+      state_manager.dispatch_action(&action).await;
     })
   }
 

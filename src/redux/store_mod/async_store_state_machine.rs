@@ -31,8 +31,8 @@ where
 {
   pub state: S,
   pub history: Vec<S>,
-  pub subscriber_manager: SafeListManager<SafeSubscriberFnWrapper<S>>,
-  pub middleware_manager: SafeListManager<SafeMiddlewareFnWrapper<A>>,
+  pub subscriber_manager: SubscriberManager<S>,
+  pub middleware_manager: MiddlewareManager<A>,
   pub reducer_manager: ReducerManager<S, A>,
 }
 
@@ -90,7 +90,7 @@ where
       let list = locked_list.read().await;
       list.iter().for_each(|reducer_fn| {
         let new_state = reducer_fn.invoke(&self.state, &action);
-        update_history(&mut self.history, &new_state);
+        self.update_history(&new_state);
         self.state = new_state;
       });
     }
@@ -106,27 +106,27 @@ where
         }
       );
     }
+  }
 
+  // Update history.
+  fn update_history(
+    &mut self,
+    new_state: &S,
+  ) where
+    S: PartialEq + Clone,
+  {
     // Update history.
-    fn update_history<S>(
-      history: &mut Vec<S>,
-      new_state: &S,
-    ) where
-      S: PartialEq + Clone,
-    {
-      // Update history.
-      let mut update_history = false;
-      if history.is_empty() {
+    let mut update_history = false;
+    if self.history.is_empty() {
+      update_history = true;
+    } else if let Some(last_known_state) = self.history.last() {
+      if *last_known_state != *new_state {
         update_history = true;
-      } else if let Some(last_known_state) = history.last() {
-        if *last_known_state != *new_state {
-          update_history = true;
-        }
       }
-      if update_history {
-        history.push(new_state.clone())
-      };
     }
+    if update_history {
+      self.history.push(new_state.clone())
+    };
   }
 
   /// Run middleware and return a list of resulting actions. If a middleware produces `None` that
