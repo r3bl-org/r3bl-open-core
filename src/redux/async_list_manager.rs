@@ -67,6 +67,7 @@ where
 // https://dhghomon.github.io/easy_rust/Chapter_61.html
 // https://stackoverflow.com/questions/26731243/how-do-i-use-a-macro-across-module-files
 
+/// The `$lambda` expression is not async.
 macro_rules! iterate_over_vec_with {
   ($this:ident, $locked_list_arc:expr, $lambda:expr) => {
     let locked_list = $locked_list_arc.get();
@@ -77,6 +78,7 @@ macro_rules! iterate_over_vec_with {
   };
 }
 
+/// The `$lambda` expression is async.
 macro_rules! iterate_over_vec_with_async {
   ($this:ident, $locked_list_arc:expr, $lambda:expr) => {
     let locked_list = $locked_list_arc.get();
@@ -87,6 +89,7 @@ macro_rules! iterate_over_vec_with_async {
   };
 }
 
+/// The `$lambda` expression is async.
 macro_rules! iterate_over_vec_with_results_async {
   ($locked_list_arc:expr, $lambda:expr, $results:ident) => {
     let locked_list = $locked_list_arc.get();

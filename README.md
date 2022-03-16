@@ -24,7 +24,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.6.6"
+r3bl_rs_utils = "0.6.7"
 ```
 
 ## redux
