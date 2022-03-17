@@ -102,7 +102,7 @@ async fn test_redux_store_works_for_main_use_cases() {
   assert_eq!(shared_object.lock().unwrap().pop(), Some(-2));
   store.dispatch(&Action::Clear).await;
   assert_eq!(shared_object.lock().unwrap().pop(), Some(-3));
-  store.clear_middleware().await;
+  store.clear_middlewares().await;
 
   // Test async middleware: mw_returns_action.
   shared_object.lock().unwrap().clear();

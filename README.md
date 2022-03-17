@@ -2,8 +2,8 @@
 
 This library provides utility functions:
 
-1. Thread safe asynchronous Redux library (uses `tokio` to run subscribers and middleware in
-   parallel). The reducer functions are run single threaded.
+1. Thread safe asynchronous Redux library (uses Tokio to run subscribers and middleware in separate
+   tasks). The reducer functions are run in sequence (not in Tokio tasks).
 2. Non binary tree data structure inspired by memory arenas, that is thread safe and supports
    parallel tree walking.
 3. Functions to unwrap deeply nested objects inspired by Kotlin scope functions.
@@ -14,10 +14,10 @@ This library provides utility functions:
 > [developerlife.com](https://developerlife.com):
 >
 > 1. <https://developerlife.com/2022/02/24/rust-non-binary-tree/>.
-> 2. <https://developerlife.com/2022/03/12/rust-redux/>
->
-> You can also read all the Rust content on
-> [developerlife.com here](https://developerlife.com/category/Rust/). And the equivalent of this
+> 2. <https://developerlife.com/2022/03/12/rust-redux/>.
+
+> 💡 You can also read all the Rust content on
+> [developerlife.com here](https://developerlife.com/category/Rust/). Also, the equivalent of this
 > library is available for TypeScript and is called
 > [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/).
 
@@ -27,14 +27,22 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.6.7"
+r3bl_rs_utils = "0.6.8"
 ```
 
 ## redux
 
-`Store` is a thread safe asynchronous Redux library that uses `tokio` to run subscribers and
-middleware in parallel. The reducer functions are run single threaded. Here's an example of how to
-use it. Let's say we have the following action enum, and state struct.
+`Store` is thread safe and asynchronous (using Tokio). The middleware and subscribers will be run in
+asynchronously via Tokio tasks. But the reducer functions will be run in sequence (not in separate
+Tokio tasks).
+
+> ⚡ **Any functions or blocks that you write which uses the Redux library will have to be marked
+> `async` as well. And you will have to spawn the Tokio runtime by using the `#[tokio::main]` macro.
+> If you use the default runtime then Tokio will use multiple threads and its task stealing
+> implementation to give you parallel and concurrent behavior. You can also use the single threaded
+> runtime; its really up to you.**
+
+Here's an example of how to use it. Let's say we have the following action enum, and state struct.
 
 ```rust
 /// Action enum.

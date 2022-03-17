@@ -118,7 +118,7 @@ where
     self
   }
 
-  pub async fn clear_middleware(&mut self) -> &mut Store<S, A> {
+  pub async fn clear_middlewares(&mut self) -> &mut Store<S, A> {
     with_middleware_manager_w!(self, |it: &'a mut MiddlewareManager<A>| async {
       it.clear().await;
     });

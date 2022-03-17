@@ -79,6 +79,7 @@ where
     for action in resulting_actions.iter() {
       self.actually_dispatch_action(action).await;
     }
+
   }
 
   pub async fn actually_dispatch_action<'a>(
