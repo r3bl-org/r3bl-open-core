@@ -4,19 +4,22 @@ This library provides utility functions:
 
 1. Thread safe asynchronous Redux library (uses `tokio` to run subscribers and middleware in
    parallel). The reducer functions are run single threaded.
-2. Functions to unwrap deeply nested objects inspired by Kotlin scope functions.
-3. Non binary tree data structure inspired by memory arenas, that is thread safe and supports
+2. Non binary tree data structure inspired by memory arenas, that is thread safe and supports
    parallel tree walking.
+3. Functions to unwrap deeply nested objects inspired by Kotlin scope functions.
 4. Capabilities to make it easier to build TUIs (Text User Interface apps) in Rust.
 5. And more.
 
 > 💡 To learn more about this library, please read how it was built on
-> [developerlife.com](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
+> [developerlife.com](https://developerlife.com):
 >
-> - You can also read all the Rust content on developerlife.com
->   [here](https://developerlife.com/category/Rust/).
-> - The equivalent of this library is available for TypeScript and is called
->   [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/).
+> 1. <https://developerlife.com/2022/02/24/rust-non-binary-tree/>.
+> 2. <https://developerlife.com/2022/03/12/rust-redux/>
+>
+> You can also read all the Rust content on
+> [developerlife.com here](https://developerlife.com/category/Rust/). And the equivalent of this
+> library is available for TypeScript and is called
+> [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/).
 
 ## Usage
 
