@@ -28,6 +28,22 @@ use std::{
 pub type ReadGuarded<'a, T> = RwLockReadGuard<'a, T>;
 pub type WriteGuarded<'a, T> = RwLockWriteGuard<'a, T>;
 
+/// Macros to unwrap various locks.
+#[macro_export]
+macro_rules! unwrap {
+  (mutex from $arc_mutex: expr) => {
+    $arc_mutex.lock().unwrap()
+  };
+  (r_lock from $arc_rw_lock: expr) => {
+    $arc_rw_lock.read().unwrap()
+  };
+  (w_lock from $arc_rw_lock: expr) => {
+    $arc_rw_lock.write().unwrap()
+  };
+}
+
+// Functions to unwrap various locks.
+
 pub fn unwrap_arc_read_lock_and_call<T, F, R>(
   arc_lock_wrapped_value: &Arc<RwLock<T>>,
   receiver_fn: &mut F,
@@ -35,9 +51,9 @@ pub fn unwrap_arc_read_lock_and_call<T, F, R>(
 where
   F: FnMut(&T) -> R,
 {
-  let arc_copy = arc_lock_wrapped_value.clone();
-  let read_guard: ReadGuarded<T> = arc_copy.read().unwrap();
-  receiver_fn(&*read_guard)
+  let arc_clone = arc_lock_wrapped_value.clone();
+  let read_guarded: ReadGuarded<T> = unwrap!(r_lock from arc_clone);
+  receiver_fn(&read_guarded)
 }
 
 pub fn unwrap_arc_write_lock_and_call<T, F, R>(
@@ -47,10 +63,12 @@ pub fn unwrap_arc_write_lock_and_call<T, F, R>(
 where
   F: FnMut(&mut T) -> R,
 {
-  let arc_copy = arc_lock_wrapped_value.clone();
-  let mut write_guard: WriteGuarded<T> = arc_copy.write().unwrap();
-  receiver_fn(&mut write_guard)
+  let arc_clone = arc_lock_wrapped_value.clone();
+  let mut write_guarded: WriteGuarded<T> = unwrap!(w_lock from arc_clone);
+  receiver_fn(&mut write_guarded)
 }
+
+// Helper lambdas.
 
 pub fn with_mut<T, F, R>(
   arg: &mut T,
