@@ -15,7 +15,7 @@ imports_indent = "Visual"
 imports_layout = "HorizontalVertical"
 imports_granularity = "Crate"
 group_imports = "StdExternalCrate"
-reorder_imports = false
+reorder_imports = true
 
 # modules
 reorder_modules = false
