@@ -1,5 +1,24 @@
-r3bl_rs_utils repo - create manager of things macro & debug! decl macro:
-  ✔ Move from `macros` repo "debug!" decl macro @done(22-03-31 10:19)
-  ☐ Based on `macros` repo create the final "manager" of "things" fn like macro
+decl macros:
+  ✔ Move from macros repo debug! decl macro @done(22-03-31 10:19)
+
+proc macros setup:
+  ✔ make lib crate for proc macro @done(22-03-31 11:33)
+  ✔ make lib.rs file and setup directory layout @done(22-03-31 11:33)
+  ✔ link this lib to the main crate's Cargo.toml @done(22-03-31 11:33)
+  ✔ make manager-of-things.rs file and export it via lib.rs @done(22-03-31 11:33)
+
+builder.rs:
+  ✔ copy from macros repo to here @done(22-03-31 15:00)
+  ✔ update lib.rs to export it @done(22-03-31 15:00)
+
+manager_of_things.rs:
+  ☐ Based on macros repo create the final "manager" of "things" fn like macro
   ☐ Refactor existing Redux code to use them
-  ☐ Update developerlife.com articles on Redux and Proc Macros w/ this new stuff
+
+README:
+  ☐ decl: add debug! macro docs
+  ☐ proc-derive: add builder.rs docs
+  ☐ proc-function-like: add manager-of-things proc macro fn docs
+
+developerlife.com content:
+  ☐ Update articles on Redux and Proc Macros w/ this new stuff
