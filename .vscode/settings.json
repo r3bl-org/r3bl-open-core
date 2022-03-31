@@ -1,5 +1,5 @@
 {
-  "copyrightInserter.holder": "R3BL LLC",
-  "copyrightInserter.license": "apache",
+  "copyrighter.author": "R3BL LLC",
+  "copyrighter.license": "Apache2"
   "cSpell.words": ["isnt", "middlewares"]
 }

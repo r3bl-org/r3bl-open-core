@@ -1,0 +1,5 @@
+r3bl_rs_utils repo - create manager of things macro & debug! decl macro:
+  ✔ Move from `macros` repo "debug!" decl macro @done(22-03-31 10:19)
+  ☐ Based on `macros` repo create the final "manager" of "things" fn like macro
+  ☐ Refactor existing Redux code to use them
+  ☐ Update developerlife.com articles on Redux and Proc Macros w/ this new stuff

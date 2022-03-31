@@ -26,6 +26,7 @@ pub mod lazy;
 pub mod safe_unwrap;
 pub mod tty;
 pub mod type_utils;
+pub mod decl_macros;
 
 // Module re-exports:
 // <https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html#documentation-comments-as-tests>
@@ -37,3 +38,4 @@ pub use lazy::*;
 pub use safe_unwrap::*;
 pub use tty::*;
 pub use type_utils::*;
+pub use decl_macros::*;
