@@ -19,6 +19,7 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 #![allow(unused_macros)]
+#![allow(non_camel_case_types)]
 
 use core::panic;
 
@@ -46,9 +47,9 @@ use crate::utils::type_ext::TypeExt;
 /// For reference, here's an example from syn called
 /// [`lazy-static`](https://github.com/dtolnay/syn/blob/master/examples/lazy-static/lazy-static/src/lib.rs)
 pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-  let manager_of_thing_info: ManagerOfThingInfo = parse_macro_input!(input);
+  let manager_of_thing_info: ManagerOfThingSyntaxInfo = parse_macro_input!(input);
 
-  let ManagerOfThingInfo {
+  let ManagerOfThingSyntaxInfo {
     manager_name_ident,
     manager_ty,
     thing_ty,
@@ -68,8 +69,13 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     &manager_name_ident,
   );
 
-  let doc_str_impl_for_struct = format!(
-    " Generated impl for {}.",
+  let doc_str_impl_share_for_struct = format!(
+    " Generated SafeToShare impl for {}.",
+    &manager_name_ident,
+  );
+
+  let doc_str_impl_mutate_for_struct = format!(
+    " Generated SafeToMutate impl for {}.",
     &manager_name_ident,
   );
 
@@ -92,6 +98,11 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
   };
 
   quote! {
+    // Bring the following traits into scope.
+    use r3bl_rs_utils::utils::SafeToShare;
+    use r3bl_rs_utils::utils::SafeToMutate;
+
+    // Type aliases to make the code more readable.
     type ARC<T> = std::sync::Arc<T>;
     type RWLOCK<T> = tokio::sync::RwLock<T>;
     type RWLOCK_WG<'a, T> = tokio::sync::RwLockWriteGuard<'a, T>;
@@ -112,64 +123,70 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
       }
     }
 
-    #[doc = #doc_str_impl_for_struct]
-    impl #opt_generic_args #manager_ty #where_clause {
+    #[doc = #doc_str_impl_share_for_struct]
+    #[async_trait::async_trait]
+    impl #opt_generic_args r3bl_rs_utils::utils::SafeToShare<#thing_ty> for #manager_ty #where_clause {
       #[doc = #doc_str_setter_fn]
-      pub async fn set_value(
+      async fn set_value(
         &self,
         value: #thing_ty,
       ) {
         *self.#property_name_ident.write().await = value;
       }
 
-      pub async fn get_value<'a>(
+      async fn get_value<'a>(
         &'a self
       ) -> RWLOCK_RG<'a, #thing_ty> {
         self.#property_name_ident.read().await
       }
 
       #[doc = #doc_str_getter_fn]
-      pub fn get_ref(&self) -> ARC<RWLOCK<#thing_ty>> {
+      fn get_ref(&self) -> ARC<RWLOCK<#thing_ty>> {
         self.#property_name_ident.clone()
       }
+    }
 
+    #[doc = #doc_str_impl_mutate_for_struct]
+    #[async_trait::async_trait]
+    impl #opt_generic_args r3bl_rs_utils::utils::SafeToMutate<#thing_ty> for #manager_ty #where_clause {
       #[doc = #doc_str_static_lock_w]
-      pub async fn with_ref_get_value_w_lock<'a>(
+      async fn with_ref_get_value_w_lock<'a>(
         my_arc: &'a ARC<RWLOCK<#thing_ty>>
       ) -> RWLOCK_WG<'a, #thing_ty> {
         my_arc.write().await
       }
 
       #[doc = #doc_str_static_lock_r]
-      pub async fn with_ref_get_value_r_lock<'a>(
+      async fn with_ref_get_value_r_lock<'a>(
         my_arc: &'a ARC<RWLOCK<#thing_ty>>
       ) -> RWLOCK_RG<'a, #thing_ty> {
         my_arc.read().await
       }
 
       #[doc = #doc_str_static_with_arc_setter_fn]
-      pub async fn with_ref_set_value(
+      async fn with_ref_set_value(
         my_arc: &ARC<RWLOCK<#thing_ty>>,
         value: #thing_ty,
       ) {
         *my_arc.write().await = value;
       }
     }
+
   }
   .into()
 }
 
 /// Example of syntax to parse:
 /// ```no_run
-/// fn_macro_custom_syntax! {
-///   ThingManager<K, V>
+/// make_struct_safe_to_share_and_mutate! {
+///   named ThingManager<K, V>
 ///   where K: Send + Sync + 'static, V: Send + Sync + 'static
-///   for my_property_name
-///   as type std::collections::HashMap<K, V>
+///   containing my_property_name
+///   of_type std::collections::HashMap<K, V>
 /// }
 /// ```
 #[derive(Debug)]
-struct ManagerOfThingInfo {
+struct ManagerOfThingSyntaxInfo {
   manager_name_ident: Ident,
   manager_ty: Type,
   manager_ty_generic_args: Option<Punctuated<GenericArgument, Comma>>,
@@ -178,9 +195,19 @@ struct ManagerOfThingInfo {
   property_name_ident: Ident,
 }
 
+/// [syn custom keywords docs](https://docs.rs/syn/latest/syn/macro.custom_keyword.html)
+mod kw {
+  syn::custom_keyword!(named);
+  syn::custom_keyword!(containing);
+  syn::custom_keyword!(of_type);
+}
+
 /// [Parse docs](https://docs.rs/syn/latest/syn/parse/index.html)
-impl Parse for ManagerOfThingInfo {
+impl Parse for ManagerOfThingSyntaxInfo {
   fn parse(input: ParseStream) -> Result<Self> {
+    // 👀 "named" keyword.
+    input.parse::<kw::named>()?;
+
     // 👀 Manager Type, eg: `ThingManager<K,V>`.
     let manager_ty: Type = input.parse()?;
     let manager_ty_generic_args = match manager_ty.has_angle_bracketed_generic_args() {
@@ -211,13 +238,14 @@ impl Parse for ManagerOfThingInfo {
       }
     }
 
-    // 👀 use Ident, eg: `for my_map`.
-    input.parse::<Token![for]>()?;
+    // 👀 "containing" keyword.
+    input.parse::<kw::containing>()?;
+
+    // 👀 use Ident, eg: `my_map`.
     let property_name_ident: Ident = input.parse()?;
 
-    // 👀 type keyword.
-    input.parse::<Token![as]>()?;
-    input.parse::<Token![type]>()?;
+    // 👀 "of_type" keyword.
+    input.parse::<kw::of_type>()?;
 
     // 👀 Thing Type, eg: `std::collections::HashMap<K, V>`.
     let thing_ty: Type = input.parse()?;
@@ -229,7 +257,7 @@ impl Parse for ManagerOfThingInfo {
       panic!("Expected Type::Path::TypePath.segments to have an Ident")
     };
 
-    Ok(ManagerOfThingInfo {
+    Ok(ManagerOfThingSyntaxInfo {
       manager_ty_generic_args,
       manager_name_ident,
       manager_ty,

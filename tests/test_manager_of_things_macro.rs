@@ -27,15 +27,15 @@
 
 use std::collections::HashMap;
 
-use my_proc_macros_lib::make_a_manager_named;
+use my_proc_macros_lib::make_struct_safe_to_share_and_mutate;
 
 #[tokio::test]
 async fn test_custom_syntax_full() {
-  make_a_manager_named! {
-    MyMapManager<K, V>
+  make_struct_safe_to_share_and_mutate! {
+    named MyMapManager<K, V>
     where K: Default + Send + Sync + 'static, V: Default + Send + Sync + 'static
-    for my_map
-    as type std::collections::HashMap<K, V>
+    containing my_map
+    of_type std::collections::HashMap<K, V>
   }
 
   // Create an instance of the "manager" struct.
@@ -82,15 +82,25 @@ async fn test_custom_syntax_full() {
 
 #[tokio::test]
 async fn test_custom_syntax_no_where_clause() {
-  make_a_manager_named! {
-    StringMap<K, V>
+  make_struct_safe_to_share_and_mutate! {
+    named StringMap<K, V>
     // where is optional and is missing here.
-    for my_map
-    as type std::collections::HashMap<K, V>
+    containing my_map
+    of_type std::collections::HashMap<K, V>
   }
 
   let my_manager: StringMap<String, String> = StringMap::default();
   let locked_map = my_manager.my_map.read().await;
   assert_eq!(locked_map.len(), 0);
   drop(locked_map);
+}
+
+#[test]
+fn test_simple_expansion() {
+  make_struct_safe_to_share_and_mutate! {
+    named MyMapManager<K, V>
+    where K: Default + Send + Sync + 'static, V: Default + Send + Sync + 'static
+    containing my_map
+    of_type std::collections::HashMap<K, V>
+  }
 }

@@ -18,6 +18,7 @@ developerlife.com content:
   ✔ Update articles on Redux and Proc Macros w/ this new stuff @done(22-03-31 20:06)
 
 r3bl_rs_utils:
+  ✔ Extract 2 traits out of manager_of_things.rs & rename the macro @done(22-04-01 07:41)
   ☐ Identify where the new proc macro "manager" of "things" can be used
   ☐ Refactor existing Redux code to use macros above
   ☐ Publish a new version to crates.io

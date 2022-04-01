@@ -25,7 +25,7 @@ mod manager_of_things;
 mod builder;
 
 #[proc_macro]
-pub fn make_a_manager_named(input: TokenStream) -> TokenStream {
+pub fn make_struct_safe_to_share_and_mutate(input: TokenStream) -> TokenStream {
   manager_of_things::fn_proc_macro_impl(input)
 }
 
