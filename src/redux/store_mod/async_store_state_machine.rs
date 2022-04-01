@@ -14,11 +14,13 @@
  limitations under the License.
 */
 
-use core::{hash::Hash, fmt::Debug};
+use core::{fmt::Debug, hash::Hash};
+use my_core_lib::{SafeToMutate, SafeToShare};
+
 use crate::redux::{
-  SafeListManager, SafeSubscriberFnWrapper, SafeMiddlewareFnWrapper, ReducerFnWrapper,
-  iterate_over_vec_with_async, iterate_over_vec_with_results_async,
-  iterate_over_vec_with,
+  iterate_over_vec_with, iterate_over_vec_with_async,
+  iterate_over_vec_with_results_async, ReducerFnWrapper, SafeListManager,
+  SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper,
 };
 
 pub type ReducerManager<S, A> = SafeListManager<ReducerFnWrapper<S, A>>;
@@ -70,16 +72,19 @@ where
     action: &A,
   ) {
     // Run middleware & collect resulting actions.
-    let mut resulting_actions = self.middleware_runner(action).await;
+    let mut resulting_actions = self
+      .middleware_runner(action)
+      .await;
 
     // Add the original action to the resulting actions.
     resulting_actions.push(action.clone());
 
     // Dispatch the resulting actions.
     for action in resulting_actions.iter() {
-      self.actually_dispatch_action(action).await;
+      self
+        .actually_dispatch_action(action)
+        .await;
     }
-
   }
 
   pub async fn actually_dispatch_action<'a>(
@@ -87,17 +92,15 @@ where
     action: &A,
   ) {
     // Run reducers.
-    {
-      iterate_over_vec_with!(
-        self,
-        self.reducer_manager,
-        |reducer_fn: &'a ReducerFnWrapper<S, A>| {
-          let new_state = reducer_fn.invoke(&self.state, &action);
-          self.update_history(&new_state);
-          self.state = new_state;
-        }
-      );
+    let reducer_fn_list_ref = self.reducer_manager.get_ref();
+    let list_read_lock = reducer_fn_list_ref.read().await;
+    for item_fn in list_read_lock.iter() {
+      let new_state = item_fn.invoke(&self.state, &action);
+      self.update_history(&new_state);
+      self.state = new_state;
     }
+
+    // TODO: ⬇ cleanup stuff below ⬇
 
     // Run subscribers.
     {
@@ -106,7 +109,10 @@ where
         self,
         self.subscriber_manager,
         |subscriber_fn: &'a SafeSubscriberFnWrapper<S>| async move {
-          subscriber_fn.spawn(state_clone.clone()).await.unwrap();
+          subscriber_fn
+            .spawn(state_clone.clone())
+            .await
+            .unwrap();
         }
       );
     }
@@ -129,7 +135,9 @@ where
       }
     }
     if update_history {
-      self.history.push(new_state.clone())
+      self
+        .history
+        .push(new_state.clone())
     };
   }
 
@@ -143,7 +151,9 @@ where
     iterate_over_vec_with_results_async!(
       self.middleware_manager,
       |middleware_fn: &'a SafeMiddlewareFnWrapper<A>| async move {
-        middleware_fn.spawn(action.clone()).await
+        middleware_fn
+          .spawn(action.clone())
+          .await
       },
       return_vec
     );

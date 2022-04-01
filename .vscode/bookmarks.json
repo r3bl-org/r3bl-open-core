@@ -1,11 +1,26 @@
 {
 	"files": [
 		{
-			"path": "src/redux/store_mod/async_store.rs",
+			"path": "my_proc_macros_lib/src/manager_of_things.rs",
 			"bookmarks": [
 				{
-					"line": 70,
-					"column": 31,
+					"line": 179,
+					"column": 0,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/redux/store_mod/async_store_state_machine.rs",
+			"bookmarks": [
+				{
+					"line": 102,
+					"column": 4,
+					"label": ""
+				},
+				{
+					"line": 107,
+					"column": 6,
 					"label": ""
 				}
 			]
