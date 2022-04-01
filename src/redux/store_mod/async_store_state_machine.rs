@@ -95,24 +95,28 @@ where
     action: &A,
   ) {
     // Run reducers.
-    let reducer_fn_list = self.reducer_manager.get_ref();
-    let reducer_fn_list_r_lock = reducer_fn_list.read().await;
-    for reducer_fn in reducer_fn_list_r_lock.iter() {
-      let new_state = reducer_fn.invoke(&self.state, &action);
-      self.update_history(&new_state);
-      self.state = new_state;
-    }
+    {
+      let reducer_manager = self.reducer_manager.get_ref();
+      let reducer_manager_r_lock = reducer_manager.read().await;
+      for reducer_fn in reducer_manager_r_lock.iter() {
+        let new_state = reducer_fn.invoke(&self.state, &action);
+        self.update_history(&new_state);
+        self.state = new_state;
+      }
+    } // Automatically drop any held locks.
 
     // Run subscribers.
-    let state_clone = &self.get_state_clone();
-    let subscriber_fn_list = self.subscriber_manager.get_ref();
-    let subscriber_fn_list_r_lock = subscriber_fn_list.read().await;
-    for subscriber_fn in subscriber_fn_list_r_lock.iter() {
-      subscriber_fn
-        .spawn(state_clone.clone())
-        .await
-        .unwrap();
-    }
+    {
+      let state_clone = &self.get_state_clone();
+      let subscriber_fn_list = self.subscriber_manager.get_ref();
+      let subscriber_fn_list_r_lock = subscriber_fn_list.read().await;
+      for subscriber_fn in subscriber_fn_list_r_lock.iter() {
+        subscriber_fn
+          .spawn(state_clone.clone())
+          .await
+          .unwrap();
+      }
+    } // Automatically drop any held
   }
 
   // TODO: ⬇ cleanup stuff below ⬇
