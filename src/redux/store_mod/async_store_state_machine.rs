@@ -15,15 +15,12 @@
 */
 
 use core::{fmt::Debug, hash::Hash};
-use my_core_lib::{SafeToMutate, SafeToShare};
+use my_core_lib::SafeToShare;
 
-use crate::{
-  redux::{
-    iterate_over_vec_with, iterate_over_vec_with_async,
-    iterate_over_vec_with_results_async, ReducerFnWrapper, SafeListManager,
-    SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper,
-  },
-  utils::with,
+use crate::redux::{
+  iterate_over_list, iterate_over_list_async,
+  iterate_over_list_containing_results_async, ReducerFnWrapper, SafeListManager,
+  SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper,
 };
 
 pub type ReducerManager<S, A> = SafeListManager<ReducerFnWrapper<S, A>>;
@@ -96,30 +93,30 @@ where
   ) {
     // Run reducers.
     {
-      let reducer_manager = self.reducer_manager.get_ref();
-      let reducer_manager_r_lock = reducer_manager.read().await;
-      for reducer_fn in reducer_manager_r_lock.iter() {
-        let new_state = reducer_fn.invoke(&self.state, &action);
-        self.update_history(&new_state);
-        self.state = new_state;
-      }
-    } // Automatically drop any held locks.
+      iterate_over_list!(
+        self.reducer_manager,
+        |reducer_fn: &'a ReducerFnWrapper<S, A>| {
+          let new_state = reducer_fn.invoke(&self.state, &action);
+          self.update_history(&new_state);
+          self.state = new_state;
+        }
+      );
+    }
 
     // Run subscribers.
     {
       let state_clone = &self.get_state_clone();
-      let subscriber_fn_list = self.subscriber_manager.get_ref();
-      let subscriber_fn_list_r_lock = subscriber_fn_list.read().await;
-      for subscriber_fn in subscriber_fn_list_r_lock.iter() {
-        subscriber_fn
-          .spawn(state_clone.clone())
-          .await
-          .unwrap();
-      }
-    } // Automatically drop any held
+      iterate_over_list_async!(
+        self.subscriber_manager,
+        |subscriber_fn: &'a SafeSubscriberFnWrapper<S>| async move {
+          subscriber_fn
+            .spawn(state_clone.clone())
+            .await
+            .unwrap();
+        }
+      );
+    }
   }
-
-  // TODO: ⬇ cleanup stuff below ⬇
 
   // Update history.
   fn update_history(
@@ -151,7 +148,7 @@ where
     action: &A,
   ) -> Vec<A> {
     let mut return_vec = vec![];
-    iterate_over_vec_with_results_async!(
+    iterate_over_list_containing_results_async!(
       self.middleware_manager,
       |middleware_fn: &'a SafeMiddlewareFnWrapper<A>| async move {
         middleware_fn
