@@ -90,17 +90,16 @@ where
     self
   }
 
-  // TODO: 🎗️ modify below ⬇
   pub async fn clear_subscribers(&mut self) -> &mut Store<S, A> {
-    with_subscriber_manager_w!(
-      self,
-      |it: &'a mut SubscriberManager<S>| async {
-        it.clear().await;
-      }
-    );
+    Store::with_ref_get_value_w_lock(&self.get_ref())
+      .await
+      .subscriber_manager
+      .clear()
+      .await;
     self
   }
 
+  // TODO: 🎗️ modify below ⬇
   pub async fn add_middleware(
     &mut self,
     middleware_fn: SafeMiddlewareFnWrapper<A>,
