@@ -68,21 +68,17 @@ where
     })
   }
 
-  // 🎗️ TODO: clean up stuff below
-
   pub async fn dispatch(
     &self,
     action: &A,
   ) {
-    with_self_w!(
-      self,
-      |state_manager: &'a mut StoreStateMachine<S, A>| async {
-        state_manager
-          .dispatch_action(action)
-          .await;
-      }
-    );
+    Store::with_ref_get_value_w_lock(&self.get_ref())
+      .await
+      .dispatch_action(action)
+      .await;
   }
+
+  // TODO: 🎗️ modify below ⬇
 
   pub async fn add_subscriber(
     &mut self,
