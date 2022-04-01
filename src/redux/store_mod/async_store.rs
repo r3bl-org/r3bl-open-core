@@ -14,37 +14,25 @@
  limitations under the License.
 */
 
+use my_proc_macros_lib::make_struct_safe_to_share_and_mutate;
 use std::{fmt::Debug, hash::Hash, sync::Arc};
-use tokio::{task::JoinHandle, sync::RwLock};
+use tokio::{sync::RwLock, task::JoinHandle};
 
 use crate::redux::{
-  StoreStateMachine, async_subscriber::SafeSubscriberFnWrapper,
-  async_middleware::SafeMiddlewareFnWrapper, sync_reducers::ReducerFnWrapper,
-  ReducerManager, MiddlewareManager, SubscriberManager,
+  async_middleware::SafeMiddlewareFnWrapper, async_subscriber::SafeSubscriberFnWrapper,
+  sync_reducers::ReducerFnWrapper, MiddlewareManager, ReducerManager, StoreStateMachine,
+  SubscriberManager,
 };
 
 /// Thread safe and async Redux store (using [`tokio`]). This is built atop [`StoreData`] (which
 /// should not be used directly).
-pub struct Store<S, A>
-where
-  S: Sync + Send + 'static,
-  A: Sync + Send + 'static,
-{
-  store_state_machine_arc: SafeStoreStateMachineWrapper<S, A>,
-}
-
 pub type SafeStoreStateMachineWrapper<S, A> = Arc<RwLock<StoreStateMachine<S, A>>>;
 
-impl<S, A> Default for Store<S, A>
-where
-  S: Sync + Send + 'static + Default,
-  A: Sync + Send + 'static,
-{
-  fn default() -> Self {
-    Self {
-      store_state_machine_arc: Arc::new(RwLock::new(Default::default())),
-    }
-  }
+make_struct_safe_to_share_and_mutate! {
+  named Store<S, A>
+  where S: Sync + Send + 'static + Default, A: Sync + Send + 'static
+  containing store_state_machine_arc
+  of_type StoreStateMachine<S, A>
 }
 
 impl<'a, S, A> Store<S, A>
@@ -52,30 +40,34 @@ where
   S: Default + Clone + PartialEq + Debug + Hash + Sync + Send + 'static,
   A: Clone + Sync + Send + 'static,
 {
-  pub fn new() -> Self {
-    Self::default()
-  }
-
-  pub fn get(&self) -> SafeStoreStateMachineWrapper<S, A> {
-    self.store_state_machine_arc.clone()
-  }
-
   pub async fn get_state(&self) -> S {
-    self.get().read().await.state.clone()
+    self
+      .get_ref()
+      .read()
+      .await
+      .state
+      .clone()
   }
 
   pub async fn get_history(&self) -> Vec<S> {
-    self.get().read().await.history.clone()
+    self
+      .get_ref()
+      .read()
+      .await
+      .history
+      .clone()
   }
 
   pub async fn dispatch_spawn(
     &self,
     action: A,
   ) -> JoinHandle<()> {
-    let my_arc = self.get();
+    let my_arc = self.get_ref();
     tokio::spawn(async move {
       let mut state_manager = my_arc.write().await;
-      state_manager.dispatch_action(&action).await;
+      state_manager
+        .dispatch_action(&action)
+        .await;
     })
   }
 
@@ -86,7 +78,9 @@ where
     with_self_w!(
       self,
       |state_manager: &'a mut StoreStateMachine<S, A>| async {
-        state_manager.dispatch_action(action).await;
+        state_manager
+          .dispatch_action(action)
+          .await;
       }
     );
   }
@@ -95,16 +89,22 @@ where
     &mut self,
     subscriber_fn: SafeSubscriberFnWrapper<S>,
   ) -> &mut Store<S, A> {
-    with_subscriber_manager_w!(self, |it: &'a mut SubscriberManager<S>| async {
-      it.push(subscriber_fn).await;
-    });
+    with_subscriber_manager_w!(
+      self,
+      |it: &'a mut SubscriberManager<S>| async {
+        it.push(subscriber_fn).await;
+      }
+    );
     self
   }
 
   pub async fn clear_subscribers(&mut self) -> &mut Store<S, A> {
-    with_subscriber_manager_w!(self, |it: &'a mut SubscriberManager<S>| async {
-      it.clear().await;
-    });
+    with_subscriber_manager_w!(
+      self,
+      |it: &'a mut SubscriberManager<S>| async {
+        it.clear().await;
+      }
+    );
     self
   }
 
@@ -112,16 +112,22 @@ where
     &mut self,
     middleware_fn: SafeMiddlewareFnWrapper<A>,
   ) -> &mut Store<S, A> {
-    with_middleware_manager_w!(self, |it: &'a mut MiddlewareManager<A>| async {
-      it.push(middleware_fn).await;
-    });
+    with_middleware_manager_w!(
+      self,
+      |it: &'a mut MiddlewareManager<A>| async {
+        it.push(middleware_fn).await;
+      }
+    );
     self
   }
 
   pub async fn clear_middlewares(&mut self) -> &mut Store<S, A> {
-    with_middleware_manager_w!(self, |it: &'a mut MiddlewareManager<A>| async {
-      it.clear().await;
-    });
+    with_middleware_manager_w!(
+      self,
+      |it: &'a mut MiddlewareManager<A>| async {
+        it.clear().await;
+      }
+    );
     self
   }
 
@@ -129,9 +135,12 @@ where
     &mut self,
     reducer_fn: ReducerFnWrapper<S, A>,
   ) -> &mut Store<S, A> {
-    with_reducer_manager_w!(self, |it: &'a mut ReducerManager<S, A>| async {
-      it.push(reducer_fn).await;
-    });
+    with_reducer_manager_w!(
+      self,
+      |it: &'a mut ReducerManager<S, A>| async {
+        it.push(reducer_fn).await;
+      }
+    );
     self
   }
 }
@@ -140,7 +149,7 @@ where
 
 macro_rules! with_subscriber_manager_w {
   ($this:ident, $lambda:expr) => {
-    let arc = $this.get();
+    let arc = $this.get_ref();
     let mut my_state_machine_w = arc.write().await;
     $lambda(&mut my_state_machine_w.subscriber_manager).await;
   };
@@ -148,7 +157,7 @@ macro_rules! with_subscriber_manager_w {
 
 macro_rules! with_middleware_manager_w {
   ($this:ident, $lambda:expr) => {
-    let arc = $this.get();
+    let arc = $this.get_ref();
     let mut my_state_machine_w = arc.write().await;
     $lambda(&mut my_state_machine_w.middleware_manager).await;
   };
@@ -156,7 +165,7 @@ macro_rules! with_middleware_manager_w {
 
 macro_rules! with_reducer_manager_w {
   ($this:ident, $lambda:expr) => {
-    let arc = $this.get();
+    let arc = $this.get_ref();
     let mut my_state_machine_w = arc.write().await;
     $lambda(&mut my_state_machine_w.reducer_manager).await;
   };
@@ -164,13 +173,13 @@ macro_rules! with_reducer_manager_w {
 
 macro_rules! with_self_w {
   ($this:ident, $lambda:expr) => {
-    let arc = $this.get();
+    let arc = $this.get_ref();
     let mut my_state_machine_w = arc.write().await;
     $lambda(&mut my_state_machine_w).await;
   };
 }
 
-pub(crate) use with_self_w;
-pub(crate) use with_reducer_manager_w;
 pub(crate) use with_middleware_manager_w;
+pub(crate) use with_reducer_manager_w;
+pub(crate) use with_self_w;
 pub(crate) use with_subscriber_manager_w;

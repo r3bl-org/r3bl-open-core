@@ -1,0 +1,24 @@
+{
+	"files": [
+		{
+			"path": "src/redux/async_middleware.rs",
+			"bookmarks": [
+				{
+					"line": 32,
+					"column": 0,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/redux/sync_reducers.rs",
+			"bookmarks": [
+				{
+					"line": 23,
+					"column": 0,
+					"label": ""
+				}
+			]
+		}
+	]
+}

@@ -19,7 +19,7 @@ use std::{
   marker::{Send, Sync},
   sync::Arc,
 };
-use tokio::{task::JoinHandle, sync::RwLock};
+use tokio::{sync::RwLock, task::JoinHandle};
 
 /// Excellent resources on lifetimes and returning references:
 /// 1. https://stackoverflow.com/questions/59442080/rust-pass-a-function-reference-to-threads

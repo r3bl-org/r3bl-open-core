@@ -17,6 +17,7 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+#[derive(Debug)]
 pub struct SafeListManager<T>
 where
   T: Sync + Send + 'static,

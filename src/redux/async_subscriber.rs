@@ -15,7 +15,7 @@
 */
 
 use std::sync::Arc;
-use tokio::{task::JoinHandle, sync::RwLock};
+use tokio::{sync::RwLock, task::JoinHandle};
 
 /// Subscriber function.
 pub type SafeSubscriberFn<S> = Arc<RwLock<dyn FnMut(S) + Sync + Send>>;
@@ -23,6 +23,16 @@ pub type SafeSubscriberFn<S> = Arc<RwLock<dyn FnMut(S) + Sync + Send>>;
 #[derive(Clone)]
 pub struct SafeSubscriberFnWrapper<S> {
   fn_mut: SafeSubscriberFn<S>,
+}
+
+impl<S> std::fmt::Debug for SafeSubscriberFnWrapper<S> {
+  fn fmt(
+    &self,
+    f: &mut std::fmt::Formatter<'_>,
+  ) -> std::fmt::Result {
+    f.debug_struct("SafeSubscriberFnWrapper")
+      .finish()
+  }
 }
 
 impl<S> SafeSubscriberFnWrapper<S>

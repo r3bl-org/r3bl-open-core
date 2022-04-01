@@ -109,8 +109,7 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     type RWLOCK_RG<'a, T> = tokio::sync::RwLockReadGuard<'a, T>;
 
     #[doc = #doc_str_struct]
-    #[derive(Debug)]
-    struct #manager_ty #where_clause {
+    pub struct #manager_ty #where_clause {
       #property_name_ident: ARC<RWLOCK<#thing_ty>>
     }
 
