@@ -1,6 +1,16 @@
 {
 	"files": [
 		{
+			"path": "src/redux/store_mod/async_store.rs",
+			"bookmarks": [
+				{
+					"line": 70,
+					"column": 31,
+					"label": ""
+				}
+			]
+		},
+		{
 			"path": "src/redux/async_middleware.rs",
 			"bookmarks": [
 				{

@@ -14,9 +14,12 @@
  limitations under the License.
 */
 
+//! Thread safe and async Redux store (using [`tokio`]). This is built atop [`StoreData`] (which
+//! should not be used directly).
+
 use my_proc_macros_lib::make_struct_safe_to_share_and_mutate;
-use std::{fmt::Debug, hash::Hash, sync::Arc};
-use tokio::{sync::RwLock, task::JoinHandle};
+use std::{fmt::Debug, hash::Hash};
+use tokio::task::JoinHandle;
 
 use crate::redux::{
   async_middleware::SafeMiddlewareFnWrapper, async_subscriber::SafeSubscriberFnWrapper,
@@ -24,14 +27,10 @@ use crate::redux::{
   SubscriberManager,
 };
 
-/// Thread safe and async Redux store (using [`tokio`]). This is built atop [`StoreData`] (which
-/// should not be used directly).
-pub type SafeStoreStateMachineWrapper<S, A> = Arc<RwLock<StoreStateMachine<S, A>>>;
-
 make_struct_safe_to_share_and_mutate! {
   named Store<S, A>
   where S: Sync + Send + 'static + Default, A: Sync + Send + 'static
-  containing store_state_machine_arc
+  containing my_store_state_machine
   of_type StoreStateMachine<S, A>
 }
 
@@ -42,8 +41,7 @@ where
 {
   pub async fn get_state(&self) -> S {
     self
-      .get_ref()
-      .read()
+      .get_value()
       .await
       .state
       .clone()
@@ -51,8 +49,7 @@ where
 
   pub async fn get_history(&self) -> Vec<S> {
     self
-      .get_ref()
-      .read()
+      .get_value()
       .await
       .history
       .clone()
@@ -62,14 +59,16 @@ where
     &self,
     action: A,
   ) -> JoinHandle<()> {
-    let my_arc = self.get_ref();
+    let my_ref = self.get_ref();
     tokio::spawn(async move {
-      let mut state_manager = my_arc.write().await;
-      state_manager
+      Store::with_ref_get_value_w_lock(&my_ref)
+        .await
         .dispatch_action(&action)
         .await;
     })
   }
+
+  // 🎗️ TODO: clean up stuff below
 
   pub async fn dispatch(
     &self,
