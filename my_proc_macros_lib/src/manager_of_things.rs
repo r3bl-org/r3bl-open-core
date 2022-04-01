@@ -77,12 +77,12 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
   let doc_str_getter_fn = " Get a clone of the arc. This can be passed around safely, \
                            instead of passing the manager instance itself.";
   let doc_str_static_lock_w = " 🔒 Static method that allow you to indirectly access \
-                               the property via `Arc` produced by `get_arc()`.";
+                               the property via `Arc` produced by `get_ref()`.";
   let doc_str_static_lock_r = " 🔒 Static method that allow you to indirectly access \
-                               the property via `Arc` produced by `get_arc()`.";
+                               the property via `Arc` produced by `get_ref()`.";
   let doc_str_static_with_arc_setter_fn = " Static method that allow you to indirectly \
                                            mutate the property via `Arc` produced by \
-                                           `get_arc()`.";
+                                           `get_ref()`.";
 
   let opt_generic_args = if manager_ty_generic_args.is_some() {
     let args = manager_ty_generic_args.unwrap();
@@ -115,34 +115,40 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     #[doc = #doc_str_impl_for_struct]
     impl #opt_generic_args #manager_ty #where_clause {
       #[doc = #doc_str_setter_fn]
-      pub async fn set_value_of_wrapped_thing(
+      pub async fn set_value(
         &self,
         value: #thing_ty,
       ) {
         *self.#property_name_ident.write().await = value;
       }
 
+      pub async fn get_value<'a>(
+        &'a self
+      ) -> RWLOCK_RG<'a, #thing_ty> {
+        self.#property_name_ident.read().await
+      }
+
       #[doc = #doc_str_getter_fn]
-      pub fn get_arc(&self) -> ARC<RWLOCK<#thing_ty>> {
+      pub fn get_ref(&self) -> ARC<RWLOCK<#thing_ty>> {
         self.#property_name_ident.clone()
       }
 
       #[doc = #doc_str_static_lock_w]
-      pub async fn with_arc_get_locked_thing_w<'a>(
+      pub async fn with_ref_get_value_w_lock<'a>(
         my_arc: &'a ARC<RWLOCK<#thing_ty>>
       ) -> RWLOCK_WG<'a, #thing_ty> {
         my_arc.write().await
       }
 
       #[doc = #doc_str_static_lock_r]
-      pub async fn with_arc_get_locked_thing_r<'a>(
+      pub async fn with_ref_get_value_r_lock<'a>(
         my_arc: &'a ARC<RWLOCK<#thing_ty>>
       ) -> RWLOCK_RG<'a, #thing_ty> {
         my_arc.read().await
       }
 
       #[doc = #doc_str_static_with_arc_setter_fn]
-      pub async fn with_arc_set_value_of_wrapped_thing(
+      pub async fn with_ref_set_value(
         my_arc: &ARC<RWLOCK<#thing_ty>>,
         value: #thing_ty,
       ) {

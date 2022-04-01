@@ -12,13 +12,17 @@ builder.rs:
   ✔ update lib.rs to export it @done(22-03-31 15:00)
 
 manager_of_things.rs:
-  ☐ Based on macros repo create the final "manager" of "things" fn like macro
-  ☐ Refactor existing Redux code to use them
+  ✔ Based on macros repo create the final "manager" of "things" fn like macro @done(22-03-31 18:41)
+
+developerlife.com content:
+  ✔ Update articles on Redux and Proc Macros w/ this new stuff @done(22-03-31 20:06)
+
+r3bl_rs_utils:
+  ☐ Identify where the new proc macro "manager" of "things" can be used
+  ☐ Refactor existing Redux code to use macros above
+  ☐ Publish a new version to crates.io
 
 README:
   ☐ decl: add debug! macro docs
   ☐ proc-derive: add builder.rs docs
-  ☐ proc-function-like: add manager-of-things proc macro fn docs
-
-developerlife.com content:
-  ☐ Update articles on Redux and Proc Macros w/ this new stuff
+  ☐ proc-fn-like: add manager-of-things proc macro fn docs

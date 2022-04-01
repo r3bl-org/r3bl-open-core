@@ -45,24 +45,35 @@ async fn test_custom_syntax_full() {
   // mutex guard can be dropped and the tests won't deadlock.
 
   // 1. Test that `my_map` is created.
-  let locked_map = my_manager.my_map.read().await;
+  let locked_map = my_manager.get_value().await;
   assert_eq!(locked_map.len(), 0);
   drop(locked_map);
 
-  // 2. Test that `get_arc()` => works
+  // 2. Test that `get_ref()` => works
   //    - 🔒 `with_arc_get_locked_thing()`
-  //    - 🔒 `with_arc_get_locked_thing_r()`
-  //    - `with_arc_set_value_of_wrapped_thing()`
-  let arc_clone = my_manager.get_arc();
+  //    - 🔒 `with_ref_ge_lock_readable()`
+  //    - `with_ref_set_value()`
+  let arc_clone = my_manager.get_ref();
 
-  let locked_map = MyMapManager::with_arc_get_locked_thing_w(&arc_clone).await;
+  let locked_map = MyMapManager::with_ref_get_value_w_lock(&arc_clone).await;
   assert_eq!(locked_map.len(), 0);
   drop(locked_map); // 🔒 Prevents deadlock below.
 
   let map: HashMap<String, String> = HashMap::new();
-  MyMapManager::with_arc_set_value_of_wrapped_thing(&arc_clone, map).await;
+  MyMapManager::with_ref_set_value(&arc_clone, map).await;
   assert_eq!(
-    MyMapManager::with_arc_get_locked_thing_r(&arc_clone)
+    MyMapManager::with_ref_get_value_r_lock(&arc_clone)
+      .await
+      .len(),
+    0
+  );
+
+  let map: HashMap<String, String> = HashMap::new();
+  my_manager.set_value(map).await;
+  assert_eq!(
+    my_manager
+      .my_map
+      .read()
       .await
       .len(),
     0
@@ -78,33 +89,8 @@ async fn test_custom_syntax_no_where_clause() {
     as type std::collections::HashMap<K, V>
   }
 
-  // Create an instance of the "manager" struct.
   let my_manager: StringMap<String, String> = StringMap::default();
-
-  // 🔒 Each of the locked objects need to be wrapped in a block, or call `drop()` so the
-  // mutex guard can be dropped and the tests won't deadlock.
-
-  // 1. Test that `my_map` is created.
   let locked_map = my_manager.my_map.read().await;
   assert_eq!(locked_map.len(), 0);
   drop(locked_map);
-
-  // 2. Test that `get_arc()` => works
-  //    - 🔒 `with_arc_get_locked_thing()`
-  //    - 🔒 `with_arc_get_locked_thing_r()`
-  //    - `with_arc_set_value_of_wrapped_thing()`
-  let arc_clone = my_manager.get_arc();
-
-  let locked_map = StringMap::with_arc_get_locked_thing_w(&arc_clone).await;
-  assert_eq!(locked_map.len(), 0);
-  drop(locked_map); // 🔒 Prevents deadlock below.
-
-  let map: HashMap<String, String> = HashMap::new();
-  StringMap::with_arc_set_value_of_wrapped_thing(&arc_clone, map).await;
-  assert_eq!(
-    StringMap::with_arc_get_locked_thing_r(&arc_clone)
-      .await
-      .len(),
-    0
-  );
 }
