@@ -22,7 +22,10 @@ type RWLOCK<T> = tokio::sync::RwLock<T>;
 type RWLOCK_WG<'a, T> = tokio::sync::RwLockWriteGuard<'a, T>;
 type RWLOCK_RG<'a, T> = tokio::sync::RwLockReadGuard<'a, T>;
 
-/// [Async trait docs](https://github.com/dtolnay/async-trait)
+/// This trait marks a type as being safe to share across threads (parallel safe) and
+/// tasks (async safe).
+///
+/// [Async trait docs](https://github.com/dtolnay/async-trait).
 #[async_trait::async_trait]
 pub trait SafeToShare<T> {
   async fn set_value(
@@ -33,7 +36,10 @@ pub trait SafeToShare<T> {
   fn get_ref(&self) -> ARC<RWLOCK<T>>;
 }
 
-/// [Async trait docs](https://github.com/dtolnay/async-trait)
+/// This trait marks a type as being safe to mutate (interior mutability) across threads
+/// (parallel safe) and tasks (async safe).
+///
+/// [Async trait docs](https://github.com/dtolnay/async-trait).
 #[async_trait::async_trait]
 pub trait SafeToMutate<T> {
   async fn with_ref_get_value_w_lock<'a>(my_arc: &'a ARC<RWLOCK<T>>) -> RWLOCK_WG<'a, T>;

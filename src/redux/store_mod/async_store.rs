@@ -14,17 +14,13 @@
  limitations under the License.
 */
 
-//! Thread safe and async Redux store (using [`tokio`]). This is built atop [`StoreData`] (which
-//! should not be used directly).
-
 use my_proc_macros_lib::make_struct_safe_to_share_and_mutate;
 use std::{fmt::Debug, hash::Hash};
 use tokio::task::JoinHandle;
 
 use crate::redux::{
   async_middleware::SafeMiddlewareFnWrapper, async_subscriber::SafeSubscriberFnWrapper,
-  sync_reducers::ReducerFnWrapper, MiddlewareManager, ReducerManager, StoreStateMachine,
-  SubscriberManager,
+  sync_reducers::ReducerFnWrapper, StoreStateMachine,
 };
 
 make_struct_safe_to_share_and_mutate! {
@@ -34,6 +30,8 @@ make_struct_safe_to_share_and_mutate! {
   of_type StoreStateMachine<S, A>
 }
 
+/// Thread safe and async Redux store (using [`tokio`]). This is built atop [`StoreData`] (which
+/// should not be used directly).
 impl<'a, S, A> Store<S, A>
 where
   S: Default + Clone + PartialEq + Debug + Hash + Sync + Send + 'static,
@@ -132,43 +130,3 @@ where
     self
   }
 }
-
-// TODO: 🎗️ modify below ⬇
-// Macros.
-
-macro_rules! with_subscriber_manager_w {
-  ($this:ident, $lambda:expr) => {
-    let arc = $this.get_ref();
-    let mut my_state_machine_w = arc.write().await;
-    $lambda(&mut my_state_machine_w.subscriber_manager).await;
-  };
-}
-
-macro_rules! with_middleware_manager_w {
-  ($this:ident, $lambda:expr) => {
-    let arc = $this.get_ref();
-    let mut my_state_machine_w = arc.write().await;
-    $lambda(&mut my_state_machine_w.middleware_manager).await;
-  };
-}
-
-macro_rules! with_reducer_manager_w {
-  ($this:ident, $lambda:expr) => {
-    let arc = $this.get_ref();
-    let mut my_state_machine_w = arc.write().await;
-    $lambda(&mut my_state_machine_w.reducer_manager).await;
-  };
-}
-
-macro_rules! with_self_w {
-  ($this:ident, $lambda:expr) => {
-    let arc = $this.get_ref();
-    let mut my_state_machine_w = arc.write().await;
-    $lambda(&mut my_state_machine_w).await;
-  };
-}
-
-pub(crate) use with_middleware_manager_w;
-pub(crate) use with_reducer_manager_w;
-pub(crate) use with_self_w;
-pub(crate) use with_subscriber_manager_w;
