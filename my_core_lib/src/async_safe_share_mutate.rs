@@ -37,7 +37,8 @@ pub trait SafeToShare<T> {
 }
 
 /// This trait marks a type as being safe to mutate (interior mutability) across threads
-/// (parallel safe) and tasks (async safe).
+/// (parallel safe) and tasks (async safe). These are just convenience static methods. You
+/// can simply use the `read()` and `write()` methods directly on the `Arc` reference.
 ///
 /// [Async trait docs](https://github.com/dtolnay/async-trait).
 #[async_trait::async_trait]

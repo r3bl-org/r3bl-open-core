@@ -59,7 +59,8 @@ where
   ) -> JoinHandle<()> {
     let my_ref = self.get_ref();
     tokio::spawn(async move {
-      Store::with_ref_get_value_w_lock(&my_ref)
+      my_ref
+        .write()
         .await
         .dispatch_action(&action)
         .await;
@@ -70,7 +71,9 @@ where
     &self,
     action: &A,
   ) {
-    Store::with_ref_get_value_w_lock(&self.get_ref())
+    self
+      .get_ref()
+      .write()
       .await
       .dispatch_action(action)
       .await;
@@ -80,7 +83,9 @@ where
     &mut self,
     subscriber_fn: SafeSubscriberFnWrapper<S>,
   ) -> &mut Store<S, A> {
-    Store::with_ref_get_value_w_lock(&self.get_ref())
+    self
+      .get_ref()
+      .write()
       .await
       .subscriber_manager
       .push(subscriber_fn)
@@ -89,7 +94,9 @@ where
   }
 
   pub async fn clear_subscribers(&mut self) -> &mut Store<S, A> {
-    Store::with_ref_get_value_w_lock(&self.get_ref())
+    self
+      .get_ref()
+      .write()
       .await
       .subscriber_manager
       .clear()
@@ -101,7 +108,9 @@ where
     &mut self,
     middleware_fn: SafeMiddlewareFnWrapper<A>,
   ) -> &mut Store<S, A> {
-    Store::with_ref_get_value_w_lock(&self.get_ref())
+    self
+      .get_ref()
+      .write()
       .await
       .middleware_manager
       .push(middleware_fn)
@@ -110,7 +119,9 @@ where
   }
 
   pub async fn clear_middlewares(&mut self) -> &mut Store<S, A> {
-    Store::with_ref_get_value_w_lock(&self.get_ref())
+    self
+      .get_ref()
+      .write()
       .await
       .middleware_manager
       .clear()
@@ -122,7 +133,9 @@ where
     &mut self,
     reducer_fn: ReducerFnWrapper<S, A>,
   ) -> &mut Store<S, A> {
-    Store::with_ref_get_value_w_lock(&self.get_ref())
+    self
+      .get_ref()
+      .write()
       .await
       .reducer_manager
       .push(reducer_fn)
