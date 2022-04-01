@@ -92,13 +92,17 @@ where
     action: &A,
   ) {
     // Run reducers.
-    let reducer_fn_list_ref = self.reducer_manager.get_ref();
-    let list_read_lock = reducer_fn_list_ref.read().await;
-    for item_fn in list_read_lock.iter() {
-      let new_state = item_fn.invoke(&self.state, &action);
-      self.update_history(&new_state);
-      self.state = new_state;
-    }
+    self
+      .reducer_manager
+      .get_ref()
+      .read()
+      .await
+      .iter()
+      .for_each(|item_fn| {
+        let new_state = item_fn.invoke(&self.state, &action);
+        self.update_history(&new_state);
+        self.state = new_state;
+      });
 
     // TODO: ⬇ cleanup stuff below ⬇
 

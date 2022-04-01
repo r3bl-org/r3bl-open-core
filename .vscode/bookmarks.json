@@ -14,12 +14,12 @@
 			"path": "src/redux/store_mod/async_store_state_machine.rs",
 			"bookmarks": [
 				{
-					"line": 102,
+					"line": 106,
 					"column": 4,
 					"label": ""
 				},
 				{
-					"line": 107,
+					"line": 111,
 					"column": 6,
 					"label": ""
 				}
