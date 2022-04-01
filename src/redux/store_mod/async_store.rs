@@ -78,21 +78,19 @@ where
       .await;
   }
 
-  // TODO: 🎗️ modify below ⬇
-
   pub async fn add_subscriber(
     &mut self,
     subscriber_fn: SafeSubscriberFnWrapper<S>,
   ) -> &mut Store<S, A> {
-    with_subscriber_manager_w!(
-      self,
-      |it: &'a mut SubscriberManager<S>| async {
-        it.push(subscriber_fn).await;
-      }
-    );
+    Store::with_ref_get_value_w_lock(&self.get_ref())
+      .await
+      .subscriber_manager
+      .push(subscriber_fn)
+      .await;
     self
   }
 
+  // TODO: 🎗️ modify below ⬇
   pub async fn clear_subscribers(&mut self) -> &mut Store<S, A> {
     with_subscriber_manager_w!(
       self,
