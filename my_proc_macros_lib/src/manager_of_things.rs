@@ -54,6 +54,7 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     thing_ty,
     manager_ty_generic_args,
     where_clause,
+    property_name_ident,
   } = manager_of_thing_info;
 
   let doc_str_struct = format!(
@@ -72,16 +73,16 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     &manager_name_ident,
   );
 
-  let doc_str_setter_fn = " Directly mutate `wrapped_thing`.";
+  let doc_str_setter_fn = " Directly mutate the property.";
   let doc_str_getter_fn = " Get a clone of the arc. This can be passed around safely, \
                            instead of passing the manager instance itself.";
   let doc_str_static_lock_w = " 🔒 Static method that allow you to indirectly access \
-                               the wrapped_thing via `Arc` produced by `get_arc()`.";
+                               the property via `Arc` produced by `get_arc()`.";
   let doc_str_static_lock_r = " 🔒 Static method that allow you to indirectly access \
-                               the wrapped_thing via `Arc` produced by `get_arc()`.";
+                               the property via `Arc` produced by `get_arc()`.";
   let doc_str_static_with_arc_setter_fn = " Static method that allow you to indirectly \
-                                           mutate the wrapped_thing via `Arc` produced \
-                                           by `get_arc()`.";
+                                           mutate the property via `Arc` produced by \
+                                           `get_arc()`.";
 
   let opt_generic_args = if manager_ty_generic_args.is_some() {
     let args = manager_ty_generic_args.unwrap();
@@ -99,14 +100,14 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     #[doc = #doc_str_struct]
     #[derive(Debug)]
     struct #manager_ty #where_clause {
-      wrapped_thing: ARC<RWLOCK<#thing_ty>>
+      #property_name_ident: ARC<RWLOCK<#thing_ty>>
     }
 
     #[doc = #doc_str_default_impl_for_struct]
     impl #opt_generic_args Default for #manager_ty #where_clause {
       fn default() -> #manager_ty {
         #manager_name_ident {
-          wrapped_thing: ARC::new(RWLOCK::new(Default::default())),
+          #property_name_ident: ARC::new(RWLOCK::new(Default::default())),
         }
       }
     }
@@ -118,12 +119,12 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
         &self,
         value: #thing_ty,
       ) {
-        *self.wrapped_thing.write().await = value;
+        *self.#property_name_ident.write().await = value;
       }
 
       #[doc = #doc_str_getter_fn]
       pub fn get_arc(&self) -> ARC<RWLOCK<#thing_ty>> {
-        self.wrapped_thing.clone()
+        self.#property_name_ident.clone()
       }
 
       #[doc = #doc_str_static_lock_w]
@@ -157,7 +158,8 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 /// fn_macro_custom_syntax! {
 ///   ThingManager<K, V>
 ///   where K: Send + Sync + 'static, V: Send + Sync + 'static
-///   type std::collections::HashMap<K, V>
+///   for my_property_name
+///   as type std::collections::HashMap<K, V>
 /// }
 /// ```
 #[derive(Debug)]
@@ -167,6 +169,7 @@ struct ManagerOfThingInfo {
   manager_ty_generic_args: Option<Punctuated<GenericArgument, Comma>>,
   where_clause: Option<WhereClause>,
   thing_ty: Type,
+  property_name_ident: Ident,
 }
 
 /// [Parse docs](https://docs.rs/syn/latest/syn/parse/index.html)
@@ -202,12 +205,18 @@ impl Parse for ManagerOfThingInfo {
       }
     }
 
+    // 👀 use Ident, eg: `for my_map`.
+    input.parse::<Token![for]>()?;
+    let property_name_ident: Ident = input.parse()?;
+
     // 👀 type keyword.
+    input.parse::<Token![as]>()?;
     input.parse::<Token![type]>()?;
 
     // 👀 Thing Type, eg: `std::collections::HashMap<K, V>`.
     let thing_ty: Type = input.parse()?;
 
+    // Done parsing. Extract the manager name.
     let manager_name_ident = if manager_ty.has_ident() {
       manager_ty.get_ident().unwrap()
     } else {
@@ -220,6 +229,7 @@ impl Parse for ManagerOfThingInfo {
       manager_ty,
       thing_ty,
       where_clause,
+      property_name_ident,
     })
   }
 }

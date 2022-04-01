@@ -32,39 +32,37 @@ use my_proc_macros_lib::make_a_manager_named;
 #[tokio::test]
 async fn test_custom_syntax_full() {
   make_a_manager_named! {
-    ThingManager<K, V>
+    MyMapManager<K, V>
     where K: Default + Send + Sync + 'static, V: Default + Send + Sync + 'static
-    type std::collections::HashMap<K, V>
+    for my_map
+    as type std::collections::HashMap<K, V>
   }
 
-  // Create an manager_instance of the "manager" struct.
-  let manager_instance: ThingManager<String, String> = ThingManager::default();
+  // Create an instance of the "manager" struct.
+  let my_manager: MyMapManager<String, String> = MyMapManager::default();
 
   // 🔒 Each of the locked objects need to be wrapped in a block, or call `drop()` so the
   // mutex guard can be dropped and the tests won't deadlock.
 
-  // 1. Test that `wrapped_thing` is created.
-  let locked_thing = manager_instance
-    .wrapped_thing
-    .read()
-    .await;
-  assert_eq!(locked_thing.len(), 0);
-  drop(locked_thing);
+  // 1. Test that `my_map` is created.
+  let locked_map = my_manager.my_map.read().await;
+  assert_eq!(locked_map.len(), 0);
+  drop(locked_map);
 
   // 2. Test that `get_arc()` => works
   //    - 🔒 `with_arc_get_locked_thing()`
   //    - 🔒 `with_arc_get_locked_thing_r()`
   //    - `with_arc_set_value_of_wrapped_thing()`
-  let arc_clone = manager_instance.get_arc();
+  let arc_clone = my_manager.get_arc();
 
-  let locked_thing = ThingManager::with_arc_get_locked_thing_w(&arc_clone).await;
-  assert_eq!(locked_thing.len(), 0);
-  drop(locked_thing); // 🔒 Prevents deadlock below.
+  let locked_map = MyMapManager::with_arc_get_locked_thing_w(&arc_clone).await;
+  assert_eq!(locked_map.len(), 0);
+  drop(locked_map); // 🔒 Prevents deadlock below.
 
   let map: HashMap<String, String> = HashMap::new();
-  ThingManager::with_arc_set_value_of_wrapped_thing(&arc_clone, map).await;
+  MyMapManager::with_arc_set_value_of_wrapped_thing(&arc_clone, map).await;
   assert_eq!(
-    ThingManager::with_arc_get_locked_thing_r(&arc_clone)
+    MyMapManager::with_arc_get_locked_thing_r(&arc_clone)
       .await
       .len(),
     0
@@ -75,32 +73,31 @@ async fn test_custom_syntax_full() {
 async fn test_custom_syntax_no_where_clause() {
   make_a_manager_named! {
     StringMap<K, V>
-    type std::collections::HashMap<K, V>
+    // where is optional and is missing here.
+    for my_map
+    as type std::collections::HashMap<K, V>
   }
 
-  // Create an manager_instance of the "manager" struct.
-  let manager_instance: StringMap<String, String> = StringMap::default();
+  // Create an instance of the "manager" struct.
+  let my_manager: StringMap<String, String> = StringMap::default();
 
   // 🔒 Each of the locked objects need to be wrapped in a block, or call `drop()` so the
   // mutex guard can be dropped and the tests won't deadlock.
 
-  // 1. Test that `wrapped_thing` is created.
-  let locked_thing = manager_instance
-    .wrapped_thing
-    .read()
-    .await;
-  assert_eq!(locked_thing.len(), 0);
-  drop(locked_thing);
+  // 1. Test that `my_map` is created.
+  let locked_map = my_manager.my_map.read().await;
+  assert_eq!(locked_map.len(), 0);
+  drop(locked_map);
 
   // 2. Test that `get_arc()` => works
   //    - 🔒 `with_arc_get_locked_thing()`
   //    - 🔒 `with_arc_get_locked_thing_r()`
   //    - `with_arc_set_value_of_wrapped_thing()`
-  let arc_clone = manager_instance.get_arc();
+  let arc_clone = my_manager.get_arc();
 
-  let locked_thing = StringMap::with_arc_get_locked_thing_w(&arc_clone).await;
-  assert_eq!(locked_thing.len(), 0);
-  drop(locked_thing); // 🔒 Prevents deadlock below.
+  let locked_map = StringMap::with_arc_get_locked_thing_w(&arc_clone).await;
+  assert_eq!(locked_map.len(), 0);
+  drop(locked_map); // 🔒 Prevents deadlock below.
 
   let map: HashMap<String, String> = HashMap::new();
   StringMap::with_arc_set_value_of_wrapped_thing(&arc_clone, map).await;
