@@ -17,10 +17,13 @@
 use core::{fmt::Debug, hash::Hash};
 use my_core_lib::{SafeToMutate, SafeToShare};
 
-use crate::redux::{
-  iterate_over_vec_with, iterate_over_vec_with_async,
-  iterate_over_vec_with_results_async, ReducerFnWrapper, SafeListManager,
-  SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper,
+use crate::{
+  redux::{
+    iterate_over_vec_with, iterate_over_vec_with_async,
+    iterate_over_vec_with_results_async, ReducerFnWrapper, SafeListManager,
+    SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper,
+  },
+  utils::with,
 };
 
 pub type ReducerManager<S, A> = SafeListManager<ReducerFnWrapper<S, A>>;
@@ -92,35 +95,27 @@ where
     action: &A,
   ) {
     // Run reducers.
-    self
-      .reducer_manager
-      .get_ref()
-      .read()
-      .await
-      .iter()
-      .for_each(|reducer_fn| {
-        let new_state = reducer_fn.invoke(&self.state, &action);
-        self.update_history(&new_state);
-        self.state = new_state;
-      });
-
-    // TODO: ⬇ cleanup stuff below ⬇
+    let reducer_fn_list = self.reducer_manager.get_ref();
+    let reducer_fn_list_r_lock = reducer_fn_list.read().await;
+    for reducer_fn in reducer_fn_list_r_lock.iter() {
+      let new_state = reducer_fn.invoke(&self.state, &action);
+      self.update_history(&new_state);
+      self.state = new_state;
+    }
 
     // Run subscribers.
-    {
-      let state_clone = &self.get_state_clone();
-      iterate_over_vec_with_async!(
-        self,
-        self.subscriber_manager,
-        |subscriber_fn: &'a SafeSubscriberFnWrapper<S>| async move {
-          subscriber_fn
-            .spawn(state_clone.clone())
-            .await
-            .unwrap();
-        }
-      );
+    let state_clone = &self.get_state_clone();
+    let subscriber_fn_list = self.subscriber_manager.get_ref();
+    let subscriber_fn_list_r_lock = subscriber_fn_list.read().await;
+    for subscriber_fn in subscriber_fn_list_r_lock.iter() {
+      subscriber_fn
+        .spawn(state_clone.clone())
+        .await
+        .unwrap();
     }
   }
+
+  // TODO: ⬇ cleanup stuff below ⬇
 
   // Update history.
   fn update_history(

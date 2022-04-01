@@ -11,21 +11,6 @@
 			]
 		},
 		{
-			"path": "src/redux/store_mod/async_store_state_machine.rs",
-			"bookmarks": [
-				{
-					"line": 106,
-					"column": 4,
-					"label": ""
-				},
-				{
-					"line": 111,
-					"column": 6,
-					"label": ""
-				}
-			]
-		},
-		{
 			"path": "src/redux/async_middleware.rs",
 			"bookmarks": [
 				{
