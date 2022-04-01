@@ -98,8 +98,8 @@ where
       .read()
       .await
       .iter()
-      .for_each(|item_fn| {
-        let new_state = item_fn.invoke(&self.state, &action);
+      .for_each(|reducer_fn| {
+        let new_state = reducer_fn.invoke(&self.state, &action);
         self.update_history(&new_state);
         self.state = new_state;
       });
