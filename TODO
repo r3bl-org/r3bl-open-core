@@ -26,11 +26,15 @@ r3bl_rs_utils:
   ✔ Move the 2 core traits into my_core_lib crate @done(22-04-01 10:42)
 
 use the macros:
-  ☐ Identify where the new proc macro "manager" of "things" can be used
-  ☐ Refactor existing Redux code to use macros above
-  ☐ Publish a new version to crates.io
+  ✔ Identify where the new proc macro "manager" of "things" can be used @done(22-04-01 15:03)
+  ✔ Refactor existing Redux code to use macros above @done(22-04-01 15:03)
+  ☐ sync_reducer.rs
+  ☐ async_middleware.rs
+  ☐ async_subscriber.rs
 
 README:
   ☐ decl: add debug! macro docs
   ☐ proc-derive: add builder.rs docs
   ☐ proc-fn-like: add manager-of-things proc macro fn docs
+  ☐ Publish a new version to crates.io
+  ☐ developerlife.com update Rust & Redux article
