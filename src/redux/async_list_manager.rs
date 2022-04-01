@@ -17,13 +17,13 @@
 use my_proc_macros_lib::make_struct_safe_to_share_and_mutate;
 
 make_struct_safe_to_share_and_mutate! {
-  named SafeListManager<T>
+  named SafeList<T>
   where T: Sync + Send + 'static
   containing list
   of_type Vec<T>
 }
 
-impl<T> SafeListManager<T>
+impl<T> SafeList<T>
 where
   T: Sync + Send + 'static,
 {

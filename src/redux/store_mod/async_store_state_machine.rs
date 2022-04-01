@@ -18,14 +18,9 @@ use core::{fmt::Debug, hash::Hash};
 use my_core_lib::SafeToShare;
 
 use crate::redux::{
-  iterate_over_list, iterate_over_list_async,
-  iterate_over_list_containing_results_async, ReducerFnWrapper, SafeListManager,
-  SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper,
+  iterate_over_list, iterate_over_list_async, iterate_over_list_containing_results_async,
+  ReducerFnWrapper, SafeList, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper,
 };
-
-pub type ReducerManager<S, A> = SafeListManager<ReducerFnWrapper<S, A>>;
-pub type MiddlewareManager<A> = SafeListManager<SafeMiddlewareFnWrapper<A>>;
-pub type SubscriberManager<S> = SafeListManager<SafeSubscriberFnWrapper<S>>;
 
 pub struct StoreStateMachine<S, A>
 where
@@ -34,9 +29,9 @@ where
 {
   pub state: S,
   pub history: Vec<S>,
-  pub subscriber_manager: SubscriberManager<S>,
-  pub middleware_manager: MiddlewareManager<A>,
-  pub reducer_manager: ReducerManager<S, A>,
+  pub subscriber_fn_list: SafeList<SafeSubscriberFnWrapper<S>>,
+  pub middleware_fn_list: SafeList<SafeMiddlewareFnWrapper<A>>,
+  pub reducer_fn_list: SafeList<ReducerFnWrapper<S, A>>,
 }
 
 impl<S, A> Default for StoreStateMachine<S, A>
@@ -48,9 +43,9 @@ where
     StoreStateMachine {
       state: Default::default(),
       history: vec![],
-      subscriber_manager: Default::default(),
-      middleware_manager: Default::default(),
-      reducer_manager: Default::default(),
+      subscriber_fn_list: Default::default(),
+      middleware_fn_list: Default::default(),
+      reducer_fn_list: Default::default(),
     }
   }
 }
@@ -94,7 +89,7 @@ where
     // Run reducers.
     {
       iterate_over_list!(
-        self.reducer_manager,
+        self.reducer_fn_list,
         |reducer_fn: &'a ReducerFnWrapper<S, A>| {
           let new_state = reducer_fn.invoke(&self.state, &action);
           self.update_history(&new_state);
@@ -107,7 +102,7 @@ where
     {
       let state_clone = &self.get_state_clone();
       iterate_over_list_async!(
-        self.subscriber_manager,
+        self.subscriber_fn_list,
         |subscriber_fn: &'a SafeSubscriberFnWrapper<S>| async move {
           subscriber_fn
             .spawn(state_clone.clone())
@@ -149,7 +144,7 @@ where
   ) -> Vec<A> {
     let mut return_vec = vec![];
     iterate_over_list_containing_results_async!(
-      self.middleware_manager,
+      self.middleware_fn_list,
       |middleware_fn: &'a SafeMiddlewareFnWrapper<A>| async move {
         middleware_fn
           .spawn(action.clone())

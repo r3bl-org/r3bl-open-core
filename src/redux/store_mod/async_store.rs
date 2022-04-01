@@ -87,7 +87,7 @@ where
       .get_ref()
       .write()
       .await
-      .subscriber_manager
+      .subscriber_fn_list
       .push(subscriber_fn)
       .await;
     self
@@ -98,7 +98,7 @@ where
       .get_ref()
       .write()
       .await
-      .subscriber_manager
+      .subscriber_fn_list
       .clear()
       .await;
     self
@@ -112,7 +112,7 @@ where
       .get_ref()
       .write()
       .await
-      .middleware_manager
+      .middleware_fn_list
       .push(middleware_fn)
       .await;
     self
@@ -123,7 +123,7 @@ where
       .get_ref()
       .write()
       .await
-      .middleware_manager
+      .middleware_fn_list
       .clear()
       .await;
     self
@@ -137,7 +137,7 @@ where
       .get_ref()
       .write()
       .await
-      .reducer_manager
+      .reducer_fn_list
       .push(reducer_fn)
       .await;
     self
