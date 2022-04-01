@@ -27,7 +27,6 @@ pub mod safe_unwrap;
 pub mod tty;
 pub mod type_utils;
 pub mod decl_macros;
-pub mod async_safe_share_mutate;
 
 // Module re-exports:
 // <https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html#documentation-comments-as-tests>
@@ -40,4 +39,3 @@ pub use safe_unwrap::*;
 pub use tty::*;
 pub use type_utils::*;
 pub use decl_macros::*;
-pub use async_safe_share_mutate::*;

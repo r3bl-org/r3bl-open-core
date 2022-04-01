@@ -15,16 +15,17 @@ repository = "https://github.com/r3bl-org/r3bl-rs-utils"
 documentation = "https://docs.rs/r3bl_rs_utils"
 homepage = "https://r3bl.com"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-# https://stackoverflow.com/a/57767413/2085356
-
 [lib]
 name = "r3bl_rs_utils"
 path = "src/lib.rs"
 
+# Documentation for crate layout.
+# [General crate layout](https://stackoverflow.com/a/57767413/2085356)
+# [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
+
 [dependencies]
 my_proc_macros_lib = { path = "my_proc_macros_lib" }
+my_core_lib = { path = "my_core_lib" }
 
 rand = "0.8.4"
 ansi_term = "0.12.1"

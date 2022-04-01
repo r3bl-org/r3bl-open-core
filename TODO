@@ -19,6 +19,13 @@ developerlife.com content:
 
 r3bl_rs_utils:
   ✔ Extract 2 traits out of manager_of_things.rs & rename the macro @done(22-04-01 07:41)
+  ✔ Create my_core_lib crate @done(22-04-01 10:41)
+  ✔ Add my_core_lib crate as dep for: @done(22-04-01 10:42)
+    ✔ public crate (r3bl_rs_utils), @done(22-04-01 10:42)
+    ✔ proc macro crate (my_proc_macros_lib) @done(22-04-01 10:42)
+  ✔ Move the 2 core traits into my_core_lib crate @done(22-04-01 10:42)
+
+use the macros:
   ☐ Identify where the new proc macro "manager" of "things" can be used
   ☐ Refactor existing Redux code to use macros above
   ☐ Publish a new version to crates.io
