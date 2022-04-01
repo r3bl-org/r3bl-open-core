@@ -99,27 +99,24 @@ where
     self
   }
 
-  // TODO: 🎗️ modify below ⬇
   pub async fn add_middleware(
     &mut self,
     middleware_fn: SafeMiddlewareFnWrapper<A>,
   ) -> &mut Store<S, A> {
-    with_middleware_manager_w!(
-      self,
-      |it: &'a mut MiddlewareManager<A>| async {
-        it.push(middleware_fn).await;
-      }
-    );
+    Store::with_ref_get_value_w_lock(&self.get_ref())
+      .await
+      .middleware_manager
+      .push(middleware_fn)
+      .await;
     self
   }
 
   pub async fn clear_middlewares(&mut self) -> &mut Store<S, A> {
-    with_middleware_manager_w!(
-      self,
-      |it: &'a mut MiddlewareManager<A>| async {
-        it.clear().await;
-      }
-    );
+    Store::with_ref_get_value_w_lock(&self.get_ref())
+      .await
+      .middleware_manager
+      .clear()
+      .await;
     self
   }
 
@@ -127,16 +124,16 @@ where
     &mut self,
     reducer_fn: ReducerFnWrapper<S, A>,
   ) -> &mut Store<S, A> {
-    with_reducer_manager_w!(
-      self,
-      |it: &'a mut ReducerManager<S, A>| async {
-        it.push(reducer_fn).await;
-      }
-    );
+    Store::with_ref_get_value_w_lock(&self.get_ref())
+      .await
+      .reducer_manager
+      .push(reducer_fn)
+      .await;
     self
   }
 }
 
+// TODO: 🎗️ modify below ⬇
 // Macros.
 
 macro_rules! with_subscriber_manager_w {
