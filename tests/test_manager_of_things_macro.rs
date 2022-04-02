@@ -27,7 +27,7 @@
 
 use std::collections::HashMap;
 
-use my_proc_macros_lib::make_struct_safe_to_share_and_mutate;
+use r3bl_rs_utils_macro::make_struct_safe_to_share_and_mutate;
 
 #[tokio::test]
 async fn test_custom_syntax_full() {

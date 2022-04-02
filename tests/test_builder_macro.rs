@@ -27,7 +27,7 @@
 //! To watch for test output run this script:
 //! `./cargo-watch-one-test.fish test_builder_macro`
 
-use my_proc_macros_lib::Builder;
+use r3bl_rs_utils_macro::Builder;
 
 #[test]
 fn test_proc_macro_struct_and_enum() {

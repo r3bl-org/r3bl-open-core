@@ -33,8 +33,8 @@ use the macros:
   ✔ async_subscriber.rs @done(22-04-01 20:46)
 
 README:
-  ☐ decl: add debug! macro docs
-  ☐ proc-derive: add builder.rs docs
-  ☐ proc-fn-like: add manager-of-things proc macro fn docs
+  ✔ decl: add debug! macro docs @done(22-04-01 21:03)
+  ✔ proc-derive: add builder.rs docs @done(22-04-01 21:03)
+  ✔ proc-fn-like: add manager-of-things proc macro fn docs @done(22-04-01 21:03)
   ☐ Publish a new version to crates.io
   ☐ developerlife.com update Rust & Redux article

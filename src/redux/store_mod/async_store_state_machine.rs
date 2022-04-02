@@ -15,7 +15,7 @@
 */
 
 use core::{fmt::Debug, hash::Hash};
-use my_core_lib::SafeToShare;
+use r3bl_rs_utils_core::SafeToShare;
 
 use crate::redux::{
   iterate_over_list, iterate_over_list_async, iterate_over_list_containing_results_async,

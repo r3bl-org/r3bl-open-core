@@ -99,8 +99,8 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 
   quote! {
     // Bring the following traits into scope.
-    use my_core_lib::SafeToShare;
-    use my_core_lib::SafeToMutate;
+    use r3bl_rs_utils_core::SafeToShare;
+    use r3bl_rs_utils_core::SafeToMutate;
 
     // Type aliases to make the code more readable.
     type ARC<T> = std::sync::Arc<T>;
@@ -124,7 +124,7 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 
     #[doc = #doc_str_impl_share_for_struct]
     #[async_trait::async_trait]
-    impl #opt_generic_args my_core_lib::SafeToShare<#thing_ty> for #manager_ty #where_clause {
+    impl #opt_generic_args r3bl_rs_utils_core::SafeToShare<#thing_ty> for #manager_ty #where_clause {
       #[doc = #doc_str_setter_fn]
       async fn set_value(
         &self,
@@ -147,7 +147,7 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 
     #[doc = #doc_str_impl_mutate_for_struct]
     #[async_trait::async_trait]
-    impl #opt_generic_args my_core_lib::SafeToMutate<#thing_ty> for #manager_ty #where_clause {
+    impl #opt_generic_args r3bl_rs_utils_core::SafeToMutate<#thing_ty> for #manager_ty #where_clause {
       #[doc = #doc_str_static_lock_w]
       async fn with_ref_get_value_w_lock<'a>(
         my_arc: &'a ARC<RWLOCK<#thing_ty>>

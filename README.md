@@ -2,23 +2,26 @@
 
 This library provides utility functions:
 
-1. Thread safe asynchronous Redux library (uses Tokio to run subscribers and middleware in separate
-   tasks). The reducer functions are run in sequence (not in Tokio tasks).
-2. Non binary tree data structure inspired by memory arenas, that is thread safe and supports
-   parallel tree walking.
-3. Functions to unwrap deeply nested objects inspired by Kotlin scope functions.
-4. Capabilities to make it easier to build TUIs (Text User Interface apps) in Rust.
-5. And more.
+1. Thread safe asynchronous Redux library (uses Tokio to run subscribers and middleware in
+   separate tasks). The reducer functions are run in sequence (not in Tokio tasks).
+2. Declarative macros, and procedural macros (both function like and derive) to avoid
+   having to write lots of boilerplate code for many common (and complex) tasks.
+3. Non binary tree data structure inspired by memory arenas, that is thread safe and
+   supports parallel tree walking.
+4. Functions to unwrap deeply nested objects inspired by Kotlin scope functions.
+5. Capabilities to make it easier to build TUIs (Text User Interface apps) in Rust. This
+   is currently experimental and is being actively developed.
 
 > 💡 To learn more about this library, please read how it was built on
 > [developerlife.com](https://developerlife.com):
 >
-> 1. <https://developerlife.com/2022/02/24/rust-non-binary-tree/>.
-> 2. <https://developerlife.com/2022/03/12/rust-redux/>.
+> 1. <https://developerlife.com/2022/02/24/rust-non-binary-tree/>
+> 2. <https://developerlife.com/2022/03/12/rust-redux/>
+> 3. <https://developerlife.com/2022/03/30/rust-proc-macro/>
 
 > 💡 You can also read all the Rust content on
-> [developerlife.com here](https://developerlife.com/category/Rust/). Also, the equivalent of this
-> library is available for TypeScript and is called
+> [developerlife.com here](https://developerlife.com/category/Rust/). Also, the equivalent
+> of this library is available for TypeScript and is called
 > [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/).
 
 ## Usage
@@ -27,22 +30,23 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.6.9"
+r3bl_rs_utils = "0.7.0"
 ```
 
 ## redux
 
-`Store` is thread safe and asynchronous (using Tokio). The middleware and subscribers will be run in
-asynchronously via Tokio tasks. But the reducer functions will be run in sequence (not in separate
-Tokio tasks).
+`Store` is thread safe and asynchronous (using Tokio). The middleware and subscribers will
+be run in asynchronously via Tokio tasks. But the reducer functions will be run in
+sequence (not in separate Tokio tasks).
 
-> ⚡ **Any functions or blocks that you write which uses the Redux library will have to be marked
-> `async` as well. And you will have to spawn the Tokio runtime by using the `#[tokio::main]` macro.
-> If you use the default runtime then Tokio will use multiple threads and its task stealing
-> implementation to give you parallel and concurrent behavior. You can also use the single threaded
-> runtime; its really up to you.**
+> ⚡ **Any functions or blocks that you write which uses the Redux library will have to be
+> marked `async` as well. And you will have to spawn the Tokio runtime by using the
+> `#[tokio::main]` macro. If you use the default runtime then Tokio will use multiple
+> threads and its task stealing implementation to give you parallel and concurrent
+> behavior. You can also use the single threaded runtime; its really up to you.**
 
-Here's an example of how to use it. Let's say we have the following action enum, and state struct.
+Here's an example of how to use it. Let's say we have the following action enum, and state
+struct.
 
 ```rust
 /// Action enum.
@@ -79,10 +83,10 @@ let reducer_fn = |state: &State, action: &Action| match action {
 };
 ```
 
-Here's an example of an async subscriber function (which are run in parallel after an action is
-dispatched). The following example uses a lambda that captures a shared object. This is a pretty
-common pattern that you might encounter when creating subscribers that share state in your enclosing
-block or scope.
+Here's an example of an async subscriber function (which are run in parallel after an
+action is dispatched). The following example uses a lambda that captures a shared object.
+This is a pretty common pattern that you might encounter when creating subscribers that
+share state in your enclosing block or scope.
 
 ```rust
 // This shared object is used to collect results from the subscriber function & test it later.
@@ -97,10 +101,10 @@ let subscriber_fn = with(shared_object.clone(), |it| {
 });
 ```
 
-Here are two types of async middleware functions. One that returns an action (which will get
-dispatched once this middleware returns), and another that doesn't return anything (like a logger
-middleware that just dumps the current action to the console). Note that both these functions share
-the `shared_object` reference from above.
+Here are two types of async middleware functions. One that returns an action (which will
+get dispatched once this middleware returns), and another that doesn't return anything
+(like a logger middleware that just dumps the current action to the console). Note that
+both these functions share the `shared_object` reference from above.
 
 ```rust
 // This middleware function is curried to capture a reference to the shared object.
@@ -132,7 +136,8 @@ let mw_returns_action = with(shared_object.clone(), |it| {
 });
 ```
 
-Here's how you can setup a store with the above reducer, middleware, and subscriber functions.
+Here's how you can setup a store with the above reducer, middleware, and subscriber
+functions.
 
 ```rust
 // Setup store.
@@ -147,9 +152,9 @@ store
 ```
 
 Finally here's an example of how to dispatch an action in a test. You can dispatch actions
-asynchronously using `dispatch_spawn()` which is "fire and forget" meaning that the caller won't
-block or wait for the `dispatch_spawn()` to return. Then you can dispatch actions synchronously if
-that's what you would like using `dispatch()`.
+asynchronously using `dispatch_spawn()` which is "fire and forget" meaning that the caller
+won't block or wait for the `dispatch_spawn()` to return. Then you can dispatch actions
+synchronously if that's what you would like using `dispatch()`.
 
 ```rust
 // Test reducer and subscriber by dispatching Add and AddPop actions asynchronously.
@@ -170,11 +175,107 @@ assert_eq!(store.get_state().stack.len(), 0);
 assert_eq!(shared_object.lock().unwrap().pop(), Some(-4));
 ```
 
+## Macros
+
+### Declarative
+
+There are quite a few declarative macros that you will find in the library. They tend to
+be used internally in the implementation of the library itself. Here are some that are
+actually externally exposed via `#[macro_export]`.
+
+#### debug!
+
+This is a really simple macro to make it effortless to use the color console logger. It
+takes an identifier as an argument. It simply dumps an arrow symbol, followed by the
+identifier (stringified) along with the value that it contains (using the `Debug`
+formatter). All of the output is colorized for easy readability. You can use it like this.
+
+```rust
+let my_string = "Hello World!";
+debug!(my_string);
+```
+
+### Procedural
+
+All the procedural macros are organized in 3 crates
+[using an internal or core crate](https://developerlife.com/2022/03/30/rust-proc-macro/#add-an-internal-or-core-crate):
+the public crate, an internal or core crate, and the proc macro crate.
+
+#### #[derive(Builder)]
+
+This derive macro makes it easy to generate builders when annotating a `struct` or `enum`.
+It generates It has full support for generics. It can be used like this.
+
+```rust
+#[derive(Builder)]
+struct Point<X, Y>
+where
+  X: std::fmt::Display + Clone,
+  Y: std::fmt::Display + Clone,
+{
+  x: X,
+  y: Y,
+}
+
+let my_pt: Point<i32, i32> = PointBuilder::new()
+  .set_x(1 as i32)
+  .set_y(2 as i32)
+  .build();
+
+assert_eq!(my_pt.x, 1);
+assert_eq!(my_pt.y, 2);
+```
+
+#### make_struct_safe_to_share_and_mutate!
+
+This function like macro (with custom syntax) makes it easy to manage this pattern (which
+we call the "manager" of "things").
+
+> 🪄 You can read all about it
+> [here](https://developerlife.com/2022/03/12/rust-redux/#of-things-and-their-managers).
+
+The idea is to make it easy to manage shareability and interior mutability of a struct.
+
+1. This struct gets wrapped in a `RwLock` for thread safety.
+2. That is then wrapped inside an `Arc` so we can share it across threads.
+3. Additionally it works w/ Tokio so that it is totally async. It also fully supports
+   generics and trait bounds w/ an optional `where` clause.
+
+Here's a very simple usage:
+
+```rust
+make_struct_safe_to_share_and_mutate! {
+  named MyMapManager<K, V>
+  where K: Default + Send + Sync + 'static, V: Default + Send + Sync + 'static
+  containing my_map
+  of_type std::collections::HashMap<K, V>
+}
+```
+
+Here's an async example.
+
+```rust
+#[tokio::test]
+async fn test_custom_syntax_no_where_clause() {
+  make_struct_safe_to_share_and_mutate! {
+    named StringMap<K, V>
+    // where is optional and is missing here.
+    containing my_map
+    of_type std::collections::HashMap<K, V>
+  }
+
+  let my_manager: StringMap<String, String> = StringMap::default();
+  let locked_map = my_manager.my_map.read().await;
+  assert_eq!(locked_map.len(), 0);
+  drop(locked_map);
+}
+```
+
 ## tree_memory_arena (non-binary tree data structure)
 
 [`Arena`] and [`MTArena`] types are the implementation of a
-[non-binary tree](https://en.wikipedia.org/wiki/Binary_tree#Non-binary_trees) data structure that is
-inspired by [memory arenas](https://en.wikipedia.org/wiki/Memory_arena).
+[non-binary tree](https://en.wikipedia.org/wiki/Binary_tree#Non-binary_trees) data
+structure that is inspired by [memory arenas](https://en.wikipedia.org/wiki/Memory_arena).
 
 Here's a simple example of how to use the [`Arena`] type:
 
@@ -291,17 +392,17 @@ let arena = MTArena::<String>::new();
 }
 ```
 
-> 📜 There are more complex ways of using [`Arena`] and [`MTArena`]. Please look at these extensive
-> integration tests that put them thru their paces
+> 📜 There are more complex ways of using [`Arena`] and [`MTArena`]. Please look at these
+> extensive integration tests that put them thru their paces
 > [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
 
 ## utils
 
 ### LazyMemoValues
 
-This struct allows users to create a lazy hash map. A function must be provided that computes the
-values when they are first requested. These values are cached for the lifetime this struct. Here's
-an example.
+This struct allows users to create a lazy hash map. A function must be provided that
+computes the values when they are first requested. These values are cached for the
+lifetime this struct. Here's an example.
 
 ```rust
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
@@ -374,10 +475,10 @@ Here's a list of functions available in this module:
 
 ### safe_unwrap
 
-Functions that make it easy to unwrap a value safely. These functions are provided to improve the
-ergonomics of using wrapped values in Rust. Examples of wrapped values are `<Arc<RwLock<T>>`, and
-`<Option>`. These functions are inspired by Kotlin scope functions & TypeScript expression based
-language library which can be found
+Functions that make it easy to unwrap a value safely. These functions are provided to
+improve the ergonomics of using wrapped values in Rust. Examples of wrapped values are
+`<Arc<RwLock<T>>`, and `<Option>`. These functions are inspired by Kotlin scope functions
+& TypeScript expression based language library which can be found
 [here on `r3bl-ts-utils`](https://github.com/r3bl-org/r3bl-ts-utils).
 
 Here are some examples.
@@ -419,7 +520,8 @@ Here's a list of type aliases provided for better readability:
 
 ### color_text
 
-ANSI colorized text <https://github.com/ogham/rust-ansi-term> helper methods. Here's an example.
+ANSI colorized text <https://github.com/ogham/rust-ansi-term> helper methods. Here's an
+example.
 
 ```rust
 use r3bl_rs_utils::utils::{
@@ -450,10 +552,10 @@ Here's a list of functions available in this module:
 
 ## tui (experimental)
 
-🚧 WIP - This is an experimental module that isn’t ready yet. It is the first step towards creating
-a TUI library that can be used to create sophisticated TUI applications. This is similar to Ink
-library for Node.js & TypeScript (that uses React and Yoga). Or kinda like `tui` built atop
-`crossterm` (and not `termion`).
+🚧 WIP - This is an experimental module that isn’t ready yet. It is the first step towards
+creating a TUI library that can be used to create sophisticated TUI applications. This is
+similar to Ink library for Node.js & TypeScript (that uses React and Yoga). Or kinda like
+`tui` built atop `crossterm` (and not `termion`).
 
 ## Stability
 
@@ -462,5 +564,6 @@ library for Node.js & TypeScript (that uses React and Yoga). Or kinda like `tui`
 1. There are extensive integration tests for code that is production ready.
 2. Everything else is marked experimental in the source.
 
-Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
-And if you have any feature requests, feel free to add them there too 👍.
+Please report any issues to the
+[issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues). And if you have any
+feature requests, feel free to add them there too 👍.
