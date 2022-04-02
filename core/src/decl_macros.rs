@@ -20,9 +20,9 @@ macro_rules! debug {
   ($i:ident) => {
     println!(
       "{} {} = {}",
-      r3bl_rs_utils::utils::style_error("▶"),
-      r3bl_rs_utils::utils::style_prompt(stringify!($i)),
-      r3bl_rs_utils::utils::style_dimmed(&format!("{:#?}", $i))
+      r3bl_rs_utils_core::style_error("▶"),
+      r3bl_rs_utils_core::style_prompt(stringify!($i)),
+      r3bl_rs_utils_core::style_dimmed(&format!("{:#?}", $i))
     );
   };
 }

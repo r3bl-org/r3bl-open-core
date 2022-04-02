@@ -23,13 +23,19 @@ use proc_macro::TokenStream;
 mod utils;
 mod manager_of_things;
 mod builder;
+mod make_safe_fn_wrapper;
+
+#[proc_macro_derive(Builder)]
+pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
+  builder::derive_proc_macro_impl(input)
+}
 
 #[proc_macro]
 pub fn make_struct_safe_to_share_and_mutate(input: TokenStream) -> TokenStream {
   manager_of_things::fn_proc_macro_impl(input)
 }
 
-#[proc_macro_derive(Builder)]
-pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
-  builder::derive_proc_macro_impl(input)
+#[proc_macro]
+pub fn make_safe_fn_wrapper(input: TokenStream) -> TokenStream {
+  make_safe_fn_wrapper::fn_proc_macro_impl(input)
 }

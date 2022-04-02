@@ -15,10 +15,19 @@
  *   limitations under the License.
 */
 
+pub mod type_ext;
 pub mod ident_ext;
 pub mod syn_parser_helpers;
 pub mod data_ext;
 pub mod meta_ext;
 pub mod nested_meta_ext;
 pub mod attribute_args_ext;
-pub mod type_ext;
+
+// Re-export.
+pub use attribute_args_ext::*;
+pub use data_ext::*;
+pub use ident_ext::*;
+pub use meta_ext::*;
+pub use nested_meta_ext::*;
+pub use syn_parser_helpers::*;
+pub use type_ext::*;

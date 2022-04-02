@@ -13,24 +13,34 @@
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- */
+*/
 
-//! Integration tests for the `utils`
-/// Rust book: https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory
-use ansi_term::Colour::Green;
-use r3bl_rs_utils::utils::type_of;
-use r3bl_rs_utils_core::{style_primary};
+//! # Watch macro expansion
+//!
+//! To watch for changes run this script:
+//! `./cargo-watch-macro-expand-one-test.fish test_make_safe_fn_wrapper`
+//!
+//! # Watch test output
+//!
+//! To watch for test output run this script:
+//! `./cargo-watch-one-test.fish test_make_safe_fn_wrapper`
 
-#[test]
-fn test_color_styles_work() {
-  let text = "foo";
-  let styled_text = style_primary(text);
-  assert_eq!(Green.bold().paint(text), styled_text);
+use r3bl_rs_utils_macro::make_safe_fn_wrapper;
+
+#[tokio::test]
+async fn test_custom_syntax_full() {
+  make_safe_fn_wrapper! {
+    named FnWrapper<A>
+    containing fn_mut
+    of_type FnMut(A) -> Option<A>
+  }
 }
 
 #[test]
-fn test_type_of_works() {
-  let text = "foo".to_string();
-  let type_of_text = type_of(&text);
-  assert_eq!(type_of_text, "alloc::string::String");
+fn test_simple_macro_expansion() {
+  make_safe_fn_wrapper! {
+    named FnWrapper<A>
+    containing fn_mut
+    of_type FnMut(A) -> Option<A>
+  }
 }

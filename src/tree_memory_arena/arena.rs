@@ -75,9 +75,9 @@ where
 /// ## Basic usage
 ///
 /// ```rust
+/// use r3bl_rs_utils_core::{style_primary, style_prompt};
 /// use r3bl_rs_utils::{
-///   tree_memory_arena::{Arena, HasId, MTArena, ResultUidList},
-///   utils::{style_primary, style_prompt},
+///   tree_memory_arena::{Arena, HasId, MTArena, ResultUidList}
 /// };
 ///
 /// let mut arena = Arena::<usize>::new();
@@ -90,9 +90,9 @@ where
 /// ## Get weak and strong references from the arena (tree), and tree walking
 ///
 /// ```rust
+/// use r3bl_rs_utils_core::{style_primary, style_prompt};
 /// use r3bl_rs_utils::{
-///   tree_memory_arena::{Arena, HasId, MTArena, ResultUidList},
-///   utils::{style_primary, style_prompt},
+///   tree_memory_arena::{Arena, HasId, MTArena, ResultUidList}
 /// };
 ///
 /// let mut arena = Arena::<usize>::new();
@@ -146,7 +146,16 @@ where
     let map: ReadGuarded<ArenaMap<T>> = self.map.read().unwrap();
     let filtered_map = map
       .iter()
-      .filter(|(id, node_ref)| filter_fn(**id, node_ref.read().unwrap().payload.clone()))
+      .filter(|(id, node_ref)| {
+        filter_fn(
+          **id,
+          node_ref
+            .read()
+            .unwrap()
+            .payload
+            .clone(),
+        )
+      })
       .map(|(id, _node_ref)| *id)
       .collect::<Vec<usize>>();
     match filtered_map.len() {
@@ -186,7 +195,11 @@ where
     &self,
     node_id: usize,
   ) -> bool {
-    self.map.read().unwrap().contains_key(&node_id.get_id())
+    self
+      .map
+      .read()
+      .unwrap()
+      .contains_key(&node_id.get_id())
   }
 
   pub fn has_parent(
@@ -216,23 +229,32 @@ where
     // Note - this lambda expects that `parent_id` exists.
     let remove_node_id_from_parent = |parent_id: usize| {
       let parent_node_arc_opt = self.get_node_arc(parent_id);
-      unwrap_arc_write_lock_and_call(&parent_node_arc_opt.unwrap(), &mut |parent_node| {
-        parent_node
-          .children
-          .retain(|child_id| *child_id != node_id.get_id());
-      });
+      unwrap_arc_write_lock_and_call(
+        &parent_node_arc_opt.unwrap(),
+        &mut |parent_node| {
+          parent_node
+            .children
+            .retain(|child_id| *child_id != node_id.get_id());
+        },
+      );
     };
 
     // If `node_id` has a parent, remove `node_id` its children, otherwise skip this step.
     if self.has_parent(node_id) {
-      remove_node_id_from_parent(self.get_parent_of(node_id).unwrap()); // Safe to unwrap.
+      remove_node_id_from_parent(
+        self
+          .get_parent_of(node_id)
+          .unwrap(),
+      ); // Safe to unwrap.
     }
 
     // Actually delete the nodes in the deletion list.
     let mut map: WriteGuarded<ArenaMap<T>> = self.map.write().unwrap(); // Safe to unwrap.
-    deletion_list.iter().for_each(|id| {
-      map.remove(id);
-    });
+    deletion_list
+      .iter()
+      .for_each(|id| {
+        map.remove(id);
+      });
 
     // Pass the deletion list back.
     Some(deletion_list.clone())
@@ -319,28 +341,39 @@ where
 
     let new_node_id = self.generate_uid();
 
-    with_mut(&mut self.map.write().unwrap(), &mut |map| {
-      let value = Arc::new(RwLock::new(Node {
-        id: new_node_id,
-        parent: if parent_id_arg_provided {
-          let parent_id = parent_id_opt.unwrap();
-          Some(parent_id.get_id())
-        } else {
-          None
-        },
-        children: vec![],
-        payload: data.clone(),
-      }));
-      map.insert(new_node_id, value);
-    });
+    with_mut(
+      &mut self.map.write().unwrap(),
+      &mut |map| {
+        let value = Arc::new(RwLock::new(Node {
+          id: new_node_id,
+          parent: if parent_id_arg_provided {
+            let parent_id = parent_id_opt.unwrap();
+            Some(parent_id.get_id())
+          } else {
+            None
+          },
+          children: vec![],
+          payload: data.clone(),
+        }));
+        map.insert(new_node_id, value);
+      },
+    );
 
     if let Some(parent_id) = parent_id_opt {
       let parent_node_arc_opt = self.get_node_arc(parent_id);
-      call_if_some(&parent_node_arc_opt, &|parent_node_arc| {
-        unwrap_arc_write_lock_and_call(&parent_node_arc, &mut |parent_node| {
-          parent_node.children.push(new_node_id);
-        });
-      });
+      call_if_some(
+        &parent_node_arc_opt,
+        &|parent_node_arc| {
+          unwrap_arc_write_lock_and_call(
+            &parent_node_arc,
+            &mut |parent_node| {
+              parent_node
+                .children
+                .push(new_node_id);
+            },
+          );
+        },
+      );
     }
 
     // Return the node identifier.
@@ -348,9 +381,10 @@ where
   }
 
   fn generate_uid(&self) -> usize {
-    self
-      .atomic_counter
-      .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+    self.atomic_counter.fetch_add(
+      1,
+      std::sync::atomic::Ordering::SeqCst,
+    )
   }
 
   pub fn new() -> Self {

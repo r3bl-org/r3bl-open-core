@@ -16,7 +16,12 @@
 */
 
 // Connect to source file.
-mod async_safe_share_mutate;
+pub mod async_safe_share_mutate;
+pub mod decl_macros;
+pub mod color_text;
+pub use color_text::styles::*;
 
 // Re-export.
 pub use async_safe_share_mutate::*;
+pub use color_text::*;
+pub use decl_macros::*;

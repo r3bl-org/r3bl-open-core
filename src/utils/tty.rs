@@ -16,7 +16,7 @@
 
 //! This module contains a set of functions to make it easier to work with terminals.
 
-use crate::utils::{style_error, style_prompt};
+use r3bl_rs_utils_core::{style_error, style_prompt};
 use std::{
   env::{args, Args},
   error::Error,

@@ -41,9 +41,9 @@ use std::thread::{spawn, JoinHandle};
 ///   thread::{self, JoinHandle},
 /// };
 ///
+/// use r3bl_rs_utils_core::{style_primary, style_prompt};
 /// use r3bl_rs_utils::{
-///   tree_memory_arena::{Arena, HasId, MTArena, ResultUidList},
-///   utils::{style_primary, style_prompt},
+///   tree_memory_arena::{Arena, HasId, MTArena, ResultUidList}
 /// };
 ///
 /// type ThreadResult = Vec<usize>;
@@ -140,13 +140,16 @@ where
 
       // While walking the tree, in a separate thread, call the `walker_fn` for each node.
       if let Some(result_list) = return_value.clone() {
-        result_list.clone().into_iter().for_each(|uid| {
-          let node_arc_opt = read_guard.get_node_arc(uid);
-          if let Some(node_arc) = node_arc_opt {
-            let node_ref: ReadGuarded<Node<T>> = node_arc.read().unwrap();
-            walker_fn_arc(uid, node_ref.payload.clone());
-          }
-        });
+        result_list
+          .clone()
+          .into_iter()
+          .for_each(|uid| {
+            let node_arc_opt = read_guard.get_node_arc(uid);
+            if let Some(node_arc) = node_arc_opt {
+              let node_ref: ReadGuarded<Node<T>> = node_arc.read().unwrap();
+              walker_fn_arc(uid, node_ref.payload.clone());
+            }
+          });
       }
 
       return_value

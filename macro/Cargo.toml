@@ -27,4 +27,3 @@ r3bl_rs_utils_core = { version = "0.7.0", path = "../core" }
 syn = { version = "1.0.90", features = ["extra-traits"] }
 quote = "1.0.17"
 proc-macro2 = "1.0.36"
-async-trait = "0.1.53"

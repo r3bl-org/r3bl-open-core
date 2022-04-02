@@ -11,21 +11,41 @@
 			]
 		},
 		{
-			"path": "src/redux/async_middleware.rs",
+			"path": "src/redux/sync_reducers.rs",
 			"bookmarks": [
 				{
-					"line": 36,
+					"line": 18,
+					"column": 5,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "macro/src/manager_of_things.rs",
+			"bookmarks": [
+				{
+					"line": 177,
+					"column": 7,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "macro/src/make_safe_fn_wrapper.rs",
+			"bookmarks": [
+				{
+					"line": 47,
 					"column": 0,
 					"label": ""
 				}
 			]
 		},
 		{
-			"path": "src/redux/sync_reducers.rs",
+			"path": "tests/test_make_safe_fn_wrapper.rs",
 			"bookmarks": [
 				{
-					"line": 18,
-					"column": 5,
+					"line": 40,
+					"column": 0,
 					"label": ""
 				}
 			]

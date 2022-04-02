@@ -38,3 +38,7 @@ README:
   ✔ proc-fn-like: add manager-of-things proc macro fn docs @done(22-04-01 21:03)
   ✔ Publish a new version to crates.io @done(22-04-01 22:10)
   ✔ developerlife.com update Rust & Redux article @done(22-04-01 22:10)
+
+Experiment:
+  ✔ make a macro that can generate the complex function wrapper struct @done(22-04-02 20:17)
+  ✔ Replace async_subscribers.rs and async_middleware.rs w/ new macro @done(22-04-02 20:17)

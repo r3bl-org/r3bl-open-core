@@ -51,9 +51,9 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 
   let ManagerOfThingSyntaxInfo {
     manager_name_ident,
-    manager_ty,
-    thing_ty,
-    manager_ty_generic_args,
+    manager_type,
+    thing_type,
+    manager_type_generic_args,
     where_clause,
     property_name_ident,
   } = manager_of_thing_info;
@@ -61,7 +61,7 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
   let doc_str_struct = format!(
     " Generated {} struct for {}.",
     &manager_name_ident,
-    &thing_ty.to_string()
+    &thing_type.to_string()
   );
 
   let doc_str_default_impl_for_struct = format!(
@@ -90,8 +90,8 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
                                            mutate the property via `Arc` produced by \
                                            `get_ref()`.";
 
-  let opt_generic_args = if manager_ty_generic_args.is_some() {
-    let args = manager_ty_generic_args.unwrap();
+  let opt_generic_args = if manager_type_generic_args.is_some() {
+    let args = manager_type_generic_args.unwrap();
     quote! { < #args > }
   } else {
     quote! {}
@@ -109,13 +109,13 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     type RWLOCK_RG<'a, T> = tokio::sync::RwLockReadGuard<'a, T>;
 
     #[doc = #doc_str_struct]
-    pub struct #manager_ty #where_clause {
-      #property_name_ident: ARC<RWLOCK<#thing_ty>>
+    pub struct #manager_type #where_clause {
+      #property_name_ident: ARC<RWLOCK<#thing_type>>
     }
 
     #[doc = #doc_str_default_impl_for_struct]
-    impl #opt_generic_args Default for #manager_ty #where_clause {
-      fn default() -> #manager_ty {
+    impl #opt_generic_args Default for #manager_type #where_clause {
+      fn default() -> #manager_type {
         #manager_name_ident {
           #property_name_ident: ARC::new(RWLOCK::new(Default::default())),
         }
@@ -124,48 +124,48 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 
     #[doc = #doc_str_impl_share_for_struct]
     #[async_trait::async_trait]
-    impl #opt_generic_args r3bl_rs_utils_core::SafeToShare<#thing_ty> for #manager_ty #where_clause {
+    impl #opt_generic_args r3bl_rs_utils_core::SafeToShare<#thing_type> for #manager_type #where_clause {
       #[doc = #doc_str_setter_fn]
       async fn set_value(
         &self,
-        value: #thing_ty,
+        value: #thing_type,
       ) {
         *self.#property_name_ident.write().await = value;
       }
 
       async fn get_value<'a>(
         &'a self
-      ) -> RWLOCK_RG<'a, #thing_ty> {
+      ) -> RWLOCK_RG<'a, #thing_type> {
         self.#property_name_ident.read().await
       }
 
       #[doc = #doc_str_getter_fn]
-      fn get_ref(&self) -> ARC<RWLOCK<#thing_ty>> {
+      fn get_ref(&self) -> ARC<RWLOCK<#thing_type>> {
         self.#property_name_ident.clone()
       }
     }
 
     #[doc = #doc_str_impl_mutate_for_struct]
     #[async_trait::async_trait]
-    impl #opt_generic_args r3bl_rs_utils_core::SafeToMutate<#thing_ty> for #manager_ty #where_clause {
+    impl #opt_generic_args r3bl_rs_utils_core::SafeToMutate<#thing_type> for #manager_type #where_clause {
       #[doc = #doc_str_static_lock_w]
       async fn with_ref_get_value_w_lock<'a>(
-        my_arc: &'a ARC<RWLOCK<#thing_ty>>
-      ) -> RWLOCK_WG<'a, #thing_ty> {
+        my_arc: &'a ARC<RWLOCK<#thing_type>>
+      ) -> RWLOCK_WG<'a, #thing_type> {
         my_arc.write().await
       }
 
       #[doc = #doc_str_static_lock_r]
       async fn with_ref_get_value_r_lock<'a>(
-        my_arc: &'a ARC<RWLOCK<#thing_ty>>
-      ) -> RWLOCK_RG<'a, #thing_ty> {
+        my_arc: &'a ARC<RWLOCK<#thing_type>>
+      ) -> RWLOCK_RG<'a, #thing_type> {
         my_arc.read().await
       }
 
       #[doc = #doc_str_static_with_arc_setter_fn]
       async fn with_ref_set_value(
-        my_arc: &ARC<RWLOCK<#thing_ty>>,
-        value: #thing_ty,
+        my_arc: &ARC<RWLOCK<#thing_type>>,
+        value: #thing_type,
       ) {
         *my_arc.write().await = value;
       }
@@ -178,19 +178,38 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 /// Example of syntax to parse:
 /// ```no_run
 /// make_struct_safe_to_share_and_mutate! {
+///   ╭─L1──────────────────────────────────────────
+///   │     manager_type
+///   │     ▾▾▾▾▾▾▾▾▾▾▾▾▾▾▾▾▾▾
 ///   named ThingManager<K, V>
+///   │     ▴▴▴▴▴▴▴▴▴▴▴▴ ▴▴▴▴
+///   │     │            manager_type_generic_args
+///   │     manager_name_ident
+///   ╰─────────────────────────────────────────────
+///   ╭─L2?─────────────────────────────────────────
 ///   where K: Send + Sync + 'static, V: Send + Sync + 'static
+///   │     ▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴
+///   │     where_clause
+///   ╰─────────────────────────────────────────────
+///   ╭─L3──────────────────────────────────────────
 ///   containing my_property_name
+///   │          ▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴
+///   │          property_name_ident
+///   ╰─────────────────────────────────────────────
+///   ╭─L4──────────────────────────────────────────
 ///   of_type std::collections::HashMap<K, V>
+///   │       ▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴
+///   │       thing_type
+///   ╰─────────────────────────────────────────────
 /// }
 /// ```
 #[derive(Debug)]
 struct ManagerOfThingSyntaxInfo {
   manager_name_ident: Ident,
-  manager_ty: Type,
-  manager_ty_generic_args: Option<Punctuated<GenericArgument, Comma>>,
+  manager_type: Type,
+  manager_type_generic_args: Option<Punctuated<GenericArgument, Comma>>,
   where_clause: Option<WhereClause>,
-  thing_ty: Type,
+  thing_type: Type,
   property_name_ident: Ident,
 }
 
@@ -208,24 +227,26 @@ impl Parse for ManagerOfThingSyntaxInfo {
     input.parse::<kw::named>()?;
 
     // 👀 Manager Type, eg: `ThingManager<K,V>`.
-    let manager_ty: Type = input.parse()?;
-    let manager_ty_generic_args = match manager_ty.has_angle_bracketed_generic_args() {
+    let manager_type: Type = input.parse()?;
+
+    // 👀 Manager Type generic args, eg: `<K,V>`.
+    let manager_type_generic_args = match manager_type.has_angle_bracketed_generic_args() {
       true => Some(
-        manager_ty
+        manager_type
           .get_angle_bracketed_generic_args_result()
           .unwrap(),
       ),
       false => None,
     };
-    // debug!(manager_ty_has_generic_args);
+    // debug!(manager_type_has_generic_args);
 
     // 👀 Optional where clause, eg: `where K: Send+Sync+'static, V: Send+Sync+'static`.
     let mut where_clause: Option<WhereClause> = None;
     if input.peek(Token![where]) {
       where_clause = Some(input.parse::<WhereClause>()?);
     } else {
-      if manager_ty.has_angle_bracketed_generic_args() {
-        let ident_vec = manager_ty
+      if manager_type.has_angle_bracketed_generic_args() {
+        let ident_vec = manager_type
           .get_angle_bracketed_generic_args_idents_result()
           .unwrap();
         let my_ts = quote! {
@@ -247,20 +268,20 @@ impl Parse for ManagerOfThingSyntaxInfo {
     input.parse::<kw::of_type>()?;
 
     // 👀 Thing Type, eg: `std::collections::HashMap<K, V>`.
-    let thing_ty: Type = input.parse()?;
+    let thing_type: Type = input.parse()?;
 
     // Done parsing. Extract the manager name.
-    let manager_name_ident = if manager_ty.has_ident() {
-      manager_ty.get_ident().unwrap()
+    let manager_name_ident = if manager_type.has_ident() {
+      manager_type.get_ident().unwrap()
     } else {
       panic!("Expected Type::Path::TypePath.segments to have an Ident")
     };
 
     Ok(ManagerOfThingSyntaxInfo {
-      manager_ty_generic_args,
+      manager_type_generic_args,
       manager_name_ident,
-      manager_ty,
-      thing_ty,
+      manager_type,
+      thing_type,
       where_clause,
       property_name_ident,
     })
