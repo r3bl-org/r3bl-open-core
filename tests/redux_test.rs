@@ -1,26 +1,26 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
- *   All rights reserved.
+*   Copyright (c) 2022 R3BL LLC
+*   All rights reserved.
 
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
+*   Licensed under the Apache License, Version 2.0 (the "License");
+*   you may not use this file except in compliance with the License.
+*   You may obtain a copy of the License at
 
- *   http://www.apache.org/licenses/LICENSE-2.0
+*   http://www.apache.org/licenses/LICENSE-2.0
 
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- */
+*   Unless required by applicable law or agreed to in writing, software
+*   distributed under the License is distributed on an "AS IS" BASIS,
+*   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*   See the License for the specific language governing permissions and
+*   limitations under the License.
+*/
 
 // Imports.
+use r3bl_rs_utils::redux::{
+  ReducerFnWrapper, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper, Store,
+};
 use r3bl_rs_utils::utils::with;
 use std::sync::{Arc, Mutex};
-use r3bl_rs_utils::redux::{
-  Store, ReducerFnWrapper, SafeSubscriberFnWrapper, SafeMiddlewareFnWrapper,
-};
 
 /// Action enum.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
@@ -99,35 +99,77 @@ async fn test_redux_store_works_for_main_use_cases() {
   store
     .add_reducer(ReducerFnWrapper::from(reducer_fn))
     .await
-    .add_subscriber(SafeSubscriberFnWrapper::from(subscriber_fn))
+    .add_subscriber(SafeSubscriberFnWrapper::from(
+      subscriber_fn,
+    ))
     .await
-    .add_middleware(SafeMiddlewareFnWrapper::from(mw_returns_none))
+    .add_middleware(SafeMiddlewareFnWrapper::from(
+      mw_returns_none,
+    ))
     .await;
 
   // Test reducer and subscriber by dispatching Add and AddPop actions sync & async.
-  store.dispatch_spawn(Action::Add(10, 10)).await;
-  store.dispatch(&Action::Add(1, 2)).await;
-  assert_eq!(shared_object.lock().unwrap().pop(), Some(3));
-  store.dispatch(&Action::AddPop(1)).await;
-  assert_eq!(shared_object.lock().unwrap().pop(), Some(21));
+  store
+    .dispatch_spawn(Action::Add(10, 10))
+    .await;
+  store
+    .dispatch(&Action::Add(1, 2))
+    .await;
+  assert_eq!(
+    shared_object.lock().unwrap().pop(),
+    Some(3)
+  );
+  store
+    .dispatch(&Action::AddPop(1))
+    .await;
+  assert_eq!(
+    shared_object.lock().unwrap().pop(),
+    Some(21)
+  );
   store.clear_subscribers().await;
 
   // Test async middleware: mw_returns_none.
-  store.dispatch(&Action::Add(1, 2)).await;
-  assert_eq!(shared_object.lock().unwrap().pop(), Some(-1));
-  store.dispatch(&Action::AddPop(1)).await;
-  assert_eq!(shared_object.lock().unwrap().pop(), Some(-2));
-  store.dispatch(&Action::Clear).await;
-  assert_eq!(shared_object.lock().unwrap().pop(), Some(-3));
+  store
+    .dispatch(&Action::Add(1, 2))
+    .await;
+  assert_eq!(
+    shared_object.lock().unwrap().pop(),
+    Some(-1)
+  );
+  store
+    .dispatch(&Action::AddPop(1))
+    .await;
+  assert_eq!(
+    shared_object.lock().unwrap().pop(),
+    Some(-2)
+  );
+  store
+    .dispatch(&Action::Clear)
+    .await;
+  assert_eq!(
+    shared_object.lock().unwrap().pop(),
+    Some(-3)
+  );
   store.clear_middlewares().await;
 
   // Test async middleware: mw_returns_action.
-  shared_object.lock().unwrap().clear();
+  shared_object
+    .lock()
+    .unwrap()
+    .clear();
   store
-    .add_middleware(SafeMiddlewareFnWrapper::from(mw_returns_action))
+    .add_middleware(SafeMiddlewareFnWrapper::from(
+      mw_returns_action,
+    ))
     .await
     .dispatch(&Action::MiddlewareCreateClearAction)
     .await;
-  assert_eq!(store.get_state().await.stack.len(), 0);
-  assert_eq!(shared_object.lock().unwrap().pop(), Some(-4));
+  assert_eq!(
+    store.get_state().await.stack.len(),
+    0
+  );
+  assert_eq!(
+    shared_object.lock().unwrap().pop(),
+    Some(-4)
+  );
 }
