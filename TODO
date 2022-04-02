@@ -29,8 +29,8 @@ use the macros:
   ✔ Identify where the new proc macro "manager" of "things" can be used @done(22-04-01 15:03)
   ✔ Refactor existing Redux code to use macros above @done(22-04-01 15:03)
   ✔ sync_reducer.rs @done(22-04-01 20:26)
-  ☐ async_middleware.rs
-  ☐ async_subscriber.rs
+  ✔ async_middleware.rs @done(22-04-01 20:46)
+  ✔ async_subscriber.rs @done(22-04-01 20:46)
 
 README:
   ☐ decl: add debug! macro docs

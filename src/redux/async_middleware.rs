@@ -21,6 +21,7 @@ use std::{
 };
 use tokio::{sync::RwLock, task::JoinHandle};
 
+// Middleware function.
 /// Excellent resources on lifetimes and returning references:
 /// 1. https://stackoverflow.com/questions/59442080/rust-pass-a-function-reference-to-threads
 /// 2. https://stackoverflow.com/questions/68547268/cannot-borrow-data-in-an-arc-as-mutable
@@ -30,6 +31,9 @@ pub type SafeMiddlewareFn<A> = Arc<RwLock<dyn FnMut(A) -> Option<A> + Sync + Sen
 //                             Safe to pass      Declare`FnMut` has thread safety
 //                             around.           requirement to rust compiler.
 
+/// `fn_mut` has to be wrapped in an `Arc<RwLock>` because it needs to be safe to be
+/// passed around between threads. The `RwLock` ensures that access to the `fn_mut` will
+/// be thread safe.
 #[derive(Clone)]
 pub struct SafeMiddlewareFnWrapper<A> {
   fn_mut: SafeMiddlewareFn<A>,
