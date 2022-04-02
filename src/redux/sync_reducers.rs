@@ -16,11 +16,14 @@
 
 use std::sync::Arc;
 
-/// Reducer function.
+/// Reducer function signature. This is not [`Sized`].
 pub type ReducerFn<S, A> = dyn Fn(&S, &A) -> S + Sync + Send + 'static;
 
-#[derive(Clone)]
-pub struct ReducerFnWrapper<S, A>
+/// [`ReducerFn`] has to be wrapped in an [`Arc`] because it is [`Sized`] and safe to
+/// share between threads.
+/// 1. It does not allow interior mutability.
+/// 2. It is not thread safe, since it performs no locking.
+pub struct ShareableReducerFn<S, A>
 where
   S: Sync + Send + 'static,
   A: Sync + Send + 'static,
@@ -28,21 +31,19 @@ where
   fn_mut: Arc<ReducerFn<S, A>>,
 }
 
-impl<S, A> ReducerFnWrapper<S, A>
+impl<S, A> ShareableReducerFn<S, A>
 where
   S: Sync + Send + 'static,
   A: Sync + Send + 'static,
 {
-  pub fn from(
+  /// Constructing a [`ReducerFnWrapper`] using a sized argument `fn_mut`, which can be a
+  /// normal function or a lambda.
+  pub fn new(
     fn_mut: impl Fn(&S, &A) -> S + Send + Sync + 'static
-  ) -> ReducerFnWrapper<S, A> {
+  ) -> ShareableReducerFn<S, A> {
     Self {
       fn_mut: Arc::new(fn_mut),
     }
-  }
-
-  pub fn get(&self) -> Arc<ReducerFn<S, A>> {
-    self.fn_mut.clone()
   }
 
   pub fn invoke(
@@ -50,7 +51,7 @@ where
     state: &S,
     action: &A,
   ) -> S {
-    let arc_locked_fn_mut = self.get();
-    arc_locked_fn_mut(state, action)
+    let fn_mut_ref = self.fn_mut.clone();
+    fn_mut_ref(state, action)
   }
 }

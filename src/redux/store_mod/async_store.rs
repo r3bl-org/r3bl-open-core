@@ -20,7 +20,7 @@ use tokio::task::JoinHandle;
 
 use crate::redux::{
   async_middleware::SafeMiddlewareFnWrapper, async_subscriber::SafeSubscriberFnWrapper,
-  sync_reducers::ReducerFnWrapper, StoreStateMachine,
+  sync_reducers::ShareableReducerFn, StoreStateMachine,
 };
 
 make_struct_safe_to_share_and_mutate! {
@@ -131,7 +131,7 @@ where
 
   pub async fn add_reducer(
     &mut self,
-    reducer_fn: ReducerFnWrapper<S, A>,
+    reducer_fn: ShareableReducerFn<S, A>,
   ) -> &mut Store<S, A> {
     self
       .get_ref()

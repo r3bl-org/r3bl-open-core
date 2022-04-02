@@ -19,7 +19,7 @@ use my_core_lib::SafeToShare;
 
 use crate::redux::{
   iterate_over_list, iterate_over_list_async, iterate_over_list_containing_results_async,
-  ReducerFnWrapper, SafeList, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper,
+  ShareableReducerFn, SafeList, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper,
 };
 
 pub struct StoreStateMachine<S, A>
@@ -31,7 +31,7 @@ where
   pub history: Vec<S>,
   pub subscriber_fn_list: SafeList<SafeSubscriberFnWrapper<S>>,
   pub middleware_fn_list: SafeList<SafeMiddlewareFnWrapper<A>>,
-  pub reducer_fn_list: SafeList<ReducerFnWrapper<S, A>>,
+  pub reducer_fn_list: SafeList<ShareableReducerFn<S, A>>,
 }
 
 impl<S, A> Default for StoreStateMachine<S, A>
@@ -90,7 +90,7 @@ where
     {
       iterate_over_list!(
         self.reducer_fn_list,
-        |reducer_fn: &'a ReducerFnWrapper<S, A>| {
+        |reducer_fn: &'a ShareableReducerFn<S, A>| {
           let new_state = reducer_fn.invoke(&self.state, &action);
           self.update_history(&new_state);
           self.state = new_state;

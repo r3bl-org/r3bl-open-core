@@ -17,7 +17,7 @@
 
 // Imports.
 use r3bl_rs_utils::redux::{
-  ReducerFnWrapper, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper, Store,
+  ShareableReducerFn, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper, Store,
 };
 use r3bl_rs_utils::utils::with;
 use std::sync::{Arc, Mutex};
@@ -97,7 +97,7 @@ async fn test_redux_store_works_for_main_use_cases() {
   // Setup store.
   let mut store = Store::<State, Action>::default();
   store
-    .add_reducer(ReducerFnWrapper::from(reducer_fn))
+    .add_reducer(ShareableReducerFn::new(reducer_fn))
     .await
     .add_subscriber(SafeSubscriberFnWrapper::from(
       subscriber_fn,
