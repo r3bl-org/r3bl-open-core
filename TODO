@@ -42,3 +42,4 @@ README:
 Experiment:
   ✔ make a macro that can generate the complex function wrapper struct @done(22-04-02 20:17)
   ✔ Replace async_subscribers.rs and async_middleware.rs w/ new macro @done(22-04-02 20:17)
+  ✔ publish v0.7.1 and update all the internal deps to v0.7.1 @done(22-04-02 20:24)
