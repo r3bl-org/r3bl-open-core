@@ -1,5 +1,27 @@
 # r3bl_rs_utils
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Usage](#usage)
+- [redux](#redux)
+- [Macros](#macros)
+  - [Declarative](#declarative)
+    - [debug!](#debug)
+  - [Procedural](#procedural)
+    - [#[derive(Builder)]](#derivebuilder)
+    - [make_struct_safe_to_share_and_mutate!](#make_struct_safe_to_share_and_mutate)
+- [tree_memory_arena (non-binary tree data structure)](#tree_memory_arena-non-binary-tree-data-structure)
+- [utils](#utils)
+  - [LazyMemoValues](#lazymemovalues)
+  - [tty](#tty)
+  - [safe_unwrap](#safe_unwrap)
+  - [color_text](#color_text)
+- [tui (experimental)](#tui-experimental)
+- [Stability](#stability)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 This library provides utility functions:
 
 1. Thread safe asynchronous Redux library (uses Tokio to run subscribers and middleware in
