@@ -21,7 +21,8 @@ use syn::{punctuated::Punctuated,
           GenericArgument,
           Ident,
           PathArguments::AngleBracketed,
-          Type};
+          Type,
+          TypeReference};
 
 pub trait TypeExt {
   fn has_ident(&self) -> bool;
@@ -124,5 +125,45 @@ impl TypeExt for syn::Type {
       .to_token_stream()
       .to_string()
       .replace(" ", "")
+  }
+}
+
+pub trait TypeReferenceExt {
+  fn has_ident(&self) -> bool;
+  fn get_ident(&self) -> Option<Ident>;
+}
+
+impl TypeReferenceExt for TypeReference {
+  fn has_ident(&self) -> bool {
+    let elem = self.elem.as_ref();
+    match elem {
+      Type::Path(ref type_path) => {
+        let path = &type_path.path;
+        let ident = &path.segments.first();
+        ident.is_some()
+      }
+      _ => false,
+    }
+  }
+
+  fn get_ident(&self) -> Option<Ident> {
+    match self.has_ident() {
+      false => None,
+      true => {
+        let elem = self.elem.as_ref();
+        match elem {
+          Type::Path(ref type_path) => {
+            let path = &type_path.path;
+            let ident = &path
+              .segments
+              .first()
+              .unwrap()
+              .ident;
+            Some(ident.clone())
+          }
+          _ => None,
+        }
+      }
+    }
   }
 }

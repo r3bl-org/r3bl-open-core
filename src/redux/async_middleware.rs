@@ -14,9 +14,9 @@
  limitations under the License.
 */
 
-use r3bl_rs_utils_macro::make_safe_fn_wrapper;
+use r3bl_rs_utils_macro::make_safe_async_fn_wrapper;
 
-make_safe_fn_wrapper! {
+make_safe_async_fn_wrapper! {
   named SafeMiddlewareFnWrapper<A>
   containing fn_mut
   of_type FnMut(A) -> Option<A>

@@ -43,7 +43,9 @@ use syn::{parse::{Parse, ParseBuffer, ParseStream},
           Visibility,
           WhereClause};
 
-use crate::utils::{IdentExt, TypeExt};
+use crate::{fn_wrapper_custom_syntax_parser::{make_opt_where_clause_from_generic_args,
+                                              SafeFnWrapperSyntaxInfo},
+            utils::{IdentExt, TypeExt}};
 
 pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let safe_wrapper_syntax_info: SafeFnWrapperSyntaxInfo = parse_macro_input!(input);
@@ -70,14 +72,8 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     quote! {}
   };
 
-  let opt_where_clause = if wrapper_name_type_generic_args.is_some() {
-    let where_clause = wrapper_name_type_generic_args
-      .as_ref()
-      .unwrap();
-    quote! { where #where_clause: Sync + Send + 'static }
-  } else {
-    quote! {}
-  };
+  let opt_where_clause =
+    make_opt_where_clause_from_generic_args(wrapper_name_type_generic_args);
 
   quote! {
     // Type aliases to make the code more readable.
@@ -111,6 +107,12 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
           fn_mut(#(#fn_input_arg_name_ident_vec),*)
         })
       }
+
+      pub async fn invoke(&self, #(#fn_input_arg_expr_vec),*) -> #fn_output_return_type {
+        let arc_lock_fn_mut = self.get();
+        let mut fn_mut = arc_lock_fn_mut.write().await;
+        fn_mut(#(#fn_input_arg_name_ident_vec),*)
+    }
     }
   }
   .into()
@@ -191,94 +193,4 @@ fn get_fn_output_type_from(property_fn_type: &Type) -> Option<proc_macro2::Token
     }
   }
   None
-}
-
-/// Example of syntax to parse:
-/// ```no_run
-/// make_safe_fn_wrapper! {
-///   ╭─L1──────────────────────────────────────────
-///   │     wrapper_name_type
-///   │     ▾▾▾▾▾▾▾▾▾▾▾▾▾▾▾▾▾
-///   named FnWrapper<K, V>
-///   │     ▴▴▴▴▴▴▴▴▴ ▴▴▴▴
-///   │     │         wrapper_name_type_generic_args
-///   │     wrapper_name_ident
-///   ╰─────────────────────────────────────────────
-///   ╭─L2──────────────────────────────────────────
-///   containing fn_mut
-///   │          ▴▴▴▴▴▴
-///   │          property_name_ident
-///   ╰─────────────────────────────────────────────
-///   ╭─L3──────────────────────────────────────────
-///   of_type FnMut(A) -> Option<A>
-///   │       ▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴
-///   │       property_fn_type
-///   ╰─────────────────────────────────────────────
-/// }
-/// ```
-#[derive(Debug)]
-struct SafeFnWrapperSyntaxInfo {
-  wrapper_name_ident: Ident,
-  wrapper_name_type: Type,
-  wrapper_name_type_generic_args: Option<Punctuated<GenericArgument, Comma>>,
-  property_name_ident: Ident,
-  property_fn_type: Type,
-}
-
-/// [syn custom keywords docs](https://docs.rs/syn/latest/syn/macro.custom_keyword.html)
-mod kw {
-  syn::custom_keyword!(named);
-  syn::custom_keyword!(containing);
-  syn::custom_keyword!(of_type);
-}
-
-/// [Parse docs](https://docs.rs/syn/latest/syn/parse/index.html)
-impl Parse for SafeFnWrapperSyntaxInfo {
-  fn parse(input: ParseStream) -> Result<Self> {
-    // 👀 "named" keyword.
-    input.parse::<kw::named>()?;
-
-    // 👀 Wrapper Name Type, eg: `FnWrapper<K,V>`.
-    let wrapper_name_type: Type = input.parse()?;
-
-    // 👀 Wrapper Name Type generic args, eg: `<K,V>`.
-    let wrapper_name_type_generic_args =
-      match wrapper_name_type.has_angle_bracketed_generic_args() {
-        true => Some(
-          wrapper_name_type
-            .get_angle_bracketed_generic_args_result()
-            .unwrap(),
-        ),
-        false => None,
-      };
-
-    // 👀 "containing" keyword.
-    input.parse::<kw::containing>()?;
-
-    // 👀 use Ident, eg: `fn_mut`.
-    let property_name_ident: Ident = input.parse()?;
-
-    // 👀 "of_type" keyword.
-    input.parse::<kw::of_type>()?;
-
-    // 👀 Fn Type, eg: `FnMut(A) -> Option(A) + Sync + Send + 'static`.
-    let property_fn_type: Type = input.parse()?;
-
-    // Done parsing. Extract the manager name.
-    let wrapper_name_ident: Ident = if wrapper_name_type.has_ident() {
-      wrapper_name_type
-        .get_ident()
-        .unwrap()
-    } else {
-      panic!("Expected Type::Path::TypePath.segments to have an Ident")
-    };
-
-    Ok(SafeFnWrapperSyntaxInfo {
-      wrapper_name_ident,
-      wrapper_name_type,
-      wrapper_name_type_generic_args,
-      property_name_ident,
-      property_fn_type,
-    })
-  }
 }

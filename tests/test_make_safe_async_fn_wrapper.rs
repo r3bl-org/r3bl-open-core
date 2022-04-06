@@ -25,11 +25,11 @@
 //! To watch for test output run this script:
 //! `./cargo-watch-one-test.fish test_make_safe_fn_wrapper`
 
-use r3bl_rs_utils_macro::make_safe_fn_wrapper;
+use r3bl_rs_utils_macro::make_safe_async_fn_wrapper;
 
 #[tokio::test]
 async fn test_custom_syntax_full() {
-  make_safe_fn_wrapper! {
+  make_safe_async_fn_wrapper! {
     named FnWrapper<A>
     containing fn_mut
     of_type FnMut(A) -> Option<A>
@@ -38,7 +38,7 @@ async fn test_custom_syntax_full() {
 
 #[test]
 fn test_simple_macro_expansion() {
-  make_safe_fn_wrapper! {
+  make_safe_async_fn_wrapper! {
     named FnWrapper<A>
     containing fn_mut
     of_type FnMut(A) -> Option<A>

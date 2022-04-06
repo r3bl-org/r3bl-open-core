@@ -1,5 +1,13 @@
 {
   "copyrighter.author": "R3BL LLC",
-  "copyrighter.license": "Apache2"
-  "cSpell.words": ["isnt", "middlewares", "idents", "qself", "Colour"]
+  "copyrighter.license": "Apache2",
+  "cSpell.words": [
+    "Colour",
+    "derivebuilder",
+    "idents",
+    "isnt",
+    "lazymemovalues",
+    "middlewares",
+    "qself"
+  ]
 }

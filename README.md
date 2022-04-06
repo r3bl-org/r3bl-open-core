@@ -250,13 +250,11 @@ assert_eq!(my_pt.y, 2);
 
 #### make_struct_safe_to_share_and_mutate!
 
-This function like macro (with custom syntax) makes it easy to manage this pattern (which
-we call the "manager" of "things").
+This function like macro (with custom syntax) makes it easy to manage shareability and
+interior mutability of a struct. We call this pattern the "manager" of "things").
 
 > 🪄 You can read all about it
 > [here](https://developerlife.com/2022/03/12/rust-redux/#of-things-and-their-managers).
-
-The idea is to make it easy to manage shareability and interior mutability of a struct.
 
 1. This struct gets wrapped in a `RwLock` for thread safety.
 2. That is then wrapped inside an `Arc` so we can share it across threads.
@@ -290,6 +288,50 @@ async fn test_custom_syntax_no_where_clause() {
   let locked_map = my_manager.my_map.read().await;
   assert_eq!(locked_map.len(), 0);
   drop(locked_map);
+}
+```
+
+#### make_safe_async_fn_wrapper!
+
+This function like macro (with custom syntax) makes it easy to share functions and lambdas
+that are async. They should be safe to share between threads and they should support
+either being invoked or spawned.
+
+> 🪄 You can read all about how to write proc macros
+> [here](https://developerlife.com/2022/03/30/rust-proc-macro/).
+
+1. A struct is generated that wraps the given function or lambda in an `Arc<RwLock<>>` for
+   thread safety and interior mutability.
+2. A `get()` method is generated which makes it possible to share this struct across
+   threads.
+3. A `from()` method is generated which makes it easy to create this struct from a
+   function or lambda.
+4. A `spawn()` method is generated which makes it possible to spawn the enclosed function
+   or lambda asynchronously using Tokio.
+5. An `invoke()` method is generated which makes it possible to invoke the enclosed
+   function or lambda synchronously.
+
+Here's an example of how to use this macro.
+
+```rust
+use r3bl_rs_utils::make_safe_async_fn_wrapper;
+
+make_safe_async_fn_wrapper! {
+  named SafeMiddlewareFnWrapper<A>
+  containing fn_mut
+  of_type FnMut(A) -> Option<A>
+}
+```
+
+Here's another example.
+
+```rust
+use r3bl_rs_utils::make_safe_async_fn_wrapper;
+
+make_safe_async_fn_wrapper! {
+  named SafeSubscriberFnWrapper<S>
+  containing fn_mut
+  of_type FnMut(S) -> ()
 }
 ```
 

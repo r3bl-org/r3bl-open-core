@@ -23,7 +23,9 @@ use proc_macro::TokenStream;
 mod utils;
 mod manager_of_things;
 mod builder;
-mod make_safe_fn_wrapper;
+mod make_safe_async_fn_wrapper;
+mod make_shareable_fn_wrapper;
+mod fn_wrapper_custom_syntax_parser;
 
 #[proc_macro_derive(Builder)]
 pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
@@ -36,6 +38,11 @@ pub fn make_struct_safe_to_share_and_mutate(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
-pub fn make_safe_fn_wrapper(input: TokenStream) -> TokenStream {
-  make_safe_fn_wrapper::fn_proc_macro_impl(input)
+pub fn make_safe_async_fn_wrapper(input: TokenStream) -> TokenStream {
+  make_safe_async_fn_wrapper::fn_proc_macro_impl(input)
+}
+
+#[proc_macro]
+pub fn make_shareable_fn_wrapper(input: TokenStream) -> TokenStream {
+  make_shareable_fn_wrapper::fn_proc_macro_impl(input)
 }
