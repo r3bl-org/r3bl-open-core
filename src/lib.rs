@@ -30,3 +30,8 @@ pub mod tree_memory_arena;
 pub mod utils;
 pub mod tui;
 pub mod redux;
+
+// Re-export from core and macro (so users of public crate can use them w/out having to
+// add dependency on each core and macro).
+pub use r3bl_rs_utils_core::*;
+pub use r3bl_rs_utils_macro::*;
