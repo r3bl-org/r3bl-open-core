@@ -21,7 +21,7 @@ proc-macro = true
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-r3bl_rs_utils_core = { version = "0.7.2", path = "../core" }
+r3bl_rs_utils_core = { version = "0.7.3", path = "../core" }
 
 # https://github.com/dtolnay/proc-macro-workshop#debugging-tips
 syn = { version = "1.0.90", features = ["extra-traits"] }

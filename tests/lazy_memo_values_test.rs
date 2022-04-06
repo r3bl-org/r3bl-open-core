@@ -16,9 +16,8 @@
 
 //! Integration tests for the `lazy` module.
 
+use r3bl_rs_utils::{debug, utils::LazyMemoValues};
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
-
-use r3bl_rs_utils::utils::LazyMemoValues;
 
 #[test]
 fn test_lazy() {
@@ -26,6 +25,9 @@ fn test_lazy() {
   let arc_atomic_count = AtomicUsize::new(0);
   let mut a_variable = 123;
   let mut a_flag = false;
+
+  debug!(a_variable);
+  debug!(a_flag);
 
   let mut generate_value_fn = LazyMemoValues::new(|it| {
     arc_atomic_count.fetch_add(1, SeqCst);
