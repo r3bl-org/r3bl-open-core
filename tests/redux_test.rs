@@ -97,7 +97,7 @@ async fn test_redux_store_works_for_main_use_cases() {
   // Setup store.
   let mut store = Store::<State, Action>::default();
   store
-    .add_reducer(ShareableReducerFn::new(reducer_fn))
+    .add_reducer(ShareableReducerFn::from(reducer_fn))
     .await
     .add_subscriber(SafeSubscriberFnWrapper::from(
       subscriber_fn,

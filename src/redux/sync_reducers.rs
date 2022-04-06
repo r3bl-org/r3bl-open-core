@@ -36,9 +36,9 @@ where
   S: Sync + Send + 'static,
   A: Sync + Send + 'static,
 {
-  /// Constructing a [`ReducerFnWrapper`] using a sized argument `fn_mut`, which can be a
+  /// Constructing a [`ShareableReducerFn`] using a sized argument `fn_mut`, which can be a
   /// normal function or a lambda.
-  pub fn new(
+  pub fn from(
     fn_mut: impl Fn(&S, &A) -> S + Send + Sync + 'static
   ) -> ShareableReducerFn<S, A> {
     Self {

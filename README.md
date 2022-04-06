@@ -52,7 +52,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.4"
+r3bl_rs_utils = "0.7.5"
 ```
 
 ## redux
@@ -165,7 +165,7 @@ functions.
 // Setup store.
 let mut store = Store::<State, Action>::new();
 store
-  .add_reducer(ReducerFnWrapper::new(reducer_fn))
+  .add_reducer(ShareableReducerFn::new(reducer_fn))
   .await
   .add_subscriber(SafeSubscriberFnWrapper::new(subscriber_fn))
   .await
