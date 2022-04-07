@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_rs_utils_macro"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2021"
 description = """
 Internal support for a proc-macro library for reading attributes into structs when
