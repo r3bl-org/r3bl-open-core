@@ -50,6 +50,7 @@ Bug fixes:
     - `make_shareable_fn_wrapper.rs`
     - `make_safe_async_fn_wrapper.rs`
   ✔ clean up `type_ext.rs` @done(22-04-07 15:52)
+  ✔ publish public 0.7.7 and macro 0.7.2 @done(22-04-07 16:08)
 
 Cyclic arc in Rust 1.60.0:
   ☐ Howto use `arc_cyclic_test.rs` in `<Arc<RwLock<T>>>` pattern
