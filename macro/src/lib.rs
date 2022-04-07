@@ -18,14 +18,14 @@
 //! [Procedural macro guide](https://developerlife.com/2022/03/30/rust-proc-macro/).
 
 extern crate proc_macro;
-use proc_macro::TokenStream;
 
 mod utils;
 mod manager_of_things;
 mod builder;
-mod make_safe_async_fn_wrapper;
-mod make_shareable_fn_wrapper;
-mod fn_wrapper_custom_syntax_parser;
+mod fn_wrapper;
+
+use fn_wrapper::{make_safe_async, make_shareable};
+use proc_macro::TokenStream;
 
 #[proc_macro_derive(Builder)]
 pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
@@ -39,10 +39,10 @@ pub fn make_struct_safe_to_share_and_mutate(input: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn make_safe_async_fn_wrapper(input: TokenStream) -> TokenStream {
-  make_safe_async_fn_wrapper::fn_proc_macro_impl(input)
+  make_safe_async::fn_proc_macro_impl(input)
 }
 
 #[proc_macro]
 pub fn make_shareable_fn_wrapper(input: TokenStream) -> TokenStream {
-  make_shareable_fn_wrapper::fn_proc_macro_impl(input)
+  make_shareable::fn_proc_macro_impl(input)
 }

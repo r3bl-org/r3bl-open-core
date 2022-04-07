@@ -15,37 +15,15 @@
  *   limitations under the License.
 */
 
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-#![allow(unused_macros)]
-#![allow(non_camel_case_types)]
+use quote::quote;
+use syn::parse_macro_input;
 
-use core::panic;
-
-use quote::{quote, ToTokens};
-use r3bl_rs_utils_core::debug;
-use syn::{parse::{Parse, ParseBuffer, ParseStream},
-          parse2,
-          parse_macro_input,
-          punctuated::Punctuated,
-          token::Comma,
-          Expr,
-          GenericArgument,
-          GenericParam,
-          Generics,
-          Ident,
-          PathArguments,
-          Result,
-          Token,
-          Type,
-          TypePath,
-          Visibility,
-          WhereClause};
-
-use crate::{fn_wrapper_custom_syntax_parser::{make_opt_where_clause_from_generic_args,
-                                              SafeFnWrapperSyntaxInfo},
-            utils::{IdentExt, TypeExtHasGenericArgs, TypeExtHasIdent}};
+use super::{gen_fn_input_args_expr_list,
+            get_fn_input_args_ident_ref_from_fn_ty,
+            get_fn_output_type_from,
+            IdentRef};
+use crate::fn_wrapper::custom_syntax_parser::{make_opt_where_clause_from_generic_args,
+                                              SafeFnWrapperSyntaxInfo};
 
 /// Example of using this macro:
 ///
@@ -99,14 +77,15 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
   let safe_wrapper_syntax_info: SafeFnWrapperSyntaxInfo = parse_macro_input!(input);
 
   let SafeFnWrapperSyntaxInfo {
-    wrapper_name_ident,
+    wrapper_name_ident: _,
     wrapper_name_type,
     wrapper_name_type_generic_args,
     property_name_ident,
     property_fn_type,
   } = safe_wrapper_syntax_info;
 
-  let fn_input_arg_type_vec: Vec<IdentRef> = get_fn_input_args_from(&property_fn_type);
+  let fn_input_arg_type_vec: Vec<IdentRef> =
+    get_fn_input_args_ident_ref_from_fn_ty(&property_fn_type);
 
   let (fn_input_arg_expr_vec, fn_input_arg_name_ident_vec) =
     gen_fn_input_args_expr_list(&fn_input_arg_type_vec);
@@ -158,123 +137,4 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 
   }
   .into()
-}
-
-fn gen_fn_input_args_expr_list(
-  fn_arg_type_list: &Vec<IdentRef>
-) -> (
-  Vec<proc_macro2::TokenStream>,
-  Vec<Ident>,
-) {
-  let mut count = 0;
-  let mut arg_name_ident_vec: Vec<Ident> = Vec::new();
-  let arg_with_type_vec: Vec<proc_macro2::TokenStream> = fn_arg_type_list
-    .iter()
-    .map(|arg_ty_ident_ref| {
-      count = count + 1;
-      let arg_name_ident: Ident = arg_ty_ident_ref
-        .ident
-        .from_string(&format!("arg{}", count));
-      arg_name_ident_vec.push(arg_name_ident.clone());
-
-      let arg_ty_ident = arg_ty_ident_ref.ident.clone();
-
-      if arg_ty_ident_ref.is_ref {
-        quote! { #arg_name_ident: &#arg_ty_ident }
-      } else {
-        quote! { #arg_name_ident: #arg_ty_ident }
-      }
-    })
-    .collect::<Vec<proc_macro2::TokenStream>>();
-  (
-    arg_with_type_vec,
-    arg_name_ident_vec,
-  )
-}
-
-fn get_fn_input_args_from(property_fn_type: &Type) -> Vec<IdentRef> {
-  let mut args: Vec<IdentRef> = Vec::new();
-  match property_fn_type {
-    Type::Path(type_path) => {
-      handle_type_path(type_path, &mut args);
-    }
-    _ => {}
-  }
-  args
-}
-
-#[derive(Debug)]
-struct IdentRef {
-  pub ident: Ident,
-  pub is_ref: bool,
-}
-
-fn handle_type_path(
-  type_path: &TypePath,
-  args: &mut Vec<IdentRef>,
-) {
-  if type_path
-    .path
-    .segments
-    .first()
-    .is_some()
-  {
-    let path_segment = type_path
-      .path
-      .segments
-      .first()
-      .unwrap();
-    let path_arguments = &path_segment.arguments;
-    if let PathArguments::Parenthesized(p_g_args) = path_arguments {
-      let inputs = &p_g_args.inputs;
-      inputs
-        .iter()
-        .for_each(|type_item| match type_item {
-          Type::Path(type_path) => {
-            if type_item.has_ident() {
-              let ident = type_item.get_ident().unwrap();
-              args.push(IdentRef {
-                ident: ident.clone(),
-                is_ref: false,
-              });
-            }
-          }
-          Type::Reference(ty) => {
-            if ty.has_ident() {
-              let ident = ty.get_ident().unwrap();
-              args.push(IdentRef {
-                ident: ident.clone(),
-                is_ref: true,
-              });
-            }
-          }
-          _ => {}
-        })
-    }
-  }
-}
-
-fn get_fn_output_type_from(property_fn_type: &Type) -> Option<proc_macro2::TokenStream> {
-  if let Type::Path(type_path) = property_fn_type {
-    if type_path
-      .path
-      .segments
-      .first()
-      .is_some()
-    {
-      let path_segment = type_path
-        .path
-        .segments
-        .first()
-        .unwrap();
-      let path_arguments = &path_segment.arguments;
-      if let PathArguments::Parenthesized(p_g_args) = path_arguments {
-        let output = &p_g_args.output;
-        if let syn::ReturnType::Type(_, return_ty) = output {
-          return Some(return_ty.to_token_stream());
-        }
-      }
-    }
-  }
-  None
 }

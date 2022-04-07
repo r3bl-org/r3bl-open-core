@@ -43,3 +43,10 @@ Experiment:
   ✔ make a macro that can generate the complex function wrapper struct @done(22-04-02 20:17)
   ✔ Replace async_subscribers.rs and async_middleware.rs w/ new macro @done(22-04-02 20:17)
   ✔ publish v0.7.1 and update all the internal deps to v0.7.1 @done(22-04-02 20:24)
+
+Bug fixes:
+  ✔ separate `TypeExt` into 2 smaller traits @done(22-04-07 11:02)
+  ✔ remove helper function redundancy between following proc macros: @started(22-04-07 15:51) @done(22-04-07 15:51) @lasted(41s)
+    - `make_shareable_fn_wrapper.rs`
+    - `make_safe_async_fn_wrapper.rs`
+  ✔ clean up `type_ext.rs` @done(22-04-07 15:52)

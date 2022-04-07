@@ -20,8 +20,10 @@ use syn::{punctuated::Punctuated,
           token::Comma,
           GenericArgument,
           Ident,
+          Path,
           PathArguments::AngleBracketed,
           Type,
+          TypePath,
           TypeReference};
 
 pub trait TypeExtHasIdent {
@@ -41,27 +43,65 @@ pub trait TypeExtHasGenericArgs {
 impl TypeExtHasIdent for syn::Type {
   fn has_ident(&self) -> bool {
     match self {
-      Type::Path(ref type_path) => {
-        let path = &type_path.path;
-        let ident = &path.segments.first();
-        ident.is_some()
-      }
+      Type::Path(ref it) => it.get_ident().is_some(),
+      Type::Reference(ref it) => it.get_ident().is_some(),
       _ => false,
     }
   }
 
   fn get_ident(&self) -> Option<Ident> {
     match self {
-      Type::Path(ref type_path) => {
-        let path = &type_path.path;
-        let ident = &path
-          .segments
-          .first()
-          .unwrap()
-          .ident;
-        Some(ident.clone())
-      }
+      Type::Path(ref it) => it.get_ident(),
+      Type::Reference(ref it) => it.get_ident(),
       _ => None,
+    }
+  }
+}
+
+impl TypeExtHasIdent for TypePath {
+  fn has_ident(&self) -> bool {
+    match self {
+      TypePath {
+        path: Path { segments, .. },
+        ..
+      } => {
+        let ident = &segments.first();
+        ident.is_some()
+      }
+    }
+  }
+
+  fn get_ident(&self) -> Option<Ident> {
+    if self.has_ident() {
+      self
+        .path
+        .segments
+        .first()
+        .map(|s| s.ident.clone())
+    } else {
+      None
+    }
+  }
+}
+
+impl TypeExtHasIdent for TypeReference {
+  fn has_ident(&self) -> bool {
+    match self.elem.as_ref() {
+      Type::Path(ref it) => it.has_ident(),
+      _ => false,
+    }
+  }
+
+  fn get_ident(&self) -> Option<Ident> {
+    match self.has_ident() {
+      false => None,
+      true => {
+        let elem = self.elem.as_ref();
+        match elem {
+          Type::Path(ref it) => it.get_ident(),
+          _ => None,
+        }
+      }
     }
   }
 }
@@ -130,40 +170,5 @@ impl TypeExtHasGenericArgs for syn::Type {
       .to_token_stream()
       .to_string()
       .replace(" ", "")
-  }
-}
-
-impl TypeExtHasIdent for TypeReference {
-  fn has_ident(&self) -> bool {
-    let elem = self.elem.as_ref();
-    match elem {
-      Type::Path(ref type_path) => {
-        let path = &type_path.path;
-        let ident = &path.segments.first();
-        ident.is_some()
-      }
-      _ => false,
-    }
-  }
-
-  fn get_ident(&self) -> Option<Ident> {
-    match self.has_ident() {
-      false => None,
-      true => {
-        let elem = self.elem.as_ref();
-        match elem {
-          Type::Path(ref type_path) => {
-            let path = &type_path.path;
-            let ident = &path
-              .segments
-              .first()
-              .unwrap()
-              .ident;
-            Some(ident.clone())
-          }
-          _ => None,
-        }
-      }
-    }
   }
 }
