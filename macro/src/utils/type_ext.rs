@@ -24,9 +24,12 @@ use syn::{punctuated::Punctuated,
           Type,
           TypeReference};
 
-pub trait TypeExt {
+pub trait TypeExtHasIdent {
   fn has_ident(&self) -> bool;
   fn get_ident(&self) -> Option<Ident>;
+}
+
+pub trait TypeExtHasGenericArgs {
   fn has_angle_bracketed_generic_args(&self) -> bool;
   fn get_angle_bracketed_generic_args_result(
     &self
@@ -35,7 +38,7 @@ pub trait TypeExt {
   fn to_string(&self) -> String;
 }
 
-impl TypeExt for syn::Type {
+impl TypeExtHasIdent for syn::Type {
   fn has_ident(&self) -> bool {
     match self {
       Type::Path(ref type_path) => {
@@ -61,7 +64,9 @@ impl TypeExt for syn::Type {
       _ => None,
     }
   }
+}
 
+impl TypeExtHasGenericArgs for syn::Type {
   /// True if self.type_path.path.segments.first().arguments.args.len() to be > 0.
   fn has_angle_bracketed_generic_args(&self) -> bool {
     match self.get_angle_bracketed_generic_args_result() {
@@ -128,12 +133,7 @@ impl TypeExt for syn::Type {
   }
 }
 
-pub trait TypeReferenceExt {
-  fn has_ident(&self) -> bool;
-  fn get_ident(&self) -> Option<Ident>;
-}
-
-impl TypeReferenceExt for TypeReference {
+impl TypeExtHasIdent for TypeReference {
   fn has_ident(&self) -> bool {
     let elem = self.elem.as_ref();
     match elem {

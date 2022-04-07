@@ -45,7 +45,7 @@ use syn::{parse::{Parse, ParseBuffer, ParseStream},
 
 use crate::{fn_wrapper_custom_syntax_parser::{make_opt_where_clause_from_generic_args,
                                               SafeFnWrapperSyntaxInfo},
-            utils::{IdentExt, TypeExt}};
+            utils::{IdentExt, TypeExtHasGenericArgs, TypeExtHasIdent}};
 
 pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let safe_wrapper_syntax_info: SafeFnWrapperSyntaxInfo = parse_macro_input!(input);

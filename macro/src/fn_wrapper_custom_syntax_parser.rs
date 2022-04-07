@@ -43,7 +43,7 @@ use syn::{parse::{Parse, ParseBuffer, ParseStream},
           Visibility,
           WhereClause};
 
-use crate::utils::{IdentExt, TypeExt};
+use crate::utils::{IdentExt, TypeExtHasIdent, TypeExtHasGenericArgs};
 
 /// Example of syntax to parse:
 /// ```no_run

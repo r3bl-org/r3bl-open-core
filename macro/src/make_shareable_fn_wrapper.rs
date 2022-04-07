@@ -45,7 +45,7 @@ use syn::{parse::{Parse, ParseBuffer, ParseStream},
 
 use crate::{fn_wrapper_custom_syntax_parser::{make_opt_where_clause_from_generic_args,
                                               SafeFnWrapperSyntaxInfo},
-            utils::{IdentExt, TypeExt, TypeReferenceExt}};
+            utils::{IdentExt, TypeExtHasGenericArgs, TypeExtHasIdent}};
 
 /// Example of using this macro:
 ///

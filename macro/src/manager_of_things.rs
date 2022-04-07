@@ -40,7 +40,7 @@ use syn::{parse::{Parse, ParseBuffer, ParseStream},
           Visibility,
           WhereClause};
 
-use crate::utils::type_ext::TypeExt;
+use crate::utils::type_ext::{TypeExtHasGenericArgs, TypeExtHasIdent};
 
 /// See [`ManagerOfThingInfo`] for more information on the syntax that this macro accepts.
 ///
