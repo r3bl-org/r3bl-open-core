@@ -124,12 +124,12 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
         Self { #property_name_ident: ARC::new(RWLOCK::new(#property_name_ident)) }
       }
 
-      pub fn get(&self) -> ARC<RWLOCK<dyn #property_fn_type + Send + Sync + 'static>> {
+      pub fn get_ref(&self) -> ARC<RWLOCK<dyn #property_fn_type + Send + Sync + 'static>> {
         self.#property_name_ident.clone()
       }
 
       pub fn invoke(&self, #(#fn_input_arg_expr_vec),*) -> #fn_output_return_type {
-        let arc_lock_fn_mut = self.get();
+        let arc_lock_fn_mut = self.get_ref();
         let mut fn_mut = arc_lock_fn_mut.write().unwrap();
         fn_mut(#(#fn_input_arg_name_ident_vec),*)
       }
