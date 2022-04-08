@@ -15,29 +15,18 @@
  *   limitations under the License.
 */
 
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-#![allow(unused_macros)]
-#![allow(non_camel_case_types)]
-
 use core::panic;
 
-use quote::{quote, ToTokens};
-use syn::{parse::{Parse, ParseBuffer, ParseStream},
-          parse2,
+use quote::quote;
+use syn::{parse::{Parse, ParseStream},
           parse_macro_input,
           punctuated::Punctuated,
           token::Comma,
-          Expr,
           GenericArgument,
-          GenericParam,
-          Generics,
           Ident,
           Result,
           Token,
           Type,
-          Visibility,
           WhereClause};
 
 use crate::utils::type_ext::{TypeExtHasGenericArgs, TypeExtHasIdent};
@@ -230,7 +219,8 @@ impl Parse for ManagerOfThingSyntaxInfo {
     let manager_type: Type = input.parse()?;
 
     // 👀 Manager Type generic args, eg: `<K,V>`.
-    let manager_type_generic_args = match manager_type.has_angle_bracketed_generic_args() {
+    let manager_type_generic_args = match manager_type.has_angle_bracketed_generic_args()
+    {
       true => Some(
         manager_type
           .get_angle_bracketed_generic_args_result()

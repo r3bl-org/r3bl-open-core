@@ -16,7 +16,7 @@
 
 use r3bl_rs_utils_macro::make_struct_safe_to_share_and_mutate;
 use std::{fmt::Debug, hash::Hash};
-use tokio::task::JoinHandle;
+use tokio::{task::JoinHandle, spawn};
 
 use crate::redux::{
   async_middleware::SafeMiddlewareFnWrapper, async_subscriber::SafeSubscriberFnWrapper,
@@ -58,7 +58,7 @@ where
     action: A,
   ) -> JoinHandle<()> {
     let my_ref = self.get_ref();
-    tokio::spawn(async move {
+    spawn(async move {
       my_ref
         .write()
         .await
