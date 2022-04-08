@@ -53,4 +53,6 @@ Bug fixes:
   ✔ publish public 0.7.7 and macro 0.7.2 @done(22-04-07 16:08)
 
 Cyclic arc in Rust 1.60.0:
-  ☐ Howto use `arc_cyclic_test.rs` in `<Arc<RwLock<T>>>` pattern
+  ☐ Experiment use new cyclic `Arc` in `<Arc<RwLock<T>>>` pattern
+    - `arc_cyclic_test.rs`
+    - `arc_cyclic_test_2.rs`

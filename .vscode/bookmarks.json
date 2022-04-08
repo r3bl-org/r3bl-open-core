@@ -29,16 +29,6 @@
 					"label": ""
 				}
 			]
-		},
-		{
-			"path": "macro/src/fn_wrapper/make_shareable.rs",
-			"bookmarks": [
-				{
-					"line": 91,
-					"column": 4,
-					"label": ""
-				}
-			]
 		}
 	]
 }

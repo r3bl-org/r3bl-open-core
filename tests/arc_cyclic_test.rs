@@ -18,48 +18,45 @@
 //! New in Rust v 1.60.0: Arc cyclic references.
 //! https://doc.rust-lang.org/stable/std/sync/struct.Arc.html#method.new_cyclic
 
-#![allow(unused)]
-#![allow(dead_code)]
-
 use std::sync::RwLock;
 use std::sync::{Arc, Weak};
 
-struct Gadget {
-  pub weak_me: Weak<RwLock<Gadget>>,
-  pub data: String,
-}
-
-impl Gadget {
-  /// Construct a reference counted Gadget.
-  fn new() -> Arc<RwLock<Self>> {
-    Arc::new_cyclic(|weak_me_ref| {
-      let weak_me_clone = weak_me_ref.clone();
-      RwLock::new(Gadget {
-        weak_me: weak_me_clone,
-        data: Default::default(),
-      })
-    })
-  }
-
-  /// Return a reference counted pointer to Self.
-  pub fn clone_arc(&self) -> Arc<RwLock<Self>> {
-    self.weak_me.upgrade().unwrap()
-  }
-
-  pub fn set_data(
-    &mut self,
-    arg: &str,
-  ) {
-    self.data = String::from(arg);
-  }
-
-  pub fn get_data(&self) -> String {
-    self.data.clone()
-  }
-}
-
 #[test]
 fn test_new() {
+  struct Gadget {
+    pub weak_me: Weak<RwLock<Gadget>>,
+    pub data: String,
+  }
+
+  impl Gadget {
+    /// Construct a reference counted Gadget.
+    fn new() -> Arc<RwLock<Self>> {
+      Arc::new_cyclic(|weak_me_ref| {
+        let weak_me_clone = weak_me_ref.clone();
+        RwLock::new(Gadget {
+          weak_me: weak_me_clone,
+          data: Default::default(),
+        })
+      })
+    }
+
+    /// Return a reference counted pointer to Self.
+    pub fn clone_arc(&self) -> Arc<RwLock<Self>> {
+      self.weak_me.upgrade().unwrap()
+    }
+
+    pub fn set_data(
+      &mut self,
+      arg: &str,
+    ) {
+      self.data = String::from(arg);
+    }
+
+    pub fn get_data(&self) -> String {
+      self.data.clone()
+    }
+  }
+
   let g_arc: Arc<RwLock<Gadget>> = Gadget::new();
 
   g_arc
