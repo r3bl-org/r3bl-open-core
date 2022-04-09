@@ -53,7 +53,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.7"
+r3bl_rs_utils = "0.7.8"
 ```
 
 ## redux
