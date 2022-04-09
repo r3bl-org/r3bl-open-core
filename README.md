@@ -11,6 +11,7 @@
   - [Procedural](#procedural)
     - [#[derive(Builder)]](#derivebuilder)
     - [make_struct_safe_to_share_and_mutate!](#make_struct_safe_to_share_and_mutate)
+    - [make_safe_async_fn_wrapper!](#make_safe_async_fn_wrapper)
 - [tree_memory_arena (non-binary tree data structure)](#tree_memory_arena-non-binary-tree-data-structure)
 - [utils](#utils)
   - [LazyMemoValues](#lazymemovalues)
