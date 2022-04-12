@@ -31,7 +31,7 @@ rand = "0.8.4"
 ansi_term = "0.12.1"
 chrono = "0.4.0"
 atty = "0.2.14"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.17.0", features = ["full"] }
 async-trait = "0.1.53"
 
 [workspace]

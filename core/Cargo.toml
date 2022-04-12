@@ -18,6 +18,6 @@ license = "Apache-2.0"
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.17.0", features = ["full"] }
 async-trait = "0.1.53"
 ansi_term = "0.12.1"
