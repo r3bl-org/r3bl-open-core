@@ -14,13 +14,13 @@
  limitations under the License.
 */
 
+use crate::redux::{
+  SafeList, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper, ShareableReducerFn,
+};
 use core::{fmt::Debug, hash::Hash};
 use r3bl_rs_utils_core::SafeToShare;
-
-use crate::redux::{
-  iterate_over_list, iterate_over_list_async, iterate_over_list_containing_results_async,
-  ShareableReducerFn, SafeList, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper,
-};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 pub struct StoreStateMachine<S, A>
 where
@@ -30,7 +30,7 @@ where
   pub state: S,
   pub history: Vec<S>,
   pub subscriber_fn_list: SafeList<SafeSubscriberFnWrapper<S>>,
-  pub middleware_fn_list: SafeList<SafeMiddlewareFnWrapper<A>>,
+  pub middleware_fn_list: SafeList<SafeMiddlewareFnWrapper<A, Arc<RwLock<Self>>>>,
   pub reducer_fn_list: SafeList<ShareableReducerFn<S, A>>,
 }
 
@@ -65,10 +65,11 @@ where
   pub async fn dispatch_action(
     &mut self,
     action: &A,
+    my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) {
     // Run middleware & collect resulting actions.
     let mut resulting_actions = self
-      .middleware_runner(action)
+      .middleware_runner(action, my_ref)
       .await;
 
     // Add the original action to the resulting actions.
@@ -88,28 +89,27 @@ where
   ) {
     // Run reducers.
     {
-      iterate_over_list!(
-        self.reducer_fn_list,
-        |reducer_fn: &'a ShareableReducerFn<S, A>| {
-          let new_state = reducer_fn.invoke(&self.state, &action);
-          self.update_history(&new_state);
-          self.state = new_state;
-        }
-      );
+      let locked_list = self.reducer_fn_list.get_ref();
+      let list_r = locked_list.read().await;
+      for reducer_fn in list_r.iter() {
+        let new_state = reducer_fn.invoke(&self.state, &action);
+        self.update_history(&new_state);
+        self.state = new_state;
+      }
     }
 
     // Run subscribers.
     {
       let state_clone = &self.get_state_clone();
-      iterate_over_list_async!(
-        self.subscriber_fn_list,
-        |subscriber_fn: &'a SafeSubscriberFnWrapper<S>| async move {
-          subscriber_fn
-            .spawn(state_clone.clone())
-            .await
-            .unwrap();
-        }
-      );
+
+      let locked_list = self.subscriber_fn_list.get_ref();
+      let list_r = locked_list.read().await;
+      for subscriber_fn in list_r.iter() {
+        subscriber_fn
+          .spawn(state_clone.clone())
+          .await
+          .unwrap();
+      }
     }
   }
 
@@ -141,17 +141,29 @@ where
   pub async fn middleware_runner<'a>(
     &mut self,
     action: &A,
+    my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) -> Vec<A> {
+    let action_clone = action.clone();
+    let my_ref_clone = my_ref.clone();
     let mut return_vec = vec![];
-    iterate_over_list_containing_results_async!(
-      self.middleware_fn_list,
-      |middleware_fn: &'a SafeMiddlewareFnWrapper<A>| async move {
-        middleware_fn
-          .spawn(action.clone())
-          .await
-      },
-      return_vec
-    );
+
+    let locked_list = self.middleware_fn_list.get_ref();
+    let list_r = locked_list.read().await;
+    for item_fn in list_r.iter() {
+      let result = item_fn
+        .spawn(
+          action_clone.clone(),
+          my_ref_clone.clone(),
+        )
+        .await;
+      match result {
+        Ok(Some(action)) => {
+          return_vec.push(action);
+        }
+        _ => (),
+      };
+    }
+
     return return_vec;
   }
 }

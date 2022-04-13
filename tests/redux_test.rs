@@ -17,7 +17,7 @@
 
 // Imports.
 use r3bl_rs_utils::redux::{
-  ShareableReducerFn, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper, Store,
+  SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper, ShareableReducerFn, Store,
 };
 use r3bl_rs_utils::utils::with;
 use std::sync::{Arc, Mutex};
@@ -68,7 +68,7 @@ async fn test_redux_store_works_for_main_use_cases() {
 
   // This middleware function is curried to capture a reference to the shared object.
   let mw_returns_none = with(shared_object.clone(), |it| {
-    let curried_fn = move |action: Action| {
+    let curried_fn = move |action: Action, _| {
       let mut stack = it.lock().unwrap();
       match action {
         Action::Add(_, _) => stack.push(-1),
@@ -83,7 +83,7 @@ async fn test_redux_store_works_for_main_use_cases() {
 
   // This middleware function is curried to capture a reference to the shared object.
   let mw_returns_action = with(shared_object.clone(), |it| {
-    let curried_fn = move |action: Action| {
+    let curried_fn = move |action: Action, _| {
       let mut stack = it.lock().unwrap();
       match action {
         Action::MiddlewareCreateClearAction => stack.push(-4),
@@ -97,7 +97,9 @@ async fn test_redux_store_works_for_main_use_cases() {
   // Setup store.
   let mut store = Store::<State, Action>::default();
   store
-    .add_reducer(ShareableReducerFn::from(reducer_fn))
+    .add_reducer(ShareableReducerFn::from(
+      reducer_fn,
+    ))
     .await
     .add_subscriber(SafeSubscriberFnWrapper::from(
       subscriber_fn,

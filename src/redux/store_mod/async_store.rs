@@ -16,7 +16,7 @@
 
 use r3bl_rs_utils_macro::make_struct_safe_to_share_and_mutate;
 use std::{fmt::Debug, hash::Hash};
-use tokio::{task::JoinHandle, spawn};
+use tokio::{spawn, task::JoinHandle};
 
 use crate::redux::{
   async_middleware::SafeMiddlewareFnWrapper, async_subscriber::SafeSubscriberFnWrapper,
@@ -62,7 +62,7 @@ where
       my_ref
         .write()
         .await
-        .dispatch_action(&action)
+        .dispatch_action(&action, my_ref.clone())
         .await;
     })
   }
@@ -71,11 +71,11 @@ where
     &self,
     action: &A,
   ) {
-    self
-      .get_ref()
+    let my_ref = self.get_ref();
+    my_ref
       .write()
       .await
-      .dispatch_action(action)
+      .dispatch_action(action, my_ref.clone())
       .await;
   }
 
@@ -106,7 +106,7 @@ where
 
   pub async fn add_middleware(
     &mut self,
-    middleware_fn: SafeMiddlewareFnWrapper<A>,
+    middleware_fn: SafeMiddlewareFnWrapper<A, ARC<RWLOCK<StoreStateMachine<S, A>>>>,
   ) -> &mut Store<S, A> {
     self
       .get_ref()

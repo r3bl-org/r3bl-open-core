@@ -17,7 +17,7 @@
 use r3bl_rs_utils_macro::make_safe_async_fn_wrapper;
 
 make_safe_async_fn_wrapper! {
-  named SafeMiddlewareFnWrapper<A>
+  named SafeMiddlewareFnWrapper<A, B>
   containing fn_mut
-  of_type FnMut(A) -> Option<A>
+  of_type FnMut(A, B) -> Option<A>
 }
