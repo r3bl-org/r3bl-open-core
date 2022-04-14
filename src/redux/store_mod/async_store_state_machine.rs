@@ -64,12 +64,12 @@ where
 
   pub async fn dispatch_action(
     &mut self,
-    action: &A,
+    action: A,
     my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) {
     // Run middleware & collect resulting actions.
     let mut resulting_actions = self
-      .middleware_runner(action, my_ref)
+      .middleware_runner(action.clone(), my_ref)
       .await;
 
     // Add the original action to the resulting actions.
@@ -83,33 +83,36 @@ where
     }
   }
 
-  pub async fn actually_dispatch_action<'a>(
+  async fn actually_dispatch_action(
     &mut self,
     action: &A,
   ) {
-    // Run reducers.
-    {
-      let locked_list = self.reducer_fn_list.get_ref();
-      let list_r = locked_list.read().await;
-      for reducer_fn in list_r.iter() {
-        let new_state = reducer_fn.invoke(&self.state, &action);
-        self.update_history(&new_state);
-        self.state = new_state;
-      }
+    self.run_reducers(action).await;
+    self.run_subscribers().await;
+  }
+
+  async fn run_subscribers(&mut self) {
+    let state_clone = &self.get_state_clone();
+    let locked_list = self.subscriber_fn_list.get_ref();
+    let list_r = locked_list.read().await;
+    for subscriber_fn in list_r.iter() {
+      subscriber_fn
+        .spawn(state_clone.clone())
+        .await
+        .unwrap();
     }
+  }
 
-    // Run subscribers.
-    {
-      let state_clone = &self.get_state_clone();
-
-      let locked_list = self.subscriber_fn_list.get_ref();
-      let list_r = locked_list.read().await;
-      for subscriber_fn in list_r.iter() {
-        subscriber_fn
-          .spawn(state_clone.clone())
-          .await
-          .unwrap();
-      }
+  async fn run_reducers(
+    &mut self,
+    action: &A,
+  ) {
+    let locked_list = self.reducer_fn_list.get_ref();
+    let list_r = locked_list.read().await;
+    for reducer_fn in list_r.iter() {
+      let new_state = reducer_fn.invoke(&self.state, &action);
+      self.update_history(&new_state);
+      self.state = new_state;
     }
   }
 
@@ -138,9 +141,9 @@ where
 
   /// Run middleware and return a list of resulting actions. If a middleware produces `None` that
   /// isn't added to the list that's returned.
-  pub async fn middleware_runner<'a>(
+  pub async fn middleware_runner(
     &mut self,
-    action: &A,
+    action: A,
     my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) -> Vec<A> {
     let action_clone = action.clone();

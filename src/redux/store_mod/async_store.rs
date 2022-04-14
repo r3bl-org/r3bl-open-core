@@ -32,7 +32,7 @@ make_struct_safe_to_share_and_mutate! {
 
 /// Thread safe and async Redux store (using [`tokio`]). This is built atop [`StoreData`] (which
 /// should not be used directly).
-impl<'a, S, A> Store<S, A>
+impl<S, A> Store<S, A>
 where
   S: Default + Clone + PartialEq + Debug + Hash + Sync + Send + 'static,
   A: Clone + Sync + Send + 'static,
@@ -58,24 +58,25 @@ where
     action: A,
   ) -> JoinHandle<()> {
     let my_ref = self.get_ref();
+    let my_ref_2 = self.get_ref();
     spawn(async move {
       my_ref
         .write()
         .await
-        .dispatch_action(&action, my_ref.clone())
+        .dispatch_action(action, my_ref_2)
         .await;
     })
   }
 
   pub async fn dispatch(
     &self,
-    action: &A,
+    action: A,
   ) {
     let my_ref = self.get_ref();
     my_ref
       .write()
       .await
-      .dispatch_action(action, my_ref.clone())
+      .dispatch_action(action.clone(), my_ref.clone())
       .await;
   }
 
