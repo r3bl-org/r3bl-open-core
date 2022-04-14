@@ -60,4 +60,4 @@ Cyclic arc in Rust 1.60.0:
     - `from` constructor provides an `Arc` wrapped struct & fails to hide the `Arc`
 
 Fix middleware & make it async:
-  ☐ mw fn accepts 2nd arg (`StoreStateMachine`) so it can dispatch action async
+  ✔ mw fn accepts 2nd arg (`StoreStateMachine`) so it can dispatch action async @done(22-04-13 17:49)
