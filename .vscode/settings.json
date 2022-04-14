@@ -8,6 +8,7 @@
     "isnt",
     "lazymemovalues",
     "middlewares",
-    "qself"
+    "qself",
+    "reqwest"
   ]
 }

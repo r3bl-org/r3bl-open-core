@@ -26,3 +26,34 @@ macro_rules! debug {
     );
   };
 }
+
+/// Declarative macro to generate the API call functions. This adds the following:
+/// - `make_request()` async function to call the API.
+/// - `to_string()` function to stringify the struct to JSON.
+/// - impl `Display` trait to for the struct using `to_string()` above.
+#[macro_export]
+macro_rules! make_api_call_for {
+  ($STRUCT_NAME:ident at $ENDPOINT:ident) => {
+    pub async fn make_request() -> Result<$STRUCT_NAME, Box<dyn Error>> {
+      let res = reqwest::get($ENDPOINT).await?;
+      let res_text = res.text().await?;
+      let res_json: $STRUCT_NAME = serde_json::from_str(&res_text)?;
+      Ok(res_json)
+    }
+
+    impl $STRUCT_NAME {
+      pub fn to_string(&self) -> String {
+        serde_json::to_string(&self).unwrap()
+      }
+    }
+
+    impl Display for $STRUCT_NAME {
+      fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+      ) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
+      }
+    }
+  };
+}
