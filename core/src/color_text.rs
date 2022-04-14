@@ -18,6 +18,7 @@
 
 use ansi_term::Colour::Purple;
 
+#[macro_export]
 macro_rules! print_header {
   (error $msg: expr) => {
     let hamburger = "☰";
