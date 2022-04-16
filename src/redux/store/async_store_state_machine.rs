@@ -144,8 +144,6 @@ where
     };
   }
 
-  // FIXME: run middleware_vec
-  // FIXME: deprecate middleware_fn_list
   /// Run middleware and return a list of resulting actions. If a middleware produces `None` that
   /// isn't added to the list that's returned.
   pub async fn middleware_runner(
@@ -155,8 +153,18 @@ where
   ) -> Vec<A> {
     let mut return_vec = vec![];
 
+    // FIXME: deprecate middleware_fn_list
     self
       .run_middleware_fn_list(
+        action.clone(),
+        my_ref.clone(),
+        &mut return_vec,
+      )
+      .await;
+
+    // FIXME: run middleware_vec
+    self
+      .run_middleware_vec(
         action.clone(),
         my_ref.clone(),
         &mut return_vec,
@@ -167,21 +175,34 @@ where
   }
 
   // FIXME: add run_middleware_vec()
+  async fn run_middleware_vec(
+    &mut self,
+    my_action: A,
+    my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
+    return_vec: &mut Vec<A>,
+  ) {
+    for item in &self.middleware_vec.vec {
+      let fun = item.write().await;
+      let result = fun
+        .run(my_action.clone(), my_ref.clone())
+        .await;
+      if let Some(result) = result {
+        return_vec.push(result);
+      }
+    }
+  }
 
   async fn run_middleware_fn_list(
     &mut self,
-    action_clone: A,
-    my_ref_clone: Arc<RwLock<StoreStateMachine<S, A>>>,
+    my_action: A,
+    my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
     return_vec: &mut Vec<A>,
   ) {
     let locked_list = self.middleware_fn_list.get_ref();
     let list_r = locked_list.read().await;
     for item_fn in list_r.iter() {
       let result = item_fn
-        .spawn(
-          action_clone.clone(),
-          my_ref_clone.clone(),
-        )
+        .spawn(my_action.clone(), my_ref.clone())
         .await;
       match result {
         Ok(Some(action)) => {
