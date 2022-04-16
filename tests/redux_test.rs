@@ -76,20 +76,21 @@ async fn test_redux_store_works_for_main_use_cases() {
     curried_fn
   });
 
+  // FIXME: remove this
   // This middleware function is curried to capture a reference to the shared object.
-  let mw_returns_none = with(shared_object.clone(), |it| {
-    let curried_fn = move |action: Action, _| {
-      let mut stack = it.lock().unwrap();
-      match action {
-        Action::Add(_, _) => stack.push(-1),
-        Action::AddPop(_) => stack.push(-2),
-        Action::Clear => stack.push(-3),
-        _ => {}
-      }
-      None
-    };
-    curried_fn
-  });
+  // let mw_returns_none = with(shared_object.clone(), |it| {
+  //   let curried_fn = move |action: Action, _| {
+  //     let mut stack = it.lock().unwrap();
+  //     match action {
+  //       Action::Add(_, _) => stack.push(-1),
+  //       Action::AddPop(_) => stack.push(-2),
+  //       Action::Clear => stack.push(-3),
+  //       _ => {}
+  //     }
+  //     None
+  //   };
+  //   curried_fn
+  // });
 
   // This middleware function is curried to capture a reference to the shared object.
   let mw_returns_action = with(shared_object.clone(), |it| {
@@ -114,28 +115,44 @@ async fn test_redux_store_works_for_main_use_cases() {
     .add_subscriber(SafeSubscriberFnWrapper::from(
       subscriber_fn,
     ))
-    .await
-    .add_middleware(SafeMiddlewareFnWrapper::from(
-      mw_returns_none,
-    ))
     .await;
+  // FIXME: remove this
+  // .add_middleware(SafeMiddlewareFnWrapper::from(
+  //   mw_returns_none,
+  // ))
+  // .await;
 
   // FIXME: Middleware 2.
   #[derive(Default)]
-  struct MyAsyncMWImpl;
+  struct MyAsyncMWReturnsNone {
+    pub shared_object: Arc<Mutex<Vec<i32>>>,
+  }
 
   #[async_trait]
-  impl AsyncMiddleware<State, Action> for MyAsyncMWImpl {
+  impl AsyncMiddleware<State, Action> for MyAsyncMWReturnsNone {
     async fn run(
       &self,
-      _action: Action,
+      action: Action,
       _store_ref: Arc<RwLock<StoreStateMachine<State, Action>>>,
     ) -> Option<Action> {
+      // FIXME: Replacement for mw_returns_none.
+      let mut stack = self.shared_object.lock().unwrap();
+      match action {
+        Action::Add(_, _) => stack.push(-1),
+        Action::AddPop(_) => stack.push(-2),
+        Action::Clear => stack.push(-3),
+        _ => {}
+      }
       None
     }
   }
+  let my_async_mw_returns_none = MyAsyncMWReturnsNone {
+    shared_object: shared_object.clone(),
+  };
   store
-    .add_middleware2(MyAsyncMWImpl::new())
+    .add_middleware2(Arc::new(RwLock::new(
+      my_async_mw_returns_none,
+    )))
     .await;
 
   // Test reducer and subscriber by dispatching Add and AddPop actions sync & async.
