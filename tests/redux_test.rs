@@ -16,11 +16,14 @@
 */
 
 // Imports.
+use async_trait::async_trait;
 use r3bl_rs_utils::redux::{
-  SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper, ShareableReducerFn, Store,
+  AsyncMiddleware, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper, ShareableReducerFn,
+  Store, StoreStateMachine,
 };
 use r3bl_rs_utils::utils::with;
 use std::sync::{Arc, Mutex};
+use tokio::sync::RwLock;
 
 /// Action enum.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
@@ -115,6 +118,24 @@ async fn test_redux_store_works_for_main_use_cases() {
     .add_middleware(SafeMiddlewareFnWrapper::from(
       mw_returns_none,
     ))
+    .await;
+
+  // FIXME: Middleware 2.
+  #[derive(Default)]
+  struct MyAsyncMWImpl;
+
+  #[async_trait]
+  impl AsyncMiddleware<State, Action> for MyAsyncMWImpl {
+    async fn run(
+      &self,
+      _action: Action,
+      _store_ref: Arc<RwLock<StoreStateMachine<State, Action>>>,
+    ) -> Option<Action> {
+      None
+    }
+  }
+  store
+    .add_middleware2(MyAsyncMWImpl::new())
     .await;
 
   // Test reducer and subscriber by dispatching Add and AddPop actions sync & async.

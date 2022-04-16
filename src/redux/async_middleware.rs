@@ -14,10 +14,14 @@
  limitations under the License.
 */
 
+use std::sync::Arc;
+
 use super::StoreStateMachine;
 use async_trait::async_trait;
 use r3bl_rs_utils_macro::make_safe_async_fn_wrapper;
+use tokio::sync::RwLock;
 
+// FIXME: deprecate this (also <A, S> is backwards!)
 make_safe_async_fn_wrapper! {
   named SafeMiddlewareFnWrapper<A, S>
   containing fn_mut
@@ -31,29 +35,33 @@ make_safe_async_fn_wrapper! {
 #[async_trait]
 pub trait AsyncMiddleware<S, A>
 where
-  A: Sync + Send,
   S: Sync + Send,
+  A: Sync + Send,
 {
   async fn run(
     &self,
     action: A,
-    store_ref: ARC<RWLOCK<StoreStateMachine<S, A>>>,
+    store_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) -> Option<A>;
 
-  fn new() -> Self
+  /// https://doc.rust-lang.org/book/ch10-02-traits.html
+  fn new() -> Arc<RwLock<dyn AsyncMiddleware<S, A> + Send + Sync + 'static>>
   where
-    Self: Sized;
+    Self: Default + Sized + Sync + Send + 'static,
+  {
+    Arc::new(RwLock::new(Self::default()))
+  }
 }
 
 #[derive(Default)]
 pub struct AsyncMiddlewareVec<S, A> {
-  pub vec: Vec<ARC<RWLOCK<dyn AsyncMiddleware<A, S> + Send + Sync>>>,
+  pub vec: Vec<Arc<RwLock<dyn AsyncMiddleware<S, A> + Send + Sync>>>,
 }
 
 impl<S, A> AsyncMiddlewareVec<S, A> {
   pub fn push(
     &mut self,
-    middleware: ARC<RWLOCK<dyn AsyncMiddleware<A, S> + Send + Sync>>,
+    middleware: Arc<RwLock<dyn AsyncMiddleware<S, A> + Send + Sync>>,
   ) {
     self.vec.push(middleware);
   }

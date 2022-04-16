@@ -15,8 +15,8 @@
 */
 
 use r3bl_rs_utils_macro::make_struct_safe_to_share_and_mutate;
-use std::{fmt::Debug, hash::Hash};
-use tokio::{spawn, task::JoinHandle};
+use std::{fmt::Debug, hash::Hash, sync::Arc};
+use tokio::{spawn, task::JoinHandle, sync::RwLock};
 
 use crate::redux::{
   async_middleware::SafeMiddlewareFnWrapper, async_subscriber::SafeSubscriberFnWrapper,
@@ -135,7 +135,7 @@ where
   // FIXME: rename this to add_middleware
   pub async fn add_middleware2(
     &mut self,
-    middleware_fn: ARC<RWLOCK<dyn AsyncMiddleware<A, S> + Send + Sync>>,
+    middleware_fn: Arc<RwLock<dyn AsyncMiddleware<S, A> + Send + Sync>>,
   ) -> &mut Store<S, A> {
     self
       .get_ref()

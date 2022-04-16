@@ -37,12 +37,12 @@ where
   pub middleware_fn_list: SafeList<SafeMiddlewareFnWrapper<A, Arc<RwLock<Self>>>>,
 }
 
-impl<S, A> Default for StoreStateMachine<S, A>
+impl<StateT, ActionT> Default for StoreStateMachine<StateT, ActionT>
 where
-  S: Default + Sync + Send + 'static,
-  A: Default + Sync + Send + 'static,
+  StateT: Default + Sync + Send + 'static,
+  ActionT: Default + Sync + Send + 'static,
 {
-  fn default() -> StoreStateMachine<S, A> {
+  fn default() -> StoreStateMachine<StateT, ActionT> {
     StoreStateMachine {
       state: Default::default(),
       history: vec![],

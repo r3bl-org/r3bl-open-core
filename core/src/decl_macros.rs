@@ -72,21 +72,21 @@ macro_rules! debug {
 /// - impl `Display` trait to for the struct using `to_string()` above.
 #[macro_export]
 macro_rules! make_api_call_for {
-  ($STRUCT_NAME:ident at $ENDPOINT:ident) => {
-    pub async fn make_request() -> Result<$STRUCT_NAME, Box<dyn Error>> {
+  ($IDENT:ident at $ENDPOINT:ident) => {
+    pub async fn make_request() -> Result<$IDENT, Box<dyn Error>> {
       let res = reqwest::get($ENDPOINT).await?;
       let res_text = res.text().await?;
-      let res_json: $STRUCT_NAME = serde_json::from_str(&res_text)?;
+      let res_json: $IDENT = serde_json::from_str(&res_text)?;
       Ok(res_json)
     }
 
-    impl $STRUCT_NAME {
+    impl $IDENT {
       pub fn to_string(&self) -> String {
         serde_json::to_string(&self).unwrap()
       }
     }
 
-    impl Display for $STRUCT_NAME {
+    impl Display for $IDENT {
       fn fmt(
         &self,
         f: &mut std::fmt::Formatter<'_>,
