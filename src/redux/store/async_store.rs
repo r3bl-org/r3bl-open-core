@@ -16,11 +16,11 @@
 
 use r3bl_rs_utils_macro::make_struct_safe_to_share_and_mutate;
 use std::{fmt::Debug, hash::Hash, sync::Arc};
-use tokio::{spawn, task::JoinHandle, sync::RwLock};
+use tokio::{spawn, sync::RwLock, task::JoinHandle};
 
 use crate::redux::{
-  async_middleware::SafeMiddlewareFnWrapper, async_subscriber::SafeSubscriberFnWrapper,
-  sync_reducers::ShareableReducerFn, AsyncMiddleware, StoreStateMachine,
+  async_subscriber::SafeSubscriberFnWrapper, sync_reducers::ShareableReducerFn,
+  AsyncMiddleware, StoreStateMachine,
 };
 
 make_struct_safe_to_share_and_mutate! {
@@ -58,12 +58,11 @@ where
     action: A,
   ) -> JoinHandle<()> {
     let my_ref = self.get_ref();
-    let my_ref_2 = self.get_ref();
     spawn(async move {
       my_ref
         .write()
         .await
-        .dispatch_action(action, my_ref_2)
+        .dispatch_action(action, my_ref.clone())
         .await;
     })
   }
@@ -105,35 +104,7 @@ where
     self
   }
 
-  // FIXME: deprecate this.
   pub async fn add_middleware(
-    &mut self,
-    middleware_fn: SafeMiddlewareFnWrapper<A, ARC<RWLOCK<StoreStateMachine<S, A>>>>,
-  ) -> &mut Store<S, A> {
-    self
-      .get_ref()
-      .write()
-      .await
-      .middleware_fn_list
-      .push(middleware_fn)
-      .await;
-    self
-  }
-
-  // FIXME: deprecate this.
-  pub async fn clear_middlewares(&mut self) -> &mut Store<S, A> {
-    self
-      .get_ref()
-      .write()
-      .await
-      .middleware_fn_list
-      .clear()
-      .await;
-    self
-  }
-
-  // FIXME: rename this to add_middleware
-  pub async fn add_middleware2(
     &mut self,
     middleware_fn: Arc<RwLock<dyn AsyncMiddleware<S, A> + Send + Sync>>,
   ) -> &mut Store<S, A> {
@@ -146,7 +117,7 @@ where
     self
   }
 
-  pub async fn clear_middlewares2(&mut self) -> &mut Store<S, A> {
+  pub async fn clear_middlewares(&mut self) -> &mut Store<S, A> {
     self
       .get_ref()
       .write()

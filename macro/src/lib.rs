@@ -37,6 +37,7 @@ pub fn make_struct_safe_to_share_and_mutate(input: TokenStream) -> TokenStream {
   manager_of_things::fn_proc_macro_impl(input)
 }
 
+#[deprecated(since = "0.7.12", note = "please use [`AsyncMiddleware`] instead")]
 #[proc_macro]
 pub fn make_safe_async_fn_wrapper(input: TokenStream) -> TokenStream {
   make_safe_async::fn_proc_macro_impl(input)

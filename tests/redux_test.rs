@@ -18,8 +18,7 @@
 // Imports.
 use async_trait::async_trait;
 use r3bl_rs_utils::redux::{
-  AsyncMiddleware, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper, ShareableReducerFn,
-  Store, StoreStateMachine,
+  AsyncMiddleware, SafeSubscriberFnWrapper, ShareableReducerFn, Store, StoreStateMachine,
 };
 use r3bl_rs_utils::utils::with;
 use std::sync::{Arc, Mutex};
@@ -67,6 +66,7 @@ async fn test_redux_store_works_for_main_use_cases() {
 
   // This shared object is used to collect results from the subscriber function & test it later.
   let shared_object = Arc::new(Mutex::new(Vec::<i32>::new()));
+
   // This subscriber function is curried to capture a reference to the shared object.
   let subscriber_fn = with(shared_object.clone(), |it| {
     let curried_fn = move |state: State| {
@@ -76,34 +76,15 @@ async fn test_redux_store_works_for_main_use_cases() {
     curried_fn
   });
 
-  // FIXME: remove this
   // This middleware function is curried to capture a reference to the shared object.
-  // let mw_returns_none = with(shared_object.clone(), |it| {
-  //   let curried_fn = move |action: Action, _| {
-  //     let mut stack = it.lock().unwrap();
-  //     match action {
-  //       Action::Add(_, _) => stack.push(-1),
-  //       Action::AddPop(_) => stack.push(-2),
-  //       Action::Clear => stack.push(-3),
-  //       _ => {}
-  //     }
-  //     None
-  //   };
-  //   curried_fn
-  // });
+  let my_async_mw_returns_none = AsyncMwReturnsNone {
+    shared_object: shared_object.clone(),
+  };
 
   // This middleware function is curried to capture a reference to the shared object.
-  let mw_returns_action = with(shared_object.clone(), |it| {
-    let curried_fn = move |action: Action, _| {
-      let mut stack = it.lock().unwrap();
-      match action {
-        Action::MiddlewareCreateClearAction => stack.push(-4),
-        _ => {}
-      }
-      Some(Action::Clear)
-    };
-    curried_fn
-  });
+  let my_async_mw_returns_action = AsyncMwReturnsAction {
+    shared_object: shared_object.clone(),
+  };
 
   // Setup store.
   let mut store = Store::<State, Action>::default();
@@ -115,42 +96,8 @@ async fn test_redux_store_works_for_main_use_cases() {
     .add_subscriber(SafeSubscriberFnWrapper::from(
       subscriber_fn,
     ))
-    .await;
-  // FIXME: remove this
-  // .add_middleware(SafeMiddlewareFnWrapper::from(
-  //   mw_returns_none,
-  // ))
-  // .await;
-
-  // FIXME: Middleware 2.
-  #[derive(Default)]
-  struct MyAsyncMWReturnsNone {
-    pub shared_object: Arc<Mutex<Vec<i32>>>,
-  }
-
-  #[async_trait]
-  impl AsyncMiddleware<State, Action> for MyAsyncMWReturnsNone {
-    async fn run(
-      &self,
-      action: Action,
-      _store_ref: Arc<RwLock<StoreStateMachine<State, Action>>>,
-    ) -> Option<Action> {
-      // FIXME: Replacement for mw_returns_none.
-      let mut stack = self.shared_object.lock().unwrap();
-      match action {
-        Action::Add(_, _) => stack.push(-1),
-        Action::AddPop(_) => stack.push(-2),
-        Action::Clear => stack.push(-3),
-        _ => {}
-      }
-      None
-    }
-  }
-  let my_async_mw_returns_none = MyAsyncMWReturnsNone {
-    shared_object: shared_object.clone(),
-  };
-  store
-    .add_middleware2(Arc::new(RwLock::new(
+    .await
+    .add_middleware(Arc::new(RwLock::new(
       my_async_mw_returns_none,
     )))
     .await;
@@ -202,10 +149,11 @@ async fn test_redux_store_works_for_main_use_cases() {
     .lock()
     .unwrap()
     .clear();
+
   store
-    .add_middleware(SafeMiddlewareFnWrapper::from(
-      mw_returns_action,
-    ))
+    .add_middleware(Arc::new(RwLock::new(
+      my_async_mw_returns_action,
+    )))
     .await
     .dispatch(Action::MiddlewareCreateClearAction)
     .await;
@@ -217,4 +165,46 @@ async fn test_redux_store_works_for_main_use_cases() {
     shared_object.lock().unwrap().pop(),
     Some(-4)
   );
+}
+
+struct AsyncMwReturnsNone {
+  pub shared_object: Arc<Mutex<Vec<i32>>>,
+}
+
+#[async_trait]
+impl AsyncMiddleware<State, Action> for AsyncMwReturnsNone {
+  async fn run(
+    &self,
+    action: Action,
+    _store_ref: Arc<RwLock<StoreStateMachine<State, Action>>>,
+  ) -> Option<Action> {
+    let mut stack = self.shared_object.lock().unwrap();
+    match action {
+      Action::Add(_, _) => stack.push(-1),
+      Action::AddPop(_) => stack.push(-2),
+      Action::Clear => stack.push(-3),
+      _ => {}
+    }
+    None
+  }
+}
+
+struct AsyncMwReturnsAction {
+  pub shared_object: Arc<Mutex<Vec<i32>>>,
+}
+
+#[async_trait]
+impl AsyncMiddleware<State, Action> for AsyncMwReturnsAction {
+  async fn run(
+    &self,
+    action: Action,
+    _store_ref: Arc<RwLock<StoreStateMachine<State, Action>>>,
+  ) -> Option<Action> {
+    let mut stack = self.shared_object.lock().unwrap();
+    match action {
+      Action::MiddlewareCreateClearAction => stack.push(-4),
+      _ => {}
+    }
+    Some(Action::Clear)
+  }
 }

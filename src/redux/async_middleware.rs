@@ -18,19 +18,7 @@ use std::sync::Arc;
 
 use super::StoreStateMachine;
 use async_trait::async_trait;
-use r3bl_rs_utils_macro::make_safe_async_fn_wrapper;
 use tokio::sync::RwLock;
-
-// FIXME: deprecate this (also <A, S> is backwards!)
-make_safe_async_fn_wrapper! {
-  named SafeMiddlewareFnWrapper<A, S>
-  containing fn_mut
-  of_type FnMut(A, S) -> Option<A>
-}
-
-// FIXME: add new async trait here
-// FIXME: add vec of this async trait here
-// FIXME: use this new vec in async_store_state_machine.rs
 
 #[async_trait]
 pub trait AsyncMiddleware<S, A>

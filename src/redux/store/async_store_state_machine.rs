@@ -15,8 +15,7 @@
 */
 
 use crate::redux::{
-  AsyncMiddlewareVec, SafeList, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper,
-  ShareableReducerFn,
+  AsyncMiddlewareVec, SafeList, SafeSubscriberFnWrapper, ShareableReducerFn,
 };
 use core::{fmt::Debug, hash::Hash};
 use r3bl_rs_utils_core::SafeToShare;
@@ -33,8 +32,6 @@ where
   pub subscriber_fn_list: SafeList<SafeSubscriberFnWrapper<S>>,
   pub reducer_fn_list: SafeList<ShareableReducerFn<S, A>>,
   pub middleware_vec: AsyncMiddlewareVec<S, A>,
-  // FIXME: deprecate middleware_fn_list
-  pub middleware_fn_list: SafeList<SafeMiddlewareFnWrapper<A, Arc<RwLock<Self>>>>,
 }
 
 impl<StateT, ActionT> Default for StoreStateMachine<StateT, ActionT>
@@ -49,8 +46,6 @@ where
       subscriber_fn_list: Default::default(),
       reducer_fn_list: Default::default(),
       middleware_vec: Default::default(),
-      // FIXME: deprecate middleware_fn_list
-      middleware_fn_list: Default::default(),
     }
   }
 }
@@ -153,16 +148,6 @@ where
   ) -> Vec<A> {
     let mut return_vec = vec![];
 
-    // FIXME: deprecate middleware_fn_list
-    self
-      .run_middleware_fn_list(
-        action.clone(),
-        my_ref.clone(),
-        &mut return_vec,
-      )
-      .await;
-
-    // FIXME: run middleware_vec
     self
       .run_middleware_vec(
         action.clone(),
@@ -174,7 +159,6 @@ where
     return return_vec;
   }
 
-  // FIXME: add run_middleware_vec()
   async fn run_middleware_vec(
     &mut self,
     my_action: A,
@@ -189,27 +173,6 @@ where
       if let Some(result) = result {
         return_vec.push(result);
       }
-    }
-  }
-
-  async fn run_middleware_fn_list(
-    &mut self,
-    my_action: A,
-    my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
-    return_vec: &mut Vec<A>,
-  ) {
-    let locked_list = self.middleware_fn_list.get_ref();
-    let list_r = locked_list.read().await;
-    for item_fn in list_r.iter() {
-      let result = item_fn
-        .spawn(my_action.clone(), my_ref.clone())
-        .await;
-      match result {
-        Ok(Some(action)) => {
-          return_vec.push(action);
-        }
-        _ => (),
-      };
     }
   }
 }

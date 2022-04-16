@@ -1,15 +1,16 @@
 ╭──────────────────────────────────────────────────────╮
 │ r3bl_rs_utils                                        │
 ╰──────────────────────────────────────────────────────╯
-Rewrite mw to use async trait:
-  ✔ add async trait in `async_middleware.rs` @done(22-04-15 19:31)
-  ✔ add async trait vec in `async_middleware.rs` @done(22-04-15 19:31)
-  ✔ add methods in `async_store.rs` to add/remove middleware async trait @done(22-04-15 19:31)
-  ☐ add method in `async_store_state_machine.rs` to run the trait objs in `middleware_vec`
 Rewrite subscriber to use async trait:
   ☐ async trait
 
 Done:
+  Rewrite mw to use async trait:
+    ✔ add async trait in `async_middleware.rs` @done(22-04-15 19:31)
+    ✔ add async trait vec in `async_middleware.rs` @done(22-04-15 19:31)
+    ✔ add methods in `async_store.rs` to add/remove middleware async trait @done(22-04-15 19:31)
+    ✔ add method in `async_store_state_machine.rs` to run the trait objs in `middleware_vec` @done(22-04-16 19:12)
+
   Fix middleware & make it async:
     ✔ mw fn accepts 2nd arg (`StoreStateMachine`) so it can dispatch action async @done(22-04-13 17:49)
 
