@@ -21,3 +21,7 @@ make_safe_async_fn_wrapper! {
   containing fn_mut
   of_type FnMut(A, B) -> Option<A>
 }
+
+// FIXME: add new async trait here
+// FIXME: add vec of this async trait here
+// FIXME: use this new vec in async_store_state_machine.rs
