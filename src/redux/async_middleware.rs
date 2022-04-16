@@ -14,14 +14,51 @@
  limitations under the License.
 */
 
+use super::StoreStateMachine;
+use async_trait::async_trait;
 use r3bl_rs_utils_macro::make_safe_async_fn_wrapper;
 
 make_safe_async_fn_wrapper! {
-  named SafeMiddlewareFnWrapper<A, B>
+  named SafeMiddlewareFnWrapper<A, S>
   containing fn_mut
-  of_type FnMut(A, B) -> Option<A>
+  of_type FnMut(A, S) -> Option<A>
 }
 
 // FIXME: add new async trait here
 // FIXME: add vec of this async trait here
 // FIXME: use this new vec in async_store_state_machine.rs
+
+#[async_trait]
+pub trait AsyncMiddleware<S, A>
+where
+  A: Sync + Send,
+  S: Sync + Send,
+{
+  async fn run(
+    &self,
+    action: A,
+    store_ref: ARC<RWLOCK<StoreStateMachine<S, A>>>,
+  ) -> Option<A>;
+
+  fn new() -> Self
+  where
+    Self: Sized;
+}
+
+#[derive(Default)]
+pub struct AsyncMiddlewareVec<S, A> {
+  pub vec: Vec<ARC<RWLOCK<dyn AsyncMiddleware<A, S> + Send + Sync>>>,
+}
+
+impl<S, A> AsyncMiddlewareVec<S, A> {
+  pub fn push(
+    &mut self,
+    middleware: ARC<RWLOCK<dyn AsyncMiddleware<A, S> + Send + Sync>>,
+  ) {
+    self.vec.push(middleware);
+  }
+
+  pub fn clear(&mut self) {
+    self.vec.clear();
+  }
+}

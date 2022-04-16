@@ -15,7 +15,8 @@
 */
 
 use crate::redux::{
-  SafeList, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper, ShareableReducerFn,
+  AsyncMiddlewareVec, SafeList, SafeMiddlewareFnWrapper, SafeSubscriberFnWrapper,
+  ShareableReducerFn,
 };
 use core::{fmt::Debug, hash::Hash};
 use r3bl_rs_utils_core::SafeToShare;
@@ -30,22 +31,26 @@ where
   pub state: S,
   pub history: Vec<S>,
   pub subscriber_fn_list: SafeList<SafeSubscriberFnWrapper<S>>,
-  pub middleware_fn_list: SafeList<SafeMiddlewareFnWrapper<A, Arc<RwLock<Self>>>>,
   pub reducer_fn_list: SafeList<ShareableReducerFn<S, A>>,
+  pub middleware_vec: AsyncMiddlewareVec<S, A>,
+  // FIXME: deprecate middleware_fn_list
+  pub middleware_fn_list: SafeList<SafeMiddlewareFnWrapper<A, Arc<RwLock<Self>>>>,
 }
 
 impl<S, A> Default for StoreStateMachine<S, A>
 where
   S: Default + Sync + Send + 'static,
-  A: Sync + Send + 'static,
+  A: Default + Sync + Send + 'static,
 {
   fn default() -> StoreStateMachine<S, A> {
     StoreStateMachine {
       state: Default::default(),
       history: vec![],
       subscriber_fn_list: Default::default(),
-      middleware_fn_list: Default::default(),
       reducer_fn_list: Default::default(),
+      middleware_vec: Default::default(),
+      // FIXME: deprecate middleware_fn_list
+      middleware_fn_list: Default::default(),
     }
   }
 }
@@ -139,6 +144,8 @@ where
     };
   }
 
+  // FIXME: run middleware_vec
+  // FIXME: deprecate middleware_fn_list
   /// Run middleware and return a list of resulting actions. If a middleware produces `None` that
   /// isn't added to the list that's returned.
   pub async fn middleware_runner(
@@ -146,10 +153,27 @@ where
     action: A,
     my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) -> Vec<A> {
-    let action_clone = action.clone();
-    let my_ref_clone = my_ref.clone();
     let mut return_vec = vec![];
 
+    self
+      .run_middleware_fn_list(
+        action.clone(),
+        my_ref.clone(),
+        &mut return_vec,
+      )
+      .await;
+
+    return return_vec;
+  }
+
+  // FIXME: add run_middleware_vec()
+
+  async fn run_middleware_fn_list(
+    &mut self,
+    action_clone: A,
+    my_ref_clone: Arc<RwLock<StoreStateMachine<S, A>>>,
+    return_vec: &mut Vec<A>,
+  ) {
     let locked_list = self.middleware_fn_list.get_ref();
     let list_r = locked_list.read().await;
     for item_fn in list_r.iter() {
@@ -166,7 +190,5 @@ where
         _ => (),
       };
     }
-
-    return return_vec;
   }
 }

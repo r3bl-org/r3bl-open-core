@@ -29,6 +29,13 @@ pub enum Action {
   AddPop(i32),
   Clear,
   MiddlewareCreateClearAction,
+  Noop,
+}
+
+impl Default for Action {
+  fn default() -> Self {
+    Action::Noop
+  }
 }
 
 /// State.
