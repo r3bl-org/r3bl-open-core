@@ -15,7 +15,7 @@
 */
 
 use crate::redux::{
-  AsyncMiddlewareVec, SafeList, SafeSubscriberFnWrapper, ShareableReducerFn,
+  AsyncMiddlewareVec, AsyncSubscriberVec, SafeList, ShareableReducerFn,
 };
 use core::{fmt::Debug, hash::Hash};
 use r3bl_rs_utils_core::SafeToShare;
@@ -29,9 +29,10 @@ where
 {
   pub state: S,
   pub history: Vec<S>,
-  pub subscriber_fn_list: SafeList<SafeSubscriberFnWrapper<S>>,
-  pub reducer_fn_list: SafeList<ShareableReducerFn<S, A>>,
   pub middleware_vec: AsyncMiddlewareVec<S, A>,
+  pub subscriber_vec: AsyncSubscriberVec<S>,
+  // FIXME: replace this w/ new async trait
+  pub reducer_fn_list: SafeList<ShareableReducerFn<S, A>>,
 }
 
 impl<StateT, ActionT> Default for StoreStateMachine<StateT, ActionT>
@@ -43,9 +44,9 @@ where
     StoreStateMachine {
       state: Default::default(),
       history: vec![],
-      subscriber_fn_list: Default::default(),
       reducer_fn_list: Default::default(),
       middleware_vec: Default::default(),
+      subscriber_vec: Default::default(),
     }
   }
 }
@@ -91,18 +92,15 @@ where
     self.run_subscribers().await;
   }
 
-  async fn run_subscribers(&mut self) {
-    let state_clone = &self.get_state_clone();
-    let locked_list = self.subscriber_fn_list.get_ref();
-    let list_r = locked_list.read().await;
-    for subscriber_fn in list_r.iter() {
-      subscriber_fn
-        .spawn(state_clone.clone())
-        .await
-        .unwrap();
+  async fn run_subscribers(&self) {
+    let state_clone = self.get_state_clone();
+    for item in &self.subscriber_vec.vec {
+      let fun = item.write().await;
+      fun.run(state_clone.clone()).await;
     }
   }
 
+  // FIXME: deprecate this w/ new sync trait
   async fn run_reducers(
     &mut self,
     action: &A,
@@ -142,7 +140,7 @@ where
   /// Run middleware and return a list of resulting actions. If a middleware produces `None` that
   /// isn't added to the list that's returned.
   pub async fn middleware_runner(
-    &mut self,
+    &self,
     action: A,
     my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) -> Vec<A> {
@@ -160,7 +158,7 @@ where
   }
 
   async fn run_middleware_vec(
-    &mut self,
+    &self,
     my_action: A,
     my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
     return_vec: &mut Vec<A>,

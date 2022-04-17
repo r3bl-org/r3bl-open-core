@@ -43,6 +43,7 @@ pub fn make_safe_async_fn_wrapper(input: TokenStream) -> TokenStream {
   make_safe_async::fn_proc_macro_impl(input)
 }
 
+// FIXME: add deprecated here
 #[proc_macro]
 pub fn make_shareable_fn_wrapper(input: TokenStream) -> TokenStream {
   make_shareable::fn_proc_macro_impl(input)

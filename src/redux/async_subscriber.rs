@@ -14,10 +14,43 @@
  limitations under the License.
 */
 
-use r3bl_rs_utils_macro::make_safe_async_fn_wrapper;
+use async_trait::async_trait;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
-make_safe_async_fn_wrapper! {
-  named SafeSubscriberFnWrapper<S>
-  containing fn_mut
-  of_type FnMut(S) -> ()
+#[async_trait]
+pub trait AsyncSubscriber<S>
+where
+  S: Sync + Send,
+{
+  async fn run(
+    &self,
+    state: S,
+  );
+
+  /// https://doc.rust-lang.org/book/ch10-02-traits.html
+  fn new() -> Arc<RwLock<dyn AsyncSubscriber<S> + Send + Sync + 'static>>
+  where
+    Self: Default + Sized + Sync + Send + 'static,
+  {
+    Arc::new(RwLock::new(Self::default()))
+  }
+}
+
+#[derive(Default)]
+pub struct AsyncSubscriberVec<S> {
+  pub vec: Vec<Arc<RwLock<dyn AsyncSubscriber<S> + Send + Sync>>>,
+}
+
+impl<S> AsyncSubscriberVec<S> {
+  pub fn push(
+    &mut self,
+    middleware: Arc<RwLock<dyn AsyncSubscriber<S> + Send + Sync>>,
+  ) {
+    self.vec.push(middleware);
+  }
+
+  pub fn clear(&mut self) {
+    self.vec.clear();
+  }
 }

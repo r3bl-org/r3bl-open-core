@@ -19,8 +19,7 @@ use std::{fmt::Debug, hash::Hash, sync::Arc};
 use tokio::{spawn, sync::RwLock, task::JoinHandle};
 
 use crate::redux::{
-  async_subscriber::SafeSubscriberFnWrapper, sync_reducers::ShareableReducerFn,
-  AsyncMiddleware, StoreStateMachine,
+  sync_reducers::ShareableReducerFn, AsyncMiddleware, AsyncSubscriber, StoreStateMachine,
 };
 
 make_struct_safe_to_share_and_mutate! {
@@ -81,15 +80,14 @@ where
 
   pub async fn add_subscriber(
     &mut self,
-    subscriber_fn: SafeSubscriberFnWrapper<S>,
+    subscriber_fn: Arc<RwLock<dyn AsyncSubscriber<S> + Send + Sync>>,
   ) -> &mut Store<S, A> {
     self
       .get_ref()
       .write()
       .await
-      .subscriber_fn_list
-      .push(subscriber_fn)
-      .await;
+      .subscriber_vec
+      .push(subscriber_fn);
     self
   }
 
@@ -98,9 +96,8 @@ where
       .get_ref()
       .write()
       .await
-      .subscriber_fn_list
-      .clear()
-      .await;
+      .subscriber_vec
+      .clear();
     self
   }
 
@@ -127,6 +124,7 @@ where
     self
   }
 
+  // FIXME: deprecate this w/ new sync trait
   pub async fn add_reducer(
     &mut self,
     reducer_fn: ShareableReducerFn<S, A>,

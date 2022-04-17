@@ -16,6 +16,7 @@
 
 use r3bl_rs_utils_macro::make_struct_safe_to_share_and_mutate;
 
+// FIXME: deprecate me
 make_struct_safe_to_share_and_mutate! {
   named SafeList<T>
   where T: Sync + Send + 'static
@@ -23,6 +24,7 @@ make_struct_safe_to_share_and_mutate! {
   of_type Vec<T>
 }
 
+// FIXME: deprecate me
 impl<T> SafeList<T>
 where
   T: Sync + Send + 'static,
