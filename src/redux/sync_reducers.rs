@@ -14,9 +14,18 @@
  limitations under the License.
 */
 
+// FIXME: delete me
 use r3bl_rs_utils_macro::make_shareable_fn_wrapper;
 make_shareable_fn_wrapper! {
   named ShareableReducerFn<S, A>
   containing fn_mut
   of_type Fn(&S, &A) -> S
 }
+
+// FIXME: make a new trait for AsyncReducer
+// FIXME: make a vec of these traits
+// FIXME: rename file to async_reducers.rs
+// FIXME: update async_store.rs w/ this trait
+// FIXME: update async_store_state_machine.rs w/ this trait
+// FIXME: update tests
+// FIXME: update address book app
