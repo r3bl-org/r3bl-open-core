@@ -53,7 +53,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.14"
+r3bl_rs_utils = "0.7.15"
 ```
 
 ## redux
@@ -111,12 +111,27 @@ Here's the gist of how to make & use one of these:
      constructor function or use the following as an argument to the `add_???()` methods:
      `Arc::new(RwLock::new($YOUR_STRUCT))`.
 
-Here's an example of how to use it. Let's say we have the following action enum, and state
-struct.
-
 > 💡 There are lots of examples in the tests for this library and in this
 > [CLI application](https://github.com/nazmulidris/rust_scratch/blob/main/address-book-with-redux/)
 > built using it.
+
+Here's an example of how to use it. Let's start w/ the import statements.
+
+```rust
+use async_trait::async_trait;
+use r3bl_rs_utils::redux::{
+  AsyncMiddleware, AsyncReducer, AsyncSubscriber, Store, StoreStateMachine,
+};
+use std::sync::{Arc, Mutex};
+use tokio::sync::RwLock;
+```
+
+> 1. Make sure to have the `tokio` and `async-trait` crates installed as well as
+>    `r3bl_rs_utils` in your `Cargo.toml` file.
+> 2. Here's an example
+>    [`Cargo.toml`](https://github.com/nazmulidris/rust_scratch/blob/main/address-book-with-redux/Cargo.toml).
+
+Let's say we have the following action enum, and state struct.
 
 ```rust
 /// Action enum.
