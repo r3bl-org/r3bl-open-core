@@ -55,25 +55,63 @@ pub struct State {
 
 // TODO: Write integration tests for history.
 
+/// ╭──────────────────────────────────────────────────────╮
+/// │ Main test runner                                     │
+/// ╰──────────────────────────────────────────────────────╯
 #[tokio::test]
 async fn test_redux_store_works_for_main_use_cases() {
   // This shared object is used to collect results from the subscriber & middleware &
   // reducer functions & test it later.
   let shared_object_ref = Arc::new(Mutex::new(Vec::<i32>::new()));
 
+  // Create the store.
+  let mut store = Store::<State, Action>::default();
+
+  test_reducer_and_subscriber(&shared_object_ref, &mut store).await;
+  test_mw_returns_none(&shared_object_ref, &mut store).await;
+  test_mw_returns_action(&shared_object_ref, &mut store).await;
+}
+
+/// ╭──────────────────────────────────────────────────────╮
+/// │ Test helpers: Reset shared object.                   │
+/// ╰──────────────────────────────────────────────────────╯
+fn reset_shared_object(shared_object_ref: &Arc<Mutex<Vec<i32>>>) {
+  shared_object_ref
+    .lock()
+    .unwrap()
+    .clear();
+}
+
+/// ╭──────────────────────────────────────────────────────╮
+/// │ Test helpers: Reset store.                           │
+/// ╰──────────────────────────────────────────────────────╯
+async fn reset_store(store: &mut Store<State, Action>) -> &mut Store<State, Action> {
+  store
+    .clear_reducers()
+    .await
+    .clear_subscribers()
+    .await
+    .clear_middlewares()
+    .await;
+  store
+}
+
+/// ╭──────────────────────────────────────────────────────╮
+/// │ Test async subscriber: [MySubscriber].               │
+/// ╰──────────────────────────────────────────────────────╯
+async fn test_reducer_and_subscriber(
+  shared_object_ref: &Arc<Mutex<Vec<i32>>>,
+  store: &mut Store<State, Action>,
+) {
   let my_subscriber = MySubscriber {
     shared_object_ref: shared_object_ref.clone(),
   };
-  let mw_returns_none = MwReturnsNone {
-    shared_object_ref: shared_object_ref.clone(),
-  };
-  let mw_returns_action = MwReturnsAction {
-    shared_object_ref: shared_object_ref.clone(),
-  };
+
+  reset_shared_object(shared_object_ref);
 
   // Setup store w/ only reducer & subscriber (no middlewares).
-  let mut store = Store::<State, Action>::default();
-  store
+  reset_store(store)
+    .await
     .add_reducer(MyReducer::new())
     .await
     .add_subscriber(Arc::new(RwLock::new(
@@ -110,10 +148,23 @@ async fn test_redux_store_works_for_main_use_cases() {
       .pop(),
     Some(4)
   );
+}
 
-  // Test async middleware: my_async_mw_returns_none.
-  store
-    .clear_subscribers()
+/// ╭──────────────────────────────────────────────────────╮
+/// │ Test async middleware: [MwReturnsNone].              │
+/// ╰──────────────────────────────────────────────────────╯
+async fn test_mw_returns_none(
+  shared_object_ref: &Arc<Mutex<Vec<i32>>>,
+  store: &mut Store<State, Action>,
+) {
+  let mw_returns_none = MwReturnsNone {
+    shared_object_ref: shared_object_ref.clone(),
+  };
+
+  reset_shared_object(shared_object_ref);
+
+  // Reconfigure store.
+  reset_store(store)
     .await
     .add_middleware(Arc::new(RwLock::new(
       mw_returns_none,
@@ -153,19 +204,24 @@ async fn test_redux_store_works_for_main_use_cases() {
       .pop(),
     Some(-3)
   );
+}
 
-  // Test async middleware: my_async_mw_returns_action.
-  shared_object_ref
-    .lock()
-    .unwrap()
-    .clear();
+/// ╭──────────────────────────────────────────────────────╮
+/// │ Test async middleware: [MwReturnsAction].            │
+/// ╰──────────────────────────────────────────────────────╯
+async fn test_mw_returns_action(
+  shared_object_ref: &Arc<Mutex<Vec<i32>>>,
+  store: &mut Store<State, Action>,
+) {
+  let mw_returns_action = MwReturnsAction {
+    shared_object_ref: shared_object_ref.clone(),
+  };
+
+  reset_shared_object(shared_object_ref);
 
   // Since the reducers are removed, the `Action::Clear` returned by the following
   // middleware will be ignored.
-  store
-    .clear_reducers()
-    .await
-    .clear_middlewares()
+  reset_store(store)
     .await
     .add_middleware(Arc::new(RwLock::new(
       mw_returns_action,
@@ -188,6 +244,9 @@ async fn test_redux_store_works_for_main_use_cases() {
   );
 }
 
+/// ╭──────────────────────────────────────────────────────╮
+/// │ MwReturnsNone                                        │
+/// ╰──────────────────────────────────────────────────────╯
 struct MwReturnsNone {
   pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
 }
@@ -213,6 +272,9 @@ impl AsyncMiddleware<State, Action> for MwReturnsNone {
   }
 }
 
+/// ╭──────────────────────────────────────────────────────╮
+/// │ MwReturnsAction                                      │
+/// ╰──────────────────────────────────────────────────────╯
 struct MwReturnsAction {
   pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
 }
@@ -236,6 +298,9 @@ impl AsyncMiddleware<State, Action> for MwReturnsAction {
   }
 }
 
+/// ╭──────────────────────────────────────────────────────╮
+/// │ MySubscriber                                         │
+/// ╰──────────────────────────────────────────────────────╯
 struct MySubscriber {
   pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
 }
@@ -256,6 +321,9 @@ impl AsyncSubscriber<State> for MySubscriber {
   }
 }
 
+/// ╭──────────────────────────────────────────────────────╮
+/// │ MyReducer                                            │
+/// ╰──────────────────────────────────────────────────────╯
 #[derive(Default)]
 struct MyReducer;
 
