@@ -230,8 +230,8 @@ get dispatched once this middleware returns), and another that doesn't return an
 both these functions share the `shared_object` reference from above.
 
 ```rust
-/// This middleware function is curried to capture a reference to the
-/// shared object.
+/// This shared object is used to collect results from the subscriber
+/// function & test it later.
 #[derive(Default)]
 struct MwReturnsNone {
   pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
@@ -262,8 +262,8 @@ let mw_returns_none = MwReturnsNone {
   shared_object_ref: shared_object_ref.clone(),
 };
 
-/// This middleware function is curried to capture a reference to the
-/// shared object.
+/// This shared object is used to collect results from the subscriber
+/// function & test it later.
 #[derive(Default)]
 struct MwReturnsAction {
   pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
