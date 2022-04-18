@@ -53,7 +53,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.13"
+r3bl_rs_utils = "0.7.14"
 ```
 
 ## redux
@@ -75,19 +75,48 @@ objects.
 > threads and its task stealing implementation to give you parallel and concurrent
 > behavior. You can also use the single threaded runtime; its really up to you.**
 
-1. To create middleware you have to implement the `AsyncMiddleware` trait. If the `run()`
-   method returns a `Some<Action>` then the action will be dispatched to the store. The
-   `run()` method will be passed two arguments: the `Store` and the `Action`. You can use
-   the `Store` reference to dispatch an action if you're using the `fire_and_forget!`
-   macro.
-2. To create reducers you have to implement the `AsyncReducer` trait. These should be pure
-   functions and simply return a new `State`. The `run()` method will be passed two
-   arguments: the `Store` and the `Action`.
-3. To create subscribers you have to implement the `AsyncSubscriber` trait. The `run()`
-   method will be passed a `Store` object as an argument.
+1. To create middleware you have to implement the `AsyncMiddleware` trait.
+   - If the `run()` method returns a `Some(Action)` then the action will be dispatched to
+     the store. If `None` is returned, then nothing is dispatched.
+   - The `run()` method will be passed two arguments: the `Store` and the `Action`.
+   - You can use the `Store` reference to dispatch an action if you're using the
+     `fire_and_forget!` macro.
+   - Please read the `AsyncMiddleware`
+     [docs](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/redux/async_middleware/trait.AsyncMiddleware.html)
+     to make sure that you are not deadlocking.
+2. To create reducers you have to implement the `AsyncReducer` trait.
+   - These should be
+     [pure functions](https://redux.js.org/understanding/thinking-in-redux/three-principles#changes-are-made-with-pure-functions)
+     and simply return a new `State` object.
+   - The `run()` method will be passed two arguments: a ref to `Action` and ref to
+     `State`.
+3. To create subscribers you have to implement the `AsyncSubscriber` trait.
+   - The `run()` method will be passed a `State` object as an argument.
+   - It returns nothing `()`.
+
+Here's the gist of how to make & use one of these:
+
+1. Create a struct. Make it derive `Default`. Or you can add your own properties / fields
+   to this struct, and construct it yourself, or even provide a constructor function.
+   - A default constructor function `new()` is provided for you by the trait.
+   - Just follow that works for when you need to make your own constructor function for a
+     struct w/ your own properties.
+2. Implement the `AsyncMiddleware`, `AsyncReducer`, or `AsyncSubscriber` trait on your
+   struct.
+3. Register this struct w/ the store using one of the `add_middleware()`, `add_reducer()`,
+   or `add_subscriber()` methods. You can register multiple of these.
+   - If you have a struct w/ no properties, you can just use the default `::new()` method
+     to create an instance and pass that to the `add_???()` methods.
+   - If you have a struct w/ custom properties, you can either implement your own
+     constructor function or use the following as an argument to the `add_???()` methods:
+     `Arc::new(RwLock::new($YOUR_STRUCT))`.
 
 Here's an example of how to use it. Let's say we have the following action enum, and state
 struct.
+
+> 💡 There are lots of examples in the tests for this library and in this
+> [CLI application](https://github.com/nazmulidris/rust_scratch/blob/main/address-book-with-redux/)
+> built using it.
 
 ```rust
 /// Action enum.

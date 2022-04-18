@@ -17,10 +17,10 @@
 pub mod store;
 pub mod async_middleware;
 pub mod async_subscriber;
-pub mod async_reducers;
+pub mod async_reducer;
 
 // Re-export the following modules:
 pub use async_middleware::*;
-pub use async_reducers::*;
+pub use async_reducer::*;
 pub use async_subscriber::*;
 pub use store::*;
