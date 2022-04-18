@@ -58,15 +58,33 @@ r3bl_rs_utils = "0.7.12"
 
 ## redux
 
-`Store` is thread safe and asynchronous (using Tokio). The middleware and subscribers will
-be run in asynchronously via Tokio tasks. But the reducer functions will be run in
-sequence (not in separate Tokio tasks).
+`Store` is thread safe and asynchronous (using Tokio). You have to implement `async`
+traits in order to use it, by defining your own reducer, subscriber, and middleware trait
+objects.
+
+- The middleware, subscribers will be run in asynchronously via Tokio tasks. However, they
+  are run one after another (in the order in which they're added).
+- The reducer functions are also are async functions that are run in the tokio runtime.
+  They're also run one after another in the order in which they're added. A macro
+  `fire_and_forget!` is provided so that you can spawn parallel blocks of code in your
+  async functions.
 
 > ⚡ **Any functions or blocks that you write which uses the Redux library will have to be
 > marked `async` as well. And you will have to spawn the Tokio runtime by using the
 > `#[tokio::main]` macro. If you use the default runtime then Tokio will use multiple
 > threads and its task stealing implementation to give you parallel and concurrent
 > behavior. You can also use the single threaded runtime; its really up to you.**
+
+1. To create middleware you have to implement the `AsyncMiddleware` trait. If the `run()`
+   method returns a `Some<Action>` then the action will be dispatched to the store. The
+   `run()` method will be passed two arguments: the `Store` and the `Action`. You can use
+   the `Store` reference to dispatch an action if you're using the `fire_and_forget!`
+   macro.
+2. To create reducers you have to implement the `AsyncReducer` trait. These should be pure
+   functions and simply return a new `State`. The `run()` method will be passed two
+   arguments: the `Store` and the `Action`.
+3. To create subscribers you have to implement the `AsyncSubscriber` trait. The `run()`
+   method will be passed a `Store` object as an argument.
 
 Here's an example of how to use it. Let's say we have the following action enum, and state
 struct.
@@ -79,6 +97,13 @@ pub enum Action {
   AddPop(i32),
   Clear,
   MiddlewareCreateClearAction,
+  Noop,
+}
+
+impl Default for Action {
+  fn default() -> Self {
+    Action::Noop
+  }
 }
 
 /// State.
@@ -91,19 +116,31 @@ pub struct State {
 Here's an example of the reducer function.
 
 ```rust
-// Reducer function (pure).
-let reducer_fn = |state: &State, action: &Action| match action {
-  Action::Add(a, b) => {
-    let sum = a + b;
-    State { stack: vec![sum] }
+/// Reducer function (pure).
+#[derive(Default)]
+struct MyReducer;
+
+#[async_trait]
+impl AsyncReducer<State, Action> for MyReducer {
+  async fn run(
+    &self,
+    action: &Action,
+    state: &State,
+  ) -> State {
+    match action {
+      Action::Add(a, b) => {
+        let sum = a + b;
+        State { stack: vec![sum] }
+      }
+      Action::AddPop(a) => {
+        let sum = a + state.stack[0];
+        State { stack: vec![sum] }
+      }
+      Action::Clear => State { stack: vec![] },
+      _ => state.clone(),
+    }
   }
-  Action::AddPop(a) => {
-    let sum = a + state.stack[0];
-    State { stack: vec![sum] }
-  }
-  Action::Clear => State { stack: vec![] },
-  _ => state.clone(),
-};
+}
 ```
 
 Here's an example of an async subscriber function (which are run in parallel after an
@@ -112,16 +149,34 @@ This is a pretty common pattern that you might encounter when creating subscribe
 share state in your enclosing block or scope.
 
 ```rust
-// This shared object is used to collect results from the subscriber function & test it later.
+/// This shared object is used to collect results from the subscriber
+/// function & test it later.
 let shared_object = Arc::new(Mutex::new(Vec::<i32>::new()));
-// This subscriber function is curried to capture a reference to the shared object.
-let subscriber_fn = with(shared_object.clone(), |it| {
-  let curried_fn = move |state: State| {
-    let mut stack = it.lock().unwrap();
-    stack.push(state.stack[0]);
-  };
-  curried_fn
-});
+
+#[derive(Default)]
+struct MySubscriber {
+  pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
+}
+
+#[async_trait]
+impl AsyncSubscriber<State> for MySubscriber {
+  async fn run(
+    &self,
+    state: State,
+  ) {
+    let mut stack = self
+      .shared_object_ref
+      .lock()
+      .unwrap();
+    if !state.stack.is_empty() {
+      stack.push(state.stack[0]);
+    }
+  }
+}
+
+let my_subscriber = MySubscriber {
+  shared_object_ref: shared_object_ref.clone(),
+};
 ```
 
 Here are two types of async middleware functions. One that returns an action (which will
@@ -130,33 +185,67 @@ get dispatched once this middleware returns), and another that doesn't return an
 both these functions share the `shared_object` reference from above.
 
 ```rust
-// This middleware function is curried to capture a reference to the shared object.
-let mw_returns_none = with(shared_object.clone(), |it| {
-  let curried_fn = move |action: Action| {
-    let mut stack = it.lock().unwrap();
+/// This middleware function is curried to capture a reference to the
+/// shared object.
+#[derive(Default)]
+struct MwReturnsNone {
+  pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
+}
+
+#[async_trait]
+impl AsyncMiddleware<State, Action> for MwReturnsNone {
+  async fn run(
+    &self,
+    action: Action,
+    _store_ref: Arc<RwLock<StoreStateMachine<State, Action>>>,
+  ) -> Option<Action> {
+    let mut stack = self
+      .shared_object_ref
+      .lock()
+      .unwrap();
     match action {
-      Action::Add(_, _) => stack.push(-1),
-      Action::AddPop(_) => stack.push(-2),
-      Action::Clear => stack.push(-3),
+      Action::MwReturnsNone_Add(_, _) => stack.push(-1),
+      Action::MwReturnsNone_AddPop(_) => stack.push(-2),
+      Action::MwReturnsNone_Clear => stack.push(-3),
       _ => {}
     }
     None
-  };
-  curried_fn
-});
+  }
+}
 
-// This middleware function is curried to capture a reference to the shared object.
-let mw_returns_action = with(shared_object.clone(), |it| {
-  let curried_fn = move |action: Action| {
-    let mut stack = it.lock().unwrap();
+let mw_returns_none = MwReturnsNone {
+  shared_object_ref: shared_object_ref.clone(),
+};
+
+/// This middleware function is curried to capture a reference to the
+/// shared object.
+#[derive(Default)]
+struct MwReturnsAction {
+  pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
+}
+
+#[async_trait]
+impl AsyncMiddleware<State, Action> for MwReturnsAction {
+  async fn run(
+    &self,
+    action: Action,
+    _store_ref: Arc<RwLock<StoreStateMachine<State, Action>>>,
+  ) -> Option<Action> {
+    let mut stack = self
+      .shared_object_ref
+      .lock()
+      .unwrap();
     match action {
-      Action::MiddlewareCreateClearAction => stack.push(-4),
+      Action::MwReturnsAction_SetState => stack.push(-4),
       _ => {}
     }
     Some(Action::Clear)
-  };
-  curried_fn
-});
+  }
+}
+
+let mw_returns_action = MwReturnsAction {
+  shared_object_ref: shared_object_ref.clone(),
+};
 ```
 
 Here's how you can setup a store with the above reducer, middleware, and subscriber
@@ -164,13 +253,21 @@ functions.
 
 ```rust
 // Setup store.
-let mut store = Store::<State, Action>::new();
+let mut store = Store::<State, Action>::default();
 store
-  .add_reducer(ShareableReducerFn::new(reducer_fn))
+  .add_reducer(MyReducer::new()) // Note the use of `new()` here.
   .await
-  .add_subscriber(SafeSubscriberFnWrapper::new(subscriber_fn))
+  .add_subscriber(Arc::new(RwLock::new( // We aren't using `new()` here
+    my_subscriber,                      // because the struct has properties.
+  )))
   .await
-  .add_middleware(SafeMiddlewareFnWrapper::new(mw_returns_none))
+  .add_middleware(Arc::new(RwLock::new( // We aren't using `new()` here
+    mw_returns_action,                  // because the struct has properties.
+  )))
+  .await
+  .add_middleware(Arc::new(RwLock::new( // We aren't using `new()` here
+    mw_returns_none,                    // because the struct has properties.
+  )))
   .await;
 ```
 
