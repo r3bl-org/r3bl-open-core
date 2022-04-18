@@ -66,7 +66,7 @@ objects.
   are run one after another (in the order in which they're added).
 - The reducer functions are also are async functions that are run in the tokio runtime.
   They're also run one after another in the order in which they're added. A macro
-  `fire_and_forget!` is provided so that you can spawn parallel blocks of code in your
+  [`fire_and_forget!`](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/macro.fire_and_forget.html) is provided so that you can spawn parallel blocks of code in your
   async functions.
 
 > ⚡ **Any functions or blocks that you write which uses the Redux library will have to be
@@ -80,7 +80,7 @@ objects.
      the store. If `None` is returned, then nothing is dispatched.
    - The `run()` method will be passed two arguments: the `Store` and the `Action`.
    - You can use the `Store` reference to dispatch an action if you're using the
-     `fire_and_forget!` macro.
+     [`fire_and_forget!`](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/macro.fire_and_forget.html) macro.
    - Please read the `AsyncMiddleware`
      [docs](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/redux/async_middleware/trait.AsyncMiddleware.html)
      to make sure that you are not deadlocking.
