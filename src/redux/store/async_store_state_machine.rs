@@ -14,11 +14,8 @@
  limitations under the License.
 */
 
-use crate::redux::{
-  AsyncMiddlewareVec, AsyncSubscriberVec, SafeList, ShareableReducerFn,
-};
+use crate::redux::{AsyncMiddlewareVec, AsyncReducerVec, AsyncSubscriberVec};
 use core::{fmt::Debug, hash::Hash};
-use r3bl_rs_utils_core::SafeToShare;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -31,8 +28,7 @@ where
   pub history: Vec<S>,
   pub middleware_vec: AsyncMiddlewareVec<S, A>,
   pub subscriber_vec: AsyncSubscriberVec<S>,
-  // FIXME: replace this w/ new async trait
-  pub reducer_fn_list: SafeList<ShareableReducerFn<S, A>>,
+  pub reducer_vec: AsyncReducerVec<S, A>,
 }
 
 impl<StateT, ActionT> Default for StoreStateMachine<StateT, ActionT>
@@ -44,8 +40,8 @@ where
     StoreStateMachine {
       state: Default::default(),
       history: vec![],
-      reducer_fn_list: Default::default(),
       middleware_vec: Default::default(),
+      reducer_vec: Default::default(),
       subscriber_vec: Default::default(),
     }
   }
@@ -100,15 +96,16 @@ where
     }
   }
 
-  // FIXME: deprecate this w/ new sync trait
   async fn run_reducers(
     &mut self,
     action: &A,
   ) {
-    let locked_list = self.reducer_fn_list.get_ref();
-    let list_r = locked_list.read().await;
-    for reducer_fn in list_r.iter() {
-      let new_state = reducer_fn.invoke(&self.state, &action);
+    let vec_clone = &self.reducer_vec.clone();
+    for item in vec_clone {
+      let reducer = item.read().await;
+      let new_state = reducer
+        .run(&action, &self.state)
+        .await;
       self.update_history(&new_state);
       self.state = new_state;
     }

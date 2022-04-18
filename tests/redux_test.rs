@@ -18,9 +18,8 @@
 // Imports.
 use async_trait::async_trait;
 use r3bl_rs_utils::redux::{
-  AsyncMiddleware, AsyncSubscriber, ShareableReducerFn, Store, StoreStateMachine,
+  AsyncMiddleware, AsyncReducer, AsyncSubscriber, Store, StoreStateMachine,
 };
-
 use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 
@@ -33,11 +32,11 @@ pub enum Action {
   AddPop(i32),
   Clear,
   // Middleware actions for AsyncMwReturnsNone.
-  AsyncMwReturnsNone_Add(i32, i32),
-  AsyncMwReturnsNone_AddPop(i32),
-  AsyncMwReturnsNone_Clear,
+  MwReturnsNone_Add(i32, i32),
+  MwReturnsNone_AddPop(i32),
+  MwReturnsNone_Clear,
   // Middleware actions for AsyncMwReturnsAction.
-  AsyncMwReturnsAction_SetState,
+  MwReturnsAction_SetState,
   // For Default impl.
   Noop,
 }
@@ -58,42 +57,27 @@ pub struct State {
 
 #[tokio::test]
 async fn test_redux_store_works_for_main_use_cases() {
-  // Reducer function (pure).
-  let reducer_fn = |state: &State, action: &Action| match action {
-    Action::Add(a, b) => {
-      let sum = a + b;
-      State { stack: vec![sum] }
-    }
-    Action::AddPop(a) => {
-      let sum = a + state.stack[0];
-      State { stack: vec![sum] }
-    }
-    Action::Clear => State { stack: vec![] },
-    _ => state.clone(),
-  };
-
   // This shared object is used to collect results from the subscriber & middleware &
   // reducer functions & test it later.
   let shared_object_ref = Arc::new(Mutex::new(Vec::<i32>::new()));
-  let subscriber_fn2 = MyAsyncSubscriber {
+
+  let my_subscriber = MySubscriber {
     shared_object_ref: shared_object_ref.clone(),
   };
-  let my_async_mw_returns_none = AsyncMwReturnsNone {
+  let mw_returns_none = MwReturnsNone {
     shared_object_ref: shared_object_ref.clone(),
   };
-  let my_async_mw_returns_action = AsyncMwReturnsAction {
+  let mw_returns_action = MwReturnsAction {
     shared_object_ref: shared_object_ref.clone(),
   };
 
   // Setup store w/ only reducer & subscriber (no middlewares).
   let mut store = Store::<State, Action>::default();
   store
-    .add_reducer(ShareableReducerFn::from(
-      reducer_fn,
-    ))
+    .add_reducer(MyReducer::new())
     .await
     .add_subscriber(Arc::new(RwLock::new(
-      subscriber_fn2,
+      my_subscriber,
     )))
     .await;
 
@@ -127,12 +111,10 @@ async fn test_redux_store_works_for_main_use_cases() {
   // Test async middleware: my_async_mw_returns_none.
   store
     .add_middleware(Arc::new(RwLock::new(
-      my_async_mw_returns_none,
+      mw_returns_none,
     )))
     .await
-    .dispatch(Action::AsyncMwReturnsNone_Add(
-      1, 2,
-    ))
+    .dispatch(Action::MwReturnsNone_Add(1, 2))
     .await;
   assert_eq!(
     shared_object_ref
@@ -142,9 +124,7 @@ async fn test_redux_store_works_for_main_use_cases() {
     Some(-1)
   );
   store
-    .dispatch(Action::AsyncMwReturnsNone_AddPop(
-      1,
-    ))
+    .dispatch(Action::MwReturnsNone_AddPop(1))
     .await;
   assert_eq!(
     shared_object_ref
@@ -154,7 +134,7 @@ async fn test_redux_store_works_for_main_use_cases() {
     Some(-2)
   );
   store
-    .dispatch(Action::AsyncMwReturnsNone_Clear)
+    .dispatch(Action::MwReturnsNone_Clear)
     .await;
   assert_eq!(
     shared_object_ref
@@ -173,10 +153,10 @@ async fn test_redux_store_works_for_main_use_cases() {
 
   store
     .add_middleware(Arc::new(RwLock::new(
-      my_async_mw_returns_action,
+      mw_returns_action,
     )))
     .await
-    .dispatch(Action::AsyncMwReturnsAction_SetState)
+    .dispatch(Action::MwReturnsAction_SetState)
     .await;
   assert_eq!(
     store.get_state().await.stack.len(),
@@ -191,12 +171,12 @@ async fn test_redux_store_works_for_main_use_cases() {
   );
 }
 
-struct AsyncMwReturnsNone {
+struct MwReturnsNone {
   pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
 }
 
 #[async_trait]
-impl AsyncMiddleware<State, Action> for AsyncMwReturnsNone {
+impl AsyncMiddleware<State, Action> for MwReturnsNone {
   async fn run(
     &self,
     action: Action,
@@ -207,21 +187,21 @@ impl AsyncMiddleware<State, Action> for AsyncMwReturnsNone {
       .lock()
       .unwrap();
     match action {
-      Action::AsyncMwReturnsNone_Add(_, _) => stack.push(-1),
-      Action::AsyncMwReturnsNone_AddPop(_) => stack.push(-2),
-      Action::AsyncMwReturnsNone_Clear => stack.push(-3),
+      Action::MwReturnsNone_Add(_, _) => stack.push(-1),
+      Action::MwReturnsNone_AddPop(_) => stack.push(-2),
+      Action::MwReturnsNone_Clear => stack.push(-3),
       _ => {}
     }
     None
   }
 }
 
-struct AsyncMwReturnsAction {
+struct MwReturnsAction {
   pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
 }
 
 #[async_trait]
-impl AsyncMiddleware<State, Action> for AsyncMwReturnsAction {
+impl AsyncMiddleware<State, Action> for MwReturnsAction {
   async fn run(
     &self,
     action: Action,
@@ -232,19 +212,19 @@ impl AsyncMiddleware<State, Action> for AsyncMwReturnsAction {
       .lock()
       .unwrap();
     match action {
-      Action::AsyncMwReturnsAction_SetState => stack.push(-4),
+      Action::MwReturnsAction_SetState => stack.push(-4),
       _ => {}
     }
     Some(Action::Clear)
   }
 }
 
-struct MyAsyncSubscriber {
+struct MySubscriber {
   pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
 }
 
 #[async_trait]
-impl AsyncSubscriber<State> for MyAsyncSubscriber {
+impl AsyncSubscriber<State> for MySubscriber {
   async fn run(
     &self,
     state: State,
@@ -255,6 +235,31 @@ impl AsyncSubscriber<State> for MyAsyncSubscriber {
       .unwrap();
     if !state.stack.is_empty() {
       stack.push(state.stack[0]);
+    }
+  }
+}
+
+#[derive(Default)]
+struct MyReducer;
+
+#[async_trait]
+impl AsyncReducer<State, Action> for MyReducer {
+  async fn run(
+    &self,
+    action: &Action,
+    state: &State,
+  ) -> State {
+    match action {
+      Action::Add(a, b) => {
+        let sum = a + b;
+        State { stack: vec![sum] }
+      }
+      Action::AddPop(a) => {
+        let sum = a + state.stack[0];
+        State { stack: vec![sum] }
+      }
+      Action::Clear => State { stack: vec![] },
+      _ => state.clone(),
     }
   }
 }

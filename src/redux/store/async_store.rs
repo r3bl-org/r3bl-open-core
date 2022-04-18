@@ -14,13 +14,10 @@
  limitations under the License.
 */
 
+use crate::redux::{AsyncMiddleware, AsyncReducer, AsyncSubscriber, StoreStateMachine};
 use r3bl_rs_utils_macro::make_struct_safe_to_share_and_mutate;
 use std::{fmt::Debug, hash::Hash, sync::Arc};
 use tokio::{spawn, sync::RwLock, task::JoinHandle};
-
-use crate::redux::{
-  sync_reducers::ShareableReducerFn, AsyncMiddleware, AsyncSubscriber, StoreStateMachine,
-};
 
 make_struct_safe_to_share_and_mutate! {
   named Store<S, A>
@@ -124,18 +121,16 @@ where
     self
   }
 
-  // FIXME: deprecate this w/ new sync trait
   pub async fn add_reducer(
     &mut self,
-    reducer_fn: ShareableReducerFn<S, A>,
+    reducer_fn: Arc<RwLock<dyn AsyncReducer<S, A> + Send + Sync>>,
   ) -> &mut Store<S, A> {
     self
       .get_ref()
       .write()
       .await
-      .reducer_fn_list
-      .push(reducer_fn)
-      .await;
+      .reducer_vec
+      .push(reducer_fn);
     self
   }
 }
