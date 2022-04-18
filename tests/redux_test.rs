@@ -15,7 +15,6 @@
  *   limitations under the License.
 */
 
-// Imports.
 use async_trait::async_trait;
 use r3bl_rs_utils::redux::{
   AsyncMiddleware, AsyncReducer, AsyncSubscriber, Store, StoreStateMachine,
@@ -23,7 +22,9 @@ use r3bl_rs_utils::redux::{
 use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 
-/// Action enum.
+/// ╭──────────────────────────────────────────────────────╮
+/// │ Action enum.                                         │
+/// ╰──────────────────────────────────────────────────────╯
 #[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Action {
@@ -47,7 +48,9 @@ impl Default for Action {
   }
 }
 
-/// State.
+/// ╭──────────────────────────────────────────────────────╮
+/// │ State struct.                                        │
+/// ╰──────────────────────────────────────────────────────╯
 #[derive(Clone, Default, PartialEq, Debug, Hash)]
 pub struct State {
   pub stack: Vec<i32>,
@@ -56,7 +59,7 @@ pub struct State {
 // TODO: Write integration tests for history.
 
 /// ╭──────────────────────────────────────────────────────╮
-/// │ Main test runner                                     │
+/// │ Main test runner.                                    │
 /// ╰──────────────────────────────────────────────────────╯
 #[tokio::test]
 async fn test_redux_store_works_for_main_use_cases() {
@@ -245,7 +248,7 @@ async fn test_mw_returns_action(
 }
 
 /// ╭──────────────────────────────────────────────────────╮
-/// │ MwReturnsNone                                        │
+/// │ MwReturnsNone.                                       │
 /// ╰──────────────────────────────────────────────────────╯
 struct MwReturnsNone {
   pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
@@ -273,7 +276,7 @@ impl AsyncMiddleware<State, Action> for MwReturnsNone {
 }
 
 /// ╭──────────────────────────────────────────────────────╮
-/// │ MwReturnsAction                                      │
+/// │ MwReturnsAction.                                     │
 /// ╰──────────────────────────────────────────────────────╯
 struct MwReturnsAction {
   pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
@@ -299,7 +302,7 @@ impl AsyncMiddleware<State, Action> for MwReturnsAction {
 }
 
 /// ╭──────────────────────────────────────────────────────╮
-/// │ MySubscriber                                         │
+/// │ MySubscriber.                                        │
 /// ╰──────────────────────────────────────────────────────╯
 struct MySubscriber {
   pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
@@ -322,7 +325,7 @@ impl AsyncSubscriber<State> for MySubscriber {
 }
 
 /// ╭──────────────────────────────────────────────────────╮
-/// │ MyReducer                                            │
+/// │ MyReducer.                                           │
 /// ╰──────────────────────────────────────────────────────╯
 #[derive(Default)]
 struct MyReducer;

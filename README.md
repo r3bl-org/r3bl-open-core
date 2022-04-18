@@ -112,7 +112,9 @@ Here's the gist of how to make & use one of these:
      constructor function or use the following as an argument to the `add_???()` methods:
      `Arc::new(RwLock::new($YOUR_STRUCT))`.
 
-> 💡 There are lots of examples in the tests for this library and in this
+> 💡 There are lots of examples in the
+> [tests](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/redux_test.rs) for
+> this library and in this
 > [CLI application](https://github.com/nazmulidris/rust_scratch/blob/main/address-book-with-redux/)
 > built using it.
 
