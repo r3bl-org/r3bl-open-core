@@ -86,9 +86,11 @@ async fn test_redux_store_works_for_main_use_cases() {
   store
     .dispatch_spawn(Action::Add(10, 10))
     .await;
+
   store
     .dispatch(Action::Add(1, 2))
     .await;
+
   assert_eq!(
     shared_object_ref
       .lock()
@@ -96,9 +98,11 @@ async fn test_redux_store_works_for_main_use_cases() {
       .pop(),
     Some(3)
   );
+
   store
     .dispatch(Action::AddPop(1))
     .await;
+
   assert_eq!(
     shared_object_ref
       .lock()
@@ -106,16 +110,18 @@ async fn test_redux_store_works_for_main_use_cases() {
       .pop(),
     Some(4)
   );
-  store.clear_subscribers().await;
 
   // Test async middleware: my_async_mw_returns_none.
   store
+    .clear_subscribers()
+    .await
     .add_middleware(Arc::new(RwLock::new(
       mw_returns_none,
     )))
     .await
     .dispatch(Action::MwReturnsNone_Add(1, 2))
     .await;
+
   assert_eq!(
     shared_object_ref
       .lock()
@@ -123,9 +129,11 @@ async fn test_redux_store_works_for_main_use_cases() {
       .pop(),
     Some(-1)
   );
+
   store
     .dispatch(Action::MwReturnsNone_AddPop(1))
     .await;
+
   assert_eq!(
     shared_object_ref
       .lock()
@@ -133,9 +141,11 @@ async fn test_redux_store_works_for_main_use_cases() {
       .pop(),
     Some(-2)
   );
+
   store
     .dispatch(Action::MwReturnsNone_Clear)
     .await;
+
   assert_eq!(
     shared_object_ref
       .lock()
@@ -145,23 +155,30 @@ async fn test_redux_store_works_for_main_use_cases() {
   );
 
   // Test async middleware: my_async_mw_returns_action.
-  store.clear_middlewares().await;
   shared_object_ref
     .lock()
     .unwrap()
     .clear();
 
+  // Since the reducers are removed, the `Action::Clear` returned by the following
+  // middleware will be ignored.
   store
+    .clear_reducers()
+    .await
+    .clear_middlewares()
+    .await
     .add_middleware(Arc::new(RwLock::new(
       mw_returns_action,
     )))
     .await
     .dispatch(Action::MwReturnsAction_SetState)
     .await;
+
   assert_eq!(
     store.get_state().await.stack.len(),
-    0
+    1
   );
+
   assert_eq!(
     shared_object_ref
       .lock()

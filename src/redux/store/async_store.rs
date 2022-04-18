@@ -133,4 +133,14 @@ where
       .push(reducer_fn);
     self
   }
+
+  pub async fn clear_reducers(&mut self) -> &mut Store<S, A> {
+    self
+      .get_ref()
+      .write()
+      .await
+      .reducer_vec
+      .clear();
+    self
+  }
 }

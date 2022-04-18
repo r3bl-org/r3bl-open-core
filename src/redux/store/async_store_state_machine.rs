@@ -100,6 +100,9 @@ where
     &mut self,
     action: &A,
   ) {
+    if self.reducer_vec.vec.is_empty() {
+      return;
+    }
     let vec_clone = &self.reducer_vec.clone();
     for item in vec_clone {
       let reducer = item.read().await;
