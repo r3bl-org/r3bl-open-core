@@ -64,20 +64,15 @@ where
     action: A,
     my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) {
-    // Run middleware & collect resulting actions.
-    let mut resulting_actions = self
+    // Run middlewares.
+    self
       .middleware_runner(action.clone(), my_ref)
       .await;
 
-    // Add the original action to the resulting actions.
-    resulting_actions.push(action.clone());
-
-    // Dispatch the resulting actions.
-    for action in resulting_actions.iter() {
-      self
-        .actually_dispatch_action(action)
-        .await;
-    }
+    // Dispatch the action.
+    self
+      .actually_dispatch_action(&action.clone())
+      .await;
   }
 
   async fn actually_dispatch_action(
@@ -143,34 +138,22 @@ where
     &self,
     action: A,
     my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
-  ) -> Vec<A> {
-    let mut return_vec = vec![];
-
+  ) {
     self
-      .run_middleware_vec(
-        action.clone(),
-        my_ref.clone(),
-        &mut return_vec,
-      )
+      .run_middleware_vec(action.clone(), my_ref.clone())
       .await;
-
-    return return_vec;
   }
 
   async fn run_middleware_vec(
     &self,
     my_action: A,
     my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
-    return_vec: &mut Vec<A>,
   ) {
     for item in &self.middleware_vec.vec {
       let fun = item.write().await;
-      let result = fun
+      fun
         .run(my_action.clone(), my_ref.clone())
         .await;
-      if let Some(result) = result {
-        return_vec.push(result);
-      }
     }
   }
 }

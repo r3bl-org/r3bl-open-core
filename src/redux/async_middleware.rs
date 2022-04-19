@@ -102,7 +102,7 @@ where
     &self,
     action: A,
     store_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
-  ) -> Option<A>;
+  );
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
   fn new() -> Arc<RwLock<dyn AsyncMiddleware<S, A> + Send + Sync + 'static>>

@@ -19,16 +19,6 @@
 					"label": ""
 				}
 			]
-		},
-		{
-			"path": "macro/src/fn_wrapper/make_safe_async.rs",
-			"bookmarks": [
-				{
-					"line": 44,
-					"column": 4,
-					"label": ""
-				}
-			]
 		}
 	]
 }

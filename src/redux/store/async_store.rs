@@ -63,18 +63,6 @@ where
     });
   }
 
-  pub async fn dispatch(
-    &self,
-    action: A,
-  ) {
-    let my_ref = self.get_ref();
-    my_ref
-      .write()
-      .await
-      .dispatch_action(action.clone(), my_ref.clone())
-      .await;
-  }
-
   pub async fn add_subscriber(
     &mut self,
     subscriber_fn: Arc<RwLock<dyn AsyncSubscriber<S> + Send + Sync>>,
