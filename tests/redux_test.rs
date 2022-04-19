@@ -124,9 +124,7 @@ async fn test_reducer_and_subscriber(
 
   // Test reducer and subscriber by dispatching Add and AddPop actions sync & async w/ no
   // middlewares.
-  store
-    .dispatch_spawn(Action::Add(10, 10))
-    .await;
+  store.dispatch_spawn(Action::Add(10, 10));
 
   store
     .dispatch(Action::Add(1, 2))

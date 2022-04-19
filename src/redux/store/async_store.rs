@@ -17,7 +17,7 @@
 use crate::redux::{AsyncMiddleware, AsyncReducer, AsyncSubscriber, StoreStateMachine};
 use r3bl_rs_utils_macro::make_struct_safe_to_share_and_mutate;
 use std::{fmt::Debug, hash::Hash, sync::Arc};
-use tokio::{spawn, sync::RwLock, task::JoinHandle};
+use tokio::{spawn, sync::RwLock};
 
 make_struct_safe_to_share_and_mutate! {
   named Store<S, A>
@@ -49,10 +49,10 @@ where
       .clone()
   }
 
-  pub async fn dispatch_spawn(
+  pub fn dispatch_spawn(
     &self,
     action: A,
-  ) -> JoinHandle<()> {
+  ) {
     let my_ref = self.get_ref();
     spawn(async move {
       my_ref
@@ -60,7 +60,7 @@ where
         .await
         .dispatch_action(action, my_ref.clone())
         .await;
-    })
+    });
   }
 
   pub async fn dispatch(
