@@ -149,11 +149,13 @@ where
     my_action: A,
     my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) {
+    let mut vec_fut = vec![];
+
     for item in &self.middleware_vec.vec {
-      let fun = item.write().await;
-      fun
-        .run(my_action.clone(), my_ref.clone())
-        .await;
+      let fut = item.run(my_action.clone(), my_ref.clone());
+      vec_fut.push(fut);
     }
+
+    futures::future::join_all(vec_fut).await;
   }
 }

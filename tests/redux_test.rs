@@ -176,9 +176,7 @@ async fn run_mw_example_no_spawn(
   //
   reset_store(store)
     .await
-    .add_middleware(Arc::new(RwLock::new(
-      mw_returns_none,
-    )))
+    .add_middleware(Box::new(mw_returns_none))
     .await
     .dispatch_spawn(Action::MwExampleNoSpawn_Foo(1, 2));
   delay_for_spawned_mw_to_execute().await;
@@ -226,9 +224,7 @@ async fn run_mw_example_spawns(
     .await
     .add_reducer(MyReducer::new())
     .await
-    .add_middleware(Arc::new(RwLock::new(
-      mw_returns_action,
-    )))
+    .add_middleware(Box::new(mw_returns_action))
     .await
     .dispatch_spawn(Action::MwExampleSpawns_ModifySharedObject_ResetState);
   delay_for_spawned_mw_to_execute().await;

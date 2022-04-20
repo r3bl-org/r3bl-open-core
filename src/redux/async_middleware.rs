@@ -14,9 +14,9 @@
  limitations under the License.
 */
 
-use std::sync::Arc;
 use super::StoreStateMachine;
 use async_trait::async_trait;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Your code in this trait implementation is able to deadlock in the following situation.
@@ -105,23 +105,23 @@ where
   );
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
-  fn new() -> Arc<RwLock<dyn AsyncMiddleware<S, A> + Send + Sync>>
+  fn new() -> Box<dyn AsyncMiddleware<S, A> + Send + Sync>
   where
     Self: Default + Sized + Sync + Send + 'static,
   {
-    Arc::new(RwLock::new(Self::default()))
+    Box::new(Self::default())
   }
 }
 
 #[derive(Default)]
 pub struct AsyncMiddlewareVec<S, A> {
-  pub vec: Vec<Arc<RwLock<dyn AsyncMiddleware<S, A> + Send + Sync>>>,
+  pub vec: Vec<Box<dyn AsyncMiddleware<S, A> + Send + Sync>>,
 }
 
 impl<S, A> AsyncMiddlewareVec<S, A> {
   pub fn push(
     &mut self,
-    middleware: Arc<RwLock<dyn AsyncMiddleware<S, A> + Send + Sync>>,
+    middleware: Box<dyn AsyncMiddleware<S, A> + Send + Sync>,
   ) {
     self.vec.push(middleware);
   }

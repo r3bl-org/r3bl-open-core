@@ -88,7 +88,7 @@ where
 
   pub async fn add_middleware(
     &mut self,
-    middleware_fn: Arc<RwLock<dyn AsyncMiddleware<S, A> + Send + Sync>>,
+    middleware_fn: Box<dyn AsyncMiddleware<S, A> + Send + Sync>,
   ) -> &mut Store<S, A> {
     self
       .get_ref()
