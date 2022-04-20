@@ -33,7 +33,7 @@ use super::{
 /// This struct represents a node in a tree. It may have a parent. It can hold multiple children.
 /// And it has a payload. It also has an id that uniquely identifies it. An [`Arena`] or
 /// [`super::MTArena`] is used to hold nodes.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Node<T>
 where
   T: Debug + Clone + Send + Sync,

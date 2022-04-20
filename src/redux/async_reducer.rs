@@ -15,8 +15,6 @@
 */
 
 use async_trait::async_trait;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 #[async_trait]
 pub trait AsyncReducer<S, A>
@@ -31,32 +29,28 @@ where
   ) -> S;
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
-  fn new() -> Arc<RwLock<dyn AsyncReducer<S, A> + Send + Sync>>
+  fn new() -> Box<dyn AsyncReducer<S, A> + Send + Sync>
   where
     Self: Default + Sized + Sync + Send + 'static,
   {
-    Arc::new(RwLock::new(Self::default()))
+    Box::new(Self::default())
   }
 }
 
 #[derive(Default)]
 pub struct AsyncReducerVec<S, A> {
-  pub vec: Vec<Arc<RwLock<dyn AsyncReducer<S, A> + Send + Sync>>>,
+  pub vec: Vec<Box<dyn AsyncReducer<S, A> + Send + Sync>>,
 }
 
 impl<S, A> AsyncReducerVec<S, A> {
   pub fn push(
     &mut self,
-    reducer: Arc<RwLock<dyn AsyncReducer<S, A> + Send + Sync>>,
+    reducer: Box<dyn AsyncReducer<S, A> + Send + Sync>,
   ) {
     self.vec.push(reducer);
   }
 
   pub fn clear(&mut self) {
     self.vec.clear();
-  }
-
-  pub fn clone(&mut self) -> Vec<Arc<RwLock<dyn AsyncReducer<S, A> + Send + Sync>>> {
-    self.vec.clone()
   }
 }

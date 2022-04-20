@@ -98,30 +98,28 @@ where
     if self.reducer_vec.vec.is_empty() {
       return;
     }
-    let vec_clone = &self.reducer_vec.clone();
-    for item in vec_clone {
-      let reducer = item.read().await;
+    for reducer in &self.reducer_vec.vec {
       let new_state = reducer
         .run(&action, &self.state)
         .await;
-      self.update_history(&new_state);
       self.state = new_state;
     }
+    self.update_history();
   }
 
   // Update history.
-  fn update_history(
-    &mut self,
-    new_state: &S,
-  ) where
+  fn update_history(&mut self)
+  where
     S: PartialEq + Clone,
   {
+    let new_state = self.get_state_clone();
+
     // Update history.
     let mut update_history = false;
     if self.history.is_empty() {
       update_history = true;
     } else if let Some(last_known_state) = self.history.last() {
-      if *last_known_state != *new_state {
+      if *last_known_state != new_state {
         update_history = true;
       }
     }

@@ -111,7 +111,7 @@ where
 
   pub async fn add_reducer(
     &mut self,
-    reducer_fn: Arc<RwLock<dyn AsyncReducer<S, A> + Send + Sync>>,
+    reducer_fn: Box<dyn AsyncReducer<S, A> + Send + Sync>,
   ) -> &mut Store<S, A> {
     self
       .get_ref()
