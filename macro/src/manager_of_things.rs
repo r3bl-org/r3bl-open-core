@@ -176,7 +176,7 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 ///   │     manager_name_ident
 ///   ╰─────────────────────────────────────────────
 ///   ╭─L2?─────────────────────────────────────────
-///   where K: Send + Sync + 'static, V: Send + Sync + 'static
+///   where K: Send + Sync, V: Send + Sync
 ///   │     ▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴
 ///   │     where_clause
 ///   ╰─────────────────────────────────────────────
@@ -230,7 +230,7 @@ impl Parse for ManagerOfThingSyntaxInfo {
     };
     // debug!(manager_type_has_generic_args);
 
-    // 👀 Optional where clause, eg: `where K: Send+Sync+'static, V: Send+Sync+'static`.
+    // 👀 Optional where clause, eg: `where K: Send+Sync, V: Send+Sync`.
     let mut where_clause: Option<WhereClause> = None;
     if input.peek(Token![where]) {
       where_clause = Some(input.parse::<WhereClause>()?);
@@ -240,7 +240,7 @@ impl Parse for ManagerOfThingSyntaxInfo {
           .get_angle_bracketed_generic_args_idents_result()
           .unwrap();
         let my_ts = quote! {
-          where #(#ident_vec: Default + Send + Sync + 'static),*
+          where #(#ident_vec: Default + Send + Sync),*
         }
         .into();
         let my_where_clause: WhereClause = syn::parse(my_ts).unwrap();

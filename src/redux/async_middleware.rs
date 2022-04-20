@@ -105,7 +105,7 @@ where
   );
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
-  fn new() -> Arc<RwLock<dyn AsyncMiddleware<S, A> + Send + Sync + 'static>>
+  fn new() -> Arc<RwLock<dyn AsyncMiddleware<S, A> + Send + Sync>>
   where
     Self: Default + Sized + Sync + Send + 'static,
   {

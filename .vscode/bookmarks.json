@@ -19,6 +19,21 @@
 					"label": ""
 				}
 			]
+		},
+		{
+			"path": "../..",
+			"bookmarks": [
+				{
+					"line": 27,
+					"column": 23,
+					"label": ""
+				},
+				{
+					"line": 35,
+					"column": 18,
+					"label": ""
+				}
+			]
 		}
 	]
 }

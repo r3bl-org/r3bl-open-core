@@ -29,7 +29,7 @@ where
   );
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
-  fn new() -> Arc<RwLock<dyn AsyncSubscriber<S> + Send + Sync + 'static>>
+  fn new() -> Arc<RwLock<dyn AsyncSubscriber<S> + Send + Sync>>
   where
     Self: Default + Sized + Sync + Send + 'static,
   {

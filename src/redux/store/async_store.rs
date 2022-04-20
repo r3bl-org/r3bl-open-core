@@ -30,8 +30,8 @@ make_struct_safe_to_share_and_mutate! {
 /// should not be used directly).
 impl<S, A> Store<S, A>
 where
-  S: Default + Clone + PartialEq + Debug + Hash + Sync + Send + 'static,
-  A: Default + Clone + Sync + Send + 'static,
+  S: Default + Clone + PartialEq + Debug + Hash + Sync + Send,
+  A: Default + Clone + Sync + Send,
 {
   pub async fn get_state(&self) -> S {
     self

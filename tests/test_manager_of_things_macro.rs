@@ -33,7 +33,7 @@ use r3bl_rs_utils_macro::make_struct_safe_to_share_and_mutate;
 async fn test_custom_syntax_full() {
   make_struct_safe_to_share_and_mutate! {
     named MyMapManager<K, V>
-    where K: Default + Send + Sync + 'static, V: Default + Send + Sync + 'static
+    where K: Default + Send + Sync, V: Default + Send + Sync
     containing my_map
     of_type std::collections::HashMap<K, V>
   }
@@ -99,7 +99,7 @@ async fn test_custom_syntax_no_where_clause() {
 fn test_simple_expansion() {
   make_struct_safe_to_share_and_mutate! {
     named MyMapManager<K, V>
-    where K: Default + Send + Sync + 'static, V: Default + Send + Sync + 'static
+    where K: Default + Send + Sync, V: Default + Send + Sync
     containing my_map
     of_type std::collections::HashMap<K, V>
   }

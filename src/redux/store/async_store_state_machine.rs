@@ -21,8 +21,8 @@ use tokio::sync::RwLock;
 
 pub struct StoreStateMachine<S, A>
 where
-  S: Sync + Send + 'static,
-  A: Sync + Send + 'static,
+  S: Sync + Send,
+  A: Sync + Send,
 {
   pub state: S,
   pub history: Vec<S>,
@@ -33,8 +33,8 @@ where
 
 impl<StateT, ActionT> Default for StoreStateMachine<StateT, ActionT>
 where
-  StateT: Default + Sync + Send + 'static,
-  ActionT: Default + Sync + Send + 'static,
+  StateT: Default + Sync + Send,
+  ActionT: Default + Sync + Send,
 {
   fn default() -> StoreStateMachine<StateT, ActionT> {
     StoreStateMachine {
@@ -52,8 +52,8 @@ where
 // Handle dispatch & history.
 impl<S, A> StoreStateMachine<S, A>
 where
-  S: Clone + Default + PartialEq + Debug + Hash + Sync + Send + 'static,
-  A: Clone + Send + Sync + 'static,
+  S: Clone + Default + PartialEq + Debug + Hash + Sync + Send,
+  A: Clone + Send + Sync,
 {
   pub fn get_state_clone(&self) -> S {
     self.state.clone()
