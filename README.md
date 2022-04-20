@@ -799,3 +799,20 @@ similar to Ink library for Node.js & TypeScript (that uses React and Yoga). Or k
 Please report any issues to the
 [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues). And if you have any
 feature requests, feel free to add them there too 👍.
+
+Here are some notes on using experimental / unstable features in Tokio.
+
+```toml
+# The rustflags needs to be set since we are using unstable features
+# in Tokio.
+# - https://github.com/tokio-rs/console
+# - https://docs.rs/tokio/latest/tokio/#unstable-features
+
+# This is how you set rustflags for cargo build defaults.
+# - https://github.com/rust-lang/rust-analyzer/issues/5828
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = [
+    "--cfg", "tokio_unstable",
+]
+```

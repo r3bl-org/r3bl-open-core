@@ -9,6 +9,7 @@
     "lazymemovalues",
     "middlewares",
     "qself",
-    "reqwest"
+    "reqwest",
+    "rustflags"
   ]
 }
