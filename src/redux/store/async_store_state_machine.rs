@@ -176,18 +176,17 @@ where
     &mut self,
     my_action: A,
   ) {
-    let mut vec_fut = vec![];
+    let mut vec_join_handle = vec![];
 
     for item in &self.middleware_spawns_vec.vec {
-      let fut = item
-        .run(my_action.clone())
-        .await
-        .await;
-      vec_fut.push(fut);
+      let fut = item.run(my_action.clone()).await;
+      vec_join_handle.push(fut);
     }
 
-    for join_handle_opt in vec_fut {
-      let result = join_handle_opt;
+    let vec_results = futures::future::join_all(vec_join_handle).await;
+
+    for join_handle in vec_results {
+      let result = join_handle;
       if let Ok(result) = result {
         if let Some(action) = result {
           self
