@@ -14,10 +14,8 @@
  limitations under the License.
 */
 
-use super::StoreStateMachine;
 use async_trait::async_trait;
-use std::sync::Arc;
-use tokio::{sync::RwLock, task::JoinHandle};
+use tokio::task::JoinHandle;
 
 /// Your code in this trait implementation is able to deadlock in the following situation.
 /// 1. A write lock to the store is already held when this function is called by the Redux
@@ -101,8 +99,7 @@ where
   async fn run(
     &self,
     action: A,
-    store_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
-  );
+  ) -> Option<A>;
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
   fn new() -> Box<dyn AsyncMiddleware<S, A> + Send + Sync>

@@ -18,8 +18,6 @@ use crate::redux::{
   AsyncMiddlewareSpawnsVec, AsyncMiddlewareVec, AsyncReducerVec, AsyncSubscriberVec,
 };
 use core::{fmt::Debug, hash::Hash};
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 pub struct StoreStateMachine<S, A>
 where
@@ -34,12 +32,12 @@ where
   pub reducer_vec: AsyncReducerVec<S, A>,
 }
 
-impl<StateT, ActionT> Default for StoreStateMachine<StateT, ActionT>
+impl<S, A> Default for StoreStateMachine<S, A>
 where
-  StateT: Default + Sync + Send,
-  ActionT: Default + Sync + Send,
+  S: Default + Sync + Send,
+  A: Default + Sync + Send,
 {
-  fn default() -> StoreStateMachine<StateT, ActionT> {
+  fn default() -> StoreStateMachine<S, A> {
     StoreStateMachine {
       state: Default::default(),
       history: vec![],
@@ -66,11 +64,10 @@ where
   pub async fn dispatch_action(
     &mut self,
     action: A,
-    my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) {
     // Run middlewares.
     self
-      .middleware_runner(action.clone(), my_ref)
+      .middleware_runner(action.clone())
       .await;
 
     // Dispatch the action.
@@ -141,10 +138,9 @@ where
   pub async fn middleware_runner(
     &mut self,
     action: A,
-    my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) {
     self
-      .run_middleware_vec(action.clone(), my_ref.clone())
+      .run_middleware_vec(action.clone())
       .await;
 
     self
@@ -152,21 +148,30 @@ where
       .await;
   }
 
+  /// Run concurrently (cooperatively on a single thread).
   async fn run_middleware_vec(
-    &self,
+    &mut self,
     my_action: A,
-    my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) {
     let mut vec_fut = vec![];
 
     for item in &self.middleware_vec.vec {
-      let value = item.run(my_action.clone(), my_ref.clone());
+      let value = item.run(my_action.clone());
       vec_fut.push(value);
     }
 
-    futures::future::join_all(vec_fut).await;
+    let vec_opt_action = futures::future::join_all(vec_fut).await;
+
+    for opt_action in vec_opt_action {
+      if let Some(action) = opt_action {
+        self
+          .actually_dispatch_action(&action)
+          .await;
+      }
+    }
   }
 
+  /// Run in parallel (on multiple threads, if using Tokio's multithreaded executor).
   async fn run_middleware_spawns_vec(
     &mut self,
     my_action: A,

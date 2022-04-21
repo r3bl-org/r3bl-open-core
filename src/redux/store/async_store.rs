@@ -14,7 +14,10 @@
  limitations under the License.
 */
 
-use crate::redux::{AsyncMiddleware, AsyncReducer, AsyncSubscriber, StoreStateMachine, AsyncMiddlewareSpawns};
+use crate::redux::{
+  AsyncMiddleware, AsyncMiddlewareSpawns, AsyncReducer, AsyncSubscriber,
+  StoreStateMachine,
+};
 use r3bl_rs_utils_macro::make_struct_safe_to_share_and_mutate;
 use std::{fmt::Debug, hash::Hash};
 
@@ -57,7 +60,7 @@ where
       my_ref
         .write()
         .await
-        .dispatch_action(action, my_ref.clone())
+        .dispatch_action(action)
         .await;
     });
   }

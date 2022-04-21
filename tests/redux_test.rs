@@ -260,8 +260,7 @@ impl AsyncMiddleware<State, Action> for MwExampleNoSpawn {
   async fn run(
     &self,
     action: Action,
-    _: Arc<RwLock<StoreStateMachine<State, Action>>>,
-  ) {
+  ) -> Option<Action> {
     let mut shared_vec = self.shared_vec.lock().await;
     match action {
       Action::MwExampleNoSpawn_Foo(_, _) => shared_vec.push(-1),
@@ -269,6 +268,7 @@ impl AsyncMiddleware<State, Action> for MwExampleNoSpawn {
       Action::MwExampleNoSpawn_Baz => shared_vec.push(-3),
       _ => {}
     }
+    None
   }
 }
 
