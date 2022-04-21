@@ -16,8 +16,8 @@
 
 use crate::redux::{AsyncMiddleware, AsyncReducer, AsyncSubscriber, StoreStateMachine};
 use r3bl_rs_utils_macro::make_struct_safe_to_share_and_mutate;
-use std::{fmt::Debug, hash::Hash, sync::Arc};
-use tokio::{spawn, sync::RwLock};
+use std::{fmt::Debug, hash::Hash};
+use tokio::spawn;
 
 make_struct_safe_to_share_and_mutate! {
   named Store<S, A>
@@ -65,7 +65,7 @@ where
 
   pub async fn add_subscriber(
     &mut self,
-    subscriber_fn: Arc<RwLock<dyn AsyncSubscriber<S> + Send + Sync>>,
+    subscriber_fn: Box<dyn AsyncSubscriber<S> + Send + Sync>,
   ) -> &mut Store<S, A> {
     self
       .get_ref()

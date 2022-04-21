@@ -83,14 +83,17 @@ where
     self.run_subscribers().await;
   }
 
+  /// Run these in parallel.
   async fn run_subscribers(&self) {
+    let mut vec_fut = vec![];
     let state_clone = self.get_state_clone();
-    for item in &self.subscriber_vec.vec {
-      let fun = item.write().await;
-      fun.run(state_clone.clone()).await;
+    for fun in &self.subscriber_vec.vec {
+      vec_fut.push(fun.run(state_clone.clone()));
     }
+    futures::future::join_all(vec_fut).await;
   }
 
+  /// Run these in sequence.
   async fn run_reducers(
     &mut self,
     action: &A,
@@ -130,8 +133,7 @@ where
     };
   }
 
-  /// Run middleware and return a list of resulting actions. If a middleware produces `None` that
-  /// isn't added to the list that's returned.
+  /// Run these in parallel.
   pub async fn middleware_runner(
     &self,
     action: A,

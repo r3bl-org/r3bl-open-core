@@ -15,8 +15,6 @@
 */
 
 use async_trait::async_trait;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 #[async_trait]
 pub trait AsyncSubscriber<S>
@@ -29,23 +27,23 @@ where
   );
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
-  fn new() -> Arc<RwLock<dyn AsyncSubscriber<S> + Send + Sync>>
+  fn new() -> Box<dyn AsyncSubscriber<S> + Send + Sync>
   where
     Self: Default + Sized + Sync + Send + 'static,
   {
-    Arc::new(RwLock::new(Self::default()))
+    Box::new(Self::default())
   }
 }
 
 #[derive(Default)]
 pub struct AsyncSubscriberVec<S> {
-  pub vec: Vec<Arc<RwLock<dyn AsyncSubscriber<S> + Send + Sync>>>,
+  pub vec: Vec<Box<dyn AsyncSubscriber<S> + Send + Sync>>,
 }
 
 impl<S> AsyncSubscriberVec<S> {
   pub fn push(
     &mut self,
-    middleware: Arc<RwLock<dyn AsyncSubscriber<S> + Send + Sync>>,
+    middleware: Box<dyn AsyncSubscriber<S> + Send + Sync>,
   ) {
     self.vec.push(middleware);
   }

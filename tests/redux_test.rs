@@ -126,9 +126,7 @@ async fn run_reducer_and_subscriber(
     .await
     .add_reducer(MyReducer::new())
     .await
-    .add_subscriber(Arc::new(RwLock::new(
-      my_subscriber,
-    )))
+    .add_subscriber(Box::new(my_subscriber))
     .await;
 
   store.dispatch_spawn(Action::Add(1, 2));
