@@ -139,12 +139,16 @@ where
 
   /// Run these in parallel.
   pub async fn middleware_runner(
-    &self,
+    &mut self,
     action: A,
     my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) {
     self
       .run_middleware_vec(action.clone(), my_ref.clone())
+      .await;
+
+    self
+      .run_middleware_spawns_vec(action.clone(), my_ref.clone())
       .await;
   }
 
@@ -182,7 +186,7 @@ where
       if let Ok(result) = result {
         if let Some(action) = result {
           self
-            .dispatch_action(action, my_ref.clone())
+            .actually_dispatch_action(&action)
             .await;
         }
       }
