@@ -5,6 +5,11 @@
 
 - [Usage](#usage)
 - [redux](#redux)
+  - [Middlewares](#middlewares)
+  - [Subscribers](#subscribers)
+  - [Reducers](#reducers)
+  - [Summary](#summary)
+  - [Examples](#examples)
 - [Macros](#macros)
   - [Declarative](#declarative)
     - [debug!](#debug)
@@ -53,28 +58,54 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.18"
+r3bl_rs_utils = "0.7.19"
 ```
 
 ## redux
 
 `Store` is thread safe and asynchronous (using Tokio). You have to implement `async`
 traits in order to use it, by defining your own reducer, subscriber, and middleware trait
-objects.
+objects. You also have to supply the Tokio runtime, this library will not create its own
+runtime. However, for best results, it is best to use the multithreaded Tokio runtime.
 
-- The middleware will be run asynchronously via Tokio tasks. They are all run together
-  concurrently but not in parallel, using
-  [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
-  Note that your middleware can use `tokio::spawn` to run `async` blocks in a
-  [separate thread](https://docs.rs/tokio/latest/tokio/task/index.html#spawning). A macro
-  [`fire_and_forget!`](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/macro.fire_and_forget.html)
-  is provided so that you can easily spawn parallel blocks of code in your `async`
-  functions.
-- The subscribers will be run asynchronously via Tokio tasks. They are all run together
-  concurrently but not in parallel, using
-  [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
-- The reducer functions are also are `async` functions that are run in the tokio runtime.
-  They're also run one after another in the order in which they're added.
+Once you setup your Redux store w/ your reducer, subscriber, and middleware, you can use
+it by calling `store.dispatch_spawn(action)`. This kicks off a parallel Tokio task that
+will run the middleware functions, reducer functions, and finally the subscriber
+functions. So this will not block the thread of whatever code you call this from. The
+`dispatch_spawn()` method itself is not `async`. So you can call it from non `async` code,
+however you still have to provide a Tokio executor / runtime, without which you will get a
+panic when `dispatch_spawn()` is called.
+
+### Middlewares
+
+Your middleware (`async` trait implementations) will be run concurrently or in parallel
+via Tokio tasks. You get to choose which `async` trait to implement to do one or the
+other. And regardless of which kind you implement the `Action` that is optionally returned
+will be dispatched to the Redux store at the end of execution of all the middlewares (for
+that particular `dispatch_spawn()` call).
+
+1. `AsyncMiddlewareSpawns<State, Action>` - Your middleware has to use `tokio::spawn` to
+   run `async` blocks in a
+   [separate thread](https://docs.rs/tokio/latest/tokio/task/index.html#spawning) and
+   return a `JoinHandle` that contains an `Option<Action>`. A macro
+   [`fire_and_forget!`](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/macro.fire_and_forget.html)
+   is provided so that you can easily spawn parallel blocks of code in your `async`
+   functions. These are added to the store via a call to `add_middleware_spawns(...)`.
+
+2. `AsyncMiddleware<State, Action>` - They are will all be run together concurrently using
+   [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
+   These are added to the store via a call to `add_middleware(...)`.
+
+### Subscribers
+
+The subscribers will be run asynchronously via Tokio tasks. They are all run together
+concurrently but not in parallel, using
+[`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
+
+### Reducers
+
+The reducer functions are also are `async` functions that are run in the tokio runtime.
+They're also run one after another in the order in which they're added.
 
 > ⚡ **Any functions or blocks that you write which uses the Redux library will have to be
 > marked `async` as well. And you will have to spawn the Tokio runtime by using the
@@ -82,21 +113,17 @@ objects.
 > threads and its task stealing implementation to give you parallel and concurrent
 > behavior. You can also use the single threaded runtime; its really up to you.**
 
-1. To create middleware you have to implement the `AsyncMiddleware` trait.
+1. To create middleware you have to implement the `AsyncMiddleware<S,A>` trait or
+   `AsyncMiddlewareSpawns<S,A>` trait. Please read the
+   [`AsyncMiddleware` docs](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/redux/async_middleware/trait.AsyncMiddleware.html)
+   for examples of both. The `run()` method is passed two arguments: the `State` and the
+   `Action`.
 
-   - The `run()` method is passed two arguments: the `Store` and the `Action`. It returns
-     nothing.
-   - You can get the `State` from the `Store` using
-     `store_ref.read().await.get_state_clone()` to perform any state dependent computation
-     in your task.
-   - If you want to dispatch an action when your task is done, you have to:
-     1. Use the
-        [`fire_and_forget!`](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/macro.fire_and_forget.html)
-        macro to surround your code. Please read the
-        [`AsyncMiddleware` docs](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/redux/async_middleware/trait.AsyncMiddleware.html)
-        to make sure that you are not deadlocking.
-     2. Use the `Store` reference to dispatch an action
-        `store_ref.write().await().dispatch_action(...)`.
+   1. For `AsyncMiddlewareSpawns<S,A>` in your `run()` implementation you have to use the
+      [`fire_and_forget!`](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/macro.fire_and_forget.html)
+      macro to surround your code. And this will return a `JoinHandle<Option<A>>`.
+   2. For `AsyncMiddleware<S,A>` in your `run()` implementation you just have to return an
+      `Option<A>>`.
 
 2. To create reducers you have to implement the `AsyncReducer` trait.
 
@@ -111,6 +138,8 @@ objects.
    - The `run()` method will be passed a `State` object as an argument.
    - It returns nothing `()`.
 
+### Summary
+
 Here's the gist of how to make & use one of these:
 
 1. Create a struct. Make it derive `Default`. Or you can add your own properties / fields
@@ -118,15 +147,18 @@ Here's the gist of how to make & use one of these:
    - A default constructor function `new()` is provided for you by the trait.
    - Just follow that works for when you need to make your own constructor function for a
      struct w/ your own properties.
-2. Implement the `AsyncMiddleware`, `AsyncReducer`, or `AsyncSubscriber` trait on your
-   struct.
-3. Register this struct w/ the store using one of the `add_middleware()`, `add_reducer()`,
-   or `add_subscriber()` methods. You can register multiple of these.
+2. Implement the `AsyncMiddleware`, `AsyncMiddlewareSpawns`, `AsyncReducer`, or
+   `AsyncSubscriber` trait on your struct.
+3. Register this struct w/ the store using one of the `add_middleware()`,
+   `add_middleware_spawns()`, `add_reducer()`, or `add_subscriber()` methods. You can
+   register as many of these as you like.
    - If you have a struct w/ no properties, you can just use the default `::new()` method
      to create an instance and pass that to the `add_???()` methods.
    - If you have a struct w/ custom properties, you can either implement your own
      constructor function or use the following as an argument to the `add_???()` methods:
-     `Arc::new(RwLock::new($YOUR_STRUCT))`.
+     `Box::new($YOUR_STRUCT))`.
+
+### Examples
 
 > 💡 There are lots of examples in the
 > [tests](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/redux_test.rs) for
@@ -140,7 +172,8 @@ Here's an example of how to use it. Let's start w/ the import statements.
 /// Imports.
 use async_trait::async_trait;
 use r3bl_rs_utils::redux::{
-  AsyncMiddleware, AsyncReducer, AsyncSubscriber, Store, StoreStateMachine,
+  AsyncMiddlewareSpawns, AsyncMiddleware, AsyncReducer,
+  AsyncSubscriber, Store, StoreStateMachine,
 };
 use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
@@ -252,12 +285,12 @@ both these functions share the `shared_object` reference from above.
 /// This shared object is used to collect results from the subscriber
 /// function & test it later.
 #[derive(Default)]
-struct MwReturnsNone {
+struct MwExampleNoSpawn {
   pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
 }
 
 #[async_trait]
-impl AsyncMiddleware<State, Action> for MwReturnsNone {
+impl AsyncMiddleware<State, Action> for MwExampleNoSpawn {
   async fn run(
     &self,
     action: Action,
@@ -268,32 +301,33 @@ impl AsyncMiddleware<State, Action> for MwReturnsNone {
       .lock()
       .unwrap();
     match action {
-      Action::MwReturnsNone_Add(_, _) => stack.push(-1),
-      Action::MwReturnsNone_AddPop(_) => stack.push(-2),
-      Action::MwReturnsNone_Clear => stack.push(-3),
+      Action::MwExampleNoSpawn_Add(_, _) => stack.push(-1),
+      Action::MwExampleNoSpawn_AddPop(_) => stack.push(-2),
+      Action::MwExampleNoSpawn_Clear => stack.push(-3),
       _ => {}
     }
+    None
   }
 }
 
-let mw_returns_none = MwReturnsNone {
+let mw_example_no_spawn = MwExampleNoSpawn {
   shared_object_ref: shared_object_ref.clone(),
 };
 
 /// This shared object is used to collect results from the subscriber
 /// function & test it later.
 #[derive(Default)]
-struct MwReturnsAction {
+struct MwExampleSpawns {
   pub shared_object_ref: Arc<Mutex<Vec<i32>>>,
 }
 
 #[async_trait]
-impl AsyncMiddleware<State, Action> for MwReturnsAction {
+impl AsyncMiddlewareSpawns<State, Action> for MwExampleSpawns {
   async fn run(
     &self,
     action: Action,
     store_ref: Arc<RwLock<StoreStateMachine<State, Action>>>,
-  ) {
+  ) -> JoinHandle<Option<Action>> {
     fire_and_forget!(
       {
         let mut stack = self
@@ -301,21 +335,19 @@ impl AsyncMiddleware<State, Action> for MwReturnsAction {
           .lock()
           .unwrap();
         match action {
-          Action::MwReturnsAction_SetState => stack.push(-4),
+          Action::MwExampleSpawns_ModifySharedObject_ResetState => {
+            shared_vec.push(-4);
+            return Some(Action::Reset);
+          }
           _ => {}
         }
-
-        store_ref
-          .write()
-          .await
-          .dispatch_action(Action::Clear, store_ref.clone())
-          .await;
+        None
       }
     );
   }
 }
 
-let mw_returns_action = MwReturnsAction {
+let mw_example_spawns = MwExampleSpawns {
   shared_object_ref: shared_object_ref.clone(),
 };
 ```
@@ -329,41 +361,34 @@ let mut store = Store::<State, Action>::default();
 store
   .add_reducer(MyReducer::new()) // Note the use of `::new()` here.
   .await
-  .add_subscriber(Box::new( // We aren't using `::new()` here
-    my_subscriber,          // because the struct has properties.
-  )))
+  .add_subscriber(Box::new(         // We aren't using `::new()` here
+    my_subscriber,                  // because the struct has properties.
+  ))
   .await
-  .add_middleware(Box::new( // We aren't using `::new()` here
-    mw_returns_action,      // because the struct has properties.
-  )))
+  .add_middleware_spawns(Box::new(  // We aren't using `::new()` here
+    mw_example_spawns,              // because the struct has properties.
+  ))
   .await
-  .add_middleware(Box::new( // We aren't using `::new()` here
-    mw_returns_none,        // because the struct has properties.
-  )))
+  .add_middleware(Box::new(         // We aren't using `::new()` here
+    mw_example_no_spawn,            // because the struct has properties.
+  ))
   .await;
 ```
 
 Finally here's an example of how to dispatch an action in a test. You can dispatch actions
-asynchronously using `dispatch_spawn()` which is "fire and forget" meaning that the caller
+in parallel using `dispatch_spawn()` which is "fire and forget" meaning that the caller
 won't block or wait for the `dispatch_spawn()` to return.
 
 ```rust
-// Test reducer and subscriber by dispatching Add and AddPop actions asynchronously.
-store.dispatch_spawn(Action::Add(10, 10)).await;
-store.dispatch_spawn(&Action::Add(1, 2)).await;
+// Test reducer and subscriber by dispatching `Add`, `AddPop`, `Clear` actions in parallel.
+store.dispatch_spawn(Action::Add(1, 2)).await;
 assert_eq!(shared_object.lock().unwrap().pop(), Some(3));
-store.dispatch_spawn(&Action::AddPop(1)).await;
-assert_eq!(shared_object.lock().unwrap().pop(), Some(21));
-store.clear_subscribers().await;
 
-// Test async middleware: mw_returns_action.
-shared_object.lock().unwrap().clear();
-store
-  .add_middleware(SafeMiddlewareFnWrapper::new(mw_returns_action))
-  .dispatch_spawn(&Action::MiddlewareCreateClearAction)
-  .await;
+store.dispatch_spawn(Action::AddPop(1)).await;
+assert_eq!(shared_object.lock().unwrap().pop(), Some(4));
+
+store.dispatch_spawn(Action::Clear).await;
 assert_eq!(store.get_state().stack.len(), 0);
-assert_eq!(shared_object.lock().unwrap().pop(), Some(-4));
 ```
 
 ## Macros

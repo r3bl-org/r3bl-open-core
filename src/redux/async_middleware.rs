@@ -17,79 +17,32 @@
 use async_trait::async_trait;
 use tokio::task::JoinHandle;
 
-/// Your code in this trait implementation is able to deadlock in the following situation.
-/// 1. A write lock to the store is already held when this function is called by the Redux
-/// store.
-/// 2. This write lock gets acquired in the [`Store::dispatch`] method. Be careful when
-/// dispatching actions from the `run()` method's thread.
-/// 3. The async read write lock that's held [`tokio::sync::RwLock`] is NOT reentrant.
-///
-/// Here's an example that will deadlock.
-///
+/// ╭──────────────────────────────────────────────────────╮
+/// │ MwExampleNoSpawn example                             │
+/// ╰──────────────────────────────────────────────────────╯
 /// ```ignore
+/// struct MwExampleNoSpawn {
+///   pub shared_vec: Arc<Mutex<Vec<i32>>>,
+/// }
+///
 /// #[async_trait]
-/// impl AsyncMiddleware<State, Action> for AddAsyncCmdMw {
+/// impl AsyncMiddleware<State, Action> for MwExampleNoSpawn {
 ///   async fn run(
 ///     &self,
 ///     action: Action,
-///     store_ref: Arc<RwLock<StoreStateMachine<State, Action>>>,
+///     _state: State,
 ///   ) -> Option<Action> {
-///     if let Action::Mw(Mw::AsyncAddCmd) = action {
-///       let fake_data = fake_contact_data_api()
-///         .await
-///         .unwrap_or_else(|_| FakeContactData {
-///           name: "Foo Bar".to_string(),
-///           phone_h: "123-456-7890".to_string(),
-///           email_u: "foo".to_string(),
-///           email_d: "bar.com".to_string(),
-///           ..FakeContactData::default()
-///         });
-///       let action = Action::Std(Std::AddContact(
-///         format!("{}", fake_data.name),
-///         format!(
-///           "{}@{}",
-///           fake_data.email_u, fake_data.email_d
-///         ),
-///         format!("{}", fake_data.phone_h),
-///       ));
-///
-///       /* ⚠️ Do not do this. ⚠️ */
-///       {
-///         let mut my_store = store_ref.write().await; // Deadlock!
-///         my_store
-///           .dispatch_action(action, store_ref.clone())
-///           .await;
-///       }
-///
-///       /* The following avoids this deadlock. */
-///       // return Some(action);
+///     let mut shared_vec = self.shared_vec.lock().await;
+///     match action {
+///       Action::MwExampleNoSpawn_Foo(_, _) => shared_vec.push(-1),
+///       Action::MwExampleNoSpawn_Bar(_) => shared_vec.push(-2),
+///       Action::MwExampleNoSpawn_Baz => shared_vec.push(-3),
+///       _ => {}
 ///     }
 ///     None
 ///   }
 /// }
 /// ```
-///
-/// To avoid this situation, just return the action from the `run()` method. And this will
-/// safely be dispatched for you w/out deadlock.
-///
-/// However there are situations where you want to manage your own tasks in parallel and
-/// then generate an action or actions when those tasks have completed. In this case, you
-/// can manage your own tasks and you can opt-out of returning anything by returning
-/// `None` and run your code in a block run by `fire_and_forget!` macro.
-///
-/// If you want to call the deadlock block above, use the following instead & do not call
-/// `return Some(action);`:
-///
-/// ```ignore
-/// use r3bl_rs_utils::fire_and_forget;
-///
-/// fire_and_forget! { /* block above will not deadlock */ });
-/// ```
-///
-/// By the time the spawned task is executed (and has to acquire its own write or read
-/// lock) the held write lock will be dropped & deadlock won't ensue. Be aware that you
-/// are responsible for dispatching actions (if any) from your spawned task's thread.
-/// Otherwise the Redux store won't know what your tasks have done.
 #[async_trait]
 pub trait AsyncMiddleware<S, A>
 where
@@ -128,6 +81,37 @@ impl<S, A> AsyncMiddlewareVec<S, A> {
     self.vec.clear();
   }
 }
+
+/// ╭──────────────────────────────────────────────────────╮
+/// │ MwExampleSpawns example                              │
+/// ╰──────────────────────────────────────────────────────╯
+/// ```ignore
+/// struct MwExampleSpawns {
+///   pub shared_vec: Arc<Mutex<Vec<i32>>>,
+/// }
+///
+/// #[async_trait]
+/// impl AsyncMiddlewareSpawns<State, Action> for MwExampleSpawns {
+///   async fn run(
+///     &self,
+///     action: Action,
+///     _state: State,
+///   ) -> JoinHandle<Option<Action>> {
+///     let so_arc_clone = self.shared_vec.clone();
+///     tokio::spawn(async move {
+///       let mut shared_vec = so_arc_clone.lock().await;
+///       match action {
+///         Action::MwExampleSpawns_ModifySharedObject_ResetState => {
+///           shared_vec.push(-4);
+///           return Some(Action::Reset);
+///         }
+///         _ => {}
+///       }
+///       None
+///     })
+///   }
+/// }
+/// ```
 
 #[async_trait]
 pub trait AsyncMiddlewareSpawns<S, A>
