@@ -18,10 +18,16 @@
 use async_trait::async_trait;
 use r3bl_rs_utils::{
   fire_and_forget,
-  redux::{AsyncMiddleware, AsyncReducer, AsyncSubscriber, Store, StoreStateMachine},
+  redux::{
+    AsyncMiddleware, AsyncMiddlewareSpawns, AsyncReducer, AsyncSubscriber, Store,
+    StoreStateMachine,
+  },
 };
 use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock};
+use tokio::{
+  sync::{Mutex, RwLock},
+  task::JoinHandle,
+};
 
 /// ╭──────────────────────────────────────────────────────╮
 /// │ Action enum.                                         │
@@ -222,7 +228,7 @@ async fn run_mw_example_spawns(
     .await
     .add_reducer(MyReducer::new())
     .await
-    .add_middleware(Box::new(mw_returns_action))
+    .add_middleware_spawns(Box::new(mw_returns_action))
     .await
     .dispatch_spawn(Action::MwExampleSpawns_ModifySharedObject_ResetState);
   delay_for_spawned_mw_to_execute().await;
@@ -274,27 +280,23 @@ struct MwExampleSpawns {
 }
 
 #[async_trait]
-impl AsyncMiddleware<State, Action> for MwExampleSpawns {
+impl AsyncMiddlewareSpawns<State, Action> for MwExampleSpawns {
   async fn run(
     &self,
     action: Action,
-    store_ref: Arc<RwLock<StoreStateMachine<State, Action>>>,
-  ) {
+  ) -> JoinHandle<Option<Action>> {
     let so_arc_clone = self.shared_vec.clone();
-    fire_and_forget!({
+    tokio::spawn(async move {
       let mut shared_vec = so_arc_clone.lock().await;
       match action {
         Action::MwExampleSpawns_ModifySharedObject_ResetState => {
           shared_vec.push(-4);
-          store_ref
-            .write()
-            .await
-            .dispatch_action(Action::Reset, store_ref.clone())
-            .await;
+          return Some(Action::Reset);
         }
         _ => {}
       }
-    });
+      None
+    })
   }
 }
 

@@ -148,7 +148,7 @@ where
       .await;
 
     self
-      .run_middleware_spawns_vec(action.clone(), my_ref.clone())
+      .run_middleware_spawns_vec(action.clone())
       .await;
   }
 
@@ -170,19 +170,19 @@ where
   async fn run_middleware_spawns_vec(
     &mut self,
     my_action: A,
-    my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) {
     let mut vec_fut = vec![];
 
     for item in &self.middleware_spawns_vec.vec {
-      let fut = item.run(my_action.clone(), my_ref.clone());
+      let fut = item
+        .run(my_action.clone())
+        .await
+        .await;
       vec_fut.push(fut);
     }
 
-    let vec_join_handle = futures::future::join_all(vec_fut).await;
-
-    for join_handle_opt in vec_join_handle {
-      let result = join_handle_opt.await;
+    for join_handle_opt in vec_fut {
+      let result = join_handle_opt;
       if let Ok(result) = result {
         if let Some(action) = result {
           self

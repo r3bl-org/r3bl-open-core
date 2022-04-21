@@ -140,7 +140,6 @@ where
   async fn run(
     &self,
     action: A,
-    store_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
   ) -> JoinHandle<Option<A>>;
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html

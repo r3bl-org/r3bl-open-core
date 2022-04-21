@@ -50,7 +50,7 @@
 #[macro_export]
 macro_rules! fire_and_forget {
   ($block:block) => {
-    tokio::spawn(async move { $block });
+     return tokio::spawn(async move { $block });
   };
 }
 

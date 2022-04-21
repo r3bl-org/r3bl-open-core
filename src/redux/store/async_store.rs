@@ -14,7 +14,7 @@
  limitations under the License.
 */
 
-use crate::redux::{AsyncMiddleware, AsyncReducer, AsyncSubscriber, StoreStateMachine};
+use crate::redux::{AsyncMiddleware, AsyncReducer, AsyncSubscriber, StoreStateMachine, AsyncMiddlewareSpawns};
 use r3bl_rs_utils_macro::make_struct_safe_to_share_and_mutate;
 use std::{fmt::Debug, hash::Hash};
 
@@ -94,6 +94,19 @@ where
       .write()
       .await
       .middleware_vec
+      .push(middleware_fn);
+    self
+  }
+
+  pub async fn add_middleware_spawns(
+    &mut self,
+    middleware_fn: Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>,
+  ) -> &mut Store<S, A> {
+    self
+      .get_ref()
+      .write()
+      .await
+      .middleware_spawns_vec
       .push(middleware_fn);
     self
   }
