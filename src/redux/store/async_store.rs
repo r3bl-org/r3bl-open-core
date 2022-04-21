@@ -17,7 +17,6 @@
 use crate::redux::{AsyncMiddleware, AsyncReducer, AsyncSubscriber, StoreStateMachine};
 use r3bl_rs_utils_macro::make_struct_safe_to_share_and_mutate;
 use std::{fmt::Debug, hash::Hash};
-use tokio::spawn;
 
 make_struct_safe_to_share_and_mutate! {
   named Store<S, A>
@@ -54,7 +53,7 @@ where
     action: A,
   ) {
     let my_ref = self.get_ref();
-    spawn(async move {
+    tokio::spawn(async move {
       my_ref
         .write()
         .await

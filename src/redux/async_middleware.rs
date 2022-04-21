@@ -17,7 +17,7 @@
 use super::StoreStateMachine;
 use async_trait::async_trait;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::{sync::RwLock, task::JoinHandle};
 
 /// Your code in this trait implementation is able to deadlock in the following situation.
 /// 1. A write lock to the store is already held when this function is called by the Redux
@@ -122,6 +122,45 @@ impl<S, A> AsyncMiddlewareVec<S, A> {
   pub fn push(
     &mut self,
     middleware: Box<dyn AsyncMiddleware<S, A> + Send + Sync>,
+  ) {
+    self.vec.push(middleware);
+  }
+
+  pub fn clear(&mut self) {
+    self.vec.clear();
+  }
+}
+
+#[async_trait]
+pub trait AsyncMiddlewareSpawns<S, A>
+where
+  S: Sync + Send,
+  A: Sync + Send,
+{
+  async fn run(
+    &self,
+    action: A,
+    store_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
+  ) -> JoinHandle<Option<A>>;
+
+  /// https://doc.rust-lang.org/book/ch10-02-traits.html
+  fn new() -> Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>
+  where
+    Self: Default + Sized + Sync + Send + 'static,
+  {
+    Box::new(Self::default())
+  }
+}
+
+#[derive(Default)]
+pub struct AsyncMiddlewareSpawnsVec<S, A> {
+  pub vec: Vec<Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>>,
+}
+
+impl<S, A> AsyncMiddlewareSpawnsVec<S, A> {
+  pub fn push(
+    &mut self,
+    middleware: Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>,
   ) {
     self.vec.push(middleware);
   }
