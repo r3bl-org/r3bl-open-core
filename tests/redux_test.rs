@@ -16,18 +16,11 @@
 */
 
 use async_trait::async_trait;
-use r3bl_rs_utils::{
-  fire_and_forget,
-  redux::{
-    AsyncMiddleware, AsyncMiddlewareSpawns, AsyncReducer, AsyncSubscriber, Store,
-    StoreStateMachine,
-  },
+use r3bl_rs_utils::redux::{
+  AsyncMiddleware, AsyncMiddlewareSpawns, AsyncReducer, AsyncSubscriber, Store,
 };
 use std::sync::Arc;
-use tokio::{
-  sync::{Mutex, RwLock},
-  task::JoinHandle,
-};
+use tokio::{sync::Mutex, task::JoinHandle};
 
 /// ╭──────────────────────────────────────────────────────╮
 /// │ Action enum.                                         │
@@ -260,6 +253,7 @@ impl AsyncMiddleware<State, Action> for MwExampleNoSpawn {
   async fn run(
     &self,
     action: Action,
+    _state: State,
   ) -> Option<Action> {
     let mut shared_vec = self.shared_vec.lock().await;
     match action {
@@ -284,6 +278,7 @@ impl AsyncMiddlewareSpawns<State, Action> for MwExampleSpawns {
   async fn run(
     &self,
     action: Action,
+    _state: State,
   ) -> JoinHandle<Option<Action>> {
     let so_arc_clone = self.shared_vec.clone();
     tokio::spawn(async move {

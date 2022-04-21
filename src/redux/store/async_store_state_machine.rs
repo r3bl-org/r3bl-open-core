@@ -156,7 +156,10 @@ where
     let mut vec_fut = vec![];
 
     for item in &self.middleware_vec.vec {
-      let value = item.run(my_action.clone());
+      let value = item.run(
+        my_action.clone(),
+        self.get_state_clone(),
+      );
       vec_fut.push(value);
     }
 
@@ -179,7 +182,12 @@ where
     let mut vec_join_handle = vec![];
 
     for item in &self.middleware_spawns_vec.vec {
-      let fut = item.run(my_action.clone()).await;
+      let fut = item
+        .run(
+          my_action.clone(),
+          self.get_state_clone(),
+        )
+        .await;
       vec_join_handle.push(fut);
     }
 
