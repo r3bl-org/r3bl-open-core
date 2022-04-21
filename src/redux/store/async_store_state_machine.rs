@@ -14,7 +14,9 @@
  limitations under the License.
 */
 
-use crate::redux::{AsyncMiddlewareVec, AsyncReducerVec, AsyncSubscriberVec};
+use crate::redux::{
+  AsyncMiddlewareSpawnsVec, AsyncMiddlewareVec, AsyncReducerVec, AsyncSubscriberVec,
+};
 use core::{fmt::Debug, hash::Hash};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -27,6 +29,7 @@ where
   pub state: S,
   pub history: Vec<S>,
   pub middleware_vec: AsyncMiddlewareVec<S, A>,
+  pub middleware_spawns_vec: AsyncMiddlewareSpawnsVec<S, A>,
   pub subscriber_vec: AsyncSubscriberVec<S>,
   pub reducer_vec: AsyncReducerVec<S, A>,
 }
@@ -41,6 +44,7 @@ where
       state: Default::default(),
       history: vec![],
       middleware_vec: Default::default(),
+      middleware_spawns_vec: Default::default(),
       reducer_vec: Default::default(),
       subscriber_vec: Default::default(),
     }
@@ -152,10 +156,36 @@ where
     let mut vec_fut = vec![];
 
     for item in &self.middleware_vec.vec {
+      let value = item.run(my_action.clone(), my_ref.clone());
+      vec_fut.push(value);
+    }
+
+    futures::future::join_all(vec_fut).await;
+  }
+
+  async fn run_middleware_spawns_vec(
+    &mut self,
+    my_action: A,
+    my_ref: Arc<RwLock<StoreStateMachine<S, A>>>,
+  ) {
+    let mut vec_fut = vec![];
+
+    for item in &self.middleware_spawns_vec.vec {
       let fut = item.run(my_action.clone(), my_ref.clone());
       vec_fut.push(fut);
     }
 
-    futures::future::join_all(vec_fut).await;
+    let vec_join_handle = futures::future::join_all(vec_fut).await;
+
+    for join_handle_opt in vec_join_handle {
+      let result = join_handle_opt.await;
+      if let Ok(result) = result {
+        if let Some(action) = result {
+          self
+            .dispatch_action(action, my_ref.clone())
+            .await;
+        }
+      }
+    }
   }
 }
