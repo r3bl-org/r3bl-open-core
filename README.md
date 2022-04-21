@@ -53,7 +53,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.17"
+r3bl_rs_utils = "0.7.18"
 ```
 
 ## redux
@@ -62,16 +62,17 @@ r3bl_rs_utils = "0.7.17"
 traits in order to use it, by defining your own reducer, subscriber, and middleware trait
 objects.
 
-- The middleware will be run asynchronously via Tokio tasks. However, they are run one
-  after another (in the order in which they're added). If you need to dispatch an action
-  after your task is completed then you are free to use `tokio::spawn` to run `async`
-  blocks in a
+- The middleware will be run asynchronously via Tokio tasks. They are all run together
+  concurrently but not in parallel, using
+  [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
+  Note that your middleware can use `tokio::spawn` to run `async` blocks in a
   [separate thread](https://docs.rs/tokio/latest/tokio/task/index.html#spawning). A macro
   [`fire_and_forget!`](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/macro.fire_and_forget.html)
   is provided so that you can easily spawn parallel blocks of code in your `async`
   functions.
-- The subscribers will be run asynchronously via Tokio tasks. However, they are run one
-  after another (in the order in which they're added).
+- The subscribers will be run asynchronously via Tokio tasks. They are all run together
+  concurrently but not in parallel, using
+  [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
 - The reducer functions are also are `async` functions that are run in the tokio runtime.
   They're also run one after another in the order in which they're added.
 
@@ -326,18 +327,18 @@ functions.
 // Setup store.
 let mut store = Store::<State, Action>::default();
 store
-  .add_reducer(MyReducer::new()) // Note the use of `new()` here.
+  .add_reducer(MyReducer::new()) // Note the use of `::new()` here.
   .await
-  .add_subscriber(Arc::new(RwLock::new( // We aren't using `new()` here
-    my_subscriber,                      // because the struct has properties.
+  .add_subscriber(Box::new( // We aren't using `::new()` here
+    my_subscriber,          // because the struct has properties.
   )))
   .await
-  .add_middleware(Arc::new(RwLock::new( // We aren't using `new()` here
-    mw_returns_action,                  // because the struct has properties.
+  .add_middleware(Box::new( // We aren't using `::new()` here
+    mw_returns_action,      // because the struct has properties.
   )))
   .await
-  .add_middleware(Arc::new(RwLock::new( // We aren't using `new()` here
-    mw_returns_none,                    // because the struct has properties.
+  .add_middleware(Box::new( // We aren't using `::new()` here
+    mw_returns_none,        // because the struct has properties.
   )))
   .await;
 ```

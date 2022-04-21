@@ -5,7 +5,7 @@ description = "Rust language utilities inspired by Kotlin scope functions, TUI u
 keywords = ["tui", "color", "terminal", "redux", "non-binary-tree"]
 categories = ["algorithms", "data-structures"]
 # When you change this, make sure to update `README.md` as well.
-version = "0.7.17"
+version = "0.7.18"
 edition = "2021"
 readme = "README.md" # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/
