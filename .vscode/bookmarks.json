@@ -1,36 +1,16 @@
 {
 	"files": [
 		{
-			"path": "macro/src/make_safe_async_fn_wrapper.rs",
+			"path": "README.md",
 			"bookmarks": [
 				{
-					"line": 60,
-					"column": 2,
-					"label": ""
-				}
-			]
-		},
-		{
-			"path": "macro/src/make_shareable_fn_wrapper.rs",
-			"bookmarks": [
-				{
-					"line": 108,
-					"column": 8,
-					"label": ""
-				}
-			]
-		},
-		{
-			"path": "../..",
-			"bookmarks": [
-				{
-					"line": 27,
-					"column": 23,
+					"line": 401,
+					"column": 0,
 					"label": ""
 				},
 				{
-					"line": 35,
-					"column": 18,
+					"line": 405,
+					"column": 5,
 					"label": ""
 				}
 			]

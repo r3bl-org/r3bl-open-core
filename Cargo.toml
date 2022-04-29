@@ -24,13 +24,27 @@ path = "src/lib.rs"
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
+
+# r3bl_rs_utils
 r3bl_rs_utils_core = { version = "0.7.5", path = "core" }
 r3bl_rs_utils_macro = { version = "0.7.2", path = "macro" }
 
-rand = "0.8.4"
-ansi_term = "0.12.1"
+# Logging
+log = "0.4.16"
+simplelog = "0.12.0"
+
+# Time
 chrono = "0.4.0"
+time = "0.3.9"
+
+# Misc
+rand = "0.8.4"
+
+# Terminal
+ansi_term = "0.12.1"
 atty = "0.2.14"
+
+# Async
 tokio = { version = "1.17.0", features = ["full"] }
 async-trait = "0.1.53"
 futures = "0.3.21"

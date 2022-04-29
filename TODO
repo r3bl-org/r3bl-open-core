@@ -2,6 +2,10 @@
 │ r3bl_rs_utils                                        │
 ╰──────────────────────────────────────────────────────╯
 Pending:
+  Add new functions from other repos:
+    ✔ Add `file_logging.rs` from `tui-layout-crossterm` @done(22-04-28 17:01)
+    ☐ Update `README.md` w/ `log!` macro
+    ☐ Update `README.md` w/ `make_api_call_for!` macro
 
 Done:
   Simplify mw:

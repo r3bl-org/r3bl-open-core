@@ -399,6 +399,14 @@ There are quite a few declarative macros that you will find in the library. They
 be used internally in the implementation of the library itself. Here are some that are
 actually externally exposed via `#[macro_export]`.
 
+#### log!
+
+// TODO: Write docs.
+
+#### make_api_call_for!
+
+// TODO: Write docs.
+
 #### debug!
 
 This is a really simple macro to make it effortless to use the color console logger. It
