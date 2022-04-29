@@ -2,12 +2,6 @@
 │ r3bl_rs_utils                                        │
 ╰──────────────────────────────────────────────────────╯
 Pending:
-  Add new functions from other repos:
-    ✔ Add `file_logging.rs` from `tui-layout-crossterm` @done(22-04-28 17:01)
-    ✔ Update `README.md` w/ `log!` macro @done(22-04-29 12:28)
-    ✔ Update `README.md` w/ `make_api_call_for!` macro @done(22-04-29 14:58)
-    ✔ Update `README.md` w/ `fire_and_forget!` macro @done(22-04-29 14:58)
-    ✔ Publish 0.7.21 @done(22-04-29 14:59)
 
 Done:
   Simplify mw:
@@ -89,3 +83,9 @@ Done:
   decl macros:
     ✔ Move from macros repo debug! decl macro @done(22-03-31 10:19)
 
+  Add new functions from other repos:
+    ✔ Add `file_logging.rs` from `tui-layout-crossterm` @done(22-04-28 17:01)
+    ✔ Update `README.md` w/ `log!` macro @done(22-04-29 12:28)
+    ✔ Update `README.md` w/ `make_api_call_for!` macro @done(22-04-29 14:58)
+    ✔ Update `README.md` w/ `fire_and_forget!` macro @done(22-04-29 14:58)
+    ✔ Publish 0.7.21 @done(22-04-29 14:59)
