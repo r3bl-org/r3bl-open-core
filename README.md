@@ -12,6 +12,9 @@
   - [Examples](#examples)
 - [Macros](#macros)
   - [Declarative](#declarative)
+    - [log!](#log)
+    - [make_api_call_for!](#make_api_call_for)
+    - [fire_and_forget!](#fire_and_forget)
     - [debug!](#debug)
   - [Procedural](#procedural)
     - [#[derive(Builder)]](#derivebuilder)
@@ -58,7 +61,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.20"
+r3bl_rs_utils = "0.7.21"
 ```
 
 ## redux
@@ -401,11 +404,96 @@ actually externally exposed via `#[macro_export]`.
 
 #### log!
 
-// TODO: Write docs.
+You can use this macro to dump log messages at 3 levels to a file. By default this file is
+named `log.txt` and is dumped in the current directory. Here's how you can use it. Please
+note that the macro returns a `Result`. A type alias is provided to save some typing
+called `ResultCommon<T>` which is just a short hand for
+`std::result::Result<T, Box<dyn Error>>`. The log file itself is overwritten for each
+"session" that you run your program.
+
+```rust
+use r3bl_rs_utils::{init_file_logger_once, log, ResultCommon};
+fn run() -> ResultCommon<()> {
+  log!(INFO, "This is a info message");
+  log!(WARN, "This is a warning message");
+  log!(ERROR, "This is a error message");
+  Ok(())
+}
+```
+
+Please check out the source
+[here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/src/utils/file_logging.rs).
 
 #### make_api_call_for!
 
-// TODO: Write docs.
+This macro makes it easy to create simple HTTP GET requests using the `reqwest` crate. It
+generates an `async` function called `make_request()` that returns a `ResultCommon<T>`
+where `T` is the type of the response body. Here's an example.
+
+```rust
+use std::{error::Error, fmt::Display};
+use r3bl_rs_utils::make_api_call_for;
+use serde::{Deserialize, Serialize};
+
+const ENDPOINT: &str = "https://api.namefake.com/english-united-states/female/";
+
+make_api_call_for! {
+  FakeContactData at ENDPOINT
+}
+#[derive(Serialize, Deserialize, Debug, Default)]
+
+pub struct FakeContactData {
+  pub name: String,
+  pub phone_h: String,
+  pub email_u: String,
+  pub email_d: String,
+  pub address: String,
+}
+
+let fake_data = fake_contact_data_api()
+            .await
+            .unwrap_or_else(|_| FakeContactData {
+              name: "Foo Bar".to_string(),
+              phone_h: "123-456-7890".to_string(),
+              email_u: "foo".to_string(),
+              email_d: "bar.com".to_string(),
+              ..FakeContactData::default()
+            });
+```
+
+You can find lots of
+[examples here](https://github.com/nazmulidris/rust_scratch/blob/main/address-book-with-redux/src/tui/middlewares).
+
+#### fire_and_forget!
+
+This is a really simple wrapper around `tokio::spawn()` for the given block. Its just
+syntactic sugar. Here's an example of using it for a non-`async` block.
+
+```rust
+pub fn foo() {
+  fire_and_forget!(
+    { println!("Hello"); }
+  );
+}
+```
+
+And, here's an example of using it for an `async` block.
+
+```rust
+pub fn foo() {
+  fire_and_forget!(
+     let fake_data = fake_contact_data_api()
+     .await
+     .unwrap_or_else(|_| FakeContactData {
+       name: "Foo Bar".to_string(),
+       phone_h: "123-456-7890".to_string(),
+       email_u: "foo".to_string(),
+       email_d: "bar.com".to_string(),
+       ..FakeContactData::default()
+     });
+  );
+}
+```
 
 #### debug!
 
