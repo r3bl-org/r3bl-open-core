@@ -15,10 +15,12 @@
  *   limitations under the License.
 */
 
+use chrono::Local;
 use log::LevelFilter;
 use simplelog::*;
 use std::fs::File;
 use std::{error::Error, io::Error as IoError, sync::Once};
+use time::UtcOffset;
 
 const FILE_PATH: &str = "log.txt";
 
@@ -97,15 +99,21 @@ fn actually_init_file_logger() {
 }
 
 /// Try to make a [`Config`] with local timezone offset. If that fails, return a default.
+/// The implementation used here works w/ Tokio.
 fn new_config() -> Config {
-  match ConfigBuilder::new().set_time_offset_to_local() {
-    Ok(builder) => {
-      // To use RFC2822 instead of custom: `builder.set_time_format_rfc2822();`
-      builder.set_time_format_custom(format_description!(
-        "[hour repr:12]:[minute] [period]"
-      ));
-      builder.build()
-    }
-    Err(_) => Config::default(),
+  let mut builder = ConfigBuilder::new();
+
+  let offset_in_sec = Local::now()
+    .offset()
+    .local_minus_utc();
+  let utc_offset_result = UtcOffset::from_whole_seconds(offset_in_sec);
+  if let Ok(utc_offset) = utc_offset_result {
+    builder.set_time_offset(utc_offset);
   }
+
+  builder.set_time_format_custom(format_description!(
+    "[hour repr:12]:[minute] [period]"
+  ));
+
+  builder.build()
 }
