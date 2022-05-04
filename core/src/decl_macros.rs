@@ -97,3 +97,31 @@ macro_rules! make_api_call_for {
     }
   };
 }
+
+/// Runs the `$code` block after evaluating the `$eval` expression and assigning it to
+/// `$id`.
+///
+/// # Examples:
+/// ```ignore
+/// with! {
+///   LayoutProps {
+///     id: id.to_string(),
+///     dir,
+///     req_size: RequestedSize::new(width_pc, height_pc),
+///   },
+///   as it,
+///   run {
+///     match self.is_layout_stack_empty() {
+///       true => self.add_root_layout(it),
+///       false => self.add_normal_layout(it),
+///     }?;
+///   }
+/// }
+/// ```
+#[macro_export]
+macro_rules! with {
+  ($eval:expr, as $id:ident, run $code:block) => {
+    let $id = $eval;
+    $code;
+  };
+}

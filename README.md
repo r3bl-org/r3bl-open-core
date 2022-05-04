@@ -16,6 +16,7 @@
     - [make_api_call_for!](#make_api_call_for)
     - [fire_and_forget!](#fire_and_forget)
     - [debug!](#debug)
+    - [with!](#with)
   - [Procedural](#procedural)
     - [#[derive(Builder)]](#derivebuilder)
     - [make_struct_safe_to_share_and_mutate!](#make_struct_safe_to_share_and_mutate)
@@ -506,6 +507,34 @@ formatter). All of the output is colorized for easy readability. You can use it 
 let my_string = "Hello World!";
 debug!(my_string);
 ```
+
+#### with!
+
+This is a macro that takes inspiration from the `with` scoping function in Kotlin. It just
+makes it easier to express a block of code that needs to run after an expression is
+evaluated and saved to a given variable. Here's an example.
+
+```rust
+with! {
+  /* $eval */ LayoutProps {
+    id: id.to_string(),
+    dir,
+    req_size: RequestedSize::new(width_pc, height_pc),
+  },
+  as /* $id */ it,
+  run /* $code */ {
+    match self.is_layout_stack_empty() {
+      true => self.add_root_layout(it),
+      false => self.add_normal_layout(it),
+    }?;
+  }
+}
+```
+
+It does the following:
+
+1. Evaluates the `$eval` expression and assigns it to `$id`.
+2. Runs the `$code` block.
 
 ### Procedural
 
