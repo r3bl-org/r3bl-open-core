@@ -536,6 +536,28 @@ It does the following:
 1. Evaluates the `$eval` expression and assigns it to `$id`.
 2. Runs the `$code` block.
 
+#### unwrap_option_or_run_fn_returning_err!
+
+This macro can be useful when you are working w/ an expression that returns an `Option`
+and if that `Option` is `None` then you want to abort and return an error immediately. The
+idea is that you are using this macro in a function that returns a `Result<T>` basically.
+
+Here's an example to illustrate.
+
+```rust
+pub fn from(
+  width_percent: u8,
+  height_percent: u8,
+) -> ResultCommon<RequestedSize> {
+  let size_tuple = (width_percent, height_percent);
+  let (width_pc, height_pc) = unwrap_option_or_run_fn_returning_err!(
+    convert_to_percent(size_tuple),
+    || LayoutError::new_err(LayoutErrorType::InvalidLayoutSizePercentage)
+  );
+  Ok(Self::new(width_pc, height_pc))
+}
+```
+
 ### Procedural
 
 All the procedural macros are organized in 3 crates

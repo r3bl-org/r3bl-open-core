@@ -125,3 +125,31 @@ macro_rules! with {
     $code;
   };
 }
+
+/// Unwrap the `$option`, and if `None` then run the `$next` closure which must return an
+/// error. This macro must be called in a block that returns a `ResultCommon<T>`.
+///
+/// # Example
+///
+/// ```ignore
+/// pub fn from(
+///   width_percent: u8,
+///   height_percent: u8,
+/// ) -> ResultCommon<RequestedSize> {
+///   let size_tuple = (width_percent, height_percent);
+///   let (width_pc, height_pc) = unwrap_option_or_run_fn_returning_err!(
+///     convert_to_percent(size_tuple),
+///     || LayoutError::new_err(LayoutErrorType::InvalidLayoutSizePercentage)
+///   );
+///   Ok(Self::new(width_pc, height_pc))
+/// }
+/// ```
+#[macro_export]
+macro_rules! unwrap_option_or_run_fn_returning_err {
+  ($option:expr, $next:expr) => {
+    match $option {
+      Some(value) => value,
+      None => return $next(),
+    }
+  };
+}
