@@ -17,6 +17,7 @@
     - [fire_and_forget!](#fire_and_forget)
     - [debug!](#debug)
     - [with!](#with)
+    - [unwrap_option_or_run_fn_returning_err!](#unwrap_option_or_run_fn_returning_err)
   - [Procedural](#procedural)
     - [#[derive(Builder)]](#derivebuilder)
     - [make_struct_safe_to_share_and_mutate!](#make_struct_safe_to_share_and_mutate)
