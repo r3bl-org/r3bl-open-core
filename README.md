@@ -17,6 +17,7 @@
     - [fire_and_forget!](#fire_and_forget)
     - [debug!](#debug)
     - [with!](#with)
+    - [with_mut!](#with_mut)
     - [unwrap_option_or_run_fn_returning_err!](#unwrap_option_or_run_fn_returning_err)
   - [Procedural](#procedural)
     - [#[derive(Builder)]](#derivebuilder)
@@ -63,7 +64,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.24"
+r3bl_rs_utils = "0.7.25"
 ```
 
 ## redux
