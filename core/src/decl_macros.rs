@@ -126,6 +126,15 @@ macro_rules! with {
   };
 }
 
+/// Similar to [`with!`] except `$id` is a mutable reference to the `$eval` expression.
+#[macro_export]
+macro_rules! with_mut {
+  ($eval:expr, as $id:ident, run $code:block) => {
+    let mut $id = $eval;
+    $code;
+  };
+}
+
 /// Unwrap the `$option`, and if `None` then run the `$next` closure which must return an
 /// error. This macro must be called in a block that returns a `ResultCommon<T>`.
 ///

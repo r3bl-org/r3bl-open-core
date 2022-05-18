@@ -537,6 +537,11 @@ It does the following:
 1. Evaluates the `$eval` expression and assigns it to `$id`.
 2. Runs the `$code` block.
 
+#### with_mut!
+
+This macro is just like [`with!`](#with) but it takes a mutable reference to the `$id`
+variable.
+
 #### unwrap_option_or_run_fn_returning_err!
 
 This macro can be useful when you are working w/ an expression that returns an `Option`
