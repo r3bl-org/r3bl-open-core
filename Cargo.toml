@@ -5,7 +5,7 @@ description = "Async Redux library, TUI utilities, and useful data structures"
 keywords = ["tui", "color", "terminal", "redux", "non-binary-tree"]
 categories = ["algorithms", "data-structures"]
 # When you change this, make sure to update `README.md` as well.
-version = "0.7.25"
+version = "0.7.26"
 edition = "2021"
 readme = "README.md" # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/

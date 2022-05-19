@@ -85,7 +85,7 @@ pub fn derive_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::Tok
           #gen_props_setter_fns_ts
         }
 
-        struct #builder_name_ident #generics #new_or_modified_where_clause_ts {
+        pub struct #builder_name_ident #generics #new_or_modified_where_clause_ts {
           #gen_props_ts
         }
       }
