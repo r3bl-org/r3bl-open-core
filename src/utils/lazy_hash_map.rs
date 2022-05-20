@@ -84,7 +84,11 @@ where
       let value = (self.create_value_fn)(&arg);
       self.value_map.insert(arg, value);
     }
-    self.value_map.get(arg).as_ref().unwrap()
+    self
+      .value_map
+      .get(arg)
+      .as_ref()
+      .unwrap()
   }
 
   pub fn get_copy(

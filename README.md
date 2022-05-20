@@ -25,6 +25,7 @@
     - [make_safe_async_fn_wrapper!](#make_safe_async_fn_wrapper)
 - [tree_memory_arena (non-binary tree data structure)](#tree_memory_arena-non-binary-tree-data-structure)
 - [utils](#utils)
+  - [LazyField](#lazyfield)
   - [LazyMemoValues](#lazymemovalues)
   - [tty](#tty)
   - [safe_unwrap](#safe_unwrap)
@@ -64,7 +65,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.26"
+r3bl_rs_utils = "0.7.27"
 ```
 
 ## redux
@@ -809,6 +810,44 @@ let arena = MTArena::<String>::new();
 > [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
 
 ## utils
+
+### LazyField
+
+This struct allows you to create a lazy field that is only evaluated when it is first
+accessed. You have to provide a closure that will generate the field's value. Here's an
+example.
+
+```rust
+use r3bl_rs_utils::LazyField;
+
+#[test]
+fn test_name() {
+  let boxed_fn = Box::new(|| Ok(1));
+  let mut thunk = LazyField::new(boxed_fn);
+
+  // First access to the field will trigger the computation.
+  {
+    let result = thunk.access_field();
+    if result.is_err() {
+      panic!("error");
+    } else {
+      let field_value = result.unwrap();
+      assert_eq!(field_value, 1);
+    }
+  }
+
+  // Subsequent accesses to the field will return the cached value.
+  {
+    let result = thunk.access_field();
+    if result.is_err() {
+      panic!("error");
+    } else {
+      let field_value = result.unwrap();
+      assert_eq!(field_value, 1);
+    }
+  }
+}
+```
 
 ### LazyMemoValues
 

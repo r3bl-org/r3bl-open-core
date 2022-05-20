@@ -7,6 +7,7 @@
     "derivebuilder",
     "idents",
     "isnt",
+    "lazyfield",
     "lazymemovalues",
     "middlewares",
     "qself",
