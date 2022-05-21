@@ -19,6 +19,7 @@
     - [with!](#with)
     - [with_mut!](#with_mut)
     - [unwrap_option_or_run_fn_returning_err!](#unwrap_option_or_run_fn_returning_err)
+    - [unwrap_option_or_compute_if_none!](#unwrap_option_or_compute_if_none)
   - [Procedural](#procedural)
     - [#[derive(Builder)]](#derivebuilder)
     - [make_struct_safe_to_share_and_mutate!](#make_struct_safe_to_share_and_mutate)
@@ -65,7 +66,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.27"
+r3bl_rs_utils = "0.7.28"
 ```
 
 ## redux
@@ -566,6 +567,27 @@ pub fn from(
 }
 ```
 
+#### unwrap_option_or_compute_if_none!
+
+This macro is basically a way to compute something lazily when it (the `Option`) is set to
+`None`. Unwrap the `$option`, and if `None` then run the `$next` closure which must return
+a value that is set to `$option`. Here's an example.
+
+```rust
+use r3bl_rs_utils::unwrap_option_or_compute_if_none;
+
+#[test]
+fn test_unwrap_option_or_compute_if_none() {
+  struct MyStruct {
+    field: Option<i32>,
+  }
+  let mut my_struct = MyStruct { field: None };
+  assert_eq!(my_struct.field, None);
+  unwrap_option_or_compute_if_none!(my_struct.field, { || 1 });
+  assert_eq!(my_struct.field, Some(1));
+}
+```
+
 ### Procedural
 
 All the procedural macros are organized in 3 crates
@@ -813,39 +835,34 @@ let arena = MTArena::<String>::new();
 
 ### LazyField
 
-This struct allows you to create a lazy field that is only evaluated when it is first
-accessed. You have to provide a closure that will generate the field's value. Here's an
-example.
+This combo of struct & trait object allows you to create a lazy field that is only
+evaluated when it is first accessed. You have to provide a trait implementation that
+computes the value of the field (once). Here's an example.
 
 ```rust
-use r3bl_rs_utils::LazyField;
+use r3bl_rs_utils::{LazyExecutor, LazyField};
 
 #[test]
-fn test_name() {
-  let boxed_fn = Box::new(|| Ok(1));
-  let mut thunk = LazyField::new(boxed_fn);
-
-  // First access to the field will trigger the computation.
-  {
-    let result = thunk.access_field();
-    if result.is_err() {
-      panic!("error");
-    } else {
-      let field_value = result.unwrap();
-      assert_eq!(field_value, 1);
+fn test_lazy_field() {
+  struct MyExecutor;
+  impl LazyExecutor<i32> for MyExecutor {
+    fn compute(&mut self) -> i32 {
+      1
     }
   }
 
-  // Subsequent accesses to the field will return the cached value.
-  {
-    let result = thunk.access_field();
-    if result.is_err() {
-      panic!("error");
-    } else {
-      let field_value = result.unwrap();
-      assert_eq!(field_value, 1);
-    }
-  }
+  let mut lazy_field = LazyField::new(Box::new(MyExecutor));
+  assert_eq!(lazy_field.has_computed, false);
+
+  // First access will trigger the computation.
+  let value = lazy_field.compute();
+  assert_eq!(lazy_field.has_computed, true);
+  assert_eq!(value, 1);
+
+  // Subsequent accesses will not trigger the computation.
+  let value = lazy_field.compute();
+  assert_eq!(lazy_field.has_computed, true);
+  assert_eq!(value, 1);
 }
 ```
 

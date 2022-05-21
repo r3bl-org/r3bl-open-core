@@ -162,3 +162,36 @@ macro_rules! unwrap_option_or_run_fn_returning_err {
     }
   };
 }
+
+/// Unwrap the `$option`, and if `None` then run the `$next` closure which must return a
+/// value that is set to `$option`. Basically a way to compute something lazily when it
+/// (the `Option`) is set to `None`.
+///
+/// # Example
+///
+/// ```
+/// use r3bl_rs_utils::unwrap_option_or_compute_if_none;
+///
+/// #[test]
+/// fn test_unwrap_option_or_compute_if_none() {
+///   struct MyStruct {
+///     field: Option<i32>,
+///   }
+///   let mut my_struct = MyStruct { field: None };
+///   assert_eq!(my_struct.field, None);
+///   unwrap_option_or_compute_if_none!(my_struct.field, { || 1 });
+///   assert_eq!(my_struct.field, Some(1));
+/// }
+/// ```
+#[macro_export]
+macro_rules! unwrap_option_or_compute_if_none {
+  ($option:expr, $next:expr) => {
+    match $option {
+      Some(value) => value,
+      None => {
+        $option = Some($next());
+        $option.unwrap()
+      }
+    }
+  };
+}

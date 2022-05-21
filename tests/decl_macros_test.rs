@@ -15,27 +15,15 @@
  *   limitations under the License.
 */
 
-use r3bl_rs_utils::{LazyExecutor, LazyField};
+use r3bl_rs_utils::unwrap_option_or_compute_if_none;
 
 #[test]
-fn test_lazy_field() {
-  struct MyExecutor;
-  impl LazyExecutor<i32> for MyExecutor {
-    fn compute(&mut self) -> i32 {
-      1
-    }
+fn test_unwrap_option_or_compute_if_none() {
+  struct MyStruct {
+    field: Option<i32>,
   }
-
-  let mut lazy_field = LazyField::new(Box::new(MyExecutor));
-  assert_eq!(lazy_field.has_computed, false);
-
-  // First access will trigger the computation.
-  let value = lazy_field.compute();
-  assert_eq!(lazy_field.has_computed, true);
-  assert_eq!(value, 1);
-
-  // Subsequent accesses will not trigger the computation.
-  let value = lazy_field.compute();
-  assert_eq!(lazy_field.has_computed, true);
-  assert_eq!(value, 1);
+  let mut my_struct = MyStruct { field: None };
+  assert_eq!(my_struct.field, None);
+  unwrap_option_or_compute_if_none!(my_struct.field, { || 1 });
+  assert_eq!(my_struct.field, Some(1));
 }
