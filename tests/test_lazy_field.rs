@@ -15,38 +15,10 @@
  *   limitations under the License.
 */
 
-use r3bl_rs_utils::{LazyExecutor, LazyField, LazyField2};
+use r3bl_rs_utils::{LazyExecutor, LazyField};
 
 #[test]
 fn test_lazy_field() {
-  let boxed_compute_fn = Box::new(|| Ok(1));
-  let mut thunk = LazyField::new(boxed_compute_fn);
-
-  // First access to the field will trigger the computation.
-  {
-    let result = thunk.access_field();
-    if result.is_err() {
-      panic!("error");
-    } else {
-      let field_value = result.unwrap();
-      assert_eq!(field_value, 1);
-    }
-  }
-
-  // Subsequent accesses to the field will return the cached value.
-  {
-    let result = thunk.access_field();
-    if result.is_err() {
-      panic!("error");
-    } else {
-      let field_value = result.unwrap();
-      assert_eq!(field_value, 1);
-    }
-  }
-}
-
-#[test]
-fn test_lazy_field_2() {
   struct MyExecutor;
   impl LazyExecutor<i32> for MyExecutor {
     fn compute(&mut self) -> i32 {
@@ -54,7 +26,7 @@ fn test_lazy_field_2() {
     }
   }
 
-  let mut lazy_field = LazyField2::new(Box::new(MyExecutor));
+  let mut lazy_field = LazyField::new(Box::new(MyExecutor));
   assert_eq!(lazy_field.has_computed, false);
   let value = lazy_field.compute();
   assert_eq!(lazy_field.has_computed, true);
