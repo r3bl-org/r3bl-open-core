@@ -15,10 +15,10 @@
  *   limitations under the License.
 */
 
-use r3bl_rs_utils::LazyField;
+use r3bl_rs_utils::{LazyExecutor, LazyField, LazyField2};
 
 #[test]
-fn test_name() {
+fn test_lazy_field() {
   let boxed_compute_fn = Box::new(|| Ok(1));
   let mut thunk = LazyField::new(boxed_compute_fn);
 
@@ -43,4 +43,24 @@ fn test_name() {
       assert_eq!(field_value, 1);
     }
   }
+}
+
+#[test]
+fn test_lazy_field_2() {
+  struct MyExecutor;
+  impl LazyExecutor<i32> for MyExecutor {
+    fn compute(&mut self) -> i32 {
+      1
+    }
+  }
+
+  let mut lazy_field = LazyField2::new(Box::new(MyExecutor));
+  assert_eq!(lazy_field.has_computed, false);
+  let value = lazy_field.compute();
+  assert_eq!(lazy_field.has_computed, true);
+  assert_eq!(value, 1);
+
+  let value = lazy_field.compute();
+  assert_eq!(lazy_field.has_computed, true);
+  assert_eq!(value, 1);
 }

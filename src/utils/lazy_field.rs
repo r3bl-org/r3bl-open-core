@@ -22,6 +22,54 @@ const DEBUG: bool = false;
 pub type LazyResult<T> = Result<T, Box<LazyExecutionError>>;
 pub type LazyComputeFunction<T> = Box<dyn FnMut() -> LazyResult<T>>;
 
+pub trait LazyExecutor<T>
+where
+  T: Send + Sync,
+{
+  fn compute(&mut self) -> T;
+
+  /// https://doc.rust-lang.org/book/ch10-02-traits.html
+  fn new() -> Box<dyn LazyExecutor<T> + Send + Sync>
+  where
+    Self: Default + Sized + Sync + Send + 'static,
+  {
+    Box::new(Self::default())
+  }
+}
+
+pub struct LazyField2<T>
+where
+  T: Send + Sync,
+{
+  pub lazy_executor: Box<dyn LazyExecutor<T> + Send + Sync>,
+  pub field: T,
+  pub has_computed: bool,
+}
+
+impl<T> LazyField2<T>
+where
+  T: Send + Sync,
+  T: Default + Clone,
+{
+  pub fn new(lazy_executor: Box<dyn LazyExecutor<T> + Send + Sync>) -> Self {
+    Self {
+      lazy_executor,
+      field: T::default(),
+      has_computed: false,
+    }
+  }
+
+  pub fn compute(&mut self) -> T {
+    if self.has_computed {
+      return self.field.clone();
+    } else {
+      self.field = self.lazy_executor.compute();
+      self.has_computed = true;
+      return self.field.clone();
+    }
+  }
+}
+
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
 pub struct LazyExecutionError {
