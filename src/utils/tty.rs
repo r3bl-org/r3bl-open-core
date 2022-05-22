@@ -32,7 +32,9 @@ pub fn readline() -> (usize, String) {
   // <https://learning-rust.github.io/docs/e4.unwrap_and_expect.html>
   match stdin().read_line(&mut temp_string_buffer) {
     Ok(bytes_read) => {
-      let guess: String = temp_string_buffer.trim().to_string(); // Remove any whitespace (including \n).
+      let guess: String = temp_string_buffer
+        .trim()
+        .to_string(); // Remove any whitespace (including \n).
       (bytes_read, guess)
     }
     Err(_) => {
@@ -83,11 +85,14 @@ pub trait ArgsToStrings {
 
 impl ArgsToStrings for Args {
   fn filter_and_convert_to_strings(&self) -> Vec<String> {
-    with(args().collect::<Vec<String>>(), |mut list| {
-      if list.len() > 0 {
-        list.remove(0);
-      }
-      list
-    })
+    with(
+      args().collect::<Vec<String>>(),
+      |mut list| {
+        if list.len() > 0 {
+          list.remove(0);
+        }
+        list
+      },
+    )
   }
 }

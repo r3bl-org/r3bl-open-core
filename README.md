@@ -26,6 +26,7 @@
     - [make_safe_async_fn_wrapper!](#make_safe_async_fn_wrapper)
 - [tree_memory_arena (non-binary tree data structure)](#tree_memory_arena-non-binary-tree-data-structure)
 - [utils](#utils)
+  - [CommonResult and CommonError](#commonresult-and-commonerror)
   - [LazyField](#lazyfield)
   - [LazyMemoValues](#lazymemovalues)
   - [tty](#tty)
@@ -66,7 +67,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.28"
+r3bl_rs_utils = "0.7.29"
 ```
 
 ## redux
@@ -412,13 +413,13 @@ actually externally exposed via `#[macro_export]`.
 You can use this macro to dump log messages at 3 levels to a file. By default this file is
 named `log.txt` and is dumped in the current directory. Here's how you can use it. Please
 note that the macro returns a `Result`. A type alias is provided to save some typing
-called `ResultCommon<T>` which is just a short hand for
+called `CommonResult<T>` which is just a short hand for
 `std::result::Result<T, Box<dyn Error>>`. The log file itself is overwritten for each
 "session" that you run your program.
 
 ```rust
-use r3bl_rs_utils::{init_file_logger_once, log, ResultCommon};
-fn run() -> ResultCommon<()> {
+use r3bl_rs_utils::{init_file_logger_once, log, CommonResult};
+fn run() -> CommonResult<()> {
   log!(INFO, "This is a info message");
   log!(WARN, "This is a warning message");
   log!(ERROR, "This is a error message");
@@ -432,7 +433,7 @@ Please check out the source
 #### make_api_call_for!
 
 This macro makes it easy to create simple HTTP GET requests using the `reqwest` crate. It
-generates an `async` function called `make_request()` that returns a `ResultCommon<T>`
+generates an `async` function called `make_request()` that returns a `CommonResult<T>`
 where `T` is the type of the response body. Here's an example.
 
 ```rust
@@ -557,7 +558,7 @@ Here's an example to illustrate.
 pub fn from(
   width_percent: u8,
   height_percent: u8,
-) -> ResultCommon<RequestedSize> {
+) -> CommonResult<RequestedSize> {
   let size_tuple = (width_percent, height_percent);
   let (width_pc, height_pc) = unwrap_option_or_run_fn_returning_err!(
     convert_to_percent(size_tuple),
@@ -832,6 +833,38 @@ let arena = MTArena::<String>::new();
 > [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
 
 ## utils
+
+### CommonResult and CommonError
+
+These two structs make it easier to work w/ `Result`s. They are just syntactic sugar and
+helper structs. You will find them used everywhere in the
+[`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crate.
+
+Here's an example of using them both.
+
+```rust
+use r3bl_rs_utils::{CommonError, CommonResult};
+
+#[derive(Default, Debug, Clone)]
+pub struct Stylesheet {
+  pub styles: Vec<Style>,
+}
+
+impl Stylesheet {
+  pub fn add_style(
+    &mut self,
+    style: Style,
+  ) -> CommonResult<()> {
+    if style.id.is_empty() {
+      return CommonError::new_err_with_only_msg("Style id cannot be empty");
+    }
+    self.styles.push(style);
+    Ok(())
+  }
+}
+```
+
+// TODO: write this section
 
 ### LazyField
 

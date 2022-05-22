@@ -15,19 +15,18 @@
  *   limitations under the License.
 */
 
+use crate::CommonResult;
 use chrono::Local;
 use log::LevelFilter;
 use simplelog::*;
 use std::fs::File;
-use std::{error::Error, io::Error as IoError, sync::Once};
+use std::{io::Error as IoError, sync::Once};
 use time::UtcOffset;
 
 const FILE_PATH: &str = "log.txt";
 
 static mut FILE_LOGGER_INIT_OK: bool = false;
 static FILE_LOGGER_INIT_FN: Once = Once::new();
-
-pub type ResultCommon<T> = std::result::Result<T, Box<dyn Error>>;
 
 /// # Docs
 /// - [`log::info!`], [`log::warn!`], [`log::error!`]: https://docs.rs/log/latest/log/
@@ -65,7 +64,7 @@ macro_rules! log {
 /// # Docs
 /// - [`CombinedLogger`], [`WriteLogger`], [`ConfigBuilder`]: https://github.com/drakulix/simplelog.rs
 /// - [`format_description!`]: https://time-rs.github.io/book/api/format-description.html
-pub fn init_file_logger_once() -> ResultCommon<()> {
+pub fn init_file_logger_once() -> CommonResult<()> {
   // Run the lambda once & save bool to static `FILE_LOGGER_INIT_OK`.
   FILE_LOGGER_INIT_FN.call_once(|| actually_init_file_logger());
 
