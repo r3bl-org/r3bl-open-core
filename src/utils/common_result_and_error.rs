@@ -35,6 +35,7 @@ pub struct CommonError {
 }
 
 /// Some common errors that can occur.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy)]
 pub enum CommonErrorType {
   General,
