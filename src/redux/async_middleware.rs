@@ -17,9 +17,11 @@
 use async_trait::async_trait;
 use tokio::task::JoinHandle;
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ MwExampleNoSpawn example                             │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 /// ```ignore
 /// struct MwExampleNoSpawn {
 ///   pub shared_vec: Arc<Mutex<Vec<i32>>>,
@@ -82,9 +84,11 @@ impl<S, A> AsyncMiddlewareVec<S, A> {
   }
 }
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ MwExampleSpawns example                              │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 /// ```ignore
 /// struct MwExampleSpawns {
 ///   pub shared_vec: Arc<Mutex<Vec<i32>>>,

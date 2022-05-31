@@ -22,9 +22,11 @@ use r3bl_rs_utils::redux::{
 use std::sync::Arc;
 use tokio::{sync::Mutex, task::JoinHandle};
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ Action enum.                                         │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 #[allow(non_camel_case_types)]
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Action {
@@ -49,9 +51,11 @@ impl Default for Action {
   }
 }
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ State struct.                                        │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 #[derive(Clone, Default, PartialEq, Debug, Hash)]
 pub struct State {
   pub stack: Vec<i32>,
@@ -59,9 +63,11 @@ pub struct State {
 
 // TODO: Write integration tests for history.
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ Main test runner.                                    │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 #[tokio::test]
 async fn test_redux_store_works_for_main_use_cases() {
   // This shared object is used to collect results from the subscriber & middleware &
@@ -76,16 +82,20 @@ async fn test_redux_store_works_for_main_use_cases() {
   run_mw_example_spawns(&shared_vec, &mut store).await;
 }
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ Test helpers: Reset shared object.                   │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 async fn reset_shared_object(shared_vec: &Arc<Mutex<Vec<i32>>>) {
   shared_vec.lock().await.clear();
 }
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ Test helpers: Reset store.                           │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 async fn reset_store(store: &mut Store<State, Action>) -> &mut Store<State, Action> {
   store
     .clear_reducers()
@@ -97,9 +107,11 @@ async fn reset_store(store: &mut Store<State, Action>) -> &mut Store<State, Acti
   store
 }
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ Test helpers: 1ms delay                              │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 async fn delay_for_spawned_mw_to_execute() {
   tokio::time::sleep(tokio::time::Duration::from_millis(
     1,
@@ -107,9 +119,11 @@ async fn delay_for_spawned_mw_to_execute() {
   .await;
 }
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ Test async subscriber: [MySubscriber].               │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 /// 1. Test reducer and subscriber by dispatching `Add` and `AddPop` actions
 /// 2. No middlewares.
 async fn run_reducer_and_subscriber(
@@ -154,9 +168,11 @@ async fn run_reducer_and_subscriber(
   );
 }
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ Test async middleware: [MwExampleNoSpawn].           │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 /// 1. Does not involve any reducers or subscribers.
 /// 2. Just this middleware which modifies the `shared_vec`.
 async fn run_mw_example_no_spawn(
@@ -169,8 +185,6 @@ async fn run_mw_example_no_spawn(
 
   reset_shared_object(shared_vec).await;
 
-  //
-  //
   reset_store(store)
     .await
     .add_middleware(Box::new(mw_returns_none))
@@ -200,9 +214,11 @@ async fn run_mw_example_no_spawn(
   );
 }
 
+/// ```
 /// ╭──────────────────────────────────────────────────────╮
 /// │ Test async middleware: [MwExampleSpawns].            │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 /// Involves use of both `MwExampleSpawns` mw & `MyReducer` reducer. This middleware
 /// spawns a new task that:
 /// 1. Adds `-4` to the `shared_vec`.
@@ -241,9 +257,11 @@ async fn run_mw_example_spawns(
   assert_eq!(*stack, -100);
 }
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ MwExampleNoSpawn.                                    │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 struct MwExampleNoSpawn {
   pub shared_vec: Arc<Mutex<Vec<i32>>>,
 }
@@ -266,9 +284,11 @@ impl AsyncMiddleware<State, Action> for MwExampleNoSpawn {
   }
 }
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ MwExampleSpawns.                                     │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 struct MwExampleSpawns {
   pub shared_vec: Arc<Mutex<Vec<i32>>>,
 }
@@ -295,9 +315,11 @@ impl AsyncMiddlewareSpawns<State, Action> for MwExampleSpawns {
   }
 }
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ MySubscriber.                                        │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 struct MySubscriber {
   pub shared_vec: Arc<Mutex<Vec<i32>>>,
 }
@@ -315,9 +337,11 @@ impl AsyncSubscriber<State> for MySubscriber {
   }
 }
 
+/// ```text
 /// ╭──────────────────────────────────────────────────────╮
 /// │ MyReducer.                                           │
 /// ╰──────────────────────────────────────────────────────╯
+/// ```
 #[derive(Default)]
 struct MyReducer;
 
