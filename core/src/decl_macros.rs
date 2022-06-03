@@ -55,15 +55,31 @@ macro_rules! fire_and_forget {
   };
 }
 
+/// https://danielkeep.github.io/tlborm/book/mbe-macro-rules.html#repetitions
 #[macro_export]
 macro_rules! debug {
-  ($i:ident) => {
-    println!(
-      "{} {} = {}",
-      r3bl_rs_utils::style_error("▶"),
-      r3bl_rs_utils::style_prompt(stringify!($i)),
-      r3bl_rs_utils::style_dimmed(&format!("{:#?}", $i))
-    );
+  (
+    // Start a repetition:
+    $(
+        // Each repeat must contain an expression...
+        $element:expr
+    )
+    // ...separated by commas...
+    ,
+    // ...zero or more times.
+    *
+  ) => {
+    // Start a repetition:
+    $(
+      // Each repeat will contain the following statement, with
+      // $element replaced with the corresponding expression.
+      println!(
+        "{} {} = {}",
+        r3bl_rs_utils::style_error("▶"),
+        r3bl_rs_utils::style_prompt(stringify!($element)),
+        r3bl_rs_utils::style_dimmed(&format!("{:#?}", $element))
+      );
+    )*
   };
 }
 

@@ -504,13 +504,16 @@ pub fn foo() {
 #### debug!
 
 This is a really simple macro to make it effortless to use the color console logger. It
-takes an identifier as an argument. It simply dumps an arrow symbol, followed by the
-identifier (stringified) along with the value that it contains (using the `Debug`
-formatter). All of the output is colorized for easy readability. You can use it like this.
+takes a single identifier as an argument, or any number of them. It simply dumps an arrow
+symbol, followed by the identifier (stringified) along with the value that it contains
+(using the `Debug` formatter). All of the output is colorized for easy readability. You
+can use it like this.
 
 ```rust
 let my_string = "Hello World!";
 debug!(my_string);
+let my_number = 42;
+debug!(my_string, my_number);
 ```
 
 #### with!
