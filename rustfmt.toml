@@ -1,7 +1,7 @@
 # https://rust-lang.github.io/rustfmt/
 
 # width
-max_width = 150
+max_width = 120
 # https://rust-lang.github.io/rustfmt/?version=v1.4.38&search=#use_small_heuristics
 # chain_width = 35
 # fn_call_width = 35
