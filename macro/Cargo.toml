@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_rs_utils_macro"
-version = "0.7.4"
+version = "0.7.5"
 edition = "2021"
 description = """
 Internal support for a proc-macro library for reading attributes into structs when
@@ -21,7 +21,7 @@ proc-macro = true
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-r3bl_rs_utils_core = { version = "0.7.8", path = "../core" }
+r3bl_rs_utils_core = { version = "0.7.9", path = "../core" }
 
 # https://github.com/dtolnay/proc-macro-workshop#debugging-tips
 syn = { version = "1.0.90", features = ["extra-traits"] }
