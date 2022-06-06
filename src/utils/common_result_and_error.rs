@@ -38,6 +38,7 @@ pub struct CommonError {
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy)]
 pub enum CommonErrorType {
+  ExitLoop,
   General,
   InvalidArguments,
   InvalidResult,
@@ -85,10 +86,7 @@ impl CommonError {
 
   /// Constructor that is compatible w/ [`ResultCommon`].
   pub fn new_err_with_only_msg<T>(msg: &str) -> CommonResult<T> {
-    CommonError::from_err_type_and_msg(
-      CommonErrorType::General,
-      Some(msg.to_string()),
-    )
+    CommonError::from_err_type_and_msg(CommonErrorType::General, Some(msg.to_string()))
   }
 
   /// Private helper method.

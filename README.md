@@ -408,6 +408,42 @@ There are quite a few declarative macros that you will find in the library. They
 be used internally in the implementation of the library itself. Here are some that are
 actually externally exposed via `#[macro_export]`.
 
+#### throws!
+
+Wrap the given `block` or `stmt` so that it returns a `Result<()>`. It is just syntactic
+sugar that helps having to write `Ok(())` repeatedly at the end of each block. Here's an
+example.
+
+```rust
+throws! {
+  match input_event {
+    InputEvent::DisplayableKeypress(character) => {
+      println_raw!(character);
+    }
+    _ => todo!()
+  }
+}
+```
+
+Here's another example.
+
+```rust
+fn test_simple_2_col_layout() -> CommonResult<()> {
+  throws!({
+    let mut canvas = Canvas::default();
+    canvas.stylesheet = create_stylesheet()?;
+    canvas.canvas_start(
+      CanvasPropsBuilder::new()
+        .set_pos((0, 0).into())
+        .set_size((500, 500).into())
+        .build(),
+    )?;
+    layout_container(&mut canvas)?;
+    canvas.canvas_end()?;
+  });
+}
+```
+
 #### log!
 
 You can use this macro to dump log messages at 3 levels to a file. By default this file is

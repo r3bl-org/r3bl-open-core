@@ -15,6 +15,50 @@
  *   limitations under the License.
 */
 
+/// Wrap the given block or stmt so that it returns a Result<()>. It is just syntactic
+/// sugar that helps having to write Ok(()) repeatedly.
+///
+/// Here's an example.
+/// ```ignore
+/// throws! {
+///   match input_event {
+///     InputEvent::DisplayableKeypress(character) => {
+///       println_raw!(character);
+///     }
+///     _ => todo!()
+///   }
+/// }
+/// ```
+///
+/// Here's another example.
+/// ```rust
+/// fn test_simple_2_col_layout() -> CommonResult<()> {
+///   throws!({
+///     let mut canvas = Canvas::default();
+///     canvas.stylesheet = create_stylesheet()?;
+///     canvas.canvas_start(
+///       CanvasPropsBuilder::new()
+///         .set_pos((0, 0).into())
+///         .set_size((500, 500).into())
+///         .build(),
+///     )?;
+///     layout_container(&mut canvas)?;
+///     canvas.canvas_end()?;
+///   });
+/// }
+/// ```
+#[macro_export]
+macro_rules! throws {
+  ($it: block) => {{
+    $it
+    return Ok(())
+  }};
+  ($it: stmt) => {{
+    $it
+    return Ok(())
+  }};
+}
+
 /// Declarative macro to surround the given block with a call to [`tokio::spawn`]. This is
 /// useful for spawning a task that will run in the background from a function that is NOT
 /// async.

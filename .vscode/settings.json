@@ -4,9 +4,12 @@
   "cSpell.words": [
     "chrono",
     "Colour",
+    "commonerror",
+    "commonresult",
     "derivebuilder",
     "idents",
     "isnt",
+    "Keypress",
     "lazyfield",
     "lazymemovalues",
     "middlewares",
@@ -14,6 +17,7 @@
     "repr",
     "reqwest",
     "rustflags",
-    "simplelog"
+    "simplelog",
+    "stylesheet"
   ]
 }
