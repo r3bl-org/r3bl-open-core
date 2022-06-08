@@ -35,9 +35,11 @@ static FILE_LOGGER_INIT_FN: Once = Once::new();
 /// ```ignore
 /// use r3bl_rs_utils::{init_file_logger_once, log, ResultCommon};
 /// fn run() -> ResultCommon<()> {
+///   let msg = "foo";
+///   let msg_2 = "bar";
 ///   log!(INFO, "This is a info message");
-///   log!(WARN, "This is a warning message");
-///   log!(ERROR, "This is a error message");
+///   log!(WARN, "This is a warning message {}", msg);
+///   log!(ERROR, "This is a error message {} {}", msg, msg_2);
 ///   Ok(())
 /// }
 /// ```
@@ -74,10 +76,7 @@ pub fn init_file_logger_once() -> CommonResult<()> {
       true => Ok(()),
       false => Err(Box::new(IoError::new(
         std::io::ErrorKind::Other,
-        format!(
-          "Failed to initialize file logger {}",
-          FILE_PATH
-        ),
+        format!("Failed to initialize file logger {}", FILE_PATH),
       ))),
     }
   }
@@ -86,11 +85,7 @@ pub fn init_file_logger_once() -> CommonResult<()> {
 fn actually_init_file_logger() {
   let new_file_result = File::create(FILE_PATH);
   if let Ok(new_file) = new_file_result {
-    let logger_init_result = CombinedLogger::init(vec![WriteLogger::new(
-      LevelFilter::Info,
-      new_config(),
-      new_file,
-    )]);
+    let logger_init_result = CombinedLogger::init(vec![WriteLogger::new(LevelFilter::Info, new_config(), new_file)]);
     if let Ok(_) = logger_init_result {
       unsafe { FILE_LOGGER_INIT_OK = true }
     }
@@ -102,17 +97,13 @@ fn actually_init_file_logger() {
 fn new_config() -> Config {
   let mut builder = ConfigBuilder::new();
 
-  let offset_in_sec = Local::now()
-    .offset()
-    .local_minus_utc();
+  let offset_in_sec = Local::now().offset().local_minus_utc();
   let utc_offset_result = UtcOffset::from_whole_seconds(offset_in_sec);
   if let Ok(utc_offset) = utc_offset_result {
     builder.set_time_offset(utc_offset);
   }
 
-  builder.set_time_format_custom(format_description!(
-    "[hour repr:12]:[minute] [period]"
-  ));
+  builder.set_time_format_custom(format_description!("[hour repr:12]:[minute] [period]"));
 
   builder.build()
 }
