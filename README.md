@@ -67,7 +67,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.33"
+r3bl_rs_utils = "0.7.34"
 ```
 
 ## redux
@@ -456,9 +456,11 @@ called `CommonResult<T>` which is just a short hand for
 ```rust
 use r3bl_rs_utils::{init_file_logger_once, log, CommonResult};
 fn run() -> CommonResult<()> {
+  let msg = "foo";
+  let msg_2 = "bar";
   log!(INFO, "This is a info message");
-  log!(WARN, "This is a warning message");
-  log!(ERROR, "This is a error message");
+  log!(WARN, "This is a warning message {}", msg);
+  log!(ERROR, "This is a error message {} {}", msg, msg_2);
   Ok(())
 }
 ```
