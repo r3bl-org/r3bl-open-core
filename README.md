@@ -539,6 +539,23 @@ pub fn foo() {
 }
 ```
 
+#### call_if_true!
+
+Syntactic sugar to run a conditional statement. Here's an example.
+
+```rust
+const DEBUG: bool = true;
+call_if_true!(
+  DEBUG,
+  eprintln!(
+    "{} {} {}\r",
+    r3bl_rs_utils::style_error("▶"),
+    r3bl_rs_utils::style_prompt($msg),
+    r3bl_rs_utils::style_dimmed(&format!("{:#?}", $err))
+  )
+);
+```
+
 #### debug!
 
 This is a really simple macro to make it effortless to use the color console logger. It
@@ -552,6 +569,23 @@ let my_string = "Hello World!";
 debug!(my_string);
 let my_number = 42;
 debug!(my_string, my_number);
+```
+
+You can also use it in these other forms for terminal raw mode output. This will dump the
+output to stderr.
+
+```rust
+if let Err(err) = $cmd {
+  let msg = format!("❌ Failed to {}", stringify!($cmd));
+  debug!(ERROR_RAW &msg, err);
+}
+```
+
+This will dump the output to stdout.
+
+```rust
+let msg = format!("✅ Did the thing to {}", stringify!($name));
+debug!(OK_RAW &msg);
 ```
 
 #### with!
