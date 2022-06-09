@@ -99,9 +99,84 @@ macro_rules! fire_and_forget {
   };
 }
 
+/// Syntactic sugar to run a conditional statement. Here's an example.
+/// ```rust
+/// const DEBUG: bool = true;
+/// call_if_true!(
+///   DEBUG,
+///   eprintln!(
+///     "{} {} {}\r",
+///     r3bl_rs_utils::style_error("▶"),
+///     r3bl_rs_utils::style_prompt($msg),
+///     r3bl_rs_utils::style_dimmed(&format!("{:#?}", $err))
+///   )
+/// );
+/// ```
+#[macro_export]
+macro_rules! call_if_true {
+  ($cond:ident, $block: expr) => {{
+    if $cond {
+      $block
+    }
+  }};
+}
+
+/// This is a really simple macro to make it effortless to use the color console logger.
+/// It takes a single identifier as an argument, or any number of them. It simply dumps an
+/// arrow symbol, followed by the identifier ([stringify]'d) along with the value that it
+/// contains (using the [Debug] formatter). All of the output is colorized for easy
+/// readability. You can use it like this.
+///
+/// ```rust
+/// let my_string = "Hello World!";
+/// debug!(my_string);
+/// let my_number = 42;
+/// debug!(my_string, my_number);
+/// ```
+///
+/// You can also use it in these other forms for terminal raw mode output. This will dump
+/// the output to stderr.
+///
+/// ```rust
+/// if let Err(err) = $cmd {
+///   let msg = format!("❌ Failed to {}", stringify!($cmd));
+///   debug!(ERROR_RAW &msg, err);
+/// }
+/// ```
+///
+/// This will dump the output to stdout.
+///
+/// ```rust
+/// let msg = format!("✅ Did the thing to {}", stringify!($name));
+/// debug!(OK_RAW &msg);
+/// ```
+///
 /// https://danielkeep.github.io/tlborm/book/mbe-macro-rules.html#repetitions
 #[macro_export]
 macro_rules! debug {
+  (ERROR_RAW $msg:expr, $err:expr) => {{
+    call_if_true!(
+      DEBUG,
+      eprintln!(
+        "{} {} {}\r",
+        r3bl_rs_utils::style_error("▶"),
+        r3bl_rs_utils::style_prompt($msg),
+        r3bl_rs_utils::style_dimmed(&format!("{:#?}", $err))
+      )
+    );
+  }};
+
+  (OK_RAW $msg:expr) => {{
+    call_if_true(
+      DEBUG,
+      println!(
+        "{} {}\r",
+        r3bl_rs_utils::style_error("▶"),
+        r3bl_rs_utils::style_prompt($msg)
+      ),
+    )
+  }};
+
   (
     // Start a repetition:
     $(
@@ -112,7 +187,7 @@ macro_rules! debug {
     ,
     // ...zero or more times.
     *
-  ) => {
+  ) => {{
     // Start a repetition:
     $(
       // Each repeat will contain the following statement, with
@@ -124,7 +199,7 @@ macro_rules! debug {
         r3bl_rs_utils::style_dimmed(&format!("{:#?}", $element))
       );
     )*
-  };
+  }};
 }
 
 /// Declarative macro to generate the API call functions. This adds the following:
