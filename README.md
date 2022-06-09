@@ -12,9 +12,11 @@
   - [Examples](#examples)
 - [Macros](#macros)
   - [Declarative](#declarative)
+    - [throws!](#throws)
     - [log!](#log)
     - [make_api_call_for!](#make_api_call_for)
     - [fire_and_forget!](#fire_and_forget)
+    - [call_if_true!](#call_if_true)
     - [debug!](#debug)
     - [with!](#with)
     - [with_mut!](#with_mut)
@@ -67,7 +69,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.35"
+r3bl_rs_utils = "0.7.36"
 ```
 
 ## redux
