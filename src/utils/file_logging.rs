@@ -28,10 +28,8 @@ const FILE_PATH: &str = "log.txt";
 static mut FILE_LOGGER_INIT_OK: bool = false;
 static FILE_LOGGER_INIT_FN: Once = Once::new();
 
-/// # Docs
-/// - [`log::info!`], [`log::warn!`], [`log::error!`]: https://docs.rs/log/latest/log/
-///
 /// # Example
+///
 /// ```ignore
 /// use r3bl_rs_utils::{init_file_logger_once, log, ResultCommon};
 /// fn run() -> ResultCommon<()> {
@@ -43,6 +41,10 @@ static FILE_LOGGER_INIT_FN: Once = Once::new();
 ///   Ok(())
 /// }
 /// ```
+///
+/// # Docs for log crate
+///
+/// - [`log::info!`], [`log::warn!`], [`log::error!`]: https://docs.rs/log/latest/log/
 #[macro_export]
 macro_rules! log {
   (INFO, $($arg:tt)*) => {{
@@ -56,6 +58,32 @@ macro_rules! log {
   (ERROR, $($arg:tt)*) => {{
     init_file_logger_once()?;
     log::error!($($arg)*);
+  }};
+}
+
+/// This is very similar to [log!] except that if it fails, it will not propagate the log error.
+#[macro_export]
+macro_rules! log_no_err {
+  (INFO, $($arg:tt)*) => {{
+    if init_file_logger_once().is_err() {
+      eprintln!("Error initializing file logger due to {}", init_file_logger_once().unwrap_err());
+    } else {
+      log::info!($($arg)*);
+    }
+  }};
+  (WARN, $($arg:tt)*) => {{
+    if init_file_logger_once().is_err() {
+      eprintln!("Error initializing file logger due to {}", init_file_logger_once().unwrap_err());
+    } else {
+      log::warn!($($arg)*);
+    }
+  }};
+  (ERROR, $($arg:tt)*) => {{
+    if init_file_logger_once().is_err() {
+      eprintln!("Error initializing file logger due to {}", init_file_logger_once().unwrap_err());
+  } else {
+      log::error!($($arg)*);
+    }
   }};
 }
 

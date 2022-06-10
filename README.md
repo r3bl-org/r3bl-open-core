@@ -14,6 +14,7 @@
   - [Declarative](#declarative)
     - [throws!](#throws)
     - [log!](#log)
+    - [log_no_err!](#log_no_err)
     - [make_api_call_for!](#make_api_call_for)
     - [fire_and_forget!](#fire_and_forget)
     - [call_if_true!](#call_if_true)
@@ -69,7 +70,7 @@ Please add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-r3bl_rs_utils = "0.7.36"
+r3bl_rs_utils = "0.7.37"
 ```
 
 ## redux
@@ -469,6 +470,11 @@ fn run() -> CommonResult<()> {
 
 Please check out the source
 [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/src/utils/file_logging.rs).
+
+#### log_no_err!
+
+This macro is very similar to the [log!](#log) macro, except that it won't return any
+error if the underlying logging system fails. It will simply print a message to stderr.
 
 #### make_api_call_for!
 
