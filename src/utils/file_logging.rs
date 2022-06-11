@@ -15,16 +15,15 @@
  *   limitations under the License.
 */
 
-use crate::CommonResult;
+use crate::*;
 use chrono::Local;
 use log::LevelFilter;
 use simplelog::*;
 use std::fs::File;
-use std::{io::Error as IoError, sync::Once};
+use std::sync::Once;
 use time::UtcOffset;
 
-const FILE_PATH: &str = "log.txt";
-
+static mut FILE_PATH: &str = "log.txt";
 static mut FILE_LOGGER_INIT_OK: bool = false;
 static FILE_LOGGER_INIT_FN: Once = Once::new();
 
@@ -59,6 +58,21 @@ macro_rules! log {
     init_file_logger_once()?;
     log::error!($($arg)*);
   }};
+}
+
+/// If you want to override the default log file path, you can use this function. If the
+/// logger has already been initialized, then it will return a
+/// [CommonErrorType::InvalidState] error.
+pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
+  unsafe {
+    return match FILE_LOGGER_INIT_OK {
+      true => CommonError::new_err_with_only_type(CommonErrorType::InvalidState),
+      false => {
+        FILE_PATH = path;
+        Ok(path.to_string())
+      }
+    };
+  }
 }
 
 /// This is very similar to [log!] except that if it fails, it will not propagate the log error.
@@ -100,38 +114,48 @@ pub fn init_file_logger_once() -> CommonResult<()> {
 
   // Use saved bool in static `FILE_LOGGER_INIT_OK` to throw error if needed.
   unsafe {
-    match FILE_LOGGER_INIT_OK {
+    return match FILE_LOGGER_INIT_OK {
       true => Ok(()),
-      false => Err(Box::new(IoError::new(
-        std::io::ErrorKind::Other,
-        format!("Failed to initialize file logger {}", FILE_PATH),
-      ))),
+      false => {
+        let msg = format!("Failed to initialize file logger {}", FILE_PATH);
+        return CommonError::new(CommonErrorType::IOError, &msg);
+      }
+    };
+  }
+
+  /// [FILE_LOGGER_INIT_OK] is `false` at the start. Only this function (if it succeeds) can
+  /// set that to `true`. This function does *not* panic if there's a problem
+  /// initializing the logger. It just prints a message to stderr & returns.
+  fn actually_init_file_logger() {
+    unsafe {
+      let maybe_new_file = File::create(FILE_PATH);
+      if let Ok(new_file) = maybe_new_file {
+        let config = new_config();
+        let level = LevelFilter::Info;
+        let file_logger = WriteLogger::new(level, config, new_file);
+        let maybe_logger_init_err = CombinedLogger::init(vec![file_logger]);
+        if let Err(e) = maybe_logger_init_err {
+          eprintln!("Failed to initialize file logger {} due to {}", FILE_PATH, e);
+        } else {
+          FILE_LOGGER_INIT_OK = true
+        }
+      }
     }
   }
-}
 
-fn actually_init_file_logger() {
-  let new_file_result = File::create(FILE_PATH);
-  if let Ok(new_file) = new_file_result {
-    let logger_init_result = CombinedLogger::init(vec![WriteLogger::new(LevelFilter::Info, new_config(), new_file)]);
-    if let Ok(_) = logger_init_result {
-      unsafe { FILE_LOGGER_INIT_OK = true }
+  /// Try to make a [`Config`] with local timezone offset. If that fails, return a default.
+  /// The implementation used here works w/ Tokio.
+  fn new_config() -> Config {
+    let mut builder = ConfigBuilder::new();
+
+    let offset_in_sec = Local::now().offset().local_minus_utc();
+    let utc_offset_result = UtcOffset::from_whole_seconds(offset_in_sec);
+    if let Ok(utc_offset) = utc_offset_result {
+      builder.set_time_offset(utc_offset);
     }
+
+    builder.set_time_format_custom(format_description!("[hour repr:12]:[minute] [period]"));
+
+    builder.build()
   }
-}
-
-/// Try to make a [`Config`] with local timezone offset. If that fails, return a default.
-/// The implementation used here works w/ Tokio.
-fn new_config() -> Config {
-  let mut builder = ConfigBuilder::new();
-
-  let offset_in_sec = Local::now().offset().local_minus_utc();
-  let utc_offset_result = UtcOffset::from_whole_seconds(offset_in_sec);
-  if let Ok(utc_offset) = utc_offset_result {
-    builder.set_time_offset(utc_offset);
-  }
-
-  builder.set_time_format_custom(format_description!("[hour repr:12]:[minute] [period]"));
-
-  builder.build()
 }

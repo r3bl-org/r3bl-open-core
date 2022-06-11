@@ -42,6 +42,7 @@ pub enum CommonErrorType {
   General,
   InvalidArguments,
   InvalidResult,
+  InvalidState,
   StackOverflow,
   StackUnderflow,
   ParsingError,

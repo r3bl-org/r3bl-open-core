@@ -450,14 +450,15 @@ fn test_simple_2_col_layout() -> CommonResult<()> {
 #### log!
 
 You can use this macro to dump log messages at 3 levels to a file. By default this file is
-named `log.txt` and is dumped in the current directory. Here's how you can use it. Please
-note that the macro returns a `Result`. A type alias is provided to save some typing
-called `CommonResult<T>` which is just a short hand for
+named `log.txt` and is dumped in the current directory. Here's how you can use it.
+
+Please note that the macro returns a `Result`. A type alias is provided to save some
+typing called `CommonResult<T>` which is just a short hand for
 `std::result::Result<T, Box<dyn Error>>`. The log file itself is overwritten for each
 "session" that you run your program.
 
 ```rust
-use r3bl_rs_utils::{init_file_logger_once, log, CommonResult};
+use r3bl_rs_utils::{log, CommonResult, CommonError};
 fn run() -> CommonResult<()> {
   let msg = "foo";
   let msg_2 = "bar";
@@ -465,6 +466,20 @@ fn run() -> CommonResult<()> {
   log!(WARN, "This is a warning message {}", msg);
   log!(ERROR, "This is a error message {} {}", msg, msg_2);
   Ok(())
+}
+```
+
+To change the default log file to whatever you choose, you can use the
+`try_to_set_log_file_path()` function. If the logger hasn't yet been initialized, this
+function will set the log file path. Otherwise it will return an error.
+
+```rust
+use r3bl_rs_utils::{try_set_log_file_path, CommonResult, CommonError};
+fn run() {
+    match try_set_log_file_path("new_log.txt") {
+    Ok(path_set) => debug!(path_set),
+    Err(error) => debug!(error),
+  }
 }
 ```
 
