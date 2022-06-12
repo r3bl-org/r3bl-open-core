@@ -157,8 +157,8 @@ Here's the gist of how to make & use one of these:
 1. Create a struct. Make it derive `Default`. Or you can add your own properties / fields
    to this struct, and construct it yourself, or even provide a constructor function.
    - A default constructor function `new()` is provided for you by the trait.
-   - Just follow that works for when you need to make your own constructor function for a
-     struct w/ your own properties.
+   - Just follow how that works for when you need to make your own constructor function
+     for a struct w/ your own properties.
 2. Implement the `AsyncMiddleware`, `AsyncMiddlewareSpawns`, `AsyncReducer`, or
    `AsyncSubscriber` trait on your struct.
 3. Register this struct w/ the store using one of the `add_middleware()`,
