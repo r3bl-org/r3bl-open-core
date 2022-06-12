@@ -22,11 +22,7 @@ where
   S: Sync + Send,
   A: Sync + Send,
 {
-  async fn run(
-    &self,
-    action: &A,
-    state: &S,
-  ) -> S;
+  async fn run(&self, action: &A, state: &S) -> S;
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
   fn new() -> Box<dyn AsyncReducer<S, A> + Send + Sync>
@@ -43,10 +39,7 @@ pub struct AsyncReducerVec<S, A> {
 }
 
 impl<S, A> AsyncReducerVec<S, A> {
-  pub fn push(
-    &mut self,
-    reducer: Box<dyn AsyncReducer<S, A> + Send + Sync>,
-  ) {
+  pub fn push(&mut self, reducer: Box<dyn AsyncReducer<S, A> + Send + Sync>) {
     self.vec.push(reducer);
   }
 

@@ -51,11 +51,7 @@ where
   S: Sync + Send,
   A: Sync + Send,
 {
-  async fn run(
-    &self,
-    action: A,
-    state: S,
-  ) -> Option<A>;
+  async fn run(&self, action: A, state: S) -> Option<A>;
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
   fn new() -> Box<dyn AsyncMiddleware<S, A> + Send + Sync>
@@ -72,10 +68,7 @@ pub struct AsyncMiddlewareVec<S, A> {
 }
 
 impl<S, A> AsyncMiddlewareVec<S, A> {
-  pub fn push(
-    &mut self,
-    middleware: Box<dyn AsyncMiddleware<S, A> + Send + Sync>,
-  ) {
+  pub fn push(&mut self, middleware: Box<dyn AsyncMiddleware<S, A> + Send + Sync>) {
     self.vec.push(middleware);
   }
 
@@ -101,9 +94,9 @@ impl<S, A> AsyncMiddlewareVec<S, A> {
 ///     action: Action,
 ///     _state: State,
 ///   ) -> JoinHandle<Option<Action>> {
-///     let so_arc_clone = self.shared_vec.clone();
+///     let shared_obj_arc_clone = self.shared_vec.clone();
 ///     tokio::spawn(async move {
-///       let mut shared_vec = so_arc_clone.lock().await;
+///       let mut shared_vec = shared_obj_arc_clone.lock().await;
 ///       match action {
 ///         Action::MwExampleSpawns_ModifySharedObject_ResetState => {
 ///           shared_vec.push(-4);
@@ -123,11 +116,7 @@ where
   S: Sync + Send,
   A: Sync + Send,
 {
-  async fn run(
-    &self,
-    action: A,
-    state: S,
-  ) -> JoinHandle<Option<A>>;
+  async fn run(&self, action: A, state: S) -> JoinHandle<Option<A>>;
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
   fn new() -> Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>
@@ -144,10 +133,7 @@ pub struct AsyncMiddlewareSpawnsVec<S, A> {
 }
 
 impl<S, A> AsyncMiddlewareSpawnsVec<S, A> {
-  pub fn push(
-    &mut self,
-    middleware: Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>,
-  ) {
+  pub fn push(&mut self, middleware: Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>) {
     self.vec.push(middleware);
   }
 
