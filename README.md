@@ -13,6 +13,7 @@
 - [Macros](#macros)
   - [Declarative](#declarative)
     - [throws!](#throws)
+    - [throws_with_return!](#throws_with_return)
     - [log!](#log)
     - [log_no_err!](#log_no_err)
     - [make_api_call_for!](#make_api_call_for)
@@ -418,12 +419,14 @@ sugar that helps having to write `Ok(())` repeatedly at the end of each block. H
 example.
 
 ```rust
-throws! {
-  match input_event {
-    InputEvent::DisplayableKeypress(character) => {
-      println_raw!(character);
+fn test_simple_2_col_layout() -> CommonResult<()> {
+  throws! {
+    match input_event {
+      InputEvent::DisplayableKeypress(character) => {
+        println_raw!(character);
+      }
+      _ => todo!()
     }
-    _ => todo!()
   }
 }
 ```
@@ -443,6 +446,19 @@ fn test_simple_2_col_layout() -> CommonResult<()> {
     )?;
     layout_container(&mut canvas)?;
     canvas.canvas_end()?;
+  });
+}
+```
+
+#### throws_with_return!
+
+This is very similar to [`throws!`](#throws) but it also returns the result of the block.
+
+```rust
+fn test_simple_2_col_layout() -> CommonResult<CommandQueue> {
+  throws_with_return!({
+    println!("⛵ Draw -> draw: {}\r", state);
+    CommandQueue::default()
   });
 }
 ```

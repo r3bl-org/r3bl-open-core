@@ -20,12 +20,14 @@
 ///
 /// Here's an example.
 /// ```ignore
-/// throws! {
-///   match input_event {
-///     InputEvent::DisplayableKeypress(character) => {
-///       println_raw!(character);
+/// fn test_simple_2_col_layout() -> CommonResult<()> {
+///   throws! {
+///     match input_event {
+///       InputEvent::DisplayableKeypress(character) => {
+///         println_raw!(character);
+///       }
+///       _ => todo!()
 ///     }
-///     _ => todo!()
 ///   }
 /// }
 /// ```
@@ -56,6 +58,27 @@ macro_rules! throws {
   ($it: stmt) => {{
     $it
     return Ok(())
+  }};
+}
+
+/// Wrap the given block or stmt so that it returns a Result<$it>. It is just syntactic
+/// sugar that helps having to write Ok($it) repeatedly.
+///
+/// Here's an example.
+/// ```ignore
+/// throws_with_return!({
+///   println!("⛵ Draw -> draw: {}\r", state);
+///   CommandQueue::default()
+/// });
+/// ```
+#[macro_export]
+macro_rules! throws_with_return {
+  ($it: block) => {{
+    return Ok($it)
+  }};
+  ($it: stmt) => {{
+    $it
+    return Ok($it)
   }};
 }
 
@@ -223,10 +246,7 @@ macro_rules! make_api_call_for {
     }
 
     impl Display for $IDENT {
-      fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-      ) -> std::fmt::Result {
+      fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_string())
       }
     }
