@@ -1,14 +1,16 @@
-//! This is an experimental module that isn't ready yet. It is the first step towards creating a TUI
-//! library that can be used to create sophisticated TUI applications. This is similar to Ink
-//! library for Node.js & TypeScript (that uses React and Yoga)
+/*
+ *   Copyright (c) 2022 R3BL LLC
+ *   All rights reserved.
 
-// Include these modules:
-pub mod components;
-pub mod tui_types;
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
 
-// Module re-exports:
-// <https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html#documentation-comments-as-tests>
+ *   http://www.apache.org/licenses/LICENSE-2.0
 
-// Re-export the following modules:
-pub use components::*;
-pub use tui_types::*;
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+*/
