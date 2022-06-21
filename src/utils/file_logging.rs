@@ -75,7 +75,13 @@ pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
   }
 }
 
-/// This is very similar to [log!] except that if it fails, it will not propagate the log error.
+/// This is very similar to [log!] except that if it fails, it will not propagate the log
+/// error. Here's an example.
+/// ```ignore
+/// pub fn log_state(&self, msg: &str) {
+///   log_no_err!(INFO, "{} -> {}", msg, self.to_string());
+/// }
+/// ```
 #[macro_export]
 macro_rules! log_no_err {
   (INFO, $($arg:tt)*) => {{
