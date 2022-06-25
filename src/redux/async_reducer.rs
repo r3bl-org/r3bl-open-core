@@ -25,7 +25,7 @@ where
   async fn run(&self, action: &A, state: &S) -> S;
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
-  fn new() -> Box<dyn AsyncReducer<S, A> + Send + Sync>
+  fn new() -> AsyncReducerItem<S, A>
   where
     Self: Default + Sized + Sync + Send + 'static,
   {
@@ -33,17 +33,6 @@ where
   }
 }
 
-#[derive(Default)]
-pub struct AsyncReducerVec<S, A> {
-  pub vec: Vec<Box<dyn AsyncReducer<S, A> + Send + Sync>>,
-}
-
-impl<S, A> AsyncReducerVec<S, A> {
-  pub fn push(&mut self, reducer: Box<dyn AsyncReducer<S, A> + Send + Sync>) {
-    self.vec.push(reducer);
-  }
-
-  pub fn clear(&mut self) {
-    self.vec.clear();
-  }
-}
+pub type AsyncReducerTraitObject<S, A> = dyn AsyncReducer<S, A> + Send + Sync;
+pub type AsyncReducerItem<S, A> = Box<dyn AsyncReducer<S, A> + Send + Sync>;
+pub type AsyncReducerVec<S, A> = Vec<AsyncReducerItem<S, A>>;

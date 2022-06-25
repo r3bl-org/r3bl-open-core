@@ -54,7 +54,7 @@ where
   async fn run(&self, action: A, state: S) -> Option<A>;
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
-  fn new() -> Box<dyn AsyncMiddleware<S, A> + Send + Sync>
+  fn new() -> Box<AsyncMiddlewareTraitObject<S, A>>
   where
     Self: Default + Sized + Sync + Send + 'static,
   {
@@ -62,20 +62,9 @@ where
   }
 }
 
-#[derive(Default)]
-pub struct AsyncMiddlewareVec<S, A> {
-  pub vec: Vec<Box<dyn AsyncMiddleware<S, A> + Send + Sync>>,
-}
-
-impl<S, A> AsyncMiddlewareVec<S, A> {
-  pub fn push(&mut self, middleware: Box<dyn AsyncMiddleware<S, A> + Send + Sync>) {
-    self.vec.push(middleware);
-  }
-
-  pub fn clear(&mut self) {
-    self.vec.clear();
-  }
-}
+pub type AsyncMiddlewareTraitObject<S, A> = dyn AsyncMiddleware<S, A> + Send + Sync;
+pub type AsyncMiddlewareItem<S, A> = Box<dyn AsyncMiddleware<S, A> + Send + Sync>;
+pub type AsyncMiddlewareVec<S, A> = Vec<AsyncMiddlewareItem<S, A>>;
 
 /// ```text
 /// ╭──────────────────────────────────────────────────────╮
@@ -109,7 +98,6 @@ impl<S, A> AsyncMiddlewareVec<S, A> {
 ///   }
 /// }
 /// ```
-
 #[async_trait]
 pub trait AsyncMiddlewareSpawns<S, A>
 where
@@ -119,7 +107,7 @@ where
   async fn run(&self, action: A, state: S) -> JoinHandle<Option<A>>;
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
-  fn new() -> Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>
+  fn new() -> AsyncMiddlewareSpawnsItem<S, A>
   where
     Self: Default + Sized + Sync + Send + 'static,
   {
@@ -127,17 +115,6 @@ where
   }
 }
 
-#[derive(Default)]
-pub struct AsyncMiddlewareSpawnsVec<S, A> {
-  pub vec: Vec<Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>>,
-}
-
-impl<S, A> AsyncMiddlewareSpawnsVec<S, A> {
-  pub fn push(&mut self, middleware: Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>) {
-    self.vec.push(middleware);
-  }
-
-  pub fn clear(&mut self) {
-    self.vec.clear();
-  }
-}
+pub type AsyncMiddlewareSpawnsTraitObject<S, A> = dyn AsyncMiddlewareSpawns<S, A> + Send + Sync;
+pub type AsyncMiddlewareSpawnsItem<S, A> = Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>;
+pub type AsyncMiddlewareSpawnsVec<S, A> = Vec<AsyncMiddlewareSpawnsItem<S, A>>;

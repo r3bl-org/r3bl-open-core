@@ -82,12 +82,12 @@ objects. You also have to supply the Tokio runtime, this library will not create
 runtime. However, for best results, it is best to use the multithreaded Tokio runtime.
 
 Once you setup your Redux store w/ your reducer, subscriber, and middleware, you can use
-it by calling `store.dispatch_spawn(action)`. This kicks off a parallel Tokio task that
-will run the middleware functions, reducer functions, and finally the subscriber
+it by calling `spawn_dispatch_action!( store, action )`. This kicks off a parallel Tokio
+task that will run the middleware functions, reducer functions, and finally the subscriber
 functions. So this will not block the thread of whatever code you call this from. The
-`dispatch_spawn()` method itself is not `async`. So you can call it from non `async` code,
-however you still have to provide a Tokio executor / runtime, without which you will get a
-panic when `dispatch_spawn()` is called.
+`spawn_dispatch_action!()` macro itself is not `async`. So you can call it from non
+`async` code, however you still have to provide a Tokio executor / runtime, without which
+you will get a panic when `spawn_dispatch_action!()` is called.
 
 ### Middlewares
 
@@ -95,7 +95,7 @@ Your middleware (`async` trait implementations) will be run concurrently or in p
 via Tokio tasks. You get to choose which `async` trait to implement to do one or the
 other. And regardless of which kind you implement the `Action` that is optionally returned
 will be dispatched to the Redux store at the end of execution of all the middlewares (for
-that particular `dispatch_spawn()` call).
+that particular `spawn_dispatch_action!()` call).
 
 1. `AsyncMiddlewareSpawns<State, Action>` - Your middleware has to use `tokio::spawn` to
    run `async` blocks in a
@@ -389,18 +389,18 @@ store
 ```
 
 Finally here's an example of how to dispatch an action in a test. You can dispatch actions
-in parallel using `dispatch_spawn()` which is "fire and forget" meaning that the caller
-won't block or wait for the `dispatch_spawn()` to return.
+in parallel using `spawn_dispatch_action!()` which is "fire and forget" meaning that the
+caller won't block or wait for the `spawn_dispatch_action!()` to return.
 
 ```rust
 // Test reducer and subscriber by dispatching `Add`, `AddPop`, `Clear` actions in parallel.
-store.dispatch_spawn(Action::Add(1, 2)).await;
+spawn_dispatch_action!( store, Action::Add(1, 2) );
 assert_eq!(shared_object.lock().unwrap().pop(), Some(3));
 
-store.dispatch_spawn(Action::AddPop(1)).await;
+spawn_dispatch_action!( store, Action::AddPop(1) );
 assert_eq!(shared_object.lock().unwrap().pop(), Some(4));
 
-store.dispatch_spawn(Action::Clear).await;
+spawn_dispatch_action!( store, Action::Clear );
 assert_eq!(store.get_state().stack.len(), 0);
 ```
 

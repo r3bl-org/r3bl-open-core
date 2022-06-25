@@ -21,13 +21,10 @@ pub trait AsyncSubscriber<S>
 where
   S: Sync + Send,
 {
-  async fn run(
-    &self,
-    state: S,
-  );
+  async fn run(&self, state: S);
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
-  fn new() -> Box<dyn AsyncSubscriber<S> + Send + Sync>
+  fn new() -> AsyncSubscriberItem<S>
   where
     Self: Default + Sized + Sync + Send + 'static,
   {
@@ -35,20 +32,6 @@ where
   }
 }
 
-#[derive(Default)]
-pub struct AsyncSubscriberVec<S> {
-  pub vec: Vec<Box<dyn AsyncSubscriber<S> + Send + Sync>>,
-}
-
-impl<S> AsyncSubscriberVec<S> {
-  pub fn push(
-    &mut self,
-    middleware: Box<dyn AsyncSubscriber<S> + Send + Sync>,
-  ) {
-    self.vec.push(middleware);
-  }
-
-  pub fn clear(&mut self) {
-    self.vec.clear();
-  }
-}
+pub type AsyncSubscriberTraitObject<S> = dyn AsyncSubscriber<S> + Send + Sync;
+pub type AsyncSubscriberItem<S> = Box<dyn AsyncSubscriber<S> + Send + Sync>;
+pub type AsyncSubscriberVec<S> = Vec<AsyncSubscriberItem<S>>;

@@ -28,9 +28,7 @@ use fn_wrapper::{make_safe_async, make_shareable};
 use proc_macro::TokenStream;
 
 #[proc_macro_derive(Builder)]
-pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
-  builder::derive_proc_macro_impl(input)
-}
+pub fn derive_macro_builder(input: TokenStream) -> TokenStream { builder::derive_proc_macro_impl(input) }
 
 #[proc_macro]
 pub fn make_struct_safe_to_share_and_mutate(input: TokenStream) -> TokenStream {
