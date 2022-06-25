@@ -31,7 +31,7 @@ use syn::{parse::{Parse, ParseStream},
 
 use crate::utils::type_ext::{TypeExtHasGenericArgs, TypeExtHasIdent};
 
-/// See [`ManagerOfThingInfo`] for more information on the syntax that this
+/// See [ManagerOfThingSyntaxInfo] for more information on the syntax that this
 /// macro accepts.
 ///
 /// For reference, here's an example from syn called
@@ -48,19 +48,28 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     property_name_ident,
   } = manager_of_thing_info;
 
-  let doc_str_struct = format!(" Generated {} struct for {}.", &manager_name_ident, &thing_type.to_string());
+  let doc_str_struct = format!(
+    " Generated {} struct for {}.",
+    &manager_name_ident,
+    &thing_type.to_string()
+  );
 
-  let doc_str_default_impl_for_struct = format!(" Generated Default trait impl for {}.", &manager_name_ident,);
+  let doc_str_default_impl_for_struct =
+    format!(" Generated Default trait impl for {}.", &manager_name_ident,);
 
   let doc_str_impl_share_for_struct = format!(" Generated SafeToShare impl for {}.", &manager_name_ident,);
 
   let doc_str_impl_mutate_for_struct = format!(" Generated SafeToMutate impl for {}.", &manager_name_ident,);
 
   let doc_str_setter_fn = " Directly mutate the property.";
-  let doc_str_getter_fn = " Get a clone of the arc. This can be passed around safely, instead of passing the manager instance itself.";
-  let doc_str_static_lock_w = " 🔒 Static method that allow you to indirectly access the property via `Arc` produced by `get_ref()`.";
-  let doc_str_static_lock_r = " 🔒 Static method that allow you to indirectly access the property via `Arc` produced by `get_ref()`.";
-  let doc_str_static_with_arc_setter_fn = " Static method that allow you to indirectly mutate the property via `Arc` produced by `get_ref()`.";
+  let doc_str_getter_fn = " Get a clone of the arc. This can be passed around safely, instead of passing \
+                           the manager instance itself.";
+  let doc_str_static_lock_w =
+    " 🔒 Static method that allow you to indirectly access the property via `Arc` produced by `get_ref()`.";
+  let doc_str_static_lock_r =
+    " 🔒 Static method that allow you to indirectly access the property via `Arc` produced by `get_ref()`.";
+  let doc_str_static_with_arc_setter_fn =
+    " Static method that allow you to indirectly mutate the property via `Arc` produced by `get_ref()`.";
 
   let opt_generic_args = if manager_type_generic_args.is_some() {
     let args = manager_type_generic_args.unwrap();
@@ -214,7 +223,9 @@ impl Parse for ManagerOfThingSyntaxInfo {
       where_clause = Some(input.parse::<WhereClause>()?);
     } else {
       if manager_type.has_angle_bracketed_generic_args() {
-        let ident_vec = manager_type.get_angle_bracketed_generic_args_idents_result().unwrap();
+        let ident_vec = manager_type
+          .get_angle_bracketed_generic_args_idents_result()
+          .unwrap();
         let my_ts = quote! {
           where #(#ident_vec: Default + Send + Sync),*
         }
