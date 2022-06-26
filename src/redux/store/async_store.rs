@@ -14,14 +14,13 @@
  limitations under the License.
 */
 
-use tokio::sync::RwLock;
-
 use crate::{
   redux::{AsyncMiddlewareSpawnsVec, AsyncMiddlewareVec, AsyncReducerVec, AsyncSubscriberVec},
   AsyncMiddleware, AsyncMiddlewareSpawns, AsyncReducer, AsyncSubscriber,
 };
 use core::{fmt::Debug, hash::Hash};
 use std::sync::Arc;
+use tokio::sync::RwLock;
 
 pub type SharedStore<S, A> = Arc<RwLock<Store<S, A>>>;
 
