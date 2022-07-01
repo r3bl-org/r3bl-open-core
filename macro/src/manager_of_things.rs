@@ -1,19 +1,19 @@
 /*
  *   Copyright (c) 2022 R3BL LLC
  *   All rights reserved.
-
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
-
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
-
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
-*/
+ */
 
 use core::panic;
 
@@ -48,31 +48,21 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     property_name_ident,
   } = manager_of_thing_info;
 
-  let doc_str_struct = format!(
-    " Generated {} struct for {}.",
-    &manager_name_ident,
-    &thing_type.to_string()
-  );
+  let doc_str_struct = format!(" Generated {} struct for {}.", &manager_name_ident, &thing_type.to_string());
 
-  let doc_str_default_impl_for_struct =
-    format!(" Generated Default trait impl for {}.", &manager_name_ident,);
+  let doc_str_default_impl_for_struct = format!(" Generated Default trait impl for {}.", &manager_name_ident,);
 
   let doc_str_impl_share_for_struct = format!(" Generated SafeToShare impl for {}.", &manager_name_ident,);
 
   let doc_str_impl_mutate_for_struct = format!(" Generated SafeToMutate impl for {}.", &manager_name_ident,);
 
   let doc_str_setter_fn = " Directly mutate the property.";
-  let doc_str_getter_fn = " Get a clone of the arc. This can be passed around safely, instead of passing \
-                           the manager instance itself.";
-  let doc_str_static_lock_w =
-    " 🔒 Static method that allow you to indirectly access the property via `Arc` produced by `get_ref()`.";
-  let doc_str_static_lock_r =
-    " 🔒 Static method that allow you to indirectly access the property via `Arc` produced by `get_ref()`.";
-  let doc_str_static_with_arc_setter_fn =
-    " Static method that allow you to indirectly mutate the property via `Arc` produced by `get_ref()`.";
+  let doc_str_getter_fn = " Get a clone of the arc. This can be passed around safely, instead of passing the manager instance itself.";
+  let doc_str_static_lock_w = " 🔒 Static method that allow you to indirectly access the property via `Arc` produced by `get_ref()`.";
+  let doc_str_static_lock_r = " 🔒 Static method that allow you to indirectly access the property via `Arc` produced by `get_ref()`.";
+  let doc_str_static_with_arc_setter_fn = " Static method that allow you to indirectly mutate the property via `Arc` produced by `get_ref()`.";
 
-  let opt_generic_args = if manager_type_generic_args.is_some() {
-    let args = manager_type_generic_args.unwrap();
+  let opt_generic_args = if let Some(args) = manager_type_generic_args {
     quote! { < #args > }
   } else {
     quote! {}
@@ -221,18 +211,14 @@ impl Parse for ManagerOfThingSyntaxInfo {
     let mut where_clause: Option<WhereClause> = None;
     if input.peek(Token![where]) {
       where_clause = Some(input.parse::<WhereClause>()?);
-    } else {
-      if manager_type.has_angle_bracketed_generic_args() {
-        let ident_vec = manager_type
-          .get_angle_bracketed_generic_args_idents_result()
-          .unwrap();
-        let my_ts = quote! {
-          where #(#ident_vec: Default + Send + Sync),*
-        }
-        .into();
-        let my_where_clause: WhereClause = syn::parse(my_ts).unwrap();
-        where_clause = Some(my_where_clause)
+    } else if manager_type.has_angle_bracketed_generic_args() {
+      let ident_vec = manager_type.get_angle_bracketed_generic_args_idents_result().unwrap();
+      let my_ts = quote! {
+        where #(#ident_vec: Default + Send + Sync),*
       }
+      .into();
+      let my_where_clause: WhereClause = syn::parse(my_ts).unwrap();
+      where_clause = Some(my_where_clause)
     }
 
     // 👀 "containing" keyword.

@@ -73,10 +73,7 @@ where
   S: Clone + Default + PartialEq + Debug + Hash + Sync + Send,
   A: Clone + Default + Send + Sync,
 {
-  pub async fn add_subscriber(
-    &mut self,
-    subscriber_fn: Box<dyn AsyncSubscriber<S> + Send + Sync>,
-  ) -> &mut Store<S, A> {
+  pub async fn add_subscriber(&mut self, subscriber_fn: Box<dyn AsyncSubscriber<S> + Send + Sync>) -> &mut Store<S, A> {
     self.subscriber_vec.push(subscriber_fn);
     self
   }
@@ -86,18 +83,12 @@ where
     self
   }
 
-  pub async fn add_middleware(
-    &mut self,
-    middleware_fn: Box<dyn AsyncMiddleware<S, A> + Send + Sync>,
-  ) -> &mut Store<S, A> {
+  pub async fn add_middleware(&mut self, middleware_fn: Box<dyn AsyncMiddleware<S, A> + Send + Sync>) -> &mut Store<S, A> {
     self.middleware_vec.push(middleware_fn);
     self
   }
 
-  pub async fn add_middleware_spawns(
-    &mut self,
-    middleware_fn: Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>,
-  ) -> &mut Store<S, A> {
+  pub async fn add_middleware_spawns(&mut self, middleware_fn: Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>) -> &mut Store<S, A> {
     self.middleware_spawns_vec.push(middleware_fn);
     self
   }
@@ -107,10 +98,7 @@ where
     self
   }
 
-  pub async fn add_reducer(
-    &mut self,
-    reducer_fn: Box<dyn AsyncReducer<S, A> + Send + Sync>,
-  ) -> &mut Store<S, A> {
+  pub async fn add_reducer(&mut self, reducer_fn: Box<dyn AsyncReducer<S, A> + Send + Sync>) -> &mut Store<S, A> {
     self.reducer_vec.push(reducer_fn);
     self
   }
@@ -170,7 +158,7 @@ where
       return;
     }
     for reducer in &self.reducer_vec {
-      let new_state = reducer.run(&action, &self.state).await;
+      let new_state = reducer.run(action, &self.state).await;
       self.state = new_state;
     }
     self.update_history();
@@ -193,7 +181,7 @@ where
       }
     }
     if update_history {
-      self.history.push(new_state.clone())
+      self.history.push(new_state)
     };
   }
 
@@ -215,10 +203,8 @@ where
 
     let vec_opt_action = futures::future::join_all(vec_fut).await;
 
-    for opt_action in vec_opt_action {
-      if let Some(action) = opt_action {
-        self.actually_dispatch_action(&action).await;
-      }
+    for action in vec_opt_action.into_iter().flatten() {
+      self.actually_dispatch_action(&action).await;
     }
   }
 
@@ -235,10 +221,8 @@ where
 
     for join_handle in vec_results {
       let result = join_handle;
-      if let Ok(result) = result {
-        if let Some(action) = result {
-          self.actually_dispatch_action(&action).await;
-        }
+      if let Ok(Some(action)) = result {
+        self.actually_dispatch_action(&action).await;
       }
     }
   }

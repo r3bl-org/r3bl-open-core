@@ -1,19 +1,19 @@
 /*
  *   Copyright (c) 2022 R3BL LLC
  *   All rights reserved.
-
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
-
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
-
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
-*/
+ */
 
 //! New in Rust v 1.60.0: Arc cyclic references.
 //! https://doc.rust-lang.org/stable/std/sync/struct.Arc.html#method.new_cyclic
@@ -45,10 +45,7 @@ fn test_new() {
       self.weak_me.upgrade().unwrap()
     }
 
-    pub fn set_data(
-      &mut self,
-      arg: &str,
-    ) {
+    pub fn set_data(&mut self, arg: &str) {
       self.data = String::from(arg);
     }
 
@@ -59,25 +56,10 @@ fn test_new() {
 
   let g_arc: Arc<RwLock<Gadget>> = Gadget::new();
 
-  g_arc
-    .write()
-    .unwrap()
-    .set_data("foo");
-  assert_eq!(
-    g_arc.read().unwrap().get_data(),
-    "foo"
-  );
+  g_arc.write().unwrap().set_data("foo");
+  assert_eq!(g_arc.read().unwrap().get_data(), "foo");
 
   let g_arc_clone: Arc<RwLock<Gadget>> = g_arc.read().unwrap().clone_arc();
-  g_arc_clone
-    .write()
-    .unwrap()
-    .set_data("dummy");
-  assert_eq!(
-    g_arc_clone
-      .read()
-      .unwrap()
-      .get_data(),
-    "dummy"
-  );
+  g_arc_clone.write().unwrap().set_data("dummy");
+  assert_eq!(g_arc_clone.read().unwrap().get_data(), "dummy");
 }

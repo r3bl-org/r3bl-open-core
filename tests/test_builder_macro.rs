@@ -1,19 +1,19 @@
 /*
  *   Copyright (c) 2022 R3BL LLC
  *   All rights reserved.
-
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
-
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
-
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
-*/
+ */
 
 #![allow(dead_code)]
 
@@ -27,47 +27,53 @@
 //! To watch for test output run this script:
 //! `./cargo-watch-one-test.fish test_builder_macro`
 
-use r3bl_rs_utils_macro::Builder;
+mod test1 {
+  use r3bl_rs_utils::Builder;
 
-#[test]
-fn test_proc_macro_struct_and_enum() {
   #[derive(Builder)]
-  struct MyStruct {
+  pub struct MyStruct {
     my_string: String,
     my_enum: MyEnum,
     my_number: i32,
   }
 
-  enum MyEnum {
+  pub enum MyEnum {
     MyVariant1,
   }
 
-  impl Default for MyEnum {
-    fn default() -> Self { MyEnum::MyVariant1 }
+  #[test]
+  fn test_proc_macro_struct_and_enum() {
+    impl Default for MyEnum {
+      fn default() -> Self {
+        MyEnum::MyVariant1
+      }
+    }
   }
 }
 
-#[test]
-fn test_proc_macro_no_where_clause() {
+mod test2 {
+  use r3bl_rs_utils::Builder;
+
   #[derive(Builder)]
-  struct Point<X, Y> {
+  pub struct Point<X, Y> {
     x: X,
     y: Y,
   }
 
-  let my_pt: Point<i32, i32> = PointBuilder::new()
-    .set_x(1 as i32)
-    .set_y(2 as i32)
-    .build();
+  #[test]
+  fn test_proc_macro_no_where_clause() {
+    let my_pt: Point<i32, i32> = PointBuilder::new().set_x(1_i32).set_y(2_i32).build();
 
-  assert_eq!(my_pt.x, 1);
-  assert_eq!(my_pt.y, 2);
+    assert_eq!(my_pt.x, 1);
+    assert_eq!(my_pt.y, 2);
+  }
 }
 
-#[test]
-fn test_proc_macro_generics() {
+mod test3 {
+  use r3bl_rs_utils::Builder;
+
   #[derive(Builder)]
-  struct Point<X, Y>
+  pub struct Point<X, Y>
   where
     X: std::fmt::Display + Clone,
     Y: std::fmt::Display + Clone,
@@ -76,11 +82,10 @@ fn test_proc_macro_generics() {
     y: Y,
   }
 
-  let my_pt: Point<i32, i32> = PointBuilder::new()
-    .set_x(1 as i32)
-    .set_y(2 as i32)
-    .build();
-
-  assert_eq!(my_pt.x, 1);
-  assert_eq!(my_pt.y, 2);
+  #[test]
+  fn test_proc_macro_generics() {
+    let my_pt: Point<i32, i32> = PointBuilder::new().set_x(1_i32).set_y(2_i32).build();
+    assert_eq!(my_pt.x, 1);
+    assert_eq!(my_pt.y, 2);
+  }
 }

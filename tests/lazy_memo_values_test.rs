@@ -48,5 +48,5 @@ fn test_lazy() {
   assert_eq!(generate_value_fn.get_copy(&2), 14);
 
   assert_eq!(a_variable, 12);
-  assert_eq!(a_flag, true);
+  assert!(a_flag);
 }

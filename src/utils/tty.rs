@@ -88,7 +88,7 @@ impl ArgsToStrings for Args {
     with(
       args().collect::<Vec<String>>(),
       |mut list| {
-        if list.len() > 0 {
+        if !list.is_empty() {
           list.remove(0);
         }
         list

@@ -1,30 +1,22 @@
 /*
- *   Copyright (c) 2022 Nazmul Idris
+ *   Copyright (c) 2022 R3BL LLC
  *   All rights reserved.
-
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
-
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
-
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
-*/
+ */
 
 use quote::ToTokens;
-use syn::{punctuated::Punctuated,
-          token::Comma,
-          GenericArgument,
-          Ident,
-          Path,
-          PathArguments::AngleBracketed,
-          Type,
-          TypePath,
-          TypeReference};
+use syn::{punctuated::Punctuated, token::Comma, GenericArgument, Ident, Path, PathArguments::AngleBracketed, Type, TypePath, TypeReference};
 
 pub trait TypeExtHasIdent {
   fn has_ident(&self) -> bool;
@@ -33,9 +25,7 @@ pub trait TypeExtHasIdent {
 
 pub trait TypeExtHasGenericArgs {
   fn has_angle_bracketed_generic_args(&self) -> bool;
-  fn get_angle_bracketed_generic_args_result(
-    &self
-  ) -> Result<Punctuated<GenericArgument, Comma>, ()>;
+  fn get_angle_bracketed_generic_args_result(&self) -> Result<Punctuated<GenericArgument, Comma>, ()>;
   fn get_angle_bracketed_generic_args_idents_result(&self) -> Result<Vec<Ident>, ()>;
   fn to_string(&self) -> String;
 }
@@ -60,24 +50,16 @@ impl TypeExtHasIdent for syn::Type {
 
 impl TypeExtHasIdent for TypePath {
   fn has_ident(&self) -> bool {
-    match self {
-      TypePath {
-        path: Path { segments, .. },
-        ..
-      } => {
-        let ident = &segments.first();
-        ident.is_some()
-      }
+    let TypePath { path: Path { segments, .. }, .. } = self;
+    {
+      let ident = &segments.first();
+      ident.is_some()
     }
   }
 
   fn get_ident(&self) -> Option<Ident> {
     if self.has_ident() {
-      self
-        .path
-        .segments
-        .first()
-        .map(|s| s.ident.clone())
+      self.path.segments.first().map(|s| s.ident.clone())
     } else {
       None
     }
@@ -107,32 +89,23 @@ impl TypeExtHasIdent for TypeReference {
 }
 
 impl TypeExtHasGenericArgs for syn::Type {
-  /// True if self.type_path.path.segments.first().arguments.args.len() to be > 0.
+  /// True if self.type_path.path.segments.first().arguments.args.len() to be >
+  /// 0.
   fn has_angle_bracketed_generic_args(&self) -> bool {
     match self.get_angle_bracketed_generic_args_result() {
-      Ok(generic_args) => generic_args.len() > 0,
+      Ok(generic_args) => !generic_args.is_empty(),
       Err(_) => false,
     }
   }
 
   /// Ok if self.type_path.path.segments.first().arguments.args exists.
-  fn get_angle_bracketed_generic_args_result(
-    &self
-  ) -> Result<Punctuated<GenericArgument, Comma>, ()> {
+  fn get_angle_bracketed_generic_args_result(&self) -> Result<Punctuated<GenericArgument, Comma>, ()> {
     if let Type::Path(ref type_path) = self {
       let path = &type_path.path;
-      let path_arguments = &path
-        .segments
-        .first()
-        .unwrap()
-        .arguments;
+      let path_arguments = &path.segments.first().unwrap().arguments;
 
       if let AngleBracketed(ref angle_bracketed_generic_arguments) = path_arguments {
-        return Ok(
-          angle_bracketed_generic_arguments
-            .args
-            .clone(),
-        );
+        return Ok(angle_bracketed_generic_arguments.args.clone());
       }
     }
 
@@ -144,19 +117,10 @@ impl TypeExtHasGenericArgs for syn::Type {
       Ok(generic_args) => {
         let mut idents = Vec::new();
         for generic_arg in generic_args {
-          match generic_arg {
-            GenericArgument::Type(ref type_arg) => {
-              if let Type::Path(ref type_path) = type_arg {
-                let path = &type_path.path;
-                let ident = &path
-                  .segments
-                  .first()
-                  .unwrap()
-                  .ident;
-                idents.push(ident.clone());
-              }
-            }
-            _ => {}
+          if let GenericArgument::Type(Type::Path(ref type_path)) = generic_arg {
+            let path = &type_path.path;
+            let ident = &path.segments.first().unwrap().ident;
+            idents.push(ident.clone());
           }
         }
         Ok(idents)
@@ -165,10 +129,5 @@ impl TypeExtHasGenericArgs for syn::Type {
     }
   }
 
-  fn to_string(&self) -> String {
-    self
-      .to_token_stream()
-      .to_string()
-      .replace(" ", "")
-  }
+  fn to_string(&self) -> String { self.to_token_stream().to_string().replace(' ', "") }
 }

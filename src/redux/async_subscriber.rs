@@ -24,6 +24,7 @@ where
   async fn run(&self, state: S);
 
   /// https://doc.rust-lang.org/book/ch10-02-traits.html
+  #[allow(clippy::all)]
   fn new() -> AsyncSubscriberItem<S>
   where
     Self: Default + Sized + Sync + Send + 'static,

@@ -49,18 +49,18 @@ pub mod styles {
   use ansi_term::Colour::{Blue, Green, Red, White};
 
   pub fn style_primary(text: &str) -> ANSIGenericString<str> {
-    return Green.bold().paint(text);
+    Green.bold().paint(text)
   }
 
   pub fn style_prompt(text: &str) -> ANSIGenericString<str> {
-    return Blue.bold().paint(text);
+    Blue.bold().paint(text)
   }
 
   pub fn style_error(text: &str) -> ANSIGenericString<str> {
-    return Red.bold().paint(text);
+    Red.bold().paint(text)
   }
 
   pub fn style_dimmed(text: &str) -> ANSIGenericString<str> {
-    return White.underline().paint(text);
+    White.underline().paint(text)
   }
 }

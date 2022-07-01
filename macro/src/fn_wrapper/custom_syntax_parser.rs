@@ -1,19 +1,19 @@
 /*
  *   Copyright (c) 2022 R3BL LLC
  *   All rights reserved.
-
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
-
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
-
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
-*/
+ */
 
 #![allow(dead_code)]
 #![allow(unused_imports)]
@@ -43,7 +43,7 @@ use syn::{parse::{Parse, ParseBuffer, ParseStream},
           Visibility,
           WhereClause};
 
-use crate::utils::{IdentExt, TypeExtHasIdent, TypeExtHasGenericArgs};
+use crate::utils::{IdentExt, TypeExtHasGenericArgs, TypeExtHasIdent};
 
 /// Example of syntax to parse:
 /// ```no_run
@@ -94,15 +94,10 @@ impl Parse for SafeFnWrapperSyntaxInfo {
     let wrapper_name_type: Type = input.parse()?;
 
     // 👀 Wrapper Name Type generic args, eg: `<K,V>`.
-    let wrapper_name_type_generic_args =
-      match wrapper_name_type.has_angle_bracketed_generic_args() {
-        true => Some(
-          wrapper_name_type
-            .get_angle_bracketed_generic_args_result()
-            .unwrap(),
-        ),
-        false => None,
-      };
+    let wrapper_name_type_generic_args = match wrapper_name_type.has_angle_bracketed_generic_args() {
+      true => Some(wrapper_name_type.get_angle_bracketed_generic_args_result().unwrap()),
+      false => None,
+    };
 
     // 👀 "containing" keyword.
     input.parse::<kw::containing>()?;
@@ -118,9 +113,7 @@ impl Parse for SafeFnWrapperSyntaxInfo {
 
     // Done parsing. Extract the manager name.
     let wrapper_name_ident: Ident = if wrapper_name_type.has_ident() {
-      wrapper_name_type
-        .get_ident()
-        .unwrap()
+      wrapper_name_type.get_ident().unwrap()
     } else {
       panic!("Expected Type::Path::TypePath.segments to have an Ident")
     };
@@ -135,36 +128,24 @@ impl Parse for SafeFnWrapperSyntaxInfo {
   }
 }
 
-/// Given optional `GenericArgument`s that are separated by `Comma`s, generate an optional
-/// where clause.
+/// Given optional `GenericArgument`s that are separated by `Comma`s, generate
+/// an optional where clause.
 /// - Eg of input: `A, B`
 /// - Eg of return: `where A : Sync + Send + 'static, B : Sync + Send + 'static`
-pub fn make_opt_where_clause_from_generic_args(
-  wrapper_name_type_generic_args: Option<Punctuated<GenericArgument, Comma>>
-) -> proc_macro2::TokenStream {
+pub fn make_opt_where_clause_from_generic_args(wrapper_name_type_generic_args: Option<Punctuated<GenericArgument, Comma>>) -> proc_macro2::TokenStream {
   if wrapper_name_type_generic_args.is_some() {
-    let generic_args_list = wrapper_name_type_generic_args
-      .as_ref()
-      .unwrap();
+    let generic_args_list = wrapper_name_type_generic_args.as_ref().unwrap();
 
     let generic_args_ident_vec: Vec<Ident> = generic_args_list
       .iter()
       .map(|it: &GenericArgument| match it {
-        GenericArgument::Type(it) => match it {
-          Type::Path(it) => {
-            if !it.path.segments.is_empty() {
-              it.path
-                .segments
-                .first()
-                .unwrap()
-                .ident
-                .clone()
-            } else {
-              panic!("Expected generic arg type")
-            }
+        GenericArgument::Type(Type::Path(it)) => {
+          if !it.path.segments.is_empty() {
+            it.path.segments.first().unwrap().ident.clone()
+          } else {
+            panic!("Expected generic arg type")
           }
-          _ => panic!("Expected generic arg type"),
-        },
+        }
         _ => panic!("Expected generic arg type"),
       })
       .collect();

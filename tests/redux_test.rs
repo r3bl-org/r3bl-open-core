@@ -1,19 +1,19 @@
 /*
  *   Copyright (c) 2022 R3BL LLC
  *   All rights reserved.
-
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
-
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
-
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
-*/
+ */
 
 use async_trait::async_trait;
 use r3bl_rs_utils::{
@@ -111,16 +111,11 @@ async fn reset_store(shared_store: &SharedStore<State, Action>) {
 /// ```
 /// 1. Test reducer and subscriber by dispatching `Add` and `AddPop` actions
 /// 2. No middlewares.
-async fn run_reducer_and_subscriber(
-  shared_vec: &Arc<RwLock<Vec<i32>>>,
-  shared_store: &SharedStore<State, Action>,
-) {
+async fn run_reducer_and_subscriber(shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>) {
   // Setup store w/ only reducer & subscriber (no middlewares).
-  let my_subscriber = MySubscriber {
-    shared_vec: shared_vec.clone(),
-  };
+  let my_subscriber = MySubscriber { shared_vec: shared_vec.clone() };
   reset_shared_object(shared_vec).await;
-  reset_store(&shared_store).await;
+  reset_store(shared_store).await;
 
   shared_store
     .write()
@@ -130,19 +125,11 @@ async fn run_reducer_and_subscriber(
     .add_subscriber(Box::new(my_subscriber))
     .await;
 
-  shared_store
-    .write()
-    .await
-    .dispatch_action(Action::Add(1, 2))
-    .await;
+  shared_store.write().await.dispatch_action(Action::Add(1, 2)).await;
 
   assert_eq!(shared_vec.write().await.pop(), Some(3));
 
-  shared_store
-    .write()
-    .await
-    .dispatch_action(Action::AddPop(1))
-    .await;
+  shared_store.write().await.dispatch_action(Action::AddPop(1)).await;
 
   assert_eq!(shared_vec.write().await.pop(), Some(4));
 
@@ -160,13 +147,8 @@ async fn run_reducer_and_subscriber(
 /// ```
 /// 1. Does not involve any reducers or subscribers.
 /// 2. Just this middleware which modifies the `shared_vec`.
-async fn run_mw_example_no_spawn(
-  shared_vec: &Arc<RwLock<Vec<i32>>>,
-  shared_store: &SharedStore<State, Action>,
-) {
-  let mw_returns_none = MwExampleNoSpawn {
-    shared_vec: shared_vec.clone(),
-  };
+async fn run_mw_example_no_spawn(shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>) {
+  let mw_returns_none = MwExampleNoSpawn { shared_vec: shared_vec.clone() };
 
   reset_shared_object(shared_vec).await;
 
@@ -182,19 +164,11 @@ async fn run_mw_example_no_spawn(
 
   assert_eq!(shared_vec.write().await.pop(), Some(-1));
 
-  shared_store
-    .write()
-    .await
-    .dispatch_action(Action::MwExampleNoSpawn_Bar(1))
-    .await;
+  shared_store.write().await.dispatch_action(Action::MwExampleNoSpawn_Bar(1)).await;
 
   assert_eq!(shared_vec.write().await.pop(), Some(-2));
 
-  shared_store
-    .write()
-    .await
-    .dispatch_action(Action::MwExampleNoSpawn_Baz)
-    .await;
+  shared_store.write().await.dispatch_action(Action::MwExampleNoSpawn_Baz).await;
 
   assert_eq!(shared_vec.write().await.pop(), Some(-3));
 }
@@ -212,13 +186,8 @@ async fn delay_for_spawned_mw_to_execute() {
 /// spawns a new task that:
 /// 1. Adds `-4` to the `shared_vec`.
 /// 2. Then dispatches an action to `MyReducer` that resets the store w/ `[-100]`.
-async fn run_mw_example_spawns(
-  shared_vec: &Arc<RwLock<Vec<i32>>>,
-  shared_store: &SharedStore<State, Action>,
-) {
-  let mw_returns_action = MwExampleSpawns {
-    shared_vec: shared_vec.clone(),
-  };
+async fn run_mw_example_spawns(shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>) {
+  let mw_returns_action = MwExampleSpawns { shared_vec: shared_vec.clone() };
   reset_store(shared_store).await;
   reset_shared_object(shared_vec).await;
 
@@ -230,10 +199,7 @@ async fn run_mw_example_spawns(
     .add_middleware_spawns(Box::new(mw_returns_action))
     .await;
 
-  spawn_dispatch_action!(
-    shared_store,
-    Action::MwExampleSpawns_ModifySharedObject_ResetState
-  );
+  spawn_dispatch_action!(shared_store, Action::MwExampleSpawns_ModifySharedObject_ResetState);
 
   delay_for_spawned_mw_to_execute().await;
 
@@ -282,6 +248,7 @@ struct MwExampleSpawns {
 
 #[async_trait]
 impl AsyncMiddlewareSpawns<State, Action> for MwExampleSpawns {
+  #[allow(clippy::all)]
   async fn run(&self, action: Action, _state: State) -> JoinHandle<Option<Action>> {
     let so_arc_clone = self.shared_vec.clone();
     tokio::spawn(async move {

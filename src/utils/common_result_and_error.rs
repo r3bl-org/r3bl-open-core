@@ -1,19 +1,19 @@
 /*
  *   Copyright (c) 2022 R3BL LLC
  *   All rights reserved.
-
+ *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
-
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
-
+ *
  *   Unless required by applicable law or agreed to in writing, software
  *   distributed under the License is distributed on an "AS IS" BASIS,
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
-*/
+ */
 
 use r3bl_rs_utils_macro::Builder;
 use std::{
@@ -60,20 +60,15 @@ impl Error for CommonError {}
 
 /// Implement [`Display`] trait (needed by [`Error`] trait).
 impl Display for CommonError {
-  fn fmt(
-    &self,
-    f: &mut std::fmt::Formatter<'_>,
-  ) -> FmtResult {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> FmtResult {
     write!(f, "{:?}", self)
   }
 }
 
 impl CommonError {
   /// Constructor that is compatible w/ [`ResultCommon`].
-  pub fn new<T>(
-    err_type: CommonErrorType,
-    msg: &str,
-  ) -> CommonResult<T> {
+  #[allow(clippy::all)]
+  pub fn new<T>(err_type: CommonErrorType, msg: &str) -> CommonResult<T> {
     Self::from_err(CommonError {
       err_type,
       msg: Some(msg.to_string()),
@@ -91,10 +86,7 @@ impl CommonError {
   }
 
   /// Private helper method.
-  fn from_err_type_and_msg<T>(
-    err_type: CommonErrorType,
-    msg: Option<String>,
-  ) -> CommonResult<T> {
+  fn from_err_type_and_msg<T>(err_type: CommonErrorType, msg: Option<String>) -> CommonResult<T> {
     Self::from_err(CommonError { err_type, msg })
   }
 

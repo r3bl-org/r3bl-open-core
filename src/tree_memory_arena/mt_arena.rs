@@ -141,7 +141,7 @@ where
       // While walking the tree, in a separate thread, call the `walker_fn` for each node.
       if let Some(result_list) = return_value.clone() {
         result_list
-          .clone()
+          
           .into_iter()
           .for_each(|uid| {
             let node_arc_opt = read_guard.get_node_arc(uid);
@@ -155,4 +155,13 @@ where
       return_value
     })
   }
+}
+
+impl<T> Default for MTArena<T>
+where
+  T: Debug + Send + Sync + Clone + 'static,
+{
+    fn default() -> Self {
+        Self::new()
+    }
 }
