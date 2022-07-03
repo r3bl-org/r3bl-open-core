@@ -1,7 +1,7 @@
 # https://rust-lang.github.io/rustfmt/
 
 # width
-max_width = 165
+max_width = 130
 
 # function
 fn_args_layout = "Tall"
