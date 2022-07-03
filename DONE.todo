@@ -1,0 +1,85 @@
+Simplify mw:
+  ✔ no longer returns `Option<Action>` @done(22-04-19 16:35)
+  ✔ be opinoninated about parallel execution @done(22-04-19 16:35)
+    - via `fire_and_forget!`
+    - dispatch an `Action` afterwards
+    - in a separate tokio thread
+Rewrite subscriber to use async trait:
+  ✔ async trait @done(22-04-17 18:22)
+
+Rewrite mw to use async trait:
+  ✔ add async trait in `async_middleware.rs` @done(22-04-15 19:31)
+  ✔ add async trait vec in `async_middleware.rs` @done(22-04-15 19:31)
+  ✔ add methods in `async_store.rs` to add/remove middleware async trait @done(22-04-15 19:31)
+  ✔ add method in `async_store_state_machine.rs` to run the trait objs in `middleware_vec` @done(22-04-16 19:12)
+
+Fix middleware & make it async:
+  ✔ mw fn accepts 2nd arg (`StoreStateMachine`) so it can dispatch action async @done(22-04-13 17:49)
+
+Cyclic arc in Rust 1.60.0:
+  ✔ Experiment use new cyclic `Arc` in `<Arc<RwLock<T>>>` pattern @done(22-04-08 11:32)
+    - `arc_cyclic_test.rs`
+    - `arc_cyclic_test_2.rs`
+  ✔ Can't use it in proc macro @done(22-04-08 11:33)
+    - `from` constructor provides an `Arc` wrapped struct & fails to hide the `Arc`
+
+Bug fixes:
+  ✔ separate `TypeExt` into 2 smaller traits @done(22-04-07 11:02)
+  ✔ remove helper function redundancy between following proc macros: @started(22-04-07 15:51) @done(22-04-07 15:51) @lasted(41s)
+    - `make_shareable_fn_wrapper.rs`
+    - `make_safe_async_fn_wrapper.rs`
+  ✔ clean up `type_ext.rs` @done(22-04-07 15:52)
+  ✔ publish public 0.7.7 and macro 0.7.2 @done(22-04-07 16:08)
+
+Experiment:
+  ✔ make a macro that can generate the complex function wrapper struct @done(22-04-02 20:17)
+  ✔ Replace async_subscribers.rs and async_middleware.rs w/ new macro @done(22-04-02 20:17)
+  ✔ publish v0.7.1 and update all the internal deps to v0.7.1 @done(22-04-02 20:24)
+
+README:
+  ✔ decl: add debug! macro docs @done(22-04-01 21:03)
+  ✔ proc-derive: add builder.rs docs @done(22-04-01 21:03)
+  ✔ proc-fn-like: add manager-of-things proc macro fn docs @done(22-04-01 21:03)
+  ✔ Publish a new version to crates.io @done(22-04-01 22:10)
+  ✔ developerlife.com update Rust & Redux article @done(22-04-01 22:10)
+
+use the macros:
+  ✔ Identify where the new proc macro "manager" of "things" can be used @done(22-04-01 15:03)
+  ✔ Refactor existing Redux code to use macros above @done(22-04-01 15:03)
+  ✔ sync_reducer.rs @done(22-04-01 20:26)
+  ✔ async_middleware.rs @done(22-04-01 20:46)
+  ✔ async_subscriber.rs @done(22-04-01 20:46)
+
+r3bl_rs_utils:
+  ✔ Extract 2 traits out of manager_of_things.rs & rename the macro @done(22-04-01 07:41)
+  ✔ Create my_core_lib crate @done(22-04-01 10:41)
+  ✔ Add my_core_lib crate as dep for: @done(22-04-01 10:42)
+    ✔ public crate (r3bl_rs_utils), @done(22-04-01 10:42)
+    ✔ proc macro crate (my_proc_macros_lib) @done(22-04-01 10:42)
+  ✔ Move the 2 core traits into my_core_lib crate @done(22-04-01 10:42)
+
+developerlife.com content:
+  ✔ Update articles on Redux and Proc Macros w/ this new stuff @done(22-03-31 20:06)
+
+manager_of_things.rs:
+  ✔ Based on macros repo create the final "manager" of "things" fn like macro @done(22-03-31 18:41)
+
+builder.rs:
+  ✔ copy from macros repo to here @done(22-03-31 15:00)
+  ✔ update lib.rs to export it @done(22-03-31 15:00)
+
+proc macros setup:
+  ✔ make lib crate for proc macro @done(22-03-31 11:33)
+  ✔ make lib.rs file and setup directory layout @done(22-03-31 11:33)
+  ✔ link this lib to the main crate's Cargo.toml @done(22-03-31 11:33)
+  ✔ make manager-of-things.rs file and export it via lib.rs @done(22-03-31 11:33)
+
+decl macros:
+  ✔ Move from macros repo debug! decl macro @done(22-03-31 10:19)
+
+Add new functions from other repos:
+  ✔ Add `file_logging.rs` from `tui-layout-crossterm` @done(22-04-28 17:01)
+  ✔ Update `README.md` w/ `log!` macro @done(22-04-29 12:28)
+  ✔ Update `README.md` w/ `make_api_call_for!` macro @done(22-04-29 14:58)
+  ✔ Update `README.md` w/ `fire_and_forget!` macro @done(22-04-29 14:58)
+  ✔ Publish 0.7.21 @done(22-04-29 14:59)

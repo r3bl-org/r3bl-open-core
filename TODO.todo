@@ -1,0 +1,5 @@
+move `tui` from `r3bl-cmdr` here:
+  ☐ move the `tui` folder here when it is ready
+  ☐ move the tests here
+  ☐ update README.md
+  ☐ rev the public version & publish
