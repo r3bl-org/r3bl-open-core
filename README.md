@@ -474,13 +474,27 @@ typing called `CommonResult<T>` which is just a short hand for
 "session" that you run your program.
 
 ```rust
-use r3bl_rs_utils::{log, CommonResult, CommonError};
-fn run() -> CommonResult<()> {
+use r3bl_rs_utils::{init_file_logger_once, log, ResultCommon};
+
+fn run() -> ResultCommon<()> {
   let msg = "foo";
   let msg_2 = "bar";
+
   log!(INFO, "This is a info message");
+  log!(INFO, target: "foo", "This is a info message");
+
   log!(WARN, "This is a warning message {}", msg);
+  log!(WARN, target: "foo", "This is a warning message {}", msg);
+
   log!(ERROR, "This is a error message {} {}", msg, msg_2);
+  log!(ERROR, target: "foo", "This is a error message {} {}", msg, msg_2);
+
+  log!(DEBUG, "This is a debug message {} {}", msg, msg_2);
+  log!(DEBUG, target: "foo", "This is a debug message {} {}", msg, msg_2);
+
+  log!(TRACE, "This is a debug message {} {}", msg, msg_2);
+  log!(TRACE, target: "foo", "This is a debug message {} {}", msg, msg_2);
+
   Ok(())
 }
 ```
@@ -492,9 +506,42 @@ function will set the log file path. Otherwise it will return an error.
 ```rust
 use r3bl_rs_utils::{try_set_log_file_path, CommonResult, CommonError};
 fn run() {
-    match try_set_log_file_path("new_log.txt") {
-    Ok(path_set) => debug!(path_set),
-    Err(error) => debug!(error),
+  match try_set_log_file_path("new_log.txt") {
+      Ok(path_set) => debug!(path_set),
+      Err(error) => debug!(error),
+  }
+}
+```
+
+To change the default log level or to disable the log itself, you can use the
+`try_to_set_log_level()` function.
+
+If you want to override the default log level `LOG_LEVEL`, you can use this function. If
+the logger has already been initialized, then it will return a an error.
+
+```rust
+use r3bl_rs_utils::{try_to_set_log_level, CommonResult, CommonError};
+use log::LevelFilter;
+
+fn run() {
+  match try_to_set_log_level(LevelFilter::Trace) {
+      Ok(level_set) => debug!(level_set),
+      Err(error) => debug!(error),
+  }
+}
+```
+
+To disable logging simply set the log level to
+[`LevelFilter::Off`](https://docs.rs/log/latest/log/enum.LevelFilter.html).
+
+```rust
+use r3bl_rs_utils::{try_to_set_log_level, CommonResult, CommonError};
+use log::LevelFilter;
+
+fn run() {
+  match try_to_set_log_level(LevelFilter::Off) {
+      Ok(level_set) => debug!(level_set),
+      Err(error) => debug!(error),
   }
 }
 ```
@@ -505,7 +552,38 @@ Please check out the source
 #### log_no_err!
 
 This macro is very similar to the [log!](#log) macro, except that it won't return any
-error if the underlying logging system fails. It will simply print a message to stderr.
+error if the underlying logging system fails. It will simply print a message to `stderr`.
+Here's an example.
+
+```rust
+pub fn log_state(&self, msg: &str) {
+  log_no_err!(INFO, "{:?} -> {}", msg, self.to_string());
+  log_no_err!(INFO, target: "foo", "{:?} -> {}", msg, self.to_string());
+}
+```
+
+#### debug_log_no_err!
+
+This is a really simple macro to make it effortless to debug into a log file. It outputs
+`DEBUG` level logs. It takes a single identifier as an argument, or any number of them. It
+simply dumps an arrow symbol, followed by the identifier `stringify`'d along with the
+value that it contains (using the `Debug` formatter). All of the output is colorized for
+easy readability. You can use it like this.
+
+```rust
+let my_string = "Hello World!";
+debug_log_no_err!(my_string);
+```
+
+#### trace_log_no_err!
+
+This is very similar to [debug_log_no_err!](#debuglognoerr) except that it outputs `TRACE`
+level logs.
+
+```rust
+let my_string = "Hello World!";
+trace_log_no_err!(my_string);
+```
 
 #### make_api_call_for!
 

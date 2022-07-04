@@ -6,6 +6,7 @@
     "Colour",
     "commonerror",
     "commonresult",
+    "debuglognoerr",
     "derivebuilder",
     "idents",
     "isnt",
