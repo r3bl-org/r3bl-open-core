@@ -169,21 +169,24 @@ macro_rules! log_no_err {
 #[macro_export]
 macro_rules! debug_log_no_err {
   (
-    $/* Start repetition. */
-      /* Repeated expression. */ ($element:expr) /* Comma separated. */,
-    */* End repetition. */
-  ) => {{
-    // Start a repetition.
-    $(
-      // Each repeat will contain the following statement, with $element replaced with the
-      // corresponding expression.
-      log_no_err! {
-        DEBUG,
-        "{} = {}",
-        stringify!($element),
-        &format!("{:#?}", $element)
-      }
-    )*
+    $(                      /* Start a repetition. */
+      $element:expr         /* Expression. */
+    )                       /* End repetition. */
+    ,                       /* Comma separated. */
+    *                       /* Zero or more times. */
+  ) => {
+    /* Enclose the expansion in a block so that we can use multiple statements. */
+    {
+      /* Start a repetition. */
+      $(
+        /* Each repeat will contain the following statement, with $element replaced. */
+        log_no_err! {
+          DEBUG,
+          "{} = {}",
+          stringify!($element),
+          &format!("{:#?}", $element)
+        }
+      )*
   }};
 }
 
@@ -195,21 +198,24 @@ macro_rules! debug_log_no_err {
 #[macro_export]
 macro_rules! trace_log_no_err {
   (
-    $/* Start repetition. */
-      /* Repeated expression. */ ($element:expr) /* Comma separated. */,
-    */* End repetition. */
-  ) => {{
-    // Start a repetition.
-    $(
-      // Each repeat will contain the following statement, with $element replaced with the
-      // corresponding expression.
-      log_no_err! {
-        TRACE,
-        "{} = {}",
-        stringify!($element),
-        &format!("{:#?}", $element)
-      }
-    )*
+    $(                      /* Start a repetition. */
+      $element:expr         /* Expression. */
+    )                       /* End repetition. */
+    ,                       /* Comma separated. */
+    *                       /* Zero or more times. */
+  ) => {
+    /* Enclose the expansion in a block so that we can use multiple statements. */
+    {
+      /* Start a repetition. */
+      $(
+        /* Each repeat will contain the following statement, with $element replaced. */
+        log_no_err! {
+          TRACE,
+          "{} = {}",
+          stringify!($element),
+          &format!("{:#?}", $element)
+        }
+      )*
   }};
 }
 

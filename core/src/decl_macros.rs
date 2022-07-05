@@ -201,27 +201,24 @@ macro_rules! debug {
   }};
 
   (
-    // Start a repetition:
-    $(
-        // Each repeat must contain an expression...
-        $element:expr
-    )
-    // ...separated by commas...
-    ,
-    // ...zero or more times.
-    *
-  ) => {{
-    // Start a repetition:
-    $(
-      // Each repeat will contain the following statement, with
-      // $element replaced with the corresponding expression.
-      println!(
-        "{} {} = {}",
-        r3bl_rs_utils::style_error("▶"),
-        r3bl_rs_utils::style_prompt(stringify!($element)),
-        r3bl_rs_utils::style_dimmed(&format!("{:#?}", $element))
-      );
-    )*
+    $(                      /* Start a repetition. */
+      $element:expr         /* Expression. */
+    )                       /* End repetition. */
+    ,                       /* Comma separated. */
+    *                       /* Zero or more times. */
+  ) => {
+    /* Enclose the expansion in a block so that we can use multiple statements. */
+      {
+      /* Start a repetition. */
+      $(
+        /* Each repeat will contain the following statement, with $element replaced. */
+        println!(
+          "{} {} = {}",
+          r3bl_rs_utils::style_error("▶"),
+          r3bl_rs_utils::style_prompt(stringify!($element)),
+          r3bl_rs_utils::style_dimmed(&format!("{:#?}", $element))
+        );
+      )*
   }};
 }
 
