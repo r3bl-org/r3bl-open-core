@@ -15,18 +15,16 @@
  *   limitations under the License.
  */
 
-// Connect to source file.
-pub mod common;
-pub mod async_safe_share_mutate;
-pub mod decl_macros;
-pub mod color_text;
-pub mod tui_core;
+// Attach source files.
+pub mod base_units;
+pub mod pair;
+pub mod position;
+pub mod size;
+pub mod percent;
 
-// Re-export.
-pub use async_safe_share_mutate::*;
-pub use color_text::styles::*;
-pub use color_text::styles::*;
-pub use color_text::*;
-pub use common::*;
-pub use decl_macros::*;
-pub use tui_core::*;
+// Re-export attached source files.
+pub use base_units::*;
+pub use pair::*;
+pub use percent::*;
+pub use position::*;
+pub use size::*;

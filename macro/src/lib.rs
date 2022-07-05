@@ -23,12 +23,16 @@ mod utils;
 mod manager_of_things;
 mod builder;
 mod fn_wrapper;
+mod make_style;
 
 use fn_wrapper::{make_safe_async, make_shareable};
 use proc_macro::TokenStream;
 
 #[proc_macro_derive(Builder)]
 pub fn derive_macro_builder(input: TokenStream) -> TokenStream { builder::derive_proc_macro_impl(input) }
+
+#[proc_macro]
+pub fn style(input: TokenStream) -> TokenStream { make_style::fn_proc_macro_impl(input) }
 
 #[proc_macro]
 pub fn make_struct_safe_to_share_and_mutate(input: TokenStream) -> TokenStream { manager_of_things::fn_proc_macro_impl(input) }

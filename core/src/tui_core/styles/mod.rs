@@ -15,18 +15,12 @@
  *   limitations under the License.
  */
 
-// Connect to source file.
-pub mod common;
-pub mod async_safe_share_mutate;
-pub mod decl_macros;
-pub mod color_text;
-pub mod tui_core;
+// Attach sources.
+pub mod style;
+pub mod stylesheet;
+pub mod tw_color;
 
 // Re-export.
-pub use async_safe_share_mutate::*;
-pub use color_text::styles::*;
-pub use color_text::styles::*;
-pub use color_text::*;
-pub use common::*;
-pub use decl_macros::*;
-pub use tui_core::*;
+pub use style::*;
+pub use stylesheet::*;
+pub use tw_color::*;

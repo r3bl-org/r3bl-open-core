@@ -15,7 +15,6 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_macro::Builder;
 use std::{
   error::Error,
   fmt::{Display, Result as FmtResult},
@@ -27,7 +26,7 @@ pub type CommonResult<T> = OGResult<T, Box<dyn Error + Send + Sync>>;
 
 /// Common error struct.
 /// [Docs](https://learning-rust.github.io/docs/e7.custom_error_types.html)
-#[derive(Debug, Clone, Builder)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct CommonError {
   err_type: CommonErrorType,
@@ -47,6 +46,8 @@ pub enum CommonErrorType {
   StackUnderflow,
   ParsingError,
   IOError,
+  ValueOutOfRange,
+  InvalidValue,
 }
 
 impl Default for CommonErrorType {

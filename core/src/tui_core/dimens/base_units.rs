@@ -15,18 +15,13 @@
  *   limitations under the License.
  */
 
-// Connect to source file.
-pub mod common;
-pub mod async_safe_share_mutate;
-pub mod decl_macros;
-pub mod color_text;
-pub mod tui_core;
+/// Maps to whatever base units `crossterm` uses.
+pub type UnitType = u16;
 
-// Re-export.
-pub use async_safe_share_mutate::*;
-pub use color_text::styles::*;
-pub use color_text::styles::*;
-pub use color_text::*;
-pub use common::*;
-pub use decl_macros::*;
-pub use tui_core::*;
+/// Converts a variety of types ([i32], [usize]) to a [UnitType].
+#[macro_export]
+macro_rules! convert_to_base_unit {
+  ($self:expr) => {
+    $self.try_into().unwrap_or($self as UnitType)
+  };
+}

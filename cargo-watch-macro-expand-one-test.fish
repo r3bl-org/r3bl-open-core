@@ -19,5 +19,8 @@ end
 # 1. cargo test --help      => these go to the cargo test command
 # 2. cargo test -- --help   => these go to the binary that is being tested
 
+# More info about disabling cargo warnings:
+# https://users.rust-lang.org/t/suppress-warnings-from-the-cargo-command/10536/2?u=nazmulidris
+
 # cargo watch -x check -x "ltest $argv --color always -q --message-format short  -- --nocapture" -c -q
-cargo watch -x "expand --test $argv"
+RUSTFLAGS=-Awarnings cargo watch -x "expand --test $argv" -c -q

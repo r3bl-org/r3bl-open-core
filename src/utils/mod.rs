@@ -21,7 +21,6 @@
 //! 4. Easy to work w/ readline.
 //! 5. Interrogation of types.
 
-pub mod common_result_and_error;
 pub mod lazy_hash_map;
 pub mod lazy_field;
 pub mod safe_unwrap;
@@ -33,7 +32,6 @@ pub mod file_logging;
 // <https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html#documentation-comments-as-tests>
 
 // Re-export the following modules:
-pub use common_result_and_error::*;
 pub use file_logging::*;
 pub use lazy_field::*;
 pub use lazy_hash_map::*;

@@ -1,5 +1,27 @@
+move `tui-core` from `r3bl-cmdr` here:
+  ✔ add `tui-core` to `core` @done(22-07-05 16:19)
+  ✔ make this work w/ the `style!` macro @done(22-07-05 16:19)
+
+add `style!` proc macro:
+  ✔ impl attrib (bold, dim, etc) @done(22-07-05 16:19)
+  ☐ make this work w/ the real `Style` struct (update test below)
+  ☐ impl margin
+  ☐ impl color_fg
+  ☐ impl color_bg
+
+test_make_style_macro.rs:
+  ☐ use the real `Style` struct (not the fake one)
+
+publish:
+  ☐ rev `core` version & publish (`tui-core`)
+  ☐ rev `macro` version & publish
+  ☐ rev main version
+  ☐ update `README.md` (run `doctoc`)
+  ☐ publish `public` version 
+
 move `tui` from `r3bl-cmdr` here:
   ☐ move the `tui` folder here when it is ready
   ☐ move the tests here
   ☐ update README.md
   ☐ rev the public version & publish
+
