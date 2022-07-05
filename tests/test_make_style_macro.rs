@@ -46,4 +46,6 @@ fn test_simple_expansion() {
   };
 
   assert_eq!(style1.id, "style1");
+  assert!(style1.bold);
+  assert!(style1.dim);
 }

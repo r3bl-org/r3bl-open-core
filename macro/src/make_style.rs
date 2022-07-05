@@ -93,50 +93,54 @@ impl Parse for StyleMetadata {
     };
 
     // Parse id (required).
-    let lookahead = input.lookahead1();
-    if lookahead.peek(kw::id) {
-      input.parse::<kw::id>()?;
-      input.parse::<Token![:]>()?;
-      let id = input.parse::<Literal>()?;
-      metadata.id = id;
+    {
+      let lookahead = input.lookahead1();
+      if lookahead.peek(kw::id) {
+        input.parse::<kw::id>()?;
+        input.parse::<Token![:]>()?;
+        let id = input.parse::<Literal>()?;
+        metadata.id = id;
+      }
     }
 
     // Parse attrib (optional).
-    let lookahead = input.lookahead1();
-    if lookahead.peek(kw::attrib) {
-      input.parse::<kw::attrib>()?;
-      input.parse::<Token![:]>()?;
+    {
+      let lookahead = input.lookahead1();
+      if lookahead.peek(kw::attrib) {
+        input.parse::<kw::attrib>()?;
+        input.parse::<Token![:]>()?;
 
-      let punct_attrs: syn::punctuated::Punctuated<StyleAttribute, Token![,]> = input.parse_terminated(|input| {
-        let lookahead = input.lookahead1();
-        if lookahead.peek(kw::bold) {
-          input.parse::<kw::bold>()?;
-          Ok(StyleAttribute::Bold)
-        } else if lookahead.peek(kw::dim) {
-          input.parse::<kw::dim>()?;
-          Ok(StyleAttribute::Dim)
-        } else if lookahead.peek(kw::underline) {
-          input.parse::<kw::underline>()?;
-          Ok(StyleAttribute::Underline)
-        } else if lookahead.peek(kw::reverse) {
-          input.parse::<kw::reverse>()?;
-          Ok(StyleAttribute::Reverse)
-        } else if lookahead.peek(kw::hidden) {
-          input.parse::<kw::hidden>()?;
-          Ok(StyleAttribute::Hidden)
-        } else if lookahead.peek(kw::strikethrough) {
-          input.parse::<kw::strikethrough>()?;
-          Ok(StyleAttribute::Strikethrough)
-        } else {
-          Err(lookahead.error())
-        }
-      })?;
+        let punct_attrs: syn::punctuated::Punctuated<StyleAttribute, Token![,]> = input.parse_terminated(|input| {
+          let lookahead = input.lookahead1();
+          if lookahead.peek(kw::bold) {
+            input.parse::<kw::bold>()?;
+            Ok(StyleAttribute::Bold)
+          } else if lookahead.peek(kw::dim) {
+            input.parse::<kw::dim>()?;
+            Ok(StyleAttribute::Dim)
+          } else if lookahead.peek(kw::underline) {
+            input.parse::<kw::underline>()?;
+            Ok(StyleAttribute::Underline)
+          } else if lookahead.peek(kw::reverse) {
+            input.parse::<kw::reverse>()?;
+            Ok(StyleAttribute::Reverse)
+          } else if lookahead.peek(kw::hidden) {
+            input.parse::<kw::hidden>()?;
+            Ok(StyleAttribute::Hidden)
+          } else if lookahead.peek(kw::strikethrough) {
+            input.parse::<kw::strikethrough>()?;
+            Ok(StyleAttribute::Strikethrough)
+          } else {
+            Err(lookahead.error())
+          }
+        })?;
 
-      punct_attrs.iter().for_each(|attrib| {
-        metadata.attrib_vec.push(attrib.clone());
-      });
+        punct_attrs.iter().for_each(|attrib| {
+          metadata.attrib_vec.push(attrib.clone());
+        });
 
-      println!("🚀 punct_attrs: {:?}", punct_attrs);
+        println!("🚀 punct_attrs: {:?}", punct_attrs);
+      }
     }
 
     Ok(metadata)
@@ -162,7 +166,6 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
   let has_attrib_hidden = attrib_vec.contains(&StyleAttribute::Hidden);
   let has_attrib_strikethrough = attrib_vec.contains(&StyleAttribute::Strikethrough);
 
-  // TODO: gen the source using style_info
   quote! {
     Style {
       id: #id,
@@ -172,6 +175,7 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
       reverse: #has_attrib_reverse,
       hidden: #has_attrib_hidden,
       strikethrough: #has_attrib_strikethrough,
+      // TODO: add .. Default::default() at the end
     }
   }
   .into()
