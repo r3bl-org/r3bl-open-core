@@ -20,4 +20,4 @@ end
 # 2. cargo test -- --help   => these go to the binary that is being tested
 
 # cargo watch -x check -x "ltest $argv --color always -q --message-format short  -- --nocapture" -c -q
-RUST_BACKTRACE=1 RUSTFLAGS=-Awarnings cargo watch -x check -x "test --test $argv -- --show-output" -c -q
+RUST_BACKTRACE=1 cargo watch -x check -x "test --test $argv -- --show-output" -c -q
