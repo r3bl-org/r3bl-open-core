@@ -24,7 +24,7 @@ use syn::{parse::{Parse, ParseStream},
 
 use crate::utils::IdentExt;
 
-const DEBUG: bool = true;
+const DEBUG: bool = false;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum StyleAttribute {
@@ -152,7 +152,16 @@ impl Parse for StyleMetadata {
     }
 
     // Parse color_bg (optional).
-    {}
+    {
+      let lookahead = input.lookahead1();
+      if lookahead.peek(kw::color_bg) {
+        input.parse::<kw::color_bg>()?;
+        input.parse::<Token![:]>()?;
+        let color_expr = input.parse::<Expr>()?;
+        metadata.color_bg = Some(color_expr);
+        call_if_true!(DEBUG, println!("🚀 color_bg: {:#?}", metadata.color_bg));
+      }
+    }
 
     Ok(metadata)
   }

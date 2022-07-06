@@ -29,19 +29,16 @@ use r3bl_rs_utils::style;
 
 #[test]
 fn test_debug() {
-  let style_with_attrib = style! {
+  let _ = style! {
     id: style2
     attrib: [dim, bold]
     margin: 1
     color_fg: Color::Red
-    // color_bg: Color::Rgb { r: 0, g: 0, b: 0 }
+    color_bg: Color::Rgb { r: 0, g: 0, b: 0 }
   };
-  assert_eq!(style_with_attrib.id, "style2");
-  assert!(style_with_attrib.bold);
-  assert!(!style_with_attrib.underline);
 }
 
-// TODO: enable these when macro is flushed out
+// TODO: enable these when macro is complete
 // #[test]
 // fn test_expansion_with_attrib() {
 //   let style_no_attrib = style! {
@@ -63,3 +60,7 @@ fn test_debug() {
 //   assert!(!style_with_attrib.hidden);
 //   assert!(!style_with_attrib.strikethrough);
 // }
+
+// TODO: add tests for margin
+// TODO: add tests for color_fg
+// TODO: add tests for color_bg
