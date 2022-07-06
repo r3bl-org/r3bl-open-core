@@ -177,10 +177,19 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 
   let id_str = format!("{}", id);
 
-  let margin_expr = match margin {
+  let maybe_margin_expr = match margin {
     Some(margin_int) => {
       quote! {
         margin: Some(#margin_int),
+      }
+    }
+    None => quote! {},
+  };
+
+  let maybe_color_fg_expr = match color_fg {
+    Some(color_expr) => {
+      quote! {
+        color_fg: Some(crossterm::style::#color_expr.into()),
       }
     }
     None => quote! {},
@@ -195,7 +204,8 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
       reverse: #has_attrib_reverse,
       hidden: #has_attrib_hidden,
       strikethrough: #has_attrib_strikethrough,
-      #margin_expr
+      #maybe_margin_expr
+      #maybe_color_fg_expr
       .. Default::default()
     }
   }

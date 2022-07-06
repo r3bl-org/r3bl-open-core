@@ -34,7 +34,7 @@ fn test_debug() {
     attrib: [dim, bold]
     margin: 1
     color_fg: Color::Red
-    
+    // color_bg: Color::Rgb { r: 0, g: 0, b: 0 }
   };
   assert_eq!(style_with_attrib.id, "style2");
   assert!(style_with_attrib.bold);
