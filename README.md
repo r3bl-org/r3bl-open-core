@@ -16,6 +16,8 @@
     - [throws_with_return!](#throws_with_return)
     - [log!](#log)
     - [log_no_err!](#log_no_err)
+    - [debug_log_no_err!](#debug_log_no_err)
+    - [trace_log_no_err!](#trace_log_no_err)
     - [make_api_call_for!](#make_api_call_for)
     - [fire_and_forget!](#fire_and_forget)
     - [call_if_true!](#call_if_true)
@@ -37,6 +39,7 @@
   - [safe_unwrap](#safe_unwrap)
   - [color_text](#color_text)
 - [tui (experimental)](#tui-experimental)
+  - [tui-core](#tui-core)
 - [Stability](#stability)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -1244,9 +1247,26 @@ Here's a list of functions available in this module:
 ## tui (experimental)
 
 🚧 WIP - This is an experimental module that isn’t ready yet. It is the first step towards
-creating a TUI library that can be used to create sophisticated TUI applications. This is
-similar to Ink library for Node.js & TypeScript (that uses React and Yoga). Or kinda like
-`tui` built atop `crossterm` (and not `termion`).
+creating a TUI (text user interface) library that can be used to create rich terminal
+applications. This is similar to Ink library for Node.js & TypeScript (that uses React and
+Yoga). It is built atop `crossterm` but can easily be ported to other low level terminal
+libraries. The idea is that it takes the best ideas from Redux, React (even JSX), and CSS
+to create a modern way to create powerful and efficient (concurrent & parallel) terminal
+applications in Rust.
+
+### tui-core
+
+The `tui-core` module lives in the `core` crate and contains the following foundations for
+a TUI architecture:
+
+1. `dimens` - All the units, size, position structs can be found here.
+2. `styles` - This is the equivalent of CSS. There's a `style!` proc macro (in the `macro`
+   crate) that provides a nice JSX-like syntax (DSL) for creating styles.
+
+As the functionality is build and the API stabilized in `r3bl-cmdr`
+[crate](https://crates.io/crates/r3bl-cmdr) &
+[repo](https://github.com/r3bl-org/r3bl-cmdr), they will be moved here (from the `tui`
+package there).
 
 ## Stability
 
