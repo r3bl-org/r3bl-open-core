@@ -15,11 +15,13 @@
     "Keypress",
     "lazyfield",
     "lazymemovalues",
+    "litint",
     "middlewares",
     "punct",
     "qself",
     "repr",
     "reqwest",
+    "retval",
     "rustflags",
     "simplelog",
     "stylesheet"

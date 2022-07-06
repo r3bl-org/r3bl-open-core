@@ -17,6 +17,7 @@
 
 pub trait IdentExt {
   fn create_from_string(&self, string: &str) -> Self;
+  fn as_str(&self) -> String;
 }
 
 impl IdentExt for proc_macro2::Ident {
@@ -27,4 +28,6 @@ impl IdentExt for proc_macro2::Ident {
     let name = str::replace(name_with_template_placeholder, "{}", &self.to_string());
     proc_macro2::Ident::new(&name, self.span())
   }
+
+  fn as_str(&self) -> String { std::string::ToString::to_string(&self) }
 }

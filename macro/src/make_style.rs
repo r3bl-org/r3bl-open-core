@@ -22,6 +22,10 @@ use syn::{parse::{Parse, ParseStream},
           parse_macro_input,
           *};
 
+use crate::utils::IdentExt;
+
+const DEBUG: bool = true;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum StyleAttribute {
   Bold,
@@ -38,8 +42,8 @@ struct StyleMetadata {
   id: Ident,                       /* Only required field. */
   attrib_vec: Vec<StyleAttribute>, /* Attributes are optional. */
   margin: Option<UnitType>,        /* Optional. */
-  color_fg: Option<TWColor>,       /* Optional. */
-  color_bg: Option<TWColor>,       /* Optional. */
+  color_fg: Option<Expr>,          /* Optional. */
+  color_bg: Option<Expr>,          /* Optional. */
 }
 
 /// [syn custom keywords docs](https://docs.rs/syn/latest/syn/macro.custom_keyword.html)
@@ -70,19 +74,6 @@ mod kw {
 /// ```
 impl Parse for StyleMetadata {
   fn parse(input: ParseStream) -> Result<Self> {
-    // TODO: parse the tokens & make a struct
-    // Sample code:
-    // let lookahead = input.lookahead1();
-    // if lookahead.peek(Ident) {
-    //     input.parse().map(GenericParam::Type)
-    // } else if lookahead.peek(Lifetime) {
-    //     input.parse().map(GenericParam::Lifetime)
-    // } else if lookahead.peek(Token![const]) {
-    //     input.parse().map(GenericParam::Const)
-    // } else {
-    //     Err(lookahead.error())
-    // }
-
     let mut metadata = StyleMetadata {
       id: Ident::new("tbd", Span::call_site()),
       attrib_vec: Vec::new(),
@@ -100,6 +91,7 @@ impl Parse for StyleMetadata {
         let id = input.parse::<Ident>()?;
         metadata.id = id;
       }
+      call_if_true!(DEBUG, println!("🚀 id: {:?}", metadata.id));
     }
 
     // Parse attrib (optional).
@@ -109,36 +101,58 @@ impl Parse for StyleMetadata {
         input.parse::<kw::attrib>()?;
         input.parse::<Token![:]>()?;
 
-        let punct_attrs: syn::punctuated::Punctuated<StyleAttribute, Token![,]> = input.parse_terminated(|input| {
-          let lookahead = input.lookahead1();
-          if lookahead.peek(kw::bold) {
-            input.parse::<kw::bold>()?;
-            Ok(StyleAttribute::Bold)
-          } else if lookahead.peek(kw::dim) {
-            input.parse::<kw::dim>()?;
-            Ok(StyleAttribute::Dim)
-          } else if lookahead.peek(kw::underline) {
-            input.parse::<kw::underline>()?;
-            Ok(StyleAttribute::Underline)
-          } else if lookahead.peek(kw::reverse) {
-            input.parse::<kw::reverse>()?;
-            Ok(StyleAttribute::Reverse)
-          } else if lookahead.peek(kw::hidden) {
-            input.parse::<kw::hidden>()?;
-            Ok(StyleAttribute::Hidden)
-          } else if lookahead.peek(kw::strikethrough) {
-            input.parse::<kw::strikethrough>()?;
-            Ok(StyleAttribute::Strikethrough)
-          } else {
-            Err(lookahead.error())
+        let expr_array: ExprArray = input.parse()?;
+        for item in expr_array.elems {
+          if let Expr::Path(ExprPath {
+            attrs: _,
+            qself: _,
+            path: Path { segments, .. },
+          }) = item
+          {
+            let PathSegment { ident, arguments: _ } = segments.first().unwrap();
+            match ident.as_str().as_ref() {
+              "bold" => metadata.attrib_vec.push(StyleAttribute::Bold),
+              "dim" => metadata.attrib_vec.push(StyleAttribute::Dim),
+              "underline" => metadata.attrib_vec.push(StyleAttribute::Underline),
+              "reverse" => metadata.attrib_vec.push(StyleAttribute::Reverse),
+              "hidden" => metadata.attrib_vec.push(StyleAttribute::Hidden),
+              "strikethrough" => metadata.attrib_vec.push(StyleAttribute::Strikethrough),
+              _ => panic!("🚀 unknown attrib: {}", ident),
+            }
           }
-        })?;
+        }
 
-        punct_attrs.iter().for_each(|attrib| {
-          metadata.attrib_vec.push(attrib.clone());
-        });
+        call_if_true!(DEBUG, println!("🚀 attrib_vec: {:?}", metadata.attrib_vec));
       }
     }
+
+    // Parse margin (optional).
+    {
+      let lookahead = input.lookahead1();
+      if lookahead.peek(kw::margin) {
+        input.parse::<kw::margin>()?;
+        input.parse::<Token![:]>()?;
+        let lit_int = input.parse::<LitInt>()?;
+        let margin_int: UnitType = lit_int.base10_parse().unwrap();
+        metadata.margin = Some(margin_int);
+        call_if_true!(DEBUG, println!("🚀 margin: {:?}", &metadata.margin));
+      }
+    }
+
+    // Parse color_fg (optional).
+    {
+      let lookahead = input.lookahead1();
+      if lookahead.peek(kw::color_fg) {
+        input.parse::<kw::color_fg>()?;
+        input.parse::<Token![:]>()?;
+        let color_expr = input.parse::<Expr>()?;
+        metadata.color_fg = Some(color_expr);
+        call_if_true!(DEBUG, println!("🚀 color_fg: {:#?}", metadata.color_fg));
+      }
+    }
+
+    // Parse color_bg (optional).
+    {}
 
     Ok(metadata)
   }
@@ -163,6 +177,15 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 
   let id_str = format!("{}", id);
 
+  let margin_expr = match margin {
+    Some(margin_int) => {
+      quote! {
+        margin: Some(#margin_int),
+      }
+    }
+    None => quote! {},
+  };
+
   quote! {
     r3bl_rs_utils::Style {
       id: #id_str.to_string(),
@@ -172,6 +195,7 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
       reverse: #has_attrib_reverse,
       hidden: #has_attrib_hidden,
       strikethrough: #has_attrib_strikethrough,
+      #margin_expr
       .. Default::default()
     }
   }
