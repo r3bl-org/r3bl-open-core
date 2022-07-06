@@ -29,12 +29,22 @@ use r3bl_rs_utils::style;
 
 #[test]
 fn test_simple_expansion() {
-  let style1 = style! {
+  let style_no_attrib = style! {
     id: style1
-    attrib: bold
   };
+  assert_eq!(style_no_attrib.id, "style1");
+  assert!(!style_no_attrib.bold);
+  assert!(!style_no_attrib.dim);
 
-  assert_eq!(style1.id, "style1");
-  assert!(style1.bold);
-  assert!(style1.dim);
+  let style_with_attrib = style! {
+    id: style2
+    attrib: dim, bold
+  };
+  assert_eq!(style_with_attrib.id, "style2");
+  assert!(style_with_attrib.bold);
+  assert!(style_with_attrib.dim);
+  assert!(!style_with_attrib.underline);
+  assert!(!style_with_attrib.reverse);
+  assert!(!style_with_attrib.hidden);
+  assert!(!style_with_attrib.strikethrough);
 }

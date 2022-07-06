@@ -23,4 +23,4 @@ end
 # https://users.rust-lang.org/t/suppress-warnings-from-the-cargo-command/10536/2?u=nazmulidris
 
 # cargo watch -x check -x "ltest $argv --color always -q --message-format short  -- --nocapture" -c -q
-RUSTFLAGS=-Awarnings cargo watch -x "expand --test $argv" -c -q
+RUST_BACKTRACE=1 RUSTFLAGS=-Awarnings cargo watch -x "expand --test $argv" -c -q
