@@ -204,6 +204,15 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     None => quote! {},
   };
 
+  let maybe_color_bg_expr = match color_bg {
+    Some(color_expr) => {
+      quote! {
+        color_bg: Some(crossterm::style::#color_expr.into()),
+      }
+    }
+    None => quote! {},
+  };
+
   quote! {
     r3bl_rs_utils::Style {
       id: #id_str.to_string(),
@@ -215,6 +224,7 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
       strikethrough: #has_attrib_strikethrough,
       #maybe_margin_expr
       #maybe_color_fg_expr
+      #maybe_color_bg_expr
       .. Default::default()
     }
   }

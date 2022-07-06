@@ -25,10 +25,10 @@
 //! To watch for test output run this script:
 //! `./cargo-watch-one-test.fish test_make_style_macro`
 
-use r3bl_rs_utils::style;
+use r3bl_rs_utils::{style, with};
 
 #[test]
-fn test_debug() {
+fn test_syntax_expansion() {
   let _ = style! {
     id: style2
     attrib: [dim, bold]
@@ -38,29 +38,66 @@ fn test_debug() {
   };
 }
 
-// TODO: enable these when macro is complete
-// #[test]
-// fn test_expansion_with_attrib() {
-//   let style_no_attrib = style! {
-//     id: style1
-//   };
-//   assert_eq!(style_no_attrib.id, "style1");
-//   assert!(!style_no_attrib.bold);
-//   assert!(!style_no_attrib.dim);
+#[test]
+fn test_with_attrib() {
+  let style_no_attrib = style! {
+    id: style1
+  };
+  assert_eq!(style_no_attrib.id, "style1");
+  assert!(!style_no_attrib.bold);
+  assert!(!style_no_attrib.dim);
 
-//   let style_with_attrib = style! {
-//     id: style2
-//     attrib: dim, bold
-//   };
-//   assert_eq!(style_with_attrib.id, "style2");
-//   assert!(style_with_attrib.bold);
-//   assert!(style_with_attrib.dim);
-//   assert!(!style_with_attrib.underline);
-//   assert!(!style_with_attrib.reverse);
-//   assert!(!style_with_attrib.hidden);
-//   assert!(!style_with_attrib.strikethrough);
-// }
+  let style_with_attrib = style! {
+    id: style2
+    attrib: [dim, bold]
+  };
+  assert_eq!(style_with_attrib.id, "style2");
+  assert!(style_with_attrib.bold);
+  assert!(style_with_attrib.dim);
+  assert!(!style_with_attrib.underline);
+  assert!(!style_with_attrib.reverse);
+  assert!(!style_with_attrib.hidden);
+  assert!(!style_with_attrib.strikethrough);
+}
 
-// TODO: add tests for margin
-// TODO: add tests for color_fg
-// TODO: add tests for color_bg
+#[test]
+fn test_with_margin() {
+  with! {
+    style! {
+      id: style1
+      margin: 1
+    },
+    as it,
+    run {
+      assert_eq!(it.margin, Some(1));
+    }
+  }
+}
+
+#[test]
+fn test_with_color_fg() {
+  with! {
+    style! {
+      id: style1
+      color_fg: Color::Red
+    },
+    as it,
+    run {
+      assert_eq!(it.color_fg, Some(crossterm::style::Color::Red.into()));
+    }
+  }
+}
+
+#[test]
+fn test_with_color_bg() {
+  with! {
+    style! {
+      id: style1
+      color_bg: Color::Rgb { r: 0, g: 0, b: 0 }
+    },
+    as it,
+    run {
+      assert_eq!(it.color_bg, Some(crossterm::style::Color::Rgb { r: 0, g: 0, b: 0 }.into()));
+    }
+  }
+}
