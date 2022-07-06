@@ -29,19 +29,8 @@ use r3bl_rs_utils::style;
 
 #[test]
 fn test_simple_expansion() {
-  // TODO: remove this placeholder struct & use the real one
-  pub struct Style<'a> {
-    pub id: &'a str,
-    pub bold: bool,
-    pub dim: bool,
-    pub underline: bool,
-    pub reverse: bool,
-    pub hidden: bool,
-    pub strikethrough: bool,
-  }
-
   let style1 = style! {
-    id: "style1"
+    id: style1
     attrib: bold
   };
 

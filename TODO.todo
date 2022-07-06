@@ -4,7 +4,7 @@ move `tui-core` from `r3bl-cmdr` here:
 
 add `style!` proc macro:
   ✔ impl attrib (bold, dim, etc) @done(22-07-05 16:19)
-  ☐ make this work w/ the real `Style` struct (update test below)
+  ✔ make this work w/ the real `Style` struct (update test below) @done(22-07-05 19:51)
   ☐ impl margin
   ☐ impl color_fg
   ☐ impl color_bg

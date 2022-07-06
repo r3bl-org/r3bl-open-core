@@ -15,13 +15,12 @@
  *   limitations under the License.
  */
 
-use proc_macro2::Literal;
+use proc_macro2::*;
 use quote::quote;
 use r3bl_rs_utils_core::*;
 use syn::{parse::{Parse, ParseStream},
           parse_macro_input,
-          Result,
-          Token};
+          *};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum StyleAttribute {
@@ -36,7 +35,7 @@ enum StyleAttribute {
 /// Docs: https://docs.rs/syn/1.0.98/syn/parse/struct.ParseBuffer.html
 #[derive(Debug, Clone)]
 struct StyleMetadata {
-  id: Literal,                     /* Only required field. */
+  id: Ident,                       /* Only required field. */
   attrib_vec: Vec<StyleAttribute>, /* Attributes are optional. */
   margin: Option<UnitType>,        /* Optional. */
   color_fg: Option<TWColor>,       /* Optional. */
@@ -85,7 +84,7 @@ impl Parse for StyleMetadata {
     // }
 
     let mut metadata = StyleMetadata {
-      id: Literal::string(""),
+      id: Ident::new("tbd", Span::call_site()),
       attrib_vec: Vec::new(),
       margin: None,
       color_fg: None,
@@ -98,7 +97,7 @@ impl Parse for StyleMetadata {
       if lookahead.peek(kw::id) {
         input.parse::<kw::id>()?;
         input.parse::<Token![:]>()?;
-        let id = input.parse::<Literal>()?;
+        let id = input.parse::<Ident>()?;
         metadata.id = id;
       }
     }
@@ -138,8 +137,6 @@ impl Parse for StyleMetadata {
         punct_attrs.iter().for_each(|attrib| {
           metadata.attrib_vec.push(attrib.clone());
         });
-
-        println!("🚀 punct_attrs: {:?}", punct_attrs);
       }
     }
 
@@ -157,8 +154,6 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     color_bg,
   } = style_metadata;
 
-  println!("🚀 attrib_vec: {:?}", attrib_vec);
-
   let has_attrib_bold = attrib_vec.contains(&StyleAttribute::Bold);
   let has_attrib_dim = attrib_vec.contains(&StyleAttribute::Dim);
   let has_attrib_underline = attrib_vec.contains(&StyleAttribute::Underline);
@@ -166,16 +161,18 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
   let has_attrib_hidden = attrib_vec.contains(&StyleAttribute::Hidden);
   let has_attrib_strikethrough = attrib_vec.contains(&StyleAttribute::Strikethrough);
 
+  let id_str = format!("{}", id);
+
   quote! {
-    Style {
-      id: #id,
+    r3bl_rs_utils::Style {
+      id: #id_str.to_string(),
       bold: #has_attrib_bold,
       dim: #has_attrib_dim,
       underline: #has_attrib_underline,
       reverse: #has_attrib_reverse,
       hidden: #has_attrib_hidden,
       strikethrough: #has_attrib_strikethrough,
-      // TODO: add .. Default::default() at the end
+      .. Default::default()
     }
   }
   .into()
