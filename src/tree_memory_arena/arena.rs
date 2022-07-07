@@ -16,19 +16,20 @@
 
 //! [`Arena`] is defined here.
 
-use std::{
-  collections::HashMap,
-  fmt::Debug,
-  sync::{atomic::AtomicUsize, Arc, RwLock},
-};
-
-use crate::utils::{call_if_some, unwrap_arc_read_lock_and_call, unwrap_arc_write_lock_and_call, with_mut};
-use crate::utils::{ReadGuarded, WriteGuarded};
+use std::{collections::HashMap,
+          fmt::Debug,
+          sync::{atomic::AtomicUsize, Arc, RwLock}};
 
 use super::{arena_types::HasId, ArenaMap, FilterFn, NodeRef, ResultUidList, WeakNodeRef};
-/// This struct represents a node in a tree. It may have a parent. It can hold multiple children.
-/// And it has a payload. It also has an id that uniquely identifies it. An [`Arena`] or
-/// [`super::MTArena`] is used to hold nodes.
+use crate::utils::{call_if_some,
+                   unwrap_arc_read_lock_and_call,
+                   unwrap_arc_write_lock_and_call,
+                   with_mut,
+                   ReadGuarded,
+                   WriteGuarded};
+/// This struct represents a node in a tree. It may have a parent. It can hold
+/// multiple children. And it has a payload. It also has an id that uniquely
+/// identifies it. An [`Arena`] or [`super::MTArena`] is used to hold nodes.
 #[derive(Debug)]
 pub struct Node<T>
 where
@@ -47,34 +48,29 @@ where
   type IdType = usize;
 
   /// Delegate this to `self.id`, which is type `usize`.
-  fn get_id(&self) -> usize {
-    self.id.get_id()
-  }
+  fn get_id(&self) -> usize { self.id.get_id() }
 
   /// Delegate this to `self.id`, which is type `usize`.
-  fn as_some(&self) -> Option<usize> {
-    self.id.as_some()
-  }
+  fn as_some(&self) -> Option<usize> { self.id.as_some() }
 }
 
-/// Data structure to store & manipulate a (non-binary) tree of data in memory. It can be used as
-/// the basis to implement a plethora of different data structures. The non-binary tree is just one
-/// example of what can be built using the underlying code.
+/// Data structure to store & manipulate a (non-binary) tree of data in memory.
+/// It can be used as the basis to implement a plethora of different data
+/// structures. The non-binary tree is just one example of what can be built
+/// using the underlying code.
 ///
 /// 1. [Wikipedia definition of memory
 ///    arena](https://en.wikipedia.org/wiki/Region-based_memory_management)
-/// 2. You can learn more about how this library was built from this [developerlife.com
-///    article](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
+/// 2. You can learn more about how this library was built from this
+/// [developerlife.com    article](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
 ///
 /// # Examples
 ///
 /// ## Basic usage
 ///
 /// ```rust
+/// use r3bl_rs_utils::tree_memory_arena::{Arena, HasId, MTArena, ResultUidList};
 /// use r3bl_rs_utils_core::{style_primary, style_prompt};
-/// use r3bl_rs_utils::{
-///   tree_memory_arena::{Arena, HasId, MTArena, ResultUidList}
-/// };
 ///
 /// let mut arena = Arena::<usize>::new();
 /// let node_1_value = 42 as usize;
@@ -86,10 +82,8 @@ where
 /// ## Get weak and strong references from the arena (tree), and tree walking
 ///
 /// ```rust
+/// use r3bl_rs_utils::tree_memory_arena::{Arena, HasId, MTArena, ResultUidList};
 /// use r3bl_rs_utils_core::{style_primary, style_prompt};
-/// use r3bl_rs_utils::{
-///   tree_memory_arena::{Arena, HasId, MTArena, ResultUidList}
-/// };
 ///
 /// let mut arena = Arena::<usize>::new();
 /// let node_1_value = 42 as usize;
@@ -118,9 +112,9 @@ where
 ///   assert_eq!(node_list, vec![0]);
 /// }
 /// ```
-/// 📜 There are more complex ways of using [`Arena`] and [`super::MTArena`]. Please look at these
-/// extensive integration tests that put them thru their paces
-/// [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
+/// 📜 There are more complex ways of using [`Arena`] and [`super::MTArena`].
+/// Please look at these extensive integration tests that put them thru their
+/// paces [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
 #[derive(Debug)]
 pub struct Arena<T>
 where
@@ -169,9 +163,7 @@ where
     node_to_lookup.parent
   }
 
-  pub fn node_exists(&self, node_id: usize) -> bool {
-    self.map.read().unwrap().contains_key(&node_id.get_id())
-  }
+  pub fn node_exists(&self, node_id: usize) -> bool { self.map.read().unwrap().contains_key(&node_id.get_id()) }
 
   pub fn has_parent(&self, node_id: usize) -> bool {
     if self.node_exists(node_id) {
@@ -198,7 +190,8 @@ where
       });
     };
 
-    // If `node_id` has a parent, remove `node_id` its children, otherwise skip this step.
+    // If `node_id` has a parent, remove `node_id` its children, otherwise skip this
+    // step.
     if self.has_parent(node_id) {
       remove_node_id_from_parent(self.get_parent_of(node_id).unwrap()); // Safe to unwrap.
     }
@@ -223,8 +216,9 @@ where
     let mut stack: Vec<usize> = vec![node_id.get_id()];
 
     while let Some(node_id) = stack.pop() {
-      // Question mark operator works below, since it returns a `Option` to `while let ...`.
-      // Basically skip to the next item in the `stack` if `node_id` can't be found.
+      // Question mark operator works below, since it returns a `Option` to `while let
+      // ...`. Basically skip to the next item in the `stack` if `node_id` can't
+      // be found.
       let node_ref = self.get_node_arc(node_id)?;
       unwrap_arc_read_lock_and_call(&node_ref, &mut |node| {
         collected_nodes.push(node.get_id());
@@ -309,9 +303,7 @@ where
     new_node_id
   }
 
-  fn generate_uid(&self) -> usize {
-    self.atomic_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
-  }
+  fn generate_uid(&self) -> usize { self.atomic_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst) }
 
   pub fn new() -> Self {
     Arena {
@@ -325,7 +317,5 @@ impl<T> Default for Arena<T>
 where
   T: Debug + Clone + Send + Sync,
 {
-  fn default() -> Self {
-    Self::new()
-  }
+  fn default() -> Self { Self::new() }
 }

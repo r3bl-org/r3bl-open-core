@@ -15,12 +15,12 @@
  *   limitations under the License.
  */
 
-use async_trait::async_trait;
-use r3bl_rs_utils::{
-  redux::{AsyncMiddleware, AsyncMiddlewareSpawns, AsyncReducer, AsyncSubscriber, Store},
-  spawn_dispatch_action, SharedStore,
-};
 use std::sync::Arc;
+
+use async_trait::async_trait;
+use r3bl_rs_utils::{redux::{AsyncMiddleware, AsyncMiddlewareSpawns, AsyncReducer, AsyncSubscriber, Store},
+                    spawn_dispatch_action,
+                    SharedStore};
 use tokio::{sync::RwLock, task::JoinHandle};
 
 /// ```text
@@ -47,9 +47,7 @@ pub enum Action {
 }
 
 impl Default for Action {
-  fn default() -> Self {
-    Action::Noop
-  }
+  fn default() -> Self { Action::Noop }
 }
 
 /// ```text
@@ -71,8 +69,8 @@ pub struct State {
 /// ```
 #[tokio::test]
 async fn test_redux_store_works_for_main_use_cases() {
-  // This shared object is used to collect results from the subscriber & middleware &
-  // reducer functions & test it later.
+  // This shared object is used to collect results from the subscriber &
+  // middleware & reducer functions & test it later.
   let shared_vec = Arc::new(RwLock::new(Vec::<i32>::new()));
 
   // Create the store.
@@ -89,9 +87,7 @@ async fn test_redux_store_works_for_main_use_cases() {
 /// │ Test helpers: Reset shared object.                   │
 /// ╰──────────────────────────────────────────────────────╯
 /// ```
-async fn reset_shared_object(shared_vec: &Arc<RwLock<Vec<i32>>>) {
-  shared_vec.write().await.clear();
-}
+async fn reset_shared_object(shared_vec: &Arc<RwLock<Vec<i32>>>) { shared_vec.write().await.clear(); }
 
 /// ```text
 /// ╭──────────────────────────────────────────────────────╮
@@ -113,7 +109,9 @@ async fn reset_store(shared_store: &SharedStore<State, Action>) {
 /// 2. No middlewares.
 async fn run_reducer_and_subscriber(shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>) {
   // Setup store w/ only reducer & subscriber (no middlewares).
-  let my_subscriber = MySubscriber { shared_vec: shared_vec.clone() };
+  let my_subscriber = MySubscriber {
+    shared_vec: shared_vec.clone(),
+  };
   reset_shared_object(shared_vec).await;
   reset_store(shared_store).await;
 
@@ -148,7 +146,9 @@ async fn run_reducer_and_subscriber(shared_vec: &Arc<RwLock<Vec<i32>>>, shared_s
 /// 1. Does not involve any reducers or subscribers.
 /// 2. Just this middleware which modifies the `shared_vec`.
 async fn run_mw_example_no_spawn(shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>) {
-  let mw_returns_none = MwExampleNoSpawn { shared_vec: shared_vec.clone() };
+  let mw_returns_none = MwExampleNoSpawn {
+    shared_vec: shared_vec.clone(),
+  };
 
   reset_shared_object(shared_vec).await;
 
@@ -164,7 +164,11 @@ async fn run_mw_example_no_spawn(shared_vec: &Arc<RwLock<Vec<i32>>>, shared_stor
 
   assert_eq!(shared_vec.write().await.pop(), Some(-1));
 
-  shared_store.write().await.dispatch_action(Action::MwExampleNoSpawn_Bar(1)).await;
+  shared_store
+    .write()
+    .await
+    .dispatch_action(Action::MwExampleNoSpawn_Bar(1))
+    .await;
 
   assert_eq!(shared_vec.write().await.pop(), Some(-2));
 
@@ -173,21 +177,22 @@ async fn run_mw_example_no_spawn(shared_vec: &Arc<RwLock<Vec<i32>>>, shared_stor
   assert_eq!(shared_vec.write().await.pop(), Some(-3));
 }
 
-async fn delay_for_spawned_mw_to_execute() {
-  tokio::time::sleep(tokio::time::Duration::from_millis(0)).await;
-}
+async fn delay_for_spawned_mw_to_execute() { tokio::time::sleep(tokio::time::Duration::from_millis(0)).await; }
 
 /// ```
 /// ╭──────────────────────────────────────────────────────╮
 /// │ Test async middleware: [MwExampleSpawns].            │
 /// ╰──────────────────────────────────────────────────────╯
 /// ```
-/// Involves use of both `MwExampleSpawns` mw & `MyReducer` reducer. This middleware
-/// spawns a new task that:
+/// Involves use of both `MwExampleSpawns` mw & `MyReducer` reducer. This
+/// middleware spawns a new task that:
 /// 1. Adds `-4` to the `shared_vec`.
-/// 2. Then dispatches an action to `MyReducer` that resets the store w/ `[-100]`.
+/// 2. Then dispatches an action to `MyReducer` that resets the store w/
+/// `[-100]`.
 async fn run_mw_example_spawns(shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>) {
-  let mw_returns_action = MwExampleSpawns { shared_vec: shared_vec.clone() };
+  let mw_returns_action = MwExampleSpawns {
+    shared_vec: shared_vec.clone(),
+  };
   reset_store(shared_store).await;
   reset_shared_object(shared_vec).await;
 

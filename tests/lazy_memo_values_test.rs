@@ -16,8 +16,9 @@
 
 //! Integration tests for the `lazy` module.
 
-use r3bl_rs_utils::{debug, utils::LazyMemoValues};
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
+
+use r3bl_rs_utils::{debug, utils::LazyMemoValues};
 
 #[test]
 fn test_lazy() {

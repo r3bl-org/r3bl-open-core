@@ -132,7 +132,9 @@ impl Parse for SafeFnWrapperSyntaxInfo {
 /// an optional where clause.
 /// - Eg of input: `A, B`
 /// - Eg of return: `where A : Sync + Send + 'static, B : Sync + Send + 'static`
-pub fn make_opt_where_clause_from_generic_args(wrapper_name_type_generic_args: Option<Punctuated<GenericArgument, Comma>>) -> proc_macro2::TokenStream {
+pub fn make_opt_where_clause_from_generic_args(
+  wrapper_name_type_generic_args: Option<Punctuated<GenericArgument, Comma>>,
+) -> proc_macro2::TokenStream {
   if wrapper_name_type_generic_args.is_some() {
     let generic_args_list = wrapper_name_type_generic_args.as_ref().unwrap();
 

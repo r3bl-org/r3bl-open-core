@@ -15,8 +15,8 @@
  *   limitations under the License.
  */
 
-/// Wrap the given block or stmt so that it returns a Result<()>. It is just syntactic
-/// sugar that helps having to write Ok(()) repeatedly.
+/// Wrap the given block or stmt so that it returns a Result<()>. It is just
+/// syntactic sugar that helps having to write Ok(()) repeatedly.
 ///
 /// Here's an example.
 /// ```ignore
@@ -61,8 +61,8 @@ macro_rules! throws {
   }};
 }
 
-/// Wrap the given block or stmt so that it returns a Result<$it>. It is just syntactic
-/// sugar that helps having to write Ok($it) repeatedly.
+/// Wrap the given block or stmt so that it returns a Result<$it>. It is just
+/// syntactic sugar that helps having to write Ok($it) repeatedly.
 ///
 /// Here's an example.
 /// ```ignore
@@ -82,9 +82,9 @@ macro_rules! throws_with_return {
   }};
 }
 
-/// Declarative macro to surround the given block with a call to [`tokio::spawn`]. This is
-/// useful for spawning a task that will run in the background from a function that is NOT
-/// async.
+/// Declarative macro to surround the given block with a call to
+/// [`tokio::spawn`]. This is useful for spawning a task that will run in the
+/// background from a function that is NOT async.
 ///
 /// # Examples:
 ///
@@ -92,9 +92,9 @@ macro_rules! throws_with_return {
 ///
 /// ```no_run
 /// pub fn foo() {
-///   fire_and_forget!(
-///     { println!("Hello"); }
-///   );
+///   fire_and_forget!({
+///     println!("Hello");
+///   });
 /// }
 /// ```
 ///
@@ -144,11 +144,11 @@ macro_rules! call_if_true {
   }};
 }
 
-/// This is a really simple macro to make it effortless to use the color console logger.
-/// It takes a single identifier as an argument, or any number of them. It simply dumps an
-/// arrow symbol, followed by the identifier ([stringify]'d) along with the value that it
-/// contains (using the [Debug] formatter). All of the output is colorized for easy
-/// readability. You can use it like this.
+/// This is a really simple macro to make it effortless to use the color console
+/// logger. It takes a single identifier as an argument, or any number of them.
+/// It simply dumps an arrow symbol, followed by the identifier ([stringify]'d)
+/// along with the value that it contains (using the [Debug] formatter). All of
+/// the output is colorized for easy readability. You can use it like this.
 ///
 /// ```rust
 /// let my_string = "Hello World!";
@@ -157,8 +157,8 @@ macro_rules! call_if_true {
 /// debug!(my_string, my_number);
 /// ```
 ///
-/// You can also use it in these other forms for terminal raw mode output. This will dump
-/// the output to stderr.
+/// You can also use it in these other forms for terminal raw mode output. This
+/// will dump the output to stderr.
 ///
 /// ```rust
 /// if let Err(err) = $cmd {
@@ -222,7 +222,8 @@ macro_rules! debug {
   }};
 }
 
-/// Declarative macro to generate the API call functions. This adds the following:
+/// Declarative macro to generate the API call functions. This adds the
+/// following:
 /// - `make_request()` async function to call the API.
 /// - `to_string()` function to stringify the struct to JSON.
 /// - impl `Display` trait to for the struct using `to_string()` above.
@@ -237,21 +238,17 @@ macro_rules! make_api_call_for {
     }
 
     impl $IDENT {
-      pub fn to_string(&self) -> String {
-        serde_json::to_string(&self).unwrap()
-      }
+      pub fn to_string(&self) -> String { serde_json::to_string(&self).unwrap() }
     }
 
     impl Display for $IDENT {
-      fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
-      }
+      fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "{}", self.to_string()) }
     }
   };
 }
 
-/// Runs the `$code` block after evaluating the `$eval` expression and assigning it to
-/// `$id`.
+/// Runs the `$code` block after evaluating the `$eval` expression and assigning
+/// it to `$id`.
 ///
 /// # Examples:
 /// ```ignore
@@ -278,7 +275,8 @@ macro_rules! with {
   };
 }
 
-/// Similar to [`with!`] except `$id` is a mutable reference to the `$eval` expression.
+/// Similar to [`with!`] except `$id` is a mutable reference to the `$eval`
+/// expression.
 #[macro_export]
 macro_rules! with_mut {
   ($eval:expr, as $id:ident, run $code:block) => {
@@ -287,8 +285,9 @@ macro_rules! with_mut {
   };
 }
 
-/// Unwrap the `$option`, and if `None` then run the `$next` closure which must return an
-/// error. This macro must be called in a block that returns a `ResultCommon<T>`.
+/// Unwrap the `$option`, and if `None` then run the `$next` closure which must
+/// return an error. This macro must be called in a block that returns a
+/// `ResultCommon<T>`.
 ///
 /// # Example
 ///
@@ -315,9 +314,9 @@ macro_rules! unwrap_option_or_run_fn_returning_err {
   };
 }
 
-/// Unwrap the `$option`, and if `None` then run the `$next` closure which must return a
-/// value that is set to `$option`. Basically a way to compute something lazily when it
-/// (the `Option`) is set to `None`.
+/// Unwrap the `$option`, and if `None` then run the `$next` closure which must
+/// return a value that is set to `$option`. Basically a way to compute
+/// something lazily when it (the `Option`) is set to `None`.
 ///
 /// # Example
 ///

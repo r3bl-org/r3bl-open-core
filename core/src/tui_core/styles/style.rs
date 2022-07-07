@@ -15,17 +15,18 @@
  *   limitations under the License.
  */
 
-use crate::*;
-use bitflags::bitflags;
 use core::fmt::Debug;
+use std::{fmt::{Display, Formatter},
+          ops::{Add, AddAssign}};
+
+use bitflags::bitflags;
 use serde::{Deserialize, Serialize};
 
-use std::fmt::{Display, Formatter};
-use std::ops::{Add, AddAssign};
+use crate::*;
 
-/// Use the `StyleBuilder` to create a `Style`. `Style` objects are meant to be immutable.
-/// If you need to modify a `Style`, you should use the `StyleBuilder` to create a new
-/// one.
+/// Use the `StyleBuilder` to create a `Style`. `Style` objects are meant to be
+/// immutable. If you need to modify a `Style`, you should use the
+/// `StyleBuilder` to create a new one.
 #[derive(Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Style {
   pub id: String,
@@ -106,9 +107,9 @@ bitflags! {
 }
 
 impl Style {
-  /// The `StyleFlag` is lazily computed and cached after the first time it is evaluated.
-  /// A `Style` should be built using via `StyleBuilder and the expectation is that once
-  /// built, the style won't be modified.
+  /// The `StyleFlag` is lazily computed and cached after the first time it is
+  /// evaluated. A `Style` should be built using via `StyleBuilder and the
+  /// expectation is that once built, the style won't be modified.
   pub fn get_bitflags(&mut self) -> StyleFlag {
     unwrap_option_or_compute_if_none! {
       self.cached_bitflags,
@@ -116,9 +117,7 @@ impl Style {
     }
   }
 
-  pub fn reset_bitflags(&mut self) {
-    self.cached_bitflags = None;
-  }
+  pub fn reset_bitflags(&mut self) { self.cached_bitflags = None; }
 
   fn gen_bitflags(&self) -> StyleFlag {
     let mut it = StyleFlag::empty();
@@ -158,8 +157,8 @@ impl Style {
   }
 }
 
-/// Implement specificity behavior for [Style] by implementing [Add] trait. Here's the
-/// rule: `Style + Style (overrides) = Style`.
+/// Implement specificity behavior for [Style] by implementing [Add] trait.
+/// Here's the rule: `Style + Style (overrides) = Style`.
 /// - https://doc.rust-lang.org/book/ch19-03-advanced-traits.html
 impl Add<Self> for Style {
   type Output = Self;
@@ -208,7 +207,5 @@ impl Add<Self> for Style {
 }
 
 impl AddAssign<&Style> for Style {
-  fn add_assign(&mut self, other: &Style) {
-    *self = self.clone() + other.clone();
-  }
+  fn add_assign(&mut self, other: &Style) { *self = self.clone() + other.clone(); }
 }

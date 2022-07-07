@@ -22,7 +22,8 @@ use super::utils::{data_ext::DataExt,
                    ident_ext::IdentExt,
                    syn_parser_helpers::{transform_named_fields_into_ts, with_data_struct_make_ts}};
 
-const BUILDER_DOC_URL: &str = "https://rust-lang.github.io/api-guidelines/type-safety.html#builders-enable-construction-of-complex-values-c-builder";
+const BUILDER_DOC_URL: &str =
+  "https://rust-lang.github.io/api-guidelines/type-safety.html#builders-enable-construction-of-complex-values-c-builder";
 
 /// Example #1: <https://github.com/dtolnay/syn/blob/master/examples/heapsize/heapsize_derive/src/lib.rs>
 /// Example #2: <https://github.com/jonhoo/proc-macro-workshop/blob/master/builder/src/lib.rs>
@@ -149,7 +150,9 @@ fn make_new_where_clause_with_default_trait_bounds_for_named_fields(data_struct:
 ///     Comma,
 /// ]
 /// ```
-fn add_trait_bounds_to_existing_where_clause_ts(where_clause: &Option<syn::WhereClause>, traits: &[&str]) -> proc_macro2::TokenStream {
+fn add_trait_bounds_to_existing_where_clause_ts(
+  where_clause: &Option<syn::WhereClause>, traits: &[&str],
+) -> proc_macro2::TokenStream {
   // Must parse the `traits.join("+")` string into a [syn::Type].
   let joined_traits: Type = parse_str(&traits.join(" + ")).unwrap();
 

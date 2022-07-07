@@ -15,14 +15,13 @@
  *   limitations under the License.
  */
 
-use crate::*;
-use std::{
-  fmt::{self, Debug},
-  ops::{Add, AddAssign, Mul},
-};
+use std::{fmt::{self, Debug},
+          ops::{Add, AddAssign, Mul}};
 
-/// Here is a visual representation of how position and sizing works for the layout
-/// engine.
+use crate::*;
+
+/// Here is a visual representation of how position and sizing works for the
+/// layout engine.
 ///
 /// ```text
 ///     0   4    9    1    2    2
@@ -71,16 +70,12 @@ impl From<(UnitType, UnitType)> for Position {
 }
 
 impl From<Position> for (UnitType, UnitType) {
-  fn from(position: Position) -> Self {
-    (position.col, position.row)
-  }
+  fn from(position: Position) -> Self { (position.col, position.row) }
 }
 
 impl Position {
   /// Return an `Option` with `self`.
-  pub fn as_some(&self) -> Option<Self> {
-    Some(*self)
-  }
+  pub fn as_some(&self) -> Option<Self> { Some(*self) }
 
   /// Add given `col` value to `self`.
   pub fn add_col(&mut self, value: usize) -> Self {
@@ -98,9 +93,7 @@ impl Position {
 }
 
 impl Debug for Position {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "[col:{}, row:{}]", self.col, self.row)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "[col:{}, row:{}]", self.col, self.row) }
 }
 
 impl Add<Position> for Position {

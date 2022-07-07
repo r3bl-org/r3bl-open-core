@@ -18,8 +18,7 @@
 //! New in Rust v 1.60.0: Arc cyclic references.
 //! https://doc.rust-lang.org/stable/std/sync/struct.Arc.html#method.new_cyclic
 
-use std::sync::RwLock;
-use std::sync::{Arc, Weak};
+use std::sync::{Arc, RwLock, Weak};
 
 #[test]
 fn test_new() {
@@ -41,17 +40,11 @@ fn test_new() {
     }
 
     /// Return a reference counted pointer to Self.
-    pub fn clone_arc(&self) -> Arc<RwLock<Self>> {
-      self.weak_me.upgrade().unwrap()
-    }
+    pub fn clone_arc(&self) -> Arc<RwLock<Self>> { self.weak_me.upgrade().unwrap() }
 
-    pub fn set_data(&mut self, arg: &str) {
-      self.data = String::from(arg);
-    }
+    pub fn set_data(&mut self, arg: &str) { self.data = String::from(arg); }
 
-    pub fn get_data(&self) -> String {
-      self.data.clone()
-    }
+    pub fn get_data(&self) -> String { self.data.clone() }
   }
 
   let g_arc: Arc<RwLock<Gadget>> = Gadget::new();

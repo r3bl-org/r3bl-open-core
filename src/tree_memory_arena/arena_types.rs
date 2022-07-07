@@ -16,10 +16,8 @@
 
 //! Type aliases to improve code readability.
 
-use std::{
-  collections::HashMap,
-  sync::{Arc, RwLock, Weak},
-};
+use std::{collections::HashMap,
+          sync::{Arc, RwLock, Weak}};
 
 use super::{Arena, Node};
 
@@ -37,14 +35,10 @@ impl HasId for usize {
   type IdType = usize;
 
   /// Returns a clone of the id.
-  fn get_id(&self) -> usize {
-    *self
-  }
+  fn get_id(&self) -> usize { *self }
 
   /// Returns an `Option::Some` containing a clone of the id.
-  fn as_some(&self) -> Option<Self::IdType> {
-    Some(self.get_id())
-  }
+  fn as_some(&self) -> Option<Self::IdType> { Some(self.get_id()) }
 }
 
 // Type aliases for readability.

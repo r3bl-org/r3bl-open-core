@@ -24,9 +24,7 @@ pub mod tui_core;
 
 // Re-export.
 pub use async_safe_share_mutate::*;
-pub use color_text::styles::*;
-pub use color_text::styles::*;
-pub use color_text::*;
+pub use color_text::{styles::*, *};
 pub use common::*;
 pub use decl_macros::*;
 pub use tui_core::*;

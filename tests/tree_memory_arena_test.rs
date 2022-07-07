@@ -17,10 +17,8 @@
 
 //! Integration tests for the `tree_memory_arena` module.
 
-use std::{
-  sync::Arc,
-  thread::{self, JoinHandle},
-};
+use std::{sync::Arc,
+          thread::{self, JoinHandle}};
 
 /// Rust book: https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory
 use r3bl_rs_utils::tree_memory_arena::{Arena, HasId, MTArena, ResultUidList};
@@ -122,13 +120,21 @@ fn test_can_walk_tree_and_delete_nodes_from_tree() {
 
   // Test that node deletion works correctly.
   {
-    println!("{} {:?}", style_primary("root -before- ==>"), arena.tree_walk_dfs(root).unwrap());
+    println!(
+      "{} {:?}",
+      style_primary("root -before- ==>"),
+      arena.tree_walk_dfs(root).unwrap()
+    );
     let deletion_list = arena.delete_node(child1);
     assert_eq!(deletion_list.as_ref().unwrap().len(), 3);
     assert!(deletion_list.as_ref().unwrap().contains(&gc_1_id));
     assert!(deletion_list.as_ref().unwrap().contains(&gc_2_id));
     assert!(deletion_list.as_ref().unwrap().contains(&child1));
-    println!("{} {:?}", style_prompt("root -after- <=="), arena.tree_walk_dfs(root).unwrap());
+    println!(
+      "{} {:?}",
+      style_prompt("root -after- <=="),
+      arena.tree_walk_dfs(root).unwrap()
+    );
     assert_eq!(dbg!(arena.tree_walk_dfs(root).unwrap()).len(), 2);
   }
 
@@ -179,7 +185,8 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
   let mut handles: Handles = Vec::new();
   let arena = MTArena::<String>::new();
 
-  // Thread 1 - add root. Spawn and wait (since the 2 threads below need the root).
+  // Thread 1 - add root. Spawn and wait (since the 2 threads below need the
+  // root).
   {
     let arena_arc = arena.get_arena_arc();
     let thread = thread::spawn(move || {
@@ -224,7 +231,8 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
   });
   println!("{:#?}", &arena);
 
-  // Perform tree walking in parallel. Note the lambda does capture many enclosing variable context.
+  // Perform tree walking in parallel. Note the lambda does capture many enclosing
+  // variable context.
   {
     let arena_arc = arena.get_arena_arc();
     let fn_arc = Arc::new(move |uid, payload| {

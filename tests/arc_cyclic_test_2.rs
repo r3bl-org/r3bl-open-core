@@ -82,9 +82,7 @@ fn test_new() {
     }
 
     /// Returns a clone of my `Arc`.
-    pub fn get(&self) -> _Arc<_RwLock<Self>> {
-      self.weak_me.upgrade().unwrap()
-    }
+    pub fn get(&self) -> _Arc<_RwLock<Self>> { self.weak_me.upgrade().unwrap() }
 
     /// Proxy for `fu_mut` invocation.
     pub fn invoke(&self, arg1: S, arg2: A) -> S {

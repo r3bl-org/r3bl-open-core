@@ -44,9 +44,7 @@ mod test1 {
   #[test]
   fn test_proc_macro_struct_and_enum() {
     impl Default for MyEnum {
-      fn default() -> Self {
-        MyEnum::MyVariant1
-      }
+      fn default() -> Self { MyEnum::MyVariant1 }
     }
   }
 }

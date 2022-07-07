@@ -14,13 +14,16 @@
  limitations under the License.
 */
 
-use crate::{
-  redux::{AsyncMiddlewareSpawnsVec, AsyncMiddlewareVec, AsyncReducerVec, AsyncSubscriberVec},
-  AsyncMiddleware, AsyncMiddlewareSpawns, AsyncReducer, AsyncSubscriber,
-};
 use core::{fmt::Debug, hash::Hash};
 use std::sync::Arc;
+
 use tokio::sync::RwLock;
+
+use crate::{redux::{AsyncMiddlewareSpawnsVec, AsyncMiddlewareVec, AsyncReducerVec, AsyncSubscriberVec},
+            AsyncMiddleware,
+            AsyncMiddlewareSpawns,
+            AsyncReducer,
+            AsyncSubscriber};
 
 pub type SharedStore<S, A> = Arc<RwLock<Store<S, A>>>;
 
@@ -65,7 +68,8 @@ where
   }
 }
 
-// TODO: make history implementation more comprehensive (eg: max history size) & add tests.
+// TODO: make history implementation more comprehensive (eg: max history size) &
+// add tests.
 
 // Handle subscriber, middleware, reducer management.
 impl<S, A> Store<S, A>
@@ -88,7 +92,9 @@ where
     self
   }
 
-  pub async fn add_middleware_spawns(&mut self, middleware_fn: Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>) -> &mut Store<S, A> {
+  pub async fn add_middleware_spawns(
+    &mut self, middleware_fn: Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>,
+  ) -> &mut Store<S, A> {
     self.middleware_spawns_vec.push(middleware_fn);
     self
   }
@@ -115,13 +121,9 @@ where
   S: Clone + Default + PartialEq + Debug + Hash + Sync + Send,
   A: Clone + Default + Send + Sync,
 {
-  pub fn get_state(&self) -> S {
-    self.state.clone()
-  }
+  pub fn get_state(&self) -> S { self.state.clone() }
 
-  pub fn get_history(&self) -> Vec<S> {
-    self.history.clone()
-  }
+  pub fn get_history(&self) -> Vec<S> { self.history.clone() }
 
   pub async fn dispatch_spawn(&'static mut self, action: A) {
     tokio::spawn(async move {
@@ -208,7 +210,8 @@ where
     }
   }
 
-  /// Run in parallel (on multiple threads, if using Tokio's multithreaded executor).
+  /// Run in parallel (on multiple threads, if using Tokio's multithreaded
+  /// executor).
   async fn run_middleware_spawns_vec(&mut self, my_action: A) {
     let mut vec_join_handle = vec![];
 

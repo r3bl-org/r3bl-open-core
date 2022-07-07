@@ -16,35 +16,31 @@
 
 //! [`MTArena`] is defined here.
 
+use std::{fmt::Debug,
+          marker::{Send, Sync},
+          sync::{Arc, RwLock},
+          thread::{spawn, JoinHandle}};
+
+use super::{arena::Arena, Node, ResultUidList, ShareableArena, WalkerFn};
 use crate::utils::ReadGuarded;
 
-use super::arena::Arena;
-use super::{Node, ResultUidList, ShareableArena, WalkerFn};
-use std::fmt::Debug;
-use std::marker::{Send, Sync};
-use std::sync::{Arc, RwLock};
-use std::thread::{spawn, JoinHandle};
-
-/// [`MTArena`] is built on top of [`Arena`] but with support for sharing the arena
-/// between threads. Also supports tree walking on a separate thread w/ a lambda that's supplied.
+/// [`MTArena`] is built on top of [`Arena`] but with support for sharing the
+/// arena between threads. Also supports tree walking on a separate thread w/ a
+/// lambda that's supplied.
 ///
 /// 1. [Wikipedia definition of memory
 ///    arena](https://en.wikipedia.org/wiki/Region-based_memory_management)
-/// 2. You can learn more about how this library was built from this [developerlife.com
-///    article](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
+/// 2. You can learn more about how this library was built from this
+/// [developerlife.com    article](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
 ///
 /// # Examples
 ///
 /// ```rust
-/// use std::{
-///   sync::Arc,
-///   thread::{self, JoinHandle},
-/// };
+/// use std::{sync::Arc,
+///           thread::{self, JoinHandle}};
 ///
+/// use r3bl_rs_utils::tree_memory_arena::{Arena, HasId, MTArena, ResultUidList};
 /// use r3bl_rs_utils_core::{style_primary, style_prompt};
-/// use r3bl_rs_utils::{
-///   tree_memory_arena::{Arena, HasId, MTArena, ResultUidList}
-/// };
 ///
 /// type ThreadResult = Vec<usize>;
 /// type Handles = Vec<JoinHandle<ThreadResult>>;
@@ -79,8 +75,7 @@ use std::thread::{spawn, JoinHandle};
 ///
 ///   // Walk tree w/ a new thread using arc to lambda.
 ///   {
-///     let thread_handle: JoinHandle<ResultUidList> =
-///       arena.tree_walk_parallel(0, fn_arc.clone());
+///     let thread_handle: JoinHandle<ResultUidList> = arena.tree_walk_parallel(0, fn_arc.clone());
 ///
 ///     let result_node_list = thread_handle.join().unwrap();
 ///     println!("{:#?}", result_node_list);
@@ -88,17 +83,16 @@ use std::thread::{spawn, JoinHandle};
 ///
 ///   // Walk tree w/ a new thread using arc to lambda.
 ///   {
-///     let thread_handle: JoinHandle<ResultUidList> =
-///       arena.tree_walk_parallel(1, fn_arc.clone());
+///     let thread_handle: JoinHandle<ResultUidList> = arena.tree_walk_parallel(1, fn_arc.clone());
 ///
 ///     let result_node_list = thread_handle.join().unwrap();
 ///     println!("{:#?}", result_node_list);
 ///   }
 /// }
 /// ```
-/// 📜 There are more complex ways of using [`super::Arena`] and [`MTArena`]. Please look at these
-/// extensive integration tests that put them thru their paces
-/// [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
+/// 📜 There are more complex ways of using [`super::Arena`] and [`MTArena`].
+/// Please look at these extensive integration tests that put them thru their
+/// paces [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
 #[derive(Debug)]
 pub struct MTArena<T>
 where
@@ -117,20 +111,14 @@ where
     }
   }
 
-  pub fn get_arena_arc(&self) -> ShareableArena<T> {
-    self.arena_arc.clone()
-  }
+  pub fn get_arena_arc(&self) -> ShareableArena<T> { self.arena_arc.clone() }
 
-  /// `walker_fn` is a closure that captures variables. It is wrapped in an `Arc` to be able to
-  /// clone that and share it across threads.
+  /// `walker_fn` is a closure that captures variables. It is wrapped in an
+  /// `Arc` to be able to clone that and share it across threads.
   /// More info:
   /// 1. SO thread: <https://stackoverflow.com/a/36213377/2085356>
   /// 2. Scoped threads: <https://docs.rs/crossbeam/0.3.0/crossbeam/struct.Scope.html>
-  pub fn tree_walk_parallel(
-    &self,
-    node_id: usize,
-    walker_fn: Arc<WalkerFn<T>>,
-  ) -> JoinHandle<ResultUidList> {
+  pub fn tree_walk_parallel(&self, node_id: usize, walker_fn: Arc<WalkerFn<T>>) -> JoinHandle<ResultUidList> {
     let arena_arc = self.get_arena_arc();
     let walker_fn_arc = walker_fn.clone();
 
@@ -138,18 +126,16 @@ where
       let read_guard: ReadGuarded<Arena<T>> = arena_arc.read().unwrap();
       let return_value = read_guard.tree_walk_dfs(node_id);
 
-      // While walking the tree, in a separate thread, call the `walker_fn` for each node.
+      // While walking the tree, in a separate thread, call the `walker_fn` for each
+      // node.
       if let Some(result_list) = return_value.clone() {
-        result_list
-          
-          .into_iter()
-          .for_each(|uid| {
-            let node_arc_opt = read_guard.get_node_arc(uid);
-            if let Some(node_arc) = node_arc_opt {
-              let node_ref: ReadGuarded<Node<T>> = node_arc.read().unwrap();
-              walker_fn_arc(uid, node_ref.payload.clone());
-            }
-          });
+        result_list.into_iter().for_each(|uid| {
+          let node_arc_opt = read_guard.get_node_arc(uid);
+          if let Some(node_arc) = node_arc_opt {
+            let node_ref: ReadGuarded<Node<T>> = node_arc.read().unwrap();
+            walker_fn_arc(uid, node_ref.payload.clone());
+          }
+        });
       }
 
       return_value
@@ -161,7 +147,5 @@ impl<T> Default for MTArena<T>
 where
   T: Debug + Send + Sync + Clone + 'static,
 {
-    fn default() -> Self {
-        Self::new()
-    }
+  fn default() -> Self { Self::new() }
 }

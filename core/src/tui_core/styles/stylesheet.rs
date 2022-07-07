@@ -23,9 +23,7 @@ pub struct Stylesheet {
 }
 
 impl Stylesheet {
-  pub fn new() -> Self {
-    Self::default()
-  }
+  pub fn new() -> Self { Self::default() }
 
   pub fn add_style(&mut self, style: Style) -> CommonResult<()> {
     throws!({
@@ -44,9 +42,7 @@ impl Stylesheet {
     });
   }
 
-  pub fn find_style_by_id(&self, id: &str) -> Option<Style> {
-    self.styles.iter().find(|style| style.id == id).cloned()
-  }
+  pub fn find_style_by_id(&self, id: &str) -> Option<Style> { self.styles.iter().find(|style| style.id == id).cloned() }
 
   /// Returns [None] if no style in `ids` [Vec] is found.
   pub fn find_styles_by_ids(&self, ids: Vec<&str>) -> Option<Vec<Style>> {

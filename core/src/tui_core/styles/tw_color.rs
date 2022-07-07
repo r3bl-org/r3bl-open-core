@@ -16,12 +16,13 @@
  */
 
 use core::fmt::Debug;
-use crossterm::style::*;
-use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
-/// Wrapper for [Color]. This is used to serialize and deserialize [Color]s. And it [Deref]s to
-/// [Color] for interchangeable use w/ [Color].
+use crossterm::style::*;
+use serde::{Deserialize, Serialize};
+
+/// Wrapper for [Color]. This is used to serialize and deserialize [Color]s. And
+/// it [Deref]s to [Color] for interchangeable use w/ [Color].
 ///
 /// Docs:
 /// 1. https://serde.rs/remote-derive.html
@@ -83,13 +84,15 @@ enum ColorDef {
   /// An RGB color. See [RGB color model](https://en.wikipedia.org/wiki/RGB_color_model) for more info.
   ///
   /// Most UNIX terminals and Windows 10 supported only.
-  /// See [Platform-specific notes](enum.Color.html#platform-specific-notes) for more info.
+  /// See [Platform-specific notes](enum.Color.html#platform-specific-notes) for
+  /// more info.
   Rgb { r: u8, g: u8, b: u8 },
 
   /// An ANSI color. See [256 colors - cheat sheet](https://jonasjacek.github.io/colors/) for more info.
   ///
   /// Most UNIX terminals and Windows 10 supported only.
-  /// See [Platform-specific notes](enum.Color.html#platform-specific-notes) for more info.
+  /// See [Platform-specific notes](enum.Color.html#platform-specific-notes) for
+  /// more info.
   AnsiValue(u8),
 }
 
@@ -101,15 +104,11 @@ pub struct TWColor {
 
 impl Deref for TWColor {
   type Target = Color;
-  fn deref(&self) -> &Self::Target {
-    &self.color
-  }
+  fn deref(&self) -> &Self::Target { &self.color }
 }
 
 impl From<Color> for TWColor {
-  fn from(color: Color) -> Self {
-    TWColor { color }
-  }
+  fn from(color: Color) -> Self { TWColor { color } }
 }
 
 impl Debug for TWColor {

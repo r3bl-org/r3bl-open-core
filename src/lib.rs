@@ -15,15 +15,17 @@
 */
 
 //! This library provides utility functions:
-//!  1. Thread safe asynchronous Redux library (uses Tokio to run subscribers and middleware in
-//!     separate tasks). The reducer functions are run in sequence (not in Tokio tasks).
-//!  2. Declarative macros, and procedural macros (both function like and derive) to avoid
-//!     having to write lots of boilerplate code for many common (and complex) tasks.
-//!  3. Non binary tree data structure inspired by memory arenas, that is thread safe and
+//!  1. Thread safe asynchronous Redux library (uses Tokio to run subscribers
+//! and middleware in     separate tasks). The reducer functions are run in
+//! sequence (not in Tokio tasks).  2. Declarative macros, and procedural macros
+//! (both function like and derive) to avoid     having to write lots of
+//! boilerplate code for many common (and complex) tasks.  3. Non binary tree
+//! data structure inspired by memory arenas, that is thread safe and
 //!     supports parallel tree walking.
-//!  4. Functions to unwrap deeply nested objects inspired by Kotlin scope functions.
-//!  5. Capabilities to make it easier to build TUIs (Text User Interface apps) in Rust. This
-//!     is currently experimental and is being actively developed.
+//!  4. Functions to unwrap deeply nested objects inspired by Kotlin scope
+//! functions.  5. Capabilities to make it easier to build TUIs (Text User
+//! Interface apps) in Rust. This     is currently experimental and is being
+//! actively developed.
 //!
 //! > 💡 To learn more about this library, please read how it was built on
 //! > [developerlife.com](https://developerlife.com):
@@ -33,7 +35,8 @@
 //! > 3. https://developerlife.com/2022/03/30/rust-proc-macro/
 //!
 //! > 💡 You can also read all the Rust content on
-//! > [developerlife.com here](https://developerlife.com/category/Rust/). Also, the equivalent
+//! > [developerlife.com here](https://developerlife.com/category/Rust/). Also,
+//! > the equivalent
 //! > of this library is available for TypeScript and is called
 //! > [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/).
 
@@ -44,12 +47,11 @@ pub mod tui;
 pub mod redux;
 
 // Re-export.
+// Re-export from core and macro (so users of public crate can use them w/out
+// having to add dependency on each core and macro).
+pub use r3bl_rs_utils_core::*;
+pub use r3bl_rs_utils_macro::*;
 pub use redux::*;
 pub use tree_memory_arena::*;
 pub use tui::*;
 pub use utils::*;
-
-// Re-export from core and macro (so users of public crate can use them w/out having to
-// add dependency on each core and macro).
-pub use r3bl_rs_utils_core::*;
-pub use r3bl_rs_utils_macro::*;

@@ -41,8 +41,8 @@ async fn test_custom_syntax_full() {
   // Create an instance of the "manager" struct.
   let my_manager: MyMapManager<String, String> = MyMapManager::default();
 
-  // 🔒 Each of the locked objects need to be wrapped in a block, or call `drop()` so the
-  // mutex guard can be dropped and the tests won't deadlock.
+  // 🔒 Each of the locked objects need to be wrapped in a block, or call `drop()`
+  // so the mutex guard can be dropped and the tests won't deadlock.
 
   // 1. Test that `my_map` is created.
   let locked_map = my_manager.get_value().await;

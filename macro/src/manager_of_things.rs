@@ -57,10 +57,14 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
   let doc_str_impl_mutate_for_struct = format!(" Generated SafeToMutate impl for {}.", &manager_name_ident,);
 
   let doc_str_setter_fn = " Directly mutate the property.";
-  let doc_str_getter_fn = " Get a clone of the arc. This can be passed around safely, instead of passing the manager instance itself.";
-  let doc_str_static_lock_w = " 🔒 Static method that allow you to indirectly access the property via `Arc` produced by `get_ref()`.";
-  let doc_str_static_lock_r = " 🔒 Static method that allow you to indirectly access the property via `Arc` produced by `get_ref()`.";
-  let doc_str_static_with_arc_setter_fn = " Static method that allow you to indirectly mutate the property via `Arc` produced by `get_ref()`.";
+  let doc_str_getter_fn =
+    " Get a clone of the arc. This can be passed around safely, instead of passing the manager instance itself.";
+  let doc_str_static_lock_w =
+    " 🔒 Static method that allow you to indirectly access the property via `Arc` produced by `get_ref()`.";
+  let doc_str_static_lock_r =
+    " 🔒 Static method that allow you to indirectly access the property via `Arc` produced by `get_ref()`.";
+  let doc_str_static_with_arc_setter_fn =
+    " Static method that allow you to indirectly mutate the property via `Arc` produced by `get_ref()`.";
 
   let opt_generic_args = if let Some(args) = manager_type_generic_args {
     quote! { < #args > }

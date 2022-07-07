@@ -14,14 +14,15 @@
  limitations under the License.
 */
 
-//! This module contains [`Arena`] a non-binary tree implementation that is thread safe, and
-//! [`MTArena`] a variant of the tree that supports parallel tree walking.
+//! This module contains [`Arena`] a non-binary tree implementation that is
+//! thread safe, and [`MTArena`] a variant of the tree that supports parallel
+//! tree walking.
 //!
-//! 💡 You can learn more about how this library was built from this [developerlife.com
-//! article](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
+//! 💡 You can learn more about how this library was built from this
+//! [developerlife.com article](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
 //!
-//! 📜 There are more complex ways of using [`Arena`] and [`MTArena`]. Please look at these
-//! extensive integration tests that put them thru their paces
+//! 📜 There are more complex ways of using [`Arena`] and [`MTArena`]. Please
+//! look at these extensive integration tests that put them thru their paces
 //! [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
 
 pub mod arena;

@@ -14,17 +14,20 @@
  limitations under the License.
 */
 
-//! Data structures to make it easier to work w/ lazily computed values and caching them.
+//! Data structures to make it easier to work w/ lazily computed values and
+//! caching them.
 
 use std::{collections::HashMap, hash::Hash};
 
-/// This struct allows users to create a lazy hash map. A function must be provided that computes
-/// the values when they are first requested. These values are cached for the lifetime this struct.
+/// This struct allows users to create a lazy hash map. A function must be
+/// provided that computes the values when they are first requested. These
+/// values are cached for the lifetime this struct.
 ///
 /// # Examples
 ///
 /// ```rust
 /// use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
+///
 /// use r3bl_rs_utils::utils::LazyMemoValues;
 ///
 /// // These are copied in the closure below.
@@ -75,26 +78,14 @@ where
     }
   }
 
-  pub fn get_ref(
-    &mut self,
-    arg: &T,
-  ) -> &V {
+  pub fn get_ref(&mut self, arg: &T) -> &V {
     if !self.value_map.contains_key(arg) {
       let arg = arg.clone();
       let value = (self.create_value_fn)(&arg);
       self.value_map.insert(arg, value);
     }
-    self
-      .value_map
-      .get(arg)
-      .as_ref()
-      .unwrap()
+    self.value_map.get(arg).as_ref().unwrap()
   }
 
-  pub fn get_copy(
-    &mut self,
-    arg: &T,
-  ) -> V {
-    self.get_ref(arg).clone()
-  }
+  pub fn get_copy(&mut self, arg: &T) -> V { self.get_ref(arg).clone() }
 }

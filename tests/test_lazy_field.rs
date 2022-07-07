@@ -21,9 +21,7 @@ use r3bl_rs_utils::{LazyExecutor, LazyField};
 fn test_lazy_field() {
   struct MyExecutor;
   impl LazyExecutor<i32> for MyExecutor {
-    fn compute(&mut self) -> i32 {
-      1
-    }
+    fn compute(&mut self) -> i32 { 1 }
   }
 
   let mut lazy_field = LazyField::new(Box::new(MyExecutor));

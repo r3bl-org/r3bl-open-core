@@ -15,14 +15,13 @@
  *   limitations under the License.
  */
 
-use crate::*;
-use std::{
-  fmt::{self, Debug, Display},
-  ops::SubAssign,
-};
+use std::{fmt::{self, Debug, Display},
+          ops::SubAssign};
 
-/// Here is a visual representation of how position and sizing works for the layout
-/// engine.
+use crate::*;
+
+/// Here is a visual representation of how position and sizing works for the
+/// layout engine.
 ///
 /// ```text
 ///     0   4    9    1    2    2
@@ -46,9 +45,7 @@ pub struct Size {
 }
 
 impl Display for Size {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "Size: [{}, {}]", self.height, self.width)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "Size: [{}, {}]", self.height, self.width) }
 }
 
 impl SubAssign<UnitType> for Size {
@@ -98,13 +95,9 @@ impl From<(i32, i32)> for Size {
 
 impl Size {
   /// Return an `Option` with `self`.
-  pub fn as_some(&self) -> Option<Self> {
-    Some(*self)
-  }
+  pub fn as_some(&self) -> Option<Self> { Some(*self) }
 }
 
 impl Debug for Size {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "[width:{}, height:{}]", self.width, self.height)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "[width:{}, height:{}]", self.width, self.height) }
 }

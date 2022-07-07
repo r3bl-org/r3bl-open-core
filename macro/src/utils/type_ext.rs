@@ -16,7 +16,15 @@
  */
 
 use quote::ToTokens;
-use syn::{punctuated::Punctuated, token::Comma, GenericArgument, Ident, Path, PathArguments::AngleBracketed, Type, TypePath, TypeReference};
+use syn::{punctuated::Punctuated,
+          token::Comma,
+          GenericArgument,
+          Ident,
+          Path,
+          PathArguments::AngleBracketed,
+          Type,
+          TypePath,
+          TypeReference};
 
 pub trait TypeExtHasIdent {
   fn has_ident(&self) -> bool;
@@ -50,7 +58,10 @@ impl TypeExtHasIdent for syn::Type {
 
 impl TypeExtHasIdent for TypePath {
   fn has_ident(&self) -> bool {
-    let TypePath { path: Path { segments, .. }, .. } = self;
+    let TypePath {
+      path: Path { segments, .. },
+      ..
+    } = self;
     {
       let ident = &segments.first();
       ident.is_some()

@@ -15,11 +15,9 @@
  *   limitations under the License.
  */
 
-use std::{
-  error::Error,
-  fmt::{Display, Result as FmtResult},
-  result::Result as OGResult,
-};
+use std::{error::Error,
+          fmt::{Display, Result as FmtResult},
+          result::Result as OGResult};
 
 /// Type alias to make it easy to work with [`Result`]s.
 pub type CommonResult<T> = OGResult<T, Box<dyn Error + Send + Sync>>;
@@ -51,9 +49,7 @@ pub enum CommonErrorType {
 }
 
 impl Default for CommonErrorType {
-  fn default() -> Self {
-    CommonErrorType::General
-  }
+  fn default() -> Self { CommonErrorType::General }
 }
 
 /// Implement [`Error`] trait.
@@ -61,9 +57,7 @@ impl Error for CommonError {}
 
 /// Implement [`Display`] trait (needed by [`Error`] trait).
 impl Display for CommonError {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> FmtResult {
-    write!(f, "{:?}", self)
-  }
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> FmtResult { write!(f, "{:?}", self) }
 }
 
 impl CommonError {
@@ -92,7 +86,5 @@ impl CommonError {
   }
 
   /// Private helper method.
-  fn from_err<T>(err: CommonError) -> CommonResult<T> {
-    Err(Box::new(err))
-  }
+  fn from_err<T>(err: CommonError) -> CommonResult<T> { Err(Box::new(err)) }
 }

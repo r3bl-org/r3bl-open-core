@@ -22,8 +22,8 @@ type _RwLock<T> = tokio::sync::RwLock<T>;
 type _WriteG<'a, T> = tokio::sync::RwLockWriteGuard<'a, T>;
 type _ReadG<'a, T> = tokio::sync::RwLockReadGuard<'a, T>;
 
-/// This trait marks a type as being safe to share across threads (parallel safe) and
-/// tasks (async safe).
+/// This trait marks a type as being safe to share across threads (parallel
+/// safe) and tasks (async safe).
 ///
 /// [Async trait docs](https://github.com/dtolnay/async-trait).
 #[async_trait::async_trait]
@@ -33,9 +33,10 @@ pub trait SafeToShare<T> {
   fn get_ref(&self) -> _Arc<_RwLock<T>>;
 }
 
-/// This trait marks a type as being safe to mutate (interior mutability) across threads
-/// (parallel safe) and tasks (async safe). These are just convenience static methods. You
-/// can simply use the `read()` and `write()` methods directly on the `Arc` reference.
+/// This trait marks a type as being safe to mutate (interior mutability) across
+/// threads (parallel safe) and tasks (async safe). These are just convenience
+/// static methods. You can simply use the `read()` and `write()` methods
+/// directly on the `Arc` reference.
 ///
 /// [Async trait docs](https://github.com/dtolnay/async-trait).
 #[async_trait::async_trait]

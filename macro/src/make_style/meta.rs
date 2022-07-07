@@ -38,4 +38,3 @@ pub(crate) struct StyleMetadata {
   pub color_fg: Option<Expr>,   /* Optional. */
   pub color_bg: Option<Expr>,   /* Optional. */
 }
-

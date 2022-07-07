@@ -15,8 +15,9 @@
  *   limitations under the License.
  */
 
-use crate::*;
 use std::fmt::{self, Debug};
+
+use crate::*;
 
 /// Represents an integer value between 0 and 100 (inclusive).
 #[derive(Copy, Clone, PartialEq, Eq, Default)]
@@ -25,15 +26,11 @@ pub struct Percent {
 }
 
 impl fmt::Display for Percent {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}%", self.value)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{}%", self.value) }
 }
 
 impl Debug for Percent {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "PerCent value:{}%", self.value)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "PerCent value:{}%", self.value) }
 }
 
 /// https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#
@@ -60,7 +57,8 @@ impl TryFrom<i32> for Percent {
 
 impl Percent {
   /// Try and convert given `Pair` into a `(Percent, Percent)`. Return
-  /// `InvalidLayoutSizePercentage` error if given values are not between 0 and 100.
+  /// `InvalidLayoutSizePercentage` error if given values are not between 0 and
+  /// 100.
   pub fn try_from_pair(pair: Pair) -> CommonResult<(Percent, Percent)> {
     let first = pair.first.try_into();
     let second = pair.second.try_into();
@@ -74,8 +72,8 @@ impl Percent {
     }
   }
 
-  /// Try and convert given `UnitType` value to `Percent`. Return `None` if given value is
-  /// not between 0 and 100.
+  /// Try and convert given `UnitType` value to `Percent`. Return `None` if
+  /// given value is not between 0 and 100.
   fn try_and_convert(item: i32) -> Option<Percent> {
     if !(0..=100).contains(&item) {
       return None;
@@ -84,9 +82,7 @@ impl Percent {
   }
 
   /// Wrap `self` in `Option`.
-  pub fn as_some(&self) -> Option<Percent> {
-    Some(*self)
-  }
+  pub fn as_some(&self) -> Option<Percent> { Some(*self) }
 }
 
 /// Return the calculated percentage of the given value.
@@ -132,13 +128,9 @@ impl From<(Percent, Percent)> for RequestedSizePercent {
 
 impl RequestedSizePercent {
   /// Wrap `self` in `Option`.
-  pub fn as_some(&self) -> Option<Self> {
-    Some(*self)
-  }
+  pub fn as_some(&self) -> Option<Self> { Some(*self) }
 }
 
 impl Debug for RequestedSizePercent {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "[width:{}, height:{}]", self.width, self.height)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "[width:{}, height:{}]", self.width, self.height) }
 }
