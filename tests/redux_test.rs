@@ -55,7 +55,8 @@ impl Default for Action {
 /// │ State struct.                                        │
 /// ╰──────────────────────────────────────────────────────╯
 /// ```
-#[derive(Clone, Default, PartialEq, Debug, Hash)]
+#[derive(Clone, Default, PartialEq, Eq, 
+  Debug, Hash)]
 pub struct State {
   pub stack: Vec<i32>,
 }

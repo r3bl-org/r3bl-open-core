@@ -40,13 +40,10 @@ impl MetaExt for syn::Meta {
     match self {
       syn::Meta::Path(_) => panic!("Path found"),
       syn::Meta::List(_) => panic!("List found"),
-      syn::Meta::NameValue(meta_name_value) => {
-        let lit_str = match &meta_name_value.lit {
-          syn::Lit::Str(lit_str) => lit_str.value(),
-          _ => panic!("Expected a string literal"),
-        };
-        lit_str
-      }
+      syn::Meta::NameValue(meta_name_value) => match &meta_name_value.lit {
+        syn::Lit::Str(lit_str) => lit_str.value(),
+        _ => panic!("Expected a string literal"),
+      },
     }
   }
 
