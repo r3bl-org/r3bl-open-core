@@ -1,3 +1,30 @@
+move `tui-core` from `r3bl-cmdr` here:
+  ✔ add `tui-core` to `core` @done(22-07-05 16:19)
+  ✔ make this work w/ the `style!` macro @done(22-07-05 16:19)
+
+add `style!` proc macro:
+  ✔ impl attrib (bold, dim, etc) @done(22-07-05 16:19)
+  ✔ make this work w/ the real `Style` struct (update test below) @done(22-07-05 19:51)
+  ✔ impl margin @done(22-07-07 13:22)
+  ✔ impl color_fg @done(22-07-07 13:22)
+  ✔ impl color_bg @done(22-07-07 13:22)
+
+test_make_style_macro.rs:
+  ✔ use the real `Style` struct (not the fake one) @done(22-07-07 13:22)
+
+publish:
+  ✔ rev `core` version & publish (`tui-core`) @done(22-07-07 13:22)
+  ✔ rev `macro` version & publish @done(22-07-07 13:22)
+  ✔ rev main version @done(22-07-07 13:22)
+  ✔ update `README.md` (run `doctoc`) @done(22-07-07 13:22)
+  ✔ publish `public` version @done(22-07-07 13:22)
+
+move `tui` from `r3bl-cmdr` here:
+  ✔ move the `tui` folder here when it is ready @done(22-07-07 13:22)
+  ✔ move the tests here @done(22-07-07 13:22)
+  ✔ update README.md @done(22-07-07 13:22)
+  ✔ rev the public version & publish @done(22-07-07 13:22)
+
 Simplify mw:
   ✔ no longer returns `Option<Action>` @done(22-04-19 16:35)
   ✔ be opinoninated about parallel execution @done(22-04-19 16:35)
