@@ -18,6 +18,8 @@
 use std::{fmt::{self, Debug},
           ops::{Add, AddAssign, Mul}};
 
+use serde::*;
+
 use crate::*;
 
 /// Here is a visual representation of how position and sizing works for the
@@ -38,7 +40,7 @@ use crate::*;
 /// ```
 ///
 /// Position, defined as [col, row].
-#[derive(Copy, Clone, Default, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Default)]
 pub struct Position {
   pub col: UnitType,
   pub row: UnitType,

@@ -118,7 +118,9 @@ where
   /// More info:
   /// 1. SO thread: <https://stackoverflow.com/a/36213377/2085356>
   /// 2. Scoped threads: <https://docs.rs/crossbeam/0.3.0/crossbeam/struct.Scope.html>
-  pub fn tree_walk_parallel(&self, node_id: usize, walker_fn: Arc<WalkerFn<T>>) -> JoinHandle<ResultUidList> {
+  pub fn tree_walk_parallel(
+    &self, node_id: usize, walker_fn: Arc<WalkerFn<T>>,
+  ) -> JoinHandle<ResultUidList> {
     let arena_arc = self.get_arena_arc();
     let walker_fn_arc = walker_fn.clone();
 

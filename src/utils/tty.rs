@@ -36,7 +36,10 @@ pub fn readline() -> (usize, String) {
       (bytes_read, guess)
     }
     Err(_) => {
-      println!("{}", style_error("Something went wrong when reading input from terminal."));
+      println!(
+        "{}",
+        style_error("Something went wrong when reading input from terminal.")
+      );
       (0, "".to_string())
     }
   }
@@ -63,7 +66,9 @@ pub fn is_stdin_piped() -> bool { atty::isnt(atty::Stream::Stdin) }
 pub fn is_stdout_piped() -> bool { atty::isnt(atty::Stream::Stdout) }
 
 /// If you run `cargo run` the following will return true.
-pub fn is_tty() -> bool { atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) && atty::is(atty::Stream::Stderr) }
+pub fn is_tty() -> bool {
+  atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) && atty::is(atty::Stream::Stderr)
+}
 
 /// Helper trait and impl to convert [std::env::Args][Args] to a `Vec<String>`
 /// after removing the first item (which is the path to the executable)..
