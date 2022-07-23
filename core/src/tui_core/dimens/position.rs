@@ -92,6 +92,20 @@ impl Position {
     self.row += value;
     *self
   }
+
+  /// Add given `row` value to `self` w/ bounds check for max rows.
+  pub fn add_row_with_bounds(&mut self, value: usize, box_bounding_size: Size) -> Self {
+    let value: UnitType = value as UnitType;
+    let max: UnitType = box_bounding_size.rows;
+
+    if (self.row + value) >= max {
+      self.row = max
+    } else {
+      self.row += value;
+    }
+
+    *self
+  }
 }
 
 impl Debug for Position {
@@ -114,8 +128,8 @@ impl Add<Size> for Position {
   type Output = Position;
   fn add(self, other: Size) -> Self {
     Self {
-      col: self.col + other.width,
-      row: self.row + other.height,
+      col: self.col + other.cols,
+      row: self.row + other.rows,
     }
   }
 }

@@ -40,26 +40,39 @@ use crate::*;
 /// Size, defined as [height, width].
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
 pub struct Size {
-  pub width: UnitType,  // number of cols (y).
-  pub height: UnitType, // number of rows (x).
+  pub cols: UnitType, // width = number of cols (y).
+  pub rows: UnitType, // height = number of rows (x).
+}
+
+pub trait TruncateString {
+  fn truncate_at_cols(&self, arg: String) -> String;
+}
+
+impl TruncateString for Size {
+  fn truncate_at_cols(&self, mut arg: String) -> String {
+    let cols: usize = self.cols.into();
+    let result_clone = arg.clone();
+    arg.truncate(cols);
+    result_clone
+  }
 }
 
 impl Display for Size {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "Size: [{}, {}]", self.height, self.width) }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "Size: [{}, {}]", self.rows, self.cols) }
 }
 
 impl SubAssign<UnitType> for Size {
   fn sub_assign(&mut self, other: UnitType) {
-    self.width -= other;
-    self.height -= other;
+    self.cols -= other;
+    self.rows -= other;
   }
 }
 
 impl From<Pair> for Size {
   fn from(pair: Pair) -> Self {
     Self {
-      width: pair.first,
-      height: pair.second,
+      cols: pair.first,
+      rows: pair.second,
     }
   }
 }
@@ -69,8 +82,8 @@ impl From<(UnitType, UnitType)> for Size {
   /// 2. Second (pair.1) is height or rows.
   fn from(pair: (UnitType, UnitType)) -> Self {
     Self {
-      width: pair.0,
-      height: pair.1,
+      cols: pair.0,
+      rows: pair.1,
     }
   }
 }
@@ -78,8 +91,8 @@ impl From<(UnitType, UnitType)> for Size {
 impl From<(usize, usize)> for Size {
   fn from(pair: (usize, usize)) -> Self {
     Self {
-      width: convert_to_base_unit!(pair.0),
-      height: convert_to_base_unit!(pair.1),
+      cols: convert_to_base_unit!(pair.0),
+      rows: convert_to_base_unit!(pair.1),
     }
   }
 }
@@ -87,8 +100,8 @@ impl From<(usize, usize)> for Size {
 impl From<(i32, i32)> for Size {
   fn from(pair: (i32, i32)) -> Self {
     Self {
-      width: convert_to_base_unit!(pair.0),
-      height: convert_to_base_unit!(pair.1),
+      cols: convert_to_base_unit!(pair.0),
+      rows: convert_to_base_unit!(pair.1),
     }
   }
 }
@@ -99,5 +112,5 @@ impl Size {
 }
 
 impl Debug for Size {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "[width:{}, height:{}]", self.width, self.height) }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "[width:{}, height:{}]", self.cols, self.rows) }
 }
