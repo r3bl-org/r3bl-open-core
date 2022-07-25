@@ -45,10 +45,7 @@ fn test_can_add_nodes_to_tree() {
     let node_1_ref = dbg!(arena.get_node_arc(node_1_id).unwrap());
     let node_1_ref_weak = arena.get_node_arc_weak(node_1_id).unwrap();
     assert_eq!(node_1_ref.read().unwrap().payload, node_1_value);
-    assert_eq!(
-      node_1_ref_weak.upgrade().unwrap().read().unwrap().payload,
-      42
-    );
+    assert_eq!(node_1_ref_weak.upgrade().unwrap().read().unwrap().payload, 42);
   }
 
   // Can't find node by id that doesn't exist.
@@ -122,10 +119,7 @@ fn test_can_walk_tree_and_delete_nodes_from_tree() {
   assert!(child1_and_descendants.contains(&gc_2_id));
 
   assert_eq!(arena.tree_walk_dfs(child_2_id).unwrap().len(), 1);
-  assert!(arena
-    .tree_walk_dfs(child_2_id)
-    .unwrap()
-    .contains(&child_2_id));
+  assert!(arena.tree_walk_dfs(child_2_id).unwrap().contains(&child_2_id));
 
   // Test that node deletion works correctly.
   {
@@ -211,8 +205,7 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
     let arena_arc = arena.get_arena_arc();
     let thread = thread::spawn(move || {
       let mut arena_write = arena_arc.write().unwrap();
-      let parent: Option<Vec<usize>> =
-        arena_write.filter_all_nodes_by(&move |_id, payload| payload == "foo");
+      let parent: Option<Vec<usize>> = arena_write.filter_all_nodes_by(&move |_id, payload| payload == "foo");
       let parent_id = *parent.unwrap().first().unwrap();
       let child = arena_write.add_new_node("bar".to_string(), parent_id.as_some());
       vec![parent_id, child]
@@ -226,8 +219,7 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
     let arena_arc = arena.get_arena_arc();
     let thread = thread::spawn(move || {
       let mut arena_write = arena_arc.write().unwrap();
-      let parent: Option<Vec<usize>> =
-        arena_write.filter_all_nodes_by(&move |_id, payload| payload == "foo");
+      let parent: Option<Vec<usize>> = arena_write.filter_all_nodes_by(&move |_id, payload| payload == "foo");
       let parent_id = *parent.unwrap().first().unwrap();
       let child = arena_write.add_new_node("baz".to_string(), parent_id.as_some());
       vec![parent_id, child]

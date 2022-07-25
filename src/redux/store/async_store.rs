@@ -19,10 +19,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::{redux::{AsyncMiddlewareSpawnsVec,
-                    AsyncMiddlewareVec,
-                    AsyncReducerVec,
-                    AsyncSubscriberVec},
+use crate::{redux::{AsyncMiddlewareSpawnsVec, AsyncMiddlewareVec, AsyncReducerVec, AsyncSubscriberVec},
             AsyncMiddleware,
             AsyncMiddlewareSpawns,
             AsyncReducer,

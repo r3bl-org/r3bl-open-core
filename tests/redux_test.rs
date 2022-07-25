@@ -18,11 +18,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use r3bl_rs_utils::{redux::{AsyncMiddleware,
-                            AsyncMiddlewareSpawns,
-                            AsyncReducer,
-                            AsyncSubscriber,
-                            Store},
+use r3bl_rs_utils::{redux::{AsyncMiddleware, AsyncMiddlewareSpawns, AsyncReducer, AsyncSubscriber, Store},
                     spawn_dispatch_action,
                     SharedStore};
 use tokio::{sync::RwLock, task::JoinHandle};
@@ -91,9 +87,7 @@ async fn test_redux_store_works_for_main_use_cases() {
 /// │ Test helpers: Reset shared object.                   │
 /// ╰──────────────────────────────────────────────────────╯
 /// ```
-async fn reset_shared_object(shared_vec: &Arc<RwLock<Vec<i32>>>) {
-  shared_vec.write().await.clear();
-}
+async fn reset_shared_object(shared_vec: &Arc<RwLock<Vec<i32>>>) { shared_vec.write().await.clear(); }
 
 /// ```text
 /// ╭──────────────────────────────────────────────────────╮
@@ -148,11 +142,7 @@ async fn run_reducer_and_subscriber(
   assert_eq!(shared_vec.write().await.pop(), Some(4));
 
   // Clean up the store's state.
-  shared_store
-    .write()
-    .await
-    .dispatch_action(Action::Clear)
-    .await;
+  shared_store.write().await.dispatch_action(Action::Clear).await;
 
   let state = shared_store.read().await.get_state();
   assert_eq!(state.stack.len(), 0);
