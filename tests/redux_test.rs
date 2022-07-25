@@ -107,9 +107,7 @@ async fn reset_store(shared_store: &SharedStore<State, Action>) {
 /// ```
 /// 1. Test reducer and subscriber by dispatching `Add` and `AddPop` actions
 /// 2. No middlewares.
-async fn run_reducer_and_subscriber(
-  shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>,
-) {
+async fn run_reducer_and_subscriber(shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>) {
   // Setup store w/ only reducer & subscriber (no middlewares).
   let my_subscriber = MySubscriber {
     shared_vec: shared_vec.clone(),
@@ -125,19 +123,11 @@ async fn run_reducer_and_subscriber(
     .add_subscriber(Box::new(my_subscriber))
     .await;
 
-  shared_store
-    .write()
-    .await
-    .dispatch_action(Action::Add(1, 2))
-    .await;
+  shared_store.write().await.dispatch_action(Action::Add(1, 2)).await;
 
   assert_eq!(shared_vec.write().await.pop(), Some(3));
 
-  shared_store
-    .write()
-    .await
-    .dispatch_action(Action::AddPop(1))
-    .await;
+  shared_store.write().await.dispatch_action(Action::AddPop(1)).await;
 
   assert_eq!(shared_vec.write().await.pop(), Some(4));
 
@@ -155,9 +145,7 @@ async fn run_reducer_and_subscriber(
 /// ```
 /// 1. Does not involve any reducers or subscribers.
 /// 2. Just this middleware which modifies the `shared_vec`.
-async fn run_mw_example_no_spawn(
-  shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>,
-) {
+async fn run_mw_example_no_spawn(shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>) {
   let mw_returns_none = MwExampleNoSpawn {
     shared_vec: shared_vec.clone(),
   };
@@ -193,9 +181,7 @@ async fn run_mw_example_no_spawn(
   assert_eq!(shared_vec.write().await.pop(), Some(-3));
 }
 
-async fn delay_for_spawned_mw_to_execute() {
-  tokio::time::sleep(tokio::time::Duration::from_millis(0)).await;
-}
+async fn delay_for_spawned_mw_to_execute() { tokio::time::sleep(tokio::time::Duration::from_millis(0)).await; }
 
 /// ```
 /// ╭──────────────────────────────────────────────────────╮
@@ -207,9 +193,7 @@ async fn delay_for_spawned_mw_to_execute() {
 /// 1. Adds `-4` to the `shared_vec`.
 /// 2. Then dispatches an action to `MyReducer` that resets the store w/
 /// `[-100]`.
-async fn run_mw_example_spawns(
-  shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>,
-) {
+async fn run_mw_example_spawns(shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>) {
   let mw_returns_action = MwExampleSpawns {
     shared_vec: shared_vec.clone(),
   };
@@ -224,10 +208,7 @@ async fn run_mw_example_spawns(
     .add_middleware_spawns(Box::new(mw_returns_action))
     .await;
 
-  spawn_dispatch_action!(
-    shared_store,
-    Action::MwExampleSpawns_ModifySharedObject_ResetState
-  );
+  spawn_dispatch_action!(shared_store, Action::MwExampleSpawns_ModifySharedObject_ResetState);
 
   delay_for_spawned_mw_to_execute().await;
 

@@ -163,9 +163,7 @@ where
     node_to_lookup.parent
   }
 
-  pub fn node_exists(&self, node_id: usize) -> bool {
-    self.map.read().unwrap().contains_key(&node_id.get_id())
-  }
+  pub fn node_exists(&self, node_id: usize) -> bool { self.map.read().unwrap().contains_key(&node_id.get_id()) }
 
   pub fn has_parent(&self, node_id: usize) -> bool {
     if self.node_exists(node_id) {
@@ -188,9 +186,7 @@ where
     let remove_node_id_from_parent = |parent_id: usize| {
       let parent_node_arc_opt = self.get_node_arc(parent_id);
       unwrap_arc_write_lock_and_call(&parent_node_arc_opt.unwrap(), &mut |parent_node| {
-        parent_node
-          .children
-          .retain(|child_id| *child_id != node_id.get_id());
+        parent_node.children.retain(|child_id| *child_id != node_id.get_id());
       });
     };
 
@@ -307,11 +303,7 @@ where
     new_node_id
   }
 
-  fn generate_uid(&self) -> usize {
-    self
-      .atomic_counter
-      .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
-  }
+  fn generate_uid(&self) -> usize { self.atomic_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst) }
 
   pub fn new() -> Self {
     Arena {

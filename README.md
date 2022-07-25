@@ -12,6 +12,7 @@
   - [Examples](#examples)
 - [Macros](#macros)
   - [Declarative](#declarative)
+    - [assert_eq_2!](#assert_eq_2)
     - [throws!](#throws)
     - [throws_with_return!](#throws_with_return)
     - [log!](#log)
@@ -414,6 +415,12 @@ assert_eq!(store.get_state().stack.len(), 0);
 There are quite a few declarative macros that you will find in the library. They tend to
 be used internally in the implementation of the library itself. Here are some that are
 actually externally exposed via `#[macro_export]`.
+
+#### assert_eq_2!
+
+Similar to `assert_eq!` but automatically prints the left and right hand side variables if
+the assertion fails. Useful for debugging tests, since the cargo would just print out the
+left and right values w/out providing information on what variables were being compared.
 
 #### throws!
 

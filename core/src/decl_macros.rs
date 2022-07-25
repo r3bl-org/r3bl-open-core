@@ -346,3 +346,20 @@ macro_rules! unwrap_option_or_compute_if_none {
     }
   };
 }
+
+/// Similar to [`assert_eq!`] but automatically prints the left and right hand
+/// side variables if the assertion fails. Useful for debugging tests, since the
+/// cargo would just print out the left and right values w/out providing
+/// information on what variables were being compared.
+#[macro_export]
+macro_rules! assert_eq2 {
+  ($left:expr, $right:expr $(,)?) => {
+    assert_eq!(
+      $left,
+      $right,
+      "⛔ {} = {}",
+      r3bl_rs_utils::style_error(stringify!($left)),
+      r3bl_rs_utils::style_error(stringify!($right))
+    );
+  };
+}

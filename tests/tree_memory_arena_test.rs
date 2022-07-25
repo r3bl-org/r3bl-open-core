@@ -61,10 +61,7 @@ fn test_can_add_nodes_to_tree() {
     let node_2_ref = dbg!(arena.get_node_arc(node_2_id).unwrap());
     let node_2_ref_weak = arena.get_node_arc_weak(node_2_id).unwrap();
     assert_eq!(node_2_ref.read().unwrap().payload, node_2_value);
-    assert_eq!(
-      node_2_ref_weak.upgrade().unwrap().read().unwrap().payload,
-      node_2_value
-    );
+    assert_eq!(node_2_ref_weak.upgrade().unwrap().read().unwrap().payload, node_2_value);
   }
 
   // Can dfs tree walk.

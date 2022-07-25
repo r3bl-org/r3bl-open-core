@@ -1,7 +1,7 @@
 # https://rust-lang.github.io/rustfmt/
 
 # width
-max_width = 110
+max_width = 120
 
 # function 
 fn_args_layout = "Compressed" # Possible values: "Compressed", "Tall", "Vertical"
@@ -23,9 +23,4 @@ tab_spaces = 2
 trailing_comma = "Vertical"
 color = "Always"
 empty_item_single_line = true
-normalize_doc_attributes = true
 trailing_semicolon = true
-force_explicit_abi = true
-format_strings = true
-wrap_comments = false
-format_code_in_doc_comments = true
