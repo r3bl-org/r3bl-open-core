@@ -16,11 +16,7 @@
  */
 
 // Attach sources.
-pub mod dimens;
-pub mod styles;
-pub mod graphemes;
+pub mod unicode_string_ext;
 
 // Re-export.
-pub use dimens::*;
-pub use graphemes::*;
-pub use styles::*;
+pub use unicode_string_ext::*;

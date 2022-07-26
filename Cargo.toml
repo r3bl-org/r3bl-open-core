@@ -1,9 +1,9 @@
 [package]
 name = "r3bl_rs_utils"
-description = "Async Redux library, TUI utilities, and useful data structures"
+description = "Async Redux library, TUI framework, and useful types"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["tui", "color", "terminal", "redux", "non-binary-tree"]
-categories = ["algorithms", "data-structures"]
+categories = ["command-line-interface", "command-line-utilities", "algorithms", "data-structures"]
 # When you change this, make sure to update `README.md` as well.
 version = "0.7.40"
 edition = "2021"

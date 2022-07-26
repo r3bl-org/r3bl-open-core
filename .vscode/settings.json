@@ -12,6 +12,7 @@
     "derivebuilder",
     "dimens",
     "idents",
+    "insertanchor",
     "isnt",
     "Keypress",
     "lazyfield",
@@ -25,6 +26,8 @@
     "retval",
     "rustflags",
     "simplelog",
-    "stylesheet"
+    "stylesheet",
+    "treememoryarena",
+    "tuicore"
   ]
 }

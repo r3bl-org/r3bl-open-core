@@ -1,7 +1,45 @@
 # r3bl_rs_utils
+<a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+This crate provides lots of useful functionality to help you build TUI (text user
+interface) apps, along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy
+🎉:
+
+1. Thread-safe & fully asynchronous [Redux](#2-redux) library (using Tokio to run
+   subscribers and middleware in separate tasks). The reducer functions are run
+   sequentially.
+2. Loosely coupled & fully asynchronous [TUI framework](#6-tui-coming-soon) to make it
+   possible (and easy) to build sophisticated TUIs (Text User Interface apps) in Rust.
+   This is currently under [active development](#61-tuicore).
+3. Lots of [declarative macros](#31-declarative), and [procedural macros](#32-procedural)
+   (both function like and derive) to avoid having to write lots of boilerplate code for
+   many common (and complex) tasks.
+4. [Non binary tree data](#4-treememoryarena-non-binary-tree-data-structure) structure
+   inspired by memory arenas, that is thread safe and supports parallel tree walking.
+5. Utility functions to improve [ergonomics](#5-utils) of commonly used patterns in Rust
+   programming, ranging from things like colorizing `stdout`, `stderr` output, to having
+   less noisy `Result` and `Error` types.
+
+> 🦜 To learn more about this library, please read how it was built (on
+> [developerlife.com](https://developerlife.com)):
+>
+> 1. <https://developerlife.com/2022/02/24/rust-non-binary-tree/>
+> 2. <https://developerlife.com/2022/03/12/rust-redux/>
+> 3. <https://developerlife.com/2022/03/30/rust-proc-macro/>
+>
+> 🦀 You can also find all the Rust related content on developerlife.com
+> [here](https://developerlife.com/category/Rust/).
+>
+> 🤷‍♂️ Fun fact: we built a library that is similar in spirit to this crate for TypeScript
+> (for TUI apps on Node.js) called
+> [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/).
+
+<hr/>
+
+Table of contents:
+
+<!-- TOC depthfrom:2 updateonsave:true orderedlist:false insertanchor:true -->
 
 - [Usage](#usage)
 - [redux](#redux)
@@ -12,7 +50,7 @@
   - [Examples](#examples)
 - [Macros](#macros)
   - [Declarative](#declarative)
-    - [assert_eq_2!](#assert_eq_2)
+    - [assert_eq2!](#assert_eq2)
     - [throws!](#throws)
     - [throws_with_return!](#throws_with_return)
     - [log!](#log)
@@ -28,10 +66,10 @@
     - [unwrap_option_or_run_fn_returning_err!](#unwrap_option_or_run_fn_returning_err)
     - [unwrap_option_or_compute_if_none!](#unwrap_option_or_compute_if_none)
   - [Procedural](#procedural)
-    - [#[derive(Builder)]](#derivebuilder)
+    - [#[deriveBuilder]](#derivebuilder)
     - [make_struct_safe_to_share_and_mutate!](#make_struct_safe_to_share_and_mutate)
     - [make_safe_async_fn_wrapper!](#make_safe_async_fn_wrapper)
-- [tree_memory_arena (non-binary tree data structure)](#tree_memory_arena-non-binary-tree-data-structure)
+- [tree_memory_arena non-binary tree data structure](#tree_memory_arena-non-binary-tree-data-structure)
 - [utils](#utils)
   - [CommonResult and CommonError](#commonresult-and-commonerror)
   - [LazyField](#lazyfield)
@@ -39,37 +77,19 @@
   - [tty](#tty)
   - [safe_unwrap](#safe_unwrap)
   - [color_text](#color_text)
-- [tui (experimental)](#tui-experimental)
-  - [tui-core](#tui-core)
+- [tui Coming soon!](#tui-coming-soon)
+  - [tui_core](#tui_core)
 - [Stability](#stability)
+- [Issues, comments, feedback, and PRs](#issues-comments-feedback-and-prs)
+- [Notes](#notes)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+<!-- /TOC -->
 
-This library provides utility functions:
-
-1. Thread safe asynchronous Redux library (uses Tokio to run subscribers and middleware in
-   separate tasks). The reducer functions are run in sequence (not in Tokio tasks).
-2. Declarative macros, and procedural macros (both function like and derive) to avoid
-   having to write lots of boilerplate code for many common (and complex) tasks.
-3. Non binary tree data structure inspired by memory arenas, that is thread safe and
-   supports parallel tree walking.
-4. Functions to unwrap deeply nested objects inspired by Kotlin scope functions.
-5. Capabilities to make it easier to build TUIs (Text User Interface apps) in Rust. This
-   is currently experimental and is being actively developed.
-
-> 💡 To learn more about this library, please read how it was built on
-> [developerlife.com](https://developerlife.com):
->
-> 1. <https://developerlife.com/2022/02/24/rust-non-binary-tree/>
-> 2. <https://developerlife.com/2022/03/12/rust-redux/>
-> 3. <https://developerlife.com/2022/03/30/rust-proc-macro/>
-
-> 💡 You can also read all the Rust content on
-> [developerlife.com here](https://developerlife.com/category/Rust/). Also, the equivalent
-> of this library is available for TypeScript and is called
-> [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/).
+<hr/>
 
 ## Usage
+<a id="markdown-usage" name="usage"></a>
+
 
 Please add the following to your `Cargo.toml` file:
 
@@ -79,6 +99,8 @@ r3bl_rs_utils = "0.7.40"
 ```
 
 ## redux
+<a id="markdown-redux" name="redux"></a>
+
 
 `Store` is thread safe and asynchronous (using Tokio). You have to implement `async`
 traits in order to use it, by defining your own reducer, subscriber, and middleware trait
@@ -94,6 +116,8 @@ functions. So this will not block the thread of whatever code you call this from
 you will get a panic when `spawn_dispatch_action!()` is called.
 
 ### Middlewares
+<a id="markdown-middlewares" name="middlewares"></a>
+
 
 Your middleware (`async` trait implementations) will be run concurrently or in parallel
 via Tokio tasks. You get to choose which `async` trait to implement to do one or the
@@ -114,12 +138,16 @@ that particular `spawn_dispatch_action!()` call).
    These are added to the store via a call to `add_middleware(...)`.
 
 ### Subscribers
+<a id="markdown-subscribers" name="subscribers"></a>
+
 
 The subscribers will be run asynchronously via Tokio tasks. They are all run together
 concurrently but not in parallel, using
 [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
 
 ### Reducers
+<a id="markdown-reducers" name="reducers"></a>
+
 
 The reducer functions are also are `async` functions that are run in the tokio runtime.
 They're also run one after another in the order in which they're added.
@@ -156,6 +184,8 @@ They're also run one after another in the order in which they're added.
    - It returns nothing `()`.
 
 ### Summary
+<a id="markdown-summary" name="summary"></a>
+
 
 Here's the gist of how to make & use one of these:
 
@@ -176,6 +206,8 @@ Here's the gist of how to make & use one of these:
      `Box::new($YOUR_STRUCT))`.
 
 ### Examples
+<a id="markdown-examples" name="examples"></a>
+
 
 > 💡 There are lots of examples in the
 > [tests](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/redux_test.rs) for
@@ -409,20 +441,29 @@ assert_eq!(store.get_state().stack.len(), 0);
 ```
 
 ## Macros
+<a id="markdown-macros" name="macros"></a>
+
 
 ### Declarative
+<a id="markdown-declarative" name="declarative"></a>
+
 
 There are quite a few declarative macros that you will find in the library. They tend to
 be used internally in the implementation of the library itself. Here are some that are
 actually externally exposed via `#[macro_export]`.
 
-#### assert_eq_2!
+#### assert_eq2!
+<a id="markdown-assert_eq2!" name="assert_eq2!"></a>
 
-Similar to `assert_eq!` but automatically prints the left and right hand side variables if
-the assertion fails. Useful for debugging tests, since the cargo would just print out the
-left and right values w/out providing information on what variables were being compared.
+
+Similar to [`assert_eq!`] but automatically prints the left and right hand side variables
+if the assertion fails. Useful for debugging tests, since the cargo would just print out
+the left and right values w/out providing information on what variables were being
+compared.
 
 #### throws!
+<a id="markdown-throws!" name="throws!"></a>
+
 
 Wrap the given `block` or `stmt` so that it returns a `Result<()>`. It is just syntactic
 sugar that helps having to write `Ok(())` repeatedly at the end of each block. Here's an
@@ -461,6 +502,8 @@ fn test_simple_2_col_layout() -> CommonResult<()> {
 ```
 
 #### throws_with_return!
+<a id="markdown-throws_with_return!" name="throws_with_return!"></a>
+
 
 This is very similar to [`throws!`](#throws) but it also returns the result of the block.
 
@@ -474,6 +517,8 @@ fn test_simple_2_col_layout() -> CommonResult<CommandQueue> {
 ```
 
 #### log!
+<a id="markdown-log!" name="log!"></a>
+
 
 You can use this macro to dump log messages at 3 levels to a file. By default this file is
 named `log.txt` and is dumped in the current directory. Here's how you can use it.
@@ -560,6 +605,8 @@ Please check out the source
 [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/src/utils/file_logging.rs).
 
 #### log_no_err!
+<a id="markdown-log_no_err!" name="log_no_err!"></a>
+
 
 This macro is very similar to the [log!](#log) macro, except that it won't return any
 error if the underlying logging system fails. It will simply print a message to `stderr`.
@@ -573,6 +620,8 @@ pub fn log_state(&self, msg: &str) {
 ```
 
 #### debug_log_no_err!
+<a id="markdown-debug_log_no_err!" name="debug_log_no_err!"></a>
+
 
 This is a really simple macro to make it effortless to debug into a log file. It outputs
 `DEBUG` level logs. It takes a single identifier as an argument, or any number of them. It
@@ -586,6 +635,8 @@ debug_log_no_err!(my_string);
 ```
 
 #### trace_log_no_err!
+<a id="markdown-trace_log_no_err!" name="trace_log_no_err!"></a>
+
 
 This is very similar to [debug_log_no_err!](#debuglognoerr) except that it outputs `TRACE`
 level logs.
@@ -596,6 +647,8 @@ trace_log_no_err!(my_string);
 ```
 
 #### make_api_call_for!
+<a id="markdown-make_api_call_for!" name="make_api_call_for!"></a>
+
 
 This macro makes it easy to create simple HTTP GET requests using the `reqwest` crate. It
 generates an `async` function called `make_request()` that returns a `CommonResult<T>`
@@ -636,6 +689,8 @@ You can find lots of
 [examples here](https://github.com/nazmulidris/rust_scratch/blob/main/address-book-with-redux/src/tui/middlewares).
 
 #### fire_and_forget!
+<a id="markdown-fire_and_forget!" name="fire_and_forget!"></a>
+
 
 This is a really simple wrapper around `tokio::spawn()` for the given block. Its just
 syntactic sugar. Here's an example of using it for a non-`async` block.
@@ -667,6 +722,8 @@ pub fn foo() {
 ```
 
 #### call_if_true!
+<a id="markdown-call_if_true!" name="call_if_true!"></a>
+
 
 Syntactic sugar to run a conditional statement. Here's an example.
 
@@ -684,6 +741,8 @@ call_if_true!(
 ```
 
 #### debug!
+<a id="markdown-debug!" name="debug!"></a>
+
 
 This is a really simple macro to make it effortless to use the color console logger. It
 takes a single identifier as an argument, or any number of them. It simply dumps an arrow
@@ -716,6 +775,8 @@ debug!(OK_RAW &msg);
 ```
 
 #### with!
+<a id="markdown-with!" name="with!"></a>
+
 
 This is a macro that takes inspiration from the `with` scoping function in Kotlin. It just
 makes it easier to express a block of code that needs to run after an expression is
@@ -744,11 +805,15 @@ It does the following:
 2. Runs the `$code` block.
 
 #### with_mut!
+<a id="markdown-with_mut!" name="with_mut!"></a>
+
 
 This macro is just like [`with!`](#with) but it takes a mutable reference to the `$id`
 variable.
 
 #### unwrap_option_or_run_fn_returning_err!
+<a id="markdown-unwrap_option_or_run_fn_returning_err!" name="unwrap_option_or_run_fn_returning_err!"></a>
+
 
 This macro can be useful when you are working w/ an expression that returns an `Option`
 and if that `Option` is `None` then you want to abort and return an error immediately. The
@@ -771,6 +836,8 @@ pub fn from(
 ```
 
 #### unwrap_option_or_compute_if_none!
+<a id="markdown-unwrap_option_or_compute_if_none!" name="unwrap_option_or_compute_if_none!"></a>
+
 
 This macro is basically a way to compute something lazily when it (the `Option`) is set to
 `None`. Unwrap the `$option`, and if `None` then run the `$next` closure which must return
@@ -792,12 +859,16 @@ fn test_unwrap_option_or_compute_if_none() {
 ```
 
 ### Procedural
+<a id="markdown-procedural" name="procedural"></a>
+
 
 All the procedural macros are organized in 3 crates
 [using an internal or core crate](https://developerlife.com/2022/03/30/rust-proc-macro/#add-an-internal-or-core-crate):
 the public crate, an internal or core crate, and the proc macro crate.
 
 #### #[derive(Builder)]
+<a id="markdown-%23%5Bderivebuilder%5D" name="%23%5Bderivebuilder%5D"></a>
+
 
 This derive macro makes it easy to generate builders when annotating a `struct` or `enum`.
 It generates It has full support for generics. It can be used like this.
@@ -823,6 +894,8 @@ assert_eq!(my_pt.y, 2);
 ```
 
 #### make_struct_safe_to_share_and_mutate!
+<a id="markdown-make_struct_safe_to_share_and_mutate!" name="make_struct_safe_to_share_and_mutate!"></a>
+
 
 This function like macro (with custom syntax) makes it easy to manage shareability and
 interior mutability of a struct. We call this pattern the "manager" of "things").
@@ -866,6 +939,8 @@ async fn test_custom_syntax_no_where_clause() {
 ```
 
 #### make_safe_async_fn_wrapper!
+<a id="markdown-make_safe_async_fn_wrapper!" name="make_safe_async_fn_wrapper!"></a>
+
 
 This function like macro (with custom syntax) makes it easy to share functions and lambdas
 that are async. They should be safe to share between threads and they should support
@@ -910,6 +985,8 @@ make_safe_async_fn_wrapper! {
 ```
 
 ## tree_memory_arena (non-binary tree data structure)
+<a id="markdown-tree_memory_arena-non-binary-tree-data-structure" name="tree_memory_arena-non-binary-tree-data-structure"></a>
+
 
 [`Arena`] and [`MTArena`] types are the implementation of a
 [non-binary tree](https://en.wikipedia.org/wiki/Binary_tree#Non-binary_trees) data
@@ -1035,8 +1112,12 @@ let arena = MTArena::<String>::new();
 > [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
 
 ## utils
+<a id="markdown-utils" name="utils"></a>
+
 
 ### CommonResult and CommonError
+<a id="markdown-commonresult-and-commonerror" name="commonresult-and-commonerror"></a>
+
 
 These two structs make it easier to work w/ `Result`s. They are just syntactic sugar and
 helper structs. You will find them used everywhere in the
@@ -1067,6 +1148,8 @@ impl Stylesheet {
 ```
 
 ### LazyField
+<a id="markdown-lazyfield" name="lazyfield"></a>
+
 
 This combo of struct & trait object allows you to create a lazy field that is only
 evaluated when it is first accessed. You have to provide a trait implementation that
@@ -1100,6 +1183,8 @@ fn test_lazy_field() {
 ```
 
 ### LazyMemoValues
+<a id="markdown-lazymemovalues" name="lazymemovalues"></a>
+
 
 This struct allows users to create a lazy hash map. A function must be provided that
 computes the values when they are first requested. These values are cached for the
@@ -1129,6 +1214,8 @@ assert_eq!(arc_atomic_count.load(SeqCst), 1); // Doesn't change.
 ```
 
 ### tty
+<a id="markdown-tty" name="tty"></a>
+
 
 This module contains a set of functions to make it easier to work with terminals.
 
@@ -1175,6 +1262,8 @@ Here's a list of functions available in this module:
 - `is_stdin_piped()`
 
 ### safe_unwrap
+<a id="markdown-safe_unwrap" name="safe_unwrap"></a>
+
 
 Functions that make it easy to unwrap a value safely. These functions are provided to
 improve the ergonomics of using wrapped values in Rust. Examples of wrapped values are
@@ -1220,6 +1309,8 @@ Here's a list of type aliases provided for better readability:
 - `WriteGuarded<T>`
 
 ### color_text
+<a id="markdown-color_text" name="color_text"></a>
+
 
 ANSI colorized text <https://github.com/ogham/rust-ansi-term> helper methods. Here's an
 example.
@@ -1251,40 +1342,75 @@ Here's a list of functions available in this module:
 - `style_dimmed()`
 - `style_error()`
 
-## tui (experimental)
+## tui (Coming soon!)
+<a id="markdown-tui-coming-soon!" name="tui-coming-soon!"></a>
 
-🚧 WIP - This is an experimental module that isn’t ready yet. It is the first step towards
-creating a TUI (text user interface) library that can be used to create rich terminal
-applications. This is similar to Ink library for Node.js & TypeScript (that uses React and
-Yoga). It is built atop `crossterm` but can easily be ported to other low level terminal
-libraries. The idea is that it takes the best ideas from Redux, React (even JSX), and CSS
-to create a modern way to create powerful and efficient (concurrent & parallel) terminal
-applications in Rust.
 
-### tui-core
+> 🚧 WIP - This module isn’t ready yet but will be soon. It is the foundation for creating
+> a sophisticated TUI (text user interface) library that can be used to create rich
+> terminal applications for desktop and cloud. This is similar conceptually to [Ink
+> library for Node.js & TypeScript][tui_1] (that uses React and Yoga).
+>
+> - It is built atop `crossterm` but can easily be ported to other low level terminal
+>   libraries.
+> - It is totally async, so w/ Tokio, you get concurrency and parallel behavior in TUI
+>   apps that are written with it.
+> - The idea is that it takes the best ideas from Redux, React (even JSX), and CSS to
+>   create a modern way to create powerful and efficient (concurrent & parallel) terminal
+>   applications in Rust.
+>
+> 🚀 As the functionality is built and the API stabilized in `r3bl-cmdr` [crate][tui_2] &
+> [repo][tui_3], they will be moved here (from the `tui` package there). As soon as the
+> bulk of the code is moved here, this README will be updated as well. The first of these
+> is the `tui_core` module below.
 
-The `tui-core` module lives in the `core` crate and contains the following foundations for
+[tui_1]: https://developerlife.com/category/CLI/
+[tui_2]: https://crates.io/crates/r3bl-cmdr
+[tui_3]: https://github.com/r3bl-org/r3bl-cmdr
+
+### tui_core
+<a id="markdown-tui_core" name="tui_core"></a>
+
+
+The `tui_core` module lives in the `core` crate and contains the following foundations for
 a TUI architecture:
 
 1. `dimens` - All the units, size, position structs can be found here.
 2. `styles` - This is the equivalent of CSS. There's a `style!` proc macro (in the `macro`
    crate) that provides a nice JSX-like syntax (DSL) for creating styles.
-
-As the functionality is build and the API stabilized in `r3bl-cmdr`
-[crate](https://crates.io/crates/r3bl-cmdr) &
-[repo](https://github.com/r3bl-org/r3bl-cmdr), they will be moved here (from the `tui`
-package there).
+3. `graphemes` - Support for grapheme clusters is provided here. You can start w/ a
+   `String` and treat it as a list of `GraphemeClusterSegments` and explore sizing and
+   maintain two types of cursor or index:
+   1. Logical index which allows the `String` to be traversed by grapheme cluster segment.
+   2. Display index which allows `crossterm` column coordinates and widths to be used to
+      "map" to and from a specific grapehme cluster segment. More documentation is
+      provided in the `unicode_string.ext.rs` file and the `test_unicode_string_ext.rs`
+      file is great to see the API in action.
 
 ## Stability
+<a id="markdown-stability" name="stability"></a>
+
 
 🧑‍🔬 This library is in early development.
 
-1. There are extensive integration tests for code that is production ready.
-2. Everything else is marked experimental in the source.
+1. There are extensive integration tests for code that is production ready. The goal is
+   not to have breaking changes for existing code, and be thoughtful when adding new
+   functionality. This is why code lives in other repos for a while before being moved to
+   this one.
+2. The `tui` and `tui_core` modules are current WIP. They are currently under active
+   development in the `r3bl-cmdr` [repo][tui_3] and [crate][tui_2].
+
+## Issues, comments, feedback, and PRs
+<a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
+
 
 Please report any issues to the
 [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues). And if you have any
 feature requests, feel free to add them there too 👍.
+
+## Notes
+<a id="markdown-notes" name="notes"></a>
+
 
 Here are some notes on using experimental / unstable features in Tokio.
 
