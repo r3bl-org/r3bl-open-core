@@ -63,10 +63,11 @@ Table of contents:
     - [debug!](#debug)
     - [with!](#with)
     - [with_mut!](#with_mut)
+    - [with_mut_returns!](#with_mut_returns)
     - [unwrap_option_or_run_fn_returning_err!](#unwrap_option_or_run_fn_returning_err)
     - [unwrap_option_or_compute_if_none!](#unwrap_option_or_compute_if_none)
   - [Procedural](#procedural)
-    - [#[deriveBuilder]](#derivebuilder)
+    - [Builder derive macro](#builder-derive-macro)
     - [make_struct_safe_to_share_and_mutate!](#make_struct_safe_to_share_and_mutate)
     - [make_safe_async_fn_wrapper!](#make_safe_async_fn_wrapper)
 - [tree_memory_arena non-binary tree data structure](#tree_memory_arena-non-binary-tree-data-structure)
@@ -809,7 +810,39 @@ It does the following:
 
 
 This macro is just like [`with!`](#with) but it takes a mutable reference to the `$id`
-variable.
+variable. Here's a code example.
+
+```rust
+with_mut! {
+  StyleFlag::BOLD_SET | StyleFlag::DIM_SET,
+  as mask2,
+  run {
+    assert!(mask2.contains(StyleFlag::BOLD_SET));
+    assert!(mask2.contains(StyleFlag::DIM_SET));
+    assert!(!mask2.contains(StyleFlag::UNDERLINE_SET));
+    assert!(!mask2.contains(StyleFlag::COLOR_FG_SET));
+    assert!(!mask2.contains(StyleFlag::COLOR_BG_SET));
+    assert!(!mask2.contains(StyleFlag::MARGIN_SET));
+  }
+}
+```
+
+#### with_mut_returns!
+<a id="markdown-with_mut_returns!" name="with_mut_returns!"></a>
+
+
+This macro is just like [`with_mut!`](#withmutreturns) except that it returns the value of
+the `$code` block. Here's a code example.
+
+```rust
+let tw_queue = with_mut_returns! {
+    ColumnRenderComponent { lolcat },
+    as it,
+    return {
+      it.render_component(tw_surface.current_box()?, state, shared_store).await?
+    }
+};
+```
 
 #### unwrap_option_or_run_fn_returning_err!
 <a id="markdown-unwrap_option_or_run_fn_returning_err!" name="unwrap_option_or_run_fn_returning_err!"></a>
@@ -866,8 +899,8 @@ All the procedural macros are organized in 3 crates
 [using an internal or core crate](https://developerlife.com/2022/03/30/rust-proc-macro/#add-an-internal-or-core-crate):
 the public crate, an internal or core crate, and the proc macro crate.
 
-#### #[derive(Builder)]
-<a id="markdown-%23%5Bderivebuilder%5D" name="%23%5Bderivebuilder%5D"></a>
+#### Builder derive macro
+<a id="markdown-builder-derive-macro" name="builder-derive-macro"></a>
 
 
 This derive macro makes it easy to generate builders when annotating a `struct` or `enum`.

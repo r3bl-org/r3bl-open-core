@@ -74,11 +74,10 @@ macro_rules! throws {
 #[macro_export]
 macro_rules! throws_with_return {
   ($it: block) => {{
-    return Ok($it)
+    return Ok($it);
   }};
   ($it: stmt) => {{
-    $it
-    return Ok($it)
+    return Ok($it);
   }};
 }
 
@@ -277,12 +276,51 @@ macro_rules! with {
 
 /// Similar to [`with!`] except `$id` is a mutable reference to the `$eval`
 /// expression.
+///
+/// # Examples:
+/// ```ignore
+/// with_mut! {
+///   StyleFlag::BOLD_SET | StyleFlag::DIM_SET,
+///   as mask2,
+///   run {
+///     assert!(mask2.contains(StyleFlag::BOLD_SET));
+///     assert!(mask2.contains(StyleFlag::DIM_SET));
+///     assert!(!mask2.contains(StyleFlag::UNDERLINE_SET));
+///     assert!(!mask2.contains(StyleFlag::COLOR_FG_SET));
+///     assert!(!mask2.contains(StyleFlag::COLOR_BG_SET));
+///     assert!(!mask2.contains(StyleFlag::MARGIN_SET));
+///   }
+/// }
+/// ```
+
 #[macro_export]
 macro_rules! with_mut {
   ($eval:expr, as $id:ident, run $code:block) => {
     let mut $id = $eval;
     $code;
   };
+}
+
+/// Similar to [`with_mut!`] except that it returns the value of the `$code`
+/// block.
+///
+/// # Examples:
+/// ```ignore
+/// let tw_queue = with_mut_returns! {
+///   ColumnRenderComponent { lolcat },
+///   as it,
+///   return {
+///     let current_box = tw_surface.current_box()?;
+///     it.render_component(current_box, state, shared_store).await?
+///   }
+/// };
+/// ```
+#[macro_export]
+macro_rules! with_mut_returns {
+  ($eval:expr, as $id:ident, return $code:block) => {{
+    let mut $id = $eval;
+    $code
+  }};
 }
 
 /// Unwrap the `$option`, and if `None` then run the `$next` closure which must
