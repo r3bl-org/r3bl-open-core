@@ -44,19 +44,6 @@ pub struct Size {
   pub rows: UnitType, // height = number of rows (x).
 }
 
-pub trait TruncateString {
-  fn truncate_at_cols(&self, arg: String) -> String;
-}
-
-impl TruncateString for Size {
-  fn truncate_at_cols(&self, mut arg: String) -> String {
-    let cols: usize = self.cols.into();
-    let result_clone = arg.clone();
-    arg.truncate(cols);
-    result_clone
-  }
-}
-
 impl Display for Size {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "Size: [{}, {}]", self.rows, self.cols) }
 }
