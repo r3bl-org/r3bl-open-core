@@ -1,20 +1,21 @@
 /*
- Copyright 2022 R3BL LLC
+ *   Copyright (c) 2022 R3BL LLC
+ *   All rights reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
 
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-      https://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-*/
-
-use core::{fmt::Debug, hash::Hash};
+use core::fmt::Debug;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -40,7 +41,7 @@ macro_rules! spawn_dispatch_action {
 /// Thread safe and async Redux store (using [`tokio`]).
 pub struct Store<S, A>
 where
-  S: Clone + Default + PartialEq + Debug + Hash + Sync + Send,
+  S: Clone + Default + PartialEq + Debug + Sync + Send,
   A: Clone + Default + Send + Sync,
 {
   pub state: S,
@@ -53,7 +54,7 @@ where
 
 impl<S, A> Default for Store<S, A>
 where
-  S: Clone + Default + PartialEq + Debug + Hash + Sync + Send,
+  S: Clone + Default + PartialEq + Debug + Sync + Send,
   A: Clone + Default + Send + Sync,
 {
   fn default() -> Store<S, A> {
@@ -74,7 +75,7 @@ where
 // Handle subscriber, middleware, reducer management.
 impl<S, A> Store<S, A>
 where
-  S: Clone + Default + PartialEq + Debug + Hash + Sync + Send,
+  S: Clone + Default + PartialEq + Debug + Sync + Send,
   A: Clone + Default + Send + Sync,
 {
   pub async fn add_subscriber(&mut self, subscriber_fn: Box<dyn AsyncSubscriber<S> + Send + Sync>) -> &mut Store<S, A> {
@@ -120,7 +121,7 @@ where
 // Handle dispatch & history.
 impl<S, A> Store<S, A>
 where
-  S: Clone + Default + PartialEq + Debug + Hash + Sync + Send,
+  S: Clone + Default + PartialEq + Debug + Sync + Send,
   A: Clone + Default + Send + Sync,
 {
   pub fn get_state(&self) -> S { self.state.clone() }

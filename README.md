@@ -238,7 +238,7 @@ Let's say we have the following action enum, and state struct.
 
 ```rust
 /// Action enum.
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Action {
   Add(i32, i32),
   AddPop(i32),
@@ -254,7 +254,7 @@ impl Default for Action {
 }
 
 /// State.
-#[derive(Clone, Default, PartialEq, Debug, Hash)]
+#[derive(Clone, Default, PartialEq, Debug)]
 pub struct State {
   pub stack: Vec<i32>,
 }
@@ -1416,7 +1416,7 @@ a TUI architecture:
    maintain two types of cursor or index:
    1. Logical index which allows the `String` to be traversed by grapheme cluster segment.
    2. Display index which allows `crossterm` column coordinates and widths to be used to
-      "map" to and from a specific grapehme cluster segment. More documentation is
+      "map" to and from a specific grapheme cluster segment. More documentation is
       provided in the `unicode_string.ext.rs` file and the `test_unicode_string_ext.rs`
       file is great to see the API in action.
 

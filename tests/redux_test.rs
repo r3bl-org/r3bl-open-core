@@ -29,7 +29,7 @@ use tokio::{sync::RwLock, task::JoinHandle};
 /// ╰──────────────────────────────────────────────────────╯
 /// ```
 #[allow(non_camel_case_types)]
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Action {
   // Reducer actions.
   Add(i32, i32),
@@ -55,7 +55,7 @@ impl Default for Action {
 /// │ State struct.                                        │
 /// ╰──────────────────────────────────────────────────────╯
 /// ```
-#[derive(Clone, Default, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Default, PartialEq, Eq, Debug)]
 pub struct State {
   pub stack: Vec<i32>,
 }
