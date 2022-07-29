@@ -43,7 +43,9 @@ macro_rules! unwrap {
 
 // Functions to unwrap various locks.
 
-pub fn unwrap_arc_read_lock_and_call<T, F, R>(arc_lock_wrapped_value: &Arc<RwLock<T>>, receiver_fn: &mut F) -> R
+pub fn unwrap_arc_read_lock_and_call<T, F, R>(
+  arc_lock_wrapped_value: &Arc<RwLock<T>>, receiver_fn: &mut F,
+) -> R
 where
   F: FnMut(&T) -> R,
 {
@@ -52,7 +54,9 @@ where
   receiver_fn(&read_guarded)
 }
 
-pub fn unwrap_arc_write_lock_and_call<T, F, R>(arc_lock_wrapped_value: &Arc<RwLock<T>>, receiver_fn: &mut F) -> R
+pub fn unwrap_arc_write_lock_and_call<T, F, R>(
+  arc_lock_wrapped_value: &Arc<RwLock<T>>, receiver_fn: &mut F,
+) -> R
 where
   F: FnMut(&mut T) -> R,
 {

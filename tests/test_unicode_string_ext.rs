@@ -35,8 +35,8 @@ fn test_unicode_string_ext() {
 #[test]
 fn test_grapheme_cluster_segment() {
   fn assert_segment(
-    segment: GraphemeClusterSegment, byte_offset: usize, unicode_width: UnitType, logical_index: usize,
-    byte_size: usize, string: &str,
+    segment: GraphemeClusterSegment, byte_offset: usize, unicode_width: UnitType,
+    logical_index: usize, byte_size: usize, string: &str,
   ) {
     assert_eq2!(segment.string, string);
     assert_eq2!(segment.byte_offset, byte_offset);
@@ -58,7 +58,14 @@ fn test_grapheme_cluster_segment() {
   assert_segment(u_s.grapheme_cluster_segment_vec[06], 12, 01, 06, 01, " ");
   assert_segment(u_s.grapheme_cluster_segment_vec[07], 13, 04, 07, 08, "🙏🏽");
   assert_segment(u_s.grapheme_cluster_segment_vec[08], 21, 01, 08, 01, " ");
-  assert_segment(u_s.grapheme_cluster_segment_vec[09], 22, 10, 09, 26, "👨🏾‍🤝‍👨🏿");
+  assert_segment(
+    u_s.grapheme_cluster_segment_vec[09],
+    22,
+    10,
+    09,
+    26,
+    "👨🏾‍🤝‍👨🏿",
+  );
   assert_segment(u_s.grapheme_cluster_segment_vec[10], 48, 01, 10, 01, ".");
 }
 
@@ -146,6 +153,12 @@ fn test_unicode_string_truncate() {
   assert_eq2!(u_s.truncate_to_fit_display_cols(21), "Hi 😃 📦 🙏🏽 ");
   assert_eq2!(u_s.truncate_to_fit_display_cols(22), "Hi 😃 📦 🙏🏽 ");
   assert_eq2!(u_s.truncate_to_fit_display_cols(23), "Hi 😃 📦 🙏🏽 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(24), "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(25), "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿.");
+  assert_eq2!(
+    u_s.truncate_to_fit_display_cols(24),
+    "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿"
+  );
+  assert_eq2!(
+    u_s.truncate_to_fit_display_cols(25),
+    "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."
+  );
 }

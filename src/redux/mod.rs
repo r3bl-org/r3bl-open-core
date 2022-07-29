@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-pub mod store;
 pub mod async_middleware;
-pub mod async_subscriber;
 pub mod async_reducer;
+pub mod async_subscriber;
+pub mod store;
 
 // Re-export the following modules:
 pub use async_middleware::*;

@@ -1,7 +1,7 @@
 # https://rust-lang.github.io/rustfmt/
 
 # width
-max_width = 120
+max_width = 100
 
 # function 
 fn_args_layout = "Compressed" # Possible values: "Compressed", "Tall", "Vertical"
@@ -15,7 +15,7 @@ group_imports = "StdExternalCrate"
 reorder_imports = true
 
 # modules
-reorder_modules = false
+reorder_modules = true
 
 # misc
 hard_tabs = false

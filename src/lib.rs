@@ -42,10 +42,10 @@
 //! > [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/).
 
 // Attach the following files to the library module.
-pub mod tree_memory_arena;
-pub mod utils;
-pub mod tui;
 pub mod redux;
+pub mod tree_memory_arena;
+pub mod tui;
+pub mod utils;
 
 // Re-export.
 // Re-export from core and macro (so users of public crate can use them w/out

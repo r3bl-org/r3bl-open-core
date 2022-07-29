@@ -22,12 +22,12 @@
 //! 4. Easy to work w/ readline.
 //! 5. Interrogation of types.
 
-pub mod lazy_hash_map;
+pub mod file_logging;
 pub mod lazy_field;
+pub mod lazy_hash_map;
 pub mod safe_unwrap;
 pub mod tty;
 pub mod type_utils;
-pub mod file_logging;
 
 // Module re-exports:
 // <https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html#documentation-comments-as-tests>

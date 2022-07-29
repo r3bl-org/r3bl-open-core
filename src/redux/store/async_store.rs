@@ -20,7 +20,10 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::{redux::{AsyncMiddlewareSpawnsVec, AsyncMiddlewareVec, AsyncReducerVec, AsyncSubscriberVec},
+use crate::{redux::{AsyncMiddlewareSpawnsVec,
+                    AsyncMiddlewareVec,
+                    AsyncReducerVec,
+                    AsyncSubscriberVec},
             AsyncMiddleware,
             AsyncMiddlewareSpawns,
             AsyncReducer,
@@ -78,7 +81,9 @@ where
   S: Clone + Default + PartialEq + Eq + Debug + Sync + Send,
   A: Clone + Default + Send + Sync,
 {
-  pub async fn add_subscriber(&mut self, subscriber_fn: Box<dyn AsyncSubscriber<S> + Send + Sync>) -> &mut Store<S, A> {
+  pub async fn add_subscriber(
+    &mut self, subscriber_fn: Box<dyn AsyncSubscriber<S> + Send + Sync>,
+  ) -> &mut Store<S, A> {
     self.subscriber_vec.push(subscriber_fn);
     self
   }
@@ -107,7 +112,9 @@ where
     self
   }
 
-  pub async fn add_reducer(&mut self, reducer_fn: Box<dyn AsyncReducer<S, A> + Send + Sync>) -> &mut Store<S, A> {
+  pub async fn add_reducer(
+    &mut self, reducer_fn: Box<dyn AsyncReducer<S, A> + Send + Sync>,
+  ) -> &mut Store<S, A> {
     self.reducer_vec.push(reducer_fn);
     self
   }
