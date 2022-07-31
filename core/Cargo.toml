@@ -40,3 +40,6 @@ paste = "1.0.7"
 # Unicode, grapheme clusters.
 unicode-width = "0.1.9"
 unicode-segmentation = "1.9.0"
+
+# Strip ANSI escapes.
+strip-ansi-escapes = "0.1.1"

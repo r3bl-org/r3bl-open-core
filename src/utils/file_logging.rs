@@ -29,6 +29,11 @@ static mut FILE_PATH: &str = "log.txt";
 static mut FILE_LOGGER_INIT_OK: bool = false;
 static FILE_LOGGER_INIT_FN: Once = Once::new();
 
+/// This macro will log the message if the log level is set to the given level. The log is output to
+/// a file logger. Since there could be issues w/ accessing this file, this macro can itself throw
+/// an error. This is why it returns a [r3bl_rs_utils::ResultCommon]. If you want to use a version
+/// of this macro that does not throw an error, use [log_no_err!].
+///
 /// # Example
 ///
 /// ```ignore
@@ -82,9 +87,9 @@ macro_rules! log {
   }};
 }
 
-/// If you want to override the default log file path [FILE_PATH], you can use
-/// this function. If the logger has already been initialized, then it will
-/// return a [CommonErrorType::InvalidState] error.
+/// If you want to override the default log file path [FILE_PATH], you can use this function. If the
+/// logger has already been initialized, then it will return a [CommonErrorType::InvalidState]
+/// error.
 pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
   unsafe {
     return match FILE_LOGGER_INIT_OK {
@@ -97,10 +102,9 @@ pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
   }
 }
 
-/// If you want to override the default log level [LOG_LEVEL], you can use this
-/// function. If the logger has already been initialized, then it will return a
-/// [CommonErrorType::InvalidState] error. To disable logging simply set the log
-/// level to [LevelFilter::Off].
+/// If you want to override the default log level [LOG_LEVEL], you can use this function. If the
+/// logger has already been initialized, then it will return a [CommonErrorType::InvalidState]
+/// error. To disable logging simply set the log level to [LevelFilter::Off].
 pub fn try_to_set_log_level(level: LevelFilter) -> CommonResult<String> {
   unsafe {
     return match FILE_LOGGER_INIT_OK {
@@ -113,8 +117,9 @@ pub fn try_to_set_log_level(level: LevelFilter) -> CommonResult<String> {
   }
 }
 
-/// This is very similar to [log!] except that if it fails, it will not
-/// propagate the log error. Here's an example.
+/// This is very similar to [log!] except that if it fails, it will not propagate the log error.
+/// Here's an example.
+///
 /// ```ignore
 /// pub fn log_state(&self, msg: &str) {
 ///   log_no_err!(INFO, "{:?} -> {}", msg, self.to_string());
@@ -160,13 +165,13 @@ macro_rules! log_no_err {
   }};
 }
 
-/// This is a really simple macro to make it effortless to debug into a log. It
-/// takes a single identifier as an argument, or any number of them. It simply
-/// dumps an arrow symbol, followed by the identifier ([stringify]'d) along with
-/// the value that it contains (using the [Debug] formatter). All of the output
-/// is colorized for easy readability. You can use it like this. ```ignore
-/// let my_string = "Hello World!";
-/// debug_log_no_err!(my_string);
+/// This is a really simple macro to make it effortless to debug into a log. It takes a single
+/// identifier as an argument, or any number of them. It simply dumps an arrow symbol, followed by
+/// the identifier ([stringify]'d) along with the value that it contains (using the [Debug]
+/// formatter). All of the output is colorized for easy readability. You can use it like this.
+///
+/// ```ignore
+/// let my_string = "Hello World!"; debug_log_no_err!(my_string);
 /// ```
 #[macro_export]
 macro_rules! debug_log_no_err {
@@ -192,8 +197,9 @@ macro_rules! debug_log_no_err {
   }};
 }
 
-/// Very similar to [debug_log_no_err!] except that it outputs TRACE. Here's an
-/// example. ```ignore
+/// Very similar to [debug_log_no_err!] except that it outputs TRACE. Here's an example.
+///
+/// ```ignore
 /// let my_string = "Hello World!";
 /// trace_log_no_err!(my_string);
 /// ```
@@ -221,13 +227,14 @@ macro_rules! trace_log_no_err {
   }};
 }
 
-/// Simply open the [`FILE_PATH`] file and write the log message to it. This
-/// will be opened once per session (i.e. program execution). It is
-/// destructively opened, meaning that it will be rewritten when used in the
-/// next session.
+/// Simply open the [`FILE_PATH`] file and write the log message to it. This will be opened once per
+/// session (i.e. program execution). It is destructively opened, meaning that it will be rewritten
+/// when used in the next session.
 ///
 /// # Docs
-/// - [`CombinedLogger`], [`WriteLogger`], [`ConfigBuilder`]: https://github.com/drakulix/simplelog.rs
+/// - Log
+///   - [`CombinedLogger`], [`WriteLogger`], [`ConfigBuilder`]
+///   - https://github.com/drakulix/simplelog.rs
 /// - [`format_description!`]: https://time-rs.github.io/book/api/format-description.html
 pub fn init_file_logger_once() -> CommonResult<()> {
   unsafe {
@@ -251,10 +258,9 @@ pub fn init_file_logger_once() -> CommonResult<()> {
     };
   }
 
-  /// [FILE_LOGGER_INIT_OK] is `false` at the start. Only this function (if it
-  /// succeeds) can set that to `true`. This function does *not* panic if
-  /// there's a problem initializing the logger. It just prints a message to
-  /// stderr & returns.
+  /// [FILE_LOGGER_INIT_OK] is `false` at the start. Only this function (if it succeeds) can set
+  /// that to `true`. This function does *not* panic if there's a problem initializing the logger.
+  /// It just prints a message to stderr & returns.
   fn actually_init_file_logger() {
     unsafe {
       let maybe_new_file = File::create(FILE_PATH);
@@ -275,8 +281,8 @@ pub fn init_file_logger_once() -> CommonResult<()> {
     }
   }
 
-  /// Try to make a [`Config`] with local timezone offset. If that fails, return
-  /// a default. The implementation used here works w/ Tokio.
+  /// Try to make a [`Config`] with local timezone offset. If that fails, return a default. The
+  /// implementation used here works w/ Tokio.
   fn new_config() -> Config {
     let mut builder = ConfigBuilder::new();
 

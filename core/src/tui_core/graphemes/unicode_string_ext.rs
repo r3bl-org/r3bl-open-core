@@ -39,7 +39,7 @@ use crate::{convert_to_base_unit, Size, UnitType};
 /// 1. If we use byte boundaries in the `String` we can move the cursor one byte
 /// to the left. 2. This falls apart when we have a grapheme cluster.
 /// 3. A grapheme cluster can take up more than one byte, and they don't fall
-/// cleanly into byte    boundaries.
+/// cleanly into byte boundaries.
 ///
 /// To complicate things further, the size that a grapheme cluster takes up is
 /// not the same as its byte size in memory. Let's unpack that.
@@ -138,12 +138,12 @@ use crate::{convert_to_base_unit, Size, UnitType};
 /// "physical" index into the rendered output of the string in a terminal.
 ///
 /// 1. Some parsing is necessary to get "logical" index into the string that is
-/// grapheme cluster    based (not byte boundary based).
+/// grapheme cluster based (not byte boundary based).
 ///    - This is where [`unicode-segmentation`](https://crates.io/crates/unicode-segmentation)
 ///      crate comes in and allows us to split our string into a vector of
 ///      grapheme clusters.
 /// 2. Some translation is necessary to get from the "logical" index to the
-/// physical index and back    again. This is where we can apply one of the
+/// physical index and back again. This is where we can apply one of the
 /// following approaches:
 ///    - We can use the [`unicode-width`](https://crates.io/crates/unicode-width)
 ///      crate to calculate the width of the grapheme cluster. This works on
@@ -266,4 +266,14 @@ impl<'a> UnicodeString<'a> {
   pub fn display_col_at_logical_index(&self, logical_index: usize) -> Option<UnitType> {
     self.at_logical_index(logical_index).map(|segment| segment.display_col_offset)
   }
+}
+
+pub fn strip_ansi(text: &str) -> Option<String> {
+  if let Ok(vec_u8) = strip_ansi_escapes::strip(&text) {
+    let result_text_plain = std::str::from_utf8(&vec_u8);
+    if let Ok(text_plain) = result_text_plain {
+      return Some(text_plain.to_string());
+    }
+  }
+  None
 }
