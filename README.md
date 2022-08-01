@@ -2,24 +2,22 @@
 <a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
 
 
-This crate provides lots of useful functionality to help you build TUI (text user
-interface) apps, along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy
-🎉:
+This crate provides lots of useful functionality to help you build TUI (text user interface) apps,
+along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 
-1. Thread-safe & fully asynchronous [Redux](#2-redux) library (using Tokio to run
-   subscribers and middleware in separate tasks). The reducer functions are run
-   sequentially.
-2. Loosely coupled & fully asynchronous [TUI framework](#6-tui-coming-soon) to make it
-   possible (and easy) to build sophisticated TUIs (Text User Interface apps) in Rust.
-   This is currently under [active development](#61-tuicore).
-3. Lots of [declarative macros](#31-declarative), and [procedural macros](#32-procedural)
-   (both function like and derive) to avoid having to write lots of boilerplate code for
-   many common (and complex) tasks.
-4. [Non binary tree data](#4-treememoryarena-non-binary-tree-data-structure) structure
-   inspired by memory arenas, that is thread safe and supports parallel tree walking.
+1. Thread-safe & fully asynchronous [Redux](#2-redux) library (using Tokio to run subscribers and
+   middleware in separate tasks). The reducer functions are run sequentially.
+2. Loosely coupled & fully asynchronous [TUI framework](#6-tui-coming-soon) to make it possible (and
+   easy) to build sophisticated TUIs (Text User Interface apps) in Rust. This is currently under
+   [active development](#61-tuicore).
+3. Lots of [declarative macros](#31-declarative), and [procedural macros](#32-procedural) (both
+   function like and derive) to avoid having to write lots of boilerplate code for many common (and
+   complex) tasks.
+4. [Non binary tree data](#4-treememoryarena-non-binary-tree-data-structure) structure inspired by
+   memory arenas, that is thread safe and supports parallel tree walking.
 5. Utility functions to improve [ergonomics](#5-utils) of commonly used patterns in Rust
-   programming, ranging from things like colorizing `stdout`, `stderr` output, to having
-   less noisy `Result` and `Error` types.
+   programming, ranging from things like colorizing `stdout`, `stderr` output, to having less noisy
+   `Result` and `Error` types.
 
 > 🦜 To learn more about this library, please read how it was built (on
 > [developerlife.com](https://developerlife.com)):
@@ -31,9 +29,8 @@ interface) apps, along w/ general niceties & ergonomics that all Rustaceans 🦀
 > 🦀 You can also find all the Rust related content on developerlife.com
 > [here](https://developerlife.com/category/Rust/).
 >
-> 🤷‍♂️ Fun fact: we built a library that is similar in spirit to this crate for TypeScript
-> (for TUI apps on Node.js) called
-> [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/).
+> 🤷‍♂️ Fun fact: we built a library that is similar in spirit to this crate for TypeScript (for TUI
+> apps on Node.js) called [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/).
 
 <hr/>
 
@@ -103,67 +100,65 @@ r3bl_rs_utils = "0.7.40"
 <a id="markdown-redux" name="redux"></a>
 
 
-`Store` is thread safe and asynchronous (using Tokio). You have to implement `async`
-traits in order to use it, by defining your own reducer, subscriber, and middleware trait
-objects. You also have to supply the Tokio runtime, this library will not create its own
-runtime. However, for best results, it is best to use the multithreaded Tokio runtime.
+`Store` is thread safe and asynchronous (using Tokio). You have to implement `async` traits in order
+to use it, by defining your own reducer, subscriber, and middleware trait objects. You also have to
+supply the Tokio runtime, this library will not create its own runtime. However, for best results,
+it is best to use the multithreaded Tokio runtime.
 
-Once you setup your Redux store w/ your reducer, subscriber, and middleware, you can use
-it by calling `spawn_dispatch_action!( store, action )`. This kicks off a parallel Tokio
-task that will run the middleware functions, reducer functions, and finally the subscriber
-functions. So this will not block the thread of whatever code you call this from. The
-`spawn_dispatch_action!()` macro itself is not `async`. So you can call it from non
-`async` code, however you still have to provide a Tokio executor / runtime, without which
-you will get a panic when `spawn_dispatch_action!()` is called.
+Once you setup your Redux store w/ your reducer, subscriber, and middleware, you can use it by
+calling `spawn_dispatch_action!( store, action )`. This kicks off a parallel Tokio task that will
+run the middleware functions, reducer functions, and finally the subscriber functions. So this will
+not block the thread of whatever code you call this from. The `spawn_dispatch_action!()` macro
+itself is not `async`. So you can call it from non `async` code, however you still have to provide a
+Tokio executor / runtime, without which you will get a panic when `spawn_dispatch_action!()` is
+called.
 
 ### Middlewares
 <a id="markdown-middlewares" name="middlewares"></a>
 
 
-Your middleware (`async` trait implementations) will be run concurrently or in parallel
-via Tokio tasks. You get to choose which `async` trait to implement to do one or the
-other. And regardless of which kind you implement the `Action` that is optionally returned
-will be dispatched to the Redux store at the end of execution of all the middlewares (for
-that particular `spawn_dispatch_action!()` call).
+Your middleware (`async` trait implementations) will be run concurrently or in parallel via Tokio
+tasks. You get to choose which `async` trait to implement to do one or the other. And regardless of
+which kind you implement the `Action` that is optionally returned will be dispatched to the Redux
+store at the end of execution of all the middlewares (for that particular `spawn_dispatch_action!()`
+call).
 
-1. `AsyncMiddlewareSpawns<State, Action>` - Your middleware has to use `tokio::spawn` to
-   run `async` blocks in a
-   [separate thread](https://docs.rs/tokio/latest/tokio/task/index.html#spawning) and
+1. `AsyncMiddlewareSpawns<State, Action>` - Your middleware has to use `tokio::spawn` to run `async`
+   blocks in a [separate thread](https://docs.rs/tokio/latest/tokio/task/index.html#spawning) and
    return a `JoinHandle` that contains an `Option<Action>`. A macro
    [`fire_and_forget!`](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/macro.fire_and_forget.html)
-   is provided so that you can easily spawn parallel blocks of code in your `async`
-   functions. These are added to the store via a call to `add_middleware_spawns(...)`.
+   is provided so that you can easily spawn parallel blocks of code in your `async` functions. These
+   are added to the store via a call to `add_middleware_spawns(...)`.
 
 2. `AsyncMiddleware<State, Action>` - They are will all be run together concurrently using
-   [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
-   These are added to the store via a call to `add_middleware(...)`.
+   [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html). These
+   are added to the store via a call to `add_middleware(...)`.
 
 ### Subscribers
 <a id="markdown-subscribers" name="subscribers"></a>
 
 
-The subscribers will be run asynchronously via Tokio tasks. They are all run together
-concurrently but not in parallel, using
+The subscribers will be run asynchronously via Tokio tasks. They are all run together concurrently
+but not in parallel, using
 [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
 
 ### Reducers
 <a id="markdown-reducers" name="reducers"></a>
 
 
-The reducer functions are also are `async` functions that are run in the tokio runtime.
-They're also run one after another in the order in which they're added.
+The reducer functions are also are `async` functions that are run in the tokio runtime. They're also
+run one after another in the order in which they're added.
 
-> ⚡ **Any functions or blocks that you write which uses the Redux library will have to be
-> marked `async` as well. And you will have to spawn the Tokio runtime by using the
-> `#[tokio::main]` macro. If you use the default runtime then Tokio will use multiple
-> threads and its task stealing implementation to give you parallel and concurrent
-> behavior. You can also use the single threaded runtime; its really up to you.**
+> ⚡ **Any functions or blocks that you write which uses the Redux library will have to be marked
+> `async` as well. And you will have to spawn the Tokio runtime by using the `#[tokio::main]` macro.
+> If you use the default runtime then Tokio will use multiple threads and its task stealing
+> implementation to give you parallel and concurrent behavior. You can also use the single threaded
+> runtime; its really up to you.**
 
 1. To create middleware you have to implement the `AsyncMiddleware<S,A>` trait or
    `AsyncMiddlewareSpawns<S,A>` trait. Please read the
    [`AsyncMiddleware` docs](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/redux/async_middleware/trait.AsyncMiddleware.html)
-   for examples of both. The `run()` method is passed two arguments: the `State` and the
-   `Action`.
+   for examples of both. The `run()` method is passed two arguments: the `State` and the `Action`.
 
    1. For `AsyncMiddlewareSpawns<S,A>` in your `run()` implementation you have to use the
       [`fire_and_forget!`](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/macro.fire_and_forget.html)
@@ -176,8 +171,7 @@ They're also run one after another in the order in which they're added.
    - These should be
      [pure functions](https://redux.js.org/understanding/thinking-in-redux/three-principles#changes-are-made-with-pure-functions)
      and simply return a new `State` object.
-   - The `run()` method will be passed two arguments: a ref to `Action` and ref to
-     `State`.
+   - The `run()` method will be passed two arguments: a ref to `Action` and ref to `State`.
 
 3. To create subscribers you have to implement the `AsyncSubscriber` trait.
 
@@ -190,20 +184,19 @@ They're also run one after another in the order in which they're added.
 
 Here's the gist of how to make & use one of these:
 
-1. Create a struct. Make it derive `Default`. Or you can add your own properties / fields
-   to this struct, and construct it yourself, or even provide a constructor function.
+1. Create a struct. Make it derive `Default`. Or you can add your own properties / fields to this
+   struct, and construct it yourself, or even provide a constructor function.
    - A default constructor function `new()` is provided for you by the trait.
-   - Just follow how that works for when you need to make your own constructor function
-     for a struct w/ your own properties.
-2. Implement the `AsyncMiddleware`, `AsyncMiddlewareSpawns`, `AsyncReducer`, or
-   `AsyncSubscriber` trait on your struct.
-3. Register this struct w/ the store using one of the `add_middleware()`,
-   `add_middleware_spawns()`, `add_reducer()`, or `add_subscriber()` methods. You can
-   register as many of these as you like.
-   - If you have a struct w/ no properties, you can just use the default `::new()` method
-     to create an instance and pass that to the `add_???()` methods.
-   - If you have a struct w/ custom properties, you can either implement your own
-     constructor function or use the following as an argument to the `add_???()` methods:
+   - Just follow how that works for when you need to make your own constructor function for a struct
+     w/ your own properties.
+2. Implement the `AsyncMiddleware`, `AsyncMiddlewareSpawns`, `AsyncReducer`, or `AsyncSubscriber`
+   trait on your struct.
+3. Register this struct w/ the store using one of the `add_middleware()`, `add_middleware_spawns()`,
+   `add_reducer()`, or `add_subscriber()` methods. You can register as many of these as you like.
+   - If you have a struct w/ no properties, you can just use the default `::new()` method to create
+     an instance and pass that to the `add_???()` methods.
+   - If you have a struct w/ custom properties, you can either implement your own constructor
+     function or use the following as an argument to the `add_???()` methods:
      `Box::new($YOUR_STRUCT))`.
 
 ### Examples
@@ -211,8 +204,8 @@ Here's the gist of how to make & use one of these:
 
 
 > 💡 There are lots of examples in the
-> [tests](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/redux_test.rs) for
-> this library and in this
+> [tests](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/redux_test.rs) for this library
+> and in this
 > [CLI application](https://github.com/nazmulidris/rust_scratch/blob/main/address-book-with-redux/)
 > built using it.
 
@@ -229,8 +222,8 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 ```
 
-> 1. Make sure to have the `tokio` and `async-trait` crates installed as well as
->    `r3bl_rs_utils` in your `Cargo.toml` file.
+> 1. Make sure to have the `tokio` and `async-trait` crates installed as well as `r3bl_rs_utils` in
+>    your `Cargo.toml` file.
 > 2. Here's an example
 >    [`Cargo.toml`](https://github.com/nazmulidris/rust_scratch/blob/main/address-book-with-redux/Cargo.toml).
 
@@ -290,10 +283,10 @@ impl AsyncReducer<State, Action> for MyReducer {
 }
 ```
 
-Here's an example of an async subscriber function (which are run in parallel after an
-action is dispatched). The following example uses a lambda that captures a shared object.
-This is a pretty common pattern that you might encounter when creating subscribers that
-share state in your enclosing block or scope.
+Here's an example of an async subscriber function (which are run in parallel after an action is
+dispatched). The following example uses a lambda that captures a shared object. This is a pretty
+common pattern that you might encounter when creating subscribers that share state in your enclosing
+block or scope.
 
 ```rust
 /// This shared object is used to collect results from the subscriber
@@ -326,10 +319,10 @@ let my_subscriber = MySubscriber {
 };
 ```
 
-Here are two types of async middleware functions. One that returns an action (which will
-get dispatched once this middleware returns), and another that doesn't return anything
-(like a logger middleware that just dumps the current action to the console). Note that
-both these functions share the `shared_object` reference from above.
+Here are two types of async middleware functions. One that returns an action (which will get
+dispatched once this middleware returns), and another that doesn't return anything (like a logger
+middleware that just dumps the current action to the console). Note that both these functions share
+the `shared_object` reference from above.
 
 ```rust
 /// This shared object is used to collect results from the subscriber
@@ -402,8 +395,7 @@ let mw_example_spawns = MwExampleSpawns {
 };
 ```
 
-Here's how you can setup a store with the above reducer, middleware, and subscriber
-functions.
+Here's how you can setup a store with the above reducer, middleware, and subscriber functions.
 
 ```rust
 // Setup store.
@@ -425,9 +417,9 @@ store
   .await;
 ```
 
-Finally here's an example of how to dispatch an action in a test. You can dispatch actions
-in parallel using `spawn_dispatch_action!()` which is "fire and forget" meaning that the
-caller won't block or wait for the `spawn_dispatch_action!()` to return.
+Finally here's an example of how to dispatch an action in a test. You can dispatch actions in
+parallel using `spawn_dispatch_action!()` which is "fire and forget" meaning that the caller won't
+block or wait for the `spawn_dispatch_action!()` to return.
 
 ```rust
 // Test reducer and subscriber by dispatching `Add`, `AddPop`, `Clear` actions in parallel.
@@ -449,26 +441,24 @@ assert_eq!(store.get_state().stack.len(), 0);
 <a id="markdown-declarative" name="declarative"></a>
 
 
-There are quite a few declarative macros that you will find in the library. They tend to
-be used internally in the implementation of the library itself. Here are some that are
-actually externally exposed via `#[macro_export]`.
+There are quite a few declarative macros that you will find in the library. They tend to be used
+internally in the implementation of the library itself. Here are some that are actually externally
+exposed via `#[macro_export]`.
 
 #### assert_eq2!
 <a id="markdown-assert_eq2!" name="assert_eq2!"></a>
 
 
-Similar to [`assert_eq!`] but automatically prints the left and right hand side variables
-if the assertion fails. Useful for debugging tests, since the cargo would just print out
-the left and right values w/out providing information on what variables were being
-compared.
+Similar to [`assert_eq!`] but automatically prints the left and right hand side variables if the
+assertion fails. Useful for debugging tests, since the cargo would just print out the left and right
+values w/out providing information on what variables were being compared.
 
 #### throws!
 <a id="markdown-throws!" name="throws!"></a>
 
 
-Wrap the given `block` or `stmt` so that it returns a `Result<()>`. It is just syntactic
-sugar that helps having to write `Ok(())` repeatedly at the end of each block. Here's an
-example.
+Wrap the given `block` or `stmt` so that it returns a `Result<()>`. It is just syntactic sugar that
+helps having to write `Ok(())` repeatedly at the end of each block. Here's an example.
 
 ```rust
 fn test_simple_2_col_layout() -> CommonResult<()> {
@@ -521,13 +511,12 @@ fn test_simple_2_col_layout() -> CommonResult<CommandQueue> {
 <a id="markdown-log!" name="log!"></a>
 
 
-You can use this macro to dump log messages at 3 levels to a file. By default this file is
-named `log.txt` and is dumped in the current directory. Here's how you can use it.
+You can use this macro to dump log messages at 3 levels to a file. By default this file is named
+`log.txt` and is dumped in the current directory. Here's how you can use it.
 
-Please note that the macro returns a `Result`. A type alias is provided to save some
-typing called `CommonResult<T>` which is just a short hand for
-`std::result::Result<T, Box<dyn Error>>`. The log file itself is overwritten for each
-"session" that you run your program.
+Please note that the macro returns a `Result`. A type alias is provided to save some typing called
+`CommonResult<T>` which is just a short hand for `std::result::Result<T, Box<dyn Error>>`. The log
+file itself is overwritten for each "session" that you run your program.
 
 ```rust
 use r3bl_rs_utils::{init_file_logger_once, log, ResultCommon};
@@ -555,9 +544,9 @@ fn run() -> ResultCommon<()> {
 }
 ```
 
-To change the default log file to whatever you choose, you can use the
-`try_to_set_log_file_path()` function. If the logger hasn't yet been initialized, this
-function will set the log file path. Otherwise it will return an error.
+To change the default log file to whatever you choose, you can use the `try_to_set_log_file_path()`
+function. If the logger hasn't yet been initialized, this function will set the log file path.
+Otherwise it will return an error.
 
 ```rust
 use r3bl_rs_utils::{try_set_log_file_path, CommonResult, CommonError};
@@ -572,8 +561,8 @@ fn run() {
 To change the default log level or to disable the log itself, you can use the
 `try_to_set_log_level()` function.
 
-If you want to override the default log level `LOG_LEVEL`, you can use this function. If
-the logger has already been initialized, then it will return a an error.
+If you want to override the default log level `LOG_LEVEL`, you can use this function. If the logger
+has already been initialized, then it will return a an error.
 
 ```rust
 use r3bl_rs_utils::{try_to_set_log_level, CommonResult, CommonError};
@@ -609,9 +598,8 @@ Please check out the source
 <a id="markdown-log_no_err!" name="log_no_err!"></a>
 
 
-This macro is very similar to the [log!](#log) macro, except that it won't return any
-error if the underlying logging system fails. It will simply print a message to `stderr`.
-Here's an example.
+This macro is very similar to the [log!](#log) macro, except that it won't return any error if the
+underlying logging system fails. It will simply print a message to `stderr`. Here's an example.
 
 ```rust
 pub fn log_state(&self, msg: &str) {
@@ -624,11 +612,11 @@ pub fn log_state(&self, msg: &str) {
 <a id="markdown-debug_log_no_err!" name="debug_log_no_err!"></a>
 
 
-This is a really simple macro to make it effortless to debug into a log file. It outputs
-`DEBUG` level logs. It takes a single identifier as an argument, or any number of them. It
-simply dumps an arrow symbol, followed by the identifier `stringify`'d along with the
-value that it contains (using the `Debug` formatter). All of the output is colorized for
-easy readability. You can use it like this.
+This is a really simple macro to make it effortless to debug into a log file. It outputs `DEBUG`
+level logs. It takes a single identifier as an argument, or any number of them. It simply dumps an
+arrow symbol, followed by the identifier `stringify`'d along with the value that it contains (using
+the `Debug` formatter). All of the output is colorized for easy readability. You can use it like
+this.
 
 ```rust
 let my_string = "Hello World!";
@@ -639,8 +627,8 @@ debug_log_no_err!(my_string);
 <a id="markdown-trace_log_no_err!" name="trace_log_no_err!"></a>
 
 
-This is very similar to [debug_log_no_err!](#debuglognoerr) except that it outputs `TRACE`
-level logs.
+This is very similar to [debug_log_no_err!](#debuglognoerr) except that it outputs `TRACE` level
+logs.
 
 ```rust
 let my_string = "Hello World!";
@@ -651,9 +639,9 @@ trace_log_no_err!(my_string);
 <a id="markdown-make_api_call_for!" name="make_api_call_for!"></a>
 
 
-This macro makes it easy to create simple HTTP GET requests using the `reqwest` crate. It
-generates an `async` function called `make_request()` that returns a `CommonResult<T>`
-where `T` is the type of the response body. Here's an example.
+This macro makes it easy to create simple HTTP GET requests using the `reqwest` crate. It generates
+an `async` function called `make_request()` that returns a `CommonResult<T>` where `T` is the type
+of the response body. Here's an example.
 
 ```rust
 use std::{error::Error, fmt::Display};
@@ -693,8 +681,8 @@ You can find lots of
 <a id="markdown-fire_and_forget!" name="fire_and_forget!"></a>
 
 
-This is a really simple wrapper around `tokio::spawn()` for the given block. Its just
-syntactic sugar. Here's an example of using it for a non-`async` block.
+This is a really simple wrapper around `tokio::spawn()` for the given block. Its just syntactic
+sugar. Here's an example of using it for a non-`async` block.
 
 ```rust
 pub fn foo() {
@@ -745,11 +733,10 @@ call_if_true!(
 <a id="markdown-debug!" name="debug!"></a>
 
 
-This is a really simple macro to make it effortless to use the color console logger. It
-takes a single identifier as an argument, or any number of them. It simply dumps an arrow
-symbol, followed by the identifier (stringified) along with the value that it contains
-(using the `Debug` formatter). All of the output is colorized for easy readability. You
-can use it like this.
+This is a really simple macro to make it effortless to use the color console logger. It takes a
+single identifier as an argument, or any number of them. It simply dumps an arrow symbol, followed
+by the identifier (stringified) along with the value that it contains (using the `Debug` formatter).
+All of the output is colorized for easy readability. You can use it like this.
 
 ```rust
 let my_string = "Hello World!";
@@ -758,8 +745,8 @@ let my_number = 42;
 debug!(my_string, my_number);
 ```
 
-You can also use it in these other forms for terminal raw mode output. This will dump the
-output to stderr.
+You can also use it in these other forms for terminal raw mode output. This will dump the output to
+stderr.
 
 ```rust
 if let Err(err) = $cmd {
@@ -779,9 +766,9 @@ debug!(OK_RAW &msg);
 <a id="markdown-with!" name="with!"></a>
 
 
-This is a macro that takes inspiration from the `with` scoping function in Kotlin. It just
-makes it easier to express a block of code that needs to run after an expression is
-evaluated and saved to a given variable. Here's an example.
+This is a macro that takes inspiration from the `with` scoping function in Kotlin. It just makes it
+easier to express a block of code that needs to run after an expression is evaluated and saved to a
+given variable. Here's an example.
 
 ```rust
 with! {
@@ -809,8 +796,8 @@ It does the following:
 <a id="markdown-with_mut!" name="with_mut!"></a>
 
 
-This macro is just like [`with!`](#with) but it takes a mutable reference to the `$id`
-variable. Here's a code example.
+This macro is just like [`with!`](#with) but it takes a mutable reference to the `$id` variable.
+Here's a code example.
 
 ```rust
 with_mut! {
@@ -831,8 +818,8 @@ with_mut! {
 <a id="markdown-with_mut_returns!" name="with_mut_returns!"></a>
 
 
-This macro is just like [`with_mut!`](#withmutreturns) except that it returns the value of
-the `$code` block. Here's a code example.
+This macro is just like [`with_mut!`](#withmutreturns) except that it returns the value of the
+`$code` block. Here's a code example.
 
 ```rust
 let tw_queue = with_mut_returns! {
@@ -848,9 +835,9 @@ let tw_queue = with_mut_returns! {
 <a id="markdown-unwrap_option_or_run_fn_returning_err!" name="unwrap_option_or_run_fn_returning_err!"></a>
 
 
-This macro can be useful when you are working w/ an expression that returns an `Option`
-and if that `Option` is `None` then you want to abort and return an error immediately. The
-idea is that you are using this macro in a function that returns a `Result<T>` basically.
+This macro can be useful when you are working w/ an expression that returns an `Option` and if that
+`Option` is `None` then you want to abort and return an error immediately. The idea is that you are
+using this macro in a function that returns a `Result<T>` basically.
 
 Here's an example to illustrate.
 
@@ -872,9 +859,9 @@ pub fn from(
 <a id="markdown-unwrap_option_or_compute_if_none!" name="unwrap_option_or_compute_if_none!"></a>
 
 
-This macro is basically a way to compute something lazily when it (the `Option`) is set to
-`None`. Unwrap the `$option`, and if `None` then run the `$next` closure which must return
-a value that is set to `$option`. Here's an example.
+This macro is basically a way to compute something lazily when it (the `Option`) is set to `None`.
+Unwrap the `$option`, and if `None` then run the `$next` closure which must return a value that is
+set to `$option`. Here's an example.
 
 ```rust
 use r3bl_rs_utils::unwrap_option_or_compute_if_none;
@@ -903,8 +890,8 @@ the public crate, an internal or core crate, and the proc macro crate.
 <a id="markdown-builder-derive-macro" name="builder-derive-macro"></a>
 
 
-This derive macro makes it easy to generate builders when annotating a `struct` or `enum`.
-It generates It has full support for generics. It can be used like this.
+This derive macro makes it easy to generate builders when annotating a `struct` or `enum`. It
+generates It has full support for generics. It can be used like this.
 
 ```rust
 #[derive(Builder)]
@@ -930,16 +917,16 @@ assert_eq!(my_pt.y, 2);
 <a id="markdown-make_struct_safe_to_share_and_mutate!" name="make_struct_safe_to_share_and_mutate!"></a>
 
 
-This function like macro (with custom syntax) makes it easy to manage shareability and
-interior mutability of a struct. We call this pattern the "manager" of "things").
+This function like macro (with custom syntax) makes it easy to manage shareability and interior
+mutability of a struct. We call this pattern the "manager" of "things").
 
 > 🪄 You can read all about it
 > [here](https://developerlife.com/2022/03/12/rust-redux/#of-things-and-their-managers).
 
 1. This struct gets wrapped in a `RwLock` for thread safety.
 2. That is then wrapped inside an `Arc` so we can share it across threads.
-3. Additionally it works w/ Tokio so that it is totally async. It also fully supports
-   generics and trait bounds w/ an optional `where` clause.
+3. Additionally it works w/ Tokio so that it is totally async. It also fully supports generics and
+   trait bounds w/ an optional `where` clause.
 
 Here's a very simple usage:
 
@@ -975,23 +962,22 @@ async fn test_custom_syntax_no_where_clause() {
 <a id="markdown-make_safe_async_fn_wrapper!" name="make_safe_async_fn_wrapper!"></a>
 
 
-This function like macro (with custom syntax) makes it easy to share functions and lambdas
-that are async. They should be safe to share between threads and they should support
-either being invoked or spawned.
+This function like macro (with custom syntax) makes it easy to share functions and lambdas that are
+async. They should be safe to share between threads and they should support either being invoked or
+spawned.
 
 > 🪄 You can read all about how to write proc macros
 > [here](https://developerlife.com/2022/03/30/rust-proc-macro/).
 
-1. A struct is generated that wraps the given function or lambda in an `Arc<RwLock<>>` for
-   thread safety and interior mutability.
-2. A `get()` method is generated which makes it possible to share this struct across
-   threads.
-3. A `from()` method is generated which makes it easy to create this struct from a
-   function or lambda.
-4. A `spawn()` method is generated which makes it possible to spawn the enclosed function
-   or lambda asynchronously using Tokio.
-5. An `invoke()` method is generated which makes it possible to invoke the enclosed
-   function or lambda synchronously.
+1. A struct is generated that wraps the given function or lambda in an `Arc<RwLock<>>` for thread
+   safety and interior mutability.
+2. A `get()` method is generated which makes it possible to share this struct across threads.
+3. A `from()` method is generated which makes it easy to create this struct from a function or
+   lambda.
+4. A `spawn()` method is generated which makes it possible to spawn the enclosed function or lambda
+   asynchronously using Tokio.
+5. An `invoke()` method is generated which makes it possible to invoke the enclosed function or
+   lambda synchronously.
 
 Here's an example of how to use this macro.
 
@@ -1022,8 +1008,8 @@ make_safe_async_fn_wrapper! {
 
 
 [`Arena`] and [`MTArena`] types are the implementation of a
-[non-binary tree](https://en.wikipedia.org/wiki/Binary_tree#Non-binary_trees) data
-structure that is inspired by [memory arenas](https://en.wikipedia.org/wiki/Memory_arena).
+[non-binary tree](https://en.wikipedia.org/wiki/Binary_tree#Non-binary_trees) data structure that is
+inspired by [memory arenas](https://en.wikipedia.org/wiki/Memory_arena).
 
 Here's a simple example of how to use the [`Arena`] type:
 
@@ -1140,8 +1126,8 @@ let arena = MTArena::<String>::new();
 }
 ```
 
-> 📜 There are more complex ways of using [`Arena`] and [`MTArena`]. Please look at these
-> extensive integration tests that put them thru their paces
+> 📜 There are more complex ways of using [`Arena`] and [`MTArena`]. Please look at these extensive
+> integration tests that put them thru their paces
 > [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
 
 ## utils
@@ -1152,8 +1138,8 @@ let arena = MTArena::<String>::new();
 <a id="markdown-commonresult-and-commonerror" name="commonresult-and-commonerror"></a>
 
 
-These two structs make it easier to work w/ `Result`s. They are just syntactic sugar and
-helper structs. You will find them used everywhere in the
+These two structs make it easier to work w/ `Result`s. They are just syntactic sugar and helper
+structs. You will find them used everywhere in the
 [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crate.
 
 Here's an example of using them both.
@@ -1184,9 +1170,9 @@ impl Stylesheet {
 <a id="markdown-lazyfield" name="lazyfield"></a>
 
 
-This combo of struct & trait object allows you to create a lazy field that is only
-evaluated when it is first accessed. You have to provide a trait implementation that
-computes the value of the field (once). Here's an example.
+This combo of struct & trait object allows you to create a lazy field that is only evaluated when it
+is first accessed. You have to provide a trait implementation that computes the value of the field
+(once). Here's an example.
 
 ```rust
 use r3bl_rs_utils::{LazyExecutor, LazyField};
@@ -1219,9 +1205,9 @@ fn test_lazy_field() {
 <a id="markdown-lazymemovalues" name="lazymemovalues"></a>
 
 
-This struct allows users to create a lazy hash map. A function must be provided that
-computes the values when they are first requested. These values are cached for the
-lifetime this struct. Here's an example.
+This struct allows users to create a lazy hash map. A function must be provided that computes the
+values when they are first requested. These values are cached for the lifetime this struct. Here's
+an example.
 
 ```rust
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
@@ -1298,10 +1284,10 @@ Here's a list of functions available in this module:
 <a id="markdown-safe_unwrap" name="safe_unwrap"></a>
 
 
-Functions that make it easy to unwrap a value safely. These functions are provided to
-improve the ergonomics of using wrapped values in Rust. Examples of wrapped values are
-`<Arc<RwLock<T>>`, and `<Option>`. These functions are inspired by Kotlin scope functions
-& TypeScript expression based language library which can be found
+Functions that make it easy to unwrap a value safely. These functions are provided to improve the
+ergonomics of using wrapped values in Rust. Examples of wrapped values are `<Arc<RwLock<T>>`, and
+`<Option>`. These functions are inspired by Kotlin scope functions & TypeScript expression based
+language library which can be found
 [here on `r3bl-ts-utils`](https://github.com/r3bl-org/r3bl-ts-utils).
 
 Here are some examples.
@@ -1345,8 +1331,7 @@ Here's a list of type aliases provided for better readability:
 <a id="markdown-color_text" name="color_text"></a>
 
 
-ANSI colorized text <https://github.com/ogham/rust-ansi-term> helper methods. Here's an
-example.
+ANSI colorized text <https://github.com/ogham/rust-ansi-term> helper methods. Here's an example.
 
 ```rust
 use r3bl_rs_utils::utils::{
@@ -1379,23 +1364,47 @@ Here's a list of functions available in this module:
 <a id="markdown-tui-coming-soon!" name="tui-coming-soon!"></a>
 
 
-> 🚧 WIP - This module isn’t ready yet but will be soon. It is the foundation for creating
-> a sophisticated TUI (text user interface) library that can be used to create rich
-> terminal applications for desktop and cloud. This is similar conceptually to [Ink
-> library for Node.js & TypeScript][tui_1] (that uses React and Yoga).
+The `tui` module allows you to build fully async TUI apps with a modern API that brings the best of
+reactive & unidirectional data flow architecture from frontend web development (React, Redux, CSS,
+flexbox) to Rust and TUI apps. And since this is using Tokio you get the advantages of concurrency
+and parallelism built-in. No more blocking on the main thread for user input, for async middleware,
+or even rendering 🎉.
+
+This framework is
+[loosely coupled and strongly coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
+meaning that you can pick and choose whatever pieces you would like to use w/out having the
+cognitive load of having to grok all the things in the codebase. Its more like a collection of
+mostly independent modules that work well w/ each other, but know very little about each other.
+
+Here are some framework highlights:
+
+- The entire TUI framework itself supports concurrency & parallelism (user input, rendering, etc.
+  are generally non blocking).
+- Flexbox-like responsive layout.
+- CSS-like styling.
+- Redux for state management (fully async, concurrent & parallel).
+- Lolcat implementation w/ a rainbow color-wheel palette.
+- Support for Unicode grapheme clusters in strings.
+
+> 🚀 To see a showcase for you can build w/ this framework, check out the
+> [r3bl-cmdr](https://github.com/r3bl-org/r3bl-cmdr) crate.
+
+> 🚧 WIP - This module isn’t ready yet but will be soon. It is the foundation for creating a
+> sophisticated TUI (text user interface) library that can be used to create rich terminal
+> applications for desktop and cloud. This is similar conceptually to [Ink library for Node.js &
+> TypeScript][tui_1] (that uses React and Yoga).
 >
-> - It is built atop `crossterm` but can easily be ported to other low level terminal
->   libraries.
-> - It is totally async, so w/ Tokio, you get concurrency and parallel behavior in TUI
->   apps that are written with it.
-> - The idea is that it takes the best ideas from Redux, React (even JSX), and CSS to
->   create a modern way to create powerful and efficient (concurrent & parallel) terminal
->   applications in Rust.
+> - It is built atop `crossterm` but can easily be ported to other low level terminal libraries.
+> - It is totally async, so w/ Tokio, you get concurrency and parallel behavior in TUI apps that are
+>   written with it.
+> - The idea is that it takes the best ideas from Redux, React (even JSX), and CSS to create a
+>   modern way to create powerful and efficient (concurrent & parallel) terminal applications in
+>   Rust.
 >
 > 🚀 As the functionality is built and the API stabilized in `r3bl-cmdr` [crate][tui_2] &
-> [repo][tui_3], they will be moved here (from the `tui` package there). As soon as the
-> bulk of the code is moved here, this README will be updated as well. The first of these
-> is the `tui_core` module below.
+> [repo][tui_3], they will be moved here (from the `tui` package there). As soon as the bulk of the
+> code is moved here, this README will be updated as well. The first of these is the `tui_core`
+> module below.
 
 [tui_1]: https://developerlife.com/category/CLI/
 [tui_2]: https://crates.io/crates/r3bl-cmdr
@@ -1405,20 +1414,20 @@ Here's a list of functions available in this module:
 <a id="markdown-tui_core" name="tui_core"></a>
 
 
-The `tui_core` module lives in the `core` crate and contains the following foundations for
-a TUI architecture:
+The `tui_core` module lives in the `core` crate and contains the following foundations for a TUI
+architecture:
 
 1. `dimens` - All the units, size, position structs can be found here.
-2. `styles` - This is the equivalent of CSS. There's a `style!` proc macro (in the `macro`
-   crate) that provides a nice JSX-like syntax (DSL) for creating styles.
-3. `graphemes` - Support for grapheme clusters is provided here. You can start w/ a
-   `String` and treat it as a list of `GraphemeClusterSegments` and explore sizing and
-   maintain two types of cursor or index:
+2. `styles` - This is the equivalent of CSS. There's a `style!` proc macro (in the `macro` crate)
+   that provides a nice JSX-like syntax (DSL) for creating styles.
+3. `graphemes` - Support for grapheme clusters is provided here. You can start w/ a `String` and
+   treat it as a list of `GraphemeClusterSegments` and explore sizing and maintain two types of
+   cursor or index:
    1. Logical index which allows the `String` to be traversed by grapheme cluster segment.
-   2. Display index which allows `crossterm` column coordinates and widths to be used to
-      "map" to and from a specific grapheme cluster segment. More documentation is
-      provided in the `unicode_string.ext.rs` file and the `test_unicode_string_ext.rs`
-      file is great to see the API in action.
+   2. Display index which allows `crossterm` column coordinates and widths to be used to "map" to
+      and from a specific grapheme cluster segment. More documentation is provided in the
+      `unicode_string.ext.rs` file and the `test_unicode_string_ext.rs` file is great to see the API
+      in action.
 
 ## Stability
 <a id="markdown-stability" name="stability"></a>
@@ -1426,20 +1435,18 @@ a TUI architecture:
 
 🧑‍🔬 This library is in early development.
 
-1. There are extensive integration tests for code that is production ready. The goal is
-   not to have breaking changes for existing code, and be thoughtful when adding new
-   functionality. This is why code lives in other repos for a while before being moved to
-   this one.
-2. The `tui` and `tui_core` modules are current WIP. They are currently under active
-   development in the `r3bl-cmdr` [repo][tui_3] and [crate][tui_2].
+1. There are extensive integration tests for code that is production ready. The goal is not to have
+   breaking changes for existing code, and be thoughtful when adding new functionality. This is why
+   code lives in other repos for a while before being moved to this one.
+2. The `tui` and `tui_core` modules are current WIP. They are currently under active development in
+   the `r3bl-cmdr` [repo][tui_3] and [crate][tui_2].
 
 ## Issues, comments, feedback, and PRs
 <a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
 
 
-Please report any issues to the
-[issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues). And if you have any
-feature requests, feel free to add them there too 👍.
+Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
+And if you have any feature requests, feel free to add them there too 👍.
 
 ## Notes
 <a id="markdown-notes" name="notes"></a>
