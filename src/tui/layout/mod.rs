@@ -15,14 +15,18 @@
  *   limitations under the License.
  */
 
-// Attach sources.
-pub mod dimens;
-pub mod styles;
-pub mod graphemes;
-pub mod lolcat;
+/// If set to true, and the [log!] fails, then it will print the error to
+/// stderr. Also enables or disables file logging for entire module.
+pub const DEBUG: bool = true;
 
-// Re-export.
-pub use dimens::*;
-pub use graphemes::*;
-pub use lolcat::*;
-pub use styles::*;
+// Attach source files.
+pub mod layout_error;
+pub mod layout_management;
+pub mod tw_box;
+pub mod tw_surface;
+
+// Re-export the public items.
+pub use layout_error::*;
+pub use layout_management::*;
+pub use tw_box::*;
+pub use tw_surface::*;

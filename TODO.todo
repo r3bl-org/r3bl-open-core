@@ -2,7 +2,7 @@
 │ r3bl_rs_utils │
 ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 tui:
-  ☐ move all the `tui` stuff out of `r3bl-cmdr` into here
+  ✔ move all the `tui` stuff out of `r3bl-cmdr` into here @done(22-08-02 15:04)
 
 publish:
   ☐ core needs to be rev'd

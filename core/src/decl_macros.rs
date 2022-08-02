@@ -181,9 +181,9 @@ macro_rules! debug {
       DEBUG,
       eprintln!(
         "{} {} {}\r",
-        r3bl_rs_utils::style_error("▶"),
-        r3bl_rs_utils::style_prompt($msg),
-        r3bl_rs_utils::style_dimmed(&format!("{:#?}", $err))
+        r3bl_rs_utils_core::style_error("▶"),
+        r3bl_rs_utils_core::style_prompt($msg),
+        r3bl_rs_utils_core::style_dimmed(&format!("{:#?}", $err))
       )
     );
   }};
@@ -193,8 +193,8 @@ macro_rules! debug {
       DEBUG,
       println!(
         "{} {}\r",
-        r3bl_rs_utils::style_error("▶"),
-        r3bl_rs_utils::style_prompt($msg)
+        r3bl_rs_utils_core::style_error("▶"),
+        r3bl_rs_utils_core::style_prompt($msg)
       ),
     )
   }};
@@ -213,9 +213,9 @@ macro_rules! debug {
         /* Each repeat will contain the following statement, with $element replaced. */
         println!(
           "{} {} = {}",
-          r3bl_rs_utils::style_error("▶"),
-          r3bl_rs_utils::style_prompt(stringify!($element)),
-          r3bl_rs_utils::style_dimmed(&format!("{:#?}", $element))
+          r3bl_rs_utils_core::style_error("▶"),
+          r3bl_rs_utils_core::style_prompt(stringify!($element)),
+          r3bl_rs_utils_core::style_dimmed(&format!("{:#?}", $element))
         );
       )*
   }};

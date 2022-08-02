@@ -15,14 +15,21 @@
  *   limitations under the License.
  */
 
-// Attach sources.
-pub mod dimens;
-pub mod styles;
-pub mod graphemes;
-pub mod lolcat;
+use std::sync::Arc;
 
-// Re-export.
-pub use dimens::*;
-pub use graphemes::*;
-pub use lolcat::*;
-pub use styles::*;
+use tokio::sync::RwLock;
+
+use crate::*;
+
+// TWData.
+pub type SharedWindow = Arc<RwLock<TWData>>;
+
+// TWApp.
+pub type SafeTWApp<S, A> = dyn TWApp<S, A> + Send + Sync;
+pub type BoxedSafeTWApp<S, A> = Box<SafeTWApp<S, A>>;
+pub type SharedTWApp<S, A> = Arc<RwLock<SafeTWApp<S, A>>>;
+
+// Component.
+pub type SafeComponent<S, A> = dyn Component<S, A> + Send + Sync;
+pub type BoxedSafeComponent<S, A> = Box<SafeComponent<S, A>>;
+pub type SharedComponent<S, A> = Arc<RwLock<SafeComponent<S, A>>>;

@@ -15,14 +15,12 @@
  *   limitations under the License.
  */
 
-// Attach sources.
-pub mod dimens;
-pub mod styles;
-pub mod graphemes;
-pub mod lolcat;
+// Attach source files.
+pub mod cat;
+pub mod color_utils;
+pub mod control;
 
-// Re-export.
-pub use dimens::*;
-pub use graphemes::*;
-pub use lolcat::*;
-pub use styles::*;
+// Re-exports.
+pub use cat::*;
+pub use color_utils::*;
+pub use control::*;

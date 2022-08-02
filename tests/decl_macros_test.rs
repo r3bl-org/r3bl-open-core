@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils::unwrap_option_or_compute_if_none;
+use r3bl_rs_utils_core::unwrap_option_or_compute_if_none;
 
 #[test]
 fn test_unwrap_option_or_compute_if_none() {
