@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+// FIXME: add short documentation here explaining why core exists
+
 // Connect to source file.
 pub mod common;
 pub mod async_safe_share_mutate;

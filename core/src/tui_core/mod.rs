@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+// FIXME: add documentation for tui_core module
+
 // Attach sources.
 pub mod dimens;
 pub mod styles;

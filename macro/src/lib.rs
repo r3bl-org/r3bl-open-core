@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+// FIXME: add short documentation here explaining why core exists
+
 //! [Procedural macro guide](https://developerlife.com/2022/03/30/rust-proc-macro/).
 
 extern crate proc_macro;

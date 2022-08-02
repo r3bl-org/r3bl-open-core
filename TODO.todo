@@ -3,6 +3,8 @@
 ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 tui:
   ✔ move all the `tui` stuff out of `r3bl-cmdr` into here @done(22-08-02 15:04)
+  ☐ add documentation for `tui` module
+  ☐ add documentation for `tui_core` module
 
 publish:
   ☐ core needs to be rev'd
