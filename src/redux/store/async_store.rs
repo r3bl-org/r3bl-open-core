@@ -2,7 +2,7 @@
  *   Copyright (c) 2022 R3BL LLC
  *   All rights reserved.
  *
- *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   Licensed under the Apache License, Version 2.0 (the "License"); 
  *   you may not use this file except in compliance with the License.
  *   You may obtain a copy of the License at
  *
@@ -72,8 +72,7 @@ where
   }
 }
 
-// TODO: make history implementation more comprehensive (eg: max history size) &
-// add tests.
+// FUTURE: make history implementation more comprehensive (eg: max history size) & add tests.
 
 // Handle subscriber, middleware, reducer management.
 impl<S, A> Store<S, A>

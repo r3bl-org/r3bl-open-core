@@ -64,7 +64,7 @@ pub struct State {
   pub stack: Vec<i32>,
 }
 
-// TODO: Write integration tests for history.
+// FUTURE: Write integration tests for history.
 
 /// ```text
 /// ╭──────────────────────────────────────────────────────╮

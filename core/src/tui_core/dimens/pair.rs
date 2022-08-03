@@ -57,7 +57,7 @@ impl From<(i32, i32)> for Pair {
   }
 }
 
-/// https://stackoverflow.com/a/28280042/2085356
+/// <https://stackoverflow.com/a/28280042/2085356>
 impl From<(usize, usize)> for Pair {
   fn from(pair: (usize, usize)) -> Self {
     Self {

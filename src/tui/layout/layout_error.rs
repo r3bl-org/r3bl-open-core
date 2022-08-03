@@ -21,7 +21,7 @@ use std::{error::Error,
 use crate::{CommonResult, *};
 
 /// Main error struct.
-/// https://learning-rust.github.io/docs/e7.custom_error_types.html
+/// <https://learning-rust.github.io/docs/e7.custom_error_types.html>
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct LayoutError {

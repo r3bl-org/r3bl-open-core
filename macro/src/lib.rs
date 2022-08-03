@@ -15,34 +15,47 @@
  *   limitations under the License.
  */
 
-// FIXME: add short documentation here explaining why core exists
-
-//! [Procedural macro guide](https://developerlife.com/2022/03/30/rust-proc-macro/).
+//! - This crate is a dependency of the [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils)
+//!   crate.
+//! - Here's a guide to writing [procedural
+//!   macros](https://developerlife.com/2022/03/30/rust-proc-macro/) on
+//!   [developerlife.com](https://developerlife.com/category/Rust/).
 
 extern crate proc_macro;
 
-mod utils;
-mod manager_of_things;
 mod builder;
 mod fn_wrapper;
 mod make_style;
+mod manager_of_things;
+mod utils;
 
 use fn_wrapper::{make_safe_async, make_shareable};
 use proc_macro::TokenStream;
 
 #[proc_macro_derive(Builder)]
-pub fn derive_macro_builder(input: TokenStream) -> TokenStream { builder::derive_proc_macro_impl(input) }
+pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
+  builder::derive_proc_macro_impl(input)
+}
 
 #[proc_macro]
 pub fn style(input: TokenStream) -> TokenStream { make_style::fn_proc_macro_impl(input) }
 
 #[proc_macro]
-pub fn make_struct_safe_to_share_and_mutate(input: TokenStream) -> TokenStream { manager_of_things::fn_proc_macro_impl(input) }
+pub fn make_struct_safe_to_share_and_mutate(input: TokenStream) -> TokenStream {
+  manager_of_things::fn_proc_macro_impl(input)
+}
 
-#[deprecated(since = "0.7.12", note = "please use [`AsyncMiddleware`] or [`AsyncSubscriber`] instead")]
+#[deprecated(
+  since = "0.7.12",
+  note = "please use [`AsyncMiddleware`] or [`AsyncSubscriber`] instead"
+)]
 #[proc_macro]
-pub fn make_safe_async_fn_wrapper(input: TokenStream) -> TokenStream { make_safe_async::fn_proc_macro_impl(input) }
+pub fn make_safe_async_fn_wrapper(input: TokenStream) -> TokenStream {
+  make_safe_async::fn_proc_macro_impl(input)
+}
 
 #[deprecated(since = "0.7.12", note = "please use [`AsyncReducer`] instead")]
 #[proc_macro]
-pub fn make_shareable_fn_wrapper(input: TokenStream) -> TokenStream { make_shareable::fn_proc_macro_impl(input) }
+pub fn make_shareable_fn_wrapper(input: TokenStream) -> TokenStream {
+  make_shareable::fn_proc_macro_impl(input)
+}

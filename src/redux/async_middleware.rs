@@ -54,7 +54,7 @@ where
 {
   async fn run(&self, action: A, state: S) -> Option<A>;
 
-  /// https://doc.rust-lang.org/book/ch10-02-traits.html
+  /// <https://doc.rust-lang.org/book/ch10-02-traits.html>
   #[allow(clippy::all)]
   fn new() -> Box<AsyncMiddlewareTraitObject<S, A>>
   where
@@ -108,7 +108,7 @@ where
 {
   async fn run(&self, action: A, state: S) -> JoinHandle<Option<A>>;
 
-  /// https://doc.rust-lang.org/book/ch10-02-traits.html
+  /// <https://doc.rust-lang.org/book/ch10-02-traits.html>
   #[allow(clippy::all)]
   fn new() -> AsyncMiddlewareSpawnsItem<S, A>
   where

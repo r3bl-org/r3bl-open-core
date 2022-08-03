@@ -61,7 +61,7 @@ impl Display for CommonError {
 }
 
 impl CommonError {
-  /// Constructor that is compatible w/ [`ResultCommon`].
+  /// Constructor that is compatible w/ [`CommonResult`].
   #[allow(clippy::all)]
   pub fn new<T>(err_type: CommonErrorType, msg: &str) -> CommonResult<T> {
     Self::from_err(CommonError {
@@ -70,12 +70,12 @@ impl CommonError {
     })
   }
 
-  /// Constructor that is compatible w/ [`ResultCommon`].
+  /// Constructor that is compatible w/ [`CommonResult`].
   pub fn new_err_with_only_type<T>(err_type: CommonErrorType) -> CommonResult<T> {
     CommonError::from_err_type_and_msg(err_type, None)
   }
 
-  /// Constructor that is compatible w/ [`ResultCommon`].
+  /// Constructor that is compatible w/ [`CommonResult`].
   pub fn new_err_with_only_msg<T>(msg: &str) -> CommonResult<T> {
     CommonError::from_err_type_and_msg(CommonErrorType::General, Some(msg.to_string()))
   }

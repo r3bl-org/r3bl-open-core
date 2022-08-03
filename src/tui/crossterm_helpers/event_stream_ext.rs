@@ -21,7 +21,7 @@
 //! ```ignore
 //! loop {
 //!   if poll(Duration::from_millis(500))? { // This is inefficient.
-//!     let input_event: InputEvent = read()?.into();
+//!     let input_event: TWInputEvent = read()?.into();
 //!     if handle_input_event(input_event).await.is_err() {
 //!       break;
 //!     };
@@ -35,7 +35,7 @@
 //!   throws!({
 //!     println_raw!("Type Ctrl+q to exit repl.");
 //!     loop {
-//!       let input_event: InputEvent = read()?.into();
+//!       let input_event: TWInputEvent = read()?.into();
 //!       let result = handle_input_event(input_event).await;
 //!       if result.is_err() {
 //!         break;
@@ -46,9 +46,9 @@
 //! ```
 //!
 //! Docs:
-//! - https://github.com/crossterm-rs/crossterm/wiki/Upgrade-from-0.13-to-0.14#115-event-polling
-//! - https://github.com/crossterm-rs/crossterm/wiki/Upgrade-from-0.13-to-0.14#111-new-event-api
-//! - https://github.com/crossterm-rs/crossterm/blob/master/examples/event-stream-tokio.rs
+//! - <https://github.com/crossterm-rs/crossterm/wiki/Upgrade-from-0.13-to-0.14#115-event-polling>
+//! - <https://github.com/crossterm-rs/crossterm/wiki/Upgrade-from-0.13-to-0.14#111-new-event-api>
+//! - <https://github.com/crossterm-rs/crossterm/blob/master/examples/event-stream-tokio.rs>
 
 use async_trait::async_trait;
 use crossterm::event::*;
@@ -58,8 +58,8 @@ use crate::*;
 
 #[async_trait]
 pub trait EventStreamExt {
-  /// Try and read an [Event] from the [EventStream], and convert it into an [InputEvent]. This is a
-  /// non-blocking call. It returns an [InputEvent] wrapped in a [Option]. [None] is returned if
+  /// Try and read an [Event] from the [EventStream], and convert it into an [TWInputEvent]. This is a
+  /// non-blocking call. It returns an [TWInputEvent] wrapped in a [Option]. [None] is returned if
   /// there was an error.
   async fn try_to_get_input_event(&mut self) -> Option<TWInputEvent>;
 }

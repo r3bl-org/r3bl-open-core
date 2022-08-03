@@ -33,7 +33,7 @@ use crate::*;
 /// Given a crossterm command, this will run it and [log!] the [Result] that is returned. If [log!]
 /// fails, then it will print a message to stderr.
 ///
-/// Paste docs: https://github.com/dtolnay/paste
+/// Paste docs: <https://github.com/dtolnay/paste>
 #[macro_export]
 macro_rules! exec {
   ($cmd: expr, $log_msg: expr) => {{
@@ -95,7 +95,7 @@ macro_rules! exec {
 /// ```
 ///
 /// Decl macro docs:
-/// - https://veykril.github.io/tlborm/decl-macros/macros-methodical.html#repetitions
+/// - <https://veykril.github.io/tlborm/decl-macros/macros-methodical.html#repetitions>
 #[macro_export]
 macro_rules! tw_command_queue {
   // Create a new queue & return it. If any ($element)* are passed, then add it to new queue.
@@ -144,7 +144,7 @@ pub enum TWCommand {
   ResetColor,
   /// Translate [Style] into fg and bg colors for crossterm.
   ApplyColors(Option<Style>),
-  /// Translate [Style] into attributes [STYLE_TO_ATTRIBUTE_MAP] for crossterm (bold, underline,
+  /// Translate [Style] into attributes [struct@STYLE_TO_ATTRIBUTE_MAP] for crossterm (bold, underline,
   /// strikethrough, etc)
   PrintWithAttributes(String, Option<Style>),
   CursorShow,
@@ -399,7 +399,7 @@ impl TWCommandQueue {
 }
 
 lazy_static! {
-  static ref STYLE_TO_ATTRIBUTE_MAP: HashMap<StyleFlag, Attribute> = {
+  pub static ref STYLE_TO_ATTRIBUTE_MAP: HashMap<StyleFlag, Attribute> = {
     let mut map = HashMap::new();
     map.insert(StyleFlag::BOLD_SET, Attribute::Bold);
     map.insert(StyleFlag::DIM_SET, Attribute::Dim);

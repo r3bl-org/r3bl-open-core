@@ -33,7 +33,7 @@ impl Debug for Percent {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "PerCent value:{}%", self.value) }
 }
 
-/// https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#
+/// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>
 impl TryFrom<UnitType> for Percent {
   type Error = String;
   fn try_from(arg: UnitType) -> Result<Self, Self::Error> {
@@ -44,7 +44,7 @@ impl TryFrom<UnitType> for Percent {
   }
 }
 
-/// https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#
+/// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>
 impl TryFrom<i32> for Percent {
   type Error = String;
   fn try_from(arg: i32) -> Result<Self, Self::Error> {

@@ -24,21 +24,21 @@ use time::UtcOffset;
 
 use crate::*;
 
-static mut LOG_LEVEL: LevelFilter = LevelFilter::Trace;
-static mut FILE_PATH: &str = "log.txt";
+pub static mut LOG_LEVEL: LevelFilter = LevelFilter::Trace;
+pub static mut FILE_PATH: &str = "log.txt";
 static mut FILE_LOGGER_INIT_OK: bool = false;
 static FILE_LOGGER_INIT_FN: Once = Once::new();
 
 /// This macro will log the message if the log level is set to the given level. The log is output to
 /// a file logger. Since there could be issues w/ accessing this file, this macro can itself throw
-/// an error. This is why it returns a [r3bl_rs_utils::ResultCommon]. If you want to use a version
+/// an error. This is why it returns a [CommonResult]. If you want to use a version
 /// of this macro that does not throw an error, use [log_no_err!].
 ///
 /// # Example
 ///
 /// ```ignore
-/// use r3bl_rs_utils::{init_file_logger_once, log, ResultCommon};
-/// fn run() -> ResultCommon<()> {
+/// use r3bl_rs_utils::{init_file_logger_once, log, CommonResult};
+/// fn run() -> CommonResult<()> {
 ///   let msg = "foo";
 ///   let msg_2 = "bar";
 ///   log!(INFO, "This is a info message");
@@ -62,7 +62,7 @@ static FILE_LOGGER_INIT_FN: Once = Once::new();
 ///
 /// # Docs for log crate
 ///
-/// - [`log::info!`], [`log::warn!`], [`log::error!`]: https://docs.rs/log/latest/log/
+/// - [`log::info!`], [`log::warn!`], [`log::error!`]: <https://docs.rs/log/latest/log/>
 #[macro_export]
 macro_rules! log {
   (INFO, $($arg:tt)*) => {{
@@ -87,9 +87,9 @@ macro_rules! log {
   }};
 }
 
-/// If you want to override the default log file path [FILE_PATH], you can use this function. If the
-/// logger has already been initialized, then it will return a [CommonErrorType::InvalidState]
-/// error.
+/// If you want to override the default log file path (stored in [FILE_PATH]), you can use this
+/// function. If the logger has already been initialized, then it will return a
+/// [CommonErrorType::InvalidState] error.
 pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
   unsafe {
     return match FILE_LOGGER_INIT_OK {
@@ -227,15 +227,16 @@ macro_rules! trace_log_no_err {
   }};
 }
 
-/// Simply open the [`FILE_PATH`] file and write the log message to it. This will be opened once per
-/// session (i.e. program execution). It is destructively opened, meaning that it will be rewritten
-/// when used in the next session.
+/// Simply open the file (location stored in [FILE_PATH] static above) and write the log message to
+/// it. This will be opened once per session (i.e. program execution). It is destructively opened,
+/// meaning that it will be rewritten when used in the next session.
 ///
 /// # Docs
+///
 /// - Log
 ///   - [`CombinedLogger`], [`WriteLogger`], [`ConfigBuilder`]
-///   - https://github.com/drakulix/simplelog.rs
-/// - [`format_description!`]: https://time-rs.github.io/book/api/format-description.html
+///   - <https://github.com/drakulix/simplelog.rs>
+/// - `format_description!`: <https://time-rs.github.io/book/api/format-description.html>
 pub fn init_file_logger_once() -> CommonResult<()> {
   unsafe {
     if LOG_LEVEL == LevelFilter::Off {

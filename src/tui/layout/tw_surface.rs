@@ -159,7 +159,7 @@ impl PerformPositioningAndSizing for TWSurface {
   }
 
   /// Must be called *before* the new [TWBox] is added to the stack of boxes
-  /// otherwise [LayoutErrorType::ErrorCalculatingNextLayoutPos] error is
+  /// otherwise [LayoutErrorType::ErrorCalculatingNextBoxPos] error is
   /// returned.
   ///
   /// This updates the `box_cursor_pos` of the current [TWBox].

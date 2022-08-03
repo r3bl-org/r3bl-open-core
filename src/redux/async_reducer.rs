@@ -25,7 +25,7 @@ where
 {
   async fn run(&self, action: &A, state: &S) -> S;
 
-  /// https://doc.rust-lang.org/book/ch10-02-traits.html
+  /// <https://doc.rust-lang.org/book/ch10-02-traits.html>
   #[allow(clippy::all)]
   fn new() -> AsyncReducerItem<S, A>
   where

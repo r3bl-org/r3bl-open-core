@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-/// If set to true, and the [log!] fails, then it will print the error to
+/// If set to true, and the [crate::log!] fails, then it will print the error to
 /// stderr. Also enables or disables file logging for entire module.
 pub const DEBUG: bool = true;
 

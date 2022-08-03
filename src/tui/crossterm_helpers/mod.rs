@@ -15,24 +15,37 @@
  *   limitations under the License.
  */
 
-//! Background information on terminals, VT100, ANSI, ASCII, etc.
+//! # Background information on terminals PTY, TTY, VT100, ANSI, ASCII
 //!
-//! - crossterm docs: https://docs.rs/crossterm/latest/crossterm/index.html
-//!   - Raw mode: https://docs.rs/crossterm/0.23.2/crossterm/terminal/index.html#raw-mode
-//!   - Event Poll vs block: https://github.com/crossterm-rs/crossterm/wiki/Upgrade-from-0.13-to-0.14#115-event-polling
-//!   - Async event read eg: https://github.com/crossterm-rs/crossterm/blob/master/examples/event-stream-tokio.rs
-//!   - Async event read src: https://github.com/crossterm-rs/crossterm/blob/master/src/event/stream.rs#L23
-//! - Tutorial: https://medium.com/@otukof/build-your-text-editor-with-rust-part-2-74e03daef237
-//! - Raw mode: https://en.wikipedia.org/wiki/POSIX_terminal_interface#Non-canonical_mode_processing
-//! - Canonical mode: https://en.wikipedia.org/wiki/POSIX_terminal_interface#Canonical_mode_processing
+//! crossterm:
+//! - docs: <https://docs.rs/crossterm/latest/crossterm/index.html>
+//! - Raw mode: <https://docs.rs/crossterm/0.23.2/crossterm/terminal/index.html#raw-mode>
+//! - Event Poll vs block: <https://github.com/crossterm-rs/crossterm/wiki/Upgrade-from-0.13-to-0.14#115-event-polling>
+//! - Async event read eg: <https://github.com/crossterm-rs/crossterm/blob/master/examples/event-stream-tokio.rs>
+//! - Async event read src: <https://github.com/crossterm-rs/crossterm/blob/master/src/event/stream.rs#L23>
+//!
+//! terminal:
+//! - Video: <https://youtu.be/Q-te_UBzzjo?t=849>
+//! - Raw mode: <https://en.wikipedia.org/wiki/POSIX_terminal_interface#Non-canonical_mode_processing>
+//! - Canonical mode: <https://en.wikipedia.org/wiki/POSIX_terminal_interface#Canonical_mode_processing>
 //! - Control characters & escape codes:
-//!   - ANSI escape codes: https://en.wikipedia.org/wiki/ANSI_escape_code
-//!     - Windows support: https://en.wikipedia.org/wiki/ANSI_escape_code#DOS,_OS/2,_and_Windows
-//!     - Colors: https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
-//!   - ASCII control chars: https://www.asciitable.com/
-//!   - VT100 Control codes: https://vt100.net/docs/vt100-ug/chapter3.html#ED
-//! - ANSI (8-bit) vs ASCII (7-bit): http://www.differencebetween.net/technology/web-applications/difference-between-ansi-and-ascii/
-//! - Windows Terminal (bash): https://www.makeuseof.com/windows-terminal-vs-powershell/
+//!   - ANSI escape codes: <https://en.wikipedia.org/wiki/ANSI_escape_code>
+//!     - Windows support: <https://en.wikipedia.org/wiki/ANSI_escape_code#DOS,_OS/2,_and_Windows>
+//!     - Colors: <https://en.wikipedia.org/wiki/ANSI_escape_code#Colors>
+//!   - ASCII control chars: <https://www.asciitable.com/>
+//!   - VT100 Control codes: <https://vt100.net/docs/vt100-ug/chapter3.html#ED>
+//! - ANSI (8-bit) vs ASCII (7-bit): <http://www.differencebetween.net/technology/web-applications/difference-between-ansi-and-ascii/>
+//! - Windows Terminal (bash): <https://www.makeuseof.com/windows-terminal-vs-powershell/>
+//!
+//! Examples of TUI / CLI editor:
+//! - reedline
+//!   - repo: <https://github.com/nushell/reedline>
+//!   - live stream videos: <https://www.youtube.com/playlist?list=PLP2yfE2-FXdQw0I6O4YdIX_mzBeF5TDdv>
+//! - kilo
+//!   - blog: <http://antirez.com/news/108>
+//!   - repo (C code): <https://github.com/antirez/kilo>
+//! - Sodium:
+//!   - repo: <https://github.com/redox-os/sodium>
 
 // Attach source files.
 pub mod event_stream_ext;

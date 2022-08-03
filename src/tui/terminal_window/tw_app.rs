@@ -24,7 +24,7 @@ use tokio::sync::RwLock;
 use crate::*;
 
 /// See [Component].
-/// Async trait docs: https://doc.rust-lang.org/book/ch10-02-traits.html
+/// Async trait docs: <https://doc.rust-lang.org/book/ch10-02-traits.html>
 #[async_trait]
 pub trait TWApp<S, A>
 where

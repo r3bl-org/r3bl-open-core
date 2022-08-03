@@ -22,7 +22,7 @@ use crate::*;
 pub struct TWDefaultInputEventHandler;
 
 impl TWDefaultInputEventHandler {
-  /// This function does **not** consume the `input_event` argument. [InputEvent] implements [Copy]
+  /// This function does **not** consume the `input_event` argument. [TWInputEvent] implements [Copy]
   /// (no need to pass references into this function).
   pub async fn no_consume(input_event: TWInputEvent, exit_keys: &[KeyEvent]) -> Continuation {
     // Early return if any exit key sequence is pressed.

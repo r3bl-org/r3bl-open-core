@@ -27,38 +27,11 @@ use crate::*;
 /// Given a mutable [Lolcat], colorize the token tree that follows.
 ///
 /// ```ignore
-/// #[derive(Default, Debug, Clone, Copy)]
-/// pub struct App {
-///   pub lolcat: Lolcat,
-/// }
-///
-/// #[async_trait]
-/// impl Render<AppState, AppAction> for App {
-///   async fn render(
-///     &mut self,
-///     state: &AppState,
-///     _shared_store: &SharedStore<AppState, AppAction>,
-///     _window_size: Size,
-///   ) -> CommonResult<CommandQueue> {
-///     throws_with_return!({
-///       let content = format!("{}", state);
-///       let colored_content = colorize_using_lolcat!(
-///         &mut self.lolcat, "{}", state
-///       );
-///       tw_queue!(
-///         TWCommand::Print(colored_content),
-///       );
-///   }
-///
-/// async fn handle_event(
-///     &self,
-///     _input_event: &InputEvent,
-///     _state: &AppState,
-///     _shared_store: &SharedStore<AppState, AppAction>,
-///     _terminal_size: Size,
-///   ) -> CommonResult<()> {}
-///
-/// }
+/// pub lolcat = Lolcat::default();
+/// pub content = "Hello, world!";
+/// let colored_content = colorize_using_lolcat!(
+///   &mut lolcat, "{}", content
+/// );
 /// ```
 ///
 /// See [my_print!] for more information on how this macro is written.
@@ -98,14 +71,15 @@ pub trait SupportsColor {
   fn get_lolcat(&mut self) -> &mut Lolcat;
 }
 
-/// Docs: https://doc.rust-lang.org/stable/std/fmt/struct.Arguments.html
+/// Docs: <https://doc.rust-lang.org/stable/std/fmt/struct.Arguments.html>
+#[macro_export]
 macro_rules! my_print {
   ($output_collector: expr, $($arg:tt)*) => {
       _print($output_collector, std::format_args!($($arg)*))
   };
 }
 
-/// Docs: https://doc.rust-lang.org/stable/std/fmt/struct.Arguments.html
+/// Docs: <https://doc.rust-lang.org/stable/std/fmt/struct.Arguments.html>
 fn _print(output_vec: &mut OutputCollectorType, args: std::fmt::Arguments) {
   let content = format!("{}", args);
   output_vec.push(content);
@@ -136,7 +110,9 @@ impl Lolcat {
   ///   colored_print.
   /// - Print newlines correctly, resetting background.
   /// - If constantly_flush is on, it won't wait till a newline to flush stdout.
-  fn format_iter<I: Iterator<Item = char>>(&mut self, mut iter: I, constantly_flush: bool) -> OutputCollector {
+  fn format_iter<I: Iterator<Item = char>>(
+    &mut self, mut iter: I, constantly_flush: bool,
+  ) -> OutputCollector {
     let mut original_seed = self.color_wheel_control.seed;
     let mut ignore_whitespace = self.color_wheel_control.background_mode;
     let mut output_vec: OutputCollectorType = vec![];
@@ -166,17 +142,21 @@ impl Lolcat {
           // everything in the escape sequence, even if it is a color (that will be
           // overridden)
           my_print!(&mut output_vec, "\x1b");
-          let mut escape_sequence_character = iter.next().expect("Escape character with no escape sequence after it");
+          let mut escape_sequence_character = iter
+            .next()
+            .expect("Escape character with no escape sequence after it");
           my_print!(&mut output_vec, "{}", escape_sequence_character);
           match escape_sequence_character {
             '[' => loop {
-              escape_sequence_character = iter.next().expect("CSI escape sequence did not terminate");
+              escape_sequence_character =
+                iter.next().expect("CSI escape sequence did not terminate");
               my_print!(&mut output_vec, "{}", escape_sequence_character);
               match escape_sequence_character {
                 '\x30'..='\x3F' => continue,
                 '\x20'..='\x2F' => {
                   loop {
-                    escape_sequence_character = iter.next().expect("CSI escape sequence did not terminate");
+                    escape_sequence_character =
+                      iter.next().expect("CSI escape sequence did not terminate");
                     my_print!(&mut output_vec, "{}", escape_sequence_character);
                     match escape_sequence_character {
                       '\x20'..='\x2F' => continue,
@@ -193,7 +173,8 @@ impl Lolcat {
               }
             },
             '\x20'..='\x2F' => loop {
-              escape_sequence_character = iter.next().expect("nF escape sequence did not terminate");
+              escape_sequence_character =
+                iter.next().expect("nF escape sequence did not terminate");
               my_print!(&mut output_vec, "{}", escape_sequence_character);
               match escape_sequence_character {
                 '\x20'..='\x2F' => continue,
@@ -289,7 +270,14 @@ impl Lolcat {
       );
     } else {
       let fg = ColorUtils::get_color_tuple(&self.color_wheel_control);
-      my_print!(output_vec, "\x1b[38;2;{};{};{}m{}", fg.0, fg.1, fg.2, character);
+      my_print!(
+        output_vec,
+        "\x1b[38;2;{};{};{}m{}",
+        fg.0,
+        fg.1,
+        fg.2,
+        character
+      );
     }
   }
 }

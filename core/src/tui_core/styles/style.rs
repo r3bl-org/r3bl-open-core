@@ -84,7 +84,11 @@ impl Debug for Style {
       msg_vec.join("+"),
       self.color_fg,
       self.color_bg,
-      if self.margin.is_some() { self.margin.unwrap() } else { 0 }
+      if self.margin.is_some() {
+        self.margin.unwrap()
+      } else {
+        0
+      }
     )
   }
 }
@@ -159,7 +163,9 @@ impl Style {
 
 /// Implement specificity behavior for [Style] by implementing [Add] trait.
 /// Here's the rule: `Style + Style (overrides) = Style`.
-/// - https://doc.rust-lang.org/book/ch19-03-advanced-traits.html
+///
+/// Docs:
+/// - <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
 impl Add<Self> for Style {
   type Output = Self;
 

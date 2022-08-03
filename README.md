@@ -5,19 +5,18 @@
 This crate provides lots of useful functionality to help you build TUI (text user interface) apps,
 along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 
-1. Thread-safe & fully asynchronous [Redux](#2-redux) library (using Tokio to run subscribers and
+1. Loosely coupled & fully asynchronous [TUI framework](#tui) to make it possible (and easy) to
+   build sophisticated TUIs (Text User Interface apps) in Rust.
+2. Fully asynchronous & thread safe [Redux](#redux) library (using Tokio to run subscribers and
    middleware in separate tasks). The reducer functions are run sequentially.
-2. Loosely coupled & fully asynchronous [TUI framework](#6-tui-coming-soon) to make it possible (and
-   easy) to build sophisticated TUIs (Text User Interface apps) in Rust. This is currently under
-   [active development](#61-tuicore).
-3. Lots of [declarative macros](#31-declarative), and [procedural macros](#32-procedural) (both
-   function like and derive) to avoid having to write lots of boilerplate code for many common (and
-   complex) tasks.
-4. [Non binary tree data](#4-treememoryarena-non-binary-tree-data-structure) structure inspired by
-   memory arenas, that is thread safe and supports parallel tree walking.
-5. Utility functions to improve [ergonomics](#5-utils) of commonly used patterns in Rust
-   programming, ranging from things like colorizing `stdout`, `stderr` output, to having less noisy
-   `Result` and `Error` types.
+3. [Declarative macros](#declarative), and [procedural macros](#procedural) (both function like and
+   derive) to avoid having to write lots of boilerplate code for many common (and complex) tasks.
+4. Utility functions to improve [ergonomics](#utils) of commonly used patterns in Rust programming,
+   ranging from things like colorizing `stdout`, `stderr` output, to having less noisy `Result` and
+   `Error` types.
+5. [Non binary tree data](#treememoryarena-non-binary-tree-data-structure) structure (written more
+   like a graph than a non binary tree) inspired by memory arenas, that is thread safe and supports
+   parallel tree walking.
 
 > 🦜 To learn more about this library, please read how it was built (on
 > [developerlife.com](https://developerlife.com)):
@@ -29,8 +28,10 @@ along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 > 🦀 You can also find all the Rust related content on developerlife.com
 > [here](https://developerlife.com/category/Rust/).
 >
-> 🤷‍♂️ Fun fact: we built a library that is similar in spirit to this crate for TypeScript (for TUI
-> apps on Node.js) called [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/).
+> - 🤷‍♂️ Fun fact: before we built this crate, we built a library that is similar in spirit for
+>   TypeScript (for TUI apps on Node.js) called
+>   [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/). We have since switched to Rust
+>   🦀🎉.
 
 <hr/>
 
@@ -39,6 +40,16 @@ Table of contents:
 <!-- TOC depthfrom:2 updateonsave:true orderedlist:false insertanchor:true -->
 
 - [Usage](#usage)
+- [tui](#tui)
+  - [Life of an input event](#life-of-an-input-event)
+  - [The window](#the-window)
+  - [Layout and styling](#layout-and-styling)
+  - [Component, ComponentRegistry, focus management, and event routing](#component-componentregistry-focus-management-and-event-routing)
+  - [Input event specificity](#input-event-specificity)
+  - [Redux for state management](#redux-for-state-management)
+  - [Grapheme support](#grapheme-support)
+  - [Lolcat support](#lolcat-support)
+  - [Examples to get you started](#examples-to-get-you-started)
 - [redux](#redux)
   - [Middlewares](#middlewares)
   - [Subscribers](#subscribers)
@@ -75,8 +86,6 @@ Table of contents:
   - [tty](#tty)
   - [safe_unwrap](#safe_unwrap)
   - [color_text](#color_text)
-- [tui Coming soon!](#tui-coming-soon)
-  - [tui_core](#tui_core)
 - [Stability](#stability)
 - [Issues, comments, feedback, and PRs](#issues-comments-feedback-and-prs)
 - [Notes](#notes)
@@ -95,6 +104,224 @@ Please add the following to your `Cargo.toml` file:
 [dependencies]
 r3bl_rs_utils = "0.7.40"
 ```
+
+## tui
+<a id="markdown-tui" name="tui"></a>
+
+
+You can build fully async TUI apps with a modern API that brings the best of reactive &
+unidirectional data flow architecture from frontend web development (React, Redux, CSS, flexbox) to
+Rust and TUI apps. And since this is using Tokio you get the advantages of concurrency and
+parallelism built-in. No more blocking on the main thread for user input, for async middleware, or
+even rendering 🎉.
+
+This framework is
+[loosely coupled and strongly coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
+meaning that you can pick and choose whatever pieces you would like to use w/out having the
+cognitive load of having to grok all the things in the codebase. Its more like a collection of
+mostly independent modules that work well w/ each other, but know very little about each other.
+
+Here are some framework highlights:
+
+- The entire TUI framework itself supports concurrency & parallelism (user input, rendering, etc.
+  are generally non blocking).
+- Flexbox-like responsive layout.
+- CSS-like styling.
+- Redux for state management (fully async, concurrent & parallel).
+- Lolcat implementation w/ a rainbow color-wheel palette.
+- Support for Unicode grapheme clusters in strings.
+
+### Life of an input event
+<a id="markdown-life-of-an-input-event" name="life-of-an-input-event"></a>
+
+
+There is a clear separation of concerns in this module. To illustrate what goes where, and how
+things work let's look at an example that puts the main event loop front and center & deals w/ how
+the system handles an input event (key press or mouse).
+
+- The diagram below shows an app that has 3 [Component]s for (flexbox like) layout & (CSS like)
+  styling.
+- Let's say that you run this app (by hypothetically executing `cargo run`).
+- And then you click or type something in the terminal window that you're running this app in.
+
+```text
+input event → [TerminalWindow]
+                  ↑      ↓                 [ComponentRegistry] creates
+                  ┊   [TWApp] ───────────■ [Component]s at 1st render
+                  ┊      │
+                  ┊      │        ┌──────■ id=1 has focus
+                  ┊      │        │
+                  ┊      ├→ [Component] id=1 ───┐
+                  ┊      ├→ [Component] id=2    │
+                  ┊      └→ [Component] id=3    │
+               default                          │
+               handler  ←───────────────────────┘
+```
+
+Let's trace the journey through the diagram when an input even is generated by the user (eg: a key
+press, or mouse event). When the app is started via `cargo run` it sets up a main loop, and lays out
+all the 3 components, sizes, positions, and then paints them. Then it asynchronously listens for
+input events (no threads are blocked). When the user types something, this input is processed by the
+main loop of [TerminalWindow].
+
+1.  The [Component] that is in [TWBox] w/ `id=1` currently has focus.
+2.  When an input event comes in from the user (key press or mouse input) it is routed to the
+    [TWApp] first, before [TerminalWindow] looks at the event.
+3.  The specificity of the event handler in [TWApp] is higher than the default input handler in
+    [TerminalWindow]. Further, the specificity of the [Component] that currently has focus is the
+    highest. In other words, the input event gets routed by the [TWApp] to the [Component] that
+    currently has focus ([Component] id=1 in our example).
+4.  Since it is not guaranteed that some [Component] will have focus, this input event can then be
+    handled by [TWApp], and if not, then by [TerminalWindow]'s default handler. If the default
+    handler doesn't process it, then it is simply ignored.
+5.  In this journey, as the input event is moved between all these different entities, each entity
+    decides whether it wants to handle the input event or not. If it does, then it returns an enum
+    indicating that the event has been consumed, else, it returns an enum that indicates the event
+    should be propagated.
+
+Now that we have seen this whirlwind overview of the life of an input event, let's look at the
+details in each of the sections below.
+
+### The window
+<a id="markdown-the-window" name="the-window"></a>
+
+
+The main building blocks of a TUI app are:
+
+1.  [TerminalWindow] - You can think of this as the main "window" of the app. All the content of
+    your app is painted inside of this "window". And the "window" conceptually maps to the screen
+    that is contained inside your terminal emulator program (eg: tilix, Terminal.app, etc). Your TUI
+    app will end up taking up 100% of the screen space of this terminal emulator. It will also enter
+    raw mode, and paint to an alternate screen buffer, leaving your original scroll back buffer and
+    history intact. When you exit this TUI app, it will return your terminal to where you'd left
+    off. You don't write this code, this is something that you use.
+2.  [TWApp] - This is where you write your code. You pass in a [TWApp] to the [TerminalWindow] to
+    bootstrap your TUI app. You can just use [TWApp] to build your app, if it is a simple one & you
+    don't really need any sophisticated layout or styling. But if you want layout and styling, now
+    we have to deal with [TWBox], [Component], and [crate::Style].
+
+### Layout and styling
+<a id="markdown-layout-and-styling" name="layout-and-styling"></a>
+
+
+Inside of your [TWApp] if you want to use flexbox like layout and CSS like styling you can think of
+composing your code in the following way:
+
+1.  [TWApp] is like a box or container. You can attach styles and an id here. The id has to be
+    unique, and you can reference as many styles as you want from your stylesheet. Yes, cascading
+    styles are supported! 👏 You can put boxes inside of boxes. You can make a container box and
+    inside of that you can add other boxes (you can give them a direction and even relative sizing
+    out of 100%).
+2.  As you approach the "leaf" nodes of your layout, you will find [Component] trait objects. These
+    are black boxes which are sized, positioned, and painted _relative_ to their parent box. They
+    get to handle input events and render [TWCommand]s into a [TWCommandQueue]. This is kind of like
+    virtual DOM in React. This queue of commands is collected from all the components and ultimately
+    painted to the screen, for each render! You can also use Redux to maintain your app's state, and
+    dispatch actions to the store, and even have async middleware!
+
+### Component, ComponentRegistry, focus management, and event routing
+<a id="markdown-component%2C-componentregistry%2C-focus-management%2C-and-event-routing" name="component%2C-componentregistry%2C-focus-management%2C-and-event-routing"></a>
+
+
+Typically your [TWApp] will look like this:
+
+```rust
+/// Async trait object that implements the [TWApp] trait.
+#[derive(Default)]
+pub struct AppWithLayout {
+  pub component_registry: ComponentRegistry<AppWithLayoutState, AppWithLayoutAction>,
+  pub has_focus: HasFocus,
+}
+```
+
+As we look at [Component] & [TWApp] more closely we will find a curious thing [ComponentRegistry]
+(that is managed by the [TWApp]). The reason this exists is for input event routing. The input
+events are routed to the [Component] that currently has focus.
+
+The [HasFocus] struct takes care of this. This provides 2 things:
+
+1.  It holds an `id` of a [TWBox] / [Component] that has focus.
+2.  It also holds a map that holds a [crate::Position] for each `id`. This is used to represent a
+    cursor (whatever that means to your app & component). This cursor is maintained for each `id`.
+    This allows a separate cursor for each [Component] that has focus. This is needed to build apps
+    like editors and viewers that maintains a cursor position between focus switches.
+
+Another thing to keep in mind is that the [TWApp] and [TerminalWindow] is persistent between
+re-renders. The Redux store is also persistent between re-renders.
+
+### Input event specificity
+<a id="markdown-input-event-specificity" name="input-event-specificity"></a>
+
+
+[TerminalWindow] gives [Component] first dibs when it comes to handling input events. If it punts
+handling this event, it will be handled by the default input event handler. And if nothing there
+matches this event, then it is simply dropped.
+
+### Redux for state management
+<a id="markdown-redux-for-state-management" name="redux-for-state-management"></a>
+
+
+If you use Redux for state management, then you will create a [crate::redux] [crate::Store] that is
+passed into the [TerminalWindow]. Here's an example of this.
+
+```rust
+use crossterm::event::*;
+use r3bl_rs_utils::*;
+use super::*;
+
+const DEBUG: bool = true;
+
+pub async fn run_app() -> CommonResult<()> {
+  throws!({
+    if DEBUG {
+      try_to_set_log_level(log::LevelFilter::Trace)?;
+    } else {
+      try_to_set_log_level(log::LevelFilter::Off)?;
+    }
+
+    // Create store.
+    let store = create_store().await;
+
+    // Create an App (renders & responds to user input).
+    let shared_app = AppWithLayout::new_shared();
+
+    // Exit if these keys are pressed.
+    let exit_keys: Vec<KeyEvent> = vec![KeyEvent {
+      code: KeyCode::Char('q'),
+      modifiers: KeyModifiers::CONTROL,
+    }];
+
+    // Create a window.
+    TerminalWindow::main_event_loop(store, shared_app, exit_keys).await?
+  });
+}
+
+async fn create_store() -> Store<AppWithLayoutState, AppWithLayoutAction> {
+  let mut store: Store<AppWithLayoutState, AppWithLayoutAction> = Store::default();
+  store.add_reducer(AppReducer::new()).await;
+  store
+}
+```
+
+### Grapheme support
+<a id="markdown-grapheme-support" name="grapheme-support"></a>
+
+
+Unicode is supported (to an extent). There are some caveats. The [crate::UnicodeStringExt] trait has
+lots of great information on this graphemes and what is supported and what is not.
+
+### Lolcat support
+<a id="markdown-lolcat-support" name="lolcat-support"></a>
+
+
+An implementation of [crate::lolcat::cat] w/ a color wheel is provided.
+
+### Examples to get you started
+<a id="markdown-examples-to-get-you-started" name="examples-to-get-you-started"></a>
+
+
+1.  [Code example of an address book using Redux](https://github.com/r3bl-org/address-book-with-redux-tui).
+2.  [Code example of TUI apps using Redux](https://github.com/r3bl-org/r3bl-cmdr).
 
 ## redux
 <a id="markdown-redux" name="redux"></a>
@@ -204,10 +431,9 @@ Here's the gist of how to make & use one of these:
 
 
 > 💡 There are lots of examples in the
-> [tests](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/redux_test.rs) for this library
-> and in this
-> [CLI application](https://github.com/nazmulidris/rust_scratch/blob/main/address-book-with-redux/)
-> built using it.
+> [tests](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/test_redux.rs) for this library
+> and in this [CLI application](https://github.com/r3bl-org/address-book-with-redux-tui/) built
+> using it.
 
 Here's an example of how to use it. Let's start w/ the import statements.
 
@@ -225,7 +451,7 @@ use tokio::sync::RwLock;
 > 1. Make sure to have the `tokio` and `async-trait` crates installed as well as `r3bl_rs_utils` in
 >    your `Cargo.toml` file.
 > 2. Here's an example
->    [`Cargo.toml`](https://github.com/nazmulidris/rust_scratch/blob/main/address-book-with-redux/Cargo.toml).
+>    [`Cargo.toml`](https://github.com/r3bl-org/address-book-with-redux-tui/blob/main/Cargo.toml).
 
 Let's say we have the following action enum, and state struct.
 
@@ -464,7 +690,7 @@ helps having to write `Ok(())` repeatedly at the end of each block. Here's an ex
 fn test_simple_2_col_layout() -> CommonResult<()> {
   throws! {
     match input_event {
-      InputEvent::DisplayableKeypress(character) => {
+      TWInputEvent::DisplayableKeypress(character) => {
         println_raw!(character);
       }
       _ => todo!()
@@ -519,9 +745,9 @@ Please note that the macro returns a `Result`. A type alias is provided to save 
 file itself is overwritten for each "session" that you run your program.
 
 ```rust
-use r3bl_rs_utils::{init_file_logger_once, log, ResultCommon};
+use r3bl_rs_utils::{init_file_logger_once, log, CommonResult};
 
-fn run() -> ResultCommon<()> {
+fn run() -> CommonResult<()> {
   let msg = "foo";
   let msg_2 = "bar";
 
@@ -675,7 +901,7 @@ let fake_data = fake_contact_data_api()
 ```
 
 You can find lots of
-[examples here](https://github.com/nazmulidris/rust_scratch/blob/main/address-book-with-redux/src/tui/middlewares).
+[examples here](https://github.com/r3bl-org/address-book-with-redux-tui/blob/main/src/tui/middlewares).
 
 #### fire_and_forget!
 <a id="markdown-fire_and_forget!" name="fire_and_forget!"></a>
@@ -1360,86 +1586,18 @@ Here's a list of functions available in this module:
 - `style_dimmed()`
 - `style_error()`
 
-## tui (Coming soon!)
-<a id="markdown-tui-coming-soon!" name="tui-coming-soon!"></a>
-
-
-The `tui` module allows you to build fully async TUI apps with a modern API that brings the best of
-reactive & unidirectional data flow architecture from frontend web development (React, Redux, CSS,
-flexbox) to Rust and TUI apps. And since this is using Tokio you get the advantages of concurrency
-and parallelism built-in. No more blocking on the main thread for user input, for async middleware,
-or even rendering 🎉.
-
-This framework is
-[loosely coupled and strongly coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
-meaning that you can pick and choose whatever pieces you would like to use w/out having the
-cognitive load of having to grok all the things in the codebase. Its more like a collection of
-mostly independent modules that work well w/ each other, but know very little about each other.
-
-Here are some framework highlights:
-
-- The entire TUI framework itself supports concurrency & parallelism (user input, rendering, etc.
-  are generally non blocking).
-- Flexbox-like responsive layout.
-- CSS-like styling.
-- Redux for state management (fully async, concurrent & parallel).
-- Lolcat implementation w/ a rainbow color-wheel palette.
-- Support for Unicode grapheme clusters in strings.
-
-> 🚀 To see a showcase for you can build w/ this framework, check out the
-> [r3bl-cmdr](https://github.com/r3bl-org/r3bl-cmdr) crate.
-
-> 🚧 WIP - This module isn’t ready yet but will be soon. It is the foundation for creating a
-> sophisticated TUI (text user interface) library that can be used to create rich terminal
-> applications for desktop and cloud. This is similar conceptually to [Ink library for Node.js &
-> TypeScript][tui_1] (that uses React and Yoga).
->
-> - It is built atop `crossterm` but can easily be ported to other low level terminal libraries.
-> - It is totally async, so w/ Tokio, you get concurrency and parallel behavior in TUI apps that are
->   written with it.
-> - The idea is that it takes the best ideas from Redux, React (even JSX), and CSS to create a
->   modern way to create powerful and efficient (concurrent & parallel) terminal applications in
->   Rust.
->
-> 🚀 As the functionality is built and the API stabilized in `r3bl-cmdr` [crate][tui_2] &
-> [repo][tui_3], they will be moved here (from the `tui` package there). As soon as the bulk of the
-> code is moved here, this README will be updated as well. The first of these is the `tui_core`
-> module below.
-
-[tui_1]: https://developerlife.com/category/CLI/
-[tui_2]: https://crates.io/crates/r3bl-cmdr
-[tui_3]: https://github.com/r3bl-org/r3bl-cmdr
-
-### tui_core
-<a id="markdown-tui_core" name="tui_core"></a>
-
-
-The `tui_core` module lives in the `core` crate and contains the following foundations for a TUI
-architecture:
-
-1. `dimens` - All the units, size, position structs can be found here.
-2. `styles` - This is the equivalent of CSS. There's a `style!` proc macro (in the `macro` crate)
-   that provides a nice JSX-like syntax (DSL) for creating styles.
-3. `graphemes` - Support for grapheme clusters is provided here. You can start w/ a `String` and
-   treat it as a list of `GraphemeClusterSegments` and explore sizing and maintain two types of
-   cursor or index:
-   1. Logical index which allows the `String` to be traversed by grapheme cluster segment.
-   2. Display index which allows `crossterm` column coordinates and widths to be used to "map" to
-      and from a specific grapheme cluster segment. More documentation is provided in the
-      `unicode_string.ext.rs` file and the `test_unicode_string_ext.rs` file is great to see the API
-      in action.
-
 ## Stability
 <a id="markdown-stability" name="stability"></a>
 
 
-🧑‍🔬 This library is in early development.
+🧑‍🔬 This library is in active development.
 
-1. There are extensive integration tests for code that is production ready. The goal is not to have
-   breaking changes for existing code, and be thoughtful when adding new functionality. This is why
-   code lives in other repos for a while before being moved to this one.
-2. The `tui` and `tui_core` modules are current WIP. They are currently under active development in
-   the `r3bl-cmdr` [repo][tui_3] and [crate][tui_2].
+1. The `tui` module is current under active development. You can see what's baking in:
+   - `r3bl-cmdr` [repo](https://github.com/r3bl-org/r3bl-cmdr)
+   - `r3bl-cmdr` [crate](https://crates.io/crates/r3bl-cmdr)
+2. The goal is not to have breaking changes for existing code, and be thoughtful when adding new
+   functionality. This is why code lives in other repos for a while before being moved to this one.
+3. There are extensive tests for code that is production ready.
 
 ## Issues, comments, feedback, and PRs
 <a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>

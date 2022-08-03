@@ -15,13 +15,26 @@
  *   limitations under the License.
  */
 
-// FIXME: add short documentation here explaining why core exists
+//! This crate is a dependency of the following crates:
+//! 1. [`r3bl_rs_utils_macro`](https://crates.io/crates/r3bl_rs_utils_macro) (procedural macros)
+//! 2. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils)
+//!
+//! Due to the [requirements of proc macros being in a separate
+//! crate](https://developerlife.com/2022/03/30/rust-proc-macro/#add-an-internal-or-core-crate),
+//! this breakdown of one crate into multiple crates is necessary:
+//! 1. Put some code in a separate crate (`r3bl_rs_utils_core`) that is used by other crates.
+//! 2. Put the proc macros in a separate crate (`r3bl_rs_utils_macro`). This crate also depends on
+//!    the `r3bl_rs_utils_core` crate.
+//! 3. Finally, make the "public" crate (`r3bl_rs_utils`) depend on the other two.
+//!
+//! As a way to hide this kind of layering from the users of the "main" `r3bl_rs_utils` crate, all
+//! the modules tend to be re-exported, making them available from the "main" or top-level crate.
 
 // Connect to source file.
-pub mod common;
 pub mod async_safe_share_mutate;
-pub mod decl_macros;
 pub mod color_text;
+pub mod common;
+pub mod decl_macros;
 pub mod tui_core;
 
 // Re-export.

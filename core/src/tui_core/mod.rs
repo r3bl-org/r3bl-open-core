@@ -15,13 +15,14 @@
  *   limitations under the License.
  */
 
-// FIXME: add documentation for tui_core module
+//! All the modules in the `r3bl_rs_utils_core` crate are in support of the `tui` module in the
+//! "main" [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crate.
 
 // Attach sources.
 pub mod dimens;
-pub mod styles;
 pub mod graphemes;
 pub mod lolcat;
+pub mod styles;
 
 // Re-export.
 pub use dimens::*;

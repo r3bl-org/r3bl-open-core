@@ -21,7 +21,7 @@ where
 {
   fn compute(&mut self) -> T;
 
-  /// https://doc.rust-lang.org/book/ch10-02-traits.html
+  /// Book: <https://doc.rust-lang.org/book/ch10-02-traits.html>
   #[allow(clippy::all)]
   fn new() -> Box<dyn LazyExecutor<T> + Send + Sync>
   where

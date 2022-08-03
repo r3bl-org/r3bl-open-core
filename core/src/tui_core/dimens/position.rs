@@ -123,7 +123,7 @@ impl Add<Position> for Position {
 }
 
 /// Add: BoxPosition + BoxSize = BoxPosition.
-/// https://doc.rust-lang.org/book/ch19-03-advanced-traits.html
+/// <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
 impl Add<Size> for Position {
   type Output = Position;
   fn add(self, other: Size) -> Self {
@@ -135,7 +135,7 @@ impl Add<Size> for Position {
 }
 
 /// Mul: BoxPosition * Pair = BoxPosition.
-/// https://doc.rust-lang.org/book/ch19-03-advanced-traits.html
+/// <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
 impl Mul<Pair> for Position {
   type Output = Position;
   fn mul(self, other: Pair) -> Self {

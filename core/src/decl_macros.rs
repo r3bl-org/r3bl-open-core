@@ -23,7 +23,7 @@
 /// fn test_simple_2_col_layout() -> CommonResult<()> {
 ///   throws! {
 ///     match input_event {
-///       InputEvent::DisplayableKeypress(character) => {
+///       TWInputEvent::DisplayableKeypress(character) => {
 ///         println_raw!(character);
 ///       }
 ///       _ => todo!()
@@ -173,7 +173,7 @@ macro_rules! call_if_true {
 /// debug!(OK_RAW &msg);
 /// ```
 ///
-/// https://danielkeep.github.io/tlborm/book/mbe-macro-rules.html#repetitions
+/// <https://danielkeep.github.io/tlborm/book/mbe-macro-rules.html#repetitions>
 #[macro_export]
 macro_rules! debug {
   (ERROR_RAW $msg:expr, $err:expr) => {{
@@ -325,7 +325,7 @@ macro_rules! with_mut_returns {
 
 /// Unwrap the `$option`, and if `None` then run the `$next` closure which must
 /// return an error. This macro must be called in a block that returns a
-/// `ResultCommon<T>`.
+/// `CommonResult<T>`.
 ///
 /// # Example
 ///
@@ -333,7 +333,7 @@ macro_rules! with_mut_returns {
 /// pub fn from(
 ///   width_percent: u8,
 ///   height_percent: u8,
-/// ) -> ResultCommon<RequestedSize> {
+/// ) -> CommonResult<RequestedSize> {
 ///   let size_tuple = (width_percent, height_percent);
 ///   let (width_pc, height_pc) = unwrap_option_or_run_fn_returning_err!(
 ///     convert_to_percent(size_tuple),
