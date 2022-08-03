@@ -5,8 +5,19 @@ tui:
   ✔ move all the `tui` stuff out of `r3bl-cmdr` into here @done(22-08-02 15:04)
   ☐ add documentation for `tui` module
   ☐ add documentation for `tui_core` module
+  ☐ add simple README for core crate
+  ☐ add simple README for macro crate
 
 publish:
   ☐ core needs to be rev'd
   ☐ public needs to be rev'd
   ☐ README needs to be rev'd & doctoc'd
+
+awareness:
+  ☐ write tutorial on developerlife.com about `style!` DSL
+    - part 1 of a series on creating CSS like DSL in Rust
+    - plan to add JSX like DSL in Rust as well for `tui` module
+    - share this w/ the community:
+      - r/rust
+      - discord server for rust proc-macro & tui-and-cli
+      - mailchimp
