@@ -24,9 +24,29 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-/// Use the `StyleBuilder` to create a `Style`. `Style` objects are meant to be
-/// immutable. If you need to modify a `Style`, you should use the
-/// `StyleBuilder` to create a new one.
+/// Use [crate::style] proc macro to generate code for this struct. Here's an example.
+///
+/// ```ignore
+/// // Turquoise:  Color::Rgb { r: 51, g: 255, b: 255 }
+/// // Pink:       Color::Rgb { r: 252, g: 157, b: 248 }
+/// // Blue:       Color::Rgb { r: 55, g: 55, b: 248 }
+/// // Faded blue: Color::Rgb { r: 85, g: 85, b: 255 }
+/// let mut stylesheet = Stylesheet::new();
+///
+/// stylesheet.add_styles(vec![
+///   style! {
+///     id: style1
+///     margin: 1
+///     color_bg: Color::Rgb { r: 55, g: 55, b: 248 }
+///   },
+///   style! {
+///     id: style2
+///     margin: 1
+///     color_bg: Color::Rgb { r: 85, g: 85, b: 255 }
+///   },
+/// ])?;
+/// ```
+
 #[derive(Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Style {
   pub id: String,

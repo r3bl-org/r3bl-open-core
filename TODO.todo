@@ -1,11 +1,6 @@
 ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 │ r3bl_rs_utils │
 ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-publish:
-  ☐ core needs to be rev'd
-  ☐ public needs to be rev'd
-  ☐ README needs to be rev'd
-
 build awareness:
   ☐ write tutorial on developerlife.com about `style!` DSL
     - part 1 of a series on creating CSS like DSL in Rust

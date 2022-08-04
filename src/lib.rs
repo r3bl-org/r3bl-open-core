@@ -34,17 +34,19 @@
 //!
 //! ## Learn more about how this library is built
 //!
-//! - 🦜 Here are some articles (on [developerlife.com](https://developerlife.com)) about how this
-//!   crate is made:
-//!   1. <https://developerlife.com/2022/02/24/rust-non-binary-tree/>
-//!   2. <https://developerlife.com/2022/03/12/rust-redux/>
-//!   3. <https://developerlife.com/2022/03/30/rust-proc-macro/>
-//!   4. You can also find all the Rust 🦀 related content on developerlife.com
-//!      [here](https://developerlife.com/category/Rust/).
-//! - 🤷‍♂️ Fun fact: before we built this crate, we built a library that is similar in spirit for
-//!   TypeScript (for TUI apps on Node.js) called
-//!   [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/). We have since switched to Rust
-//!   🦀🎉.
+//! 🦜 Here are some articles (on [developerlife.com](https://developerlife.com)) about how this
+//! crate is made:
+//! 1. <https://developerlife.com/2022/02/24/rust-non-binary-tree/>
+//! 2. <https://developerlife.com/2022/03/12/rust-redux/>
+//! 3. <https://developerlife.com/2022/03/30/rust-proc-macro/>
+//!
+//! 🦀 You can also find all the Rust related content on developerlife.com
+//! [here](https://developerlife.com/category/Rust/).
+//!
+//! 🤷‍♂️ Fun fact: before we built this crate, we built a library that is similar in spirit for
+//! TypeScript (for TUI apps on Node.js) called
+//! [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/). We have since switched to Rust
+//! 🦀🎉.
 
 // Attach the following files to the library module.
 pub mod redux;

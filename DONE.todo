@@ -1,3 +1,8 @@
+publish:
+  ✔ core needs to be rev'd @done(22-08-04 11:14)
+  ✔ public needs to be rev'd @done(22-08-04 11:14)
+  ✔ README needs to be rev'd @done(22-08-04 11:14)
+
 tui graduate:
   ✔ move all the `tui` stuff out of `r3bl-cmdr` into here @done(22-08-02 15:04)
   ✔ fix `cargo doc` warnings in `r3bl_rs_utils` @done(22-08-03 10:11)
