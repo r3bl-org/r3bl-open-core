@@ -20,7 +20,8 @@ use syn::{parse_macro_input, parse_str, DataStruct, DeriveInput, Type};
 
 use super::utils::{data_ext::DataExt,
                    ident_ext::IdentExt,
-                   syn_parser_helpers::{transform_named_fields_into_ts, with_data_struct_make_ts}};
+                   syn_parser_helpers::{transform_named_fields_into_ts,
+                                        with_data_struct_make_ts}};
 
 const BUILDER_DOC_URL: &str =
   "https://rust-lang.github.io/api-guidelines/type-safety.html#builders-enable-construction-of-complex-values-c-builder";
@@ -51,7 +52,8 @@ pub fn derive_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::Tok
         &struct_name_ident, BUILDER_DOC_URL
       );
 
-      let gen_props_with_defaults_ts = transform_named_fields_to_props_with_defaults_ts(data_struct);
+      let gen_props_with_defaults_ts =
+        transform_named_fields_to_props_with_defaults_ts(data_struct);
 
       let new_or_modified_where_clause_ts = if does_where_clause_exist(&generics.where_clause) {
         add_trait_bounds_to_existing_where_clause_ts(&generics.where_clause, &required_trait_bounds)
@@ -100,7 +102,9 @@ fn build_fn_set_named_fields_ts(data_struct: &DataStruct) -> proc_macro2::TokenS
   })
 }
 
-fn make_new_where_clause_with_default_trait_bounds_for_named_fields(data_struct: &DataStruct) -> proc_macro2::TokenStream {
+fn make_new_where_clause_with_default_trait_bounds_for_named_fields(
+  data_struct: &DataStruct,
+) -> proc_macro2::TokenStream {
   let trait_bound_list = transform_named_fields_into_ts(data_struct, &|named_field| {
     // let field_ident = named_field.ident.as_ref().unwrap();
     let field_ty = &named_field.ty;
@@ -180,11 +184,15 @@ fn add_trait_bounds_to_existing_where_clause_ts(
   where_clause_ts
 }
 
-fn does_where_clause_exist(where_clause: &Option<syn::WhereClause>) -> bool { where_clause.is_some() }
+fn does_where_clause_exist(where_clause: &Option<syn::WhereClause>) -> bool {
+  where_clause.is_some()
+}
 
 /// Given named fields, generate props w/ defaults for the <Foo>Builder impl
 /// block. Returns [proc_macro2::TokenStream] (not [proc_macro::TokenStream]).
-fn transform_named_fields_to_props_with_defaults_ts(data_struct: &DataStruct) -> proc_macro2::TokenStream {
+fn transform_named_fields_to_props_with_defaults_ts(
+  data_struct: &DataStruct,
+) -> proc_macro2::TokenStream {
   transform_named_fields_into_ts(data_struct, &|named_field| {
     let field_ident = named_field.ident.as_ref().unwrap();
     // let field_ty = &named_field.ty;

@@ -45,7 +45,9 @@ pub struct Size {
 }
 
 impl Display for Size {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "Size: [{}, {}]", self.rows, self.cols) }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "Size: [{}, {}]", self.rows, self.cols)
+  }
 }
 
 impl SubAssign<UnitType> for Size {
@@ -99,5 +101,7 @@ impl Size {
 }
 
 impl Debug for Size {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "[width:{}, height:{}]", self.cols, self.rows) }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "[width:{}, height:{}]", self.cols, self.rows)
+  }
 }

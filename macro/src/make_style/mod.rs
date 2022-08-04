@@ -18,10 +18,10 @@
 pub(crate) const DEBUG: bool = false;
 
 // Attach sources.
-pub mod entry_point;
 pub mod codegen;
-pub mod syntax_parse;
+pub mod entry_point;
 pub mod meta;
+pub mod syntax_parse;
 
 // Re-export.
 pub(crate) use codegen::*; /* Internal. */

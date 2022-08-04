@@ -18,9 +18,9 @@
 // Attach source files.
 pub mod base_units;
 pub mod pair;
+pub mod percent;
 pub mod position;
 pub mod size;
-pub mod percent;
 
 // Re-export attached source files.
 pub use base_units::*;

@@ -97,7 +97,10 @@ fn parse_optional_attrib(input: &ParseStream, metadata: &mut StyleMetadata) -> R
         path: Path { segments, .. },
       }) = item
       {
-        let PathSegment { ident, arguments: _ } = segments.first().unwrap();
+        let PathSegment {
+          ident,
+          arguments: _,
+        } = segments.first().unwrap();
         match ident.as_str().as_ref() {
           "bold" => metadata.attrib_vec.push(Attrib::Bold),
           "dim" => metadata.attrib_vec.push(Attrib::Dim),

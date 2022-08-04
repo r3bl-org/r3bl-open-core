@@ -168,7 +168,9 @@ impl UnicodeStringExt for String {
     let mut my_unicode_string_segments = vec![];
     let mut my_unicode_width_offset_accumulator: UnitType = 0;
 
-    for (grapheme_cluster_index, (byte_offset, grapheme_cluster_str)) in self.grapheme_indices(true).enumerate() {
+    for (grapheme_cluster_index, (byte_offset, grapheme_cluster_str)) in
+      self.grapheme_indices(true).enumerate()
+    {
       let unicode_width = convert_to_base_unit!(grapheme_cluster_str.width());
       my_unicode_string_segments.push(GraphemeClusterSegment {
         string: grapheme_cluster_str,
@@ -252,19 +254,27 @@ impl<'a> UnicodeString<'a> {
   }
 
   pub fn at_display_col(&self, display_col: UnitType) -> Option<&GraphemeClusterSegment<'a>> {
-    self.grapheme_cluster_segment_vec.iter().find(|&grapheme_cluster_segment| {
-      let segment_display_col_start: UnitType = grapheme_cluster_segment.display_col_offset;
-      let segment_display_col_end: UnitType = segment_display_col_start + grapheme_cluster_segment.unicode_width;
-      display_col >= segment_display_col_start && display_col < segment_display_col_end
-    })
+    self
+      .grapheme_cluster_segment_vec
+      .iter()
+      .find(|&grapheme_cluster_segment| {
+        let segment_display_col_start: UnitType = grapheme_cluster_segment.display_col_offset;
+        let segment_display_col_end: UnitType =
+          segment_display_col_start + grapheme_cluster_segment.unicode_width;
+        display_col >= segment_display_col_start && display_col < segment_display_col_end
+      })
   }
 
   pub fn logical_index_at_display_col(&self, display_col: UnitType) -> Option<usize> {
-    self.at_display_col(display_col).map(|segment| segment.logical_index)
+    self
+      .at_display_col(display_col)
+      .map(|segment| segment.logical_index)
   }
 
   pub fn display_col_at_logical_index(&self, logical_index: usize) -> Option<UnitType> {
-    self.at_logical_index(logical_index).map(|segment| segment.display_col_offset)
+    self
+      .at_logical_index(logical_index)
+      .map(|segment| segment.display_col_offset)
   }
 }
 

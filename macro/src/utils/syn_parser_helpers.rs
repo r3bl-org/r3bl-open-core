@@ -20,12 +20,16 @@ use syn::{Data::Struct, DataStruct, Fields::Named};
 
 /// Returns [proc_macro2::TokenStream] (not [proc_macro::TokenStream]).
 pub fn transform_named_fields_into_ts(
-  data_struct: &DataStruct, transform_named_field_fn: &dyn Fn(&syn::Field) -> proc_macro2::TokenStream,
+  data_struct: &DataStruct,
+  transform_named_field_fn: &dyn Fn(&syn::Field) -> proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
   match data_struct.fields {
     Named(ref fields) => {
       // Create iterator over named fields, holding generated props token streams.
-      let props_ts_iter = fields.named.iter().map(|named_field| transform_named_field_fn(named_field));
+      let props_ts_iter = fields
+        .named
+        .iter()
+        .map(|named_field| transform_named_field_fn(named_field));
 
       // Unwrap iterator into a [proc_macro2::TokenStream].
       quote! {

@@ -241,7 +241,9 @@ macro_rules! make_api_call_for {
     }
 
     impl Display for $IDENT {
-      fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "{}", self.to_string()) }
+      fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
+      }
     }
   };
 }

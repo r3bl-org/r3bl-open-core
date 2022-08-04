@@ -109,7 +109,9 @@ impl Position {
 }
 
 impl Debug for Position {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "[col:{}, row:{}]", self.col, self.row) }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "[col:{}, row:{}]", self.col, self.row)
+  }
 }
 
 impl Add<Position> for Position {

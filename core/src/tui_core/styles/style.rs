@@ -43,7 +43,7 @@ use crate::*;
 ///     id: style2
 ///     margin: 1
 ///     color_bg: Color::Rgb { r: 85, g: 85, b: 255 }
-///   },
+///   },F
 /// ])?;
 /// ```
 
@@ -131,9 +131,9 @@ bitflags! {
 }
 
 impl Style {
-  /// The `StyleFlag` is lazily computed and cached after the first time it is
-  /// evaluated. A `Style` should be built using via `StyleBuilder and the
-  /// expectation is that once built, the style won't be modified.
+  /// The `StyleFlag` is lazily computed and cached after the first time it is evaluated. A `Style`
+  /// can be built simply or by using the [crate::style] proc macro and the expectation is that once
+  /// built, the style won't be modified.
   pub fn get_bitflags(&mut self) -> StyleFlag {
     unwrap_option_or_compute_if_none! {
       self.cached_bitflags,
@@ -181,8 +181,8 @@ impl Style {
   }
 }
 
-/// Implement specificity behavior for [Style] by implementing [Add] trait.
-/// Here's the rule: `Style + Style (overrides) = Style`.
+/// Implement specificity behavior for [Style] by implementing [Add] trait. Here's the rule: `Style
+/// + Style (overrides) = Style`.
 ///
 /// Docs:
 /// - <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>

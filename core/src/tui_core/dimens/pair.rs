@@ -27,7 +27,9 @@ pub struct Pair {
 }
 
 impl Debug for Pair {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "Pair [first:{}, second:{}]", self.first, self.second) }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "Pair [first:{}, second:{}]", self.first, self.second)
+  }
 }
 
 impl From<(UnitType, UnitType)> for Pair {

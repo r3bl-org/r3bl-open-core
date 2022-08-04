@@ -2,10 +2,12 @@
 │ r3bl_rs_utils │
 ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 build awareness:
-  ☐ write tutorial on developerlife.com about `style!` DSL
+  ✔ write tutorial on developerlife.com about `style!` DSL @done(22-08-05 17:11)
     - part 1 of a series on creating CSS like DSL in Rust
     - plan to add JSX like DSL in Rust as well for `tui` module
-    - share this w/ the community:
-      - r/rust
-      - discord server for rust `proc-macro` & `tui-and-cli`
-      - mailchimp
+  
+share this w/ the community:
+  ☐ rust lang community forum
+  ☐ discord server for rust `proc-macro` & `tui-and-cli`
+  ☐ r/rust
+  ☐ mailchimp

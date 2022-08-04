@@ -16,9 +16,9 @@
  */
 
 pub mod custom_syntax_parser;
-pub mod make_shareable;
-pub mod make_safe_async;
 pub mod ident_ref;
+pub mod make_safe_async;
+pub mod make_shareable;
 
 pub use custom_syntax_parser::*;
 pub use ident_ref::*;

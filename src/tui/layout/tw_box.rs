@@ -33,7 +33,7 @@ impl Default for Direction {
 
 /// A box is a rectangle with a position and size. The direction of the box
 /// determines how it's contained elements are positioned.
-#[derive(Clone, Default, Builder)]
+#[derive(Clone, Default)]
 pub struct TWBox {
   pub id: String,
   pub dir: Direction,
@@ -56,15 +56,15 @@ impl TWBox {
       calc_percentage(width_pc, size.cols),
       calc_percentage(height_pc, size.rows),
     ));
-    TWBoxBuilder::new()
-      .set_id(id)
-      .set_dir(dir)
-      .set_origin_pos(origin_pos)
-      .set_bounding_size(bounds_size)
-      .set_req_size_percent((width_pc, height_pc).into())
-      .set_box_cursor_pos(origin_pos.as_some())
-      .set_computed_style(computed_style)
-      .build()
+    TWBox {
+      id,
+      dir,
+      origin_pos,
+      bounding_size: bounds_size,
+      req_size_percent: (width_pc, height_pc).into(),
+      box_cursor_pos: origin_pos.as_some(),
+      computed_style,
+    }
   }
 
   /// Actual position and size for our box will be calculated based on provided
@@ -90,14 +90,15 @@ impl TWBox {
 
     let req_size_pc: RequestedSizePercent = (width_pc, height_pc).into();
 
-    TWBoxBuilder::new()
-      .set_id(id)
-      .set_dir(dir)
-      .set_origin_pos(style_adjusted_origin)
-      .set_bounding_size(style_adjusted_bounds_size)
-      .set_req_size_percent(req_size_pc)
-      .set_computed_style(computed_style)
-      .build()
+    TWBox {
+      id,
+      dir,
+      origin_pos: style_adjusted_origin,
+      bounding_size: style_adjusted_bounds_size,
+      req_size_percent: req_size_pc,
+      computed_style,
+      ..Default::default()
+    }
   }
 }
 

@@ -48,13 +48,20 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     property_name_ident,
   } = manager_of_thing_info;
 
-  let doc_str_struct = format!(" Generated {} struct for {}.", &manager_name_ident, &thing_type.to_string());
+  let doc_str_struct = format!(
+    " Generated {} struct for {}.",
+    &manager_name_ident,
+    &thing_type.to_string()
+  );
 
-  let doc_str_default_impl_for_struct = format!(" Generated Default trait impl for {}.", &manager_name_ident,);
+  let doc_str_default_impl_for_struct =
+    format!(" Generated Default trait impl for {}.", &manager_name_ident,);
 
-  let doc_str_impl_share_for_struct = format!(" Generated SafeToShare impl for {}.", &manager_name_ident,);
+  let doc_str_impl_share_for_struct =
+    format!(" Generated SafeToShare impl for {}.", &manager_name_ident,);
 
-  let doc_str_impl_mutate_for_struct = format!(" Generated SafeToMutate impl for {}.", &manager_name_ident,);
+  let doc_str_impl_mutate_for_struct =
+    format!(" Generated SafeToMutate impl for {}.", &manager_name_ident,);
 
   let doc_str_setter_fn = " Directly mutate the property.";
   let doc_str_getter_fn =
@@ -206,7 +213,11 @@ impl Parse for ManagerOfThingSyntaxInfo {
 
     // 👀 Manager Type generic args, eg: `<K,V>`.
     let manager_type_generic_args = match manager_type.has_angle_bracketed_generic_args() {
-      true => Some(manager_type.get_angle_bracketed_generic_args_result().unwrap()),
+      true => Some(
+        manager_type
+          .get_angle_bracketed_generic_args_result()
+          .unwrap(),
+      ),
       false => None,
     };
     // debug!(manager_type_has_generic_args);
@@ -216,7 +227,9 @@ impl Parse for ManagerOfThingSyntaxInfo {
     if input.peek(Token![where]) {
       where_clause = Some(input.parse::<WhereClause>()?);
     } else if manager_type.has_angle_bracketed_generic_args() {
-      let ident_vec = manager_type.get_angle_bracketed_generic_args_idents_result().unwrap();
+      let ident_vec = manager_type
+        .get_angle_bracketed_generic_args_idents_result()
+        .unwrap();
       let my_ts = quote! {
         where #(#ident_vec: Default + Send + Sync),*
       }
