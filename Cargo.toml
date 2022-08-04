@@ -30,23 +30,23 @@ r3bl_rs_utils_core = { version = "0.7.12", path = "core" }
 r3bl_rs_utils_macro = { version = "0.7.8", path = "macro" }
 
 # Logging
-log = "0.4.16"
+log = "0.4.17"
 simplelog = "0.12.0"
 
 # Time
-chrono = "0.4.0"
-time = "0.3.9"
+chrono = "0.4.20"
+time = "0.3.12"
 
 # Misc
-rand = "0.8.4"
+rand = "0.8.5"
 
 # Terminal
 ansi_term = "0.12.1"
 atty = "0.2.14"
 
 # Async
-tokio = { version = "1.17.0", features = ["full"] }
-async-trait = "0.1.53"
+tokio = { version = "1.20.1", features = ["full"] }
+async-trait = "0.1.57"
 futures = "0.3.21"
 
 # Crossterm & EventStream support.
