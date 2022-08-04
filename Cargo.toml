@@ -5,7 +5,7 @@ description = "Async Redux library, TUI framework, and useful types"
 keywords = ["tui", "color", "terminal", "redux", "non-binary-tree"]
 categories = ["command-line-interface", "command-line-utilities", "algorithms", "data-structures"]
 # When you change this, make sure to update `README.md` as well.
-version = "0.7.40"
+version = "0.7.41"
 edition = "2021"
 readme = "README.md" # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/
@@ -26,8 +26,8 @@ path = "src/lib.rs"
 [dependencies]
 
 # r3bl_rs_utils
-r3bl_rs_utils_core = { version = "0.7.12", path = "core" }
-r3bl_rs_utils_macro = { version = "0.7.8", path = "macro" }
+r3bl_rs_utils_core = { version = "0.7.13", path = "core" }
+r3bl_rs_utils_macro = { version = "0.7.9", path = "macro" }
 
 # Logging
 log = "0.4.17"
