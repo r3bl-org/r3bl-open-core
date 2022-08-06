@@ -1,3 +1,14 @@
+build awareness:
+  ✔ write tutorial on developerlife.com about `style!` DSL @done(22-08-05 17:11)
+    - part 1 of a series on creating CSS like DSL in Rust
+    - plan to add JSX like DSL in Rust as well for `tui` module
+  
+share this w/ the community:
+  ✔ rust lang community forum @done(22-08-06 20:13)
+  ✔ discord server for rust `proc-macro` & `tui-and-cli` @done(22-08-06 20:13)
+  ✔ r/rust @done(22-08-06 20:13)
+  ✔ mailchimp @done(22-08-06 20:13)
+
 publish:
   ✔ core needs to be rev'd @done(22-08-04 11:14)
   ✔ public needs to be rev'd @done(22-08-04 11:14)

@@ -1,6 +1,8 @@
-# r3bl_rs_utils
+<p align="center"><img src="r3bl-term.svg" height="256px"></p>
 
+# r3bl_rs_utils
 <a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
+
 
 This crate provides lots of useful functionality to help you build TUI (text user interface) apps,
 along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
@@ -94,8 +96,8 @@ Table of contents:
 <hr/>
 
 ## Usage
-
 <a id="markdown-usage" name="usage"></a>
+
 
 Please add the following to your `Cargo.toml` file:
 
@@ -105,8 +107,8 @@ r3bl_rs_utils = "0.7.40"
 ```
 
 ## tui
-
 <a id="markdown-tui" name="tui"></a>
+
 
 You can build fully async TUI apps with a modern API that brings the best of reactive &
 unidirectional data flow architecture from frontend web development (React, Redux, CSS, flexbox) to
@@ -131,8 +133,8 @@ Here are some framework highlights:
 - Support for Unicode grapheme clusters in strings.
 
 ### Life of an input event
-
 <a id="markdown-life-of-an-input-event" name="life-of-an-input-event"></a>
+
 
 There is a clear separation of concerns in this module. To illustrate what goes where, and how
 things work let's look at an example that puts the main event loop front and center & deals w/ how
@@ -183,8 +185,8 @@ Now that we have seen this whirlwind overview of the life of an input event, let
 details in each of the sections below.
 
 ### The window
-
 <a id="markdown-the-window" name="the-window"></a>
+
 
 The main building blocks of a TUI app are:
 
@@ -201,8 +203,8 @@ The main building blocks of a TUI app are:
     we have to deal with [TWBox], [Component], and [crate::Style].
 
 ### Layout and styling
-
 <a id="markdown-layout-and-styling" name="layout-and-styling"></a>
+
 
 Inside of your [TWApp] if you want to use flexbox like layout and CSS like styling you can think of
 composing your code in the following way:
@@ -220,8 +222,8 @@ composing your code in the following way:
     dispatch actions to the store, and even have async middleware!
 
 ### Component, ComponentRegistry, focus management, and event routing
-
 <a id="markdown-component%2C-componentregistry%2C-focus-management%2C-and-event-routing" name="component%2C-componentregistry%2C-focus-management%2C-and-event-routing"></a>
+
 
 Typically your [TWApp] will look like this:
 
@@ -250,16 +252,16 @@ Another thing to keep in mind is that the [TWApp] and [TerminalWindow] is persis
 re-renders. The Redux store is also persistent between re-renders.
 
 ### Input event specificity
-
 <a id="markdown-input-event-specificity" name="input-event-specificity"></a>
+
 
 [TerminalWindow] gives [Component] first dibs when it comes to handling input events. If it punts
 handling this event, it will be handled by the default input event handler. And if nothing there
 matches this event, then it is simply dropped.
 
 ### Redux for state management
-
 <a id="markdown-redux-for-state-management" name="redux-for-state-management"></a>
+
 
 If you use Redux for state management, then you will create a [crate::redux] [crate::Store] that is
 passed into the [TerminalWindow]. Here's an example of this.
@@ -304,28 +306,28 @@ async fn create_store() -> Store<AppWithLayoutState, AppWithLayoutAction> {
 ```
 
 ### Grapheme support
-
 <a id="markdown-grapheme-support" name="grapheme-support"></a>
+
 
 Unicode is supported (to an extent). There are some caveats. The [crate::UnicodeStringExt] trait has
 lots of great information on this graphemes and what is supported and what is not.
 
 ### Lolcat support
-
 <a id="markdown-lolcat-support" name="lolcat-support"></a>
+
 
 An implementation of [crate::lolcat::cat] w/ a color wheel is provided.
 
 ### Examples to get you started
-
 <a id="markdown-examples-to-get-you-started" name="examples-to-get-you-started"></a>
+
 
 1.  [Code example of an address book using Redux](https://github.com/r3bl-org/address-book-with-redux-tui).
 2.  [Code example of TUI apps using Redux](https://github.com/r3bl-org/r3bl-cmdr).
 
 ## redux
-
 <a id="markdown-redux" name="redux"></a>
+
 
 `Store` is thread safe and asynchronous (using Tokio). You have to implement `async` traits in order
 to use it, by defining your own reducer, subscriber, and middleware trait objects. You also have to
@@ -341,8 +343,8 @@ Tokio executor / runtime, without which you will get a panic when `spawn_dispatc
 called.
 
 ### Middlewares
-
 <a id="markdown-middlewares" name="middlewares"></a>
+
 
 Your middleware (`async` trait implementations) will be run concurrently or in parallel via Tokio
 tasks. You get to choose which `async` trait to implement to do one or the other. And regardless of
@@ -362,16 +364,16 @@ call).
    are added to the store via a call to `add_middleware(...)`.
 
 ### Subscribers
-
 <a id="markdown-subscribers" name="subscribers"></a>
+
 
 The subscribers will be run asynchronously via Tokio tasks. They are all run together concurrently
 but not in parallel, using
 [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
 
 ### Reducers
-
 <a id="markdown-reducers" name="reducers"></a>
+
 
 The reducer functions are also are `async` functions that are run in the tokio runtime. They're also
 run one after another in the order in which they're added.
@@ -406,8 +408,8 @@ run one after another in the order in which they're added.
    - It returns nothing `()`.
 
 ### Summary
-
 <a id="markdown-summary" name="summary"></a>
+
 
 Here's the gist of how to make & use one of these:
 
@@ -427,8 +429,8 @@ Here's the gist of how to make & use one of these:
      `Box::new($YOUR_STRUCT))`.
 
 ### Examples
-
 <a id="markdown-examples" name="examples"></a>
+
 
 > 💡 There are lots of examples in the
 > [tests](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/test_redux.rs) for this library
@@ -660,28 +662,28 @@ assert_eq!(store.get_state().stack.len(), 0);
 ```
 
 ## Macros
-
 <a id="markdown-macros" name="macros"></a>
 
-### Declarative
 
+### Declarative
 <a id="markdown-declarative" name="declarative"></a>
+
 
 There are quite a few declarative macros that you will find in the library. They tend to be used
 internally in the implementation of the library itself. Here are some that are actually externally
 exposed via `#[macro_export]`.
 
 #### assert_eq2!
-
 <a id="markdown-assert_eq2!" name="assert_eq2!"></a>
+
 
 Similar to [`assert_eq!`] but automatically prints the left and right hand side variables if the
 assertion fails. Useful for debugging tests, since the cargo would just print out the left and right
 values w/out providing information on what variables were being compared.
 
 #### throws!
-
 <a id="markdown-throws!" name="throws!"></a>
+
 
 Wrap the given `block` or `stmt` so that it returns a `Result<()>`. It is just syntactic sugar that
 helps having to write `Ok(())` repeatedly at the end of each block. Here's an example.
@@ -719,8 +721,8 @@ fn test_simple_2_col_layout() -> CommonResult<()> {
 ```
 
 #### throws_with_return!
-
 <a id="markdown-throws_with_return!" name="throws_with_return!"></a>
+
 
 This is very similar to [`throws!`](#throws) but it also returns the result of the block.
 
@@ -734,8 +736,8 @@ fn test_simple_2_col_layout() -> CommonResult<CommandQueue> {
 ```
 
 #### log!
-
 <a id="markdown-log!" name="log!"></a>
+
 
 You can use this macro to dump log messages at 3 levels to a file. By default this file is named
 `log.txt` and is dumped in the current directory. Here's how you can use it.
@@ -821,8 +823,8 @@ Please check out the source
 [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/src/utils/file_logging.rs).
 
 #### log_no_err!
-
 <a id="markdown-log_no_err!" name="log_no_err!"></a>
+
 
 This macro is very similar to the [log!](#log) macro, except that it won't return any error if the
 underlying logging system fails. It will simply print a message to `stderr`. Here's an example.
@@ -835,8 +837,8 @@ pub fn log_state(&self, msg: &str) {
 ```
 
 #### debug_log_no_err!
-
 <a id="markdown-debug_log_no_err!" name="debug_log_no_err!"></a>
+
 
 This is a really simple macro to make it effortless to debug into a log file. It outputs `DEBUG`
 level logs. It takes a single identifier as an argument, or any number of them. It simply dumps an
@@ -850,8 +852,8 @@ debug_log_no_err!(my_string);
 ```
 
 #### trace_log_no_err!
-
 <a id="markdown-trace_log_no_err!" name="trace_log_no_err!"></a>
+
 
 This is very similar to [debug_log_no_err!](#debuglognoerr) except that it outputs `TRACE` level
 logs.
@@ -862,8 +864,8 @@ trace_log_no_err!(my_string);
 ```
 
 #### make_api_call_for!
-
 <a id="markdown-make_api_call_for!" name="make_api_call_for!"></a>
+
 
 This macro makes it easy to create simple HTTP GET requests using the `reqwest` crate. It generates
 an `async` function called `make_request()` that returns a `CommonResult<T>` where `T` is the type
@@ -904,8 +906,8 @@ You can find lots of
 [examples here](https://github.com/r3bl-org/address-book-with-redux-tui/blob/main/src/tui/middlewares).
 
 #### fire_and_forget!
-
 <a id="markdown-fire_and_forget!" name="fire_and_forget!"></a>
+
 
 This is a really simple wrapper around `tokio::spawn()` for the given block. Its just syntactic
 sugar. Here's an example of using it for a non-`async` block.
@@ -937,8 +939,8 @@ pub fn foo() {
 ```
 
 #### call_if_true!
-
 <a id="markdown-call_if_true!" name="call_if_true!"></a>
+
 
 Syntactic sugar to run a conditional statement. Here's an example.
 
@@ -956,8 +958,8 @@ call_if_true!(
 ```
 
 #### debug!
-
 <a id="markdown-debug!" name="debug!"></a>
+
 
 This is a really simple macro to make it effortless to use the color console logger. It takes a
 single identifier as an argument, or any number of them. It simply dumps an arrow symbol, followed
@@ -989,8 +991,8 @@ debug!(OK_RAW &msg);
 ```
 
 #### with!
-
 <a id="markdown-with!" name="with!"></a>
+
 
 This is a macro that takes inspiration from the `with` scoping function in Kotlin. It just makes it
 easier to express a block of code that needs to run after an expression is evaluated and saved to a
@@ -1019,8 +1021,8 @@ It does the following:
 2. Runs the `$code` block.
 
 #### with_mut!
-
 <a id="markdown-with_mut!" name="with_mut!"></a>
+
 
 This macro is just like [`with!`](#with) but it takes a mutable reference to the `$id` variable.
 Here's a code example.
@@ -1041,8 +1043,8 @@ with_mut! {
 ```
 
 #### with_mut_returns!
-
 <a id="markdown-with_mut_returns!" name="with_mut_returns!"></a>
+
 
 This macro is just like [`with_mut!`](#withmutreturns) except that it returns the value of the
 `$code` block. Here's a code example.
@@ -1058,8 +1060,8 @@ let tw_queue = with_mut_returns! {
 ```
 
 #### unwrap_option_or_run_fn_returning_err!
-
 <a id="markdown-unwrap_option_or_run_fn_returning_err!" name="unwrap_option_or_run_fn_returning_err!"></a>
+
 
 This macro can be useful when you are working w/ an expression that returns an `Option` and if that
 `Option` is `None` then you want to abort and return an error immediately. The idea is that you are
@@ -1082,8 +1084,8 @@ pub fn from(
 ```
 
 #### unwrap_option_or_compute_if_none!
-
 <a id="markdown-unwrap_option_or_compute_if_none!" name="unwrap_option_or_compute_if_none!"></a>
+
 
 This macro is basically a way to compute something lazily when it (the `Option`) is set to `None`.
 Unwrap the `$option`, and if `None` then run the `$next` closure which must return a value that is
@@ -1105,16 +1107,16 @@ fn test_unwrap_option_or_compute_if_none() {
 ```
 
 ### Procedural
-
 <a id="markdown-procedural" name="procedural"></a>
+
 
 All the procedural macros are organized in 3 crates
 [using an internal or core crate](https://developerlife.com/2022/03/30/rust-proc-macro/#add-an-internal-or-core-crate):
 the public crate, an internal or core crate, and the proc macro crate.
 
 #### Builder derive macro
-
 <a id="markdown-builder-derive-macro" name="builder-derive-macro"></a>
+
 
 This derive macro makes it easy to generate builders when annotating a `struct` or `enum`. It
 generates It has full support for generics. It can be used like this.
@@ -1140,8 +1142,8 @@ assert_eq!(my_pt.y, 2);
 ```
 
 #### make_struct_safe_to_share_and_mutate!
-
 <a id="markdown-make_struct_safe_to_share_and_mutate!" name="make_struct_safe_to_share_and_mutate!"></a>
+
 
 This function like macro (with custom syntax) makes it easy to manage shareability and interior
 mutability of a struct. We call this pattern the "manager" of "things").
@@ -1185,8 +1187,8 @@ async fn test_custom_syntax_no_where_clause() {
 ```
 
 #### make_safe_async_fn_wrapper!
-
 <a id="markdown-make_safe_async_fn_wrapper!" name="make_safe_async_fn_wrapper!"></a>
+
 
 This function like macro (with custom syntax) makes it easy to share functions and lambdas that are
 async. They should be safe to share between threads and they should support either being invoked or
@@ -1230,8 +1232,8 @@ make_safe_async_fn_wrapper! {
 ```
 
 ## tree_memory_arena (non-binary tree data structure)
-
 <a id="markdown-tree_memory_arena-non-binary-tree-data-structure" name="tree_memory_arena-non-binary-tree-data-structure"></a>
+
 
 [`Arena`] and [`MTArena`] types are the implementation of a
 [non-binary tree](https://en.wikipedia.org/wiki/Binary_tree#Non-binary_trees) data structure that is
@@ -1357,12 +1359,12 @@ let arena = MTArena::<String>::new();
 > [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
 
 ## utils
-
 <a id="markdown-utils" name="utils"></a>
 
-### CommonResult and CommonError
 
+### CommonResult and CommonError
 <a id="markdown-commonresult-and-commonerror" name="commonresult-and-commonerror"></a>
+
 
 These two structs make it easier to work w/ `Result`s. They are just syntactic sugar and helper
 structs. You will find them used everywhere in the
@@ -1393,8 +1395,8 @@ impl Stylesheet {
 ```
 
 ### LazyField
-
 <a id="markdown-lazyfield" name="lazyfield"></a>
+
 
 This combo of struct & trait object allows you to create a lazy field that is only evaluated when it
 is first accessed. You have to provide a trait implementation that computes the value of the field
@@ -1428,8 +1430,8 @@ fn test_lazy_field() {
 ```
 
 ### LazyMemoValues
-
 <a id="markdown-lazymemovalues" name="lazymemovalues"></a>
+
 
 This struct allows users to create a lazy hash map. A function must be provided that computes the
 values when they are first requested. These values are cached for the lifetime this struct. Here's
@@ -1459,8 +1461,8 @@ assert_eq!(arc_atomic_count.load(SeqCst), 1); // Doesn't change.
 ```
 
 ### tty
-
 <a id="markdown-tty" name="tty"></a>
+
 
 This module contains a set of functions to make it easier to work with terminals.
 
@@ -1507,8 +1509,8 @@ Here's a list of functions available in this module:
 - `is_stdin_piped()`
 
 ### safe_unwrap
-
 <a id="markdown-safe_unwrap" name="safe_unwrap"></a>
+
 
 Functions that make it easy to unwrap a value safely. These functions are provided to improve the
 ergonomics of using wrapped values in Rust. Examples of wrapped values are `<Arc<RwLock<T>>`, and
@@ -1554,8 +1556,8 @@ Here's a list of type aliases provided for better readability:
 - `WriteGuarded<T>`
 
 ### color_text
-
 <a id="markdown-color_text" name="color_text"></a>
+
 
 ANSI colorized text <https://github.com/ogham/rust-ansi-term> helper methods. Here's an example.
 
@@ -1587,8 +1589,8 @@ Here's a list of functions available in this module:
 - `style_error()`
 
 ## Stability
-
 <a id="markdown-stability" name="stability"></a>
+
 
 🧑‍🔬 This library is in active development.
 
@@ -1600,15 +1602,15 @@ Here's a list of functions available in this module:
 3. There are extensive tests for code that is production ready.
 
 ## Issues, comments, feedback, and PRs
-
 <a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
+
 
 Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
 And if you have any feature requests, feel free to add them there too 👍.
 
 ## Notes
-
 <a id="markdown-notes" name="notes"></a>
+
 
 Here are some notes on using experimental / unstable features in Tokio.
 
