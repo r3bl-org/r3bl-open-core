@@ -5,18 +5,19 @@
 # Context
 <a id="markdown-context" name="context"></a>
 
+<!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
-<code><font color="#FD2F53">R</font><font color="#FC2C57">3</font><font color="#FB295B">B</font><font color="#FA265F">L</font><font color="#F92363">
-</font><font color="#F82067">T</font><font color="#F61D6B">U</font><font color="#F51A6F">I</font><font color="#F31874">
-</font><font color="#F11678">l</font><font color="#EF137C">i</font><font color="#ED1180">b</font><font color="#EB0F84">r</font><font color="#E90D89">a</font><font color="#E60B8D">r</font><font color="#E40A91">y</font><font color="#E10895">
-</font><font color="#DE0799">&amp;</font><font color="#DB069E">
-</font><font color="#D804A2">s</font><font color="#D503A6">u</font><font color="#D203AA">i</font><font color="#CF02AE">t</font><font color="#CB01B2">e</font><font color="#C801B6">
-</font><font color="#C501B9">o</font><font color="#C101BD">f</font><font color="#BD01C1">
-</font><font color="#BA01C4">a</font><font color="#B601C8">p</font><font color="#B201CB">p</font><font color="#AE02CF">s</font><font color="#AA03D2">
-</font><font color="#A603D5">f</font><font color="#A204D8">o</font><font color="#9E06DB">c</font><font color="#9A07DE">u</font><font color="#9608E1">s</font><font color="#910AE3">e</font><font color="#8D0BE6">d</font><font color="#890DE8">
-</font><font color="#850FEB">o</font><font color="#8111ED">n</font><font color="#7C13EF">
-</font><font color="#7815F1">d</font><font color="#7418F3">e</font><font color="#701AF5">v</font><font color="#6B1DF6">e</font><font color="#6720F8">l</font><font color="#6322F9">o</font><font color="#5F25FA">p</font><font color="#5B28FB">e</font><font color="#572CFC">r</font><font color="#532FFD">
-</font><font color="#4F32FD">p</font><font color="#4B36FE">r</font><font color="#4739FE">o</font><font color="#443DFE">d</font><font color="#4040FE">u</font><font color="#3C44FE">c</font><font color="#3948FE">t</font><font color="#354CFE">i</font><font color="#324FFD">v</font><font color="#2E53FD">i</font><font color="#2B57FC">t</font><font color="#285BFB">y</font></code>
+<span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363">
+</span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span style="color:#F31874">
+</span><span style="color:#F11678">l</span><span style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span style="color:#E10895">
+</span><span style="color:#DE0799">&amp;</span><span style="color:#DB069E">
+</span><span style="color:#D804A2">s</span><span style="color:#D503A6">u</span><span style="color:#D203AA">i</span><span style="color:#CF02AE">t</span><span style="color:#CB01B2">e</span><span style="color:#C801B6">
+</span><span style="color:#C501B9">o</span><span style="color:#C101BD">f</span><span style="color:#BD01C1">
+</span><span style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span style="color:#AA03D2">
+</span><span style="color:#A603D5">f</span><span style="color:#A204D8">o</span><span style="color:#9E06DB">c</span><span style="color:#9A07DE">u</span><span style="color:#9608E1">s</span><span style="color:#910AE3">e</span><span style="color:#8D0BE6">d</span><span style="color:#890DE8">
+</span><span style="color:#850FEB">o</span><span style="color:#8111ED">n</span><span style="color:#7C13EF">
+</span><span style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span style="color:#572CFC">r</span><span style="color:#532FFD">
+</span><span style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
 
 We are working on building command line apps in Rust which have rich text user interfaces (TUI). We
 want to lean into the terminal as a place of productivity, and build all kinds of awesome apps for
