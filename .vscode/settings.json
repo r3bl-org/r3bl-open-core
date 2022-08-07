@@ -29,6 +29,7 @@
     "reqwest",
     "retval",
     "rustflags",
+    "rustfmt",
     "simplelog",
     "stylesheet",
     "Tilix",
