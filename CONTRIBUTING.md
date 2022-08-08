@@ -12,8 +12,8 @@ Table of contents
 
 - [Feedback](#feedback)
 - [Good starting points](#good-starting-points)
-  - [New to terminals?](#new-to-terminals)
-  - [New to the R3BL codebase?](#new-to-the-r3bl-codebase)
+  - [🦜 New to terminals?](#%F0%9F%A6%9C-new-to-terminals)
+  - [🐒 New to the R3BL codebase?](#-new-to-the-r3bl-codebase)
 - [Developing](#developing)
   - [Set up](#set-up)
   - [Code style](#code-style)
@@ -47,8 +47,8 @@ If you want to get started, check out the list of
 You can also browse the more information TODOs in [TODO.todo](TODO.todo) which haven't been turned
 into issues yet.
 
-### New to terminals?
-<a id="markdown-new-to-terminals%3F" name="new-to-terminals%3F"></a>
+### 🦜 New to terminals?
+<a id="markdown-%F0%9F%A6%9C-new-to-terminals%3F" name="%F0%9F%A6%9C-new-to-terminals%3F"></a>
 
 
 Here's a learning path to help you get started:
@@ -61,8 +61,8 @@ Here's a learning path to help you get started:
    [documentation](https://docs.rs/r3bl_rs_utils/0.7.41/r3bl_rs_utils/tui/crossterm_helpers/index.html)
    w/ lots of background information on terminals, PTY, TTY, etc.
 
-### New to the R3BL codebase?
-<a id="markdown-new-to-the-r3bl-codebase%3F" name="new-to-the-r3bl-codebase%3F"></a>
+### 🐒 New to the R3BL codebase?
+<a id="markdown-%F0%9F%90%92-new-to-the-r3bl-codebase%3F" name="%F0%9F%90%92-new-to-the-r3bl-codebase%3F"></a>
 
 
 1. A great starting point is this this [README](https://github.com/r3bl-org/r3bl_rs_utils). Here are
