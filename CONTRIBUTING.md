@@ -25,8 +25,8 @@ Table of contents
 <a id="markdown-feedback" name="feedback"></a>
 
 
-This library crate is in service of the apps being built in the
-[r3bl-cmdr](https://github.com/r3bl-org/r3bl-cmdr/) crate / project.
+> This library crate is in service of the apps being built in the
+> [r3bl-cmdr](https://github.com/r3bl-org/r3bl-cmdr/) crate / project.
 
 While the maintainers might currently prioritize working on features, we are open to ideas and
 contributions by people and projects interested in using `r3bl_rs_utils` or `r3bl-cmdr` for other
