@@ -74,12 +74,10 @@ Here's a learning path to help you get started:
    NOT have TUI support. It is a good app to convert to using the TUI library to get a solid handle
    on how to build TUIs. This app was intended to be a pedagogical example to get a handle on this
    stuff.
-
-Here are some resources to learn more about the project itself:
-
-1. [r3bl_rs_utils repo README](https://github.com/r3bl-org/r3bl_rs_utils/blob/main/README.md).
-1. [r3bl-cmdr repo README](https://github.com/r3bl-org/r3bl-cmdr/blob/main/README.md).
-1. [Related content on developerlife.com](https://developerlife.com/category/Rust/).
+3. Here are some resources to learn more about the project itself:
+   - [r3bl_rs_utils repo README](https://github.com/r3bl-org/r3bl_rs_utils/blob/main/README.md).
+   - [r3bl-cmdr repo README](https://github.com/r3bl-org/r3bl-cmdr/blob/main/README.md).
+   - [Related content on developerlife.com](https://developerlife.com/category/Rust/).
 
 ## Developing
 <a id="markdown-developing" name="developing"></a>
