@@ -12,6 +12,8 @@ Table of contents
 
 - [Feedback](#feedback)
 - [Good starting points](#good-starting-points)
+  - [New to terminals?](#new-to-terminals)
+  - [New to the R3BL codebase?](#new-to-the-r3bl-codebase)
 - [Developing](#developing)
   - [Set up](#set-up)
   - [Code style](#code-style)
@@ -44,6 +46,34 @@ If you want to get started, check out the list of
 
 You can also browse the more information TODOs in [TODO.todo](TODO.todo) which haven't been turned
 into issues yet.
+
+### New to terminals?
+<a id="markdown-new-to-terminals%3F" name="new-to-terminals%3F"></a>
+
+
+Here's a learning path to help you get started:
+
+1. A really good first step is taking a look at `crossterm` crate - it is small and relatively
+   straight forward to understand. This will give you good exposure to the underlying terminal
+   stuff. Here's a link to the repo's
+   [examples](https://github.com/crossterm-rs/crossterm/tree/master/examples).
+2. Here's some
+   [documentation](https://docs.rs/r3bl_rs_utils/0.7.41/r3bl_rs_utils/tui/crossterm_helpers/index.html)
+   w/ lots of background information on terminals, PTY, TTY, etc.
+
+### New to the R3BL codebase?
+<a id="markdown-new-to-the-r3bl-codebase%3F" name="new-to-the-r3bl-codebase%3F"></a>
+
+
+1. A great starting point is this this [README](https://github.com/r3bl-org/r3bl_rs_utils). Here are
+   some important sections:
+   - [tui](https://github.com/r3bl-org/r3bl_rs_utils#tui)
+   - [redux](https://github.com/r3bl-org/r3bl_rs_utils#redux)
+2. Here's a [repo](https://github.com/r3bl-org/address-book-with-redux-tui/releases/tag/1.0) that is
+   a good one to start working on first. This repo is for a simple address book CLI app that does
+   NOT have TUI support. It is a good app to convert to using the TUI library to get a solid handle
+   on how to build TUIs. This app was intended to be a pedagogical example to get a handle on this
+   stuff.
 
 Here are some resources to learn more about the project itself:
 
