@@ -48,6 +48,9 @@
 //! [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/). We have since switched to Rust
 //! 🦀🎉.
 
+#![warn(clippy::all)]
+#![warn(rust_2018_idioms)]
+
 // Attach the following files to the library module.
 pub mod redux;
 pub mod tree_memory_arena;
