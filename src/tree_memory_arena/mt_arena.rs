@@ -126,7 +126,7 @@ where
     let walker_fn_arc = walker_fn.clone();
 
     spawn(move || {
-      let read_guard: ReadGuarded<Arena<T>> = arena_arc.read().unwrap();
+      let read_guard: ReadGuarded<'_, Arena<T>> = arena_arc.read().unwrap();
       let return_value = read_guard.tree_walk_dfs(node_id);
 
       // While walking the tree, in a separate thread, call the `walker_fn` for each
@@ -135,7 +135,7 @@ where
         result_list.into_iter().for_each(|uid| {
           let node_arc_opt = read_guard.get_node_arc(uid);
           if let Some(node_arc) = node_arc_opt {
-            let node_ref: ReadGuarded<Node<T>> = node_arc.read().unwrap();
+            let node_ref: ReadGuarded<'_, Node<T>> = node_arc.read().unwrap();
             walker_fn_arc(uid, node_ref.payload.clone());
           }
         });
