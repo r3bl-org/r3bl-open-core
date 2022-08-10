@@ -50,7 +50,7 @@ where
   F: FnMut(&T) -> R,
 {
   let arc_clone = arc_lock_wrapped_value.clone();
-  let read_guarded: ReadGuarded<T> = unwrap!(r_lock from arc_clone);
+  let read_guarded: ReadGuarded<'_, T> = unwrap!(r_lock from arc_clone);
   receiver_fn(&read_guarded)
 }
 
@@ -61,7 +61,7 @@ where
   F: FnMut(&mut T) -> R,
 {
   let arc_clone = arc_lock_wrapped_value.clone();
-  let mut write_guarded: WriteGuarded<T> = unwrap!(w_lock from arc_clone);
+  let mut write_guarded: WriteGuarded<'_, T> = unwrap!(w_lock from arc_clone);
   receiver_fn(&mut write_guarded)
 }
 
