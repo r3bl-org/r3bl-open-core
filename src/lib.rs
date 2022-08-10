@@ -48,6 +48,8 @@
 //! [r3bl-ts-utils](https://github.com/r3bl-org/r3bl-ts-utils/). We have since switched to Rust
 //! 🦀🎉.
 
+// https://github.com/rust-lang/rust-clippy
+// https://rust-lang.github.io/rust-clippy/master/index.html
 #![warn(clippy::all)]
 #![warn(rust_2018_idioms)]
 
