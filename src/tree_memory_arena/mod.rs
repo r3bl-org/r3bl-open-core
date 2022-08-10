@@ -31,7 +31,7 @@ pub mod arena_types;
 pub mod mt_arena;
 
 // Module re-exports:
-// <https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html#documentation-comments-as-tests>
+// <https://doc.rust-lang.org/book/ch07-04-bringing-paths-into-scope-with-the-use-keyword.html?highlight=module%20re-export#re-exporting-names-with-pub-use>
 
 // Re-export the following modules:
 pub use arena::*; // Arena.
