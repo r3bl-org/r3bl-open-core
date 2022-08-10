@@ -194,8 +194,7 @@ impl UnicodeStringExt for String {
         total_byte_offset
       },
       grapheme_cluster_segment_count: if total_grapheme_cluster_count > 0 {
-        total_grapheme_cluster_count + 1 /* count = grapheme_cluster_index +
-                                          * 1 */
+        total_grapheme_cluster_count + 1 /* count = grapheme_cluster_index + 1 */
       } else {
         total_grapheme_cluster_count
       },
