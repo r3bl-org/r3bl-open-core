@@ -131,7 +131,7 @@ where
 {
   /// If no matching nodes can be found returns `None`.
   pub fn filter_all_nodes_by(&self, filter_fn: &FilterFn<T>) -> ResultUidList {
-    let map: ReadGuarded<ArenaMap<T>> = self.map.read().unwrap();
+    let map: ReadGuarded<'_, ArenaMap<T>> = self.map.read().unwrap();
     let filtered_map = map
       .iter()
       .filter(|(id, node_ref)| filter_fn(**id, node_ref.read().unwrap().payload.clone()))
@@ -149,7 +149,7 @@ where
       return None;
     }
     let node_to_lookup = self.get_node_arc(node_id)?;
-    let node_to_lookup: ReadGuarded<Node<T>> = node_to_lookup.read().unwrap(); // Safe to call unwrap.
+    let node_to_lookup: ReadGuarded<'_, Node<T>> = node_to_lookup.read().unwrap(); // Safe to call unwrap.
     let children_uids = &node_to_lookup.children;
     Some(children_uids.clone())
   }
@@ -160,7 +160,7 @@ where
       return None;
     }
     let node_to_lookup = self.get_node_arc(node_id)?;
-    let node_to_lookup: ReadGuarded<Node<T>> = node_to_lookup.read().unwrap(); // Safe to call unwrap.
+    let node_to_lookup: ReadGuarded<'_, Node<T>> = node_to_lookup.read().unwrap(); // Safe to call unwrap.
     node_to_lookup.parent
   }
 
@@ -202,7 +202,7 @@ where
     }
 
     // Actually delete the nodes in the deletion list.
-    let mut map: WriteGuarded<ArenaMap<T>> = self.map.write().unwrap(); // Safe to unwrap.
+    let mut map: WriteGuarded<'_, ArenaMap<T>> = self.map.write().unwrap(); // Safe to unwrap.
     deletion_list.iter().for_each(|id| {
       map.remove(id);
     });

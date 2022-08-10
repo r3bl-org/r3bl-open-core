@@ -211,9 +211,6 @@
 //! 1. [Code example of an address book using Redux](https://github.com/r3bl-org/address-book-with-redux-tui).
 //! 2. [Code example of TUI apps using Redux](https://github.com/r3bl-org/r3bl-cmdr).
 
-/// Use bitflags! macro.
-extern crate bitflags;
-
 // Attach sources.
 pub mod crossterm_helpers;
 pub mod layout;
