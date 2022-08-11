@@ -26,7 +26,7 @@ fn test_unicode_string_ext() {
 
   // Check overall sizes and counts on the `UnicodeString` struct.
   assert_eq2!(u_s.string, test_string);
-  assert_eq2!(u_s.grapheme_cluster_segment_vec.len(), 11);
+  assert_eq2!(u_s.vec_segment.len(), 11);
   assert_eq2!(u_s.grapheme_cluster_segment_count, 11);
   assert_eq2!(u_s.byte_size, test_string.len());
 }
@@ -35,7 +35,7 @@ fn test_unicode_string_ext() {
 #[test]
 fn test_grapheme_cluster_segment() {
   fn assert_segment(
-    segment: GraphemeClusterSegment, byte_offset: usize, unicode_width: UnitType,
+    segment: &GraphemeClusterSegment, byte_offset: usize, unicode_width: UnitType,
     logical_index: usize, byte_size: usize, string: &str,
   ) {
     assert_eq2!(segment.string, string);
@@ -49,24 +49,17 @@ fn test_grapheme_cluster_segment() {
   let u_s = test_string.unicode_string();
 
   // Check the individual `GraphemeClusterSegment` structs.
-  assert_segment(u_s.grapheme_cluster_segment_vec[00], 00, 01, 00, 01, "H");
-  assert_segment(u_s.grapheme_cluster_segment_vec[01], 01, 01, 01, 01, "i");
-  assert_segment(u_s.grapheme_cluster_segment_vec[02], 02, 01, 02, 01, " ");
-  assert_segment(u_s.grapheme_cluster_segment_vec[03], 03, 02, 03, 04, "😃");
-  assert_segment(u_s.grapheme_cluster_segment_vec[04], 07, 01, 04, 01, " ");
-  assert_segment(u_s.grapheme_cluster_segment_vec[05], 08, 02, 05, 04, "📦");
-  assert_segment(u_s.grapheme_cluster_segment_vec[06], 12, 01, 06, 01, " ");
-  assert_segment(u_s.grapheme_cluster_segment_vec[07], 13, 04, 07, 08, "🙏🏽");
-  assert_segment(u_s.grapheme_cluster_segment_vec[08], 21, 01, 08, 01, " ");
-  assert_segment(
-    u_s.grapheme_cluster_segment_vec[09],
-    22,
-    10,
-    09,
-    26,
-    "👨🏾‍🤝‍👨🏿",
-  );
-  assert_segment(u_s.grapheme_cluster_segment_vec[10], 48, 01, 10, 01, ".");
+  assert_segment(&u_s.vec_segment[00], 00, 01, 00, 01, "H");
+  assert_segment(&u_s.vec_segment[01], 01, 01, 01, 01, "i");
+  assert_segment(&u_s.vec_segment[02], 02, 01, 02, 01, " ");
+  assert_segment(&u_s.vec_segment[03], 03, 02, 03, 04, "😃");
+  assert_segment(&u_s.vec_segment[04], 07, 01, 04, 01, " ");
+  assert_segment(&u_s.vec_segment[05], 08, 02, 05, 04, "📦");
+  assert_segment(&u_s.vec_segment[06], 12, 01, 06, 01, " ");
+  assert_segment(&u_s.vec_segment[07], 13, 04, 07, 08, "🙏🏽");
+  assert_segment(&u_s.vec_segment[08], 21, 01, 08, 01, " ");
+  assert_segment(&u_s.vec_segment[09], 22, 10, 09, 26, "👨🏾‍🤝‍👨🏿");
+  assert_segment(&u_s.vec_segment[10], 48, 01, 10, 01, ".");
 }
 
 #[allow(clippy::zero_prefixed_literal)]

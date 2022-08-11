@@ -23,13 +23,13 @@ pub struct StyledText {
 }
 
 pub struct StyledTextVec {
-  pub vec: Vec<StyledText>,
+  pub vec_spans: Vec<StyledText>,
 }
 
 impl StyledTextVec {
   pub fn get_plain_text(&self) -> String {
     let mut plain_text = String::new();
-    for styled_text in &self.vec {
+    for styled_text in &self.vec_spans {
       plain_text.push_str(&styled_text.plain_text);
     }
     plain_text
@@ -42,8 +42,5 @@ impl StyledTextVec {
 }
 
 impl UnicodeStringExt for StyledTextVec {
-  fn unicode_string(&self) -> UnicodeString {
-    // TODO: use the plain_text field (which is a String) and re-use its trait impl
-    todo!()
-  }
+  fn unicode_string(&self) -> UnicodeString { self.get_plain_text().unicode_string() }
 }

@@ -2,6 +2,6 @@
 │ r3bl_rs_utils │
 ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 styling - add text span support:
-  ☐ add new struct to provide text span which is vec of styled text
+  ☐ add new struct to provide text span which is vec of styled text `styled_text.rs`
   ☐ ensure that its compatible w/ `GraphemeClusterSegment` & `unicode_string_ext.rs`
   ☐ impl this for the exit message in `r3bl-cmdr`

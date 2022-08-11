@@ -173,7 +173,7 @@ impl UnicodeStringExt for String {
     {
       let unicode_width = convert_to_base_unit!(grapheme_cluster_str.width());
       my_unicode_string_segments.push(GraphemeClusterSegment {
-        string: grapheme_cluster_str,
+        string: grapheme_cluster_str.into(),
         byte_offset,
         unicode_width,
         logical_index: grapheme_cluster_index,
@@ -186,8 +186,8 @@ impl UnicodeStringExt for String {
     }
 
     UnicodeString {
-      string: self,
-      grapheme_cluster_segment_vec: my_unicode_string_segments,
+      string: self.into(),
+      vec_segment: my_unicode_string_segments,
       byte_size: if total_byte_offset > 0 {
         total_byte_offset + 1 /* size = byte_offset (index) + 1 */
       } else {
@@ -203,19 +203,18 @@ impl UnicodeStringExt for String {
 }
 
 #[derive(Debug, Clone)]
-pub struct UnicodeString<'a> {
-  pub string: &'a str,
-  pub grapheme_cluster_segment_vec: Vec<GraphemeClusterSegment<'a>>,
+pub struct UnicodeString {
+  pub string: String,
+  pub vec_segment: Vec<GraphemeClusterSegment>,
   pub byte_size: usize,
   pub grapheme_cluster_segment_count: usize,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct GraphemeClusterSegment<'a> {
+#[derive(Debug, Clone)]
+pub struct GraphemeClusterSegment {
   /// The actual grapheme cluster `&str`. Eg: "H", "📦", "🙏🏽".
-  pub string: &'a str,
-  /// The byte offset (in the original string) of the start of the
-  /// `grapheme_cluster`.
+  pub string: String,
+  /// The byte offset (in the original string) of the start of the `grapheme_cluster`.
   pub byte_offset: usize,
   /// Display width of the `string` via [`unicode_width::UnicodeWidthChar`].
   pub unicode_width: UnitType,
@@ -227,17 +226,17 @@ pub struct GraphemeClusterSegment<'a> {
   pub display_col_offset: UnitType,
 }
 
-impl<'a> UnicodeString<'a> {
-  pub fn truncate_to_fit_size(&self, size: Size) -> &'a str {
+impl UnicodeString {
+  pub fn truncate_to_fit_size(&self, size: Size) -> &str {
     let display_cols: UnitType = size.cols;
     self.truncate_to_fit_display_cols(display_cols)
   }
 
-  pub fn truncate_to_fit_display_cols(&self, display_cols: UnitType) -> &'a str {
+  pub fn truncate_to_fit_display_cols(&self, display_cols: UnitType) -> &str {
     let mut avail_cols = display_cols;
     let mut string_end_byte_index = 0;
 
-    for segment in &self.grapheme_cluster_segment_vec {
+    for segment in &self.vec_segment {
       if avail_cols < segment.unicode_width {
         break;
       }
@@ -248,20 +247,17 @@ impl<'a> UnicodeString<'a> {
     &self.string[..string_end_byte_index]
   }
 
-  pub fn at_logical_index(&self, logical_index: usize) -> Option<&GraphemeClusterSegment<'a>> {
-    self.grapheme_cluster_segment_vec.get(logical_index)
+  pub fn at_logical_index(&self, logical_index: usize) -> Option<&GraphemeClusterSegment> {
+    self.vec_segment.get(logical_index)
   }
 
-  pub fn at_display_col(&self, display_col: UnitType) -> Option<&GraphemeClusterSegment<'a>> {
-    self
-      .grapheme_cluster_segment_vec
-      .iter()
-      .find(|&grapheme_cluster_segment| {
-        let segment_display_col_start: UnitType = grapheme_cluster_segment.display_col_offset;
-        let segment_display_col_end: UnitType =
-          segment_display_col_start + grapheme_cluster_segment.unicode_width;
-        display_col >= segment_display_col_start && display_col < segment_display_col_end
-      })
+  pub fn at_display_col(&self, display_col: UnitType) -> Option<&GraphemeClusterSegment> {
+    self.vec_segment.iter().find(|&grapheme_cluster_segment| {
+      let segment_display_col_start: UnitType = grapheme_cluster_segment.display_col_offset;
+      let segment_display_col_end: UnitType =
+        segment_display_col_start + grapheme_cluster_segment.unicode_width;
+      display_col >= segment_display_col_start && display_col < segment_display_col_end
+    })
   }
 
   pub fn logical_index_at_display_col(&self, display_col: UnitType) -> Option<usize> {
