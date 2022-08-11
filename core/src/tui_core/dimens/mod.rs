@@ -22,7 +22,7 @@ pub mod percent;
 pub mod position;
 pub mod size;
 
-// Re-export attached source files.
+// Re-export.
 pub use base_units::*;
 pub use pair::*;
 pub use percent::*;
