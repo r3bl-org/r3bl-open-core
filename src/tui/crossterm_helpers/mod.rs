@@ -53,7 +53,7 @@ pub mod tw_command;
 pub mod tw_input_event;
 pub mod tw_raw_mode;
 
-// Re-export everything from attached source files.
+// Re-export.
 pub use event_stream_ext::*;
 pub use tw_command::*;
 pub use tw_input_event::*;

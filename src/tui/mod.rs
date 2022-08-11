@@ -215,8 +215,11 @@
 pub mod crossterm_helpers;
 pub mod layout;
 pub mod terminal_window;
+pub mod syntax_highlighting;
 
 // Re-export.
 pub use crossterm_helpers::*;
 pub use layout::*;
 pub use terminal_window::*;
+pub use syntax_highlighting::*;
+

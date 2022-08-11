@@ -26,14 +26,12 @@
 //! look at these extensive integration tests that put them thru their paces
 //! [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
 
+// Attach sources.
 pub mod arena;
 pub mod arena_types;
 pub mod mt_arena;
 
-// Module re-exports:
-// <https://doc.rust-lang.org/book/ch07-04-bringing-paths-into-scope-with-the-use-keyword.html?highlight=module%20re-export#re-exporting-names-with-pub-use>
-
-// Re-export the following modules:
+// Re-export.
 pub use arena::*; // Arena.
 pub use arena_types::*; // Arena type aliases.
 pub use mt_arena::*; // MTArena.

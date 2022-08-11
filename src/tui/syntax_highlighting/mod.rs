@@ -15,26 +15,8 @@
  *   limitations under the License.
  */
 
-//! This module contains a lot of utility functions that are meant to:
-//! 1. Increase the ergonomics of using wrapped values in Rust
-//! 2. Colorizing console output.
-//! 3. Easy to work w/ lazy hash maps.
-//! 4. Easy to work w/ readline.
-//! 5. Interrogation of types.
-
 // Attach sources.
-pub mod file_logging;
-pub mod lazy_field;
-pub mod lazy_hash_map;
-pub mod safe_unwrap;
-pub mod tty;
-pub mod type_utils;
+pub mod styled_text;
 
-
-// Re-export.
-pub use file_logging::*;
-pub use lazy_field::*;
-pub use lazy_hash_map::*;
-pub use safe_unwrap::*;
-pub use tty::*;
-pub use type_utils::*;
+// Re-export
+pub use styled_text::*;

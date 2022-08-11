@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
+// Attach sources.
 pub mod async_store;
 
-// Re-export the following modules:
+// Re-export.
 pub use async_store::*;

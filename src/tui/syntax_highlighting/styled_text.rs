@@ -15,26 +15,35 @@
  *   limitations under the License.
  */
 
-//! This module contains a lot of utility functions that are meant to:
-//! 1. Increase the ergonomics of using wrapped values in Rust
-//! 2. Colorizing console output.
-//! 3. Easy to work w/ lazy hash maps.
-//! 4. Easy to work w/ readline.
-//! 5. Interrogation of types.
+use crate::*;
 
-// Attach sources.
-pub mod file_logging;
-pub mod lazy_field;
-pub mod lazy_hash_map;
-pub mod safe_unwrap;
-pub mod tty;
-pub mod type_utils;
+pub struct StyledText {
+  pub plain_text: String,
+  pub style: Style,
+}
 
+pub struct StyledTextVec {
+  pub vec: Vec<StyledText>,
+}
 
-// Re-export.
-pub use file_logging::*;
-pub use lazy_field::*;
-pub use lazy_hash_map::*;
-pub use safe_unwrap::*;
-pub use tty::*;
-pub use type_utils::*;
+impl StyledTextVec {
+  pub fn get_plain_text(&self) -> String {
+    let mut plain_text = String::new();
+    for styled_text in &self.vec {
+      plain_text.push_str(&styled_text.plain_text);
+    }
+    plain_text
+  }
+
+  pub fn render(&self) -> TWCommandQueue {
+    // TODO:
+    todo!();
+  }
+}
+
+impl UnicodeStringExt for StyledTextVec {
+  fn unicode_string(&self) -> UnicodeString {
+    // TODO: use the plain_text field (which is a String) and re-use its trait impl
+    todo!()
+  }
+}

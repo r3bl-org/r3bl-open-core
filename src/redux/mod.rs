@@ -499,7 +499,7 @@ pub mod async_reducer;
 pub mod async_subscriber;
 pub mod store;
 
-// Re-export the following modules:
+// Re-export.
 pub use async_middleware::*;
 pub use async_reducer::*;
 pub use async_subscriber::*;

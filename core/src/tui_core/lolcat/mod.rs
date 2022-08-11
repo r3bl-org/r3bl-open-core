@@ -20,7 +20,7 @@ pub mod cat;
 pub mod color_utils;
 pub mod control;
 
-// Re-exports.
+// Re-export.
 pub use cat::*;
 pub use color_utils::*;
 pub use control::*;

@@ -28,7 +28,9 @@
 //! 3. Finally, make the "public" crate (`r3bl_rs_utils`) depend on the other two.
 //!
 //! As a way to hide this kind of layering from the users of the "main" `r3bl_rs_utils` crate, all
-//! the modules tend to be re-exported, making them available from the "main" or top-level crate.
+//! the modules tend to be re-exported, making them available from the "main" or top-level crate;
+//! more info on this
+//! [here](https://doc.rust-lang.org/book/ch07-04-bringing-paths-into-scope-with-the-use-keyword.html?highlight=module%20re-export#re-exporting-names-with-pub-use).
 
 // Connect to source file.
 pub mod async_safe_share_mutate;
