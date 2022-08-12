@@ -106,21 +106,6 @@ impl Stylesheet {
 macro_rules! stylesheet {
   ($($style:expr),*) => {
     {
-      trait AddStyle {
-        fn add_to_style_sheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()>;
-      }
-      impl AddStyle for Style {
-        fn add_to_style_sheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()>{
-          stylesheet.add_style(self)?;
-          Ok(())
-        }
-      }
-      impl AddStyle for Vec<Style> {
-        fn add_to_style_sheet(self, stylesheet: &mut Stylesheet)  -> CommonResult<()>{
-            stylesheet.add_styles(self)?;
-            Ok(())
-        }
-      }
       let mut style_sheet = Stylesheet::new();
       $(
         ($style).add_to_style_sheet(&mut style_sheet)?;
@@ -128,4 +113,22 @@ macro_rules! stylesheet {
       style_sheet
     }
   };
+}
+
+pub trait AddStyle {
+  fn add_to_style_sheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()>;
+}
+
+impl AddStyle for Style {
+  fn add_to_style_sheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()> {
+    stylesheet.add_style(self)?;
+    Ok(())
+  }
+}
+
+impl AddStyle for Vec<Style> {
+  fn add_to_style_sheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()> {
+    stylesheet.add_styles(self)?;
+    Ok(())
+  }
 }
