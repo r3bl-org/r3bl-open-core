@@ -19,57 +19,118 @@ use crate::*;
 
 #[derive(Default, Debug, Clone)]
 pub struct Stylesheet {
-  pub styles: Vec<Style>,
+    pub styles: Vec<Style>,
 }
 
 impl Stylesheet {
-  pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self { Self::default() }
 
-  pub fn add_style(&mut self, style: Style) -> CommonResult<()> {
-    throws!({
+    pub fn add_style(&mut self, style: Style) -> CommonResult<()> {
+        throws!({
       if style.id.is_empty() {
         return CommonError::new_err_with_only_msg("Style id cannot be empty");
       }
       self.styles.push(style);
     });
-  }
+    }
 
-  pub fn add_styles(&mut self, styles: Vec<Style>) -> CommonResult<()> {
-    throws!({
+    pub fn add_styles(&mut self, styles: Vec<Style>) -> CommonResult<()> {
+        throws!({
       for style in styles {
         self.add_style(style)?;
       }
     });
-  }
-
-  pub fn find_style_by_id(&self, id: &str) -> Option<Style> {
-    self.styles.iter().find(|style| style.id == id).cloned()
-  }
-
-  /// Returns [None] if no style in `ids` [Vec] is found.
-  pub fn find_styles_by_ids(&self, ids: Vec<&str>) -> Option<Vec<Style>> {
-    let mut styles = Vec::new();
-
-    for id in ids {
-      if let Some(style) = self.find_style_by_id(id) {
-        styles.push(style.clone());
-      }
     }
 
-    if styles.is_empty() {
-      None
-    } else {
-      Some(styles)
+    pub fn find_style_by_id(&self, id: &str) -> Option<Style> {
+        self.styles.iter().find(|style| style.id == id).cloned()
     }
-  }
 
-  pub fn compute(styles: Option<Vec<Style>>) -> Option<Style> {
-    if let Some(styles) = styles {
-      let mut computed = Style::default();
-      styles.iter().for_each(|style| computed += style);
-      Some(computed)
-    } else {
-      None
+    /// Returns [None] if no style in `ids` [Vec] is found.
+    pub fn find_styles_by_ids(&self, ids: Vec<&str>) -> Option<Vec<Style>> {
+        let mut styles = Vec::new();
+
+        for id in ids {
+            if let Some(style) = self.find_style_by_id(id) {
+                styles.push(style.clone());
+            }
+        }
+
+        if styles.is_empty() {
+            None
+        } else {
+            Some(styles)
+        }
     }
-  }
+
+    pub fn compute(styles: Option<Vec<Style>>) -> Option<Style> {
+        if let Some(styles) = styles {
+            let mut computed = Style::default();
+            styles.iter().for_each(|style| computed += style);
+            Some(computed)
+        } else {
+            None
+        }
+    }
+}
+
+
+/// Macro to make building `StyleSheet` easy
+///
+/// Use case:
+/// ```rust
+/// use crossterm::event::*;
+/// use r3bl_rs_utils_core::{CommonResult, Stylesheet};
+///
+/// fn create_stylesheet() -> CommonResult<Stylesheet> {
+///   throws_with_return!({
+///     stylesheet! {
+///         style! {
+///           id: style1
+///           margin: 1
+///           color_bg: Color::Rgb { r: 55, g: 55, b: 248 }
+///         },
+///         vec![
+///             style! {
+///                 id: style1
+///                 margin: 1
+///                 color_bg: Color::Rgb { r: 55, g: 55, b: 248 }
+///             },
+///             style! {
+///                 id: style2
+///                 margin: 1
+///                 color_bg: Color::Rgb { r: 85, g: 85, b: 255 }
+///             },
+///         ]
+///     }
+///   })
+/// }
+/// ```
+/// Note that this operation may panic if the styles could not be added to the Stylesheet
+///
+#[macro_export]
+macro_rules! stylesheet {
+    ($($style:expr),*) => {
+        {
+            trait AddStyle {
+                #[inline]
+                fn add_to_style_sheet(self, stylesheet: &mut Stylesheet);
+            }
+            impl AddStyle for Style {
+                fn add_to_style_sheet(self, stylesheet: &mut Stylesheet){
+                    stylesheet.add_style(self).unwrap();
+                }
+            }
+            impl AddStyle for Vec<Style> {
+                fn add_to_style_sheet(self, stylesheet: &mut Stylesheet){
+                    stylesheet.add_styles(self).unwrap()
+                }
+            }
+            let mut style_sheet = Stylesheet::new();
+            $(
+                ($style).add_to_style_sheet(&mut style_sheet);
+            )*
+            style_sheet
+        }
+    };
 }
