@@ -188,6 +188,7 @@ impl UnicodeStringExt for String {
     UnicodeString {
       string: self.into(),
       vec_segment: my_unicode_string_segments,
+      display_width: my_unicode_width_offset_accumulator,
       byte_size: if total_byte_offset > 0 {
         total_byte_offset + 1 /* size = byte_offset (index) + 1 */
       } else {
@@ -208,6 +209,7 @@ pub struct UnicodeString {
   pub vec_segment: Vec<GraphemeClusterSegment>,
   pub byte_size: usize,
   pub grapheme_cluster_segment_count: usize,
+  pub display_width: UnitType,
 }
 
 #[derive(Debug, Clone)]
@@ -273,7 +275,7 @@ impl UnicodeString {
   }
 }
 
-pub fn strip_ansi(text: &str) -> Option<String> {
+pub fn try_strip_ansi(text: &str) -> Option<String> {
   if let Ok(vec_u8) = strip_ansi_escapes::strip(&text) {
     let result_text_plain = std::str::from_utf8(&vec_u8);
     if let Ok(text_plain) = result_text_plain {

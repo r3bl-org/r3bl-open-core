@@ -18,7 +18,7 @@
 use std::{collections::HashMap,
           fmt::Debug,
           io::{stderr, stdout, Write},
-          ops::AddAssign};
+          ops::{Add, AddAssign}};
 
 use crossterm::{cursor::*,
                 event::*,
@@ -173,15 +173,20 @@ impl Debug for TWCommand {
           None => "ApplyColors(None)".into(),
         },
         TWCommand::PrintWithAttributes(text, maybe_style) => {
-          if let Some(plain_text) = strip_ansi(text) {
-            match maybe_style {
-              Some(style) => format!("PrintWithAttributes(\"{}\", {:?})", plain_text, style),
-              None => format!("PrintWithAttributes(\"{}\", None)", plain_text),
+          match try_strip_ansi(text) {
+            Some(plain_text) => {
+              // Successfully stripped ANSI escape codes.
+              match maybe_style {
+                Some(style) => format!("PrintWithAttributes(\"{}\", {:?})", plain_text, style),
+                None => format!("PrintWithAttributes(\"{}\", None)", plain_text),
+              }
             }
-          } else {
-            match maybe_style {
-              Some(style) => format!("PrintWithAttributes({} bytes, {:?})", text.len(), style),
-              None => format!("PrintWithAttributes({} bytes, None)", text.len()),
+            None => {
+              // Couldn't strip ANSI, so just print the text.
+              match maybe_style {
+                Some(style) => format!("PrintWithAttributes({} bytes, {:?})", text.len(), style),
+                None => format!("PrintWithAttributes({} bytes, None)", text.len()),
+              }
             }
           }
         }
@@ -213,6 +218,7 @@ pub struct TWCommandQueue {
   pub queue: Vec<TWCommand>,
 }
 
+// FIXME: move to helpers mod
 impl Debug for TWCommandQueue {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     let mut temp_vec: Vec<String> = vec![];
@@ -224,13 +230,38 @@ impl Debug for TWCommandQueue {
   }
 }
 
+// FIXME: move to helpers mod
 impl AddAssign for TWCommandQueue {
   fn add_assign(&mut self, other: TWCommandQueue) { self.queue.extend(other.queue); }
+}
+
+// FIXME: move to helpers mod
+impl Add<TWCommand> for TWCommandQueue {
+  type Output = TWCommandQueue;
+  fn add(mut self, other: TWCommand) -> TWCommandQueue {
+    self.queue.push(other);
+    self
+  }
+}
+
+// FIXME: move to helpers mod
+impl AddAssign<TWCommand> for TWCommandQueue {
+  fn add_assign(&mut self, other: TWCommand) { self.queue.push(other); }
 }
 
 impl TWCommandQueue {
   pub fn push(&mut self, cmd_wrapper: TWCommand) -> &mut Self {
     self.queue.push(cmd_wrapper);
+    self
+  }
+
+  pub fn push_all(&mut self, cmd_wrapper_vec: Vec<TWCommand>) -> &mut Self {
+    self.queue.extend(cmd_wrapper_vec);
+    self
+  }
+
+  pub fn push_another(&mut self, other: TWCommandQueue) -> &mut Self {
+    self.queue.extend(other.queue);
     self
   }
 
@@ -340,7 +371,7 @@ impl TWCommandQueue {
         }
       }
       TWCommand::PrintWithAttributes(text, maybe_style) => {
-        let log_msg: String = match strip_ansi(text) {
+        let log_msg: String = match try_strip_ansi(text) {
           Some(text_plain) => format!("\"{}\"", text_plain),
           None => format!("bytes {}", text.len())
         };
