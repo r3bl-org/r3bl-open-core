@@ -183,8 +183,8 @@ fn test_stylesheet() {
 }
 
 #[test]
-fn test_stylesheet_builder() {
-  let style1 =     make_a_style("style1");
+fn test_stylesheet_builder() -> CommonResult<()> {
+  let style1 = make_a_style("style1");
   let mut stylesheet = stylesheet! {
     style1,
     style! {
@@ -207,6 +207,7 @@ fn test_stylesheet_builder() {
     ],
     make_a_style("style6")
   };
+
   assert_eq!(stylesheet.styles.len(), 6);
   assert_eq!(stylesheet.find_style_by_id("style1").unwrap().id, "style1");
   assert_eq!(stylesheet.find_style_by_id("style2").unwrap().id, "style2");
@@ -229,6 +230,7 @@ fn test_stylesheet_builder() {
   result.unwrap();
   assert_eq!(stylesheet.styles.len(), 7);
   assert_eq!(stylesheet.find_style_by_id("style7").unwrap().id, "style7");
+  Ok(())
 }
 
 /// Helper function.

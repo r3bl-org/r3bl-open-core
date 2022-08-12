@@ -74,13 +74,10 @@ impl Stylesheet {
   }
 }
 
-/// Macro to make building `StyleSheet` easy
+/// Macro to make building [Stylesheet] easy.
 ///
-/// Use case:
-/// ```rust
-/// use crossterm::event::*;
-/// use r3bl_rs_utils_core::{CommonResult, Stylesheet};
-///
+/// Here's an example.
+/// ```ignore
 /// fn create_stylesheet() -> CommonResult<Stylesheet> {
 ///   throws_with_return!({
 ///     stylesheet! {
@@ -105,31 +102,30 @@ impl Stylesheet {
 ///   })
 /// }
 /// ```
-/// Note that this operation may panic if the styles could not be added to the Stylesheet
-///
 #[macro_export]
 macro_rules! stylesheet {
-    ($($style:expr),*) => {
-        {
-            trait AddStyle {
-                #[inline]
-                fn add_to_style_sheet(self, stylesheet: &mut Stylesheet);
-            }
-            impl AddStyle for Style {
-                fn add_to_style_sheet(self, stylesheet: &mut Stylesheet){
-                    stylesheet.add_style(self).unwrap();
-                }
-            }
-            impl AddStyle for Vec<Style> {
-                fn add_to_style_sheet(self, stylesheet: &mut Stylesheet){
-                    stylesheet.add_styles(self).unwrap()
-                }
-            }
-            let mut style_sheet = Stylesheet::new();
-            $(
-                ($style).add_to_style_sheet(&mut style_sheet);
-            )*
-            style_sheet
+  ($($style:expr),*) => {
+    {
+      trait AddStyle {
+        fn add_to_style_sheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()>;
+      }
+      impl AddStyle for Style {
+        fn add_to_style_sheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()>{
+          stylesheet.add_style(self)?;
+          Ok(())
         }
-    };
+      }
+      impl AddStyle for Vec<Style> {
+        fn add_to_style_sheet(self, stylesheet: &mut Stylesheet)  -> CommonResult<()>{
+            stylesheet.add_styles(self)?;
+            Ok(())
+        }
+      }
+      let mut style_sheet = Stylesheet::new();
+      $(
+        ($style).add_to_style_sheet(&mut style_sheet)?;
+      )*
+      style_sheet
+    }
+  };
 }
