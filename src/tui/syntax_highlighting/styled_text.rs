@@ -45,6 +45,6 @@ impl StyledTextVec {
 
 impl UnicodeStringExt for StyledTextVec {
   fn unicode_string(&self) -> UnicodeString { self.get_plain_text().unicode_string() }
-}
+}      
 
 // TODO: write tests for everything above.
