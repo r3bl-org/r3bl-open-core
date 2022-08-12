@@ -17,11 +17,13 @@
 
 use crate::*;
 
+#[derive(Debug, Clone, Default)]
 pub struct StyledText {
   pub plain_text: String,
   pub style: Style,
 }
 
+#[derive(Debug, Clone, Default)]
 pub struct StyledTextVec {
   pub vec_spans: Vec<StyledText>,
 }
@@ -44,3 +46,5 @@ impl StyledTextVec {
 impl UnicodeStringExt for StyledTextVec {
   fn unicode_string(&self) -> UnicodeString { self.get_plain_text().unicode_string() }
 }
+
+// TODO: write tests for everything above.
