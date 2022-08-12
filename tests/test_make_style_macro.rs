@@ -57,6 +57,13 @@ fn test_syntax_expansion_dsl() {
     color_fg: red
     color_bg: black
   };
+  let _ = style! {
+    id: style_fixed
+    attrib: [dim, bold]
+    margin: 1
+    color_fg: Color::Red
+    color_bg: black
+  };
 }
 
 #[test]
