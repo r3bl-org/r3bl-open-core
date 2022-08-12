@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 Nazmul Idris
+ *   Copyright (c) 2022 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +29,7 @@ fn test_unicode_string_ext() {
   assert_eq2!(u_s.vec_segment.len(), 11);
   assert_eq2!(u_s.grapheme_cluster_segment_count, 11);
   assert_eq2!(u_s.byte_size, test_string.len());
+  assert_eq2!(u_s.display_width, 25);
 }
 
 #[allow(clippy::zero_prefixed_literal)]

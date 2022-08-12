@@ -63,6 +63,7 @@ pub struct Style {
   pub cached_bitflags: Option<StyleFlag>,
 }
 
+// FIXME: move to helpers mod
 impl Display for Style {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     let msg = format!("{:?}", self);
@@ -70,6 +71,7 @@ impl Display for Style {
   }
 }
 
+// FIXME: move to helpers mod
 impl Debug for Style {
   fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
     let mut msg_vec: Vec<String> = vec![];
@@ -181,6 +183,7 @@ impl Style {
   }
 }
 
+// FIXME: move to helpers mod
 /// Implement specificity behavior for [Style] by implementing [Add] trait. Here's the rule: `Style
 /// + Style (overrides) = Style`.
 ///
@@ -232,6 +235,55 @@ impl Add<Self> for Style {
   }
 }
 
+// FIXME: move to helpers mod
 impl AddAssign<&Style> for Style {
   fn add_assign(&mut self, other: &Style) { *self = self.clone() + other.clone(); }
+}
+
+/// Instead of using the [crate::style] proc macro, you can use this macro to quickly build simple
+/// styles which just have attributes.
+#[macro_export]
+macro_rules! gen_attrib_style {
+  (@dim) => {
+    style! {
+      id: _style
+      attrib: [dim]
+    }
+  };
+  (@bold) => {
+    style! {
+      id: _style
+      attrib: [bold]
+    }
+  };
+  (@underline) => {
+    style! {
+      id: _style
+      attrib: [underline]
+    }
+  };
+  (@dim, @bold) => {
+    style! {
+      id: _style
+      attrib: [dim, bold]
+    }
+  };
+  (@dim, @underline) => {
+    style! {
+      id: _style
+      attrib: [dim, underline]
+    }
+  };
+  (@bold, @underline) => {
+    style! {
+      id: _style
+      attrib: [bold, underline]
+    }
+  };
+  (@dim, @bold, @underline) => {
+    style! {
+      id: _style
+      attrib: [dim, bold, underline]
+    }
+  };
 }

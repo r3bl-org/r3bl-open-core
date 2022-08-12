@@ -27,12 +27,17 @@ use crate::utils::IdentExt;
 /// ```
 /// style! {
 ///   id: my_style,          /* Required. */
-///   attrib: bold, dim,     /* Optional. */
+///   attrib: [dim, bold]     /* Optional. */
 ///   margin: 10,            /* Optional. */
 ///   color_fg: Color::Blue, /* Optional. */
 ///   color_bg: Color::Red,  /* Optional. */
 /// }
 /// ```
+///
+/// `color_fg` and `color_bg` can take any of the following:
+/// 1. Color enum value.
+/// 2. Rgb value.
+/// 3. Variable holding either of the above.
 impl Parse for StyleMetadata {
   fn parse(input: ParseStream) -> Result<Self> {
     let mut metadata = StyleMetadata {
