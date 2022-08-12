@@ -49,7 +49,7 @@ pub(crate) fn code_gen(
   let maybe_color_fg_expr = match color_fg {
     Some(color_expr) => {
       quote! {
-        color_fg: Some(crossterm::style::#color_expr.into()),
+        color_fg: Some(#color_expr.into()),
       }
     }
     None => quote! {},
@@ -58,7 +58,7 @@ pub(crate) fn code_gen(
   let maybe_color_bg_expr = match color_bg {
     Some(color_expr) => {
       quote! {
-        color_bg: Some(crossterm::style::#color_expr.into()),
+        color_bg: Some(#color_expr.into()),
       }
     }
     None => quote! {},

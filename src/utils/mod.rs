@@ -30,7 +30,6 @@ pub mod safe_unwrap;
 pub mod tty;
 pub mod type_utils;
 
-
 // Re-export.
 pub use file_logging::*;
 pub use lazy_field::*;

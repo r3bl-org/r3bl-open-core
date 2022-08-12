@@ -25,6 +25,7 @@
 //! To watch for test output run this script:
 //! `./cargo-watch-one-test.fish test_make_style_macro`
 
+use crossterm::style::Color;
 use r3bl_rs_utils::{style, with};
 
 #[test]
@@ -35,6 +36,26 @@ fn test_syntax_expansion() {
     margin: 1
     color_fg: Color::Red
     color_bg: Color::Rgb { r: 0, g: 0, b: 0 }
+  };
+}
+
+#[test]
+fn test_syntax_expansion_dsl() {
+  let red = Color::Red;
+  let black = Color::Rgb { r: 0, g: 0, b: 0 };
+  let _ = style! {
+    id: style_fixed
+    attrib: [dim, bold]
+    margin: 1
+    color_fg: red
+    color_bg: Color::Rgb { r: 0, g: 0, b: 0 }
+  };
+  let _ = style! {
+    id: style_fixed
+    attrib: [dim, bold]
+    margin: 1
+    color_fg: red
+    color_bg: black
   };
 }
 
