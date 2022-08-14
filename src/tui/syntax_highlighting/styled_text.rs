@@ -67,45 +67,46 @@ macro_rules! styled_text {
   };
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ StyledTextVec │
-// ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-/// Use [styled_text_vec!] macro for easier construction.
-#[derive(Debug, Clone, Default)]
-pub struct StyledTextVec {
-  pub vec_spans: Vec<StyledText>,
-}
-
-impl Add<StyledText> for StyledTextVec {
-  type Output = StyledTextVec;
-  fn add(self, other: StyledText) -> StyledTextVec {
-    let mut vec_spans = self.vec_spans;
-    vec_spans.push(other);
-    StyledTextVec { vec_spans }
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Vec<StyledText>, StyledTexts │
+// ╯                              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+impl Add<StyledText> for Vec<StyledText> {
+  type Output = Vec<StyledText>;
+  fn add(mut self, other: StyledText) -> Self::Output {
+    self.push(other);
+    self
   }
 }
 
-impl AddAssign<StyledText> for StyledTextVec {
-  fn add_assign(&mut self, other: StyledText) { self.vec_spans.push(other); }
+impl AddAssign<StyledText> for Vec<StyledText> {
+  fn add_assign(&mut self, other: StyledText) { self.push(other); }
 }
 
-impl StyledTextVec {
-  pub fn len(&self) -> usize { self.vec_spans.len() }
+pub trait StyledTexts {
+  fn len(&self) -> usize;
+  fn is_empty(&self) -> bool;
+  fn get_plain_text(&self) -> String;
+  fn render(&self) -> TWCommandQueue;
+  fn unicode_string(&self) -> UnicodeString { self.get_plain_text().unicode_string() }
+}
 
-  pub fn is_empty(&self) -> bool { self.vec_spans.is_empty() }
+impl StyledTexts for Vec<StyledText> {
+  fn len(&self) -> usize { self.len() }
 
-  pub fn get_plain_text(&self) -> String {
+  fn is_empty(&self) -> bool { self.is_empty() }
+
+  fn get_plain_text(&self) -> String {
     let mut plain_text = String::new();
-    for styled_text in &self.vec_spans {
+    for styled_text in self {
       plain_text.push_str(&styled_text.plain_text);
     }
     plain_text
   }
 
-  pub fn render(&self) -> TWCommandQueue {
+  fn render(&self) -> TWCommandQueue {
     let mut tw_command_queue = TWCommandQueue::default();
 
-    for styled_text in &self.vec_spans {
+    for styled_text in self {
       let style = styled_text.style.clone();
       let text = styled_text.plain_text.clone();
       tw_command_queue.push(TWCommand::ApplyColors(style.clone().into()));
@@ -117,11 +118,11 @@ impl StyledTextVec {
   }
 }
 
-/// Macro to make building [StyledTextVec] easy.
+/// Macro to make building [Vec<StyledText>] easy.
 ///
 /// Here's an example.
 /// ```ignore
-/// let mut st_vec = styled_text_vec! {
+/// let mut st_vec = styled_texts! {
 ///   styled_text! {
 ///     "Hello".to_string(),
 ///     maybe_style1.unwrap()
@@ -133,21 +134,14 @@ impl StyledTextVec {
 /// };
 /// ```
 #[macro_export]
-macro_rules! styled_text_vec {
+macro_rules! styled_texts {
   ($($style:expr),*) => {
     {
-      let mut styled_text_vec = StyledTextVec::default();
+      let mut styled_text_vec: Vec<StyledText> = Default::default();
       $(
         styled_text_vec += $style;
       )*
       styled_text_vec
     }
   };
-}
-
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ UnicodeStringExt │
-// ╯                  ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-impl UnicodeStringExt for StyledTextVec {
-  fn unicode_string(&self) -> UnicodeString { self.get_plain_text().unicode_string() }
 }

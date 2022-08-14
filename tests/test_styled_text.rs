@@ -40,13 +40,13 @@ mod helpers {
   use crossterm::style::Color;
   use r3bl_rs_utils::*;
 
-  pub fn create_styled_text() -> CommonResult<StyledTextVec> {
+  pub fn create_styled_text() -> CommonResult<Vec<StyledText>> {
     throws_with_return!({
       let stylesheet = create_stylesheet()?;
       let maybe_style1 = stylesheet.find_style_by_id("style1");
       let maybe_style2 = stylesheet.find_style_by_id("style2");
 
-      let st_vec = styled_text_vec! {
+      let st_vec = styled_texts! {
         styled_text! {
           "Hello".to_string(),
           maybe_style1.unwrap()
