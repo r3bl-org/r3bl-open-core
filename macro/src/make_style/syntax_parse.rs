@@ -26,8 +26,8 @@ use crate::utils::IdentExt;
 ///
 /// ```
 /// style! {
-///   id: my_style,          /* Required. */
-///   attrib: [dim, bold]     /* Optional. */
+///   id: my_style,          /* Optional. */
+///   attrib: [dim, bold]    /* Optional. */
 ///   margin: 10,            /* Optional. */
 ///   color_fg: Color::Blue, /* Optional. */
 ///   color_bg: Color::Red,  /* Optional. */
@@ -41,7 +41,7 @@ use crate::utils::IdentExt;
 impl Parse for StyleMetadata {
   fn parse(input: ParseStream) -> Result<Self> {
     let mut metadata = StyleMetadata {
-      id: Ident::new("tbd", Span::call_site()),
+      id: Ident::new("_id", Span::call_site()),
       attrib_vec: Vec::new(),
       margin: None,
       color_fg: None,
@@ -49,7 +49,7 @@ impl Parse for StyleMetadata {
     };
 
     // Run them all.
-    parse_id(&input, &mut metadata)?;
+    parse_optional_id(&input, &mut metadata)?;
     parse_optional_attrib(&input, &mut metadata)?;
     parse_optional_margin(&input, &mut metadata)?;
     parse_optional_color_fg(&input, &mut metadata)?;
@@ -74,8 +74,8 @@ pub(crate) mod kw {
   syn::custom_keyword!(color_bg);
 }
 
-// Parse id (required).
-fn parse_id(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
+// Parse id (optional).
+fn parse_optional_id(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
   let lookahead = input.lookahead1();
   if lookahead.peek(kw::id) {
     input.parse::<kw::id>()?;

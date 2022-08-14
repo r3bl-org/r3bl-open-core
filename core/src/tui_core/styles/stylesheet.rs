@@ -17,6 +17,9 @@
 
 use crate::*;
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Stylesheet │
+// ╯            ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 #[derive(Default, Debug, Clone)]
 pub struct Stylesheet {
   pub styles: Vec<Style>,
@@ -74,6 +77,9 @@ impl Stylesheet {
   }
 }
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ stylesheet! │
+// ╯             ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// Macro to make building [Stylesheet] easy.
 ///
 /// Here's an example.
@@ -108,25 +114,25 @@ macro_rules! stylesheet {
     {
       let mut style_sheet = Stylesheet::new();
       $(
-        ($style).add_to_style_sheet(&mut style_sheet)?;
+        ($style).add_to_stylesheet(&mut style_sheet)?;
       )*
       style_sheet
     }
   };
 }
 
-pub trait AddStyle {
-  fn add_to_style_sheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()>;
+pub trait AddToStylesheet {
+  fn add_to_stylesheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()>;
 }
 
-impl AddStyle for Style {
-  fn add_to_style_sheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()> {
+impl AddToStylesheet for Style {
+  fn add_to_stylesheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()> {
     stylesheet.add_style(self)
   }
 }
 
-impl AddStyle for Vec<Style> {
-  fn add_to_style_sheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()> {
+impl AddToStylesheet for Vec<Style> {
+  fn add_to_stylesheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()> {
     stylesheet.add_styles(self)
   }
 }
