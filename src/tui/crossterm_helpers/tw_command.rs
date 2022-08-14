@@ -29,7 +29,9 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 
 use crate::*;
-
+// ╭┄┄┄┄┄┄┄╮
+// │ exec! │
+// ╯       ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// Given a crossterm command, this will run it and [log!] the [Result] that is returned. If [log!]
 /// fails, then it will print a message to stderr.
 ///
@@ -73,6 +75,9 @@ macro_rules! exec {
   }};
 }
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ tw_command_queue! │
+// ╯                   ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// This works together w/ [TWCommand] to enqueue commands, but not flush them. It will return a
 /// [TWCommandQueue]. Here's an example.
 ///
@@ -126,6 +131,9 @@ macro_rules! tw_command_queue {
   };
 }
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄╮
+// │ TWCommand │
+// ╯           ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum TWCommand {
@@ -151,49 +159,53 @@ pub enum TWCommand {
   CursorHide,
 }
 
-impl Debug for TWCommand {
-  /// When [TWCommandQueue] is printed as debug, each [TWCommand] is printed using this method.
-  /// Also [exec!] does not use this; it has its own way of logging output.
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(
-      f,
-      "{}",
-      match self {
-        TWCommand::EnterRawMode => "EnterRawMode".into(),
-        TWCommand::ExitRawMode => "ExitRawMode".into(),
-        TWCommand::MoveCursorPositionAbs(pos) => format!("MoveCursorPositionAbs({:?})", pos),
-        TWCommand::MoveCursorPositionRelTo(orig_pos, rel_pos) =>
-          format!("MoveCursorPositionRelTo({:?}, {:?})", orig_pos, rel_pos),
-        TWCommand::ClearScreen => "ClearScreen".into(),
-        TWCommand::SetFgColor(fg_color) => format!("SetFgColor({:?})", fg_color),
-        TWCommand::SetBgColor(bg_color) => format!("SetBgColor({:?})", bg_color),
-        TWCommand::ResetColor => "ResetColor".into(),
-        TWCommand::ApplyColors(maybe_style) => match maybe_style {
-          Some(style) => format!("ApplyColors({:?})", style),
-          None => "ApplyColors(None)".into(),
-        },
-        TWCommand::PrintWithAttributes(text, maybe_style) => {
-          match try_strip_ansi(text) {
-            Some(plain_text) => {
-              // Successfully stripped ANSI escape codes.
-              match maybe_style {
-                Some(style) => format!("PrintWithAttributes(\"{}\", {:?})", plain_text, style),
-                None => format!("PrintWithAttributes(\"{}\", None)", plain_text),
+mod command_helpers {
+  use super::*;
+
+  impl Debug for TWCommand {
+    /// When [TWCommandQueue] is printed as debug, each [TWCommand] is printed using this method.
+    /// Also [exec!] does not use this; it has its own way of logging output.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      write!(
+        f,
+        "{}",
+        match self {
+          TWCommand::EnterRawMode => "EnterRawMode".into(),
+          TWCommand::ExitRawMode => "ExitRawMode".into(),
+          TWCommand::MoveCursorPositionAbs(pos) => format!("MoveCursorPositionAbs({:?})", pos),
+          TWCommand::MoveCursorPositionRelTo(orig_pos, rel_pos) =>
+            format!("MoveCursorPositionRelTo({:?}, {:?})", orig_pos, rel_pos),
+          TWCommand::ClearScreen => "ClearScreen".into(),
+          TWCommand::SetFgColor(fg_color) => format!("SetFgColor({:?})", fg_color),
+          TWCommand::SetBgColor(bg_color) => format!("SetBgColor({:?})", bg_color),
+          TWCommand::ResetColor => "ResetColor".into(),
+          TWCommand::ApplyColors(maybe_style) => match maybe_style {
+            Some(style) => format!("ApplyColors({:?})", style),
+            None => "ApplyColors(None)".into(),
+          },
+          TWCommand::PrintWithAttributes(text, maybe_style) => {
+            match try_strip_ansi(text) {
+              Some(plain_text) => {
+                // Successfully stripped ANSI escape codes.
+                match maybe_style {
+                  Some(style) => format!("PrintWithAttributes(\"{}\", {:?})", plain_text, style),
+                  None => format!("PrintWithAttributes(\"{}\", None)", plain_text),
+                }
               }
-            }
-            None => {
-              // Couldn't strip ANSI, so just print the text.
-              match maybe_style {
-                Some(style) => format!("PrintWithAttributes({} bytes, {:?})", text.len(), style),
-                None => format!("PrintWithAttributes({} bytes, None)", text.len()),
+              None => {
+                // Couldn't strip ANSI, so just print the text.
+                match maybe_style {
+                  Some(style) => format!("PrintWithAttributes({} bytes, {:?})", text.len(), style),
+                  None => format!("PrintWithAttributes({} bytes, None)", text.len()),
+                }
               }
             }
           }
+          TWCommand::CursorShow => "CursorShow".into(),
+          TWCommand::CursorHide => "CursorHide".into(),
         }
-        TWCommand::CursorShow => "CursorShow".into(),
-        TWCommand::CursorHide => "CursorHide".into(),
-      }
-    )
+      )
+    }
   }
 }
 
@@ -204,6 +216,9 @@ impl TWCommand {
   }
 }
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ TWCommandQueue │
+// ╯                ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// This works w/ [TWCommand] items. It allows them to be added in sequence, and then flushed at the
 /// end. Here's an example.
 ///
@@ -218,35 +233,35 @@ pub struct TWCommandQueue {
   pub queue: Vec<TWCommand>,
 }
 
-// FIXME: move to helpers mod
-impl Debug for TWCommandQueue {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let mut temp_vec: Vec<String> = vec![];
-    for command in &self.queue {
-      let line: String = format!("{:?}", command);
-      temp_vec.push(line);
+mod queue_helpers {
+  use super::*;
+
+  impl Debug for TWCommandQueue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      let mut temp_vec: Vec<String> = vec![];
+      for command in &self.queue {
+        let line: String = format!("{:?}", command);
+        temp_vec.push(line);
+      }
+      write!(f, "\n    - {}", temp_vec.join("\n    - "))
     }
-    write!(f, "\n    - {}", temp_vec.join("\n    - "))
   }
-}
 
-// FIXME: move to helpers mod
-impl AddAssign for TWCommandQueue {
-  fn add_assign(&mut self, other: TWCommandQueue) { self.queue.extend(other.queue); }
-}
-
-// FIXME: move to helpers mod
-impl Add<TWCommand> for TWCommandQueue {
-  type Output = TWCommandQueue;
-  fn add(mut self, other: TWCommand) -> TWCommandQueue {
-    self.queue.push(other);
-    self
+  impl AddAssign for TWCommandQueue {
+    fn add_assign(&mut self, other: TWCommandQueue) { self.queue.extend(other.queue); }
   }
-}
 
-// FIXME: move to helpers mod
-impl AddAssign<TWCommand> for TWCommandQueue {
-  fn add_assign(&mut self, other: TWCommand) { self.queue.push(other); }
+  impl Add<TWCommand> for TWCommandQueue {
+    type Output = TWCommandQueue;
+    fn add(mut self, other: TWCommand) -> TWCommandQueue {
+      self.queue.push(other);
+      self
+    }
+  }
+
+  impl AddAssign<TWCommand> for TWCommandQueue {
+    fn add_assign(&mut self, other: TWCommand) { self.queue.push(other); }
+  }
 }
 
 impl TWCommandQueue {
@@ -429,6 +444,9 @@ impl TWCommandQueue {
   }
 }
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Style to attribute map │
+// ╯                        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 lazy_static! {
   pub static ref STYLE_TO_ATTRIBUTE_MAP: HashMap<StyleFlag, Attribute> = {
     let mut map = HashMap::new();
