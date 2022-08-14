@@ -24,6 +24,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 
+// ╭┄┄┄┄┄┄┄╮
+// │ Style │
+// ╯       ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// Use [crate::style] proc macro to generate code for this struct. Here's an example.
 ///
 /// ```ignore
@@ -43,10 +46,9 @@ use crate::*;
 ///     id: style2
 ///     margin: 1
 ///     color_bg: Color::Rgb { r: 85, g: 85, b: 255 }
-///   },F
+///   }
 /// ])?;
 /// ```
-
 #[derive(Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Style {
   pub id: String,
@@ -63,59 +65,123 @@ pub struct Style {
   pub cached_bitflags: Option<StyleFlag>,
 }
 
-// FIXME: move to helpers mod
-impl Display for Style {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    let msg = format!("{:?}", self);
-    f.write_str(&msg)
-  }
-}
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Style helpers │
+// ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+mod helpers {
+  use super::*;
 
-// FIXME: move to helpers mod
-impl Debug for Style {
-  fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-    let mut msg_vec: Vec<String> = vec![];
+  /// Implement specificity behavior for [Style] by implementing [Add] trait. Here's the rule: `Style
+  /// + Style (overrides) = Style`.
+  ///
+  /// Docs:
+  /// - <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
+  impl Add<Self> for Style {
+    type Output = Self;
 
-    if self.computed {
-      msg_vec.push("computed".to_string())
-    } else {
-      msg_vec.push(self.id.to_string());
-    }
-    if self.bold {
-      msg_vec.push("bold".to_string())
-    }
-    if self.dim {
-      msg_vec.push("dim".to_string())
-    }
-    if self.underline {
-      msg_vec.push("underline".to_string())
-    }
-    if self.reverse {
-      msg_vec.push("reverse".to_string())
-    }
-    if self.hidden {
-      msg_vec.push("hidden".to_string())
-    }
-    if self.strikethrough {
-      msg_vec.push("strikethrough".to_string())
-    }
+    fn add(mut self, other: Self) -> Self {
+      // Computed style has no id.
+      self.computed = true;
+      self.id = "".to_string();
 
-    write!(
-      f,
-      "Style {{ {} | fg: {:?} | bg: {:?} | margin: {:?} }}",
-      msg_vec.join("+"),
-      self.color_fg,
-      self.color_bg,
-      if self.margin.is_some() {
-        self.margin.unwrap()
-      } else {
-        0
+      // other (if set) overrides self.
+      let other_mask = other.clone().get_bitflags();
+      if other_mask.contains(StyleFlag::COLOR_FG_SET) {
+        self.color_fg = other.color_fg;
       }
-    )
+      if other_mask.contains(StyleFlag::COLOR_BG_SET) {
+        self.color_bg = other.color_bg;
+      }
+      if other_mask.contains(StyleFlag::BOLD_SET) {
+        self.bold = other.bold;
+      }
+      if other_mask.contains(StyleFlag::DIM_SET) {
+        self.dim = other.dim;
+      }
+      if other_mask.contains(StyleFlag::UNDERLINE_SET) {
+        self.underline = other.underline;
+      }
+      if other_mask.contains(StyleFlag::MARGIN_SET) {
+        self.margin = other.margin;
+      }
+      if other_mask.contains(StyleFlag::REVERSE_SET) {
+        self.reverse = other.reverse;
+      }
+      if other_mask.contains(StyleFlag::HIDDEN_SET) {
+        self.hidden = other.hidden;
+      }
+      if other_mask.contains(StyleFlag::STRIKETHROUGH_SET) {
+        self.strikethrough = other.strikethrough;
+      }
+
+      // Recalculate the bitflags.
+      self.reset_bitflags();
+      self.get_bitflags();
+
+      self
+    }
+  }
+
+  impl AddAssign<&Style> for Style {
+    fn add_assign(&mut self, other: &Style) { *self = self.clone() + other.clone(); }
+  }
+
+  impl Display for Style {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+      let msg = format!("{:?}", self);
+      f.write_str(&msg)
+    }
+  }
+
+  impl Debug for Style {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+      let mut msg_vec: Vec<String> = vec![];
+
+      if self.computed {
+        msg_vec.push("computed".to_string())
+      } else {
+        msg_vec.push(self.id.to_string());
+      }
+      if self.bold {
+        msg_vec.push("bold".to_string())
+      }
+      if self.dim {
+        msg_vec.push("dim".to_string())
+      }
+      if self.underline {
+        msg_vec.push("underline".to_string())
+      }
+      if self.reverse {
+        msg_vec.push("reverse".to_string())
+      }
+      if self.hidden {
+        msg_vec.push("hidden".to_string())
+      }
+      if self.strikethrough {
+        msg_vec.push("strikethrough".to_string())
+      }
+
+      write!(
+        f,
+        "Style {{ {} | fg: {:?} | bg: {:?} | margin: {:?} }}",
+        msg_vec.join("+"),
+        self.color_fg,
+        self.color_bg,
+        if self.margin.is_some() {
+          self.margin.unwrap()
+        } else {
+          0
+        }
+      )
+    }
   }
 }
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Style bitflags │
+// ╯                ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 bitflags! {
+  /// Bitflags for [Style].
   /// https://docs.rs/bitflags/0.8.2/bitflags/macro.bitflags.html
   #[derive(Serialize, Deserialize)]
   pub struct StyleFlag: u8 {
@@ -132,6 +198,9 @@ bitflags! {
   }
 }
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Style impl │
+// ╯            ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 impl Style {
   /// The `StyleFlag` is lazily computed and cached after the first time it is evaluated. A `Style`
   /// can be built simply or by using the [crate::style] proc macro and the expectation is that once
@@ -181,109 +250,4 @@ impl Style {
 
     it
   }
-}
-
-// FIXME: move to helpers mod
-/// Implement specificity behavior for [Style] by implementing [Add] trait. Here's the rule: `Style
-/// + Style (overrides) = Style`.
-///
-/// Docs:
-/// - <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
-impl Add<Self> for Style {
-  type Output = Self;
-
-  fn add(mut self, other: Self) -> Self {
-    // Computed style has no id.
-    self.computed = true;
-    self.id = "".to_string();
-
-    // other (if set) overrides self.
-    let other_mask = other.clone().get_bitflags();
-    if other_mask.contains(StyleFlag::COLOR_FG_SET) {
-      self.color_fg = other.color_fg;
-    }
-    if other_mask.contains(StyleFlag::COLOR_BG_SET) {
-      self.color_bg = other.color_bg;
-    }
-    if other_mask.contains(StyleFlag::BOLD_SET) {
-      self.bold = other.bold;
-    }
-    if other_mask.contains(StyleFlag::DIM_SET) {
-      self.dim = other.dim;
-    }
-    if other_mask.contains(StyleFlag::UNDERLINE_SET) {
-      self.underline = other.underline;
-    }
-    if other_mask.contains(StyleFlag::MARGIN_SET) {
-      self.margin = other.margin;
-    }
-    if other_mask.contains(StyleFlag::REVERSE_SET) {
-      self.reverse = other.reverse;
-    }
-    if other_mask.contains(StyleFlag::HIDDEN_SET) {
-      self.hidden = other.hidden;
-    }
-    if other_mask.contains(StyleFlag::STRIKETHROUGH_SET) {
-      self.strikethrough = other.strikethrough;
-    }
-
-    // Recalculate the bitflags.
-    self.reset_bitflags();
-    self.get_bitflags();
-
-    self
-  }
-}
-
-// FIXME: move to helpers mod
-impl AddAssign<&Style> for Style {
-  fn add_assign(&mut self, other: &Style) { *self = self.clone() + other.clone(); }
-}
-
-/// Instead of using the [crate::style] proc macro, you can use this macro to quickly build simple
-/// styles which just have attributes.
-#[macro_export]
-macro_rules! gen_attrib_style {
-  (@dim) => {
-    style! {
-      id: _style
-      attrib: [dim]
-    }
-  };
-  (@bold) => {
-    style! {
-      id: _style
-      attrib: [bold]
-    }
-  };
-  (@underline) => {
-    style! {
-      id: _style
-      attrib: [underline]
-    }
-  };
-  (@dim, @bold) => {
-    style! {
-      id: _style
-      attrib: [dim, bold]
-    }
-  };
-  (@dim, @underline) => {
-    style! {
-      id: _style
-      attrib: [dim, underline]
-    }
-  };
-  (@bold, @underline) => {
-    style! {
-      id: _style
-      attrib: [bold, underline]
-    }
-  };
-  (@dim, @bold, @underline) => {
-    style! {
-      id: _style
-      attrib: [dim, bold, underline]
-    }
-  };
 }

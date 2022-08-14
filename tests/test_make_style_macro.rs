@@ -26,7 +26,7 @@
 //! `./cargo-watch-one-test.fish test_make_style_macro`
 
 use crossterm::style::Color;
-use r3bl_rs_utils::{style, with};
+use r3bl_rs_utils::*;
 
 #[test]
 fn test_syntax_expansion() {
@@ -64,6 +64,12 @@ fn test_syntax_expansion_dsl() {
     color_fg: Color::Red
     color_bg: black
   };
+}
+
+#[test]
+fn test_with_nothing() {
+  let style: Style = style! {};
+  assert_eq2!(style.id, "_id");
 }
 
 #[test]
