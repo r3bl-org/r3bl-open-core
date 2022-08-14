@@ -16,20 +16,11 @@
  */
 
 use core::fmt::Debug;
-use std::ops::Deref;
 
-use crossterm::style::*;
 use serde::{Deserialize, Serialize};
 
-/// Wrapper for [Color]. This is used to serialize and deserialize [Color]s. And
-/// it [Deref]s to [Color] for interchangeable use w/ [Color].
-///
-/// Docs:
-/// 1. https://serde.rs/remote-derive.html
-/// 2. https://riptutorial.com/rust/example/20152/implement-serialize-and-deserialize-for-a-type-in-a-different-crate
-#[derive(Serialize, Deserialize)]
-#[serde(remote = "Color")]
-enum ColorDef {
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub enum TWColor {
   /// Resets the terminal color.
   Reset,
 
@@ -81,40 +72,79 @@ enum ColorDef {
   /// Grey color.
   Grey,
 
-  /// An RGB color. See [RGB color model](https://en.wikipedia.org/wiki/RGB_color_model) for more info.
+  /// An RGB color. See [RGB color model](https://en.wikipedia.org/wiki/RGB_color_model) for more
+  /// info.
   ///
-  /// Most UNIX terminals and Windows 10 supported only.
-  /// See [Platform-specific notes](enum.Color.html#platform-specific-notes) for
-  /// more info.
+  /// Most UNIX terminals and Windows 10 supported only. See [Platform-specific
+  /// notes](enum.Color.html#platform-specific-notes) for more info.
   Rgb { r: u8, g: u8, b: u8 },
 
-  /// An ANSI color. See [256 colors - cheat sheet](https://jonasjacek.github.io/colors/) for more info.
+  /// An ANSI color. See [256 colors - cheat sheet](https://jonasjacek.github.io/colors/) for more
+  /// info.
   ///
-  /// Most UNIX terminals and Windows 10 supported only.
-  /// See [Platform-specific notes](enum.Color.html#platform-specific-notes) for
-  /// more info.
+  /// Most UNIX terminals and Windows 10 supported only. See [Platform-specific
+  /// notes](enum.Color.html#platform-specific-notes) for more info.
   AnsiValue(u8),
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
-pub struct TWColor {
-  #[serde(with = "ColorDef")]
-  color: Color,
+/// Convert from [crossterm::style::color::Color] to [TWColor].
+impl From<crossterm::style::Color> for TWColor {
+  fn from(other: crossterm::style::Color) -> Self {
+    match other {
+      crossterm::style::Color::Reset => TWColor::Reset,
+      crossterm::style::Color::Black => TWColor::Black,
+      crossterm::style::Color::DarkGrey => TWColor::DarkGrey,
+      crossterm::style::Color::Red => TWColor::Red,
+      crossterm::style::Color::DarkRed => TWColor::DarkRed,
+      crossterm::style::Color::Green => TWColor::Green,
+      crossterm::style::Color::DarkGreen => TWColor::DarkGreen,
+      crossterm::style::Color::Yellow => TWColor::Yellow,
+      crossterm::style::Color::DarkYellow => TWColor::DarkYellow,
+      crossterm::style::Color::Blue => TWColor::Blue,
+      crossterm::style::Color::DarkBlue => TWColor::DarkBlue,
+      crossterm::style::Color::Magenta => TWColor::Magenta,
+      crossterm::style::Color::DarkMagenta => TWColor::DarkMagenta,
+      crossterm::style::Color::Cyan => TWColor::Cyan,
+      crossterm::style::Color::DarkCyan => TWColor::DarkCyan,
+      crossterm::style::Color::White => TWColor::White,
+      crossterm::style::Color::Grey => TWColor::Grey,
+      crossterm::style::Color::Rgb { r, g, b } => TWColor::Rgb { r, g, b },
+      crossterm::style::Color::AnsiValue(u8) => TWColor::AnsiValue(u8),
+    }
+  }
 }
 
-impl Deref for TWColor {
-  type Target = Color;
-  fn deref(&self) -> &Self::Target { &self.color }
-}
-
-impl From<Color> for TWColor {
-  fn from(color: Color) -> Self { TWColor { color } }
+/// Convert from [TWColor] to [crossterm::style::color::Color].
+impl From<TWColor> for crossterm::style::Color {
+  fn from(other: TWColor) -> Self {
+    match other {
+      TWColor::Reset => crossterm::style::Color::Reset,
+      TWColor::Black => crossterm::style::Color::Black,
+      TWColor::DarkGrey => crossterm::style::Color::DarkGrey,
+      TWColor::Red => crossterm::style::Color::Red,
+      TWColor::DarkRed => crossterm::style::Color::DarkRed,
+      TWColor::Green => crossterm::style::Color::Green,
+      TWColor::DarkGreen => crossterm::style::Color::DarkGreen,
+      TWColor::Yellow => crossterm::style::Color::Yellow,
+      TWColor::DarkYellow => crossterm::style::Color::DarkYellow,
+      TWColor::Blue => crossterm::style::Color::Blue,
+      TWColor::DarkBlue => crossterm::style::Color::DarkBlue,
+      TWColor::Magenta => crossterm::style::Color::Magenta,
+      TWColor::DarkMagenta => crossterm::style::Color::DarkMagenta,
+      TWColor::Cyan => crossterm::style::Color::Cyan,
+      TWColor::DarkCyan => crossterm::style::Color::DarkCyan,
+      TWColor::White => crossterm::style::Color::White,
+      TWColor::Grey => crossterm::style::Color::Grey,
+      TWColor::Rgb { r, g, b } => crossterm::style::Color::Rgb { r, g, b },
+      TWColor::AnsiValue(u8) => crossterm::style::Color::AnsiValue(u8),
+    }
+  }
 }
 
 impl Debug for TWColor {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self.color {
-      Color::Rgb { r, g, b } => f.write_fmt(format_args!("{},{},{}", r, g, b)),
+    match self {
+      TWColor::Rgb { r, g, b } => f.write_fmt(format_args!("{},{},{}", r, g, b)),
       color => write!(f, "{:?}", color),
     }
   }

@@ -37,7 +37,7 @@ use crate::utils::IdentExt;
 /// `color_fg` and `color_bg` can take any of the following:
 /// 1. Color enum value.
 /// 2. Rgb value.
-/// 3. Variable holding either of the above.
+/// 3. Variable holding either of the above.qq
 impl Parse for StyleMetadata {
   fn parse(input: ParseStream) -> Result<Self> {
     let mut metadata = StyleMetadata {

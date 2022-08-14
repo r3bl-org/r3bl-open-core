@@ -343,14 +343,16 @@ impl TWCommandQueue {
         exec!(queue!(stdout(), Clear(ClearType::All)), "ClearScreen")
       }
       TWCommand::SetFgColor(color) => {
+        let color: crossterm::style::Color = (*color).clone().into();
         exec!(
-          queue!(stdout(), SetForegroundColor(**color)),
+          queue!(stdout(), SetForegroundColor(color)),
           format!("SetFgColor({:?})", color)
         )
       }
       TWCommand::SetBgColor(color) => {
+        let color: crossterm::style::Color = (*color).clone().into();
         exec!(
-          queue!(stdout(), SetBackgroundColor(**color)),
+          queue!(stdout(), SetBackgroundColor(color)),
           format!("SetBgColor({:?})", color)
         )
       }
@@ -371,16 +373,18 @@ impl TWCommandQueue {
           let mask = style.get_bitflags();
           if mask.contains(StyleFlag::COLOR_BG_SET) {
             let color_bg = style.color_bg.unwrap();
+            let color_bg: crossterm::style::Color = color_bg.into();
             exec!(
-              queue!(stdout(), SetBackgroundColor(*color_bg)),
-              format!("ApplyColors -> SetBackgroundColor({:?})", *color_bg)
+              queue!(stdout(), SetBackgroundColor(color_bg)),
+              format!("ApplyColors -> SetBackgroundColor({:?})", color_bg)
             )
           }
           if mask.contains(StyleFlag::COLOR_FG_SET) {
             let color_fg = style.color_fg.unwrap();
+            let color_fg: crossterm::style::Color = color_fg.into();
             exec!(
-              queue!(stdout(), SetForegroundColor(*color_fg)),
-              format!("ApplyColors -> SetForegroundColor({:?})", *color_fg)
+              queue!(stdout(), SetForegroundColor(color_fg)),
+              format!("ApplyColors -> SetForegroundColor({:?})", color_fg)
             )
           }
         }
