@@ -9,3 +9,4 @@ styling - add text span support:
 
 cleanup:
   ☐ replace all use of crossterm `Color` w/ `TWColor` (provide `From` trait impl)
+  ☐ clean up all existing code & try to move things to inner `helpers` mod
