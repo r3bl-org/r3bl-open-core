@@ -121,14 +121,12 @@ pub trait AddStyle {
 
 impl AddStyle for Style {
   fn add_to_style_sheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()> {
-    stylesheet.add_style(self)?;
-    Ok(())
+    stylesheet.add_style(self)
   }
 }
 
 impl AddStyle for Vec<Style> {
   fn add_to_style_sheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()> {
-    stylesheet.add_styles(self)?;
-    Ok(())
+    stylesheet.add_styles(self)
   }
 }
