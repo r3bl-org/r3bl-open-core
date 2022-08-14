@@ -1,12 +1,3 @@
 ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 │ r3bl_rs_utils │
 ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-styling - add text span support:
-  ✔ add new struct to provide text span which is vec of styled text `styled_text.rs` @done(22-08-13 20:18)
-  ✔ ensure that its compatible w/ `GraphemeClusterSegment` & `unicode_string_ext.rs` @done(22-08-13 20:18)
-  ✔ add unicode width to `GraphemeClusterSegment` @done(22-08-13 20:18)
-  ✔ impl this for the exit message in `r3bl-cmdr` @done(22-08-13 20:18)
-
-cleanup:
-  ☐ replace all use of crossterm `Color` w/ `TWColor` (provide `From` trait impl)
-  ☐ clean up all existing code & try to move things to inner `helpers` mod

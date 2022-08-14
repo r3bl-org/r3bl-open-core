@@ -1,3 +1,13 @@
+styling - add text span support:
+  ✔ add new struct to provide text span which is vec of styled text `styled_text.rs` @done(22-08-13 20:18)
+  ✔ ensure that its compatible w/ `GraphemeClusterSegment` & `unicode_string_ext.rs` @done(22-08-13 20:18)
+  ✔ add unicode width to `GraphemeClusterSegment` @done(22-08-13 20:18)
+  ✔ impl this for the exit message in `r3bl-cmdr` @done(22-08-13 20:18)
+
+cleanup:
+  ✔ replace all use of crossterm `Color` w/ `TWColor` (provide `From` trait impl) @done(22-08-14 14:50)
+  ✔ clean up all existing code & try to move things to inner `helpers` mod @done(22-08-14 14:50)
+
 build awareness:
   ✔ write tutorial on developerlife.com about `style!` DSL @done(22-08-05 17:11)
     - part 1 of a series on creating CSS like DSL in Rust
