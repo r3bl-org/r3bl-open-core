@@ -77,11 +77,12 @@ impl TWDefaultInputEventHandler {
   }
 
   fn from(input_event: TWInputEvent, exit_keys: &[KeyEvent]) -> Continuation {
-    if let TWInputEvent::NonDisplayableKeypress(key_event) = input_event {
-      if exit_keys.contains(&key_event) {
+    for exit_key in exit_keys {
+      if input_event == (*exit_key).into() {
         return Continuation::Exit;
       }
     }
+
     Continuation::Continue
   }
 }
