@@ -17,6 +17,7 @@
     "idents",
     "insertanchor",
     "isnt",
+    "keyevent",
     "Keypress",
     "lazyfield",
     "lazymemovalues",
@@ -36,6 +37,7 @@
     "tofro",
     "treememoryarena",
     "tuicore",
+    "twinputevent",
     "withmutreturns"
   ]
 }
