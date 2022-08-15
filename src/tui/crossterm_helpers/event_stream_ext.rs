@@ -70,12 +70,10 @@ impl EventStreamExt for EventStream {
     let maybe_event = self.next().fuse().await;
     match maybe_event {
       Some(Ok(event)) => Some(event.into()),
-
       Some(Err(e)) => {
         call_if_true!(DEBUG, log_no_err!(ERROR, "Error: {:?}", e));
         None
       }
-
       _ => None,
     }
   }
