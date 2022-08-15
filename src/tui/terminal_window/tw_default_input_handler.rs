@@ -15,8 +15,6 @@
  *   limitations under the License.
  */
 
-use crossterm::event::*;
-
 use crate::*;
 
 pub struct TWDefaultInputEventHandler;
@@ -24,9 +22,9 @@ pub struct TWDefaultInputEventHandler;
 impl TWDefaultInputEventHandler {
   /// This function does **not** consume the `input_event` argument. [TWInputEvent] implements [Copy]
   /// (no need to pass references into this function).
-  pub async fn no_consume(input_event: TWInputEvent, exit_keys: &[KeyEvent]) -> Continuation {
+  pub async fn no_consume(input_event: TWInputEvent, exit_keys: &[TWInputEvent]) -> Continuation {
     // Early return if any exit key sequence is pressed.
-    if let Continuation::Exit = TWDefaultInputEventHandler::from(input_event, exit_keys) {
+    if does_input_event_match_exit_keys(input_event, exit_keys) {
       return Continuation::Exit;
     }
 
@@ -70,16 +68,6 @@ impl TWDefaultInputEventHandler {
           DEBUG,
           log_no_err!(INFO, "default_event_handler -> Other: {:?}", input_event)
         );
-      }
-    }
-
-    Continuation::Continue
-  }
-
-  fn from(input_event: TWInputEvent, exit_keys: &[KeyEvent]) -> Continuation {
-    for exit_key in exit_keys {
-      if input_event == (*exit_key).into() {
-        return Continuation::Exit;
       }
     }
 

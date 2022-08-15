@@ -63,7 +63,7 @@ impl TerminalWindow {
   /// A: Default + Clone + Sync + Send,
   /// ```
   pub async fn main_event_loop<S, A>(
-    store: Store<S, A>, shared_app: SharedTWApp<S, A>, exit_keys: Vec<KeyEvent>,
+    store: Store<S, A>, shared_app: SharedTWApp<S, A>, exit_keys: Vec<TWInputEvent>,
   ) -> CommonResult<()>
   where
     S: Display + Default + Clone + PartialEq + Eq + Debug + Sync + Send + 'static,

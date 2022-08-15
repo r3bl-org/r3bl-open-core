@@ -44,3 +44,24 @@ fn test_convert_keyevent_into_twinputevent() {
   assert_eq2!(caps_x_tw, TWInputEvent::DisplayableKeypress('X'));
   assert_eq2!(ctrl_x_tw, TWInputEvent::NonDisplayableKeypress(ctrl_x));
 }
+
+#[test]
+fn test_tw_input_event_matches_correctly() {
+  let x = TWInputEvent::DisplayableKeypress('x');
+  let caps_x = TWInputEvent::DisplayableKeypress('X');
+  let ctrl_x = TWInputEvent::NonDisplayableKeypress(KeyEvent {
+    code: KeyCode::Char('x'),
+    modifiers: KeyModifiers::CONTROL,
+  });
+  let events_to_match_against = [x, caps_x, ctrl_x];
+
+  let key_event = KeyEvent {
+    code: KeyCode::Char('x'),
+    modifiers: KeyModifiers::SHIFT,
+  }; // "Shift + x"
+  let converted_event: TWInputEvent = key_event.into(); // "X"
+
+  let result = does_input_event_match_exit_keys(converted_event, &events_to_match_against);
+
+  assert!(result);
+}
