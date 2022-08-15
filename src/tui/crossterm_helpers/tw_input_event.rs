@@ -20,7 +20,6 @@ use std::fmt::{Display, Formatter};
 use crossterm::event::{Event::{self, Key, Mouse, Resize},
                        KeyCode,
                        KeyEvent,
-                       KeyModifiers,
                        MouseEvent};
 
 use crate::*;
@@ -28,7 +27,10 @@ use crate::*;
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TWInputEvent {
+  /// `char` that can be printed to the console.
+  /// [Crossterm KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
   DisplayableKeypress(char),
+  /// Crossterm [KeyEvent] that can not be printed.
   NonDisplayableKeypress(KeyEvent),
   Resize(Size),
   Mouse(MouseEvent),
@@ -73,10 +75,10 @@ impl From<KeyEvent> for TWInputEvent {
   /// [TWInputEvent::NonDisplayableKeypress].
   fn from(key_event: KeyEvent) -> Self {
     match key_event {
-      // Check if "normal character" is pressed.
+      // Check if "displayable character" is pressed (eg: a, b, A, B, 1, 2, etc).
       KeyEvent {
         code: KeyCode::Char(character),
-        modifiers: KeyModifiers::NONE,
+        modifiers: _, // Don't really care about the modifiers. Don't match on it.
       } => TWInputEvent::DisplayableKeypress(character),
 
       // All other key presses.
