@@ -50,9 +50,6 @@ where
 
   /// Delegate this to `self.id`, which is type `usize`.
   fn get_id(&self) -> usize { self.id.get_id() }
-
-  /// Delegate this to `self.id`, which is type `usize`.
-  fn as_some(&self) -> Option<usize> { self.id.as_some() }
 }
 
 /// Data structure to store & manipulate a (non-binary) tree of data in memory.
@@ -151,7 +148,7 @@ where
     let node_to_lookup = self.get_node_arc(node_id)?;
     let node_to_lookup: ReadGuarded<'_, Node<T>> = node_to_lookup.read().unwrap(); // Safe to call unwrap.
     let children_uids = &node_to_lookup.children;
-    Some(children_uids.clone())
+    children_uids.clone().into()
   }
 
   /// If `node_id` can't be found, returns `None`.
@@ -208,7 +205,7 @@ where
     });
 
     // Pass the deletion list back.
-    Some(deletion_list)
+    deletion_list.into()
   }
 
   /// DFS graph walking: <https://developerlife.com/2018/08/16/algorithms-in-kotlin-5/>

@@ -33,8 +33,8 @@ fn test_syntax_expansion() {
     id: style2
     attrib: [dim, bold]
     margin: 1
-    color_fg: TWColor::Red
-    color_bg: TWColor::Rgb { r: 0, g: 0, b: 0 }
+    color_fg: color!(@red)
+    color_bg: color!(0, 0, 0)
   };
 }
 
@@ -45,7 +45,7 @@ fn test_syntax_expansion_dsl() {
     attrib: [dim, bold]
     margin: 1
     color_fg: color!(@red)
-    color_bg: TWColor::Rgb { r: 0, g: 0, b: 0 }
+    color_bg: color!(0, 0, 0)
   };
   let _ = style! {
     id: style_fixed
@@ -58,7 +58,7 @@ fn test_syntax_expansion_dsl() {
     id: style_fixed
     attrib: [dim, bold]
     margin: 1
-    color_fg: TWColor::Red
+    color_fg: color!(@red)
     color_bg: color!(0, 0, 0)
   };
 }
@@ -110,11 +110,11 @@ fn test_with_color_fg() {
   with! {
     style! {
       id: style1
-      color_fg: TWColor::Red
+      color_fg: color!(@red)
     },
     as it,
     run {
-      assert_eq!(it.color_fg, Some(TWColor::Red));
+      assert_eq!(it.color_fg, color!(@red).into());
     }
   }
 }
@@ -124,11 +124,11 @@ fn test_with_color_bg() {
   with! {
     style! {
       id: style1
-      color_bg: TWColor::Rgb { r: 0, g: 0, b: 0 }
+      color_bg: color!(0, 0, 0)
     },
     as it,
     run {
-      assert_eq!(it.color_bg, Some(TWColor::Rgb { r: 0, g: 0, b: 0 }));
+      assert_eq!(it.color_bg, color!(0, 0, 0).into());
     }
   }
 }
