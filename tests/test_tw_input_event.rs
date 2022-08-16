@@ -61,7 +61,7 @@ fn test_tw_input_event_matches_correctly() {
   }; // "Shift + x"
   let converted_event: TWInputEvent = key_event.into(); // "X"
 
-  let result = does_input_event_match_exit_keys(converted_event, &events_to_match_against);
+  let result = converted_event.matches(&events_to_match_against);
 
   assert!(result);
 }

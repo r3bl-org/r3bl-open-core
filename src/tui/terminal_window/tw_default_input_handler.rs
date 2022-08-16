@@ -24,7 +24,7 @@ impl TWDefaultInputEventHandler {
   /// (no need to pass references into this function).
   pub async fn no_consume(input_event: TWInputEvent, exit_keys: &[TWInputEvent]) -> Continuation {
     // Early return if any exit key sequence is pressed.
-    if does_input_event_match_exit_keys(input_event, exit_keys) {
+    if input_event.matches(exit_keys) {
       return Continuation::Exit;
     }
 
