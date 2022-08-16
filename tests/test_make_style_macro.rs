@@ -25,7 +25,6 @@
 //! To watch for test output run this script:
 //! `./cargo-watch-one-test.fish test_make_style_macro`
 
-use crossterm::style::Color;
 use r3bl_rs_utils::*;
 
 #[test]
@@ -34,35 +33,33 @@ fn test_syntax_expansion() {
     id: style2
     attrib: [dim, bold]
     margin: 1
-    color_fg: Color::Red
-    color_bg: Color::Rgb { r: 0, g: 0, b: 0 }
+    color_fg: TWColor::Red
+    color_bg: TWColor::Rgb { r: 0, g: 0, b: 0 }
   };
 }
 
 #[test]
 fn test_syntax_expansion_dsl() {
-  let red = Color::Red;
-  let black = Color::Rgb { r: 0, g: 0, b: 0 };
   let _ = style! {
     id: style_fixed
     attrib: [dim, bold]
     margin: 1
-    color_fg: red
-    color_bg: Color::Rgb { r: 0, g: 0, b: 0 }
+    color_fg: color!(@red)
+    color_bg: TWColor::Rgb { r: 0, g: 0, b: 0 }
   };
   let _ = style! {
     id: style_fixed
     attrib: [dim, bold]
     margin: 1
-    color_fg: red
-    color_bg: black
+    color_fg: color!(@red)
+    color_bg: color!(0, 0, 0)
   };
   let _ = style! {
     id: style_fixed
     attrib: [dim, bold]
     margin: 1
-    color_fg: Color::Red
-    color_bg: black
+    color_fg: TWColor::Red
+    color_bg: color!(0, 0, 0)
   };
 }
 
@@ -113,11 +110,11 @@ fn test_with_color_fg() {
   with! {
     style! {
       id: style1
-      color_fg: Color::Red
+      color_fg: TWColor::Red
     },
     as it,
     run {
-      assert_eq!(it.color_fg, Some(crossterm::style::Color::Red.into()));
+      assert_eq!(it.color_fg, Some(TWColor::Red));
     }
   }
 }
@@ -127,11 +124,11 @@ fn test_with_color_bg() {
   with! {
     style! {
       id: style1
-      color_bg: Color::Rgb { r: 0, g: 0, b: 0 }
+      color_bg: TWColor::Rgb { r: 0, g: 0, b: 0 }
     },
     as it,
     run {
-      assert_eq!(it.color_bg, Some(crossterm::style::Color::Rgb { r: 0, g: 0, b: 0 }.into()));
+      assert_eq!(it.color_bg, Some(TWColor::Rgb { r: 0, g: 0, b: 0 }));
     }
   }
 }
