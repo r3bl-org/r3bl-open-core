@@ -15,14 +15,13 @@
  *   limitations under the License.
  */
 
-use crossterm::style::Color;
 use r3bl_rs_utils::*;
 
 use crate::{TWCommand, TWCommandQueue};
 
 #[test]
 fn test_serde_tw_color_simple() {
-  let color: TWColor = Color::Red.into();
+  let color: TWColor = TWColor::Red;
   let ser_str = serde_json::to_string(&color).unwrap();
   let og_color: TWColor = serde_json::from_str(&ser_str).unwrap();
   assert_eq!(color, og_color);
@@ -30,7 +29,7 @@ fn test_serde_tw_color_simple() {
 
 #[test]
 fn test_serde_tw_color_rgb() {
-  let color: TWColor = Color::Rgb { r: 0, g: 0, b: 0 }.into();
+  let color = TWColor::Rgb { r: 0, g: 0, b: 0 };
   let ser_str = serde_json::to_string(&color).unwrap();
   let og_color: TWColor = serde_json::from_str(&ser_str).unwrap();
   assert_eq!(color, og_color);
@@ -40,7 +39,7 @@ fn test_serde_tw_color_rgb() {
 fn test_serde_tw_command_queue() {
   let mut q = TWCommandQueue::default();
   q.push(TWCommand::ClearScreen);
-  q.push(TWCommand::SetBgColor(Color::Red.into()));
+  q.push(TWCommand::SetBgColor(TWColor::Red));
   let ser_str = serde_json::to_string_pretty(&q).unwrap();
   println!("{}", ser_str);
   let og_q: TWCommandQueue = serde_json::from_str(&ser_str).unwrap();

@@ -17,7 +17,6 @@
 
 //! https://docs.rs/bitmask/latest/bitmask/macro.bitmask.html
 
-use crossterm::style::*;
 use r3bl_rs_utils::*;
 
 #[test]
@@ -63,8 +62,8 @@ fn test_all_fields_in_style() {
     reverse: true,
     hidden: true,
     strikethrough: true,
-    color_fg: Some(Color::Red.into()),
-    color_bg: Some(Color::Rgb { r: 0, g: 0, b: 0 }.into()),
+    color_fg: Some(TWColor::Red),
+    color_bg: Some(TWColor::Rgb { r: 0, g: 0, b: 0 }),
     margin: Some(10),
     ..Style::default()
   };
@@ -77,8 +76,8 @@ fn test_all_fields_in_style() {
   assert!(style.reverse);
   assert!(style.hidden);
   assert!(style.strikethrough);
-  assert_eq!(style.color_fg, Some(Color::Red.into()));
-  assert_eq!(style.color_bg, Some(Color::Rgb { r: 0, g: 0, b: 0 }.into()));
+  assert_eq!(style.color_fg, Some(TWColor::Red));
+  assert_eq!(style.color_bg, Some(TWColor::Rgb { r: 0, g: 0, b: 0 }));
   assert_eq!(style.margin, Some(10));
 
   let mask = style.get_bitflags();
@@ -110,7 +109,7 @@ fn test_cascade_style() {
   let style_bold_green_fg = style! {
     id: bold_green_fg
     attrib: [bold]
-    color_fg: Color::Green
+    color_fg: TWColor::Green
   };
 
   let style_dim = style! {
@@ -120,7 +119,7 @@ fn test_cascade_style() {
 
   let style_yellow_bg = style! {
     id: yellow_bg
-    color_bg: Color::Yellow
+    color_bg: TWColor::Yellow
   };
 
   let style_margin = style! {
@@ -130,7 +129,7 @@ fn test_cascade_style() {
 
   let style_red_fg = style! {
     id: red_fg
-    color_fg: Color::Red
+    color_fg: TWColor::Red
   };
 
   let mut computed_style =
@@ -145,8 +144,8 @@ fn test_cascade_style() {
       | StyleFlag::COMPUTED_SET
   ));
 
-  assert_eq!(computed_style.color_bg.unwrap(), Color::Yellow.into());
-  assert_eq!(computed_style.color_fg.unwrap(), Color::Red.into());
+  assert_eq!(computed_style.color_bg.unwrap(), TWColor::Yellow);
+  assert_eq!(computed_style.color_fg.unwrap(), TWColor::Red);
   assert!(computed_style.bold);
   assert!(computed_style.dim);
   assert!(computed_style.computed);
@@ -190,19 +189,19 @@ fn test_stylesheet_builder() -> CommonResult<()> {
     style! {
           id: style2
           margin: 1
-          color_bg: Color::Rgb { r: 55, g: 55, b: 248 }
+          color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
     },
     make_a_style("style3"),
     vec![
       style! {
         id: style4
         margin: 1
-        color_bg: Color::Rgb { r: 55, g: 55, b: 248 }
+        color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
       },
       style! {
         id: style5
         margin: 1
-        color_bg: Color::Rgb { r: 85, g: 85, b: 255 }
+        color_bg: TWColor::Rgb { r: 85, g: 85, b: 255 }
       },
     ],
     make_a_style("style6")
@@ -235,13 +234,12 @@ fn test_stylesheet_builder() -> CommonResult<()> {
 
 /// Helper function.
 fn make_a_style(id: &str) -> Style {
-  let black = Color::Rgb { r: 0, g: 0, b: 0 };
   Style {
     id: id.to_string(),
     dim: true,
     bold: true,
-    color_fg: Some(black.into()),
-    color_bg: Some(black.into()),
+    color_fg: Some(color!(0, 0, 0)),
+    color_bg: Some(color!(0, 0, 0)),
     ..Style::default()
   }
 }

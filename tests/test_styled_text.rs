@@ -37,7 +37,6 @@ fn test_styled_text_renders_correctly() -> CommonResult<()> {
 }
 
 mod helpers {
-  use crossterm::style::Color;
   use r3bl_rs_utils::*;
 
   pub fn create_styled_text() -> CommonResult<Vec<StyledText>> {
@@ -67,12 +66,12 @@ mod helpers {
         style! {
           id: style1
           margin: 1
-          color_bg: Color::Rgb { r: 55, g: 55, b: 100 }
+          color_bg: TWColor::Rgb { r: 55, g: 55, b: 100 }
         },
         style! {
           id: style2
           margin: 1
-          color_bg: Color::Rgb { r: 55, g: 55, b: 248 }
+          color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
         }
       }
     })
