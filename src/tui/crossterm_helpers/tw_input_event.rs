@@ -24,13 +24,14 @@ use crate::*;
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TWInputEvent {
-  /// `char` that can be printed to the console.
-  /// Displayable characters are:
+  /// [char] that can be printed to the console. Displayable characters are:
   /// - `a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z`
   /// - `A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z`
   /// - `1, 2, 3, 4, 5, 6, 7, 8, 9, 0`
   /// - `!, @, #, $, %, ^, &, *, (, ), _, +, -, =, [, ], {, }, |, \, ,, ., /, <, >, ?, `, ~`
-  /// [Crossterm KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
+  ///
+  /// Docs:
+  /// - [Crossterm KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
   DisplayableKeypress(char),
 
   /// Crossterm [KeyEvent] that can not be printed.
@@ -41,6 +42,21 @@ pub enum TWInputEvent {
   Mouse(MouseEvent),
 
   None,
+}
+
+impl TWInputEvent {
+  /// Checks to see whether the `input_event` matches any of the `exit_keys`. Returns `true` if it
+  /// does and `false` otherwise.
+  pub fn matches(&self, exit_keys: &[TWInputEvent]) -> bool {
+    for exit_key in exit_keys {
+      let lhs = *self;
+      let rhs = *exit_key;
+      if lhs == rhs {
+        return true;
+      }
+    }
+    false
+  }
 }
 
 impl Display for TWInputEvent {
@@ -89,19 +105,4 @@ impl From<KeyEvent> for TWInputEvent {
       _ => TWInputEvent::NonDisplayableKeypress(key_event),
     }
   }
-}
-
-/// [TerminalWindow] `main_event_loop()` function uses this in order to determine whether to exit or
-/// not.
-pub fn does_input_event_match_exit_keys(
-  input_event: TWInputEvent, exit_keys: &[TWInputEvent],
-) -> bool {
-  for exit_key in exit_keys {
-    let lhs = input_event;
-    let rhs = *exit_key;
-    if lhs == rhs {
-      return true;
-    }
-  }
-  false
 }
