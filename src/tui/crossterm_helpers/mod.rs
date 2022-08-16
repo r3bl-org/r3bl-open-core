@@ -52,6 +52,7 @@ pub mod color_converter;
 pub mod event_stream_ext;
 pub mod tw_command;
 pub mod tw_input_event;
+pub mod keypress;
 pub mod tw_raw_mode;
 
 // Re-export.
@@ -59,4 +60,5 @@ pub use color_converter::*;
 pub use event_stream_ext::*;
 pub use tw_command::*;
 pub use tw_input_event::*;
+pub use keypress::*;
 pub use tw_raw_mode::*;
