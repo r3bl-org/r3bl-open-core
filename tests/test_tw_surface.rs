@@ -15,7 +15,6 @@
  *   limitations under the License.
  */
 
-use crossterm::style::Color;
 use r3bl_rs_utils::*;
 
 #[test]
@@ -136,15 +135,15 @@ fn dsl_stylesheet() -> CommonResult<Stylesheet> {
         id: style1
         attrib: [dim, bold]
         margin: 2
-        color_fg: Color::Rgb { r: 255, g: 255, b: 0 } /* Yellow. */
-        color_bg:  Color::Rgb { r: 128, g: 128, b: 128 } /* Grey. */
+        color_fg: TWColor::Rgb { r: 255, g: 255, b: 0 } /* Yellow. */
+        color_bg: TWColor::Rgb { r: 128, g: 128, b: 128 } /* Grey. */
       },
       style! {
         id: style2
         attrib: [underline, strikethrough]
         margin: 3
-        color_fg: Color::Rgb { r: 0, g: 0, b: 0 } /* Black. */
-        color_bg: Color::Rgb { r: 255, g: 255, b: 255 } /* White. */
+        color_fg: TWColor::Rgb { r: 0, g: 0, b: 0 } /* Black. */
+        color_bg: TWColor::Rgb { r: 255, g: 255, b: 255 } /* White. */
       }
     }
   })
