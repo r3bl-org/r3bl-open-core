@@ -100,7 +100,7 @@ impl HasFocus {
   pub fn set_id(&mut self, id: &str) { self.id = Some(id.into()) }
 
   /// Check whether the given id currently has keyboard focus.
-  pub fn does_id_have_focus(&self, id: &str) -> bool { self.id == Some(id.to_string()) }
+  pub fn does_id_have_focus(&self, id: &str) -> bool { self.id == Some(id.into()) }
 
   /// Check whether the id of the [TWBox] currently has keyboard focus.
   pub fn does_current_box_have_focus(&self, current_box: &TWBox) -> bool {

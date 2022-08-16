@@ -80,11 +80,8 @@ impl Percent {
     if !(0..=100).contains(&item) {
       return None;
     }
-    Some(Percent { value: item as u8 })
+    Percent { value: item as u8 }.into()
   }
-
-  /// Wrap `self` in `Option`.
-  pub fn as_some(&self) -> Option<Percent> { Some(*self) }
 }
 
 /// Return the calculated percentage of the given value.
@@ -126,11 +123,6 @@ impl From<(Percent, Percent)> for RequestedSizePercent {
       height: pair.1,
     }
   }
-}
-
-impl RequestedSizePercent {
-  /// Wrap `self` in `Option`.
-  pub fn as_some(&self) -> Option<Self> { Some(*self) }
 }
 
 impl Debug for RequestedSizePercent {

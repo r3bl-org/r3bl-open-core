@@ -186,7 +186,7 @@ impl PerformPositioningAndSizing for TWSurface {
     };
 
     // Update the box_cursor_pos of the current layout.
-    current_box.box_cursor_pos = new_pos.as_some();
+    current_box.box_cursor_pos = new_pos.into();
 
     Ok(new_pos)
   }

@@ -62,8 +62,8 @@ fn test_all_fields_in_style() {
     reverse: true,
     hidden: true,
     strikethrough: true,
-    color_fg: Some(TWColor::Red),
-    color_bg: Some(TWColor::Rgb { r: 0, g: 0, b: 0 }),
+    color_fg: color!(@red).into(),
+    color_bg: color!(0, 0, 0).into(),
     margin: Some(10),
     ..Style::default()
   };
@@ -76,8 +76,8 @@ fn test_all_fields_in_style() {
   assert!(style.reverse);
   assert!(style.hidden);
   assert!(style.strikethrough);
-  assert_eq!(style.color_fg, Some(TWColor::Red));
-  assert_eq!(style.color_bg, Some(TWColor::Rgb { r: 0, g: 0, b: 0 }));
+  assert_eq!(style.color_fg, color!(@red).into());
+  assert_eq!(style.color_bg, color!(0, 0, 0).into());
   assert_eq!(style.margin, Some(10));
 
   let mask = style.get_bitflags();
@@ -238,8 +238,8 @@ fn make_a_style(id: &str) -> Style {
     id: id.to_string(),
     dim: true,
     bold: true,
-    color_fg: Some(color!(0, 0, 0)),
-    color_bg: Some(color!(0, 0, 0)),
+    color_fg: color!(0, 0, 0).into(),
+    color_bg: color!(0, 0, 0).into(),
     ..Style::default()
   }
 }

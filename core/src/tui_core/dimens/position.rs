@@ -76,9 +76,6 @@ impl From<Position> for (UnitType, UnitType) {
 }
 
 impl Position {
-  /// Return an `Option` with `self`.
-  pub fn as_some(&self) -> Option<Self> { Some(*self) }
-
   /// Add given `col` value to `self`.
   pub fn add_col(&mut self, value: usize) -> Self {
     let value: UnitType = value as UnitType;

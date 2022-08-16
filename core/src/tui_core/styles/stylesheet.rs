@@ -62,7 +62,7 @@ impl Stylesheet {
     if styles.is_empty() {
       None
     } else {
-      Some(styles)
+      styles.into()
     }
   }
 
@@ -70,7 +70,7 @@ impl Stylesheet {
     if let Some(styles) = styles {
       let mut computed = Style::default();
       styles.iter().for_each(|style| computed += style);
-      Some(computed)
+      computed.into()
     } else {
       None
     }
