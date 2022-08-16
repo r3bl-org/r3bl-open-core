@@ -66,7 +66,7 @@ impl CommonError {
   pub fn new<T>(err_type: CommonErrorType, msg: &str) -> CommonResult<T> {
     Self::from_err(CommonError {
       err_type,
-      msg: Some(msg.to_string()),
+      msg: msg.to_string().into(),
     })
   }
 

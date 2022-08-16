@@ -172,7 +172,7 @@ where
       &self.shared_store,
       &self.shared_app,
       window_size,
-      Some(my_state),
+      my_state.into(),
     )
     .await;
     if let Err(e) = result {

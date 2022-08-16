@@ -647,7 +647,7 @@ impl AsyncMiddlewareSpawns<State, Action> for MwExampleSpawns {
         match action {
           Action::MwExampleSpawns_ModifySharedObject_ResetState => {
             shared_vec.push(-4);
-            return Some(Action::Reset);
+            return Action::Reset.into();
           }
           _ => {}
         }

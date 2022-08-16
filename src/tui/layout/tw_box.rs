@@ -62,7 +62,7 @@ impl TWBox {
       origin_pos,
       bounding_size: bounds_size,
       req_size_percent: (width_pc, height_pc).into(),
-      box_cursor_pos: origin_pos.as_some(),
+      box_cursor_pos: origin_pos.into(),
       computed_style,
     }
   }
