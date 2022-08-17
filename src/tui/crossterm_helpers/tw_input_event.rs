@@ -31,8 +31,7 @@ pub enum TWInputEvent {
   /// - `!, @, #, $, %, ^, &, *, (, ), _, +, -, =, [, ], {, }, |, \, ,, ., /, <, >, ?, `, ~`
   DisplayableKeypress(char),
 
-  // FIXME: replace KeyEvent -> Keypress
-  NonDisplayableKeypress(KeyEvent),
+  NonDisplayableKeypress(Keypress),
 
   Resize(Size),
 
@@ -110,7 +109,7 @@ mod converters {
           modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
         } => TWInputEvent::DisplayableKeypress(character),
         // All other key presses.
-        _ => TWInputEvent::NonDisplayableKeypress(key_event),
+        _ => TWInputEvent::NonDisplayableKeypress(key_event.into()),
       }
     }
   }

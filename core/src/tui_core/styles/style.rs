@@ -208,13 +208,13 @@ impl Style {
   pub fn get_bitflags(&mut self) -> StyleFlag {
     unwrap_option_or_compute_if_none! {
       self.cached_bitflags,
-      || self.gen_bitflags()
+      || self.compute_bitflags()
     }
   }
 
   pub fn reset_bitflags(&mut self) { self.cached_bitflags = None; }
 
-  fn gen_bitflags(&self) -> StyleFlag {
+  fn compute_bitflags(&self) -> StyleFlag {
     let mut it = StyleFlag::empty();
 
     if self.color_fg.is_some() {
