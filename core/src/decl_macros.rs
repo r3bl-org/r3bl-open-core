@@ -396,7 +396,8 @@ macro_rules! assert_eq2 {
     assert_eq!(
       $left,
       $right,
-      "⛔ {} = {}",
+      "\n😮 {}\nleft-expr : {}\nright-expr: {}",
+      r3bl_rs_utils::style_prompt("Houston, we have a problem..."),
       r3bl_rs_utils::style_error(stringify!($left)),
       r3bl_rs_utils::style_error(stringify!($right))
     );
