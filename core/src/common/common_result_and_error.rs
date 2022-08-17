@@ -19,11 +19,42 @@ use std::{error::Error,
           fmt::{Display, Result as FmtResult},
           result::Result as OGResult};
 
-/// Type alias to make it easy to work with [`Result`]s.
+/// Type alias to make it easy to work with [`Result`]s. Works hand in hand w/ [CommonError].
+/// Here's an example.
+/// ```ignore
+/// pub fn try_from_pair(pair: Pair) -> CommonResult<(Percent, Percent)> {
+///   let first = pair.first.try_into();
+///   let second = pair.second.try_into();
+///
+///   match (first, second) {
+///     (Ok(first), Ok(second)) => Ok((first, second)),
+///     _ => {
+///       let err_msg = format!("Invalid percentage values in tuple: {:?}", pair);
+///       CommonError::new(CommonErrorType::ValueOutOfRange, &err_msg)
+///     }
+///   }
+/// }
+/// ```
 pub type CommonResult<T> = OGResult<T, Box<dyn Error + Send + Sync>>;
 
-/// Common error struct.
-/// [Docs](https://learning-rust.github.io/docs/e7.custom_error_types.html)
+// Common error struct. Read custom error docs
+/// [here](https://learning-rust.github.io/docs/e7.custom_error_types.html).
+///
+/// Here's an example.
+/// ```ignore
+/// pub fn try_from_pair(pair: Pair) -> CommonResult<(Percent, Percent)> {
+///   let first = pair.first.try_into();
+///   let second = pair.second.try_into();
+///
+///   match (first, second) {
+///     (Ok(first), Ok(second)) => Ok((first, second)),
+///     _ => {
+///       let err_msg = format!("Invalid percentage values in tuple: {:?}", pair);
+///       CommonError::new(CommonErrorType::ValueOutOfRange, &err_msg)
+///     }
+///   }
+/// }
+/// ```
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct CommonError {
