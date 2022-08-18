@@ -55,8 +55,10 @@ pub mod tw_input_event;
 pub mod keypress;
 pub mod tw_raw_mode;
 pub mod mouse_input;
+pub mod modifier_keys;
 
 // Re-export.
+pub use modifier_keys::*;
 pub use color_converter::*;
 pub use async_event_stream_ext::*;
 pub use tw_command::*;

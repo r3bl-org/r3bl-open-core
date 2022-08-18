@@ -30,7 +30,28 @@ pub struct MouseInput {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub enum MouseInputKind {
-  MouseDown,
-  MouseUp,
+  MouseDown(MouseButton),
+  MouseUp(MouseButton),
   MouseMove,
+  MouseDrag(MouseButton),
+  ScrollUp,
+  ScrollDown,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+pub enum MouseButton {
+  Left,
+  Right,
+  Middle,
+}
+
+impl From<MouseEvent> for MouseButton {
+  fn from(mouse_event: MouseEvent) -> Self {
+    let pos: Position = (mouse_event.column, mouse_event.row).into();
+    let maybe_modifier_keys: Option<ModifierKeys> = convert_key_modifiers(&mouse_event.modifiers);
+
+    // FIXME: handle MouseEventKind enum
+
+    todo!()
+  }
 }

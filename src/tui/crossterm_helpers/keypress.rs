@@ -15,23 +15,15 @@
  *   limitations under the License.
  */
 
-use bitflags::bitflags;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::*;
 use serde::{Deserialize, Serialize};
+
+use crate::*;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub struct Keypress {
   pub maybe_modifier_keys: Option<ModifierKeys>,
   pub non_modifier_key: NonModifierKey,
-}
-
-bitflags! {
-  #[derive(Serialize, Deserialize)]
-  pub struct ModifierKeys: u8 {
-    const SHIFT = 0b0000_0001;
-    const CTRL  = 0b0000_0010;
-    const ALT   = 0b0000_0100;
-  }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
@@ -124,6 +116,7 @@ macro_rules! keypress {
 }
 
 pub mod convert_key_event {
+
   use super::*;
 
   /// Difference in meaning between `intersects` and `contains`:
@@ -131,26 +124,7 @@ pub mod convert_key_event {
   ///   bits.
   /// - `contains` -> means that your variable ONLY contains these bits.
   pub fn copy_modifiers_from_key_event(key_event: &KeyEvent) -> Option<ModifierKeys> {
-    // Start w/ empty my_modifiers.
-    let mut my_modifiers: ModifierKeys = ModifierKeys::empty(); // 0b0000_0000
-
-    // Try and set any bitflags from key_event.
-    if key_event.modifiers.intersects(KeyModifiers::SHIFT) {
-      my_modifiers.insert(ModifierKeys::SHIFT) // my_modifiers = 0b0000_0001;
-    }
-    if key_event.modifiers.intersects(KeyModifiers::CONTROL) {
-      my_modifiers.insert(ModifierKeys::CTRL) // my_modifiers = 0b0000_0010;
-    }
-    if key_event.modifiers.intersects(KeyModifiers::ALT) {
-      my_modifiers.insert(ModifierKeys::ALT) // my_modifiers = 0b0000_0100;
-    }
-
-    // If my_modifiers is empty, return None.
-    if key_event.modifiers.is_empty() {
-      None
-    } else {
-      Some(my_modifiers)
-    }
+    convert_key_modifiers(&key_event.modifiers)
   }
 
   pub fn copy_code_from_key_event(key_event: &KeyEvent) -> Option<NonModifierKey> {
