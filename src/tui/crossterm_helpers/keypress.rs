@@ -19,10 +19,10 @@ use bitflags::bitflags;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub struct Keypress {
-  pub modifier_keys: Option<ModifierKeys>,
-  pub non_modifier_key: Option<NonModifierKey>,
+  pub maybe_modifier_keys: Option<ModifierKeys>,
+  pub non_modifier_key: NonModifierKey,
 }
 
 bitflags! {
@@ -83,42 +83,42 @@ macro_rules! keypress {
   // @char
   (@char $arg_char : expr) => {
     Keypress {
-      non_modifier_key: Some(NonModifierKey::Character($arg_char)),
-      ..Default::default()
+      maybe_modifier_keys: None,
+      non_modifier_key: NonModifierKey::Character($arg_char),
     }
   };
   (@char $arg_modifiers : expr, $arg_char : expr) => {
     Keypress {
-      modifier_keys: Some($arg_modifiers),
-      non_modifier_key: Some(NonModifierKey::Character($arg_char)),
+      maybe_modifier_keys: Some($arg_modifiers),
+      non_modifier_key: NonModifierKey::Character($arg_char),
     }
   };
 
   // @special
   (@special $arg_special : expr) => {
     Keypress {
-      non_modifier_key: Some(NonModifierKey::Special($arg_special)),
-      ..Default::default()
+      maybe_modifier_keys: None,
+      non_modifier_key: NonModifierKey::Special($arg_special),
     }
   };
   (@special $arg_modifiers : expr, $arg_special : expr) => {
     Keypress {
-      modifier_keys: Some($arg_modifiers),
-      non_modifier_key: Some(NonModifierKey::Special($arg_special)),
+      maybe_modifier_keys: Some($arg_modifiers),
+      non_modifier_key: NonModifierKey::Special($arg_special),
     }
   };
 
   // @fn
   (@fn $arg_function : expr) => {
     Keypress {
-      non_modifier_key: Some(NonModifierKey::Function($arg_function)),
-      ..Default::default()
+      maybe_modifier_keys: None,
+      non_modifier_key: NonModifierKey::Function($arg_function),
     }
   };
   (@fn $arg_modifiers : expr, $arg_function : expr) => {
     Keypress {
-      modifier_keys: Some($arg_modifiers),
-      non_modifier_key: Some(NonModifierKey::Function($arg_function)),
+      maybe_modifier_keys: Some($arg_modifiers),
+      non_modifier_key: NonModifierKey::Function($arg_function),
     }
   };
 }
@@ -190,17 +190,20 @@ pub mod convert_key_event {
     }
   }
 
-  impl From<KeyEvent> for Keypress {
+  impl TryFrom<KeyEvent> for Keypress {
+    type Error = ();
     /// Convert [KeyEvent] to [Keypress].
-    fn from(key_event: KeyEvent) -> Self {
+    fn try_from(key_event: KeyEvent) -> Result<Self, Self::Error> {
       let modifiers: Option<ModifierKeys> = copy_modifiers_from_key_event(&key_event);
+      let maybe_keypress: Option<NonModifierKey> = copy_code_from_key_event(&key_event);
 
-      // Copy `code` from `KeyEvent`.
-      let keypress: Option<NonModifierKey> = copy_code_from_key_event(&key_event);
-
-      Keypress {
-        modifier_keys: modifiers,
-        non_modifier_key: keypress,
+      if let Some(keypress) = maybe_keypress {
+        Ok(Keypress {
+          maybe_modifier_keys: modifiers,
+          non_modifier_key: keypress,
+        })
+      } else {
+        Err(())
       }
     }
   }

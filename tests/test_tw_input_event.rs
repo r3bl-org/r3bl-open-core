@@ -19,7 +19,7 @@ use crossterm::event::*;
 use r3bl_rs_utils::*;
 
 #[test]
-fn test_convert_keyevent_into_twinputevent() {
+fn test_convert_keyevent_into_twinputevent() -> Result<(), ()> {
   // Crossterm KeyEvents.
   let x = KeyEvent {
     code: KeyCode::Char('x'),
@@ -35,21 +35,23 @@ fn test_convert_keyevent_into_twinputevent() {
   };
 
   // TWInputEvents.
-  let x_tw = TWInputEvent::from(x);
-  let caps_x_tw = TWInputEvent::from(caps_x);
-  let ctrl_x_tw = TWInputEvent::from(ctrl_x);
+  let x_tw = TWInputEvent::try_from(x)?;
+  let caps_x_tw = TWInputEvent::try_from(caps_x)?;
+  let ctrl_x_tw = TWInputEvent::try_from(ctrl_x);
 
   // Check that the conversion is correct.
   assert_eq2!(x_tw, TWInputEvent::DisplayableKeypress('x'));
   assert_eq2!(caps_x_tw, TWInputEvent::DisplayableKeypress('X'));
   assert_eq2!(
     ctrl_x_tw,
-    TWInputEvent::NonDisplayableKeypress(ctrl_x.into())
+    Ok(TWInputEvent::NonDisplayableKeypress(ctrl_x.try_into()?))
   );
+
+  Ok(())
 }
 
 #[test]
-fn test_tw_input_event_matches_correctly() {
+fn test_tw_input_event_matches_correctly() -> Result<(), ()> {
   let x = TWInputEvent::DisplayableKeypress('x');
   let caps_x = TWInputEvent::DisplayableKeypress('X');
   let ctrl_x = TWInputEvent::NonDisplayableKeypress(
@@ -57,7 +59,7 @@ fn test_tw_input_event_matches_correctly() {
       code: KeyCode::Char('x'),
       modifiers: KeyModifiers::CONTROL,
     }
-    .into(),
+    .try_into()?,
   );
   let events_to_match_against = [x, caps_x, ctrl_x];
 
@@ -65,11 +67,13 @@ fn test_tw_input_event_matches_correctly() {
     code: KeyCode::Char('x'),
     modifiers: KeyModifiers::SHIFT,
   }; // "Shift + x"
-  let converted_event: TWInputEvent = key_event.into(); // "X"
+  let converted_event: TWInputEvent = key_event.try_into()?; // "X"
 
   let result = converted_event.matches(&events_to_match_against);
 
   assert!(result);
+
+  Ok(())
 }
 
 #[test]
