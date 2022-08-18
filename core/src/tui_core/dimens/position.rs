@@ -38,8 +38,16 @@ use crate::*;
 ///    ↓
 ///    row
 /// ```
+/// Position, defined as [col, row]. Here are some examples.
 ///
-/// Position, defined as [col, row].
+/// ```ignore
+/// let pos: Position = (/* col: */ 0, /* row: */ 0).into();
+/// pos.add_col(1);
+/// pos.add_row(1);
+/// pos += (/* col: */ 1, /* row: */ 1);
+/// let max_size: Size = (/* _max_col: */ 10, /* max_row: */ 10).into();
+/// pos.add_row_with_bounds(20, max_size);
+/// ```
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Default)]
 pub struct Position {
   pub col: UnitType,
@@ -63,6 +71,7 @@ impl From<Pair> for Position {
 }
 
 impl From<(UnitType, UnitType)> for Position {
+  /// First argument is the column, second argument is the row.
   fn from(pair: (UnitType, UnitType)) -> Self {
     Self {
       col: pair.0,

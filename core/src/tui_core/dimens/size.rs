@@ -37,7 +37,10 @@ use crate::*;
 ///    row
 /// ```
 ///
-/// Size, defined as [height, width].
+/// Size, defined as [height, width]. Here are some examples.
+/// ```ignore
+/// let max_size: Size = (/* max_col: */ 10, /* max_row: */ 10).into();
+/// ```
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
 pub struct Size {
   pub cols: UnitType, // width = number of cols (y).
@@ -93,11 +96,6 @@ impl From<(i32, i32)> for Size {
       rows: convert_to_base_unit!(pair.1),
     }
   }
-}
-
-impl Size {
-  /// Return an `Option` with `self`.
-  pub fn as_some(&self) -> Option<Self> { Some(*self) }
 }
 
 impl Debug for Size {
