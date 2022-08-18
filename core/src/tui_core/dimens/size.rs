@@ -41,6 +41,10 @@ use crate::*;
 /// ```ignore
 /// let max_size: Size = (/* max_col: */ 10, /* max_row: */ 10).into();
 /// ```
+///
+/// ```ignore
+/// let size: Size = size!(10, 10);
+/// ```
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
 pub struct Size {
   pub cols: UnitType, // width = number of cols (y).
@@ -102,4 +106,20 @@ impl Debug for Size {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "[width:{}, height:{}]", self.cols, self.rows)
   }
+}
+
+// FIXME: add size! macro
+// FIXME: replace use Size{} w/ use size!{}
+
+#[macro_export]
+macro_rules! size {
+  (
+    col: $arg_col:expr,
+    row: $arg_row:expr
+  ) => {
+    Size {
+      cols: $arg_col,
+      rows: $arg_row,
+    }
+  };
 }

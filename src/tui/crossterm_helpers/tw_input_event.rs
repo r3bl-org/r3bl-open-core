@@ -32,8 +32,7 @@ pub enum TWInputEvent {
   DisplayableKeypress(char),
   NonDisplayableKeypress(Keypress),
   Resize(Size),
-  // FIXME: remove MouseEvent dep; replace w/ MouseInput
-  Mouse(MouseEvent),
+  Mouse(MouseInput),
   None,
 }
 
@@ -90,7 +89,7 @@ mod converters {
 
   impl From<MouseEvent> for TWInputEvent {
     /// Typecast / convert [MouseEvent] to [TWInputEvent::Mouse].
-    fn from(mouse_event: MouseEvent) -> Self { TWInputEvent::Mouse(mouse_event) }
+    fn from(mouse_event: MouseEvent) -> Self { TWInputEvent::Mouse(mouse_event.into()) }
   }
 
   impl TryFrom<KeyEvent> for TWInputEvent {
