@@ -30,13 +30,9 @@ pub enum TWInputEvent {
   /// - `1, 2, 3, 4, 5, 6, 7, 8, 9, 0`
   /// - `!, @, #, $, %, ^, &, *, (, ), _, +, -, =, [, ], {, }, |, \, ,, ., /, <, >, ?, `, ~`
   DisplayableKeypress(char),
-
   NonDisplayableKeypress(Keypress),
-
   Resize(Size),
-
   Mouse(MouseEvent),
-
   None,
 }
 

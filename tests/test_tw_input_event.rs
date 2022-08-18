@@ -80,7 +80,7 @@ fn test_copy_modifiers_from_key_event() {
       code: KeyCode::Char('x'),
       modifiers: KeyModifiers::NONE,
     };
-    let maybe_modifier_keys = copy_modifiers_from_key_event(&key_event);
+    let maybe_modifier_keys = convert_key_event::copy_modifiers_from_key_event(&key_event);
     assert!(maybe_modifier_keys.is_none());
   }
   // "Ctrl + x"
@@ -89,9 +89,9 @@ fn test_copy_modifiers_from_key_event() {
       code: KeyCode::Char('x'),
       modifiers: KeyModifiers::CONTROL,
     };
-    let maybe_modifier_keys = copy_modifiers_from_key_event(&key_event);
+    let maybe_modifier_keys = convert_key_event::copy_modifiers_from_key_event(&key_event);
     assert!(maybe_modifier_keys.is_some());
-    assert!(maybe_modifier_keys.unwrap().contains(ModifierKeys::CONTROL));
+    assert!(maybe_modifier_keys.unwrap().contains(ModifierKeys::CTRL));
   }
   // "Ctrl + Shift + X"
   {
@@ -99,11 +99,11 @@ fn test_copy_modifiers_from_key_event() {
       code: KeyCode::Char('X'),
       modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT,
     };
-    let maybe_modifier_keys = copy_modifiers_from_key_event(&key_event);
+    let maybe_modifier_keys = convert_key_event::copy_modifiers_from_key_event(&key_event);
     assert!(maybe_modifier_keys.is_some());
     assert!(maybe_modifier_keys
       .unwrap()
-      .contains(ModifierKeys::CONTROL | ModifierKeys::SHIFT));
+      .contains(ModifierKeys::CTRL | ModifierKeys::SHIFT));
   }
   // "Ctrl + Shift + Alt + X"
   {
@@ -111,11 +111,11 @@ fn test_copy_modifiers_from_key_event() {
       code: KeyCode::Char('X'),
       modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT | KeyModifiers::ALT,
     };
-    let maybe_modifier_keys = copy_modifiers_from_key_event(&key_event);
+    let maybe_modifier_keys = convert_key_event::copy_modifiers_from_key_event(&key_event);
     assert!(maybe_modifier_keys.is_some());
     assert!(maybe_modifier_keys
       .unwrap()
-      .contains(ModifierKeys::CONTROL | ModifierKeys::SHIFT | ModifierKeys::ALT));
+      .contains(ModifierKeys::CTRL | ModifierKeys::SHIFT | ModifierKeys::ALT));
   }
 }
 
@@ -127,7 +127,7 @@ fn test_copy_code_from_key_event() {
       code: KeyCode::Char('x'),
       modifiers: KeyModifiers::NONE,
     };
-    let maybe_non_modifier_keys = copy_code_from_key_event(&key_event);
+    let maybe_non_modifier_keys = convert_key_event::copy_code_from_key_event(&key_event);
     assert_eq2!(
       maybe_non_modifier_keys.unwrap(),
       NonModifierKey::Character('x')
@@ -139,7 +139,7 @@ fn test_copy_code_from_key_event() {
       code: KeyCode::Char('x'),
       modifiers: KeyModifiers::CONTROL,
     };
-    let maybe_non_modifier_keys = copy_code_from_key_event(&key_event);
+    let maybe_non_modifier_keys = convert_key_event::copy_code_from_key_event(&key_event);
     assert_eq2!(
       maybe_non_modifier_keys.unwrap(),
       NonModifierKey::Character('x')
@@ -151,7 +151,7 @@ fn test_copy_code_from_key_event() {
       code: KeyCode::Char('x'),
       modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT,
     };
-    let maybe_non_modifier_keys = copy_code_from_key_event(&key_event);
+    let maybe_non_modifier_keys = convert_key_event::copy_code_from_key_event(&key_event);
     assert_eq2!(
       maybe_non_modifier_keys.unwrap(),
       NonModifierKey::Character('x')
@@ -163,61 +163,10 @@ fn test_copy_code_from_key_event() {
       code: KeyCode::Char('x'),
       modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT | KeyModifiers::ALT,
     };
-    let maybe_non_modifier_keys = copy_code_from_key_event(&key_event);
+    let maybe_non_modifier_keys = convert_key_event::copy_code_from_key_event(&key_event);
     assert_eq2!(
       maybe_non_modifier_keys.unwrap(),
       NonModifierKey::Character('x')
-    );
-  }
-}
-
-#[test]
-fn test_keypress() {
-  // "x"
-  {
-    let key_event = KeyEvent {
-      code: KeyCode::Char('x'),
-      modifiers: KeyModifiers::NONE,
-    };
-    let keypress: Keypress = key_event.into();
-    assert_eq2!(
-      keypress,
-      Keypress {
-        non_modifier_key: NonModifierKey::Character('x').into(),
-        ..Default::default()
-      }
-    );
-  }
-
-  // "Ctrl + x"
-  {
-    let key_event = KeyEvent {
-      code: KeyCode::Char('x'),
-      modifiers: KeyModifiers::CONTROL,
-    };
-    let converted_keypress: Keypress = key_event.into();
-    assert_eq2!(
-      converted_keypress,
-      Keypress {
-        modifier_keys: ModifierKeys::CONTROL.into(),
-        non_modifier_key: NonModifierKey::Character('x').into(),
-      }
-    );
-  }
-
-  // "Ctrl + Alt + x"
-  {
-    let key_event = KeyEvent {
-      code: KeyCode::Char('x'),
-      modifiers: KeyModifiers::CONTROL | KeyModifiers::ALT,
-    };
-    let converted_keypress: Keypress = key_event.into();
-    assert_eq2!(
-      converted_keypress,
-      Keypress {
-        modifier_keys: Some(ModifierKeys::CONTROL | ModifierKeys::ALT),
-        non_modifier_key: NonModifierKey::Character('x').into(),
-      }
     );
   }
 }
