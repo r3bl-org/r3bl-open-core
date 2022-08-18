@@ -25,7 +25,7 @@ use crate::*;
 pub struct MouseInput {
   pub pos: Position,
   pub kind: MouseInputKind,
-  pub modifier_keys: Option<ModifierKeys>,
+  pub maybe_modifier_keys: Option<ModifierKeys>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
