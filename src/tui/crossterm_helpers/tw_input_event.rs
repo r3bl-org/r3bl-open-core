@@ -32,6 +32,7 @@ pub enum TWInputEvent {
   DisplayableKeypress(char),
   NonDisplayableKeypress(Keypress),
   Resize(Size),
+  // FIXME: remove MouseEvent dep; replace w/ MouseInput
   Mouse(MouseEvent),
   None,
 }

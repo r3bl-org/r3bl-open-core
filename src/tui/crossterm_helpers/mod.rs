@@ -54,6 +54,7 @@ pub mod tw_command;
 pub mod tw_input_event;
 pub mod keypress;
 pub mod tw_raw_mode;
+pub mod mouse_input;
 
 // Re-export.
 pub use color_converter::*;
@@ -62,3 +63,4 @@ pub use tw_command::*;
 pub use tw_input_event::*;
 pub use keypress::*;
 pub use tw_raw_mode::*;
+pub use mouse_input::*;
