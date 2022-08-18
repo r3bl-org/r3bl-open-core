@@ -18,7 +18,6 @@
 use crossterm::event::*;
 use serde::{Deserialize, Serialize};
 
-// FIXME: convert crossterm::MouseEvent -> MouseInput
 use crate::*;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
@@ -30,28 +29,53 @@ pub struct MouseInput {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub enum MouseInputKind {
-  MouseDown(MouseButton),
-  MouseUp(MouseButton),
+  MouseDown(Button),
+  MouseUp(Button),
   MouseMove,
-  MouseDrag(MouseButton),
+  MouseDrag(Button),
   ScrollUp,
   ScrollDown,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
-pub enum MouseButton {
+pub enum Button {
   Left,
   Right,
   Middle,
 }
 
-impl From<MouseEvent> for MouseButton {
+impl From<MouseEvent> for MouseInput {
   fn from(mouse_event: MouseEvent) -> Self {
     let pos: Position = (mouse_event.column, mouse_event.row).into();
     let maybe_modifier_keys: Option<ModifierKeys> = convert_key_modifiers(&mouse_event.modifiers);
+    let kind: MouseInputKind = mouse_event.kind.into();
+    MouseInput {
+      pos,
+      kind,
+      maybe_modifier_keys,
+    }
+  }
+}
 
-    // FIXME: handle MouseEventKind enum
+impl From<MouseEventKind> for MouseInputKind {
+  fn from(mouse_event_kind: MouseEventKind) -> Self {
+    match mouse_event_kind {
+      MouseEventKind::Down(button) => MouseInputKind::MouseDown(button.into()),
+      MouseEventKind::Up(button) => MouseInputKind::MouseUp(button.into()),
+      MouseEventKind::Moved => MouseInputKind::MouseMove,
+      MouseEventKind::Drag(button) => MouseInputKind::MouseDrag(button.into()),
+      MouseEventKind::ScrollUp => MouseInputKind::ScrollUp,
+      MouseEventKind::ScrollDown => MouseInputKind::ScrollDown,
+    }
+  }
+}
 
-    todo!()
+impl From<MouseButton> for Button {
+  fn from(mouse_button: MouseButton) -> Self {
+    match mouse_button {
+      MouseButton::Left => Button::Left,
+      MouseButton::Right => Button::Right,
+      MouseButton::Middle => Button::Middle,
+    }
   }
 }

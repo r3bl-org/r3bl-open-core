@@ -48,6 +48,10 @@ use crate::*;
 /// let max_size: Size = (/* _max_col: */ 10, /* max_row: */ 10).into();
 /// pos.add_row_with_bounds(20, max_size);
 /// ```
+///
+/// ```ignore
+/// let pos: Position = position!(0, 0);
+/// ```
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Default)]
 pub struct Position {
   pub col: UnitType,
@@ -152,4 +156,20 @@ impl Mul<Pair> for Position {
       row: self.row * other.second,
     }
   }
+}
+
+// FIXME: add position! macro
+// FIXME: replace use Position{} w/ use position!{}
+
+#[macro_export]
+macro_rules! position {
+  (
+    col: $arg_col:expr,
+    row: $arg_row:expr
+  ) => {
+    Position {
+      col: $arg_col,
+      row: $arg_row,
+    }
+  };
 }

@@ -19,7 +19,15 @@ use std::fmt::{self, Debug};
 
 use crate::*;
 
-/// Pair, defined as [left, right].
+/// Pair, defined as (first, second). Here are some examples.
+/// 
+/// ```ignore
+/// let pair: Pair = Pair { first: 0, second: 0 };
+/// ```
+/// 
+/// ```ignore
+/// let pair: Pair = pair!(0, 0);
+/// ```
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
 pub struct Pair {
   pub first: UnitType,
@@ -68,3 +76,19 @@ impl From<(usize, usize)> for Pair {
     }
   }
 }
+
+#[macro_export]
+macro_rules! pair {
+  (
+    $arg_first:expr, 
+    $arg_second:expr
+  ) => {
+    Pair {
+      first: $arg_first,
+      second: $arg_second,
+    }
+  };
+}
+
+// FIXME: add pair macro
+// FIXME: replace Pair{} w/ pair!{}
