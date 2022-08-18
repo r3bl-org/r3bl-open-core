@@ -71,15 +71,21 @@ pub enum TWColor {
 
 #[macro_export]
 macro_rules! color {
-  ($r:expr, $g:expr, $b:expr) => {
+  (
+    $arg_r : expr, 
+    $arg_g : expr, 
+    $arg_b : expr
+  ) => {
     TWColor::Rgb {
-      r: $r,
-      g: $g,
-      b: $b,
+      r: $arg_r,
+      g: $arg_g,
+      b: $arg_b,
     }
   };
-  ($value:expr) => {
-    TWColor::AnsiValue($value)
+  (
+    $arg_value : expr
+  ) => {
+    TWColor::AnsiValue($arg_value)
   };
   (@reset) => {
     TWColor::Reset
