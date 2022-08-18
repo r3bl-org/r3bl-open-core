@@ -69,7 +69,16 @@ impl EventStreamExt for EventStream {
   async fn try_to_get_input_event(&mut self) -> Option<TWInputEvent> {
     let maybe_event = self.next().fuse().await;
     match maybe_event {
-      Some(Ok(event)) => Some(event.into()),
+      Some(Ok(event)) => {
+        let tw_input_event: Result<TWInputEvent, ()> = event.try_into();
+        match tw_input_event {
+          Ok(tw_input_event) => Some(tw_input_event),
+          Err(e) => {
+            call_if_true!(DEBUG, log_no_err!(ERROR, "Error: {:?}", e));
+            None
+          }
+        }
+      }
       Some(Err(e)) => {
         call_if_true!(DEBUG, log_no_err!(ERROR, "Error: {:?}", e));
         None

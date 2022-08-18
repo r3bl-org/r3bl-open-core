@@ -15,4 +15,22 @@
  *   limitations under the License.
  */
 
+use crossterm::event::*;
+use serde::{Deserialize, Serialize};
+
 // FIXME: convert crossterm::MouseEvent -> MouseInput
+use crate::*;
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+pub struct MouseInput {
+  pub pos: Position,
+  pub kind: MouseInputKind,
+  pub modifier_keys: Option<ModifierKeys>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
+pub enum MouseInputKind {
+  MouseDown,
+  MouseUp,
+  MouseMove,
+}

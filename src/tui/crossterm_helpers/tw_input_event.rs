@@ -68,13 +68,14 @@ mod helpers {
 mod converters {
   use super::*;
 
-  impl From<Event> for TWInputEvent {
+  impl TryFrom<Event> for TWInputEvent {
+    type Error = ();
     /// Typecast / convert [Event] to [TWInputEvent].
-    fn from(event: Event) -> Self {
+    fn try_from(event: Event) -> Result<Self, Self::Error> {
       match event {
-        Key(key_event) => key_event.into(),
-        Mouse(mouse_event) => mouse_event.into(),
-        Resize(cols, rows) => (rows, cols).into(),
+        Key(key_event) => Ok(key_event.try_into()?),
+        Mouse(mouse_event) => Ok(mouse_event.into()),
+        Resize(cols, rows) => Ok((rows, cols).into()),
       }
     }
   }
@@ -92,21 +93,22 @@ mod converters {
     fn from(mouse_event: MouseEvent) -> Self { TWInputEvent::Mouse(mouse_event) }
   }
 
-  impl From<KeyEvent> for TWInputEvent {
+  impl TryFrom<KeyEvent> for TWInputEvent {
+    type Error = ();
     /// Typecast / convert [KeyEvent] to [TWInputEvent::DisplayableKeypress], or
     /// [TWInputEvent::NonDisplayableKeypress].
     ///
     /// Docs:
     ///  - [Crossterm
     ///    KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
-    fn from(key_event: KeyEvent) -> Self {
+    fn try_from(key_event: KeyEvent) -> Result<Self, Self::Error> {
       match key_event {
         KeyEvent {
           code: KeyCode::Char(character),
           modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-        } => TWInputEvent::DisplayableKeypress(character),
+        } => Ok(TWInputEvent::DisplayableKeypress(character)),
         // All other key presses.
-        _ => TWInputEvent::NonDisplayableKeypress(key_event.into()),
+        _ => Ok(TWInputEvent::NonDisplayableKeypress(key_event.try_into()?)),
       }
     }
   }
