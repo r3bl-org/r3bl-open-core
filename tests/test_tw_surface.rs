@@ -67,15 +67,18 @@ fn create_main_container(tw_surface: &mut TWSurface) -> CommonResult<()> {
   }
 }
 
+// REFACTOR: add test for macro
 /// Left column "col_1".
 fn create_left_col(tw_surface: &mut TWSurface) -> CommonResult<()> {
   throws!({
-    tw_surface.box_start(TWBoxProps {
-      styles: tw_surface.stylesheet.find_styles_by_ids(vec!["style1"]),
-      id: "col_1".to_string(),
-      dir: Direction::Vertical,
-      req_size: (50, 100).try_into()?,
-    })?;
+    // With macro.
+    box_start! {
+      in: tw_surface,
+      "col_1",
+      Direction::Vertical,
+      (50, 100).try_into()?,
+      ["style1"]
+    }
     make_left_col_assertions(tw_surface)?;
     tw_surface.box_end()?;
   });
@@ -100,6 +103,7 @@ fn create_left_col(tw_surface: &mut TWSurface) -> CommonResult<()> {
 /// Right column "col_2".
 fn create_right_col(tw_surface: &mut TWSurface) -> CommonResult<()> {
   throws!({
+    // No macro.
     tw_surface.box_start(TWBoxProps {
       styles: tw_surface.stylesheet.find_styles_by_ids(vec!["style2"]),
       id: "col_2".to_string(),

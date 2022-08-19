@@ -167,18 +167,35 @@ fn test_stylesheet() {
   result.unwrap();
   assert_eq!(stylesheet.styles.len(), 2);
 
-  assert_eq!(stylesheet.find_style_by_id("style1").unwrap().id, "style1");
-  assert_eq!(stylesheet.find_style_by_id("style2").unwrap().id, "style2");
-  assert!(stylesheet.find_style_by_id("style3").is_none());
+  // Test find_style_by_id.
+  {
+    // No macro.
+    assert_eq!(stylesheet.find_style_by_id("style1").unwrap().id, "style1");
+    assert_eq!(stylesheet.find_style_by_id("style2").unwrap().id, "style2");
+    assert!(stylesheet.find_style_by_id("style3").is_none());
+    // Macro.
+    assert_eq!(get_style!(from: stylesheet, "style1").unwrap().id, "style1");
+    assert_eq!(get_style!(from: stylesheet, "style2").unwrap().id, "style2");
+    assert!(get_style!(from: stylesheet, "style3").is_none());
+  }
 
-  let result = stylesheet.find_styles_by_ids(vec!["style1", "style2"]);
-  assert_eq!(result.as_ref().unwrap().len(), 2);
-  assert_eq!(result.as_ref().unwrap()[0].id, "style1");
-  assert_eq!(result.as_ref().unwrap()[1].id, "style2");
-  assert_eq!(
-    stylesheet.find_styles_by_ids(vec!["style3", "style4"]),
-    None
-  );
+  // Test find_styles_by_ids.
+  {
+    // Contains.
+    assertions_for_find_styles_by_ids(&stylesheet.find_styles_by_ids(vec!["style1", "style2"]));
+    assertions_for_find_styles_by_ids(&get_styles!(from: &stylesheet => ["style1", "style2"]));
+    fn assertions_for_find_styles_by_ids(result: &Option<Vec<Style>>) {
+      assert_eq!(result.as_ref().unwrap().len(), 2);
+      assert_eq!(result.as_ref().unwrap()[0].id, "style1");
+      assert_eq!(result.as_ref().unwrap()[1].id, "style2");
+    }
+    // Does not contain.
+    assert_eq!(
+      stylesheet.find_styles_by_ids(vec!["style3", "style4"]),
+      None
+    );
+    assert_eq!(get_styles!(from: stylesheet => ["style3", "style4"]), None);
+  }
 }
 
 #[test]
