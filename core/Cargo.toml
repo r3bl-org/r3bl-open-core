@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_rs_utils_core"
-version = "0.7.13"
+version = "0.7.14"
 edition = "2021"
 description = """
 Helper crate for proc-macro library for reading attributes into structs when
@@ -33,8 +33,8 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 # Crossterm & EventStream support.
-crossterm = { version = "0.24.0", features = ["event-stream"] }
-futures-util = "0.3.21"
+crossterm = { version = "0.25.0", features = ["event-stream"] }
+futures-util = "0.3.23"
 paste = "1.0.8"
 
 # Unicode, grapheme clusters.

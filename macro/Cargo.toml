@@ -21,7 +21,7 @@ proc-macro = true
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-r3bl_rs_utils_core = { version = "0.7.13", path = "../core" }
+r3bl_rs_utils_core = { version = "0.7.14", path = "../core" }
 
 # https://github.com/dtolnay/proc-macro-workshop#debugging-tips
 syn = { version = "1.0.99", features = ["extra-traits", "full", "derive", "parsing"] }
@@ -30,5 +30,5 @@ proc-macro2 = "1.0.43"
 
 # Crossterm & EventStream support.
 crossterm = { version = "0.24.0", features = ["event-stream"] }
-futures-util = "0.3.21"
+futures-util = "0.3.23"
 paste = "1.0.8"
