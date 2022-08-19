@@ -15,8 +15,32 @@
  *   limitations under the License.
  */
 
+// REFACTOR: move this to top_level_macros.rs
 // REFACTOR: macro to make box easily
+/// Use incremental TT munching: https://veykril.github.io/tlborm/decl-macros/patterns/tt-muncher.html
 #[macro_export]
 macro_rules! make_box {
-  () => {};
+  (
+    in:     $arg_surface : expr,   // Eg: in: tw_surface,
+    id:     $arg_id : expr,        // Eg: "foo",
+    dir:    $arg_dir : expr,       // Eg: Direction::Horizontal,
+    size:   $arg_req_size : expr,  // Eg: (50, 100).try_into()?,
+    style:  [$($args:tt)*],        // Eg: [ "style1" , "style2" ]
+    render: {$($tail:tt)*}         // Eg: render! args
+  ) => {
+    box_start! {
+      in: $arg_surface,
+      $arg_id,
+      $arg_dir,
+      $arg_req_size,
+      [$($args)*]
+    };
+
+    render! {
+      in: $arg_surface,
+      $($tail)*
+    };
+
+    $arg_surface.box_end()?;
+  };
 }
