@@ -77,4 +77,3 @@ macro_rules! box_props {
     }
   };
 }
-

@@ -18,11 +18,11 @@
 // FIXME: Add tests for Component, ComponentRegistry, HasFocus, and this macro.
 // REFACTOR: add macro for easy render of component from registry
 #[macro_export]
-macro_rules! render_component {
+macro_rules! render {
   (
     in:           $arg_surface        : expr, // Eg: in: surface
     from:         $arg_registry       : expr, // Eg: from: registry
-    id:           $arg_component_id   : expr, // Eg: "component1"
+    component_id: $arg_component_id   : expr, // Eg: "component1"
     has_focus:    $arg_has_focus      : expr, // Eg: has_focus
     state:        $arg_state          : expr, // Eg: state
     shared_store: $arg_shared_store   : expr  // Eg: shared_store
