@@ -38,6 +38,7 @@ macro_rules! make_box {
 
     render! {
       in: $arg_surface,
+      component_id: $arg_id,
       $($tail)*
     };
 

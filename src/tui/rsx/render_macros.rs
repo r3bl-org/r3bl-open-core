@@ -21,8 +21,8 @@
 macro_rules! render {
   (
     in:           $arg_surface        : expr, // Eg: in: surface
-    from:         $arg_registry       : expr, // Eg: from: registry
     component_id: $arg_component_id   : expr, // Eg: "component1"
+    from:         $arg_registry       : expr, // Eg: from: registry
     has_focus:    $arg_has_focus      : expr, // Eg: has_focus
     state:        $arg_state          : expr, // Eg: state
     shared_store: $arg_shared_store   : expr  // Eg: shared_store
