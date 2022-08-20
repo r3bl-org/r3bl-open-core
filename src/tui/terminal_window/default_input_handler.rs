@@ -17,9 +17,9 @@
 
 use crate::*;
 
-pub struct TWDefaultInputEventHandler;
+pub struct DefaultInputEventHandler;
 
-impl TWDefaultInputEventHandler {
+impl DefaultInputEventHandler {
   /// This function does **not** consume the `input_event` argument. [TWInputEvent] implements [Copy]
   /// (no need to pass references into this function).
   pub async fn no_consume(input_event: TWInputEvent, exit_keys: &[TWInputEvent]) -> Continuation {

@@ -26,7 +26,7 @@ use crate::*;
 /// See [Component].
 /// Async trait docs: <https://doc.rust-lang.org/book/ch10-02-traits.html>
 #[async_trait]
-pub trait TWApp<S, A>
+pub trait App<S, A>
 where
   S: Display + Default + Clone + PartialEq + Eq + Debug + Sync + Send,
   A: Display + Default + Clone + Sync + Send,
@@ -43,7 +43,7 @@ where
   ) -> CommonResult<EventPropagation>;
 
   /// Wrap a new instance in [Box].
-  fn new_owned() -> BoxedSafeTWApp<S, A>
+  fn new_owned() -> BoxedSafeApp<S, A>
   where
     Self: Default + Sync + Send + 'static,
   {
@@ -51,7 +51,7 @@ where
   }
 
   /// Wrap a new instance in [std::sync::Arc] & [tokio::sync::RwLock].
-  fn new_shared() -> SharedTWApp<S, A>
+  fn new_shared() -> SharedApp<S, A>
   where
     Self: Default + Sync + Send + 'static,
   {

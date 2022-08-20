@@ -16,19 +16,19 @@
  */
 
 // Attach files.
+pub mod app;
+pub mod component;
+pub mod default_input_handler;
 pub mod event_routing_support;
-pub mod tw_app;
-pub mod tw_component;
-pub mod tw_default_input_handler;
-pub mod tw_focus_manager;
-pub mod tw_main_event_loop;
+pub mod focus_manager;
+pub mod main_event_loop;
 pub mod type_aliases;
 
 // Re-export.
+pub use app::*;
+pub use component::*;
+pub use default_input_handler::*;
 pub use event_routing_support::*;
-pub use tw_app::*;
-pub use tw_component::*;
-pub use tw_default_input_handler::*;
-pub use tw_focus_manager::*;
-pub use tw_main_event_loop::*;
+pub use focus_manager::*;
+pub use main_event_loop::*;
 pub use type_aliases::*;

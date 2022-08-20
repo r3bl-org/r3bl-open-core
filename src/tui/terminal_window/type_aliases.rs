@@ -25,9 +25,9 @@ use crate::*;
 pub type SharedWindow = Arc<RwLock<TWData>>;
 
 // TWApp.
-pub type SafeTWApp<S, A> = dyn TWApp<S, A> + Send + Sync;
-pub type BoxedSafeTWApp<S, A> = Box<SafeTWApp<S, A>>;
-pub type SharedTWApp<S, A> = Arc<RwLock<SafeTWApp<S, A>>>;
+pub type SafeApp<S, A> = dyn App<S, A> + Send + Sync;
+pub type BoxedSafeApp<S, A> = Box<SafeApp<S, A>>;
+pub type SharedApp<S, A> = Arc<RwLock<SafeApp<S, A>>>;
 
 // Component.
 pub type SafeComponent<S, A> = dyn Component<S, A> + Send + Sync;

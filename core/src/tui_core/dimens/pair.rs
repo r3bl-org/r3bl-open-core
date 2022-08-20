@@ -20,11 +20,11 @@ use std::fmt::{self, Debug};
 use crate::*;
 
 /// Pair, defined as (first, second). Here are some examples.
-/// 
+///
 /// ```ignore
 /// let pair: Pair = Pair { first: 0, second: 0 };
 /// ```
-/// 
+///
 /// ```ignore
 /// let pair: Pair = pair!(0, 0);
 /// ```
@@ -89,6 +89,3 @@ macro_rules! pair {
     }
   };
 }
-
-// FIXME: add pair macro
-// FIXME: replace Pair{} w/ pair!{}

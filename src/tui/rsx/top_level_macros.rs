@@ -17,7 +17,7 @@
 
 /// Use incremental TT munching: https://veykril.github.io/tlborm/decl-macros/patterns/tt-muncher.html
 #[macro_export]
-macro_rules! make_box {
+macro_rules! make_box_with_component {
   (
     in:     $arg_surface : expr,   // Eg: in: tw_surface,
     id:     $arg_id : expr,        // Eg: "foo",
@@ -42,4 +42,10 @@ macro_rules! make_box {
 
     $arg_surface.box_end()?;
   };
+}
+
+// TODO: add make_box_with_applet!
+#[macro_export]
+macro_rules! make_box_with_applet {
+  () => {};
 }
