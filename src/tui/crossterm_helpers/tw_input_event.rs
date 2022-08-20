@@ -83,7 +83,7 @@ mod converters {
     /// Typecast / convert [(u16, u16)] to [TWInputEvent::Resize].
     fn from(size: (u16, u16)) -> Self {
       let (rows, cols) = size;
-      TWInputEvent::Resize(Size { cols, rows })
+      TWInputEvent::Resize( size! { col : cols, row : rows } )
     }
   }
 
