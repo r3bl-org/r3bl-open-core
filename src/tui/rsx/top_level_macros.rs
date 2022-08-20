@@ -15,8 +15,6 @@
  *   limitations under the License.
  */
 
-// REFACTOR: move this to top_level_macros.rs
-// REFACTOR: macro to make box easily
 /// Use incremental TT munching: https://veykril.github.io/tlborm/decl-macros/patterns/tt-muncher.html
 #[macro_export]
 macro_rules! make_box {

@@ -67,7 +67,6 @@ fn create_main_container(tw_surface: &mut TWSurface) -> CommonResult<()> {
   }
 }
 
-// REFACTOR: add test for macro
 /// Left column "col_1".
 fn create_left_col(tw_surface: &mut TWSurface) -> CommonResult<()> {
   throws!({

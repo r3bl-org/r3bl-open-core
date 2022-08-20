@@ -15,8 +15,27 @@
  *   limitations under the License.
  */
 
-// REFACTOR: macro for easy box_start call
-// REFACTOR: add test for this macro
+#[macro_export]
+macro_rules! surface_start {
+  (
+    stylesheet: $arg_stylesheet : expr,
+    pos:        $arg_pos        : expr,
+    size:       $arg_size       : expr,
+  ) => {{
+    let mut surface = TWSurface {
+      stylesheet: $arg_stylesheet,
+      ..TWSurface::default()
+    };
+
+    surface.surface_start(TWSurfaceProps {
+      pos: $arg_pos,
+      size: $arg_size,
+    })?;
+
+    surface
+  }};
+}
+
 #[macro_export]
 macro_rules! box_start {
   (
@@ -35,7 +54,6 @@ macro_rules! box_start {
   };
 }
 
-// REFACTOR: macro for easy tw_box_props creation
 #[macro_export]
 macro_rules! box_props {
   (

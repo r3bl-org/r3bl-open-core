@@ -23,10 +23,10 @@ pub const DEBUG: bool = true;
 pub mod layout_error;
 pub mod layout_management;
 pub mod tw_box;
-pub mod tw_surface;
+pub mod surface;
 
 // Re-export the public items.
 pub use layout_error::*;
 pub use layout_management::*;
 pub use tw_box::*;
-pub use tw_surface::*;
+pub use surface::*;
