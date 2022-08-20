@@ -20,17 +20,17 @@
 #[macro_export]
 macro_rules! box_start {
   (
-    in: $arg_surface : expr, // Eg: in: tw_surface,
-    $arg_id : expr,          // Eg: "foo",
-    $arg_dir : expr,         // Eg: Direction::Horizontal,
-    $arg_req_size : expr,    // Eg: (50, 100).try_into()?,
-    [$($args:tt)*]           // Eg: [ "style1" , "style2" ]
+    in:     $arg_surface : expr, // Eg: in: tw_surface,
+    id:     $arg_id : expr,          // Eg: "foo",
+    dir:    $arg_dir : expr,         // Eg: Direction::Horizontal,
+    size:   $arg_req_size : expr,    // Eg: (50, 100).try_into()?,
+    styles: [$($args:tt)*]           // Eg: [ "style1" , "style2" ]
   ) => {
     $arg_surface.box_start(box_props! {
-      $arg_id,
-      $arg_dir,
-      $arg_req_size,
-      get_styles! { from: $arg_surface.stylesheet => [$($args)*] }
+      id:     $arg_id,
+      dir:    $arg_dir,
+      size:   $arg_req_size,
+      styles: get_styles! { from: $arg_surface.stylesheet => [$($args)*] }
     })?
   };
 }
@@ -39,10 +39,10 @@ macro_rules! box_start {
 #[macro_export]
 macro_rules! box_props {
   (
-    $arg_id : expr,       // Eg: "foo",
-    $arg_dir : expr,      // Eg: Direction::Horizontal,
-    $arg_req_size : expr, // Eg: (50, 100).try_into()?,
-    $arg_styles: expr     // Eg: get_styles! { from: stylesheet => ["style1", "style2"] };
+    id:     $arg_id : expr,       // Eg: "foo",
+    dir:    $arg_dir : expr,      // Eg: Direction::Horizontal,
+    size:   $arg_req_size : expr, // Eg: (50, 100).try_into()?,
+    styles: $arg_styles: expr     // Eg: get_styles! { from: stylesheet => ["style1", "style2"] };
   ) => {
     TWBoxProps {
       id: $arg_id.to_string(),
@@ -52,10 +52,10 @@ macro_rules! box_props {
     }
   };
   (
-    $arg_id : expr,       // Eg: "foo",
-    $arg_dir : expr,      // Eg: Direction::Horizontal,
-    $arg_req_size : expr, // Eg: (50, 100).try_into()?,
-    [$($args:tt)*]        // Eg: [ style! {...} , style! {...} ]
+    id:     $arg_id : expr,       // Eg: "foo",
+    dir:    $arg_dir : expr,      // Eg: Direction::Horizontal,
+    size:   $arg_req_size : expr, // Eg: (50, 100).try_into()?,
+    styles: [$($args:tt)*]        // Eg: [ style! {...} , style! {...} ]
   ) => {
     TWBoxProps {
       id: $arg_id.to_string(),
@@ -65,9 +65,9 @@ macro_rules! box_props {
     }
   };
   (
-    $arg_id : expr,       // Eg: "foo",
-    $arg_dir : expr,      // Eg: Direction::Horizontal,
-    $arg_req_size : expr, // Eg: (50, 100).try_into()?,
+    id:     $arg_id : expr,       // Eg: "foo",
+    dir:    $arg_dir : expr,      // Eg: Direction::Horizontal,
+    size:   $arg_req_size : expr, // Eg: (50, 100).try_into()?,
   ) => {
     TWBoxProps {
       id: $arg_id.to_string(),

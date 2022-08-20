@@ -25,19 +25,19 @@ macro_rules! make_box {
     id:     $arg_id : expr,        // Eg: "foo",
     dir:    $arg_dir : expr,       // Eg: Direction::Horizontal,
     size:   $arg_req_size : expr,  // Eg: (50, 100).try_into()?,
-    style:  [$($args:tt)*],        // Eg: [ "style1" , "style2" ]
+    styles: [$($args:tt)*],        // Eg: [ "style1" , "style2" ]
     render: {$($tail:tt)*}         // Eg: render! args
   ) => {
     box_start! {
-      in: $arg_surface,
-      $arg_id,
-      $arg_dir,
-      $arg_req_size,
-      [$($args)*]
+      in:     $arg_surface,
+      id:     $arg_id,
+      dir:    $arg_dir,
+      size:   $arg_req_size,
+      styles: [$($args)*]
     };
 
     render! {
-      in: $arg_surface,
+      in:           $arg_surface,
       component_id: $arg_id,
       $($tail)*
     };

@@ -73,11 +73,11 @@ fn create_left_col(tw_surface: &mut TWSurface) -> CommonResult<()> {
   throws!({
     // With macro.
     box_start! {
-      in: tw_surface,
-      "col_1",
-      Direction::Vertical,
-      (50, 100).try_into()?,
-      ["style1"]
+      in:     tw_surface,
+      id:     "col_1",
+      dir:    Direction::Vertical,
+      size:   (50, 100).try_into()?,
+      styles: ["style1"]
     }
     make_left_col_assertions(tw_surface)?;
     tw_surface.box_end()?;
