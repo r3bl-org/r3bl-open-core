@@ -20,11 +20,11 @@ use r3bl_rs_utils::*;
 #[test]
 fn test_simple_2_col_layout() -> CommonResult<()> {
   throws!({
-    let mut tw_surface = TWSurface {
+    let mut tw_surface = Surface {
       stylesheet: dsl_stylesheet()?,
-      ..TWSurface::default()
+      ..Surface::default()
     };
-    tw_surface.surface_start(TWSurfaceProps {
+    tw_surface.surface_start(SurfaceProps {
       pos: (0, 0).into(),
       size: (500, 500).into(),
     })?;
@@ -39,7 +39,7 @@ fn test_simple_2_col_layout() -> CommonResult<()> {
 }
 
 /// Main container "container".
-fn create_main_container(tw_surface: &mut TWSurface) -> CommonResult<()> {
+fn create_main_container(tw_surface: &mut Surface) -> CommonResult<()> {
   throws!({
     tw_surface.box_start(TWBoxProps {
       id: "container".to_string(),
@@ -53,7 +53,7 @@ fn create_main_container(tw_surface: &mut TWSurface) -> CommonResult<()> {
     tw_surface.box_end()?;
   });
 
-  fn make_container_assertions(tw_surface: &TWSurface) -> CommonResult<()> {
+  fn make_container_assertions(tw_surface: &Surface) -> CommonResult<()> {
     throws!({
       let layout_item = tw_surface.stack_of_boxes.first().unwrap();
       assert_eq!(layout_item.id, "container");
@@ -68,7 +68,7 @@ fn create_main_container(tw_surface: &mut TWSurface) -> CommonResult<()> {
 }
 
 /// Left column "col_1".
-fn create_left_col(tw_surface: &mut TWSurface) -> CommonResult<()> {
+fn create_left_col(tw_surface: &mut Surface) -> CommonResult<()> {
   throws!({
     // With macro.
     box_start! {
@@ -82,7 +82,7 @@ fn create_left_col(tw_surface: &mut TWSurface) -> CommonResult<()> {
     tw_surface.box_end()?;
   });
 
-  fn make_left_col_assertions(tw_surface: &TWSurface) -> CommonResult<()> {
+  fn make_left_col_assertions(tw_surface: &Surface) -> CommonResult<()> {
     throws!({
       let layout_item = tw_surface.stack_of_boxes.last().unwrap();
       assert_eq!(layout_item.id, "col_1");
@@ -100,7 +100,7 @@ fn create_left_col(tw_surface: &mut TWSurface) -> CommonResult<()> {
 }
 
 /// Right column "col_2".
-fn create_right_col(tw_surface: &mut TWSurface) -> CommonResult<()> {
+fn create_right_col(tw_surface: &mut Surface) -> CommonResult<()> {
   throws!({
     // No macro.
     tw_surface.box_start(TWBoxProps {
@@ -113,7 +113,7 @@ fn create_right_col(tw_surface: &mut TWSurface) -> CommonResult<()> {
     tw_surface.box_end()?;
   });
 
-  fn make_right_col_assertions(tw_surface: &TWSurface) -> CommonResult<()> {
+  fn make_right_col_assertions(tw_surface: &Surface) -> CommonResult<()> {
     throws!({
       let current_box = tw_surface.stack_of_boxes.last().unwrap();
       assert_eq!(current_box.id, "col_2");
