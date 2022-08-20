@@ -20,7 +20,7 @@ use crate::*;
 /// Represents a rectangular area of the terminal screen, and not necessarily
 /// the full terminal screen.
 #[derive(Clone, Debug, Default)]
-pub struct TWSurface {
+pub struct Surface {
   pub origin_pos: Position,
   pub box_size: Size,
   pub stack_of_boxes: Vec<TWBox>,
@@ -28,8 +28,8 @@ pub struct TWSurface {
   pub render_buffer: TWCommandQueue,
 }
 
-impl LayoutManagement for TWSurface {
-  fn surface_start(&mut self, TWSurfaceProps { pos, size }: TWSurfaceProps) -> CommonResult<()> {
+impl LayoutManagement for Surface {
+  fn surface_start(&mut self, SurfaceProps { pos, size }: SurfaceProps) -> CommonResult<()> {
     throws!({
       // Expect stack to be empty!
       if !self.no_boxes_added() {
@@ -87,7 +87,7 @@ impl LayoutManagement for TWSurface {
   }
 }
 
-impl PerformPositioningAndSizing for TWSurface {
+impl PerformPositioningAndSizing for Surface {
   /// 🌳 Root: Handle first box to add to stack of boxes, explicitly sized &
   /// positioned.
   fn add_root_box(

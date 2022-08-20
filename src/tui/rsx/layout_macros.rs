@@ -22,12 +22,12 @@ macro_rules! surface_start {
     pos:        $arg_pos        : expr,
     size:       $arg_size       : expr,
   ) => {{
-    let mut surface = TWSurface {
+    let mut surface = Surface {
       stylesheet: $arg_stylesheet,
-      ..TWSurface::default()
+      ..Surface::default()
     };
 
-    surface.surface_start(TWSurfaceProps {
+    surface.surface_start(SurfaceProps {
       pos: $arg_pos,
       size: $arg_size,
     })?;
