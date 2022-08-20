@@ -25,7 +25,6 @@ pub struct Stylesheet {
   pub styles: Vec<Style>,
 }
 
-// REFACTOR: macro for easy style lookup
 #[macro_export]
 macro_rules! get_style {
   (
