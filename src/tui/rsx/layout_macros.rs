@@ -15,12 +15,17 @@
  *   limitations under the License.
  */
 
+/// `self` has to be passed into `$arg_this` because this macro has a `let` statement that requires
+/// it to have a block. And in this block, `self` is not available from the calling scope.
 #[macro_export]
-macro_rules! surface_start {
+macro_rules! surface_start_with_runnable {
   (
-    stylesheet: $arg_stylesheet : expr,
-    pos:        $arg_pos        : expr,
-    size:       $arg_size       : expr,
+    this:         $arg_this         : expr,
+    stylesheet:   $arg_stylesheet   : expr,
+    pos:          $arg_pos          : expr,
+    size:         $arg_size         : expr,
+    state:        $arg_state        : expr,
+    shared_store: $arg_shared_store : expr
   ) => {{
     let mut surface = Surface {
       stylesheet: $arg_stylesheet,
@@ -32,6 +37,12 @@ macro_rules! surface_start {
       size: $arg_size,
     })?;
 
+    $arg_this
+      .run_on_surface(&mut surface, $arg_state, $arg_shared_store)
+      .await?;
+
+    surface.surface_end()?;
+
     surface
   }};
 }
@@ -39,7 +50,7 @@ macro_rules! surface_start {
 #[macro_export]
 macro_rules! box_start {
   (
-    in:     $arg_surface : expr, // Eg: in: tw_surface,
+    in:     $arg_surface : expr,     // Eg: in: tw_surface,
     id:     $arg_id : expr,          // Eg: "foo",
     dir:    $arg_dir : expr,         // Eg: Direction::Horizontal,
     size:   $arg_req_size : expr,    // Eg: (50, 100).try_into()?,

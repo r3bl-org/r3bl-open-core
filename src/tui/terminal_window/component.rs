@@ -56,3 +56,13 @@ where
   ) -> CommonResult<EventPropagation>;
 }
 
+#[async_trait]
+pub trait SurfaceRunnable<S, A>
+where
+  S: Default + Display + Clone + PartialEq + Eq + Debug + Sync + Send,
+  A: Default + Display + Clone + Sync + Send,
+{
+  async fn run_on_surface(
+    &mut self, surface: &mut Surface, state: &S, shared_store: &SharedStore<S, A>,
+  ) -> CommonResult<()>;
+}
