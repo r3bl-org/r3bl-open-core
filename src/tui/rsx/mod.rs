@@ -18,9 +18,7 @@
 // Attach sources.
 pub mod layout_macros;
 pub mod render_macros;
-pub mod top_level_macros;
 
 // Re-export.
 pub use layout_macros::*;
 pub use render_macros::*;
-pub use top_level_macros::*;
