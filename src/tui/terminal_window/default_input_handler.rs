@@ -30,23 +30,13 @@ impl DefaultInputEventHandler {
 
     // Default input event handling.
     match input_event {
-      TWInputEvent::NonDisplayableKeypress(key_event) => {
+      TWInputEvent::Key(keypress) => {
         call_if_true!(
           DEBUG,
           log_no_err!(
             INFO,
-            "default_event_handler -> NonDisplayableKeypress: {:?}",
-            key_event
-          )
-        );
-      }
-      TWInputEvent::DisplayableKeypress(character) => {
-        call_if_true!(
-          DEBUG,
-          log_no_err!(
-            INFO,
-            "default_event_handler -> DisplayableKeypress: {:?}",
-            character
+            "default_event_handler -> Keypress: {:?}",
+            keypress
           )
         );
       }
