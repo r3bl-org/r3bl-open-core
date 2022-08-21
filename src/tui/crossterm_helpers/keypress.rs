@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 
+/// Please see [converters::special_handling_of_character_key_event] for more information.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub struct Keypress {
   pub maybe_modifier_keys: Option<ModifierKeys>,
@@ -28,6 +29,11 @@ pub struct Keypress {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub enum NonModifierKey {
+  /// [char] that can be printed to the console. Displayable characters are:
+  /// - `a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z`
+  /// - `A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z`
+  /// - `1, 2, 3, 4, 5, 6, 7, 8, 9, 0`
+  /// - `!, @, #, $, %, ^, &, *, (, ), _, +, -, =, [, ], {, }, |, \, ,, ., /, <, >, ?, `, ~`
   Character(char),
   Special(SpecialKey),
   Function(FunctionKey),

@@ -24,13 +24,7 @@ use crate::*;
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TWInputEvent {
-  /// [char] that can be printed to the console. Displayable characters are:
-  /// - `a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z`
-  /// - `A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z`
-  /// - `1, 2, 3, 4, 5, 6, 7, 8, 9, 0`
-  /// - `!, @, #, $, %, ^, &, *, (, ), _, +, -, =, [, ], {, }, |, \, ,, ., /, <, >, ?, `, ~`
-  DisplayableKeypress(char),
-  NonDisplayableKeypress(Keypress),
+  Key(Keypress),
   Resize(Size),
   Mouse(MouseInput),
   None,
@@ -64,7 +58,7 @@ mod helpers {
   }
 }
 
-mod converters {
+pub(crate) mod converters {
   use super::*;
 
   impl TryFrom<Event> for TWInputEvent {
@@ -94,21 +88,40 @@ mod converters {
 
   impl TryFrom<KeyEvent> for TWInputEvent {
     type Error = ();
-    /// Typecast / convert [KeyEvent] to [TWInputEvent::DisplayableKeypress], or
-    /// [TWInputEvent::NonDisplayableKeypress].
-    ///
-    /// Docs:
-    ///  - [Crossterm
-    ///    KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
     fn try_from(key_event: KeyEvent) -> Result<Self, Self::Error> {
-      match key_event {
-        KeyEvent {
-          code: KeyCode::Char(character),
-          modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-        } => Ok(TWInputEvent::DisplayableKeypress(character)),
-        // All other key presses.
-        _ => Ok(TWInputEvent::NonDisplayableKeypress(key_event.try_into()?)),
-      }
+      special_handling_of_character_key_event(key_event)
+    }
+  }
+
+  /// Typecast / convert [KeyEvent] to [TWInputEvent::Key]. There is special handling of displayable
+  /// characters in this conversion. This occurs if the [KeyEvent] is a [KeyCode::Char].
+  ///
+  /// An example is typing "X" which shows up in crossterm as "Shift + X". In this case, the
+  /// [KeyModifiers] `SHIFT` and `NONE` are ignored when converted into a [TWInputEvent]! This means
+  /// the following:
+  ///
+  /// 1. Type "x"         -> you get TWInputEVent::Key(keypress! {@char 'x'})
+  /// 2. Type "X"         -> you get TWInputEVent::Key(keypress! {@char 'X'}) and not
+  ///                        TWInputEVent::Key(keypress! {@char ModifierKeys::SHIFT, 'X'}) ie, the
+  ///                        "SHIFT" is ignored
+  /// 3. Type "Shift + x" -> same as "X"
+  ///
+  /// The test `test_tw_input_event_matches_correctly` in `test_tw_input_event.rs` demonstrates
+  /// this.
+  ///
+  /// Docs:
+  ///  - [Crossterm
+  ///    KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
+  pub(crate) fn special_handling_of_character_key_event(
+    key_event: KeyEvent,
+  ) -> Result<TWInputEvent, ()> {
+    match key_event {
+      KeyEvent {
+        code: KeyCode::Char(character),
+        modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
+      } => Ok(TWInputEvent::Key(keypress! { @char character })),
+      // All other key presses.
+      _ => Ok(TWInputEvent::Key(key_event.try_into()?)),
     }
   }
 }
