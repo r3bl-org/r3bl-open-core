@@ -235,6 +235,6 @@ pub mod convert_key_event {
   }
 }
 
-// Re-export for testing.
+// Re-export so this is visible for testing.
 #[allow(unused_imports)]
 pub(crate) use convert_key_event::*;

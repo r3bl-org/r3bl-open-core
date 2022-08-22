@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-// FIXME: Add tests for Component, ComponentRegistry, HasFocus, and this macro to `test_component.rs`
+// FUTURE: Add tests for Component, ComponentRegistry, HasFocus, and this macro to `test_component.rs`
 #[macro_export]
 macro_rules! render {
   (
