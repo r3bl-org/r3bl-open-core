@@ -30,14 +30,10 @@ impl DefaultInputEventHandler {
 
     // Default input event handling.
     match input_event {
-      TWInputEvent::Key(keypress) => {
+      TWInputEvent::Keyboard(keypress) => {
         call_if_true!(
           DEBUG,
-          log_no_err!(
-            INFO,
-            "default_event_handler -> Keypress: {:?}",
-            keypress
-          )
+          log_no_err!(INFO, "default_event_handler -> Keypress: {:?}", keypress)
         );
       }
       TWInputEvent::Resize(size) => {
@@ -51,12 +47,6 @@ impl DefaultInputEventHandler {
         call_if_true!(
           DEBUG,
           log_no_err!(INFO, "default_event_handler -> Mouse: {:?}", mouse_event)
-        );
-      }
-      _ => {
-        call_if_true!(
-          DEBUG,
-          log_no_err!(INFO, "default_event_handler -> Other: {:?}", input_event)
         );
       }
     }

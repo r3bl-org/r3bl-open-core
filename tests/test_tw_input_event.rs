@@ -40,18 +40,18 @@ fn test_convert_keyevent_into_twinputevent() -> Result<(), ()> {
   let ctrl_x_tw = TWInputEvent::try_from(ctrl_x);
 
   // Check that the conversion is correct.
-  assert_eq2!(x_tw, TWInputEvent::Key(keypress! {@char 'x'}));
-  assert_eq2!(caps_x_tw, TWInputEvent::Key(keypress! {@char 'X'}));
-  assert_eq2!(ctrl_x_tw, Ok(TWInputEvent::Key(ctrl_x.try_into()?)));
+  assert_eq2!(x_tw, TWInputEvent::Keyboard(keypress! {@char 'x'}));
+  assert_eq2!(caps_x_tw, TWInputEvent::Keyboard(keypress! {@char 'X'}));
+  assert_eq2!(ctrl_x_tw, Ok(TWInputEvent::Keyboard(ctrl_x.try_into()?)));
 
   Ok(())
 }
 
 #[test]
 fn test_tw_input_event_matches_correctly() -> Result<(), ()> {
-  let x = TWInputEvent::Key(keypress! { @char 'x' });
-  let caps_x = TWInputEvent::Key(keypress! {@char 'X'});
-  let ctrl_x = TWInputEvent::Key(
+  let x = TWInputEvent::Keyboard(keypress! { @char 'x' });
+  let caps_x = TWInputEvent::Keyboard(keypress! {@char 'X'});
+  let ctrl_x = TWInputEvent::Keyboard(
     KeyEvent {
       code: KeyCode::Char('x'),
       modifiers: KeyModifiers::CONTROL,

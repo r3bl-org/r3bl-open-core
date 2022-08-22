@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-/// Please see [converters::special_handling_of_character_key_event] for more information.
+/// Please see [convert_key_event::special_handling_of_character_key_event] for more information.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub struct Keypress {
   pub maybe_modifier_keys: Option<ModifierKeys>,
@@ -122,7 +122,6 @@ macro_rules! keypress {
 }
 
 pub mod convert_key_event {
-
   use super::*;
 
   /// Difference in meaning between `intersects` and `contains`:
@@ -174,16 +173,53 @@ pub mod convert_key_event {
     type Error = ();
     /// Convert [KeyEvent] to [Keypress].
     fn try_from(key_event: KeyEvent) -> Result<Self, Self::Error> {
-      let modifiers: Option<ModifierKeys> = copy_modifiers_from_key_event(&key_event);
-      let maybe_keypress: Option<NonModifierKey> = copy_code_from_key_event(&key_event);
+      special_handling_of_character_key_event(key_event)
+    }
+  }
 
-      if let Some(keypress) = maybe_keypress {
-        Ok(Keypress {
-          maybe_modifier_keys: modifiers,
-          non_modifier_key: keypress,
-        })
-      } else {
-        Err(())
+  /// Typecast / convert [KeyEvent] to [TWInputEvent::Key]. There is special handling of displayable
+  /// characters in this conversion. This occurs if the [KeyEvent] is a [KeyCode::Char].
+  ///
+  /// An example is typing "X" which shows up in crossterm as "Shift + X". In this case, the
+  /// [KeyModifiers] `SHIFT` and `NONE` are ignored when converted into a [TWInputEvent]! This means
+  /// the following:
+  ///
+  /// 1. Type "x"         -> you get TWInputEVent::Key(keypress! {@char 'x'})
+  /// 2. Type "X"         -> you get TWInputEVent::Key(keypress! {@char 'X'}) and not
+  ///                        TWInputEVent::Key(keypress! {@char ModifierKeys::SHIFT, 'X'}) ie, the
+  ///                        "SHIFT" is ignored
+  /// 3. Type "Shift + x" -> same as "X"
+  ///
+  /// The test `test_tw_input_event_matches_correctly` in `test_tw_input_event.rs` demonstrates
+  /// this.
+  ///
+  /// Docs:
+  ///  - [Crossterm
+  ///    KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
+  pub(crate) fn special_handling_of_character_key_event(
+    key_event: KeyEvent,
+  ) -> Result<Keypress, ()> {
+    match key_event {
+      KeyEvent {
+        code: KeyCode::Char(character),
+        modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
+      } => {
+        // Character.
+        Ok(keypress! { @char character })
+      }
+      _ => {
+        // All other key presses.
+        let modifiers: Option<ModifierKeys> = copy_modifiers_from_key_event(&key_event);
+        let maybe_keypress: Option<NonModifierKey> = copy_code_from_key_event(&key_event);
+
+        if let Some(keypress) = maybe_keypress {
+          Ok(Keypress {
+            maybe_modifier_keys: modifiers,
+            non_modifier_key: keypress,
+          })
+        } else {
+          Err(())
+        }
       }
     }
   }
