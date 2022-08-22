@@ -108,9 +108,6 @@ impl Debug for Size {
   }
 }
 
-// FIXME: add size! macro
-// FIXME: replace use Size{} w/ use size!{}
-
 #[macro_export]
 macro_rules! size {
   (

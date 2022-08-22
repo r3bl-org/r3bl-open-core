@@ -158,9 +158,6 @@ impl Mul<Pair> for Position {
   }
 }
 
-// FIXME: add position! macro
-// FIXME: replace use Position{} w/ use position!{}
-
 #[macro_export]
 macro_rules! position {
   (
