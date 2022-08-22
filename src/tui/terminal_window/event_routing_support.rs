@@ -20,12 +20,13 @@ use crate::*;
 /// This works w/ the main event loop to let it know whether it should exit or resize after an input
 /// event has occurred (and has been passed thru the input event routing system).
 #[non_exhaustive]
-pub enum Continuation {
+pub enum Continuation<T> {
   Exit,
   Continue,
   ResizeAndContinue(Size),
   Return,
   Break,
+  Result(T),
 }
 
 /// This works w/ the input event routing system to provide the caller w/ information about whether

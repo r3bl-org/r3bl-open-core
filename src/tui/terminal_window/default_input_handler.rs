@@ -22,7 +22,9 @@ pub struct DefaultInputEventHandler;
 impl DefaultInputEventHandler {
   /// This function does **not** consume the `input_event` argument. [TWInputEvent] implements [Copy]
   /// (no need to pass references into this function).
-  pub async fn no_consume(input_event: TWInputEvent, exit_keys: &[TWInputEvent]) -> Continuation {
+  pub async fn no_consume(
+    input_event: TWInputEvent, exit_keys: &[TWInputEvent],
+  ) -> Continuation<String> {
     // Early return if any exit key sequence is pressed.
     if input_event.matches(exit_keys) {
       return Continuation::Exit;
