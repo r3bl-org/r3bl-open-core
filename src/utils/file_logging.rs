@@ -90,10 +90,16 @@ macro_rules! log {
 /// If you want to override the default log file path (stored in [FILE_PATH]), you can use this
 /// function. If the logger has already been initialized, then it will return a
 /// [CommonErrorType::InvalidState] error.
+///
+/// If you would like to ignore the error just call `ok()` on the result that's returned. [More
+/// info](https://doc.rust-lang.org/std/result/enum.Result.html#method.ok).
 pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
   unsafe {
     return match FILE_LOGGER_INIT_OK {
-      true => CommonError::new_err_with_only_type(CommonErrorType::InvalidState),
+      true => CommonError::new(
+        CommonErrorType::InvalidState,
+        "Logger already initialized, can't set log file path",
+      ),
       false => {
         FILE_PATH = path;
         Ok(path.to_string())
@@ -105,10 +111,16 @@ pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
 /// If you want to override the default log level [LOG_LEVEL], you can use this function. If the
 /// logger has already been initialized, then it will return a [CommonErrorType::InvalidState]
 /// error. To disable logging simply set the log level to [LevelFilter::Off].
+///
+/// If you would like to ignore the error just call `ok()` on the result that's returned. [More
+/// info](https://doc.rust-lang.org/std/result/enum.Result.html#method.ok).
 pub fn try_to_set_log_level(level: LevelFilter) -> CommonResult<String> {
   unsafe {
     return match FILE_LOGGER_INIT_OK {
-      true => CommonError::new_err_with_only_type(CommonErrorType::InvalidState),
+      true => CommonError::new(
+        CommonErrorType::InvalidState,
+        "Logger already initialized, can't set log level",
+      ),
       false => {
         LOG_LEVEL = level;
         Ok(level.to_string())
