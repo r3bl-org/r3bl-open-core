@@ -177,18 +177,28 @@ pub mod convert_key_event {
     }
   }
 
-  /// Typecast / convert [KeyEvent] to [TWInputEvent::Key]. There is special handling of displayable
-  /// characters in this conversion. This occurs if the [KeyEvent] is a [KeyCode::Char].
+  /// Typecast / convert [KeyEvent] to [Keypress].
   ///
-  /// An example is typing "X" which shows up in crossterm as "Shift + X". In this case, the
-  /// [KeyModifiers] `SHIFT` and `NONE` are ignored when converted into a [TWInputEvent]! This means
-  /// the following:
+  /// There is special handling of displayable characters in this conversion. This occurs if the
+  /// [KeyEvent] is a [KeyCode::Char].
   ///
-  /// 1. Type "x"         -> you get TWInputEVent::Key(keypress! {@char 'x'})
-  /// 2. Type "X"         -> you get TWInputEVent::Key(keypress! {@char 'X'}) and not
-  ///                        TWInputEVent::Key(keypress! {@char ModifierKeys::SHIFT, 'X'}) ie, the
-  ///                        "SHIFT" is ignored
-  /// 3. Type "Shift + x" -> same as "X"
+  /// An example is typing "X" by pressing "Shift + X" on the keyboard, which shows up in crossterm
+  /// as "Shift + X". In this case, the [KeyModifiers] `SHIFT` and `NONE` are ignored when converted
+  /// into a [Keypress]. This means the following:
+  ///
+  /// ```text
+  /// ╔════════════════════╦═══════════════════════════════════════════════════════════════╗
+  /// ║ User action        ║ Result                                                        ║
+  /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
+  /// ║ Type "x"           ║ TWInputEVent::Key(keypress! {@char 'x'})                      ║
+  /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
+  /// ║ Type "X"           ║ TWInputEVent::Key(keypress! {@char 'X'}) and not              ║
+  /// ║ (On keyboard press ║ TWInputEVent::Key(keypress! {@char ModifierKeys::SHIFT, 'X'}) ║
+  /// ║ Shift+X)           ║ ie, the "SHIFT" is ignored                                    ║
+  /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
+  /// ║ Type "Shift + x"   ║ same as above                                                 ║
+  /// ╚════════════════════╩═══════════════════════════════════════════════════════════════╝
+  /// ```
   ///
   /// The test `test_tw_input_event_matches_correctly` in `test_tw_input_event.rs` demonstrates
   /// this.
