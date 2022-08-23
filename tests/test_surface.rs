@@ -135,14 +135,14 @@ fn dsl_stylesheet() -> CommonResult<Stylesheet> {
   throws_with_return!({
     stylesheet! {
       style! {
-        id: style1
+        id: "style1"
         attrib: [dim, bold]
         margin: 2
         color_fg: TWColor::Rgb { r: 255, g: 255, b: 0 } /* Yellow. */
         color_bg: TWColor::Rgb { r: 128, g: 128, b: 128 } /* Grey. */
       },
       style! {
-        id: style2
+        id: "style2"
         attrib: [underline, strikethrough]
         margin: 3
         color_fg: TWColor::Rgb { r: 0, g: 0, b: 0 } /* Black. */

@@ -35,8 +35,6 @@ pub(crate) fn code_gen(
   let has_attrib_hidden = attrib_vec.contains(&Attrib::Hidden);
   let has_attrib_strikethrough = attrib_vec.contains(&Attrib::Strikethrough);
 
-  let id_str = format!("{}", id);
-
   let maybe_margin_expr = match margin {
     Some(margin_int) => {
       quote! {
@@ -66,7 +64,7 @@ pub(crate) fn code_gen(
 
   quote! {
     r3bl_rs_utils::Style {
-      id: #id_str.to_string(),
+      id: #id.to_string(),
       bold: #has_attrib_bold,
       dim: #has_attrib_dim,
       underline: #has_attrib_underline,

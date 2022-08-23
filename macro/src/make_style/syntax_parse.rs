@@ -15,9 +15,9 @@
  *   limitations under the License.
  */
 
-use proc_macro2::*;
+use quote::*;
 use r3bl_rs_utils_core::*;
-use syn::{parse::*, *};
+use syn::{parse::*, Expr::Verbatim, *};
 
 use super::*;
 use crate::utils::IdentExt;
@@ -26,7 +26,7 @@ use crate::utils::IdentExt;
 ///
 /// ```
 /// style! {
-///   id: my_style,          /* Optional. */
+///   id: "my_style",        /* Optional. */
 ///   attrib: [dim, bold]    /* Optional. */
 ///   margin: 10,            /* Optional. */
 ///   color_fg: Color::Blue, /* Optional. */
@@ -41,7 +41,7 @@ use crate::utils::IdentExt;
 impl Parse for StyleMetadata {
   fn parse(input: ParseStream) -> Result<Self> {
     let mut metadata = StyleMetadata {
-      id: Ident::new("_id", Span::call_site()),
+      id: Verbatim(quote! { "_id" }),
       attrib_vec: Vec::new(),
       margin: None,
       color_fg: None,
@@ -80,7 +80,7 @@ fn parse_optional_id(input: &ParseStream, metadata: &mut StyleMetadata) -> Resul
   if lookahead.peek(kw::id) {
     input.parse::<kw::id>()?;
     input.parse::<Token![:]>()?;
-    let id = input.parse::<Ident>()?;
+    let id = input.parse::<Expr>()?;
     metadata.id = id;
   }
   call_if_true!(DEBUG, println!("🚀 id: {:?}", metadata.id));

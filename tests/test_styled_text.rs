@@ -64,12 +64,12 @@ mod helpers {
     throws_with_return!({
       stylesheet! {
         style! {
-          id: style1
+          id: "style1"
           margin: 1
           color_bg: TWColor::Rgb { r: 55, g: 55, b: 100 }
         },
         style! {
-          id: style2
+          id: "style2"
           margin: 1
           color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
         }
