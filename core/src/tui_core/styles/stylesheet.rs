@@ -132,27 +132,27 @@ impl Stylesheet {
 macro_rules! stylesheet {
   ($($style:expr),*) => {
     {
-      let mut style_sheet = Stylesheet::new();
+      let mut stylesheet = Stylesheet::new();
       $(
-        ($style).add_to_stylesheet(&mut style_sheet)?;
+        stylesheet.try_add($style)?;
       )*
-      style_sheet
+      stylesheet
     }
   };
 }
 
-pub trait AddToStylesheet {
-  fn add_to_stylesheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()>;
+/// This trait exists to allow "pseudo operator overloading". Rust does not support operator
+/// overloading, and the method to add a single style has a different signature than the one to add
+/// a vector of styles. To get around this, the [TryAdd] trait is implemented for both [Style] and
+/// [Vec<Style>]. Then the [stylesheet!] macro can "pseudo overload" them.
+pub trait TryAdd<OtherType = Self> {
+  fn try_add(&mut self, other: OtherType) -> CommonResult<()>;
 }
 
-impl AddToStylesheet for Style {
-  fn add_to_stylesheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()> {
-    stylesheet.add_style(self)
-  }
+impl TryAdd<Style> for Stylesheet {
+  fn try_add(&mut self, other: Style) -> CommonResult<()> { self.add_style(other) }
 }
 
-impl AddToStylesheet for Vec<Style> {
-  fn add_to_stylesheet(self, stylesheet: &mut Stylesheet) -> CommonResult<()> {
-    stylesheet.add_styles(self)
-  }
+impl TryAdd<Vec<Style>> for Stylesheet {
+  fn try_add(&mut self, other: Vec<Style>) -> CommonResult<()> { self.add_styles(other) }
 }
