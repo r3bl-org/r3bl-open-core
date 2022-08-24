@@ -65,7 +65,7 @@ impl LayoutManagement for Surface {
     throws!({
       match self.no_boxes_added() {
         true => self.add_root_box(tw_box_props),
-        false => self.add_box(tw_box_props),
+        false => self.add_non_root_box(tw_box_props),
       }?
     });
   }
@@ -88,109 +88,6 @@ impl LayoutManagement for Surface {
 }
 
 impl PerformPositioningAndSizing for Surface {
-  /// 🌳 Root: Handle first box to add to stack of boxes, explicitly sized &
-  /// positioned.
-  fn add_root_box(
-    &mut self,
-    TWBoxProps {
-      id,
-      dir,
-      req_size: RequestedSizePercent {
-        width: width_pc,
-        height: height_pc,
-      },
-      styles,
-    }: TWBoxProps,
-  ) -> CommonResult<()> {
-    throws!({
-      self.stack_of_boxes.push(TWBox::make_root_box(
-        id,
-        self.box_size,
-        self.origin_pos,
-        width_pc,
-        height_pc,
-        dir,
-        Stylesheet::compute(styles),
-      ));
-    });
-  }
-
-  /// 🍀 Non-root: Handle non-root box to add to stack of boxes. [Position] and
-  /// [Size] will be calculated.
-  fn add_box(
-    &mut self,
-    TWBoxProps {
-      id,
-      dir,
-      req_size: RequestedSizePercent {
-        width: width_pc,
-        height: height_pc,
-      },
-      styles,
-    }: TWBoxProps,
-  ) -> CommonResult<()> {
-    throws!({
-      let current_box = self.current_box()?;
-
-      let container_bounds = current_box.bounding_size;
-
-      let requested_size_allocation = Size::from((
-        calc_percentage(width_pc, container_bounds.cols),
-        calc_percentage(height_pc, container_bounds.rows),
-      ));
-
-      let old_position = unwrap_or_err! {
-        current_box.box_cursor_pos,
-        LayoutErrorType::BoxCursorPositionUndefined
-      };
-
-      self.calc_where_to_insert_new_box_in_tw_surface(requested_size_allocation)?;
-
-      self.stack_of_boxes.push(TWBox::make_box(
-        id,
-        dir,
-        container_bounds,
-        old_position,
-        width_pc,
-        height_pc,
-        Stylesheet::compute(styles),
-      ));
-    });
-  }
-
-  /// Must be called *before* the new [TWBox] is added to the stack of boxes
-  /// otherwise [LayoutErrorType::ErrorCalculatingNextBoxPos] error is
-  /// returned.
-  ///
-  /// This updates the `box_cursor_pos` of the current [TWBox].
-  ///
-  /// Returns the [Position] where the next [TWBox] can be added to the stack of
-  /// boxes.
-  fn calc_where_to_insert_new_box_in_tw_surface(
-    &mut self, allocated_size: Size,
-  ) -> CommonResult<Position> {
-    let current_box = self.current_box()?;
-    let box_cursor_pos = current_box.box_cursor_pos;
-
-    let box_cursor_pos = unwrap_or_err! {
-      box_cursor_pos,
-      LayoutErrorType::ErrorCalculatingNextBoxPos
-    };
-
-    let new_pos: Position = box_cursor_pos + allocated_size;
-
-    // Adjust `new_pos` using Direction.
-    let new_pos: Position = match current_box.dir {
-      Direction::Vertical => new_pos * (0, 1).into(),
-      Direction::Horizontal => new_pos * (1, 0).into(),
-    };
-
-    // Update the box_cursor_pos of the current layout.
-    current_box.box_cursor_pos = new_pos.into();
-
-    Ok(new_pos)
-  }
-
   /// Get the last box on the stack (if none found then return Err).
   fn current_box(&mut self) -> CommonResult<&mut TWBox> {
     // Expect stack of boxes not to be empty!
@@ -201,4 +98,197 @@ impl PerformPositioningAndSizing for Surface {
   }
 
   fn no_boxes_added(&self) -> bool { self.stack_of_boxes.is_empty() }
+
+  /// Must be called *before* the new [TWBox] is added to the stack of boxes
+  /// otherwise [LayoutErrorType::ErrorCalculatingNextBoxPos] error is
+  /// returned.
+  ///
+  /// This updates the `box_cursor_pos` of the current [TWBox].
+  ///
+  /// Returns the [Position] where the next [TWBox] can be added to the stack of
+  /// boxes.
+  fn update_insertion_pos_for_next_box(&mut self, allocated_size: Size) -> CommonResult<Position> {
+    let current_box = self.current_box()?;
+    let current_insertion_pos = current_box.insertion_pos_for_next_box;
+
+    let current_insertion_pos = unwrap_or_err! {
+      current_insertion_pos,
+      LayoutErrorType::ErrorCalculatingNextBoxPos
+    };
+
+    let new_pos: Position = current_insertion_pos + allocated_size;
+
+    // Adjust `new_pos` using Direction.
+    let new_pos: Position = match current_box.dir {
+      Direction::Vertical => new_pos * (0, 1).into(),
+      Direction::Horizontal => new_pos * (1, 0).into(),
+    };
+
+    // Update the box_cursor_pos of the current layout.
+    current_box.insertion_pos_for_next_box = new_pos.into();
+
+    Ok(new_pos)
+  }
+
+  /// 🍀 Handle non-root box to add to stack of boxes. [Position] and [Size] will be calculated.
+  /// `insertion_pos_for_next_box` will also be updated.
+  fn add_non_root_box(&mut self, tw_box_props: TWBoxProps) -> CommonResult<()> {
+    throws!({
+      let container_box = self.current_box()?;
+      let container_bounds = container_box.bounds_size;
+
+      let maybe_cascaded_style: Option<Style> = cascade_styles(container_box, &tw_box_props);
+
+      let RequestedSizePercent {
+        width_pc,
+        height_pc,
+      } = tw_box_props.requested_size_percent;
+
+      let requested_size_allocation = Size::from((
+        calc_percentage(width_pc, container_bounds.cols),
+        calc_percentage(height_pc, container_bounds.rows),
+      ));
+
+      let origin_pos = unwrap_or_err! {
+        container_box.insertion_pos_for_next_box,
+        LayoutErrorType::BoxCursorPositionUndefined
+      };
+
+      self.update_insertion_pos_for_next_box(requested_size_allocation)?;
+
+      self.stack_of_boxes.push(make_non_root_box_with_style(
+        tw_box_props,
+        origin_pos,
+        container_bounds,
+        maybe_cascaded_style,
+      ));
+    });
+  }
+
+  /// 🌳 Handle root (first) box to add to stack of boxes, explicitly sized & positioned.
+  fn add_root_box(&mut self, tw_box_props: TWBoxProps) -> CommonResult<()> {
+    throws!({
+      let RequestedSizePercent {
+        width_pc,
+        height_pc,
+      } = tw_box_props.requested_size_percent;
+
+      let bounds_size = Size::from((
+        calc_percentage(width_pc, self.box_size.cols),
+        calc_percentage(height_pc, self.box_size.rows),
+      ));
+
+      self.stack_of_boxes.push(make_root_box_with_style(
+        tw_box_props,
+        self.origin_pos,
+        bounds_size,
+      ));
+    });
+  }
+}
+
+/// - If `is_root` is true:
+///   - The `insertion_pos_for_next_box` is origin_pos + margin adjustment (from style)
+/// - If `is_root` is false:
+///   - The `insertion_pos_for_next_box` is `None` non-root box; it needs to be calculated by
+///     `update_box_cursor_pos_for_next_box_insertion()`
+fn make_non_root_box_with_style(
+  TWBoxProps {
+    id,
+    dir,
+    requested_size_percent: RequestedSizePercent {
+      width_pc,
+      height_pc,
+    },
+    maybe_styles: _,
+  }: TWBoxProps,
+  origin_pos: Position, container_bounds: Size, maybe_cascaded_style: Option<Style>,
+) -> TWBox {
+  let bounds_size = Size::from((
+    calc_percentage(width_pc, container_bounds.cols),
+    calc_percentage(height_pc, container_bounds.rows),
+  ));
+
+  // Adjust `bounds_size` & `origin` based on the style's margin.
+  let (style_adjusted_origin_pos, style_adjusted_bounds_size) =
+    adjust_with_style(&maybe_cascaded_style, origin_pos, bounds_size);
+
+  let req_size_pc: RequestedSizePercent = (width_pc, height_pc).into();
+
+  TWBox {
+    id,
+    dir,
+    origin_pos,
+    bounds_size,
+    style_adjusted_origin_pos,
+    style_adjusted_bounds_size,
+    requested_size_percent: req_size_pc,
+    maybe_computed_style: maybe_cascaded_style,
+    insertion_pos_for_next_box: None,
+  }
+}
+
+fn make_root_box_with_style(
+  TWBoxProps {
+    id,
+    dir,
+    requested_size_percent,
+    maybe_styles,
+  }: TWBoxProps,
+  origin_pos: Position, bounds_size: Size,
+) -> TWBox {
+  let computed_style = Stylesheet::compute(&maybe_styles);
+
+  // Adjust `bounds_size` & `origin` based on the style's margin.
+  let (style_adjusted_origin_pos, style_adjusted_bounds_size) =
+    adjust_with_style(&computed_style, origin_pos, bounds_size);
+
+  TWBox {
+    id,
+    dir,
+    origin_pos,
+    bounds_size,
+    style_adjusted_origin_pos,
+    style_adjusted_bounds_size,
+    requested_size_percent,
+    maybe_computed_style: computed_style,
+    insertion_pos_for_next_box: Some(origin_pos),
+  }
+}
+
+/// Adjust `origin` & `bounds_size` based on the `maybe_style`'s margin.
+fn adjust_with_style(
+  maybe_computed_style: &Option<Style>, origin_pos: Position, bounds_size: Size,
+) -> (Position, Size) {
+  let mut style_adjusted_origin_pos = origin_pos;
+  let mut style_adjusted_bounds_size = bounds_size;
+
+  if let Some(ref style) = maybe_computed_style {
+    if let Some(margin) = style.margin {
+      style_adjusted_origin_pos += margin;
+      style_adjusted_bounds_size -= margin * 2;
+    };
+  }
+
+  (style_adjusted_origin_pos, style_adjusted_bounds_size)
+}
+
+fn cascade_styles(parent_box: &TWBox, self_box_props: &TWBoxProps) -> Option<Style> {
+  let mut style_vec: Vec<Style> = vec![];
+
+  if let Some(parent_style) = parent_box.get_computed_style() {
+    style_vec.push(parent_style);
+  };
+
+  if let Some(ref self_styles) = self_box_props.maybe_styles {
+    self_styles
+      .iter()
+      .for_each(|style| style_vec.push(style.clone()));
+  }
+
+  if style_vec.is_empty() {
+    None
+  } else {
+    Stylesheet::compute(&Some(style_vec))
+  }
 }

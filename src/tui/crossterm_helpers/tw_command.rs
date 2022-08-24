@@ -343,14 +343,14 @@ impl TWCommandQueue {
         exec!(queue!(stdout(), Clear(ClearType::All)), "ClearScreen")
       }
       TWCommand::SetFgColor(color) => {
-        let color = color_converter::to_crossterm_color((*color).clone());
+        let color = color_converter::to_crossterm_color(*color);
         exec!(
           queue!(stdout(), SetForegroundColor(color)),
           format!("SetFgColor({:?})", color)
         )
       }
       TWCommand::SetBgColor(color) => {
-        let color: crossterm::style::Color = color_converter::to_crossterm_color((*color).clone());
+        let color: crossterm::style::Color = color_converter::to_crossterm_color(*color);
         exec!(
           queue!(stdout(), SetBackgroundColor(color)),
           format!("SetBgColor({:?})", color)

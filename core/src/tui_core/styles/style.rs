@@ -65,66 +65,88 @@ pub struct Style {
   pub cached_bitflags: Option<StyleFlag>,
 }
 
+// ╭┄┄┄┄┄┄┄┄┄┄╮
+// │ Addition │
+// ╯          ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+mod addition {
+  use super::*;
+
+  impl Add for Style {
+    type Output = Self;
+    fn add(self, other: Self) -> Self { add_styles(self, other) }
+  }
+
+  pub fn add_styles(lhs: Style, rhs: Style) -> Style {
+    // Computed style has no id.
+    let mut new_style: Style = Style {
+      id: "".to_string(),
+      computed: true,
+      ..Style::default()
+    };
+
+    apply_style_flag(&mut new_style, &lhs);
+    apply_style_flag(&mut new_style, &rhs);
+
+    // other (if set) overrides new_style.
+    fn apply_style_flag(new_style: &mut Style, other: &Style) {
+      let other_mask = other.clone().get_bitflags();
+      if other_mask.contains(StyleFlag::COLOR_FG_SET) {
+        new_style.color_fg = other.color_fg;
+      }
+      if other_mask.contains(StyleFlag::COLOR_BG_SET) {
+        new_style.color_bg = other.color_bg;
+      }
+      if other_mask.contains(StyleFlag::BOLD_SET) {
+        new_style.bold = other.bold;
+      }
+      if other_mask.contains(StyleFlag::DIM_SET) {
+        new_style.dim = other.dim;
+      }
+      if other_mask.contains(StyleFlag::UNDERLINE_SET) {
+        new_style.underline = other.underline;
+      }
+      if other_mask.contains(StyleFlag::MARGIN_SET) {
+        new_style.margin = other.margin;
+      }
+      if other_mask.contains(StyleFlag::REVERSE_SET) {
+        new_style.reverse = other.reverse;
+      }
+      if other_mask.contains(StyleFlag::HIDDEN_SET) {
+        new_style.hidden = other.hidden;
+      }
+      if other_mask.contains(StyleFlag::STRIKETHROUGH_SET) {
+        new_style.strikethrough = other.strikethrough;
+      }
+    }
+
+    // Aggregate margins.
+    let aggregate_margin = lhs.margin.unwrap_or(0) + rhs.margin.unwrap_or(0);
+    if aggregate_margin > 0 {
+      new_style.margin = Some(aggregate_margin);
+    } else {
+      new_style.margin = None;
+    }
+
+    // Recalculate the bitflags.
+    new_style.reset_bitflags();
+    new_style.get_bitflags();
+
+    new_style
+  }
+
+  impl AddAssign<&Style> for Style {
+    fn add_assign(&mut self, rhs: &Style) {
+      let sum = add_styles(self.clone(), rhs.clone());
+      *self = sum;
+    }
+  }
+}
+
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 // │ Style helpers │
 // ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 mod helpers {
   use super::*;
-
-  /// Implement specificity behavior for [Style] by implementing [Add] trait. Here's the rule: `Style
-  /// + Style (overrides) = Style`.
-  ///
-  /// Docs:
-  /// - <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
-  impl Add<Self> for Style {
-    type Output = Self;
-
-    fn add(mut self, other: Self) -> Self {
-      // Computed style has no id.
-      self.computed = true;
-      self.id = "".to_string();
-
-      // other (if set) overrides self.
-      let other_mask = other.clone().get_bitflags();
-      if other_mask.contains(StyleFlag::COLOR_FG_SET) {
-        self.color_fg = other.color_fg;
-      }
-      if other_mask.contains(StyleFlag::COLOR_BG_SET) {
-        self.color_bg = other.color_bg;
-      }
-      if other_mask.contains(StyleFlag::BOLD_SET) {
-        self.bold = other.bold;
-      }
-      if other_mask.contains(StyleFlag::DIM_SET) {
-        self.dim = other.dim;
-      }
-      if other_mask.contains(StyleFlag::UNDERLINE_SET) {
-        self.underline = other.underline;
-      }
-      if other_mask.contains(StyleFlag::MARGIN_SET) {
-        self.margin = other.margin;
-      }
-      if other_mask.contains(StyleFlag::REVERSE_SET) {
-        self.reverse = other.reverse;
-      }
-      if other_mask.contains(StyleFlag::HIDDEN_SET) {
-        self.hidden = other.hidden;
-      }
-      if other_mask.contains(StyleFlag::STRIKETHROUGH_SET) {
-        self.strikethrough = other.strikethrough;
-      }
-
-      // Recalculate the bitflags.
-      self.reset_bitflags();
-      self.get_bitflags();
-
-      self
-    }
-  }
-
-  impl AddAssign<&Style> for Style {
-    fn add_assign(&mut self, other: &Style) { *self = self.clone() + other.clone(); }
-  }
 
   impl Display for Style {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -167,11 +189,7 @@ mod helpers {
         msg_vec.join("+"),
         self.color_fg,
         self.color_bg,
-        if self.margin.is_some() {
-          self.margin.unwrap()
-        } else {
-          0
-        }
+        self.margin.unwrap_or(0)
       )
     }
   }

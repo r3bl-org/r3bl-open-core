@@ -11,7 +11,7 @@
 # cargo watch -x check -x 'test -q --color always' -c -q
 
 # rm -rf target
-RUST_BACKTRACE=1 cargo watch -x check -x 'test -q --color always' -c -q
+RUST_BACKTRACE=0 cargo watch -x check -x 'test -q --color always' -c -q
 
 # cargo test -q --color always
 # cargo test --package rust_book --bin rust_book --all-features -- data_structures::tree::test_node --exact --nocapture
