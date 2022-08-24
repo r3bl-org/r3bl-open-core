@@ -25,7 +25,7 @@ use crossterm::{cursor::*,
                 style::*,
                 terminal::{self, *},
                 *};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use crate::*;
@@ -451,15 +451,13 @@ impl TWCommandQueue {
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 // │ Style to attribute map │
 // ╯                        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-lazy_static! {
-  pub static ref STYLE_TO_ATTRIBUTE_MAP: HashMap<StyleFlag, Attribute> = {
-    let mut map = HashMap::new();
-    map.insert(StyleFlag::BOLD_SET, Attribute::Bold);
-    map.insert(StyleFlag::DIM_SET, Attribute::Dim);
-    map.insert(StyleFlag::UNDERLINE_SET, Attribute::Underlined);
-    map.insert(StyleFlag::REVERSE_SET, Attribute::Reverse);
-    map.insert(StyleFlag::HIDDEN_SET, Attribute::Hidden);
-    map.insert(StyleFlag::STRIKETHROUGH_SET, Attribute::Fraktur);
-    map
-  };
-}
+static STYLE_TO_ATTRIBUTE_MAP: Lazy<HashMap<StyleFlag, Attribute>> = Lazy::new(|| {
+  let mut map = HashMap::new();
+  map.insert(StyleFlag::BOLD_SET, Attribute::Bold);
+  map.insert(StyleFlag::DIM_SET, Attribute::Dim);
+  map.insert(StyleFlag::UNDERLINE_SET, Attribute::Underlined);
+  map.insert(StyleFlag::REVERSE_SET, Attribute::Reverse);
+  map.insert(StyleFlag::HIDDEN_SET, Attribute::Hidden);
+  map.insert(StyleFlag::STRIKETHROUGH_SET, Attribute::Fraktur);
+  map
+});
