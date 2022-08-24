@@ -97,8 +97,8 @@ pub fn calc_percentage(percentage: Percent, value: UnitType) -> UnitType {
 /// Size, defined as [height, width].
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
 pub struct RequestedSizePercent {
-  pub width: Percent,
-  pub height: Percent,
+  pub width_pc: Percent,
+  pub height_pc: Percent,
 }
 
 impl TryFrom<(i32, i32)> for RequestedSizePercent {
@@ -110,8 +110,8 @@ impl TryFrom<(i32, i32)> for RequestedSizePercent {
     }
     let pair = pair.unwrap();
     Ok(RequestedSizePercent {
-      width: pair.0,
-      height: pair.1,
+      width_pc: pair.0,
+      height_pc: pair.1,
     })
   }
 }
@@ -119,14 +119,14 @@ impl TryFrom<(i32, i32)> for RequestedSizePercent {
 impl From<(Percent, Percent)> for RequestedSizePercent {
   fn from(pair: (Percent, Percent)) -> Self {
     RequestedSizePercent {
-      width: pair.0,
-      height: pair.1,
+      width_pc: pair.0,
+      height_pc: pair.1,
     }
   }
 }
 
 impl Debug for RequestedSizePercent {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "[width:{}, height:{}]", self.width, self.height)
+    write!(f, "[width:{}, height:{}]", self.width_pc, self.height_pc)
   }
 }

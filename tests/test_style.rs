@@ -97,8 +97,6 @@ fn test_all_fields_in_style() {
 fn test_style() {
   let mut style = make_a_style("test_style");
   let bitflags = style.get_bitflags();
-  debug!(style);
-  debug!(bitflags);
   assert!(bitflags.contains(StyleFlag::BOLD_SET));
   assert!(bitflags.contains(StyleFlag::DIM_SET));
   assert!(!bitflags.contains(StyleFlag::UNDERLINE_SET));
@@ -132,25 +130,39 @@ fn test_cascade_style() {
     color_fg: TWColor::Red
   };
 
-  let mut computed_style =
-    style_bold_green_fg + style_dim + style_yellow_bg + style_margin + style_red_fg;
+  let style_margin_another = style! {
+    id: "margin"
+    margin: 1
+  };
 
-  assert!(computed_style.get_bitflags().contains(
-    StyleFlag::COLOR_FG_SET
-      | StyleFlag::COLOR_BG_SET
-      | StyleFlag::BOLD_SET
-      | StyleFlag::DIM_SET
-      | StyleFlag::MARGIN_SET
-      | StyleFlag::COMPUTED_SET
-  ));
+  let mut my_style = style_bold_green_fg
+    + style_dim
+    + style_yellow_bg
+    + style_margin
+    + style_red_fg
+    + style_margin_another;
 
-  assert_eq2!(computed_style.color_bg.unwrap(), TWColor::Yellow);
-  assert_eq2!(computed_style.color_fg.unwrap(), TWColor::Red);
-  assert!(computed_style.bold);
-  assert!(computed_style.dim);
-  assert!(computed_style.computed);
-  assert_eq2!(computed_style.margin.unwrap(), 2);
-  assert!(!computed_style.underline);
+  debug!(my_style);
+
+  assert_eq2!(
+    my_style.get_bitflags().contains(
+      StyleFlag::COLOR_FG_SET
+        | StyleFlag::COLOR_BG_SET
+        | StyleFlag::BOLD_SET
+        | StyleFlag::DIM_SET
+        | StyleFlag::MARGIN_SET
+        | StyleFlag::COMPUTED_SET
+    ),
+    true
+  );
+
+  assert_eq2!(my_style.margin.unwrap(), 3);
+  assert_eq2!(my_style.color_bg.unwrap(), TWColor::Yellow);
+  assert_eq2!(my_style.color_fg.unwrap(), TWColor::Red);
+  assert!(my_style.bold);
+  assert!(my_style.dim);
+  assert!(my_style.computed);
+  assert!(!my_style.underline);
 }
 
 #[test]
@@ -183,7 +195,7 @@ fn test_stylesheet() {
   {
     // Contains.
     assertions_for_find_styles_by_ids(&stylesheet.find_styles_by_ids(vec!["style1", "style2"]));
-    assertions_for_find_styles_by_ids(&get_styles!(from: &stylesheet => ["style1", "style2"]));
+    assertions_for_find_styles_by_ids(&get_styles!(from: &stylesheet, ["style1", "style2"]));
     fn assertions_for_find_styles_by_ids(result: &Option<Vec<Style>>) {
       assert_eq2!(result.as_ref().unwrap().len(), 2);
       assert_eq2!(result.as_ref().unwrap()[0].id, "style1");
@@ -194,7 +206,7 @@ fn test_stylesheet() {
       stylesheet.find_styles_by_ids(vec!["style3", "style4"]),
       None
     );
-    assert_eq2!(get_styles!(from: stylesheet => ["style3", "style4"]), None);
+    assert_eq2!(get_styles!(from: stylesheet, ["style3", "style4"]), None);
   }
 }
 

@@ -38,68 +38,16 @@ pub struct TWBox {
   pub id: String,
   pub dir: Direction,
   pub origin_pos: Position,
-  pub bounding_size: Size,
-  pub req_size_percent: RequestedSizePercent,
-  pub box_cursor_pos: Option<Position>,
-  pub computed_style: Option<Style>,
+  pub bounds_size: Size,
+  pub style_adjusted_origin_pos: Position,
+  pub style_adjusted_bounds_size: Size,
+  pub requested_size_percent: RequestedSizePercent,
+  pub insertion_pos_for_next_box: Option<Position>,
+  pub maybe_computed_style: Option<Style>,
 }
 
 impl TWBox {
-  pub fn get_computed_style(&self) -> Option<Style> { self.computed_style.clone() }
-
-  /// Explicitly set the position & size of our box.
-  pub fn make_root_box(
-    id: String, size: Size, origin_pos: Position, width_pc: Percent, height_pc: Percent,
-    dir: Direction, computed_style: Option<Style>,
-  ) -> TWBox {
-    let bounds_size = Size::from((
-      calc_percentage(width_pc, size.cols),
-      calc_percentage(height_pc, size.rows),
-    ));
-    TWBox {
-      id,
-      dir,
-      origin_pos,
-      bounding_size: bounds_size,
-      req_size_percent: (width_pc, height_pc).into(),
-      box_cursor_pos: origin_pos.into(),
-      computed_style,
-    }
-  }
-
-  /// Actual position and size for our box will be calculated based on provided
-  /// hints.
-  pub fn make_box(
-    id: String, dir: Direction, container_bounds: Size, origin_pos: Position, width_pc: Percent,
-    height_pc: Percent, computed_style: Option<Style>,
-  ) -> Self {
-    // Adjust `bounds_size` & `origin` based on the style's margin.
-    let mut style_adjusted_origin = origin_pos;
-
-    let mut style_adjusted_bounds_size = Size::from((
-      calc_percentage(width_pc, container_bounds.cols),
-      calc_percentage(height_pc, container_bounds.rows),
-    ));
-
-    if let Some(ref style) = computed_style {
-      if let Some(margin) = style.margin {
-        style_adjusted_origin += margin;
-        style_adjusted_bounds_size -= margin * 2;
-      };
-    }
-
-    let req_size_pc: RequestedSizePercent = (width_pc, height_pc).into();
-
-    TWBox {
-      id,
-      dir,
-      origin_pos: style_adjusted_origin,
-      bounding_size: style_adjusted_bounds_size,
-      req_size_percent: req_size_pc,
-      computed_style,
-      ..Default::default()
-    }
-  }
+  pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style.clone() }
 }
 
 macro_rules! format_option {
@@ -121,11 +69,22 @@ impl Debug for TWBox {
     f.debug_struct("TWBox")
       .field("id", &self.id)
       .field("dir", &self.dir)
-      .field("origin", &self.origin_pos)
-      .field("bounds_size", &self.bounding_size)
-      .field("req_size_percent", &self.req_size_percent)
-      .field("box_cursor_pos", format_option!(&self.box_cursor_pos))
-      .field("styles", format_option!(&self.computed_style))
+      .field("origin_pos", &self.origin_pos)
+      .field("bounds_size", &self.bounds_size)
+      .field("style_adjusted_origin_pos", &self.style_adjusted_origin_pos)
+      .field(
+        "style_adjusted_bounds_size",
+        &self.style_adjusted_bounds_size,
+      )
+      .field("requested_size_percent", &self.requested_size_percent)
+      .field(
+        "insertion_pos_for_next_box",
+        format_option!(&self.insertion_pos_for_next_box),
+      )
+      .field(
+        "maybe_computed_style",
+        format_option!(&self.maybe_computed_style),
+      )
       .finish()
   }
 }

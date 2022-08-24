@@ -28,7 +28,7 @@ pub struct Stylesheet {
 #[macro_export]
 macro_rules! get_style {
   (
-    from: $arg_stylesheet : expr, // Eg: from: stylesheet
+    from: $arg_stylesheet : expr, // Eg: from: stylesheet,
     $arg_style_name : expr        // Eg: "style1"
   ) => {
     $arg_stylesheet.find_style_by_id($arg_style_name)
@@ -38,7 +38,7 @@ macro_rules! get_style {
 #[macro_export]
 macro_rules! get_styles {
   (
-    from: $arg_stylesheet : expr => // Eg: from: stylesheet
+    from: $arg_stylesheet : expr,   // Eg: from: stylesheet,
     [$($args:tt)*]                  // Eg: ["style1", "style2"]
   ) => {
     $arg_stylesheet.find_styles_by_ids(vec![$($args)*])
@@ -86,7 +86,7 @@ impl Stylesheet {
     }
   }
 
-  pub fn compute(styles: Option<Vec<Style>>) -> Option<Style> {
+  pub fn compute(styles: &Option<Vec<Style>>) -> Option<Style> {
     if let Some(styles) = styles {
       let mut computed = Style::default();
       styles.iter().for_each(|style| computed += style);

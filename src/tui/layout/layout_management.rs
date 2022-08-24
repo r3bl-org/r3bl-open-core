@@ -33,22 +33,20 @@ pub trait LayoutManagement {
 /// Methods that actually perform the layout and positioning.
 pub trait PerformPositioningAndSizing {
   /// Update `box_cursor_pos`. This needs to be called before adding a new [TWBox].
-  fn calc_where_to_insert_new_box_in_tw_surface(
-    &mut self, allocated_size: Size,
-  ) -> CommonResult<Position>;
+  fn update_insertion_pos_for_next_box(&mut self, allocated_size: Size) -> CommonResult<Position>;
 
   /// Get the [TWBox] at the "top" of the `stack`.
   fn current_box(&mut self) -> CommonResult<&mut TWBox>;
 
   fn no_boxes_added(&self) -> bool;
 
-  /// Add the first [TWBox] to the [TWSurface].
+  /// Add the first [TWBox] to the [Surface].
   /// 1. This one is explicitly sized.
   /// 2. there can be only one.
   fn add_root_box(&mut self, props: TWBoxProps) -> CommonResult<()>;
 
   /// Add non-root [TWBox].
-  fn add_box(&mut self, props: TWBoxProps) -> CommonResult<()>;
+  fn add_non_root_box(&mut self, props: TWBoxProps) -> CommonResult<()>;
 }
 
 /// Properties that are needed to create a [TWBox].
@@ -56,8 +54,8 @@ pub trait PerformPositioningAndSizing {
 pub struct TWBoxProps {
   pub id: String,
   pub dir: Direction,
-  pub req_size: RequestedSizePercent,
-  pub styles: Option<Vec<Style>>,
+  pub requested_size_percent: RequestedSizePercent,
+  pub maybe_styles: Option<Vec<Style>>,
 }
 
 /// Properties that are needed to create a [TWSurface].
