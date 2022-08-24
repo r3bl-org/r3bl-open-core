@@ -78,18 +78,34 @@ where
     throws_with_return!({
       // If component has focus, then route input_event to it. Return its propagation enum.
       if let Some(shared_component_has_focus) = self.get_has_focus(has_focus) {
-        let result_event_propagation = shared_component_has_focus
-          .write()
-          .await
-          .handle_event(input_event, state, shared_store)
-          .await?;
-        return Ok(result_event_propagation);
+        call_handle_event!(
+          shared_component: shared_component_has_focus, 
+          input_event: input_event, 
+          state: state, 
+          shared_store: shared_store)
       };
 
       // input_event not handled, propagate it.
       EventPropagation::Propagate
     });
   }
+}
+
+#[macro_export]
+macro_rules! call_handle_event {
+  (
+    shared_component: $shared_component: expr, 
+    input_event:      $input_event: expr, 
+    state:            $state: expr, 
+    shared_store:     $shared_store: expr
+  ) => {{
+    let result_event_propagation = $shared_component
+      .write()
+      .await
+      .handle_event($input_event, $state, $shared_store)
+      .await?;
+    return Ok(result_event_propagation);
+  }};
 }
 
 #[macro_export]
