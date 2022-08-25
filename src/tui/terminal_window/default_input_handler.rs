@@ -20,10 +20,10 @@ use crate::*;
 pub struct DefaultInputEventHandler;
 
 impl DefaultInputEventHandler {
-  /// This function does **not** consume the `input_event` argument. [TWInputEvent] implements [Copy]
+  /// This function does **not** consume the `input_event` argument. [InputEvent] implements [Copy]
   /// (no need to pass references into this function).
   pub async fn no_consume(
-    input_event: TWInputEvent, exit_keys: &[TWInputEvent],
+    input_event: InputEvent, exit_keys: &[InputEvent],
   ) -> Continuation<String> {
     // Early return if any exit key sequence is pressed.
     if input_event.matches(exit_keys) {
@@ -32,23 +32,35 @@ impl DefaultInputEventHandler {
 
     // Default input event handling.
     match input_event {
-      TWInputEvent::Keyboard(keypress) => {
+      InputEvent::Keyboard(keypress) => {
         call_if_true!(
           DEBUG,
           log_no_err!(INFO, "default_event_handler -> Keypress: {:?}", keypress)
         );
       }
-      TWInputEvent::Resize(size) => {
+      InputEvent::Resize(size) => {
         call_if_true!(
           DEBUG,
           log_no_err!(INFO, "default_event_handler -> Resize: {:?}", size)
         );
         return Continuation::ResizeAndContinue(size);
       }
-      TWInputEvent::Mouse(mouse_event) => {
+      InputEvent::Mouse(mouse_event) => {
         call_if_true!(
           DEBUG,
           log_no_err!(INFO, "default_event_handler -> Mouse: {:?}", mouse_event)
+        );
+      }
+      InputEvent::Focus(focus_event) => {
+        call_if_true!(
+          DEBUG,
+          log_no_err!(INFO, "default_event_handler -> Focus: {:?}", focus_event)
+        );
+      }
+      InputEvent::Paste(text) => {
+        call_if_true!(
+          DEBUG,
+          log_no_err!(INFO, "default_event_handler -> Paste: {:?}", text)
         );
       }
     }

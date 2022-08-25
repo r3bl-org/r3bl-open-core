@@ -136,7 +136,7 @@ macro_rules! box_props {
                                                                 //     { from: stylesheet,
                                                                 //     ["style1", "style2"] };
   ) => {
-    TWBoxProps {
+    FlexBoxProps {
       id: $arg_id.to_string(),
       dir: $arg_dir,
       requested_size_percent: $arg_requested_size_percent,
@@ -149,7 +149,7 @@ macro_rules! box_props {
     requested_size_percent: $arg_requested_size_percent : expr, // Eg: (50, 100).try_into()?,
     maybe_styles:           [$($args:tt)*]                      // Eg: [style!{...} , style!{...}]
   ) => {
-    TWBoxProps {
+    FlexBoxProps {
       id: $arg_id.to_string(),
       dir: $arg_dir,
       requested_size_percent: $arg_requested_size_percent,
@@ -161,7 +161,7 @@ macro_rules! box_props {
     dir:      $arg_dir : expr,                                  // Eg: Direction::Horizontal,
     requested_size_percent: $arg_requested_size_percent : expr, // Eg: (50, 100).try_into()?,
   ) => {
-    TWBoxProps {
+    FlexBoxProps {
       id: $arg_id.to_string(),
       dir: $arg_dir,
       requested_size_percent: $arg_requested_size_percent,

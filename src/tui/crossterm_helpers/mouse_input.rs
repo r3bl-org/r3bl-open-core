@@ -24,7 +24,7 @@ use crate::*;
 pub struct MouseInput {
   pub pos: Position,
   pub kind: MouseInputKind,
-  pub maybe_modifier_keys: Option<ModifierKeys>,
+  pub maybe_modifier_keys: Option<ModifierKeysMask>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
@@ -47,7 +47,8 @@ pub enum Button {
 impl From<MouseEvent> for MouseInput {
   fn from(mouse_event: MouseEvent) -> Self {
     let pos: Position = (mouse_event.column, mouse_event.row).into();
-    let maybe_modifier_keys: Option<ModifierKeys> = convert_key_modifiers(&mouse_event.modifiers);
+    let maybe_modifier_keys: Option<ModifierKeysMask> =
+      convert_key_modifiers(&mouse_event.modifiers);
     let kind: MouseInputKind = mouse_event.kind.into();
     MouseInput {
       pos,

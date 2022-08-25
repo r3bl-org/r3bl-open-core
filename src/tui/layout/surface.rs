@@ -23,7 +23,7 @@ use crate::*;
 pub struct Surface {
   pub origin_pos: Position,
   pub box_size: Size,
-  pub stack_of_boxes: Vec<TWBox>,
+  pub stack_of_boxes: Vec<FlexBox>,
   pub stylesheet: Stylesheet,
   pub render_buffer: TWCommandQueue,
 }
@@ -61,11 +61,11 @@ impl LayoutManagement for Surface {
     });
   }
 
-  fn box_start(&mut self, tw_box_props: TWBoxProps) -> CommonResult<()> {
+  fn box_start(&mut self, flex_box_props: FlexBoxProps) -> CommonResult<()> {
     throws!({
       match self.no_boxes_added() {
-        true => self.add_root_box(tw_box_props),
-        false => self.add_non_root_box(tw_box_props),
+        true => self.add_root_box(flex_box_props),
+        false => self.add_non_root_box(flex_box_props),
       }?
     });
   }
@@ -89,7 +89,7 @@ impl LayoutManagement for Surface {
 
 impl PerformPositioningAndSizing for Surface {
   /// Get the last box on the stack (if none found then return Err).
-  fn current_box(&mut self) -> CommonResult<&mut TWBox> {
+  fn current_box(&mut self) -> CommonResult<&mut FlexBox> {
     // Expect stack of boxes not to be empty!
     if self.no_boxes_added() {
       LayoutError::new_err(LayoutErrorType::StackOfBoxesShouldNotBeEmpty)?
@@ -99,13 +99,13 @@ impl PerformPositioningAndSizing for Surface {
 
   fn no_boxes_added(&self) -> bool { self.stack_of_boxes.is_empty() }
 
-  /// Must be called *before* the new [TWBox] is added to the stack of boxes
+  /// Must be called *before* the new [FlexBox] is added to the stack of boxes
   /// otherwise [LayoutErrorType::ErrorCalculatingNextBoxPos] error is
   /// returned.
   ///
-  /// This updates the `box_cursor_pos` of the current [TWBox].
+  /// This updates the `box_cursor_pos` of the current [FlexBox].
   ///
-  /// Returns the [Position] where the next [TWBox] can be added to the stack of
+  /// Returns the [Position] where the next [FlexBox] can be added to the stack of
   /// boxes.
   fn update_insertion_pos_for_next_box(&mut self, allocated_size: Size) -> CommonResult<Position> {
     let current_box = self.current_box()?;
@@ -132,17 +132,17 @@ impl PerformPositioningAndSizing for Surface {
 
   /// 🍀 Handle non-root box to add to stack of boxes. [Position] and [Size] will be calculated.
   /// `insertion_pos_for_next_box` will also be updated.
-  fn add_non_root_box(&mut self, tw_box_props: TWBoxProps) -> CommonResult<()> {
+  fn add_non_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult<()> {
     throws!({
       let container_box = self.current_box()?;
       let container_bounds = container_box.bounds_size;
 
-      let maybe_cascaded_style: Option<Style> = cascade_styles(container_box, &tw_box_props);
+      let maybe_cascaded_style: Option<Style> = cascade_styles(container_box, &flex_box_props);
 
       let RequestedSizePercent {
         width_pc,
         height_pc,
-      } = tw_box_props.requested_size_percent;
+      } = flex_box_props.requested_size_percent;
 
       let requested_size_allocation = Size::from((
         calc_percentage(width_pc, container_bounds.cols),
@@ -157,7 +157,7 @@ impl PerformPositioningAndSizing for Surface {
       self.update_insertion_pos_for_next_box(requested_size_allocation)?;
 
       self.stack_of_boxes.push(make_non_root_box_with_style(
-        tw_box_props,
+        flex_box_props,
         origin_pos,
         container_bounds,
         maybe_cascaded_style,
@@ -166,12 +166,12 @@ impl PerformPositioningAndSizing for Surface {
   }
 
   /// 🌳 Handle root (first) box to add to stack of boxes, explicitly sized & positioned.
-  fn add_root_box(&mut self, tw_box_props: TWBoxProps) -> CommonResult<()> {
+  fn add_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult<()> {
     throws!({
       let RequestedSizePercent {
         width_pc,
         height_pc,
-      } = tw_box_props.requested_size_percent;
+      } = flex_box_props.requested_size_percent;
 
       let bounds_size = Size::from((
         calc_percentage(width_pc, self.box_size.cols),
@@ -179,7 +179,7 @@ impl PerformPositioningAndSizing for Surface {
       ));
 
       self.stack_of_boxes.push(make_root_box_with_style(
-        tw_box_props,
+        flex_box_props,
         self.origin_pos,
         bounds_size,
       ));
@@ -193,7 +193,7 @@ impl PerformPositioningAndSizing for Surface {
 ///   - The `insertion_pos_for_next_box` is `None` non-root box; it needs to be calculated by
 ///     `update_box_cursor_pos_for_next_box_insertion()`
 fn make_non_root_box_with_style(
-  TWBoxProps {
+  FlexBoxProps {
     id,
     dir,
     requested_size_percent: RequestedSizePercent {
@@ -201,9 +201,9 @@ fn make_non_root_box_with_style(
       height_pc,
     },
     maybe_styles: _,
-  }: TWBoxProps,
+  }: FlexBoxProps,
   origin_pos: Position, container_bounds: Size, maybe_cascaded_style: Option<Style>,
-) -> TWBox {
+) -> FlexBox {
   let bounds_size = Size::from((
     calc_percentage(width_pc, container_bounds.cols),
     calc_percentage(height_pc, container_bounds.rows),
@@ -215,7 +215,7 @@ fn make_non_root_box_with_style(
 
   let req_size_pc: RequestedSizePercent = (width_pc, height_pc).into();
 
-  TWBox {
+  FlexBox {
     id,
     dir,
     origin_pos,
@@ -229,21 +229,21 @@ fn make_non_root_box_with_style(
 }
 
 fn make_root_box_with_style(
-  TWBoxProps {
+  FlexBoxProps {
     id,
     dir,
     requested_size_percent,
     maybe_styles,
-  }: TWBoxProps,
+  }: FlexBoxProps,
   origin_pos: Position, bounds_size: Size,
-) -> TWBox {
+) -> FlexBox {
   let computed_style = Stylesheet::compute(&maybe_styles);
 
   // Adjust `bounds_size` & `origin` based on the style's padding.
   let (style_adjusted_origin_pos, style_adjusted_bounds_size) =
     adjust_with_style(&computed_style, origin_pos, bounds_size);
 
-  TWBox {
+  FlexBox {
     id,
     dir,
     origin_pos,
@@ -273,7 +273,7 @@ fn adjust_with_style(
   (style_adjusted_origin_pos, style_adjusted_bounds_size)
 }
 
-fn cascade_styles(parent_box: &TWBox, self_box_props: &TWBoxProps) -> Option<Style> {
+fn cascade_styles(parent_box: &FlexBox, self_box_props: &FlexBoxProps) -> Option<Style> {
   let mut style_vec: Vec<Style> = vec![];
 
   if let Some(parent_style) = parent_box.get_computed_style() {

@@ -23,24 +23,24 @@ use crate::*;
 /// Please see [convert_key_event::special_handling_of_character_key_event] for more information.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub struct Keypress {
-  pub maybe_modifier_keys: Option<ModifierKeys>,
-  pub non_modifier_key: NonModifierKey,
+  pub maybe_modifier_keys: Option<ModifierKeysMask>,
+  pub non_modifier_key: Key,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
-pub enum NonModifierKey {
+pub enum Key {
   /// [char] that can be printed to the console. Displayable characters are:
   /// - `a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z`
   /// - `A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z`
   /// - `1, 2, 3, 4, 5, 6, 7, 8, 9, 0`
   /// - `!, @, #, $, %, ^, &, *, (, ), _, +, -, =, [, ], {, }, |, \, ,, ., /, <, >, ?, `, ~`
   Character(char),
-  Special(SpecialKey),
-  Function(FunctionKey),
+  SpecialKey(SpecialKey),
+  FunctionKey(FunctionKey),
+  Enhanced(Enhanced),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
-
 pub enum FunctionKey {
   F1,
   F2,
@@ -57,7 +57,6 @@ pub enum FunctionKey {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
-
 pub enum SpecialKey {
   Backspace,
   Enter,
@@ -82,13 +81,13 @@ macro_rules! keypress {
   (@char $arg_char : expr) => {
     Keypress {
       maybe_modifier_keys: None,
-      non_modifier_key: NonModifierKey::Character($arg_char),
+      non_modifier_key: Key::Character($arg_char),
     }
   };
   (@char $arg_modifiers : expr, $arg_char : expr) => {
     Keypress {
       maybe_modifier_keys: Some($arg_modifiers),
-      non_modifier_key: NonModifierKey::Character($arg_char),
+      non_modifier_key: Key::Character($arg_char),
     }
   };
 
@@ -96,13 +95,13 @@ macro_rules! keypress {
   (@special $arg_special : expr) => {
     Keypress {
       maybe_modifier_keys: None,
-      non_modifier_key: NonModifierKey::Special($arg_special),
+      non_modifier_key: Key::SpecialKey($arg_special),
     }
   };
   (@special $arg_modifiers : expr, $arg_special : expr) => {
     Keypress {
       maybe_modifier_keys: Some($arg_modifiers),
-      non_modifier_key: NonModifierKey::Special($arg_special),
+      non_modifier_key: Key::SpecialKey($arg_special),
     }
   };
 
@@ -110,13 +109,13 @@ macro_rules! keypress {
   (@fn $arg_function : expr) => {
     Keypress {
       maybe_modifier_keys: None,
-      non_modifier_key: NonModifierKey::Function($arg_function),
+      non_modifier_key: Key::FunctionKey($arg_function),
     }
   };
   (@fn $arg_modifiers : expr, $arg_function : expr) => {
     Keypress {
       maybe_modifier_keys: Some($arg_modifiers),
-      non_modifier_key: NonModifierKey::Function($arg_function),
+      non_modifier_key: Key::FunctionKey($arg_function),
     }
   };
 }
@@ -128,44 +127,105 @@ pub mod convert_key_event {
   /// - `intersects` -> means that the given bit shows up in your variable, but it might contain other
   ///   bits.
   /// - `contains` -> means that your variable ONLY contains these bits.
-  pub fn copy_modifiers_from_key_event(key_event: &KeyEvent) -> Option<ModifierKeys> {
+  pub fn copy_modifiers_from_key_event(key_event: &KeyEvent) -> Option<ModifierKeysMask> {
     convert_key_modifiers(&key_event.modifiers)
   }
 
-  pub fn copy_code_from_key_event(key_event: &KeyEvent) -> Option<NonModifierKey> {
+  fn match_fn_key(fn_key: u8) -> Option<Key> {
+    match fn_key {
+      1 => Key::FunctionKey(FunctionKey::F1).into(),
+      2 => Key::FunctionKey(FunctionKey::F2).into(),
+      3 => Key::FunctionKey(FunctionKey::F3).into(),
+      4 => Key::FunctionKey(FunctionKey::F4).into(),
+      5 => Key::FunctionKey(FunctionKey::F5).into(),
+      6 => Key::FunctionKey(FunctionKey::F6).into(),
+      7 => Key::FunctionKey(FunctionKey::F7).into(),
+      8 => Key::FunctionKey(FunctionKey::F8).into(),
+      9 => Key::FunctionKey(FunctionKey::F9).into(),
+      10 => Key::FunctionKey(FunctionKey::F10).into(),
+      11 => Key::FunctionKey(FunctionKey::F11).into(),
+      12 => Key::FunctionKey(FunctionKey::F12).into(),
+      _ => None,
+    }
+  }
+
+  fn match_media_key(media_key: MediaKeyCode) -> Option<Key> {
+    // Make the code easier to read below using this alias.
+    type KC = MediaKeyCode;
+    Some(match media_key {
+      KC::Play => Key::Enhanced(Enhanced::MediaKey(MediaKey::Play)),
+      KC::Pause => Key::Enhanced(Enhanced::MediaKey(MediaKey::Pause)),
+      KC::Stop => Key::Enhanced(Enhanced::MediaKey(MediaKey::Stop)),
+      KC::PlayPause => Key::Enhanced(Enhanced::MediaKey(MediaKey::PlayPause)),
+      KC::Reverse => Key::Enhanced(Enhanced::MediaKey(MediaKey::Reverse)),
+      KC::FastForward => Key::Enhanced(Enhanced::MediaKey(MediaKey::FastForward)),
+      KC::Rewind => Key::Enhanced(Enhanced::MediaKey(MediaKey::Rewind)),
+      KC::TrackNext => Key::Enhanced(Enhanced::MediaKey(MediaKey::TrackNext)),
+      KC::TrackPrevious => Key::Enhanced(Enhanced::MediaKey(MediaKey::TrackPrevious)),
+      KC::Record => Key::Enhanced(Enhanced::MediaKey(MediaKey::Record)),
+      KC::LowerVolume => Key::Enhanced(Enhanced::MediaKey(MediaKey::LowerVolume)),
+      KC::RaiseVolume => Key::Enhanced(Enhanced::MediaKey(MediaKey::RaiseVolume)),
+      KC::MuteVolume => Key::Enhanced(Enhanced::MediaKey(MediaKey::MuteVolume)),
+    })
+  }
+
+  fn match_modifier_key_code(modifier_key_code: ModifierKeyCode) -> Option<Key> {
+    // Make the code easier to read below using this alias.
+    type KC = ModifierKeyCode;
+    Some(match modifier_key_code {
+      KC::LeftShift => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftShift)),
+      KC::LeftControl => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftControl)),
+      KC::LeftAlt => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftAlt)),
+      KC::LeftSuper => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftSuper)),
+      KC::LeftHyper => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftHyper)),
+      KC::LeftMeta => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftMeta)),
+      KC::RightShift => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightShift)),
+      KC::RightControl => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightControl)),
+      KC::RightAlt => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightAlt)),
+      KC::RightSuper => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightSuper)),
+      KC::RightHyper => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightHyper)),
+      KC::RightMeta => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightMeta)),
+      KC::IsoLevel3Shift => {
+        Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::IsoLevel3Shift))
+      }
+      KC::IsoLevel5Shift => {
+        Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::IsoLevel5Shift))
+      }
+    })
+  }
+
+  pub fn copy_code_from_key_event(key_event: &KeyEvent) -> Option<Key> {
+    // Make the code easier to read below using this alias.
+    type KC = KeyCode;
     match key_event.code {
-      KeyCode::Null => None,
-      KeyCode::Backspace => NonModifierKey::Special(SpecialKey::Backspace).into(),
-      KeyCode::Enter => NonModifierKey::Special(SpecialKey::Enter).into(),
-      KeyCode::Left => NonModifierKey::Special(SpecialKey::Left).into(),
-      KeyCode::Right => NonModifierKey::Special(SpecialKey::Right).into(),
-      KeyCode::Up => NonModifierKey::Special(SpecialKey::Up).into(),
-      KeyCode::Down => NonModifierKey::Special(SpecialKey::Down).into(),
-      KeyCode::Home => NonModifierKey::Special(SpecialKey::Home).into(),
-      KeyCode::End => NonModifierKey::Special(SpecialKey::End).into(),
-      KeyCode::PageUp => NonModifierKey::Special(SpecialKey::PageUp).into(),
-      KeyCode::PageDown => NonModifierKey::Special(SpecialKey::PageDown).into(),
-      KeyCode::Tab => NonModifierKey::Special(SpecialKey::Tab).into(),
-      KeyCode::BackTab => NonModifierKey::Special(SpecialKey::BackTab).into(),
-      KeyCode::Delete => NonModifierKey::Special(SpecialKey::Delete).into(),
-      KeyCode::Insert => NonModifierKey::Special(SpecialKey::Insert).into(),
-      KeyCode::Esc => NonModifierKey::Special(SpecialKey::Esc).into(),
-      KeyCode::F(fn_key) => match fn_key {
-        1 => NonModifierKey::Function(FunctionKey::F1).into(),
-        2 => NonModifierKey::Function(FunctionKey::F2).into(),
-        3 => NonModifierKey::Function(FunctionKey::F3).into(),
-        4 => NonModifierKey::Function(FunctionKey::F4).into(),
-        5 => NonModifierKey::Function(FunctionKey::F5).into(),
-        6 => NonModifierKey::Function(FunctionKey::F6).into(),
-        7 => NonModifierKey::Function(FunctionKey::F7).into(),
-        8 => NonModifierKey::Function(FunctionKey::F8).into(),
-        9 => NonModifierKey::Function(FunctionKey::F9).into(),
-        10 => NonModifierKey::Function(FunctionKey::F10).into(),
-        11 => NonModifierKey::Function(FunctionKey::F11).into(),
-        12 => NonModifierKey::Function(FunctionKey::F12).into(),
-        _ => None,
-      },
-      KeyCode::Char(character) => NonModifierKey::Character(character).into(),
+      KC::Null => None,
+      KC::Backspace => Key::SpecialKey(SpecialKey::Backspace).into(),
+      KC::Enter => Key::SpecialKey(SpecialKey::Enter).into(),
+      KC::Left => Key::SpecialKey(SpecialKey::Left).into(),
+      KC::Right => Key::SpecialKey(SpecialKey::Right).into(),
+      KC::Up => Key::SpecialKey(SpecialKey::Up).into(),
+      KC::Down => Key::SpecialKey(SpecialKey::Down).into(),
+      KC::Home => Key::SpecialKey(SpecialKey::Home).into(),
+      KC::End => Key::SpecialKey(SpecialKey::End).into(),
+      KC::PageUp => Key::SpecialKey(SpecialKey::PageUp).into(),
+      KC::PageDown => Key::SpecialKey(SpecialKey::PageDown).into(),
+      KC::Tab => Key::SpecialKey(SpecialKey::Tab).into(),
+      KC::BackTab => Key::SpecialKey(SpecialKey::BackTab).into(),
+      KC::Delete => Key::SpecialKey(SpecialKey::Delete).into(),
+      KC::Insert => Key::SpecialKey(SpecialKey::Insert).into(),
+      KC::Esc => Key::SpecialKey(SpecialKey::Esc).into(),
+      KC::F(fn_key) => match_fn_key(fn_key),
+      KC::Char(character) => Key::Character(character).into(),
+      // New "enhanced" keys since crossterm 0.25.0
+      KC::CapsLock => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::CapsLock)).into(),
+      KC::ScrollLock => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::ScrollLock)).into(),
+      KC::NumLock => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::NumLock)).into(),
+      KC::PrintScreen => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::PrintScreen)).into(),
+      KC::Pause => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::Pause)).into(),
+      KC::Menu => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::Menu)).into(),
+      KC::KeypadBegin => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::KeypadBegin)).into(),
+      KC::Media(media_key) => match_media_key(media_key),
+      KC::Modifier(modifier_key_code) => match_modifier_key_code(modifier_key_code),
     }
   }
 
@@ -190,17 +250,17 @@ pub mod convert_key_event {
   /// ╔════════════════════╦═══════════════════════════════════════════════════════════════╗
   /// ║ User action        ║ Result                                                        ║
   /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
-  /// ║ Type "x"           ║ TWInputEVent::Key(keypress! {@char 'x'})                      ║
+  /// ║ Type "x"           ║ InputEvent::Key(keypress! {@char 'x'})                        ║
   /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
-  /// ║ Type "X"           ║ TWInputEVent::Key(keypress! {@char 'X'}) and not              ║
-  /// ║ (On keyboard press ║ TWInputEVent::Key(keypress! {@char ModifierKeys::SHIFT, 'X'}) ║
+  /// ║ Type "X"           ║ InputEvent::Key(keypress! {@char 'X'}) and not                ║
+  /// ║ (On keyboard press ║ InputEvent::Key(keypress! {@char ModifierKeys::SHIFT, 'X'})   ║
   /// ║ Shift+X)           ║ ie, the "SHIFT" is ignored                                    ║
   /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
   /// ║ Type "Shift + x"   ║ same as above                                                 ║
   /// ╚════════════════════╩═══════════════════════════════════════════════════════════════╝
   /// ```
   ///
-  /// The test `test_tw_input_event_matches_correctly` in `test_tw_input_event.rs` demonstrates
+  /// The test `test_input_event_matches_correctly` in `test_input_event.rs` demonstrates
   /// this.
   ///
   /// Docs:
@@ -209,29 +269,56 @@ pub mod convert_key_event {
   pub(crate) fn special_handling_of_character_key_event(
     key_event: KeyEvent,
   ) -> Result<Keypress, ()> {
-    match key_event {
+    return match key_event {
       KeyEvent {
-        code: KeyCode::Char(character),
-        modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
+        kind: KeyEventKind::Press,
+        .. /* ignore everything else: code, modifiers, etc */
       } => {
-        // Character.
-        Ok(keypress! { @char character })
+        match_event_kind_press(key_event)
       }
-      _ => {
-        // All other key presses.
-        let modifiers: Option<ModifierKeys> = copy_modifiers_from_key_event(&key_event);
-        let maybe_keypress: Option<NonModifierKey> = copy_code_from_key_event(&key_event);
+      _=> {
+        Err(())
+      }
+    };
 
-        if let Some(keypress) = maybe_keypress {
-          Ok(Keypress {
-            maybe_modifier_keys: modifiers,
-            non_modifier_key: keypress,
-          })
-        } else {
-          Err(())
+    fn match_event_kind_press(key_event: KeyEvent) -> Result<Keypress, ()> {
+      match key_event {
+        // character keys.
+        KeyEvent {
+          code: KeyCode::Char(character),
+          modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
+          .. /* ignore others */
+        } => {
+          // Character.
+          Ok(keypress! { @char character })
+        },
+        // non character keys.
+        _ => {
+          let modifiers: Option<ModifierKeysMask> = copy_modifiers_from_key_event(&key_event);
+          let maybe_keypress: Option<Key> = copy_code_from_key_event(&key_event);
+
+          if let Some(keypress) = maybe_keypress {
+            Ok(Keypress {
+              maybe_modifier_keys: modifiers,
+              non_modifier_key: keypress,
+            })
+          } else {
+            Err(())
+          }
         }
       }
     }
+  }
+
+  /// Macro to insulate this library from changes in crossterm [KeyEvent] constructor & fields.
+  #[macro_export]
+  macro_rules! keyevent {
+    (
+      code: $arg_key_code: expr,
+      modifiers: $arg_key_modifiers: expr
+    ) => {
+      KeyEvent::new($arg_key_code, $arg_key_modifiers)
+    };
   }
 }
 

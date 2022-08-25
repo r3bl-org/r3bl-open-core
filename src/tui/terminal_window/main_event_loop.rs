@@ -63,7 +63,7 @@ impl TerminalWindow {
   /// A: Default + Clone + Sync + Send,
   /// ```
   pub async fn main_event_loop<S, A>(
-    store: Store<S, A>, shared_app: SharedApp<S, A>, exit_keys: Vec<TWInputEvent>,
+    store: Store<S, A>, shared_app: SharedApp<S, A>, exit_keys: Vec<InputEvent>,
   ) -> CommonResult<()>
   where
     S: Display + Default + Clone + PartialEq + Eq + Debug + Sync + Send + 'static,
@@ -202,7 +202,7 @@ where
   /// Pass the event to the `shared_app` for further processing.
   pub async fn route_input_to_app(
     shared_window: &SharedWindow, shared_store: &SharedStore<S, A>, shared_app: &SharedApp<S, A>,
-    input_event: &TWInputEvent,
+    input_event: &InputEvent,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       let latest_state = shared_store.read().await.get_state();

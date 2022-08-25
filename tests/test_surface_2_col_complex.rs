@@ -45,7 +45,7 @@ fn test_surface_2_col_complex() -> CommonResult<()> {
 /// Main container "container".
 fn create_main_container(tw_surface: &mut Surface) -> CommonResult<()> {
   throws!({
-    tw_surface.box_start(TWBoxProps {
+    tw_surface.box_start(FlexBoxProps {
       id: "container".to_string(),
       dir: Direction::Horizontal,
       requested_size_percent: (100, 100).try_into()?,
@@ -126,7 +126,7 @@ fn create_left_col(tw_surface: &mut Surface) -> CommonResult<()> {
 fn create_right_col(tw_surface: &mut Surface) -> CommonResult<()> {
   throws!({
     // No macro.
-    tw_surface.box_start(TWBoxProps {
+    tw_surface.box_start(FlexBoxProps {
       maybe_styles: get_styles! { from: tw_surface.stylesheet, ["col_2"] },
       id: "col_2".to_string(),
       dir: Direction::Vertical,

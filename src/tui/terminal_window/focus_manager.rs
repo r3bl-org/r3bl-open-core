@@ -72,17 +72,18 @@ where
   pub fn remove(&mut self, id: &str) -> Option<SharedComponent<S, A>> { self.components.remove(id) }
 
   pub async fn route_to_focused_component(
-    &mut self, has_focus: &HasFocus, input_event: &TWInputEvent, state: &S,
+    &mut self, has_focus: &HasFocus, input_event: &InputEvent, state: &S,
     shared_store: &SharedStore<S, A>,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       // If component has focus, then route input_event to it. Return its propagation enum.
       if let Some(shared_component_has_focus) = self.get_has_focus(has_focus) {
         call_handle_event!(
-          shared_component: shared_component_has_focus, 
-          input_event: input_event, 
-          state: state, 
-          shared_store: shared_store)
+          shared_component: shared_component_has_focus,
+          input_event: input_event,
+          state: state,
+          shared_store: shared_store
+        )
       };
 
       // input_event not handled, propagate it.
@@ -94,9 +95,9 @@ where
 #[macro_export]
 macro_rules! call_handle_event {
   (
-    shared_component: $shared_component: expr, 
-    input_event:      $input_event: expr, 
-    state:            $state: expr, 
+    shared_component: $shared_component: expr,
+    input_event:      $input_event: expr,
+    state:            $state: expr,
     shared_store:     $shared_store: expr
   ) => {{
     let result_event_propagation = $shared_component
@@ -134,7 +135,7 @@ macro_rules! route_event_to_focused_component {
 /// There are certain fields that need to be in each state struct to represent global information
 /// about keyboard focus.
 ///
-/// 1. An `id` [String] is used to store which [TWBox] id currently holds keyboard focus.
+/// 1. An `id` [String] is used to store which [FlexBox] id currently holds keyboard focus.
 ///    This is global.
 /// 2. Each `id` may have a [Position] associated with it, which is used to draw the "cursor" (the
 ///    meaning of which depends on the specific [Component] impl). This cursor is scoped to
@@ -153,27 +154,27 @@ pub struct HasFocus {
 pub type CursorPositionMap = HashMap<String, Option<Position>>;
 
 impl HasFocus {
-  /// Set the id of the [TWBox] that has keyboard focus.
+  /// Set the id of the [FlexBox] that has keyboard focus.
   pub fn get_id(&self) -> Option<String> { self.id.clone() }
 
-  /// Get the id of the [TWBox] that has keyboard focus.
+  /// Get the id of the [FlexBox] that has keyboard focus.
   pub fn set_id(&mut self, id: &str) { self.id = Some(id.into()) }
 
   /// Check whether the given id currently has keyboard focus.
   pub fn does_id_have_focus(&self, id: &str) -> bool { self.id == Some(id.into()) }
 
-  /// Check whether the id of the [TWBox] currently has keyboard focus.
-  pub fn does_current_box_have_focus(&self, current_box: &TWBox) -> bool {
+  /// Check whether the id of the [FlexBox] currently has keyboard focus.
+  pub fn does_current_box_have_focus(&self, current_box: &FlexBox) -> bool {
     self.does_id_have_focus(&current_box.id)
   }
 
-  /// For a given [TWBox] id, set the position of the cursor inside of it.
+  /// For a given [FlexBox] id, set the position of the cursor inside of it.
   pub fn set_cursor_position_for_id(&mut self, id: &str, maybe_position: Option<Position>) {
     let map = &mut self.cursor_position_map;
     map.insert(id.into(), maybe_position);
   }
 
-  /// For a given [TWBox] id, get the position of the cursor inside of it.
+  /// For a given [FlexBox] id, get the position of the cursor inside of it.
   pub fn get_cursor_position_for_id(&self, id: &str) -> Option<Position> {
     let map = &self.cursor_position_map;
     if map.contains_key(id) {

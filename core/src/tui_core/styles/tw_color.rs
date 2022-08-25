@@ -72,8 +72,8 @@ pub enum TWColor {
 #[macro_export]
 macro_rules! color {
   (
-    $arg_r : expr, 
-    $arg_g : expr, 
+    $arg_r : expr,
+    $arg_g : expr,
     $arg_b : expr
   ) => {
     TWColor::Rgb {
@@ -142,32 +142,31 @@ macro_rules! color {
 
 mod helpers {
 
-use super::*;
+  use super::*;
 
   impl Debug for TWColor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       match self {
         TWColor::Rgb { r, g, b } => f.write_fmt(format_args!("{},{},{}", r, g, b)),
-        TWColor::AnsiValue(value) =>  f.write_fmt(format_args!("ansi_value({})", value)),
-        TWColor::Reset =>       f.write_fmt(format_args!("reset")),
-        TWColor::Black =>       f.write_fmt(format_args!("black")),
-        TWColor::DarkGrey =>    f.write_fmt(format_args!("dark_grey")),
-        TWColor::Red =>         f.write_fmt(format_args!("red")),
-        TWColor::DarkRed =>     f.write_fmt(format_args!("dark_red")),
-        TWColor::Green =>       f.write_fmt(format_args!("green")),
-        TWColor::DarkGreen =>   f.write_fmt(format_args!("dark_green")),
-        TWColor::Yellow =>      f.write_fmt(format_args!("yellow")),
-        TWColor::DarkYellow =>  f.write_fmt(format_args!("dark_yellow")),
-        TWColor::Blue =>        f.write_fmt(format_args!("blue")),
-        TWColor::DarkBlue =>    f.write_fmt(format_args!("dark_blue")),
-        TWColor::Magenta =>     f.write_fmt(format_args!("magenta")),
+        TWColor::AnsiValue(value) => f.write_fmt(format_args!("ansi_value({})", value)),
+        TWColor::Reset => f.write_fmt(format_args!("reset")),
+        TWColor::Black => f.write_fmt(format_args!("black")),
+        TWColor::DarkGrey => f.write_fmt(format_args!("dark_grey")),
+        TWColor::Red => f.write_fmt(format_args!("red")),
+        TWColor::DarkRed => f.write_fmt(format_args!("dark_red")),
+        TWColor::Green => f.write_fmt(format_args!("green")),
+        TWColor::DarkGreen => f.write_fmt(format_args!("dark_green")),
+        TWColor::Yellow => f.write_fmt(format_args!("yellow")),
+        TWColor::DarkYellow => f.write_fmt(format_args!("dark_yellow")),
+        TWColor::Blue => f.write_fmt(format_args!("blue")),
+        TWColor::DarkBlue => f.write_fmt(format_args!("dark_blue")),
+        TWColor::Magenta => f.write_fmt(format_args!("magenta")),
         TWColor::DarkMagenta => f.write_fmt(format_args!("dark_magenta")),
-        TWColor::Cyan =>        f.write_fmt(format_args!("cyan")),
-        TWColor::DarkCyan =>    f.write_fmt(format_args!("dark_cyan")),
-        TWColor::White =>       f.write_fmt(format_args!("white")),
-        TWColor::Grey =>        f.write_fmt(format_args!("grey")),
+        TWColor::Cyan => f.write_fmt(format_args!("cyan")),
+        TWColor::DarkCyan => f.write_fmt(format_args!("dark_cyan")),
+        TWColor::White => f.write_fmt(format_args!("white")),
+        TWColor::Grey => f.write_fmt(format_args!("grey")),
       }
     }
   }
-
 }

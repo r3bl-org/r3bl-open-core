@@ -23,7 +23,7 @@
 /// fn test_simple_2_col_layout() -> CommonResult<()> {
 ///   throws! {
 ///     match input_event {
-///       TWInputEvent::DisplayableKeypress(character) => {
+///       InputEvent::DisplayableKeypress(character) => {
 ///         println_raw!(character);
 ///       }
 ///       _ => todo!()

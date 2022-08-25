@@ -34,7 +34,7 @@ impl Default for Direction {
 /// A box is a rectangle with a position and size. The direction of the box
 /// determines how it's contained elements are positioned.
 #[derive(Clone, Default)]
-pub struct TWBox {
+pub struct FlexBox {
   pub id: String,
   pub dir: Direction,
   pub origin_pos: Position,
@@ -46,7 +46,7 @@ pub struct TWBox {
   pub maybe_computed_style: Option<Style>,
 }
 
-impl TWBox {
+impl FlexBox {
   pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style.clone() }
 }
 
@@ -64,9 +64,9 @@ enum FormatMsg {
   None,
 }
 
-impl Debug for TWBox {
+impl Debug for FlexBox {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("TWBox")
+    f.debug_struct("FlexBox")
       .field("id", &self.id)
       .field("dir", &self.dir)
       .field("origin_pos", &self.origin_pos)
