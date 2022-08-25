@@ -30,9 +30,9 @@ use r3bl_rs_utils::*;
 #[test]
 fn test_syntax_expansion() {
   let _ = style! {
-    id: "style2"
-    attrib: [dim, bold]
-    margin: 1
+    id:       "style2"
+    attrib:   [dim, bold]
+    padding:  1
     color_fg: color!(@red)
     color_bg: color!(0, 0, 0)
   };
@@ -43,21 +43,21 @@ fn test_syntax_expansion_dsl() {
   let _ = style! {
     id: "style_fixed"
     attrib: [dim, bold]
-    margin: 1
+    padding: 1
     color_fg: color!(@red)
     color_bg: color!(0, 0, 0)
   };
   let _ = style! {
     id: "style_fixed"
     attrib: [dim, bold]
-    margin: 1
+    padding: 1
     color_fg: color!(@red)
     color_bg: color!(0, 0, 0)
   };
   let _ = style! {
     id: "style_fixed"
     attrib: [dim, bold]
-    margin: 1
+    padding: 1
     color_fg: color!(@red)
     color_bg: color!(0, 0, 0)
   };
@@ -92,15 +92,15 @@ fn test_with_attrib() {
 }
 
 #[test]
-fn test_with_margin() {
+fn test_with_padding() {
   with! {
     style! {
       id: "style1"
-      margin: 1
+      padding: 1
     },
     as it,
     run {
-      assert_eq!(it.margin, Some(1));
+      assert_eq!(it.padding, Some(1));
     }
   }
 }

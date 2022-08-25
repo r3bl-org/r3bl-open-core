@@ -66,7 +66,7 @@ fn create_main_container(tw_surface: &mut Surface) -> CommonResult<()> {
       assert_eq2!(layout_item.id, "container");
       assert_eq2!(layout_item.dir, Direction::Horizontal);
       assert_eq2!(layout_item.origin_pos, (0, 0).into());
-      assert_eq2!(layout_item.bounds_size, (500, 500).into()); // due to `margin: 1`
+      assert_eq2!(layout_item.bounds_size, (500, 500).into()); // due to `padding: 1`
       assert_eq2!(layout_item.requested_size_percent, (100, 100).try_into()?);
       assert_eq2!(layout_item.insertion_pos_for_next_box, Some((0, 0).into()));
       assert_eq2!(layout_item.get_computed_style(), None);
@@ -98,8 +98,8 @@ fn create_left_col(tw_surface: &mut Surface) -> CommonResult<()> {
       assert_eq2!(layout_item.origin_pos, (0, 0).into());
       assert_eq2!(layout_item.bounds_size, (250, 500).into());
 
-      assert_eq2!(layout_item.style_adjusted_origin_pos, (2, 2).into()); // Take margin into account.
-      assert_eq2!(layout_item.style_adjusted_bounds_size, (246, 496).into()); // Take margin into account.
+      assert_eq2!(layout_item.style_adjusted_origin_pos, (2, 2).into()); // Take padding into account.
+      assert_eq2!(layout_item.style_adjusted_bounds_size, (246, 496).into()); // Take padding into account.
 
       assert_eq2!(layout_item.requested_size_percent, (50, 100).try_into()?);
       assert_eq2!(layout_item.insertion_pos_for_next_box, None);
@@ -134,8 +134,8 @@ fn create_right_col(tw_surface: &mut Surface) -> CommonResult<()> {
       assert_eq2!(current_box.origin_pos, (250, 0).into());
       assert_eq2!(current_box.bounds_size, (250, 500).into());
 
-      assert_eq2!(current_box.style_adjusted_origin_pos, (253, 3).into()); // Take margin into account.
-      assert_eq2!(current_box.style_adjusted_bounds_size, (244, 494).into()); // Take margin into account.
+      assert_eq2!(current_box.style_adjusted_origin_pos, (253, 3).into()); // Take padding into account.
+      assert_eq2!(current_box.style_adjusted_bounds_size, (244, 494).into()); // Take padding into account.
 
       assert_eq2!(current_box.requested_size_percent, (50, 100).try_into()?);
       assert_eq2!(current_box.insertion_pos_for_next_box, None);
@@ -154,14 +154,14 @@ fn dsl_stylesheet() -> CommonResult<Stylesheet> {
       style! {
         id: "col_1"
         attrib: [dim, bold]
-        margin: 2
+        padding: 2
         color_fg: TWColor::Rgb { r: 255, g: 255, b: 0 } /* Yellow. */
         color_bg: TWColor::Rgb { r: 128, g: 128, b: 128 } /* Grey. */
       },
       style! {
         id: "col_2"
         attrib: [underline, strikethrough]
-        margin: 3
+        padding: 3
         color_fg: TWColor::Rgb { r: 0, g: 0, b: 0 } /* Black. */
         color_bg: TWColor::Rgb { r: 255, g: 255, b: 255 } /* White. */
       }

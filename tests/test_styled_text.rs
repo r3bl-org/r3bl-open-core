@@ -65,12 +65,12 @@ mod helpers {
       stylesheet! {
         style! {
           id: "style1"
-          margin: 1
+          padding: 1
           color_bg: TWColor::Rgb { r: 55, g: 55, b: 100 }
         },
         style! {
           id: "style2"
-          margin: 1
+          padding: 1
           color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
         }
       }

@@ -23,7 +23,7 @@ pub(crate) fn code_gen(
   StyleMetadata {
     id,
     attrib_vec,
-    margin,
+    padding,
     color_fg,
     color_bg,
   }: StyleMetadata,
@@ -35,10 +35,10 @@ pub(crate) fn code_gen(
   let has_attrib_hidden = attrib_vec.contains(&Attrib::Hidden);
   let has_attrib_strikethrough = attrib_vec.contains(&Attrib::Strikethrough);
 
-  let maybe_margin_expr = match margin {
-    Some(margin_int) => {
+  let maybe_padding_expr = match padding {
+    Some(padding_int) => {
       quote! {
-        margin: Some(#margin_int),
+        padding: Some(#padding_int),
       }
     }
     None => quote! {},
@@ -71,7 +71,7 @@ pub(crate) fn code_gen(
       reverse: #has_attrib_reverse,
       hidden: #has_attrib_hidden,
       strikethrough: #has_attrib_strikethrough,
-      #maybe_margin_expr
+      #maybe_padding_expr
       #maybe_color_fg_expr
       #maybe_color_bg_expr
       .. Default::default()

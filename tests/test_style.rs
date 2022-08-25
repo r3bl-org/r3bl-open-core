@@ -32,7 +32,7 @@ fn test_bitflags() {
       assert!(!mask1.contains(StyleFlag::COLOR_FG_SET));
       assert!(!mask1.contains(StyleFlag::COLOR_BG_SET));
       assert!(!mask1.contains(StyleFlag::BOLD_SET));
-      assert!(!mask1.contains(StyleFlag::MARGIN_SET));
+      assert!(!mask1.contains(StyleFlag::PADDING_SET));
     }
   };
 
@@ -45,7 +45,7 @@ fn test_bitflags() {
       assert!(!mask2.contains(StyleFlag::UNDERLINE_SET));
       assert!(!mask2.contains(StyleFlag::COLOR_FG_SET));
       assert!(!mask2.contains(StyleFlag::COLOR_BG_SET));
-      assert!(!mask2.contains(StyleFlag::MARGIN_SET));
+      assert!(!mask2.contains(StyleFlag::PADDING_SET));
     }
   }
 
@@ -64,7 +64,7 @@ fn test_all_fields_in_style() {
     strikethrough: true,
     color_fg: color!(@red).into(),
     color_bg: color!(0, 0, 0).into(),
-    margin: Some(10),
+    padding: Some(10),
     ..Style::default()
   };
 
@@ -78,7 +78,7 @@ fn test_all_fields_in_style() {
   assert!(style.strikethrough);
   assert_eq2!(style.color_fg, color!(@red).into());
   assert_eq2!(style.color_bg, color!(0, 0, 0).into());
-  assert_eq2!(style.margin, Some(10));
+  assert_eq2!(style.padding, Some(10));
 
   let mask = style.get_bitflags();
   assert!(!mask.contains(StyleFlag::COMPUTED_SET));
@@ -90,7 +90,7 @@ fn test_all_fields_in_style() {
   assert!(mask.contains(StyleFlag::STRIKETHROUGH_SET));
   assert!(mask.contains(StyleFlag::COLOR_FG_SET));
   assert!(mask.contains(StyleFlag::COLOR_BG_SET));
-  assert!(mask.contains(StyleFlag::MARGIN_SET));
+  assert!(mask.contains(StyleFlag::PADDING_SET));
 }
 
 #[test]
@@ -120,9 +120,9 @@ fn test_cascade_style() {
     color_bg: TWColor::Yellow
   };
 
-  let style_margin = style! {
-    id: "margin"
-    margin: 2
+  let style_padding = style! {
+    id: "padding"
+    padding: 2
   };
 
   let style_red_fg = style! {
@@ -130,17 +130,17 @@ fn test_cascade_style() {
     color_fg: TWColor::Red
   };
 
-  let style_margin_another = style! {
-    id: "margin"
-    margin: 1
+  let style_padding_another = style! {
+    id: "padding"
+    padding: 1
   };
 
   let mut my_style = style_bold_green_fg
     + style_dim
     + style_yellow_bg
-    + style_margin
+    + style_padding
     + style_red_fg
-    + style_margin_another;
+    + style_padding_another;
 
   debug!(my_style);
 
@@ -150,13 +150,13 @@ fn test_cascade_style() {
         | StyleFlag::COLOR_BG_SET
         | StyleFlag::BOLD_SET
         | StyleFlag::DIM_SET
-        | StyleFlag::MARGIN_SET
+        | StyleFlag::PADDING_SET
         | StyleFlag::COMPUTED_SET
     ),
     true
   );
 
-  assert_eq2!(my_style.margin.unwrap(), 3);
+  assert_eq2!(my_style.padding.unwrap(), 3);
   assert_eq2!(my_style.color_bg.unwrap(), TWColor::Yellow);
   assert_eq2!(my_style.color_fg.unwrap(), TWColor::Red);
   assert!(my_style.bold);
@@ -218,19 +218,19 @@ fn test_stylesheet_builder() -> CommonResult<()> {
     style1,
     style! {
           id: id_2 /* using a variable instead of string literal */
-          margin: 1
+          padding: 1
           color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
     },
     make_a_style("style3"),
     vec![
       style! {
         id: "style4"
-        margin: 1
+        padding: 1
         color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
       },
       style! {
         id: "style5"
-        margin: 1
+        padding: 1
         color_bg: TWColor::Rgb { r: 85, g: 85, b: 255 }
       },
     ],
