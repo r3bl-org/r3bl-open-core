@@ -33,7 +33,7 @@ fn test_convert_mouse_event_mouse_moved() {
     assert_eq2!(converted_mouse_input.pos, position!(col: 0, row: 0));
     assert_eq2!(
       converted_mouse_input.maybe_modifier_keys,
-      Some(ModifierKeys::SHIFT)
+      Some(ModifierKeysMask::SHIFT)
     );
   }
   // Mouse moved.
@@ -111,7 +111,7 @@ fn test_convert_mouse_event_mouse_click() {
     assert_eq2!(converted_mouse_input.pos, position!(col: 0, row: 0));
     assert_eq2!(
       converted_mouse_input.maybe_modifier_keys,
-      Some(ModifierKeys::SHIFT)
+      Some(ModifierKeysMask::SHIFT)
     );
   }
   // Mouse up.
@@ -164,7 +164,7 @@ fn test_convert_mouse_event_mouse_drag() {
     assert_eq2!(converted_mouse_input.pos, position!(col: 0, row: 0));
     assert_eq2!(
       converted_mouse_input.maybe_modifier_keys,
-      Some(ModifierKeys::SHIFT | ModifierKeys::ALT)
+      Some(ModifierKeysMask::SHIFT | ModifierKeysMask::ALT)
     );
   }
 }

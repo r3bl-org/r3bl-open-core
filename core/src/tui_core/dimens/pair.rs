@@ -17,6 +17,8 @@
 
 use std::fmt::{self, Debug};
 
+use serde::*;
+
 use crate::*;
 
 /// Pair, defined as (first, second). Here are some examples.
@@ -28,7 +30,7 @@ use crate::*;
 /// ```ignore
 /// let pair: Pair = pair!(0, 0);
 /// ```
-#[derive(Copy, Clone, Default, PartialEq, Eq)]
+#[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Pair {
   pub first: UnitType,
   pub second: UnitType,
@@ -80,7 +82,7 @@ impl From<(usize, usize)> for Pair {
 #[macro_export]
 macro_rules! pair {
   (
-    $arg_first:expr, 
+    $arg_first:expr,
     $arg_second:expr
   ) => {
     Pair {

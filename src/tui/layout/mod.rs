@@ -20,13 +20,13 @@
 pub const DEBUG: bool = true;
 
 // Attach source files.
+pub mod flex_box;
 pub mod layout_error;
 pub mod layout_management;
 pub mod surface;
-pub mod tw_box;
 
 // Re-export the public items.
+pub use flex_box::*;
 pub use layout_error::*;
 pub use layout_management::*;
 pub use surface::*;
-pub use tw_box::*;

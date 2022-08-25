@@ -21,16 +21,16 @@ use serde::{Deserialize, Serialize};
 
 bitflags! {
   #[derive(Serialize, Deserialize)]
-  pub struct ModifierKeys: u8 {
+  pub struct ModifierKeysMask: u8 {
     const SHIFT = 0b0000_0001;
     const CTRL  = 0b0000_0010;
     const ALT   = 0b0000_0100;
   }
 }
 
-pub fn convert_key_modifiers(modifiers: &KeyModifiers) -> Option<ModifierKeys> {
+pub fn convert_key_modifiers(modifiers: &KeyModifiers) -> Option<ModifierKeysMask> {
   // Start w/ empty my_modifiers.
-  let my_modifiers: ModifierKeys = (*modifiers).into();
+  let my_modifiers: ModifierKeysMask = (*modifiers).into();
   if modifiers.is_empty() {
     None
   } else {
@@ -38,20 +38,20 @@ pub fn convert_key_modifiers(modifiers: &KeyModifiers) -> Option<ModifierKeys> {
   }
 }
 
-impl From<KeyModifiers> for ModifierKeys {
+impl From<KeyModifiers> for ModifierKeysMask {
   fn from(other: KeyModifiers) -> Self {
     // Start w/ empty my_modifiers.
-    let mut my_modifiers: ModifierKeys = ModifierKeys::empty(); // 0b0000_0000
+    let mut my_modifiers: ModifierKeysMask = ModifierKeysMask::empty(); // 0b0000_0000
 
     // Try and set any bitflags from key_event.
     if other.intersects(KeyModifiers::SHIFT) {
-      my_modifiers.insert(ModifierKeys::SHIFT) // my_modifiers = 0b0000_0001;
+      my_modifiers.insert(ModifierKeysMask::SHIFT) // my_modifiers = 0b0000_0001;
     }
     if other.intersects(KeyModifiers::CONTROL) {
-      my_modifiers.insert(ModifierKeys::CTRL) // my_modifiers = 0b0000_0010;
+      my_modifiers.insert(ModifierKeysMask::CTRL) // my_modifiers = 0b0000_0010;
     }
     if other.intersects(KeyModifiers::ALT) {
-      my_modifiers.insert(ModifierKeys::ALT) // my_modifiers = 0b0000_0100;
+      my_modifiers.insert(ModifierKeysMask::ALT) // my_modifiers = 0b0000_0100;
     }
 
     my_modifiers

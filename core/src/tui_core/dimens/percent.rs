@@ -17,10 +17,12 @@
 
 use std::fmt::{self, Debug};
 
+use serde::*;
+
 use crate::*;
 
 /// Represents an integer value between 0 and 100 (inclusive).
-#[derive(Copy, Clone, PartialEq, Eq, Default)]
+#[derive(Copy, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Percent {
   pub value: u8,
 }
@@ -95,7 +97,7 @@ pub fn calc_percentage(percentage: Percent, value: UnitType) -> UnitType {
 }
 
 /// Size, defined as [height, width].
-#[derive(Copy, Clone, Default, PartialEq, Eq)]
+#[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RequestedSizePercent {
   pub width_pc: Percent,
   pub height_pc: Percent,

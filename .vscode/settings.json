@@ -39,7 +39,7 @@
     "tofro",
     "treememoryarena",
     "tuicore",
-    "twinputevent",
+    "InputEvent",
     "withmutreturns"
   ]
 }

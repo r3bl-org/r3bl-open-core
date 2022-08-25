@@ -62,8 +62,8 @@ pub struct Style {
   pub color_fg: Option<TWColor>,
   pub color_bg: Option<TWColor>,
   /// The semantics of this are the same as CSS. The padding is space that is taken up inside a
-  /// [TWBox]. This does not affect the size or position of a [TWBox], it only applies to the
-  /// contents inside of that [TWBox].
+  /// [FlexBox]. This does not affect the size or position of a [FlexBox], it only applies to the
+  /// contents inside of that [FlexBox].
   pub padding: Option<UnitType>,
   pub cached_bitflags: Option<StyleFlag>,
 }

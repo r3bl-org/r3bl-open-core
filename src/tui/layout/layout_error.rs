@@ -66,7 +66,7 @@ impl LayoutError {
     Box::new(LayoutError { err_type, msg })
   }
 
-  pub fn format_msg_with_stack_len(stack_of_boxes: &Vec<TWBox>, msg: &str) -> String {
+  pub fn format_msg_with_stack_len(stack_of_boxes: &Vec<FlexBox>, msg: &str) -> String {
     format!("{}, stack_of_boxes.len(): {}", msg, stack_of_boxes.len())
   }
 }

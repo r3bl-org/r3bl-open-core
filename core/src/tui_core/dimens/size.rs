@@ -18,6 +18,8 @@
 use std::{fmt::{self, Debug, Display},
           ops::SubAssign};
 
+use serde::*;
+
 use crate::*;
 
 /// Here is a visual representation of how position and sizing works for the
@@ -45,7 +47,7 @@ use crate::*;
 /// ```ignore
 /// let size: Size = size!(10, 10);
 /// ```
-#[derive(Copy, Clone, Default, PartialEq, Eq)]
+#[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Size {
   pub cols: UnitType, // width = number of cols (y).
   pub rows: UnitType, // height = number of rows (x).

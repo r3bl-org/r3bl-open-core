@@ -70,7 +70,7 @@
 //! listens for input events (no threads are blocked). When the user types something, this input is
 //! processed by the main loop of [TerminalWindow].
 //!
-//! 1. The [Component] that is in [TWBox] w/ `id=1` currently has focus.
+//! 1. The [Component] that is in [FlexBox] w/ `id=1` currently has focus.
 //! 2. When an input event comes in from the user (key press or mouse input) it is routed to the
 //!    [TWApp] first, before [TerminalWindow] looks at the event.
 //! 3. The specificity of the event handler in [TWApp] is higher than the default input handler in
@@ -101,7 +101,7 @@
 //! 2. [TWApp] - This is where you write your code. You pass in a [TWApp] to the [TerminalWindow] to
 //!    bootstrap your TUI app. You can just use [TWApp] to build your app, if it is a simple one &
 //!    you don't really need any sophisticated layout or styling. But if you want layout and
-//!    styling, now we have to deal with [TWBox], [Component], and [crate::Style].
+//!    styling, now we have to deal with [FlexBox], [Component], and [crate::Style].
 //!
 //! ## Layout and styling
 //!
@@ -138,7 +138,7 @@
 //! routing. The input events are routed to the [Component] that currently has focus.
 //!
 //! The [HasFocus] struct takes care of this. This provides 2 things:
-//! 1. It holds an `id` of a [TWBox] / [Component] that has focus.
+//! 1. It holds an `id` of a [FlexBox] / [Component] that has focus.
 //! 2. It also holds a map that holds a [crate::Position] for each `id`. This is used to represent a
 //!    cursor (whatever that means to your app & component). This cursor is maintained for each
 //!    `id`. This allows a separate cursor for each [Component] that has focus. This is needed to

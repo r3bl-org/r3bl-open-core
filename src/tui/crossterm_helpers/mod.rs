@@ -50,19 +50,21 @@
 // Attach source files.
 pub mod async_event_stream_ext;
 pub mod color_converter;
+pub mod enhanced_keys;
+pub mod input_event;
 pub mod keypress;
-pub mod modifier_keys;
+pub mod modifier_keys_mask;
 pub mod mouse_input;
+pub mod raw_mode;
 pub mod tw_command;
-pub mod tw_input_event;
-pub mod tw_raw_mode;
 
 // Re-export.
 pub use async_event_stream_ext::*;
 pub use color_converter::*;
+pub use enhanced_keys::*;
+pub use input_event::*;
 pub use keypress::*;
-pub use modifier_keys::*;
+pub use modifier_keys_mask::*;
 pub use mouse_input::*;
+pub use raw_mode::*;
 pub use tw_command::*;
-pub use tw_input_event::*;
-pub use tw_raw_mode::*;
