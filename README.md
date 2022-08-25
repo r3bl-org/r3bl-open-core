@@ -1076,7 +1076,7 @@ with_mut! {
     assert!(!mask2.contains(StyleFlag::UNDERLINE_SET));
     assert!(!mask2.contains(StyleFlag::COLOR_FG_SET));
     assert!(!mask2.contains(StyleFlag::COLOR_BG_SET));
-    assert!(!mask2.contains(StyleFlag::MARGIN_SET));
+    assert!(!mask2.contains(StyleFlag::PADDING_SET));
   }
 }
 ```

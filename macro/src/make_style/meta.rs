@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
- use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::*;
 use syn::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,9 +31,9 @@ pub(crate) enum Attrib {
 /// Docs: https://docs.rs/syn/1.0.98/syn/parse/struct.ParseBuffer.html
 #[derive(Debug, Clone)]
 pub(crate) struct StyleMetadata {
-  pub id: Expr,                 /* Only required field. */
-  pub attrib_vec: Vec<Attrib>,  /* Attributes are optional. */
-  pub margin: Option<UnitType>, /* Optional. */
-  pub color_fg: Option<Expr>,   /* Optional. */
-  pub color_bg: Option<Expr>,   /* Optional. */
+  pub id: Expr,                  /* Only required field. */
+  pub attrib_vec: Vec<Attrib>,   /* Attributes are optional. */
+  pub padding: Option<UnitType>, /* Optional. */
+  pub color_fg: Option<Expr>,    /* Optional. */
+  pub color_bg: Option<Expr>,    /* Optional. */
 }

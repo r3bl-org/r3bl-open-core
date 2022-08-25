@@ -39,12 +39,12 @@ use crate::*;
 /// stylesheet.add_styles(vec![
 ///   style! {
 ///     id: style1
-///     margin: 1
+///     padding: 1
 ///     color_bg: Color::Rgb { r: 55, g: 55, b: 248 }
 ///   },
 ///   style! {
 ///     id: style2
-///     margin: 1
+///     padding: 1
 ///     color_bg: Color::Rgb { r: 85, g: 85, b: 255 }
 ///   }
 /// ])?;
@@ -61,7 +61,10 @@ pub struct Style {
   pub computed: bool,
   pub color_fg: Option<TWColor>,
   pub color_bg: Option<TWColor>,
-  pub margin: Option<UnitType>,
+  /// The semantics of this are the same as CSS. The padding is space that is taken up inside a
+  /// [TWBox]. This does not affect the size or position of a [TWBox], it only applies to the
+  /// contents inside of that [TWBox].
+  pub padding: Option<UnitType>,
   pub cached_bitflags: Option<StyleFlag>,
 }
 
@@ -105,8 +108,8 @@ mod addition {
       if other_mask.contains(StyleFlag::UNDERLINE_SET) {
         new_style.underline = other.underline;
       }
-      if other_mask.contains(StyleFlag::MARGIN_SET) {
-        new_style.margin = other.margin;
+      if other_mask.contains(StyleFlag::PADDING_SET) {
+        new_style.padding = other.padding;
       }
       if other_mask.contains(StyleFlag::REVERSE_SET) {
         new_style.reverse = other.reverse;
@@ -119,12 +122,12 @@ mod addition {
       }
     }
 
-    // Aggregate margins.
-    let aggregate_margin = lhs.margin.unwrap_or(0) + rhs.margin.unwrap_or(0);
-    if aggregate_margin > 0 {
-      new_style.margin = Some(aggregate_margin);
+    // Aggregate paddings.
+    let aggregate_padding = lhs.padding.unwrap_or(0) + rhs.padding.unwrap_or(0);
+    if aggregate_padding > 0 {
+      new_style.padding = Some(aggregate_padding);
     } else {
-      new_style.margin = None;
+      new_style.padding = None;
     }
 
     // Recalculate the bitflags.
@@ -185,11 +188,11 @@ mod helpers {
 
       write!(
         f,
-        "Style {{ {} | fg: {:?} | bg: {:?} | margin: {:?} }}",
+        "Style {{ {} | fg: {:?} | bg: {:?} | padding: {:?} }}",
         msg_vec.join("+"),
         self.color_fg,
         self.color_bg,
-        self.margin.unwrap_or(0)
+        self.padding.unwrap_or(0)
       )
     }
   }
@@ -208,7 +211,7 @@ bitflags! {
     const BOLD_SET            = 0b0000_0100;
     const DIM_SET             = 0b0000_1000;
     const UNDERLINE_SET       = 0b0001_0000;
-    const MARGIN_SET          = 0b0010_0000;
+    const PADDING_SET          = 0b0010_0000;
     const COMPUTED_SET        = 0b0100_0000;
     const REVERSE_SET         = 0b1000_0000;
     const HIDDEN_SET          = 0b1000_0001;
@@ -250,8 +253,8 @@ impl Style {
     if self.underline {
       it.insert(StyleFlag::UNDERLINE_SET);
     }
-    if self.margin.is_some() {
-      it.insert(StyleFlag::MARGIN_SET);
+    if self.padding.is_some() {
+      it.insert(StyleFlag::PADDING_SET);
     }
     if self.computed {
       it.insert(StyleFlag::COMPUTED_SET);

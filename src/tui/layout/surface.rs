@@ -188,7 +188,7 @@ impl PerformPositioningAndSizing for Surface {
 }
 
 /// - If `is_root` is true:
-///   - The `insertion_pos_for_next_box` is origin_pos + margin adjustment (from style)
+///   - The `insertion_pos_for_next_box` is origin_pos + padding adjustment (from style)
 /// - If `is_root` is false:
 ///   - The `insertion_pos_for_next_box` is `None` non-root box; it needs to be calculated by
 ///     `update_box_cursor_pos_for_next_box_insertion()`
@@ -209,7 +209,7 @@ fn make_non_root_box_with_style(
     calc_percentage(height_pc, container_bounds.rows),
   ));
 
-  // Adjust `bounds_size` & `origin` based on the style's margin.
+  // Adjust `bounds_size` & `origin` based on the style's padding.
   let (style_adjusted_origin_pos, style_adjusted_bounds_size) =
     adjust_with_style(&maybe_cascaded_style, origin_pos, bounds_size);
 
@@ -239,7 +239,7 @@ fn make_root_box_with_style(
 ) -> TWBox {
   let computed_style = Stylesheet::compute(&maybe_styles);
 
-  // Adjust `bounds_size` & `origin` based on the style's margin.
+  // Adjust `bounds_size` & `origin` based on the style's padding.
   let (style_adjusted_origin_pos, style_adjusted_bounds_size) =
     adjust_with_style(&computed_style, origin_pos, bounds_size);
 
@@ -256,7 +256,7 @@ fn make_root_box_with_style(
   }
 }
 
-/// Adjust `origin` & `bounds_size` based on the `maybe_style`'s margin.
+/// Adjust `origin` & `bounds_size` based on the `maybe_style`'s padding.
 fn adjust_with_style(
   maybe_computed_style: &Option<Style>, origin_pos: Position, bounds_size: Size,
 ) -> (Position, Size) {
@@ -264,9 +264,9 @@ fn adjust_with_style(
   let mut style_adjusted_bounds_size = bounds_size;
 
   if let Some(ref style) = maybe_computed_style {
-    if let Some(margin) = style.margin {
-      style_adjusted_origin_pos += margin;
-      style_adjusted_bounds_size -= margin * 2;
+    if let Some(padding) = style.padding {
+      style_adjusted_origin_pos += padding;
+      style_adjusted_bounds_size -= padding * 2;
     };
   }
 

@@ -28,7 +28,7 @@ use crate::utils::IdentExt;
 /// style! {
 ///   id: "my_style",        /* Optional. */
 ///   attrib: [dim, bold]    /* Optional. */
-///   margin: 10,            /* Optional. */
+///   padding: 10,           /* Optional. */
 ///   color_fg: Color::Blue, /* Optional. */
 ///   color_bg: Color::Red,  /* Optional. */
 /// }
@@ -43,7 +43,7 @@ impl Parse for StyleMetadata {
     let mut metadata = StyleMetadata {
       id: Verbatim(quote! { "_id" }),
       attrib_vec: Vec::new(),
-      margin: None,
+      padding: None,
       color_fg: None,
       color_bg: None,
     };
@@ -51,7 +51,7 @@ impl Parse for StyleMetadata {
     // Run them all.
     parse_optional_id(&input, &mut metadata)?;
     parse_optional_attrib(&input, &mut metadata)?;
-    parse_optional_margin(&input, &mut metadata)?;
+    parse_optional_padding(&input, &mut metadata)?;
     parse_optional_color_fg(&input, &mut metadata)?;
     parse_optional_color_bg(&input, &mut metadata)?;
 
@@ -69,7 +69,7 @@ pub(crate) mod kw {
   syn::custom_keyword!(reverse);
   syn::custom_keyword!(hidden);
   syn::custom_keyword!(strikethrough);
-  syn::custom_keyword!(margin);
+  syn::custom_keyword!(padding);
   syn::custom_keyword!(color_fg);
   syn::custom_keyword!(color_bg);
 }
@@ -123,16 +123,16 @@ fn parse_optional_attrib(input: &ParseStream, metadata: &mut StyleMetadata) -> R
   Ok(())
 }
 
-// Parse margin (optional).
-fn parse_optional_margin(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
+// Parse padding (optional).
+fn parse_optional_padding(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
   let lookahead = input.lookahead1();
-  if lookahead.peek(kw::margin) {
-    input.parse::<kw::margin>()?;
+  if lookahead.peek(kw::padding) {
+    input.parse::<kw::padding>()?;
     input.parse::<Token![:]>()?;
     let lit_int = input.parse::<LitInt>()?;
-    let margin_int: UnitType = lit_int.base10_parse().unwrap();
-    metadata.margin = Some(margin_int);
-    call_if_true!(DEBUG, println!("🚀 margin: {:?}", &metadata.margin));
+    let padding_int: UnitType = lit_int.base10_parse().unwrap();
+    metadata.padding = Some(padding_int);
+    call_if_true!(DEBUG, println!("🚀 padding: {:?}", &metadata.padding));
   }
   Ok(())
 }

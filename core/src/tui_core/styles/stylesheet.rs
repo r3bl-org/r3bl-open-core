@@ -109,18 +109,18 @@ impl Stylesheet {
 ///     stylesheet! {
 ///         style! {
 ///           id: style1
-///           margin: 1
+///           padding: 1
 ///           color_bg: Color::Rgb { r: 55, g: 55, b: 248 }
 ///         },
 ///         vec![
 ///             style! {
 ///                 id: style1
-///                 margin: 1
+///                 padding: 1
 ///                 color_bg: Color::Rgb { r: 55, g: 55, b: 248 }
 ///             },
 ///             style! {
 ///                 id: style2
-///                 margin: 1
+///                 padding: 1
 ///                 color_bg: Color::Rgb { r: 85, g: 85, b: 255 }
 ///             },
 ///         ]
