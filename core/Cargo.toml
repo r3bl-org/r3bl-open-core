@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_rs_utils_core"
-version = "0.7.14"
+version = "0.8.0"
 edition = "2021"
 description = """
 Helper crate for proc-macro library for reading attributes into structs when
