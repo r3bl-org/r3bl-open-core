@@ -20,11 +20,66 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-/// Please see [convert_key_event::special_handling_of_character_key_event] for more information.
+/// See [convert_key_event::special_handling_of_character_key_event] for more information. Use the
+/// macro [keypress!] instead of directly constructing this struct.`
+///
+/// ```ignore
+/// fn make_keypress() {
+///   let _ = Keypress::WithModifiers {
+///     modifier_keys: ModifierKeysMask::ALT,
+///     non_modifier_key: Key::Character('a'),
+///   };
+///   let _ = Keypress::Plain {
+///     key: Key::Character('a'),
+///   };
+/// }
+/// ```
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
-pub struct Keypress {
-  pub maybe_modifier_keys: Option<ModifierKeysMask>,
-  pub non_modifier_key: Key,
+pub enum Keypress {
+  Plain { key: Key },
+  WithModifiers { mask: ModifierKeysMask, key: Key },
+}
+
+#[macro_export]
+macro_rules! keypress {
+  // @char
+  (@char $arg_char : expr) => {
+    Keypress::Plain {
+      key: Key::Character($arg_char),
+    }
+  };
+  (@char $arg_modifiers : expr, $arg_char : expr) => {
+    Keypress::WithModifiers {
+      mask: $arg_modifiers,
+      key: Key::Character($arg_char),
+    }
+  };
+
+  // @special
+  (@special $arg_special : expr) => {
+    Keypress::Plain {
+      key: Key::SpecialKey($arg_special),
+    }
+  };
+  (@special $arg_modifiers : expr, $arg_special : expr) => {
+    Keypress::WithModifiers {
+      mask: $arg_modifiers,
+      key: Key::SpecialKey($arg_special),
+    }
+  };
+
+  // @fn
+  (@fn $arg_function : expr) => {
+    Keypress::Plain {
+      key: Key::FunctionKey($arg_function),
+    }
+  };
+  (@fn $arg_modifiers : expr, $arg_function : expr) => {
+    Keypress::WithModifiers {
+      mask: $arg_modifiers,
+      key: Key::FunctionKey($arg_function),
+    }
+  };
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
@@ -75,53 +130,112 @@ pub enum SpecialKey {
   Esc,
 }
 
-#[macro_export]
-macro_rules! keypress {
-  // @char
-  (@char $arg_char : expr) => {
-    Keypress {
-      maybe_modifier_keys: None,
-      non_modifier_key: Key::Character($arg_char),
-    }
-  };
-  (@char $arg_modifiers : expr, $arg_char : expr) => {
-    Keypress {
-      maybe_modifier_keys: Some($arg_modifiers),
-      non_modifier_key: Key::Character($arg_char),
-    }
-  };
-
-  // @special
-  (@special $arg_special : expr) => {
-    Keypress {
-      maybe_modifier_keys: None,
-      non_modifier_key: Key::SpecialKey($arg_special),
-    }
-  };
-  (@special $arg_modifiers : expr, $arg_special : expr) => {
-    Keypress {
-      maybe_modifier_keys: Some($arg_modifiers),
-      non_modifier_key: Key::SpecialKey($arg_special),
-    }
-  };
-
-  // @fn
-  (@fn $arg_function : expr) => {
-    Keypress {
-      maybe_modifier_keys: None,
-      non_modifier_key: Key::FunctionKey($arg_function),
-    }
-  };
-  (@fn $arg_modifiers : expr, $arg_function : expr) => {
-    Keypress {
-      maybe_modifier_keys: Some($arg_modifiers),
-      non_modifier_key: Key::FunctionKey($arg_function),
-    }
-  };
-}
-
 pub mod convert_key_event {
   use super::*;
+  impl TryFrom<KeyEvent> for Keypress {
+    type Error = ();
+    /// Convert [KeyEvent] to [Keypress].
+    fn try_from(key_event: KeyEvent) -> Result<Self, Self::Error> {
+      special_handling_of_character_key_event(key_event)
+    }
+  }
+
+  /// Typecast / convert [KeyEvent] to [Keypress].
+  ///
+  /// There is special handling of displayable characters in this conversion. This occurs if the
+  /// [KeyEvent] is a [KeyCode::Char].
+  ///
+  /// An example is typing "X" by pressing "Shift + X" on the keyboard, which shows up in crossterm
+  /// as "Shift + X". In this case, the [KeyModifiers] `SHIFT` and `NONE` are ignored when converted
+  /// into a [Keypress]. This means the following:
+  ///
+  /// ```text
+  /// ╔════════════════════╦═══════════════════════════════════════════════════════════════╗
+  /// ║ User action        ║ Result                                                        ║
+  /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
+  /// ║ Type "x"           ║ InputEvent::Key(keypress! {@char 'x'})                        ║
+  /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
+  /// ║ Type "X"           ║ InputEvent::Key(keypress! {@char 'X'}) and not                ║
+  /// ║ (On keyboard press ║ InputEvent::Key(keypress! {@char ModifierKeys::SHIFT, 'X'})   ║
+  /// ║ Shift+X)           ║ ie, the "SHIFT" is ignored                                    ║
+  /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
+  /// ║ Type "Shift + x"   ║ same as above                                                 ║
+  /// ╚════════════════════╩═══════════════════════════════════════════════════════════════╝
+  /// ```
+  ///
+  /// The test `test_input_event_matches_correctly` in `test_input_event.rs` demonstrates
+  /// this.
+  ///
+  /// Docs:
+  ///  - [Crossterm
+  ///    KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
+  pub(crate) fn special_handling_of_character_key_event(
+    key_event: KeyEvent,
+  ) -> Result<Keypress, ()> {
+    return match key_event {
+      KeyEvent {
+        kind: KeyEventKind::Press,
+        .. /* ignore everything else: code, modifiers, etc */
+      } => {
+        match_event_kind_press(key_event)
+      }
+      _=> {
+        Err(())
+      }
+    };
+
+    fn match_event_kind_press(key_event: KeyEvent) -> Result<Keypress, ()> {
+      match key_event {
+        // Character keys (ignore SHIFT).
+        KeyEvent {
+          code: KeyCode::Char(character),
+          modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT, // Ignore SHIFT.
+          .. // Ignore other fields.
+        } => {
+          generate_character_key(character)
+        },
+        // Non character keys.
+        _ => {
+          let maybe_modifiers_keys_mask: Option<ModifierKeysMask> = copy_modifiers_from_key_event(&key_event);
+          let maybe_key: Option<Key> = copy_code_from_key_event(&key_event);
+          if let Some(key) = maybe_key {
+            if let Some(mask) = maybe_modifiers_keys_mask {
+              generate_non_character_key_with_modifiers(key, mask)
+            } else {
+              generate_non_character_key_without_modifiers(key)
+            }
+          } else {
+            Err(())
+          }
+        }
+      }
+    }
+
+    fn generate_character_key(character: char) -> Result<Keypress, ()> {
+      Ok(keypress! { @char character })
+    }
+
+    fn generate_non_character_key_without_modifiers(key: Key) -> Result<Keypress, ()> {
+      Ok(Keypress::Plain { key })
+    }
+
+    fn generate_non_character_key_with_modifiers(
+      key: Key, mask: ModifierKeysMask,
+    ) -> Result<Keypress, ()> {
+      Ok(Keypress::WithModifiers { mask, key })
+    }
+  }
+
+  /// Macro to insulate this library from changes in crossterm [KeyEvent] constructor & fields.
+  #[macro_export]
+  macro_rules! keyevent {
+    (
+      code: $arg_key_code: expr,
+      modifiers: $arg_key_modifiers: expr
+    ) => {
+      KeyEvent::new($arg_key_code, $arg_key_modifiers)
+    };
+  }
 
   /// Difference in meaning between `intersects` and `contains`:
   /// - `intersects` -> means that the given bit shows up in your variable, but it might contain other
@@ -227,98 +341,6 @@ pub mod convert_key_event {
       KC::Media(media_key) => match_media_key(media_key),
       KC::Modifier(modifier_key_code) => match_modifier_key_code(modifier_key_code),
     }
-  }
-
-  impl TryFrom<KeyEvent> for Keypress {
-    type Error = ();
-    /// Convert [KeyEvent] to [Keypress].
-    fn try_from(key_event: KeyEvent) -> Result<Self, Self::Error> {
-      special_handling_of_character_key_event(key_event)
-    }
-  }
-
-  /// Typecast / convert [KeyEvent] to [Keypress].
-  ///
-  /// There is special handling of displayable characters in this conversion. This occurs if the
-  /// [KeyEvent] is a [KeyCode::Char].
-  ///
-  /// An example is typing "X" by pressing "Shift + X" on the keyboard, which shows up in crossterm
-  /// as "Shift + X". In this case, the [KeyModifiers] `SHIFT` and `NONE` are ignored when converted
-  /// into a [Keypress]. This means the following:
-  ///
-  /// ```text
-  /// ╔════════════════════╦═══════════════════════════════════════════════════════════════╗
-  /// ║ User action        ║ Result                                                        ║
-  /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
-  /// ║ Type "x"           ║ InputEvent::Key(keypress! {@char 'x'})                        ║
-  /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
-  /// ║ Type "X"           ║ InputEvent::Key(keypress! {@char 'X'}) and not                ║
-  /// ║ (On keyboard press ║ InputEvent::Key(keypress! {@char ModifierKeys::SHIFT, 'X'})   ║
-  /// ║ Shift+X)           ║ ie, the "SHIFT" is ignored                                    ║
-  /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
-  /// ║ Type "Shift + x"   ║ same as above                                                 ║
-  /// ╚════════════════════╩═══════════════════════════════════════════════════════════════╝
-  /// ```
-  ///
-  /// The test `test_input_event_matches_correctly` in `test_input_event.rs` demonstrates
-  /// this.
-  ///
-  /// Docs:
-  ///  - [Crossterm
-  ///    KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
-  pub(crate) fn special_handling_of_character_key_event(
-    key_event: KeyEvent,
-  ) -> Result<Keypress, ()> {
-    return match key_event {
-      KeyEvent {
-        kind: KeyEventKind::Press,
-        .. /* ignore everything else: code, modifiers, etc */
-      } => {
-        match_event_kind_press(key_event)
-      }
-      _=> {
-        Err(())
-      }
-    };
-
-    fn match_event_kind_press(key_event: KeyEvent) -> Result<Keypress, ()> {
-      match key_event {
-        // character keys.
-        KeyEvent {
-          code: KeyCode::Char(character),
-          modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-          .. /* ignore others */
-        } => {
-          // Character.
-          Ok(keypress! { @char character })
-        },
-        // non character keys.
-        _ => {
-          let modifiers: Option<ModifierKeysMask> = copy_modifiers_from_key_event(&key_event);
-          let maybe_keypress: Option<Key> = copy_code_from_key_event(&key_event);
-
-          if let Some(keypress) = maybe_keypress {
-            Ok(Keypress {
-              maybe_modifier_keys: modifiers,
-              non_modifier_key: keypress,
-            })
-          } else {
-            Err(())
-          }
-        }
-      }
-    }
-  }
-
-  /// Macro to insulate this library from changes in crossterm [KeyEvent] constructor & fields.
-  #[macro_export]
-  macro_rules! keyevent {
-    (
-      code: $arg_key_code: expr,
-      modifiers: $arg_key_modifiers: expr
-    ) => {
-      KeyEvent::new($arg_key_code, $arg_key_modifiers)
-    };
   }
 }
 

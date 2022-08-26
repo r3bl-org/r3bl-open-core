@@ -23,9 +23,8 @@ fn test_keypress_character_key() {
   // No modifier.
   {
     let macro_syntax = keypress! { @char 'a' };
-    let struct_syntax = Keypress {
-      non_modifier_key: Key::Character('a'),
-      maybe_modifier_keys: None,
+    let struct_syntax = Keypress::Plain {
+      key: Key::Character('a'),
     };
     assert_eq2!(macro_syntax, struct_syntax);
   }
@@ -33,9 +32,9 @@ fn test_keypress_character_key() {
   // With modifier.
   {
     let macro_syntax = keypress! { @char ModifierKeysMask::SHIFT | ModifierKeysMask::CTRL, 'a' };
-    let struct_syntax = Keypress {
-      non_modifier_key: Key::Character('a'),
-      maybe_modifier_keys: Some(ModifierKeysMask::SHIFT | ModifierKeysMask::CTRL),
+    let struct_syntax = Keypress::WithModifiers {
+      key: Key::Character('a'),
+      mask: ModifierKeysMask::SHIFT | ModifierKeysMask::CTRL,
     };
     assert_eq2!(macro_syntax, struct_syntax);
   }
@@ -46,9 +45,8 @@ fn test_keypress_special_key() {
   // No modifier.
   {
     let macro_syntax = keypress! { @special SpecialKey::Left };
-    let struct_syntax = Keypress {
-      non_modifier_key: Key::SpecialKey(SpecialKey::Left),
-      maybe_modifier_keys: None,
+    let struct_syntax = Keypress::Plain {
+      key: Key::SpecialKey(SpecialKey::Left),
     };
     assert_eq2!(macro_syntax, struct_syntax);
   }
@@ -56,9 +54,9 @@ fn test_keypress_special_key() {
   {
     let macro_syntax =
       keypress! { @special ModifierKeysMask::CTRL | ModifierKeysMask::ALT, SpecialKey::Left };
-    let struct_syntax = Keypress {
-      non_modifier_key: Key::SpecialKey(SpecialKey::Left),
-      maybe_modifier_keys: Some(ModifierKeysMask::CTRL | ModifierKeysMask::ALT),
+    let struct_syntax = Keypress::WithModifiers {
+      key: Key::SpecialKey(SpecialKey::Left),
+      mask: ModifierKeysMask::CTRL | ModifierKeysMask::ALT,
     };
     assert_eq2!(macro_syntax, struct_syntax);
   }
@@ -69,18 +67,17 @@ fn test_keypress_function_key() {
   // No modifier.
   {
     let macro_syntax = keypress! { @fn FunctionKey::F1 };
-    let struct_syntax = Keypress {
-      non_modifier_key: Key::FunctionKey(FunctionKey::F1),
-      maybe_modifier_keys: None,
+    let struct_syntax = Keypress::Plain {
+      key: Key::FunctionKey(FunctionKey::F1),
     };
     assert_eq2!(macro_syntax, struct_syntax);
   }
   // With modifier.
   {
     let macro_syntax = keypress! { @fn ModifierKeysMask::SHIFT, FunctionKey::F1 };
-    let struct_syntax = Keypress {
-      non_modifier_key: Key::FunctionKey(FunctionKey::F1),
-      maybe_modifier_keys: Some(ModifierKeysMask::SHIFT),
+    let struct_syntax = Keypress::WithModifiers {
+      key: Key::FunctionKey(FunctionKey::F1),
+      mask: ModifierKeysMask::SHIFT,
     };
     assert_eq2!(macro_syntax, struct_syntax);
   }
@@ -94,9 +91,8 @@ fn test_keypress() -> Result<(), ()> {
     let keypress: Keypress = key_event.try_into()?;
     assert_eq2!(
       keypress,
-      Keypress {
-        non_modifier_key: Key::Character('x'),
-        maybe_modifier_keys: None,
+      Keypress::Plain {
+        key: Key::Character('x'),
       }
     );
   }
@@ -107,9 +103,9 @@ fn test_keypress() -> Result<(), ()> {
     let converted_keypress: Keypress = key_event.try_into()?;
     assert_eq2!(
       converted_keypress,
-      Keypress {
-        maybe_modifier_keys: ModifierKeysMask::CTRL.into(),
-        non_modifier_key: Key::Character('x'),
+      Keypress::WithModifiers {
+        mask: ModifierKeysMask::CTRL,
+        key: Key::Character('x'),
       }
     );
   }
@@ -123,9 +119,9 @@ fn test_keypress() -> Result<(), ()> {
     let converted_keypress: Keypress = key_event.try_into()?;
     assert_eq2!(
       converted_keypress,
-      Keypress {
-        maybe_modifier_keys: Some(ModifierKeysMask::CTRL | ModifierKeysMask::ALT),
-        non_modifier_key: Key::Character('x'),
+      Keypress::WithModifiers {
+        mask: ModifierKeysMask::CTRL | ModifierKeysMask::ALT,
+        key: Key::Character('x'),
       }
     );
   }
