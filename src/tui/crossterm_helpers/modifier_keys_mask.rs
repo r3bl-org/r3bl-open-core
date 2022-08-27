@@ -39,6 +39,10 @@ pub fn convert_key_modifiers(modifiers: &KeyModifiers) -> Option<ModifierKeysMas
 }
 
 impl From<KeyModifiers> for ModifierKeysMask {
+  /// Difference in meaning between `intersects` and `contains`:
+  /// - `intersects` -> means that the given bit shows up in your variable, but it might contain other
+  ///   bits.
+  /// - `contains` -> means that your variable ONLY contains these bits.
   fn from(other: KeyModifiers) -> Self {
     // Start w/ empty my_modifiers.
     let mut my_modifiers: ModifierKeysMask = ModifierKeysMask::empty(); // 0b0000_0000

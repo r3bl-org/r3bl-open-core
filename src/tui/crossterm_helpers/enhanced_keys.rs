@@ -17,40 +17,6 @@
 
 use serde::{Deserialize, Serialize};
 
-/// **Note:** [EnhancedMediaKey] and [EnhancedSpecialKey] can be read if:
-/// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`] has been enabled with
-/// [`PushKeyboardEnhancementFlags`].
-///
-/// **Note:** [EnhancedModifierKeyEnum] can only be read if **both**
-/// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`] and
-/// [`KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES`] have been enabled with
-/// [`PushKeyboardEnhancementFlags`].
-///
-/// Here's how you can enable crossterm enhanced mode.
-///
-/// /// ```no_run
-/// use std::io::{Write, stdout};
-/// use crossterm::execute;
-/// use crossterm::event::{
-///     KeyboardEnhancementFlags,
-///     PushKeyboardEnhancementFlags,
-///     PopKeyboardEnhancementFlags
-/// };
-///
-/// let mut stdout = stdout();
-///
-/// execute!(
-///     stdout,
-///     PushKeyboardEnhancementFlags(
-///         KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
-///     )
-/// );
-///
-/// // ...
-///
-/// execute!(stdout, PopKeyboardEnhancementFlags);
-/// ```
-
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub enum Enhanced {
   /// **Note:** this key can only be read if

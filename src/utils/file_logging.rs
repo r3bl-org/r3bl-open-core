@@ -183,10 +183,10 @@ macro_rules! log_no_err {
 /// formatter). All of the output is colorized for easy readability. You can use it like this.
 ///
 /// ```ignore
-/// let my_string = "Hello World!"; debug_log_no_err!(my_string);
+/// let my_string = "Hello World!"; log_no_err_debug!(my_string);
 /// ```
 #[macro_export]
-macro_rules! debug_log_no_err {
+macro_rules! log_no_err_debug {
   (
     $(                      /* Start a repetition. */
       $element:expr         /* Expression. */
@@ -209,14 +209,14 @@ macro_rules! debug_log_no_err {
   }};
 }
 
-/// Very similar to [debug_log_no_err!] except that it outputs TRACE. Here's an example.
+/// Very similar to [log_no_err_debug!] except that it outputs TRACE. Here's an example.
 ///
 /// ```ignore
 /// let my_string = "Hello World!";
-/// trace_log_no_err!(my_string);
+/// log_no_err_trace!(my_string);
 /// ```
 #[macro_export]
-macro_rules! trace_log_no_err {
+macro_rules! log_no_err_trace {
   (
     $(                      /* Start a repetition. */
       $element:expr         /* Expression. */
