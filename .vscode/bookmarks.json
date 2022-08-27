@@ -1,0 +1,24 @@
+{
+	"files": [
+		{
+			"path": "src/tui/crossterm_helpers/keypress.rs",
+			"bookmarks": [
+				{
+					"line": 228,
+					"column": 19,
+					"label": ""
+				},
+				{
+					"line": 359,
+					"column": 0,
+					"label": ""
+				},
+				{
+					"line": 379,
+					"column": 2,
+					"label": ""
+				}
+			]
+		}
+	]
+}

@@ -81,7 +81,7 @@ fn test_copy_modifiers_from_key_event() {
       code: KeyCode::Char('x'),
       modifiers: KeyModifiers::NONE
     };
-    let maybe_modifier_keys = convert_key_event::copy_modifiers_from_key_event(&key_event);
+    let maybe_modifier_keys = convert_key_modifiers(&key_event.modifiers);
     assert!(maybe_modifier_keys.is_none());
   }
   // "Ctrl + x"
@@ -90,7 +90,7 @@ fn test_copy_modifiers_from_key_event() {
       code: KeyCode::Char('x'),
       modifiers: KeyModifiers::CONTROL
     };
-    let maybe_modifier_keys = convert_key_event::copy_modifiers_from_key_event(&key_event);
+    let maybe_modifier_keys = convert_key_modifiers(&key_event.modifiers);
     assert!(maybe_modifier_keys.is_some());
     assert!(maybe_modifier_keys
       .unwrap()
@@ -102,7 +102,7 @@ fn test_copy_modifiers_from_key_event() {
       code: KeyCode::Char('X'),
       modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT
     };
-    let maybe_modifier_keys = convert_key_event::copy_modifiers_from_key_event(&key_event);
+    let maybe_modifier_keys = convert_key_modifiers(&key_event.modifiers);
     assert!(maybe_modifier_keys.is_some());
     assert!(maybe_modifier_keys
       .unwrap()
@@ -114,7 +114,7 @@ fn test_copy_modifiers_from_key_event() {
       code: KeyCode::Char('X'),
       modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT | KeyModifiers::ALT
     };
-    let maybe_modifier_keys = convert_key_event::copy_modifiers_from_key_event(&key_event);
+    let maybe_modifier_keys = convert_key_modifiers(&key_event.modifiers);
     assert!(maybe_modifier_keys.is_some());
     assert!(maybe_modifier_keys
       .unwrap()

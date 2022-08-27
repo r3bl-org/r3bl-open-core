@@ -34,6 +34,18 @@ use crate::*;
 ///   };
 /// }
 /// ```
+///
+/// # Kitty keyboard protocol support limitations
+///
+/// 1. `Keypress` explicitly matches on `KeyEventKind::Press` as of crossterm 0.25.0. It added a new
+///    field in KeyEvent, called
+///    [`kind`](https://github.com/crossterm-rs/crossterm/blob/10d1dc246dcd708b4902d53a542f732cba32ce99/src/event.rs#L645).
+///    Currently in terminals that do NOT support [kitty keyboard
+///    protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), in other words most terminals,
+///    the `kind` is always `Press`. This is made explicit in the code.
+///
+/// 2. Also, the [KeyEvent]'s `state` is totally ignored in the conversion to [Keypress]. The
+///    [KeyEventState] isn't even considered in the conversion code.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub enum Keypress {
   Plain { key: Key },
@@ -92,7 +104,51 @@ pub enum Key {
   Character(char),
   SpecialKey(SpecialKey),
   FunctionKey(FunctionKey),
-  Enhanced(Enhanced),
+  /// See [`PushKeyboardEnhancementFlags`] for more details on [kitty keyboard
+  /// protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/) and the terminals on which this
+  /// is currently supported:
+  /// * [kitty terminal](https://sw.kovidgoyal.net/kitty/)
+  /// * [foot terminal](https://codeberg.org/dnkl/foot/issues/319)
+  /// * [WezTerm terminal](https://wezfurlong.org/wezterm/config/lua/config/enable_kitty_keyboard.html)
+  /// * [notcurses library](https://github.com/dankamongmen/notcurses/issues/2131)
+  /// * [neovim text editor](https://github.com/neovim/neovim/pull/18181)
+  /// * [kakoune text editor](https://github.com/mawww/kakoune/issues/4103)
+  /// * [dte text editor](https://gitlab.com/craigbarnes/dte/-/issues/138)
+  ///
+  /// **Note:** [EnhancedMediaKey] and [EnhancedSpecialKey] can be read if:
+  /// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`] has been enabled with
+  /// [`PushKeyboardEnhancementFlags`].
+  ///
+  /// **Note:** [EnhancedModifierKeyEnum] can only be read if **both**
+  /// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`] and
+  /// [`KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES`] have been enabled with
+  /// [`PushKeyboardEnhancementFlags`].
+  ///
+  /// Here's how you can enable crossterm enhanced mode.
+  ///
+  /// ```ignore
+  /// use std::io::{Write, stdout};
+  /// use crossterm::execute;
+  /// use crossterm::event::{
+  ///     KeyboardEnhancementFlags,
+  ///     PushKeyboardEnhancementFlags,
+  ///     PopKeyboardEnhancementFlags
+  /// };
+  ///
+  /// let mut stdout = stdout();
+  ///
+  /// execute!(
+  ///     stdout,
+  ///     PushKeyboardEnhancementFlags(
+  ///         KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
+  ///     )
+  /// );
+  ///
+  /// // Your code here.
+  ///
+  /// execute!(stdout, PopKeyboardEnhancementFlags);
+  /// ```
+  KittyKeyboardProtocol(Enhanced),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
@@ -177,26 +233,26 @@ pub mod convert_key_event {
         kind: KeyEventKind::Press,
         .. /* ignore everything else: code, modifiers, etc */
       } => {
-        match_event_kind_press(key_event)
+        process_only_key_event_kind_press(key_event)
       }
       _=> {
         Err(())
       }
     };
 
-    fn match_event_kind_press(key_event: KeyEvent) -> Result<Keypress, ()> {
+    fn process_only_key_event_kind_press(key_event: KeyEvent) -> Result<Keypress, ()> {
       match key_event {
-        // Character keys (ignore SHIFT).
+        // If character keys, then ignore SHIFT or NONE modifiers.
         KeyEvent {
           code: KeyCode::Char(character),
           modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT, // Ignore SHIFT.
-          .. // Ignore other fields.
+          .. // Ignore `state`. We know `kind`=`KeyEventKind::Press`.
         } => {
           generate_character_key(character)
         },
         // Non character keys.
         _ => {
-          let maybe_modifiers_keys_mask: Option<ModifierKeysMask> = copy_modifiers_from_key_event(&key_event);
+          let maybe_modifiers_keys_mask: Option<ModifierKeysMask> = convert_key_modifiers(&key_event.modifiers);
           let maybe_key: Option<Key> = copy_code_from_key_event(&key_event);
           if let Some(key) = maybe_key {
             if let Some(mask) = maybe_modifiers_keys_mask {
@@ -237,14 +293,6 @@ pub mod convert_key_event {
     };
   }
 
-  /// Difference in meaning between `intersects` and `contains`:
-  /// - `intersects` -> means that the given bit shows up in your variable, but it might contain other
-  ///   bits.
-  /// - `contains` -> means that your variable ONLY contains these bits.
-  pub fn copy_modifiers_from_key_event(key_event: &KeyEvent) -> Option<ModifierKeysMask> {
-    convert_key_modifiers(&key_event.modifiers)
-  }
-
   fn match_fn_key(fn_key: u8) -> Option<Key> {
     match fn_key {
       1 => Key::FunctionKey(FunctionKey::F1).into(),
@@ -261,51 +309,6 @@ pub mod convert_key_event {
       12 => Key::FunctionKey(FunctionKey::F12).into(),
       _ => None,
     }
-  }
-
-  fn match_media_key(media_key: MediaKeyCode) -> Option<Key> {
-    // Make the code easier to read below using this alias.
-    type KC = MediaKeyCode;
-    Some(match media_key {
-      KC::Play => Key::Enhanced(Enhanced::MediaKey(MediaKey::Play)),
-      KC::Pause => Key::Enhanced(Enhanced::MediaKey(MediaKey::Pause)),
-      KC::Stop => Key::Enhanced(Enhanced::MediaKey(MediaKey::Stop)),
-      KC::PlayPause => Key::Enhanced(Enhanced::MediaKey(MediaKey::PlayPause)),
-      KC::Reverse => Key::Enhanced(Enhanced::MediaKey(MediaKey::Reverse)),
-      KC::FastForward => Key::Enhanced(Enhanced::MediaKey(MediaKey::FastForward)),
-      KC::Rewind => Key::Enhanced(Enhanced::MediaKey(MediaKey::Rewind)),
-      KC::TrackNext => Key::Enhanced(Enhanced::MediaKey(MediaKey::TrackNext)),
-      KC::TrackPrevious => Key::Enhanced(Enhanced::MediaKey(MediaKey::TrackPrevious)),
-      KC::Record => Key::Enhanced(Enhanced::MediaKey(MediaKey::Record)),
-      KC::LowerVolume => Key::Enhanced(Enhanced::MediaKey(MediaKey::LowerVolume)),
-      KC::RaiseVolume => Key::Enhanced(Enhanced::MediaKey(MediaKey::RaiseVolume)),
-      KC::MuteVolume => Key::Enhanced(Enhanced::MediaKey(MediaKey::MuteVolume)),
-    })
-  }
-
-  fn match_modifier_key_code(modifier_key_code: ModifierKeyCode) -> Option<Key> {
-    // Make the code easier to read below using this alias.
-    type KC = ModifierKeyCode;
-    Some(match modifier_key_code {
-      KC::LeftShift => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftShift)),
-      KC::LeftControl => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftControl)),
-      KC::LeftAlt => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftAlt)),
-      KC::LeftSuper => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftSuper)),
-      KC::LeftHyper => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftHyper)),
-      KC::LeftMeta => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftMeta)),
-      KC::RightShift => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightShift)),
-      KC::RightControl => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightControl)),
-      KC::RightAlt => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightAlt)),
-      KC::RightSuper => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightSuper)),
-      KC::RightHyper => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightHyper)),
-      KC::RightMeta => Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightMeta)),
-      KC::IsoLevel3Shift => {
-        Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::IsoLevel3Shift))
-      }
-      KC::IsoLevel5Shift => {
-        Key::Enhanced(Enhanced::ModifierKeyEnum(ModifierKeyEnum::IsoLevel5Shift))
-      }
-    })
   }
 
   pub fn copy_code_from_key_event(key_event: &KeyEvent) -> Option<Key> {
@@ -331,16 +334,95 @@ pub mod convert_key_event {
       KC::F(fn_key) => match_fn_key(fn_key),
       KC::Char(character) => Key::Character(character).into(),
       // New "enhanced" keys since crossterm 0.25.0
-      KC::CapsLock => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::CapsLock)).into(),
-      KC::ScrollLock => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::ScrollLock)).into(),
-      KC::NumLock => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::NumLock)).into(),
-      KC::PrintScreen => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::PrintScreen)).into(),
-      KC::Pause => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::Pause)).into(),
-      KC::Menu => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::Menu)).into(),
-      KC::KeypadBegin => Key::Enhanced(Enhanced::SpecialKeyExt(SpecialKeyExt::KeypadBegin)).into(),
-      KC::Media(media_key) => match_media_key(media_key),
-      KC::Modifier(modifier_key_code) => match_modifier_key_code(modifier_key_code),
+      KC::CapsLock => {
+        Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::CapsLock)).into()
+      }
+      KC::ScrollLock => {
+        Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::ScrollLock)).into()
+      }
+      KC::NumLock => {
+        Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::NumLock)).into()
+      }
+      KC::PrintScreen => {
+        Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::PrintScreen)).into()
+      }
+      KC::Pause => Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::Pause)).into(),
+      KC::Menu => Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::Menu)).into(),
+      KC::KeypadBegin => {
+        Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::KeypadBegin)).into()
+      }
+      KC::Media(media_key) => match_enhanced_media_key(media_key),
+      KC::Modifier(modifier_key_code) => match_enhanced_modifier_key_code(modifier_key_code),
     }
+  }
+
+  fn match_enhanced_media_key(media_key: MediaKeyCode) -> Option<Key> {
+    // Make the code easier to read below using this alias.
+    type KC = MediaKeyCode;
+    Some(match media_key {
+      KC::Play => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Play)),
+      KC::Pause => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Pause)),
+      KC::Stop => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Stop)),
+      KC::PlayPause => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::PlayPause)),
+      KC::Reverse => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Reverse)),
+      KC::FastForward => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::FastForward)),
+      KC::Rewind => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Rewind)),
+      KC::TrackNext => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::TrackNext)),
+      KC::TrackPrevious => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::TrackPrevious)),
+      KC::Record => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Record)),
+      KC::LowerVolume => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::LowerVolume)),
+      KC::RaiseVolume => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::RaiseVolume)),
+      KC::MuteVolume => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::MuteVolume)),
+    })
+  }
+
+  fn match_enhanced_modifier_key_code(modifier_key_code: ModifierKeyCode) -> Option<Key> {
+    // Make the code easier to read below using this alias.
+    type KC = ModifierKeyCode;
+    Some(match modifier_key_code {
+      KC::LeftShift => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftShift))
+      }
+      KC::LeftControl => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftControl))
+      }
+      KC::LeftAlt => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftAlt))
+      }
+      KC::LeftSuper => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftSuper))
+      }
+      KC::LeftHyper => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftHyper))
+      }
+      KC::LeftMeta => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftMeta))
+      }
+      KC::RightShift => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightShift))
+      }
+      KC::RightControl => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightControl))
+      }
+      KC::RightAlt => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightAlt))
+      }
+      KC::RightSuper => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightSuper))
+      }
+      KC::RightHyper => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightHyper))
+      }
+      KC::RightMeta => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightMeta))
+      }
+      KC::IsoLevel3Shift => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::IsoLevel3Shift))
+      }
+      KC::IsoLevel5Shift => {
+        Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::IsoLevel5Shift))
+      }
+    })
   }
 }
 

@@ -16,8 +16,10 @@
     "dimens",
     "enumflags",
     "idents",
+    "InputEvent",
     "insertanchor",
     "isnt",
+    "kakoune",
     "keyb",
     "keyevent",
     "Keypress",
@@ -25,6 +27,8 @@
     "lazymemovalues",
     "litint",
     "middlewares",
+    "neovim",
+    "notcurses",
     "punct",
     "qself",
     "reedline",
@@ -39,7 +43,6 @@
     "tofro",
     "treememoryarena",
     "tuicore",
-    "InputEvent",
     "withmutreturns"
   ]
 }
