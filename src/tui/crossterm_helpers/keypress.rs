@@ -25,11 +25,11 @@ use crate::*;
 ///
 /// ```ignore
 /// fn make_keypress() {
-///   let _ = Keypress::WithModifiers {
-///     modifier_keys: ModifierKeysMask::ALT,
-///     non_modifier_key: Key::Character('a'),
+///   let alt_a = Keypress::WithModifiers {
+///     key: Key::Character('a'),
+///     mask: ModifierKeysMask::ALT,
 ///   };
-///   let _ = Keypress::Plain {
+///   let a = Keypress::Plain {
 ///     key: Key::Character('a'),
 ///   };
 /// }
@@ -37,7 +37,7 @@ use crate::*;
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub enum Keypress {
   Plain { key: Key },
-  WithModifiers { mask: ModifierKeysMask, key: Key },
+  WithModifiers { key: Key, mask: ModifierKeysMask },
 }
 
 #[macro_export]
