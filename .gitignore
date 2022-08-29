@@ -1,3 +1,5 @@
 /target
 Cargo.lock
 **/target
+docs/*.bkp
+docs/*.dtmp

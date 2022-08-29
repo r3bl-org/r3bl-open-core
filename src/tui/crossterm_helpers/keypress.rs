@@ -20,8 +20,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-/// See [convert_key_event::special_handling_of_character_key_event] for more information. Use the
-/// macro [keypress!] instead of directly constructing this struct.`
+/// This is equivalent to [crossterm::event::KeyEvent] except that it is cleaned up semantically and
+/// impossible states are removed. It enables the tui framework to use a different backend other
+/// than crossterm in the future. Apps written using this framework use [Keypress] and not
+/// [crossterm::event::KeyEvent]. See [convert_key_event] for more information on the conversion.
+///
+/// Please use the [keypress!] macro instead of directly constructing this struct.
 ///
 /// ```ignore
 /// fn make_keypress() {
@@ -29,9 +33,12 @@ use crate::*;
 ///     key: Key::Character('a'),
 ///     mask: ModifierKeysMask::ALT,
 ///   };
+///   let alt_a = keypress!(@char ModifierKeys::ALT, 'a')
+///
 ///   let a = Keypress::Plain {
 ///     key: Key::Character('a'),
 ///   };
+///   let a = keypress!(@char 'a');
 /// }
 /// ```
 ///
@@ -109,20 +116,25 @@ pub enum Key {
   /// is currently supported:
   /// * [kitty terminal](https://sw.kovidgoyal.net/kitty/)
   /// * [foot terminal](https://codeberg.org/dnkl/foot/issues/319)
-  /// * [WezTerm terminal](https://wezfurlong.org/wezterm/config/lua/config/enable_kitty_keyboard.html)
+  /// * [WezTerm
+  ///   terminal](https://wezfurlong.org/wezterm/config/lua/config/enable_kitty_keyboard.html)
   /// * [notcurses library](https://github.com/dankamongmen/notcurses/issues/2131)
   /// * [neovim text editor](https://github.com/neovim/neovim/pull/18181)
   /// * [kakoune text editor](https://github.com/mawww/kakoune/issues/4103)
   /// * [dte text editor](https://gitlab.com/craigbarnes/dte/-/issues/138)
   ///
-  /// **Note:** [EnhancedMediaKey] and [EnhancedSpecialKey] can be read if:
-  /// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`] has been enabled with
-  /// [`PushKeyboardEnhancementFlags`].
+  /// Crossterm docs:
+  /// - [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
+  /// - [`PushKeyboardEnhancementFlags`](https://docs.rs/crossterm/0.25.0/crossterm/event/struct.KeyboardEnhancementFlags.html)
   ///
-  /// **Note:** [EnhancedModifierKeyEnum] can only be read if **both**
-  /// [`KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES`] and
-  /// [`KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES`] have been enabled with
-  /// [`PushKeyboardEnhancementFlags`].
+  /// **Note:** [MediaKey] and [SpecialKey] can be read if:
+  /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` has been enabled with
+  /// `PushKeyboardEnhancementFlags`.
+  ///
+  /// **Note:** [ModifierKeyEnum] can only be read if **both**
+  /// `KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES` and
+  /// `KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES` have been enabled with
+  /// `PushKeyboardEnhancementFlags`.
   ///
   /// Here's how you can enable crossterm enhanced mode.
   ///
@@ -186,6 +198,35 @@ pub enum SpecialKey {
   Esc,
 }
 
+/// Typecast / convert [KeyEvent] to [Keypress].
+///
+/// There is special handling of displayable characters in this conversion. This occurs if the
+/// [KeyEvent] is a [KeyCode::Char].
+///
+/// An example is typing "X" by pressing "Shift + X" on the keyboard, which shows up in crossterm
+/// as "Shift + X". In this case, the [KeyModifiers] `SHIFT` and `NONE` are ignored when converted
+/// into a [Keypress]. This means the following:
+///
+/// ```text
+/// ╔════════════════════╦═══════════════════════════════════════════════════════════════╗
+/// ║ User action        ║ Result                                                        ║
+/// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
+/// ║ Type "x"           ║ InputEvent::Key(keypress! {@char 'x'})                        ║
+/// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
+/// ║ Type "X"           ║ InputEvent::Key(keypress! {@char 'X'}) and not                ║
+/// ║ (On keyboard press ║ InputEvent::Key(keypress! {@char ModifierKeys::SHIFT, 'X'})   ║
+/// ║ Shift+X)           ║ ie, the "SHIFT" is ignored                                    ║
+/// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
+/// ║ Type "Shift + x"   ║ same as above                                                 ║
+/// ╚════════════════════╩═══════════════════════════════════════════════════════════════╝
+/// ```
+///
+/// The test `test_input_event_matches_correctly` in `test_input_event.rs` demonstrates
+/// this.
+///
+/// Docs:
+///  - [Crossterm
+///    KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
 pub mod convert_key_event {
   use super::*;
   impl TryFrom<KeyEvent> for Keypress {
@@ -196,35 +237,6 @@ pub mod convert_key_event {
     }
   }
 
-  /// Typecast / convert [KeyEvent] to [Keypress].
-  ///
-  /// There is special handling of displayable characters in this conversion. This occurs if the
-  /// [KeyEvent] is a [KeyCode::Char].
-  ///
-  /// An example is typing "X" by pressing "Shift + X" on the keyboard, which shows up in crossterm
-  /// as "Shift + X". In this case, the [KeyModifiers] `SHIFT` and `NONE` are ignored when converted
-  /// into a [Keypress]. This means the following:
-  ///
-  /// ```text
-  /// ╔════════════════════╦═══════════════════════════════════════════════════════════════╗
-  /// ║ User action        ║ Result                                                        ║
-  /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
-  /// ║ Type "x"           ║ InputEvent::Key(keypress! {@char 'x'})                        ║
-  /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
-  /// ║ Type "X"           ║ InputEvent::Key(keypress! {@char 'X'}) and not                ║
-  /// ║ (On keyboard press ║ InputEvent::Key(keypress! {@char ModifierKeys::SHIFT, 'X'})   ║
-  /// ║ Shift+X)           ║ ie, the "SHIFT" is ignored                                    ║
-  /// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
-  /// ║ Type "Shift + x"   ║ same as above                                                 ║
-  /// ╚════════════════════╩═══════════════════════════════════════════════════════════════╝
-  /// ```
-  ///
-  /// The test `test_input_event_matches_correctly` in `test_input_event.rs` demonstrates
-  /// this.
-  ///
-  /// Docs:
-  ///  - [Crossterm
-  ///    KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
   pub(crate) fn special_handling_of_character_key_event(
     key_event: KeyEvent,
   ) -> Result<Keypress, ()> {

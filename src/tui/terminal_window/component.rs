@@ -21,7 +21,7 @@ use async_trait::async_trait;
 
 use crate::*;
 
-/// See [TWApp].
+/// See [App].
 #[async_trait]
 pub trait Component<S, A>
 where

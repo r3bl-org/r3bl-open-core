@@ -152,7 +152,7 @@ pub enum TWCommand {
   ResetColor,
   /// Translate [Style] into fg and bg colors for crossterm.
   ApplyColors(Option<Style>),
-  /// Translate [Style] into attributes [struct@STYLE_TO_ATTRIBUTE_MAP] for crossterm (bold, underline,
+  /// Translate [Style] into attributes [static@STYLE_TO_ATTRIBUTE_MAP] for crossterm (bold, underline,
   /// strikethrough, etc)
   PrintWithAttributes(String, Option<Style>),
   CursorShow,
@@ -451,7 +451,7 @@ impl TWCommandQueue {
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 // │ Style to attribute map │
 // ╯                        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-static STYLE_TO_ATTRIBUTE_MAP: Lazy<HashMap<StyleFlag, Attribute>> = Lazy::new(|| {
+pub static STYLE_TO_ATTRIBUTE_MAP: Lazy<HashMap<StyleFlag, Attribute>> = Lazy::new(|| {
   let mut map = HashMap::new();
   map.insert(StyleFlag::BOLD_SET, Attribute::Bold);
   map.insert(StyleFlag::DIM_SET, Attribute::Dim);

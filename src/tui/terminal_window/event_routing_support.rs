@@ -42,8 +42,12 @@ pub enum EventPropagation {
 /// an input event is processed and an [EventPropagation] is returned.
 #[macro_export]
 macro_rules! spawn_and_consume_event {
-  ($bool: ident, $shared_store: ident, $action: expr) => {
-    $bool = true;
-    spawn_dispatch_action!($shared_store, $action);
+  (
+    $arg_event_consumed_bool: ident,
+    $arg_shared_store:        ident,
+    $arg_action:              expr
+  ) => {
+    $arg_event_consumed_bool = true;
+    spawn_dispatch_action!($arg_shared_store, $arg_action);
   };
 }
