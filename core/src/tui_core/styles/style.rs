@@ -62,8 +62,10 @@ pub struct Style {
   pub color_fg: Option<TWColor>,
   pub color_bg: Option<TWColor>,
   /// The semantics of this are the same as CSS. The padding is space that is taken up inside a
-  /// [FlexBox]. This does not affect the size or position of a [FlexBox], it only applies to the
-  /// contents inside of that [FlexBox].
+  /// `FlexBox`. This does not affect the size or position of a `FlexBox`, it only applies to the
+  /// contents inside of that `FlexBox`.
+  ///
+  /// [`FlexBox` docs](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/tui/layout/flex_box/struct.FlexBox.html).
   pub padding: Option<UnitType>,
   pub cached_bitflags: Option<StyleFlag>,
 }

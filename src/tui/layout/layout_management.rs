@@ -58,7 +58,7 @@ pub struct FlexBoxProps {
   pub maybe_styles: Option<Vec<Style>>,
 }
 
-/// Properties that are needed to create a [TWSurface].
+/// Properties that are needed to create a [Surface].
 #[derive(Clone, Debug, Default)]
 pub struct SurfaceProps {
   pub pos: Position,

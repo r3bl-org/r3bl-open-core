@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-/// Use incremental TT munching: https://veykril.github.io/tlborm/decl-macros/patterns/tt-muncher.html
+/// [Use incremental TT munching](https://veykril.github.io/tlborm/decl-macros/patterns/tt-muncher.html)
 #[macro_export]
 macro_rules! box_start_with_component {
   (

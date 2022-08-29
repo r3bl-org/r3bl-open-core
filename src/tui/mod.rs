@@ -53,7 +53,7 @@
 //! 🧍⌨️🖱️
 //! input → [TerminalWindow]
 //! event       ↑      ↓                 [ComponentRegistry] creates
-//!             ┊   [TWApp] ───────────■ [Component]s at 1st render
+//!             ┊   [App] ───────────■ [Component]s at 1st render
 //!             ┊      │                 
 //!             ┊      │        ┌──────■ id=1 has focus
 //!             ┊      │        │
@@ -72,13 +72,13 @@
 //!
 //! 1. The [Component] that is in [FlexBox] w/ `id=1` currently has focus.
 //! 2. When an input event comes in from the user (key press or mouse input) it is routed to the
-//!    [TWApp] first, before [TerminalWindow] looks at the event.
-//! 3. The specificity of the event handler in [TWApp] is higher than the default input handler in
+//!    [App] first, before [TerminalWindow] looks at the event.
+//! 3. The specificity of the event handler in [App] is higher than the default input handler in
 //!    [TerminalWindow]. Further, the specificity of the [Component] that currently has focus is the
-//!    highest. In other words, the input event gets routed by the [TWApp] to the [Component] that
+//!    highest. In other words, the input event gets routed by the [App] to the [Component] that
 //!    currently has focus ([Component] id=1 in our example).
 //! 4. Since it is not guaranteed that some [Component] will have focus, this input event can then
-//!    be handled by [TWApp], and if not, then by [TerminalWindow]'s default handler. If the default
+//!    be handled by [App], and if not, then by [TerminalWindow]'s default handler. If the default
 //!    handler doesn't process it, then it is simply ignored.
 //! 5. In this journey, as the input event is moved between all these different entities, each
 //!    entity decides whether it wants to handle the input event or not. If it does, then it returns
@@ -98,17 +98,17 @@
 //!    also enter raw mode, and paint to an alternate screen buffer, leaving your original scroll
 //!    back buffer and history intact. When you exit this TUI app, it will return your terminal to
 //!    where you'd left off. You don't write this code, this is something that you use.
-//! 2. [TWApp] - This is where you write your code. You pass in a [TWApp] to the [TerminalWindow] to
-//!    bootstrap your TUI app. You can just use [TWApp] to build your app, if it is a simple one &
+//! 2. [App] - This is where you write your code. You pass in a [App] to the [TerminalWindow] to
+//!    bootstrap your TUI app. You can just use [App] to build your app, if it is a simple one &
 //!    you don't really need any sophisticated layout or styling. But if you want layout and
 //!    styling, now we have to deal with [FlexBox], [Component], and [crate::Style].
 //!
 //! ## Layout and styling
 //!
-//! Inside of your [TWApp] if you want to use flexbox like layout and CSS like styling you can think
+//! Inside of your [App] if you want to use flexbox like layout and CSS like styling you can think
 //! of composing your code in the following way:
 //!
-//! 1. [TWApp] is like a box or container. You can attach styles and an id here. The id has to be
+//! 1. [App] is like a box or container. You can attach styles and an id here. The id has to be
 //!    unique, and you can reference as many styles as you want from your stylesheet. Yes, cascading
 //!    styles are supported! 👏 You can put boxes inside of boxes. You can make a container box and
 //!    inside of that you can add other boxes (you can give them a direction and even relative
@@ -122,10 +122,10 @@
 //!
 //! ## [Component] and [ComponentRegistry], focus management, and event routing
 //!
-//! Typically your [TWApp] will look like this:
+//! Typically your [App] will look like this:
 //!
 //! ```ignore
-//! /// Async trait object that implements the [TWApp] trait.
+//! /// Async trait object that implements the [App] trait.
 //! #[derive(Default)]
 //! pub struct AppWithLayout {
 //!   pub component_registry: ComponentRegistry<AppWithLayoutState, AppWithLayoutAction>,
@@ -133,8 +133,8 @@
 //! }
 //! ```
 //!
-//! As we look at [Component] & [TWApp] more closely we will find a curious thing
-//! [ComponentRegistry] (that is managed by the [TWApp]). The reason this exists is for input event
+//! As we look at [Component] & [App] more closely we will find a curious thing
+//! [ComponentRegistry] (that is managed by the [App]). The reason this exists is for input event
 //! routing. The input events are routed to the [Component] that currently has focus.
 //!
 //! The [HasFocus] struct takes care of this. This provides 2 things:
@@ -144,7 +144,7 @@
 //!    `id`. This allows a separate cursor for each [Component] that has focus. This is needed to
 //!    build apps like editors and viewers that maintains a cursor position between focus switches.
 //!
-//! Another thing to keep in mind is that the [TWApp] and [TerminalWindow] is persistent between
+//! Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent between
 //! re-renders. The Redux store is also persistent between re-renders.
 //!
 //! ## Input event specificity

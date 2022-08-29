@@ -20,8 +20,8 @@ pub mod app;
 pub mod component;
 pub mod default_input_handler;
 pub mod event_routing_support;
-pub mod focus_manager;
 pub mod main_event_loop;
+pub mod manage_focus;
 pub mod type_aliases;
 
 // Re-export.
@@ -29,6 +29,6 @@ pub use app::*;
 pub use component::*;
 pub use default_input_handler::*;
 pub use event_routing_support::*;
-pub use focus_manager::*;
 pub use main_event_loop::*;
+pub use manage_focus::*;
 pub use type_aliases::*;
