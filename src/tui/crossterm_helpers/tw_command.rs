@@ -29,6 +29,8 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use crate::*;
+const DEBUG: bool = false;
+
 // ╭┄┄┄┄┄┄┄╮
 // │ exec! │
 // ╯       ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
