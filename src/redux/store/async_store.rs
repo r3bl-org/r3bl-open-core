@@ -53,6 +53,7 @@ where
   pub middleware_spawns_vec: AsyncMiddlewareSpawnsVec<S, A>,
   pub subscriber_vec: AsyncSubscriberVec<S>,
   pub reducer_vec: AsyncReducerVec<S, A>,
+  pub maybe_previous_state: Option<S>,
 }
 
 impl<S, A> Default for Store<S, A>
@@ -68,6 +69,7 @@ where
       middleware_spawns_vec: Default::default(),
       reducer_vec: Default::default(),
       subscriber_vec: Default::default(),
+      maybe_previous_state: None,
     }
   }
 }
@@ -154,7 +156,18 @@ where
   }
 
   /// Run these in parallel.
-  async fn run_subscribers(&self) {
+  async fn run_subscribers(&mut self) {
+    // Early return if state hasn't changed.
+    if let Some(previous_state) = &self.maybe_previous_state {
+      if *previous_state == self.state {
+        return;
+      }
+    } else {
+      // Update self.maybe_previous_state for next time.
+      self.maybe_previous_state = Some(self.state.clone());
+    }
+
+    // Actually run the subscribers.
     let mut vec_fut = vec![];
     let state_clone = self.get_state();
     for fun in &self.subscriber_vec {
