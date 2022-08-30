@@ -213,6 +213,7 @@
 
 // Attach sources.
 pub mod crossterm_helpers;
+pub mod ed;
 pub mod layout;
 pub mod rsx;
 pub mod syntax_highlighting;
@@ -220,6 +221,7 @@ pub mod terminal_window;
 
 // Re-export.
 pub use crossterm_helpers::*;
+pub use ed::*;
 pub use layout::*;
 pub use rsx::*;
 pub use syntax_highlighting::*;

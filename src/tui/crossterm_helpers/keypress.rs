@@ -33,7 +33,7 @@ use crate::*;
 ///     key: Key::Character('a'),
 ///     mask: ModifierKeysMask::ALT,
 ///   };
-///   let alt_a = keypress!(@char ModifierKeys::ALT, 'a')
+///   let alt_a = keypress!(@char ModifierKeysMask::ALT, 'a')
 ///
 ///   let a = Keypress::Plain {
 ///     key: Key::Character('a'),
@@ -208,17 +208,17 @@ pub enum SpecialKey {
 /// into a [Keypress]. This means the following:
 ///
 /// ```text
-/// ╔════════════════════╦═══════════════════════════════════════════════════════════════╗
-/// ║ User action        ║ Result                                                        ║
-/// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
-/// ║ Type "x"           ║ InputEvent::Key(keypress! {@char 'x'})                        ║
-/// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
-/// ║ Type "X"           ║ InputEvent::Key(keypress! {@char 'X'}) and not                ║
-/// ║ (On keyboard press ║ InputEvent::Key(keypress! {@char ModifierKeys::SHIFT, 'X'})   ║
-/// ║ Shift+X)           ║ ie, the "SHIFT" is ignored                                    ║
-/// ╠════════════════════╬═══════════════════════════════════════════════════════════════╣
-/// ║ Type "Shift + x"   ║ same as above                                                 ║
-/// ╚════════════════════╩═══════════════════════════════════════════════════════════════╝
+/// ╔════════════════════╦════════════════════════════════════════════════════════════════╗
+/// ║ User action        ║ Result                                                         ║
+/// ╠════════════════════╬════════════════════════════════════════════════════════════════╣
+/// ║ Type "x"           ║ InputEvent::Key(keypress! {@char 'x'})                         ║
+/// ╠════════════════════╬════════════════════════════════════════════════════════════════╣
+/// ║ Type "X"           ║ InputEvent::Key(keypress! {@char 'X'}) and not                 ║
+/// ║ (On keyboard press ║ InputEvent::Key(keypress! {@char ModifierKeysMask::SHIFT, 'X'})║
+/// ║ Shift+X)           ║ ie, the "SHIFT" is ignored                                     ║
+/// ╠════════════════════╬════════════════════════════════════════════════════════════════╣
+/// ║ Type "Shift + x"   ║ same as above                                                  ║
+/// ╚════════════════════╩════════════════════════════════════════════════════════════════╝
 /// ```
 ///
 /// The test `test_input_event_matches_correctly` in `test_input_event.rs` demonstrates

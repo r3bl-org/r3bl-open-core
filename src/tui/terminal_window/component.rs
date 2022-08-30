@@ -28,6 +28,14 @@ where
   S: Default + Display + Clone + PartialEq + Eq + Debug + Sync + Send,
   A: Default + Display + Clone + Sync + Send,
 {
+  /// If this component has focus [HasFocus] then this method will be called to handle input event
+  /// that is meant for it.
+  async fn handle_event(
+    &mut self, input_event: &InputEvent, state: &S, shared_store: &SharedStore<S, A>,
+  ) -> CommonResult<EventPropagation>;
+
+  /// Render this component given the following.
+  ///
   /// Arguments: Get from `current_box`:
   ///   - box_origin_pos: Position
   ///   - box_bounding_size: Size
@@ -50,10 +58,6 @@ where
     &mut self, has_focus: &HasFocus, current_box: &FlexBox, state: &S,
     shared_store: &SharedStore<S, A>,
   ) -> CommonResult<TWCommandQueue>;
-
-  async fn handle_event(
-    &mut self, input_event: &InputEvent, state: &S, shared_store: &SharedStore<S, A>,
-  ) -> CommonResult<EventPropagation>;
 }
 
 #[async_trait]

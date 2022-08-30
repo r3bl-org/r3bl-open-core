@@ -282,6 +282,7 @@ impl TWCommandQueue {
     self
   }
 
+  // TODO: support termion, along w/ crossterm, by providing another impl of this fn
   #[allow(unreachable_patterns)]
   pub fn flush(&self, clear_before_flush: bool) {
     let mut skip_flush = false;
