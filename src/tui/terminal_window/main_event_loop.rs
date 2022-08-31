@@ -59,14 +59,14 @@ impl TerminalWindow {
   ///
   /// ```ignore
   /// where
-  /// S: Default + Clone + PartialEq + Eq + Debug + Sync + Send,
+  /// S: Default + Clone + PartialEq + Debug + Sync + Send,
   /// A: Default + Clone + Sync + Send,
   /// ```
   pub async fn main_event_loop<S, A>(
     store: Store<S, A>, shared_app: SharedApp<S, A>, exit_keys: Vec<InputEvent>,
   ) -> CommonResult<()>
   where
-    S: Display + Default + Clone + PartialEq + Eq + Debug + Sync + Send + 'static,
+    S: Display + Default + Clone + PartialEq + Debug + Sync + Send + 'static,
     A: Display + Default + Clone + Sync + Send + 'static,
   {
     raw_mode!({
@@ -152,7 +152,7 @@ impl TerminalWindow {
 
 struct AppManager<S, A>
 where
-  S: Display + Default + Clone + PartialEq + Eq + Debug + Sync + Send + 'static,
+  S: Display + Default + Clone + PartialEq + Debug + Sync + Send + 'static,
   A: Display + Default + Clone + Sync + Send + 'static,
 {
   shared_app: SharedApp<S, A>,
@@ -163,7 +163,7 @@ where
 #[async_trait]
 impl<S, A> AsyncSubscriber<S> for AppManager<S, A>
 where
-  S: Display + Default + Clone + PartialEq + Eq + Debug + Sync + Send + 'static,
+  S: Display + Default + Clone + PartialEq + Debug + Sync + Send + 'static,
   A: Display + Default + Clone + Sync + Send,
 {
   async fn run(&self, my_state: S) {
@@ -186,7 +186,7 @@ where
 
 impl<S, A> AppManager<S, A>
 where
-  S: Display + Default + Clone + PartialEq + Eq + Debug + Sync + Send + 'static,
+  S: Display + Default + Clone + PartialEq + Debug + Sync + Send + 'static,
   A: Display + Default + Clone + Sync + Send,
 {
   fn new_box(

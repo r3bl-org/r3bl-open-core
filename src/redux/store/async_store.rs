@@ -44,7 +44,7 @@ macro_rules! spawn_dispatch_action {
 /// Thread safe and async Redux store (using [`tokio`]).
 pub struct Store<S, A>
 where
-  S: Clone + Default + PartialEq + Eq + Debug + Sync + Send,
+  S: Clone + Default + PartialEq + Debug + Sync + Send,
   A: Clone + Default + Send + Sync,
 {
   pub state: S,
@@ -58,7 +58,7 @@ where
 
 impl<S, A> Default for Store<S, A>
 where
-  S: Clone + Default + PartialEq + Eq + Debug + Sync + Send,
+  S: Clone + Default + PartialEq + Debug + Sync + Send,
   A: Clone + Default + Send + Sync,
 {
   fn default() -> Store<S, A> {
@@ -79,7 +79,7 @@ where
 // Handle subscriber, middleware, reducer management.
 impl<S, A> Store<S, A>
 where
-  S: Clone + Default + PartialEq + Eq + Debug + Sync + Send,
+  S: Clone + Default + PartialEq + Debug + Sync + Send,
   A: Clone + Default + Send + Sync,
 {
   pub async fn add_subscriber(
@@ -129,7 +129,7 @@ where
 // Handle dispatch & history.
 impl<S, A> Store<S, A>
 where
-  S: Clone + Default + PartialEq + Eq + Debug + Sync + Send,
+  S: Clone + Default + PartialEq + Debug + Sync + Send,
   A: Clone + Default + Send + Sync,
 {
   pub fn get_state(&self) -> S { self.state.clone() }

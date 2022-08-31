@@ -25,7 +25,7 @@ use crate::*;
 #[async_trait]
 pub trait Component<S, A>
 where
-  S: Default + Display + Clone + PartialEq + Eq + Debug + Sync + Send,
+  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Display + Clone + Sync + Send,
 {
   /// If this component has focus [HasFocus] then this method will be called to handle input event
@@ -63,7 +63,7 @@ where
 #[async_trait]
 pub trait SurfaceRunnable<S, A>
 where
-  S: Default + Display + Clone + PartialEq + Eq + Debug + Sync + Send,
+  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Display + Clone + Sync + Send,
 {
   async fn run_on_surface(

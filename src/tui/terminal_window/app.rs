@@ -28,7 +28,7 @@ use crate::*;
 #[async_trait]
 pub trait App<S, A>
 where
-  S: Display + Default + Clone + PartialEq + Eq + Debug + Sync + Send,
+  S: Display + Default + Clone + PartialEq + Debug + Sync + Send,
   A: Display + Default + Clone + Sync + Send,
 {
   /// Use the state to render the output (via crossterm). To change the state, dispatch an action.
