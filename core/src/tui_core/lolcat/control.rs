@@ -15,12 +15,15 @@
  *   limitations under the License.
  */
 
+use std::fmt::Display;
+
 use atty::Stream;
 use rand::random;
 use serde::*;
+use get_size::GetSize;
 
 /// A struct to contain info we need to print with every character.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, GetSize)]
 pub struct ColorWheelControl {
   pub seed: f64,
   pub spread: f64,
@@ -47,10 +50,19 @@ impl PartialEq for ColorWheelControl {
   }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, GetSize)]
 pub enum ColorChangeSpeed {
   Rapid,
   Slow,
+}
+
+impl Display for ColorChangeSpeed {
+  fn fmt(&self, f: &mut __private::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      ColorChangeSpeed::Rapid => write!(f, "Rapid"),
+      ColorChangeSpeed::Slow => write!(f, "Slow"),
+    }
+  }
 }
 
 impl From<ColorChangeSpeed> for f64 {

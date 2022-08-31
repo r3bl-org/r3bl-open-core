@@ -18,6 +18,7 @@
 use std::{fmt::{self, Debug},
           ops::{Add, AddAssign, Mul}};
 
+use get_size::GetSize;
 use serde::*;
 
 use crate::*;
@@ -52,7 +53,7 @@ use crate::*;
 /// ```ignore
 /// let pos: Position = position!(0, 0);
 /// ```
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Default, GetSize)]
 pub struct Position {
   pub col: UnitType,
   pub row: UnitType,

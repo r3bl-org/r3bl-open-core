@@ -15,10 +15,11 @@
  *   limitations under the License.
  */
 
+use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::*;
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Default, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
   pub buffer: Vec<String>,
@@ -28,4 +29,27 @@ pub struct EditorBuffer {
   pub scroll_offset: Position,
   /// Lolcat struct for generating rainbow colors.
   pub lolcat: Lolcat,
+}
+
+mod helpers {
+  use super::*;
+
+  impl std::fmt::Debug for EditorBuffer {
+    fn fmt(&self, f: &mut __private::Formatter<'_>) -> std::fmt::Result {
+      write! { f,
+        "\nEditorBuffer [ \n ├ lines: {}, size: {}, \n ├ cursor: {:?}, scroll_offset: {:?}, \n └ lolcat: [{}, {}, {}, {}] \n]",
+        self.buffer.len(),
+        self.buffer.get_heap_size(),
+        self.cursor,
+        self.scroll_offset,
+        pretty_print_f64(self.lolcat.color_wheel_control.seed),
+        pretty_print_f64(self.lolcat.color_wheel_control.spread),
+        pretty_print_f64(self.lolcat.color_wheel_control.frequency),
+        self.lolcat.color_wheel_control.color_change_speed
+      }
+    }
+  }
+
+  /// More info: <https://stackoverflow.com/questions/63214346/how-to-truncate-f64-to-2-decimal-places>
+  fn pretty_print_f64(before: f64) -> f64 { f64::trunc(before * 100.0) / 100.0 }
 }
