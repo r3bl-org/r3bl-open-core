@@ -21,6 +21,7 @@ use std::{fmt::Display,
           time::Duration};
 
 use rand::{thread_rng, Rng};
+use serde::*;
 
 use crate::*;
 
@@ -85,7 +86,7 @@ fn _print(output_vec: &mut OutputCollectorType, args: std::fmt::Arguments) {
   output_vec.push(content);
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 pub struct Lolcat {
   color_wheel_control: ColorWheelControl,
 }

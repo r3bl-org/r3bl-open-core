@@ -17,9 +17,10 @@
 
 use atty::Stream;
 use rand::random;
+use serde::*;
 
 /// A struct to contain info we need to print with every character.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ColorWheelControl {
   pub seed: f64,
   pub spread: f64,
@@ -30,7 +31,23 @@ pub struct ColorWheelControl {
   pub color_change_speed: ColorChangeSpeed,
 }
 
-#[derive(Debug, Clone, Copy)]
+impl PartialEq for ColorWheelControl {
+  /// More info:
+  /// 1. <https://stackoverflow.com/questions/67951688/comparing-structs-with-floating-point-numbers-in-rust>
+  /// 2. <https://doc.rust-lang.org/std/primitive.f64.html#associatedconstant.EPSILON>
+  /// 3. <https://rust-lang.github.io/rust-clippy/master/index.html#float_equality_without_abs>
+  fn eq(&self, other: &Self) -> bool {
+    (self.seed - other.seed).abs() < f64::EPSILON // self.seed == other.seed
+      && self.spread == other.spread
+      && self.frequency == other.frequency
+      && self.background_mode == other.background_mode
+      && self.dialup_mode == other.dialup_mode
+      && self.print_color == other.print_color
+      && self.color_change_speed == other.color_change_speed
+  }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ColorChangeSpeed {
   Rapid,
   Slow,
