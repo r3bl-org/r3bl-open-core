@@ -47,3 +47,6 @@ strip-ansi-escapes = "0.1.1"
 # For lolcat.
 rand = "0.8.5"
 atty = "0.2.14"
+
+# get-size.
+get-size = { version = "^0.1", features = ["derive"] }
