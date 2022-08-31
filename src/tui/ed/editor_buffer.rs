@@ -18,7 +18,7 @@
 use r3bl_rs_utils_core::*;
 use serde::*;
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
   pub buffer: Vec<String>,
@@ -26,4 +26,6 @@ pub struct EditorBuffer {
   pub cursor: Position,
   /// The col and row offset for scrolling if active.
   pub scroll_offset: Position,
+  /// Lolcat struct for generating rainbow colors.
+  pub lolcat: Lolcat,
 }
