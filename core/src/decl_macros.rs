@@ -143,6 +143,27 @@ macro_rules! call_if_true {
   }};
 }
 
+/// Syntactic sugar to run a conditional statement. Here's an example.
+/// ```rust
+/// const DEBUG: bool = true;
+/// call_if_debug_true!(
+///   eprintln!(
+///     "{} {} {}\r",
+///     r3bl_rs_utils::style_error("▶"),
+///     r3bl_rs_utils::style_prompt($msg),
+///     r3bl_rs_utils::style_dimmed(&format!("{:#?}", $err))
+///   )
+/// );
+/// ```
+#[macro_export]
+macro_rules! call_if_debug_true {
+  ($block: expr) => {{
+    if DEBUG {
+      $block
+    }
+  }};
+}
+
 /// This is a really simple macro to make it effortless to use the color console
 /// logger. It takes a single identifier as an argument, or any number of them.
 /// It simply dumps an arrow symbol, followed by the identifier ([stringify]'d)

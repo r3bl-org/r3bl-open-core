@@ -63,7 +63,7 @@ pub(crate) fn code_gen(
   };
 
   quote! {
-    r3bl_rs_utils::Style {
+    Style {
       id: #id.to_string(),
       bold: #has_attrib_bold,
       dim: #has_attrib_dim,

@@ -1,0 +1,34 @@
+{
+	"files": [
+		{
+			"path": "src/tui/crossterm_helpers/tw_command.rs",
+			"bookmarks": [
+				{
+					"line": 319,
+					"column": 4,
+					"label": ""
+				},
+				{
+					"line": 326,
+					"column": 4,
+					"label": ""
+				},
+				{
+					"line": 486,
+					"column": 8,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/tui/terminal_window/main_event_loop.rs",
+			"bookmarks": [
+				{
+					"line": 231,
+					"column": 6,
+					"label": ""
+				}
+			]
+		}
+	]
+}

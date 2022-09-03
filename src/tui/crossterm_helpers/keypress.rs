@@ -229,6 +229,7 @@ pub enum SpecialKey {
 ///    KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
 pub mod convert_key_event {
   use super::*;
+
   impl TryFrom<KeyEvent> for Keypress {
     type Error = ();
     /// Convert [KeyEvent] to [Keypress].
@@ -437,7 +438,3 @@ pub mod convert_key_event {
     })
   }
 }
-
-// Re-export so this is visible for testing.
-#[allow(unused_imports)]
-pub(crate) use convert_key_event::*;

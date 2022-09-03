@@ -29,6 +29,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use crate::*;
+
 const DEBUG: bool = false;
 
 // ╭┄┄┄┄┄┄┄╮
@@ -40,22 +41,30 @@ const DEBUG: bool = false;
 /// Paste docs: <https://github.com/dtolnay/paste>
 #[macro_export]
 macro_rules! exec {
-  ($cmd: expr, $log_msg: expr) => {{
+  (
+    $arg_cmd: expr,
+    $arg_log_msg: expr
+  ) => {{
     // Generate a new function that returns [CommonResult]. This needs to be called. The only
     // purpose of this generated method is to handle errors that may result from calling log! macro
     // when there are issues accessing the log file for whatever reason.
     let _fn_wrap_for_logging_err = || -> CommonResult<()> {
       throws!({
         // Execute the command.
-        if let Err(err) = $cmd {
+        if let Err(err) = $arg_cmd {
           call_if_true!(
             DEBUG,
-            log!(ERROR, "crossterm: ❌ Failed to {} due to {}", $log_msg, err)
+            log!(
+              ERROR,
+              "crossterm: ❌ Failed to {} due to {}",
+              $arg_log_msg,
+              err
+            )
           );
         } else {
           call_if_true! {
             DEBUG,
-            log!(INFO, "crossterm: ✅ {} successfully", $log_msg)
+            log!(INFO, "crossterm: ✅ {} successfully", $arg_log_msg)
           };
         }
       })
@@ -66,8 +75,8 @@ macro_rules! exec {
     if let Err(logging_err) = _fn_wrap_for_logging_err() {
       let msg = format!(
         "❌ Failed to log exec output of {}, {}",
-        stringify!($cmd),
-        $log_msg
+        stringify!($arg_cmd),
+        $arg_log_msg
       );
       call_if_true! {
         DEBUG,
@@ -124,12 +133,25 @@ macro_rules! tw_command_queue {
       queue
     }
   };
-  // Add a bunch of TWCommands $element* to the existing $queue & return nothing.
+  // Add a bunch of TWCommands $element+ to the existing $queue & return nothing.
   ($queue:ident push $($element:expr),+) => {
     $(
       /* Each repeat will contain the following statement, with $element replaced. */
       $queue.push($element);
     )*
+  };
+  // Add a bunch of TWCommandQueues $element+ to the new queue, drop them, and return queue.
+  (@join_and_drop $($element:expr),+) => {{
+    let mut queue = TWCommandQueue::default();
+    $(
+      /* Each repeat will contain the following statement, with $element replaced. */
+      queue.join_into($element);
+    )*
+    queue
+  }};
+  // New.
+  (@new) => {
+    TWCommandQueue::default()
   };
 }
 
@@ -159,6 +181,8 @@ pub enum TWCommand {
   PrintWithAttributes(String, Option<Style>),
   CursorShow,
   CursorHide,
+  ShowCaretAtPositionAbs(Position),
+  ShowCaretAtPositionRelTo(Position, Position),
 }
 
 mod command_helpers {
@@ -175,8 +199,10 @@ mod command_helpers {
           TWCommand::EnterRawMode => "EnterRawMode".into(),
           TWCommand::ExitRawMode => "ExitRawMode".into(),
           TWCommand::MoveCursorPositionAbs(pos) => format!("MoveCursorPositionAbs({:?})", pos),
-          TWCommand::MoveCursorPositionRelTo(orig_pos, rel_pos) =>
-            format!("MoveCursorPositionRelTo({:?}, {:?})", orig_pos, rel_pos),
+          TWCommand::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => format!(
+            "MoveCursorPositionRelTo({:?}, {:?})",
+            box_origin_pos, content_rel_pos
+          ),
           TWCommand::ClearScreen => "ClearScreen".into(),
           TWCommand::SetFgColor(fg_color) => format!("SetFgColor({:?})", fg_color),
           TWCommand::SetBgColor(bg_color) => format!("SetBgColor({:?})", bg_color),
@@ -205,6 +231,11 @@ mod command_helpers {
           }
           TWCommand::CursorShow => "CursorShow".into(),
           TWCommand::CursorHide => "CursorHide".into(),
+          TWCommand::ShowCaretAtPositionAbs(pos) => format!("ShowCursorAtPosition({:?})", pos),
+          TWCommand::ShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => format!(
+            "ShowCursorAtPosition({:?}, {:?})",
+            box_origin_pos, content_rel_pos
+          ),
         }
       )
     }
@@ -232,41 +263,17 @@ impl TWCommand {
 /// ```
 #[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TWCommandQueue {
+  /// The queue of [TWCommand]s to execute.
   pub queue: Vec<TWCommand>,
 }
 
-mod queue_helpers {
-  use super::*;
-
-  impl Debug for TWCommandQueue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      let mut temp_vec: Vec<String> = vec![];
-      for command in &self.queue {
-        let line: String = format!("{:?}", command);
-        temp_vec.push(line);
-      }
-      write!(f, "\n    - {}", temp_vec.join("\n    - "))
-    }
-  }
-
-  impl AddAssign for TWCommandQueue {
-    fn add_assign(&mut self, other: TWCommandQueue) { self.queue.extend(other.queue); }
-  }
-
-  impl Add<TWCommand> for TWCommandQueue {
-    type Output = TWCommandQueue;
-    fn add(mut self, other: TWCommand) -> TWCommandQueue {
-      self.queue.push(other);
-      self
-    }
-  }
-
-  impl AddAssign<TWCommand> for TWCommandQueue {
-    fn add_assign(&mut self, other: TWCommand) { self.queue.push(other); }
-  }
-}
-
 impl TWCommandQueue {
+  /// This will add `rhs` to `self` and then drop `rhs`.
+  pub fn join_into(&mut self, mut rhs: TWCommandQueue) {
+    self.queue.append(&mut rhs.queue);
+    drop(rhs);
+  }
+
   pub fn push(&mut self, cmd_wrapper: TWCommand) -> &mut Self {
     self.queue.push(cmd_wrapper);
     self
@@ -287,6 +294,10 @@ impl TWCommandQueue {
   pub fn flush(&self, clear_before_flush: bool) {
     let mut skip_flush = false;
 
+    // If set to [Position] then it will draw the cursor at that position after flushing the queue.
+    // Then clear this value. It will hide the cursor if [Position] is [None].
+    let mut maybe_draw_caret_at: Option<Position> = None;
+
     if clear_before_flush {
       exec! {
         queue!(stdout(),
@@ -297,7 +308,30 @@ impl TWCommandQueue {
       }
     }
 
+    fn handle_maybe_draw_caret_at_overwrite_attempt(ignored_pos: Position) {
+      call_if_debug_true! {
+        log_no_err!(WARN,
+          "{} -> {:?}",
+          "Attempt to set maybe_draw_caret_at more than once. Ignoring {:?}", ignored_pos)
+      };
+    }
+
     self.queue.iter().for_each(|cmd_wrapper| match cmd_wrapper {
+      TWCommand::ShowCaretAtPositionAbs(pos) => {
+        if maybe_draw_caret_at.is_none() {
+          maybe_draw_caret_at = Some(*pos);
+        } else {
+          handle_maybe_draw_caret_at_overwrite_attempt(*pos);
+        }
+      }
+      TWCommand::ShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => {
+        let new_pos = *box_origin_pos + *content_rel_pos;
+        if maybe_draw_caret_at.is_none() {
+          maybe_draw_caret_at = Some(new_pos);
+        } else {
+          handle_maybe_draw_caret_at_overwrite_attempt(new_pos);
+        }
+      }
       TWCommand::EnterRawMode => {
         exec! {
           terminal::enable_raw_mode(),
@@ -434,7 +468,7 @@ impl TWCommandQueue {
             )
           }
         }
-      }
+      },
       _ => {
         log_no_err!{
           ERROR,
@@ -448,6 +482,51 @@ impl TWCommandQueue {
     if !skip_flush {
       TWCommand::flush()
     };
+
+    // Handle cursor drawing.
+    if let Some(draw_cursor_at) = maybe_draw_caret_at {
+      let Position { col, row } = draw_cursor_at;
+      exec!(
+        queue!(stdout(), MoveTo(col, row)),
+        format!("DrawCursorAt -> MoveTo(col: {}, row: {})", col, row)
+      );
+      exec!(queue!(stdout(), Show), "DrawCursorAt -> Show");
+      TWCommand::flush();
+    } else {
+      exec!(queue!(stdout(), Hide), "DrawCursorAt -> Hide");
+      TWCommand::flush();
+    }
+  }
+}
+
+mod queue_helpers {
+  use super::*;
+
+  impl Debug for TWCommandQueue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      let mut temp_vec: Vec<String> = vec![];
+      for command in &self.queue {
+        let line: String = format!("{:?}", command);
+        temp_vec.push(line);
+      }
+      write!(f, "\n    - {}", temp_vec.join("\n    - "))
+    }
+  }
+
+  impl AddAssign for TWCommandQueue {
+    fn add_assign(&mut self, other: TWCommandQueue) { self.queue.extend(other.queue); }
+  }
+
+  impl Add<TWCommand> for TWCommandQueue {
+    type Output = TWCommandQueue;
+    fn add(mut self, other: TWCommand) -> TWCommandQueue {
+      self.queue.push(other);
+      self
+    }
+  }
+
+  impl AddAssign<TWCommand> for TWCommandQueue {
+    fn add_assign(&mut self, other: TWCommand) { self.queue.push(other); }
   }
 }
 
@@ -464,3 +543,12 @@ pub static STYLE_TO_ATTRIBUTE_MAP: Lazy<HashMap<StyleFlag, Attribute>> = Lazy::n
   map.insert(StyleFlag::STRIKETHROUGH_SET, Attribute::Fraktur);
   map
 });
+
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Misc terminal commands │
+// ╯                        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+/// Create a new [Size] from [crossterm::terminal::size()].
+pub fn get_terminal_window_size() -> CommonResult<Size> {
+  let size: Size = size()?.into();
+  Ok(size)
+}

@@ -16,9 +16,9 @@
  */
 
 use unicode_segmentation::UnicodeSegmentation;
-use unicode_width::UnicodeWidthStr;
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-use crate::{convert_to_base_unit, Size, UnitType};
+use crate::{convert_to_base_unit, CommonResult, Size, UnitType};
 
 /// A grapheme cluster is a user-perceived character. Rust uses `UTF-8` to
 /// represent text in `String`. So each character takes up 8 bits or one byte.
@@ -204,15 +204,6 @@ impl UnicodeStringExt for String {
 }
 
 #[derive(Debug, Clone)]
-pub struct UnicodeString {
-  pub string: String,
-  pub vec_segment: Vec<GraphemeClusterSegment>,
-  pub byte_size: usize,
-  pub grapheme_cluster_segment_count: usize,
-  pub display_width: UnitType,
-}
-
-#[derive(Debug, Clone)]
 pub struct GraphemeClusterSegment {
   /// The actual grapheme cluster `&str`. Eg: "H", "📦", "🙏🏽".
   pub string: String,
@@ -228,7 +219,51 @@ pub struct GraphemeClusterSegment {
   pub display_col_offset: UnitType,
 }
 
+#[derive(Debug, Clone)]
+pub struct UnicodeString {
+  pub string: String,
+  pub vec_segment: Vec<GraphemeClusterSegment>,
+  pub byte_size: usize,
+  pub grapheme_cluster_segment_count: usize,
+  pub display_width: UnitType,
+}
+
+/// Convert [char] to [GraphemeClusterSegment].
+impl From<char> for GraphemeClusterSegment {
+  fn from(character: char) -> Self {
+    let my_string: String = character.into();
+    my_string.unicode_string().vec_segment[0].clone()
+  }
+}
+
+/// Convert [&str] to [GraphemeClusterSegment].
+impl From<&str> for GraphemeClusterSegment {
+  fn from(chunk: &str) -> Self {
+    let my_string: String = chunk.to_string();
+    my_string.unicode_string().vec_segment[0].clone()
+  }
+}
+
+/// Convert [Vec<GraphemeClusterSegment>] to [String].
+fn to_string(vec_grapheme_cluster_segment: Vec<GraphemeClusterSegment>) -> String {
+  let mut my_string = String::new();
+  for grapheme_cluster_segment in vec_grapheme_cluster_segment {
+    my_string.push_str(&grapheme_cluster_segment.string);
+  }
+  my_string
+}
+
 impl UnicodeString {
+  pub fn char_display_width(character: char) -> usize {
+    let display_width: usize = UnicodeWidthChar::width(character).unwrap_or(0);
+    display_width
+  }
+
+  pub fn str_display_width(string: &str) -> usize {
+    let display_width: usize = UnicodeWidthStr::width(string);
+    display_width
+  }
+
   pub fn truncate_to_fit_size(&self, size: Size) -> &str {
     let display_cols: UnitType = size.cols;
     self.truncate_to_fit_display_cols(display_cols)
@@ -249,10 +284,12 @@ impl UnicodeString {
     &self.string[..string_end_byte_index]
   }
 
+  /// `local_index` is the index of the grapheme cluster in the `vec_segment`.
   pub fn at_logical_index(&self, logical_index: usize) -> Option<&GraphemeClusterSegment> {
     self.vec_segment.get(logical_index)
   }
 
+  /// `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
   pub fn at_display_col(&self, display_col: UnitType) -> Option<&GraphemeClusterSegment> {
     self.vec_segment.iter().find(|&grapheme_cluster_segment| {
       let segment_display_col_start: UnitType = grapheme_cluster_segment.display_col_offset;
@@ -262,16 +299,61 @@ impl UnicodeString {
     })
   }
 
+  /// Convert a `display_col` to a `logical_index`.
+  /// - `local_index` is the index of the grapheme cluster in the `vec_segment`.
+  /// - `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
   pub fn logical_index_at_display_col(&self, display_col: UnitType) -> Option<usize> {
     self
       .at_display_col(display_col)
       .map(|segment| segment.logical_index)
   }
 
+  /// Convert a `logical_index` to a `display_col`.
+  /// - `local_index` is the index of the grapheme cluster in the `vec_segment`.
+  /// - `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
   pub fn display_col_at_logical_index(&self, logical_index: usize) -> Option<UnitType> {
     self
       .at_logical_index(logical_index)
       .map(|segment| segment.display_col_offset)
+  }
+
+  /// Returns a new ([String], [UnitType]) tuple and does not modify
+  /// [self.string](UnicodeString::string).
+  pub fn insert_char_at_display_col(
+    &self, display_col: UnitType, chunk: &str,
+  ) -> CommonResult<(String, UnitType)> {
+    let maybe_logical_index = self.logical_index_at_display_col(display_col);
+    match maybe_logical_index {
+      // Insert somewhere inside bounds of self.string.
+      Some(logical_index) => {
+        // Convert the character into a grapheme cluster.
+        let character_g_c_s: GraphemeClusterSegment = chunk.into();
+        let character_display_width: UnitType = character_g_c_s.unicode_width;
+
+        // Insert this grapheme cluster to self.vec_segment.
+        let mut vec_segment_clone = self.vec_segment.clone();
+        vec_segment_clone.insert(logical_index, character_g_c_s);
+
+        // Generate a new string from self.vec_segment and return it and the unicode width of the
+        // character.
+        let new_string = to_string(vec_segment_clone);
+
+        // In the caller - update the caret position based on the unicode width of the character.
+        Ok((new_string, character_display_width))
+      }
+      // Add to end of self.string.
+      None => {
+        // Push character to the end of the cloned string.
+        let mut new_string = self.string.clone();
+        new_string.push_str(chunk);
+
+        // Get the unicode width of the character.
+        let character_display_width = UnicodeString::str_display_width(chunk);
+
+        // In the caller - update the caret position based on the unicode width of the character.
+        Ok((new_string, convert_to_base_unit!(character_display_width)))
+      }
+    }
   }
 }
 

@@ -37,6 +37,22 @@ pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
   builder::derive_proc_macro_impl(input)
 }
 
+/// Example.
+///
+/// ```
+/// style! {
+///   id: "my_style",          /* Optional. */
+///   attrib: [dim, bold]      /* Optional. */
+///   padding: 10,             /* Optional. */
+///   color_fg: TWColor::Blue, /* Optional. */
+///   color_bg: TWColor::Red,  /* Optional. */
+/// }
+/// ```
+///
+/// `color_fg` and `color_bg` can take any of the following:
+/// 1. Color enum value.
+/// 2. Rgb value.
+/// 3. Variable holding either of the above.qq
 #[proc_macro]
 pub fn style(input: TokenStream) -> TokenStream { make_style::fn_proc_macro_impl(input) }
 

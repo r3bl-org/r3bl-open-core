@@ -3,3 +3,4 @@ Cargo.lock
 **/target
 docs/*.bkp
 docs/*.dtmp
+.idea
