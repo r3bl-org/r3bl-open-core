@@ -18,7 +18,8 @@
 use std::{collections::HashMap,
           fmt::Debug,
           io::{stderr, stdout, Write},
-          ops::{Add, AddAssign}};
+          ops::{Add, AddAssign},
+          sync::RwLock};
 
 use crossterm::{cursor::*,
                 event::*,
@@ -267,7 +268,27 @@ pub struct TWCommandQueue {
   pub queue: Vec<TWCommand>,
 }
 
+static mut TERMINAL_WINDOW_SIZE: RwLock<Size> = RwLock::new(size!(col: 0, row: 0));
+
 impl TWCommandQueue {
+  pub fn set_terminal_window_size(size: Size) {
+    unsafe {
+      if let Ok(mut write_guard) = TERMINAL_WINDOW_SIZE.write() {
+        *write_guard = size
+      }
+    }
+  }
+
+  pub fn get_terminal_window_size() -> Size {
+    unsafe {
+      if let Ok(read_guard) = TERMINAL_WINDOW_SIZE.read() {
+        *read_guard
+      } else {
+        size!(col: 0, row: 0)
+      }
+    }
+  }
+
   /// This will add `rhs` to `self` and then drop `rhs`.
   pub fn join_into(&mut self, mut rhs: TWCommandQueue) {
     self.queue.append(&mut rhs.queue);
@@ -289,7 +310,7 @@ impl TWCommandQueue {
     self
   }
 
-  // TODO: support termion, along w/ crossterm, by providing another impl of this fn #24
+  // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
   #[allow(unreachable_patterns)]
   pub fn flush(&self, clear_before_flush: bool) {
     let mut skip_flush = false;

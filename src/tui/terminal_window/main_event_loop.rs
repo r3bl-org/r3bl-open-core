@@ -19,36 +19,33 @@ use std::{fmt::{Debug, Display},
           sync::Arc};
 
 use async_trait::async_trait;
-use crossterm::{event::*, terminal::*};
 use tokio::sync::RwLock;
 
 use crate::*;
 
 #[derive(Clone, Debug)]
 pub struct TWData {
-  pub size: Size,
-}
-
-/// Create a new [Size] from [crossterm::terminal::size()].
-pub fn try_to_get_from_crossterm_terminal() -> CommonResult<Size> {
-  let size: Size = size()?.into();
-  Ok(size)
+  size: Size,
 }
 
 impl TWData {
   fn try_to_create_instance() -> CommonResult<TWData> {
-    Ok(TWData {
-      size: try_to_get_from_crossterm_terminal()?,
-    })
-  }
-
-  pub fn dump_state_to_log(&self, msg: &str) {
-    call_if_true!(DEBUG, log_no_err!(INFO, "{} -> {:?}", msg, self));
+    let empty_size = size!(col: 0, row: 0);
+    let mut tw_data = TWData { size: empty_size };
+    tw_data.set_size(get_terminal_window_size()?);
+    Ok(tw_data)
   }
 
   pub fn set_size(&mut self, new_size: Size) {
     self.size = new_size;
+    TWCommandQueue::set_terminal_window_size(new_size);
     self.dump_state_to_log("main_event_loop -> Resize");
+  }
+
+  pub fn get_size(&self) -> Size { self.size }
+
+  pub fn dump_state_to_log(&self, msg: &str) {
+    call_if_debug_true!(log_no_err!(INFO, "{} -> {:?}", msg, self));
   }
 }
 
@@ -82,13 +79,13 @@ impl TerminalWindow {
       shared_store.write().await.add_subscriber(_subscriber).await;
 
       // Create a new event stream (async).
-      let mut stream = EventStream::new();
+      let mut async_event_stream = AsyncEventStream::default();
 
       // Perform first render.
       AppManager::render_app(
         &shared_store,
         &shared_app,
-        shared_window.read().await.size,
+        shared_window.read().await.get_size(),
         None,
       )
       .await?;
@@ -101,7 +98,7 @@ impl TerminalWindow {
       // Main event loop.
       loop {
         // Try and get the next event if available (asynchronously).
-        let maybe_input_event = stream.try_to_get_input_event().await;
+        let maybe_input_event = async_event_stream.try_to_get_input_event().await;
 
         // Process the input_event.
         if let Some(input_event) = maybe_input_event {
@@ -122,7 +119,7 @@ impl TerminalWindow {
           // If event not consumed by app, propagate to the default input handler.
           match propagation_result_from_app {
             EventPropagation::ConsumedRerender => {
-              let size = shared_window.read().await.size;
+              let size = shared_window.read().await.get_size();
               AppManager::render_app(&shared_store, &shared_app, size, None).await?;
             }
             EventPropagation::Propagate => {
@@ -167,7 +164,7 @@ where
   A: Display + Default + Clone + Sync + Send,
 {
   async fn run(&self, my_state: S) {
-    let window_size = self.shared_window.read().await.size;
+    let window_size = self.shared_window.read().await.get_size();
     let result = AppManager::render_app(
       &self.shared_store,
       &self.shared_app,
@@ -206,7 +203,7 @@ where
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       let latest_state = shared_store.read().await.get_state();
-      let window_size = shared_window.read().await.size;
+      let window_size = shared_window.read().await.get_size();
       shared_app
         .write()
         .await
@@ -231,6 +228,7 @@ where
         .await
         .app_render(&state, shared_store, window_size)
         .await;
+
       match render_result {
         Err(error) => {
           TWCommand::flush();

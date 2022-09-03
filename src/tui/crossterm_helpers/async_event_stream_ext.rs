@@ -56,6 +56,24 @@ use futures_util::{FutureExt, StreamExt};
 
 use crate::*;
 
+pub struct AsyncEventStream {
+  event_stream: EventStream,
+}
+
+impl AsyncEventStream {
+  pub async fn try_to_get_input_event(&mut self) -> Option<InputEvent> {
+    self.event_stream.try_to_get_input_event().await
+  }
+}
+
+impl Default for AsyncEventStream {
+  fn default() -> Self {
+    Self {
+      event_stream: EventStream::new(),
+    }
+  }
+}
+
 #[async_trait]
 pub trait EventStreamExt {
   /// Try and read an [Event] from the [EventStream], and convert it into an [InputEvent]. This is a
@@ -74,13 +92,13 @@ impl EventStreamExt for EventStream {
         match input_event {
           Ok(input_event) => Some(input_event),
           Err(e) => {
-            call_if_true!(DEBUG, log_no_err!(ERROR, "Error: {:?}", e));
+            call_if_debug_true!(log_no_err!(ERROR, "Error: {:?}", e));
             None
           }
         }
       }
       Some(Err(e)) => {
-        call_if_true!(DEBUG, log_no_err!(ERROR, "Error: {:?}", e));
+        call_if_debug_true!(log_no_err!(ERROR, "Error: {:?}", e));
         None
       }
       _ => None,
