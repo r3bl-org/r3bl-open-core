@@ -26,11 +26,11 @@ use crate::utils::IdentExt;
 ///
 /// ```
 /// style! {
-///   id: "my_style",        /* Optional. */
-///   attrib: [dim, bold]    /* Optional. */
-///   padding: 10,           /* Optional. */
-///   color_fg: Color::Blue, /* Optional. */
-///   color_bg: Color::Red,  /* Optional. */
+///   id: "my_style",          /* Optional. */
+///   attrib: [dim, bold]      /* Optional. */
+///   padding: 10,             /* Optional. */
+///   color_fg: TWColor::Blue, /* Optional. */
+///   color_bg: TWColor::Red,  /* Optional. */
 /// }
 /// ```
 ///
@@ -83,7 +83,7 @@ fn parse_optional_id(input: &ParseStream, metadata: &mut StyleMetadata) -> Resul
     let id = input.parse::<Expr>()?;
     metadata.id = id;
   }
-  call_if_true!(DEBUG, println!("🚀 id: {:?}", metadata.id));
+  call_if_debug_true!(println!("🚀 id: {:?}", metadata.id));
   Ok(())
 }
 
@@ -118,7 +118,7 @@ fn parse_optional_attrib(input: &ParseStream, metadata: &mut StyleMetadata) -> R
       }
     }
 
-    call_if_true!(DEBUG, println!("🚀 attrib_vec: {:?}", metadata.attrib_vec));
+    call_if_debug_true!(println!("🚀 attrib_vec: {:?}", metadata.attrib_vec));
   }
   Ok(())
 }
@@ -132,7 +132,7 @@ fn parse_optional_padding(input: &ParseStream, metadata: &mut StyleMetadata) -> 
     let lit_int = input.parse::<LitInt>()?;
     let padding_int: UnitType = lit_int.base10_parse().unwrap();
     metadata.padding = Some(padding_int);
-    call_if_true!(DEBUG, println!("🚀 padding: {:?}", &metadata.padding));
+    call_if_debug_true!(println!("🚀 padding: {:?}", &metadata.padding));
   }
   Ok(())
 }
@@ -145,7 +145,7 @@ fn parse_optional_color_fg(input: &ParseStream, metadata: &mut StyleMetadata) ->
     input.parse::<Token![:]>()?;
     let color_expr = input.parse::<Expr>()?;
     metadata.color_fg = Some(color_expr);
-    call_if_true!(DEBUG, println!("🚀 color_fg: {:#?}", metadata.color_fg));
+    call_if_debug_true!(println!("🚀 color_fg: {:#?}", metadata.color_fg));
   }
 
   Ok(())
@@ -159,7 +159,7 @@ fn parse_optional_color_bg(input: &ParseStream, metadata: &mut StyleMetadata) ->
     input.parse::<Token![:]>()?;
     let color_expr = input.parse::<Expr>()?;
     metadata.color_bg = Some(color_expr);
-    call_if_true!(DEBUG, println!("🚀 color_bg: {:#?}", metadata.color_bg));
+    call_if_debug_true!(println!("🚀 color_bg: {:#?}", metadata.color_bg));
   }
 
   Ok(())

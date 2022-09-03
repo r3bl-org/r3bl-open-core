@@ -110,6 +110,10 @@ impl Debug for Size {
   }
 }
 
+/// Example:
+/// ```ignore
+/// let size: Size = size!(col: 10, row: 10);
+/// ```
 #[macro_export]
 macro_rules! size {
   (

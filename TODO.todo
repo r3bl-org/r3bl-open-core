@@ -1,3 +1,41 @@
 ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 │ r3bl_rs_utils │
 ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+editor engine (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
+  ✔ wire up the engine into framework @done(22-08-31 13:56)
+  ✔ fancy debug impl for editor buffer @done(22-08-31 13:57)
+  ✔ insert content: @done(22-09-01 11:46)
+    ✔ type characters & store in buffer @done(22-09-01 11:46)
+    ✔ add tests for editor buffer @done(22-09-01 11:46)
+  ✔ paint caret: @done(22-09-02 09:43)
+    ✔ use cursor show / hide @done(22-09-02 08:19)
+    ✔ use reverse / invert colors to paint the caret (so there can be many) @done(22-09-02 09:42)
+    ✔ bounds check max rows when painting content @done(22-09-02 11:29)
+  ✔ implement render clipping: @done(22-09-02 13:10)
+    ✔ figure out how to incorporate row & col bounds checking to implement clipping @done(22-09-02 13:10)
+  ☐ insert content:
+    ☐ handle new lines
+  ☐ move cursor:
+    ☐ left/right arrow key move in buffer
+    ☐ up/down arrow key move in buffer
+  ☐ delete content:
+    ☐ delete/backspace edit buffer line
+    ☐ delete/backspace lines
+  ☐ scrolling
+    ☐ left/right
+    ☐ up/down
+  ☐ keyboard shortcut to save/load buffer to/from file
+  ☐ highlight and selection:
+    ☐ add support for text selection highlighting
+    ☐ selection, copy, paste
+  ☐ multiple carets:
+    ☐ add support for multiple carets & network service providers to move them
+
+framework:
+  ☐ https://github.com/r3bl-org/r3bl_rs_utils/issues/28
+  ☐ https://github.com/r3bl-org/r3bl_rs_utils/issues/27
+  ☐ https://github.com/r3bl-org/r3bl_rs_utils/issues/24
+  ☐ https://github.com/r3bl-org/r3bl_rs_utils/issues/26
+
+writing:
+  ☐ https://github.com/r3bl-org/r3bl_rs_utils/issues/19

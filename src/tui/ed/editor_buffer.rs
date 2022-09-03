@@ -24,11 +24,81 @@ pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
   pub buffer: Vec<String>,
   /// The current caret position.
-  pub cursor: Position,
+  pub caret: Position,
   /// The col and row offset for scrolling if active.
   pub scroll_offset: Position,
   /// Lolcat struct for generating rainbow colors.
   pub lolcat: Lolcat,
+}
+
+pub fn char_to_string(character: char) -> String {
+  let my_string: String = String::from(character);
+  my_string
+}
+
+impl EditorBuffer {
+  pub fn get_char_at_caret(&self) -> Option<char> { self.get_char_at_position(self.caret) }
+  pub fn get_char_at_position(&self, position: Position) -> Option<char> {
+    let line = self.buffer.get(convert_from_base_unit!(position.row))?;
+    let character = line.chars().nth(convert_from_base_unit!(position.col))?;
+    Some(character)
+  }
+
+  pub fn insert_char_into_current_line(&mut self, character: char) {
+    self.insert_into_current_line(&char_to_string(character))
+  }
+
+  pub fn insert_str_into_current_line(&mut self, chunk: &str) {
+    self.insert_into_current_line(chunk)
+  }
+
+  fn insert_into_current_line(&mut self, chunk: &str) {
+    let caret_row = convert_from_base_unit!(self.caret.row);
+    let caret_col = convert_from_base_unit!(self.caret.col);
+    if self.buffer.get(caret_row).is_some() {
+      insert_into_existing_line(self, caret_row, caret_col, chunk);
+    } else {
+      insert_into_new_line(self, caret_row, chunk);
+    }
+
+    /// Helper function.
+    fn insert_into_existing_line(
+      this: &mut EditorBuffer, caret_row: usize, caret_col: usize, chunk: &str,
+    ) {
+      // Update existing line at caret_row.
+      if let Some(line) = this.buffer.get_mut(caret_row) {
+        // Get the new line.
+        if let Ok((new_line, char_display_width)) = line
+          .unicode_string()
+          .insert_char_at_display_col(convert_to_base_unit!(caret_col), chunk)
+        {
+          // Replace existing line w/ new line.
+          let _ = std::mem::replace(line, new_line);
+
+          // Update caret position.
+          let char_display_width = convert_from_base_unit!(char_display_width);
+          this.caret.add_cols(char_display_width);
+        }
+      }
+    }
+
+    /// Helper function.
+    fn insert_into_new_line(this: &mut EditorBuffer, caret_row: usize, chunk: &str) {
+      // Fill in any missing lines.
+      if this.buffer.get(caret_row).is_none() {
+        for row_idx in 0..caret_row + 1 {
+          if this.buffer.get(row_idx).is_none() {
+            this.buffer.push(String::new());
+          }
+        }
+      }
+      // Actually add the character to the correct line.
+      if let Some(line) = this.buffer.get_mut(caret_row) {
+        line.push_str(chunk);
+        this.caret.add_cols(UnicodeString::str_display_width(chunk));
+      }
+    }
+  }
 }
 
 mod helpers {
@@ -40,7 +110,7 @@ mod helpers {
         "\nEditorBuffer [ \n ├ lines: {}, size: {}, \n ├ cursor: {:?}, scroll_offset: {:?}, \n └ lolcat: [{}, {}, {}, {}] \n]",
         self.buffer.len(),
         self.buffer.get_heap_size(),
-        self.cursor,
+        self.caret,
         self.scroll_offset,
         pretty_print_f64(self.lolcat.color_wheel_control.seed),
         pretty_print_f64(self.lolcat.color_wheel_control.spread),

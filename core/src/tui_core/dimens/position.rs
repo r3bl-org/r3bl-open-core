@@ -90,24 +90,38 @@ impl From<Position> for (UnitType, UnitType) {
 }
 
 impl Position {
-  /// Add given `col` value to `self`.
-  pub fn add_col(&mut self, value: usize) -> Self {
-    let value: UnitType = value as UnitType;
+  /// Add given `col` count to `self`.
+  pub fn add_cols(&mut self, num_cols_to_add: usize) -> Self {
+    let value: UnitType = convert_to_base_unit!(num_cols_to_add);
     self.col += value;
     *self
   }
 
-  /// Add given `row` value to `self`.
-  pub fn add_row(&mut self, value: usize) -> Self {
-    let value = value as UnitType;
+  /// Add given `col` count to `self` w/ bounds check for max cols.
+  pub fn add_cols_with_bounds(&mut self, num_cols_to_add: usize, box_bounds_size: Size) -> Self {
+    let value: UnitType = convert_to_base_unit!(num_cols_to_add);
+    let max: UnitType = box_bounds_size.cols;
+
+    if (self.col + value) >= max {
+      self.col = max
+    } else {
+      self.col += value;
+    }
+
+    *self
+  }
+
+  /// Add given `row` count to `self`.
+  pub fn add_rows(&mut self, num_rows_to_add: usize) -> Self {
+    let value = convert_to_base_unit!(num_rows_to_add);
     self.row += value;
     *self
   }
 
-  /// Add given `row` value to `self` w/ bounds check for max rows.
-  pub fn add_row_with_bounds(&mut self, value: usize, box_bounding_size: Size) -> Self {
-    let value: UnitType = value as UnitType;
-    let max: UnitType = box_bounding_size.rows;
+  /// Add given `row` count to `self` w/ bounds check for max rows.
+  pub fn add_rows_with_bounds(&mut self, num_rows_to_add: usize, box_bounds_size: Size) -> Self {
+    let value: UnitType = convert_to_base_unit!(num_rows_to_add);
+    let max: UnitType = box_bounds_size.rows;
 
     if (self.row + value) >= max {
       self.row = max

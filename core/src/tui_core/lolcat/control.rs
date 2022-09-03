@@ -18,9 +18,9 @@
 use std::fmt::Display;
 
 use atty::Stream;
+use get_size::GetSize;
 use rand::random;
 use serde::*;
-use get_size::GetSize;
 
 /// A struct to contain info we need to print with every character.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, GetSize)]

@@ -20,9 +20,9 @@ use std::{fmt::Display,
           thread::sleep,
           time::Duration};
 
+use get_size::GetSize;
 use rand::{thread_rng, Rng};
 use serde::*;
-use get_size::GetSize;
 
 use crate::*;
 

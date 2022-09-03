@@ -25,3 +25,11 @@ macro_rules! convert_to_base_unit {
     $self.try_into().unwrap_or($self as UnitType)
   };
 }
+
+/// Converts a [UnitType] to ([i32], [usize]), etc.
+#[macro_export]
+macro_rules! convert_from_base_unit {
+  ($self:expr) => {
+    $self.try_into().unwrap_or($self as usize)
+  };
+}
