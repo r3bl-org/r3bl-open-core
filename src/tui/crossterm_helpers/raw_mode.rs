@@ -53,14 +53,16 @@ use crate::*;
 macro_rules! raw_mode {
   ($code_block: stmt) => {{
     use $crate::*;
-    let _raw_mode = RawMode::start();
+    let raw_mode = RawMode::start().await;
     $code_block
+    raw_mode.end().await;
     Ok(())
   }};
   ($code_block: block) => {{
     use $crate::*;
-    let _raw_mode = RawMode::start();
+    let raw_mode = RawMode::start();
     $code_block
+    raw_mode.end().await;
     Ok(())
   }};
 }
@@ -73,12 +75,16 @@ macro_rules! raw_mode {
 pub struct RawMode;
 
 impl RawMode {
-  pub fn start() -> Self {
-    tw_command_queue!(TWCommand::EnterRawMode).flush(false);
+  pub async fn start() -> Self {
+    tw_command_queue!(TWCommand::EnterRawMode)
+      .flush(FlushKind::JustFlushQueue)
+      .await;
     RawMode
   }
-}
 
-impl Drop for RawMode {
-  fn drop(&mut self) { tw_command_queue!(TWCommand::ExitRawMode).flush(false); }
+  pub async fn end(&self) {
+    tw_command_queue!(TWCommand::ExitRawMode)
+      .flush(FlushKind::JustFlushQueue)
+      .await;
+  }
 }

@@ -23,22 +23,21 @@ use tokio::sync::RwLock;
 
 use crate::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct TWData {
   size: Size,
 }
 
 impl TWData {
   fn try_to_create_instance() -> CommonResult<TWData> {
-    let empty_size = size!(col: 0, row: 0);
-    let mut tw_data = TWData { size: empty_size };
-    tw_data.set_size(get_terminal_window_size()?);
+    let mut tw_data = TWData::default();
+    tw_data.set_size(terminal_window_commands::lookup_size()?);
     Ok(tw_data)
   }
 
   pub fn set_size(&mut self, new_size: Size) {
     self.size = new_size;
-    TWUtils::set_terminal_window_size(new_size);
+    static_terminal_window_size::set(new_size);
     self.dump_state_to_log("main_event_loop -> Resize");
   }
 
@@ -238,7 +237,9 @@ where
           );
         }
         Ok(tw_command_queue) => {
-          tw_command_queue.flush(true);
+          tw_command_queue
+            .flush(FlushKind::ClearBeforeFlushQueue)
+            .await;
           call_if_true!(
             DEBUG,
             log_no_err!(
