@@ -160,14 +160,15 @@ macro_rules! tw_command_queue {
 // │ TWCommand │
 // ╯           ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[non_exhaustive]
 pub enum TWCommand {
   EnterRawMode,
   ExitRawMode,
-  /// [Position] is the absolute column and row on the terminal screen.
+  /// [Position] is the absolute column and row on the terminal screen. This uses
+  /// [sanitize_abs_position] to clean up the given [Position].
   MoveCursorPositionAbs(Position),
   /// 1st [Position] is the origin column and row, and the 2nd [Position] is the offset column and
-  /// row. They are added together to move the absolute position on the terminal screen.
+  /// row. They are added together to move the absolute position on the terminal screen. This uses
+  /// [sanitize_abs_position] to clean up the absolute [Position].
   MoveCursorPositionRelTo(Position, Position),
   ClearScreen,
   /// Directly set the fg color for crossterm w/out using [Style].
@@ -177,13 +178,27 @@ pub enum TWCommand {
   ResetColor,
   /// Translate [Style] into fg and bg colors for crossterm.
   ApplyColors(Option<Style>),
-  /// Translate [Style] into attributes [static@STYLE_TO_ATTRIBUTE_MAP] for crossterm (bold, underline,
-  /// strikethrough, etc)
+  /// Translate [Style] into attributes [static@STYLE_TO_ATTRIBUTE_MAP] for crossterm (bold,
+  /// underline, strikethrough, etc). Also make sure that the [String] argument is not too wide
+  /// for the terminal screen.
   PrintWithAttributes(String, Option<Style>),
   CursorShow,
   CursorHide,
-  ShowCaretAtPositionAbs(Position),
-  ShowCaretAtPositionRelTo(Position, Position),
+  /// [Position] is the absolute column and row on the terminal screen. This uses
+  /// [sanitize_abs_position] to clean up the given [Position].
+  ///
+  /// 1. [handle_draw_cursor] is actually used to draw the cursor.
+  /// 2. [handle_maybe_draw_caret_at_overwrite_attempt] is used to ensure that this is not an
+  ///    overwrite attempt.
+  RequestShowCaretAtPositionAbs(Position),
+  /// 1st [Position] is the origin column and row, and the 2nd [Position] is the offset column and
+  /// row. They are added together to move the absolute position on the terminal screen. This uses
+  /// [sanitize_abs_position] to clean up the absolute [Position].
+  ///
+  /// 1. [handle_draw_cursor] is actually used to draw the cursor.
+  /// 2. [handle_maybe_draw_caret_at_overwrite_attempt] is used to ensure that this is not an
+  ///    overwrite attempt.
+  RequestShowCaretAtPositionRelTo(Position, Position),
 }
 
 mod command_helpers {
@@ -232,8 +247,9 @@ mod command_helpers {
           }
           TWCommand::CursorShow => "CursorShow".into(),
           TWCommand::CursorHide => "CursorHide".into(),
-          TWCommand::ShowCaretAtPositionAbs(pos) => format!("ShowCursorAtPosition({:?})", pos),
-          TWCommand::ShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => format!(
+          TWCommand::RequestShowCaretAtPositionAbs(pos) =>
+            format!("ShowCursorAtPosition({:?})", pos),
+          TWCommand::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => format!(
             "ShowCursorAtPosition({:?}, {:?})",
             box_origin_pos, content_rel_pos
           ),
@@ -270,7 +286,9 @@ pub struct TWCommandQueue {
 
 static mut TERMINAL_WINDOW_SIZE: RwLock<Size> = RwLock::new(size!(col: 0, row: 0));
 
-impl TWCommandQueue {
+pub struct TWUtils;
+
+impl TWUtils {
   pub fn set_terminal_window_size(size: Size) {
     unsafe {
       if let Ok(mut write_guard) = TERMINAL_WINDOW_SIZE.write() {
@@ -289,6 +307,13 @@ impl TWCommandQueue {
     }
   }
 
+  pub fn get_current_position() -> Position {
+    let (col, row) = crossterm::cursor::position().unwrap_or((0, 0));
+    position!(col: col, row: row)
+  }
+}
+
+impl TWCommandQueue {
   /// This will add `rhs` to `self` and then drop `rhs`.
   pub fn join_into(&mut self, mut rhs: TWCommandQueue) {
     self.queue.append(&mut rhs.queue);
@@ -311,7 +336,6 @@ impl TWCommandQueue {
   }
 
   // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
-  #[allow(unreachable_patterns)]
   pub fn flush(&self, clear_before_flush: bool) {
     let mut skip_flush = false;
 
@@ -329,175 +353,9 @@ impl TWCommandQueue {
       }
     }
 
-    fn handle_maybe_draw_caret_at_overwrite_attempt(ignored_pos: Position) {
-      call_if_debug_true! {
-        log_no_err!(WARN,
-          "{} -> {:?}",
-          "Attempt to set maybe_draw_caret_at more than once. Ignoring {:?}", ignored_pos)
-      };
+    for command_ref in &self.queue {
+      execute_command(&mut maybe_draw_caret_at, &mut skip_flush, command_ref);
     }
-
-    self.queue.iter().for_each(|cmd_wrapper| match cmd_wrapper {
-      TWCommand::ShowCaretAtPositionAbs(pos) => {
-        if maybe_draw_caret_at.is_none() {
-          maybe_draw_caret_at = Some(*pos);
-        } else {
-          handle_maybe_draw_caret_at_overwrite_attempt(*pos);
-        }
-      }
-      TWCommand::ShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => {
-        let new_pos = *box_origin_pos + *content_rel_pos;
-        if maybe_draw_caret_at.is_none() {
-          maybe_draw_caret_at = Some(new_pos);
-        } else {
-          handle_maybe_draw_caret_at_overwrite_attempt(new_pos);
-        }
-      }
-      TWCommand::EnterRawMode => {
-        exec! {
-          terminal::enable_raw_mode(),
-          "EnterRawMode -> enable_raw_mode()"
-        };
-        exec! {
-          queue!(stdout(),
-            EnableMouseCapture,
-            EnterAlternateScreen,
-            MoveTo(0,0),
-            Clear(ClearType::All),
-            Hide,
-          ),
-        "EnterRawMode -> EnableMouseCapture, EnterAlternateScreen, MoveTo(0,0), Clear(ClearType::All), Hide"
-        }
-        TWCommand::flush();
-        skip_flush = true;
-      }
-      TWCommand::ExitRawMode => {
-        exec! {
-          queue!(stdout(),
-            Show,
-            LeaveAlternateScreen,
-            DisableMouseCapture
-          ),
-          "ExitRawMode -> Show, LeaveAlternateScreen, DisableMouseCapture"
-        };
-        TWCommand::flush();
-        exec! {terminal::disable_raw_mode(), "ExitRawMode -> disable_raw_mode()"}
-        skip_flush = true;
-      }
-      TWCommand::MoveCursorPositionAbs(Position { col, row }) => {
-        exec!(
-          queue!(stdout(), MoveTo(*col, *row)),
-          format!("MoveCursorPosition(col: {}, row: {})", *col, *row)
-        )
-      }
-      TWCommand::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
-        let Position { col, row } = *box_origin_pos + *content_rel_pos;
-        exec!(
-          queue!(stdout(), MoveTo(col, row)),
-          format!("MoveCursorPosition(col: {}, row: {})", col, row)
-        )
-      }
-      TWCommand::ClearScreen => {
-        exec!(queue!(stdout(), Clear(ClearType::All)), "ClearScreen")
-      }
-      TWCommand::SetFgColor(color) => {
-        let color = color_converter::to_crossterm_color(*color);
-        exec!(
-          queue!(stdout(), SetForegroundColor(color)),
-          format!("SetFgColor({:?})", color)
-        )
-      }
-      TWCommand::SetBgColor(color) => {
-        let color: crossterm::style::Color = color_converter::to_crossterm_color(*color);
-        exec!(
-          queue!(stdout(), SetBackgroundColor(color)),
-          format!("SetBgColor({:?})", color)
-        )
-      }
-      TWCommand::ResetColor => {
-        exec!(queue!(stdout(), ResetColor), "ResetColor")
-      }
-      TWCommand::CursorShow => {
-        exec!(queue!(stdout(), Show), "CursorShow")
-      }
-      TWCommand::CursorHide => {
-        exec!(queue!(stdout(), Hide), "CursorHide")
-      }
-      TWCommand::ApplyColors(style) => {
-        if style.is_some() {
-          // Use Style to set crossterm Colors.
-          // Docs: https://docs.rs/crossterm/latest/crossterm/style/index.html#colors
-          let mut style = style.clone().unwrap();
-          let mask = style.get_bitflags();
-          if mask.contains(StyleFlag::COLOR_BG_SET) {
-            let color_bg = style.color_bg.unwrap();
-            let color_bg: crossterm::style::Color = color_converter::to_crossterm_color(color_bg);
-            exec!(
-              queue!(stdout(), SetBackgroundColor(color_bg)),
-              format!("ApplyColors -> SetBackgroundColor({:?})", color_bg)
-            )
-          }
-          if mask.contains(StyleFlag::COLOR_FG_SET) {
-            let color_fg = style.color_fg.unwrap();
-            let color_fg: crossterm::style::Color = color_converter::to_crossterm_color(color_fg);
-            exec!(
-              queue!(stdout(), SetForegroundColor(color_fg)),
-              format!("ApplyColors -> SetForegroundColor({:?})", color_fg)
-            )
-          }
-        }
-      }
-      TWCommand::PrintWithAttributes(text, maybe_style) => {
-        let log_msg: String = match try_strip_ansi(text) {
-          Some(text_plain) => format!("\"{}\"", text_plain),
-          None => format!("bytes {}", text.len())
-        };
-
-        match maybe_style {
-          Some(style) => {
-            // Use Style to set crossterm Attributes.
-            // Docs: https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes
-            let mask = style.clone().get_bitflags();
-            let mut needs_reset = false;
-
-            STYLE_TO_ATTRIBUTE_MAP.iter().for_each(|(flag, attr)| {
-              if mask.contains(*flag) {
-                exec!(
-                  queue!(stdout(), SetAttribute(*attr)),
-                  format!("PrintWithAttributes -> SetAttribute({:?})", attr)
-                );
-                needs_reset = true;
-              }
-            });
-
-            exec!(
-              queue!(stdout(), Print(text.clone())),
-              format!("PrintWithAttributes -> Style + Print({})", log_msg)
-            );
-
-            if needs_reset {
-              exec!(
-                queue!(stdout(), SetAttribute(Attribute::Reset)),
-                format!("PrintWithAttributes -> SetAttribute(Reset))")
-              );
-            }
-          }
-          None =>{
-            exec!(
-              queue!(stdout(), Print(text.clone())),
-              format!("PrintWithAttributes -> None + Print({})", log_msg)
-            )
-          }
-        }
-      },
-      _ => {
-        log_no_err!{
-          ERROR,
-          target: "TWCommandQueue::flush()", 
-          "🧨 {:?} not implemented", cmd_wrapper
-        };
-      }
-    });
 
     // Flush all the commands that were added via calls to `queue!` above.
     if !skip_flush {
@@ -505,17 +363,219 @@ impl TWCommandQueue {
     };
 
     // Handle cursor drawing.
-    if let Some(draw_cursor_at) = maybe_draw_caret_at {
-      let Position { col, row } = draw_cursor_at;
+    handle_draw_cursor(maybe_draw_caret_at);
+  }
+}
+
+pub fn handle_draw_cursor(maybe_draw_caret_at: Option<Position>) {
+  if let Some(draw_cursor_at) = maybe_draw_caret_at {
+    let Position { col, row } = draw_cursor_at;
+    exec!(
+      queue!(stdout(), MoveTo(col, row)),
+      format!("DrawCursorAt -> MoveTo(col: {}, row: {})", col, row)
+    );
+    exec!(queue!(stdout(), Show), "DrawCursorAt -> Show");
+    TWCommand::flush();
+  } else {
+    exec!(queue!(stdout(), Hide), "DrawCursorAt -> Hide");
+    TWCommand::flush();
+  }
+}
+
+fn handle_maybe_draw_caret_at_overwrite_attempt(ignored_pos: Position) {
+  call_if_debug_true! {
+    log_no_err!(WARN,
+      "{} -> {:?}",
+      "Attempt to set maybe_draw_caret_at more than once. Ignoring {:?}", ignored_pos)
+  };
+}
+
+/// Ensure that the [Position] is within the bounds of the terminal window using [this
+/// method](TWUtils::get_terminal_window_size). If the [Position] is outside of the bounds of the
+/// window then it is clamped to the nearest edge of the window. This clamped [Position] is
+/// returned.
+pub fn sanitize_abs_position(abs_pos: Position) -> Position {
+  let Size {
+    cols: max_cols,
+    rows: max_rows,
+  } = TWUtils::get_terminal_window_size();
+
+  let mut new_pos: Position = abs_pos;
+
+  if abs_pos.col > max_cols {
+    new_pos.col = max_cols;
+  }
+
+  if abs_pos.row > max_rows {
+    new_pos.row = max_rows;
+  }
+
+  new_pos
+}
+
+fn execute_command(
+  maybe_draw_caret_at: &mut Option<Position>, skip_flush: &mut bool, command_ref: &TWCommand,
+) {
+  match command_ref {
+    TWCommand::RequestShowCaretAtPositionAbs(pos) => {
+      let pos = sanitize_abs_position(*pos);
+
+      if maybe_draw_caret_at.is_none() {
+        *maybe_draw_caret_at = Some(pos);
+      } else {
+        handle_maybe_draw_caret_at_overwrite_attempt(pos);
+      }
+    }
+    TWCommand::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => {
+      let new_abs_pos = *box_origin_pos + *content_rel_pos;
+      let new_abs_pos = sanitize_abs_position(new_abs_pos);
+
+      if maybe_draw_caret_at.is_none() {
+        *maybe_draw_caret_at = Some(new_abs_pos);
+      } else {
+        handle_maybe_draw_caret_at_overwrite_attempt(new_abs_pos);
+      }
+    }
+    TWCommand::EnterRawMode => {
+      exec! {
+        terminal::enable_raw_mode(),
+        "EnterRawMode -> enable_raw_mode()"
+      };
+      exec! {
+        queue!(stdout(),
+          EnableMouseCapture,
+          EnterAlternateScreen,
+          MoveTo(0,0),
+          Clear(ClearType::All),
+          Hide,
+        ),
+      "EnterRawMode -> EnableMouseCapture, EnterAlternateScreen, MoveTo(0,0), Clear(ClearType::All), Hide"
+      }
+      TWCommand::flush();
+      *skip_flush = true;
+    }
+    TWCommand::ExitRawMode => {
+      exec! {
+        queue!(stdout(),
+          Show,
+          LeaveAlternateScreen,
+          DisableMouseCapture
+        ),
+        "ExitRawMode -> Show, LeaveAlternateScreen, DisableMouseCapture"
+      };
+      TWCommand::flush();
+      exec! {terminal::disable_raw_mode(), "ExitRawMode -> disable_raw_mode()"}
+      *skip_flush = true;
+    }
+    TWCommand::MoveCursorPositionAbs(abs_pos) => {
+      let Position { col, row } = sanitize_abs_position(*abs_pos);
+
       exec!(
         queue!(stdout(), MoveTo(col, row)),
-        format!("DrawCursorAt -> MoveTo(col: {}, row: {})", col, row)
-      );
-      exec!(queue!(stdout(), Show), "DrawCursorAt -> Show");
-      TWCommand::flush();
-    } else {
-      exec!(queue!(stdout(), Hide), "DrawCursorAt -> Hide");
-      TWCommand::flush();
+        format!("MoveCursorPosition(col: {}, row: {})", col, row)
+      )
+    }
+    TWCommand::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
+      let new_abs_pos = *box_origin_pos + *content_rel_pos;
+      let Position { col, row } = sanitize_abs_position(new_abs_pos);
+
+      exec!(
+        queue!(stdout(), MoveTo(col, row)),
+        format!("MoveCursorPosition(col: {}, row: {})", col, row)
+      )
+    }
+    TWCommand::ClearScreen => {
+      exec!(queue!(stdout(), Clear(ClearType::All)), "ClearScreen")
+    }
+    TWCommand::SetFgColor(color) => {
+      let color = color_converter::to_crossterm_color(*color);
+      exec!(
+        queue!(stdout(), SetForegroundColor(color)),
+        format!("SetFgColor({:?})", color)
+      )
+    }
+    TWCommand::SetBgColor(color) => {
+      let color: crossterm::style::Color = color_converter::to_crossterm_color(*color);
+      exec!(
+        queue!(stdout(), SetBackgroundColor(color)),
+        format!("SetBgColor({:?})", color)
+      )
+    }
+    TWCommand::ResetColor => {
+      exec!(queue!(stdout(), ResetColor), "ResetColor")
+    }
+    TWCommand::CursorShow => {
+      exec!(queue!(stdout(), Show), "CursorShow")
+    }
+    TWCommand::CursorHide => {
+      exec!(queue!(stdout(), Hide), "CursorHide")
+    }
+    TWCommand::ApplyColors(style) => {
+      if style.is_some() {
+        // Use Style to set crossterm Colors.
+        // Docs: https://docs.rs/crossterm/latest/crossterm/style/index.html#colors
+        let mut style = style.clone().unwrap();
+        let mask = style.get_bitflags();
+        if mask.contains(StyleFlag::COLOR_BG_SET) {
+          let color_bg = style.color_bg.unwrap();
+          let color_bg: crossterm::style::Color = color_converter::to_crossterm_color(color_bg);
+          exec!(
+            queue!(stdout(), SetBackgroundColor(color_bg)),
+            format!("ApplyColors -> SetBackgroundColor({:?})", color_bg)
+          )
+        }
+        if mask.contains(StyleFlag::COLOR_FG_SET) {
+          let color_fg = style.color_fg.unwrap();
+          let color_fg: crossterm::style::Color = color_converter::to_crossterm_color(color_fg);
+          exec!(
+            queue!(stdout(), SetForegroundColor(color_fg)),
+            format!("ApplyColors -> SetForegroundColor({:?})", color_fg)
+          )
+        }
+      }
+    }
+    TWCommand::PrintWithAttributes(text, maybe_style) => {
+      let log_msg: String = match try_strip_ansi(text) {
+        Some(text_plain) => format!("\"{}\"", text_plain),
+        None => format!("bytes {}", text.len()),
+      };
+
+      match maybe_style {
+        Some(style) => {
+          // Use Style to set crossterm Attributes.
+          // Docs: https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes
+          let mask = style.clone().get_bitflags();
+          let mut needs_reset = false;
+
+          STYLE_TO_ATTRIBUTE_MAP.iter().for_each(|(flag, attr)| {
+            if mask.contains(*flag) {
+              exec!(
+                queue!(stdout(), SetAttribute(*attr)),
+                format!("PrintWithAttributes -> SetAttribute({:?})", attr)
+              );
+              needs_reset = true;
+            }
+          });
+
+          exec!(
+            queue!(stdout(), Print(text.clone())),
+            format!("PrintWithAttributes -> Style + Print({})", log_msg)
+          );
+
+          if needs_reset {
+            exec!(
+              queue!(stdout(), SetAttribute(Attribute::Reset)),
+              format!("PrintWithAttributes -> SetAttribute(Reset))")
+            );
+          }
+        }
+        None => {
+          exec!(
+            queue!(stdout(), Print(text.clone())),
+            format!("PrintWithAttributes -> None + Print({})", log_msg)
+          )
+        }
+      }
     }
   }
 }
