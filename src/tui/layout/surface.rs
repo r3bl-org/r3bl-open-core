@@ -94,7 +94,11 @@ impl PerformPositioningAndSizing for Surface {
     if self.no_boxes_added() {
       LayoutError::new_err(LayoutErrorType::StackOfBoxesShouldNotBeEmpty)?
     }
-    Ok(self.stack_of_boxes.last_mut().unwrap())
+    if let Some(it) = self.stack_of_boxes.last_mut() {
+      Ok(it)
+    } else {
+      LayoutError::new_err(LayoutErrorType::StackOfBoxesShouldNotBeEmpty)?
+    }
   }
 
   fn no_boxes_added(&self) -> bool { self.stack_of_boxes.is_empty() }

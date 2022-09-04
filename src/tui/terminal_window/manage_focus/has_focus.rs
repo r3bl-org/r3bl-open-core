@@ -67,8 +67,8 @@ impl HasFocus {
   /// For a given [FlexBox] id, get the position of the cursor inside of it.
   pub fn get_cursor_position_for_id(&self, id: &str) -> Option<Position> {
     let map = &self.cursor_position_map;
-    if map.contains_key(id) {
-      *map.get(id).unwrap()
+    if let Some(value) = map.get(id) {
+      *value
     } else {
       None
     }
