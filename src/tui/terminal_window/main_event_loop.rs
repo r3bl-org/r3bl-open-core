@@ -38,7 +38,7 @@ impl TWData {
 
   pub fn set_size(&mut self, new_size: Size) {
     self.size = new_size;
-    TWCommandQueue::set_terminal_window_size(new_size);
+    TWUtils::set_terminal_window_size(new_size);
     self.dump_state_to_log("main_event_loop -> Resize");
   }
 

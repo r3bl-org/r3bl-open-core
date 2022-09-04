@@ -4,17 +4,7 @@
 			"path": "src/tui/crossterm_helpers/tw_command.rs",
 			"bookmarks": [
 				{
-					"line": 340,
-					"column": 4,
-					"label": ""
-				},
-				{
-					"line": 347,
-					"column": 4,
-					"label": ""
-				},
-				{
-					"line": 507,
+					"line": 508,
 					"column": 8,
 					"label": ""
 				}
