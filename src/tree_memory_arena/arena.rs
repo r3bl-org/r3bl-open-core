@@ -25,9 +25,7 @@ use super::{arena_types::HasId, ArenaMap, FilterFn, NodeRef, ResultUidList, Weak
 use crate::utils::{call_if_some,
                    unwrap_arc_read_lock_and_call,
                    unwrap_arc_write_lock_and_call,
-                   with_mut,
-                   ReadGuarded,
-                   WriteGuarded};
+                   with_mut};
 /// This struct represents a node in a tree. It may have a parent. It can hold
 /// multiple children. And it has a payload. It also has an id that uniquely
 /// identifies it. An [`Arena`] or [`super::MTArena`] is used to hold nodes.
@@ -128,15 +126,18 @@ where
 {
   /// If no matching nodes can be found returns `None`.
   pub fn filter_all_nodes_by(&self, filter_fn: &FilterFn<T>) -> ResultUidList {
-    let map: ReadGuarded<'_, ArenaMap<T>> = self.map.read().unwrap();
-    let filtered_map = map
-      .iter()
-      .filter(|(id, node_ref)| filter_fn(**id, node_ref.read().unwrap().payload.clone()))
-      .map(|(id, _node_ref)| *id)
-      .collect::<Vec<usize>>();
-    match filtered_map.len() {
-      0 => None,
-      _ => Some(filtered_map),
+    if let Ok(map /* ReadGuarded<'_, ArenaMap<T>> */) = self.map.read() {
+      let filtered_map = map
+        .iter()
+        .filter(|(id, node_ref)| filter_fn(**id, node_ref.read().unwrap().payload.clone()))
+        .map(|(id, _node_ref)| *id)
+        .collect::<Vec<usize>>();
+      match filtered_map.len() {
+        0 => None,
+        _ => Some(filtered_map),
+      }
+    } else {
+      None
     }
   }
 
@@ -145,10 +146,19 @@ where
     if !self.node_exists(node_id) {
       return None;
     }
+
     let node_to_lookup = self.get_node_arc(node_id)?;
-    let node_to_lookup: ReadGuarded<'_, Node<T>> = node_to_lookup.read().unwrap(); // Safe to call unwrap.
-    let children_uids = &node_to_lookup.children;
-    children_uids.clone().into()
+
+    let result = if let Ok(node_to_lookup /* ReadGuarded<'_, Node<T>> */) = node_to_lookup.read() {
+      if node_to_lookup.children.is_empty() {
+        return None;
+      }
+      Some(node_to_lookup.children.clone())
+    } else {
+      None
+    };
+
+    result
   }
 
   /// If `node_id` can't be found, returns `None`.
@@ -156,9 +166,16 @@ where
     if !self.node_exists(node_id) {
       return None;
     }
+
     let node_to_lookup = self.get_node_arc(node_id)?;
-    let node_to_lookup: ReadGuarded<'_, Node<T>> = node_to_lookup.read().unwrap(); // Safe to call unwrap.
-    node_to_lookup.parent
+
+    let result = if let Ok(node_to_lookup /* ReadGuarded<'_, Node<T>> */) = node_to_lookup.read() {
+      node_to_lookup.parent
+    } else {
+      None
+    };
+
+    result
   }
 
   pub fn node_exists(&self, node_id: usize) -> bool {
@@ -185,25 +202,27 @@ where
     // Note - this lambda expects that `parent_id` exists.
     let remove_node_id_from_parent = |parent_id: usize| {
       let parent_node_arc_opt = self.get_node_arc(parent_id);
-      unwrap_arc_write_lock_and_call(&parent_node_arc_opt.unwrap(), &mut |parent_node| {
-        parent_node
-          .children
-          .retain(|child_id| *child_id != node_id.get_id());
-      });
+      if let Some(parent_node_arc) = parent_node_arc_opt {
+        if let Ok(mut parent_node /* WriteGuarded<'_, Node<T>> */) = parent_node_arc.write() {
+          parent_node.children.retain(|child_id| *child_id != node_id);
+        }
+      }
     };
 
     // If `node_id` has a parent, remove `node_id` its children, otherwise skip this
     // step.
     if self.has_parent(node_id) {
-      remove_node_id_from_parent(self.get_parent_of(node_id).unwrap()); // Safe to unwrap.
+      if let Some(parent_id) = self.get_parent_of(node_id) {
+        remove_node_id_from_parent(parent_id);
+      }
     }
 
     // Actually delete the nodes in the deletion list.
-    let mut map: WriteGuarded<'_, ArenaMap<T>> = self.map.write().unwrap(); // Safe to unwrap.
-    deletion_list.iter().for_each(|id| {
-      map.remove(id);
-    });
-
+    if let Ok(mut map /* WriteGuarded<'_, ArenaMap<T>> */) = self.map.write() {
+      for node_id in &deletion_list {
+        map.remove(node_id);
+      }
+    }
     // Pass the deletion list back.
     deletion_list.into()
   }
@@ -240,12 +259,13 @@ where
     if !self.node_exists(node_id) {
       return None;
     }
-    self
-      .map
-      .read()
-      .unwrap()
-      .get(&node_id.get_id()) // Returns `None` if `node_id` doesn't exist.
-      .map(Arc::downgrade) // Runs if `node_ref` is some, else returns `None`.
+    if let Ok(map) = self.map.read() {
+      map
+        .get(&node_id.get_id()) // Returns `None` if `node_id` doesn't exist.
+        .map(Arc::downgrade) // Runs if `node_ref` is some, else returns `None`.
+    } else {
+      None
+    }
   }
 
   /// If `node_id` can't be found, returns `None`.
@@ -254,12 +274,13 @@ where
     if !self.node_exists(node_id) {
       return None;
     }
-    self
-      .map
-      .read()
-      .unwrap()
-      .get(&node_id.get_id()) // Returns `None` if `node_id` doesn't exist.
-      .map(Arc::clone) // Runs if `node_ref` is some, else returns `None`.
+    if let Ok(map) = self.map.read() {
+      map
+        .get(&node_id.get_id()) // Returns `None` if `node_id` doesn't exist.
+        .map(Arc::clone) // Runs if `node_ref` is some, else returns `None`.
+    } else {
+      None
+    }
   }
 
   /// Note `data` is cloned to avoid `data` being moved.
