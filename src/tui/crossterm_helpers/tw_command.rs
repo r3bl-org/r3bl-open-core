@@ -18,8 +18,7 @@
 use std::{collections::HashMap,
           fmt::Debug,
           io::{stderr, stdout, Write},
-          ops::{Add, AddAssign},
-          sync::RwLock};
+          ops::{Add, AddAssign}};
 
 use crossterm::{cursor::*,
                 event::*,
@@ -33,9 +32,9 @@ use crate::*;
 
 const DEBUG: bool = false;
 
-// ╭┄┄┄┄┄┄┄╮
+// ╭┄┄┄┄┄╮
 // │ exec! │
-// ╯       ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ╯       ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// Given a crossterm command, this will run it and [log!] the [Result] that is returned. If [log!]
 /// fails, then it will print a message to stderr.
 ///
@@ -201,6 +200,11 @@ pub enum TWCommand {
   RequestShowCaretAtPositionRelTo(Position, Position),
 }
 
+pub enum FlushKind {
+  JustFlushQueue,
+  ClearBeforeFlushQueue,
+}
+
 mod command_helpers {
   use super::*;
 
@@ -284,32 +288,52 @@ pub struct TWCommandQueue {
   pub queue: Vec<TWCommand>,
 }
 
-static mut TERMINAL_WINDOW_SIZE: RwLock<Size> = RwLock::new(size!(col: 0, row: 0));
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Static mutable size │
+// ╯                     ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+pub mod static_terminal_window_size {
+  use std::sync::atomic::{AtomicU16, Ordering};
 
-pub struct TWUtils;
+  use super::*;
 
-impl TWUtils {
-  pub fn set_terminal_window_size(size: Size) {
+  pub static mut SIZE_COLS: AtomicU16 = AtomicU16::new(0);
+  pub static mut SIZE_ROWS: AtomicU16 = AtomicU16::new(0);
+
+  /// Save the given size to the static mutable variables [SIZE_COLS] and [SIZE_ROWS].
+  pub fn set(size: Size) {
     unsafe {
-      if let Ok(mut write_guard) = TERMINAL_WINDOW_SIZE.write() {
-        *write_guard = size
-      }
+      SIZE_COLS.store(size.cols, Ordering::SeqCst);
+      SIZE_ROWS.store(size.rows, Ordering::SeqCst);
     }
   }
 
-  pub fn get_terminal_window_size() -> Size {
+  /// Get the size from the static mutable mutable variables [SIZE_COLS] and [SIZE_ROWS].
+  pub fn get() -> Size {
     unsafe {
-      if let Ok(read_guard) = TERMINAL_WINDOW_SIZE.read() {
-        *read_guard
-      } else {
-        size!(col: 0, row: 0)
-      }
+      let cols = SIZE_COLS.load(Ordering::SeqCst);
+      let rows = SIZE_ROWS.load(Ordering::SeqCst);
+      size!(col: cols, row: rows)
     }
   }
+}
 
-  pub fn get_current_position() -> Position {
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Misc crossterm lookup commands │
+// ╯                                ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+pub(crate) mod terminal_window_commands {
+  use super::*;
+
+  #[allow(dead_code)]
+  /// Interrogate crossterm to get the cursor position in the terminal.
+  pub(crate) fn lookup_cursor_position() -> Position {
     let (col, row) = crossterm::cursor::position().unwrap_or((0, 0));
     position!(col: col, row: row)
+  }
+
+  /// Interrogate crossterm [crossterm::terminal::size()] to get the size of the terminal window.
+  pub(crate) fn lookup_size() -> CommonResult<Size> {
+    let size: Size = crossterm::terminal::size()?.into();
+    Ok(size)
   }
 }
 
@@ -336,14 +360,14 @@ impl TWCommandQueue {
   }
 
   // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
-  pub fn flush(&self, clear_before_flush: bool) {
+  pub async fn flush(&self, flush_kind: FlushKind) {
     let mut skip_flush = false;
 
     // If set to [Position] then it will draw the cursor at that position after flushing the queue.
     // Then clear this value. It will hide the cursor if [Position] is [None].
     let mut maybe_draw_caret_at: Option<Position> = None;
 
-    if clear_before_flush {
+    if let FlushKind::ClearBeforeFlushQueue = flush_kind {
       exec! {
         queue!(stdout(),
           ResetColor,
@@ -382,7 +406,7 @@ pub fn handle_draw_cursor(maybe_draw_caret_at: Option<Position>) {
   }
 }
 
-fn handle_maybe_draw_caret_at_overwrite_attempt(ignored_pos: Position) {
+pub fn handle_maybe_draw_caret_at_overwrite_attempt(ignored_pos: Position) {
   call_if_debug_true! {
     log_no_err!(WARN,
       "{} -> {:?}",
@@ -391,14 +415,14 @@ fn handle_maybe_draw_caret_at_overwrite_attempt(ignored_pos: Position) {
 }
 
 /// Ensure that the [Position] is within the bounds of the terminal window using [this
-/// method](TWUtils::get_terminal_window_size). If the [Position] is outside of the bounds of the
+/// method](static_terminal_window_size::get). If the [Position] is outside of the bounds of the
 /// window then it is clamped to the nearest edge of the window. This clamped [Position] is
 /// returned.
 pub fn sanitize_abs_position(abs_pos: Position) -> Position {
   let Size {
     cols: max_cols,
     rows: max_rows,
-  } = TWUtils::get_terminal_window_size();
+  } = static_terminal_window_size::get();
 
   let mut new_pos: Position = abs_pos;
 
@@ -624,12 +648,3 @@ pub static STYLE_TO_ATTRIBUTE_MAP: Lazy<HashMap<StyleFlag, Attribute>> = Lazy::n
   map.insert(StyleFlag::STRIKETHROUGH_SET, Attribute::Fraktur);
   map
 });
-
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Misc terminal commands │
-// ╯                        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-/// Create a new [Size] from [crossterm::terminal::size()].
-pub fn get_terminal_window_size() -> CommonResult<Size> {
-  let size: Size = size()?.into();
-  Ok(size)
-}
