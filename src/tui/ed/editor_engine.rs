@@ -147,7 +147,7 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> TWCommandQ
       CaretPaintStyle::GlobalCursor => {
         tw_command_queue! {
           queue push
-          TWCommand::RequestShowCaretAtPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
+          TWCommand::RequestShowCursorAtPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
         };
       }
       CaretPaintStyle::LocalPaintedEffect => {

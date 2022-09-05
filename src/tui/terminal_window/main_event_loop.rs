@@ -25,7 +25,8 @@ use crate::*;
 
 #[derive(Clone, Debug, Default)]
 pub struct TWData {
-  size: Size,
+  pub size: Size,
+  pub cursor_position: Position,
 }
 
 impl TWData {
@@ -37,7 +38,6 @@ impl TWData {
 
   pub fn set_size(&mut self, new_size: Size) {
     self.size = new_size;
-    terminal_window_static_data::set_size(new_size);
     self.dump_state_to_log("main_event_loop -> Resize");
   }
 
@@ -65,31 +65,28 @@ impl TerminalWindow {
     S: Display + Default + Clone + PartialEq + Debug + Sync + Send + 'static,
     A: Display + Default + Clone + Sync + Send + 'static,
   {
-    raw_mode!({
+    {
       // Initialize the terminal window data struct.
       let _tw_data = TWData::try_to_create_instance()?;
-      let shared_window: SharedWindow = Arc::new(RwLock::new(_tw_data));
+      let shared_tw_data: SharedTWData = Arc::new(RwLock::new(_tw_data));
+
+      // Start raw mode.
+      let my_raw_mode = RawMode::start(&shared_tw_data).await;
 
       // Move the store into an Arc & RwLock.
       let shared_store: SharedStore<S, A> = Arc::new(RwLock::new(store));
 
       // Create a subscriber (AppManager) & attach it to the store.
-      let _subscriber = AppManager::new_box(&shared_app, &shared_store, &shared_window);
+      let _subscriber = AppManager::new_box(&shared_app, &shared_store, &shared_tw_data);
       shared_store.write().await.add_subscriber(_subscriber).await;
 
       // Create a new event stream (async).
       let mut async_event_stream = AsyncEventStream::default();
 
       // Perform first render.
-      AppManager::render_app(
-        &shared_store,
-        &shared_app,
-        shared_window.read().await.get_size(),
-        None,
-      )
-      .await?;
+      AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
 
-      shared_window
+      shared_tw_data
         .read()
         .await
         .dump_state_to_log("main_event_loop -> Startup 🚀");
@@ -108,7 +105,7 @@ impl TerminalWindow {
 
           // Pass event to the app first. It has greater specificity than the default handler.
           let propagation_result_from_app = AppManager::route_input_to_app(
-            &shared_window,
+            &shared_tw_data,
             &shared_store,
             &shared_app,
             &input_event,
@@ -118,8 +115,7 @@ impl TerminalWindow {
           // If event not consumed by app, propagate to the default input handler.
           match propagation_result_from_app {
             EventPropagation::ConsumedRerender => {
-              let size = shared_window.read().await.get_size();
-              AppManager::render_app(&shared_store, &shared_app, size, None).await?;
+              AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
             }
             EventPropagation::Propagate => {
               let continuation_result_from_default_handler =
@@ -129,8 +125,8 @@ impl TerminalWindow {
                   break;
                 }
                 Continuation::ResizeAndContinue(new_size) => {
-                  shared_window.write().await.set_size(new_size);
-                  AppManager::render_app(&shared_store, &shared_app, new_size, None).await?;
+                  shared_tw_data.write().await.set_size(new_size);
+                  AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
                 }
                 _ => {}
               };
@@ -142,7 +138,12 @@ impl TerminalWindow {
         // Flush.
         TWCommand::flush();
       }
-    })
+
+      // End raw mode.
+      my_raw_mode.end(&shared_tw_data).await;
+
+      Ok(())
+    }
   }
 }
 
@@ -153,7 +154,7 @@ where
 {
   shared_app: SharedApp<S, A>,
   shared_store: SharedStore<S, A>,
-  shared_window: SharedWindow,
+  shared_tw_data: SharedTWData,
 }
 
 #[async_trait]
@@ -163,11 +164,10 @@ where
   A: Display + Default + Clone + Sync + Send,
 {
   async fn run(&self, my_state: S) {
-    let window_size = self.shared_window.read().await.get_size();
     let result = AppManager::render_app(
       &self.shared_store,
       &self.shared_app,
-      window_size,
+      &self.shared_tw_data,
       my_state.into(),
     )
     .await;
@@ -186,18 +186,18 @@ where
   A: Display + Default + Clone + Sync + Send,
 {
   fn new_box(
-    shared_app: &SharedApp<S, A>, shared_store: &SharedStore<S, A>, shared_window: &SharedWindow,
+    shared_app: &SharedApp<S, A>, shared_store: &SharedStore<S, A>, shared_window: &SharedTWData,
   ) -> Box<Self> {
     Box::new(AppManager {
       shared_app: shared_app.clone(),
       shared_store: shared_store.clone(),
-      shared_window: shared_window.clone(),
+      shared_tw_data: shared_window.clone(),
     })
   }
 
   /// Pass the event to the `shared_app` for further processing.
   pub async fn route_input_to_app(
-    shared_window: &SharedWindow, shared_store: &SharedStore<S, A>, shared_app: &SharedApp<S, A>,
+    shared_window: &SharedTWData, shared_store: &SharedStore<S, A>, shared_app: &SharedApp<S, A>,
     input_event: &InputEvent,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
@@ -212,7 +212,7 @@ where
   }
 
   pub async fn render_app(
-    shared_store: &SharedStore<S, A>, shared_app: &SharedApp<S, A>, window_size: Size,
+    shared_store: &SharedStore<S, A>, shared_app: &SharedApp<S, A>, shared_tw_data: &SharedTWData,
     maybe_state: Option<S>,
   ) -> CommonResult<()> {
     throws!({
@@ -225,7 +225,7 @@ where
       let render_result = shared_app
         .write()
         .await
-        .app_render(&state, shared_store, window_size)
+        .app_render(&state, shared_store, shared_tw_data)
         .await;
 
       match render_result {
@@ -238,8 +238,9 @@ where
         }
         Ok(tw_command_queue) => {
           tw_command_queue
-            .flush(FlushKind::ClearBeforeFlushQueue)
+            .flush(FlushKind::ClearBeforeFlushQueue, shared_tw_data)
             .await;
+          let window_size = shared_tw_data.read().await.get_size();
           call_if_true!(
             DEBUG,
             log_no_err!(

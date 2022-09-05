@@ -161,48 +161,67 @@ macro_rules! tw_command_queue {
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TWCommand {
   EnterRawMode,
+
   ExitRawMode,
+
   /// [Position] is the absolute column and row on the terminal screen. This uses
-  /// [sanitize_abs_position] to clean up the given [Position].
+  /// [flush_impl::sanitize_abs_position] to clean up the given [Position].
   MoveCursorPositionAbs(Position),
+
   /// 1st [Position] is the origin column and row, and the 2nd [Position] is the offset column and
-  /// row. They are added together to move the absolute position on the terminal screen. This uses
-  /// [sanitize_abs_position] to clean up the absolute [Position].
+  /// row. They are added together to move the absolute position on the terminal screen. Then
+  /// [TWCommand::MoveCursorPositionAbs] is used.
   MoveCursorPositionRelTo(Position, Position),
+
   ClearScreen,
+
   /// Directly set the fg color for crossterm w/out using [Style].
   SetFgColor(TWColor),
+
   /// Directly set the bg color for crossterm w/out using [Style].
   SetBgColor(TWColor),
+
   ResetColor,
+
   /// Translate [Style] into fg and bg colors for crossterm.
   ApplyColors(Option<Style>),
+
   /// Translate [Style] into attributes [static@STYLE_TO_ATTRIBUTE_MAP] for crossterm (bold,
   /// underline, strikethrough, etc). The [String] argument shouldn't contained any ANSI escape
   /// sequences (since it will be stripped out in order to figure out where to clip the text to the
   /// available width of the terminal screen).
+  ///
+  /// | Variant | Auto clipping support |
+  /// | --- | ---  |
+  /// | `PrintPlainTextWithAttributes(String, Option<Style>)` | YES |
+  /// | `PrintANSITextWithAttributes(String, Option<Style>)` | NO |
   PrintPlainTextWithAttributes(String, Option<Style>),
+
   /// Translate [Style] into attributes [static@STYLE_TO_ATTRIBUTE_MAP] for crossterm (bold,
   /// underline, strikethrough, etc). You are responsible for handling clipping of the text to the
   /// bounds of the terminal screen.
+  ///
+  /// | Variant | Auto clipping support |
+  /// | --- | ---  |
+  /// | `PrintPlainTextWithAttributes(String, Option<Style>)` | YES |
+  /// | `PrintANSITextWithAttributes(String, Option<Style>)` | NO |
   PrintANSITextWithAttributes(String, Option<Style>),
+
   CursorShow,
   CursorHide,
+
   /// [Position] is the absolute column and row on the terminal screen. This uses
-  /// [sanitize_abs_position] to clean up the given [Position].
+  /// [flush_impl::sanitize_abs_position] to clean up the given [Position].
   ///
-  /// 1. [handle_draw_cursor] is actually used to draw the cursor.
-  /// 2. [handle_maybe_draw_caret_at_overwrite_attempt] is used to ensure that this is not an
+  /// 1. [flush_impl::handle_draw_caret_on_top] is actually used to draw the cursor.
+  /// 2. [flush_impl::log_maybe_draw_caret_at_overwrite_attempt] is used to log when there's an
   ///    overwrite attempt.
-  RequestShowCaretAtPositionAbs(Position),
+  RequestShowCursorAtPositionAbs(Position),
+
   /// 1st [Position] is the origin column and row, and the 2nd [Position] is the offset column and
-  /// row. They are added together to move the absolute position on the terminal screen. This uses
-  /// [sanitize_abs_position] to clean up the absolute [Position].
-  ///
-  /// 1. [handle_draw_cursor] is actually used to draw the cursor.
-  /// 2. [handle_maybe_draw_caret_at_overwrite_attempt] is used to ensure that this is not an
-  ///    overwrite attempt.
-  RequestShowCaretAtPositionRelTo(Position, Position),
+  /// row. They are added together to move the absolute position on the terminal screen. Then
+  /// [TWCommand::RequestShowCursorAtPositionAbs].
+  RequestShowCursorAtPositionRelTo(Position, Position),
 }
 
 pub enum FlushKind {
@@ -257,9 +276,9 @@ mod command_helpers {
           }
           TWCommand::CursorShow => "CursorShow".into(),
           TWCommand::CursorHide => "CursorHide".into(),
-          TWCommand::RequestShowCaretAtPositionAbs(pos) =>
+          TWCommand::RequestShowCursorAtPositionAbs(pos) =>
             format!("ShowCursorAtPosition({:?})", pos),
-          TWCommand::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => format!(
+          TWCommand::RequestShowCursorAtPositionRelTo(box_origin_pos, content_rel_pos) => format!(
             "ShowCursorAtPosition({:?}, {:?})",
             box_origin_pos, content_rel_pos
           ),
@@ -292,55 +311,6 @@ impl TWCommand {
 pub struct TWCommandQueue {
   /// The queue of [TWCommand]s to execute.
   pub queue: Vec<TWCommand>,
-}
-
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Static mutable size │
-// ╯                     ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-pub mod terminal_window_static_data {
-  use std::sync::atomic::{AtomicU16, Ordering};
-
-  use super::*;
-
-  pub static mut SIZE_COL: AtomicU16 = AtomicU16::new(0);
-  pub static mut SIZE_ROW: AtomicU16 = AtomicU16::new(0);
-
-  /// Save the given size to the static mutable variables [SIZE_COL] and [SIZE_ROW].
-  pub fn set_size(size: Size) {
-    unsafe {
-      SIZE_COL.store(size.col, Ordering::SeqCst);
-      SIZE_ROW.store(size.row, Ordering::SeqCst);
-    }
-  }
-
-  /// Get the size from the static mutable mutable variables [SIZE_COL] and [SIZE_ROW].
-  pub fn get_size() -> Size {
-    unsafe {
-      let cols = SIZE_COL.load(Ordering::SeqCst);
-      let rows = SIZE_ROW.load(Ordering::SeqCst);
-      size!(col: cols, row: rows)
-    }
-  }
-
-  pub static mut CURSOR_COL: AtomicU16 = AtomicU16::new(0);
-  pub static mut CURSOR_ROW: AtomicU16 = AtomicU16::new(0);
-
-  /// Save the given position to the static mutable variables [CURSOR_COL] and [CURSOR_ROW].
-  pub fn set_cursor_pos(pos: Position) {
-    unsafe {
-      CURSOR_COL.store(pos.col, Ordering::SeqCst);
-      CURSOR_ROW.store(pos.row, Ordering::SeqCst);
-    }
-  }
-
-  /// Get the position from the static mutable mutable variables [CURSOR_COL] and [CURSOR_ROW].
-  pub fn get_cursor_pos() -> Position {
-    unsafe {
-      let col = CURSOR_COL.load(Ordering::SeqCst);
-      let row = CURSOR_ROW.load(Ordering::SeqCst);
-      position!(col: col, row: row)
-    }
-  }
 }
 
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
@@ -379,12 +349,21 @@ impl TWCommandQueue {
   }
 
   // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
-  pub async fn flush(&self, flush_kind: FlushKind) {
-    let mut skip_flush = false;
+  pub async fn flush(&self, flush_kind: FlushKind, shared_tw_data: &SharedTWData) {
+    flush_impl::run_flush(&self.queue, flush_kind, shared_tw_data).await;
+  }
+}
 
+pub mod flush_impl {
+  use super::*;
+
+  pub async fn run_flush(
+    queue: &Vec<TWCommand>, flush_kind: FlushKind, shared_tw_data: &SharedTWData,
+  ) {
+    let mut skip_flush = false;
     // If set to [Position] then it will draw the cursor at that position after flushing the queue.
     // Then clear this value. It will hide the cursor if [Position] is [None].
-    let mut maybe_draw_caret_at: Option<Position> = None;
+    let mut maybe_sanitized_draw_caret_at: Option<Position> = None;
 
     if let FlushKind::ClearBeforeFlushQueue = flush_kind {
       exec! {
@@ -396,8 +375,14 @@ impl TWCommandQueue {
       }
     }
 
-    for command_ref in &self.queue {
-      command_processor::execute(&mut maybe_draw_caret_at, &mut skip_flush, command_ref);
+    for command_ref in queue {
+      command_processor::run_command(
+        &mut maybe_sanitized_draw_caret_at,
+        &mut skip_flush,
+        command_ref,
+        shared_tw_data,
+      )
+      .await;
     }
 
     // Flush all the commands that were added via calls to `queue!` above.
@@ -405,95 +390,115 @@ impl TWCommandQueue {
       TWCommand::flush()
     };
 
-    // Handle cursor drawing.
-    handle_draw_cursor(maybe_draw_caret_at);
+    // Handle caret drawing.
+    flush_impl::handle_draw_caret_on_top(maybe_sanitized_draw_caret_at, shared_tw_data).await;
+  }
+
+  /// This is paints the caret at the very end, so its painted on top of everything else. The
+  /// `maybe_draw_caret_at` has already been sanitized by the time it gets here.
+  ///
+  /// See: [command_processor::request_show_caret_at_position_abs] and
+  /// [command_processor::request_show_caret_at_position_rel_to].
+  pub async fn handle_draw_caret_on_top(
+    maybe_sanitized_draw_caret_at: Option<Position>, _shared_tw_data: &SharedTWData,
+  ) {
+    if let Some(draw_cursor_at_pos) = maybe_sanitized_draw_caret_at {
+      let Position { col, row } = draw_cursor_at_pos;
+      exec!(
+        queue!(stdout(), MoveTo(col, row), Show),
+        format!("DrawCursorAt -> MoveTo(col: {}, row: {}) & Show", col, row)
+      );
+      TWCommand::flush();
+    } else {
+      exec!(queue!(stdout(), Hide), "DrawCursorAt -> Hide");
+      TWCommand::flush();
+    }
+  }
+
+  /// 1. Ensure that the [Position] is within the bounds of the terminal window using
+  ///    [SharedTWData].
+  /// 2. If the [Position] is outside of the bounds of the window then it is clamped to the nearest
+  ///    edge of the window. This clamped [Position] is returned.
+  /// 3. This also saves the clamped [Position] to [SharedTWData].
+  pub async fn sanitize_abs_position(
+    orig_abs_pos: Position, shared_tw_data: &SharedTWData,
+  ) -> Position {
+    let Size {
+      col: max_cols,
+      row: max_rows,
+    } = shared_tw_data.read().await.size;
+
+    let mut new_abs_pos: Position = orig_abs_pos;
+
+    if orig_abs_pos.col > max_cols {
+      new_abs_pos.col = max_cols;
+    }
+
+    if orig_abs_pos.row > max_rows {
+      new_abs_pos.row = max_rows;
+    }
+
+    // Save the cursor position.
+    shared_tw_data.write().await.cursor_position = new_abs_pos;
+
+    debug_sanitize_abs_position(orig_abs_pos, new_abs_pos);
+
+    return new_abs_pos;
+
+    fn debug_sanitize_abs_position(orig_pos: Position, sanitized_pos: Position) {
+      call_if_debug_true!({
+        if sanitized_pos != orig_pos {
+          log_no_err!(INFO, "🔏 Attempt to set position {:?} outside of terminal window. Clamping to nearest edge of window {:?}.", 
+          orig_pos,
+          sanitized_pos);
+        }
+      });
+    }
+  }
+
+  pub fn log_maybe_draw_caret_at_overwrite_attempt(ignored_pos: Position) {
+    call_if_debug_true! {
+      log_no_err!(WARN,
+        "{} -> {:?}",
+        "Attempt to set maybe_draw_caret_at more than once. Ignoring {:?}", ignored_pos)
+    };
   }
 }
 
-pub fn handle_draw_cursor(maybe_draw_caret_at: Option<Position>) {
-  if let Some(draw_cursor_at) = maybe_draw_caret_at {
-    let Position { col, row } = draw_cursor_at;
-    exec!(
-      queue!(stdout(), MoveTo(col, row)),
-      format!("DrawCursorAt -> MoveTo(col: {}, row: {})", col, row)
-    );
-    exec!(queue!(stdout(), Show), "DrawCursorAt -> Show");
-    TWCommand::flush();
-  } else {
-    exec!(queue!(stdout(), Hide), "DrawCursorAt -> Hide");
-    TWCommand::flush();
-  }
-}
-
-pub fn handle_maybe_draw_caret_at_overwrite_attempt(ignored_pos: Position) {
-  call_if_debug_true! {
-    log_no_err!(WARN,
-      "{} -> {:?}",
-      "Attempt to set maybe_draw_caret_at more than once. Ignoring {:?}", ignored_pos)
-  };
-}
-
-/// Ensure that the [Position] is within the bounds of the terminal window using [this
-/// method](static_terminal_window_size::get). If the [Position] is outside of the bounds of the
-/// window then it is clamped to the nearest edge of the window. This clamped [Position] is
-/// returned.
-pub fn sanitize_abs_position(orig_abs_pos: Position) -> Position {
-  let Size {
-    col: max_cols,
-    row: max_rows,
-  } = terminal_window_static_data::get_size();
-
-  let mut new_abs_pos: Position = orig_abs_pos;
-
-  if orig_abs_pos.col > max_cols {
-    new_abs_pos.col = max_cols;
-  }
-
-  if orig_abs_pos.row > max_rows {
-    new_abs_pos.row = max_rows;
-  }
-
-  debug_sanitize_abs_position(orig_abs_pos, new_abs_pos);
-
-  return new_abs_pos;
-
-  fn debug_sanitize_abs_position(orig_pos: Position, sanitized_pos: Position) {
-    call_if_debug_true!({
-      if sanitized_pos != orig_pos {
-        log_no_err!(INFO, "🔏 Attempt to set position {:?} outside of terminal window. Clamping to nearest edge of window {:?}.", 
-        orig_pos,
-        sanitized_pos);
-      }
-    });
-  }
-}
-
-mod command_processor {
+pub mod command_processor {
   use std::borrow::Cow;
 
   use super::*;
 
-  pub(super) fn execute(
-    maybe_draw_caret_at: &mut Option<Position>, skip_flush: &mut bool, command_ref: &TWCommand,
+  pub(super) async fn run_command(
+    maybe_sanitized_draw_caret_at: &mut Option<Position>, skip_flush: &mut bool,
+    command_ref: &TWCommand, shared_tw_data: &SharedTWData,
   ) {
     match command_ref {
-      TWCommand::RequestShowCaretAtPositionAbs(pos) => {
-        request_show_caret_at_position_abs(pos, maybe_draw_caret_at);
+      TWCommand::RequestShowCursorAtPositionAbs(pos) => {
+        request_show_caret_at_position_abs(pos, maybe_sanitized_draw_caret_at, shared_tw_data)
+          .await;
       }
-      TWCommand::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => {
-        request_show_caret_at_position_rel_to(box_origin_pos, content_rel_pos, maybe_draw_caret_at);
+      TWCommand::RequestShowCursorAtPositionRelTo(box_origin_pos, content_rel_pos) => {
+        request_show_caret_at_position_rel_to(
+          box_origin_pos,
+          content_rel_pos,
+          maybe_sanitized_draw_caret_at,
+          shared_tw_data,
+        )
+        .await;
       }
       TWCommand::EnterRawMode => {
-        raw_mode_enter(skip_flush);
+        raw_mode_enter(skip_flush, shared_tw_data).await;
       }
       TWCommand::ExitRawMode => {
         raw_mode_exit(skip_flush);
       }
       TWCommand::MoveCursorPositionAbs(abs_pos) => {
-        move_cursor_position_abs(abs_pos);
+        move_cursor_position_abs(abs_pos, shared_tw_data).await;
       }
       TWCommand::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
-        move_cursor_position_rel_to(box_origin_pos, content_rel_pos);
+        move_cursor_position_rel_to(box_origin_pos, content_rel_pos, shared_tw_data).await;
       }
       TWCommand::ClearScreen => {
         exec!(queue!(stdout(), Clear(ClearType::All)), "ClearScreen")
@@ -520,19 +525,20 @@ mod command_processor {
         print_ansi_text_with_attributes(text, maybe_style);
       }
       TWCommand::PrintPlainTextWithAttributes(text, maybe_style) => {
-        print_plain_text_with_attributes(text, maybe_style);
+        print_plain_text_with_attributes(text, maybe_style, shared_tw_data).await;
       }
     }
   }
 
-  fn move_cursor_position_rel_to(box_origin_pos: &Position, content_rel_pos: &Position) {
+  async fn move_cursor_position_rel_to(
+    box_origin_pos: &Position, content_rel_pos: &Position, shared_tw_data: &SharedTWData,
+  ) {
     let new_abs_pos = *box_origin_pos + *content_rel_pos;
-    move_cursor_position_abs(&new_abs_pos);
+    move_cursor_position_abs(&new_abs_pos, shared_tw_data).await;
   }
 
-  fn move_cursor_position_abs(abs_pos: &Position) {
-    let Position { col, row } = sanitize_abs_position(*abs_pos);
-    terminal_window_static_data::set_cursor_pos(position! {col: col, row: row});
+  async fn move_cursor_position_abs(abs_pos: &Position, shared_tw_data: &SharedTWData) {
+    let Position { col, row } = flush_impl::sanitize_abs_position(*abs_pos, shared_tw_data).await;
     exec!(
       queue!(stdout(), MoveTo(col, row)),
       format!("MoveCursorPosition(col: {}, row: {})", col, row)
@@ -553,7 +559,8 @@ mod command_processor {
     *skip_flush = true;
   }
 
-  fn raw_mode_enter(skip_flush: &mut bool) {
+  async fn raw_mode_enter(skip_flush: &mut bool, shared_tw_data: &SharedTWData) {
+    shared_tw_data.write().await.cursor_position = position! {col: 0, row: 0};
     exec! {
       terminal::enable_raw_mode(),
       "EnterRawMode -> enable_raw_mode()"
@@ -572,22 +579,23 @@ mod command_processor {
     *skip_flush = true;
   }
 
-  fn request_show_caret_at_position_rel_to(
+  pub async fn request_show_caret_at_position_rel_to(
     box_origin_pos: &Position, content_rel_pos: &Position,
-    maybe_draw_caret_at: &mut Option<Position>,
+    maybe_draw_caret_at: &mut Option<Position>, shared_tw_data: &SharedTWData,
   ) {
     let new_abs_pos = *box_origin_pos + *content_rel_pos;
-    request_show_caret_at_position_abs(&new_abs_pos, maybe_draw_caret_at);
+    request_show_caret_at_position_abs(&new_abs_pos, maybe_draw_caret_at, shared_tw_data).await;
   }
 
-  fn request_show_caret_at_position_abs(
-    pos: &Position, maybe_draw_caret_at: &mut Option<Position>,
+  pub async fn request_show_caret_at_position_abs(
+    pos: &Position, maybe_sanitized_draw_caret_at: &mut Option<Position>,
+    shared_tw_data: &SharedTWData,
   ) {
-    let sanitized_pos = sanitize_abs_position(*pos);
-    if maybe_draw_caret_at.is_none() {
-      *maybe_draw_caret_at = Some(sanitized_pos);
+    let sanitized_pos = flush_impl::sanitize_abs_position(*pos, shared_tw_data).await;
+    if maybe_sanitized_draw_caret_at.is_none() {
+      *maybe_sanitized_draw_caret_at = Some(sanitized_pos);
     } else {
-      handle_maybe_draw_caret_at_overwrite_attempt(sanitized_pos);
+      flush_impl::log_maybe_draw_caret_at_overwrite_attempt(sanitized_pos);
     }
   }
 
@@ -607,7 +615,9 @@ mod command_processor {
     )
   }
 
-  fn print_plain_text_with_attributes(text_arg: &String, maybe_style: &Option<Style>) {
+  async fn print_plain_text_with_attributes(
+    text_arg: &String, maybe_style: &Option<Style>, shared_tw_data: &SharedTWData,
+  ) {
     // Try and strip ansi codes & prepare the log message.
     let mut plain_text: Cow<'_, str> = Cow::Borrowed(text_arg);
     let maybe_stripped_text = try_strip_ansi(text_arg);
@@ -620,8 +630,8 @@ mod command_processor {
     };
 
     // Check whether the plain_text needs to be truncated to fit the terminal window.
-    let cursor_position = terminal_window_static_data::get_cursor_pos();
-    let max_cols = terminal_window_static_data::get_size().col;
+    let cursor_position = shared_tw_data.read().await.cursor_position;
+    let max_cols = shared_tw_data.read().await.size.col;
     let plain_text_unicode_string = plain_text.to_string().unicode_string();
     let plain_text_len = plain_text_unicode_string.display_width;
     if cursor_position.col + plain_text_len > max_cols {
