@@ -37,7 +37,7 @@ impl TWData {
 
   pub fn set_size(&mut self, new_size: Size) {
     self.size = new_size;
-    static_terminal_window_size::set(new_size);
+    terminal_window_static_data::set_size(new_size);
     self.dump_state_to_log("main_event_loop -> Resize");
   }
 
