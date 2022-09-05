@@ -99,8 +99,8 @@ fn render_content(context_ref: &Context<'_>) -> TWCommandQueue {
   let mut queue = tw_command_queue!(@new);
 
   let Size {
-    cols: max_content_display_cols,
-    rows: mut max_display_row_count,
+    col: max_content_display_cols,
+    row: mut max_display_row_count,
   } = style_adj_box_bounds_size;
 
   // Paint each line in the buffer.
@@ -120,7 +120,7 @@ fn render_content(context_ref: &Context<'_>) -> TWCommandQueue {
         position! { col: 0 , row: convert_to_base_unit!(index) }
       ),
       TWCommand::ApplyColors(current_box.get_computed_style()),
-      TWCommand::PrintWithAttributes(truncated_line.into(), current_box.get_computed_style()),
+      TWCommand::PrintPlainTextWithAttributes(truncated_line.into(), current_box.get_computed_style()),
       TWCommand::ResetColor
     };
     if max_display_row_count >= 1 {
@@ -154,7 +154,7 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> TWCommandQ
         tw_command_queue! {
           queue push
           TWCommand::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret),
-          TWCommand::PrintWithAttributes(
+          TWCommand::PrintPlainTextWithAttributes(
             editor_buffer.get_char_at_caret().unwrap_or(DEFAULT_CURSOR_CHAR).into(),
             style! { attrib: [reverse] }.into()),
           TWCommand::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
@@ -184,7 +184,7 @@ fn render_empty_state(context_ref: &Context<'_>) -> TWCommandQueue {
     TWCommand::ApplyColors(style! {
       color_fg: TWColor::Red
     }.into()),
-    TWCommand::PrintWithAttributes("No content added".into(), None),
+    TWCommand::PrintPlainTextWithAttributes("No content added".into(), None),
     TWCommand::ResetColor
   };
 
@@ -195,7 +195,7 @@ fn render_empty_state(context_ref: &Context<'_>) -> TWCommandQueue {
       TWCommand::MoveCursorPositionRelTo(
         *style_adj_box_origin_pos,
         content_cursor_pos.add_rows_with_bounds(1, *style_adj_box_bounds_size)),
-      TWCommand::PrintWithAttributes("👀".into(), None)
+      TWCommand::PrintPlainTextWithAttributes("👀".into(), None)
     };
   }
 

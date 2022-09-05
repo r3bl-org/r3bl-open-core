@@ -110,7 +110,7 @@ impl StyledTexts for Vec<StyledText> {
       let style = styled_text.style.clone();
       let text = styled_text.plain_text.clone();
       tw_command_queue.push(TWCommand::ApplyColors(style.clone().into()));
-      tw_command_queue.push(TWCommand::PrintWithAttributes(text, style.into()));
+      tw_command_queue.push(TWCommand::PrintPlainTextWithAttributes(text, style.into()));
       tw_command_queue.push(TWCommand::ResetColor);
     }
 
