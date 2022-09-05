@@ -22,7 +22,7 @@ use tokio::sync::RwLock;
 use crate::*;
 
 // TWData.
-pub type SharedWindow = Arc<RwLock<TWData>>;
+pub type SharedTWData = Arc<RwLock<TWData>>;
 
 // App.
 pub type SafeApp<S, A> = dyn App<S, A> + Send + Sync;

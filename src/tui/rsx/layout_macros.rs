@@ -50,14 +50,15 @@ macro_rules! box_start_with_component {
 #[macro_export]
 macro_rules! box_start_with_runnable {
   (
-    in:                     $arg_surface      : expr,           // Eg: in: tw_surface,
-    runnable:               $arg_runnable     : expr,           // Eg: runnable: two_col_layout,
-    id:                     $arg_id           : expr,           // Eg: "foo",
-    dir:                    $arg_dir          : expr,           // Eg: Direction::Horizontal,
-    requested_size_percent: $arg_requested_size_percent : expr, // Eg: (50, 100).try_into()?,
-    styles:                 [$($args_styles:tt)*],              // Eg: [ "style1" , "style2" ]
-    state:                  $arg_state        : expr,           // Eg: state,
-    shared_store:           $arg_shared_store : expr            // Eg: shared_store
+    in:                     $arg_surface        : expr,           // Eg: in: tw_surface,
+    runnable:               $arg_runnable       : expr,           // Eg: runnable: two_col_layout,
+    id:                     $arg_id             : expr,           // Eg: "foo",
+    dir:                    $arg_dir            : expr,           // Eg: Direction::Horizontal,
+    requested_size_percent: $arg_requested_size_percent : expr,   // Eg: (50, 100).try_into()?,
+    styles:                 [$($args_styles:tt)*],                // Eg: [ "style1" , "style2" ]
+    state:                  $arg_state          : expr,           // Eg: state,
+    shared_store:           $arg_shared_store   : expr,           // Eg: shared_store
+    shared_tw_data:         $arg_shared_tw_data : expr            // Eg: shared_tw_data
   ) => {
     box_start! {
       in:       $arg_surface,
@@ -68,7 +69,7 @@ macro_rules! box_start_with_runnable {
     };
 
     $arg_runnable
-      .run_on_surface($arg_surface, $arg_state, $arg_shared_store)
+      .run_on_surface($arg_surface, $arg_state, $arg_shared_store, $arg_shared_tw_data)
       .await?;
 
     $arg_surface.box_end()?;
@@ -81,12 +82,13 @@ macro_rules! box_start_with_runnable {
 #[macro_export]
 macro_rules! surface_start_with_runnable {
   (
-    runnable:     $arg_runnable     : expr, // Eg: runnable: two_col_layout,
-    stylesheet:   $arg_stylesheet   : expr, // Eg: stylesheet,
-    pos:          $arg_pos          : expr, // Eg: (0, 0).into(),
-    size:         $arg_size         : expr, // Eg: (50, 100).into(),
-    state:        $arg_state        : expr, // Eg: state,
-    shared_store: $arg_shared_store : expr  // Eg: shared_store
+    runnable:       $arg_runnable       : expr, // Eg: runnable: two_col_layout,
+    stylesheet:     $arg_stylesheet     : expr, // Eg: stylesheet,
+    pos:            $arg_pos            : expr, // Eg: (0, 0).into(),
+    size:           $arg_size           : expr, // Eg: (50, 100).into(),
+    state:          $arg_state          : expr, // Eg: state,
+    shared_store:   $arg_shared_store   : expr, // Eg: shared_store
+    shared_tw_data: $arg_shared_tw_data : expr  // Eg: shared_tw_data
   ) => {{
     let mut surface = Surface {
       stylesheet: $arg_stylesheet,
@@ -99,7 +101,12 @@ macro_rules! surface_start_with_runnable {
     })?;
 
     $arg_runnable
-      .run_on_surface(&mut surface, $arg_state, $arg_shared_store)
+      .run_on_surface(
+        &mut surface,
+        $arg_state,
+        $arg_shared_store,
+        $arg_shared_tw_data,
+      )
       .await?;
 
     surface.surface_end()?;

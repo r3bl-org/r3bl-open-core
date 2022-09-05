@@ -68,5 +68,6 @@ where
 {
   async fn run_on_surface(
     &mut self, surface: &mut Surface, state: &S, shared_store: &SharedStore<S, A>,
+    shared_tw_data: &SharedTWData,
   ) -> CommonResult<()>;
 }
