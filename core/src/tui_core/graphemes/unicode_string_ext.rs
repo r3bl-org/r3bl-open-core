@@ -358,7 +358,7 @@ impl UnicodeString {
 }
 
 pub fn try_strip_ansi(text: &str) -> Option<String> {
-  if let Ok(vec_u8) = strip_ansi_escapes::strip(&text) {
+  if let Ok(vec_u8) = strip_ansi_escapes::strip(text) {
     let result_text_plain = std::str::from_utf8(&vec_u8);
     if let Ok(text_plain) = result_text_plain {
       return Some(text_plain.to_string());

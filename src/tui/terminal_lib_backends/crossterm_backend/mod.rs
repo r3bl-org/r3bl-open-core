@@ -15,23 +15,10 @@
  *   limitations under the License.
  */
 
-use crate::*;
+// Attach.
+pub mod command_impl;
+pub mod debug;
 
-/// To use this directly, you need to make sure to create an instance using [start](RawMode::start)
-/// which enables raw mode and then make sure to call [end](RawMode::end) when you are done.
-pub struct RawMode;
-
-impl RawMode {
-  pub async fn start(shared_tw_data: &SharedTWData) -> Self {
-    tw_command_queue!(TWCommand::EnterRawMode)
-      .flush(FlushKind::JustFlushQueue, shared_tw_data)
-      .await;
-    RawMode
-  }
-
-  pub async fn end(&self, shared_tw_data: &SharedTWData) {
-    tw_command_queue!(TWCommand::ExitRawMode)
-      .flush(FlushKind::JustFlushQueue, shared_tw_data)
-      .await;
-  }
-}
+// Re-export.
+pub use command_impl::*;
+pub use debug::*;
