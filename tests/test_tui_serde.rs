@@ -17,8 +17,6 @@
 
 use r3bl_rs_utils::*;
 
-use crate::{TWCommand, TWCommandQueue};
-
 #[test]
 fn test_serde_tw_color_simple() {
   let color: TWColor = TWColor::Red;

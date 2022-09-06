@@ -47,24 +47,43 @@
 //! - Sodium:
 //!   - repo: <https://github.com/redox-os/sodium>
 
+// Enable or disable debug logging.
+#[allow(dead_code)]
+const DEBUG: bool = true;
+
+pub enum Backend {
+  Crossterm,
+  Termion,
+}
+
+const BACKEND: Backend = Backend::Crossterm;
+
 // Attach source files.
 pub mod async_event_stream_ext;
 pub mod color_converter;
+pub mod crossterm_backend;
 pub mod enhanced_keys;
 pub mod input_event;
 pub mod keypress;
 pub mod modifier_keys_mask;
 pub mod mouse_input;
 pub mod raw_mode;
+pub mod terminal_lib_commands;
+pub mod termion_backend;
 pub mod tw_command;
+pub mod tw_command_queue;
 
 // Re-export.
 pub use async_event_stream_ext::*;
 pub use color_converter::*;
+pub use crossterm_backend::*;
 pub use enhanced_keys::*;
 pub use input_event::*;
 pub use keypress::*;
 pub use modifier_keys_mask::*;
 pub use mouse_input::*;
 pub use raw_mode::*;
+pub use terminal_lib_commands::*;
+pub use termion_backend::*;
 pub use tw_command::*;
+pub use tw_command_queue::*;

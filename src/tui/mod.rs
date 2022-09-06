@@ -212,7 +212,7 @@
 //! 2. [Code example of TUI apps using Redux](https://github.com/r3bl-org/r3bl-cmdr).
 
 // Attach sources.
-pub mod crossterm_helpers;
+pub mod terminal_lib_backends;
 pub mod ed;
 pub mod layout;
 pub mod rsx;
@@ -220,7 +220,7 @@ pub mod syntax_highlighting;
 pub mod terminal_window;
 
 // Re-export.
-pub use crossterm_helpers::*;
+pub use terminal_lib_backends::*;
 pub use ed::*;
 pub use layout::*;
 pub use rsx::*;

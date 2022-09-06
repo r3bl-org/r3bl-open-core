@@ -32,7 +32,7 @@ pub struct TWData {
 impl TWData {
   fn try_to_create_instance() -> CommonResult<TWData> {
     let mut tw_data = TWData::default();
-    tw_data.set_size(terminal_window_commands::lookup_size()?);
+    tw_data.set_size(terminal_lib_commands::lookup_size()?);
     Ok(tw_data)
   }
 

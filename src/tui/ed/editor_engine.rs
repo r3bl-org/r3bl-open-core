@@ -81,7 +81,7 @@ impl EditorEngine {
       } else {
         let q_content = render_content(&context);
         let q_caret = render_caret(CaretPaintStyle::LocalPaintedEffect, &context);
-        tw_command_queue!(@join_and_drop q_content, q_caret)
+        command_queue!(@join_and_drop q_content, q_caret)
       }
     })
   }
@@ -96,7 +96,7 @@ fn render_content(context_ref: &Context<'_>) -> TWCommandQueue {
     editor_buffer,
     ..
   } = context_ref;
-  let mut queue = tw_command_queue!(@new);
+  let mut queue = command_queue!(@new);
 
   let Size {
     col: max_content_display_cols,
@@ -113,7 +113,7 @@ fn render_content(context_ref: &Context<'_>) -> TWCommandQueue {
     let line_unicode_string = line.unicode_string();
     let truncated_line =
       line_unicode_string.truncate_to_fit_display_cols(*max_content_display_cols);
-    tw_command_queue! {
+    command_queue! {
       queue push
       TWCommand::MoveCursorPositionRelTo(
         *style_adj_box_origin_pos,
@@ -145,13 +145,13 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> TWCommandQ
   if has_focus.does_current_box_have_focus(current_box) {
     match style {
       CaretPaintStyle::GlobalCursor => {
-        tw_command_queue! {
+        command_queue! {
           queue push
           TWCommand::RequestShowCursorAtPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
         };
       }
       CaretPaintStyle::LocalPaintedEffect => {
-        tw_command_queue! {
+        command_queue! {
           queue push
           TWCommand::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret),
           TWCommand::PrintPlainTextWithAttributes(
@@ -178,7 +178,7 @@ fn render_empty_state(context_ref: &Context<'_>) -> TWCommandQueue {
   let mut content_cursor_pos = position! { col: 0 , row: 0 };
 
   // Paint the text.
-  tw_command_queue! {
+  command_queue! {
     queue push
     TWCommand::MoveCursorPositionRelTo(*style_adj_box_origin_pos, position! { col: 0 , row: 0 }),
     TWCommand::ApplyColors(style! {
@@ -190,7 +190,7 @@ fn render_empty_state(context_ref: &Context<'_>) -> TWCommandQueue {
 
   // Paint the emoji.
   if has_focus.does_current_box_have_focus(current_box) {
-    tw_command_queue! {
+    command_queue! {
       queue push
       TWCommand::MoveCursorPositionRelTo(
         *style_adj_box_origin_pos,
