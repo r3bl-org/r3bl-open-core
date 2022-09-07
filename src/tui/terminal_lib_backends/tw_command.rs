@@ -88,7 +88,7 @@ pub enum TWCommand {
   ExitRawMode,
 
   /// [Position] is the absolute column and row on the terminal screen. This uses
-  /// [flush_impl::sanitize_abs_position] to clean up the given [Position].
+  /// [process_queue::sanitize_abs_position] to clean up the given [Position].
   MoveCursorPositionAbs(Position),
 
   /// 1st [Position] is the origin column and row, and the 2nd [Position] is the offset column and
@@ -134,10 +134,10 @@ pub enum TWCommand {
   CursorHide,
 
   /// [Position] is the absolute column and row on the terminal screen. This uses
-  /// [flush_impl::sanitize_abs_position] to clean up the given [Position].
+  /// [process_queue::sanitize_abs_position] to clean up the given [Position].
   ///
-  /// 1. [flush_impl::handle_draw_caret_on_top] is actually used to draw the cursor.
-  /// 2. [flush_impl::log_maybe_draw_caret_at_overwrite_attempt] is used to log when there's an
+  /// 1. [process_queue::handle_draw_caret_on_top] is actually used to draw the cursor.
+  /// 2. [process_queue::log_maybe_draw_caret_at_overwrite_attempt] is used to log when there's an
   ///    overwrite attempt.
   RequestShowCursorAtPositionAbs(Position),
 

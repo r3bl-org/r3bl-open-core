@@ -15,10 +15,14 @@
  *   limitations under the License.
  */
 
-// Attach sources.
-pub mod common_math;
-pub mod common_result_and_error;
-
-// Re-export.
-pub use common_math::*;
-pub use common_result_and_error::*;
+/// Safely subtracts two numbers. Does not panic.
+#[macro_export]
+macro_rules! sub_unsigned {
+  ($lhs:expr, $rhs:expr) => {
+    if $lhs > $rhs {
+      $lhs - $rhs
+    } else {
+      0
+    }
+  };
+}

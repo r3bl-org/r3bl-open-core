@@ -61,17 +61,8 @@ impl Display for Size {
 
 impl SubAssign<UnitType> for Size {
   fn sub_assign(&mut self, other: UnitType) {
-    if other > self.col {
-      self.col = 0;
-    } else {
-      self.col -= other;
-    }
-
-    if other > self.row {
-      self.row = 0;
-    } else {
-      self.row -= other;
-    }
+    self.col = sub_unsigned!(self.col, other);
+    self.row = sub_unsigned!(self.row, other);
   }
 }
 
