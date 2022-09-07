@@ -36,8 +36,8 @@ fn test_serde_tw_color_rgb() {
 #[test]
 fn test_serde_tw_command_queue() {
   let mut q = TWCommandQueue::default();
-  q.push(TWCommand::ClearScreen);
-  q.push(TWCommand::SetBgColor(TWColor::Red));
+  q.push(&ZOrder::Normal, TWCommand::ClearScreen);
+  q.push(&ZOrder::Normal, TWCommand::SetBgColor(TWColor::Red));
   let ser_str = serde_json::to_string_pretty(&q).unwrap();
   println!("{}", ser_str);
   let og_q: TWCommandQueue = serde_json::from_str(&ser_str).unwrap();

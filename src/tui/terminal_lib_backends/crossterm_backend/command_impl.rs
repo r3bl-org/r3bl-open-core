@@ -32,22 +32,15 @@ pub struct CommandImplCrossterm;
 #[async_trait]
 impl RunCommand for CommandImplCrossterm {
   async fn run_command(
-    &self, maybe_sanitized_draw_caret_at: &mut Option<Position>, skip_flush: &mut bool,
-    command_ref: &TWCommand, shared_tw_data: &SharedTWData,
+    &self, skip_flush: &mut bool, command_ref: &TWCommand, shared_tw_data: &SharedTWData,
   ) {
     match command_ref {
-      TWCommand::RequestShowCursorAtPositionAbs(pos) => {
-        request_show_caret_at_position_abs(pos, maybe_sanitized_draw_caret_at, shared_tw_data)
-          .await;
+      TWCommand::RequestShowCaretAtPositionAbs(pos) => {
+        request_show_caret_at_position_abs(pos, shared_tw_data).await;
       }
-      TWCommand::RequestShowCursorAtPositionRelTo(box_origin_pos, content_rel_pos) => {
-        request_show_caret_at_position_rel_to(
-          box_origin_pos,
-          content_rel_pos,
-          maybe_sanitized_draw_caret_at,
-          shared_tw_data,
-        )
-        .await;
+      TWCommand::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => {
+        request_show_caret_at_position_rel_to(box_origin_pos, content_rel_pos, shared_tw_data)
+          .await;
       }
       TWCommand::EnterRawMode => {
         raw_mode_enter(skip_flush, shared_tw_data).await;
@@ -141,24 +134,20 @@ async fn raw_mode_enter(skip_flush: &mut bool, shared_tw_data: &SharedTWData) {
   *skip_flush = true;
 }
 
-pub async fn request_show_caret_at_position_rel_to(
-  box_origin_pos: &Position, content_rel_pos: &Position,
-  maybe_draw_caret_at: &mut Option<Position>, shared_tw_data: &SharedTWData,
+async fn request_show_caret_at_position_rel_to(
+  box_origin_pos: &Position, content_rel_pos: &Position, shared_tw_data: &SharedTWData,
 ) {
   let new_abs_pos = *box_origin_pos + *content_rel_pos;
-  request_show_caret_at_position_abs(&new_abs_pos, maybe_draw_caret_at, shared_tw_data).await;
+  request_show_caret_at_position_abs(&new_abs_pos, shared_tw_data).await;
 }
 
-pub async fn request_show_caret_at_position_abs(
-  pos: &Position, maybe_sanitized_draw_caret_at: &mut Option<Position>,
-  shared_tw_data: &SharedTWData,
-) {
+async fn request_show_caret_at_position_abs(pos: &Position, shared_tw_data: &SharedTWData) {
   let sanitized_pos = process_queue::sanitize_abs_position(*pos, shared_tw_data).await;
-  if maybe_sanitized_draw_caret_at.is_none() {
-    *maybe_sanitized_draw_caret_at = Some(sanitized_pos);
-  } else {
-    process_queue::log_maybe_draw_caret_at_overwrite_attempt(sanitized_pos);
-  }
+  let Position { col, row } = sanitized_pos;
+  exec!(
+    queue!(stdout(), MoveTo(col, row), Show),
+    format!("ShowCaretAt -> MoveTo(col: {}, row: {}) & Show", col, row)
+  );
 }
 
 fn set_fg_color(color: &TWColor) {

@@ -96,7 +96,7 @@ fn render_content(context_ref: &Context<'_>) -> TWCommandQueue {
     editor_buffer,
     ..
   } = context_ref;
-  let mut queue = command_queue!(@new);
+  let mut queue = command_queue!(@new_empty);
 
   let Size {
     col: max_content_display_cols,
@@ -114,14 +114,14 @@ fn render_content(context_ref: &Context<'_>) -> TWCommandQueue {
     let truncated_line =
       line_unicode_string.truncate_to_fit_display_cols(*max_content_display_cols);
     command_queue! {
-      queue push
-      TWCommand::MoveCursorPositionRelTo(
+      @push_into queue at ZOrder::Normal =>
+        TWCommand::MoveCursorPositionRelTo(
         *style_adj_box_origin_pos,
         position! { col: 0 , row: convert_to_base_unit!(index) }
-      ),
-      TWCommand::ApplyColors(current_box.get_computed_style()),
-      TWCommand::PrintPlainTextWithAttributes(truncated_line.into(), current_box.get_computed_style()),
-      TWCommand::ResetColor
+        ),
+        TWCommand::ApplyColors(current_box.get_computed_style()),
+        TWCommand::PrintPlainTextWithAttributes(truncated_line.into(), current_box.get_computed_style()),
+        TWCommand::ResetColor
     };
     if max_display_row_count >= 1 {
       max_display_row_count -= 1;
@@ -146,18 +146,18 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> TWCommandQ
     match style {
       CaretPaintStyle::GlobalCursor => {
         command_queue! {
-          queue push
-          TWCommand::RequestShowCursorAtPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
+          @push_into queue at ZOrder::Caret =>
+            TWCommand::RequestShowCaretAtPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
         };
       }
       CaretPaintStyle::LocalPaintedEffect => {
         command_queue! {
-          queue push
-          TWCommand::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret),
-          TWCommand::PrintPlainTextWithAttributes(
-            editor_buffer.get_char_at_caret().unwrap_or(DEFAULT_CURSOR_CHAR).into(),
-            style! { attrib: [reverse] }.into()),
-          TWCommand::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
+          @push_into queue at ZOrder::Caret =>
+            TWCommand::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret),
+            TWCommand::PrintPlainTextWithAttributes(
+              editor_buffer.get_char_at_caret().unwrap_or(DEFAULT_CURSOR_CHAR).into(),
+              style! { attrib: [reverse] }.into()),
+            TWCommand::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
         };
       }
     }
@@ -179,23 +179,23 @@ fn render_empty_state(context_ref: &Context<'_>) -> TWCommandQueue {
 
   // Paint the text.
   command_queue! {
-    queue push
-    TWCommand::MoveCursorPositionRelTo(*style_adj_box_origin_pos, position! { col: 0 , row: 0 }),
-    TWCommand::ApplyColors(style! {
-      color_fg: TWColor::Red
-    }.into()),
-    TWCommand::PrintPlainTextWithAttributes("No content added".into(), None),
-    TWCommand::ResetColor
+    @push_into queue at ZOrder::Normal =>
+      TWCommand::MoveCursorPositionRelTo(*style_adj_box_origin_pos, position! { col: 0 , row: 0 }),
+      TWCommand::ApplyColors(style! {
+        color_fg: TWColor::Red
+      }.into()),
+      TWCommand::PrintPlainTextWithAttributes("No content added".into(), None),
+      TWCommand::ResetColor
   };
 
   // Paint the emoji.
   if has_focus.does_current_box_have_focus(current_box) {
     command_queue! {
-      queue push
-      TWCommand::MoveCursorPositionRelTo(
-        *style_adj_box_origin_pos,
-        content_cursor_pos.add_rows_with_bounds(1, *style_adj_box_bounds_size)),
-      TWCommand::PrintPlainTextWithAttributes("👀".into(), None)
+      @push_into queue at ZOrder::Normal =>
+        TWCommand::MoveCursorPositionRelTo(
+          *style_adj_box_origin_pos,
+          content_cursor_pos.add_rows_with_bounds(1, *style_adj_box_bounds_size)),
+        TWCommand::PrintPlainTextWithAttributes("👀".into(), None)
     };
   }
 

@@ -89,10 +89,12 @@ pub enum TWCommand {
 
   ExitRawMode,
 
+  /// This is always painted on top.
   /// [Position] is the absolute column and row on the terminal screen. This uses
   /// [process_queue::sanitize_abs_position] to clean up the given [Position].
   MoveCursorPositionAbs(Position),
 
+  /// This is always painted on top.
   /// 1st [Position] is the origin column and row, and the 2nd [Position] is the offset column and
   /// row. They are added together to move the absolute position on the terminal screen. Then
   /// [TWCommand::MoveCursorPositionAbs] is used.
@@ -137,16 +139,12 @@ pub enum TWCommand {
 
   /// [Position] is the absolute column and row on the terminal screen. This uses
   /// [process_queue::sanitize_abs_position] to clean up the given [Position].
-  ///
-  /// 1. [process_queue::handle_draw_caret_on_top] is actually used to draw the cursor.
-  /// 2. [process_queue::log_maybe_draw_caret_at_overwrite_attempt] is used to log when there's an
-  ///    overwrite attempt.
-  RequestShowCursorAtPositionAbs(Position),
+  RequestShowCaretAtPositionAbs(Position),
 
   /// 1st [Position] is the origin column and row, and the 2nd [Position] is the offset column and
   /// row. They are added together to move the absolute position on the terminal screen. Then
-  /// [TWCommand::RequestShowCursorAtPositionAbs].
-  RequestShowCursorAtPositionRelTo(Position, Position),
+  /// [TWCommand::RequestShowCaretAtPositionAbs].
+  RequestShowCaretAtPositionRelTo(Position, Position),
 }
 
 pub enum FlushKind {
@@ -186,18 +184,12 @@ pub trait DebugFormatCommand {
 // │ Route command │
 // ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 pub async fn route_command(
-  maybe_sanitized_draw_caret_at: &mut Option<Position>, skip_flush: &mut bool,
-  command_ref: &TWCommand, shared_tw_data: &SharedTWData,
+  skip_flush: &mut bool, command_ref: &TWCommand, shared_tw_data: &SharedTWData,
 ) {
   match BACKEND {
     Backend::Crossterm => {
       CommandImplCrossterm {}
-        .run_command(
-          maybe_sanitized_draw_caret_at,
-          skip_flush,
-          command_ref,
-          shared_tw_data,
-        )
+        .run_command(skip_flush, command_ref, shared_tw_data)
         .await;
     }
     Backend::Termion => todo!(), // TODO: implement RunCommand trait for termion
@@ -210,7 +202,6 @@ pub async fn route_command(
 #[async_trait]
 pub trait RunCommand {
   async fn run_command(
-    &self, maybe_sanitized_draw_caret_at: &mut Option<Position>, skip_flush: &mut bool,
-    command_ref: &TWCommand, shared_tw_data: &SharedTWData,
+    &self, skip_flush: &mut bool, command_ref: &TWCommand, shared_tw_data: &SharedTWData,
   );
 }

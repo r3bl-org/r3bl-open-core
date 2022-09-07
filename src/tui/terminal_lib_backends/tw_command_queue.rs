@@ -15,11 +15,9 @@
  *   limitations under the License.
  */
 
-use std::{fmt::Debug,
-          io::stdout,
-          ops::{Add, AddAssign}};
+use std::{collections::HashMap, fmt::Debug, io::stdout};
 
-use crossterm::{cursor::*, style::*, terminal::*, *};
+use crossterm::{style::*, terminal::*, *};
 use serde::{Deserialize, Serialize};
 
 use crate::*;
@@ -32,6 +30,7 @@ use crate::*;
 ///
 /// ```ignore
 /// let mut queue = command_queue!(
+///   @new ZOrder::Normal,
 ///   TWCommand::ClearScreen,
 ///   TWCommand::ResetColor
 /// ); // Returns the newly created queue.
@@ -50,11 +49,15 @@ use crate::*;
 ///
 /// Decl macro docs:
 /// - <https://veykril.github.io/tlborm/decl-macros/macros-methodical.html#repetitions>
+/// HashMap docs:
+/// - <https://doc.rust-lang.org/std/collections/struct.HashMap.html#examples>
 #[macro_export]
 macro_rules! command_queue {
   // Create a new queue & return it. If any ($element)* are passed, then add it to new queue.
   (
-    $(                      /* Start a repetition. */
+    @new
+    $arg_z_order: expr
+    => $(                   /* Start a repetition. */
       $element:expr         /* Expression. */
     )                       /* End repetition. */
     ,                       /* Comma separated. */
@@ -62,20 +65,38 @@ macro_rules! command_queue {
   ) => {
     /* Enclose the expansion in a block so that we can use multiple statements. */
     {
-      let mut queue = TWCommandQueue::default();
+      let mut tw_command_queue = TWCommandQueue::default();
       /* Start a repetition. */
       $(
         /* Each repeat will contain the following statement, with $element replaced. */
-        queue.push($element);
+        match tw_command_queue.map_of_queue.entry($arg_z_order) {
+          std::collections::hash_map::Entry::Occupied(mut entry) => {
+            entry.get_mut().push($element);
+          }
+          std::collections::hash_map::Entry::Vacant(entry) => {
+            entry.insert(vec![$element]);
+          }
+        }
       )*
-      queue
+      tw_command_queue
     }
   };
-  // Add a bunch of TWCommands $element+ to the existing $queue & return nothing.
-  ($queue:ident push $($element:expr),+) => {
+  // Add a bunch of TWCommands $element+ to the existing $arg_queue & return nothing.
+  (
+    @push_into $arg_queue:ident
+    at $arg_z_order: expr
+    => $($element:expr),+
+  ) => {
     $(
       /* Each repeat will contain the following statement, with $element replaced. */
-      $queue.push($element);
+      match $arg_queue.map_of_queue.entry($arg_z_order) {
+        std::collections::hash_map::Entry::Occupied(mut entry) => {
+          entry.get_mut().push($element);
+        }
+        std::collections::hash_map::Entry::Vacant(entry) => {
+          entry.insert(vec![$element]);
+        }
+      }
     )*
   };
   // Add a bunch of TWCommandQueues $element+ to the new queue, drop them, and return queue.
@@ -88,7 +109,7 @@ macro_rules! command_queue {
     queue
   }};
   // New.
-  (@new) => {
+  (@new_empty) => {
     TWCommandQueue::default()
   };
 }
@@ -108,46 +129,71 @@ macro_rules! command_queue {
 #[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TWCommandQueue {
   /// The queue of [TWCommand]s to execute.
-  pub queue: Vec<TWCommand>,
+  pub map_of_queue: QueueMap,
+}
+
+type QueueMap = HashMap<ZOrder, Vec<TWCommand>>;
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum ZOrder {
+  Normal,
+  High,
+  Caret,
+  Glass,
+}
+
+const RENDER_ORDERED_Z_ORDER_ARRAY: [ZOrder; 4] =
+  [ZOrder::Normal, ZOrder::High, ZOrder::Caret, ZOrder::Glass];
+
+impl Default for ZOrder {
+  fn default() -> Self { Self::Normal }
 }
 
 impl TWCommandQueue {
-  /// This will add `rhs` to `self` and then drop `rhs`.
+  /// This will add `rhs` to `self`.
   pub fn join_into(&mut self, mut rhs: TWCommandQueue) {
-    self.queue.append(&mut rhs.queue);
-    drop(rhs);
+    for (z_order, queue) in rhs.map_of_queue.drain() {
+      match self.map_of_queue.entry(z_order) {
+        std::collections::hash_map::Entry::Occupied(mut entry) => {
+          entry.get_mut().extend(queue);
+        }
+        std::collections::hash_map::Entry::Vacant(entry) => {
+          entry.insert(queue);
+        }
+      }
+    }
   }
 
-  pub fn push(&mut self, cmd_wrapper: TWCommand) -> &mut Self {
-    self.queue.push(cmd_wrapper);
-    self
-  }
+  pub fn push(&mut self, z_order: &ZOrder, cmd_wrapper: TWCommand) -> &mut Self {
+    match self.map_of_queue.entry(*z_order) {
+      std::collections::hash_map::Entry::Occupied(mut entry) => {
+        entry.get_mut().push(cmd_wrapper);
+      }
+      std::collections::hash_map::Entry::Vacant(entry) => {
+        entry.insert(vec![cmd_wrapper]);
+      }
+    }
 
-  pub fn push_all(&mut self, cmd_wrapper_vec: Vec<TWCommand>) -> &mut Self {
-    self.queue.extend(cmd_wrapper_vec);
-    self
-  }
-
-  pub fn push_another(&mut self, other: TWCommandQueue) -> &mut Self {
-    self.queue.extend(other.queue);
     self
   }
 
   // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
   pub async fn flush(&self, flush_kind: FlushKind, shared_tw_data: &SharedTWData) {
-    process_queue::run_flush(&self.queue, flush_kind, shared_tw_data).await;
+    process_queue::run_flush(&self.map_of_queue, flush_kind, shared_tw_data).await;
   }
 }
 
 mod queue_helpers {
+  use std::ops::AddAssign;
+
   use super::*;
   use crate::tui::terminal_lib_backends::tw_command_queue::TWCommandQueue;
 
   impl Debug for TWCommandQueue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       let mut temp_vec: Vec<String> = vec![];
-      for command in &self.queue {
-        let line: String = format!("{:?}", command);
+      for (z_order, vec_command) in &self.map_of_queue {
+        let line: String = format!("[{:?}]: {:?}", z_order, vec_command);
         temp_vec.push(line);
       }
       write!(f, "\n    - {}", temp_vec.join("\n    - "))
@@ -155,19 +201,11 @@ mod queue_helpers {
   }
 
   impl AddAssign for TWCommandQueue {
-    fn add_assign(&mut self, other: TWCommandQueue) { self.queue.extend(other.queue); }
+    fn add_assign(&mut self, other: TWCommandQueue) { self.join_into(other); }
   }
 
-  impl Add<TWCommand> for TWCommandQueue {
-    type Output = TWCommandQueue;
-    fn add(mut self, other: TWCommand) -> TWCommandQueue {
-      self.queue.push(other);
-      self
-    }
-  }
-
-  impl AddAssign<TWCommand> for TWCommandQueue {
-    fn add_assign(&mut self, other: TWCommand) { self.queue.push(other); }
+  impl AddAssign<(ZOrder, TWCommand)> for TWCommandQueue {
+    fn add_assign(&mut self, other: (ZOrder, TWCommand)) { self.push(&other.0, other.1); }
   }
 }
 
@@ -175,12 +213,10 @@ pub mod process_queue {
   use super::*;
 
   pub async fn run_flush(
-    queue: &Vec<TWCommand>, flush_kind: FlushKind, shared_tw_data: &SharedTWData,
+    map_of_queue: &HashMap<ZOrder, Vec<TWCommand>>, flush_kind: FlushKind,
+    shared_tw_data: &SharedTWData,
   ) {
     let mut skip_flush = false;
-    // If set to [Position] then it will draw the cursor at that position after flushing the queue.
-    // Then clear this value. It will hide the cursor if [Position] is [None].
-    let mut maybe_sanitized_draw_caret_at: Option<Position> = None;
 
     if let FlushKind::ClearBeforeFlushQueue = flush_kind {
       exec! {
@@ -192,45 +228,42 @@ pub mod process_queue {
       }
     }
 
-    for command_ref in queue {
-      route_command(
-        &mut maybe_sanitized_draw_caret_at,
-        &mut skip_flush,
-        command_ref,
-        shared_tw_data,
-      )
-      .await;
+    // List of special commands that should only be rendered at the very end.
+    let mut hoisted_commands: Vec<TWCommand> = vec![];
+
+    // Execute the commands in the queue, in the correct order of the ZOrder enum.
+    for z_order in RENDER_ORDERED_Z_ORDER_ARRAY.iter() {
+      if let Some(queue) = map_of_queue.get(z_order) {
+        for command_ref in queue {
+          if let TWCommand::RequestShowCaretAtPositionAbs(_)
+          | TWCommand::RequestShowCaretAtPositionRelTo(_, _) = command_ref
+          {
+            hoisted_commands.push(command_ref.clone());
+          } else {
+            route_command(&mut skip_flush, command_ref, shared_tw_data).await;
+          }
+        }
+      }
+    }
+
+    // Log error if hoisted_commands has more than one item.
+    if hoisted_commands.len() > 1 {
+      log_no_err!(
+        WARN,
+        "🥕 Too many requests to draw caret (some will be clobbered): {:?}",
+        hoisted_commands,
+      );
+    }
+
+    // Execute the hoisted commands (at the very end).
+    for command_ref in &hoisted_commands {
+      route_command(&mut skip_flush, command_ref, shared_tw_data).await;
     }
 
     // Flush all the commands that were added via calls to `queue!` above.
     if !skip_flush {
       TWCommand::flush()
     };
-
-    // Handle caret drawing.
-    process_queue::handle_draw_caret_on_top(maybe_sanitized_draw_caret_at, shared_tw_data).await;
-  }
-
-  /// This paints the caret at the very end, so its painted on top of everything else. The
-  /// `maybe_draw_caret_at` has already been sanitized by the time it gets here.
-  ///
-  /// See:
-  /// 1. [crossterm_backend::request_show_caret_at_position_abs]
-  /// 2. [crossterm_backend::request_show_caret_at_position_rel_to]
-  pub async fn handle_draw_caret_on_top(
-    maybe_sanitized_draw_caret_at: Option<Position>, _shared_tw_data: &SharedTWData,
-  ) {
-    if let Some(draw_cursor_at_pos) = maybe_sanitized_draw_caret_at {
-      let Position { col, row } = draw_cursor_at_pos;
-      exec!(
-        queue!(stdout(), MoveTo(col, row), Show),
-        format!("DrawCursorAt -> MoveTo(col: {}, row: {}) & Show", col, row)
-      );
-      TWCommand::flush();
-    } else {
-      exec!(queue!(stdout(), Hide), "DrawCursorAt -> Hide");
-      TWCommand::flush();
-    }
   }
 
   /// 1. Ensure that the [Position] is within the bounds of the terminal window using
@@ -272,13 +305,5 @@ pub mod process_queue {
         }
       });
     }
-  }
-
-  pub fn log_maybe_draw_caret_at_overwrite_attempt(ignored_pos: Position) {
-    call_if_debug_true! {
-      log_no_err!(WARN,
-        "{} -> {:?}",
-        "Attempt to set maybe_draw_caret_at more than once. Ignoring {:?}", ignored_pos)
-    };
   }
 }
