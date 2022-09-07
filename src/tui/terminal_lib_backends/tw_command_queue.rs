@@ -214,8 +214,9 @@ pub mod process_queue {
   /// This paints the caret at the very end, so its painted on top of everything else. The
   /// `maybe_draw_caret_at` has already been sanitized by the time it gets here.
   ///
-  /// See: [command_processor::request_show_caret_at_position_abs] and
-  /// [command_processor::request_show_caret_at_position_rel_to].
+  /// See:
+  /// 1. [crossterm_backend::request_show_caret_at_position_abs]
+  /// 2. [crossterm_backend::request_show_caret_at_position_rel_to]
   pub async fn handle_draw_caret_on_top(
     maybe_sanitized_draw_caret_at: Option<Position>, _shared_tw_data: &SharedTWData,
   ) {
