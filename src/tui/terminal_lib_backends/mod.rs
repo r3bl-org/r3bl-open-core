@@ -47,9 +47,8 @@
 //! - Sodium:
 //!   - repo: <https://github.com/redox-os/sodium>
 
-// Enable or disable debug logging.
-#[allow(dead_code)]
-const DEBUG: bool = true;
+// Enable or disable debug logging for this `terminal_lib_backends` module.
+pub(self) const DEBUG: bool = false;
 
 pub enum Backend {
   Crossterm,
