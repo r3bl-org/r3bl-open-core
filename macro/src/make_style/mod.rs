@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-pub(crate) const DEBUG: bool = false;
+/// This generates DEBUG messages when compiling (running cargo build).
+pub(self) const DEBUG: bool = false;
 
 // Attach sources.
 pub mod codegen;

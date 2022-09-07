@@ -41,6 +41,8 @@ macro_rules! exec {
     // purpose of this generated method is to handle errors that may result from calling log! macro
     // when there are issues accessing the log file for whatever reason.
     let _fn_wrap_for_logging_err = || -> CommonResult<()> {
+      use $crate::terminal_lib_backends::DEBUG;
+
       throws!({
         // Execute the command.
         if let Err(err) = $arg_cmd {

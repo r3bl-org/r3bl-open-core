@@ -4,3 +4,4 @@ Cargo.lock
 docs/*.bkp
 docs/*.dtmp
 .idea
+log.txt

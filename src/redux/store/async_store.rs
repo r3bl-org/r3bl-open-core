@@ -155,17 +155,27 @@ where
     self.run_subscribers().await;
   }
 
+  fn has_state_changed(&self) -> bool {
+    if let Some(previous_state) = &self.maybe_previous_state {
+      *previous_state != self.state
+    } else {
+      true
+    }
+  }
+
+  fn save_state_to_previous_state(&mut self) {
+    self.maybe_previous_state = Some(self.state.clone());
+  }
+
   /// Run these in parallel.
   async fn run_subscribers(&mut self) {
     // Early return if state hasn't changed.
-    if let Some(previous_state) = &self.maybe_previous_state {
-      if *previous_state == self.state {
-        return;
-      }
-    } else {
-      // Update self.maybe_previous_state for next time.
-      self.maybe_previous_state = Some(self.state.clone());
+    if !self.has_state_changed() {
+      return;
     }
+
+    // Update previous state, for next time.
+    self.save_state_to_previous_state();
 
     // Actually run the subscribers.
     let mut vec_fut = vec![];
