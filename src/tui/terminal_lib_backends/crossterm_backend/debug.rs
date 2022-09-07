@@ -63,9 +63,8 @@ impl DebugFormatCommand for CrosstermDebugFormatCommand {
         }
         TWCommand::CursorShow => "CursorShow".into(),
         TWCommand::CursorHide => "CursorHide".into(),
-        TWCommand::RequestShowCursorAtPositionAbs(pos) =>
-          format!("ShowCursorAtPosition({:?})", pos),
-        TWCommand::RequestShowCursorAtPositionRelTo(box_origin_pos, content_rel_pos) => format!(
+        TWCommand::RequestShowCaretAtPositionAbs(pos) => format!("ShowCursorAtPosition({:?})", pos),
+        TWCommand::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => format!(
           "ShowCursorAtPosition({:?}, {:?})",
           box_origin_pos, content_rel_pos
         ),
