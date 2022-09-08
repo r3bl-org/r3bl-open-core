@@ -51,12 +51,12 @@
 pub(self) const DEBUG_SHOW_TERMINAL_BACKEND: bool = false;
 pub(self) const DEBUG_SHOW_PIPELINE: bool = true;
 
-pub enum Backend {
+pub enum TerminalLibBackend {
   Crossterm,
   Termion,
 }
 
-const BACKEND: Backend = Backend::Crossterm;
+const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
 
 // Attach source files.
 pub mod async_event_stream_ext;

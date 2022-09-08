@@ -20,7 +20,7 @@ use std::fmt::{Debug, Formatter, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use super::BACKEND;
+use super::TERMINAL_LIB_BACKEND;
 use crate::*;
 
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄╮
@@ -157,20 +157,20 @@ pub trait Flush {
 
 impl Flush for RenderOp {
   fn flush(&mut self) {
-    match BACKEND {
-      Backend::Crossterm => {
+    match TERMINAL_LIB_BACKEND {
+      TerminalLibBackend::Crossterm => {
         RenderOpImplCrossterm {}.flush();
       }
-      Backend::Termion => todo!(), // TODO: implement flush for termion
+      TerminalLibBackend::Termion => todo!(), // TODO: implement flush for termion
     }
   }
 
   fn clear_before_flush(&mut self) {
-    match BACKEND {
-      Backend::Crossterm => {
+    match TERMINAL_LIB_BACKEND {
+      TerminalLibBackend::Crossterm => {
         RenderOpImplCrossterm {}.clear_before_flush();
       }
-      Backend::Termion => todo!(), // TODO: implement clear_before_flush for termion
+      TerminalLibBackend::Termion => todo!(), // TODO: implement clear_before_flush for termion
     }
   }
 }
@@ -182,9 +182,9 @@ impl Debug for RenderOp {
   /// When [RenderPipeline] is printed as debug, each [RenderOp] is printed using this method. Also
   /// [exec_render_op!] does not use this; it has its own way of logging output.
   fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-    match BACKEND {
-      Backend::Crossterm => CrosstermDebugFormatRenderOp {}.debug_format(self, f),
-      Backend::Termion => todo!(), // TODO: implement debug formatter for termion
+    match TERMINAL_LIB_BACKEND {
+      TerminalLibBackend::Crossterm => CrosstermDebugFormatRenderOp {}.debug_format(self, f),
+      TerminalLibBackend::Termion => todo!(), // TODO: implement debug formatter for termion
     }
   }
 }
@@ -202,13 +202,13 @@ pub trait DebugFormatRenderOp {
 pub async fn route_paint_render_op_to_backend(
   skip_flush: &mut bool, render_op: &RenderOp, shared_tw_data: &SharedTWData,
 ) {
-  match BACKEND {
-    Backend::Crossterm => {
+  match TERMINAL_LIB_BACKEND {
+    TerminalLibBackend::Crossterm => {
       RenderOpImplCrossterm {}
         .paint(skip_flush, render_op, shared_tw_data)
         .await;
     }
-    Backend::Termion => todo!(), // TODO: implement PaintRenderOp trait for termion
+    TerminalLibBackend::Termion => todo!(), // TODO: implement PaintRenderOp trait for termion
   }
 }
 

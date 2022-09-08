@@ -76,7 +76,7 @@ impl EditorEngine {
         current_box,
       };
 
-      if editor_buffer.buffer.is_empty() {
+      if editor_buffer.vec_lines.is_empty() {
         render_empty_state(&context)
       } else {
         let q_content = render_content(&context);
@@ -104,7 +104,7 @@ fn render_content(context_ref: &Context<'_>) -> RenderPipeline {
   } = style_adj_box_bounds_size;
 
   // Paint each line in the buffer.
-  for (index, line) in editor_buffer.buffer.iter().enumerate() {
+  for (index, line) in editor_buffer.vec_lines.iter().enumerate() {
     // Clip the content to max rows.
     if max_display_row_count == 0 {
       break;
