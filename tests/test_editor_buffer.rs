@@ -29,7 +29,7 @@ fn test_buffer_insert_into_new_line() {
   //   C0123456789
   assert_eq2!(editor_buffer.caret, position!(col: 0, row: 0));
   editor_buffer.insert_char_into_current_line('a');
-  assert_eq2!(editor_buffer.buffer, vec!["a"]);
+  assert_eq2!(editor_buffer.vec_lines, vec!["a"]);
   assert_eq2!(editor_buffer.caret, position!(col: 1, row: 0));
 
   // Move caret to col: 0, row: 1. Insert "b".
@@ -41,7 +41,7 @@ fn test_buffer_insert_into_new_line() {
   //   C0123456789
   editor_buffer.caret = position!(col: 0, row: 1);
   editor_buffer.insert_char_into_current_line('b');
-  assert_eq2!(editor_buffer.buffer, vec!["a", "b"]);
+  assert_eq2!(editor_buffer.vec_lines, vec!["a", "b"]);
   assert_eq2!(editor_buffer.caret, position!(col: 1, row: 1));
 
   // Move caret to col: 0, row: 3. Insert "😀" (unicode width = 2).
@@ -55,7 +55,7 @@ fn test_buffer_insert_into_new_line() {
   //   C0123456789
   editor_buffer.caret = position!(col: 0, row: 3);
   editor_buffer.insert_char_into_current_line('😀');
-  assert_eq2!(editor_buffer.buffer, vec!["a", "b", "", "😀"]);
+  assert_eq2!(editor_buffer.vec_lines, vec!["a", "b", "", "😀"]);
   assert_eq2!(editor_buffer.caret, position!(col: 2, row: 3));
 
   // Insert "d".
@@ -68,7 +68,7 @@ fn test_buffer_insert_into_new_line() {
   //   └───▴──────┘
   //   C0123456789
   editor_buffer.insert_char_into_current_line('d');
-  assert_eq2!(editor_buffer.buffer, vec!["a", "b", "", "😀d"]);
+  assert_eq2!(editor_buffer.vec_lines, vec!["a", "b", "", "😀d"]);
   assert_eq2!(editor_buffer.caret, position!(col: 3, row: 3));
 
   // Insert "🙏🏽" (unicode width = 4).
@@ -81,6 +81,6 @@ fn test_buffer_insert_into_new_line() {
   //   └───────▴──┘
   //   C0123456789
   editor_buffer.insert_str_into_current_line("🙏🏽");
-  assert_eq2!(editor_buffer.buffer, vec!["a", "b", "", "😀d🙏🏽"]);
+  assert_eq2!(editor_buffer.vec_lines, vec!["a", "b", "", "😀d🙏🏽"]);
   assert_eq2!(editor_buffer.caret, position!(col: 7, row: 3));
 }
