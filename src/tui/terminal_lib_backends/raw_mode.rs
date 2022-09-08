@@ -23,25 +23,25 @@ pub struct RawMode;
 
 impl RawMode {
   pub async fn start(shared_tw_data: &SharedTWData) -> Self {
-    command_queue!(
+    render_pipeline!(
       @new
       ZOrder::Normal
       =>
-        TWCommand::EnterRawMode
+        RenderOp::EnterRawMode
     )
-    .flush(FlushKind::JustFlushQueue, shared_tw_data)
+    .paint(FlushKind::JustFlush, shared_tw_data)
     .await;
     RawMode
   }
 
   pub async fn end(&self, shared_tw_data: &SharedTWData) {
-    command_queue!(
+    render_pipeline!(
       @new
       ZOrder::Normal
       =>
-        TWCommand::ExitRawMode
+        RenderOp::ExitRawMode
     )
-    .flush(FlushKind::JustFlushQueue, shared_tw_data)
+    .paint(FlushKind::JustFlush, shared_tw_data)
     .await;
   }
 }

@@ -35,11 +35,11 @@ fn test_serde_tw_color_rgb() {
 
 #[test]
 fn test_serde_tw_command_queue() {
-  let mut q = TWCommandQueue::default();
-  q.push(&ZOrder::Normal, TWCommand::ClearScreen);
-  q.push(&ZOrder::Normal, TWCommand::SetBgColor(TWColor::Red));
+  let mut q = RenderPipeline::default();
+  q.push(&ZOrder::Normal, RenderOp::ClearScreen);
+  q.push(&ZOrder::Normal, RenderOp::SetBgColor(TWColor::Red));
   let ser_str = serde_json::to_string_pretty(&q).unwrap();
   println!("{}", ser_str);
-  let og_q: TWCommandQueue = serde_json::from_str(&ser_str).unwrap();
+  let og_q: RenderPipeline = serde_json::from_str(&ser_str).unwrap();
   assert_eq!(q, og_q);
 }

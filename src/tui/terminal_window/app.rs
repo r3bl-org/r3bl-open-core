@@ -34,7 +34,7 @@ where
   /// Use the state to render the output (via crossterm). To change the state, dispatch an action.
   async fn app_render(
     &mut self, state: &S, shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
-  ) -> CommonResult<TWCommandQueue>;
+  ) -> CommonResult<RenderPipeline>;
 
   /// Use the input_event to dispatch an action to the store if needed.
   async fn app_handle_event(

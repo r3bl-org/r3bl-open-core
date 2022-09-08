@@ -1,6 +1,6 @@
 # Design document for editor component, Aug 28 2022
-<a id="markdown-design-document-for-editor-component%2C-aug-28-2022" name="design-document-for-editor-component%2C-aug-28-2022"></a>
 
+<a id="markdown-design-document-for-editor-component%2C-aug-28-2022" name="design-document-for-editor-component%2C-aug-28-2022"></a>
 
 <!-- TOC -->
 
@@ -20,8 +20,8 @@
 <!-- /TOC -->
 
 ## Goal
-<a id="markdown-goal" name="goal"></a>
 
+<a id="markdown-goal" name="goal"></a>
 
 Create an editor component that is very similar to
 [`micro` text editor](https://micro-editor.github.io/). But it must live in the tui layout engine:
@@ -31,8 +31,8 @@ Create an editor component that is very similar to
    components on the same "screen" / terminal window.
 
 ## Timeline & features
-<a id="markdown-timeline-%26-features" name="timeline-%26-features"></a>
 
+<a id="markdown-timeline-%26-features" name="timeline-%26-features"></a>
 
 1. Editor component that can fit in a `TWBox` and is implemented as a `Component`. Example of a
    `Component`
@@ -46,8 +46,8 @@ Create an editor component that is very similar to
 Timeline is about 6 weeks.
 
 ## Milestones
-<a id="markdown-milestones" name="milestones"></a>
 
+<a id="markdown-milestones" name="milestones"></a>
 
 1. Start building an example in `r3bl-cmdr` repo for editor component.
 2. Create an app that has a 2 column layout, w/ a different editor component in each column.
@@ -55,8 +55,8 @@ Timeline is about 6 weeks.
    `r3bl_rs_utils` repo.
 
 ## Resources
-<a id="markdown-resources" name="resources"></a>
 
+<a id="markdown-resources" name="resources"></a>
 
 This is a great series of videos on syntax highlighting & unicode support in editors:
 
@@ -77,14 +77,14 @@ Here are some other TUI frameworks:
 - https://github.com/veeso/tui-realm/blob/main/docs/en/get-started.md
 
 ## Proposed solution - add an `EditorEngine` field to the `EditorComponent` and add an `EditorBuffer` field to the `State`
-<a id="markdown-proposed-solution---add-an-editorengine-field-to-the-editorcomponent-and-add-an-editorbuffer-field-to-the-state" name="proposed-solution---add-an-editorengine-field-to-the-editorcomponent-and-add-an-editorbuffer-field-to-the-state"></a>
 
+<a id="markdown-proposed-solution---add-an-editorengine-field-to-the-editorcomponent-and-add-an-editorbuffer-field-to-the-state" name="proposed-solution---add-an-editorengine-field-to-the-editorcomponent-and-add-an-editorbuffer-field-to-the-state"></a>
 
 ![editor_component drawio](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/editor_component.drawio.svg)
 
 ### Scope
-<a id="markdown-scope" name="scope"></a>
 
+<a id="markdown-scope" name="scope"></a>
 
 The goal is to create a reusable editor component. This example
 [here](https://github.com/r3bl-org/r3bl-cmdr/tree/main/src/ex_editor) is a very simple application,
@@ -93,8 +93,8 @@ to add a reusable editor component to this example to get the most basic editor 
 created.
 
 ### Constraints
-<a id="markdown-constraints" name="constraints"></a>
 
+<a id="markdown-constraints" name="constraints"></a>
 
 The application has a `State` and `Action` that are specific to the `AppWithLayout` (which
 implements the `App<S,A>` trait).
@@ -114,8 +114,8 @@ The `EditorComponent` struct might be a good place to start looking for possible
   field).
 
 ### Solution overview
-<a id="markdown-solution-overview" name="solution-overview"></a>
 
+<a id="markdown-solution-overview" name="solution-overview"></a>
 
 1. Add two new structs:
 
@@ -133,7 +133,7 @@ The `EditorComponent` struct might be a good place to start looking for possible
         `UpdateEditorBuffer(EditorBuffer)`.
    2. `render(has_focus: &HasFocus, current_box: &FlexBox, state: &S, shared_store: &SharedStore<S, A>)`
       - Can simply relay the arguments to `EditorEngine::render(state.editor_buffer)`
-      - Which will return a `TWCommandQueue`.
+      - Which will return a `RenderPipeline`.
 
 Sample code:
 
@@ -148,7 +148,7 @@ impl EditorEngine {
 
   fn async render(
     editor_buffer: &EditorBuffer, has_focus: &HasFocus, current_box: &FlexBox
-  ) -> TWCommandQueue {
+  ) -> RenderPipeline {
     todo!();
   }
 }
@@ -164,8 +164,8 @@ These commits are related to the work described here:
 2. [Add EditorEngine & EditorBuffer integration for editor component](https://github.com/r3bl-org/r3bl-cmdr/commit/1041c1f7cfee91f9ca0166384dabeb8fe6b21a01)
 
 ## Painting caret (using cursor and another approach)
-<a id="markdown-painting-caret-using-cursor-and-another-approach" name="painting-caret-using-cursor-and-another-approach"></a>
 
+<a id="markdown-painting-caret-using-cursor-and-another-approach" name="painting-caret-using-cursor-and-another-approach"></a>
 
 > Definitions
 >
@@ -182,8 +182,8 @@ There are two ways of showing cursors which are quite different (each w/ very di
 constraints).
 
 ### 1. **`GlobalCursor`** - Use the terminal's cursor show / hide.
-<a id="markdown-**globalcursor**---use-the-terminal's-cursor-show-%2F-hide." name="**globalcursor**---use-the-terminal's-cursor-show-%2F-hide."></a>
 
+<a id="markdown-**globalcursor**---use-the-terminal's-cursor-show-%2F-hide." name="**globalcursor**---use-the-terminal's-cursor-show-%2F-hide."></a>
 
 1.  Both [termion::cursor](https://docs.rs/termion/1.5.6/termion/cursor/index.html) and
     [crossterm::cursor](https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html) support this.
@@ -192,22 +192,22 @@ constraints).
     is constantly moved around in order to paint anything (eg:
     `MoveTo(col, row), SetColor, PaintText(...)` sequence).
 3.  So it must be guaranteed by
-    [TWCommandQueue via TWCommand::ShowCaretAtPosition???To(...)](https://github.com/r3bl-org/r3bl_rs_utils/blob/main/src/tui/crossterm_helpers/tw_command.rs#L171).
+    [RenderPipeline via RenderOp::ShowCaretAtPosition???To(...)](https://github.com/r3bl-org/r3bl_rs_utils/blob/main/src/tui/crossterm_helpers/tw_command.rs#L171).
     The downside here too is that there's a chance that different components and render functions
     will clobber this value that's already been set. There's currently a weak warning that's
     displayed after the 1st time this value is set which isn't robust either.
 4.  This is what that code looks like:
     ```rust
     // Approach 1 - using cursor show / hide.
-    tw_command_queue! {
+    render_pipeline! {
       queue push
-      TWCommand::ShowCaretAtPositionRelTo(box_origin_pos, editor_buffer.caret)
+      RenderOp::ShowCaretAtPositionRelTo(box_origin_pos, editor_buffer.caret)
     };
     ```
 
 ### 2. **`LocalPaintedEffect`** - Paint the character at the cursor w/ the colors inverted (or some
-<a id="markdown-**localpaintedeffect**---paint-the-character-at-the-cursor-w%2F-the-colors-inverted-or-some" name="**localpaintedeffect**---paint-the-character-at-the-cursor-w%2F-the-colors-inverted-or-some"></a>
 
+<a id="markdown-**localpaintedeffect**---paint-the-character-at-the-cursor-w%2F-the-colors-inverted-or-some" name="**localpaintedeffect**---paint-the-character-at-the-cursor-w%2F-the-colors-inverted-or-some"></a>
 
 other bg color) giving the visual effect of a cursor.
 
@@ -221,19 +221,19 @@ other bg color) giving the visual effect of a cursor.
 3.  This is what that code looks like:
     ```rust
     // Approach 2 - painting the editor_buffer.caret position w/ reverse.
-    tw_command_queue! {
+    render_pipeline! {
       queue push
-      TWCommand::MoveCursorPositionRelTo(box_origin_pos, editor_buffer.caret),
-      TWCommand::PrintWithAttributes(
+      RenderOp::MoveCursorPositionRelTo(box_origin_pos, editor_buffer.caret),
+      RenderOp::PrintWithAttributes(
         editor_buffer.get_char_at_caret().unwrap_or(DEFAULT_CURSOR_CHAR).into(),
         style! { attrib: [reverse] }.into()),
-      TWCommand::MoveCursorPositionRelTo(box_origin_pos, editor_buffer.caret)
+      RenderOp::MoveCursorPositionRelTo(box_origin_pos, editor_buffer.caret)
     };
     ```
 
 ### Using both
-<a id="markdown-using-both" name="using-both"></a>
 
+<a id="markdown-using-both" name="using-both"></a>
 
 It might actually be necessary to use both `GlobalCursor` and `LocalPaintedEffect` approaches
 simultaneously.

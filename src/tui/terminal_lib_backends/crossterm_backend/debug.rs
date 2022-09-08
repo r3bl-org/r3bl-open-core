@@ -15,35 +15,36 @@
  *   limitations under the License.
  */
 
-use std::fmt;
+use std::fmt::{Formatter, Result};
 
 use crate::*;
 
-pub struct CrosstermDebugFormatCommand;
+pub struct CrosstermDebugFormatRenderOp;
 
-impl DebugFormatCommand for CrosstermDebugFormatCommand {
-  fn debug_fmt(&self, this: &TWCommand, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
+  fn debug_format(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result {
     write!(
       f,
       "{}",
       match this {
-        TWCommand::EnterRawMode => "EnterRawMode".into(),
-        TWCommand::ExitRawMode => "ExitRawMode".into(),
-        TWCommand::MoveCursorPositionAbs(pos) => format!("MoveCursorPositionAbs({:?})", pos),
-        TWCommand::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => format!(
+        RenderOp::Noop => "Noop".into(),
+        RenderOp::EnterRawMode => "EnterRawMode".into(),
+        RenderOp::ExitRawMode => "ExitRawMode".into(),
+        RenderOp::MoveCursorPositionAbs(pos) => format!("MoveCursorPositionAbs({:?})", pos),
+        RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => format!(
           "MoveCursorPositionRelTo({:?}, {:?})",
           box_origin_pos, content_rel_pos
         ),
-        TWCommand::ClearScreen => "ClearScreen".into(),
-        TWCommand::SetFgColor(fg_color) => format!("SetFgColor({:?})", fg_color),
-        TWCommand::SetBgColor(bg_color) => format!("SetBgColor({:?})", bg_color),
-        TWCommand::ResetColor => "ResetColor".into(),
-        TWCommand::ApplyColors(maybe_style) => match maybe_style {
+        RenderOp::ClearScreen => "ClearScreen".into(),
+        RenderOp::SetFgColor(fg_color) => format!("SetFgColor({:?})", fg_color),
+        RenderOp::SetBgColor(bg_color) => format!("SetBgColor({:?})", bg_color),
+        RenderOp::ResetColor => "ResetColor".into(),
+        RenderOp::ApplyColors(maybe_style) => match maybe_style {
           Some(style) => format!("ApplyColors({:?})", style),
           None => "ApplyColors(None)".into(),
         },
-        TWCommand::PrintPlainTextWithAttributes(text, maybe_style)
-        | TWCommand::PrintANSITextWithAttributes(text, maybe_style) => {
+        RenderOp::PrintPlainTextWithAttributes(text, maybe_style)
+        | RenderOp::PrintANSITextWithAttributes(text, maybe_style) => {
           match try_strip_ansi(text) {
             Some(plain_text) => {
               // Successfully stripped ANSI escape codes.
@@ -61,10 +62,10 @@ impl DebugFormatCommand for CrosstermDebugFormatCommand {
             }
           }
         }
-        TWCommand::CursorShow => "CursorShow".into(),
-        TWCommand::CursorHide => "CursorHide".into(),
-        TWCommand::RequestShowCaretAtPositionAbs(pos) => format!("ShowCursorAtPosition({:?})", pos),
-        TWCommand::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => format!(
+        RenderOp::CursorShow => "CursorShow".into(),
+        RenderOp::CursorHide => "CursorHide".into(),
+        RenderOp::RequestShowCaretAtPositionAbs(pos) => format!("ShowCursorAtPosition({:?})", pos),
+        RenderOp::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => format!(
           "ShowCursorAtPosition({:?}, {:?})",
           box_origin_pos, content_rel_pos
         ),

@@ -255,7 +255,7 @@ composing your code in the following way:
     you can add other boxes (you can give them a direction and even relative sizing out of 100%).
 2.  As you approach the "leaf" nodes of your layout, you will find [Component] trait objects. These
     are black boxes which are sized, positioned, and painted _relative_ to their parent box. They
-    get to handle input events and render [TWCommand]s into a [TWCommandQueue]. This is kind of like
+    get to handle input events and render [RenderOp]s into a [RenderPipeline]. This is kind of like
     virtual DOM in React. This queue of commands is collected from all the components and ultimately
     painted to the screen, for each render! You can also use Redux to maintain your app's state, and
     dispatch actions to the store, and even have async middleware!
@@ -766,10 +766,10 @@ fn test_simple_2_col_layout() -> CommonResult<()> {
 This is very similar to [`throws!`](#throws) but it also returns the result of the block.
 
 ```rust
-fn test_simple_2_col_layout() -> CommonResult<CommandQueue> {
+fn test_simple_2_col_layout() -> CommonResult<RenderPipeline> {
   throws_with_return!({
     println!("⛵ Draw -> draw: {}\r", state);
-    CommandQueue::default()
+    RenderPipeline::default()
   });
 }
 ```

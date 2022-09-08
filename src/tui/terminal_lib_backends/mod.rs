@@ -48,7 +48,8 @@
 //!   - repo: <https://github.com/redox-os/sodium>
 
 // Enable or disable debug logging for this `terminal_lib_backends` module.
-pub(self) const DEBUG: bool = false;
+pub(self) const DEBUG_SHOW_TERMINAL_BACKEND: bool = false;
+pub(self) const DEBUG_SHOW_PIPELINE: bool = true;
 
 pub enum Backend {
   Crossterm,
@@ -67,10 +68,10 @@ pub mod keypress;
 pub mod modifier_keys_mask;
 pub mod mouse_input;
 pub mod raw_mode;
-pub mod terminal_lib_commands;
+pub mod render_op;
+pub mod render_pipeline;
+pub mod terminal_lib_operations;
 pub mod termion_backend;
-pub mod tw_command;
-pub mod tw_command_queue;
 
 // Re-export.
 pub use async_event_stream_ext::*;
@@ -82,7 +83,7 @@ pub use keypress::*;
 pub use modifier_keys_mask::*;
 pub use mouse_input::*;
 pub use raw_mode::*;
-pub use terminal_lib_commands::*;
+pub use render_op::*;
+pub use render_pipeline::*;
+pub use terminal_lib_operations::*;
 pub use termion_backend::*;
-pub use tw_command::*;
-pub use tw_command_queue::*;

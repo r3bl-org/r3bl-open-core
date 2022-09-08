@@ -34,10 +34,10 @@ fn test_surface_2_col_simple() -> CommonResult<()> {
 
     tw_surface.surface_end()?;
 
-    println!("{:?}", &tw_surface.render_buffer);
+    println!("{:?}", &tw_surface.render_pipeline);
     println!(
       "{}",
-      serde_json::to_string_pretty(&tw_surface.render_buffer).unwrap()
+      serde_json::to_string_pretty(&tw_surface.render_pipeline).unwrap()
     );
   });
 }
