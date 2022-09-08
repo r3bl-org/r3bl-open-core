@@ -30,10 +30,18 @@ fn test_create_styled_text_with_dsl() -> CommonResult<()> {
 fn test_styled_text_renders_correctly() -> CommonResult<()> {
   throws!({
     let st_vec = helpers::create_styled_text()?;
-    let tw_queue: TWCommandQueue = st_vec.render(ZOrder::Normal);
-    debug!(tw_queue.map_of_queue);
-    assert_eq2!(tw_queue.map_of_queue.len(), 1);
-    assert_eq2!(tw_queue.map_of_queue.get(&ZOrder::Normal).unwrap().len(), 6);
+    let tw_queue: RenderPipeline = st_vec.render(ZOrder::Normal);
+    debug!(tw_queue.pipeline_map);
+    assert_eq2!(tw_queue.pipeline_map.len(), 1);
+    assert_eq2!(
+      tw_queue
+        .pipeline_map
+        .get(&ZOrder::Normal)
+        .unwrap()
+        .list
+        .len(),
+      6
+    );
   })
 }
 

@@ -39,6 +39,7 @@
     "punct",
     "qself",
     "reedline",
+    "renderop",
     "repr",
     "reqwest",
     "retval",

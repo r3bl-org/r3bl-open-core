@@ -65,7 +65,7 @@ impl EditorEngine {
   // FIXME: impl render #23
   pub async fn render(
     &mut self, editor_buffer: &EditorBuffer, has_focus: &HasFocus, current_box: &FlexBox,
-  ) -> CommonResult<TWCommandQueue> {
+  ) -> CommonResult<RenderPipeline> {
     throws_with_return!({
       // Create this struct to pass around fewer variables.
       let context = Context {
@@ -81,14 +81,14 @@ impl EditorEngine {
       } else {
         let q_content = render_content(&context);
         let q_caret = render_caret(CaretPaintStyle::LocalPaintedEffect, &context);
-        command_queue!(@join_and_drop q_content, q_caret)
+        render_pipeline!(@join_and_drop q_content, q_caret)
       }
     })
   }
 }
 
 // This simply clips the content to the `style_adj_box_bounds_size`.
-fn render_content(context_ref: &Context<'_>) -> TWCommandQueue {
+fn render_content(context_ref: &Context<'_>) -> RenderPipeline {
   let Context {
     style_adj_box_origin_pos,
     style_adj_box_bounds_size,
@@ -96,7 +96,7 @@ fn render_content(context_ref: &Context<'_>) -> TWCommandQueue {
     editor_buffer,
     ..
   } = context_ref;
-  let mut queue = command_queue!(@new_empty);
+  let mut render_pipeline = render_pipeline!(@new_empty);
 
   let Size {
     col: max_content_display_cols,
@@ -113,26 +113,26 @@ fn render_content(context_ref: &Context<'_>) -> TWCommandQueue {
     let line_unicode_string = line.unicode_string();
     let truncated_line =
       line_unicode_string.truncate_to_fit_display_cols(*max_content_display_cols);
-    command_queue! {
-      @push_into queue at ZOrder::Normal =>
-        TWCommand::MoveCursorPositionRelTo(
+    render_pipeline! {
+      @push_into render_pipeline at ZOrder::Normal =>
+        RenderOp::MoveCursorPositionRelTo(
         *style_adj_box_origin_pos,
         position! { col: 0 , row: convert_to_base_unit!(index) }
         ),
-        TWCommand::ApplyColors(current_box.get_computed_style()),
-        TWCommand::PrintPlainTextWithAttributes(truncated_line.into(), current_box.get_computed_style()),
-        TWCommand::ResetColor
+        RenderOp::ApplyColors(current_box.get_computed_style()),
+        RenderOp::PrintPlainTextWithAttributes(truncated_line.into(), current_box.get_computed_style()),
+        RenderOp::ResetColor
     };
     if max_display_row_count >= 1 {
       max_display_row_count -= 1;
     }
   }
 
-  queue
+  render_pipeline
 }
 
 /// Implement caret painting using two different strategies represented by [CaretPaintStyle].
-fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> TWCommandQueue {
+fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> RenderPipeline {
   let Context {
     style_adj_box_origin_pos,
     has_focus,
@@ -140,33 +140,33 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> TWCommandQ
     editor_buffer,
     ..
   } = context_ref;
-  let mut queue: TWCommandQueue = TWCommandQueue::default();
+  let mut render_pipeline: RenderPipeline = RenderPipeline::default();
 
   if has_focus.does_current_box_have_focus(current_box) {
     match style {
       CaretPaintStyle::GlobalCursor => {
-        command_queue! {
-          @push_into queue at ZOrder::Caret =>
-            TWCommand::RequestShowCaretAtPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
+        render_pipeline! {
+          @push_into render_pipeline at ZOrder::Caret =>
+            RenderOp::RequestShowCaretAtPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
         };
       }
       CaretPaintStyle::LocalPaintedEffect => {
-        command_queue! {
-          @push_into queue at ZOrder::Caret =>
-            TWCommand::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret),
-            TWCommand::PrintPlainTextWithAttributes(
+        render_pipeline! {
+          @push_into render_pipeline at ZOrder::Caret =>
+            RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret),
+            RenderOp::PrintPlainTextWithAttributes(
               editor_buffer.get_char_at_caret().unwrap_or(DEFAULT_CURSOR_CHAR).into(),
               style! { attrib: [reverse] }.into()),
-            TWCommand::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
+            RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
         };
       }
     }
   }
 
-  queue
+  render_pipeline
 }
 
-fn render_empty_state(context_ref: &Context<'_>) -> TWCommandQueue {
+fn render_empty_state(context_ref: &Context<'_>) -> RenderPipeline {
   let Context {
     style_adj_box_origin_pos,
     style_adj_box_bounds_size,
@@ -174,30 +174,30 @@ fn render_empty_state(context_ref: &Context<'_>) -> TWCommandQueue {
     current_box,
     ..
   } = context_ref;
-  let mut queue: TWCommandQueue = TWCommandQueue::default();
+  let mut render_pipeline: RenderPipeline = RenderPipeline::default();
   let mut content_cursor_pos = position! { col: 0 , row: 0 };
 
   // Paint the text.
-  command_queue! {
-    @push_into queue at ZOrder::Normal =>
-      TWCommand::MoveCursorPositionRelTo(*style_adj_box_origin_pos, position! { col: 0 , row: 0 }),
-      TWCommand::ApplyColors(style! {
+  render_pipeline! {
+    @push_into render_pipeline at ZOrder::Normal =>
+      RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, position! { col: 0 , row: 0 }),
+      RenderOp::ApplyColors(style! {
         color_fg: TWColor::Red
       }.into()),
-      TWCommand::PrintPlainTextWithAttributes("No content added".into(), None),
-      TWCommand::ResetColor
+      RenderOp::PrintPlainTextWithAttributes("No content added".into(), None),
+      RenderOp::ResetColor
   };
 
   // Paint the emoji.
   if has_focus.does_current_box_have_focus(current_box) {
-    command_queue! {
-      @push_into queue at ZOrder::Normal =>
-        TWCommand::MoveCursorPositionRelTo(
+    render_pipeline! {
+      @push_into render_pipeline at ZOrder::Normal =>
+        RenderOp::MoveCursorPositionRelTo(
           *style_adj_box_origin_pos,
           content_cursor_pos.add_rows_with_bounds(1, *style_adj_box_bounds_size)),
-        TWCommand::PrintPlainTextWithAttributes("👀".into(), None)
+        RenderOp::PrintPlainTextWithAttributes("👀".into(), None)
     };
   }
 
-  queue
+  render_pipeline
 }

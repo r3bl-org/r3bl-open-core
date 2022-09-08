@@ -86,7 +86,7 @@ pub trait StyledTexts {
   fn len(&self) -> usize;
   fn is_empty(&self) -> bool;
   fn get_plain_text(&self) -> String;
-  fn render(&self, z_order: ZOrder) -> TWCommandQueue;
+  fn render(&self, z_order: ZOrder) -> RenderPipeline;
   fn unicode_string(&self) -> UnicodeString { self.get_plain_text().unicode_string() }
 }
 
@@ -103,21 +103,21 @@ impl StyledTexts for Vec<StyledText> {
     plain_text
   }
 
-  fn render(&self, z_order: ZOrder) -> TWCommandQueue {
-    let mut tw_command_queue = TWCommandQueue::default();
+  fn render(&self, z_order: ZOrder) -> RenderPipeline {
+    let mut render_pipeline = RenderPipeline::default();
 
     for styled_text in self {
       let style = styled_text.style.clone();
       let text = styled_text.plain_text.clone();
-      command_queue! {
-        @push_into tw_command_queue at z_order =>
-          TWCommand::ApplyColors(style.clone().into()),
-          TWCommand::PrintPlainTextWithAttributes(text, style.into()),
-          TWCommand::ResetColor
+      render_pipeline! {
+        @push_into render_pipeline at z_order =>
+          RenderOp::ApplyColors(style.clone().into()),
+          RenderOp::PrintPlainTextWithAttributes(text, style.into()),
+          RenderOp::ResetColor
       }
     }
 
-    tw_command_queue
+    render_pipeline
   }
 }
 

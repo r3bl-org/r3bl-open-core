@@ -68,7 +68,7 @@ macro_rules! throws {
 /// ```ignore
 /// throws_with_return!({
 ///   println!("⛵ Draw -> draw: {}\r", state);
-///   CommandQueue::default()
+///   RenderPipeline::default()
 /// });
 /// ```
 #[macro_export]

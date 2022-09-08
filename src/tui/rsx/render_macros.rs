@@ -33,7 +33,7 @@ macro_rules! render {
         .await
         .render(&$arg_has_focus, current_box, $arg_state, $arg_shared_store)
         .await?;
-      $arg_surface.render_buffer += queue;
+      $arg_surface.render_pipeline += queue;
     }
   };
 }

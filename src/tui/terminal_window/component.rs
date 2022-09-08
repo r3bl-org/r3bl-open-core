@@ -50,14 +50,14 @@ where
   ///   - Dispatch an action if needed
   ///
   /// Returns:
-  ///   - [TWCommandQueue] which must be rendered by the caller
+  ///   - [RenderPipeline] which must be rendered by the caller
   ///
   /// Clipping, scrolling, overdrawing:
   ///   - Each implementation of this trait is solely responsible of taking care of these behaviors
   async fn render(
     &mut self, has_focus: &HasFocus, current_box: &FlexBox, state: &S,
     shared_store: &SharedStore<S, A>,
-  ) -> CommonResult<TWCommandQueue>;
+  ) -> CommonResult<RenderPipeline>;
 }
 
 #[async_trait]

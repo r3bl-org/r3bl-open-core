@@ -25,7 +25,7 @@ pub struct Surface {
   pub box_size: Size,
   pub stack_of_boxes: Vec<FlexBox>,
   pub stylesheet: Stylesheet,
-  pub render_buffer: TWCommandQueue,
+  pub render_pipeline: RenderPipeline,
 }
 
 impl LayoutManagement for Surface {

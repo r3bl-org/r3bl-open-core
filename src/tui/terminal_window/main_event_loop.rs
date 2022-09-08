@@ -32,7 +32,7 @@ pub struct TWData {
 impl TWData {
   fn try_to_create_instance() -> CommonResult<TWData> {
     let mut tw_data = TWData::default();
-    tw_data.set_size(terminal_lib_commands::lookup_size()?);
+    tw_data.set_size(terminal_lib_operations::lookup_size()?);
     Ok(tw_data)
   }
 
@@ -136,7 +136,7 @@ impl TerminalWindow {
         }
 
         // Flush.
-        TWCommand::flush();
+        RenderOp::default().flush();
       }
 
       // End raw mode.
@@ -230,26 +230,26 @@ where
 
       match render_result {
         Err(error) => {
-          TWCommand::flush();
-          call_if_true!(
-            DEBUG,
-            log_no_err!(ERROR, "MySubscriber::render() error ❌: {}", error)
-          );
+          RenderOp::default().flush();
+          call_if_debug_true!(log_no_err!(
+            ERROR,
+            "MySubscriber::render() error ❌: {}",
+            error
+          ));
         }
-        Ok(tw_command_queue) => {
-          tw_command_queue
-            .flush(FlushKind::ClearBeforeFlushQueue, shared_tw_data)
+        Ok(render_pipeline) => {
+          render_pipeline
+            .paint(FlushKind::ClearBeforeFlush, shared_tw_data)
             .await;
           let window_size = shared_tw_data.read().await.get_size();
-          call_if_true!(
-            DEBUG,
+          call_if_debug_true!({
             log_no_err!(
               INFO,
-              "MySubscriber::render() ok ✅: {}, {}",
+              "🎨 MySubscriber::paint() ok ✅: \n size: {:?}\n state: {:?}\n",
               window_size,
-              state
-            )
-          );
+              state,
+            );
+          });
         }
       }
     });

@@ -15,7 +15,9 @@
  *   limitations under the License.
  */
 
-use std::{borrow::Cow, collections::HashMap, io::stdout};
+use std::{borrow::Cow,
+          collections::HashMap,
+          io::{stderr, stdout, Write}};
 
 use async_trait::async_trait;
 use crossterm::{cursor::*,
@@ -27,58 +29,79 @@ use once_cell::sync::Lazy;
 
 use crate::*;
 
-pub struct CommandImplCrossterm;
+pub struct RenderOpImplCrossterm;
+
+impl Flush for RenderOpImplCrossterm {
+  fn flush(&mut self) { flush(); }
+  fn clear_before_flush(&mut self) { clear_before_flush(); }
+}
+
+fn clear_before_flush() {
+  exec_render_op! {
+    queue!(stdout(),
+      ResetColor,
+      Clear(ClearType::All),
+    ),
+  "flush() -> after ResetColor, Clear"
+  }
+}
+
+fn flush() {
+  exec_render_op!(stdout().flush(), "flush() -> stdout");
+  exec_render_op!(stderr().flush(), "flush() -> stderr");
+}
 
 #[async_trait]
-impl RunCommand for CommandImplCrossterm {
-  async fn run_command(
-    &self, skip_flush: &mut bool, command_ref: &TWCommand, shared_tw_data: &SharedTWData,
+impl PaintRenderOp for RenderOpImplCrossterm {
+  async fn paint(
+    &self, skip_flush: &mut bool, command_ref: &RenderOp, shared_tw_data: &SharedTWData,
   ) {
     match command_ref {
-      TWCommand::RequestShowCaretAtPositionAbs(pos) => {
+      RenderOp::Noop => {}
+      RenderOp::RequestShowCaretAtPositionAbs(pos) => {
         request_show_caret_at_position_abs(pos, shared_tw_data).await;
       }
-      TWCommand::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => {
+      RenderOp::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => {
         request_show_caret_at_position_rel_to(box_origin_pos, content_rel_pos, shared_tw_data)
           .await;
       }
-      TWCommand::EnterRawMode => {
+      RenderOp::EnterRawMode => {
         raw_mode_enter(skip_flush, shared_tw_data).await;
       }
-      TWCommand::ExitRawMode => {
+      RenderOp::ExitRawMode => {
         raw_mode_exit(skip_flush);
       }
-      TWCommand::MoveCursorPositionAbs(abs_pos) => {
+      RenderOp::MoveCursorPositionAbs(abs_pos) => {
         move_cursor_position_abs(abs_pos, shared_tw_data).await;
       }
-      TWCommand::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
+      RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
         move_cursor_position_rel_to(box_origin_pos, content_rel_pos, shared_tw_data).await;
       }
-      TWCommand::ClearScreen => {
-        exec!(queue!(stdout(), Clear(ClearType::All)), "ClearScreen")
+      RenderOp::ClearScreen => {
+        exec_render_op!(queue!(stdout(), Clear(ClearType::All)), "ClearScreen")
       }
-      TWCommand::SetFgColor(color) => {
+      RenderOp::SetFgColor(color) => {
         set_fg_color(color);
       }
-      TWCommand::SetBgColor(color) => {
+      RenderOp::SetBgColor(color) => {
         set_bg_color(color);
       }
-      TWCommand::ResetColor => {
-        exec!(queue!(stdout(), ResetColor), "ResetColor")
+      RenderOp::ResetColor => {
+        exec_render_op!(queue!(stdout(), ResetColor), "ResetColor")
       }
-      TWCommand::CursorShow => {
-        exec!(queue!(stdout(), Show), "CursorShow")
+      RenderOp::CursorShow => {
+        exec_render_op!(queue!(stdout(), Show), "CursorShow")
       }
-      TWCommand::CursorHide => {
-        exec!(queue!(stdout(), Hide), "CursorHide")
+      RenderOp::CursorHide => {
+        exec_render_op!(queue!(stdout(), Hide), "CursorHide")
       }
-      TWCommand::ApplyColors(style) => {
+      RenderOp::ApplyColors(style) => {
         apply_colors(style);
       }
-      TWCommand::PrintANSITextWithAttributes(text, maybe_style) => {
+      RenderOp::PrintANSITextWithAttributes(text, maybe_style) => {
         print_ansi_text_with_attributes(text, maybe_style);
       }
-      TWCommand::PrintPlainTextWithAttributes(text, maybe_style) => {
+      RenderOp::PrintPlainTextWithAttributes(text, maybe_style) => {
         print_plain_text_with_attributes(text, maybe_style, shared_tw_data).await;
       }
     }
@@ -93,15 +116,15 @@ async fn move_cursor_position_rel_to(
 }
 
 async fn move_cursor_position_abs(abs_pos: &Position, shared_tw_data: &SharedTWData) {
-  let Position { col, row } = process_queue::sanitize_abs_position(*abs_pos, shared_tw_data).await;
-  exec!(
+  let Position { col, row } = pipeline::sanitize_abs_position(*abs_pos, shared_tw_data).await;
+  exec_render_op!(
     queue!(stdout(), MoveTo(col, row)),
     format!("MoveCursorPosition(col: {}, row: {})", col, row)
   )
 }
 
 fn raw_mode_exit(skip_flush: &mut bool) {
-  exec! {
+  exec_render_op! {
     queue!(stdout(),
       Show,
       LeaveAlternateScreen,
@@ -109,18 +132,18 @@ fn raw_mode_exit(skip_flush: &mut bool) {
     ),
     "ExitRawMode -> Show, LeaveAlternateScreen, DisableMouseCapture"
   };
-  TWCommand::flush();
-  exec! {terminal::disable_raw_mode(), "ExitRawMode -> disable_raw_mode()"}
+  flush();
+  exec_render_op! {terminal::disable_raw_mode(), "ExitRawMode -> disable_raw_mode()"}
   *skip_flush = true;
 }
 
 async fn raw_mode_enter(skip_flush: &mut bool, shared_tw_data: &SharedTWData) {
   shared_tw_data.write().await.cursor_position = position! {col: 0, row: 0};
-  exec! {
+  exec_render_op! {
     terminal::enable_raw_mode(),
     "EnterRawMode -> enable_raw_mode()"
   };
-  exec! {
+  exec_render_op! {
     queue!(stdout(),
       EnableMouseCapture,
       EnterAlternateScreen,
@@ -130,7 +153,7 @@ async fn raw_mode_enter(skip_flush: &mut bool, shared_tw_data: &SharedTWData) {
     ),
   "EnterRawMode -> EnableMouseCapture, EnterAlternateScreen, MoveTo(0,0), Clear(ClearType::All), Hide"
   }
-  TWCommand::flush();
+  flush();
   *skip_flush = true;
 }
 
@@ -142,9 +165,9 @@ async fn request_show_caret_at_position_rel_to(
 }
 
 async fn request_show_caret_at_position_abs(pos: &Position, shared_tw_data: &SharedTWData) {
-  let sanitized_pos = process_queue::sanitize_abs_position(*pos, shared_tw_data).await;
+  let sanitized_pos = pipeline::sanitize_abs_position(*pos, shared_tw_data).await;
   let Position { col, row } = sanitized_pos;
-  exec!(
+  exec_render_op!(
     queue!(stdout(), MoveTo(col, row), Show),
     format!("ShowCaretAt -> MoveTo(col: {}, row: {}) & Show", col, row)
   );
@@ -152,7 +175,7 @@ async fn request_show_caret_at_position_abs(pos: &Position, shared_tw_data: &Sha
 
 fn set_fg_color(color: &TWColor) {
   let color = color_converter::to_crossterm_color(*color);
-  exec!(
+  exec_render_op!(
     queue!(stdout(), SetForegroundColor(color)),
     format!("SetFgColor({:?})", color)
   )
@@ -160,7 +183,7 @@ fn set_fg_color(color: &TWColor) {
 
 fn set_bg_color(color: &TWColor) {
   let color: crossterm::style::Color = color_converter::to_crossterm_color(*color);
-  exec!(
+  exec_render_op!(
     queue!(stdout(), SetBackgroundColor(color)),
     format!("SetBgColor({:?})", color)
   )
@@ -226,7 +249,7 @@ fn print_ansi_text_with_attributes(text_arg: &String, maybe_style: &Option<Style
 }
 
 fn paint_no_style(plain_text: Cow<'_, str>, log_msg: String) {
-  exec!(
+  exec_render_op!(
     queue!(stdout(), Print(plain_text)),
     format!("PrintWithAttributes -> None + Print({})", log_msg)
   )
@@ -239,19 +262,19 @@ fn paint_with_style(style: &Style, plain_text: Cow<'_, str>, log_msg: String) {
   let mut needs_reset = false;
   STYLE_TO_ATTRIBUTE_MAP.iter().for_each(|(flag, attr)| {
     if mask.contains(*flag) {
-      exec!(
+      exec_render_op!(
         queue!(stdout(), SetAttribute(*attr)),
         format!("PrintWithAttributes -> SetAttribute({:?})", attr)
       );
       needs_reset = true;
     }
   });
-  exec!(
+  exec_render_op!(
     queue!(stdout(), Print(plain_text)),
     format!("PrintWithAttributes -> Style + Print({})", log_msg)
   );
   if needs_reset {
-    exec!(
+    exec_render_op!(
       queue!(stdout(), SetAttribute(Attribute::Reset)),
       format!("PrintWithAttributes -> SetAttribute(Reset))")
     );
@@ -267,7 +290,7 @@ fn apply_colors(style: &Option<Style>) {
     if mask.contains(StyleFlag::COLOR_BG_SET) {
       let color_bg = style.color_bg.unwrap();
       let color_bg: crossterm::style::Color = color_converter::to_crossterm_color(color_bg);
-      exec!(
+      exec_render_op!(
         queue!(stdout(), SetBackgroundColor(color_bg)),
         format!("ApplyColors -> SetBackgroundColor({:?})", color_bg)
       )
@@ -275,7 +298,7 @@ fn apply_colors(style: &Option<Style>) {
     if mask.contains(StyleFlag::COLOR_FG_SET) {
       let color_fg = style.color_fg.unwrap();
       let color_fg: crossterm::style::Color = color_converter::to_crossterm_color(color_fg);
-      exec!(
+      exec_render_op!(
         queue!(stdout(), SetForegroundColor(color_fg)),
         format!("ApplyColors -> SetForegroundColor({:?})", color_fg)
       )
