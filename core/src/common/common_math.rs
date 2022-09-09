@@ -15,14 +15,107 @@
  *   limitations under the License.
  */
 
-/// Safely subtracts two numbers. Does not panic.
+/// Safely subtracts two unsigned numbers and returns the result. Does not panic.
+///
+/// ```rust
+/// use r3bl_rs_utils_core::*;
+/// let a: u16 = 10;
+/// let b: u16 = 15;
+/// let c: u16 = sub_unsigned!(a, b);
+/// assert_eq!(c, 0);
+/// ```
 #[macro_export]
 macro_rules! sub_unsigned {
-  ($lhs:expr, $rhs:expr) => {
-    if $lhs > $rhs {
-      $lhs - $rhs
+  ($arg_lhs: expr, $arg_rhs: expr) => {
+    if $arg_lhs > $arg_rhs {
+      $arg_lhs - $arg_rhs
     } else {
       0
     }
+  };
+}
+
+/// Safely adds two unsigned numbers and returns the result. Does not panic.
+///
+/// ```rust
+/// use r3bl_rs_utils_core::*;
+/// let a: u16 = 10;
+/// let b: u16 = 15;
+/// let c: u16 = add_unsigned!(a, b);
+/// assert_eq!(c, 25);
+/// ```
+#[macro_export]
+macro_rules! add_unsigned {
+  ($arg_lhs: expr, $arg_rhs: expr) => {
+    if $arg_lhs > std::u16::MAX || $arg_rhs > std::u16::MAX {
+      std::u16::MAX
+    } else {
+      $arg_lhs + $arg_rhs
+    }
+  };
+}
+
+/// Safely increments an unsigned number. Does not panic.
+///
+/// ```rust
+/// use r3bl_rs_utils_core::*;
+/// let mut my_u16: u16 = 0;
+///
+/// inc_unsigned!(my_u16);
+/// assert_eq!(my_u16, 1);
+///
+/// inc_unsigned!(my_u16, by: 10);
+/// assert_eq!(my_u16, 11);
+///
+/// inc_unsigned!(my_u16, max: 10);
+/// assert_eq!(my_u16, 10);
+/// ```
+#[macro_export]
+macro_rules! inc_unsigned {
+  ($arg_lhs: expr) => {
+    $arg_lhs = add_unsigned!($arg_lhs, 1);
+  };
+  ($arg_lhs: expr, by: $arg_amount: expr) => {
+    $arg_lhs = add_unsigned!($arg_lhs, $arg_amount);
+  };
+  ($arg_lhs: expr, max: $arg_max: expr) => {
+    if $arg_lhs >= $arg_max {
+      $arg_lhs = $arg_max;
+    } else {
+      $arg_lhs = add_unsigned!($arg_lhs, 1);
+    }
+  };
+  ($arg_lhs: expr, by: $arg_amount:expr, max: $arg_max: expr) => {
+    if add_unsigned!($arg_lhs, $arg_amount) >= $arg_max {
+      $arg_lhs = $arg_max;
+    } else {
+      $arg_lhs = add_unsigned!($arg_lhs, $arg_amount);
+    }
+  };
+}
+
+/// Safely decrements an unsigned number. Does not panic.
+///
+/// ```rust
+/// use r3bl_rs_utils_core::*;
+/// let mut my_u16: u16 = 10;
+///
+/// dec_unsigned!(my_u16);
+/// assert_eq!(my_u16, 9);
+///
+/// dec_unsigned!(my_u16, by: 10);
+/// assert_eq!(my_u16, 0);
+/// ```
+#[macro_export]
+macro_rules! dec_unsigned {
+  ($arg_lhs: expr) => {
+    if $arg_lhs > 1 {
+      $arg_lhs = sub_unsigned!($arg_lhs, 1);
+    } else {
+      $arg_lhs = 0;
+    }
+  };
+  ($arg_lhs: expr, by: $arg_amount: expr) => {
+    $arg_lhs = sub_unsigned!($arg_lhs, $arg_amount);
   };
 }

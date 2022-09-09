@@ -317,6 +317,31 @@ impl UnicodeString {
       .map(|segment| segment.display_col_offset)
   }
 
+  pub fn get_string_at_display_col(&self, display_col: UnitType) -> Option<(String, UnitType)> {
+    let segment = self.at_display_col(display_col)?;
+    Some((segment.string.clone(), segment.unicode_width))
+  }
+
+  pub fn get_string_at_left_of_display_col(
+    &self, display_col: UnitType,
+  ) -> Option<(String, UnitType)> {
+    let segment_at_col = self.at_display_col(display_col)?;
+    if segment_at_col.logical_index >= 1 {
+      let segment_left_of_col = self.at_logical_index(segment_at_col.logical_index - 1)?;
+      Some((
+        segment_left_of_col.string.clone(),
+        segment_left_of_col.unicode_width,
+      ))
+    } else {
+      None
+    }
+  }
+
+  pub fn get_string_at_end(&self) -> Option<(String, UnitType)> {
+    let segment = self.vec_segment.last()?;
+    Some((segment.string.clone(), segment.unicode_width))
+  }
+
   /// Returns a new ([String], [UnitType]) tuple and does not modify
   /// [self.string](UnicodeString::string).
   pub fn insert_char_at_display_col(

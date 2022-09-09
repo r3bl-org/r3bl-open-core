@@ -16,9 +16,9 @@
  */
 
 // Attach.
-pub mod render_op_impl;
 pub mod debug;
+pub mod render_op_impl;
 
 // Re-export.
-pub use render_op_impl::*;
 pub use debug::*;
+pub use render_op_impl::*;
