@@ -57,6 +57,18 @@ impl EditorEngine {
         new_editor_buffer.insert_char_into_current_line(*character);
         Ok(Some(new_editor_buffer))
       }
+      // Process Left and Right keys.
+      InputEvent::Keyboard(Keypress::Plain {
+        key: Key::SpecialKey(key),
+      }) => {
+        let mut new_editor_buffer = editor_buffer.clone();
+        match key {
+          SpecialKey::Left => new_editor_buffer.move_caret_left(),
+          SpecialKey::Right => new_editor_buffer.move_caret_right(),
+          _ => {}
+        }
+        Ok(Some(new_editor_buffer))
+      }
       // Other keypresses.
       _ => Ok(None),
     }
@@ -76,7 +88,7 @@ impl EditorEngine {
         current_box,
       };
 
-      if editor_buffer.vec_lines.is_empty() {
+      if editor_buffer.is_empty() {
         render_empty_state(&context)
       } else {
         let q_content = render_content(&context);
@@ -151,13 +163,26 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> RenderPipe
         };
       }
       CaretPaintStyle::LocalPaintedEffect => {
+        let str_at_caret: String = if let Some((str_seg, _)) = editor_buffer.get_string_at_caret() {
+          str_seg
+        } else {
+          DEFAULT_CURSOR_CHAR.into()
+        };
+
+        log_no_err!(
+          DEBUG,
+          "CRT > str_at_caret: {:?}, editor_buffer.caret: {:?}",
+          str_at_caret,
+          editor_buffer.caret
+        );
+
         render_pipeline! {
           @push_into render_pipeline at ZOrder::Caret =>
-            RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret),
+          RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret),
             RenderOp::PrintPlainTextWithAttributes(
-              editor_buffer.get_char_at_caret().unwrap_or(DEFAULT_CURSOR_CHAR).into(),
+              str_at_caret,
               style! { attrib: [reverse] }.into()),
-            RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
+          RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
         };
       }
     }

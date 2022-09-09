@@ -23,7 +23,9 @@ use serde::*;
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
   pub vec_lines: Vec<String>,
-  /// The current caret position.
+  /// The current caret position. This is the "display" and not "logical" position as defined in
+  /// [UnicodeString]. This works w/ [crate::RenderOp] as well, so you can directly move this
+  /// position.
   pub caret: Position,
   /// The col and row offset for scrolling if active.
   pub scroll_offset: Position,
@@ -31,17 +33,73 @@ pub struct EditorBuffer {
   pub lolcat: Lolcat,
 }
 
-pub fn char_to_string(character: char) -> String {
-  let my_string: String = String::from(character);
-  my_string
+macro_rules! empty_check_early_return {
+  ($arg_this: expr, @None) => {
+    if $arg_this.vec_lines.is_empty() {
+      return None;
+    }
+  };
+  ($arg_this: expr, @Nothing) => {
+    if $arg_this.vec_lines.is_empty() {
+      return;
+    }
+  };
 }
 
+mod helpers {
+  pub(super) fn char_to_string(character: char) -> String {
+    let my_string: String = String::from(character);
+    my_string
+  }
+
+  pub(super) enum CaretLocationInLine {
+    AtStart,
+    AtEnd,
+    InMiddle,
+  }
+}
+use helpers::*;
+
 impl EditorBuffer {
-  pub fn get_char_at_caret(&self) -> Option<char> { self.get_char_at_position(self.caret) }
-  pub fn get_char_at_position(&self, position: Position) -> Option<char> {
+  pub fn is_empty(&self) -> bool { self.vec_lines.is_empty() }
+
+  pub fn get_string_to_left_of_caret(&self) -> Option<(String, UnitType)> {
+    self.get_string_to_left_of_position(self.caret)
+  }
+  pub fn get_string_to_left_of_position(&self, position: Position) -> Option<(String, UnitType)> {
+    empty_check_early_return!(self, @None);
     let line = self.vec_lines.get(convert_from_base_unit!(position.row))?;
-    let character = line.chars().nth(convert_from_base_unit!(position.col))?;
-    Some(character)
+    line
+      .unicode_string()
+      .get_string_at_left_of_display_col(position.col)
+  }
+
+  pub fn get_string_at_caret(&self) -> Option<(String, UnitType)> {
+    self.get_string_at_position(self.caret)
+  }
+  pub fn get_string_at_position(&self, position: Position) -> Option<(String, UnitType)> {
+    empty_check_early_return!(self, @None);
+    let line = self.vec_lines.get(convert_from_base_unit!(position.row))?;
+    let (str_seg, unicode_width) = line
+      .unicode_string()
+      .get_string_at_display_col(position.col)?;
+    Some((str_seg, unicode_width))
+  }
+
+  pub fn get_line_at_caret(&self) -> Option<&String> { self.get_line_at_position(self.caret) }
+  pub fn get_line_at_position(&self, position: Position) -> Option<&String> {
+    empty_check_early_return!(self, @None);
+    let line = self.vec_lines.get(convert_from_base_unit!(position.row))?;
+    Some(line)
+  }
+
+  pub fn get_display_width_of_line_at_caret(&self) -> UnitType {
+    let line = self.get_line_at_caret();
+    if let Some(line) = line {
+      line.unicode_string().display_width
+    } else {
+      0
+    }
   }
 
   pub fn insert_char_into_current_line(&mut self, character: char) {
@@ -99,9 +157,83 @@ impl EditorBuffer {
       }
     }
   }
+
+  pub fn caret_is_at_end_of_current_line(&self) -> bool {
+    if let Some(line) = self.get_line_at_caret() {
+      let line_display_width = line.unicode_string().display_width;
+      self.caret.col == convert_to_base_unit!(line_display_width)
+    } else {
+      false
+    }
+  }
+
+  pub fn caret_is_at_start_of_current_line(&self) -> bool {
+    if self.get_line_at_caret().is_some() {
+      self.caret.col == 0
+    } else {
+      false
+    }
+  }
+
+  pub fn get_string_at_end_of_current_line(&self) -> Option<(String, UnitType)> {
+    let line = self.get_line_at_caret()?;
+    if self.caret_is_at_end_of_current_line() {
+      let maybe_last_str_seg = line.unicode_string().get_string_at_end();
+      return maybe_last_str_seg;
+    }
+    None
+  }
+
+  fn where_is_caret_in_current_line(&self) -> CaretLocationInLine {
+    if self.caret_is_at_start_of_current_line() {
+      CaretLocationInLine::AtStart
+    } else if self.caret_is_at_end_of_current_line() {
+      CaretLocationInLine::AtEnd
+    } else {
+      CaretLocationInLine::InMiddle
+    }
+  }
+
+  /// Move one character to the left. Figure out how wide the current character is (unicode width)
+  /// and then move the "display" caret position back that many columns.
+  pub fn move_caret_left(&mut self) {
+    empty_check_early_return!(self, @Nothing);
+    match self.where_is_caret_in_current_line() {
+      CaretLocationInLine::AtStart => {
+        // Do nothing.
+      }
+      CaretLocationInLine::AtEnd => {
+        if let Some((_, unicode_width)) = self.get_string_at_end_of_current_line() {
+          dec_unsigned!(self.caret.col, by: unicode_width);
+        }
+      }
+      CaretLocationInLine::InMiddle => {
+        if let Some((_, unicode_width)) = self.get_string_to_left_of_caret() {
+          dec_unsigned!(self.caret.col, by: unicode_width);
+        }
+      }
+    }
+  }
+
+  /// Move one character to the right. Figure out how wide the current character is (unicode width)
+  /// and then move the "display" caret position forward that many columns.
+  pub fn move_caret_right(&mut self) {
+    empty_check_early_return!(self, @Nothing);
+    match self.where_is_caret_in_current_line() {
+      CaretLocationInLine::AtEnd => {
+        // Do nothing.
+      }
+      CaretLocationInLine::AtStart | CaretLocationInLine::InMiddle => {
+        if let Some((_, unicode_width)) = self.get_string_at_caret() {
+          let max_display_width = self.get_display_width_of_line_at_caret();
+          inc_unsigned!(self.caret.col, by: unicode_width, max: max_display_width);
+        }
+      }
+    }
+  }
 }
 
-mod editor_buffer_helpers {
+mod debug_format_helpers {
   use super::*;
 
   impl std::fmt::Debug for EditorBuffer {

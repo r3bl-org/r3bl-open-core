@@ -131,6 +131,18 @@ impl Position {
 
     *self
   }
+
+  pub fn sub_rows(&mut self, num_rows_to_sub: usize) -> Self {
+    let value = convert_to_base_unit!(num_rows_to_sub);
+    dec_unsigned!(self.row, by: value);
+    *self
+  }
+
+  pub fn sub_cols(&mut self, num_cols_to_sub: usize) -> Self {
+    let value = convert_to_base_unit!(num_cols_to_sub);
+    dec_unsigned!(self.col, by: value);
+    *self
+  }
 }
 
 impl Debug for Position {

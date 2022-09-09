@@ -86,7 +86,7 @@ impl RenderPipeline {
 
   // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
   pub async fn paint(&self, flush_kind: FlushKind, shared_tw_data: &SharedTWData) {
-    pipeline::paint(&self.pipeline_map, flush_kind, shared_tw_data).await;
+    pipeline::paint(self, flush_kind, shared_tw_data).await;
   }
 }
 
@@ -100,10 +100,10 @@ mod render_pipeline_helpers {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       let mut vec_lines: Vec<String> = vec![];
       for (z_order, render_ops) in &self.pipeline_map {
-        let line: String = format!("[{:?}]: {:?}", z_order, render_ops);
+        let line: String = format!("[{:?}] {:?}", z_order, render_ops);
         vec_lines.push(line);
       }
-      write!(f, "\n  - {}", vec_lines.join("\n  - "))
+      write!(f, "  - {}", vec_lines.join("\n  - "))
     }
   }
 
@@ -120,7 +120,7 @@ pub mod pipeline {
   use super::*;
 
   pub async fn paint(
-    pipeline_map: &PipelineMap, flush_kind: FlushKind, shared_tw_data: &SharedTWData,
+    pipeline: &RenderPipeline, flush_kind: FlushKind, shared_tw_data: &SharedTWData,
   ) {
     let mut skip_flush = false;
 
@@ -133,7 +133,7 @@ pub mod pipeline {
 
     // Execute the RenderOps, in the correct order of the ZOrder enum.
     for z_order in RENDER_ORDERED_Z_ORDER_ARRAY.iter() {
-      if let Some(render_ops) = pipeline_map.get(z_order) {
+      if let Some(render_ops) = pipeline.pipeline_map.get(z_order) {
         for command_ref in &render_ops.list {
           if let RenderOp::RequestShowCaretAtPositionAbs(_)
           | RenderOp::RequestShowCaretAtPositionRelTo(_, _) = command_ref
@@ -170,7 +170,7 @@ pub mod pipeline {
       log_no_err!(
         INFO,
         "🎨 render_pipeline::paint() ok ✅: pipeline: \n{:?}",
-        pipeline_map,
+        pipeline,
       );
     });
   }
