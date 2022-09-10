@@ -163,11 +163,12 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> RenderPipe
         };
       }
       CaretPaintStyle::LocalPaintedEffect => {
-        let str_at_caret: String = if let Some((str_seg, _)) = editor_buffer.get_string_at_caret() {
-          str_seg
-        } else {
-          DEFAULT_CURSOR_CHAR.into()
-        };
+        let str_at_caret: String =
+          if let Some((str_seg, _)) = line_buffer_get_content::string_at_caret(editor_buffer) {
+            str_seg
+          } else {
+            DEFAULT_CURSOR_CHAR.into()
+          };
 
         log_no_err!(
           DEBUG,

@@ -18,7 +18,9 @@
 // Attach.
 pub mod editor_buffer;
 pub mod editor_engine;
+pub mod line_buffer;
 
 // Re-export.
 pub use editor_buffer::*;
 pub use editor_engine::*;
+pub use line_buffer::*;
