@@ -148,10 +148,10 @@ impl PerformPositioningAndSizing for Surface {
         height_pc,
       } = flex_box_props.requested_size_percent;
 
-      let requested_size_allocation = Size::from((
-        calc_percentage(width_pc, container_bounds.col),
-        calc_percentage(height_pc, container_bounds.row),
-      ));
+      let requested_size_allocation = size!(
+        col: calc_percentage(width_pc, container_bounds.col),
+        row: calc_percentage(height_pc, container_bounds.row)
+      );
 
       let origin_pos = unwrap_or_err! {
         container_box.insertion_pos_for_next_box,
@@ -177,10 +177,10 @@ impl PerformPositioningAndSizing for Surface {
         height_pc,
       } = flex_box_props.requested_size_percent;
 
-      let bounds_size = Size::from((
-        calc_percentage(width_pc, self.box_size.col),
-        calc_percentage(height_pc, self.box_size.row),
-      ));
+      let bounds_size = size!(
+        col: calc_percentage(width_pc, self.box_size.col),
+        row: calc_percentage(height_pc, self.box_size.row)
+      );
 
       self.stack_of_boxes.push(make_root_box_with_style(
         flex_box_props,
@@ -208,16 +208,16 @@ fn make_non_root_box_with_style(
   }: FlexBoxProps,
   origin_pos: Position, container_bounds: Size, maybe_cascaded_style: Option<Style>,
 ) -> FlexBox {
-  let bounds_size = Size::from((
-    calc_percentage(width_pc, container_bounds.col),
-    calc_percentage(height_pc, container_bounds.row),
-  ));
+  let bounds_size = size!(
+    col: calc_percentage(width_pc, container_bounds.col),
+    row: calc_percentage(height_pc, container_bounds.row)
+  );
 
   // Adjust `bounds_size` & `origin` based on the style's padding.
   let (style_adjusted_origin_pos, style_adjusted_bounds_size) =
     adjust_with_style(&maybe_cascaded_style, origin_pos, bounds_size);
 
-  let req_size_pc: RequestedSizePercent = (width_pc, height_pc).into();
+  let req_size_pc: RequestedSizePercent = requested_size_percent!(width: width_pc, height: height_pc);
 
   FlexBox {
     id,

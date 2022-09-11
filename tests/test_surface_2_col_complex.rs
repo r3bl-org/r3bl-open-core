@@ -27,7 +27,7 @@ fn test_surface_2_col_complex() -> CommonResult<()> {
 
     tw_surface.surface_start(SurfaceProps {
       pos: position!(col:0, row:0),
-      size: (500, 500).into(),
+      size: size!(col:500, row:500),
     })?;
 
     create_main_container(&mut tw_surface)?;
