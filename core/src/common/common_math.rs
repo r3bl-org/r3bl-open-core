@@ -44,15 +44,21 @@ macro_rules! sub_unsigned {
 /// let c: u16 = add_unsigned!(a, b);
 /// assert_eq!(c, 25);
 /// ```
+///
+/// More info: <https://rust-lang.github.io/rust-clippy/master/index.html#absurd_extreme_comparisons>
 #[macro_export]
 macro_rules! add_unsigned {
-  ($arg_lhs: expr, $arg_rhs: expr) => {
-    if $arg_lhs > std::u16::MAX || $arg_rhs > std::u16::MAX {
-      std::u16::MAX
+  ($arg_lhs: expr, $arg_rhs: expr) => {{
+    let lhs_big = $arg_lhs as u64;
+    let rhs_big = $arg_rhs as u64;
+    let sum_big = $arg_lhs + $arg_rhs;
+
+    if sum_big > UnitType::MAX {
+      UnitType::MAX
     } else {
       $arg_lhs + $arg_rhs
     }
-  };
+  }};
 }
 
 /// Safely increments an unsigned number. Does not panic.
