@@ -53,60 +53,72 @@ pub struct Size {
   pub row: UnitType, // height = number of rows (x).
 }
 
-impl Display for Size {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "Size: [{}, {}]", self.row, self.col)
-  }
-}
+pub mod debug_formatter {
+  use super::*;
 
-impl SubAssign<UnitType> for Size {
-  fn sub_assign(&mut self, other: UnitType) {
-    self.col = sub_unsigned!(self.col, other);
-    self.row = sub_unsigned!(self.row, other);
+  impl Display for Size {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+      write!(f, "Size: [{}, {}]", self.row, self.col)
+    }
   }
-}
 
-impl From<Pair> for Size {
-  fn from(pair: Pair) -> Self {
-    Self {
-      col: pair.first,
-      row: pair.second,
+  impl Debug for Size {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+      write!(f, "[width:{}, height:{}]", self.col, self.row)
     }
   }
 }
 
-impl From<(UnitType, UnitType)> for Size {
-  /// 1. First (pair.0) is width or cols.
-  /// 2. Second (pair.1) is height or rows.
-  fn from(pair: (UnitType, UnitType)) -> Self {
-    Self {
-      col: pair.0,
-      row: pair.1,
+pub mod math_ops {
+  use super::*;
+
+  impl SubAssign<UnitType> for Size {
+    fn sub_assign(&mut self, other: UnitType) {
+      self.col = sub_unsigned!(self.col, other);
+      self.row = sub_unsigned!(self.row, other);
     }
   }
 }
 
-impl From<(usize, usize)> for Size {
-  fn from(pair: (usize, usize)) -> Self {
-    Self {
-      col: convert_to_base_unit!(pair.0),
-      row: convert_to_base_unit!(pair.1),
+pub mod convert_from_other_type_to_size {
+  use super::*;
+
+  impl From<Pair> for Size {
+    fn from(pair: Pair) -> Self {
+      Self {
+        col: pair.first,
+        row: pair.second,
+      }
     }
   }
-}
 
-impl From<(i32, i32)> for Size {
-  fn from(pair: (i32, i32)) -> Self {
-    Self {
-      col: convert_to_base_unit!(pair.0),
-      row: convert_to_base_unit!(pair.1),
+  impl From<(UnitType, UnitType)> for Size {
+    /// 1. First (pair.0) is width or cols.
+    /// 2. Second (pair.1) is height or rows.
+    fn from(pair: (UnitType, UnitType)) -> Self {
+      Self {
+        col: pair.0,
+        row: pair.1,
+      }
     }
   }
-}
 
-impl Debug for Size {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "[width:{}, height:{}]", self.col, self.row)
+  impl From<(usize, usize)> for Size {
+    fn from(pair: (usize, usize)) -> Self {
+      Self {
+        col: convert_to_base_unit!(pair.0),
+        row: convert_to_base_unit!(pair.1),
+      }
+    }
+  }
+
+  impl From<(i32, i32)> for Size {
+    fn from(pair: (i32, i32)) -> Self {
+      Self {
+        col: convert_to_base_unit!(pair.0),
+        row: convert_to_base_unit!(pair.1),
+      }
+    }
   }
 }
 
