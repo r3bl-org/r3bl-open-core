@@ -26,8 +26,8 @@ fn test_surface_2_col_simple() -> CommonResult<()> {
     };
 
     tw_surface.surface_start(SurfaceProps {
-      pos: (0, 0).into(),
-      size: (500, 500).into(),
+      pos: position!(col:0, row:0),
+      size: size!(col:500, row:500),
     })?;
 
     create_main_container(&mut tw_surface)?;
@@ -65,10 +65,13 @@ fn create_main_container(tw_surface: &mut Surface) -> CommonResult<()> {
       let layout_item = tw_surface.stack_of_boxes.first().unwrap();
       assert_eq2!(layout_item.id, "container");
       assert_eq2!(layout_item.dir, Direction::Horizontal);
-      assert_eq2!(layout_item.origin_pos, (0, 0).into());
-      assert_eq2!(layout_item.bounds_size, (500, 500).into()); // due to `padding: 1`
+      assert_eq2!(layout_item.origin_pos, position!(col:0,row: 0));
+      assert_eq2!(layout_item.bounds_size, size!(col:500, row:500)); // due to `padding: 1`
       assert_eq2!(layout_item.requested_size_percent, (100, 100).try_into()?);
-      assert_eq2!(layout_item.insertion_pos_for_next_box, Some((0, 0).into()));
+      assert_eq2!(
+        layout_item.insertion_pos_for_next_box,
+        Some(position!(col:0, row:0))
+      );
       assert_eq2!(layout_item.get_computed_style(), None);
     });
   }
@@ -95,11 +98,17 @@ fn create_left_col(tw_surface: &mut Surface) -> CommonResult<()> {
       assert_eq2!(layout_item.id, "col_1");
       assert_eq2!(layout_item.dir, Direction::Vertical);
 
-      assert_eq2!(layout_item.origin_pos, (0, 0).into());
-      assert_eq2!(layout_item.bounds_size, (250, 500).into());
+      assert_eq2!(layout_item.origin_pos, position!(col:0, row:0));
+      assert_eq2!(layout_item.bounds_size, size!(col:250, row:500));
 
-      assert_eq2!(layout_item.style_adjusted_origin_pos, (2, 2).into()); // Take padding into account.
-      assert_eq2!(layout_item.style_adjusted_bounds_size, (246, 496).into()); // Take padding into account.
+      assert_eq2!(
+        layout_item.style_adjusted_origin_pos,
+        position!(col:2, row:2)
+      ); // Take padding into account.
+      assert_eq2!(
+        layout_item.style_adjusted_bounds_size,
+        size!(col:246, row:496)
+      ); // Take padding into account.
 
       assert_eq2!(layout_item.requested_size_percent, (50, 100).try_into()?);
       assert_eq2!(layout_item.insertion_pos_for_next_box, None);
@@ -131,11 +140,17 @@ fn create_right_col(tw_surface: &mut Surface) -> CommonResult<()> {
       assert_eq2!(current_box.id, "col_2");
       assert_eq2!(current_box.dir, Direction::Vertical);
 
-      assert_eq2!(current_box.origin_pos, (250, 0).into());
-      assert_eq2!(current_box.bounds_size, (250, 500).into());
+      assert_eq2!(current_box.origin_pos, position!(col:250, row:0));
+      assert_eq2!(current_box.bounds_size, size!(col:250, row:500));
 
-      assert_eq2!(current_box.style_adjusted_origin_pos, (253, 3).into()); // Take padding into account.
-      assert_eq2!(current_box.style_adjusted_bounds_size, (244, 494).into()); // Take padding into account.
+      assert_eq2!(
+        current_box.style_adjusted_origin_pos,
+        position!(col:253, row:3)
+      ); // Take padding into account.
+      assert_eq2!(
+        current_box.style_adjusted_bounds_size,
+        size!(col:244, row:494)
+      ); // Take padding into account.
 
       assert_eq2!(current_box.requested_size_percent, (50, 100).try_into()?);
       assert_eq2!(current_box.insertion_pos_for_next_box, None);

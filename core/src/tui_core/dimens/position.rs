@@ -59,36 +59,6 @@ pub struct Position {
   pub row: UnitType,
 }
 
-impl AddAssign<UnitType> for Position {
-  fn add_assign(&mut self, other: UnitType) {
-    self.col += other;
-    self.row += other;
-  }
-}
-
-impl From<Pair> for Position {
-  fn from(pair: Pair) -> Self {
-    Self {
-      col: pair.first,
-      row: pair.second,
-    }
-  }
-}
-
-impl From<(UnitType, UnitType)> for Position {
-  /// First argument is the column, second argument is the row.
-  fn from(pair: (UnitType, UnitType)) -> Self {
-    Self {
-      col: pair.0,
-      row: pair.1,
-    }
-  }
-}
-
-impl From<Position> for (UnitType, UnitType) {
-  fn from(position: Position) -> Self { (position.col, position.row) }
-}
-
 impl Position {
   /// Add given `col` count to `self`.
   pub fn add_cols(&mut self, num_cols_to_add: usize) -> Self {
@@ -145,42 +115,65 @@ impl Position {
   }
 }
 
-impl Debug for Position {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "[col:{}, row:{}]", self.col, self.row)
-  }
-}
+pub mod math_ops {
+  use super::*;
 
-impl Add<Position> for Position {
-  type Output = Position;
-  fn add(self, other: Position) -> Self::Output {
-    Position {
-      col: self.col + other.col,
-      row: self.row + other.row,
+  impl AddAssign<UnitType> for Position {
+    fn add_assign(&mut self, other: UnitType) {
+      self.col += other;
+      self.row += other;
+    }
+  }
+
+  impl Add<Position> for Position {
+    type Output = Position;
+    fn add(self, other: Position) -> Self::Output {
+      Position {
+        col: self.col + other.col,
+        row: self.row + other.row,
+      }
+    }
+  }
+
+  /// Add: BoxPosition + BoxSize = BoxPosition.
+  /// <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
+  impl Add<Size> for Position {
+    type Output = Position;
+    fn add(self, other: Size) -> Self {
+      Self {
+        col: self.col + other.col,
+        row: self.row + other.row,
+      }
+    }
+  }
+
+  /// Mul: BoxPosition * Pair = BoxPosition.
+  /// <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
+  impl Mul<Pair> for Position {
+    type Output = Position;
+    fn mul(self, other: Pair) -> Self {
+      Self {
+        col: self.col * other.first,
+        row: self.row * other.second,
+      }
     }
   }
 }
 
-/// Add: BoxPosition + BoxSize = BoxPosition.
-/// <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
-impl Add<Size> for Position {
-  type Output = Position;
-  fn add(self, other: Size) -> Self {
-    Self {
-      col: self.col + other.col,
-      row: self.row + other.row,
-    }
+pub mod convert_position_to_other_type {
+  use super::*;
+
+  impl From<Position> for (UnitType, UnitType) {
+    fn from(position: Position) -> Self { (position.col, position.row) }
   }
 }
 
-/// Mul: BoxPosition * Pair = BoxPosition.
-/// <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
-impl Mul<Pair> for Position {
-  type Output = Position;
-  fn mul(self, other: Pair) -> Self {
-    Self {
-      col: self.col * other.first,
-      row: self.row * other.second,
+pub mod debug_formatter {
+  use super::*;
+
+  impl Debug for Position {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+      write!(f, "[col:{}, row:{}]", self.col, self.row)
     }
   }
 }
