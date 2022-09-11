@@ -149,12 +149,12 @@ pub mod math_ops {
 
   /// Mul: BoxPosition * Pair = BoxPosition.
   /// <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
-  impl Mul<Pair> for Position {
+  impl Mul<(UnitType, UnitType)> for Position {
     type Output = Position;
-    fn mul(self, other: Pair) -> Self {
+    fn mul(self, other: (UnitType, UnitType)) -> Self {
       Self {
-        col: self.col * other.first,
-        row: self.row * other.second,
+        col: self.col * other.0,
+        row: self.row * other.1,
       }
     }
   }

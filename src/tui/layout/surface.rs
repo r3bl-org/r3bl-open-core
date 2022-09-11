@@ -124,8 +124,8 @@ impl PerformPositioningAndSizing for Surface {
 
     // Adjust `new_pos` using Direction.
     let new_pos: Position = match current_box.dir {
-      Direction::Vertical => new_pos * (0, 1).into(),
-      Direction::Horizontal => new_pos * (1, 0).into(),
+      Direction::Vertical => new_pos * (0, 1),
+      Direction::Horizontal => new_pos * (1, 0),
     };
 
     // Update the box_cursor_pos of the current layout.
