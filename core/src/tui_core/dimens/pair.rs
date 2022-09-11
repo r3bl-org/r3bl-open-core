@@ -82,8 +82,8 @@ impl From<(usize, usize)> for Pair {
 #[macro_export]
 macro_rules! pair {
   (
-    $arg_first:expr,
-    $arg_second:expr
+    first:  $arg_first:  expr,
+    second: $arg_second: expr
   ) => {
     Pair {
       first: $arg_first,

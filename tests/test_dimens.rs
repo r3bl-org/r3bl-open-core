@@ -20,8 +20,8 @@ use r3bl_rs_utils::*;
 #[tokio::test]
 async fn test_add_box_size_to_pos() {
   // [10, 10] + [30, 10] = [40, 20]
-  let pos = Position::from((10, 10));
-  let size = Size::from((30, 10));
+  let pos = position!(col: 10, row: 10);
+  let size = size!(col: 30, row: 10);
   let new_pos = pos + size; // `size + pos` is not defined.
   assert_eq!(new_pos.col, 40);
   assert_eq!(new_pos.row, 20);
@@ -31,8 +31,8 @@ async fn test_add_box_size_to_pos() {
 async fn test_mul_box_pos_to_pair() {
   // [30, 10] * [1, 0] = [30, 0]
   {
-    let pos: Position = (30, 10).into();
-    let pair_cancel_row = (1, 0).into();
+    let pos: Position = position!(col: 30, row: 10);
+    let pair_cancel_row = pair!(first:1, second:0);
     let new_pair = pos * pair_cancel_row;
     assert_eq!(new_pair.col, 30);
     assert_eq!(new_pair.row, 0);
@@ -40,8 +40,8 @@ async fn test_mul_box_pos_to_pair() {
 
   // [30, 10] * [0, 1] = [0, 10]
   {
-    let pos: Position = (30, 10).into();
-    let pair_cancel_col = (0, 1).into();
+    let pos: Position = position!(col: 30, row: 10);
+    let pair_cancel_col = pair!(first:0, second:1);
     let new_pair = pos * pair_cancel_col;
     assert_eq!(new_pair.col, 0);
     assert_eq!(new_pair.row, 10);
@@ -50,18 +50,22 @@ async fn test_mul_box_pos_to_pair() {
 
 #[test]
 fn test_percent_works_as_expected() {
-  let pc_100 = Percent::try_from(100i32).unwrap();
-  assert_eq!(pc_100.value, 100);
-  let result = calc_percentage(pc_100, 500);
-  assert_eq!(result, 500);
+  let maybe_pc_100: Result<Percent, String> = percent!(100i32);
+  if let Ok(pc_100) = maybe_pc_100 {
+    assert_eq!(*pc_100, 100);
+    let result = calc_percentage(pc_100, 500);
+    assert_eq!(result, 500);
+  } else {
+    panic!("Failed to create Percent from 100");
+  }
 
   let pc_50 = Percent::try_from(50i32).unwrap();
-  assert_eq!(pc_50.value, 50);
+  assert_eq!(*pc_50, 50);
   let result = calc_percentage(pc_50, 500);
   assert_eq!(result, 250);
 
   let pc_0 = Percent::try_from(0i32).unwrap();
-  assert_eq!(pc_0.value, 0);
+  assert_eq!(*pc_0, 0);
   let result = calc_percentage(pc_0, 500);
   assert_eq!(result, 0);
 }
