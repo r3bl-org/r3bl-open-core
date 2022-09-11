@@ -148,3 +148,16 @@ macro_rules! percent {
     Percent::try_from($arg_val)
   };
 }
+
+#[macro_export]
+macro_rules! requested_size_percent {
+  (
+    width:  $arg_first: expr,
+    height: $arg_second: expr
+  ) => {
+    RequestedSizePercent {
+      width_pc: $arg_first,
+      height_pc: $arg_second,
+    }
+  };
+}

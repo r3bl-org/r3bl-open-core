@@ -80,48 +80,6 @@ pub mod math_ops {
   }
 }
 
-pub mod convert_from_other_type_to_size {
-  use super::*;
-
-  impl From<Pair> for Size {
-    fn from(pair: Pair) -> Self {
-      Self {
-        col: pair.first,
-        row: pair.second,
-      }
-    }
-  }
-
-  impl From<(UnitType, UnitType)> for Size {
-    /// 1. First (pair.0) is width or cols.
-    /// 2. Second (pair.1) is height or rows.
-    fn from(pair: (UnitType, UnitType)) -> Self {
-      Self {
-        col: pair.0,
-        row: pair.1,
-      }
-    }
-  }
-
-  impl From<(usize, usize)> for Size {
-    fn from(pair: (usize, usize)) -> Self {
-      Self {
-        col: convert_to_base_unit!(pair.0),
-        row: convert_to_base_unit!(pair.1),
-      }
-    }
-  }
-
-  impl From<(i32, i32)> for Size {
-    fn from(pair: (i32, i32)) -> Self {
-      Self {
-        col: convert_to_base_unit!(pair.0),
-        row: convert_to_base_unit!(pair.1),
-      }
-    }
-  }
-}
-
 /// Example:
 /// ```ignore
 /// let size: Size = size!(col: 10, row: 10);

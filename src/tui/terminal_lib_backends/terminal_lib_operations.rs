@@ -22,6 +22,7 @@ use crate::*;
 // ╯                                ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// Interrogate crossterm [crossterm::terminal::size()] to get the size of the terminal window.
 pub fn lookup_size() -> CommonResult<Size> {
-  let size: Size = crossterm::terminal::size()?.into();
+  let (col, row) = crossterm::terminal::size()?;
+  let size: Size = size!(col: col, row: row);
   Ok(size)
 }
