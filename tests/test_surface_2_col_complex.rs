@@ -48,7 +48,7 @@ fn create_main_container(tw_surface: &mut Surface) -> CommonResult<()> {
     tw_surface.box_start(FlexBoxProps {
       id: "container".to_string(),
       dir: Direction::Horizontal,
-      requested_size_percent: (100, 100).try_into()?,
+      requested_size_percent: requested_size_percent!(width:100, height:100),
       maybe_styles: get_styles! { from: tw_surface.stylesheet, ["container"] },
     })?;
 
@@ -78,7 +78,7 @@ fn create_main_container(tw_surface: &mut Surface) -> CommonResult<()> {
         size!(col:498, row:498)
       ); // due to `padding: 1`
 
-      assert_eq2!(layout_item.requested_size_percent, (100, 100).try_into()?);
+      assert_eq2!(layout_item.requested_size_percent, requested_size_percent!(width:100, height:100));
 
       assert_eq2!(
         layout_item.insertion_pos_for_next_box,
@@ -99,7 +99,7 @@ fn create_left_col(tw_surface: &mut Surface) -> CommonResult<()> {
       in:                     tw_surface,
       id:                     "col_1",
       dir:                    Direction::Vertical,
-      requested_size_percent: (50, 100).try_into()?,
+      requested_size_percent: requested_size_percent!(width:50, height:100),
       styles:                 ["col_1"]
     }
     make_left_col_assertions(tw_surface)?;
@@ -126,7 +126,7 @@ fn create_left_col(tw_surface: &mut Surface) -> CommonResult<()> {
         size!(col:244, row:494)
       ); // Take padding into account.
 
-      assert_eq2!(layout_item.requested_size_percent, (50, 100).try_into()?);
+      assert_eq2!(layout_item.requested_size_percent, requested_size_percent!(width:50, height:100));
       assert_eq2!(layout_item.insertion_pos_for_next_box, None);
 
       assert_ne!(
@@ -145,7 +145,7 @@ fn create_right_col(tw_surface: &mut Surface) -> CommonResult<()> {
       maybe_styles: get_styles! { from: tw_surface.stylesheet, ["col_2"] },
       id: "col_2".to_string(),
       dir: Direction::Vertical,
-      requested_size_percent: (50, 100).try_into()?,
+      requested_size_percent: requested_size_percent!(width:50, height:100),
     })?;
     make_right_col_assertions(tw_surface)?;
     tw_surface.box_end()?;
@@ -169,7 +169,7 @@ fn create_right_col(tw_surface: &mut Surface) -> CommonResult<()> {
         size! (col:242, row:492)
       ); // Take padding into account.
 
-      assert_eq2!(current_box.requested_size_percent, (50, 100).try_into()?);
+      assert_eq2!(current_box.requested_size_percent, requested_size_percent!(width:50, height:100));
       assert_eq2!(current_box.insertion_pos_for_next_box, None);
 
       assert_ne!(

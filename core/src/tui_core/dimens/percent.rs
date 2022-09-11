@@ -67,22 +67,6 @@ impl TryFrom<i32> for Percent {
 }
 
 impl Percent {
-  /// Try and convert given `Pair` into a `(Percent, Percent)`. Return
-  /// `InvalidLayoutSizePercentage` error if given values are not between 0 and
-  /// 100.
-  pub fn try_from_pair(pair: Pair) -> CommonResult<(Percent, Percent)> {
-    let first = pair.first.try_into();
-    let second = pair.second.try_into();
-
-    match (first, second) {
-      (Ok(first), Ok(second)) => Ok((first, second)),
-      _ => {
-        let err_msg = format!("Invalid percentage values in tuple: {:?}", pair);
-        CommonError::new(CommonErrorType::ValueOutOfRange, &err_msg)
-      }
-    }
-  }
-
   /// Try and convert given `UnitType` value to `Percent`. Return `None` if
   /// given value is not between 0 and 100.
   fn try_and_convert(item: i32) -> Option<Percent> {
@@ -110,30 +94,6 @@ pub struct RequestedSizePercent {
   pub height_pc: Percent,
 }
 
-impl TryFrom<(i32, i32)> for RequestedSizePercent {
-  type Error = String;
-  fn try_from(arg: (i32, i32)) -> Result<Self, Self::Error> {
-    let pair = Percent::try_from_pair(arg.into());
-    if pair.is_err() {
-      return Err("Problem converting pair to requested size percentage".to_string());
-    }
-    let pair = pair.unwrap();
-    Ok(RequestedSizePercent {
-      width_pc: pair.0,
-      height_pc: pair.1,
-    })
-  }
-}
-
-impl From<(Percent, Percent)> for RequestedSizePercent {
-  fn from(pair: (Percent, Percent)) -> Self {
-    RequestedSizePercent {
-      width_pc: pair.0,
-      height_pc: pair.1,
-    }
-  }
-}
-
 impl Debug for RequestedSizePercent {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "[width:{}, height:{}]", self.width_pc, self.height_pc)
@@ -152,12 +112,12 @@ macro_rules! percent {
 #[macro_export]
 macro_rules! requested_size_percent {
   (
-    width:  $arg_first: expr,
-    height: $arg_second: expr
+    width:  $arg_width: expr,
+    height: $arg_height: expr
   ) => {
     RequestedSizePercent {
-      width_pc: $arg_first,
-      height_pc: $arg_second,
+      width_pc: percent!($arg_width)?,
+      height_pc: percent!($arg_height)?,
     }
   };
 }

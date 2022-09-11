@@ -217,8 +217,6 @@ fn make_non_root_box_with_style(
   let (style_adjusted_origin_pos, style_adjusted_bounds_size) =
     adjust_with_style(&maybe_cascaded_style, origin_pos, bounds_size);
 
-  let req_size_pc: RequestedSizePercent = requested_size_percent!(width: width_pc, height: height_pc);
-
   FlexBox {
     id,
     dir,
@@ -226,7 +224,10 @@ fn make_non_root_box_with_style(
     bounds_size,
     style_adjusted_origin_pos,
     style_adjusted_bounds_size,
-    requested_size_percent: req_size_pc,
+    requested_size_percent: RequestedSizePercent {
+      width_pc,
+      height_pc,
+    },
     maybe_computed_style: maybe_cascaded_style,
     insertion_pos_for_next_box: None,
   }
