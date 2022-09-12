@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils::{assert_eq2, GraphemeClusterSegment, UnicodeStringExt, UnitType};
+use r3bl_rs_utils::*;
 
 const TEST_STRING: &str = "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿.";
 
@@ -29,14 +29,14 @@ fn test_unicode_string_ext() {
   assert_eq2!(u_s.vec_segment.len(), 11);
   assert_eq2!(u_s.grapheme_cluster_segment_count, 11);
   assert_eq2!(u_s.byte_size, test_string.len());
-  assert_eq2!(u_s.display_width, 25);
+  assert_eq2!(u_s.display_width, base_unit!(25));
 }
 
 #[allow(clippy::zero_prefixed_literal)]
 #[test]
 fn test_grapheme_cluster_segment() {
   fn assert_segment(
-    segment: &GraphemeClusterSegment, byte_offset: usize, unicode_width: UnitType,
+    segment: &GraphemeClusterSegment, byte_offset: usize, unicode_width: BaseUnit,
     logical_index: usize, byte_size: usize, string: &str,
   ) {
     assert_eq2!(segment.string, string);
@@ -50,17 +50,17 @@ fn test_grapheme_cluster_segment() {
   let u_s = test_string.unicode_string();
 
   // Check the individual `GraphemeClusterSegment` structs.
-  assert_segment(&u_s.vec_segment[00], 00, 01, 00, 01, "H");
-  assert_segment(&u_s.vec_segment[01], 01, 01, 01, 01, "i");
-  assert_segment(&u_s.vec_segment[02], 02, 01, 02, 01, " ");
-  assert_segment(&u_s.vec_segment[03], 03, 02, 03, 04, "😃");
-  assert_segment(&u_s.vec_segment[04], 07, 01, 04, 01, " ");
-  assert_segment(&u_s.vec_segment[05], 08, 02, 05, 04, "📦");
-  assert_segment(&u_s.vec_segment[06], 12, 01, 06, 01, " ");
-  assert_segment(&u_s.vec_segment[07], 13, 04, 07, 08, "🙏🏽");
-  assert_segment(&u_s.vec_segment[08], 21, 01, 08, 01, " ");
-  assert_segment(&u_s.vec_segment[09], 22, 10, 09, 26, "👨🏾‍🤝‍👨🏿");
-  assert_segment(&u_s.vec_segment[10], 48, 01, 10, 01, ".");
+  assert_segment(&u_s.vec_segment[00], 00, 01.into(), 00, 01, "H");
+  assert_segment(&u_s.vec_segment[01], 01, 01.into(), 01, 01, "i");
+  assert_segment(&u_s.vec_segment[02], 02, 01.into(), 02, 01, " ");
+  assert_segment(&u_s.vec_segment[03], 03, 02.into(), 03, 04, "😃");
+  assert_segment(&u_s.vec_segment[04], 07, 01.into(), 04, 01, " ");
+  assert_segment(&u_s.vec_segment[05], 08, 02.into(), 05, 04, "📦");
+  assert_segment(&u_s.vec_segment[06], 12, 01.into(), 06, 01, " ");
+  assert_segment(&u_s.vec_segment[07], 13, 04.into(), 07, 08, "🙏🏽");
+  assert_segment(&u_s.vec_segment[08], 21, 01.into(), 08, 01, " ");
+  assert_segment(&u_s.vec_segment[09], 22, 10.into(), 09, 26, "👨🏾‍🤝‍👨🏿");
+  assert_segment(&u_s.vec_segment[10], 48, 01.into(), 10, 01, ".");
 }
 
 #[allow(clippy::zero_prefixed_literal)]
@@ -75,46 +75,46 @@ fn test_unicode_string_logical_index_tofro_display_col() {
   assert_eq2!(u_s.at_logical_index(10).unwrap().string, ".");
 
   // Convert display column to logical index.
-  assert_eq2!(u_s.at_display_col(00).unwrap().string, "H");
-  assert_eq2!(u_s.at_display_col(01).unwrap().string, "i");
-  assert_eq2!(u_s.at_display_col(02).unwrap().string, " ");
-  assert_eq2!(u_s.at_display_col(03).unwrap().string, "😃");
-  assert_eq2!(u_s.at_display_col(04).unwrap().string, "😃");
-  assert_eq2!(u_s.at_display_col(05).unwrap().string, " ");
-  assert_eq2!(u_s.at_display_col(06).unwrap().string, "📦");
-  assert_eq2!(u_s.at_display_col(07).unwrap().string, "📦");
-  assert_eq2!(u_s.at_display_col(08).unwrap().string, " ");
-  assert_eq2!(u_s.at_display_col(09).unwrap().string, "🙏🏽");
-  assert_eq2!(u_s.at_display_col(10).unwrap().string, "🙏🏽");
-  assert_eq2!(u_s.at_display_col(11).unwrap().string, "🙏🏽");
-  assert_eq2!(u_s.at_display_col(12).unwrap().string, "🙏🏽");
-  assert_eq2!(u_s.at_display_col(13).unwrap().string, " ");
-  assert_eq2!(u_s.at_display_col(14).unwrap().string, "👨🏾‍🤝‍👨🏿");
-  assert_eq2!(u_s.at_display_col(15).unwrap().string, "👨🏾‍🤝‍👨🏿");
-  assert_eq2!(u_s.at_display_col(16).unwrap().string, "👨🏾‍🤝‍👨🏿");
-  assert_eq2!(u_s.at_display_col(17).unwrap().string, "👨🏾‍🤝‍👨🏿");
-  assert_eq2!(u_s.at_display_col(18).unwrap().string, "👨🏾‍🤝‍👨🏿");
-  assert_eq2!(u_s.at_display_col(19).unwrap().string, "👨🏾‍🤝‍👨🏿");
-  assert_eq2!(u_s.at_display_col(20).unwrap().string, "👨🏾‍🤝‍👨🏿");
-  assert_eq2!(u_s.at_display_col(21).unwrap().string, "👨🏾‍🤝‍👨🏿");
-  assert_eq2!(u_s.at_display_col(22).unwrap().string, "👨🏾‍🤝‍👨🏿");
-  assert_eq2!(u_s.at_display_col(23).unwrap().string, "👨🏾‍🤝‍👨🏿");
-  assert_eq2!(u_s.at_display_col(24).unwrap().string, ".");
+  assert_eq2!(u_s.at_display_col(00.into()).unwrap().string, "H");
+  assert_eq2!(u_s.at_display_col(01.into()).unwrap().string, "i");
+  assert_eq2!(u_s.at_display_col(02.into()).unwrap().string, " ");
+  assert_eq2!(u_s.at_display_col(03.into()).unwrap().string, "😃");
+  assert_eq2!(u_s.at_display_col(04.into()).unwrap().string, "😃");
+  assert_eq2!(u_s.at_display_col(05.into()).unwrap().string, " ");
+  assert_eq2!(u_s.at_display_col(06.into()).unwrap().string, "📦");
+  assert_eq2!(u_s.at_display_col(07.into()).unwrap().string, "📦");
+  assert_eq2!(u_s.at_display_col(08.into()).unwrap().string, " ");
+  assert_eq2!(u_s.at_display_col(09.into()).unwrap().string, "🙏🏽");
+  assert_eq2!(u_s.at_display_col(10.into()).unwrap().string, "🙏🏽");
+  assert_eq2!(u_s.at_display_col(11.into()).unwrap().string, "🙏🏽");
+  assert_eq2!(u_s.at_display_col(12.into()).unwrap().string, "🙏🏽");
+  assert_eq2!(u_s.at_display_col(13.into()).unwrap().string, " ");
+  assert_eq2!(u_s.at_display_col(14.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+  assert_eq2!(u_s.at_display_col(15.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+  assert_eq2!(u_s.at_display_col(16.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+  assert_eq2!(u_s.at_display_col(17.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+  assert_eq2!(u_s.at_display_col(18.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+  assert_eq2!(u_s.at_display_col(19.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+  assert_eq2!(u_s.at_display_col(20.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+  assert_eq2!(u_s.at_display_col(21.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+  assert_eq2!(u_s.at_display_col(22.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+  assert_eq2!(u_s.at_display_col(23.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+  assert_eq2!(u_s.at_display_col(24.into()).unwrap().string, ".");
 
   // Spot check convert logical index to display column.
-  assert_eq2!(u_s.logical_index_at_display_col(0).unwrap(), 0); // "H"
-  assert_eq2!(u_s.logical_index_at_display_col(1).unwrap(), 1); // "i"
-  assert_eq2!(u_s.logical_index_at_display_col(2).unwrap(), 2); // " "
-  assert_eq2!(u_s.logical_index_at_display_col(3).unwrap(), 3); // "😃"
-  assert_eq2!(u_s.logical_index_at_display_col(4).unwrap(), 3); // (same as above)
-  assert_eq2!(u_s.logical_index_at_display_col(5).unwrap(), 4); // " "
+  assert_eq2!(u_s.logical_index_at_display_col(0.into()).unwrap(), 0); // "H"
+  assert_eq2!(u_s.logical_index_at_display_col(1.into()).unwrap(), 1); // "i"
+  assert_eq2!(u_s.logical_index_at_display_col(2.into()).unwrap(), 2); // " "
+  assert_eq2!(u_s.logical_index_at_display_col(3.into()).unwrap(), 3); // "😃"
+  assert_eq2!(u_s.logical_index_at_display_col(4.into()).unwrap(), 3); // (same as above)
+  assert_eq2!(u_s.logical_index_at_display_col(5.into()).unwrap(), 4); // " "
 
   // Spot check convert display col to logical index.
-  assert_eq2!(u_s.display_col_at_logical_index(0).unwrap(), 0); // "H"
-  assert_eq2!(u_s.display_col_at_logical_index(1).unwrap(), 1); // "i"
-  assert_eq2!(u_s.display_col_at_logical_index(2).unwrap(), 2); // " "
-  assert_eq2!(u_s.display_col_at_logical_index(3).unwrap(), 3); // "😃"
-  assert_eq2!(u_s.display_col_at_logical_index(4).unwrap(), 5); // " "
+  assert_eq2!(u_s.display_col_at_logical_index(0).unwrap(), 0.into()); // "H"
+  assert_eq2!(u_s.display_col_at_logical_index(1).unwrap(), 1.into()); // "i"
+  assert_eq2!(u_s.display_col_at_logical_index(2).unwrap(), 2.into()); // " "
+  assert_eq2!(u_s.display_col_at_logical_index(3).unwrap(), 3.into()); // "😃"
+  assert_eq2!(u_s.display_col_at_logical_index(4).unwrap(), 5.into()); // " "
 }
 
 #[allow(clippy::zero_prefixed_literal)]
@@ -123,36 +123,30 @@ fn test_unicode_string_truncate() {
   let test_string: String = TEST_STRING.to_string();
   let u_s = test_string.unicode_string();
 
-  assert_eq2!(u_s.truncate_to_fit_display_cols(00), "");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(01), "H");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(02), "Hi");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(03), "Hi ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(04), "Hi ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(05), "Hi 😃");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(06), "Hi 😃 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(07), "Hi 😃 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(08), "Hi 😃 📦");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(09), "Hi 😃 📦 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(10), "Hi 😃 📦 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(11), "Hi 😃 📦 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(12), "Hi 😃 📦 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(13), "Hi 😃 📦 🙏🏽");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(14), "Hi 😃 📦 🙏🏽 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(15), "Hi 😃 📦 🙏🏽 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(16), "Hi 😃 📦 🙏🏽 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(17), "Hi 😃 📦 🙏🏽 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(18), "Hi 😃 📦 🙏🏽 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(19), "Hi 😃 📦 🙏🏽 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(20), "Hi 😃 📦 🙏🏽 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(21), "Hi 😃 📦 🙏🏽 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(22), "Hi 😃 📦 🙏🏽 ");
-  assert_eq2!(u_s.truncate_to_fit_display_cols(23), "Hi 😃 📦 🙏🏽 ");
-  assert_eq2!(
-    u_s.truncate_to_fit_display_cols(24),
-    "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿"
-  );
-  assert_eq2!(
-    u_s.truncate_to_fit_display_cols(25),
-    "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."
-  );
+  assert_eq2! {u_s.truncate_to_fit_display_cols(00.into()), ""};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(01.into()), "H"};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(02.into()), "Hi"};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(03.into()), "Hi "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(04.into()), "Hi "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(05.into()), "Hi 😃"};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(06.into()), "Hi 😃 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(07.into()), "Hi 😃 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(08.into()), "Hi 😃 📦"};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(09.into()), "Hi 😃 📦 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(10.into()), "Hi 😃 📦 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(11.into()), "Hi 😃 📦 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(12.into()), "Hi 😃 📦 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(13.into()), "Hi 😃 📦 🙏🏽"};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(14.into()), "Hi 😃 📦 🙏🏽 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(15.into()), "Hi 😃 📦 🙏🏽 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(16.into()), "Hi 😃 📦 🙏🏽 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(17.into()), "Hi 😃 📦 🙏🏽 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(18.into()), "Hi 😃 📦 🙏🏽 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(19.into()), "Hi 😃 📦 🙏🏽 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(20.into()), "Hi 😃 📦 🙏🏽 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(21.into()), "Hi 😃 📦 🙏🏽 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(22.into()), "Hi 😃 📦 🙏🏽 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(23.into()), "Hi 😃 📦 🙏🏽 "};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(24.into()), "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿"};
+  assert_eq2! {u_s.truncate_to_fit_display_cols(25.into()), "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
 }

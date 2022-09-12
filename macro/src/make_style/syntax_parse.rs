@@ -129,9 +129,13 @@ fn parse_optional_padding(input: &ParseStream, metadata: &mut StyleMetadata) -> 
   if lookahead.peek(kw::padding) {
     input.parse::<kw::padding>()?;
     input.parse::<Token![:]>()?;
+
     let lit_int = input.parse::<LitInt>()?;
-    let padding_int: UnitType = lit_int.base10_parse().unwrap();
+    let val: BaseUnitUnderlyingType = lit_int.base10_parse().unwrap();
+    let padding_int: BaseUnit = base_unit!(val);
+
     metadata.padding = Some(padding_int);
+
     call_if_debug_true!(println!("🚀 padding: {:?}", &metadata.padding));
   }
   Ok(())

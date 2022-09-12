@@ -100,7 +100,7 @@ fn test_with_padding() {
     },
     as it,
     run {
-      assert_eq!(it.padding, Some(1));
+      assert_eq!(it.padding, Some(base_unit!(1)));
     }
   }
 }

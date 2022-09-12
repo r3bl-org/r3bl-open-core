@@ -16,6 +16,7 @@
  */
 
 use quote::*;
+use r3bl_rs_utils_core::*;
 
 use super::*;
 
@@ -37,8 +38,9 @@ pub(crate) fn code_gen(
 
   let maybe_padding_expr = match padding {
     Some(padding_int) => {
+      let padding_value: BaseUnitUnderlyingType = *padding_int;
       quote! {
-        padding: Some(#padding_int),
+        padding: Some(base_unit!(#padding_value)),
       }
     }
     None => quote! {},

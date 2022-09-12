@@ -49,8 +49,8 @@ use crate::*;
 /// ```
 #[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Size {
-  pub col: UnitType, // width = number of cols (y).
-  pub row: UnitType, // height = number of rows (x).
+  pub col: BaseUnit, // width = number of cols (y).
+  pub row: BaseUnit, // height = number of rows (x).
 }
 
 pub mod debug_formatter {
@@ -58,13 +58,13 @@ pub mod debug_formatter {
 
   impl Display for Size {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-      write!(f, "Size: [{}, {}]", self.row, self.col)
+      write!(f, "Size: [{}, {}]", *self.row, *self.col)
     }
   }
 
   impl Debug for Size {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-      write!(f, "[width:{}, height:{}]", self.col, self.row)
+      write!(f, "[width:{}, height:{}]", *self.col, *self.row)
     }
   }
 }
@@ -72,10 +72,10 @@ pub mod debug_formatter {
 pub mod math_ops {
   use super::*;
 
-  impl SubAssign<UnitType> for Size {
-    fn sub_assign(&mut self, other: UnitType) {
-      self.col = sub_unsigned!(self.col, other);
-      self.row = sub_unsigned!(self.row, other);
+  impl SubAssign<BaseUnit> for Size {
+    fn sub_assign(&mut self, other: BaseUnit) {
+      self.col = sub_unsigned!(*self.col, *other).into();
+      self.row = sub_unsigned!(*self.row, *other).into();
     }
   }
 }
@@ -91,8 +91,8 @@ macro_rules! size {
     row: $arg_row:expr
   ) => {
     Size {
-      col: $arg_col,
-      row: $arg_row,
+      col: $arg_col.into(),
+      row: $arg_row.into(),
     }
   };
 }

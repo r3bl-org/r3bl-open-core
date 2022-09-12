@@ -49,14 +49,31 @@ macro_rules! sub_unsigned {
 #[macro_export]
 macro_rules! add_unsigned {
   ($arg_lhs: expr, $arg_rhs: expr) => {{
-    let lhs_big = $arg_lhs as u64;
-    let rhs_big = $arg_rhs as u64;
-    let sum_big = $arg_lhs + $arg_rhs;
+    type BigInt = u64;
+    let lhs_big: BigInt = $arg_lhs as BigInt;
+    let rhs_big: BigInt = $arg_rhs as BigInt;
+    let sum_big: BigInt = lhs_big + rhs_big;
 
-    if sum_big > UnitType::MAX {
-      UnitType::MAX
+    if sum_big > BaseUnitUnderlyingType::MAX as BigInt {
+      BaseUnitUnderlyingType::MAX
     } else {
       $arg_lhs + $arg_rhs
+    }
+  }};
+}
+
+#[macro_export]
+macro_rules! mul_unsigned {
+  ($arg_lhs: expr, $arg_rhs: expr) => {{
+    type BigInt = u64;
+    let lhs_big: BigInt = $arg_lhs as BigInt;
+    let rhs_big: BigInt = $arg_rhs as BigInt;
+    let mul_big: BigInt = lhs_big + rhs_big;
+
+    if mul_big > BaseUnitUnderlyingType::MAX as BigInt {
+      BaseUnitUnderlyingType::MAX
+    } else {
+      $arg_lhs * $arg_rhs
     }
   }};
 }

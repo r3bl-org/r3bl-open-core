@@ -45,10 +45,10 @@ impl Debug for Percent {
 }
 
 /// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>
-impl TryFrom<UnitType> for Percent {
+impl TryFrom<BaseUnitUnderlyingType> for Percent {
   type Error = String;
-  fn try_from(arg: UnitType) -> Result<Self, Self::Error> {
-    match Percent::try_and_convert(arg.into()) {
+  fn try_from(arg: BaseUnitUnderlyingType) -> Result<Self, Self::Error> {
+    match Percent::try_and_convert(arg) {
       Some(percent) => Ok(percent),
       None => Err("Invalid percentage value".to_string()),
     }
@@ -59,17 +59,17 @@ impl TryFrom<UnitType> for Percent {
 impl TryFrom<i32> for Percent {
   type Error = String;
   fn try_from(arg: i32) -> Result<Self, Self::Error> {
-    match Percent::try_and_convert(arg) {
+    match Percent::try_and_convert(arg as u16) {
       Some(percent) => Ok(percent),
       None => Err("Invalid percentage value".to_string()),
     }
   }
 }
 
+/// Try and convert given `UnitType` value to `Percent`. Return `None` if given value is not
+/// between 0 and 100.
 impl Percent {
-  /// Try and convert given `UnitType` value to `Percent`. Return `None` if
-  /// given value is not between 0 and 100.
-  fn try_and_convert(item: i32) -> Option<Percent> {
+  fn try_and_convert(item: BaseUnitUnderlyingType) -> Option<Percent> {
     if !(0..=100).contains(&item) {
       return None;
     }
@@ -78,13 +78,15 @@ impl Percent {
 }
 
 /// Return the calculated percentage of the given value.
-pub fn calc_percentage(percentage: Percent, value: UnitType) -> UnitType {
-  type Integer = UnitType;
+pub fn calc_percentage(percentage: Percent, value: BaseUnit) -> BaseUnit {
   let percentage_int = percentage.value;
   let percentage_f32 = f32::from(percentage_int) / 100.0;
-  let result_f32 = percentage_f32 * f32::from(value);
-
-  unsafe { result_f32.to_int_unchecked::<Integer>() }
+  let result_f32 = percentage_f32 * f32::from(*value);
+  unsafe {
+    let converted_value: BaseUnitUnderlyingType =
+      result_f32.to_int_unchecked::<BaseUnitUnderlyingType>();
+    base_unit!(converted_value)
+  }
 }
 
 /// Size, defined as [height, width].
