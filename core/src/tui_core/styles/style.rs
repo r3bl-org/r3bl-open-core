@@ -66,7 +66,7 @@ pub struct Style {
   /// contents inside of that `FlexBox`.
   ///
   /// [`FlexBox` docs](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/tui/layout/flex_box/struct.FlexBox.html).
-  pub padding: Option<BaseUnit>,
+  pub padding: Option<ChUnit>,
   pub cached_bitflags: Option<StyleFlag>,
 }
 
@@ -125,8 +125,8 @@ mod addition {
     }
 
     // Aggregate paddings.
-    let aggregate_padding: BaseUnit =
-      lhs.padding.unwrap_or_else(|| base_unit!(0)) + rhs.padding.unwrap_or_else(|| base_unit!(0));
+    let aggregate_padding: ChUnit =
+      lhs.padding.unwrap_or_else(|| ch!(0)) + rhs.padding.unwrap_or_else(|| ch!(0));
     if *aggregate_padding > 0 {
       new_style.padding = aggregate_padding.into();
     } else {
@@ -195,7 +195,7 @@ mod helpers {
         msg_vec.join("+"),
         self.color_fg,
         self.color_bg,
-        self.padding.unwrap_or_else(|| base_unit!(0))
+        self.padding.unwrap_or_else(|| ch!(0))
       )
     }
   }

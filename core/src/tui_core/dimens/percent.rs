@@ -45,9 +45,9 @@ impl Debug for Percent {
 }
 
 /// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>
-impl TryFrom<BaseUnitUnderlyingType> for Percent {
+impl TryFrom<ChUnitPrimitiveType> for Percent {
   type Error = String;
-  fn try_from(arg: BaseUnitUnderlyingType) -> Result<Self, Self::Error> {
+  fn try_from(arg: ChUnitPrimitiveType) -> Result<Self, Self::Error> {
     match Percent::try_and_convert(arg) {
       Some(percent) => Ok(percent),
       None => Err("Invalid percentage value".to_string()),
@@ -66,10 +66,10 @@ impl TryFrom<i32> for Percent {
   }
 }
 
-/// Try and convert given `UnitType` value to `Percent`. Return `None` if given value is not
+/// Try and convert given `ChUnit` value to `Percent`. Return `None` if given value is not
 /// between 0 and 100.
 impl Percent {
-  fn try_and_convert(item: BaseUnitUnderlyingType) -> Option<Percent> {
+  fn try_and_convert(item: ChUnitPrimitiveType) -> Option<Percent> {
     if !(0..=100).contains(&item) {
       return None;
     }
@@ -78,14 +78,13 @@ impl Percent {
 }
 
 /// Return the calculated percentage of the given value.
-pub fn calc_percentage(percentage: Percent, value: BaseUnit) -> BaseUnit {
+pub fn calc_percentage(percentage: Percent, value: ChUnit) -> ChUnit {
   let percentage_int = percentage.value;
   let percentage_f32 = f32::from(percentage_int) / 100.0;
   let result_f32 = percentage_f32 * f32::from(*value);
   unsafe {
-    let converted_value: BaseUnitUnderlyingType =
-      result_f32.to_int_unchecked::<BaseUnitUnderlyingType>();
-    base_unit!(converted_value)
+    let converted_value: ChUnitPrimitiveType = result_f32.to_int_unchecked::<ChUnitPrimitiveType>();
+    ch!(converted_value)
   }
 }
 

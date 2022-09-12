@@ -54,8 +54,8 @@ macro_rules! add_unsigned {
     let rhs_big: BigInt = $arg_rhs as BigInt;
     let sum_big: BigInt = lhs_big + rhs_big;
 
-    if sum_big > BaseUnitUnderlyingType::MAX as BigInt {
-      BaseUnitUnderlyingType::MAX
+    if sum_big > ChUnitPrimitiveType::MAX as BigInt {
+      ChUnitPrimitiveType::MAX
     } else {
       $arg_lhs + $arg_rhs
     }
@@ -70,8 +70,8 @@ macro_rules! mul_unsigned {
     let rhs_big: BigInt = $arg_rhs as BigInt;
     let mul_big: BigInt = lhs_big + rhs_big;
 
-    if mul_big > BaseUnitUnderlyingType::MAX as BigInt {
-      BaseUnitUnderlyingType::MAX
+    if mul_big > ChUnitPrimitiveType::MAX as BigInt {
+      ChUnitPrimitiveType::MAX
     } else {
       $arg_lhs * $arg_rhs
     }

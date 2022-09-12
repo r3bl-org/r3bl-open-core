@@ -55,20 +55,20 @@ use crate::*;
 /// ```
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Default, GetSize)]
 pub struct Position {
-  pub col: BaseUnit,
-  pub row: BaseUnit,
+  pub col: ChUnit,
+  pub row: ChUnit,
 }
 
 impl Position {
   /// Add given `col` count to `self`.
   pub fn add_cols(&mut self, num_cols_to_add: usize) -> Self {
-    let value: BaseUnit = base_unit!(num_cols_to_add);
+    let value: ChUnit = ch!(num_cols_to_add);
     self.col += value;
     *self
   }
 
   /// Add given `col` count to `self` w/ bounds check for max cols.
-  pub fn add_cols_with_bounds(&mut self, value: BaseUnit, max: BaseUnit) -> Self {
+  pub fn add_cols_with_bounds(&mut self, value: ChUnit, max: ChUnit) -> Self {
     if (self.col + value) >= max {
       self.col = max;
     } else {
@@ -79,13 +79,13 @@ impl Position {
 
   /// Add given `row` count to `self`.
   pub fn add_rows(&mut self, num_rows_to_add: usize) -> Self {
-    let value: BaseUnit = base_unit!(num_rows_to_add);
+    let value: ChUnit = ch!(num_rows_to_add);
     self.row += value;
     *self
   }
 
   /// Add given `row` count to `self` w/ bounds check for max rows.
-  pub fn add_rows_with_bounds(&mut self, value: BaseUnit, max: BaseUnit) -> Self {
+  pub fn add_rows_with_bounds(&mut self, value: ChUnit, max: ChUnit) -> Self {
     if (self.row + value) >= max {
       self.row = max;
     } else {
@@ -95,13 +95,13 @@ impl Position {
   }
 
   pub fn sub_rows(&mut self, num_rows_to_sub: usize) -> Self {
-    let value: BaseUnit = base_unit!(num_rows_to_sub);
+    let value: ChUnit = ch!(num_rows_to_sub);
     self.row -= value;
     *self
   }
 
   pub fn sub_cols(&mut self, num_cols_to_sub: usize) -> Self {
-    let value: BaseUnit = base_unit!(num_cols_to_sub);
+    let value: ChUnit = ch!(num_cols_to_sub);
     self.col -= value;
     *self
   }
@@ -110,8 +110,8 @@ impl Position {
 pub mod math_ops {
   use super::*;
 
-  impl AddAssign<BaseUnit> for Position {
-    fn add_assign(&mut self, other: BaseUnit) {
+  impl AddAssign<ChUnit> for Position {
+    fn add_assign(&mut self, other: ChUnit) {
       self.col += other;
       self.row += other;
     }
@@ -145,8 +145,8 @@ pub mod math_ops {
     type Output = Position;
     fn mul(self, other: (u16, u16)) -> Self {
       Self {
-        col: self.col * base_unit!(other.0),
-        row: self.row * base_unit!(other.1),
+        col: self.col * ch!(other.0),
+        row: self.row * ch!(other.1),
       }
     }
   }
@@ -155,7 +155,7 @@ pub mod math_ops {
 pub mod convert_position_to_other_type {
   use super::*;
 
-  impl From<Position> for (BaseUnit, BaseUnit) {
+  impl From<Position> for (ChUnit, ChUnit) {
     fn from(position: Position) -> Self { (position.col, position.row) }
   }
 }

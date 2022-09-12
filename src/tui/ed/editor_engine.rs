@@ -129,7 +129,7 @@ fn render_content(context_ref: &Context<'_>) -> RenderPipeline {
       @push_into render_pipeline at ZOrder::Normal =>
         RenderOp::MoveCursorPositionRelTo(
         *style_adj_box_origin_pos,
-        position! { col: 0 , row: base_unit!(@to_usize index) }
+        position! { col: 0 , row: ch!(@to_usize index) }
         ),
         RenderOp::ApplyColors(current_box.get_computed_style()),
         RenderOp::PrintPlainTextWithAttributes(truncated_line.into(), current_box.get_computed_style()),
@@ -220,7 +220,7 @@ fn render_empty_state(context_ref: &Context<'_>) -> RenderPipeline {
       @push_into render_pipeline at ZOrder::Normal =>
         RenderOp::MoveCursorPositionRelTo(
           *style_adj_box_origin_pos,
-          content_cursor_pos.add_rows_with_bounds(base_unit!(1), style_adj_box_bounds_size.row)),
+          content_cursor_pos.add_rows_with_bounds(ch!(1), style_adj_box_bounds_size.row)),
         RenderOp::PrintPlainTextWithAttributes("👀".into(), None)
     };
   }

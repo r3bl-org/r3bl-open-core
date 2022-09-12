@@ -38,9 +38,9 @@ pub(crate) fn code_gen(
 
   let maybe_padding_expr = match padding {
     Some(padding_int) => {
-      let padding_value: BaseUnitUnderlyingType = *padding_int;
+      let padding_value: ChUnitPrimitiveType = *padding_int;
       quote! {
-        padding: Some(base_unit!(#padding_value)),
+        padding: Some(ch!(#padding_value)),
       }
     }
     None => quote! {},
