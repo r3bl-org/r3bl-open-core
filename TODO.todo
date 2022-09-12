@@ -13,11 +13,18 @@ editor engine (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
     ✔ bounds check max rows when painting content @done(22-09-02 11:29)
   ✔ implement render clipping: @done(22-09-02 13:10)
     ✔ figure out how to incorporate row & col bounds checking to implement clipping @done(22-09-02 13:10)
+  ✔ move cursor left, right: @done(22-09-12 09:49)
+    ✔ move cursor left @done(22-09-09 16:02)
+    ✔ move cursor right @done(22-09-09 16:02)
+    ✔ write tests @done(22-09-12 09:49)
+  ✔ refactor @done(22-09-12 09:50)
+    ✔ replace `UnitType` w/ `ChUnit` and `ch!` macro @done(22-09-12 09:50)
   ☐ insert content:
     ☐ handle new lines
-  ☐ move cursor:
-    ✔ left/right arrow key move in buffer @done(22-09-09 16:02)
-    ☐ up/down arrow key move in buffer
+  ☐ move cursor up, down:
+    ☐ up arrow key move in buffer
+    ☐ down arrow key move in buffer
+    ☐ write tests
   ☐ delete content:
     ☐ delete/backspace edit buffer line
     ☐ delete/backspace lines
@@ -25,9 +32,13 @@ editor engine (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
     ☐ left/right
     ☐ up/down
   ☐ keyboard shortcut to save/load buffer to/from file
-  ☐ highlight and selection:
+  ☐ text selection & highlighting:
     ☐ add support for text selection highlighting
     ☐ selection, copy, paste
+  ☐ syntax highlighting
+  ☐ auto completion providers:
+    ☐ add support for auto completion providers
+    ☐ modal dialogs for autocompletion provider
   ☐ multiple carets:
     ☐ add support for multiple carets & network service providers to move them
 
