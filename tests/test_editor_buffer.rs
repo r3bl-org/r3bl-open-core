@@ -17,35 +17,137 @@
 
 use r3bl_rs_utils::*;
 
+pub mod assert {
+  use super::*;
+
+  pub fn none_is_at_caret(editor_buffer: &EditorBuffer) {
+    assert_eq2!(
+      line_buffer_get_content::string_at_caret(editor_buffer),
+      None
+    );
+  }
+
+  pub fn str_at_caret_is(editor_buffer: &EditorBuffer, expected: &str) {
+    match line_buffer_get_content::string_at_caret(editor_buffer) {
+      Some((s, _)) => assert_eq2!(s, expected),
+      None => panic!("Expected string at caret, but got None."),
+    }
+  }
+}
+
 #[test]
-fn test_buffer_insert_into_new_line() {
+fn test_move_caret() {
+  let mut this = EditorBuffer::default();
+
+  // Insert "a".
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 ▸a         │
+  //   └─░────────┘
+  //   C0123456789
+  this.insert_char_into_current_line('a');
+  assert::none_is_at_caret(&this);
+
+  // Move caret left.
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 ▸a         │
+  //   └░─────────┘
+  //   C0123456789
+  this.move_caret_left();
+  assert::str_at_caret_is(&this, "a");
+
+  // Insert "1".
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 ▸1a        │
+  //   └─░────────┘
+  //   C0123456789
+  this.insert_char_into_current_line('1');
+  assert_eq2!(
+    line_buffer_get_content::line_as_string(&this).unwrap(),
+    "1a"
+  );
+  assert::str_at_caret_is(&this, "a");
+
+  // Move caret left.
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 ▸1a        │
+  //   └░─────────┘
+  //   C0123456789
+  this.move_caret_left();
+  assert::str_at_caret_is(&this, "1");
+
+  // Move caret right.
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 ▸1a        │
+  //   └─░────────┘
+  //   C0123456789
+  this.move_caret_right();
+  assert::str_at_caret_is(&this, "a");
+
+  // Insert "2".
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 ▸12a       │
+  //   └──░───────┘
+  //   C0123456789
+  this.insert_char_into_current_line('2');
+  assert::str_at_caret_is(&this, "a");
+  assert_eq2!(
+    line_buffer_get_content::line_as_string(&this).unwrap(),
+    "12a"
+  );
+
+  // Move caret right.
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 ▸12a       │
+  //   └───░──────┘
+  //   C0123456789
+  this.move_caret_right();
+  assert::none_is_at_caret(&this);
+}
+
+#[test]
+fn test_empty_state() {
   let mut editor_buffer = EditorBuffer::default();
+  assert!(editor_buffer.is_empty());
+  editor_buffer.insert_char_into_current_line('a');
+  assert!(!editor_buffer.is_empty());
+}
+
+#[test]
+fn test_insertion() {
+  let mut this = EditorBuffer::default();
 
   // Move caret to col: 0, row: 0. Insert "a".
-  // `editor_buffer` should look like:
+  // `this` should look like:
   // R ┌──────────┐
   // 0 ▸a░        │
   //   └─▴────────┘
   //   C0123456789
-  assert_eq2!(editor_buffer.caret, position!(col: 0, row: 0));
-  editor_buffer.insert_char_into_current_line('a');
-  assert_eq2!(editor_buffer.vec_lines, vec!["a"]);
-  assert_eq2!(editor_buffer.caret, position!(col: 1, row: 0));
+  assert_eq2!(this.caret, position!(col: 0, row: 0));
+  this.insert_char_into_current_line('a');
+  assert_eq2!(this.vec_lines, vec!["a"]);
+  assert_eq2!(this.caret, position!(col: 1, row: 0));
 
   // Move caret to col: 0, row: 1. Insert "b".
-  // `editor_buffer` should look like:
+  // `this` should look like:
   // R ┌──────────┐
   // 0 │a         │
   // 1 ▸b░        │
   //   └─▴────────┘
   //   C0123456789
-  editor_buffer.caret = position!(col: 0, row: 1);
-  editor_buffer.insert_char_into_current_line('b');
-  assert_eq2!(editor_buffer.vec_lines, vec!["a", "b"]);
-  assert_eq2!(editor_buffer.caret, position!(col: 1, row: 1));
+  this.caret = position!(col: 0, row: 1);
+  this.insert_char_into_current_line('b');
+  assert_eq2!(this.vec_lines, vec!["a", "b"]);
+  assert_eq2!(this.caret, position!(col: 1, row: 1));
 
   // Move caret to col: 0, row: 3. Insert "😀" (unicode width = 2).
-  // `editor_buffer` should look like:
+  // `this` should look like:
   // R ┌──────────┐
   // 0 │a         │
   // 1 │b         │
@@ -53,13 +155,13 @@ fn test_buffer_insert_into_new_line() {
   // 3 ▸😀░       │
   //   └──▴───────┘
   //   C0123456789
-  editor_buffer.caret = position!(col: 0, row: 3);
-  editor_buffer.insert_char_into_current_line('😀');
-  assert_eq2!(editor_buffer.vec_lines, vec!["a", "b", "", "😀"]);
-  assert_eq2!(editor_buffer.caret, position!(col: 2, row: 3));
+  this.caret = position!(col: 0, row: 3);
+  this.insert_char_into_current_line('😀');
+  assert_eq2!(this.vec_lines, vec!["a", "b", "", "😀"]);
+  assert_eq2!(this.caret, position!(col: 2, row: 3));
 
   // Insert "d".
-  // `editor_buffer` should look like:
+  // `this` should look like:
   // R ┌──────────┐
   // 0 │a         │
   // 1 │b         │
@@ -67,12 +169,12 @@ fn test_buffer_insert_into_new_line() {
   // 3 ▸😀d░      │
   //   └───▴──────┘
   //   C0123456789
-  editor_buffer.insert_char_into_current_line('d');
-  assert_eq2!(editor_buffer.vec_lines, vec!["a", "b", "", "😀d"]);
-  assert_eq2!(editor_buffer.caret, position!(col: 3, row: 3));
+  this.insert_char_into_current_line('d');
+  assert_eq2!(this.vec_lines, vec!["a", "b", "", "😀d"]);
+  assert_eq2!(this.caret, position!(col: 3, row: 3));
 
   // Insert "🙏🏽" (unicode width = 4).
-  // `editor_buffer` should look like:
+  // `this` should look like:
   // R ┌──────────┐
   // 0 │a         │
   // 1 │b         │
@@ -80,7 +182,7 @@ fn test_buffer_insert_into_new_line() {
   // 3 ▸😀d🙏🏽  ░  │
   //   └───────▴──┘
   //   C0123456789
-  editor_buffer.insert_str_into_current_line("🙏🏽");
-  assert_eq2!(editor_buffer.vec_lines, vec!["a", "b", "", "😀d🙏🏽"]);
-  assert_eq2!(editor_buffer.caret, position!(col: 7, row: 3));
+  this.insert_str_into_current_line("🙏🏽");
+  assert_eq2!(this.vec_lines, vec!["a", "b", "", "😀d🙏🏽"]);
+  assert_eq2!(this.caret, position!(col: 7, row: 3));
 }
