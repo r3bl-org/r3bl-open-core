@@ -19,7 +19,7 @@ use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::*;
 
-use crate::{line_buffer_insert, line_buffer_move_caret};
+use crate::*;
 
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
@@ -38,13 +38,15 @@ pub struct EditorBuffer {
 impl EditorBuffer {
   pub fn is_empty(&self) -> bool { self.vec_lines.is_empty() }
 
+  pub fn insert_new_line(&mut self) { line_buffer_insert::new_line_at_caret(self); }
+
   /// Insert [char] at the current [caret position](EditorBuffer::caret) into the current line.
-  pub fn insert_char_at_caret(&mut self, character: char) {
-    line_buffer_insert::at_caret(self, &char_to_string(character))
+  pub fn insert_char(&mut self, character: char) {
+    line_buffer_insert::str_at_caret(self, &char_to_string(character))
   }
 
   /// Insert [str] at the current [caret position](EditorBuffer::caret) into the current line.
-  pub fn insert_str_at_caret(&mut self, chunk: &str) { line_buffer_insert::at_caret(self, chunk) }
+  pub fn insert_str(&mut self, chunk: &str) { line_buffer_insert::str_at_caret(self, chunk) }
 
   /// Move one character to the left. Calculate how wide the current character is (unicode width)
   /// and then move the "display" caret position back that many columns.

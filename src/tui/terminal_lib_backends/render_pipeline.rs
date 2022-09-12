@@ -19,7 +19,8 @@ use std::{collections::HashMap, fmt::Debug};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{terminal_lib_backends::DEBUG_SHOW_PIPELINE, *};
+use crate::{terminal_lib_backends::{DEBUG_SHOW_PIPELINE, DEBUG_SHOW_PIPELINE_EXPANDED},
+            *};
 
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 // │ RenderPipeline │
@@ -99,9 +100,16 @@ mod render_pipeline_helpers {
   impl Debug for RenderPipeline {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       let mut vec_lines: Vec<String> = vec![];
-      for (z_order, render_ops) in &self.pipeline_map {
-        let line: String = format!("[{:?}] {:?}", z_order, render_ops);
-        vec_lines.push(line);
+      if DEBUG_SHOW_PIPELINE_EXPANDED {
+        for (z_order, render_ops) in &self.pipeline_map {
+          let line: String = format!("[{:?}] {:?}", z_order, render_ops);
+          vec_lines.push(line);
+        }
+      } else {
+        for (z_order, render_ops) in &self.pipeline_map {
+          let line: String = format!("[{:?}] {:?} ops", z_order, render_ops.list.len());
+          vec_lines.push(line);
+        }
       }
       write!(f, "  - {}", vec_lines.join("\n  - "))
     }
