@@ -38,19 +38,19 @@ pub struct EditorBuffer {
 impl EditorBuffer {
   pub fn is_empty(&self) -> bool { self.vec_lines.is_empty() }
 
-  pub fn insert_char_into_current_line(&mut self, character: char) {
+  /// Insert [char] at the current [caret position](EditorBuffer::caret) into the current line.
+  pub fn insert_char_at_caret(&mut self, character: char) {
     line_buffer_insert::at_caret(self, &char_to_string(character))
   }
 
-  pub fn insert_str_into_current_line(&mut self, chunk: &str) {
-    line_buffer_insert::at_caret(self, chunk)
-  }
+  /// Insert [str] at the current [caret position](EditorBuffer::caret) into the current line.
+  pub fn insert_str_at_caret(&mut self, chunk: &str) { line_buffer_insert::at_caret(self, chunk) }
 
-  /// Move one character to the left. Figure out how wide the current character is (unicode width)
+  /// Move one character to the left. Calculate how wide the current character is (unicode width)
   /// and then move the "display" caret position back that many columns.
   pub fn move_caret_left(&mut self) { line_buffer_move_caret::left(self); }
 
-  /// Move one character to the right. Figure out how wide the current character is (unicode width)
+  /// Move one character to the right. Calculate how wide the current character is (unicode width)
   /// and then move the "display" caret position forward that many columns.
   pub fn move_caret_right(&mut self) { line_buffer_move_caret::right(self); }
 }

@@ -54,7 +54,7 @@ impl EditorEngine {
         key: Key::Character(character),
       }) => {
         let mut new_editor_buffer = editor_buffer.clone();
-        new_editor_buffer.insert_char_into_current_line(*character);
+        new_editor_buffer.insert_char_at_caret(*character);
         Ok(Some(new_editor_buffer))
       }
       // Process Left and Right keys.

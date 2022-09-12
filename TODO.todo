@@ -31,6 +31,9 @@ editor engine (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
   ☐ scrolling
     ☐ left/right
     ☐ up/down
+  ☐ other key inputs
+    ☐ page up/down
+    ☐ home/end
   ☐ keyboard shortcut to save/load buffer to/from file
   ☐ text selection & highlighting:
     ☐ add support for text selection highlighting

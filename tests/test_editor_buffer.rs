@@ -45,7 +45,7 @@ fn test_move_caret() {
   // 0 ▸a         │
   //   └─░────────┘
   //   C0123456789
-  this.insert_char_into_current_line('a');
+  this.insert_char_at_caret('a');
   assert::none_is_at_caret(&this);
 
   // Move caret left.
@@ -63,7 +63,7 @@ fn test_move_caret() {
   // 0 ▸1a        │
   //   └─░────────┘
   //   C0123456789
-  this.insert_char_into_current_line('1');
+  this.insert_char_at_caret('1');
   assert_eq2!(
     line_buffer_get_content::line_as_string(&this).unwrap(),
     "1a"
@@ -94,7 +94,7 @@ fn test_move_caret() {
   // 0 ▸12a       │
   //   └──░───────┘
   //   C0123456789
-  this.insert_char_into_current_line('2');
+  this.insert_char_at_caret('2');
   assert::str_at_caret_is(&this, "a");
   assert_eq2!(
     line_buffer_get_content::line_as_string(&this).unwrap(),
@@ -115,7 +115,7 @@ fn test_move_caret() {
 fn test_empty_state() {
   let mut editor_buffer = EditorBuffer::default();
   assert!(editor_buffer.is_empty());
-  editor_buffer.insert_char_into_current_line('a');
+  editor_buffer.insert_char_at_caret('a');
   assert!(!editor_buffer.is_empty());
 }
 
@@ -130,7 +130,7 @@ fn test_insertion() {
   //   └─▴────────┘
   //   C0123456789
   assert_eq2!(this.caret, position!(col: 0, row: 0));
-  this.insert_char_into_current_line('a');
+  this.insert_char_at_caret('a');
   assert_eq2!(this.vec_lines, vec!["a"]);
   assert_eq2!(this.caret, position!(col: 1, row: 0));
 
@@ -142,7 +142,7 @@ fn test_insertion() {
   //   └─▴────────┘
   //   C0123456789
   this.caret = position!(col: 0, row: 1);
-  this.insert_char_into_current_line('b');
+  this.insert_char_at_caret('b');
   assert_eq2!(this.vec_lines, vec!["a", "b"]);
   assert_eq2!(this.caret, position!(col: 1, row: 1));
 
@@ -156,7 +156,7 @@ fn test_insertion() {
   //   └──▴───────┘
   //   C0123456789
   this.caret = position!(col: 0, row: 3);
-  this.insert_char_into_current_line('😀');
+  this.insert_char_at_caret('😀');
   assert_eq2!(this.vec_lines, vec!["a", "b", "", "😀"]);
   assert_eq2!(this.caret, position!(col: 2, row: 3));
 
@@ -169,7 +169,7 @@ fn test_insertion() {
   // 3 ▸😀d░      │
   //   └───▴──────┘
   //   C0123456789
-  this.insert_char_into_current_line('d');
+  this.insert_char_at_caret('d');
   assert_eq2!(this.vec_lines, vec!["a", "b", "", "😀d"]);
   assert_eq2!(this.caret, position!(col: 3, row: 3));
 
@@ -182,7 +182,7 @@ fn test_insertion() {
   // 3 ▸😀d🙏🏽  ░  │
   //   └───────▴──┘
   //   C0123456789
-  this.insert_str_into_current_line("🙏🏽");
+  this.insert_str_at_caret("🙏🏽");
   assert_eq2!(this.vec_lines, vec!["a", "b", "", "😀d🙏🏽"]);
   assert_eq2!(this.caret, position!(col: 7, row: 3));
 }
