@@ -55,62 +55,54 @@ use crate::*;
 /// ```
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Default, GetSize)]
 pub struct Position {
-  pub col: UnitType,
-  pub row: UnitType,
+  pub col: BaseUnit,
+  pub row: BaseUnit,
 }
 
 impl Position {
   /// Add given `col` count to `self`.
   pub fn add_cols(&mut self, num_cols_to_add: usize) -> Self {
-    let value: UnitType = convert_to_base_unit!(num_cols_to_add);
+    let value: BaseUnit = base_unit!(num_cols_to_add);
     self.col += value;
     *self
   }
 
   /// Add given `col` count to `self` w/ bounds check for max cols.
-  pub fn add_cols_with_bounds(&mut self, num_cols_to_add: usize, box_bounds_size: Size) -> Self {
-    let value: UnitType = convert_to_base_unit!(num_cols_to_add);
-    let max: UnitType = box_bounds_size.col;
-
+  pub fn add_cols_with_bounds(&mut self, value: BaseUnit, max: BaseUnit) -> Self {
     if (self.col + value) >= max {
-      self.col = max
+      self.col = max;
     } else {
       self.col += value;
     }
-
     *self
   }
 
   /// Add given `row` count to `self`.
   pub fn add_rows(&mut self, num_rows_to_add: usize) -> Self {
-    let value = convert_to_base_unit!(num_rows_to_add);
+    let value: BaseUnit = base_unit!(num_rows_to_add);
     self.row += value;
     *self
   }
 
   /// Add given `row` count to `self` w/ bounds check for max rows.
-  pub fn add_rows_with_bounds(&mut self, num_rows_to_add: usize, box_bounds_size: Size) -> Self {
-    let value: UnitType = convert_to_base_unit!(num_rows_to_add);
-    let max: UnitType = box_bounds_size.row;
-
+  pub fn add_rows_with_bounds(&mut self, value: BaseUnit, max: BaseUnit) -> Self {
     if (self.row + value) >= max {
-      self.row = max
+      self.row = max;
     } else {
       self.row += value;
     }
-
     *self
   }
 
   pub fn sub_rows(&mut self, num_rows_to_sub: usize) -> Self {
-    let value = convert_to_base_unit!(num_rows_to_sub);
-    dec_unsigned!(self.row, by: value);
+    let value: BaseUnit = base_unit!(num_rows_to_sub);
+    self.row -= value;
     *self
   }
 
   pub fn sub_cols(&mut self, num_cols_to_sub: usize) -> Self {
-    let value = convert_to_base_unit!(num_cols_to_sub);
-    dec_unsigned!(self.col, by: value);
+    let value: BaseUnit = base_unit!(num_cols_to_sub);
+    self.col -= value;
     *self
   }
 }
@@ -118,8 +110,8 @@ impl Position {
 pub mod math_ops {
   use super::*;
 
-  impl AddAssign<UnitType> for Position {
-    fn add_assign(&mut self, other: UnitType) {
+  impl AddAssign<BaseUnit> for Position {
+    fn add_assign(&mut self, other: BaseUnit) {
       self.col += other;
       self.row += other;
     }
@@ -149,12 +141,12 @@ pub mod math_ops {
 
   /// Mul: BoxPosition * Pair = BoxPosition.
   /// <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
-  impl Mul<(UnitType, UnitType)> for Position {
+  impl Mul<(u16, u16)> for Position {
     type Output = Position;
-    fn mul(self, other: (UnitType, UnitType)) -> Self {
+    fn mul(self, other: (u16, u16)) -> Self {
       Self {
-        col: self.col * other.0,
-        row: self.row * other.1,
+        col: self.col * base_unit!(other.0),
+        row: self.row * base_unit!(other.1),
       }
     }
   }
@@ -163,7 +155,7 @@ pub mod math_ops {
 pub mod convert_position_to_other_type {
   use super::*;
 
-  impl From<Position> for (UnitType, UnitType) {
+  impl From<Position> for (BaseUnit, BaseUnit) {
     fn from(position: Position) -> Self { (position.col, position.row) }
   }
 }
@@ -173,7 +165,7 @@ pub mod debug_formatter {
 
   impl Debug for Position {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-      write!(f, "[col:{}, row:{}]", self.col, self.row)
+      write!(f, "[col:{}, row:{}]", *self.col, *self.row)
     }
   }
 }
@@ -185,8 +177,8 @@ macro_rules! position {
     row: $arg_row:expr
   ) => {
     Position {
-      col: $arg_col,
-      row: $arg_row,
+      col: $arg_col.into(),
+      row: $arg_row.into(),
     }
   };
 }

@@ -33,7 +33,7 @@ pub(crate) enum Attrib {
 pub(crate) struct StyleMetadata {
   pub id: Expr,                  /* Only required field. */
   pub attrib_vec: Vec<Attrib>,   /* Attributes are optional. */
-  pub padding: Option<UnitType>, /* Optional. */
+  pub padding: Option<BaseUnit>, /* Optional. */
   pub color_fg: Option<Expr>,    /* Optional. */
   pub color_bg: Option<Expr>,    /* Optional. */
 }

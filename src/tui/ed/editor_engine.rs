@@ -118,7 +118,7 @@ fn render_content(context_ref: &Context<'_>) -> RenderPipeline {
   // Paint each line in the buffer.
   for (index, line) in editor_buffer.vec_lines.iter().enumerate() {
     // Clip the content to max rows.
-    if max_display_row_count == 0 {
+    if *max_display_row_count == 0 {
       break;
     }
     // Clip the content to max cols.
@@ -129,13 +129,13 @@ fn render_content(context_ref: &Context<'_>) -> RenderPipeline {
       @push_into render_pipeline at ZOrder::Normal =>
         RenderOp::MoveCursorPositionRelTo(
         *style_adj_box_origin_pos,
-        position! { col: 0 , row: convert_to_base_unit!(index) }
+        position! { col: 0 , row: base_unit!(@to_usize index) }
         ),
         RenderOp::ApplyColors(current_box.get_computed_style()),
         RenderOp::PrintPlainTextWithAttributes(truncated_line.into(), current_box.get_computed_style()),
         RenderOp::ResetColor
     };
-    if max_display_row_count >= 1 {
+    if *max_display_row_count >= 1 {
       max_display_row_count -= 1;
     }
   }
@@ -220,7 +220,7 @@ fn render_empty_state(context_ref: &Context<'_>) -> RenderPipeline {
       @push_into render_pipeline at ZOrder::Normal =>
         RenderOp::MoveCursorPositionRelTo(
           *style_adj_box_origin_pos,
-          content_cursor_pos.add_rows_with_bounds(1, *style_adj_box_bounds_size)),
+          content_cursor_pos.add_rows_with_bounds(base_unit!(1), style_adj_box_bounds_size.row)),
         RenderOp::PrintPlainTextWithAttributes("👀".into(), None)
     };
   }

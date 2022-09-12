@@ -78,7 +78,10 @@ fn create_main_container(tw_surface: &mut Surface) -> CommonResult<()> {
         size!(col:498, row:498)
       ); // due to `padding: 1`
 
-      assert_eq2!(layout_item.requested_size_percent, requested_size_percent!(width:100, height:100));
+      assert_eq2!(
+        layout_item.requested_size_percent,
+        requested_size_percent!(width:100, height:100)
+      );
 
       assert_eq2!(
         layout_item.insertion_pos_for_next_box,
@@ -86,7 +89,7 @@ fn create_main_container(tw_surface: &mut Surface) -> CommonResult<()> {
       );
 
       assert!(layout_item.get_computed_style().is_some());
-      assert_eq2!(layout_item.get_computed_style().unwrap().padding, Some(1));
+      assert_eq2!(layout_item.get_computed_style().unwrap().padding, Some(base_unit!(1)));
     });
   }
 }
@@ -126,7 +129,10 @@ fn create_left_col(tw_surface: &mut Surface) -> CommonResult<()> {
         size!(col:244, row:494)
       ); // Take padding into account.
 
-      assert_eq2!(layout_item.requested_size_percent, requested_size_percent!(width:50, height:100));
+      assert_eq2!(
+        layout_item.requested_size_percent,
+        requested_size_percent!(width:50, height:100)
+      );
       assert_eq2!(layout_item.insertion_pos_for_next_box, None);
 
       assert_ne!(
@@ -169,7 +175,10 @@ fn create_right_col(tw_surface: &mut Surface) -> CommonResult<()> {
         size! (col:242, row:492)
       ); // Take padding into account.
 
-      assert_eq2!(current_box.requested_size_percent, requested_size_percent!(width:50, height:100));
+      assert_eq2!(
+        current_box.requested_size_percent,
+        requested_size_percent!(width:50, height:100)
+      );
       assert_eq2!(current_box.insertion_pos_for_next_box, None);
 
       assert_ne!(
