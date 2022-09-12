@@ -60,6 +60,12 @@ pub struct Position {
 }
 
 impl Position {
+  /// Reset given `col` count to `0`.
+  pub fn reset_cols(&mut self) -> Self {
+    self.col = ch!(0);
+    *self
+  }
+
   /// Add given `col` count to `self`.
   pub fn add_cols(&mut self, num_cols_to_add: usize) -> Self {
     let value: ChUnit = ch!(num_cols_to_add);

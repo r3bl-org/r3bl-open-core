@@ -54,21 +54,24 @@ impl EditorEngine {
         key: Key::Character(character),
       }) => {
         let mut new_editor_buffer = editor_buffer.clone();
-        new_editor_buffer.insert_char_at_caret(*character);
+        new_editor_buffer.insert_char(*character);
         Ok(Some(new_editor_buffer))
       }
-      // Process Left and Right keys.
+
+      // Process keys: Left, Right, Enter
       InputEvent::Keyboard(Keypress::Plain {
-        key: Key::SpecialKey(key),
+        key: Key::SpecialKey(special_key),
       }) => {
         let mut new_editor_buffer = editor_buffer.clone();
-        match key {
+        match special_key {
           SpecialKey::Left => new_editor_buffer.move_caret_left(),
           SpecialKey::Right => new_editor_buffer.move_caret_right(),
+          SpecialKey::Enter => new_editor_buffer.insert_new_line(),
           _ => {}
         }
         Ok(Some(new_editor_buffer))
       }
+
       // Other keypresses.
       _ => Ok(None),
     }

@@ -50,6 +50,7 @@
 // Enable or disable debug logging for this `terminal_lib_backends` module.
 pub(self) const DEBUG_SHOW_TERMINAL_BACKEND: bool = false;
 pub(self) const DEBUG_SHOW_PIPELINE: bool = true;
+pub(self) const DEBUG_SHOW_PIPELINE_EXPANDED: bool = false;
 
 pub enum TerminalLibBackend {
   Crossterm,

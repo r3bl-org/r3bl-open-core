@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use std::mem::replace;
+
 use r3bl_rs_utils_core::*;
 
 use crate::*;
@@ -158,16 +160,17 @@ pub mod line_buffer_locate_caret {
 }
 
 pub mod line_buffer_insert {
+
   use super::*;
 
-  pub fn at_caret(this: &mut EditorBuffer, chunk: &str) {
+  pub fn str_at_caret(this: &mut EditorBuffer, chunk: &str) {
     let caret_row: usize = ch!(@to_usize this.caret.row);
     let caret_col: usize = ch!(@to_usize this.caret.col);
 
     if this.vec_lines.get(caret_row).is_some() {
       insert_into_existing_line(this, caret_row, caret_col, chunk);
     } else {
-      fill_in_missing_lines_up_to_caret(this, caret_row);
+      fill_in_missing_lines_up_to_row(this, caret_row);
       insert_into_new_line(this, caret_row, chunk);
     }
   }
@@ -183,7 +186,7 @@ pub mod line_buffer_insert {
         .insert_char_at_display_col(ch!(caret_col), chunk)
       {
         // Replace existing line w/ new line.
-        let _ = std::mem::replace(line, new_line);
+        let _ = replace(line, new_line);
 
         // Update caret position.
         let char_display_width = ch!(@to_usize char_display_width);
@@ -192,7 +195,7 @@ pub mod line_buffer_insert {
     }
   }
 
-  fn fill_in_missing_lines_up_to_caret(this: &mut EditorBuffer, caret_row: usize) {
+  fn fill_in_missing_lines_up_to_row(this: &mut EditorBuffer, caret_row: usize) {
     // Fill in any missing lines.
     if this.vec_lines.get(caret_row).is_none() {
       for row_idx in 0..caret_row + 1 {
@@ -208,6 +211,55 @@ pub mod line_buffer_insert {
     if let Some(line) = this.vec_lines.get_mut(caret_row) {
       line.push_str(chunk);
       this.caret.add_cols(UnicodeString::str_display_width(chunk));
+    }
+  }
+
+  pub fn new_line_at_caret(this: &mut EditorBuffer) {
+    if this.is_empty() {
+      this.vec_lines.push(String::new());
+      return;
+    }
+
+    match line_buffer_locate_caret::find(this) {
+      CaretLocation::AtEndOfLine => insert_new_line_at_end_of_current_line(this),
+      CaretLocation::AtStartOfLine => insert_new_line_at_start_of_current_line(this),
+      CaretLocation::InMiddleOfLine => insert_new_line_at_middle_of_current_line(this),
+    }
+
+    // Handle inserting a new line at the end of the current line.
+    fn insert_new_line_at_end_of_current_line(this: &mut EditorBuffer) {
+      this.caret.add_rows(1);
+      this.caret.reset_cols();
+      fill_in_missing_lines_up_to_row(this, ch!(@to_usize this.caret.row))
+    }
+
+    // Handle inserting a new line at the start of the current line.
+    fn insert_new_line_at_start_of_current_line(this: &mut EditorBuffer) {
+      let row_index = ch!(@to_usize this.caret.row);
+      if row_index == 0 {
+        this.vec_lines.insert(0, String::new());
+      } else {
+        this.vec_lines.insert(row_index, String::new());
+      }
+      this.caret.add_rows(1);
+    }
+
+    // Handle inserting a new line at the middle of the current line.
+    fn insert_new_line_at_middle_of_current_line(this: &mut EditorBuffer) {
+      if let Some(line_content) = line_buffer_get_content::line_as_string(this) {
+        let unicode_string = line_content.unicode_string();
+        let split_result = unicode_string.split_at_display_col(this.caret.col);
+
+        log_no_err_debug!(split_result);
+
+        if let Some(((left, _), (right, _))) = split_result {
+          let row_index = ch!(@to_usize this.caret.row);
+          let _ = replace(&mut this.vec_lines[row_index], left);
+          this.vec_lines.insert(row_index + 1, right);
+          this.caret.add_rows(1);
+          this.caret.reset_cols();
+        }
+      }
     }
   }
 }

@@ -19,8 +19,9 @@ editor engine (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
     ✔ write tests @done(22-09-12 09:49)
   ✔ refactor @done(22-09-12 09:50)
     ✔ replace `UnitType` w/ `ChUnit` and `ch!` macro @done(22-09-12 09:50)
-  ☐ insert content:
-    ☐ handle new lines
+  ✔ insert content: @done(22-09-12 16:06)
+    ✔ handle new line insert at start, middle, end of current line @done(22-09-12 16:06)
+    ✔ write tests @done(22-09-12 16:06)
   ☐ move cursor up, down:
     ☐ up arrow key move in buffer
     ☐ down arrow key move in buffer
