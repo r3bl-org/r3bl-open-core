@@ -89,7 +89,10 @@ fn create_main_container(tw_surface: &mut Surface) -> CommonResult<()> {
       );
 
       assert!(layout_item.get_computed_style().is_some());
-      assert_eq2!(layout_item.get_computed_style().unwrap().padding, Some(base_unit!(1)));
+      assert_eq2!(
+        layout_item.get_computed_style().unwrap().padding,
+        Some(ch!(1))
+      );
     });
   }
 }

@@ -131,8 +131,8 @@ fn parse_optional_padding(input: &ParseStream, metadata: &mut StyleMetadata) -> 
     input.parse::<Token![:]>()?;
 
     let lit_int = input.parse::<LitInt>()?;
-    let val: BaseUnitUnderlyingType = lit_int.base10_parse().unwrap();
-    let padding_int: BaseUnit = base_unit!(val);
+    let val: ChUnitPrimitiveType = lit_int.base10_parse().unwrap();
+    let padding_int: ChUnit = ch!(val);
 
     metadata.padding = Some(padding_int);
 

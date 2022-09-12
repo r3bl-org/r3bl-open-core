@@ -64,7 +64,7 @@ fn test_all_fields_in_style() {
     strikethrough: true,
     color_fg: color!(@red).into(),
     color_bg: color!(0, 0, 0).into(),
-    padding: Some(base_unit!(10)),
+    padding: Some(ch!(10)),
     ..Style::default()
   };
 
@@ -78,7 +78,7 @@ fn test_all_fields_in_style() {
   assert!(style.strikethrough);
   assert_eq2!(style.color_fg, color!(@red).into());
   assert_eq2!(style.color_bg, color!(0, 0, 0).into());
-  assert_eq2!(style.padding, Some(base_unit!(10)));
+  assert_eq2!(style.padding, Some(ch!(10)));
 
   let mask = style.get_bitflags();
   assert!(!mask.contains(StyleFlag::COMPUTED_SET));
@@ -156,7 +156,7 @@ fn test_cascade_style() {
     true
   );
 
-  assert_eq2!(my_style.padding.unwrap(), base_unit!(3));
+  assert_eq2!(my_style.padding.unwrap(), ch!(3));
   assert_eq2!(my_style.color_bg.unwrap(), TWColor::Yellow);
   assert_eq2!(my_style.color_fg.unwrap(), TWColor::Red);
   assert!(my_style.bold);

@@ -29,14 +29,14 @@ fn test_unicode_string_ext() {
   assert_eq2!(u_s.vec_segment.len(), 11);
   assert_eq2!(u_s.grapheme_cluster_segment_count, 11);
   assert_eq2!(u_s.byte_size, test_string.len());
-  assert_eq2!(u_s.display_width, base_unit!(25));
+  assert_eq2!(u_s.display_width, ch!(25));
 }
 
 #[allow(clippy::zero_prefixed_literal)]
 #[test]
 fn test_grapheme_cluster_segment() {
   fn assert_segment(
-    segment: &GraphemeClusterSegment, byte_offset: usize, unicode_width: BaseUnit,
+    segment: &GraphemeClusterSegment, byte_offset: usize, unicode_width: ChUnit,
     logical_index: usize, byte_size: usize, string: &str,
   ) {
     assert_eq2!(segment.string, string);

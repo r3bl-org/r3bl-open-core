@@ -49,8 +49,8 @@ use crate::*;
 /// ```
 #[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Size {
-  pub col: BaseUnit, // width = number of cols (y).
-  pub row: BaseUnit, // height = number of rows (x).
+  pub col: ChUnit, // width = number of cols (y).
+  pub row: ChUnit, // height = number of rows (x).
 }
 
 pub mod debug_formatter {
@@ -72,8 +72,8 @@ pub mod debug_formatter {
 pub mod math_ops {
   use super::*;
 
-  impl SubAssign<BaseUnit> for Size {
-    fn sub_assign(&mut self, other: BaseUnit) {
+  impl SubAssign<ChUnit> for Size {
+    fn sub_assign(&mut self, other: ChUnit) {
       self.col = sub_unsigned!(*self.col, *other).into();
       self.row = sub_unsigned!(*self.row, *other).into();
     }

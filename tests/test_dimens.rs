@@ -53,7 +53,7 @@ fn test_percent_works_as_expected() {
   let maybe_pc_100: Result<Percent, String> = percent!(100i32);
   if let Ok(pc_100) = maybe_pc_100 {
     assert_eq!(*pc_100, 100);
-    let result = calc_percentage(pc_100, base_unit!(500));
+    let result = calc_percentage(pc_100, ch!(500));
     assert_eq!(*result, 500);
   } else {
     panic!("Failed to create Percent from 100");
@@ -61,12 +61,12 @@ fn test_percent_works_as_expected() {
 
   let pc_50 = Percent::try_from(50i32).unwrap();
   assert_eq!(*pc_50, 50);
-  let result = calc_percentage(pc_50, base_unit!(500));
+  let result = calc_percentage(pc_50, ch!(500));
   assert_eq!(*result, 250);
 
   let pc_0 = Percent::try_from(0i32).unwrap();
   assert_eq!(*pc_0, 0);
-  let result = calc_percentage(pc_0, base_unit!(500));
+  let result = calc_percentage(pc_0, ch!(500));
   assert_eq!(*result, 0);
 }
 

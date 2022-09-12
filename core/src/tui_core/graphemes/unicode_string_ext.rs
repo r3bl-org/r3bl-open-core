@@ -166,12 +166,12 @@ impl UnicodeStringExt for String {
     let mut total_byte_offset = 0;
     let mut total_grapheme_cluster_count = 0;
     let mut my_unicode_string_segments = vec![];
-    let mut my_unicode_width_offset_accumulator: BaseUnit = base_unit!(0);
+    let mut my_unicode_width_offset_accumulator: ChUnit = ch!(0);
 
     for (grapheme_cluster_index, (byte_offset, grapheme_cluster_str)) in
       self.grapheme_indices(true).enumerate()
     {
-      let unicode_width = base_unit!(grapheme_cluster_str.width());
+      let unicode_width = ch!(grapheme_cluster_str.width());
       my_unicode_string_segments.push(GraphemeClusterSegment {
         string: grapheme_cluster_str.into(),
         byte_offset,
@@ -210,13 +210,13 @@ pub struct GraphemeClusterSegment {
   /// The byte offset (in the original string) of the start of the `grapheme_cluster`.
   pub byte_offset: usize,
   /// Display width of the `string` via [`unicode_width::UnicodeWidthChar`].
-  pub unicode_width: BaseUnit,
+  pub unicode_width: ChUnit,
   /// The index of this entry in the `grapheme_cluster_segment_vec`.
   pub logical_index: usize,
   /// The number of bytes the `string` takes up in memory.
   pub byte_size: usize,
   /// Display col at which this grapheme cluster starts.
-  pub display_col_offset: BaseUnit,
+  pub display_col_offset: ChUnit,
 }
 
 #[derive(Debug, Clone)]
@@ -225,7 +225,7 @@ pub struct UnicodeString {
   pub vec_segment: Vec<GraphemeClusterSegment>,
   pub byte_size: usize,
   pub grapheme_cluster_segment_count: usize,
-  pub display_width: BaseUnit,
+  pub display_width: ChUnit,
 }
 
 /// Convert [char] to [GraphemeClusterSegment].
@@ -265,11 +265,11 @@ impl UnicodeString {
   }
 
   pub fn truncate_to_fit_size(&self, size: Size) -> &str {
-    let display_cols: BaseUnit = size.col;
+    let display_cols: ChUnit = size.col;
     self.truncate_to_fit_display_cols(display_cols)
   }
 
-  pub fn truncate_to_fit_display_cols(&self, display_cols: BaseUnit) -> &str {
+  pub fn truncate_to_fit_display_cols(&self, display_cols: ChUnit) -> &str {
     let mut avail_cols = display_cols;
     let mut string_end_byte_index = 0;
 
@@ -290,10 +290,10 @@ impl UnicodeString {
   }
 
   /// `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
-  pub fn at_display_col(&self, display_col: BaseUnit) -> Option<&GraphemeClusterSegment> {
+  pub fn at_display_col(&self, display_col: ChUnit) -> Option<&GraphemeClusterSegment> {
     self.vec_segment.iter().find(|&grapheme_cluster_segment| {
-      let segment_display_col_start: BaseUnit = grapheme_cluster_segment.display_col_offset;
-      let segment_display_col_end: BaseUnit =
+      let segment_display_col_start: ChUnit = grapheme_cluster_segment.display_col_offset;
+      let segment_display_col_end: ChUnit =
         segment_display_col_start + grapheme_cluster_segment.unicode_width;
       display_col >= segment_display_col_start && display_col < segment_display_col_end
     })
@@ -302,7 +302,7 @@ impl UnicodeString {
   /// Convert a `display_col` to a `logical_index`.
   /// - `local_index` is the index of the grapheme cluster in the `vec_segment`.
   /// - `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
-  pub fn logical_index_at_display_col(&self, display_col: BaseUnit) -> Option<usize> {
+  pub fn logical_index_at_display_col(&self, display_col: ChUnit) -> Option<usize> {
     self
       .at_display_col(display_col)
       .map(|segment| segment.logical_index)
@@ -311,20 +311,18 @@ impl UnicodeString {
   /// Convert a `logical_index` to a `display_col`.
   /// - `local_index` is the index of the grapheme cluster in the `vec_segment`.
   /// - `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
-  pub fn display_col_at_logical_index(&self, logical_index: usize) -> Option<BaseUnit> {
+  pub fn display_col_at_logical_index(&self, logical_index: usize) -> Option<ChUnit> {
     self
       .at_logical_index(logical_index)
       .map(|segment| segment.display_col_offset)
   }
 
-  pub fn get_string_at_display_col(&self, display_col: BaseUnit) -> Option<(String, BaseUnit)> {
+  pub fn get_string_at_display_col(&self, display_col: ChUnit) -> Option<(String, ChUnit)> {
     let segment = self.at_display_col(display_col)?;
     Some((segment.string.clone(), segment.unicode_width))
   }
 
-  pub fn get_string_at_left_of_display_col(
-    &self, display_col: BaseUnit,
-  ) -> Option<(String, BaseUnit)> {
+  pub fn get_string_at_left_of_display_col(&self, display_col: ChUnit) -> Option<(String, ChUnit)> {
     let segment_at_col = self.at_display_col(display_col)?;
     if segment_at_col.logical_index >= 1 {
       let segment_left_of_col = self.at_logical_index(segment_at_col.logical_index - 1)?;
@@ -337,23 +335,23 @@ impl UnicodeString {
     }
   }
 
-  pub fn get_string_at_end(&self) -> Option<(String, BaseUnit)> {
+  pub fn get_string_at_end(&self) -> Option<(String, ChUnit)> {
     let segment = self.vec_segment.last()?;
     Some((segment.string.clone(), segment.unicode_width))
   }
 
-  /// Returns a new ([String], [UnitType]) tuple and does not modify
+  /// Returns a new ([String], [ChUnit]) tuple and does not modify
   /// [self.string](UnicodeString::string).
   pub fn insert_char_at_display_col(
-    &self, display_col: BaseUnit, chunk: &str,
-  ) -> CommonResult<(String, BaseUnit)> {
+    &self, display_col: ChUnit, chunk: &str,
+  ) -> CommonResult<(String, ChUnit)> {
     let maybe_logical_index = self.logical_index_at_display_col(display_col);
     match maybe_logical_index {
       // Insert somewhere inside bounds of self.string.
       Some(logical_index) => {
         // Convert the character into a grapheme cluster.
         let character_g_c_s: GraphemeClusterSegment = chunk.into();
-        let character_display_width: BaseUnit = character_g_c_s.unicode_width;
+        let character_display_width: ChUnit = character_g_c_s.unicode_width;
 
         // Insert this grapheme cluster to self.vec_segment.
         let mut vec_segment_clone = self.vec_segment.clone();
@@ -376,7 +374,7 @@ impl UnicodeString {
         let character_display_width = UnicodeString::str_display_width(chunk);
 
         // In the caller - update the caret position based on the unicode width of the character.
-        Ok((new_string, base_unit!(character_display_width)))
+        Ok((new_string, ch!(character_display_width)))
       }
     }
   }

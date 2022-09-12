@@ -81,42 +81,42 @@ pub mod line_buffer_move_caret {
 pub mod line_buffer_get_content {
   use super::*;
 
-  pub fn display_width_of_line(this: &EditorBuffer) -> BaseUnit {
+  pub fn display_width_of_line(this: &EditorBuffer) -> ChUnit {
     let line = line_buffer_get_content::line_as_string(this);
     if let Some(line) = line {
       line.unicode_string().display_width
     } else {
-      base_unit!(0)
+      ch!(0)
     }
   }
 
   pub fn line_as_string(this: &EditorBuffer) -> Option<&String> {
     let position = this.caret;
     empty_check_early_return!(this, @None);
-    let line = this.vec_lines.get(base_unit!(@to_usize position.row))?;
+    let line = this.vec_lines.get(ch!(@to_usize position.row))?;
     Some(line)
   }
 
-  pub fn string_at_caret(this: &EditorBuffer) -> Option<(String, BaseUnit)> {
+  pub fn string_at_caret(this: &EditorBuffer) -> Option<(String, ChUnit)> {
     let position = this.caret;
     empty_check_early_return!(this, @None);
-    let line = this.vec_lines.get(base_unit!(@to_usize position.row))?;
+    let line = this.vec_lines.get(ch!(@to_usize position.row))?;
     let (str_seg, unicode_width) = line
       .unicode_string()
       .get_string_at_display_col(position.col)?;
     Some((str_seg, unicode_width))
   }
 
-  pub fn string_to_left_of_caret(this: &EditorBuffer) -> Option<(String, BaseUnit)> {
+  pub fn string_to_left_of_caret(this: &EditorBuffer) -> Option<(String, ChUnit)> {
     let position = this.caret;
     empty_check_early_return!(this, @None);
-    let line = this.vec_lines.get(base_unit!(@to_usize position.row))?;
+    let line = this.vec_lines.get(ch!(@to_usize position.row))?;
     line
       .unicode_string()
       .get_string_at_left_of_display_col(position.col)
   }
 
-  pub fn string_at_end_of_line(this: &EditorBuffer) -> Option<(String, BaseUnit)> {
+  pub fn string_at_end_of_line(this: &EditorBuffer) -> Option<(String, ChUnit)> {
     let line = line_buffer_get_content::line_as_string(this)?;
     if let CaretLocation::AtEndOfLine = line_buffer_locate_caret::find(this) {
       let maybe_last_str_seg = line.unicode_string().get_string_at_end();
@@ -161,8 +161,8 @@ pub mod line_buffer_insert {
   use super::*;
 
   pub fn at_caret(this: &mut EditorBuffer, chunk: &str) {
-    let caret_row: usize = base_unit!(@to_usize this.caret.row);
-    let caret_col: usize = base_unit!(@to_usize this.caret.col);
+    let caret_row: usize = ch!(@to_usize this.caret.row);
+    let caret_col: usize = ch!(@to_usize this.caret.col);
 
     if this.vec_lines.get(caret_row).is_some() {
       insert_into_existing_line(this, caret_row, caret_col, chunk);
@@ -180,13 +180,13 @@ pub mod line_buffer_insert {
       // Get the new line.
       if let Ok((new_line, char_display_width)) = line
         .unicode_string()
-        .insert_char_at_display_col(base_unit!(caret_col), chunk)
+        .insert_char_at_display_col(ch!(caret_col), chunk)
       {
         // Replace existing line w/ new line.
         let _ = std::mem::replace(line, new_line);
 
         // Update caret position.
-        let char_display_width = base_unit!(@to_usize char_display_width);
+        let char_display_width = ch!(@to_usize char_display_width);
         this.caret.add_cols(char_display_width);
       }
     }
