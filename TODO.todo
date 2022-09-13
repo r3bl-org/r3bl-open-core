@@ -22,10 +22,10 @@ editor engine (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
   ✔ insert content: @done(22-09-12 16:06)
     ✔ handle new line insert at start, middle, end of current line @done(22-09-12 16:06)
     ✔ write tests @done(22-09-12 16:06)
-  ☐ move cursor up, down:
-    ☐ up arrow key move in buffer
-    ☐ down arrow key move in buffer
-    ☐ write tests
+  ✔ move cursor up, down: @done(22-09-13 11:47)
+    ✔ up arrow key move in buffer @done(22-09-13 11:08)
+    ✔ down arrow key move in buffer @done(22-09-13 11:08)
+    ✔ write tests @done(22-09-13 11:47)
   ☐ delete content:
     ☐ delete/backspace edit buffer line
     ☐ delete/backspace lines

@@ -90,6 +90,10 @@ pub mod math_ops {
     fn add_assign(&mut self, rhs: Self) { self.value = add_unsigned!(self.value, rhs.value); }
   }
 
+  impl std::ops::AddAssign<u16> for ChUnit {
+    fn add_assign(&mut self, rhs: u16) { self.value = add_unsigned!(self.value, rhs); }
+  }
+
   impl std::ops::Sub for ChUnit {
     type Output = Self;
 

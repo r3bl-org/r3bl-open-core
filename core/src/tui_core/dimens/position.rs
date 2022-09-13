@@ -83,6 +83,14 @@ impl Position {
     *self
   }
 
+  /// Set `col` count to `max` if `self.col` is greater than `max`.
+  pub fn clip_cols_to_bounds(&mut self, max: ChUnit) -> Self {
+    if self.col >= max {
+      self.col = max;
+    }
+    *self
+  }
+
   /// Add given `row` count to `self`.
   pub fn add_rows(&mut self, num_rows_to_add: usize) -> Self {
     let value: ChUnit = ch!(num_rows_to_add);

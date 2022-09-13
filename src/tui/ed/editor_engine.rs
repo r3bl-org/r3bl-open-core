@@ -58,15 +58,17 @@ impl EditorEngine {
         Ok(Some(new_editor_buffer))
       }
 
-      // Process keys: Left, Right, Enter
+      // Process keys: Left, Right, Enter, Up, Down.
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::SpecialKey(special_key),
       }) => {
         let mut new_editor_buffer = editor_buffer.clone();
         match special_key {
-          SpecialKey::Left => new_editor_buffer.move_caret_left(),
-          SpecialKey::Right => new_editor_buffer.move_caret_right(),
           SpecialKey::Enter => new_editor_buffer.insert_new_line(),
+          SpecialKey::Left => new_editor_buffer.move_caret(CaretDirection::Left),
+          SpecialKey::Right => new_editor_buffer.move_caret(CaretDirection::Right),
+          SpecialKey::Up => new_editor_buffer.move_caret(CaretDirection::Up),
+          SpecialKey::Down => new_editor_buffer.move_caret(CaretDirection::Down),
           _ => {}
         }
         Ok(Some(new_editor_buffer))
@@ -172,14 +174,6 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> RenderPipe
           } else {
             DEFAULT_CURSOR_CHAR.into()
           };
-
-        log_no_err!(
-          DEBUG,
-          "CRT > str_at_caret: {:?}, editor_buffer.caret: {:?}",
-          str_at_caret,
-          editor_buffer.caret
-        );
-
         render_pipeline! {
           @push_into render_pipeline at ZOrder::Caret =>
           RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret),
