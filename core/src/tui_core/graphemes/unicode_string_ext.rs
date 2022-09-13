@@ -340,6 +340,13 @@ impl UnicodeString {
     Some((segment.string.clone(), segment.unicode_width))
   }
 
+  /// Returns a new [String]. Does not modify [self.string](UnicodeString::string).
+  pub fn merge_with(&self, other: UnicodeString) -> Option<String> {
+    let mut new_string = self.string.clone();
+    new_string.push_str(&other.string);
+    Some(new_string)
+  }
+
   /// Returns a new ([String], [ChUnit]) tuple. Does not modify
   /// [self.string](UnicodeString::string).
   pub fn insert_char_at_display_col(
@@ -412,6 +419,49 @@ impl UnicodeString {
         (str_left, str_left_unicode_width),
         (str_right, str_right_unicode_width),
       ))
+    } else {
+      None
+    }
+  }
+
+  /// Returns a new ([String], [ChUnit]) tuple. Does not modify
+  /// [self.string](UnicodeString::string).
+  pub fn delete_char_at_display_col(&self, display_col: ChUnit) -> Option<(String, ChUnit)> {
+    // There is only one segment present.
+    if self.vec_segment.len() == 1 {
+      return Some((String::new(), ch!(0)));
+    }
+
+    // There are more than 1 segments present.i
+    let split_logical_index = self.logical_index_at_display_col(display_col)?;
+    let max_logical_index = self.vec_segment.len();
+
+    let mut str_left = String::new();
+    let mut str_left_unicode_width = ch!(0);
+    {
+      for logical_idx in 0..split_logical_index {
+        let segment = self.at_logical_index(logical_idx)?;
+        str_left.push_str(&segment.string);
+        str_left_unicode_width += segment.unicode_width;
+      }
+    }
+
+    let skip_split_logical_index = split_logical_index + 1; // Drop one segment.
+    let mut str_right = String::new();
+    let mut str_right_unicode_width = ch!(0);
+    {
+      for logical_idx in skip_split_logical_index..max_logical_index {
+        let seg_at_logical_idx = self.at_logical_index(logical_idx)?;
+        str_right.push_str(&seg_at_logical_idx.string);
+        str_right_unicode_width += seg_at_logical_idx.unicode_width;
+      }
+    }
+
+    str_left.push_str(&str_right);
+    str_left_unicode_width += str_right_unicode_width;
+
+    if *str_left_unicode_width > 0 {
+      Some((str_left, str_left_unicode_width))
     } else {
       None
     }

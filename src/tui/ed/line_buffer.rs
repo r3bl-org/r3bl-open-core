@@ -51,70 +51,76 @@ pub enum CaretRowLocation {
 pub mod line_buffer_move_caret {
   use super::*;
 
-  pub fn up(this: &mut EditorBuffer) {
-    empty_check_early_return!(this, @Nothing);
+  pub fn up(this: &mut EditorBuffer) -> Option<()> {
+    empty_check_early_return!(this, @None);
     match line_buffer_locate_caret::find_row(this) {
       CaretRowLocation::AtTopOfBuffer => {
         // Do nothing.
       }
       CaretRowLocation::AtBottomOfBuffer | CaretRowLocation::InMiddleOfBuffer => {
-        this.caret.row -= 1;
-        this
-          .caret
-          .clip_cols_to_bounds(line_buffer_get_content::line_display_width(this));
+        if *this.caret.row > 0 {
+          this.caret.row -= 1;
+          this
+            .caret
+            .clip_cols_to_bounds(line_buffer_get_content::line_display_width(this));
+        }
       }
     }
+    None
   }
 
-  pub fn down(this: &mut EditorBuffer) {
-    empty_check_early_return!(this, @Nothing);
+  pub fn down(this: &mut EditorBuffer) -> Option<()> {
+    empty_check_early_return!(this, @None);
     match line_buffer_locate_caret::find_row(this) {
       CaretRowLocation::AtBottomOfBuffer => {
         // Do nothing.
       }
       CaretRowLocation::AtTopOfBuffer | CaretRowLocation::InMiddleOfBuffer => {
-        this.caret.row += 1;
-        this
-          .caret
-          .clip_cols_to_bounds(line_buffer_get_content::line_display_width(this));
+        let max_row = ch!(this.vec_lines.len(), @dec);
+        if this.caret.row < max_row {
+          this.caret.row += 1;
+          this
+            .caret
+            .clip_cols_to_bounds(line_buffer_get_content::line_display_width(this));
+        }
       }
     }
+    None
   }
 
-  pub fn right(this: &mut EditorBuffer) {
-    empty_check_early_return!(this, @Nothing);
+  pub fn right(this: &mut EditorBuffer) -> Option<()> {
+    empty_check_early_return!(this, @None);
     match line_buffer_locate_caret::find_col(this) {
       CaretColLocation::AtEndOfLine => {
         // Do nothing.
       }
       CaretColLocation::AtStartOfLine | CaretColLocation::InMiddleOfLine => {
-        if let Some((_, unicode_width)) = line_buffer_get_content::string_at_caret(this) {
-          let max_display_width = line_buffer_get_content::line_display_width(this);
-          this
-            .caret
-            .add_cols_with_bounds(unicode_width, max_display_width);
-        }
+        let (_, unicode_width) = line_buffer_get_content::string_at_caret(this)?;
+        let max_display_width = line_buffer_get_content::line_display_width(this);
+        this
+          .caret
+          .add_cols_with_bounds(unicode_width, max_display_width);
       }
     }
+    None
   }
 
-  pub fn left(this: &mut EditorBuffer) {
-    empty_check_early_return!(this, @Nothing);
+  pub fn left(this: &mut EditorBuffer) -> Option<()> {
+    empty_check_early_return!(this, @None);
     match line_buffer_locate_caret::find_col(this) {
       CaretColLocation::AtStartOfLine => {
         // Do nothing.
       }
       CaretColLocation::AtEndOfLine => {
-        if let Some((_, unicode_width)) = line_buffer_get_content::string_at_end_of_line(this) {
-          this.caret.col -= unicode_width;
-        }
+        let (_, unicode_width) = line_buffer_get_content::string_at_end_of_line(this)?;
+        this.caret.col -= unicode_width;
       }
       CaretColLocation::InMiddleOfLine => {
-        if let Some((_, unicode_width)) = line_buffer_get_content::string_to_left_of_caret(this) {
-          this.caret.col -= unicode_width;
-        }
+        let (_, unicode_width) = line_buffer_get_content::string_to_left_of_caret(this)?;
+        this.caret.col -= unicode_width;
       }
     }
+    None
   }
 }
 
@@ -131,15 +137,36 @@ pub mod line_buffer_get_content {
   }
 
   pub fn line_as_string(this: &EditorBuffer) -> Option<String> {
-    let position = this.caret;
     empty_check_early_return!(this, @None);
+    let position = this.caret;
     let line = this.vec_lines.get(ch!(@to_usize position.row))?;
     Some(line.clone())
   }
 
-  pub fn string_at_caret(this: &EditorBuffer) -> Option<(String, ChUnit)> {
-    let position = this.caret;
+  pub fn next_line_as_string(this: &EditorBuffer) -> Option<String> {
     empty_check_early_return!(this, @None);
+    let position = this.caret;
+    let line = this
+      .vec_lines
+      .get(ch!(@to_usize position.row, @inc))?;
+    Some(line.clone())
+  }
+
+  pub fn prev_line_as_string(this: &EditorBuffer) -> Option<String> {
+    empty_check_early_return!(this, @None);
+    let position = this.caret;
+    if position.row == ch!(0) {
+      return None;
+    }
+    let line = this
+      .vec_lines
+      .get(ch!(@to_usize position.row, @dec))?;
+    Some(line.clone())
+  }
+
+  pub fn string_at_caret(this: &EditorBuffer) -> Option<(String, ChUnit)> {
+    empty_check_early_return!(this, @None);
+    let position = this.caret;
     let line = this.vec_lines.get(ch!(@to_usize position.row))?;
     let (str_seg, unicode_width) = line
       .unicode_string()
@@ -148,8 +175,8 @@ pub mod line_buffer_get_content {
   }
 
   pub fn string_to_left_of_caret(this: &EditorBuffer) -> Option<(String, ChUnit)> {
-    let position = this.caret;
     empty_check_early_return!(this, @None);
+    let position = this.caret;
     let line = this.vec_lines.get(ch!(@to_usize position.row))?;
     line
       .unicode_string()
@@ -157,6 +184,7 @@ pub mod line_buffer_get_content {
   }
 
   pub fn string_at_end_of_line(this: &EditorBuffer) -> Option<(String, ChUnit)> {
+    empty_check_early_return!(this, @None);
     let line = line_buffer_get_content::line_as_string(this)?;
     if let CaretColLocation::AtEndOfLine = line_buffer_locate_caret::find_col(this) {
       let maybe_last_str_seg = line.unicode_string().get_string_at_end();
@@ -223,7 +251,7 @@ pub mod line_buffer_locate_caret {
     if this.vec_lines.is_empty() || this.vec_lines.len() == 1 {
       false // If there is only one line, then the caret is not at the bottom, its at the top.
     } else {
-      let max_row_count = ch!(this.vec_lines.len()) /* Safe to sub. */ - 1;
+      let max_row_count = ch!(this.vec_lines.len(), @dec);
       this.caret.row == max_row_count
     }
   }
@@ -331,5 +359,76 @@ pub mod line_buffer_insert {
         }
       }
     }
+  }
+}
+
+pub mod line_buffer_delete {
+
+  use super::*;
+
+  pub fn delete_at_caret(this: &mut EditorBuffer) -> Option<()> {
+    if line_buffer_get_content::string_at_caret(this).is_some() {
+      delete_in_middle_of_line(this)?;
+    } else {
+      delete_at_end_of_line(this)?;
+    }
+    None
+  }
+
+  // R ┌──────────┐
+  // 0 ▸abc       │
+  // 1 │ab        │
+  // 2 │a         │
+  //   └─▴────────┘
+  //   C0123456789
+  fn delete_in_middle_of_line(this: &mut EditorBuffer) -> Option<()> {
+    let cur_line = line_buffer_get_content::line_as_string(this)?;
+    let unicode_string = cur_line.unicode_string();
+    let (new_line, _) = unicode_string.delete_char_at_display_col(this.caret.col)?;
+    let row_index = ch!(@to_usize this.caret.row);
+    let _ = replace(&mut this.vec_lines[row_index], new_line);
+    None
+  }
+
+  // R ┌──────────┐
+  // 0 ▸abc       │
+  // 1 │ab        │
+  // 2 │a         │
+  //   └───▴──────┘
+  //   C0123456789
+  fn delete_at_end_of_line(this: &mut EditorBuffer) -> Option<()> {
+    let this_line = line_buffer_get_content::line_as_string(this)?;
+    let next_line = line_buffer_get_content::next_line_as_string(this)?;
+    let _ = replace(
+      &mut this.vec_lines[ch!(@to_usize this.caret.row)],
+      this_line + &next_line,
+    );
+    this
+      .vec_lines
+      .remove(ch!(@to_usize this.caret.row, @inc));
+    None
+  }
+
+  // R ┌──────────┐
+  // 0 ▸abc       │
+  // 1 │ab        │
+  // 2 │a         │
+  //   └─▴────────┘
+  //   C0123456789
+  pub fn backspace_at_caret(this: &mut EditorBuffer) -> Option<()> {
+    empty_check_early_return!(this, @None);
+    // TK: impl this
+    None
+  }
+
+  // R ┌──────────┐
+  // 0 ▸abc       │
+  // 1 │ab        │
+  // 2 │a         │
+  //   └▴─────────┘
+  //   C0123456789
+  fn backspace_at_start_of_line(this: &mut EditorBuffer) -> Option<()> {
+    // TK: impl this
+    None
   }
 }
