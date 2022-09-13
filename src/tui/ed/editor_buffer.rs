@@ -35,6 +35,13 @@ pub struct EditorBuffer {
   pub lolcat: Lolcat,
 }
 
+pub enum CaretDirection {
+  Up,
+  Down,
+  Left,
+  Right,
+}
+
 impl EditorBuffer {
   pub fn is_empty(&self) -> bool { self.vec_lines.is_empty() }
 
@@ -48,13 +55,16 @@ impl EditorBuffer {
   /// Insert [str] at the current [caret position](EditorBuffer::caret) into the current line.
   pub fn insert_str(&mut self, chunk: &str) { line_buffer_insert::str_at_caret(self, chunk) }
 
-  /// Move one character to the left. Calculate how wide the current character is (unicode width)
-  /// and then move the "display" caret position back that many columns.
-  pub fn move_caret_left(&mut self) { line_buffer_move_caret::left(self); }
-
-  /// Move one character to the right. Calculate how wide the current character is (unicode width)
-  /// and then move the "display" caret position forward that many columns.
-  pub fn move_caret_right(&mut self) { line_buffer_move_caret::right(self); }
+  /// Move one character to the left, or right. Calculate how wide the current character is (unicode
+  /// width) and then move the "display" caret position back that many columns.
+  pub fn move_caret(&mut self, direction: CaretDirection) {
+    match direction {
+      CaretDirection::Left => line_buffer_move_caret::left(self),
+      CaretDirection::Right => line_buffer_move_caret::right(self),
+      CaretDirection::Up => line_buffer_move_caret::up(self),
+      CaretDirection::Down => line_buffer_move_caret::down(self),
+    }
+  }
 }
 
 mod debug_format_helpers {

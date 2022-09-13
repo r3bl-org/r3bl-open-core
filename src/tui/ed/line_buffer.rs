@@ -34,24 +34,62 @@ macro_rules! empty_check_early_return {
   };
 }
 
-pub enum CaretLocation {
+pub enum CaretColLocation {
+  /// Also covers state where there is no col, or only 1 col.
   AtStartOfLine,
   AtEndOfLine,
   InMiddleOfLine,
 }
 
+pub enum CaretRowLocation {
+  /// Also covers state where there is no row, or only 1 row.
+  AtTopOfBuffer,
+  AtBottomOfBuffer,
+  InMiddleOfBuffer,
+}
+
 pub mod line_buffer_move_caret {
   use super::*;
 
-  pub fn right(this: &mut EditorBuffer) {
+  pub fn up(this: &mut EditorBuffer) {
     empty_check_early_return!(this, @Nothing);
-    match line_buffer_locate_caret::find(this) {
-      CaretLocation::AtEndOfLine => {
+    match line_buffer_locate_caret::find_row(this) {
+      CaretRowLocation::AtTopOfBuffer => {
         // Do nothing.
       }
-      CaretLocation::AtStartOfLine | CaretLocation::InMiddleOfLine => {
+      CaretRowLocation::AtBottomOfBuffer | CaretRowLocation::InMiddleOfBuffer => {
+        this.caret.row -= 1;
+        this
+          .caret
+          .clip_cols_to_bounds(line_buffer_get_content::line_display_width(this));
+      }
+    }
+  }
+
+  pub fn down(this: &mut EditorBuffer) {
+    empty_check_early_return!(this, @Nothing);
+    match line_buffer_locate_caret::find_row(this) {
+      CaretRowLocation::AtBottomOfBuffer => {
+        // Do nothing.
+      }
+      CaretRowLocation::AtTopOfBuffer | CaretRowLocation::InMiddleOfBuffer => {
+        this.caret.row += 1;
+        this
+          .caret
+          .clip_cols_to_bounds(line_buffer_get_content::line_display_width(this));
+      }
+    }
+  }
+
+  pub fn right(this: &mut EditorBuffer) {
+    empty_check_early_return!(this, @Nothing);
+    match line_buffer_locate_caret::find_col(this) {
+      CaretColLocation::AtEndOfLine => {
+        // Do nothing.
+      }
+      CaretColLocation::AtStartOfLine | CaretColLocation::InMiddleOfLine => {
         if let Some((_, unicode_width)) = line_buffer_get_content::string_at_caret(this) {
-          let max_display_width = line_buffer_get_content::display_width_of_line(this);
+          let max_display_width = line_buffer_get_content::line_display_width(this);
           this
             .caret
             .add_cols_with_bounds(unicode_width, max_display_width);
@@ -62,16 +100,16 @@ pub mod line_buffer_move_caret {
 
   pub fn left(this: &mut EditorBuffer) {
     empty_check_early_return!(this, @Nothing);
-    match line_buffer_locate_caret::find(this) {
-      CaretLocation::AtStartOfLine => {
+    match line_buffer_locate_caret::find_col(this) {
+      CaretColLocation::AtStartOfLine => {
         // Do nothing.
       }
-      CaretLocation::AtEndOfLine => {
+      CaretColLocation::AtEndOfLine => {
         if let Some((_, unicode_width)) = line_buffer_get_content::string_at_end_of_line(this) {
           this.caret.col -= unicode_width;
         }
       }
-      CaretLocation::InMiddleOfLine => {
+      CaretColLocation::InMiddleOfLine => {
         if let Some((_, unicode_width)) = line_buffer_get_content::string_to_left_of_caret(this) {
           this.caret.col -= unicode_width;
         }
@@ -83,7 +121,7 @@ pub mod line_buffer_move_caret {
 pub mod line_buffer_get_content {
   use super::*;
 
-  pub fn display_width_of_line(this: &EditorBuffer) -> ChUnit {
+  pub fn line_display_width(this: &EditorBuffer) -> ChUnit {
     let line = line_buffer_get_content::line_as_string(this);
     if let Some(line) = line {
       line.unicode_string().display_width
@@ -92,11 +130,11 @@ pub mod line_buffer_get_content {
     }
   }
 
-  pub fn line_as_string(this: &EditorBuffer) -> Option<&String> {
+  pub fn line_as_string(this: &EditorBuffer) -> Option<String> {
     let position = this.caret;
     empty_check_early_return!(this, @None);
     let line = this.vec_lines.get(ch!(@to_usize position.row))?;
-    Some(line)
+    Some(line.clone())
   }
 
   pub fn string_at_caret(this: &EditorBuffer) -> Option<(String, ChUnit)> {
@@ -120,7 +158,7 @@ pub mod line_buffer_get_content {
 
   pub fn string_at_end_of_line(this: &EditorBuffer) -> Option<(String, ChUnit)> {
     let line = line_buffer_get_content::line_as_string(this)?;
-    if let CaretLocation::AtEndOfLine = line_buffer_locate_caret::find(this) {
+    if let CaretColLocation::AtEndOfLine = line_buffer_locate_caret::find_col(this) {
       let maybe_last_str_seg = line.unicode_string().get_string_at_end();
       return maybe_last_str_seg;
     }
@@ -131,17 +169,26 @@ pub mod line_buffer_get_content {
 pub mod line_buffer_locate_caret {
   use super::*;
 
-  pub fn find(this: &EditorBuffer) -> CaretLocation {
-    if line_buffer_locate_caret::is_at_start_of_line(this) {
-      CaretLocation::AtStartOfLine
-    } else if line_buffer_locate_caret::is_at_end_of_line(this) {
-      CaretLocation::AtEndOfLine
+  /// Locate the col.
+  pub fn find_col(this: &EditorBuffer) -> CaretColLocation {
+    if line_buffer_locate_caret::col_is_at_start_of_line(this) {
+      CaretColLocation::AtStartOfLine
+    } else if line_buffer_locate_caret::col_is_at_end_of_line(this) {
+      CaretColLocation::AtEndOfLine
     } else {
-      CaretLocation::InMiddleOfLine
+      CaretColLocation::InMiddleOfLine
     }
   }
 
-  fn is_at_end_of_line(this: &EditorBuffer) -> bool {
+  fn col_is_at_start_of_line(this: &EditorBuffer) -> bool {
+    if line_buffer_get_content::line_as_string(this).is_some() {
+      *this.caret.col == 0
+    } else {
+      false
+    }
+  }
+
+  fn col_is_at_end_of_line(this: &EditorBuffer) -> bool {
     if let Some(line) = line_buffer_get_content::line_as_string(this) {
       let line_display_width = line.unicode_string().display_width;
       this.caret.col == line_display_width
@@ -150,11 +197,34 @@ pub mod line_buffer_locate_caret {
     }
   }
 
-  fn is_at_start_of_line(this: &EditorBuffer) -> bool {
-    if line_buffer_get_content::line_as_string(this).is_some() {
-      *this.caret.col == 0
+  /// Locate the row.
+  pub fn find_row(this: &EditorBuffer) -> CaretRowLocation {
+    if row_is_at_top_of_buffer(this) {
+      CaretRowLocation::AtTopOfBuffer
+    } else if row_is_at_bottom_of_buffer(this) {
+      CaretRowLocation::AtBottomOfBuffer
     } else {
-      false
+      CaretRowLocation::InMiddleOfBuffer
+    }
+  }
+
+  // R ┌──────────┐
+  // 0 ▸          │
+  //   └▴─────────┘
+  //   C0123456789
+  fn row_is_at_top_of_buffer(this: &EditorBuffer) -> bool { *this.caret.row == 0 }
+
+  // R ┌──────────┐
+  // 0 │a         │
+  // 1 ▸a         │
+  //   └▴─────────┘
+  //   C0123456789
+  fn row_is_at_bottom_of_buffer(this: &EditorBuffer) -> bool {
+    if this.vec_lines.is_empty() || this.vec_lines.len() == 1 {
+      false // If there is only one line, then the caret is not at the bottom, its at the top.
+    } else {
+      let max_row_count = ch!(this.vec_lines.len()) /* Safe to sub. */ - 1;
+      this.caret.row == max_row_count
     }
   }
 }
@@ -220,10 +290,10 @@ pub mod line_buffer_insert {
       return;
     }
 
-    match line_buffer_locate_caret::find(this) {
-      CaretLocation::AtEndOfLine => insert_new_line_at_end_of_current_line(this),
-      CaretLocation::AtStartOfLine => insert_new_line_at_start_of_current_line(this),
-      CaretLocation::InMiddleOfLine => insert_new_line_at_middle_of_current_line(this),
+    match line_buffer_locate_caret::find_col(this) {
+      CaretColLocation::AtEndOfLine => insert_new_line_at_end_of_current_line(this),
+      CaretColLocation::AtStartOfLine => insert_new_line_at_start_of_current_line(this),
+      CaretColLocation::InMiddleOfLine => insert_new_line_at_middle_of_current_line(this),
     }
 
     // Handle inserting a new line at the end of the current line.
