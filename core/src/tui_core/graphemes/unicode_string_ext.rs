@@ -340,7 +340,7 @@ impl UnicodeString {
     Some((segment.string.clone(), segment.unicode_width))
   }
 
-  /// Returns a new ([String], [ChUnit]) tuple and does not modify
+  /// Returns a new ([String], [ChUnit]) tuple. Does not modify
   /// [self.string](UnicodeString::string).
   pub fn insert_char_at_display_col(
     &self, display_col: ChUnit, chunk: &str,
@@ -379,6 +379,8 @@ impl UnicodeString {
     }
   }
 
+  /// Returns two new tuples: *left* ([String], [ChUnit]), *right* ([String], [ChUnit]). Does not
+  /// modify [self.string](UnicodeString::string).
   pub fn split_at_display_col(
     &self, display_col: ChUnit,
   ) -> Option<((String, ChUnit), (String, ChUnit))> {
