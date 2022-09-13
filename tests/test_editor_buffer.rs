@@ -17,22 +17,9 @@
 
 use r3bl_rs_utils::*;
 
-pub mod assert {
-  use super::*;
-
-  pub fn none_is_at_caret(editor_buffer: &EditorBuffer) {
-    assert_eq2!(
-      line_buffer_get_content::string_at_caret(editor_buffer),
-      None
-    );
-  }
-
-  pub fn str_is_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
-    match line_buffer_get_content::string_at_caret(editor_buffer) {
-      Some((s, _)) => assert_eq2!(s, expected),
-      None => panic!("Expected string at caret, but got None."),
-    }
-  }
+#[test]
+fn test_delete_and_backspace() {
+  // TK: impl this
 }
 
 #[test]
@@ -56,6 +43,8 @@ fn test_move_caret_up_down() {
 
   // Move caret down. Noop.
   this.move_caret(CaretDirection::Down);
+  this.move_caret(CaretDirection::Down);
+  this.move_caret(CaretDirection::Down);
   assert_eq2!(this.caret, position!(col: 1, row: 2));
 
   // Move caret up.
@@ -66,7 +55,9 @@ fn test_move_caret_up_down() {
   this.move_caret(CaretDirection::Up);
   assert_eq2!(this.caret, position!(col: 1, row: 0));
 
-  // Move caret up. Noop.
+  // Move caret up a few times. Noop.
+  this.move_caret(CaretDirection::Up);
+  this.move_caret(CaretDirection::Up);
   this.move_caret(CaretDirection::Up);
   assert_eq2!(this.caret, position!(col: 1, row: 0));
 
@@ -215,6 +206,7 @@ fn test_move_caret_left_right() {
   //   └▴─────────┘
   //   C0123456789
   this.move_caret(CaretDirection::Left);
+  this.move_caret(CaretDirection::Left); // Noop.
   assert::str_is_at_caret(&this, "a");
 
   // Insert "1".
@@ -268,6 +260,7 @@ fn test_move_caret_left_right() {
   //   └───▴──────┘
   //   C0123456789
   this.move_caret(CaretDirection::Right);
+  this.move_caret(CaretDirection::Right); // Noop.
   assert::none_is_at_caret(&this);
 }
 
@@ -345,4 +338,22 @@ fn test_insertion() {
   this.insert_str("🙏🏽");
   assert_eq2!(this.vec_lines, vec!["a", "b", "", "😀d🙏🏽"]);
   assert_eq2!(this.caret, position!(col: 7, row: 3));
+}
+
+pub mod assert {
+  use super::*;
+
+  pub fn none_is_at_caret(editor_buffer: &EditorBuffer) {
+    assert_eq2!(
+      line_buffer_get_content::string_at_caret(editor_buffer),
+      None
+    );
+  }
+
+  pub fn str_is_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
+    match line_buffer_get_content::string_at_caret(editor_buffer) {
+      Some((s, _)) => assert_eq2!(s, expected),
+      None => panic!("Expected string at caret, but got None."),
+    }
+  }
 }

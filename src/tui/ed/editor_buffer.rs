@@ -63,8 +63,12 @@ impl EditorBuffer {
       CaretDirection::Right => line_buffer_move_caret::right(self),
       CaretDirection::Up => line_buffer_move_caret::up(self),
       CaretDirection::Down => line_buffer_move_caret::down(self),
-    }
+    };
   }
+
+  pub fn delete_at_caret(&mut self) { line_buffer_delete::delete_at_caret(self); }
+
+  pub fn backspace_at_caret(&mut self) { line_buffer_delete::backspace_at_caret(self); }
 }
 
 mod debug_format_helpers {

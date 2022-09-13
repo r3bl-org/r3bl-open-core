@@ -61,13 +61,39 @@ impl ChUnit {
 macro_rules! ch {
   // Returns ChUnit.
   ($arg: expr) => {{
-    let value: ChUnit = $arg.into();
-    value
+    let ch_value: ChUnit = $arg.into();
+    ch_value
+  }};
+  // Returns ChUnit +=1.
+  ($arg: expr, @inc) => {{
+    let mut ch_value: ChUnit = $arg.into();
+    ch_value += 1;
+    ch_value
+  }};
+  // Returns ChUnit -=1.
+  ($arg: expr, @dec) => {{
+    let mut ch_value: ChUnit = $arg.into();
+    ch_value -= 1;
+    ch_value
   }};
   // Returns usize.
   (@to_usize $arg: expr) => {{
-    let value: usize = $arg.into();
-    value
+    let usize_value: usize = $arg.into();
+    usize_value
+  }};
+  // Returns usize +=1.
+  (@to_usize $arg: expr, @inc) => {{
+    let mut ch_value_copy = $arg.clone();
+    ch_value_copy += 1;
+    let usize_value: usize = ch_value_copy.into();
+    usize_value
+  }};
+  // Returns usize -=1.
+  (@to_usize $arg: expr, @dec) => {{
+    let mut ch_value_copy = $arg.clone();
+    ch_value_copy -= 1;
+    let usize_value: usize = ch_value_copy.into();
+    usize_value
   }};
 }
 

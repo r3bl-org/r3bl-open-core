@@ -69,6 +69,8 @@ impl EditorEngine {
           SpecialKey::Right => new_editor_buffer.move_caret(CaretDirection::Right),
           SpecialKey::Up => new_editor_buffer.move_caret(CaretDirection::Up),
           SpecialKey::Down => new_editor_buffer.move_caret(CaretDirection::Down),
+          SpecialKey::Backspace => new_editor_buffer.backspace_at_caret(),
+          SpecialKey::Delete => new_editor_buffer.delete_at_caret(),
           _ => {}
         }
         Ok(Some(new_editor_buffer))

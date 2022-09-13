@@ -29,6 +29,9 @@ editor engine (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
   ☐ delete content:
     ☐ delete/backspace edit buffer line
     ☐ delete/backspace lines
+  ☐ move caret left / right move up / down as well
+    ☐ left at start of line, move up to end of previous line
+    ☐ right at end of line, move down to start of next line
   ☐ scrolling
     ☐ left/right
     ☐ up/down
