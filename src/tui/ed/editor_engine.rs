@@ -48,36 +48,12 @@ impl EditorEngine {
   pub async fn apply(
     &mut self, editor_buffer: &EditorBuffer, input_event: &InputEvent,
   ) -> CommonResult<Option<EditorBuffer>> {
-    match input_event {
-      // Process each character.
-      InputEvent::Keyboard(Keypress::Plain {
-        key: Key::Character(character),
-      }) => {
-        let mut new_editor_buffer = editor_buffer.clone();
-        new_editor_buffer.insert_char(*character);
-        Ok(Some(new_editor_buffer))
-      }
-
-      // Process keys: Left, Right, Enter, Up, Down.
-      InputEvent::Keyboard(Keypress::Plain {
-        key: Key::SpecialKey(special_key),
-      }) => {
-        let mut new_editor_buffer = editor_buffer.clone();
-        match special_key {
-          SpecialKey::Enter => new_editor_buffer.insert_new_line(),
-          SpecialKey::Left => new_editor_buffer.move_caret(CaretDirection::Left),
-          SpecialKey::Right => new_editor_buffer.move_caret(CaretDirection::Right),
-          SpecialKey::Up => new_editor_buffer.move_caret(CaretDirection::Up),
-          SpecialKey::Down => new_editor_buffer.move_caret(CaretDirection::Down),
-          SpecialKey::Backspace => new_editor_buffer.backspace_at_caret(),
-          SpecialKey::Delete => new_editor_buffer.delete_at_caret(),
-          _ => {}
-        }
-        Ok(Some(new_editor_buffer))
-      }
-
-      // Other keypresses.
-      _ => Ok(None),
+    if let Some(command) = EditorBufferCommand::try_convert_input_event(input_event) {
+      let mut new_editor_buffer = editor_buffer.clone();
+      new_editor_buffer.apply_command(command);
+      Ok(Some(new_editor_buffer))
+    } else {
+      Ok(None)
     }
   }
 

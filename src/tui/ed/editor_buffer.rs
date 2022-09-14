@@ -21,6 +21,10 @@ use serde::*;
 
 use crate::*;
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ EditorBuffer │
+// ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+/// Stores the data for a single editor buffer.
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
@@ -35,13 +39,26 @@ pub struct EditorBuffer {
   pub lolcat: Lolcat,
 }
 
-pub enum CaretDirection {
-  Up,
-  Down,
-  Left,
-  Right,
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ EditorBuffer -> Event based interface │
+// ╯                                       ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+impl EditorBuffer {
+  /// Returns [Option::Some] if the command was successfully executed, otherwise returns
+  /// [Option::None].
+  pub fn apply_command(&mut self, command: EditorBufferCommand) {
+    match command {
+      EditorBufferCommand::InsertChar(character) => self.insert_char(character),
+      EditorBufferCommand::InsertNewLine => self.insert_new_line(),
+      EditorBufferCommand::Delete => self.delete_at_caret(),
+      EditorBufferCommand::Backspace => self.backspace_at_caret(),
+      EditorBufferCommand::MoveCaret(direction) => self.move_caret(direction),
+    };
+  }
 }
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ EditorBuffer -> Function based interface │
+// ╯                                          ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 impl EditorBuffer {
   pub fn is_empty(&self) -> bool { self.vec_lines.is_empty() }
 
@@ -71,13 +88,85 @@ impl EditorBuffer {
   pub fn backspace_at_caret(&mut self) { line_buffer_delete::backspace_at_caret(self); }
 }
 
+pub mod editor_buffer_command {
+  use super::*;
+
+  // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+  // │ EditorBufferCommand │
+  // ╯                     ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+  /// Commands that can be executed on an [EditorBuffer]. By providing a conversion from [InputEvent]
+  /// to [EditorBufferCommand] it becomes easier to write event handlers that consume [InputEvent] and
+  /// then execute [EditorBufferCommand] on an [EditorBuffer].
+  #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, GetSize)]
+  pub enum EditorBufferCommand {
+    InsertChar(char),
+    InsertNewLine,
+    Delete,
+    Backspace,
+    MoveCaret(CaretDirection),
+  }
+
+  #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, GetSize)]
+  pub enum CaretDirection {
+    Up,
+    Down,
+    Left,
+    Right,
+  }
+
+  impl EditorBufferCommand {
+    pub fn try_convert_input_event(input_event: &InputEvent) -> Option<EditorBufferCommand> {
+      let maybe_editor_buffer_command: Result<EditorBufferCommand, _> = input_event.try_into();
+      match maybe_editor_buffer_command {
+        Ok(editor_buffer_command) => Some(editor_buffer_command),
+        Err(_) => None,
+      }
+    }
+  }
+
+  impl TryFrom<&InputEvent> for EditorBufferCommand {
+    type Error = String;
+
+    fn try_from(input_event: &InputEvent) -> Result<Self, Self::Error> {
+      match input_event {
+        InputEvent::Keyboard(Keypress::Plain {
+          key: Key::Character(character),
+        }) => Ok(Self::InsertChar(*character)),
+        InputEvent::Keyboard(Keypress::Plain {
+          key: Key::SpecialKey(SpecialKey::Enter),
+        }) => Ok(Self::InsertNewLine),
+        InputEvent::Keyboard(Keypress::Plain {
+          key: Key::SpecialKey(SpecialKey::Delete),
+        }) => Ok(Self::Delete),
+        InputEvent::Keyboard(Keypress::Plain {
+          key: Key::SpecialKey(SpecialKey::Backspace),
+        }) => Ok(Self::Backspace),
+        InputEvent::Keyboard(Keypress::Plain {
+          key: Key::SpecialKey(SpecialKey::Up),
+        }) => Ok(Self::MoveCaret(CaretDirection::Up)),
+        InputEvent::Keyboard(Keypress::Plain {
+          key: Key::SpecialKey(SpecialKey::Down),
+        }) => Ok(Self::MoveCaret(CaretDirection::Down)),
+        InputEvent::Keyboard(Keypress::Plain {
+          key: Key::SpecialKey(SpecialKey::Left),
+        }) => Ok(Self::MoveCaret(CaretDirection::Left)),
+        InputEvent::Keyboard(Keypress::Plain {
+          key: Key::SpecialKey(SpecialKey::Right),
+        }) => Ok(Self::MoveCaret(CaretDirection::Right)),
+        _ => Err(format!("Invalid input event: {:?}", input_event)),
+      }
+    }
+  }
+}
+pub use editor_buffer_command::*;
+
 mod debug_format_helpers {
   use super::*;
 
   impl std::fmt::Debug for EditorBuffer {
     fn fmt(&self, f: &mut __private::Formatter<'_>) -> std::fmt::Result {
       write! { f,
-        "\nEditorBuffer [ \n ├ lines: {}, size: {}, \n ├ cursor: {:?}, scroll_offset: {:?}, \n └ lolcat: [{}, {}, {}, {}] \n]",
+        "\nEditorBuffer [ \n ├ lines: {}, size: {}, \n ├ caret: {:?}, scroll_offset: {:?}, \n └ lolcat: [{}, {}, {}, {}] \n]",
         self.vec_lines.len(),
         self.vec_lines.get_heap_size(),
         self.caret,
