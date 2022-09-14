@@ -112,6 +112,12 @@ pub mod math_ops {
     fn add(self, rhs: Self) -> Self::Output { ch!(add_unsigned!(self.value, rhs.value)) }
   }
 
+  impl std::ops::Add<u16> for ChUnit {
+    type Output = Self;
+
+    fn add(self, rhs: u16) -> Self::Output { ch!(add_unsigned!(self.value, rhs)) }
+  }
+
   impl std::ops::AddAssign for ChUnit {
     fn add_assign(&mut self, rhs: Self) { self.value = add_unsigned!(self.value, rhs.value); }
   }

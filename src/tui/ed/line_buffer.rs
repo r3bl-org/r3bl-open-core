@@ -51,6 +51,23 @@ pub enum CaretRowLocation {
 pub mod line_buffer_move_caret {
   use super::*;
 
+  /// It is possible when moving the caret for it to end up in the middle of a grapheme cluster. In
+  /// this case, move the caret to the end of the cluster, since the intention is to move the caret
+  /// to the next "character".
+  fn validate_caret_position(this: &mut EditorBuffer) -> Option<()> {
+    let line = line_buffer_get_content::line_as_string(this)?;
+    let line_us = line.unicode_string();
+
+    if let Some(segment) = line_us.is_display_col_in_middle_of_grapheme_cluster(this.caret.col) {
+      // Is in middle.
+      this
+        .caret
+        .set_cols(segment.unicode_width + segment.display_col_offset);
+    }
+
+    None
+  }
+
   pub fn up(this: &mut EditorBuffer) -> Option<()> {
     empty_check_early_return!(this, @None);
     match line_buffer_locate_caret::find_row(this) {
@@ -63,6 +80,7 @@ pub mod line_buffer_move_caret {
           this
             .caret
             .clip_cols_to_bounds(line_buffer_get_content::line_display_width(this));
+          validate_caret_position(this);
         }
       }
     }
@@ -82,6 +100,7 @@ pub mod line_buffer_move_caret {
           this
             .caret
             .clip_cols_to_bounds(line_buffer_get_content::line_display_width(this));
+          validate_caret_position(this);
         }
       }
     }

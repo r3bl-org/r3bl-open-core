@@ -23,6 +23,66 @@ fn test_delete_and_backspace() {
 }
 
 #[test]
+fn test_validate_caret_position_on_up() {
+  let mut this = EditorBuffer::default();
+
+  // Insert "😀\n1".
+  // R ┌──────────┐
+  // 0 │😀        │
+  // 1 ▸1         │
+  //   └─▴────────┘
+  //   C0123456789
+  this.insert_str("😀");
+  this.insert_new_line();
+  this.insert_char('1');
+  assert_eq2!(this.caret, position!(col: 1, row: 1));
+
+  // Move caret up. It should not be in the middle of the smiley face.
+  // R ┌──────────┐
+  // 0 ▸😀        │
+  // 1 │1         │
+  //   └──▴───────┘
+  //   C0123456789
+  this.move_caret(CaretDirection::Up);
+  assert_eq2!(this.caret, position!(col: 2, row: 0));
+}
+
+#[test]
+fn test_validate_caret_position_on_down() {
+  let mut this = EditorBuffer::default();
+
+  // Insert "😀\n1".
+  // R ┌──────────┐
+  // 0 ▸1         │
+  // 1 │😀        │
+  //   └──▴───────┘
+  //   C0123456789
+  this.insert_char('1');
+  this.insert_new_line();
+  this.insert_str("😀");
+  assert_eq2!(this.caret, position!(col: 2, row: 1));
+
+  // Move caret up, and 2 left.
+  // R ┌──────────┐
+  // 0 ▸1         │
+  // 1 │😀        │
+  //   └─▴────────┘
+  //   C0123456789
+  this.move_caret(CaretDirection::Up);
+  this.move_caret(CaretDirection::Right);
+  assert_eq2!(this.caret, position!(col: 1, row: 0));
+
+  // Move caret down. It should not be in the middle of the smiley face.
+  // R ┌──────────┐
+  // 0 │1         │
+  // 1 ▸😀        │
+  //   └──▴───────┘
+  //   C0123456789
+  this.move_caret(CaretDirection::Down);
+  assert_eq2!(this.caret, position!(col: 2, row: 1));
+}
+
+#[test]
 fn test_move_caret_up_down() {
   let mut this = EditorBuffer::default();
 

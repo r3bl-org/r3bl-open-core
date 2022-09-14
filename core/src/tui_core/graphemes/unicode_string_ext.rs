@@ -317,9 +317,30 @@ impl UnicodeString {
       .map(|segment| segment.display_col_offset)
   }
 
+  /// Return the string and unicode width of the grapheme cluster segment at the given `display_col`.
+  /// If this `display_col` falls in the middle of a grapheme cluster, then return [None].
   pub fn get_string_at_display_col(&self, display_col: ChUnit) -> Option<(String, ChUnit)> {
     let segment = self.at_display_col(display_col)?;
-    Some((segment.string.clone(), segment.unicode_width))
+    // What if the display_col is in the middle of a grapheme cluster?
+    if display_col != segment.display_col_offset {
+      None
+    } else {
+      Some((segment.string.clone(), segment.unicode_width))
+    }
+  }
+
+  /// If the given `display_col` falls in the middle of a grapheme cluster, then return the
+  /// [GraphemeClusterSegment] at that `display_col`. Otherwise return [None].
+  pub fn is_display_col_in_middle_of_grapheme_cluster(
+    &self, display_col: ChUnit,
+  ) -> Option<GraphemeClusterSegment> {
+    let segment = self.at_display_col(display_col);
+    if let Some(segment) = segment {
+      if display_col != segment.display_col_offset {
+        return Some(segment.clone());
+      }
+    }
+    None
   }
 
   pub fn get_string_at_left_of_display_col(&self, display_col: ChUnit) -> Option<(String, ChUnit)> {

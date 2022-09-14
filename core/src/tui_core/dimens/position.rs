@@ -66,6 +66,12 @@ impl Position {
     *self
   }
 
+  /// Set given `col` count to `value`.
+  pub fn set_cols(&mut self, value: ChUnit) -> Self {
+    self.col = value;
+    *self
+  }
+
   /// Add given `col` count to `self`.
   pub fn add_cols(&mut self, num_cols_to_add: usize) -> Self {
     let value: ChUnit = ch!(num_cols_to_add);
