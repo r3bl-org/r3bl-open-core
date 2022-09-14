@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use get_size::GetSize;
+use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
@@ -253,6 +255,40 @@ fn to_string(vec_grapheme_cluster_segment: Vec<GraphemeClusterSegment>) -> Strin
   my_string
 }
 
+#[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Debug)]
+pub struct UnicodeStringSegmentResult {
+  pub str_seg: String,
+  pub unicode_width: ChUnit,
+  pub display_col_at_which_seg_starts: ChUnit,
+}
+
+#[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Debug)]
+pub struct UnicodeStringSliceResult {
+  pub str_slice: String,
+  pub unicode_width: ChUnit,
+}
+
+impl UnicodeStringSliceResult {
+  pub fn new(str_slice: String, unicode_width: ChUnit) -> Self {
+    Self {
+      str_slice,
+      unicode_width,
+    }
+  }
+}
+
+impl UnicodeStringSegmentResult {
+  pub fn new(
+    string: String, unicode_width: ChUnit, display_col_at_which_this_segment_starts: ChUnit,
+  ) -> Self {
+    Self {
+      str_seg: string,
+      unicode_width,
+      display_col_at_which_seg_starts: display_col_at_which_this_segment_starts,
+    }
+  }
+}
+
 impl UnicodeString {
   pub fn char_display_width(character: char) -> usize {
     let display_width: usize = UnicodeWidthChar::width(character).unwrap_or(0);
@@ -319,13 +355,19 @@ impl UnicodeString {
 
   /// Return the string and unicode width of the grapheme cluster segment at the given `display_col`.
   /// If this `display_col` falls in the middle of a grapheme cluster, then return [None].
-  pub fn get_string_at_display_col(&self, display_col: ChUnit) -> Option<(String, ChUnit)> {
+  pub fn get_string_at_display_col(
+    &self, display_col: ChUnit,
+  ) -> Option<UnicodeStringSegmentResult> {
     let segment = self.at_display_col(display_col)?;
     // What if the display_col is in the middle of a grapheme cluster?
     if display_col != segment.display_col_offset {
       None
     } else {
-      Some((segment.string.clone(), segment.unicode_width))
+      Some(UnicodeStringSegmentResult::new(
+        segment.string.clone(),
+        segment.unicode_width,
+        segment.display_col_offset,
+      ))
     }
   }
 
@@ -343,22 +385,29 @@ impl UnicodeString {
     None
   }
 
-  pub fn get_string_at_left_of_display_col(&self, display_col: ChUnit) -> Option<(String, ChUnit)> {
+  pub fn get_string_at_left_of_display_col(
+    &self, display_col: ChUnit,
+  ) -> Option<UnicodeStringSegmentResult> {
     let segment_at_col = self.at_display_col(display_col)?;
-    if segment_at_col.logical_index >= 1 {
+    if segment_at_col.logical_index > 0 {
       let segment_left_of_col = self.at_logical_index(segment_at_col.logical_index - 1)?;
-      Some((
+      Some(UnicodeStringSegmentResult::new(
         segment_left_of_col.string.clone(),
         segment_left_of_col.unicode_width,
+        segment_left_of_col.display_col_offset,
       ))
     } else {
       None
     }
   }
 
-  pub fn get_string_at_end(&self) -> Option<(String, ChUnit)> {
+  pub fn get_string_at_end(&self) -> Option<UnicodeStringSegmentResult> {
     let segment = self.vec_segment.last()?;
-    Some((segment.string.clone(), segment.unicode_width))
+    Some(UnicodeStringSegmentResult::new(
+      segment.string.clone(),
+      segment.unicode_width,
+      segment.display_col_offset,
+    ))
   }
 
   /// Returns a new [String]. Does not modify [self.string](UnicodeString::string).
@@ -407,11 +456,11 @@ impl UnicodeString {
     }
   }
 
-  /// Returns two new tuples: *left* ([String], [ChUnit]), *right* ([String], [ChUnit]). Does not
-  /// modify [self.string](UnicodeString::string).
+  /// Returns two new tuples: *left* ([UnicodeStringSliceResult]), *right*
+  /// ([UnicodeStringSliceResult]). Does not modify [self.string](UnicodeString::string).
   pub fn split_at_display_col(
     &self, display_col: ChUnit,
-  ) -> Option<((String, ChUnit), (String, ChUnit))> {
+  ) -> Option<(UnicodeStringSliceResult, UnicodeStringSliceResult)> {
     let split_logical_index = self.logical_index_at_display_col(display_col)?;
     let max_logical_index = self.vec_segment.len();
 
@@ -437,20 +486,22 @@ impl UnicodeString {
 
     if *str_right_unicode_width > 0 || *str_left_unicode_width > 0 {
       Some((
-        (str_left, str_left_unicode_width),
-        (str_right, str_right_unicode_width),
+        UnicodeStringSliceResult::new(str_left, str_left_unicode_width),
+        UnicodeStringSliceResult::new(str_right, str_right_unicode_width),
       ))
     } else {
       None
     }
   }
 
-  /// Returns a new ([String], [ChUnit]) tuple. Does not modify
+  /// Returns a new ([UnicodeStringSliceResult]) tuple. Does not modify
   /// [self.string](UnicodeString::string).
-  pub fn delete_char_at_display_col(&self, display_col: ChUnit) -> Option<(String, ChUnit)> {
+  pub fn delete_char_at_display_col(
+    &self, display_col: ChUnit,
+  ) -> Option<UnicodeStringSliceResult> {
     // There is only one segment present.
     if self.vec_segment.len() == 1 {
-      return Some((String::new(), ch!(0)));
+      return Some(UnicodeStringSliceResult::default());
     }
 
     // There are more than 1 segments present.i
@@ -482,7 +533,10 @@ impl UnicodeString {
     str_left_unicode_width += str_right_unicode_width;
 
     if *str_left_unicode_width > 0 {
-      Some((str_left, str_left_unicode_width))
+      Some(UnicodeStringSliceResult::new(
+        str_left,
+        str_left_unicode_width,
+      ))
     } else {
       None
     }
