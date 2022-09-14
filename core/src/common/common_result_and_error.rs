@@ -37,7 +37,7 @@ use std::{error::Error,
 /// ```
 pub type CommonResult<T> = OGResult<T, Box<dyn Error + Send + Sync>>;
 
-// Common error struct. Read custom error docs
+/// Common error struct. Read custom error docs
 /// [here](https://learning-rust.github.io/docs/e7.custom_error_types.html).
 ///
 /// Here's an example.
@@ -77,6 +77,7 @@ pub enum CommonErrorType {
   IOError,
   ValueOutOfRange,
   InvalidValue,
+  DoesNotApply,
 }
 
 impl Default for CommonErrorType {

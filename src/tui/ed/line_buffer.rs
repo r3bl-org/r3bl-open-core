@@ -146,9 +146,7 @@ pub mod line_buffer_get_content {
   pub fn next_line_as_string(this: &EditorBuffer) -> Option<String> {
     empty_check_early_return!(this, @None);
     let position = this.caret;
-    let line = this
-      .vec_lines
-      .get(ch!(@to_usize position.row, @inc))?;
+    let line = this.vec_lines.get(ch!(@to_usize position.row, @inc))?;
     Some(line.clone())
   }
 
@@ -158,9 +156,7 @@ pub mod line_buffer_get_content {
     if position.row == ch!(0) {
       return None;
     }
-    let line = this
-      .vec_lines
-      .get(ch!(@to_usize position.row, @dec))?;
+    let line = this.vec_lines.get(ch!(@to_usize position.row, @dec))?;
     Some(line.clone())
   }
 
@@ -403,9 +399,7 @@ pub mod line_buffer_delete {
       &mut this.vec_lines[ch!(@to_usize this.caret.row)],
       this_line + &next_line,
     );
-    this
-      .vec_lines
-      .remove(ch!(@to_usize this.caret.row, @inc));
+    this.vec_lines.remove(ch!(@to_usize this.caret.row, @inc));
     None
   }
 
@@ -427,7 +421,7 @@ pub mod line_buffer_delete {
   // 2 │a         │
   //   └▴─────────┘
   //   C0123456789
-  fn backspace_at_start_of_line(this: &mut EditorBuffer) -> Option<()> {
+  fn backspace_at_start_of_line(_this: &mut EditorBuffer) -> Option<()> {
     // TK: impl this
     None
   }
