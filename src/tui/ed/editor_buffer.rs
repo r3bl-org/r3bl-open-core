@@ -49,9 +49,10 @@ impl EditorBuffer {
     match command {
       EditorBufferCommand::InsertChar(character) => self.insert_char(character),
       EditorBufferCommand::InsertNewLine => self.insert_new_line(),
-      EditorBufferCommand::Delete => self.delete_at_caret(),
-      EditorBufferCommand::Backspace => self.backspace_at_caret(),
+      EditorBufferCommand::Delete => self.delete(),
+      EditorBufferCommand::Backspace => self.backspace(),
       EditorBufferCommand::MoveCaret(direction) => self.move_caret(direction),
+      EditorBufferCommand::InsertString(string) => self.insert_str(&string),
     };
   }
 }
@@ -83,9 +84,9 @@ impl EditorBuffer {
     };
   }
 
-  pub fn delete_at_caret(&mut self) { line_buffer_delete::delete_at_caret(self); }
+  pub fn delete(&mut self) { line_buffer_delete::delete_at_caret(self); }
 
-  pub fn backspace_at_caret(&mut self) { line_buffer_delete::backspace_at_caret(self); }
+  pub fn backspace(&mut self) { line_buffer_delete::backspace_at_caret(self); }
 }
 
 pub mod editor_buffer_command {
@@ -100,6 +101,7 @@ pub mod editor_buffer_command {
   #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, GetSize)]
   pub enum EditorBufferCommand {
     InsertChar(char),
+    InsertString(String),
     InsertNewLine,
     Delete,
     Backspace,
