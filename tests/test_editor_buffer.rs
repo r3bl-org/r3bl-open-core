@@ -244,6 +244,23 @@ fn test_insert_new_line() {
   assert::str_is_at_caret(&this, "b");
   assert_eq2!(this.caret, position!(col: 0, row: 3));
   assert_eq2!(this.vec_lines.len(), 4);
+
+  // Move caret to end of prev line. Press enter. `this` should look like:
+  // R ┌──────────┐
+  // 0 │a         │
+  // 1 │          │
+  // 2 │a         │
+  // 3 ▸          │
+  // 4 │b         │
+  //   └▴─────────┘
+  //   C0123456789
+  this.apply_commands(vec![
+    EditorBufferCommand::MoveCaret(CaretDirection::Up),
+    EditorBufferCommand::MoveCaret(CaretDirection::Right),
+    EditorBufferCommand::InsertNewLine,
+  ]);
+  assert_eq2!(this.vec_lines.len(), 5);
+  assert_eq2!(this.caret, position!(col: 0, row: 3));
 }
 
 #[test]

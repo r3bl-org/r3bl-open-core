@@ -55,10 +55,17 @@ pub enum CaretRowLocation {
 pub mod line_buffer_move_caret {
   use super::*;
 
+  /// Make sure to mutate the caret position using this function, as it will validate it after
+  /// mutating it.
+  pub fn mutate_caret_position(this: &mut EditorBuffer, mutator: impl FnOnce(&mut Position)) {
+    mutator(&mut this.caret);
+    validate_caret_position(this);
+  }
+
   /// It is possible when moving the caret for it to end up in the middle of a grapheme cluster. In
   /// this case, move the caret to the end of the cluster, since the intention is to move the caret
   /// to the next "character".
-  pub fn validate_caret_position(this: &mut EditorBuffer) -> Option<()> {
+  fn validate_caret_position(this: &mut EditorBuffer) -> Option<()> {
     let line = line_buffer_get_content::line_as_string(this)?;
     let line_us = line.unicode_string();
 
@@ -329,8 +336,9 @@ pub mod line_buffer_insert {
 
         // Update caret position.
         let char_display_width = ch!(@to_usize char_display_width);
-        this.caret.add_cols(char_display_width);
-        line_buffer_move_caret::validate_caret_position(this);
+        line_buffer_move_caret::mutate_caret_position(this, |caret| {
+          caret.add_cols(char_display_width);
+        });
       }
     }
   }
@@ -350,8 +358,9 @@ pub mod line_buffer_insert {
     // Actually add the character to the correct line.
     if let Some(line) = this.vec_lines.get_mut(caret_row) {
       line.push_str(chunk);
-      this.caret.add_cols(UnicodeString::str_display_width(chunk));
-      line_buffer_move_caret::validate_caret_position(this);
+      line_buffer_move_caret::mutate_caret_position(this, |caret| {
+        caret.add_cols(UnicodeString::str_display_width(chunk));
+      });
     }
   }
 
@@ -369,10 +378,11 @@ pub mod line_buffer_insert {
 
     // Handle inserting a new line at the end of the current line.
     fn insert_new_line_at_end_of_current_line(this: &mut EditorBuffer) {
-      this.caret.add_rows(1);
-      this.caret.reset_cols();
+      line_buffer_move_caret::mutate_caret_position(this, |caret| {
+        caret.add_rows(1);
+        caret.reset_cols();
+      });
       fill_in_missing_lines_up_to_row(this, ch!(@to_usize this.caret.row));
-      line_buffer_move_caret::validate_caret_position(this);
     }
 
     // Handle inserting a new line at the start of the current line.
@@ -383,8 +393,9 @@ pub mod line_buffer_insert {
       } else {
         this.vec_lines.insert(row_index, String::new());
       }
-      this.caret.add_rows(1);
-      line_buffer_move_caret::validate_caret_position(this);
+      line_buffer_move_caret::mutate_caret_position(this, |caret| {
+        caret.add_rows(1);
+      });
     }
 
     // Handle inserting a new line at the middle of the current line.
@@ -407,9 +418,10 @@ pub mod line_buffer_insert {
           let row_index = ch!(@to_usize this.caret.row);
           let _ = replace(&mut this.vec_lines[row_index], left);
           this.vec_lines.insert(row_index + 1, right);
-          this.caret.add_rows(1);
-          this.caret.reset_cols();
-          line_buffer_move_caret::validate_caret_position(this);
+          line_buffer_move_caret::mutate_caret_position(this, |caret| {
+            caret.add_rows(1);
+            caret.reset_cols();
+          });
         }
       }
     }
@@ -494,8 +506,9 @@ pub mod line_buffer_delete {
       } = unicode_string.delete_char_at_display_col(delete_at_this_display_idx)?;
       let row_index = ch!(@to_usize this.caret.row);
       let _ = replace(&mut this.vec_lines[row_index], new_line);
-      this.caret.set_cols(delete_at_this_display_idx);
-      line_buffer_move_caret::validate_caret_position(this);
+      line_buffer_move_caret::mutate_caret_position(this, |caret| {
+        caret.set_cols(delete_at_this_display_idx);
+      });
       None
     }
 
@@ -514,9 +527,10 @@ pub mod line_buffer_delete {
         prev_line + &this_line,
       );
       this.vec_lines.remove(ch!(@to_usize this.caret.row));
-      this.caret.sub_rows(1);
-      this.caret.set_cols(prev_line_cols);
-      line_buffer_move_caret::validate_caret_position(this);
+      line_buffer_move_caret::mutate_caret_position(this, |caret| {
+        caret.sub_rows(1);
+        caret.set_cols(prev_line_cols);
+      });
       None
     }
   }

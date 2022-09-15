@@ -42,9 +42,14 @@ pub struct EditorBuffer {
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 // │ EditorBuffer -> Event based interface │
 // ╯                                       ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+/// Example.
+/// ```rust
+/// use r3bl_rs_utils::*;
+///
+/// let mut editor_buffer = EditorBuffer::default();
+/// editor_buffer.apply_command(EditorBufferCommand::InsertChar('a'));
+/// ```
 impl EditorBuffer {
-  /// Returns [Option::Some] if the command was successfully executed, otherwise returns
-  /// [Option::None].
   pub fn apply_command(&mut self, command: EditorBufferCommand) {
     match command {
       EditorBufferCommand::InsertChar(character) => self.insert_char(character),
@@ -54,6 +59,22 @@ impl EditorBuffer {
       EditorBufferCommand::MoveCaret(direction) => self.move_caret(direction),
       EditorBufferCommand::InsertString(string) => self.insert_str(&string),
     };
+  }
+
+  /// Example.
+  /// ```rust
+  /// use r3bl_rs_utils::*;
+  ///
+  /// let mut editor_buffer = EditorBuffer::default();
+  /// editor_buffer.apply_commands(vec![
+  ///  EditorBufferCommand::InsertChar('a'),
+  ///  EditorBufferCommand::MoveCaret(CaretDirection::Left),
+  /// ]);
+  /// ```
+  pub fn apply_commands(&mut self, commands: Vec<EditorBufferCommand>) {
+    for command in commands {
+      self.apply_command(command);
+    }
   }
 }
 
