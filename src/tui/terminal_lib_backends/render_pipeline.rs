@@ -188,7 +188,7 @@ pub mod pipeline {
   /// 2. If the [Position] is outside of the bounds of the window then it is clamped to the nearest
   ///    edge of the window. This clamped [Position] is returned.
   /// 3. This also saves the clamped [Position] to [SharedTWData].
-  pub async fn sanitize_abs_position(
+  pub async fn sanitize_and_save_abs_position(
     orig_abs_pos: Position, shared_tw_data: &SharedTWData,
   ) -> Position {
     let Size {
@@ -196,30 +196,40 @@ pub mod pipeline {
       row: max_rows,
     } = shared_tw_data.read().await.size;
 
-    let mut new_abs_pos: Position = orig_abs_pos;
+    let mut sanitized_abs_pos: Position = orig_abs_pos;
 
     if orig_abs_pos.col > max_cols {
-      new_abs_pos.col = max_cols;
+      sanitized_abs_pos.col = max_cols;
     }
 
     if orig_abs_pos.row > max_rows {
-      new_abs_pos.row = max_rows;
+      sanitized_abs_pos.row = max_rows;
     }
 
     // Save the cursor position.
-    shared_tw_data.write().await.cursor_position = new_abs_pos;
+    shared_tw_data.write().await.cursor_position = sanitized_abs_pos;
 
-    debug_sanitize_abs_position(orig_abs_pos, new_abs_pos);
+    debug(orig_abs_pos, sanitized_abs_pos);
 
-    return new_abs_pos;
+    return sanitized_abs_pos;
 
-    fn debug_sanitize_abs_position(orig_pos: Position, sanitized_pos: Position) {
-      call_if_debug_true!({
+    fn debug(orig_pos: Position, sanitized_pos: Position) {
+      call_if_true!(DEBUG_TUI_MOD, {
         if sanitized_pos != orig_pos {
-          log_no_err!(INFO, "🔏 Attempt to set position {:?} outside of terminal window. Clamping to nearest edge of window {:?}.", 
-          orig_pos,
-          sanitized_pos);
+          log_no_err!(
+            INFO,
+            "pipeline : 📍 Attempt to set cursor position {:?} \
+          outside of terminal window; lamping to nearest edge of window {:?}",
+            orig_pos,
+            sanitized_pos
+          );
         }
+        log_no_err!(
+          INFO,
+          "pipeline : 📍 Save the cursor position {:?} \
+          to SharedTWData",
+          sanitized_pos
+        );
       });
     }
   }

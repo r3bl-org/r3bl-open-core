@@ -43,52 +43,22 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
           Some(style) => format!("ApplyColors({:?})", style),
           None => "ApplyColors(None)".into(),
         },
-        RenderOp::PrintANSITextWithAttributes(text, maybe_style) => {
+        RenderOp::PrintTextWithAttributes(text, maybe_style) => {
           match try_strip_ansi(text) {
             Some(plain_text) => {
               // Successfully stripped ANSI escape codes.
               match maybe_style {
-                Some(style) => format!(
-                  "PrintANSITextWithAttributes(\"{}\", {:?})",
-                  plain_text, style
-                ),
-                None => format!("PrintANSITextWithAttributes(\"{}\", None)", plain_text),
+                Some(style) => format!("PrintTextWithAttributes(\"{}\", {:?})", plain_text, style),
+                None => format!("PrintTextWithAttributes(\"{}\", None)", plain_text),
               }
             }
             None => {
               // Couldn't strip ANSI, so just print the text.
               match maybe_style {
-                Some(style) => format!(
-                  "PrintANSITextWithAttributes({} bytes, {:?})",
-                  text.len(),
-                  style
-                ),
-                None => format!("PrintANSITextWithAttributes({} bytes, None)", text.len()),
-              }
-            }
-          }
-        }
-        RenderOp::PrintPlainTextWithAttributes(text, maybe_style) => {
-          match try_strip_ansi(text) {
-            Some(plain_text) => {
-              // Successfully stripped ANSI escape codes.
-              match maybe_style {
-                Some(style) => format!(
-                  "PrintPlainTextWithAttributes(\"{}\", {:?})",
-                  plain_text, style
-                ),
-                None => format!("PrintPlainTextWithAttributes(\"{}\", None)", plain_text),
-              }
-            }
-            None => {
-              // Couldn't strip ANSI, so just print the text.
-              match maybe_style {
-                Some(style) => format!(
-                  "PrintPlainTextWithAttributes({} bytes, {:?})",
-                  text.len(),
-                  style
-                ),
-                None => format!("PrintPlainTextWithAttributes({} bytes, None)", text.len()),
+                Some(style) => {
+                  format!("PrintTextWithAttributes({} bytes, {:?})", text.len(), style)
+                }
+                None => format!("PrintTextWithAttributes({} bytes, None)", text.len()),
               }
             }
           }

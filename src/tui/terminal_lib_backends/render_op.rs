@@ -105,25 +105,14 @@ pub enum RenderOp {
   ApplyColors(Option<Style>),
 
   /// Translate [Style] into attributes [static@STYLE_TO_ATTRIBUTE_MAP] for crossterm (bold,
-  /// underline, strikethrough, etc). The [String] argument shouldn't contained any ANSI escape
-  /// sequences (since it will be stripped out in order to figure out where to clip the text to the
-  /// available width of the terminal screen).
+  /// underline, strikethrough, etc).
   ///
-  /// | Variant | Auto clipping support |
-  /// | --- | ---  |
-  /// | `PrintPlainTextWithAttributes(String, Option<Style>)` | YES |
-  /// | `PrintANSITextWithAttributes(String, Option<Style>)` | NO |
-  PrintPlainTextWithAttributes(String, Option<Style>),
-
-  /// Translate [Style] into attributes [static@STYLE_TO_ATTRIBUTE_MAP] for crossterm (bold,
-  /// underline, strikethrough, etc). You are responsible for handling clipping of the text to the
-  /// bounds of the terminal screen.
+  /// 1. If the [String] argument is plain text (no ANSI sequences) then it will be clipped
+  ///    available width of the terminal screen).
   ///
-  /// | Variant | Auto clipping support |
-  /// | --- | ---  |
-  /// | `PrintPlainTextWithAttributes(String, Option<Style>)` | YES |
-  /// | `PrintANSITextWithAttributes(String, Option<Style>)` | NO |
-  PrintANSITextWithAttributes(String, Option<Style>),
+  /// 2. If the [String] argument contains ANSI sequences then it will be printed as-is. You are
+  ///    responsible for handling clipping of the text to the bounds of the terminal screen.
+  PrintTextWithAttributes(String, Option<Style>),
 
   CursorShow,
   CursorHide,

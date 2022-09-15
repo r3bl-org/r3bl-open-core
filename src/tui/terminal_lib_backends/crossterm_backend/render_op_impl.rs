@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{borrow::Cow,
-          collections::HashMap,
+use std::{collections::HashMap,
           io::{stderr, stdout, Write}};
 
 use async_trait::async_trait;
@@ -98,11 +97,8 @@ impl PaintRenderOp for RenderOpImplCrossterm {
       RenderOp::ApplyColors(style) => {
         apply_colors(style);
       }
-      RenderOp::PrintANSITextWithAttributes(text, maybe_style) => {
-        print_ansi_text_with_attributes(text, maybe_style);
-      }
-      RenderOp::PrintPlainTextWithAttributes(text, maybe_style) => {
-        print_plain_text_with_attributes(text, maybe_style, shared_tw_data).await;
+      RenderOp::PrintTextWithAttributes(text, maybe_style) => {
+        print_text_with_attributes(text, maybe_style, shared_tw_data).await;
       }
     }
   }
@@ -116,7 +112,8 @@ async fn move_cursor_position_rel_to(
 }
 
 async fn move_cursor_position_abs(abs_pos: &Position, shared_tw_data: &SharedTWData) {
-  let Position { col, row } = pipeline::sanitize_abs_position(*abs_pos, shared_tw_data).await;
+  let Position { col, row } =
+    pipeline::sanitize_and_save_abs_position(*abs_pos, shared_tw_data).await;
   exec_render_op!(
     queue!(stdout(), MoveTo(*col, *row)),
     format!("MoveCursorPosition(col: {}, row: {})", *col, *row)
@@ -165,7 +162,7 @@ async fn request_show_caret_at_position_rel_to(
 }
 
 async fn request_show_caret_at_position_abs(pos: &Position, shared_tw_data: &SharedTWData) {
-  let sanitized_pos = pipeline::sanitize_abs_position(*pos, shared_tw_data).await;
+  let sanitized_pos = pipeline::sanitize_and_save_abs_position(*pos, shared_tw_data).await;
   let Position { col, row } = sanitized_pos;
   exec_render_op!(
     queue!(stdout(), MoveTo(*col, *row), Show),
@@ -189,96 +186,125 @@ fn set_bg_color(color: &TWColor) {
   )
 }
 
-async fn print_plain_text_with_attributes(
+enum TruncationPolicy {
+  ANSITextNoTruncate,
+  PlainTextTryToTruncate,
+}
+
+async fn print_text_with_attributes(
   text_arg: &String, maybe_style: &Option<Style>, shared_tw_data: &SharedTWData,
 ) {
-  // Try and strip ansi codes & prepare the log message.
-  let mut plain_text: Cow<'_, str> = Cow::Borrowed(text_arg);
-  let maybe_stripped_text = try_strip_ansi(text_arg);
-  let log_msg: String = match maybe_stripped_text {
-    Some(ref stripped_text) => {
-      plain_text = Cow::Borrowed(stripped_text);
-      format!("\"{}\"", stripped_text)
+  // Are ANSI codes present?
+  let truncation_policy = {
+    if try_strip_ansi(text_arg).is_some() {
+      TruncationPolicy::ANSITextNoTruncate
+    } else {
+      TruncationPolicy::PlainTextTryToTruncate
     }
-    None => format!("bytes {}", text_arg.len()),
   };
 
-  // Check whether the plain_text needs to be truncated to fit the terminal window.
-  let cursor_position = shared_tw_data.read().await.cursor_position;
-  let max_cols = shared_tw_data.read().await.size.col;
-  let plain_text_unicode_string = plain_text.to_string().unicode_string();
-  let plain_text_len = plain_text_unicode_string.display_width;
-  if cursor_position.col + plain_text_len > max_cols {
-    let trunc_plain_text = plain_text_unicode_string
-      .truncate_to_fit_display_cols(max_cols - cursor_position.col)
-      .to_string();
-    plain_text = Cow::Owned(trunc_plain_text);
-  }
+  // Gen log_msg.
+  let mut log_msg = match truncation_policy {
+    TruncationPolicy::PlainTextTryToTruncate => {
+      format!("\"{}\"", text_arg)
+    }
+    TruncationPolicy::ANSITextNoTruncate => format!("bytes {}", text_arg.len()),
+  };
 
-  // Print plain_text.
-  match maybe_style {
-    Some(style) => {
-      paint_with_style(style, plain_text, log_msg);
-    }
-    None => {
-      paint_no_style(plain_text, log_msg);
-    }
-  }
-}
+  let mut text = text_arg.clone();
 
-fn print_ansi_text_with_attributes(text_arg: &String, maybe_style: &Option<Style>) {
-  // Try and strip ansi codes & prepare the log message.
-  let ansi_text: Cow<'_, str> = Cow::Borrowed(text_arg);
-  let maybe_stripped_text = try_strip_ansi(text_arg);
-  let log_msg: String = match maybe_stripped_text {
-    Some(ref stripped_text) => {
-      format!("\"{}\"", stripped_text)
+  if let TruncationPolicy::PlainTextTryToTruncate = truncation_policy {
+    // Check whether the text needs to be truncated to fit the terminal window.
+    let cursor_position = shared_tw_data.read().await.cursor_position;
+    let max_cols = shared_tw_data.read().await.size.col;
+    let plain_text_unicode_string = text_arg.to_string().unicode_string();
+    let plain_text_len = plain_text_unicode_string.display_width;
+    if cursor_position.col + plain_text_len > max_cols {
+      let trunc_plain_text = plain_text_unicode_string
+        .truncate_to_fit_display_cols(max_cols - cursor_position.col)
+        .to_string();
+      // Update plain_text & log_msg after truncating.
+      text = trunc_plain_text;
+      log_msg = format!("\"{}✂️\"", text);
     }
-    None => format!("bytes {}", text_arg.len()),
   };
 
   // Print plain_text.
-  match maybe_style {
-    Some(style) => {
-      paint_with_style(style, ansi_text, log_msg);
-    }
-    None => {
-      paint_no_style(ansi_text, log_msg);
-    }
-  }
+  paint_style_and_text(maybe_style, text, log_msg, shared_tw_data).await;
 }
 
-fn paint_no_style(plain_text: Cow<'_, str>, log_msg: String) {
-  exec_render_op!(
-    queue!(stdout(), Print(plain_text)),
-    format!("PrintWithAttributes -> None + Print({})", log_msg)
-  )
-}
-
-/// Use [Style] to set crossterm [Attributes].
-/// Docs: https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes
-fn paint_with_style(style: &Style, plain_text: Cow<'_, str>, log_msg: String) {
-  let mask = style.clone().get_bitflags();
+/// Use [Style] to set crossterm [Attributes] ([docs](
+/// https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes)).
+async fn paint_style_and_text(
+  maybe_style: &Option<Style>, plain_text: String, log_msg: String, shared_tw_data: &SharedTWData,
+) {
   let mut needs_reset = false;
-  STYLE_TO_ATTRIBUTE_MAP.iter().for_each(|(flag, attr)| {
-    if mask.contains(*flag) {
-      exec_render_op!(
-        queue!(stdout(), SetAttribute(*attr)),
-        format!("PrintWithAttributes -> SetAttribute({:?})", attr)
-      );
-      needs_reset = true;
-    }
-  });
-  exec_render_op!(
-    queue!(stdout(), Print(plain_text)),
-    format!("PrintWithAttributes -> Style + Print({})", log_msg)
-  );
+  if let Some(style) = maybe_style {
+    let mask = style.clone().get_bitflags();
+    STYLE_TO_ATTRIBUTE_MAP.iter().for_each(|(flag, attr)| {
+      if mask.contains(*flag) {
+        exec_render_op!(
+          queue!(stdout(), SetAttribute(*attr)),
+          format!("PrintWithAttributes -> SetAttribute({:?})", attr)
+        );
+        needs_reset = true;
+      }
+    });
+  }
+
+  paint_text(plain_text, log_msg, shared_tw_data).await;
+
   if needs_reset {
     exec_render_op!(
       queue!(stdout(), SetAttribute(Attribute::Reset)),
       format!("PrintWithAttributes -> SetAttribute(Reset))")
     );
   }
+}
+
+async fn paint_text(plain_text: String, log_msg: String, shared_tw_data: &SharedTWData) {
+  let unicode_string = plain_text.unicode_string();
+  let mut cursor_position_copy = shared_tw_data.read().await.cursor_position;
+
+  match unicode_string.contains_wide_segments() {
+    true => {
+      for ref seg in unicode_string.vec_segment {
+        // Special handling of cursor based on unicode width.
+        if seg.unicode_width > ch!(1) {
+          // Paint text.
+          exec_render_op!(
+            queue!(stdout(), Print(seg.string.clone())),
+            format!("Print( wide_segment `{}`)", seg.string)
+          );
+          // Move cursor "manually" to cover "extra" width.
+          let jump_to_col = ch!(
+            @to_u16
+            cursor_position_copy.col + seg.display_col_offset + seg.unicode_width);
+          exec_render_op!(
+            queue!(stdout(), MoveToColumn(jump_to_col)),
+            format!("🦘 Jump cursor -> MoveToColumn({})", jump_to_col)
+          );
+        } else {
+          // Paint text.
+          exec_render_op!(
+            queue!(stdout(), Print(seg.string.clone())),
+            format!("Print( narrow_segment `{}`)", seg.string)
+          );
+        }
+      }
+    }
+    false => {
+      // Simple print operation.
+      exec_render_op!(
+        queue!(stdout(), Print(plain_text)),
+        format!("Print( normal_segment {})", log_msg)
+      );
+    }
+  }
+
+  // Update cursor position after paint.
+  cursor_position_copy.col += unicode_string.display_width;
+  pipeline::sanitize_and_save_abs_position(cursor_position_copy, shared_tw_data).await;
 }
 
 fn apply_colors(style: &Option<Style>) {
