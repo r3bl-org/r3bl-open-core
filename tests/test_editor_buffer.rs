@@ -32,9 +32,11 @@ fn test_validate_caret_position_on_up() {
   // 1 ▸1         │
   //   └─▴────────┘
   //   C0123456789
-  this.insert_str("😀");
-  this.insert_new_line();
-  this.insert_char('1');
+  this.apply_commands(vec![
+    EditorBufferCommand::InsertString("😀".into()),
+    EditorBufferCommand::InsertNewLine,
+    EditorBufferCommand::InsertChar('1'),
+  ]);
   assert_eq2!(this.caret, position!(col: 1, row: 1));
 
   // Move caret up. It should not be in the middle of the smiley face.
@@ -57,9 +59,11 @@ fn test_validate_caret_position_on_down() {
   // 1 │😀        │
   //   └──▴───────┘
   //   C0123456789
-  this.insert_char('1');
-  this.insert_new_line();
-  this.insert_str("😀");
+  this.apply_commands(vec![
+    EditorBufferCommand::InsertChar('1'),
+    EditorBufferCommand::InsertNewLine,
+    EditorBufferCommand::InsertString("😀".into()),
+  ]);
   assert_eq2!(this.caret, position!(col: 2, row: 1));
 
   // Move caret up, and 2 left.
@@ -68,8 +72,10 @@ fn test_validate_caret_position_on_down() {
   // 1 │😀        │
   //   └─▴────────┘
   //   C0123456789
-  this.move_caret(CaretDirection::Up);
-  this.move_caret(CaretDirection::Right);
+  this.apply_commands(vec![
+    EditorBufferCommand::MoveCaret(CaretDirection::Up),
+    EditorBufferCommand::MoveCaret(CaretDirection::Right),
+  ]);
   assert_eq2!(this.caret, position!(col: 1, row: 0));
 
   // Move caret down. It should not be in the middle of the smiley face.
@@ -94,17 +100,21 @@ fn test_move_caret_up_down() {
   // 2 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.insert_str("abc");
-  this.insert_new_line();
-  this.insert_str("ab");
-  this.insert_new_line();
-  this.insert_str("a");
+  this.apply_commands(vec![
+    EditorBufferCommand::InsertString("abc".into()),
+    EditorBufferCommand::InsertNewLine,
+    EditorBufferCommand::InsertString("ab".into()),
+    EditorBufferCommand::InsertNewLine,
+    EditorBufferCommand::InsertString("a".into()),
+  ]);
   assert_eq2!(this.caret, position!(col: 1, row: 2));
 
   // Move caret down. Noop.
-  this.move_caret(CaretDirection::Down);
-  this.move_caret(CaretDirection::Down);
-  this.move_caret(CaretDirection::Down);
+  this.apply_commands(vec![
+    EditorBufferCommand::MoveCaret(CaretDirection::Down),
+    EditorBufferCommand::MoveCaret(CaretDirection::Down),
+    EditorBufferCommand::MoveCaret(CaretDirection::Down),
+  ]);
   assert_eq2!(this.caret, position!(col: 1, row: 2));
 
   // Move caret up.
@@ -116,9 +126,11 @@ fn test_move_caret_up_down() {
   assert_eq2!(this.caret, position!(col: 1, row: 0));
 
   // Move caret up a few times. Noop.
-  this.move_caret(CaretDirection::Up);
-  this.move_caret(CaretDirection::Up);
-  this.move_caret(CaretDirection::Up);
+  this.apply_commands(vec![
+    EditorBufferCommand::MoveCaret(CaretDirection::Up),
+    EditorBufferCommand::MoveCaret(CaretDirection::Up),
+    EditorBufferCommand::MoveCaret(CaretDirection::Up),
+  ]);
   assert_eq2!(this.caret, position!(col: 1, row: 0));
 
   // Move right to end of line. Then down.
@@ -129,9 +141,11 @@ fn test_move_caret_up_down() {
   // 2 │a         │
   //   └──▴───────┘
   //   C0123456789
-  this.move_caret(CaretDirection::Right);
-  this.move_caret(CaretDirection::Right);
-  this.move_caret(CaretDirection::Down);
+  this.apply_commands(vec![
+    EditorBufferCommand::MoveCaret(CaretDirection::Right),
+    EditorBufferCommand::MoveCaret(CaretDirection::Right),
+    EditorBufferCommand::MoveCaret(CaretDirection::Down),
+  ]);
   assert_eq2!(this.caret, position!(col: 2, row: 1));
 
   // Move caret down.
@@ -222,8 +236,11 @@ fn test_insert_new_line() {
   // 2 ▸ab        │
   //   └──▴───────┘
   //   C0123456789
-  this.move_caret(CaretDirection::Right);
-  this.insert_char('b');
+  this.apply_commands(vec![
+    EditorBufferCommand::MoveCaret(CaretDirection::Right),
+    EditorBufferCommand::InsertChar('b'),
+  ]);
+
   assert::none_is_at_caret(&this);
   assert_eq2!(
     line_buffer_get_content::line_as_string(&this).unwrap(),
@@ -239,8 +256,10 @@ fn test_insert_new_line() {
   // 3 ▸b         │
   //   └▴─────────┘
   //   C0123456789
-  this.move_caret(CaretDirection::Left);
-  this.insert_new_line();
+  this.apply_commands(vec![
+    EditorBufferCommand::MoveCaret(CaretDirection::Left),
+    EditorBufferCommand::InsertNewLine,
+  ]);
   assert::str_is_at_caret(&this, "b");
   assert_eq2!(this.caret, position!(col: 0, row: 3));
   assert_eq2!(this.vec_lines.len(), 4);
