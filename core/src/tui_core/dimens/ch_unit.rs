@@ -47,7 +47,8 @@ impl ChUnit {
 /// ```rust
 /// use r3bl_rs_utils_core::*;
 /// let width_col = ch!(10);
-/// let height_row = ch!(5);
+/// let height_row = ch!(5, @inc);
+/// let height_row = ch!(5, @inc);
 /// ```
 ///
 /// You can also convert a [ChUnit] amount into a [usize] primitive.
@@ -56,6 +57,8 @@ impl ChUnit {
 /// use r3bl_rs_utils_core::*;
 /// let width_col = ch!(10);
 /// let width_col_usize: usize = ch!(@to_usize width_col);
+/// let width_col_usize: usize = ch!(@to_usize width_col, @inc);
+/// let width_col_usize: usize = ch!(@to_usize width_col, @dec);
 /// ```
 #[macro_export]
 macro_rules! ch {

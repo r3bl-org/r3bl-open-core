@@ -59,13 +59,13 @@ pub mod line_buffer_move_caret {
   /// mutating it.
   pub fn mutate_caret_position(this: &mut EditorBuffer, mutator: impl FnOnce(&mut Position)) {
     mutator(&mut this.caret);
-    validate_caret_position(this);
+    validate_caret_col_position(this);
   }
 
   /// It is possible when moving the caret for it to end up in the middle of a grapheme cluster. In
   /// this case, move the caret to the end of the cluster, since the intention is to move the caret
   /// to the next "character".
-  fn validate_caret_position(this: &mut EditorBuffer) -> Option<()> {
+  fn validate_caret_col_position(this: &mut EditorBuffer) -> Option<()> {
     let line = line_buffer_get_content::line_as_string(this)?;
     let line_us = line.unicode_string();
 
@@ -91,7 +91,7 @@ pub mod line_buffer_move_caret {
           this
             .caret
             .clip_cols_to_bounds(line_buffer_get_content::line_display_width(this));
-          validate_caret_position(this);
+          validate_caret_col_position(this);
         }
       }
     }
@@ -111,7 +111,7 @@ pub mod line_buffer_move_caret {
           this
             .caret
             .clip_cols_to_bounds(line_buffer_get_content::line_display_width(this));
-          validate_caret_position(this);
+          validate_caret_col_position(this);
         }
       }
     }
@@ -145,13 +145,13 @@ pub mod line_buffer_move_caret {
         let UnicodeStringSegmentResult { unicode_width, .. } =
           line_buffer_get_content::string_at_end_of_line(this)?;
         this.caret.col -= unicode_width;
-        validate_caret_position(this);
+        validate_caret_col_position(this);
       }
       CaretColLocation::InMiddleOfLine => {
         let UnicodeStringSegmentResult { unicode_width, .. } =
           line_buffer_get_content::string_to_left_of_caret(this)?;
         this.caret.col -= unicode_width;
-        validate_caret_position(this);
+        validate_caret_col_position(this);
       }
     }
     None
@@ -382,7 +382,10 @@ pub mod line_buffer_insert {
         caret.add_rows(1);
         caret.reset_cols();
       });
-      fill_in_missing_lines_up_to_row(this, ch!(@to_usize this.caret.row));
+      // insert empty line at caret.
+      this
+        .vec_lines
+        .insert(ch!(@to_usize this.caret.row), String::new());
     }
 
     // Handle inserting a new line at the start of the current line.
