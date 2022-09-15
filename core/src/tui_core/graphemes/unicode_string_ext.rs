@@ -290,6 +290,21 @@ impl UnicodeStringSegmentResult {
 }
 
 impl UnicodeString {
+  /// If any segment in `self.vec_segment` has a `display_col_offset` greater than 1 then this is
+  /// true. The semantic is that the string is displayed using more than 1 column of the terminal.
+  pub fn contains_wide_segments(&self) -> bool {
+    let mut contains_wide_segments = false;
+
+    for grapheme_cluster_segment in &self.vec_segment {
+      if grapheme_cluster_segment.unicode_width > ch!(1) {
+        contains_wide_segments = true;
+        break;
+      }
+    }
+
+    contains_wide_segments
+  }
+
   pub fn char_display_width(character: char) -> usize {
     let display_width: usize = UnicodeWidthChar::width(character).unwrap_or(0);
     display_width
@@ -543,11 +558,15 @@ impl UnicodeString {
   }
 }
 
+/// If conversion was successful and ANSI characters were stripped, returns a [String], otherwise
+/// returns [None].
 pub fn try_strip_ansi(text: &str) -> Option<String> {
   if let Ok(vec_u8) = strip_ansi_escapes::strip(text) {
     let result_text_plain = std::str::from_utf8(&vec_u8);
-    if let Ok(text_plain) = result_text_plain {
-      return Some(text_plain.to_string());
+    if let Ok(stripped_text) = result_text_plain {
+      if text != stripped_text {
+        return stripped_text.to_string().into();
+      }
     }
   }
   None

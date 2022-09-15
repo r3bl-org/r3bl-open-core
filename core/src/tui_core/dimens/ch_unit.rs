@@ -98,6 +98,25 @@ macro_rules! ch {
     let usize_value: usize = ch_value_copy.into();
     usize_value
   }};
+  // Returns u16.
+  (@to_u16 $arg: expr) => {{
+    let u16_value: u16 = *$arg;
+    u16_value
+  }};
+  // Returns u16 +=1.
+  (@to_u16 $arg: expr, @inc) => {{
+    let mut ch_value_copy = $arg.clone();
+    ch_value_copy += 1;
+    let u16_value: u16 = *ch_value_copy;
+    u16_value
+  }};
+  // Returns u16 -=1.
+  (@to_u16 $arg: expr, @dec) => {{
+    let mut ch_value_copy = $arg.clone();
+    ch_value_copy -= 1;
+    let u16_value: u16 = *ch_value_copy;
+    u16_value
+  }};
 }
 
 impl Deref for ChUnit {

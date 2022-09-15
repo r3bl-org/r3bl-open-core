@@ -218,12 +218,12 @@
 /// If set to `true`:
 /// 1. Enables or disables file logging for entire module.
 /// 2. If a call to [crate::log!] fails, then it will print the error to stderr.
-pub const DEBUG: bool = true;
+pub const DEBUG_TUI_MOD: bool = true;
 
 // Enable or disable debug logging for this `terminal_lib_backends` module.
-pub(self) const DEBUG_SHOW_TERMINAL_BACKEND: bool = false;
-pub(self) const DEBUG_SHOW_PIPELINE: bool = true;
-pub(self) const DEBUG_SHOW_PIPELINE_EXPANDED: bool = true;
+pub const DEBUG_SHOW_TERMINAL_BACKEND: bool = true;
+pub const DEBUG_SHOW_PIPELINE: bool = true;
+pub const DEBUG_SHOW_PIPELINE_EXPANDED: bool = false;
 
 // Attach sources.
 pub mod ed;

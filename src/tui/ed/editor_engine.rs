@@ -115,7 +115,7 @@ fn render_content(context_ref: &Context<'_>) -> RenderPipeline {
         position! { col: 0 , row: ch!(@to_usize index) }
         ),
         RenderOp::ApplyColors(current_box.get_computed_style()),
-        RenderOp::PrintPlainTextWithAttributes(truncated_line.into(), current_box.get_computed_style()),
+        RenderOp::PrintTextWithAttributes(truncated_line.into(), current_box.get_computed_style()),
         RenderOp::ResetColor
     };
     if *max_display_row_count >= 1 {
@@ -155,7 +155,7 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> RenderPipe
         render_pipeline! {
           @push_into render_pipeline at ZOrder::Caret =>
           RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret),
-            RenderOp::PrintPlainTextWithAttributes(
+            RenderOp::PrintTextWithAttributes(
               str_at_caret,
               style! { attrib: [reverse] }.into()),
           RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
@@ -185,7 +185,7 @@ fn render_empty_state(context_ref: &Context<'_>) -> RenderPipeline {
       RenderOp::ApplyColors(style! {
         color_fg: TWColor::Red
       }.into()),
-      RenderOp::PrintPlainTextWithAttributes("No content added".into(), None),
+      RenderOp::PrintTextWithAttributes("No content added".into(), None),
       RenderOp::ResetColor
   };
 
@@ -196,7 +196,7 @@ fn render_empty_state(context_ref: &Context<'_>) -> RenderPipeline {
         RenderOp::MoveCursorPositionRelTo(
           *style_adj_box_origin_pos,
           content_cursor_pos.add_rows_with_bounds(ch!(1), style_adj_box_bounds_size.row)),
-        RenderOp::PrintPlainTextWithAttributes("👀".into(), None)
+        RenderOp::PrintTextWithAttributes("👀".into(), None)
     };
   }
 

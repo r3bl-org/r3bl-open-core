@@ -44,7 +44,7 @@ impl TWData {
   pub fn get_size(&self) -> Size { self.size }
 
   pub fn dump_state_to_log(&self, msg: &str) {
-    call_if_debug_true!(log_no_err!(INFO, "{} -> {:?}", msg, self));
+    call_if_true!(DEBUG_TUI_MOD, log_no_err!(INFO, "{} -> {:?}", msg, self));
   }
 }
 
@@ -99,7 +99,7 @@ impl TerminalWindow {
         // Process the input_event.
         if let Some(input_event) = maybe_input_event {
           call_if_true!(
-            DEBUG,
+            DEBUG_TUI_MOD,
             log_no_err!(INFO, "main_event_loop -> Tick: ⏰ {}", input_event)
           );
 
@@ -173,7 +173,7 @@ where
     .await;
     if let Err(e) = result {
       call_if_true!(
-        DEBUG,
+        DEBUG_TUI_MOD,
         log_no_err!(ERROR, "MySubscriber::run -> Error: {}", e)
       )
     }
@@ -231,18 +231,17 @@ where
       match render_result {
         Err(error) => {
           RenderOp::default().flush();
-          call_if_debug_true!(log_no_err!(
-            ERROR,
-            "MySubscriber::render() error ❌: {}",
-            error
-          ));
+          call_if_true!(
+            DEBUG_TUI_MOD,
+            log_no_err!(ERROR, "MySubscriber::render() error ❌: {}", error)
+          );
         }
         Ok(render_pipeline) => {
           render_pipeline
             .paint(FlushKind::ClearBeforeFlush, shared_tw_data)
             .await;
           let window_size = shared_tw_data.read().await.get_size();
-          call_if_debug_true!({
+          call_if_true!(DEBUG_TUI_MOD, {
             log_no_err!(
               INFO,
               "🎨 MySubscriber::paint() ok ✅: \n size: {:?}\n state: {:?}\n",

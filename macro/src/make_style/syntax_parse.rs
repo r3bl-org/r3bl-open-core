@@ -83,7 +83,7 @@ fn parse_optional_id(input: &ParseStream, metadata: &mut StyleMetadata) -> Resul
     let id = input.parse::<Expr>()?;
     metadata.id = id;
   }
-  call_if_debug_true!(println!("🚀 id: {:?}", metadata.id));
+  call_if_true!(DEBUG_MAKE_STYLE_MOD, println!("🚀 id: {:?}", metadata.id));
   Ok(())
 }
 
@@ -118,7 +118,10 @@ fn parse_optional_attrib(input: &ParseStream, metadata: &mut StyleMetadata) -> R
       }
     }
 
-    call_if_debug_true!(println!("🚀 attrib_vec: {:?}", metadata.attrib_vec));
+    call_if_true!(
+      DEBUG_MAKE_STYLE_MOD,
+      println!("🚀 attrib_vec: {:?}", metadata.attrib_vec)
+    );
   }
   Ok(())
 }
@@ -136,7 +139,10 @@ fn parse_optional_padding(input: &ParseStream, metadata: &mut StyleMetadata) -> 
 
     metadata.padding = Some(padding_int);
 
-    call_if_debug_true!(println!("🚀 padding: {:?}", &metadata.padding));
+    call_if_true!(
+      DEBUG_MAKE_STYLE_MOD,
+      println!("🚀 padding: {:?}", &metadata.padding)
+    );
   }
   Ok(())
 }
@@ -149,7 +155,10 @@ fn parse_optional_color_fg(input: &ParseStream, metadata: &mut StyleMetadata) ->
     input.parse::<Token![:]>()?;
     let color_expr = input.parse::<Expr>()?;
     metadata.color_fg = Some(color_expr);
-    call_if_debug_true!(println!("🚀 color_fg: {:#?}", metadata.color_fg));
+    call_if_true!(
+      DEBUG_MAKE_STYLE_MOD,
+      println!("🚀 color_fg: {:#?}", metadata.color_fg)
+    );
   }
 
   Ok(())
@@ -163,7 +172,10 @@ fn parse_optional_color_bg(input: &ParseStream, metadata: &mut StyleMetadata) ->
     input.parse::<Token![:]>()?;
     let color_expr = input.parse::<Expr>()?;
     metadata.color_bg = Some(color_expr);
-    call_if_debug_true!(println!("🚀 color_bg: {:#?}", metadata.color_bg));
+    call_if_true!(
+      DEBUG_MAKE_STYLE_MOD,
+      println!("🚀 color_bg: {:#?}", metadata.color_bg)
+    );
   }
 
   Ok(())

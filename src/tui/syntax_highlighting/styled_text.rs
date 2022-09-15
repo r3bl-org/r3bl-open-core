@@ -112,7 +112,7 @@ impl StyledTexts for Vec<StyledText> {
       render_pipeline! {
         @push_into render_pipeline at z_order =>
           RenderOp::ApplyColors(style.clone().into()),
-          RenderOp::PrintPlainTextWithAttributes(text, style.into()),
+          RenderOp::PrintTextWithAttributes(text, style.into()),
           RenderOp::ResetColor
       }
     }
