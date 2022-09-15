@@ -211,6 +211,20 @@
 //! 1. [Code example of an address book using Redux](https://github.com/r3bl-org/address-book-with-redux-tui).
 //! 2. [Code example of TUI apps using Redux](https://github.com/r3bl-org/r3bl-cmdr).
 
+/// This is the global `DEBUG` const. It is possible to create local (module scoped) `DEBUG` const.
+/// However, you would have to use that symbol explicitly in the relevant module, eg:
+/// - `use $crate::terminal_lib_backends::DEBUG;`
+///
+/// If set to `true`:
+/// 1. Enables or disables file logging for entire module.
+/// 2. If a call to [crate::log!] fails, then it will print the error to stderr.
+pub const DEBUG: bool = true;
+
+// Enable or disable debug logging for this `terminal_lib_backends` module.
+pub(self) const DEBUG_SHOW_TERMINAL_BACKEND: bool = false;
+pub(self) const DEBUG_SHOW_PIPELINE: bool = true;
+pub(self) const DEBUG_SHOW_PIPELINE_EXPANDED: bool = true;
+
 // Attach sources.
 pub mod ed;
 pub mod layout;

@@ -19,7 +19,7 @@ use std::{collections::HashMap, fmt::Debug};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{terminal_lib_backends::{DEBUG_SHOW_PIPELINE, DEBUG_SHOW_PIPELINE_EXPANDED},
+use crate::{tui::{DEBUG_SHOW_PIPELINE, DEBUG_SHOW_PIPELINE_EXPANDED},
             *};
 
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
