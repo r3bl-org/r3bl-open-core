@@ -18,8 +18,129 @@
 use r3bl_rs_utils::*;
 
 #[test]
-fn test_delete_and_backspace() {
-  // TK: impl this
+fn test_delete() {
+  let mut this = EditorBuffer::default();
+
+  // Insert "abc\nab\na".
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 │abc       │
+  // 1 │ab        │
+  // 2 ▸a         │
+  //   └─▴────────┘
+  //   C0123456789
+  this.apply_commands(vec![
+    EditorBufferCommand::InsertString("abc".into()),
+    EditorBufferCommand::InsertNewLine,
+    EditorBufferCommand::InsertString("ab".into()),
+    EditorBufferCommand::InsertNewLine,
+    EditorBufferCommand::InsertString("a".into()),
+  ]);
+  assert_eq2!(this.caret, position!(col: 1, row: 2));
+
+  // Remove the "a" on the last line.
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 │abc       │
+  // 1 │ab        │
+  // 2 ▸          │
+  //   └▴─────────┘
+  //   C0123456789
+  this.apply_commands(vec![
+    EditorBufferCommand::MoveCaret(CaretDirection::Left),
+    EditorBufferCommand::Delete,
+  ]);
+  assert_eq2!(this.caret, position!(col: 0, row: 2));
+
+  // Move to the end of the 2nd line. Press delete.
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 │abc       │
+  // 1 ▸ab        │
+  //   └──▴───────┘
+  //   C0123456789
+  this.apply_commands(vec![
+    EditorBufferCommand::MoveCaret(CaretDirection::Up),
+    EditorBufferCommand::MoveCaret(CaretDirection::Right),
+    EditorBufferCommand::MoveCaret(CaretDirection::Right),
+    EditorBufferCommand::Delete,
+  ]);
+  assert_eq2!(this.vec_lines.len(), 2);
+  assert_eq2!(this.caret, position!(col: 2, row: 1));
+
+  // Move to the end of the 1st line.
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 ▸abcab     │
+  //   └───▴──────┘
+  //   C0123456789
+  this.apply_commands(vec![
+    EditorBufferCommand::MoveCaret(CaretDirection::Up),
+    EditorBufferCommand::MoveCaret(CaretDirection::Right),
+    EditorBufferCommand::Delete,
+  ]);
+  assert_eq2!(this.vec_lines.len(), 1);
+  assert_eq2!(this.caret, position!(col: 3, row: 0));
+  assert::line_at_caret(&this, "abcab");
+}
+
+#[test]
+fn test_backspace() {
+  let mut this = EditorBuffer::default();
+
+  // Insert "abc\nab\na".
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 │abc       │
+  // 1 │ab        │
+  // 2 ▸a         │
+  //   └─▴────────┘
+  //   C0123456789
+  this.apply_commands(vec![
+    EditorBufferCommand::InsertString("abc".into()),
+    EditorBufferCommand::InsertNewLine,
+    EditorBufferCommand::InsertString("ab".into()),
+    EditorBufferCommand::InsertNewLine,
+    EditorBufferCommand::InsertString("a".into()),
+  ]);
+  assert_eq2!(this.caret, position!(col: 1, row: 2));
+
+  // Remove the "a" on the last line.
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 │abc       │
+  // 1 │ab        │
+  // 2 ▸          │
+  //   └▴─────────┘
+  //   C0123456789
+  this.backspace();
+  assert_eq2!(this.caret, position!(col: 0, row: 2));
+
+  // Remove the last line.
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 │abc       │
+  // 1 ▸ab        │
+  //   └──▴───────┘
+  //   C0123456789
+  this.backspace();
+  assert_eq2!(this.caret, position!(col: 2, row: 1));
+
+  // Move caret to start of 2nd line. Then press backspace.
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 ▸abcab     │
+  //   └───▴──────┘
+  //   C0123456789
+  this.apply_commands(vec![
+    EditorBufferCommand::MoveCaret(CaretDirection::Left),
+    EditorBufferCommand::MoveCaret(CaretDirection::Left),
+  ]);
+  assert_eq2!(this.caret, position!(col: 0, row: 1));
+  this.backspace();
+  assert_eq2!(this.vec_lines.len(), 1);
+  assert_eq2!(this.caret, position!(col: 3, row: 0));
+  assert::line_at_caret(&this, "abcab");
 }
 
 #[test]
@@ -451,5 +572,12 @@ pub mod assert {
       Some((s, _)) => assert_eq2!(s, expected),
       None => panic!("Expected string at caret, but got None."),
     }
+  }
+
+  pub fn line_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
+    assert_eq2!(
+      line_buffer_get_content::line_as_string(editor_buffer).unwrap(),
+      expected
+    );
   }
 }
