@@ -236,7 +236,7 @@ macro_rules! exec_render_op {
     // Generate a new function that returns [CommonResult]. This needs to be called. The only
     // purpose of this generated method is to handle errors that may result from calling log! macro
     // when there are issues accessing the log file for whatever reason.
-    use $crate::terminal_lib_backends::DEBUG_SHOW_TERMINAL_BACKEND;
+    use $crate::tui::DEBUG_SHOW_TERMINAL_BACKEND;
 
     let _fn_wrap_for_logging_err = || -> CommonResult<()> {
       throws!({

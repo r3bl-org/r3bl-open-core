@@ -15,15 +15,6 @@
  *   limitations under the License.
  */
 
-/// This is the global `DEBUG` const. It is possible to create local (module scoped) `DEBUG` const.
-/// However, you would have to use that symbol explicitly in the relevant module, eg:
-/// - `use $crate::terminal_lib_backends::DEBUG;`
-///
-/// If set to `true`:
-/// 1. Enables or disables file logging for entire module.
-/// 2. If a call to [crate::log!] fails, then it will print the error to stderr.
-pub const DEBUG: bool = true;
-
 // Attach source files.
 pub mod flex_box;
 pub mod layout_error;
