@@ -208,7 +208,16 @@ async fn print_text_with_attributes(
     TruncationPolicy::PlainTextTryToTruncate => {
       format!("\"{}\"", text_arg)
     }
-    TruncationPolicy::ANSITextNoTruncate => format!("bytes {}", text_arg.len()),
+    TruncationPolicy::ANSITextNoTruncate => {
+      log_no_err!(
+        DEBUG,
+        "ANSI {:?}, len: {:?}, plain: {:?}",
+        text_arg,
+        text_arg.len(),
+        try_strip_ansi(text_arg)
+      );
+      format!("ANSI detected, size: {} bytes", text_arg.len())
+    }
   };
 
   let mut text = text_arg.clone();
