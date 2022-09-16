@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::{collections::HashMap,
+use std::{borrow::Cow,
+          collections::HashMap,
           io::{stderr, stdout, Write}};
 
 use async_trait::async_trait;
@@ -187,8 +188,8 @@ fn set_bg_color(color: &TWColor) {
 }
 
 enum TruncationPolicy {
-  ANSITextNoTruncate,
-  PlainTextTryToTruncate,
+  ANSIText,
+  PlainText,
 }
 
 async fn print_text_with_attributes(
@@ -197,32 +198,36 @@ async fn print_text_with_attributes(
   // Are ANSI codes present?
   let truncation_policy = {
     if try_strip_ansi(text_arg).is_some() {
-      TruncationPolicy::ANSITextNoTruncate
+      TruncationPolicy::ANSIText
     } else {
-      TruncationPolicy::PlainTextTryToTruncate
+      TruncationPolicy::PlainText
     }
   };
 
   // Gen log_msg.
   let mut log_msg = match truncation_policy {
-    TruncationPolicy::PlainTextTryToTruncate => {
+    TruncationPolicy::PlainText => {
       format!("\"{}\"", text_arg)
     }
-    TruncationPolicy::ANSITextNoTruncate => {
-      log_no_err!(
-        DEBUG,
-        "ANSI {:?}, len: {:?}, plain: {:?}",
-        text_arg,
-        text_arg.len(),
-        try_strip_ansi(text_arg)
+    TruncationPolicy::ANSIText => {
+      call_if_true!(
+        DEBUG_SHOW_PIPELINE_EXPANDED,
+        log_no_err!(
+          DEBUG,
+          "ANSI {:?}, len: {:?}, plain: {:?}",
+          text_arg,
+          text_arg.len(),
+          try_strip_ansi(text_arg)
+        )
       );
       format!("ANSI detected, size: {} bytes", text_arg.len())
     }
   };
 
-  let mut text = text_arg.clone();
+  let mut text: Cow<'_, str> = Cow::from(text_arg);
 
-  if let TruncationPolicy::PlainTextTryToTruncate = truncation_policy {
+  // TK: handle ANSI text truncation using ANSIText
+  if let TruncationPolicy::PlainText = truncation_policy {
     // Check whether the text needs to be truncated to fit the terminal window.
     let cursor_position = shared_tw_data.read().await.cursor_position;
     let max_cols = shared_tw_data.read().await.size.col;
@@ -233,19 +238,19 @@ async fn print_text_with_attributes(
         .truncate_to_fit_display_cols(max_cols - cursor_position.col)
         .to_string();
       // Update plain_text & log_msg after truncating.
-      text = trunc_plain_text;
+      text = Cow::from(trunc_plain_text);
       log_msg = format!("\"{}✂️\"", text);
     }
   };
 
   // Print plain_text.
-  paint_style_and_text(maybe_style, text, log_msg, shared_tw_data).await;
+  paint_style_and_text(maybe_style, text, &log_msg, shared_tw_data).await;
 }
 
 /// Use [Style] to set crossterm [Attributes] ([docs](
 /// https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes)).
 async fn paint_style_and_text(
-  maybe_style: &Option<Style>, plain_text: String, log_msg: String, shared_tw_data: &SharedTWData,
+  maybe_style: &Option<Style>, text: Cow<'_, str>, log_msg: &str, shared_tw_data: &SharedTWData,
 ) {
   let mut needs_reset = false;
   if let Some(style) = maybe_style {
@@ -261,7 +266,7 @@ async fn paint_style_and_text(
     });
   }
 
-  paint_text(plain_text, log_msg, shared_tw_data).await;
+  paint_text(text, log_msg, shared_tw_data).await;
 
   if needs_reset {
     exec_render_op!(
@@ -271,8 +276,8 @@ async fn paint_style_and_text(
   }
 }
 
-async fn paint_text(plain_text: String, log_msg: String, shared_tw_data: &SharedTWData) {
-  let unicode_string = plain_text.unicode_string();
+async fn paint_text(text: Cow<'_, str>, log_msg: &str, shared_tw_data: &SharedTWData) {
+  let unicode_string = text.unicode_string();
   let mut cursor_position_copy = shared_tw_data.read().await.cursor_position;
 
   match unicode_string.contains_wide_segments() {
@@ -281,10 +286,7 @@ async fn paint_text(plain_text: String, log_msg: String, shared_tw_data: &Shared
         // Special handling of cursor based on unicode width.
         if seg.unicode_width > ch!(1) {
           // Paint text.
-          exec_render_op!(
-            queue!(stdout(), Print(seg.string.clone())),
-            format!("Print( wide_segment `{}`)", seg.string)
-          );
+          paint(Cow::from(&seg.string), log_msg, SegmentWidth::Wide);
           // Move cursor "manually" to cover "extra" width.
           let jump_to_col = ch!(
             @to_u16
@@ -295,20 +297,29 @@ async fn paint_text(plain_text: String, log_msg: String, shared_tw_data: &Shared
           );
         } else {
           // Paint text.
-          exec_render_op!(
-            queue!(stdout(), Print(seg.string.clone())),
-            format!("Print( narrow_segment `{}`)", seg.string)
-          );
+          paint(Cow::from(&seg.string), log_msg, SegmentWidth::Narrow);
         }
       }
     }
     false => {
       // Simple print operation.
-      exec_render_op!(
-        queue!(stdout(), Print(plain_text)),
-        format!("Print( normal_segment {})", log_msg)
-      );
+      paint(text, log_msg, SegmentWidth::Narrow);
     }
+  }
+
+  enum SegmentWidth {
+    Narrow,
+    Wide,
+  }
+
+  fn paint(text: Cow<'_, str>, log_msg: &str, width: SegmentWidth) {
+    exec_render_op!(
+      queue!(stdout(), Print(text)),
+      match width {
+        SegmentWidth::Narrow => format!("Print( normal_segment {})", log_msg),
+        SegmentWidth::Wide => format!("Print( wide_segment {})", log_msg),
+      }
+    );
   }
 
   // Update cursor position after paint.

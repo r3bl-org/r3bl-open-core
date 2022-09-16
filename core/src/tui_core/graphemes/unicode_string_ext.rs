@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use std::borrow::Cow;
+
 use get_size::GetSize;
 use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
@@ -163,46 +165,52 @@ pub trait UnicodeStringExt {
   fn unicode_string(&self) -> UnicodeString;
 }
 
-impl UnicodeStringExt for String {
-  fn unicode_string(&self) -> UnicodeString {
-    let mut total_byte_offset = 0;
-    let mut total_grapheme_cluster_count = 0;
-    let mut my_unicode_string_segments = vec![];
-    let mut my_unicode_width_offset_accumulator: ChUnit = ch!(0);
+impl UnicodeStringExt for Cow<'_, str> {
+  fn unicode_string(&self) -> UnicodeString { make_unicode_string(self.as_ref()) }
+}
 
-    for (grapheme_cluster_index, (byte_offset, grapheme_cluster_str)) in
-      self.grapheme_indices(true).enumerate()
-    {
-      let unicode_width = ch!(grapheme_cluster_str.width());
-      my_unicode_string_segments.push(GraphemeClusterSegment {
-        string: grapheme_cluster_str.into(),
-        byte_offset,
-        unicode_width,
-        logical_index: grapheme_cluster_index,
-        byte_size: grapheme_cluster_str.len(),
-        display_col_offset: my_unicode_width_offset_accumulator,
-      });
-      my_unicode_width_offset_accumulator += unicode_width;
-      total_byte_offset = byte_offset;
-      total_grapheme_cluster_count = grapheme_cluster_index;
-    }
+fn make_unicode_string(this: &str) -> UnicodeString {
+  let mut total_byte_offset = 0;
+  let mut total_grapheme_cluster_count = 0;
+  let mut my_unicode_string_segments = vec![];
+  let mut my_unicode_width_offset_accumulator: ChUnit = ch!(0);
 
-    UnicodeString {
-      string: self.into(),
-      vec_segment: my_unicode_string_segments,
-      display_width: my_unicode_width_offset_accumulator,
-      byte_size: if total_byte_offset > 0 {
-        total_byte_offset + 1 /* size = byte_offset (index) + 1 */
-      } else {
-        total_byte_offset
-      },
-      grapheme_cluster_segment_count: if total_grapheme_cluster_count > 0 {
-        total_grapheme_cluster_count + 1 /* count = grapheme_cluster_index + 1 */
-      } else {
-        total_grapheme_cluster_count
-      },
-    }
+  for (grapheme_cluster_index, (byte_offset, grapheme_cluster_str)) in
+    this.grapheme_indices(true).enumerate()
+  {
+    let unicode_width = ch!(grapheme_cluster_str.width());
+    my_unicode_string_segments.push(GraphemeClusterSegment {
+      string: grapheme_cluster_str.into(),
+      byte_offset,
+      unicode_width,
+      logical_index: grapheme_cluster_index,
+      byte_size: grapheme_cluster_str.len(),
+      display_col_offset: my_unicode_width_offset_accumulator,
+    });
+    my_unicode_width_offset_accumulator += unicode_width;
+    total_byte_offset = byte_offset;
+    total_grapheme_cluster_count = grapheme_cluster_index;
   }
+
+  UnicodeString {
+    string: this.into(),
+    vec_segment: my_unicode_string_segments,
+    display_width: my_unicode_width_offset_accumulator,
+    byte_size: if total_byte_offset > 0 {
+      total_byte_offset + 1 /* size = byte_offset (index) + 1 */
+    } else {
+      total_byte_offset
+    },
+    grapheme_cluster_segment_count: if total_grapheme_cluster_count > 0 {
+      total_grapheme_cluster_count + 1 /* count = grapheme_cluster_index + 1 */
+    } else {
+      total_grapheme_cluster_count
+    },
+  }
+}
+
+impl UnicodeStringExt for String {
+  fn unicode_string(&self) -> UnicodeString { make_unicode_string(self) }
 }
 
 #[derive(Debug, Clone)]
