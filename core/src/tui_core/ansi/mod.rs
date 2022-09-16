@@ -15,19 +15,8 @@
  *   limitations under the License.
  */
 
-//! All the modules in the `r3bl_rs_utils_core` crate are in support of the `tui` module in the
-//! "main" [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crate.
-
-// Attach sources.
-pub mod dimens;
-pub mod graphemes;
-pub mod lolcat;
-pub mod styles;
-pub mod ansi;
+// Attach.
+pub mod ansi_text;
 
 // Re-export.
-pub use dimens::*;
-pub use graphemes::*;
-pub use lolcat::*;
-pub use styles::*;
-pub use ansi::*;
+pub use ansi_text::*;

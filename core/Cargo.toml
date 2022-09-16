@@ -44,6 +44,9 @@ unicode-segmentation = "1.9.0"
 # Strip ANSI escapes.
 strip-ansi-escapes = "0.1.1"
 
+# ANSI parsing.
+ansi-parser = "0.8.0"
+
 # For lolcat.
 rand = "0.8.5"
 atty = "0.2.14"

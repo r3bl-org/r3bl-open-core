@@ -218,8 +218,8 @@ pub mod pipeline {
         if sanitized_pos != orig_pos {
           log_no_err!(
             INFO,
-            "pipeline : 📍 Attempt to set cursor position {:?} \
-          outside of terminal window; lamping to nearest edge of window {:?}",
+            "pipeline : 📍🗜️ Attempt to set cursor position {:?} \
+          outside of terminal window; clamping to nearest edge of window {:?}",
             orig_pos,
             sanitized_pos
           );
