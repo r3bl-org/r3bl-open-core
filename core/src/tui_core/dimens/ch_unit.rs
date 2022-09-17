@@ -179,6 +179,12 @@ pub mod math_ops {
 
     fn mul(self, rhs: u16) -> Self::Output { ch!(mul_unsigned!(self.value, rhs)) }
   }
+
+  impl std::ops::Div<u16> for ChUnit {
+    type Output = Self;
+
+    fn div(self, rhs: u16) -> Self::Output { ch!(self.value / rhs) }
+  }
 }
 
 pub mod convert_to_number {
