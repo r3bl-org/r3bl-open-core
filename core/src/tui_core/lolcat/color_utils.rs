@@ -24,7 +24,7 @@ impl ColorUtils {
   pub fn calc_fg_color(bg: (u8, u8, u8)) -> (u8, u8, u8) {
     // Currently, it only computes the foreground color based on some threshold
     // on grayscale value.
-    // FUTURE: Add a better algorithm for computing foreground color.
+    // HACK: Add a better algorithm for computing foreground color.
     if ColorUtils::convert_grayscale(bg) > 0xA0_u8 {
       (0u8, 0u8, 0u8)
     } else {

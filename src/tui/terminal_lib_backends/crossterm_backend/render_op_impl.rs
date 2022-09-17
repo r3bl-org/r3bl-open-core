@@ -126,7 +126,7 @@ async fn move_cursor_position_rel_to(
 
 async fn move_cursor_position_abs(abs_pos: &Position, shared_tw_data: &SharedTWData) {
   let Position { col, row } =
-    pipeline::sanitize_and_save_abs_position(*abs_pos, shared_tw_data).await;
+    paint_impl::sanitize_and_save_abs_position(*abs_pos, shared_tw_data).await;
   exec_render_op!(
     queue!(stdout(), MoveTo(*col, *row)),
     format!("MoveCursorPosition(col: {}, row: {})", *col, *row)
@@ -175,7 +175,7 @@ async fn request_show_caret_at_position_rel_to(
 }
 
 async fn request_show_caret_at_position_abs(pos: &Position, shared_tw_data: &SharedTWData) {
-  let sanitized_pos = pipeline::sanitize_and_save_abs_position(*pos, shared_tw_data).await;
+  let sanitized_pos = paint_impl::sanitize_and_save_abs_position(*pos, shared_tw_data).await;
   let Position { col, row } = sanitized_pos;
   exec_render_op!(
     queue!(stdout(), MoveTo(*col, *row), Show),
@@ -412,7 +412,7 @@ async fn print_text_with_attributes(
 
     // Update cursor position after paint.
     cursor_position_copy.col += unicode_string.display_width;
-    pipeline::sanitize_and_save_abs_position(cursor_position_copy, shared_tw_data).await;
+    paint_impl::sanitize_and_save_abs_position(cursor_position_copy, shared_tw_data).await;
   }
 }
 
