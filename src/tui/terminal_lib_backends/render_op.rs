@@ -150,7 +150,7 @@ impl Flush for RenderOp {
       TerminalLibBackend::Crossterm => {
         RenderOpImplCrossterm {}.flush();
       }
-      TerminalLibBackend::Termion => todo!(), // TODO: implement flush for termion
+      TerminalLibBackend::Termion => todo!(), // FUTURE: implement flush for termion
     }
   }
 
@@ -159,7 +159,7 @@ impl Flush for RenderOp {
       TerminalLibBackend::Crossterm => {
         RenderOpImplCrossterm {}.clear_before_flush();
       }
-      TerminalLibBackend::Termion => todo!(), // TODO: implement clear_before_flush for termion
+      TerminalLibBackend::Termion => todo!(), // FUTURE: implement clear_before_flush for termion
     }
   }
 }
@@ -173,7 +173,7 @@ impl Debug for RenderOp {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result {
     match TERMINAL_LIB_BACKEND {
       TerminalLibBackend::Crossterm => CrosstermDebugFormatRenderOp {}.debug_format(self, f),
-      TerminalLibBackend::Termion => todo!(), // TODO: implement debug formatter for termion
+      TerminalLibBackend::Termion => todo!(), // FUTURE: implement debug formatter for termion
     }
   }
 }
@@ -197,7 +197,7 @@ pub async fn route_paint_render_op_to_backend(
         .paint(skip_flush, render_op, shared_tw_data)
         .await;
     }
-    TerminalLibBackend::Termion => todo!(), // TODO: implement PaintRenderOp trait for termion
+    TerminalLibBackend::Termion => todo!(), // FUTURE: implement PaintRenderOp trait for termion
   }
 }
 

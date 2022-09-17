@@ -31,7 +31,7 @@ editor engine (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
     ✔ backspace @done(22-09-14 15:46)
     ✔ write tests @done(22-09-17 13:48)
   ✔ write tests for `ch!` macro @done(22-09-17 13:55)
-  ☐ write tests for render pipeline
+  ✔ start writing tests for render pipeline @done(22-09-17 14:43)
   ☐ move caret left / right -> move up / down as well (`validate_caret_position()`)
     ☐ left at start of line, move up to end of previous line
     ☐ right at end of line, move down to start of next line

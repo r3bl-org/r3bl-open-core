@@ -15,10 +15,13 @@
  *   limitations under the License.
  */
 
-use std::{collections::HashMap, fmt::Debug};
+use std::{collections::HashMap,
+          fmt::Debug,
+          ops::{AddAssign, Deref, DerefMut}};
 
 use serde::{Deserialize, Serialize};
 
+use super::*;
 use crate::{tui::{DEBUG_SHOW_PIPELINE, DEBUG_SHOW_PIPELINE_EXPANDED},
             *};
 
@@ -26,13 +29,14 @@ use crate::{tui::{DEBUG_SHOW_PIPELINE, DEBUG_SHOW_PIPELINE_EXPANDED},
 // │ RenderPipeline │
 // ╯                ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// This works w/ [RenderOp] items. It allows them to be added in sequence, and then flushed at the
-/// end. Here's an example.
+/// end. Here's an example. Consider using the macro for convenience (see [render_pipeline!]).
 ///
-/// ```ignore
+/// ```rust
+/// use r3bl_rs_utils::*;
+///
 /// let mut pipeline = RenderPipeline::default();
-/// pipeline.add(RenderOp::ClearScreen);
-/// pipeline.add(RenderOp::CursorShow);
-/// pipeline.flush();
+/// pipeline.push(&ZOrder::Normal, RenderOp::ClearScreen);
+/// pipeline.push(&ZOrder::Caret, RenderOp::CursorShow);
 /// ```
 #[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RenderPipeline {
@@ -42,25 +46,10 @@ pub struct RenderPipeline {
 
 type PipelineMap = HashMap<ZOrder, RenderOps>;
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub enum ZOrder {
-  Normal,
-  High,
-  Caret,
-  Glass,
-}
-
-const RENDER_ORDERED_Z_ORDER_ARRAY: [ZOrder; 4] =
-  [ZOrder::Normal, ZOrder::High, ZOrder::Caret, ZOrder::Glass];
-
-impl Default for ZOrder {
-  fn default() -> Self { Self::Normal }
-}
-
 impl RenderPipeline {
   /// This will add `rhs` to `self`.
   pub fn join_into(&mut self, mut rhs: RenderPipeline) {
-    for (z_order, mut render_ops) in rhs.pipeline_map.drain() {
+    for (z_order, mut render_ops) in rhs.drain() {
       match self.pipeline_map.entry(z_order) {
         std::collections::hash_map::Entry::Occupied(mut entry) => {
           entry.get_mut().list.append(&mut render_ops.list);
@@ -73,7 +62,7 @@ impl RenderPipeline {
   }
 
   pub fn push(&mut self, z_order: &ZOrder, cmd_wrapper: RenderOp) -> &mut Self {
-    match self.pipeline_map.entry(*z_order) {
+    match self.entry(*z_order) {
       std::collections::hash_map::Entry::Occupied(mut entry) => {
         entry.get_mut().list.push(cmd_wrapper);
       }
@@ -87,26 +76,53 @@ impl RenderPipeline {
 
   // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
   pub async fn paint(&self, flush_kind: FlushKind, shared_tw_data: &SharedTWData) {
-    pipeline::paint(self, flush_kind, shared_tw_data).await;
+    paint_impl::paint(self, flush_kind, shared_tw_data).await;
   }
 }
 
-mod render_pipeline_helpers {
-  use std::ops::AddAssign;
-
+pub mod z_order_impl {
   use super::*;
-  use crate::tui::terminal_lib_backends::render_pipeline::RenderPipeline;
+
+  #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+  pub enum ZOrder {
+    Normal,
+    High,
+    Caret,
+    Glass,
+  }
+
+  pub(crate) const RENDER_ORDERED_Z_ORDER_ARRAY: [ZOrder; 4] =
+    [ZOrder::Normal, ZOrder::High, ZOrder::Caret, ZOrder::Glass];
+
+  impl Default for ZOrder {
+    fn default() -> Self { Self::Normal }
+  }
+}
+pub use z_order_impl::*;
+
+mod render_pipeline_helpers {
+  use super::*;
+
+  impl Deref for RenderPipeline {
+    type Target = PipelineMap;
+
+    fn deref(&self) -> &Self::Target { &self.pipeline_map }
+  }
+
+  impl DerefMut for RenderPipeline {
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.pipeline_map }
+  }
 
   impl Debug for RenderPipeline {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       let mut vec_lines: Vec<String> = vec![];
       if DEBUG_SHOW_PIPELINE_EXPANDED {
-        for (z_order, render_ops) in &self.pipeline_map {
+        for (z_order, render_ops) in &**self {
           let line: String = format!("[{:?}] {:?}", z_order, render_ops);
           vec_lines.push(line);
         }
       } else {
-        for (z_order, render_ops) in &self.pipeline_map {
+        for (z_order, render_ops) in &**self {
           let line: String = format!("[{:?}] {:?} ops", z_order, render_ops.list.len());
           vec_lines.push(line);
         }
@@ -124,7 +140,7 @@ mod render_pipeline_helpers {
   }
 }
 
-pub mod pipeline {
+pub mod paint_impl {
   use super::*;
 
   pub async fn paint(
@@ -243,7 +259,9 @@ pub mod pipeline {
 ///
 /// Here's an example.
 ///
-/// ```ignore
+/// ```rust
+/// use r3bl_rs_utils::*;
+///
 /// let mut pipeline = render_pipeline!(@new ZOrder::Normal =>
 ///   RenderOp::ClearScreen,
 ///   RenderOp::ResetColor
@@ -252,9 +270,11 @@ pub mod pipeline {
 ///
 /// Another example.
 ///
-/// ```ignore
+/// ```rust
+/// use r3bl_rs_utils::*;
+///
 /// let mut pipeline = render_pipeline!(@new_empty); // Returns the newly created pipeline.
-/// render_pipeline!(@push pipeline =>
+/// render_pipeline!(@push_into pipeline at ZOrder::Normal =>
 ///   RenderOp::ClearScreen,
 ///   RenderOp::ResetColor
 /// ); // Returns nothing.
