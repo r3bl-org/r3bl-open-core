@@ -17,11 +17,6 @@
 
 use r3bl_rs_utils::*;
 
-#[test]
-fn test_ch_macro() {
-  // TK: test all 3 variants of the ch! macro
-}
-
 #[tokio::test]
 async fn test_add_box_size_to_pos() {
   // [10, 10] + [30, 10] = [40, 20]
