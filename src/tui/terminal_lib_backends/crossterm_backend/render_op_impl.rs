@@ -205,7 +205,7 @@ async fn print_text_with_attributes(
   };
 
   // Gen log_msg.
-  let mut log_msg = match truncation_policy {
+  let mut log_msg = Cow::from(match truncation_policy {
     TruncationPolicy::PlainText => {
       format!("\"{}\"", text_arg)
     }
@@ -222,35 +222,77 @@ async fn print_text_with_attributes(
       );
       format!("ANSI detected, size: {} bytes", text_arg.len())
     }
-  };
+  });
 
   let mut text: Cow<'_, str> = Cow::from(text_arg);
 
   // TK: handle ANSI text truncation using ANSIText
-  if let TruncationPolicy::PlainText = truncation_policy {
+  match truncation_policy {
+    TruncationPolicy::ANSIText => {
+      truncate_ansi_text(shared_tw_data, &mut text, &mut log_msg).await;
+    }
+    TruncationPolicy::PlainText => {
+      truncate_plain_text(shared_tw_data, &mut text, &mut log_msg).await;
+    }
+  }
+
+  // Print plain_text.
+  paint_style_and_text(maybe_style, text, log_msg, shared_tw_data).await;
+
+  // TK: make sure this works!
+  async fn truncate_ansi_text(
+    shared_tw_data: &SharedTWData, text: &mut Cow<'_, str>, log_msg: &mut Cow<'_, str>,
+  ) {
+    // Check whether the text needs to be truncated to fit the terminal window.
+    let current_cursor_col = shared_tw_data.read().await.cursor_position.col;
+    let max_terminal_width = shared_tw_data.read().await.size.col;
+    let max_display_cols = max_terminal_width - current_cursor_col;
+    let ansi_text = text.ansi_text();
+    let ansi_text_segments = ansi_text.segments(None);
+
+    if ansi_text_segments.len() > ch!(@to_usize max_display_cols) {
+      // Truncate the text.
+      let truncated_segments = ansi_text.segments(Some(ch!(@to_usize max_display_cols)));
+
+      let truncated_seg_len = truncated_segments.len();
+      let truncated_seg_unicode_width = truncated_segments.unicode_width;
+
+      let buff: String = truncated_segments.into();
+      *text = Cow::from(buff);
+      *log_msg = Cow::from(format!(
+        "ANSI ✂️ display_cols: {:?}, #seg: {:?}, bytes: {:?}, text: {:?}",
+        truncated_seg_unicode_width,
+        truncated_seg_len,
+        text.len(),
+        text
+      ));
+    }
+  }
+
+  async fn truncate_plain_text(
+    shared_tw_data: &SharedTWData, text: &mut Cow<'_, str>, log_msg: &mut Cow<'_, str>,
+  ) {
     // Check whether the text needs to be truncated to fit the terminal window.
     let cursor_position = shared_tw_data.read().await.cursor_position;
     let max_cols = shared_tw_data.read().await.size.col;
-    let plain_text_unicode_string = text_arg.to_string().unicode_string();
+    let plain_text_unicode_string = text.to_string().unicode_string();
     let plain_text_len = plain_text_unicode_string.display_width;
     if cursor_position.col + plain_text_len > max_cols {
       let trunc_plain_text = plain_text_unicode_string
         .truncate_to_fit_display_cols(max_cols - cursor_position.col)
         .to_string();
       // Update plain_text & log_msg after truncating.
-      text = Cow::from(trunc_plain_text);
-      log_msg = format!("\"{}✂️\"", text);
+      *text = Cow::from(trunc_plain_text);
+      *log_msg = Cow::from(format!("\"{}✂️\"", text));
     }
-  };
-
-  // Print plain_text.
-  paint_style_and_text(maybe_style, text, &log_msg, shared_tw_data).await;
+  }
 }
 
 /// Use [Style] to set crossterm [Attributes] ([docs](
 /// https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes)).
 async fn paint_style_and_text(
-  maybe_style: &Option<Style>, text: Cow<'_, str>, log_msg: &str, shared_tw_data: &SharedTWData,
+  maybe_style: &Option<Style>, text: Cow<'_, str>, log_msg: Cow<'_, str>,
+  shared_tw_data: &SharedTWData,
 ) {
   let mut needs_reset = false;
   if let Some(style) = maybe_style {
@@ -266,7 +308,9 @@ async fn paint_style_and_text(
     });
   }
 
-  paint_text(text, log_msg, shared_tw_data).await;
+  paint_text(text, &log_msg, shared_tw_data).await;
+
+  // TK: if ANSIText is truncated, then we needs_reset needs to be true
 
   if needs_reset {
     exec_render_op!(
