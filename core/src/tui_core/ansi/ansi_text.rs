@@ -15,8 +15,13 @@
  *   limitations under the License.
  */
 
+use std::{borrow::Cow, fmt::Write, ops::Deref};
+
 use ansi_parser::{AnsiParser, Output};
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ ANSITextSegment │
+// ╯                 ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 #[derive(Debug, PartialEq, Default)]
 pub struct ANSITextSegment<'a> {
   pub vec_parts: Vec<&'a Output<'a>>,
@@ -32,6 +37,63 @@ impl ANSITextSegment<'_> {
   }
 }
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ ANSITextSegments │
+// ╯                  ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+#[derive(Debug, PartialEq, Default)]
+pub struct ANSITextSegments<'a> {
+  pub vec_segments: Vec<ANSITextSegment<'a>>,
+  pub unicode_width: usize,
+}
+
+impl<'a> ANSITextSegments<'a> {
+  pub fn new(vec_segments: Vec<ANSITextSegment<'a>>, unicode_width: usize) -> Self {
+    Self {
+      vec_segments,
+      unicode_width,
+    }
+  }
+
+  pub fn len(&self) -> usize { self.vec_segments.len() }
+
+  #[must_use]
+  pub fn is_empty(&self) -> bool { self.len() == 0 }
+}
+
+impl<'a> Deref for ANSITextSegments<'a> {
+  type Target = Vec<ANSITextSegment<'a>>;
+
+  fn deref(&self) -> &Self::Target { &self.vec_segments }
+}
+
+impl<'a> From<ANSITextSegments<'a>> for String {
+  fn from(ansi_text_segments: ANSITextSegments<'a>) -> Self {
+    let mut buff = String::new();
+
+    for segment in &*ansi_text_segments {
+      for part in &segment.vec_parts {
+        write!(&mut buff, "{}", part).expect("failed to write");
+      }
+    }
+
+    buff
+  }
+}
+
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ ANSIStringExt │
+// ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+pub trait ANSIStringExt {
+  fn ansi_text(&self) -> ANSIText;
+}
+
+impl ANSIStringExt for Cow<'_, str> {
+  fn ansi_text(&self) -> ANSIText { ANSIText::new(self) }
+}
+
+// ╭┄┄┄┄┄┄┄┄┄┄╮
+// │ ANSIText │
+// ╯          ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 #[derive(Debug, PartialEq, Default)]
 pub struct ANSIText<'a> {
   pub ansi_text: &'a str,
@@ -49,7 +111,7 @@ impl<'a> ANSIText<'a> {
   ///    [Output::TextBlock].
   /// 2. If max_display_col is provided, return the maximum number of segments that will fit in
   ///    the given display column width.
-  pub fn segments(&'a self, max_display_col: Option<usize>) -> Vec<ANSITextSegment<'a>> {
+  pub fn segments(&'a self, max_display_col: Option<usize>) -> ANSITextSegments<'a> {
     let mut vec_segments = Vec::new();
 
     let mut current_segment = ANSITextSegment::new();
@@ -74,10 +136,12 @@ impl<'a> ANSIText<'a> {
     }
 
     // Calculate the unicode_width of each segment.
+    let mut unicode_width_total = 0;
     for segment in &mut vec_segments {
       for part in &segment.vec_parts {
         if let Output::TextBlock(text) = part {
           segment.unicode_width += unicode_width::UnicodeWidthStr::width(*text);
+          unicode_width_total += segment.unicode_width;
         }
       }
     }
@@ -86,18 +150,20 @@ impl<'a> ANSIText<'a> {
     if let Some(max_display_col) = max_display_col {
       let mut vec_segments_filtered = Vec::new();
       let mut col_count = 0;
+      unicode_width_total = 0;
 
       for segment in vec_segments {
         if col_count + segment.unicode_width > max_display_col {
           break;
         }
         col_count += segment.unicode_width;
+        unicode_width_total += segment.unicode_width;
         vec_segments_filtered.push(segment);
       }
 
       vec_segments = vec_segments_filtered;
     }
 
-    vec_segments
+    ANSITextSegments::new(vec_segments, unicode_width_total)
   }
 }
