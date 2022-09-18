@@ -17,7 +17,6 @@
 
 use std::fmt::{Debug, Formatter, Result};
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use super::TERMINAL_LIB_BACKEND;
@@ -80,15 +79,14 @@ pub enum RenderOp {
 
   ExitRawMode,
 
-  /// This is always painted on top.
-  /// [Position] is the absolute column and row on the terminal screen. This uses
-  /// [pipeline::sanitize_abs_position] to clean up the given [Position].
+  /// This is always painted on top. [Position] is the absolute column and row on the terminal
+  /// screen. This uses [sanitize_and_save_abs_position] to clean up the given
+  /// [Position].
   MoveCursorPositionAbs(Position),
 
-  /// This is always painted on top.
-  /// 1st [Position] is the origin column and row, and the 2nd [Position] is the offset column and
-  /// row. They are added together to move the absolute position on the terminal screen. Then
-  /// [RenderOp::MoveCursorPositionAbs] is used.
+  /// This is always painted on top. 1st [Position] is the origin column and row, and the 2nd
+  /// [Position] is the offset column and row. They are added together to move the absolute position
+  /// on the terminal screen. Then [RenderOp::MoveCursorPositionAbs] is used.
   MoveCursorPositionRelTo(Position, Position),
 
   ClearScreen,
@@ -118,7 +116,7 @@ pub enum RenderOp {
   CursorHide,
 
   /// [Position] is the absolute column and row on the terminal screen. This uses
-  /// [pipeline::sanitize_abs_position] to clean up the given [Position].
+  /// [sanitize_and_save_abs_position] to clean up the given [Position].
   RequestShowCaretAtPositionAbs(Position),
 
   /// 1st [Position] is the origin column and row, and the 2nd [Position] is the offset column and
@@ -183,30 +181,6 @@ impl Debug for RenderOp {
 // ╯                           ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 pub trait DebugFormatRenderOp {
   fn debug_format(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result;
-}
-
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Route paint RenderOp to backend │
-// ╯                                 ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-pub async fn route_paint_render_op_to_backend(
-  skip_flush: &mut bool, render_op: &RenderOp, shared_tw_data: &SharedTWData,
-) {
-  match TERMINAL_LIB_BACKEND {
-    TerminalLibBackend::Crossterm => {
-      RenderOpImplCrossterm {}
-        .paint(skip_flush, render_op, shared_tw_data)
-        .await;
-    }
-    TerminalLibBackend::Termion => todo!(), // FUTURE: implement PaintRenderOp trait for termion
-  }
-}
-
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ PaintRenderOp trait │
-// ╯                     ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-#[async_trait]
-pub trait PaintRenderOp {
-  async fn paint(&self, skip_flush: &mut bool, render_op: &RenderOp, shared_tw_data: &SharedTWData);
 }
 
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮

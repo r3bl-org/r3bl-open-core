@@ -23,6 +23,11 @@ use tokio::sync::RwLock;
 
 use crate::*;
 
+/// These are global state values for the entire application:
+/// 1. The size holds the width and height of the terminal window.
+/// 2. The cursor_position (for purposes of drawing via [RenderOp], [RenderOps], and
+///    [RenderPipeline]). This is used for low level painting operations and are not meant to be
+///    used by code that renders components.
 #[derive(Clone, Debug, Default)]
 pub struct TWData {
   pub size: Size,

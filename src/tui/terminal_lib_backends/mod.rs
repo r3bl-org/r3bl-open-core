@@ -52,7 +52,7 @@ pub enum TerminalLibBackend {
   Termion,
 }
 
-const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
+pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
 
 // Attach source files.
 pub mod async_event_stream_ext;
@@ -66,10 +66,12 @@ pub mod mouse_input;
 pub mod raw_mode;
 pub mod render_op;
 pub mod render_pipeline;
+pub mod paint;
 pub mod terminal_lib_operations;
 pub mod termion_backend;
 
 // Re-export.
+pub use paint::*;
 pub use async_event_stream_ext::*;
 pub use color_converter::*;
 pub use crossterm_backend::*;
