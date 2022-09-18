@@ -33,13 +33,7 @@ fn test_styled_text_renders_correctly() -> CommonResult<()> {
     let tw_queue: RenderPipeline = st_vec.render(ZOrder::Normal);
     debug!(tw_queue);
     assert_eq2!(tw_queue.len(), 1);
-    assert_eq2!(
-      tw_queue
-        .get(&ZOrder::Normal)
-        .unwrap()
-        .len(),
-      6
-    );
+    assert_eq2!(tw_queue.get(&ZOrder::Normal).unwrap().len(), 6);
   })
 }
 

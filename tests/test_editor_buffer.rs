@@ -569,7 +569,7 @@ pub mod assert {
 
   pub fn str_is_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
     match line_buffer_get_content::string_at_caret(editor_buffer) {
-      Some((s, _)) => assert_eq2!(s, expected),
+      Some(UnicodeStringSegmentSliceResult { str_seg: s, .. }) => assert_eq2!(s, expected),
       None => panic!("Expected string at caret, but got None."),
     }
   }

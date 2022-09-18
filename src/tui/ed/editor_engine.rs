@@ -147,7 +147,9 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> RenderPipe
       }
       CaretPaintStyle::LocalPaintedEffect => {
         let str_at_caret: String =
-          if let Some((str_seg, _)) = line_buffer_get_content::string_at_caret(editor_buffer) {
+          if let Some(UnicodeStringSegmentSliceResult { str_seg, .. }) =
+            line_buffer_get_content::string_at_caret(editor_buffer)
+          {
             str_seg
           } else {
             DEFAULT_CURSOR_CHAR.into()

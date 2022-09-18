@@ -312,7 +312,7 @@ async fn print_text_with_attributes(
     // Check whether the text needs to be truncated to fit the terminal window.
     let cursor_position = shared_tw_data.read().await.cursor_position;
     let max_cols = shared_tw_data.read().await.size.col;
-    let plain_text_unicode_string = text.to_string().unicode_string();
+    let plain_text_unicode_string = text.unicode_string();
     let plain_text_len = plain_text_unicode_string.display_width;
     if cursor_position.col + plain_text_len > max_cols {
       let trunc_plain_text = plain_text_unicode_string
@@ -389,7 +389,7 @@ async fn print_text_with_attributes(
     }
 
     // Move cursor "manually" to cover "extra" width.
-    fn jump_cursor(pos: &Position, seg: &GraphemeClusterSegment) {
+    fn jump_cursor<'a>(pos: &Position, seg: &GraphemeClusterSegment<'a>) {
       let jump_to_col = ch!(
         @to_u16
         pos.col + seg.display_col_offset + seg.unicode_width);
