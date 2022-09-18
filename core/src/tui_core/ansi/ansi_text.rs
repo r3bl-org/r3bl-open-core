@@ -167,3 +167,19 @@ impl<'a> ANSIText<'a> {
     ANSITextSegments::new(vec_segments, unicode_width_total)
   }
 }
+
+impl ANSIText<'_> {
+  /// If conversion was successful and ANSI characters were stripped, returns a [String], otherwise
+  /// returns [None].
+  pub fn try_strip_ansi(text: &str) -> Option<String> {
+    if let Ok(vec_u8) = strip_ansi_escapes::strip(text) {
+      let result_text_plain = std::str::from_utf8(&vec_u8);
+      if let Ok(stripped_text) = result_text_plain {
+        if text != stripped_text {
+          return stripped_text.to_string().into();
+        }
+      }
+    }
+    None
+  }
+}

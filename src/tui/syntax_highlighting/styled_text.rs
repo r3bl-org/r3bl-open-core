@@ -30,10 +30,10 @@ pub struct StyledText {
 }
 
 impl StyledText {
-  /// Just as a precaution, the `text` argument is passed through [try_strip_ansi] method to remove
-  /// any ANSI escape sequences.
+  /// Just as a precaution, the `text` argument is passed through
+  /// [try_strip_ansi](ANSIText::try_strip_ansi) method to remove any ANSI escape sequences.
   pub fn new(text: String, style: Style) -> Self {
-    let plain_text = match try_strip_ansi(&text) {
+    let plain_text = match ANSIText::try_strip_ansi(&text) {
       Some(plain_text) => plain_text,
       None => text,
     };
