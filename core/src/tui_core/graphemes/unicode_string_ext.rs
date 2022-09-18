@@ -18,13 +18,14 @@
 use std::{borrow::Cow,
           ops::{Deref, DerefMut}};
 
-use get_size::GetSize;
-use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::*;
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ UnicodeStringExt │
+// ╯                  ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// A grapheme cluster is a user-perceived character. Rust uses `UTF-8` to
 /// represent text in `String`. So each character takes up 8 bits or one byte.
 /// Grapheme clusters can take up many more bytes, eg 4 bytes or 2 or 3, etc.
@@ -214,6 +215,9 @@ impl UnicodeStringExt for String {
   fn unicode_string(&self) -> UnicodeString { make_unicode_string(self) }
 }
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ GraphemeClusterSegment │
+// ╯                        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 #[derive(Debug, Clone)]
 pub struct GraphemeClusterSegment {
   /// The actual grapheme cluster `&str`. Eg: "H", "📦", "🙏🏽".
@@ -230,6 +234,51 @@ pub struct GraphemeClusterSegment {
   pub display_col_offset: ChUnit,
 }
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ UnicodeStringSegmentResult │
+// ╯                            ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+#[derive(Debug)]
+pub struct UnicodeStringSegmentResult {
+  pub str_seg: String,
+  pub unicode_width: ChUnit,
+  pub display_col_at_which_seg_starts: ChUnit,
+}
+
+// TK: probably does not need String (since no mutation)
+impl UnicodeStringSegmentResult {
+  pub fn new(
+    string: String, unicode_width: ChUnit, display_col_at_which_this_segment_starts: ChUnit,
+  ) -> Self {
+    Self {
+      str_seg: string,
+      unicode_width,
+      display_col_at_which_seg_starts: display_col_at_which_this_segment_starts,
+    }
+  }
+}
+
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ UnicodeStringSliceResult │
+// ╯                          ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+#[derive(Debug, Default)]
+pub struct UnicodeStringSliceResult {
+  pub str_slice: String,
+  pub unicode_width: ChUnit,
+}
+
+// TK: probably need String (since they are result of mutation)
+impl UnicodeStringSliceResult {
+  pub fn new(str_slice: String, unicode_width: ChUnit) -> Self {
+    Self {
+      str_slice,
+      unicode_width,
+    }
+  }
+}
+
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ UnicodeString │
+// ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 #[derive(Debug, Clone)]
 pub struct UnicodeString {
   pub string: String,
@@ -249,6 +298,7 @@ impl DerefMut for UnicodeString {
   fn deref_mut(&mut self) -> &mut Self::Target { &mut self.vec_segment }
 }
 
+// TK: why?
 /// Convert [char] to [GraphemeClusterSegment].
 impl From<char> for GraphemeClusterSegment {
   fn from(character: char) -> Self {
@@ -257,6 +307,7 @@ impl From<char> for GraphemeClusterSegment {
   }
 }
 
+// TK: why?
 /// Convert [&str] to [GraphemeClusterSegment].
 impl From<&str> for GraphemeClusterSegment {
   fn from(chunk: &str) -> Self {
@@ -265,6 +316,7 @@ impl From<&str> for GraphemeClusterSegment {
   }
 }
 
+// TK: why?
 /// Convert [Vec<GraphemeClusterSegment>] to [String].
 fn to_string(vec_grapheme_cluster_segment: Vec<GraphemeClusterSegment>) -> String {
   let mut my_string = String::new();
@@ -272,40 +324,6 @@ fn to_string(vec_grapheme_cluster_segment: Vec<GraphemeClusterSegment>) -> Strin
     my_string.push_str(&grapheme_cluster_segment.string);
   }
   my_string
-}
-
-#[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Debug)]
-pub struct UnicodeStringSegmentResult {
-  pub str_seg: String,
-  pub unicode_width: ChUnit,
-  pub display_col_at_which_seg_starts: ChUnit,
-}
-
-#[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Debug)]
-pub struct UnicodeStringSliceResult {
-  pub str_slice: String,
-  pub unicode_width: ChUnit,
-}
-
-impl UnicodeStringSliceResult {
-  pub fn new(str_slice: String, unicode_width: ChUnit) -> Self {
-    Self {
-      str_slice,
-      unicode_width,
-    }
-  }
-}
-
-impl UnicodeStringSegmentResult {
-  pub fn new(
-    string: String, unicode_width: ChUnit, display_col_at_which_this_segment_starts: ChUnit,
-  ) -> Self {
-    Self {
-      str_seg: string,
-      unicode_width,
-      display_col_at_which_seg_starts: display_col_at_which_this_segment_starts,
-    }
-  }
 }
 
 impl UnicodeString {
@@ -444,6 +462,7 @@ impl UnicodeString {
     ))
   }
 
+  // TK: mutation
   /// Returns a new [String]. Does not modify [self.string](UnicodeString::string).
   pub fn merge_with(&self, other: UnicodeString) -> Option<String> {
     let mut new_string = self.string.clone();
@@ -451,6 +470,7 @@ impl UnicodeString {
     Some(new_string)
   }
 
+  // TK: mutation
   /// Returns a new ([String], [ChUnit]) tuple. Does not modify
   /// [self.string](UnicodeString::string).
   pub fn insert_char_at_display_col(
@@ -490,6 +510,7 @@ impl UnicodeString {
     }
   }
 
+  // TK: mutation
   /// Returns two new tuples: *left* ([UnicodeStringSliceResult]), *right*
   /// ([UnicodeStringSliceResult]). Does not modify [self.string](UnicodeString::string).
   pub fn split_at_display_col(
@@ -528,6 +549,7 @@ impl UnicodeString {
     }
   }
 
+  // TK: mutation
   /// Returns a new ([UnicodeStringSliceResult]) tuple. Does not modify
   /// [self.string](UnicodeString::string).
   pub fn delete_char_at_display_col(
@@ -575,18 +597,4 @@ impl UnicodeString {
       None
     }
   }
-}
-
-/// If conversion was successful and ANSI characters were stripped, returns a [String], otherwise
-/// returns [None].
-pub fn try_strip_ansi(text: &str) -> Option<String> {
-  if let Ok(vec_u8) = strip_ansi_escapes::strip(text) {
-    let result_text_plain = std::str::from_utf8(&vec_u8);
-    if let Ok(stripped_text) = result_text_plain {
-      if text != stripped_text {
-        return stripped_text.to_string().into();
-      }
-    }
-  }
-  None
 }

@@ -44,7 +44,7 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
           None => "ApplyColors(None)".into(),
         },
         RenderOp::PrintTextWithAttributes(text, maybe_style) => {
-          match try_strip_ansi(text) {
+          match ANSIText::try_strip_ansi(text) {
             Some(plain_text) => {
               // Successfully stripped ANSI escape codes.
               match maybe_style {

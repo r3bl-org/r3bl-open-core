@@ -215,7 +215,7 @@ async fn print_text_with_attributes(
 
   // Are ANSI codes present?
   let truncation_policy = {
-    if try_strip_ansi(text_arg).is_some() {
+    if ANSIText::try_strip_ansi(text_arg).is_some() {
       TruncationPolicy::ANSIText
     } else {
       TruncationPolicy::PlainText
@@ -235,7 +235,7 @@ async fn print_text_with_attributes(
           "ANSI {:?}, len: {:?}, plain: {:?}",
           text_arg,
           text_arg.len(),
-          try_strip_ansi(text_arg)
+          ANSIText::try_strip_ansi(text_arg)
         )
       );
       format!("ANSI detected, size: {} bytes", text_arg.len())
@@ -365,7 +365,7 @@ async fn print_text_with_attributes(
 
     match unicode_string.contains_wide_segments() {
       true => {
-        for  seg in unicode_string.iter() {
+        for seg in unicode_string.iter() {
           // Special handling of cursor based on unicode width.
           if seg.unicode_width > ch!(1) {
             // Paint text.

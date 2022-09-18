@@ -88,7 +88,7 @@ impl EditorBuffer {
 
   /// Insert [char] at the current [caret position](EditorBuffer::caret) into the current line.
   pub fn insert_char(&mut self, character: char) {
-    line_buffer_insert::str_at_caret(self, &char_to_string(character))
+    line_buffer_insert::str_at_caret(self, &String::from(character))
   }
 
   /// Insert [str] at the current [caret position](EditorBuffer::caret) into the current line.
@@ -204,9 +204,4 @@ mod debug_format_helpers {
 
   /// More info: <https://stackoverflow.com/questions/63214346/how-to-truncate-f64-to-2-decimal-places>
   fn pretty_print_f64(before: f64) -> f64 { f64::trunc(before * 100.0) / 100.0 }
-}
-
-pub(crate) fn char_to_string(character: char) -> String {
-  let my_string: String = String::from(character);
-  my_string
 }
