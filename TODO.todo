@@ -32,14 +32,14 @@ editor engine (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
     ✔ write tests @done(22-09-17 13:48)
   ✔ write tests for `ch!` macro @done(22-09-17 13:55)
   ✔ start writing tests for render pipeline @done(22-09-17 14:43)
+  ☐ scrolling
+    ☐ left/right
+    ☐ up/down
   ☐ move caret left / right -> move up / down as well (`validate_caret_position()`)
     ☐ left at start of line, move up to end of previous line
     ☐ right at end of line, move down to start of next line
     ☐ down at start of last line, move to end of line
     ☐ up at end of first line, move to 0,0
-  ☐ scrolling
-    ☐ left/right
-    ☐ up/down
   ☐ other key inputs
     ☐ page up/down
     ☐ home/end
@@ -48,6 +48,8 @@ editor engine (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
     ☐ add support for text selection highlighting
     ☐ selection, copy, paste
   ☐ syntax highlighting
+
+enhancements to editor engine:
   ☐ auto completion providers:
     ☐ add support for auto completion providers
     ☐ modal dialogs for autocompletion provider
@@ -63,3 +65,5 @@ framework:
 
 writing:
   ☐ [RSX & DSL articles](https://github.com/r3bl-org/r3bl_rs_utils/issues/19)
+  ☐ [Update DD for editor component](https://github.com/r3bl-org/r3bl_rs_utils/issues/23)
+  ☐ [Write DD for render pipeline & paint](https://github.com/r3bl-org/r3bl_rs_utils/issues/37)
