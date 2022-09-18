@@ -31,14 +31,12 @@ fn test_styled_text_renders_correctly() -> CommonResult<()> {
   throws!({
     let st_vec = helpers::create_styled_text()?;
     let tw_queue: RenderPipeline = st_vec.render(ZOrder::Normal);
-    debug!(tw_queue.pipeline_map);
-    assert_eq2!(tw_queue.pipeline_map.len(), 1);
+    debug!(tw_queue);
+    assert_eq2!(tw_queue.len(), 1);
     assert_eq2!(
       tw_queue
-        .pipeline_map
         .get(&ZOrder::Normal)
         .unwrap()
-        .list
         .len(),
       6
     );

@@ -28,13 +28,13 @@ fn test_create_render_pipeline() {
   );
 
   assert_eq2!(pipeline.len(), 1);
-  let z_order_len = pipeline.get(&ZOrder::Normal).unwrap().list.len();
+  let z_order_len = pipeline.get(&ZOrder::Normal).unwrap().len();
   assert_eq2!(z_order_len, 2);
 
-  let first_item = pipeline.get(&ZOrder::Normal).unwrap().list.first().unwrap();
+  let first_item = pipeline.get(&ZOrder::Normal).unwrap().first().unwrap();
   assert_eq2!(first_item, &RenderOp::ClearScreen);
 
-  let last_item = pipeline.get(&ZOrder::Normal).unwrap().list.last().unwrap();
+  let last_item = pipeline.get(&ZOrder::Normal).unwrap().last().unwrap();
   assert_eq2!(last_item, &RenderOp::ResetColor);
 
   // Merge multiple pipelines.
@@ -58,6 +58,6 @@ fn test_create_render_pipeline() {
 
   let pipeline_merged = render_pipeline!(@join_and_drop pipeline_1, pipeline_2);
   assert_eq2!(pipeline_merged.len(), 2);
-  assert_eq2!(pipeline_merged.get(&ZOrder::Normal).unwrap().list.len(), 4);
-  assert_eq2!(pipeline_merged.get(&ZOrder::Caret).unwrap().list.len(), 1);
+  assert_eq2!(pipeline_merged.get(&ZOrder::Normal).unwrap().len(), 4);
+  assert_eq2!(pipeline_merged.get(&ZOrder::Caret).unwrap().len(), 1);
 }

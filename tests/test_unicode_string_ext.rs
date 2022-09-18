@@ -26,7 +26,7 @@ fn test_unicode_string_ext() {
 
   // Check overall sizes and counts on the `UnicodeString` struct.
   assert_eq2!(u_s.string, test_string);
-  assert_eq2!(u_s.vec_segment.len(), 11);
+  assert_eq2!(u_s.len(), 11);
   assert_eq2!(u_s.grapheme_cluster_segment_count, 11);
   assert_eq2!(u_s.byte_size, test_string.len());
   assert_eq2!(u_s.display_width, ch!(25));
@@ -50,17 +50,17 @@ fn test_grapheme_cluster_segment() {
   let u_s = test_string.unicode_string();
 
   // Check the individual `GraphemeClusterSegment` structs.
-  assert_segment(&u_s.vec_segment[00], 00, 01.into(), 00, 01, "H");
-  assert_segment(&u_s.vec_segment[01], 01, 01.into(), 01, 01, "i");
-  assert_segment(&u_s.vec_segment[02], 02, 01.into(), 02, 01, " ");
-  assert_segment(&u_s.vec_segment[03], 03, 02.into(), 03, 04, "😃");
-  assert_segment(&u_s.vec_segment[04], 07, 01.into(), 04, 01, " ");
-  assert_segment(&u_s.vec_segment[05], 08, 02.into(), 05, 04, "📦");
-  assert_segment(&u_s.vec_segment[06], 12, 01.into(), 06, 01, " ");
-  assert_segment(&u_s.vec_segment[07], 13, 04.into(), 07, 08, "🙏🏽");
-  assert_segment(&u_s.vec_segment[08], 21, 01.into(), 08, 01, " ");
-  assert_segment(&u_s.vec_segment[09], 22, 10.into(), 09, 26, "👨🏾‍🤝‍👨🏿");
-  assert_segment(&u_s.vec_segment[10], 48, 01.into(), 10, 01, ".");
+  assert_segment(&u_s[00], 00, 01.into(), 00, 01, "H");
+  assert_segment(&u_s[01], 01, 01.into(), 01, 01, "i");
+  assert_segment(&u_s[02], 02, 01.into(), 02, 01, " ");
+  assert_segment(&u_s[03], 03, 02.into(), 03, 04, "😃");
+  assert_segment(&u_s[04], 07, 01.into(), 04, 01, " ");
+  assert_segment(&u_s[05], 08, 02.into(), 05, 04, "📦");
+  assert_segment(&u_s[06], 12, 01.into(), 06, 01, " ");
+  assert_segment(&u_s[07], 13, 04.into(), 07, 08, "🙏🏽");
+  assert_segment(&u_s[08], 21, 01.into(), 08, 01, " ");
+  assert_segment(&u_s[09], 22, 10.into(), 09, 26, "👨🏾‍🤝‍👨🏿");
+  assert_segment(&u_s[10], 48, 01.into(), 10, 01, ".");
 }
 
 #[allow(clippy::zero_prefixed_literal)]

@@ -365,7 +365,7 @@ async fn print_text_with_attributes(
 
     match unicode_string.contains_wide_segments() {
       true => {
-        for ref seg in unicode_string.vec_segment {
+        for  seg in unicode_string.iter() {
           // Special handling of cursor based on unicode width.
           if seg.unicode_width > ch!(1) {
             // Paint text.

@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::borrow::Cow;
+use std::{borrow::Cow,
+          ops::{Deref, DerefMut}};
 
 use get_size::GetSize;
 use serde::{Deserialize, Serialize};
@@ -238,11 +239,21 @@ pub struct UnicodeString {
   pub display_width: ChUnit,
 }
 
+impl Deref for UnicodeString {
+  type Target = Vec<GraphemeClusterSegment>;
+
+  fn deref(&self) -> &Self::Target { &self.vec_segment }
+}
+
+impl DerefMut for UnicodeString {
+  fn deref_mut(&mut self) -> &mut Self::Target { &mut self.vec_segment }
+}
+
 /// Convert [char] to [GraphemeClusterSegment].
 impl From<char> for GraphemeClusterSegment {
   fn from(character: char) -> Self {
     let my_string: String = character.into();
-    my_string.unicode_string().vec_segment[0].clone()
+    my_string.unicode_string()[0].clone()
   }
 }
 
@@ -250,7 +261,7 @@ impl From<char> for GraphemeClusterSegment {
 impl From<&str> for GraphemeClusterSegment {
   fn from(chunk: &str) -> Self {
     let my_string: String = chunk.to_string();
-    my_string.unicode_string().vec_segment[0].clone()
+    my_string.unicode_string()[0].clone()
   }
 }
 
@@ -303,7 +314,7 @@ impl UnicodeString {
   pub fn contains_wide_segments(&self) -> bool {
     let mut contains_wide_segments = false;
 
-    for grapheme_cluster_segment in &self.vec_segment {
+    for grapheme_cluster_segment in self.iter() {
       if grapheme_cluster_segment.unicode_width > ch!(1) {
         contains_wide_segments = true;
         break;
@@ -332,7 +343,7 @@ impl UnicodeString {
     let mut avail_cols = display_cols;
     let mut string_end_byte_index = 0;
 
-    for segment in &self.vec_segment {
+    for segment in self.iter() {
       if avail_cols < segment.unicode_width {
         break;
       }
@@ -345,12 +356,12 @@ impl UnicodeString {
 
   /// `local_index` is the index of the grapheme cluster in the `vec_segment`.
   pub fn at_logical_index(&self, logical_index: usize) -> Option<&GraphemeClusterSegment> {
-    self.vec_segment.get(logical_index)
+    self.get(logical_index)
   }
 
   /// `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
   pub fn at_display_col(&self, display_col: ChUnit) -> Option<&GraphemeClusterSegment> {
-    self.vec_segment.iter().find(|&grapheme_cluster_segment| {
+    self.iter().find(|&grapheme_cluster_segment| {
       let segment_display_col_start: ChUnit = grapheme_cluster_segment.display_col_offset;
       let segment_display_col_end: ChUnit =
         segment_display_col_start + grapheme_cluster_segment.unicode_width;
@@ -425,7 +436,7 @@ impl UnicodeString {
   }
 
   pub fn get_string_at_end(&self) -> Option<UnicodeStringSegmentResult> {
-    let segment = self.vec_segment.last()?;
+    let segment = self.last()?;
     Some(UnicodeStringSegmentResult::new(
       segment.string.clone(),
       segment.unicode_width,
@@ -485,7 +496,7 @@ impl UnicodeString {
     &self, display_col: ChUnit,
   ) -> Option<(UnicodeStringSliceResult, UnicodeStringSliceResult)> {
     let split_logical_index = self.logical_index_at_display_col(display_col)?;
-    let max_logical_index = self.vec_segment.len();
+    let max_logical_index = self.len();
 
     let mut str_left = String::new();
     let mut str_left_unicode_width = ch!(0);
@@ -523,13 +534,13 @@ impl UnicodeString {
     &self, display_col: ChUnit,
   ) -> Option<UnicodeStringSliceResult> {
     // There is only one segment present.
-    if self.vec_segment.len() == 1 {
+    if self.len() == 1 {
       return Some(UnicodeStringSliceResult::default());
     }
 
     // There are more than 1 segments present.i
     let split_logical_index = self.logical_index_at_display_col(display_col)?;
-    let max_logical_index = self.vec_segment.len();
+    let max_logical_index = self.len();
 
     let mut str_left = String::new();
     let mut str_left_unicode_width = ch!(0);
