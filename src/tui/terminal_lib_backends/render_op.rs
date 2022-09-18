@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Formatter, Result};
+use std::{fmt::{Debug, Formatter, Result},
+          ops::{Deref, DerefMut}};
 
 use serde::{Deserialize, Serialize};
 
@@ -59,14 +60,28 @@ pub struct RenderOps {
   pub z_order: ZOrder,
 }
 
-impl Debug for RenderOps {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let mut vec_lines: Vec<String> = vec![format!("RenderOps.len(): {}", self.list.len())];
-    for render_op in &self.list {
-      let line: String = format!("[{:?}]", render_op);
-      vec_lines.push(line);
+pub mod render_ops_helpers {
+  use super::*;
+
+  impl Deref for RenderOps {
+    type Target = Vec<RenderOp>;
+
+    fn deref(&self) -> &Self::Target { &self.list }
+  }
+
+  impl DerefMut for RenderOps {
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.list }
+  }
+
+  impl Debug for RenderOps {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      let mut vec_lines: Vec<String> = vec![format!("RenderOps.len(): {}", self.list.len())];
+      for render_op in self.iter() {
+        let line: String = format!("[{:?}]", render_op);
+        vec_lines.push(line);
+      }
+      write!(f, "\n    - {}", vec_lines.join("\n      - "))
     }
-    write!(f, "\n    - {}", vec_lines.join("\n      - "))
   }
 }
 

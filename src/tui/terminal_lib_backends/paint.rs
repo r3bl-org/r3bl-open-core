@@ -46,8 +46,8 @@ pub async fn paint(
 
   // Execute the RenderOps, in the correct order of the ZOrder enum.
   for z_order in RENDER_ORDERED_Z_ORDER_ARRAY.iter() {
-    if let Some(render_ops) = pipeline.pipeline_map.get(z_order) {
-      for command_ref in &render_ops.list {
+    if let Some(render_ops) = pipeline.get(z_order) {
+      for command_ref in render_ops.iter() {
         if let RenderOp::RequestShowCaretAtPositionAbs(_)
         | RenderOp::RequestShowCaretAtPositionRelTo(_, _) = command_ref
         {

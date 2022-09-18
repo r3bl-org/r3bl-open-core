@@ -48,6 +48,8 @@ use crate::{tui::DEBUG_SHOW_PIPELINE_EXPANDED, *};
 ///   RenderOp::ClearScreen,
 ///   RenderOp::ResetColor
 /// ); // Returns the newly created pipeline.
+/// let len = pipeline.len();
+/// let iter = pipeline.iter();
 /// ```
 ///
 /// Another example.
@@ -60,6 +62,8 @@ use crate::{tui::DEBUG_SHOW_PIPELINE_EXPANDED, *};
 ///   RenderOp::ClearScreen,
 ///   RenderOp::ResetColor
 /// ); // Returns nothing.
+/// let len = pipeline.len();
+/// let iter = pipeline.iter();
 /// ```
 ///
 /// Decl macro docs:
@@ -83,7 +87,7 @@ macro_rules! render_pipeline {
       /* Start a repetition. */
       $(
         /* Each repeat will contain the following statement, with $element replaced. */
-        match render_pipeline.pipeline_map.entry($arg_z_order) {
+        match render_pipeline.entry($arg_z_order) {
           std::collections::hash_map::Entry::Occupied(mut entry) => {
             entry.get_mut().list.push($element);
           }
@@ -102,7 +106,7 @@ macro_rules! render_pipeline {
   ) => {
     $(
       /* Each repeat will contain the following statement, with $element replaced. */
-      match $arg_pipeline.pipeline_map.entry($arg_z_order) {
+      match $arg_pipeline.entry($arg_z_order) {
         std::collections::hash_map::Entry::Occupied(mut entry) => {
           entry.get_mut().list.push($element);
         }
@@ -138,6 +142,8 @@ macro_rules! render_pipeline {
 /// let mut pipeline = RenderPipeline::default();
 /// pipeline.push(&ZOrder::Normal, RenderOp::ClearScreen);
 /// pipeline.push(&ZOrder::Caret, RenderOp::CursorShow);
+/// let len = pipeline.len();
+/// let iter = pipeline.iter();
 /// ```
 #[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RenderPipeline {
@@ -151,9 +157,9 @@ impl RenderPipeline {
   /// This will add `rhs` to `self`.
   pub fn join_into(&mut self, mut rhs: RenderPipeline) {
     for (z_order, mut render_ops) in rhs.drain() {
-      match self.pipeline_map.entry(z_order) {
+      match self.entry(z_order) {
         std::collections::hash_map::Entry::Occupied(mut entry) => {
-          entry.get_mut().list.append(&mut render_ops.list);
+          entry.get_mut().append(&mut render_ops.list);
         }
         std::collections::hash_map::Entry::Vacant(entry) => {
           entry.insert(render_ops);
@@ -166,7 +172,7 @@ impl RenderPipeline {
   pub fn push(&mut self, z_order: &ZOrder, cmd_wrapper: RenderOp) -> &mut Self {
     match self.entry(*z_order) {
       std::collections::hash_map::Entry::Occupied(mut entry) => {
-        entry.get_mut().list.push(cmd_wrapper);
+        entry.get_mut().push(cmd_wrapper);
       }
       std::collections::hash_map::Entry::Vacant(entry) => {
         entry.insert(render_ops!(@new *z_order => cmd_wrapper));
@@ -227,7 +233,7 @@ mod render_pipeline_helpers {
         }
       } else {
         for (z_order, render_ops) in &**self {
-          let line: String = format!("[{:?}] {:?} ops", z_order, render_ops.list.len());
+          let line: String = format!("[{:?}] {:?} ops", z_order, render_ops.len());
           vec_lines.push(line);
         }
       }
