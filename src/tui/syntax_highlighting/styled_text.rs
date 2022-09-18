@@ -87,7 +87,7 @@ pub trait StyledTexts {
   fn is_empty(&self) -> bool;
   fn get_plain_text(&self) -> String;
   fn render(&self, z_order: ZOrder) -> RenderPipeline;
-  fn unicode_string(&self) -> UnicodeString { self.get_plain_text().unicode_string() }
+  fn display_width(&self) -> ChUnit;
 }
 
 impl StyledTexts for Vec<StyledText> {
@@ -102,6 +102,8 @@ impl StyledTexts for Vec<StyledText> {
     }
     plain_text
   }
+
+  fn display_width(&self) -> ChUnit { self.get_plain_text().unicode_string().display_width }
 
   fn render(&self, z_order: ZOrder) -> RenderPipeline {
     let mut render_pipeline = RenderPipeline::default();

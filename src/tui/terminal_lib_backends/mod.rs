@@ -63,15 +63,14 @@ pub mod input_event;
 pub mod keypress;
 pub mod modifier_keys_mask;
 pub mod mouse_input;
+pub mod paint;
 pub mod raw_mode;
 pub mod render_op;
 pub mod render_pipeline;
-pub mod paint;
 pub mod terminal_lib_operations;
 pub mod termion_backend;
 
 // Re-export.
-pub use paint::*;
 pub use async_event_stream_ext::*;
 pub use color_converter::*;
 pub use crossterm_backend::*;
@@ -80,6 +79,7 @@ pub use input_event::*;
 pub use keypress::*;
 pub use modifier_keys_mask::*;
 pub use mouse_input::*;
+pub use paint::*;
 pub use raw_mode::*;
 pub use render_op::*;
 pub use render_pipeline::*;

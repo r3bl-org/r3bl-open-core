@@ -125,7 +125,8 @@ pub mod line_buffer_move_caret {
         // Do nothing.
       }
       CaretColLocation::AtStartOfLine | CaretColLocation::InMiddleOfLine => {
-        let (_, unicode_width) = line_buffer_get_content::string_at_caret(this)?;
+        let UnicodeStringSegmentSliceResult { unicode_width, .. } =
+          line_buffer_get_content::string_at_caret(this)?;
         let max_display_width = line_buffer_get_content::line_display_width(this);
         this
           .caret
@@ -142,13 +143,13 @@ pub mod line_buffer_move_caret {
         // Do nothing.
       }
       CaretColLocation::AtEndOfLine => {
-        let UnicodeStringSegmentResult { unicode_width, .. } =
+        let UnicodeStringSegmentSliceResult { unicode_width, .. } =
           line_buffer_get_content::string_at_end_of_line(this)?;
         this.caret.col -= unicode_width;
         validate_caret_col_position(this);
       }
       CaretColLocation::InMiddleOfLine => {
-        let UnicodeStringSegmentResult { unicode_width, .. } =
+        let UnicodeStringSegmentSliceResult { unicode_width, .. } =
           line_buffer_get_content::string_to_left_of_caret(this)?;
         this.caret.col -= unicode_width;
         validate_caret_col_position(this);
@@ -194,21 +195,16 @@ pub mod line_buffer_get_content {
     Some(line.clone())
   }
 
-  pub fn string_at_caret(this: &EditorBuffer) -> Option<(String, ChUnit)> {
+  pub fn string_at_caret(this: &EditorBuffer) -> Option<UnicodeStringSegmentSliceResult> {
     empty_check_early_return!(this, @None);
     let position = this.caret;
     let line = this.vec_lines.get(ch!(@to_usize position.row))?;
-    let UnicodeStringSegmentResult {
-      str_seg,
-      unicode_width,
-      ..
-    } = line
-      .unicode_string()
-      .get_string_at_display_col(position.col)?;
-    Some((str_seg, unicode_width))
+    let unicode_string = line.unicode_string();
+    let result = unicode_string.get_string_at_display_col(position.col)?;
+    Some(result)
   }
 
-  pub fn string_to_left_of_caret(this: &EditorBuffer) -> Option<UnicodeStringSegmentResult> {
+  pub fn string_to_left_of_caret(this: &EditorBuffer) -> Option<UnicodeStringSegmentSliceResult> {
     empty_check_early_return!(this, @None);
     match line_buffer_locate_caret::find_col(this) {
       // Caret is at end of line, past the last character.
@@ -216,22 +212,20 @@ pub mod line_buffer_get_content {
         let mut caret_copy = this.caret;
         caret_copy.sub_cols(1);
         let line = this.vec_lines.get(ch!(@to_usize caret_copy.row))?;
-        line
-          .unicode_string()
-          .get_string_at_display_col(caret_copy.col)
+        let unicode_string = line.unicode_string();
+        unicode_string.get_string_at_display_col(caret_copy.col)
       }
       // Caret is not at end of line.
       _ => {
         let position = this.caret;
         let line = this.vec_lines.get(ch!(@to_usize position.row))?;
-        line
-          .unicode_string()
-          .get_string_at_left_of_display_col(position.col)
+        let unicode_string = line.unicode_string();
+        unicode_string.get_string_at_left_of_display_col(position.col)
       }
     }
   }
 
-  pub fn string_at_end_of_line(this: &EditorBuffer) -> Option<UnicodeStringSegmentResult> {
+  pub fn string_at_end_of_line(this: &EditorBuffer) -> Option<UnicodeStringSegmentSliceResult> {
     empty_check_early_return!(this, @None);
     let line = line_buffer_get_content::line_as_string(this)?;
     if let CaretColLocation::AtEndOfLine = line_buffer_locate_caret::find_col(this) {
@@ -327,7 +321,10 @@ pub mod line_buffer_insert {
     // Update existing line at caret_row.
     if let Some(line) = this.vec_lines.get_mut(caret_row) {
       // Get the new line.
-      if let Ok((new_line, char_display_width)) = line
+      if let Ok(NewUnicodeStringResult {
+        new_string: new_line,
+        unicode_width: char_display_width,
+      }) = line
         .unicode_string()
         .insert_char_at_display_col(ch!(caret_col), chunk)
       {
@@ -410,11 +407,11 @@ pub mod line_buffer_insert {
         log_no_err_debug!(split_result);
 
         if let Some((
-          UnicodeStringSliceResult {
-            str_slice: left, ..
+          NewUnicodeStringResult {
+            new_string: left, ..
           },
-          UnicodeStringSliceResult {
-            str_slice: right, ..
+          NewUnicodeStringResult {
+            new_string: right, ..
           },
         )) = split_result
         {
@@ -452,8 +449,8 @@ pub mod line_buffer_delete {
     fn delete_in_middle_of_line(this: &mut EditorBuffer) -> Option<()> {
       let cur_line = line_buffer_get_content::line_as_string(this)?;
       let unicode_string = cur_line.unicode_string();
-      let UnicodeStringSliceResult {
-        str_slice: new_line,
+      let NewUnicodeStringResult {
+        new_string: new_line,
         ..
       } = unicode_string.delete_char_at_display_col(this.caret.col)?;
       let row_index = ch!(@to_usize this.caret.row);
@@ -481,7 +478,7 @@ pub mod line_buffer_delete {
 
   pub fn backspace_at_caret(this: &mut EditorBuffer) -> Option<()> {
     empty_check_early_return!(this, @None);
-    if let Some(UnicodeStringSegmentResult {
+    if let Some(UnicodeStringSegmentSliceResult {
       display_col_at_which_seg_starts,
       ..
     }) = line_buffer_get_content::string_to_left_of_caret(this)
@@ -503,8 +500,8 @@ pub mod line_buffer_delete {
     ) -> Option<()> {
       let cur_line = line_buffer_get_content::line_as_string(this)?;
       let unicode_string = cur_line.unicode_string();
-      let UnicodeStringSliceResult {
-        str_slice: new_line,
+      let NewUnicodeStringResult {
+        new_string: new_line,
         ..
       } = unicode_string.delete_char_at_display_col(delete_at_this_display_idx)?;
       let row_index = ch!(@to_usize this.caret.row);

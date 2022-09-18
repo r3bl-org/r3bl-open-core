@@ -171,7 +171,7 @@ impl UnicodeStringExt for Cow<'_, str> {
   fn unicode_string(&self) -> UnicodeString { make_unicode_string(self.as_ref()) }
 }
 
-fn make_unicode_string(this: &str) -> UnicodeString {
+fn make_unicode_string(this: &'_ str) -> UnicodeString<'_> {
   let mut total_byte_offset = 0;
   let mut total_grapheme_cluster_count = 0;
   let mut my_unicode_string_segments = vec![];
@@ -219,9 +219,9 @@ impl UnicodeStringExt for String {
 // │ GraphemeClusterSegment │
 // ╯                        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 #[derive(Debug, Clone)]
-pub struct GraphemeClusterSegment {
+pub struct GraphemeClusterSegment<'a> {
   /// The actual grapheme cluster `&str`. Eg: "H", "📦", "🙏🏽".
-  pub string: String,
+  pub string: Cow<'a, str>,
   /// The byte offset (in the original string) of the start of the `grapheme_cluster`.
   pub byte_offset: usize,
   /// Display width of the `string` via [`unicode_width::UnicodeWidthChar`].
@@ -234,43 +234,45 @@ pub struct GraphemeClusterSegment {
   pub display_col_offset: ChUnit,
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ UnicodeStringSegmentResult │
-// ╯                            ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-#[derive(Debug)]
-pub struct UnicodeStringSegmentResult {
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ UnicodeStringSegmentSliceResult │
+// ╯                                 ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+/// We need a [String] (since we're returning a slice of a temporary [UnicodeString] that is
+/// dropped by the function that creates it, not as a result of mutation).
+#[derive(Debug, PartialEq, Eq)]
+pub struct UnicodeStringSegmentSliceResult {
   pub str_seg: String,
   pub unicode_width: ChUnit,
   pub display_col_at_which_seg_starts: ChUnit,
 }
 
-// TK: probably does not need String (since no mutation)
-impl UnicodeStringSegmentResult {
+impl UnicodeStringSegmentSliceResult {
   pub fn new(
-    string: String, unicode_width: ChUnit, display_col_at_which_this_segment_starts: ChUnit,
+    string: &str, unicode_width: ChUnit, display_col_at_which_this_segment_starts: ChUnit,
   ) -> Self {
     Self {
-      str_seg: string,
+      str_seg: string.to_string(),
       unicode_width,
       display_col_at_which_seg_starts: display_col_at_which_this_segment_starts,
     }
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ UnicodeStringSliceResult │
-// ╯                          ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-#[derive(Debug, Default)]
-pub struct UnicodeStringSliceResult {
-  pub str_slice: String,
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ NewUnicodeStringResult │
+// ╯                        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+/// We need a [String] (since we're returning a new [String] as a result of this [UnicodeString]
+/// mutation).
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct NewUnicodeStringResult {
+  pub new_string: String,
   pub unicode_width: ChUnit,
 }
 
-// TK: probably need String (since they are result of mutation)
-impl UnicodeStringSliceResult {
-  pub fn new(str_slice: String, unicode_width: ChUnit) -> Self {
+impl NewUnicodeStringResult {
+  pub fn new(new_string: String, unicode_width: ChUnit) -> Self {
     Self {
-      str_slice,
+      new_string,
       unicode_width,
     }
   }
@@ -280,53 +282,25 @@ impl UnicodeStringSliceResult {
 // │ UnicodeString │
 // ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 #[derive(Debug, Clone)]
-pub struct UnicodeString {
-  pub string: String,
-  pub vec_segment: Vec<GraphemeClusterSegment>,
+pub struct UnicodeString<'a> {
+  pub string: Cow<'a, str>,
+  pub vec_segment: Vec<GraphemeClusterSegment<'a>>,
   pub byte_size: usize,
   pub grapheme_cluster_segment_count: usize,
   pub display_width: ChUnit,
 }
 
-impl Deref for UnicodeString {
-  type Target = Vec<GraphemeClusterSegment>;
+impl<'a> Deref for UnicodeString<'a> {
+  type Target = Vec<GraphemeClusterSegment<'a>>;
 
   fn deref(&self) -> &Self::Target { &self.vec_segment }
 }
 
-impl DerefMut for UnicodeString {
+impl<'a> DerefMut for UnicodeString<'a> {
   fn deref_mut(&mut self) -> &mut Self::Target { &mut self.vec_segment }
 }
 
-// TK: why?
-/// Convert [char] to [GraphemeClusterSegment].
-impl From<char> for GraphemeClusterSegment {
-  fn from(character: char) -> Self {
-    let my_string: String = character.into();
-    my_string.unicode_string()[0].clone()
-  }
-}
-
-// TK: why?
-/// Convert [&str] to [GraphemeClusterSegment].
-impl From<&str> for GraphemeClusterSegment {
-  fn from(chunk: &str) -> Self {
-    let my_string: String = chunk.to_string();
-    my_string.unicode_string()[0].clone()
-  }
-}
-
-// TK: why?
-/// Convert [Vec<GraphemeClusterSegment>] to [String].
-fn to_string(vec_grapheme_cluster_segment: Vec<GraphemeClusterSegment>) -> String {
-  let mut my_string = String::new();
-  for grapheme_cluster_segment in vec_grapheme_cluster_segment {
-    my_string.push_str(&grapheme_cluster_segment.string);
-  }
-  my_string
-}
-
-impl UnicodeString {
+impl<'a> UnicodeString<'a> {
   /// If any segment in `self.vec_segment` has a `display_col_offset` greater than 1 then this is
   /// true. The semantic is that the string is displayed using more than 1 column of the terminal.
   pub fn contains_wide_segments(&self) -> bool {
@@ -409,14 +383,14 @@ impl UnicodeString {
   /// If this `display_col` falls in the middle of a grapheme cluster, then return [None].
   pub fn get_string_at_display_col(
     &self, display_col: ChUnit,
-  ) -> Option<UnicodeStringSegmentResult> {
+  ) -> Option<UnicodeStringSegmentSliceResult> {
     let segment = self.at_display_col(display_col)?;
     // What if the display_col is in the middle of a grapheme cluster?
     if display_col != segment.display_col_offset {
       None
     } else {
-      Some(UnicodeStringSegmentResult::new(
-        segment.string.clone(),
+      Some(UnicodeStringSegmentSliceResult::new(
+        &segment.string,
         segment.unicode_width,
         segment.display_col_offset,
       ))
@@ -439,12 +413,12 @@ impl UnicodeString {
 
   pub fn get_string_at_left_of_display_col(
     &self, display_col: ChUnit,
-  ) -> Option<UnicodeStringSegmentResult> {
+  ) -> Option<UnicodeStringSegmentSliceResult> {
     let segment_at_col = self.at_display_col(display_col)?;
     if segment_at_col.logical_index > 0 {
       let segment_left_of_col = self.at_logical_index(segment_at_col.logical_index - 1)?;
-      Some(UnicodeStringSegmentResult::new(
-        segment_left_of_col.string.clone(),
+      Some(UnicodeStringSegmentSliceResult::new(
+        &segment_left_of_col.string,
         segment_left_of_col.unicode_width,
         segment_left_of_col.display_col_offset,
       ))
@@ -453,148 +427,179 @@ impl UnicodeString {
     }
   }
 
-  pub fn get_string_at_end(&self) -> Option<UnicodeStringSegmentResult> {
+  pub fn get_string_at_end(&self) -> Option<UnicodeStringSegmentSliceResult> {
     let segment = self.last()?;
-    Some(UnicodeStringSegmentResult::new(
-      segment.string.clone(),
+    Some(UnicodeStringSegmentSliceResult::new(
+      &segment.string,
       segment.unicode_width,
       segment.display_col_offset,
     ))
   }
+}
 
-  // TK: mutation
-  /// Returns a new [String]. Does not modify [self.string](UnicodeString::string).
-  pub fn merge_with(&self, other: UnicodeString) -> Option<String> {
-    let mut new_string = self.string.clone();
-    new_string.push_str(&other.string);
-    Some(new_string)
-  }
+pub mod mutate {
+  use super::*;
 
-  // TK: mutation
-  /// Returns a new ([String], [ChUnit]) tuple. Does not modify
-  /// [self.string](UnicodeString::string).
-  pub fn insert_char_at_display_col(
-    &self, display_col: ChUnit, chunk: &str,
-  ) -> CommonResult<(String, ChUnit)> {
-    let maybe_logical_index = self.logical_index_at_display_col(display_col);
-    match maybe_logical_index {
-      // Insert somewhere inside bounds of self.string.
-      Some(logical_index) => {
-        // Convert the character into a grapheme cluster.
-        let character_g_c_s: GraphemeClusterSegment = chunk.into();
-        let character_display_width: ChUnit = character_g_c_s.unicode_width;
+  /// Convert [&str] to [GraphemeClusterSegment]. This is used to create a new [String] after the
+  /// [UnicodeString] is modified.
+  pub fn make_new_grapheme_cluster_segment_from(chunk: &str) -> GraphemeClusterSegment {
+    let my_string: String = chunk.to_string();
+    let result = my_string.unicode_string()[0].clone();
 
-        // Insert this grapheme cluster to self.vec_segment.
-        let mut vec_segment_clone = self.vec_segment.clone();
-        vec_segment_clone.insert(logical_index, character_g_c_s);
-
-        // Generate a new string from self.vec_segment and return it and the unicode width of the
-        // character.
-        let new_string = to_string(vec_segment_clone);
-
-        // In the caller - update the caret position based on the unicode width of the character.
-        Ok((new_string, character_display_width))
-      }
-      // Add to end of self.string.
-      None => {
-        // Push character to the end of the cloned string.
-        let mut new_string = self.string.clone();
-        new_string.push_str(chunk);
-
-        // Get the unicode width of the character.
-        let character_display_width = UnicodeString::str_display_width(chunk);
-
-        // In the caller - update the caret position based on the unicode width of the character.
-        Ok((new_string, ch!(character_display_width)))
-      }
+    GraphemeClusterSegment {
+      string: Cow::Owned(result.string.into()),
+      ..result
     }
   }
 
-  // TK: mutation
-  /// Returns two new tuples: *left* ([UnicodeStringSliceResult]), *right*
-  /// ([UnicodeStringSliceResult]). Does not modify [self.string](UnicodeString::string).
-  pub fn split_at_display_col(
-    &self, display_col: ChUnit,
-  ) -> Option<(UnicodeStringSliceResult, UnicodeStringSliceResult)> {
-    let split_logical_index = self.logical_index_at_display_col(display_col)?;
-    let max_logical_index = self.len();
-
-    let mut str_left = String::new();
-    let mut str_left_unicode_width = ch!(0);
-    {
-      for logical_idx in 0..split_logical_index {
-        let segment = self.at_logical_index(logical_idx)?;
-        str_left.push_str(&segment.string);
-        str_left_unicode_width += segment.unicode_width;
-      }
+  /// Convert [Vec<GraphemeClusterSegment>] to [String]. This is used to create a new [String] after
+  /// the [UnicodeString] is modified.
+  pub fn make_new_string_from(vec_grapheme_cluster_segment: Vec<GraphemeClusterSegment>) -> String {
+    let mut my_string = String::new();
+    for grapheme_cluster_segment in vec_grapheme_cluster_segment {
+      my_string.push_str(&grapheme_cluster_segment.string);
     }
-
-    let mut str_right = String::new();
-    let mut str_right_unicode_width = ch!(0);
-    {
-      for logical_idx in split_logical_index..max_logical_index {
-        let seg_at_logical_idx = self.at_logical_index(logical_idx)?;
-        str_right.push_str(&seg_at_logical_idx.string);
-        str_right_unicode_width += seg_at_logical_idx.unicode_width;
-      }
-    }
-
-    if *str_right_unicode_width > 0 || *str_left_unicode_width > 0 {
-      Some((
-        UnicodeStringSliceResult::new(str_left, str_left_unicode_width),
-        UnicodeStringSliceResult::new(str_right, str_right_unicode_width),
-      ))
-    } else {
-      None
-    }
+    my_string
   }
 
-  // TK: mutation
-  /// Returns a new ([UnicodeStringSliceResult]) tuple. Does not modify
-  /// [self.string](UnicodeString::string).
-  pub fn delete_char_at_display_col(
-    &self, display_col: ChUnit,
-  ) -> Option<UnicodeStringSliceResult> {
-    // There is only one segment present.
-    if self.len() == 1 {
-      return Some(UnicodeStringSliceResult::default());
+  impl<'a> UnicodeString<'a> {
+    /// Returns a new [String]. Does not modify [self.string](UnicodeString::string).
+    pub fn merge_with(&self, other: UnicodeString) -> Option<String> {
+      let mut new_string: String = self.string.as_ref().into();
+      new_string.push_str(&other.string);
+      Some(new_string)
     }
 
-    // There are more than 1 segments present.i
-    let split_logical_index = self.logical_index_at_display_col(display_col)?;
-    let max_logical_index = self.len();
+    /// Returns a new ([NewUnicodeStringResult]) tuple. Does not modify
+    /// [self.string](UnicodeString::string).
+    pub fn insert_char_at_display_col(
+      &self, display_col: ChUnit, chunk: &str,
+    ) -> CommonResult<NewUnicodeStringResult> {
+      let maybe_logical_index = self.logical_index_at_display_col(display_col);
+      match maybe_logical_index {
+        // Insert somewhere inside bounds of self.string.
+        Some(logical_index) => {
+          // Convert the character into a grapheme cluster.
+          let character_g_c_s: GraphemeClusterSegment =
+            make_new_grapheme_cluster_segment_from(chunk);
+          let character_display_width: ChUnit = character_g_c_s.unicode_width;
 
-    let mut str_left = String::new();
-    let mut str_left_unicode_width = ch!(0);
-    {
-      for logical_idx in 0..split_logical_index {
-        let segment = self.at_logical_index(logical_idx)?;
-        str_left.push_str(&segment.string);
-        str_left_unicode_width += segment.unicode_width;
+          // Insert self grapheme cluster to self.vec_segment.
+          let mut vec_segment_clone = self.vec_segment.clone();
+          vec_segment_clone.insert(logical_index, character_g_c_s);
+
+          // Generate a new string from self.vec_segment and return it and the unicode width of the
+          // character.
+          let new_string = make_new_string_from(vec_segment_clone);
+
+          // In the caller - update the caret position based on the unicode width of the character.
+          Ok(NewUnicodeStringResult::new(
+            new_string,
+            character_display_width,
+          ))
+        }
+        // Add to end of self.string.
+        None => {
+          // Push character to the end of the cloned string.
+          let mut new_string: String = self.string.as_ref().into();
+          new_string.push_str(chunk);
+
+          // Get the unicode width of the character.
+          let character_display_width = UnicodeString::str_display_width(chunk);
+
+          // In the caller - update the caret position based on the unicode width of the character.
+          Ok(NewUnicodeStringResult::new(
+            new_string,
+            ch!(character_display_width),
+          ))
+        }
       }
     }
 
-    let skip_split_logical_index = split_logical_index + 1; // Drop one segment.
-    let mut str_right = String::new();
-    let mut str_right_unicode_width = ch!(0);
-    {
-      for logical_idx in skip_split_logical_index..max_logical_index {
-        let seg_at_logical_idx = self.at_logical_index(logical_idx)?;
-        str_right.push_str(&seg_at_logical_idx.string);
-        str_right_unicode_width += seg_at_logical_idx.unicode_width;
+    /// Returns two new tuples: *left* ([NewUnicodeStringResult]), *right*
+    /// ([NewUnicodeStringResult]). Does not modify [self.string](UnicodeString::string).
+    pub fn split_at_display_col(
+      &self, display_col: ChUnit,
+    ) -> Option<(NewUnicodeStringResult, NewUnicodeStringResult)> {
+      let split_logical_index = self.logical_index_at_display_col(display_col)?;
+      let max_logical_index = self.len();
+
+      let mut str_left = String::new();
+      let mut str_left_unicode_width = ch!(0);
+      {
+        for logical_idx in 0..split_logical_index {
+          let segment = self.at_logical_index(logical_idx)?;
+          str_left.push_str(&segment.string);
+          str_left_unicode_width += segment.unicode_width;
+        }
+      }
+
+      let mut str_right = String::new();
+      let mut str_right_unicode_width = ch!(0);
+      {
+        for logical_idx in split_logical_index..max_logical_index {
+          let seg_at_logical_idx = self.at_logical_index(logical_idx)?;
+          str_right.push_str(&seg_at_logical_idx.string);
+          str_right_unicode_width += seg_at_logical_idx.unicode_width;
+        }
+      }
+
+      if *str_right_unicode_width > 0 || *str_left_unicode_width > 0 {
+        Some((
+          NewUnicodeStringResult::new(str_left, str_left_unicode_width),
+          NewUnicodeStringResult::new(str_right, str_right_unicode_width),
+        ))
+      } else {
+        None
       }
     }
 
-    str_left.push_str(&str_right);
-    str_left_unicode_width += str_right_unicode_width;
+    /// Returns a new ([NewUnicodeStringResult]) tuple. Does not modify
+    /// [self.string](UnicodeString::string).
+    pub fn delete_char_at_display_col(
+      &self, display_col: ChUnit,
+    ) -> Option<NewUnicodeStringResult> {
+      // There is only one segment present.
+      if self.len() == 1 {
+        return Some(NewUnicodeStringResult::default());
+      }
 
-    if *str_left_unicode_width > 0 {
-      Some(UnicodeStringSliceResult::new(
-        str_left,
-        str_left_unicode_width,
-      ))
-    } else {
-      None
+      // There are more than 1 segments present.i
+      let split_logical_index = self.logical_index_at_display_col(display_col)?;
+      let max_logical_index = self.len();
+
+      let mut str_left = String::new();
+      let mut str_left_unicode_width = ch!(0);
+      {
+        for logical_idx in 0..split_logical_index {
+          let segment = self.at_logical_index(logical_idx)?;
+          str_left.push_str(&segment.string);
+          str_left_unicode_width += segment.unicode_width;
+        }
+      }
+
+      let skip_split_logical_index = split_logical_index + 1; // Drop one segment.
+      let mut str_right = String::new();
+      let mut str_right_unicode_width = ch!(0);
+      {
+        for logical_idx in skip_split_logical_index..max_logical_index {
+          let seg_at_logical_idx = self.at_logical_index(logical_idx)?;
+          str_right.push_str(&seg_at_logical_idx.string);
+          str_right_unicode_width += seg_at_logical_idx.unicode_width;
+        }
+      }
+
+      str_left.push_str(&str_right);
+      str_left_unicode_width += str_right_unicode_width;
+
+      if *str_left_unicode_width > 0 {
+        Some(NewUnicodeStringResult::new(
+          str_left,
+          str_left_unicode_width,
+        ))
+      } else {
+        None
+      }
     }
   }
 }
