@@ -474,7 +474,7 @@ pub mod mutate {
     /// [self.string](UnicodeString::string).
     pub fn insert_char_at_display_col(
       &self, display_col: ChUnit, chunk: &str,
-    ) -> CommonResult<NewUnicodeStringResult> {
+    ) -> Option<NewUnicodeStringResult> {
       let maybe_logical_index = self.logical_index_at_display_col(display_col);
       match maybe_logical_index {
         // Insert somewhere inside bounds of self.string.
@@ -493,7 +493,7 @@ pub mod mutate {
           let new_string = make_new_string_from(vec_segment_clone);
 
           // In the caller - update the caret position based on the unicode width of the character.
-          Ok(NewUnicodeStringResult::new(
+          Some(NewUnicodeStringResult::new(
             new_string,
             character_display_width,
           ))
@@ -508,7 +508,7 @@ pub mod mutate {
           let character_display_width = UnicodeString::str_display_width(chunk);
 
           // In the caller - update the caret position based on the unicode width of the character.
-          Ok(NewUnicodeStringResult::new(
+          Some(NewUnicodeStringResult::new(
             new_string,
             ch!(character_display_width),
           ))
