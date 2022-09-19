@@ -1,7 +1,7 @@
 ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 │ r3bl_rs_utils │
 ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-editor engine (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
+editor engine core (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
   ✔ wire up the engine into framework @done(22-08-31 13:56)
   ✔ fancy debug impl for editor buffer @done(22-08-31 13:57)
   ✔ insert content: @done(22-09-01 11:46)
@@ -43,16 +43,35 @@ editor engine (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
   ☐ other key inputs
     ☐ page up/down
     ☐ home/end
-  ☐ keyboard shortcut to save/load buffer to/from file
+  ☐ syntax highlighting support
+  ☐ modal dialog support
+
+editor engine extras (auto-completion providers):
+  ☐ add support for auto completion providers
+  ☐ modal dialogs for autocompletion provider
+  ☐ implement auto completion provider for file paths
+  ☐ implement auto completion provider for github issues (store creds in env vars)
+
+editor engine extras (markdown syntax highlighting):
+  ☐ syntax highlighting for markdown
+
+editor engine extras (search & replace):
+  ☐ search & replace
   ☐ text selection & highlighting:
     ☐ add support for text selection highlighting
     ☐ selection, copy, paste
-  ☐ syntax highlighting
 
-enhancements to editor engine:
-  ☐ auto completion providers:
-    ☐ add support for auto completion providers
-    ☐ modal dialogs for autocompletion provider
+editor engine extras (configurable shortcuts):
+  ☐ configurable keyboard shortcuts
+
+editor engine extras (save/load buffer to/from file/surrealdb):
+  ☐ keyboard shortcut to save/load buffer
+  ☐ persist buffer to file
+  ☐ load buffer to file
+  ☐ persist buffer to surrealdb
+  ☐ load buffer to surrealdb
+
+editor engine enhancements (multi-user editing):
   ☐ multiple carets:
     ☐ add support for multiple carets & network service providers to move them
 
@@ -62,7 +81,12 @@ framework:
   ✔ [Fix broken unicode painting on different terminal + os combos](https://github.com/r3bl-org/r3bl_rs_utils/issues/33) @done(22-09-15 15:55)
   ☐ [Add termion support](https://github.com/r3bl-org/r3bl_rs_utils/issues/24)
   ☐ [Filter unsupported graphemes in keypress](https://github.com/r3bl-org/r3bl_rs_utils/issues/26)
+  ☐ [Write tests: rendering, component, etc](https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aissue+is%3Aopen+label%3Atesting)
+  ☐ [Migrate cmdr -> rs](https://github.com/r3bl-org/r3bl_rs_utils/issues/38)
 
+cmdr:
+  ☐ [Create PRD](https://github.com/r3bl-org/r3bl_rs_utils/issues/39)
+  
 writing:
   ☐ [RSX & DSL articles](https://github.com/r3bl-org/r3bl_rs_utils/issues/19)
   ☐ [Update DD for editor component](https://github.com/r3bl-org/r3bl_rs_utils/issues/23)
