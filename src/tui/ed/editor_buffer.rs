@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 use get_size::GetSize;
 use r3bl_rs_utils_core::*;
@@ -30,6 +30,7 @@ use crate::*;
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
+  // TK: remove pub
   pub lines: Vec<String>,
   /// The current caret position. This is the "display" and not "logical" position as defined in
   /// [UnicodeString]. This works w/ [crate::RenderOp] as well, so you can directly move this
@@ -41,7 +42,7 @@ pub struct EditorBuffer {
   pub lolcat: Lolcat,
 }
 
-// TK: impl Deref & DerefMut for EditorBuffer
+// TK: impl Deref for EditorBuffer
 // TK: make vec_lines private: add methods for get, modify, delete; update line_buffer.rs
 // TK: make caret private: add methods for get, modify, delete; update line_buffer.rs
 // TK: make scroll_offset private: add methods for get, modify, delete; update line_buffer.rs
@@ -49,22 +50,25 @@ pub struct EditorBuffer {
 pub mod access_and_mutate_lines {
   use super::*;
 
+  // Funnel all `self.line` read access here. No need to run additional logic for read access.
   impl Deref for EditorBuffer {
     type Target = Vec<String>;
 
     fn deref(&self) -> &Self::Target { &self.lines }
   }
 
-  impl DerefMut for EditorBuffer {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.lines }
-  }
-
+  // Funnel all `self.line` write access here; this allows some additional logic to be run after
+  // mutation is complete.
   impl EditorBuffer {
-    pub fn mutate_lines(&mut self, mutator: impl FnOnce(&mut Vec<String>)) {
-      mutator(&mut self.lines);
+    pub fn mutate_lines(&mut self, mutator: impl FnOnce(&mut Vec<String>, &mut Position)) {
+      mutator(&mut self.lines, &mut self.caret);
+      validator::validate_caret_col_position(self);
     }
 
-    pub fn access_lines(&self, accessor: impl FnOnce(&Vec<String>)) { accessor(&self.lines); }
+    pub fn mutate_caret(&mut self, mutator: impl FnOnce(&mut Position)) {
+      mutator(&mut self.caret);
+      validator::validate_caret_col_position(self);
+    }
   }
 }
 
