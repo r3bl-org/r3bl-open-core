@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use std::ops::{Deref, DerefMut};
+
 use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::*;
@@ -28,7 +30,7 @@ use crate::*;
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
-  pub vec_lines: Vec<String>,
+  pub lines: Vec<String>,
   /// The current caret position. This is the "display" and not "logical" position as defined in
   /// [UnicodeString]. This works w/ [crate::RenderOp] as well, so you can directly move this
   /// position.
@@ -37,6 +39,33 @@ pub struct EditorBuffer {
   pub scroll_offset: Position,
   /// Lolcat struct for generating rainbow colors.
   pub lolcat: Lolcat,
+}
+
+// TK: impl Deref & DerefMut for EditorBuffer
+// TK: make vec_lines private: add methods for get, modify, delete; update line_buffer.rs
+// TK: make caret private: add methods for get, modify, delete; update line_buffer.rs
+// TK: make scroll_offset private: add methods for get, modify, delete; update line_buffer.rs
+
+pub mod access_and_mutate_lines {
+  use super::*;
+
+  impl Deref for EditorBuffer {
+    type Target = Vec<String>;
+
+    fn deref(&self) -> &Self::Target { &self.lines }
+  }
+
+  impl DerefMut for EditorBuffer {
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.lines }
+  }
+
+  impl EditorBuffer {
+    pub fn mutate_lines(&mut self, mutator: impl FnOnce(&mut Vec<String>)) {
+      mutator(&mut self.lines);
+    }
+
+    pub fn access_lines(&self, accessor: impl FnOnce(&Vec<String>)) { accessor(&self.lines); }
+  }
 }
 
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
@@ -82,17 +111,17 @@ impl EditorBuffer {
 // │ EditorBuffer -> Function based interface │
 // ╯                                          ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 impl EditorBuffer {
-  pub fn is_empty(&self) -> bool { self.vec_lines.is_empty() }
+  pub fn is_empty(&self) -> bool { self.lines.is_empty() }
 
-  pub fn insert_new_line(&mut self) { line_buffer_insert::new_line_at_caret(self); }
+  pub fn insert_new_line(&mut self) { line_buffer_mut::insert_new_line_at_caret(self); }
 
   /// Insert [char] at the current [caret position](EditorBuffer::caret) into the current line.
   pub fn insert_char(&mut self, character: char) {
-    line_buffer_insert::str_at_caret(self, &String::from(character))
+    line_buffer_mut::insert_str_at_caret(self, &String::from(character))
   }
 
   /// Insert [str] at the current [caret position](EditorBuffer::caret) into the current line.
-  pub fn insert_str(&mut self, chunk: &str) { line_buffer_insert::str_at_caret(self, chunk) }
+  pub fn insert_str(&mut self, chunk: &str) { line_buffer_mut::insert_str_at_caret(self, chunk) }
 
   /// Move one character to the left, or right. Calculate how wide the current character is (unicode
   /// width) and then move the "display" caret position back that many columns.
@@ -105,9 +134,9 @@ impl EditorBuffer {
     };
   }
 
-  pub fn delete(&mut self) { line_buffer_delete::delete_at_caret(self); }
+  pub fn delete(&mut self) { line_buffer_mut::delete_at_caret(self); }
 
-  pub fn backspace(&mut self) { line_buffer_delete::backspace_at_caret(self); }
+  pub fn backspace(&mut self) { line_buffer_mut::backspace_at_caret(self); }
 }
 
 pub mod editor_buffer_command {
@@ -190,8 +219,8 @@ mod debug_format_helpers {
     fn fmt(&self, f: &mut __private::Formatter<'_>) -> std::fmt::Result {
       write! { f,
         "\nEditorBuffer [ \n ├ lines: {}, size: {}, \n ├ caret: {:?}, scroll_offset: {:?}, \n └ lolcat: [{}, {}, {}, {}] \n]",
-        self.vec_lines.len(),
-        self.vec_lines.get_heap_size(),
+        self.lines.len(),
+        self.lines.get_heap_size(),
         self.caret,
         self.scroll_offset,
         pretty_print_f64(self.lolcat.color_wheel_control.seed),
