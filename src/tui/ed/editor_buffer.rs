@@ -31,7 +31,7 @@ use crate::*;
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
   // TK: remove pub
-  pub lines: Vec<String>,
+  lines: Vec<String>,
   /// The current caret position. This is the "display" and not "logical" position as defined in
   /// [UnicodeString]. This works w/ [crate::RenderOp] as well, so you can directly move this
   /// position.
@@ -47,7 +47,7 @@ pub struct EditorBuffer {
 // TK: make caret private: add methods for get, modify, delete; update line_buffer.rs
 // TK: make scroll_offset private: add methods for get, modify, delete; update line_buffer.rs
 
-pub mod access_and_mutate_lines {
+pub mod access_and_mutate {
   use super::*;
 
   // Funnel all `self.line` read access here. No need to run additional logic for read access.

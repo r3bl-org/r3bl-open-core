@@ -206,18 +206,15 @@ pub mod line_buffer_get_content {
     match line_buffer_locate_caret::find_col(this) {
       // Caret is at end of line, past the last character.
       CaretColLocation::AtEndOfLine => {
-        let mut caret_copy = this.caret;
-        caret_copy.sub_cols(1);
-        let line = this.get(ch!(@to_usize caret_copy.row))?;
+        let line = this.get(ch!(@to_usize this.caret.row))?;
         let unicode_string = line.unicode_string();
-        unicode_string.get_string_at_display_col(caret_copy.col)
+        unicode_string.get_string_at_end()
       }
       // Caret is not at end of line.
       _ => {
-        let position = this.caret;
-        let line = this.get(ch!(@to_usize position.row))?;
+        let line = this.get(ch!(@to_usize this.caret.row))?;
         let unicode_string = line.unicode_string();
-        unicode_string.get_string_at_left_of_display_col(position.col)
+        unicode_string.get_string_at_left_of_display_col(this.caret.col)
       }
     }
   }
@@ -434,6 +431,7 @@ pub mod line_buffer_mut {
 
   pub fn backspace_at_caret(this: &mut EditorBuffer) -> Option<()> {
     empty_check_early_return!(this, @None);
+
     if let Some(UnicodeStringSegmentSliceResult {
       display_col_at_which_seg_starts,
       ..
@@ -443,6 +441,7 @@ pub mod line_buffer_mut {
     } else {
       backspace_at_start_of_line(this)?;
     }
+
     return None;
 
     // R ┌──────────┐
