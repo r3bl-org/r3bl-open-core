@@ -33,6 +33,8 @@ editor engine core (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
   ✔ write tests for `ch!` macro @done(22-09-17 13:55)
   ✔ start writing tests for render pipeline @done(22-09-17 14:43)
   ☐ scrolling
+    ✔ refactor editor buffer lines write ops so they are funnelled through a single fn @done(22-09-19 16:17)
+    ✔ refactor editor buffer caret write ops so they are funnelled through a single fn @done(22-09-19 16:17)
     ☐ left/right
     ☐ up/down
   ☐ move caret left / right -> move up / down as well (`validate_caret_position()`)
@@ -83,6 +85,7 @@ framework:
   ☐ [Filter unsupported graphemes in keypress](https://github.com/r3bl-org/r3bl_rs_utils/issues/26)
   ☐ [Write tests: rendering, component, etc](https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aissue+is%3Aopen+label%3Atesting)
   ☐ [Migrate cmdr -> rs](https://github.com/r3bl-org/r3bl_rs_utils/issues/38)
+  ☐ [EditorBuffer rewrite](https://github.com/r3bl-org/r3bl_rs_utils/issues/40)
 
 cmdr:
   ☐ [Create PRD](https://github.com/r3bl-org/r3bl_rs_utils/issues/39)

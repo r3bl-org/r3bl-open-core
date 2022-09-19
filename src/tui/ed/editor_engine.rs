@@ -39,7 +39,7 @@ const DEFAULT_CURSOR_CHAR: char = '▒';
 enum CaretPaintStyle {
   /// Using cursor show / hide.
   GlobalCursor,
-  /// Painting the editor_buffer.caret position w/ reverse style.
+  /// Painting the editor_buffer.get_caret() position w/ reverse style.
   LocalPaintedEffect,
 }
 
@@ -142,7 +142,7 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> RenderPipe
       CaretPaintStyle::GlobalCursor => {
         render_pipeline! {
           @push_into render_pipeline at ZOrder::Caret =>
-            RenderOp::RequestShowCaretAtPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
+            RenderOp::RequestShowCaretAtPositionRelTo(*style_adj_box_origin_pos, editor_buffer.get_caret())
         };
       }
       CaretPaintStyle::LocalPaintedEffect => {
@@ -156,11 +156,11 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> RenderPipe
           };
         render_pipeline! {
           @push_into render_pipeline at ZOrder::Caret =>
-          RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret),
+          RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.get_caret()),
             RenderOp::PrintTextWithAttributes(
               str_at_caret,
               style! { attrib: [reverse] }.into()),
-          RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.caret)
+          RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.get_caret())
         };
       }
     }

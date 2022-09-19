@@ -30,21 +30,18 @@ use crate::*;
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
-  // TK: remove pub
   lines: Vec<String>,
   /// The current caret position. This is the "display" and not "logical" position as defined in
   /// [UnicodeString]. This works w/ [crate::RenderOp] as well, so you can directly move this
   /// position.
-  pub caret: Position,
+  caret: Position,
   /// The col and row offset for scrolling if active.
+  // TK: remove pub
   pub scroll_offset: Position,
   /// Lolcat struct for generating rainbow colors.
   pub lolcat: Lolcat,
 }
 
-// TK: impl Deref for EditorBuffer
-// TK: make vec_lines private: add methods for get, modify, delete; update line_buffer.rs
-// TK: make caret private: add methods for get, modify, delete; update line_buffer.rs
 // TK: make scroll_offset private: add methods for get, modify, delete; update line_buffer.rs
 
 pub mod access_and_mutate {
@@ -69,6 +66,11 @@ pub mod access_and_mutate {
       mutator(&mut self.caret);
       validator::validate_caret_col_position(self);
     }
+
+    pub fn get_caret(&self) -> Position { self.caret }
+
+    // TK: add mutate_scroll_offset()
+    // TK: add get_scroll_offset()
   }
 }
 
@@ -119,12 +121,12 @@ impl EditorBuffer {
 
   pub fn insert_new_line(&mut self) { line_buffer_mut::insert_new_line_at_caret(self); }
 
-  /// Insert [char] at the current [caret position](EditorBuffer::caret) into the current line.
+  /// Insert [char] at the current [caret position](EditorBuffer::get_caret) into the current line.
   pub fn insert_char(&mut self, character: char) {
     line_buffer_mut::insert_str_at_caret(self, &String::from(character))
   }
 
-  /// Insert [str] at the current [caret position](EditorBuffer::caret) into the current line.
+  /// Insert [str] at the current [caret position](EditorBuffer::get_caret) into the current line.
   pub fn insert_str(&mut self, chunk: &str) { line_buffer_mut::insert_str_at_caret(self, chunk) }
 
   /// Move one character to the left, or right. Calculate how wide the current character is (unicode
