@@ -147,7 +147,7 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> RenderPipe
         let str_at_caret: String = if let Some(UnicodeStringSegmentSliceResult {
           unicode_string_seg: str_seg,
           ..
-        }) = line_buffer_get_content::string_at_caret(editor_buffer)
+        }) = line_buffer_content::string_at_caret(editor_buffer)
         {
           str_seg.string
         } else {

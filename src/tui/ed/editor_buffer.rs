@@ -59,12 +59,12 @@ pub mod access_and_mutate {
   impl EditorBuffer {
     pub fn mutate_lines(&mut self, mutator: impl FnOnce(&mut Vec<UnicodeString>, &mut Position)) {
       mutator(&mut self.lines, &mut self.caret);
-      validator::validate_caret_col_position(self);
+      validate_then_mutate::validate_caret_col_position(self);
     }
 
     pub fn mutate_caret(&mut self, mutator: impl FnOnce(&mut Position)) {
       mutator(&mut self.caret);
-      validator::validate_caret_col_position(self);
+      validate_then_mutate::validate_caret_col_position(self);
     }
 
     pub fn get_caret(&self) -> Position { self.caret }
@@ -119,30 +119,32 @@ impl EditorBuffer {
 impl EditorBuffer {
   pub fn is_empty(&self) -> bool { self.lines.is_empty() }
 
-  pub fn insert_new_line(&mut self) { line_buffer_mut::insert_new_line_at_caret(self); }
+  pub fn insert_new_line(&mut self) { line_buffer_content_mut::insert_new_line_at_caret(self); }
 
   /// Insert [char] at the current [caret position](EditorBuffer::get_caret) into the current line.
   pub fn insert_char(&mut self, character: char) {
-    line_buffer_mut::insert_str_at_caret(self, &String::from(character))
+    line_buffer_content_mut::insert_str_at_caret(self, &String::from(character))
   }
 
   /// Insert [str] at the current [caret position](EditorBuffer::get_caret) into the current line.
-  pub fn insert_str(&mut self, chunk: &str) { line_buffer_mut::insert_str_at_caret(self, chunk) }
+  pub fn insert_str(&mut self, chunk: &str) {
+    line_buffer_content_mut::insert_str_at_caret(self, chunk)
+  }
 
   /// Move one character to the left, or right. Calculate how wide the current character is (unicode
   /// width) and then move the "display" caret position back that many columns.
   pub fn move_caret(&mut self, direction: CaretDirection) {
     match direction {
-      CaretDirection::Left => line_buffer_move_caret::left(self),
-      CaretDirection::Right => line_buffer_move_caret::right(self),
-      CaretDirection::Up => line_buffer_move_caret::up(self),
-      CaretDirection::Down => line_buffer_move_caret::down(self),
+      CaretDirection::Left => line_buffer_caret_mut::left(self),
+      CaretDirection::Right => line_buffer_caret_mut::right(self),
+      CaretDirection::Up => line_buffer_caret_mut::up(self),
+      CaretDirection::Down => line_buffer_caret_mut::down(self),
     };
   }
 
-  pub fn delete(&mut self) { line_buffer_mut::delete_at_caret(self); }
+  pub fn delete(&mut self) { line_buffer_content_mut::delete_at_caret(self); }
 
-  pub fn backspace(&mut self) { line_buffer_mut::backspace_at_caret(self); }
+  pub fn backspace(&mut self) { line_buffer_content_mut::backspace_at_caret(self); }
 }
 
 pub mod editor_buffer_command {
