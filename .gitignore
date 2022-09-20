@@ -5,3 +5,4 @@ docs/*.bkp
 docs/*.dtmp
 .idea
 log.txt
+crash_log.txt
