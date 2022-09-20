@@ -65,7 +65,7 @@ fn test_delete() {
     EditorBufferCommand::MoveCaret(CaretDirection::Right),
     EditorBufferCommand::Delete,
   ]);
-  assert_eq2!(this.len(), 2);
+  assert_eq2!(this.get_lines().len(), 2);
   assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
 
   // Move to the end of the 1st line.
@@ -79,7 +79,7 @@ fn test_delete() {
     EditorBufferCommand::MoveCaret(CaretDirection::Right),
     EditorBufferCommand::Delete,
   ]);
-  assert_eq2!(this.len(), 1);
+  assert_eq2!(this.get_lines().len(), 1);
   assert_eq2!(this.get_caret(), position!(col: 3, row: 0));
   assert::line_at_caret(&this, "abcab");
 }
@@ -138,7 +138,7 @@ fn test_backspace() {
   ]);
   assert_eq2!(this.get_caret(), position!(col: 0, row: 1));
   this.backspace();
-  assert_eq2!(this.len(), 1);
+  assert_eq2!(this.get_lines().len(), 1);
   assert_eq2!(this.get_caret(), position!(col: 3, row: 0));
   assert::line_at_caret(&this, "abcab");
 
@@ -311,7 +311,7 @@ fn test_insert_new_line() {
   //   └▴─────────┘
   //   C0123456789
   this.insert_new_line();
-  assert_eq2!(this.len(), 1);
+  assert_eq2!(this.get_lines().len(), 1);
   assert::none_is_at_caret(&this);
 
   // Insert "a".
@@ -332,7 +332,7 @@ fn test_insert_new_line() {
   //   └▴─────────┘
   //   C0123456789
   this.insert_new_line();
-  assert_eq2!(this.len(), 2);
+  assert_eq2!(this.get_lines().len(), 2);
   assert::none_is_at_caret(&this);
   assert_eq2!(this.get_caret(), position!(col: 0, row: 1));
 
@@ -364,7 +364,7 @@ fn test_insert_new_line() {
   //   └▴─────────┘
   //   C0123456789
   this.insert_new_line();
-  assert_eq2!(this.len(), 3);
+  assert_eq2!(this.get_lines().len(), 3);
   assert::str_is_at_caret(&this, "a");
   assert_eq2!(this.get_caret(), position!(col: 0, row: 2));
 
@@ -404,7 +404,7 @@ fn test_insert_new_line() {
   ]);
   assert::str_is_at_caret(&this, "b");
   assert_eq2!(this.get_caret(), position!(col: 0, row: 3));
-  assert_eq2!(this.len(), 4);
+  assert_eq2!(this.get_lines().len(), 4);
 
   // Move caret to end of prev line. Press enter. `this` should look like:
   // R ┌──────────┐
@@ -420,7 +420,7 @@ fn test_insert_new_line() {
     EditorBufferCommand::MoveCaret(CaretDirection::Right),
     EditorBufferCommand::InsertNewLine,
   ]);
-  assert_eq2!(this.len(), 5);
+  assert_eq2!(this.get_lines().len(), 5);
   assert_eq2!(this.get_caret(), position!(col: 0, row: 3));
 }
 
@@ -526,7 +526,7 @@ fn test_insertion() {
   //   C0123456789
   assert_eq2!(this.get_caret(), position!(col: 0, row: 0));
   this.insert_char('a');
-  assert_eq2!(*this, vec![UnicodeString::from("a")]);
+  assert_eq2!(*this.get_lines(), vec![UnicodeString::from("a")]);
   assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
 
   // Move caret to col: 0, row: 1. Insert "b".
@@ -536,12 +536,10 @@ fn test_insertion() {
   // 1 ▸b░        │
   //   └─▴────────┘
   //   C0123456789
-  this.mutate_caret(|caret| {
-    *caret = position!(col: 0, row: 1);
-  });
+  line_buffer_content_mut::insert_new_line_at_caret(&mut this);
   this.insert_char('b');
   assert_eq2!(
-    *this,
+    *this.get_lines(),
     vec![UnicodeString::from("a"), UnicodeString::from("b")]
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 1));
@@ -555,12 +553,13 @@ fn test_insertion() {
   // 3 ▸😀░       │
   //   └──▴───────┘
   //   C0123456789
-  this.mutate_caret(|caret| {
-    *caret = position!(col: 0, row: 3);
-  });
-  this.insert_char('😀');
+  this.apply_commands(vec![
+    EditorBufferCommand::InsertNewLine,
+    EditorBufferCommand::InsertNewLine,
+    EditorBufferCommand::InsertChar('😀'),
+  ]);
   assert_eq2!(
-    *this,
+    *this.get_lines(),
     vec![
       UnicodeString::from("a"),
       UnicodeString::from("b"),
@@ -581,7 +580,7 @@ fn test_insertion() {
   //   C0123456789
   this.insert_char('d');
   assert_eq2!(
-    *this,
+    *this.get_lines(),
     vec![
       UnicodeString::from("a"),
       UnicodeString::from("b"),
@@ -602,7 +601,7 @@ fn test_insertion() {
   //   C0123456789
   this.insert_str("🙏🏽");
   assert_eq2!(
-    *this,
+    *this.get_lines(),
     vec![
       UnicodeString::from("a"),
       UnicodeString::from("b"),

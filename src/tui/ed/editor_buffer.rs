@@ -15,8 +15,6 @@
  *   limitations under the License.
  */
 
-use std::ops::Deref;
-
 use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::*;
@@ -47,25 +45,12 @@ pub struct EditorBuffer {
 pub mod access_and_mutate {
   use super::*;
 
-  // Funnel all `self.line` read access here. No need to run additional logic for read access.
-  impl Deref for EditorBuffer {
-    type Target = Vec<UnicodeString>;
-
-    fn deref(&self) -> &Self::Target { &self.lines }
-  }
-
-  // Funnel all `self.line` write access here; this allows some additional logic to be run after
-  // mutation is complete.
   impl EditorBuffer {
-    pub fn mutate_lines(&mut self, mutator: impl FnOnce(&mut Vec<UnicodeString>, &mut Position)) {
-      mutator(&mut self.lines, &mut self.caret);
-      validate_then_mutate::validate_caret_col_position(self);
+    pub fn get_mut(&mut self) -> (&mut Vec<UnicodeString>, &mut Position) {
+      (&mut self.lines, &mut self.caret)
     }
 
-    pub fn mutate_caret(&mut self, mutator: impl FnOnce(&mut Position)) {
-      mutator(&mut self.caret);
-      validate_then_mutate::validate_caret_col_position(self);
-    }
+    pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.lines }
 
     pub fn get_caret(&self) -> Position { self.caret }
 
@@ -135,10 +120,10 @@ impl EditorBuffer {
   /// width) and then move the "display" caret position back that many columns.
   pub fn move_caret(&mut self, direction: CaretDirection) {
     match direction {
-      CaretDirection::Left => line_buffer_caret_mut::left(self),
-      CaretDirection::Right => line_buffer_caret_mut::right(self),
-      CaretDirection::Up => line_buffer_caret_mut::up(self),
-      CaretDirection::Down => line_buffer_caret_mut::down(self),
+      CaretDirection::Left => line_buffer_caret_move::left(self),
+      CaretDirection::Right => line_buffer_caret_move::right(self),
+      CaretDirection::Up => line_buffer_caret_move::up(self),
+      CaretDirection::Down => line_buffer_caret_move::down(self),
     };
   }
 

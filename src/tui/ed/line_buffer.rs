@@ -36,10 +36,10 @@ macro_rules! empty_check_early_return {
   };
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Mutate caret │
-// ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-pub mod line_buffer_caret_mut {
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Move caret │
+// ╯            ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+pub mod line_buffer_caret_move {
   use super::*;
 
   pub fn up(this: &mut EditorBuffer) -> Option<()> {
@@ -53,7 +53,7 @@ pub mod line_buffer_caret_mut {
         if this.get_caret().row > min_row {
           let new_row = this.get_caret().row - 1;
           let line_display_width = line_buffer_content::line_display_width_at_row(this, new_row);
-          this.mutate_caret(|caret| {
+          mut_helpers::mutate_caret(this, |caret| {
             caret.row = new_row;
             caret.clip_cols_to_bounds(line_display_width);
           });
@@ -71,11 +71,11 @@ pub mod line_buffer_caret_mut {
         // Do nothing.
       }
       CaretRowLocation::AtTopOfBuffer | CaretRowLocation::InMiddleOfBuffer => {
-        let max_row = ch!(this.len(), @dec);
+        let max_row = ch!(this.get_lines().len(), @dec);
         if this.get_caret().row < max_row {
           let new_row = this.get_caret().row + 1;
           let line_display_width = line_buffer_content::line_display_width_at_row(this, new_row);
-          this.mutate_caret(|caret| {
+          mut_helpers::mutate_caret(this, |caret| {
             caret.row = new_row;
             caret.clip_cols_to_bounds(line_display_width);
           });
@@ -96,7 +96,7 @@ pub mod line_buffer_caret_mut {
         let UnicodeStringSegmentSliceResult { unicode_width, .. } =
           line_buffer_content::string_at_caret(this)?;
         let max_display_width = line_buffer_content::line_display_width_at_caret(this);
-        this.mutate_caret(|caret| {
+        mut_helpers::mutate_caret(this, |caret| {
           caret.add_cols_with_bounds(unicode_width, max_display_width);
         });
       }
@@ -114,14 +114,14 @@ pub mod line_buffer_caret_mut {
       CaretColLocation::AtEndOfLine => {
         let UnicodeStringSegmentSliceResult { unicode_width, .. } =
           line_buffer_content::string_at_end_of_line_at_caret(this)?;
-        this.mutate_caret(|caret| {
+        mut_helpers::mutate_caret(this, |caret| {
           caret.col -= unicode_width;
         });
       }
       CaretColLocation::InMiddleOfLine => {
         let UnicodeStringSegmentSliceResult { unicode_width, .. } =
           line_buffer_content::string_to_left_of_caret(this)?;
-        this.mutate_caret(|caret| {
+        mut_helpers::mutate_caret(this, |caret| {
           caret.col -= unicode_width;
         });
       }
@@ -146,7 +146,7 @@ pub mod line_buffer_content {
   }
 
   pub fn line_display_width_at_row(this: &EditorBuffer, row_idx: ChUnit) -> ChUnit {
-    let line = this.get(ch!(@to_usize row_idx));
+    let line = this.get_lines().get(ch!(@to_usize row_idx));
     if let Some(line) = line {
       line.display_width
     } else {
@@ -157,14 +157,14 @@ pub mod line_buffer_content {
   pub fn line_at_caret_to_string(this: &EditorBuffer) -> Option<UnicodeString> {
     empty_check_early_return!(this, @None);
     let position = this.get_caret();
-    let line = this.get(ch!(@to_usize position.row))?;
+    let line = this.get_lines().get(ch!(@to_usize position.row))?;
     Some(line.clone())
   }
 
   pub fn next_line_below_caret_to_string(this: &EditorBuffer) -> Option<UnicodeString> {
     empty_check_early_return!(this, @None);
     let position = this.get_caret();
-    let line = this.get(ch!(@to_usize position.row, @inc))?;
+    let line = this.get_lines().get(ch!(@to_usize position.row, @inc))?;
     Some(line.clone())
   }
 
@@ -174,14 +174,14 @@ pub mod line_buffer_content {
     if position.row == ch!(0) {
       return None;
     }
-    let line = this.get(ch!(@to_usize position.row, @dec))?;
+    let line = this.get_lines().get(ch!(@to_usize position.row, @dec))?;
     Some(line.clone())
   }
 
   pub fn string_at_caret(this: &EditorBuffer) -> Option<UnicodeStringSegmentSliceResult> {
     empty_check_early_return!(this, @None);
     let position = this.get_caret();
-    let line = this.get(ch!(@to_usize position.row))?;
+    let line = this.get_lines().get(ch!(@to_usize position.row))?;
     let result = line.get_string_at_display_col(position.col)?;
     Some(result)
   }
@@ -191,12 +191,12 @@ pub mod line_buffer_content {
     match line_buffer_caret::find_col(this) {
       // Caret is at end of line, past the last character.
       CaretColLocation::AtEndOfLine => {
-        let line = this.get(ch!(@to_usize this.get_caret().row))?;
+        let line = this.get_lines().get(ch!(@to_usize this.get_caret().row))?;
         line.get_string_at_end()
       }
       // Caret is not at end of line.
       _ => {
-        let line = this.get(ch!(@to_usize this.get_caret().row))?;
+        let line = this.get_lines().get(ch!(@to_usize this.get_caret().row))?;
         line.get_string_at_left_of_display_col(this.get_caret().col)
       }
     }
@@ -271,10 +271,10 @@ pub mod line_buffer_caret {
   //   └▴─────────┘
   //   C0123456789
   fn row_is_at_bottom_of_buffer(this: &EditorBuffer) -> bool {
-    if this.is_empty() || this.len() == 1 {
+    if this.is_empty() || this.get_lines().len() == 1 {
       false // If there is only one line, then the caret is not at the bottom, its at the top.
     } else {
-      let max_row_count = ch!(this.len(), @dec);
+      let max_row_count = ch!(this.get_lines().len(), @dec);
       this.get_caret().row == max_row_count
     }
   }
@@ -290,7 +290,7 @@ pub mod line_buffer_content_mut {
     let caret_row: usize = ch!(@to_usize this.get_caret().row);
     let caret_col: usize = ch!(@to_usize this.get_caret().col);
 
-    if this.get(caret_row).is_some() {
+    if this.get_lines().get(caret_row).is_some() {
       insert_into_existing_line(this, caret_row, caret_col, chunk);
     } else {
       fill_in_missing_lines_up_to_row(this, caret_row);
@@ -300,7 +300,7 @@ pub mod line_buffer_content_mut {
 
   pub fn insert_new_line_at_caret(this: &mut EditorBuffer) {
     if this.is_empty() {
-      this.mutate_lines(|lines, _| {
+      mut_helpers::mutate_lines_and_caret(this, |lines, _| {
         lines.push(String::new().into());
       });
       return;
@@ -314,12 +314,12 @@ pub mod line_buffer_content_mut {
 
     // Handle inserting a new line at the end of the current line.
     fn insert_new_line_at_end_of_current_line(this: &mut EditorBuffer) {
-      this.mutate_caret(|caret| {
+      mut_helpers::mutate_caret(this, |caret| {
         caret.add_rows(1);
         caret.reset_cols();
       });
       // insert empty line at caret.
-      this.mutate_lines(|lines, caret| {
+      mut_helpers::mutate_lines_and_caret(this, |lines, caret| {
         lines.insert(ch!(@to_usize caret.row), String::new().into());
       });
     }
@@ -328,15 +328,15 @@ pub mod line_buffer_content_mut {
     fn insert_new_line_at_start_of_current_line(this: &mut EditorBuffer) {
       let row_index = ch!(@to_usize this.get_caret().row);
       if row_index == 0 {
-        this.mutate_lines(|lines, _| {
+        mut_helpers::mutate_lines_and_caret(this, |lines, _| {
           lines.insert(0, String::new().into());
         });
       } else {
-        this.mutate_lines(|lines, _| {
+        mut_helpers::mutate_lines_and_caret(this, |lines, _| {
           lines.insert(row_index, String::new().into());
         });
       }
-      this.mutate_caret(|caret| {
+      mut_helpers::mutate_caret(this, |caret| {
         caret.add_rows(1);
       });
     }
@@ -358,11 +358,11 @@ pub mod line_buffer_content_mut {
         )) = split_result
         {
           let row_index = ch!(@to_usize this.get_caret().row);
-          this.mutate_lines(|lines, _| {
+          mut_helpers::mutate_lines_and_caret(this, |lines, _| {
             let _ = replace(&mut lines[row_index], left);
             lines.insert(row_index + 1, right);
           });
-          this.mutate_caret(|caret| {
+          mut_helpers::mutate_caret(this, |caret| {
             caret.add_rows(1);
             caret.reset_cols();
           });
@@ -393,7 +393,7 @@ pub mod line_buffer_content_mut {
         ..
       } = cur_line.delete_char_at_display_col(this.get_caret().col)?;
       let row_index = ch!(@to_usize this.get_caret().row);
-      this.mutate_lines(|lines, _| {
+      mut_helpers::mutate_lines_and_caret(this, |lines, _| {
         let _ = replace(&mut lines[row_index], new_line);
       });
       None
@@ -409,7 +409,7 @@ pub mod line_buffer_content_mut {
       let this_line = line_buffer_content::line_at_caret_to_string(this)?;
       let next_line = line_buffer_content::next_line_below_caret_to_string(this)?;
 
-      this.mutate_lines(|lines, caret| {
+      mut_helpers::mutate_lines_and_caret(this, |lines, caret| {
         let _ = replace(&mut lines[ch!(@to_usize caret.row)], this_line + &next_line);
         lines.remove(ch!(@to_usize caret.row, @inc));
       });
@@ -446,10 +446,10 @@ pub mod line_buffer_content_mut {
         new_unicode_string: new_line,
         ..
       } = cur_line.delete_char_at_display_col(delete_at_this_display_idx)?;
-      this.mutate_lines(|lines, caret| {
+      mut_helpers::mutate_lines_and_caret(this, |lines, caret| {
         let _ = replace(&mut lines[ch!(@to_usize caret.row)], new_line);
       });
-      this.mutate_caret(|caret| {
+      mut_helpers::mutate_caret(this, |caret| {
         caret.set_cols(delete_at_this_display_idx);
       });
 
@@ -466,14 +466,14 @@ pub mod line_buffer_content_mut {
       let this_line = line_buffer_content::line_at_caret_to_string(this)?;
       let prev_line = line_buffer_content::prev_line_above_caret_to_string(this)?;
       let prev_line_cols = prev_line.display_width;
-      this.mutate_lines(|lines, caret| {
+      mut_helpers::mutate_lines_and_caret(this, |lines, caret| {
         let _ = replace(
           &mut lines[ch!(@to_usize caret.row, @dec)],
           prev_line + &this_line,
         );
         lines.remove(ch!(@to_usize caret.row));
       });
-      this.mutate_caret(|caret| {
+      mut_helpers::mutate_caret(this, |caret| {
         caret.sub_rows(1);
         caret.set_cols(prev_line_cols);
       });
@@ -485,14 +485,14 @@ pub mod line_buffer_content_mut {
   fn insert_into_existing_line(
     this: &mut EditorBuffer, caret_row: usize, caret_col: usize, chunk: &str,
   ) -> Option<()> {
-    let line = this.get(caret_row)?;
+    let line = this.get_lines().get(caret_row)?;
 
     let NewUnicodeStringResult {
       new_unicode_string: new_line,
       unicode_width: char_display_width,
     } = line.insert_char_at_display_col(ch!(caret_col), chunk)?;
 
-    this.mutate_lines(|lines, caret| {
+    mut_helpers::mutate_lines_and_caret(this, |lines, caret| {
       // Replace existing line w/ new line.
       let _ = replace(&mut lines[caret_row], new_line);
 
@@ -505,10 +505,10 @@ pub mod line_buffer_content_mut {
 
   fn fill_in_missing_lines_up_to_row(this: &mut EditorBuffer, caret_row: usize) {
     // Fill in any missing lines.
-    if this.get(caret_row).is_none() {
+    if this.get_lines().get(caret_row).is_none() {
       for row_idx in 0..caret_row + 1 {
-        if this.get(row_idx).is_none() {
-          this.mutate_lines(|lines, _| {
+        if this.get_lines().get(row_idx).is_none() {
+          mut_helpers::mutate_lines_and_caret(this, |lines, _| {
             lines.push(String::new().into());
           });
         }
@@ -518,9 +518,9 @@ pub mod line_buffer_content_mut {
 
   fn insert_into_new_line(this: &mut EditorBuffer, caret_row: usize, chunk: &str) -> Option<()> {
     // Actually add the character to the correct line.
-    let _ = this.get(caret_row)?;
+    let _ = this.get_lines().get(caret_row)?;
 
-    this.mutate_lines(|lines, caret| {
+    mut_helpers::mutate_lines_and_caret(this, |lines, caret| {
       let _ = replace(
         &mut lines[ch!(@to_usize caret_row)],
         UnicodeString::from(chunk),
@@ -532,21 +532,37 @@ pub mod line_buffer_content_mut {
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Validate then mutate │
-// ╯                      ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-pub mod validate_then_mutate {
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Mutate content & caret │
+// ╯                        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+pub(super) mod mut_helpers {
   use super::*;
+
+  /// Internal function.
+  pub(super) fn mutate_lines_and_caret(
+    this: &mut EditorBuffer, mutator: impl FnOnce(&mut Vec<UnicodeString>, &mut Position),
+  ) {
+    let (lines, caret) = this.get_mut();
+    mutator(lines, caret);
+    validate_caret_col_position(this);
+  }
+
+  /// Internal function.
+  pub(super) fn mutate_caret(this: &mut EditorBuffer, mutator: impl FnOnce(&mut Position)) {
+    let (_, caret) = this.get_mut();
+    mutator(caret);
+    validate_caret_col_position(this);
+  }
 
   /// It is possible when moving the caret for it to end up in the middle of a grapheme cluster. In
   /// this case, move the caret to the end of the cluster, since the intention is to move the caret
   /// to the next "character".
-  pub fn validate_caret_col_position(this: &mut EditorBuffer) -> Option<()> {
+  pub(super) fn validate_caret_col_position(this: &mut EditorBuffer) -> Option<()> {
     let line = line_buffer_content::line_at_caret_to_string(this)?;
 
     if let Some(segment) = line.is_display_col_in_middle_of_grapheme_cluster(this.get_caret().col) {
       // Is in middle.
-      this.mutate_caret(|caret| {
+      mut_helpers::mutate_caret(this, |caret| {
         caret.set_cols(segment.unicode_width + segment.display_col_offset);
       });
     }
