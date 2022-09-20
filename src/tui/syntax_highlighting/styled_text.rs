@@ -103,7 +103,10 @@ impl StyledTexts for Vec<StyledText> {
     plain_text
   }
 
-  fn display_width(&self) -> ChUnit { self.get_plain_text().unicode_string().display_width }
+  fn display_width(&self) -> ChUnit {
+    let unicode_string: UnicodeString = self.get_plain_text().into();
+    unicode_string.display_width
+  }
 
   fn render(&self, z_order: ZOrder) -> RenderPipeline {
     let mut render_pipeline = RenderPipeline::default();

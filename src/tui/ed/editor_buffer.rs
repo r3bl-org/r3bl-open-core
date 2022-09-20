@@ -30,7 +30,7 @@ use crate::*;
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
-  lines: Vec<String>,
+  lines: Vec<UnicodeString>,
   /// The current caret position. This is the "display" and not "logical" position as defined in
   /// [UnicodeString]. This works w/ [crate::RenderOp] as well, so you can directly move this
   /// position.
@@ -49,7 +49,7 @@ pub mod access_and_mutate {
 
   // Funnel all `self.line` read access here. No need to run additional logic for read access.
   impl Deref for EditorBuffer {
-    type Target = Vec<String>;
+    type Target = Vec<UnicodeString>;
 
     fn deref(&self) -> &Self::Target { &self.lines }
   }
@@ -57,7 +57,7 @@ pub mod access_and_mutate {
   // Funnel all `self.line` write access here; this allows some additional logic to be run after
   // mutation is complete.
   impl EditorBuffer {
-    pub fn mutate_lines(&mut self, mutator: impl FnOnce(&mut Vec<String>, &mut Position)) {
+    pub fn mutate_lines(&mut self, mutator: impl FnOnce(&mut Vec<UnicodeString>, &mut Position)) {
       mutator(&mut self.lines, &mut self.caret);
       validator::validate_caret_col_position(self);
     }

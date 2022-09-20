@@ -105,9 +105,7 @@ fn render_content(context_ref: &Context<'_>) -> RenderPipeline {
       break;
     }
     // Clip the content to max cols.
-    let line_unicode_string = line.unicode_string();
-    let truncated_line =
-      line_unicode_string.truncate_to_fit_display_cols(*max_content_display_cols);
+    let truncated_line = line.truncate_to_fit_display_cols(*max_content_display_cols);
     render_pipeline! {
       @push_into render_pipeline at ZOrder::Normal =>
         RenderOp::MoveCursorPositionRelTo(
@@ -146,14 +144,15 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> RenderPipe
         };
       }
       CaretPaintStyle::LocalPaintedEffect => {
-        let str_at_caret: String =
-          if let Some(UnicodeStringSegmentSliceResult { str_seg, .. }) =
-            line_buffer_get_content::string_at_caret(editor_buffer)
-          {
-            str_seg
-          } else {
-            DEFAULT_CURSOR_CHAR.into()
-          };
+        let str_at_caret: String = if let Some(UnicodeStringSegmentSliceResult {
+          unicode_string_seg: str_seg,
+          ..
+        }) = line_buffer_get_content::string_at_caret(editor_buffer)
+        {
+          str_seg.string
+        } else {
+          DEFAULT_CURSOR_CHAR.into()
+        };
         render_pipeline! {
           @push_into render_pipeline at ZOrder::Caret =>
           RenderOp::MoveCursorPositionRelTo(*style_adj_box_origin_pos, editor_buffer.get_caret()),

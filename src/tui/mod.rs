@@ -199,7 +199,7 @@
 //!
 //! ## Grapheme support
 //!
-//! Unicode is supported (to an extent). There are some caveats. The [crate::UnicodeStringExt] trait
+//! Unicode is supported (to an extent). There are some caveats. The [crate::UnicodeString] struct
 //! has lots of great information on this graphemes and what is supported and what is not.
 //!
 //! ## Lolcat support

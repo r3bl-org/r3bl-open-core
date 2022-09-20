@@ -22,7 +22,7 @@ const TEST_STRING: &str = "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿.";
 #[test]
 fn test_unicode_string_ext() {
   let test_string: String = TEST_STRING.to_string();
-  let u_s = test_string.unicode_string();
+  let u_s: UnicodeString = test_string.clone().into();
 
   // Check overall sizes and counts on the `UnicodeString` struct.
   assert_eq2!(u_s.string, test_string);
@@ -47,7 +47,7 @@ fn test_grapheme_cluster_segment() {
   }
 
   let test_string: String = TEST_STRING.to_string();
-  let u_s = test_string.unicode_string();
+  let u_s: UnicodeString = test_string.into();
 
   // Check the individual `GraphemeClusterSegment` structs.
   assert_segment(&u_s[00], 00, 01.into(), 00, 01, "H");
@@ -67,7 +67,7 @@ fn test_grapheme_cluster_segment() {
 #[test]
 fn test_unicode_string_logical_index_tofro_display_col() {
   let test_string: String = TEST_STRING.to_string();
-  let u_s = test_string.unicode_string();
+  let u_s: UnicodeString = test_string.into();
 
   // Spot check some individual grapheme clusters at logical indices (the previous test does this exhaustively).
   assert_eq2!(u_s.at_logical_index(00).unwrap().string, "H");
@@ -121,7 +121,7 @@ fn test_unicode_string_logical_index_tofro_display_col() {
 #[test]
 fn test_unicode_string_truncate() {
   let test_string: String = TEST_STRING.to_string();
-  let u_s = test_string.unicode_string();
+  let u_s = UnicodeString::from(test_string);
 
   assert_eq2! {u_s.truncate_to_fit_display_cols(00.into()), ""};
   assert_eq2! {u_s.truncate_to_fit_display_cols(01.into()), "H"};
