@@ -16,6 +16,7 @@
   - [**GlobalCursor** - Use the terminal's cursor show / hide.](#globalcursor---use-the-terminals-cursor-show--hide)
   - [**LocalPaintedEffect** - Paint the character at the cursor w/ the colors inverted or some](#localpaintedeffect---paint-the-character-at-the-cursor-w-the-colors-inverted-or-some)
   - [Using both](#using-both)
+- [Mental mode of how data is stored in the editor](#mental-mode-of-how-data-is-stored-in-the-editor)
 
 <!-- /TOC -->
 
@@ -243,3 +244,18 @@ simultaneously.
 1. `GlobalCursor` might be used to show the local user's caret since it blinks, etc
 2. `LocalPaintedEffect` might be used to show remote user's carets since it doesn't blink and
    supports a multitude of background colors that can be applied to distinguish users.
+
+## Mental mode of how data is stored in the editor
+<a id="markdown-mental-mode-of-how-data-is-stored-in-the-editor" name="mental-mode-of-how-data-is-stored-in-the-editor"></a>
+
+
+Initially the idea was to represent a document in the editor buffer as an array of lines, where each
+line is a String. This wasn't really how it ended up being used. Having first class unicode grapheme
+cluster support in the editor meant that each line was converted to a UnicodeString which contains a
+list of GraphemeClusterSegments. This is actually how all the code in the editor engine, editor
+buffer, and line buffer saw the document in the editor.
+
+So, the commit to fix [this issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/40) changes the
+way a document is stored in the editor buffer. The editor buffer now stores a list of lines, where
+each line is a UnicodeString. Converters are provide to turn this into a list of Strings and back
+and forth.
