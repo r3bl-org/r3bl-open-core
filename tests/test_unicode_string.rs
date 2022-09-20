@@ -22,7 +22,7 @@ const TEST_STRING: &str = "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿.";
 #[test]
 fn test_unicode_string_ext() {
   let test_string: String = TEST_STRING.to_string();
-  let u_s: UnicodeString = test_string.clone().into();
+  let u_s = UnicodeString::from(&test_string);
 
   // Check overall sizes and counts on the `UnicodeString` struct.
   assert_eq2!(u_s.string, test_string);

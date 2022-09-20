@@ -81,11 +81,11 @@ framework:
   ✔ [Enforce terminal window bounds in RenderPipeline](https://github.com/r3bl-org/r3bl_rs_utils/issues/28) @done(22-09-03 20:36)
   ✔ [Z-ordering support in RenderPipeline](https://github.com/r3bl-org/r3bl_rs_utils/issues/27) @done(22-09-09 16:12)
   ✔ [Fix broken unicode painting on different terminal + os combos](https://github.com/r3bl-org/r3bl_rs_utils/issues/33) @done(22-09-15 15:55)
+  ✔ [EditorBuffer rewrite](https://github.com/r3bl-org/r3bl_rs_utils/issues/40) @done(22-09-20 10:32)
   ☐ [Add termion support](https://github.com/r3bl-org/r3bl_rs_utils/issues/24)
   ☐ [Filter unsupported graphemes in keypress](https://github.com/r3bl-org/r3bl_rs_utils/issues/26)
   ☐ [Write tests: rendering, component, etc](https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aissue+is%3Aopen+label%3Atesting)
   ☐ [Migrate cmdr -> rs](https://github.com/r3bl-org/r3bl_rs_utils/issues/38)
-  ☐ [EditorBuffer rewrite](https://github.com/r3bl-org/r3bl_rs_utils/issues/40)
 
 cmdr:
   ☐ [Create PRD](https://github.com/r3bl-org/r3bl_rs_utils/issues/39)
