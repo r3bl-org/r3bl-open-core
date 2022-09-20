@@ -383,7 +383,7 @@ fn test_insert_new_line() {
 
   assert::none_is_at_caret(&this);
   assert_eq2!(
-    line_buffer_get_content::line_at_caret_to_string(&this)
+    line_buffer_content::line_at_caret_to_string(&this)
       .unwrap()
       .string,
     "ab"
@@ -455,7 +455,7 @@ fn test_move_caret_left_right() {
   //   C0123456789
   this.insert_char('1');
   assert_eq2!(
-    line_buffer_get_content::line_at_caret_to_string(&this)
+    line_buffer_content::line_at_caret_to_string(&this)
       .unwrap()
       .string,
     "1a"
@@ -489,7 +489,7 @@ fn test_move_caret_left_right() {
   this.insert_char('2');
   assert::str_is_at_caret(&this, "a");
   assert_eq2!(
-    line_buffer_get_content::line_at_caret_to_string(&this)
+    line_buffer_content::line_at_caret_to_string(&this)
       .unwrap()
       .string,
     "12a"
@@ -617,14 +617,11 @@ pub mod assert {
   use super::*;
 
   pub fn none_is_at_caret(editor_buffer: &EditorBuffer) {
-    assert_eq2!(
-      line_buffer_get_content::string_at_caret(editor_buffer),
-      None
-    );
+    assert_eq2!(line_buffer_content::string_at_caret(editor_buffer), None);
   }
 
   pub fn str_is_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
-    match line_buffer_get_content::string_at_caret(editor_buffer) {
+    match line_buffer_content::string_at_caret(editor_buffer) {
       Some(UnicodeStringSegmentSliceResult {
         unicode_string_seg: s,
         ..
@@ -635,7 +632,7 @@ pub mod assert {
 
   pub fn line_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
     assert_eq2!(
-      line_buffer_get_content::line_at_caret_to_string(editor_buffer)
+      line_buffer_content::line_at_caret_to_string(editor_buffer)
         .unwrap()
         .string,
       expected
