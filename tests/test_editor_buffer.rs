@@ -383,7 +383,9 @@ fn test_insert_new_line() {
 
   assert::none_is_at_caret(&this);
   assert_eq2!(
-    line_buffer_get_content::line_at_caret_to_string(&this).unwrap(),
+    line_buffer_get_content::line_at_caret_to_string(&this)
+      .unwrap()
+      .string,
     "ab"
   );
 
@@ -453,7 +455,9 @@ fn test_move_caret_left_right() {
   //   C0123456789
   this.insert_char('1');
   assert_eq2!(
-    line_buffer_get_content::line_at_caret_to_string(&this).unwrap(),
+    line_buffer_get_content::line_at_caret_to_string(&this)
+      .unwrap()
+      .string,
     "1a"
   );
   assert::str_is_at_caret(&this, "a");
@@ -485,7 +489,9 @@ fn test_move_caret_left_right() {
   this.insert_char('2');
   assert::str_is_at_caret(&this, "a");
   assert_eq2!(
-    line_buffer_get_content::line_at_caret_to_string(&this).unwrap(),
+    line_buffer_get_content::line_at_caret_to_string(&this)
+      .unwrap()
+      .string,
     "12a"
   );
 
@@ -520,7 +526,7 @@ fn test_insertion() {
   //   C0123456789
   assert_eq2!(this.get_caret(), position!(col: 0, row: 0));
   this.insert_char('a');
-  assert_eq2!(*this, vec!["a"]);
+  assert_eq2!(*this, vec![UnicodeString::from("a")]);
   assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
 
   // Move caret to col: 0, row: 1. Insert "b".
@@ -534,7 +540,10 @@ fn test_insertion() {
     *caret = position!(col: 0, row: 1);
   });
   this.insert_char('b');
-  assert_eq2!(*this, vec!["a", "b"]);
+  assert_eq2!(
+    *this,
+    vec![UnicodeString::from("a"), UnicodeString::from("b")]
+  );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 1));
 
   // Move caret to col: 0, row: 3. Insert "😀" (unicode width = 2).
@@ -550,7 +559,15 @@ fn test_insertion() {
     *caret = position!(col: 0, row: 3);
   });
   this.insert_char('😀');
-  assert_eq2!(*this, vec!["a", "b", "", "😀"]);
+  assert_eq2!(
+    *this,
+    vec![
+      UnicodeString::from("a"),
+      UnicodeString::from("b"),
+      UnicodeString::from(""),
+      UnicodeString::from("😀")
+    ]
+  );
   assert_eq2!(this.get_caret(), position!(col: 2, row: 3));
 
   // Insert "d".
@@ -563,7 +580,15 @@ fn test_insertion() {
   //   └───▴──────┘
   //   C0123456789
   this.insert_char('d');
-  assert_eq2!(*this, vec!["a", "b", "", "😀d"]);
+  assert_eq2!(
+    *this,
+    vec![
+      UnicodeString::from("a"),
+      UnicodeString::from("b"),
+      UnicodeString::from(""),
+      UnicodeString::from("😀d")
+    ]
+  );
   assert_eq2!(this.get_caret(), position!(col: 3, row: 3));
 
   // Insert "🙏🏽" (unicode width = 4).
@@ -576,7 +601,15 @@ fn test_insertion() {
   //   └───────▴──┘
   //   C0123456789
   this.insert_str("🙏🏽");
-  assert_eq2!(*this, vec!["a", "b", "", "😀d🙏🏽"]);
+  assert_eq2!(
+    *this,
+    vec![
+      UnicodeString::from("a"),
+      UnicodeString::from("b"),
+      UnicodeString::from(""),
+      UnicodeString::from("😀d🙏🏽")
+    ]
+  );
   assert_eq2!(this.get_caret(), position!(col: 7, row: 3));
 }
 
@@ -592,14 +625,19 @@ pub mod assert {
 
   pub fn str_is_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
     match line_buffer_get_content::string_at_caret(editor_buffer) {
-      Some(UnicodeStringSegmentSliceResult { str_seg: s, .. }) => assert_eq2!(s, expected),
+      Some(UnicodeStringSegmentSliceResult {
+        unicode_string_seg: s,
+        ..
+      }) => assert_eq2!(s.string, expected),
       None => panic!("Expected string at caret, but got None."),
     }
   }
 
   pub fn line_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
     assert_eq2!(
-      line_buffer_get_content::line_at_caret_to_string(editor_buffer).unwrap(),
+      line_buffer_get_content::line_at_caret_to_string(editor_buffer)
+        .unwrap()
+        .string,
       expected
     );
   }

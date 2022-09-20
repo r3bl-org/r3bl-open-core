@@ -15,18 +15,26 @@
  *   limitations under the License.
  */
 
-// Attach sources.
-pub mod access;
-pub mod combine;
-pub mod convert;
-pub mod mutate;
-pub mod result_types;
-pub mod unicode_string;
+use std::ops::Add;
 
-// Re-export.
-pub use access::*;
-pub use combine::*;
-pub use convert::*;
-pub use mutate::*;
-pub use result_types::*;
-pub use unicode_string::*;
+use crate::*;
+
+impl Add<&str> for UnicodeString {
+  type Output = Self;
+
+  fn add(self, rhs: &str) -> Self::Output {
+    let mut new_string = self.string;
+    new_string.push_str(rhs);
+    new_string.into()
+  }
+}
+
+impl Add<&UnicodeString> for UnicodeString {
+  type Output = Self;
+
+  fn add(self, rhs: &UnicodeString) -> Self::Output {
+    let mut new_string = self.string;
+    new_string.push_str(&rhs.string);
+    new_string.into()
+  }
+}
