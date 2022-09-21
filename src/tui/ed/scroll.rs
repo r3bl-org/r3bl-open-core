@@ -18,10 +18,17 @@
 use crate::*;
 
 pub mod manage_scroll {
-  pub fn detect() {
+  use super::*;
 
-  }
-  pub fn mutate() {
-    
+  pub fn mutate() -> Nope { None }
+
+  pub fn detect(
+    scroll_offset: &Position, origin_pos: &Position, size: &Size,
+    editor_buffer: &EditorBuffer,
+  ) -> Option<ScrollOffset> {
+
+
+
+    None
   }
 }

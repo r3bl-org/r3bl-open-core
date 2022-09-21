@@ -21,11 +21,16 @@ use serde::*;
 
 use crate::*;
 
+/// Holds data in between render calls. This is not stored in the [EditorBuffer] struct, which lives
+/// in the state.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EditorEngine;
+pub struct EditorEngine {
+  /// The col and row offset for scrolling if active.
+  pub scroll_offset: ScrollOffset,
+}
 
 /// Private struct to help keep function signatures smaller.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 struct RenderArgs<'a> {
   editor_buffer: &'a EditorBuffer,
   style_adj_box_origin_pos: Position,
@@ -36,7 +41,7 @@ struct RenderArgs<'a> {
 
 const DEFAULT_CURSOR_CHAR: char = '▒';
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 enum CaretPaintStyle {
   /// Using cursor show / hide.
   #[allow(dead_code)]
@@ -76,56 +81,60 @@ impl EditorEngine {
       if editor_buffer.is_empty() {
         render_empty_state(&context)
       } else {
-        let q_content = render_content(&context);
+        let q_content = self.render_content(&context);
         let q_caret = render_caret(CaretPaintStyle::LocalPaintedEffect, &context);
         render_pipeline!(@join_and_drop q_content, q_caret)
       }
     })
   }
-}
 
-// This simply clips the content to the `style_adj_box_bounds_size`.
-fn render_content(context_ref: &RenderArgs<'_>) -> RenderPipeline {
-  let RenderArgs {
-    style_adj_box_origin_pos,
-    style_adj_box_bounds_size,
-    current_box,
-    editor_buffer,
-    ..
-  } = context_ref;
-  let mut render_pipeline = render_pipeline!(@new_empty);
+  // This simply clips the content to the `style_adj_box_bounds_size`.
+  fn render_content(&mut self, context_ref: &RenderArgs<'_>) -> RenderPipeline {
+    let RenderArgs {
+      editor_buffer,
+      style_adj_box_origin_pos: origin_pos,
+      style_adj_box_bounds_size: size,
+      current_box,
+      ..
+    } = context_ref;
+    let mut render_pipeline = render_pipeline!(@new_empty);
 
-  let Size {
-    col: max_content_display_cols,
-    row: mut max_display_row_count,
-  } = style_adj_box_bounds_size;
+    let Size {
+      col: max_content_display_cols,
+      row: mut max_display_row_count,
+    } = size;
 
-  // TK: manage scroll here -> manage_scroll::{detect(), mutate()}
-
-  // Paint each line in the buffer.
-  for (index, line) in editor_buffer.get_lines().iter().enumerate() {
-    // Clip the content to max rows.
-    if *max_display_row_count == 0 {
-      break;
+    // TK: manage scroll here -> manage_scroll::{detect(), mutate()}
+    if let Some(new_scroll_offset) =
+      manage_scroll::detect(&self.scroll_offset, origin_pos, size, editor_buffer)
+    {
+      self.scroll_offset = new_scroll_offset;
     }
-    // Clip the content to max cols.
-    let truncated_line = line.truncate_to_fit_display_cols(*max_content_display_cols);
-    render_pipeline! {
-      @push_into render_pipeline at ZOrder::Normal =>
-        RenderOp::MoveCursorPositionRelTo(
-        *style_adj_box_origin_pos,
-        position! { col: 0 , row: ch!(@to_usize index) }
-        ),
-        RenderOp::ApplyColors(current_box.get_computed_style()),
-        RenderOp::PrintTextWithAttributes(truncated_line.into(), current_box.get_computed_style()),
-        RenderOp::ResetColor
-    };
-    if *max_display_row_count >= 1 {
-      max_display_row_count -= 1;
+
+    // Paint each line in the buffer.
+    for (row_index, line) in editor_buffer.get_lines().iter().enumerate() {
+      // Clip the content to max rows.
+      if *max_display_row_count == 0 {
+        break;
+      }
+      // Clip the content to max cols.
+      let truncated_line = line.truncate_to_fit_display_cols(*max_content_display_cols);
+      render_pipeline! {
+        @push_into render_pipeline at ZOrder::Normal =>
+          RenderOp::MoveCursorPositionRelTo(
+            *origin_pos, position! { col: 0 , row: ch!(@to_usize row_index) }
+          ),
+          RenderOp::ApplyColors(current_box.get_computed_style()),
+          RenderOp::PrintTextWithAttributes(truncated_line.into(), current_box.get_computed_style()),
+          RenderOp::ResetColor
+      };
+      if *max_display_row_count >= 1 {
+        max_display_row_count -= 1;
+      }
     }
+
+    render_pipeline
   }
-
-  render_pipeline
 }
 
 /// Implement caret painting using two different strategies represented by [CaretPaintStyle].

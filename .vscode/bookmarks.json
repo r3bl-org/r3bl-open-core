@@ -1,21 +1,21 @@
 {
 	"files": [
 		{
-			"path": "../../.config/Code/User/keybindings.json",
+			"path": "src/tui/ed/editor_engine.rs",
 			"bookmarks": [
 				{
-					"line": 150,
-					"column": 0,
+					"line": 67,
+					"column": 4,
 					"label": ""
 				}
 			]
 		},
 		{
-			"path": "src/tui/ed/editor_engine.rs",
+			"path": "examples/demo/ex_editor/editor_component/editor.rs",
 			"bookmarks": [
 				{
-					"line": 87,
-					"column": 0,
+					"line": 58,
+					"column": 12,
 					"label": ""
 				}
 			]
