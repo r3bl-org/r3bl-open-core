@@ -58,12 +58,14 @@ mod app_impl {
     ) -> CommonResult<RenderPipeline> {
       throws_with_return!({
         let window_size = shared_tw_data.read().await.get_size();
+        let adjusted_window_size = size!(col: window_size.col, row: window_size.row - 1);
+
         // Render container component.
         let mut surface = surface_start_with_runnable! {
           runnable:       self,
           stylesheet:     style_helpers::create_stylesheet()?,
           pos:            position!(col:0, row:0),
-          size:           size!(col: window_size.col, row: window_size.row - 1), // Bottom row for status bar.
+          size:           adjusted_window_size, // Bottom row for status bar.
           state:          state,
           shared_store:   shared_store,
           shared_tw_data: shared_tw_data
