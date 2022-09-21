@@ -201,18 +201,6 @@ fn set_bg_color(color: &TWColor) {
 async fn print_text_with_attributes(
   text_arg: &String, maybe_style: &Option<Style>, shared_tw_data: &SharedTWData,
 ) {
-  enum TruncationPolicy {
-    ANSIText,
-    PlainText,
-  }
-
-  struct PaintArgs<'a> {
-    pub text: Cow<'a, str>,
-    pub log_msg: Cow<'a, str>,
-    pub maybe_style: &'a Option<Style>,
-    pub shared_tw_data: &'a SharedTWData,
-  }
-
   // Are ANSI codes present?
   let truncation_policy = {
     if ANSIText::try_strip_ansi(text_arg).is_some() {
@@ -249,6 +237,7 @@ async fn print_text_with_attributes(
     log_msg,
     maybe_style,
     shared_tw_data,
+    truncation_policy,
   };
 
   let mut needs_reset = false;
@@ -264,6 +253,30 @@ async fn print_text_with_attributes(
 
   // Print plain_text.
   paint_style_and_text(&mut paint_args, &mut needs_reset).await;
+
+  // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+  // │ Inner helpers │
+  // ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+  #[derive(Debug, Clone, Copy)]
+  enum TruncationPolicy {
+    ANSIText,
+    PlainText,
+  }
+
+  #[derive(Debug, Clone)]
+  struct PaintArgs<'a> {
+    pub text: Cow<'a, str>,
+    pub log_msg: Cow<'a, str>,
+    pub maybe_style: &'a Option<Style>,
+    pub shared_tw_data: &'a SharedTWData,
+    pub truncation_policy: TruncationPolicy,
+  }
+
+  #[derive(Debug, Clone, Copy)]
+  enum SegmentWidth {
+    Narrow,
+    Wide,
+  }
 
   async fn truncate_ansi_text<'a>(
     PaintArgs {
@@ -357,6 +370,7 @@ async fn print_text_with_attributes(
       text,
       log_msg,
       shared_tw_data,
+      truncation_policy,
       ..
     } = paint_args;
 
@@ -383,10 +397,18 @@ async fn print_text_with_attributes(
       }
     }
 
-    enum SegmentWidth {
-      Narrow,
-      Wide,
-    }
+    // Update cursor position after paint.
+    let display_width = match truncation_policy {
+      TruncationPolicy::ANSIText => {
+        let ansi_text = text.ansi_text();
+        let ansi_text_segments = ansi_text.segments(None);
+        let unicode_width = ansi_text_segments.unicode_width;
+        ch!(unicode_width)
+      }
+      TruncationPolicy::PlainText => unicode_string.display_width,
+    };
+    cursor_position_copy.col += display_width;
+    sanitize_and_save_abs_position(cursor_position_copy, shared_tw_data).await;
 
     // Move cursor "manually" to cover "extra" width.
     fn jump_cursor(pos: &Position, seg: &GraphemeClusterSegment) {
@@ -408,10 +430,6 @@ async fn print_text_with_attributes(
         }
       );
     }
-
-    // Update cursor position after paint.
-    cursor_position_copy.col += unicode_string.display_width;
-    sanitize_and_save_abs_position(cursor_position_copy, shared_tw_data).await;
   }
 }
 
