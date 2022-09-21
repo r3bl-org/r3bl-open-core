@@ -1,0 +1,24 @@
+{
+	"files": [
+		{
+			"path": "../../.config/Code/User/keybindings.json",
+			"bookmarks": [
+				{
+					"line": 150,
+					"column": 0,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/tui/ed/editor_engine.rs",
+			"bookmarks": [
+				{
+					"line": 87,
+					"column": 0,
+					"label": ""
+				}
+			]
+		}
+	]
+}

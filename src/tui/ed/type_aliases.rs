@@ -17,11 +17,5 @@
 
 use crate::*;
 
-pub mod manage_scroll {
-  pub fn detect() {
-
-  }
-  pub fn mutate() {
-    
-  }
-}
+pub type ScrollOffset = Position;
+pub type Nope = Option<()>;

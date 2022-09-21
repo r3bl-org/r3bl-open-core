@@ -39,8 +39,6 @@ pub struct EditorBuffer {
   pub lolcat: Lolcat,
 }
 
-pub type ScrollOffset = Position;
-
 pub mod access_and_mutate {
   use super::*;
 
