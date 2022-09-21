@@ -120,10 +120,10 @@ impl EditorBuffer {
   /// width) and then move the "display" caret position back that many columns.
   pub fn move_caret(&mut self, direction: CaretDirection) {
     match direction {
-      CaretDirection::Left => line_buffer_caret_move::left(self),
-      CaretDirection::Right => line_buffer_caret_move::right(self),
-      CaretDirection::Up => line_buffer_caret_move::up(self),
-      CaretDirection::Down => line_buffer_caret_move::down(self),
+      CaretDirection::Left => line_buffer_caret_mut::left(self),
+      CaretDirection::Right => line_buffer_caret_mut::right(self),
+      CaretDirection::Up => line_buffer_caret_mut::up(self),
+      CaretDirection::Down => line_buffer_caret_mut::down(self),
     };
   }
 
