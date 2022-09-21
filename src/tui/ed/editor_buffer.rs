@@ -34,28 +34,26 @@ pub struct EditorBuffer {
   /// position.
   caret: Position,
   /// The col and row offset for scrolling if active.
-  // TK: remove pub
-  pub scroll_offset: Position,
+  scroll_offset: Position,
   /// Lolcat struct for generating rainbow colors.
   pub lolcat: Lolcat,
 }
 
-// TK: make scroll_offset private: add methods for get, modify, delete; update line_buffer.rs
+pub type ScrollOffset = Position;
 
 pub mod access_and_mutate {
   use super::*;
 
   impl EditorBuffer {
-    pub fn get_mut(&mut self) -> (&mut Vec<UnicodeString>, &mut Position) {
-      (&mut self.lines, &mut self.caret)
+    pub fn get_mut(&mut self) -> (&mut Vec<UnicodeString>, &mut Position, &mut ScrollOffset) {
+      (&mut self.lines, &mut self.caret, &mut self.scroll_offset)
     }
 
     pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.lines }
 
     pub fn get_caret(&self) -> Position { self.caret }
 
-    // TK: add mutate_scroll_offset()
-    // TK: add get_scroll_offset()
+    pub fn get_scroll_offset(&self) -> Position { self.scroll_offset }
   }
 }
 
