@@ -23,6 +23,9 @@ use tokio::sync::RwLock;
 
 use crate::*;
 
+/// Controls whether input events are process by spawning a new task or by blocking the current task.
+const SPAWN_PROCESS_INPUT: bool = true;
+
 /// These are global state values for the entire application:
 /// 1. The size holds the width and height of the terminal window.
 /// 2. The cursor_position (for purposes of drawing via [RenderOp], [RenderOps], and
@@ -70,82 +73,137 @@ impl TerminalWindow {
     S: Display + Default + Clone + PartialEq + Debug + Sync + Send + 'static,
     A: Display + Default + Clone + Sync + Send + 'static,
   {
-    {
-      // Initialize the terminal window data struct.
-      let _tw_data = TWData::try_to_create_instance()?;
-      let shared_tw_data: SharedTWData = Arc::new(RwLock::new(_tw_data));
+    // Initialize the terminal window data struct.
+    let _tw_data = TWData::try_to_create_instance()?;
+    let shared_tw_data: SharedTWData = Arc::new(RwLock::new(_tw_data));
 
-      // Start raw mode.
-      let my_raw_mode = RawMode::start(&shared_tw_data).await;
+    // Start raw mode.
+    let my_raw_mode = RawMode::start(&shared_tw_data).await;
 
-      // Move the store into an Arc & RwLock.
-      let shared_store: SharedStore<S, A> = Arc::new(RwLock::new(store));
+    // Move the store into an Arc & RwLock.
+    let shared_store: SharedStore<S, A> = Arc::new(RwLock::new(store));
 
-      // Create a subscriber (AppManager) & attach it to the store.
-      let _subscriber = AppManager::new_box(&shared_app, &shared_store, &shared_tw_data);
-      shared_store.write().await.add_subscriber(_subscriber).await;
+    // Create a subscriber (AppManager) & attach it to the store.
+    let _subscriber = AppManager::new_box(&shared_app, &shared_store, &shared_tw_data);
+    shared_store.write().await.add_subscriber(_subscriber).await;
 
-      // Create a new event stream (async).
-      let mut async_event_stream = AsyncEventStream::default();
+    // Create a new event stream (async).
+    let mut async_event_stream = AsyncEventStream::default();
 
-      // Perform first render.
-      AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
+    // Perform first render.
+    AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
 
-      shared_tw_data
-        .read()
-        .await
-        .dump_state_to_log("main_event_loop -> Startup 🚀");
+    shared_tw_data
+      .read()
+      .await
+      .dump_state_to_log("main_event_loop -> Startup 🚀");
 
-      // Main event loop.
-      loop {
-        // Try and get the next event if available (asynchronously).
-        let maybe_input_event = async_event_stream.try_to_get_input_event().await;
+    // Main event loop.
+    loop {
+      // Try and get the next event if available (asynchronously).
+      let maybe_input_event = async_event_stream.try_to_get_input_event().await;
 
-        // Process the input_event.
-        if let Some(input_event) = maybe_input_event {
-          call_if_true!(
-            DEBUG_TUI_MOD,
-            log_no_err!(INFO, "main_event_loop -> Tick: ⏰ {}", input_event)
-          );
+      // Process the input_event.
+      let input_event = match maybe_input_event {
+        Some(it) => it,
+        _ => continue,
+      };
+      call_if_true!(
+        DEBUG_TUI_MOD,
+        log_no_err!(INFO, "main_event_loop -> Tick: ⏰ {}", input_event)
+      );
 
-          // Pass event to the app first. It has greater specificity than the default handler.
-          let propagation_result_from_app = AppManager::route_input_to_app(
-            &shared_tw_data,
-            &shared_store,
-            &shared_app,
-            &input_event,
-          )
-          .await?;
+      let propagation_result_from_app = TerminalWindow::process_input_event(
+        &shared_tw_data,
+        &shared_store,
+        &shared_app,
+        &input_event,
+      )
+      .await?;
 
-          // If event not consumed by app, propagate to the default input handler.
-          match propagation_result_from_app {
-            EventPropagation::ConsumedRerender => {
+      // If event not consumed by app, propagate to the default input handler.
+      match propagation_result_from_app {
+        EventPropagation::ConsumedRerender => {
+          AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
+        }
+        EventPropagation::Propagate => {
+          let continuation_result_from_default_handler =
+            DefaultInputEventHandler::no_consume(input_event, &exit_keys).await;
+          match continuation_result_from_default_handler {
+            Continuation::Exit => {
+              break;
+            }
+            Continuation::ResizeAndContinue(new_size) => {
+              shared_tw_data.write().await.set_size(new_size);
               AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
             }
-            EventPropagation::Propagate => {
-              let continuation_result_from_default_handler =
-                DefaultInputEventHandler::no_consume(input_event, &exit_keys).await;
-              match continuation_result_from_default_handler {
-                Continuation::Exit => {
-                  break;
-                }
-                Continuation::ResizeAndContinue(new_size) => {
-                  shared_tw_data.write().await.set_size(new_size);
-                  AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
-                }
-                _ => {}
-              };
-            }
-            EventPropagation::Consumed => {}
-          }
+            _ => {}
+          };
         }
+        EventPropagation::Consumed => {}
       }
-
-      // End raw mode.
-      my_raw_mode.end(&shared_tw_data).await;
-
-      Ok(())
     }
+
+    // End raw mode.
+    my_raw_mode.end(&shared_tw_data).await;
+
+    Ok(())
+  }
+
+  async fn process_input_event<S, A>(
+    shared_tw_data: &SharedTWData, shared_store: &SharedStore<S, A>, shared_app: &SharedApp<S, A>,
+    input_event: &InputEvent,
+  ) -> CommonResult<EventPropagation>
+  where
+    S: Display + Default + Clone + PartialEq + Debug + Sync + Send + 'static,
+    A: Display + Default + Clone + Sync + Send + 'static,
+  {
+    let propagation_result_from_app = match SPAWN_PROCESS_INPUT {
+      true => {
+        // Tokio spawn.
+        let propagation_result_from_app = {
+          let shared_tw_data_clone = shared_tw_data.clone();
+          let shared_store_clone = shared_store.clone();
+          let shared_app_clone = shared_app.clone();
+          let input_event_clone = input_event.clone();
+          let join_handle = tokio::spawn(async move {
+            AppManager::route_input_to_app(
+              &shared_tw_data_clone,
+              &shared_store_clone,
+              &shared_app_clone,
+              &input_event_clone,
+            )
+            .await
+          });
+          join_handle.await??
+        };
+        call_if_true!(
+          DEBUG_TUI_MOD,
+          log_no_err!(
+            INFO,
+            "main_event_loop -> 🚥 SPAWN propagation_result_from_app: {:?}",
+            propagation_result_from_app
+          )
+        );
+        propagation_result_from_app
+      }
+      false => {
+        // Blocking call.
+        let propagation_result_from_app =
+          AppManager::route_input_to_app(shared_tw_data, shared_store, shared_app, input_event)
+            .await?;
+        call_if_true!(
+          DEBUG_TUI_MOD,
+          log_no_err!(
+            INFO,
+            "main_event_loop -> 🚥 NO_SPAWN propagation_result_from_app: {:?}",
+            propagation_result_from_app
+          )
+        );
+        propagation_result_from_app
+      }
+    };
+    Ok(propagation_result_from_app)
   }
 }
 
