@@ -152,6 +152,7 @@ pub mod editor_buffer_command {
   }
 
   impl EditorBufferCommand {
+    // TK: 💉 need to inject the bounds_size & origin of the box in the command
     pub fn try_convert_input_event(input_event: &InputEvent) -> Option<EditorBufferCommand> {
       let maybe_editor_buffer_command: Result<EditorBufferCommand, _> = input_event.try_into();
       match maybe_editor_buffer_command {

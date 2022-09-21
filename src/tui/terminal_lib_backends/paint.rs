@@ -129,6 +129,9 @@ pub async fn sanitize_and_save_abs_position(
           sanitized_pos
         );
       }
+    });
+
+    call_if_true!(DEBUG_SHOW_PIPELINE_EXPANDED, {
       log_no_err!(
         INFO,
         "pipeline : 📍 Save the cursor position {:?} \

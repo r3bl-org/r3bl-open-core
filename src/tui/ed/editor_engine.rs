@@ -27,6 +27,7 @@ use crate::*;
 pub struct EditorEngine {
   /// The col and row offset for scrolling if active.
   pub scroll_offset: ScrollOffset,
+  // TK: 💉 save bounds size & origin pos ... saved here by render ... passed to command in apply
 }
 
 /// Private struct to help keep function signatures smaller.
@@ -55,6 +56,7 @@ impl EditorEngine {
   pub async fn apply(
     &mut self, editor_buffer: &EditorBuffer, input_event: &InputEvent,
   ) -> CommonResult<Option<EditorBuffer>> {
+    // TK: 💉 need to inject the bounds_size & origin of the box in the command
     if let Some(command) = EditorBufferCommand::try_convert_input_event(input_event) {
       let mut new_editor_buffer = editor_buffer.clone();
       new_editor_buffer.apply_command(command);
@@ -101,22 +103,30 @@ impl EditorEngine {
 
     let Size {
       col: max_content_display_cols,
-      row: mut max_display_row_count,
+      row: max_display_row_count,
     } = size;
 
     // TK: manage scroll here -> manage_scroll::{detect(), mutate()}
-    if let Some(new_scroll_offset) =
-      manage_scroll::detect(&self.scroll_offset, origin_pos, size, editor_buffer)
-    {
+    if let Some(new_scroll_offset) = manage_scroll::detect(origin_pos, size, editor_buffer) {
       self.scroll_offset = new_scroll_offset;
     }
 
-    // Paint each line in the buffer.
-    for (row_index, line) in editor_buffer.get_lines().iter().enumerate() {
+    // TK: handle vert scroll
+    // TK: handle horiz scroll
+
+    // Paint each line in the buffer (skipping the scroll_offset.row).
+    // https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip
+    for (row_index, line) in editor_buffer
+      .get_lines()
+      .iter()
+      .skip(ch!(@to_usize self.scroll_offset.row))
+      .enumerate()
+    {
       // Clip the content to max rows.
-      if *max_display_row_count == 0 {
+      if ch!(row_index) > *max_display_row_count {
         break;
       }
+
       // Clip the content to max cols.
       let truncated_line = line.truncate_to_fit_display_cols(*max_content_display_cols);
       render_pipeline! {
@@ -128,9 +138,14 @@ impl EditorEngine {
           RenderOp::PrintTextWithAttributes(truncated_line.into(), current_box.get_computed_style()),
           RenderOp::ResetColor
       };
-      if *max_display_row_count >= 1 {
-        max_display_row_count -= 1;
-      }
+
+      // TK: remove debug
+      log_no_err!(
+        DEBUG,
+        "🟡🟡🟡 row_index: {:?}, max_display_row_count: {:?}",
+        row_index,
+        **max_display_row_count
+      );
     }
 
     render_pipeline
@@ -149,6 +164,8 @@ fn render_caret(style: CaretPaintStyle, context_ref: &RenderArgs<'_>) -> RenderP
   let mut render_pipeline: RenderPipeline = RenderPipeline::default();
 
   if has_focus.does_current_box_have_focus(current_box) {
+    // TK: Fix: caret can be painted PAST the bounds of the box!
+
     match style {
       CaretPaintStyle::GlobalCursor => {
         render_pipeline! {
