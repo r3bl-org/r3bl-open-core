@@ -139,9 +139,6 @@ impl TerminalWindow {
             EventPropagation::Consumed => {}
           }
         }
-
-        // Flush.
-        RenderOp::default().flush();
       }
 
       // End raw mode.
