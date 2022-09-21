@@ -36,7 +36,6 @@ macro_rules! empty_check_early_return {
   };
 }
 
-
 // ╭┄┄┄┄┄┄┄┄┄┄┄╮
 // │ Caret get │
 // ╯           ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
@@ -534,7 +533,7 @@ pub(super) mod mutate {
   pub(super) fn change_editor_buffer(
     this: &mut EditorBuffer, mutator: impl FnOnce(&mut Vec<UnicodeString>, &mut Position),
   ) -> Nope {
-    let (lines, caret, _) = this.get_mut();
+    let (lines, caret) = this.get_mut();
     mutator(lines, caret);
     validate_caret_position(lines, caret);
     None

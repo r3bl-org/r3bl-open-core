@@ -33,8 +33,6 @@ pub struct EditorBuffer {
   /// [UnicodeString]. This works w/ [crate::RenderOp] as well, so you can directly move this
   /// position.
   caret: Position,
-  /// The col and row offset for scrolling if active.
-  scroll_offset: Position,
   /// Lolcat struct for generating rainbow colors.
   pub lolcat: Lolcat,
 }
@@ -43,15 +41,13 @@ pub mod access_and_mutate {
   use super::*;
 
   impl EditorBuffer {
-    pub fn get_mut(&mut self) -> (&mut Vec<UnicodeString>, &mut Position, &mut ScrollOffset) {
-      (&mut self.lines, &mut self.caret, &mut self.scroll_offset)
+    pub fn get_mut(&mut self) -> (&mut Vec<UnicodeString>, &mut Position) {
+      (&mut self.lines, &mut self.caret)
     }
 
     pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.lines }
 
     pub fn get_caret(&self) -> Position { self.caret }
-
-    pub fn get_scroll_offset(&self) -> Position { self.scroll_offset }
   }
 }
 
@@ -207,11 +203,10 @@ mod debug_format_helpers {
   impl std::fmt::Debug for EditorBuffer {
     fn fmt(&self, f: &mut __private::Formatter<'_>) -> std::fmt::Result {
       write! { f,
-        "\nEditorBuffer [ \n ├ lines: {}, size: {}, \n ├ caret: {:?}, scroll_offset: {:?}, \n └ lolcat: [{}, {}, {}, {}] \n]",
+        "\nEditorBuffer [ \n ├ lines: {}, size: {}, \n ├ caret: {:?}, \n └ lolcat: [{}, {}, {}, {}] \n]",
         self.lines.len(),
         self.lines.get_heap_size(),
         self.caret,
-        self.scroll_offset,
         pretty_print_f64(self.lolcat.color_wheel_control.seed),
         pretty_print_f64(self.lolcat.color_wheel_control.spread),
         pretty_print_f64(self.lolcat.color_wheel_control.frequency),
