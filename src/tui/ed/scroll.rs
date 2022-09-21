@@ -15,14 +15,8 @@
  *   limitations under the License.
  */
 
-// Attach.
-pub mod editor_buffer;
-pub mod editor_engine;
-pub mod line_buffer;
-pub mod scroll;
+use crate::*;
 
-// Re-export.
-pub use editor_buffer::*;
-pub use editor_engine::*;
-pub use line_buffer::*;
-pub use scroll::*;
+pub mod manage_scroll {
+
+}
