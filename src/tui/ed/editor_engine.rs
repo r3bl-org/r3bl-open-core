@@ -25,7 +25,8 @@ use crate::*;
 pub struct EditorEngine;
 
 /// Private struct to help keep function signatures smaller.
-struct Context<'a> {
+#[derive(Clone, Debug)]
+struct RenderArgs<'a> {
   editor_buffer: &'a EditorBuffer,
   style_adj_box_origin_pos: Position,
   style_adj_box_bounds_size: Size,
@@ -35,9 +36,10 @@ struct Context<'a> {
 
 const DEFAULT_CURSOR_CHAR: char = '▒';
 
-#[allow(dead_code)]
+#[derive(Clone, Debug)]
 enum CaretPaintStyle {
   /// Using cursor show / hide.
+  #[allow(dead_code)]
   GlobalCursor,
   /// Painting the editor_buffer.get_caret() position w/ reverse style.
   LocalPaintedEffect,
@@ -63,7 +65,7 @@ impl EditorEngine {
   ) -> CommonResult<RenderPipeline> {
     throws_with_return!({
       // Create this struct to pass around fewer variables.
-      let context = Context {
+      let context = RenderArgs {
         editor_buffer,
         style_adj_box_origin_pos: current_box.style_adjusted_origin_pos, // Adjusted for padding (if set).
         style_adj_box_bounds_size: current_box.style_adjusted_bounds_size, // Adjusted for padding (if set).
@@ -83,8 +85,8 @@ impl EditorEngine {
 }
 
 // This simply clips the content to the `style_adj_box_bounds_size`.
-fn render_content(context_ref: &Context<'_>) -> RenderPipeline {
-  let Context {
+fn render_content(context_ref: &RenderArgs<'_>) -> RenderPipeline {
+  let RenderArgs {
     style_adj_box_origin_pos,
     style_adj_box_bounds_size,
     current_box,
@@ -125,8 +127,8 @@ fn render_content(context_ref: &Context<'_>) -> RenderPipeline {
 }
 
 /// Implement caret painting using two different strategies represented by [CaretPaintStyle].
-fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> RenderPipeline {
-  let Context {
+fn render_caret(style: CaretPaintStyle, context_ref: &RenderArgs<'_>) -> RenderPipeline {
+  let RenderArgs {
     style_adj_box_origin_pos,
     has_focus,
     current_box,
@@ -168,8 +170,8 @@ fn render_caret(style: CaretPaintStyle, context_ref: &Context<'_>) -> RenderPipe
   render_pipeline
 }
 
-fn render_empty_state(context_ref: &Context<'_>) -> RenderPipeline {
-  let Context {
+fn render_empty_state(context_ref: &RenderArgs<'_>) -> RenderPipeline {
+  let RenderArgs {
     style_adj_box_origin_pos,
     style_adj_box_bounds_size,
     has_focus,
