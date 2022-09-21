@@ -36,7 +36,6 @@ macro_rules! empty_check_early_return {
   };
 }
 
-type Nope = Option<()>;
 
 // ╭┄┄┄┄┄┄┄┄┄┄┄╮
 // │ Caret get │

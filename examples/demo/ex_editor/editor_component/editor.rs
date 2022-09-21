@@ -52,7 +52,7 @@ impl Component<State, Action> for EditorComponent {
 
   async fn render(
     &mut self, has_focus: &HasFocus, current_box: &FlexBox, state: &State,
-    _shared_store: &SharedStore<State, Action>,
+    _: &SharedStore<State, Action>,
   ) -> CommonResult<RenderPipeline> {
     self
       .editor_engine

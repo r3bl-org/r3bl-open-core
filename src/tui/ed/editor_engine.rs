@@ -100,6 +100,8 @@ fn render_content(context_ref: &RenderArgs<'_>) -> RenderPipeline {
     row: mut max_display_row_count,
   } = style_adj_box_bounds_size;
 
+  // TK: manage scroll here -> manage_scroll::{detect(), mutate()}
+
   // Paint each line in the buffer.
   for (index, line) in editor_buffer.get_lines().iter().enumerate() {
     // Clip the content to max rows.
