@@ -31,7 +31,6 @@ const EDITOR_ID: &str = "editor";
 #[derive(Default)]
 pub struct AppWithLayout {
   pub component_registry: ComponentRegistry<State, Action>,
-  pub has_focus: HasFocus,
 }
 
 mod app_impl {
@@ -111,8 +110,8 @@ mod construct_components {
       }
 
       // Init has focus.
-      if self.has_focus.get_id().is_none() {
-        self.has_focus.set_id(EDITOR_ID);
+      if self.component_registry.has_focus.get_id().is_none() {
+        self.component_registry.has_focus.set_id(EDITOR_ID);
       }
     }
 
@@ -130,7 +129,6 @@ mod construct_components {
           styles:                 [EDITOR_ID],
           render: {
             from:           self.component_registry,
-            has_focus:      self.has_focus,
             state:          state,
             shared_store:   shared_store,
             shared_tw_data: shared_tw_data
@@ -148,7 +146,6 @@ mod debug_helpers {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       f.debug_struct("AppWithLayout")
         .field("component_registry", &self.component_registry)
-        .field("state_manage_focus_data", &self.has_focus)
         .finish()
     }
   }

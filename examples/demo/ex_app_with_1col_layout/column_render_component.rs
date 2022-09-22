@@ -63,9 +63,8 @@ impl Component<State, Action> for ColumnRenderComponent {
   /// - Up,   `+` : fire `AddPop(1)`
   /// - Down, `-` : fire `SubPop(1)`
   async fn handle_event(
-    &mut self, component_registry: &mut ComponentRegistry<State, Action>, has_focus: &mut HasFocus,
-    input_event: &InputEvent, _state: &State, shared_store: &SharedStore<State, Action>,
-    shared_tw_data: &SharedTWData,
+    &mut self, component_registry: &mut ComponentRegistry<State, Action>, input_event: &InputEvent,
+    _state: &State, shared_store: &SharedStore<State, Action>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       let mut event_consumed = false;
@@ -107,9 +106,8 @@ impl Component<State, Action> for ColumnRenderComponent {
   }
 
   async fn render(
-    &mut self, component_registry: &mut ComponentRegistry<State, Action>, has_focus: &mut HasFocus,
-    current_box: &FlexBox, _: &State, _: &SharedStore<State, Action>,
-    shared_tw_data: &SharedTWData,
+    &mut self, component_registry: &mut ComponentRegistry<State, Action>, current_box: &FlexBox,
+    _: &State, _: &SharedStore<State, Action>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<RenderPipeline> {
     throws_with_return!({
       // Fixed strings.
@@ -156,7 +154,10 @@ impl Component<State, Action> for ColumnRenderComponent {
       };
 
       // Paint is_focused.
-      if has_focus.does_current_box_have_focus(current_box) {
+      if component_registry
+        .has_focus
+        .does_current_box_have_focus(current_box)
+      {
         render_pipeline! {
           @push_into render_pipeline at ZOrder::Normal =>
             RenderOp::MoveCursorPositionRelTo(
