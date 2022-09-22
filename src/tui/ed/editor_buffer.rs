@@ -35,6 +35,10 @@ pub struct EditorBuffer {
   caret: Position,
   /// Lolcat struct for generating rainbow colors.
   pub lolcat: Lolcat,
+  /// Layout data, set by [apply_editor_event](EditorBuffer::apply_editor_event)
+  pub bounds_size: Size,
+  /// Layout data, set by [apply_editor_event](EditorBuffer::apply_editor_event)
+  pub origin_pos: Position,
 }
 
 pub mod access_and_mutate {
@@ -59,11 +63,28 @@ pub mod access_and_mutate {
 /// use r3bl_rs_utils::*;
 ///
 /// let mut editor_buffer = EditorBuffer::default();
-/// editor_buffer.apply_command(EditorBufferCommand::InsertChar('a'));
+/// editor_buffer.apply_editor_event(
+///   EditorEvent::new(
+///     EditorBufferCommand::InsertChar('a'),
+///     Position::default(),
+///     Size::default(),
+///   )
+/// );
 /// ```
 impl EditorBuffer {
-  pub fn apply_command(&mut self, command: EditorBufferCommand) {
-    match command {
+  pub fn apply_editor_event(&mut self, editor_event: EditorEvent) {
+    let EditorEvent {
+      editor_buffer_command,
+      bounds_size,
+      origin_pos,
+    } = editor_event;
+
+    // TK: 💉✅ save the bounds_size & origin of the box in EditorBuffer on apply
+    // Save the extra layout and position data for later.
+    self.bounds_size = bounds_size;
+    self.origin_pos = origin_pos;
+
+    match editor_buffer_command {
       EditorBufferCommand::InsertChar(character) => self.insert_char(character),
       EditorBufferCommand::InsertNewLine => self.insert_new_line(),
       EditorBufferCommand::Delete => self.delete(),
@@ -78,14 +99,20 @@ impl EditorBuffer {
   /// use r3bl_rs_utils::*;
   ///
   /// let mut editor_buffer = EditorBuffer::default();
-  /// editor_buffer.apply_commands(vec![
-  ///  EditorBufferCommand::InsertChar('a'),
-  ///  EditorBufferCommand::MoveCaret(CaretDirection::Left),
+  /// editor_buffer.apply_editor_events(vec![
+  ///  EditorEvent::new(EditorBufferCommand::InsertChar('a'),
+  ///     Position::default(),
+  ///     Size::default(),
+  ///   ),
+  ///  EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Left),
+  ///    Position::default(),
+  ///    Size::default(),
+  ///  ),
   /// ]);
   /// ```
-  pub fn apply_commands(&mut self, commands: Vec<EditorBufferCommand>) {
-    for command in commands {
-      self.apply_command(command);
+  pub fn apply_editor_events(&mut self, editor_event_vec: Vec<EditorEvent>) {
+    for editor_event in editor_event_vec {
+      self.apply_editor_event(editor_event);
     }
   }
 }
@@ -124,90 +151,20 @@ impl EditorBuffer {
   pub fn backspace(&mut self) { line_buffer_content_mut::backspace_at_caret(self); }
 }
 
-pub mod editor_buffer_command {
-  use super::*;
-
-  // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-  // │ EditorBufferCommand │
-  // ╯                     ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-  /// Commands that can be executed on an [EditorBuffer]. By providing a conversion from [InputEvent]
-  /// to [EditorBufferCommand] it becomes easier to write event handlers that consume [InputEvent] and
-  /// then execute [EditorBufferCommand] on an [EditorBuffer].
-  #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, GetSize)]
-  pub enum EditorBufferCommand {
-    InsertChar(char),
-    InsertString(String),
-    InsertNewLine,
-    Delete,
-    Backspace,
-    MoveCaret(CaretDirection),
-  }
-
-  #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, GetSize)]
-  pub enum CaretDirection {
-    Up,
-    Down,
-    Left,
-    Right,
-  }
-
-  impl EditorBufferCommand {
-    // TK: 💉 need to inject the bounds_size & origin of the box in the command
-    pub fn try_convert_input_event(input_event: &InputEvent) -> Option<EditorBufferCommand> {
-      let maybe_editor_buffer_command: Result<EditorBufferCommand, _> = input_event.try_into();
-      match maybe_editor_buffer_command {
-        Ok(editor_buffer_command) => Some(editor_buffer_command),
-        Err(_) => None,
-      }
-    }
-  }
-
-  impl TryFrom<&InputEvent> for EditorBufferCommand {
-    type Error = String;
-
-    fn try_from(input_event: &InputEvent) -> Result<Self, Self::Error> {
-      match input_event {
-        InputEvent::Keyboard(Keypress::Plain {
-          key: Key::Character(character),
-        }) => Ok(Self::InsertChar(*character)),
-        InputEvent::Keyboard(Keypress::Plain {
-          key: Key::SpecialKey(SpecialKey::Enter),
-        }) => Ok(Self::InsertNewLine),
-        InputEvent::Keyboard(Keypress::Plain {
-          key: Key::SpecialKey(SpecialKey::Delete),
-        }) => Ok(Self::Delete),
-        InputEvent::Keyboard(Keypress::Plain {
-          key: Key::SpecialKey(SpecialKey::Backspace),
-        }) => Ok(Self::Backspace),
-        InputEvent::Keyboard(Keypress::Plain {
-          key: Key::SpecialKey(SpecialKey::Up),
-        }) => Ok(Self::MoveCaret(CaretDirection::Up)),
-        InputEvent::Keyboard(Keypress::Plain {
-          key: Key::SpecialKey(SpecialKey::Down),
-        }) => Ok(Self::MoveCaret(CaretDirection::Down)),
-        InputEvent::Keyboard(Keypress::Plain {
-          key: Key::SpecialKey(SpecialKey::Left),
-        }) => Ok(Self::MoveCaret(CaretDirection::Left)),
-        InputEvent::Keyboard(Keypress::Plain {
-          key: Key::SpecialKey(SpecialKey::Right),
-        }) => Ok(Self::MoveCaret(CaretDirection::Right)),
-        _ => Err(format!("Invalid input event: {:?}", input_event)),
-      }
-    }
-  }
-}
-pub use editor_buffer_command::*;
-
 mod debug_format_helpers {
   use super::*;
 
   impl std::fmt::Debug for EditorBuffer {
     fn fmt(&self, f: &mut __private::Formatter<'_>) -> std::fmt::Result {
       write! { f,
-        "\nEditorBuffer [ \n ├ lines: {}, size: {}, \n ├ caret: {:?}, \n └ lolcat: [{}, {}, {}, {}] \n]",
-        self.lines.len(),
-        self.lines.get_heap_size(),
+        "\nEditorBuffer [ \n \
+        ├ lines: {}, size: {}, \n \
+        ├ caret: {:?}, \n \
+        ├ origin_pos: {:?}, bounds_size: {:?}\n \
+        └ lolcat: [{}, {}, {}, {}] \n]",
+        self.lines.len(), self.lines.get_heap_size(),
         self.caret,
+        self.origin_pos, self.bounds_size,
         pretty_print_f64(self.lolcat.color_wheel_control.seed),
         pretty_print_f64(self.lolcat.color_wheel_control.spread),
         pretty_print_f64(self.lolcat.color_wheel_control.frequency),

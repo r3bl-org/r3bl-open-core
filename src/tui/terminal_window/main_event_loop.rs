@@ -246,23 +246,23 @@ where
   A: Display + Default + Clone + Sync + Send,
 {
   fn new_box(
-    shared_app: &SharedApp<S, A>, shared_store: &SharedStore<S, A>, shared_window: &SharedTWData,
+    shared_app: &SharedApp<S, A>, shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
   ) -> Box<Self> {
     Box::new(AppManager {
       shared_app: shared_app.clone(),
       shared_store: shared_store.clone(),
-      shared_tw_data: shared_window.clone(),
+      shared_tw_data: shared_tw_data.clone(),
     })
   }
 
   /// Pass the event to the `shared_app` for further processing.
   pub async fn route_input_to_app(
-    shared_window: &SharedTWData, shared_store: &SharedStore<S, A>, shared_app: &SharedApp<S, A>,
+    shared_tw_data: &SharedTWData, shared_store: &SharedStore<S, A>, shared_app: &SharedApp<S, A>,
     input_event: &InputEvent,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       let latest_state = shared_store.read().await.get_state();
-      let window_size = shared_window.read().await.get_size();
+      let window_size = shared_tw_data.read().await.get_size();
       shared_app
         .write()
         .await
