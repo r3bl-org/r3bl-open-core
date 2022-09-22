@@ -32,7 +32,7 @@ macro_rules! render {
         .write()
         .await
         .render(
-          &$arg_has_focus,
+          &mut $arg_has_focus,
           current_box,
           $arg_state,
           $arg_shared_store,

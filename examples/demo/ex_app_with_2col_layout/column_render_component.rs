@@ -106,7 +106,7 @@ impl Component<State, Action> for ColumnRenderComponent {
   }
 
   async fn render(
-    &mut self, has_focus: &HasFocus, current_box: &FlexBox, _: &State,
+    &mut self, has_focus: &mut HasFocus, current_box: &FlexBox, _: &State,
     _: &SharedStore<State, Action>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<RenderPipeline> {
     throws_with_return!({

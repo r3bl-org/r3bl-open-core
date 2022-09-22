@@ -62,7 +62,7 @@ impl Component<State, Action> for EditorComponent {
   }
 
   async fn render(
-    &mut self, has_focus: &HasFocus, current_box: &FlexBox, state: &State,
+    &mut self, has_focus: &mut HasFocus, current_box: &FlexBox, state: &State,
     _: &SharedStore<State, Action>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<RenderPipeline> {
     self

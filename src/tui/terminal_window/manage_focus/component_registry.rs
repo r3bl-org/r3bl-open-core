@@ -60,7 +60,7 @@ where
   pub fn remove(&mut self, id: &str) -> Option<SharedComponent<S, A>> { self.components.remove(id) }
 
   pub async fn route_event_to_focused_component(
-    &mut self, has_focus: &HasFocus, input_event: &InputEvent, state: &S,
+    &mut self, has_focus: &mut HasFocus, input_event: &InputEvent, state: &S,
     shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
@@ -95,7 +95,7 @@ macro_rules! route_event_to_focused_component {
   ) => {
     $arg_component_registry
       .route_event_to_focused_component(
-        &$arg_has_focus,
+        &mut $arg_has_focus,
         $arg_input_event,
         $arg_state,
         $arg_shared_store,
