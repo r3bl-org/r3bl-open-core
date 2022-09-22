@@ -56,8 +56,8 @@ where
   /// If this component has focus [HasFocus] then this method will be called to handle input event
   /// that is meant for it.
   async fn handle_event(
-    &mut self, input_event: &InputEvent, state: &S, shared_store: &SharedStore<S, A>,
-    shared_tw_data: &SharedTWData,
+    &mut self, has_focus: &mut HasFocus, input_event: &InputEvent, state: &S,
+    shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation>;
 }
 

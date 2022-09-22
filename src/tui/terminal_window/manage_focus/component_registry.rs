@@ -71,7 +71,8 @@ where
           input_event: input_event,
           state: state,
           shared_store: shared_store,
-          shared_tw_data: shared_tw_data
+          shared_tw_data: shared_tw_data,
+          has_focus: has_focus
         )
       };
 
@@ -114,12 +115,19 @@ macro_rules! call_handle_event {
     input_event:      $input_event: expr,
     state:            $state: expr,
     shared_store:     $shared_store: expr,
-    shared_tw_data:   $shared_tw_data: expr
+    shared_tw_data:   $shared_tw_data: expr,
+    has_focus:        $has_focus: expr
   ) => {{
     let result_event_propagation = $shared_component
       .write()
       .await
-      .handle_event($input_event, $state, $shared_store, $shared_tw_data)
+      .handle_event(
+        $has_focus,
+        $input_event,
+        $state,
+        $shared_store,
+        $shared_tw_data,
+      )
       .await?;
     return Ok(result_event_propagation);
   }};
