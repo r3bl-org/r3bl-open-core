@@ -38,8 +38,8 @@ impl EditorComponent {
 #[async_trait]
 impl Component<State, Action> for EditorComponent {
   async fn handle_event(
-    &mut self, input_event: &InputEvent, state: &State, shared_store: &SharedStore<State, Action>,
-    shared_tw_data: &SharedTWData,
+    &mut self, has_focus: &mut HasFocus, input_event: &InputEvent, state: &State,
+    shared_store: &SharedStore<State, Action>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       // Try to apply the `input_event` to `editor_engine` to decide whether to fire action.

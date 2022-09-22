@@ -63,8 +63,8 @@ impl Component<State, Action> for ColumnRenderComponent {
   /// - Up,   `+` : fire `AddPop(1)`
   /// - Down, `-` : fire `SubPop(1)`
   async fn handle_event(
-    &mut self, input_event: &InputEvent, _state: &State, shared_store: &SharedStore<State, Action>,
-    shared_tw_data: &SharedTWData,
+    &mut self, has_focus: &mut HasFocus, input_event: &InputEvent, _state: &State,
+    shared_store: &SharedStore<State, Action>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       let mut event_consumed = false;
