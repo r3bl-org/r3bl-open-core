@@ -26,12 +26,16 @@ macro_rules! render {
     shared_store: $arg_shared_store     : expr, // Eg: shared_store
     shared_tw_data: $arg_shared_tw_data : expr  // Eg: shared_tw_data
   ) => {
-    if let Some(shared_component) = $arg_registry.get($arg_component_id) {
+    let maybe_component_ref =
+      ComponentRegistry::get_component_ref_by_id(&mut $arg_registry, $arg_component_id);
+
+    if let Some(component_ref) = maybe_component_ref {
       let current_box = $arg_surface.current_box()?;
-      let queue = shared_component
+      let queue = component_ref
         .write()
         .await
         .render(
+          &mut $arg_registry,
           &mut $arg_has_focus,
           current_box,
           $arg_state,

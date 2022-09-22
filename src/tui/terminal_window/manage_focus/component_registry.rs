@@ -69,6 +69,15 @@ where
     None
   }
 
+  pub fn get_component_ref_by_id(
+    this: &mut ComponentRegistry<S, A>, id: &str,
+  ) -> Option<SharedComponent<S, A>> {
+    if let Some(component) = this.get(id) {
+      return Some(component.clone());
+    }
+    None
+  }
+
   pub async fn route_event_to_focused_component(
     this: &mut ComponentRegistry<S, A>, has_focus: &mut HasFocus, input_event: &InputEvent,
     state: &S, shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
@@ -79,6 +88,7 @@ where
         ComponentRegistry::get_focused_component_ref(this, has_focus)
       {
         call_handle_event!(
+          component_registry: this,
           shared_component: shared_component_has_focus,
           input_event: input_event,
           state: state,
@@ -123,17 +133,19 @@ macro_rules! route_event_to_focused_component {
 #[macro_export]
 macro_rules! call_handle_event {
   (
-    shared_component: $shared_component: expr,
-    input_event:      $input_event: expr,
-    state:            $state: expr,
-    shared_store:     $shared_store: expr,
-    shared_tw_data:   $shared_tw_data: expr,
-    has_focus:        $has_focus: expr
+    component_registry: $component_registry : expr,
+    shared_component:   $shared_component: expr,
+    input_event:        $input_event: expr,
+    state:              $state: expr,
+    shared_store:       $shared_store: expr,
+    shared_tw_data:     $shared_tw_data: expr,
+    has_focus:          $has_focus: expr
   ) => {{
     let result_event_propagation = $shared_component
       .write()
       .await
       .handle_event(
+        $component_registry,
         $has_focus,
         $input_event,
         $state,
