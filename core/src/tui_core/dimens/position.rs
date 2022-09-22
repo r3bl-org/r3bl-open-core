@@ -60,6 +60,25 @@ pub struct Position {
 }
 
 impl Position {
+  pub fn deser_from_str(ser_str: &str) -> Option<Position> {
+    if let Ok(position) = serde_json::from_str(ser_str) {
+      Some(position)
+    } else {
+      None
+    }
+  }
+
+  pub fn ser_to_string(&self) -> Option<String> {
+    let ser_str = serde_json::to_string(self);
+    if let Ok(ser_str) = ser_str {
+      Some(ser_str)
+    } else {
+      None
+    }
+  }
+}
+
+impl Position {
   /// Reset given `col` count to `0`.
   pub fn reset_cols(&mut self) -> Self {
     self.col = ch!(0);

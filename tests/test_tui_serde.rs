@@ -22,7 +22,7 @@ fn test_serde_tw_color_simple() {
   let color: TWColor = TWColor::Red;
   let ser_str = serde_json::to_string(&color).unwrap();
   let og_color: TWColor = serde_json::from_str(&ser_str).unwrap();
-  assert_eq!(color, og_color);
+  assert_eq2!(color, og_color);
 }
 
 #[test]
@@ -30,7 +30,7 @@ fn test_serde_tw_color_rgb() {
   let color = TWColor::Rgb { r: 0, g: 0, b: 0 };
   let ser_str = serde_json::to_string(&color).unwrap();
   let og_color: TWColor = serde_json::from_str(&ser_str).unwrap();
-  assert_eq!(color, og_color);
+  assert_eq2!(color, og_color);
 }
 
 #[test]
@@ -41,5 +41,21 @@ fn test_serde_tw_command_queue() {
   let ser_str = serde_json::to_string_pretty(&q).unwrap();
   println!("{}", ser_str);
   let og_q: RenderPipeline = serde_json::from_str(&ser_str).unwrap();
-  assert_eq!(q, og_q);
+  assert_eq2!(q, og_q);
+}
+
+#[test]
+fn test_serde_position() {
+  let position = position!(col: 0, row:0);
+  let ser_str = position.ser_to_string().unwrap();
+  let og_position = Position::deser_from_str(&ser_str).unwrap();
+  assert_eq2!(position, og_position);
+}
+
+#[test]
+fn test_serde_size() {
+  let size = size!(col: 0, row:0);
+  let ser_str = size.ser_to_string().unwrap();
+  let og_size = Size::deser_from_str(&ser_str).unwrap();
+  assert_eq2!(size, og_size);
 }
