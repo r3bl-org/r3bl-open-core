@@ -4,7 +4,12 @@
 			"path": "src/tui/ed/editor_engine.rs",
 			"bookmarks": [
 				{
-					"line": 69,
+					"line": 28,
+					"column": 2,
+					"label": ""
+				},
+				{
+					"line": 73,
 					"column": 4,
 					"label": ""
 				}

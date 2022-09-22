@@ -27,7 +27,9 @@ use crate::*;
 pub struct EditorEngine {
   /// The col and row offset for scrolling if active.
   pub scroll_offset: ScrollOffset,
-  // TK: 💉 save bounds size & origin pos ... saved here by render ... passed to command in apply
+  // TK: 💉✅ hold bounds size & origin pos ... saved here by render ... passed to command in apply
+  pub origin_pos: Position,
+  pub bounds_size: Size,
 }
 
 /// Private struct to help keep function signatures smaller.
@@ -56,10 +58,12 @@ impl EditorEngine {
   pub async fn apply(
     &mut self, editor_buffer: &EditorBuffer, input_event: &InputEvent,
   ) -> CommonResult<Option<EditorBuffer>> {
-    // TK: 💉 need to inject the bounds_size & origin of the box in the command
-    if let Some(command) = EditorBufferCommand::try_convert_input_event(input_event) {
+    // TK: 💉✅ inject the bounds_size & origin of the box into editor event before applying
+    if let Some(editor_event) =
+      EditorBufferCommand::try_convert_input_event(input_event, self.origin_pos, self.bounds_size)
+    {
       let mut new_editor_buffer = editor_buffer.clone();
-      new_editor_buffer.apply_command(command);
+      new_editor_buffer.apply_editor_event(editor_event);
       Ok(Some(new_editor_buffer))
     } else {
       Ok(None)
@@ -79,6 +83,11 @@ impl EditorEngine {
         has_focus,
         current_box,
       };
+
+      // TK: 💉✅ save the bounds_size & origin of the box on render in EditorEngine
+      // Save a few variables for apply().
+      self.bounds_size = context.style_adj_box_bounds_size;
+      self.origin_pos = context.style_adj_box_origin_pos;
 
       if editor_buffer.is_empty() {
         render_empty_state(&context)

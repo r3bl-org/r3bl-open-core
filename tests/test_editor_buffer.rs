@@ -29,12 +29,32 @@ fn test_delete() {
   // 2 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::InsertString("abc".into()),
-    EditorBufferCommand::InsertNewLine,
-    EditorBufferCommand::InsertString("ab".into()),
-    EditorBufferCommand::InsertNewLine,
-    EditorBufferCommand::InsertString("a".into()),
+  this.apply_editor_events(vec![
+    EditorEvent::new(
+      EditorBufferCommand::InsertString("abc".into()),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::InsertNewLine,
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::InsertString("ab".into()),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::InsertNewLine,
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::InsertString("a".into()),
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
@@ -46,9 +66,17 @@ fn test_delete() {
   // 2 ▸          │
   //   └▴─────────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::MoveCaret(CaretDirection::Left),
-    EditorBufferCommand::Delete,
+  this.apply_editor_events(vec![
+    EditorEvent::new(
+      EditorBufferCommand::MoveCaret(CaretDirection::Left),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::Delete,
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_caret(), position!(col: 0, row: 2));
 
@@ -59,11 +87,27 @@ fn test_delete() {
   // 1 ▸ab        │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::MoveCaret(CaretDirection::Up),
-    EditorBufferCommand::MoveCaret(CaretDirection::Right),
-    EditorBufferCommand::MoveCaret(CaretDirection::Right),
-    EditorBufferCommand::Delete,
+  this.apply_editor_events(vec![
+    EditorEvent::new(
+      EditorBufferCommand::MoveCaret(CaretDirection::Up),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::Delete,
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_lines().len(), 2);
   assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
@@ -74,10 +118,22 @@ fn test_delete() {
   // 0 ▸abcab     │
   //   └───▴──────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::MoveCaret(CaretDirection::Up),
-    EditorBufferCommand::MoveCaret(CaretDirection::Right),
-    EditorBufferCommand::Delete,
+  this.apply_editor_events(vec![
+    EditorEvent::new(
+      EditorBufferCommand::MoveCaret(CaretDirection::Up),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::Delete,
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_lines().len(), 1);
   assert_eq2!(this.get_caret(), position!(col: 3, row: 0));
@@ -96,12 +152,32 @@ fn test_backspace() {
   // 2 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::InsertString("abc".into()),
-    EditorBufferCommand::InsertNewLine,
-    EditorBufferCommand::InsertString("ab".into()),
-    EditorBufferCommand::InsertNewLine,
-    EditorBufferCommand::InsertString("a".into()),
+  this.apply_editor_events(vec![
+    EditorEvent::new(
+      EditorBufferCommand::InsertString("abc".into()),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::InsertNewLine,
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::InsertString("ab".into()),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::InsertNewLine,
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::InsertString("a".into()),
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
@@ -132,9 +208,17 @@ fn test_backspace() {
   // 0 ▸abcab     │
   //   └───▴──────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::MoveCaret(CaretDirection::Left),
-    EditorBufferCommand::MoveCaret(CaretDirection::Left),
+  this.apply_editor_events(vec![
+    EditorEvent::new(
+      EditorBufferCommand::MoveCaret(CaretDirection::Left),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::MoveCaret(CaretDirection::Left),
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_caret(), position!(col: 0, row: 1));
   this.backspace();
@@ -148,17 +232,41 @@ fn test_backspace() {
   // 0 ▸abcab😃   │
   //   └───────▴──┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::MoveCaret(CaretDirection::Right),
-    EditorBufferCommand::MoveCaret(CaretDirection::Right),
-    EditorBufferCommand::InsertString("😃".into()),
-    EditorBufferCommand::MoveCaret(CaretDirection::Right),
-    EditorBufferCommand::MoveCaret(CaretDirection::Right),
+  this.apply_editor_events(vec![
+    EditorEvent::new(
+      EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::InsertString("😃".into()),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_caret(), position!(col: 7, row: 0));
 
   // Press backspace.
-  this.apply_command(EditorBufferCommand::Backspace);
+  this.apply_editor_event(EditorEvent::new(
+    EditorBufferCommand::Backspace,
+    Position::default(),
+    Size::default(),
+  ));
   assert::line_at_caret(&this, "abcab");
 }
 
@@ -172,10 +280,22 @@ fn test_validate_caret_position_on_up() {
   // 1 ▸1         │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::InsertString("😀".into()),
-    EditorBufferCommand::InsertNewLine,
-    EditorBufferCommand::InsertChar('1'),
+  this.apply_editor_events(vec![
+    EditorEvent::new(
+      EditorBufferCommand::InsertString("😀".into()),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::InsertNewLine,
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(
+      EditorBufferCommand::InsertChar('1'),
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_caret(), position!(col: 1, row: 1));
 
@@ -199,10 +319,19 @@ fn test_validate_caret_position_on_down() {
   // 1 │😀        │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::InsertChar('1'),
-    EditorBufferCommand::InsertNewLine,
-    EditorBufferCommand::InsertString("😀".into()),
+  this.apply_editor_events(vec![
+    EditorEvent::new(EditorBufferCommand::InsertChar('1'),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::InsertNewLine,
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::InsertString("😀".into()),
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
 
@@ -212,9 +341,15 @@ fn test_validate_caret_position_on_down() {
   // 1 │😀        │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::MoveCaret(CaretDirection::Up),
-    EditorBufferCommand::MoveCaret(CaretDirection::Right),
+  this.apply_editor_events(vec![
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Up),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
 
@@ -240,20 +375,44 @@ fn test_move_caret_up_down() {
   // 2 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::InsertString("abc".into()),
-    EditorBufferCommand::InsertNewLine,
-    EditorBufferCommand::InsertString("ab".into()),
-    EditorBufferCommand::InsertNewLine,
-    EditorBufferCommand::InsertString("a".into()),
+  this.apply_editor_events(vec![
+    EditorEvent::new(EditorBufferCommand::InsertString("abc".into()),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::InsertNewLine,
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::InsertString("ab".into()),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::InsertNewLine,
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::InsertString("a".into()),
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
   // Move caret down. Noop.
-  this.apply_commands(vec![
-    EditorBufferCommand::MoveCaret(CaretDirection::Down),
-    EditorBufferCommand::MoveCaret(CaretDirection::Down),
-    EditorBufferCommand::MoveCaret(CaretDirection::Down),
+  this.apply_editor_events(vec![
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Down),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Down),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Down),
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
@@ -266,10 +425,19 @@ fn test_move_caret_up_down() {
   assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
 
   // Move caret up a few times. Noop.
-  this.apply_commands(vec![
-    EditorBufferCommand::MoveCaret(CaretDirection::Up),
-    EditorBufferCommand::MoveCaret(CaretDirection::Up),
-    EditorBufferCommand::MoveCaret(CaretDirection::Up),
+  this.apply_editor_events(vec![
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Up),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Up),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Up),
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
 
@@ -281,10 +449,19 @@ fn test_move_caret_up_down() {
   // 2 │a         │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::MoveCaret(CaretDirection::Right),
-    EditorBufferCommand::MoveCaret(CaretDirection::Right),
-    EditorBufferCommand::MoveCaret(CaretDirection::Down),
+  this.apply_editor_events(vec![
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Down),
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
 
@@ -376,9 +553,15 @@ fn test_insert_new_line() {
   // 2 ▸ab        │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::MoveCaret(CaretDirection::Right),
-    EditorBufferCommand::InsertChar('b'),
+  this.apply_editor_events(vec![
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::InsertChar('b'),
+      Position::default(),
+      Size::default(),
+    ),
   ]);
 
   assert::none_is_at_caret(&this);
@@ -398,9 +581,15 @@ fn test_insert_new_line() {
   // 3 ▸b         │
   //   └▴─────────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::MoveCaret(CaretDirection::Left),
-    EditorBufferCommand::InsertNewLine,
+  this.apply_editor_events(vec![
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Left),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::InsertNewLine,
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert::str_is_at_caret(&this, "b");
   assert_eq2!(this.get_caret(), position!(col: 0, row: 3));
@@ -415,10 +604,19 @@ fn test_insert_new_line() {
   // 4 │b         │
   //   └▴─────────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::MoveCaret(CaretDirection::Up),
-    EditorBufferCommand::MoveCaret(CaretDirection::Right),
-    EditorBufferCommand::InsertNewLine,
+  this.apply_editor_events(vec![
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Up),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::InsertNewLine,
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(this.get_lines().len(), 5);
   assert_eq2!(this.get_caret(), position!(col: 0, row: 3));
@@ -553,10 +751,19 @@ fn test_insertion() {
   // 3 ▸😀░       │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_commands(vec![
-    EditorBufferCommand::InsertNewLine,
-    EditorBufferCommand::InsertNewLine,
-    EditorBufferCommand::InsertChar('😀'),
+  this.apply_editor_events(vec![
+    EditorEvent::new(EditorBufferCommand::InsertNewLine,
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::InsertNewLine,
+      Position::default(),
+      Size::default(),
+    ),
+    EditorEvent::new(EditorBufferCommand::InsertChar('😀'),
+      Position::default(),
+      Size::default(),
+    ),
   ]);
   assert_eq2!(
     *this.get_lines(),

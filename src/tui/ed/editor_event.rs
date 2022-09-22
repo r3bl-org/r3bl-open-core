@@ -1,0 +1,114 @@
+/*
+ *   Copyright (c) 2022 R3BL LLC
+ *   All rights reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
+use serde::{Deserialize, Serialize};
+
+use crate::*;
+
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ EditorBufferCommand │
+// ╯                     ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+/// Commands that can be executed on an [EditorBuffer]. By providing a conversion from [InputEvent]
+/// to [EditorBufferCommand] it becomes easier to write event handlers that consume [InputEvent] and
+/// then execute [EditorBufferCommand] on an [EditorBuffer].
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EditorBufferCommand {
+  InsertChar(char),
+  InsertString(String),
+  InsertNewLine,
+  Delete,
+  Backspace,
+  MoveCaret(CaretDirection),
+}
+
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EditorEvent {
+  pub editor_buffer_command: EditorBufferCommand,
+  pub origin_pos: Position,
+  pub bounds_size: Size,
+}
+
+impl EditorEvent {
+  pub fn new(
+    editor_buffer_command: EditorBufferCommand, origin_pos: Position, bounds_size: Size,
+  ) -> Self {
+    Self {
+      editor_buffer_command,
+      origin_pos,
+      bounds_size,
+    }
+  }
+}
+
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CaretDirection {
+  Up,
+  Down,
+  Left,
+  Right,
+}
+
+impl EditorBufferCommand {
+  // TK: 💉✅ need to inject the bounds_size & origin of the box into EditorEvent
+  pub fn try_convert_input_event(
+    input_event: &InputEvent, origin_pos: Position, bounds_size: Size,
+  ) -> Option<EditorEvent> {
+    let maybe_editor_buffer_command: Result<EditorBufferCommand, _> = input_event.try_into();
+    match maybe_editor_buffer_command {
+      Ok(editor_buffer_command) => Some(EditorEvent {
+        editor_buffer_command,
+        origin_pos,
+        bounds_size,
+      }),
+      Err(_) => None,
+    }
+  }
+}
+
+impl TryFrom<&InputEvent> for EditorBufferCommand {
+  type Error = String;
+
+  fn try_from(input_event: &InputEvent) -> Result<Self, Self::Error> {
+    match input_event {
+      InputEvent::Keyboard(Keypress::Plain {
+        key: Key::Character(character),
+      }) => Ok(Self::InsertChar(*character)),
+      InputEvent::Keyboard(Keypress::Plain {
+        key: Key::SpecialKey(SpecialKey::Enter),
+      }) => Ok(Self::InsertNewLine),
+      InputEvent::Keyboard(Keypress::Plain {
+        key: Key::SpecialKey(SpecialKey::Delete),
+      }) => Ok(Self::Delete),
+      InputEvent::Keyboard(Keypress::Plain {
+        key: Key::SpecialKey(SpecialKey::Backspace),
+      }) => Ok(Self::Backspace),
+      InputEvent::Keyboard(Keypress::Plain {
+        key: Key::SpecialKey(SpecialKey::Up),
+      }) => Ok(Self::MoveCaret(CaretDirection::Up)),
+      InputEvent::Keyboard(Keypress::Plain {
+        key: Key::SpecialKey(SpecialKey::Down),
+      }) => Ok(Self::MoveCaret(CaretDirection::Down)),
+      InputEvent::Keyboard(Keypress::Plain {
+        key: Key::SpecialKey(SpecialKey::Left),
+      }) => Ok(Self::MoveCaret(CaretDirection::Left)),
+      InputEvent::Keyboard(Keypress::Plain {
+        key: Key::SpecialKey(SpecialKey::Right),
+      }) => Ok(Self::MoveCaret(CaretDirection::Right)),
+      _ => Err(format!("Invalid input event: {:?}", input_event)),
+    }
+  }
+}
