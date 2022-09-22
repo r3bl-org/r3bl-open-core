@@ -50,22 +50,34 @@ where
 
   pub fn get(&self, name: &str) -> Option<&SharedComponent<S, A>> { self.components.get(name) }
 
-  pub fn get_has_focus(&self, has_focus: &HasFocus) -> Option<&SharedComponent<S, A>> {
-    match has_focus.id {
-      Some(ref id_has_focus) => self.get(id_has_focus),
-      None => None,
+  pub fn remove(&mut self, id: &str) -> Option<SharedComponent<S, A>> { self.components.remove(id) }
+}
+
+impl<S, A> ComponentRegistry<S, A>
+where
+  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Display + Clone + Sync + Send,
+{
+  pub fn get_focused_component_ref(
+    this: &mut ComponentRegistry<S, A>, has_focus: &mut HasFocus,
+  ) -> Option<SharedComponent<S, A>> {
+    if let Some(ref id) = has_focus.id {
+      if let Some(component) = this.get(id) {
+        return Some(component.clone());
+      }
     }
+    None
   }
 
-  pub fn remove(&mut self, id: &str) -> Option<SharedComponent<S, A>> { self.components.remove(id) }
-
   pub async fn route_event_to_focused_component(
-    &mut self, has_focus: &mut HasFocus, input_event: &InputEvent, state: &S,
-    shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
+    this: &mut ComponentRegistry<S, A>, has_focus: &mut HasFocus, input_event: &InputEvent,
+    state: &S, shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       // If component has focus, then route input_event to it. Return its propagation enum.
-      if let Some(shared_component_has_focus) = self.get_has_focus(has_focus) {
+      if let Some(shared_component_has_focus) =
+        ComponentRegistry::get_focused_component_ref(this, has_focus)
+      {
         call_handle_event!(
           shared_component: shared_component_has_focus,
           input_event: input_event,
@@ -83,7 +95,7 @@ where
 }
 
 /// Macro to help with the boilerplate of calling
-/// `ComponentRegistry::route_event_to_focused_component`.
+/// [route_event_to_focused_component()](ComponentRegistry::route_event_to_focused_component)
 #[macro_export]
 macro_rules! route_event_to_focused_component {
   (
@@ -94,15 +106,15 @@ macro_rules! route_event_to_focused_component {
     shared_store:   $arg_shared_store       : expr,
     shared_tw_data: $arg_shared_tw_data     : expr
   ) => {
-    $arg_component_registry
-      .route_event_to_focused_component(
-        &mut $arg_has_focus,
-        $arg_input_event,
-        $arg_state,
-        $arg_shared_store,
-        $arg_shared_tw_data,
-      )
-      .await
+    ComponentRegistry::route_event_to_focused_component(
+      &mut $arg_component_registry,
+      &mut $arg_has_focus,
+      $arg_input_event,
+      $arg_state,
+      $arg_shared_store,
+      $arg_shared_tw_data,
+    )
+    .await
   };
 }
 
