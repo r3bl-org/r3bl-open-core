@@ -33,6 +33,7 @@ where
   A: Default + Display + Clone + Sync + Send,
 {
   pub components: ComponentRegistryMap<S, A>,
+  pub has_focus: HasFocus,
 }
 
 pub type ComponentRegistryMap<S, A> = HashMap<String, SharedComponent<S, A>>;
@@ -59,9 +60,9 @@ where
   A: Default + Display + Clone + Sync + Send,
 {
   pub fn get_focused_component_ref(
-    this: &mut ComponentRegistry<S, A>, has_focus: &mut HasFocus,
+    this: &mut ComponentRegistry<S, A>,
   ) -> Option<SharedComponent<S, A>> {
-    if let Some(ref id) = has_focus.id {
+    if let Some(ref id) = this.has_focus.id {
       if let Some(component) = this.get(id) {
         return Some(component.clone());
       }
@@ -79,22 +80,19 @@ where
   }
 
   pub async fn route_event_to_focused_component(
-    this: &mut ComponentRegistry<S, A>, has_focus: &mut HasFocus, input_event: &InputEvent,
-    state: &S, shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
+    this: &mut ComponentRegistry<S, A>, input_event: &InputEvent, state: &S,
+    shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       // If component has focus, then route input_event to it. Return its propagation enum.
-      if let Some(shared_component_has_focus) =
-        ComponentRegistry::get_focused_component_ref(this, has_focus)
-      {
+      if let Some(shared_component_has_focus) = ComponentRegistry::get_focused_component_ref(this) {
         call_handle_event!(
           component_registry: this,
           shared_component: shared_component_has_focus,
           input_event: input_event,
           state: state,
           shared_store: shared_store,
-          shared_tw_data: shared_tw_data,
-          has_focus: has_focus
+          shared_tw_data: shared_tw_data
         )
       };
 
@@ -118,7 +116,6 @@ macro_rules! route_event_to_focused_component {
   ) => {
     ComponentRegistry::route_event_to_focused_component(
       &mut $arg_component_registry,
-      &mut $arg_has_focus,
       $arg_input_event,
       $arg_state,
       $arg_shared_store,
@@ -138,15 +135,13 @@ macro_rules! call_handle_event {
     input_event:        $input_event: expr,
     state:              $state: expr,
     shared_store:       $shared_store: expr,
-    shared_tw_data:     $shared_tw_data: expr,
-    has_focus:          $has_focus: expr
+    shared_tw_data:     $shared_tw_data: expr
   ) => {{
     let result_event_propagation = $shared_component
       .write()
       .await
       .handle_event(
         $component_registry,
-        $has_focus,
         $input_event,
         $state,
         $shared_store,
@@ -168,6 +163,7 @@ mod debug_helpers {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       f.debug_struct("ComponentRegistry")
         .field("components", &self.components.keys().enumerate())
+        .field("has_focus", &self.has_focus)
         .finish()
     }
   }

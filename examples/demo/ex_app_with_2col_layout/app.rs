@@ -32,7 +32,6 @@ const COL_2_ID: &str = "col_2";
 #[derive(Default)]
 pub struct AppWithLayout {
   pub component_registry: ComponentRegistry<State, Action>,
-  pub has_focus: HasFocus,
 }
 
 mod app_impl {
@@ -119,7 +118,7 @@ mod handle_focus {
             self.switch_focus(SpecialKey::Left);
             debug_log_has_focus(
               stringify!(AppWithLayout::app_handle_event).into(),
-              &self.has_focus,
+              &self.component_registry.has_focus,
             );
           }
           Keypress::Plain {
@@ -129,7 +128,7 @@ mod handle_focus {
             self.switch_focus(SpecialKey::Right);
             debug_log_has_focus(
               stringify!(AppWithLayout::app_handle_event).into(),
-              &self.has_focus,
+              &self.component_registry.has_focus,
             );
           }
           _ => {}
@@ -144,11 +143,11 @@ mod handle_focus {
     }
 
     fn switch_focus(&mut self, special_key: SpecialKey) {
-      if let Some(_id) = self.has_focus.get_id() {
+      if let Some(_id) = self.component_registry.has_focus.get_id() {
         if special_key == SpecialKey::Left {
-          self.has_focus.set_id(COL_1_ID)
+          self.component_registry.has_focus.set_id(COL_1_ID)
         } else {
-          self.has_focus.set_id(COL_2_ID)
+          self.component_registry.has_focus.set_id(COL_2_ID)
         }
       } else {
         log_no_err!(ERROR, "No focus id has been set, and it should be set!");
@@ -178,8 +177,8 @@ mod construct_components {
       }
 
       // Init has focus.
-      if self.has_focus.get_id().is_none() {
-        self.has_focus.set_id(COL_1_ID);
+      if self.component_registry.has_focus.get_id().is_none() {
+        self.component_registry.has_focus.set_id(COL_1_ID);
       }
     }
 
@@ -243,7 +242,6 @@ mod layout_components {
           styles:                 [COL_1_ID],
           render: {
             from:           self.app_with_layout.component_registry,
-            has_focus:      self.app_with_layout.has_focus,
             state:          state,
             shared_store:   shared_store,
             shared_tw_data: shared_tw_data
@@ -266,7 +264,6 @@ mod layout_components {
           styles:                 [COL_2_ID],
           render: {
             from:           self.app_with_layout.component_registry,
-            has_focus:      self.app_with_layout.has_focus,
             state:          state,
             shared_store:   shared_store,
             shared_tw_data: shared_tw_data
@@ -284,7 +281,6 @@ mod debug_helpers {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       f.debug_struct("AppWithLayout")
         .field("component_registry", &self.component_registry)
-        .field("state_manage_focus_data", &self.has_focus)
         .finish()
     }
   }

@@ -49,17 +49,15 @@ where
   /// Clipping, scrolling, overdrawing:
   ///   - Each implementation of this trait is solely responsible of taking care of these behaviors
   async fn render(
-    &mut self, component_registry: &mut ComponentRegistry<S, A>, has_focus: &mut HasFocus,
-    current_box: &FlexBox, state: &S, shared_store: &SharedStore<S, A>,
-    shared_tw_data: &SharedTWData,
+    &mut self, component_registry: &mut ComponentRegistry<S, A>, current_box: &FlexBox, state: &S,
+    shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<RenderPipeline>;
 
   /// If this component has focus [HasFocus] then this method will be called to handle input event
   /// that is meant for it.
   async fn handle_event(
-    &mut self, component_registry: &mut ComponentRegistry<S, A>, has_focus: &mut HasFocus,
-    input_event: &InputEvent, state: &S, shared_store: &SharedStore<S, A>,
-    shared_tw_data: &SharedTWData,
+    &mut self, component_registry: &mut ComponentRegistry<S, A>, input_event: &InputEvent,
+    state: &S, shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation>;
 }
 

@@ -21,7 +21,6 @@ macro_rules! render {
     in:           $arg_surface          : expr, // Eg: in: surface
     component_id: $arg_component_id     : expr, // Eg: "component1"
     from:         $arg_registry         : expr, // Eg: from: registry
-    has_focus:    $arg_has_focus        : expr, // Eg: has_focus
     state:        $arg_state            : expr, // Eg: state
     shared_store: $arg_shared_store     : expr, // Eg: shared_store
     shared_tw_data: $arg_shared_tw_data : expr  // Eg: shared_tw_data
@@ -36,7 +35,6 @@ macro_rules! render {
         .await
         .render(
           &mut $arg_registry,
-          &mut $arg_has_focus,
           current_box,
           $arg_state,
           $arg_shared_store,
