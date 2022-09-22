@@ -29,33 +29,36 @@ fn test_delete() {
   // 2 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(
-      EditorBufferCommand::InsertString("abc".into()),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::InsertNewLine,
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::InsertString("ab".into()),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::InsertNewLine,
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::InsertString("a".into()),
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::InsertString("abc".into()),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertNewLine,
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertString("ab".into()),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertNewLine,
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertString("a".into()),
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
   // Remove the "a" on the last line.
@@ -66,18 +69,21 @@ fn test_delete() {
   // 2 ▸          │
   //   └▴─────────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(
-      EditorBufferCommand::MoveCaret(CaretDirection::Left),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::Delete,
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Left),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::Delete,
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_caret(), position!(col: 0, row: 2));
 
   // Move to the end of the 2nd line. Press delete.
@@ -87,28 +93,31 @@ fn test_delete() {
   // 1 ▸ab        │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(
-      EditorBufferCommand::MoveCaret(CaretDirection::Up),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::MoveCaret(CaretDirection::Right),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::MoveCaret(CaretDirection::Right),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::Delete,
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Up),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Right),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Right),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::Delete,
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_lines().len(), 2);
   assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
 
@@ -118,23 +127,26 @@ fn test_delete() {
   // 0 ▸abcab     │
   //   └───▴──────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(
-      EditorBufferCommand::MoveCaret(CaretDirection::Up),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::MoveCaret(CaretDirection::Right),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::Delete,
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Up),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Right),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::Delete,
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_lines().len(), 1);
   assert_eq2!(this.get_caret(), position!(col: 3, row: 0));
   assert::line_at_caret(&this, "abcab");
@@ -152,33 +164,36 @@ fn test_backspace() {
   // 2 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(
-      EditorBufferCommand::InsertString("abc".into()),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::InsertNewLine,
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::InsertString("ab".into()),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::InsertNewLine,
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::InsertString("a".into()),
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::InsertString("abc".into()),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertNewLine,
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertString("ab".into()),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertNewLine,
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertString("a".into()),
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
   // Remove the "a" on the last line.
@@ -208,18 +223,21 @@ fn test_backspace() {
   // 0 ▸abcab     │
   //   └───▴──────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(
-      EditorBufferCommand::MoveCaret(CaretDirection::Left),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::MoveCaret(CaretDirection::Left),
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Left),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Left),
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_caret(), position!(col: 0, row: 1));
   this.backspace();
   assert_eq2!(this.get_lines().len(), 1);
@@ -232,41 +250,47 @@ fn test_backspace() {
   // 0 ▸abcab😃   │
   //   └───────▴──┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(
-      EditorBufferCommand::MoveCaret(CaretDirection::Right),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::MoveCaret(CaretDirection::Right),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::InsertString("😃".into()),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::MoveCaret(CaretDirection::Right),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::MoveCaret(CaretDirection::Right),
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Right),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Right),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertString("😃".into()),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Right),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Right),
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_caret(), position!(col: 7, row: 0));
 
   // Press backspace.
-  this.apply_editor_event(EditorEvent::new(
-    EditorBufferCommand::Backspace,
-    Position::default(),
-    Size::default(),
-  ));
+  this.apply_editor_event(
+    EditorEvent::new(
+      EditorBufferCommand::Backspace,
+      Position::default(),
+      Size::default(),
+    ),
+    &make_shared_tw_data(),
+  );
   assert::line_at_caret(&this, "abcab");
 }
 
@@ -280,23 +304,26 @@ fn test_validate_caret_position_on_up() {
   // 1 ▸1         │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(
-      EditorBufferCommand::InsertString("😀".into()),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::InsertNewLine,
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(
-      EditorBufferCommand::InsertChar('1'),
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::InsertString("😀".into()),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertNewLine,
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertChar('1'),
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 1));
 
   // Move caret up. It should not be in the middle of the smiley face.
@@ -319,20 +346,26 @@ fn test_validate_caret_position_on_down() {
   // 1 │😀        │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(EditorBufferCommand::InsertChar('1'),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::InsertNewLine,
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::InsertString("😀".into()),
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::InsertChar('1'),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertNewLine,
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertString("😀".into()),
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
 
   // Move caret up, and 2 left.
@@ -341,16 +374,21 @@ fn test_validate_caret_position_on_down() {
   // 1 │😀        │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Up),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Right),
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Up),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Right),
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
 
   // Move caret down. It should not be in the middle of the smiley face.
@@ -375,45 +413,59 @@ fn test_move_caret_up_down() {
   // 2 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(EditorBufferCommand::InsertString("abc".into()),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::InsertNewLine,
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::InsertString("ab".into()),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::InsertNewLine,
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::InsertString("a".into()),
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::InsertString("abc".into()),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertNewLine,
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertString("ab".into()),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertNewLine,
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertString("a".into()),
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
   // Move caret down. Noop.
-  this.apply_editor_events(vec![
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Down),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Down),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Down),
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Down),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Down),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Down),
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
   // Move caret up.
@@ -425,20 +477,26 @@ fn test_move_caret_up_down() {
   assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
 
   // Move caret up a few times. Noop.
-  this.apply_editor_events(vec![
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Up),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Up),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Up),
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Up),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Up),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Up),
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
 
   // Move right to end of line. Then down.
@@ -449,20 +507,26 @@ fn test_move_caret_up_down() {
   // 2 │a         │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Right),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Right),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Down),
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Right),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Right),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Down),
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
 
   // Move caret down.
@@ -553,16 +617,21 @@ fn test_insert_new_line() {
   // 2 ▸ab        │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Right),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::InsertChar('b'),
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Right),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertChar('b'),
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
 
   assert::none_is_at_caret(&this);
   assert_eq2!(
@@ -581,16 +650,21 @@ fn test_insert_new_line() {
   // 3 ▸b         │
   //   └▴─────────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Left),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::InsertNewLine,
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Left),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertNewLine,
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert::str_is_at_caret(&this, "b");
   assert_eq2!(this.get_caret(), position!(col: 0, row: 3));
   assert_eq2!(this.get_lines().len(), 4);
@@ -604,20 +678,26 @@ fn test_insert_new_line() {
   // 4 │b         │
   //   └▴─────────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Up),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Right),
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::InsertNewLine,
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Up),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::MoveCaret(CaretDirection::Right),
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertNewLine,
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(this.get_lines().len(), 5);
   assert_eq2!(this.get_caret(), position!(col: 0, row: 3));
 }
@@ -712,6 +792,15 @@ fn test_empty_state() {
   assert!(!editor_buffer.is_empty());
 }
 
+fn make_shared_tw_data() -> SharedTWData {
+  use std::sync::Arc;
+
+  use tokio::sync::RwLock;
+
+  let shared_tw_data: SharedTWData = Arc::new(RwLock::new(TWData::default()));
+  shared_tw_data
+}
+
 #[test]
 fn test_insertion() {
   let mut this = EditorBuffer::default();
@@ -751,20 +840,26 @@ fn test_insertion() {
   // 3 ▸😀░       │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_editor_events(vec![
-    EditorEvent::new(EditorBufferCommand::InsertNewLine,
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::InsertNewLine,
-      Position::default(),
-      Size::default(),
-    ),
-    EditorEvent::new(EditorBufferCommand::InsertChar('😀'),
-      Position::default(),
-      Size::default(),
-    ),
-  ]);
+  this.apply_editor_events(
+    vec![
+      EditorEvent::new(
+        EditorBufferCommand::InsertNewLine,
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertNewLine,
+        Position::default(),
+        Size::default(),
+      ),
+      EditorEvent::new(
+        EditorBufferCommand::InsertChar('😀'),
+        Position::default(),
+        Size::default(),
+      ),
+    ],
+    &make_shared_tw_data(),
+  );
   assert_eq2!(
     *this.get_lines(),
     vec![

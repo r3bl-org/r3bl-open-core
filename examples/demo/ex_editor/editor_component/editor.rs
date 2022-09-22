@@ -23,18 +23,29 @@ use crate::{ex_editor::*, *};
 #[derive(Debug, Clone, Default)]
 pub struct EditorComponent {
   pub editor_engine: EditorEngine,
+  pub id: String,
+}
+
+impl EditorComponent {
+  pub fn new(id: &str) -> Self {
+    Self {
+      editor_engine: EditorEngine::default(),
+      id: id.to_string(),
+    }
+  }
 }
 
 #[async_trait]
 impl Component<State, Action> for EditorComponent {
   async fn handle_event(
     &mut self, input_event: &InputEvent, state: &State, shared_store: &SharedStore<State, Action>,
+    shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       // Try to apply the `input_event` to `editor_engine` to decide whether to fire action.
       match self
         .editor_engine
-        .apply(&state.editor_buffer, input_event)
+        .apply(&state.editor_buffer, input_event, shared_tw_data, &self.id)
         .await?
       {
         Some(editor_buffer) => {
@@ -52,11 +63,17 @@ impl Component<State, Action> for EditorComponent {
 
   async fn render(
     &mut self, has_focus: &HasFocus, current_box: &FlexBox, state: &State,
-    _: &SharedStore<State, Action>,
+    _: &SharedStore<State, Action>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<RenderPipeline> {
     self
       .editor_engine
-      .render(&state.editor_buffer, has_focus, current_box)
+      .render(
+        &state.editor_buffer,
+        has_focus,
+        current_box,
+        shared_tw_data,
+        &self.id,
+      )
       .await
   }
 }

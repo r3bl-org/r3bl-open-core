@@ -18,15 +18,15 @@
 // Attach.
 pub mod editor_buffer;
 pub mod editor_engine;
+pub mod editor_event;
 pub mod line_buffer;
 pub mod scroll;
 pub mod type_aliases;
-pub mod editor_event;
 
 // Re-export.
 pub use editor_buffer::*;
 pub use editor_engine::*;
+pub use editor_event::*;
 pub use line_buffer::*;
 pub use scroll::*;
 pub use type_aliases::*;
-pub use editor_event::*;

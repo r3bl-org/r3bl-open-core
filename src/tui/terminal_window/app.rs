@@ -39,7 +39,7 @@ where
   /// Use the input_event to dispatch an action to the store if needed.
   async fn app_handle_event(
     &mut self, input_event: &InputEvent, state: &S, shared_store: &SharedStore<S, A>,
-    window_size: Size,
+    window_size: Size, shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation>;
 
   /// Wrap a new instance in [Box].
