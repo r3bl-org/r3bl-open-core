@@ -54,6 +54,25 @@ pub struct Size {
   pub row: ChUnit, // height = number of rows (x).
 }
 
+impl Size {
+  pub fn deser_from_str(ser_str: &str) -> Option<Size> {
+    if let Ok(size) = serde_json::from_str(ser_str) {
+      Some(size)
+    } else {
+      None
+    }
+  }
+
+  pub fn ser_to_string(&self) -> Option<String> {
+    let ser_str = serde_json::to_string(self);
+    if let Ok(ser_str) = ser_str {
+      Some(ser_str)
+    } else {
+      None
+    }
+  }
+}
+
 pub mod debug_formatter {
   use super::*;
 
