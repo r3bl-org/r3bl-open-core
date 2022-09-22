@@ -42,13 +42,15 @@ mod app_impl {
     async fn app_handle_event(
       &mut self, input_event: &InputEvent, state: &State,
       shared_store: &SharedStore<State, Action>, _terminal_size: Size,
+      shared_tw_data: &SharedTWData,
     ) -> CommonResult<EventPropagation> {
       route_event_to_focused_component!(
-        registry:     self.component_registry,
-        has_focus:    self.has_focus,
-        input_event:  input_event,
-        state:        state,
-        shared_store: shared_store
+        registry:       self.component_registry,
+        has_focus:      self.has_focus,
+        input_event:    input_event,
+        state:          state,
+        shared_store:   shared_store,
+        shared_tw_data: shared_tw_data
       )
     }
 
@@ -82,11 +84,11 @@ mod app_impl {
   impl SurfaceRunnable<State, Action> for AppWithLayout {
     async fn run_on_surface(
       &mut self, surface: &mut Surface, state: &State, shared_store: &SharedStore<State, Action>,
-      _shared_tw_data: &SharedTWData,
+      shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
       self.create_components_populate_registry_init_focus().await;
       self
-        .create_main_container(surface, state, shared_store)
+        .create_main_container(surface, state, shared_store, shared_tw_data)
         .await
     }
   }
@@ -115,6 +117,7 @@ mod construct_components {
     /// Main container CONTAINER_ID.
     pub async fn create_main_container(
       &mut self, surface: &mut Surface, state: &State, shared_store: &SharedStore<State, Action>,
+      shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
       throws!({
         box_start_with_component! {
@@ -124,10 +127,11 @@ mod construct_components {
           requested_size_percent: requested_size_percent!(width: 100, height: 100),
           styles:                 [COL_1_ID],
           render: {
-            from:         self.component_registry,
-            has_focus:    self.has_focus,
-            state:        state,
-            shared_store: shared_store
+            from:           self.component_registry,
+            has_focus:      self.has_focus,
+            state:          state,
+            shared_store:   shared_store,
+            shared_tw_data: shared_tw_data
           }
         }
       });

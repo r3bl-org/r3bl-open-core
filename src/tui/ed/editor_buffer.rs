@@ -61,6 +61,8 @@ pub mod access_and_mutate {
 /// Example.
 /// ```rust
 /// use r3bl_rs_utils::*;
+/// use std::sync::Arc;
+/// use tokio::sync::RwLock;
 ///
 /// let mut editor_buffer = EditorBuffer::default();
 /// editor_buffer.apply_editor_event(
@@ -68,11 +70,11 @@ pub mod access_and_mutate {
 ///     EditorBufferCommand::InsertChar('a'),
 ///     Position::default(),
 ///     Size::default(),
-///   )
+///   ), &Arc::new(RwLock::new(TWData::default()))
 /// );
 /// ```
 impl EditorBuffer {
-  pub fn apply_editor_event(&mut self, editor_event: EditorEvent) {
+  pub fn apply_editor_event(&mut self, editor_event: EditorEvent, shared_tw_data: &SharedTWData) {
     let EditorEvent {
       editor_buffer_command,
       bounds_size,
@@ -84,6 +86,7 @@ impl EditorBuffer {
     self.bounds_size = bounds_size;
     self.origin_pos = origin_pos;
 
+    // TK: 🚨 use shared_tw_data::user_data_store in order to save/load user data
     match editor_buffer_command {
       EditorBufferCommand::InsertChar(character) => self.insert_char(character),
       EditorBufferCommand::InsertNewLine => self.insert_new_line(),
@@ -97,6 +100,8 @@ impl EditorBuffer {
   /// Example.
   /// ```rust
   /// use r3bl_rs_utils::*;
+  /// use std::sync::Arc;
+  /// use tokio::sync::RwLock;
   ///
   /// let mut editor_buffer = EditorBuffer::default();
   /// editor_buffer.apply_editor_events(vec![
@@ -108,11 +113,13 @@ impl EditorBuffer {
   ///    Position::default(),
   ///    Size::default(),
   ///  ),
-  /// ]);
+  /// ], &Arc::new(RwLock::new(TWData::default())));
   /// ```
-  pub fn apply_editor_events(&mut self, editor_event_vec: Vec<EditorEvent>) {
+  pub fn apply_editor_events(
+    &mut self, editor_event_vec: Vec<EditorEvent>, shared_tw_data: &SharedTWData,
+  ) {
     for editor_event in editor_event_vec {
-      self.apply_editor_event(editor_event);
+      self.apply_editor_event(editor_event, shared_tw_data);
     }
   }
 }

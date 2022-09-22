@@ -17,9 +17,9 @@
 
 use async_trait::async_trait;
 use r3bl_rs_utils::*;
-use crate::DEBUG;
 
 use super::*;
+use crate::DEBUG;
 
 #[derive(Debug, Clone, Default)]
 pub struct ColumnRenderComponent {
@@ -64,6 +64,7 @@ impl Component<State, Action> for ColumnRenderComponent {
   /// - Down, `-` : fire `SubPop(1)`
   async fn handle_event(
     &mut self, input_event: &InputEvent, _state: &State, shared_store: &SharedStore<State, Action>,
+    shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       let mut event_consumed = false;
@@ -105,8 +106,8 @@ impl Component<State, Action> for ColumnRenderComponent {
   }
 
   async fn render(
-    &mut self, has_focus: &HasFocus, current_box: &FlexBox, _state: &State,
-    _shared_store: &SharedStore<State, Action>,
+    &mut self, has_focus: &HasFocus, current_box: &FlexBox, _: &State,
+    _: &SharedStore<State, Action>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<RenderPipeline> {
     throws_with_return!({
       // Fixed strings.

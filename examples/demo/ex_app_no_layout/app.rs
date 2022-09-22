@@ -16,10 +16,9 @@
  */
 
 use async_trait::async_trait;
-use crate::DEBUG;
 
 use super::*;
-use crate::*;
+use crate::{DEBUG, *};
 
 /// Async trait object that implements the [Render] trait.
 #[derive(Default, Debug, Clone, Copy)]
@@ -88,7 +87,7 @@ impl App<State, Action> for AppNoLayout {
 
   async fn app_handle_event(
     &mut self, input_event: &InputEvent, _state: &State, shared_store: &SharedStore<State, Action>,
-    _terminal_size: Size,
+    _terminal_size: Size, shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       call_if_true!(

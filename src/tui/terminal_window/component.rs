@@ -32,6 +32,7 @@ where
   /// that is meant for it.
   async fn handle_event(
     &mut self, input_event: &InputEvent, state: &S, shared_store: &SharedStore<S, A>,
+    shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation>;
 
   /// Render this component given the following.
@@ -56,7 +57,7 @@ where
   ///   - Each implementation of this trait is solely responsible of taking care of these behaviors
   async fn render(
     &mut self, has_focus: &HasFocus, current_box: &FlexBox, state: &S,
-    shared_store: &SharedStore<S, A>,
+    shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<RenderPipeline>;
 }
 

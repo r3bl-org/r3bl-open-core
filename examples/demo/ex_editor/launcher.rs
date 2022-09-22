@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-use crate::DEBUG;
 use r3bl_rs_utils::*;
 
 use super::*;
+use crate::DEBUG;
 
 pub async fn run_app() -> CommonResult<()> {
   throws!({

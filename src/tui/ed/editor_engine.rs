@@ -57,13 +57,14 @@ impl EditorEngine {
   // FIXME: impl apply #23
   pub async fn apply(
     &mut self, editor_buffer: &EditorBuffer, input_event: &InputEvent,
+    shared_tw_data: &SharedTWData, self_id: &str,
   ) -> CommonResult<Option<EditorBuffer>> {
     // TK: 💉✅ inject the bounds_size & origin of the box into editor event before applying
     if let Some(editor_event) =
       EditorBufferCommand::try_convert_input_event(input_event, self.origin_pos, self.bounds_size)
     {
       let mut new_editor_buffer = editor_buffer.clone();
-      new_editor_buffer.apply_editor_event(editor_event);
+      new_editor_buffer.apply_editor_event(editor_event, shared_tw_data);
       Ok(Some(new_editor_buffer))
     } else {
       Ok(None)
@@ -73,6 +74,7 @@ impl EditorEngine {
   // FIXME: impl render #23
   pub async fn render(
     &mut self, editor_buffer: &EditorBuffer, has_focus: &HasFocus, current_box: &FlexBox,
+    shared_tw_data: &SharedTWData, self_id: &str,
   ) -> CommonResult<RenderPipeline> {
     throws_with_return!({
       // Create this struct to pass around fewer variables.

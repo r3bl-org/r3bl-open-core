@@ -16,9 +16,9 @@
  */
 
 use r3bl_rs_utils::*;
-use crate::DEBUG;
 
 use super::*;
+use crate::DEBUG;
 
 pub async fn run_app() -> CommonResult<()> {
   throws!({

@@ -61,7 +61,7 @@ where
 
   pub async fn route_event_to_focused_component(
     &mut self, has_focus: &HasFocus, input_event: &InputEvent, state: &S,
-    shared_store: &SharedStore<S, A>,
+    shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       // If component has focus, then route input_event to it. Return its propagation enum.
@@ -70,7 +70,8 @@ where
           shared_component: shared_component_has_focus,
           input_event: input_event,
           state: state,
-          shared_store: shared_store
+          shared_store: shared_store,
+          shared_tw_data: shared_tw_data
         )
       };
 
@@ -85,11 +86,12 @@ where
 #[macro_export]
 macro_rules! route_event_to_focused_component {
   (
-    registry:     $arg_component_registry : expr,
-    has_focus:    $arg_has_focus          : expr,
-    input_event:  $arg_input_event        : expr,
-    state:        $arg_state              : expr,
-    shared_store: $arg_shared_store       : expr
+    registry:       $arg_component_registry : expr,
+    has_focus:      $arg_has_focus          : expr,
+    input_event:    $arg_input_event        : expr,
+    state:          $arg_state              : expr,
+    shared_store:   $arg_shared_store       : expr,
+    shared_tw_data: $arg_shared_tw_data     : expr
   ) => {
     $arg_component_registry
       .route_event_to_focused_component(
@@ -97,6 +99,7 @@ macro_rules! route_event_to_focused_component {
         $arg_input_event,
         $arg_state,
         $arg_shared_store,
+        $arg_shared_tw_data,
       )
       .await
   };
@@ -110,12 +113,13 @@ macro_rules! call_handle_event {
     shared_component: $shared_component: expr,
     input_event:      $input_event: expr,
     state:            $state: expr,
-    shared_store:     $shared_store: expr
+    shared_store:     $shared_store: expr,
+    shared_tw_data:   $shared_tw_data: expr
   ) => {{
     let result_event_propagation = $shared_component
       .write()
       .await
-      .handle_event($input_event, $state, $shared_store)
+      .handle_event($input_event, $state, $shared_store, $shared_tw_data)
       .await?;
     return Ok(result_event_propagation);
   }};

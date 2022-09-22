@@ -43,6 +43,7 @@ mod app_impl {
     async fn app_handle_event(
       &mut self, input_event: &InputEvent, state: &State,
       shared_store: &SharedStore<State, Action>, _terminal_size: Size,
+      shared_tw_data: &SharedTWData,
     ) -> CommonResult<EventPropagation> {
       // Try to handle left and right arrow key input events & return if handled.
       if let Continuation::Return = self.handle_focus_switch(input_event) {
@@ -51,11 +52,12 @@ mod app_impl {
 
       // Route any unhandled event to the component that has focus.
       route_event_to_focused_component!(
-        registry:     self.component_registry,
-        has_focus:    self.has_focus,
-        input_event:  input_event,
-        state:        state,
-        shared_store: shared_store
+        registry:       self.component_registry,
+        has_focus:      self.has_focus,
+        input_event:    input_event,
+        state:          state,
+        shared_store:   shared_store,
+        shared_tw_data: shared_tw_data
       )
     }
 
@@ -214,10 +216,14 @@ mod layout_components {
   impl<'a> SurfaceRunnable<State, Action> for TwoColLayout<'a> {
     async fn run_on_surface(
       &mut self, surface: &mut Surface, state: &State, shared_store: &SharedStore<State, Action>,
-      _shared_tw_data: &SharedTWData,
+      shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
-      self.create_left_col(surface, state, shared_store).await?;
-      self.create_right_col(surface, state, shared_store).await?;
+      self
+        .create_left_col(surface, state, shared_store, shared_tw_data)
+        .await?;
+      self
+        .create_right_col(surface, state, shared_store, shared_tw_data)
+        .await?;
       Ok(())
     }
   }
@@ -226,6 +232,7 @@ mod layout_components {
     /// Left column COL_1_ID.
     async fn create_left_col(
       &mut self, surface: &mut Surface, state: &State, shared_store: &SharedStore<State, Action>,
+      shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
       throws!({
         box_start_with_component! {
@@ -235,10 +242,11 @@ mod layout_components {
           requested_size_percent: requested_size_percent!(width: 50, height: 100),
           styles:                 [COL_1_ID],
           render: {
-            from:         self.app_with_layout.component_registry,
-            has_focus:    self.app_with_layout.has_focus,
-            state:        state,
-            shared_store: shared_store
+            from:           self.app_with_layout.component_registry,
+            has_focus:      self.app_with_layout.has_focus,
+            state:          state,
+            shared_store:   shared_store,
+            shared_tw_data: shared_tw_data
           }
         }
       });
@@ -247,6 +255,7 @@ mod layout_components {
     /// Right column COL_2_ID.
     async fn create_right_col(
       &mut self, surface: &mut Surface, state: &State, shared_store: &SharedStore<State, Action>,
+      shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
       throws!({
         box_start_with_component! {
@@ -256,10 +265,11 @@ mod layout_components {
           requested_size_percent: requested_size_percent!(width: 50, height: 100),
           styles:                 [COL_2_ID],
           render: {
-            from:         self.app_with_layout.component_registry,
-            has_focus:    self.app_with_layout.has_focus,
-            state:        state,
-            shared_store: shared_store
+            from:           self.app_with_layout.component_registry,
+            has_focus:      self.app_with_layout.has_focus,
+            state:          state,
+            shared_store:   shared_store,
+            shared_tw_data: shared_tw_data
           }
         }
       });

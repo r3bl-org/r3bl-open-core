@@ -9,7 +9,7 @@
 					"label": ""
 				},
 				{
-					"line": 73,
+					"line": 74,
 					"column": 4,
 					"label": ""
 				}
@@ -19,8 +19,18 @@
 			"path": "examples/demo/ex_editor/editor_component/editor.rs",
 			"bookmarks": [
 				{
-					"line": 58,
+					"line": 76,
 					"column": 12,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "src/tui/terminal_window/main_event_loop.rs",
+			"bookmarks": [
+				{
+					"line": 34,
+					"column": 0,
 					"label": ""
 				}
 			]

@@ -16,8 +16,7 @@
  */
 
 use super::*;
-use crate::*;
-use crate::DEBUG;
+use crate::{DEBUG, *};
 
 pub async fn run_app() -> CommonResult<()> {
   throws!({

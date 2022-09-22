@@ -35,6 +35,7 @@ const SPAWN_PROCESS_INPUT: bool = true;
 pub struct TWData {
   pub size: Size,
   pub cursor_position: Position,
+  // TK: 🚨 add user_data_store here (contains key: String, value: HashMap<String, String>).
 }
 
 impl TWData {
@@ -266,7 +267,13 @@ where
       shared_app
         .write()
         .await
-        .app_handle_event(input_event, &latest_state, shared_store, window_size)
+        .app_handle_event(
+          input_event,
+          &latest_state,
+          shared_store,
+          window_size,
+          shared_tw_data,
+        )
         .await?
     });
   }

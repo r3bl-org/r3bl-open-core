@@ -16,9 +16,9 @@
  */
 
 use r3bl_rs_utils::*;
-use crate::DEBUG;
 
 use super::*;
+use crate::DEBUG;
 
 pub fn debug_log_action(src: String, action: Action) {
   call_if_true!(
