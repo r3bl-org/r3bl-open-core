@@ -209,7 +209,7 @@ mod layout_components {
   use super::*;
 
   pub(crate) struct TwoColLayout<'a> {
-    pub(crate) app_with_layout: &'a AppWithLayout,
+    pub(crate) app_with_layout: &'a mut AppWithLayout,
   }
 
   #[async_trait]
