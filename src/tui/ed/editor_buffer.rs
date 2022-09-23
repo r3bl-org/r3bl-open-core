@@ -27,7 +27,7 @@ use crate::*;
 // │ EditorBuffer │
 // ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// Stores the data for a single editor buffer.
-#[derive(Clone, Default, PartialEq, Serialize, Deserialize, GetSize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
   lines: Vec<UnicodeString>,
@@ -37,6 +37,29 @@ pub struct EditorBuffer {
   caret: Position,
   /// Lolcat struct for generating rainbow colors.
   pub lolcat: Lolcat,
+}
+
+mod constructor {
+  use super::*;
+
+  impl Default for EditorBuffer {
+    fn default() -> Self {
+      // Potentially do any other initialization here.
+      call_if_true!(DEBUG_TUI_MOD, {
+        log_no_err!(
+          DEBUG,
+          "🪙 {}",
+          "construct EditorBuffer { lines, caret, lolcat }"
+        );
+      });
+
+      Self {
+        lines: vec![UnicodeString::default()],
+        caret: Position::default(),
+        lolcat: Lolcat::default(),
+      }
+    }
+  }
 }
 
 pub mod access_and_mutate {
