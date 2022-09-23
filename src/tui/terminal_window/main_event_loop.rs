@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{Debug, Display},
+use std::{collections::HashMap,
+          fmt::{Debug, Display},
           sync::Arc};
 
 use async_trait::async_trait;
@@ -35,7 +36,8 @@ const SPAWN_PROCESS_INPUT: bool = true;
 pub struct TWData {
   pub size: Size,
   pub cursor_position: Position,
-  // TK: 🚨 add user_data_store here (contains key: String, value: HashMap<String, String>).
+  // TK: 🐵 add user_data_store here (contains key: String, value: HashMap<String, String>).
+  pub global_user_data: HashMap<String, HashMap<String, String>>,
 }
 
 impl TWData {

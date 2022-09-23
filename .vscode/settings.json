@@ -40,6 +40,7 @@
     "middlewares",
     "neovim",
     "notcurses",
+    "paintable",
     "punct",
     "qself",
     "reedline",

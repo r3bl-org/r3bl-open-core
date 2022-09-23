@@ -55,7 +55,7 @@ where
   pub fn remove(&mut self, id: &str) -> Option<SharedComponent<S, A>> { self.components.remove(id) }
 }
 
-// TK: 🚨 add UserData to ComponentRegistry
+// TK: 🐵 add UserData to ComponentRegistry
 pub mod user_data_ops {
   use super::*;
 
