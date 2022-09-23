@@ -9,7 +9,7 @@
 					"label": ""
 				},
 				{
-					"line": 74,
+					"line": 83,
 					"column": 4,
 					"label": ""
 				}
@@ -19,7 +19,7 @@
 			"path": "examples/demo/ex_editor/editor_component/editor.rs",
 			"bookmarks": [
 				{
-					"line": 74,
+					"line": 84,
 					"column": 12,
 					"label": ""
 				}

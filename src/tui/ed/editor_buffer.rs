@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use std::fmt::{Debug, Display, Result};
+
 use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::*;
@@ -35,10 +37,6 @@ pub struct EditorBuffer {
   caret: Position,
   /// Lolcat struct for generating rainbow colors.
   pub lolcat: Lolcat,
-  /// Layout data, set by [apply_editor_event](EditorBuffer::apply_editor_event)
-  pub bounds_size: Size,
-  /// Layout data, set by [apply_editor_event](EditorBuffer::apply_editor_event)
-  pub origin_pos: Position,
 }
 
 pub mod access_and_mutate {
@@ -58,68 +56,40 @@ pub mod access_and_mutate {
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 // │ EditorBuffer -> Event based interface │
 // ╯                                       ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-/// Example.
-/// ```rust
-/// use r3bl_rs_utils::*;
-/// use std::sync::Arc;
-/// use tokio::sync::RwLock;
-///
-/// let mut editor_buffer = EditorBuffer::default();
-/// editor_buffer.apply_editor_event(
-///   EditorEvent::new(
-///     EditorBufferCommand::InsertChar('a'),
-///     Position::default(),
-///     Size::default(),
-///   ), &Arc::new(RwLock::new(TWData::default()))
-/// );
-/// ```
 impl EditorBuffer {
-  pub fn apply_editor_event(&mut self, editor_event: EditorEvent, shared_tw_data: &SharedTWData) {
+  pub fn apply_editor_event<S, A>(
+    this: &mut EditorBuffer, editor_event: EditorEvent, shared_tw_data: &SharedTWData,
+    component_registry: &ComponentRegistry<S, A>,
+  ) where
+    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Display + Clone + Sync + Send,
+  {
     let EditorEvent {
       editor_buffer_command,
       bounds_size,
       origin_pos,
     } = editor_event;
 
-    // TK: 💉✅ save the bounds_size & origin of the box in EditorBuffer on apply
-    // Save the extra layout and position data for later.
-    self.bounds_size = bounds_size;
-    self.origin_pos = origin_pos;
-
-    // TK: 🚨 use shared_tw_data::user_data_store in order to save/load user data
+    // TK: 🚨 get style_adjusted_bounds_size & style_adjusted_origin_pos from EditorEngine
     match editor_buffer_command {
-      EditorBufferCommand::InsertChar(character) => self.insert_char(character),
-      EditorBufferCommand::InsertNewLine => self.insert_new_line(),
-      EditorBufferCommand::Delete => self.delete(),
-      EditorBufferCommand::Backspace => self.backspace(),
-      EditorBufferCommand::MoveCaret(direction) => self.move_caret(direction),
-      EditorBufferCommand::InsertString(string) => self.insert_str(&string),
+      EditorBufferCommand::InsertChar(character) => this.insert_char(character),
+      EditorBufferCommand::InsertNewLine => this.insert_new_line(),
+      EditorBufferCommand::Delete => this.delete(),
+      EditorBufferCommand::Backspace => this.backspace(),
+      EditorBufferCommand::MoveCaret(direction) => this.move_caret(direction),
+      EditorBufferCommand::InsertString(string) => this.insert_str(&string),
     };
   }
 
-  /// Example.
-  /// ```rust
-  /// use r3bl_rs_utils::*;
-  /// use std::sync::Arc;
-  /// use tokio::sync::RwLock;
-  ///
-  /// let mut editor_buffer = EditorBuffer::default();
-  /// editor_buffer.apply_editor_events(vec![
-  ///  EditorEvent::new(EditorBufferCommand::InsertChar('a'),
-  ///     Position::default(),
-  ///     Size::default(),
-  ///   ),
-  ///  EditorEvent::new(EditorBufferCommand::MoveCaret(CaretDirection::Left),
-  ///    Position::default(),
-  ///    Size::default(),
-  ///  ),
-  /// ], &Arc::new(RwLock::new(TWData::default())));
-  /// ```
-  pub fn apply_editor_events(
-    &mut self, editor_event_vec: Vec<EditorEvent>, shared_tw_data: &SharedTWData,
-  ) {
+  pub fn apply_editor_events<S, A>(
+    this: &mut EditorBuffer, editor_event_vec: Vec<EditorEvent>, shared_tw_data: &SharedTWData,
+    component_registry: &ComponentRegistry<S, A>,
+  ) where
+    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Display + Clone + Sync + Send,
+  {
     for editor_event in editor_event_vec {
-      self.apply_editor_event(editor_event, shared_tw_data);
+      EditorBuffer::apply_editor_event(this, editor_event, shared_tw_data, component_registry);
     }
   }
 }
@@ -161,17 +131,15 @@ impl EditorBuffer {
 mod debug_format_helpers {
   use super::*;
 
-  impl std::fmt::Debug for EditorBuffer {
-    fn fmt(&self, f: &mut __private::Formatter<'_>) -> std::fmt::Result {
+  impl Debug for EditorBuffer {
+    fn fmt(&self, f: &mut __private::Formatter<'_>) -> Result {
       write! { f,
         "\nEditorBuffer [ \n \
         ├ lines: {}, size: {}, \n \
         ├ caret: {:?}, \n \
-        ├ origin_pos: {:?}, bounds_size: {:?}\n \
         └ lolcat: [{}, {}, {}, {}] \n]",
         self.lines.len(), self.lines.get_heap_size(),
         self.caret,
-        self.origin_pos, self.bounds_size,
         pretty_print_f64(self.lolcat.color_wheel_control.seed),
         pretty_print_f64(self.lolcat.color_wheel_control.spread),
         pretty_print_f64(self.lolcat.color_wheel_control.frequency),

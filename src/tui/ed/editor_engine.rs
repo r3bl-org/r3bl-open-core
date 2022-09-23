@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 use serde::*;
 
@@ -27,7 +27,7 @@ use crate::*;
 pub struct EditorEngine {
   /// The col and row offset for scrolling if active.
   pub scroll_offset: ScrollOffset,
-  // TK: 💉✅ hold bounds size & origin pos ... saved here by render ... passed to command in apply
+  // TK: 💉✅ hold bounds size & origin pos
   pub origin_pos: Position,
   pub bounds_size: Size,
 }
@@ -55,16 +55,25 @@ enum CaretPaintStyle {
 
 impl EditorEngine {
   // FIXME: impl apply #23
-  pub async fn apply(
-    &mut self, editor_buffer: &EditorBuffer, input_event: &InputEvent,
-    shared_tw_data: &SharedTWData, self_id: &str,
-  ) -> CommonResult<Option<EditorBuffer>> {
+  pub async fn apply<S, A>(
+    &mut self, component_registry: &mut ComponentRegistry<S, A>, editor_buffer: &EditorBuffer,
+    input_event: &InputEvent, shared_tw_data: &SharedTWData, self_id: &str,
+  ) -> CommonResult<Option<EditorBuffer>>
+  where
+    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Display + Clone + Sync + Send,
+  {
     // TK: 💉✅ inject the bounds_size & origin of the box into editor event before applying
     if let Some(editor_event) =
       EditorBufferCommand::try_convert_input_event(input_event, self.origin_pos, self.bounds_size)
     {
       let mut new_editor_buffer = editor_buffer.clone();
-      new_editor_buffer.apply_editor_event(editor_event, shared_tw_data);
+      EditorBuffer::apply_editor_event(
+        &mut new_editor_buffer,
+        editor_event,
+        shared_tw_data,
+        component_registry,
+      );
       Ok(Some(new_editor_buffer))
     } else {
       Ok(None)
@@ -72,21 +81,31 @@ impl EditorEngine {
   }
 
   // FIXME: impl render #23
-  pub async fn render(
-    &mut self, editor_buffer: &EditorBuffer, has_focus: &HasFocus, current_box: &FlexBox,
-    shared_tw_data: &SharedTWData, self_id: &str,
-  ) -> CommonResult<RenderPipeline> {
+  pub async fn render<S, A>(
+    &mut self, editor_buffer: &EditorBuffer, component_registry: &mut ComponentRegistry<S, A>,
+    current_box: &FlexBox, shared_tw_data: &SharedTWData, self_id: &str,
+  ) -> CommonResult<RenderPipeline>
+  where
+    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Display + Clone + Sync + Send,
+  {
     throws_with_return!({
       // Create this struct to pass around fewer variables.
       let context = RenderArgs {
         editor_buffer,
         style_adj_box_origin_pos: current_box.style_adjusted_origin_pos, // Adjusted for padding (if set).
         style_adj_box_bounds_size: current_box.style_adjusted_bounds_size, // Adjusted for padding (if set).
-        has_focus,
+        has_focus: &component_registry.has_focus,
         current_box,
       };
 
-      // TK: 💉✅ save the bounds_size & origin of the box on render in EditorEngine
+      // TK: 🚨 SAVE current_box::{style_adjusted_origin_pos, style_adjusted_bounds_size} -> EditorEngine
+      self.bounds_size = current_box.style_adjusted_bounds_size;
+      self.origin_pos = current_box.style_adjusted_origin_pos;
+
+      // TK: remove debug
+      log_no_err!(DEBUG, "🟨🟨🟨 current_box -> {:?}", current_box);
+
       // Save a few variables for apply().
       self.bounds_size = context.style_adj_box_bounds_size;
       self.origin_pos = context.style_adj_box_origin_pos;

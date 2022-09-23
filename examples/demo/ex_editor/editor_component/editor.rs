@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use std::fmt::Debug;
+
 use async_trait::async_trait;
 use r3bl_rs_utils::*;
 
@@ -45,7 +47,13 @@ impl Component<State, Action> for EditorComponent {
       // Try to apply the `input_event` to `editor_engine` to decide whether to fire action.
       match self
         .editor_engine
-        .apply(&state.editor_buffer, input_event, shared_tw_data, &self.id)
+        .apply(
+          component_registry,
+          &state.editor_buffer,
+          input_event,
+          shared_tw_data,
+          &self.id,
+        )
         .await?
       {
         Some(editor_buffer) => {
@@ -69,7 +77,7 @@ impl Component<State, Action> for EditorComponent {
       .editor_engine
       .render(
         &state.editor_buffer,
-        &component_registry.has_focus,
+        component_registry,
         current_box,
         shared_tw_data,
         &self.id,
