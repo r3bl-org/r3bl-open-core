@@ -63,9 +63,9 @@ impl EditorEngine {
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
-    // TK: 💉✅ inject the bounds_size & origin of the box into editor event before applying
+    // TK: 💉✅ inject bounds_size & origin_pos into editor event, then apply to editor buffer
     if let Some(editor_event) =
-      EditorBufferCommand::try_convert_input_event(input_event, self.origin_pos, self.bounds_size)
+      EditorEvent::try_create_from(input_event, self.origin_pos, self.bounds_size)
     {
       let mut new_editor_buffer = editor_buffer.clone();
       EditorBuffer::apply_editor_event(
@@ -99,7 +99,7 @@ impl EditorEngine {
         current_box,
       };
 
-      // TK: 🚨 SAVE current_box::{style_adjusted_origin_pos, style_adjusted_bounds_size} -> EditorEngine
+      // TK: 💉✅ SAVE current_box::{style_adjusted_origin_pos, style_adjusted_bounds_size} -> EditorEngine
       self.bounds_size = current_box.style_adjusted_bounds_size;
       self.origin_pos = current_box.style_adjusted_origin_pos;
 

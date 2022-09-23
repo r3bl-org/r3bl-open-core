@@ -35,6 +35,11 @@ pub enum EditorBufferCommand {
   MoveCaret(CaretDirection),
 }
 
+/// This is created by the [EditorEngine] and send to the [EditorBuffer] to be executed. It includes
+/// the following:
+/// 1. [EditorBufferCommand] (which itself is derived from [InputEvent]).
+/// 2. [Position] representing the paintable box's origin.
+/// 3. [Size] representing the paintable box's size.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditorEvent {
   pub editor_buffer_command: EditorBufferCommand,
@@ -52,6 +57,21 @@ impl EditorEvent {
       bounds_size,
     }
   }
+
+  // TK: 💉✅ need to inject the bounds_size & origin of the box into EditorEvent
+  pub fn try_create_from(
+    input_event: &InputEvent, origin_pos: Position, bounds_size: Size,
+  ) -> Option<EditorEvent> {
+    if let Ok(editor_buffer_command) = input_event.try_into() {
+      Some(EditorEvent::new(
+        editor_buffer_command,
+        origin_pos,
+        bounds_size,
+      ))
+    } else {
+      None
+    }
+  }
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -60,23 +80,6 @@ pub enum CaretDirection {
   Down,
   Left,
   Right,
-}
-
-impl EditorBufferCommand {
-  // TK: 💉✅ need to inject the bounds_size & origin of the box into EditorEvent
-  pub fn try_convert_input_event(
-    input_event: &InputEvent, origin_pos: Position, bounds_size: Size,
-  ) -> Option<EditorEvent> {
-    let maybe_editor_buffer_command: Result<EditorBufferCommand, _> = input_event.try_into();
-    match maybe_editor_buffer_command {
-      Ok(editor_buffer_command) => Some(EditorEvent {
-        editor_buffer_command,
-        origin_pos,
-        bounds_size,
-      }),
-      Err(_) => None,
-    }
-  }
 }
 
 impl TryFrom<&InputEvent> for EditorBufferCommand {

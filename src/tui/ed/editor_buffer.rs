@@ -93,7 +93,7 @@ impl EditorBuffer {
       origin_pos,
     } = editor_event;
 
-    // TK: 🚨 get style_adjusted_bounds_size & style_adjusted_origin_pos from EditorEngine
+    // TK: 🚨 get style_adjusted_bounds_size & style_adjusted_origin_pos from EditorEvent
     match editor_buffer_command {
       EditorBufferCommand::InsertChar(character) => this.insert_char(character),
       EditorBufferCommand::InsertNewLine => this.insert_new_line(),

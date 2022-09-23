@@ -15,8 +15,6 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Display};
-
 use r3bl_rs_utils::*;
 
 #[test]
@@ -575,15 +573,15 @@ fn test_move_caret_up_down() {
 
 #[test]
 fn test_insert_new_line() {
+  // Starts w/ an empty line.
   let mut this = EditorBuffer::default();
+  assert_eq2!(this.get_lines().len(), 1);
 
-  // Insert new line.
   // `this` should look like:
   // R ┌──────────┐
   // 0 ▸          │
   //   └▴─────────┘
   //   C0123456789
-  this.insert_new_line();
   assert_eq2!(this.get_lines().len(), 1);
   assert::none_is_at_caret(&this);
 
@@ -824,9 +822,8 @@ fn test_move_caret_left_right() {
 
 #[test]
 fn test_empty_state() {
-  let mut editor_buffer = EditorBuffer::default();
-  assert!(editor_buffer.is_empty());
-  editor_buffer.insert_char('a');
+  let editor_buffer = EditorBuffer::default();
+  assert_eq2!(editor_buffer.get_lines().len(), 1);
   assert!(!editor_buffer.is_empty());
 }
 
