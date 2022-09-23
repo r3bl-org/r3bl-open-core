@@ -43,13 +43,13 @@ where
   component_registry: &'a ComponentRegistry<S, A>,
 }
 
-/// Holds data in between render calls. This is not stored in the [EditorBuffer] struct, which lives
-/// in the state.
+/// Holds data related to rendering in between render calls. This is not stored in the
+/// [EditorBuffer] struct, which lives in the [Store]. The store provides the underlying document or
+/// buffer struct that holds the actual document.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditorEngine {
   /// The col and row offset for scrolling if active.
   pub scroll_offset: ScrollOffset,
-  // TK: 💉✅ hold bounds size & origin pos
   /// Set by [render](EditorEngine::render).
   pub origin_pos: Position,
   /// Set by [render](EditorEngine::render).
@@ -68,12 +68,10 @@ impl EditorEngine {
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
-    // TK: 💉✅ inject bounds_size & origin_pos into editor event, then apply to editor buffer
-    if let Some(editor_event) =
-      EditorEvent::try_create_from(input_event, self.origin_pos, self.bounds_size)
-    {
+    if let Ok(editor_event) = EditorBufferCommand::try_from(input_event) {
       let mut new_editor_buffer = editor_buffer.clone();
       EditorBuffer::apply_editor_event(
+        self,
         &mut new_editor_buffer,
         editor_event,
         shared_tw_data,
@@ -96,7 +94,6 @@ impl EditorEngine {
     A: Default + Display + Clone + Sync + Send,
   {
     throws_with_return!({
-      // TK: 💉✅ SAVE current_box::{style_adjusted_origin_pos, style_adjusted_bounds_size} -> EditorEngine
       self.bounds_size = current_box.style_adjusted_bounds_size;
       self.origin_pos = current_box.style_adjusted_origin_pos;
       self.current_box = current_box.clone();

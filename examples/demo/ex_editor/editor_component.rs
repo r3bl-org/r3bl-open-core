@@ -22,6 +22,8 @@ use r3bl_rs_utils::*;
 
 use crate::{ex_editor::*, *};
 
+/// This is a shim which allows the reusable [EditorEngine] to be used in the context of [Component]
+/// and [Store]. The main methods here simply pass thru all their arguments to the [EditorEngine].
 #[derive(Debug, Clone, Default)]
 pub struct EditorComponent {
   pub editor_engine: EditorEngine,
@@ -39,6 +41,11 @@ impl EditorComponent {
 
 #[async_trait]
 impl Component<State, Action> for EditorComponent {
+  /// This shim simply calls [EditorEngine::apply](EditorEngine::apply) w/ all the necessary
+  /// arguments:
+  /// - Global scope: [SharedStore], [SharedTwData].
+  /// - App scope: [State], [ComponentRegistry<State, Action>].
+  /// - User input (from [main_event_loop]): [InputEvent].
   async fn handle_event(
     &mut self, component_registry: &mut ComponentRegistry<State, Action>, input_event: &InputEvent,
     state: &State, shared_store: &SharedStore<State, Action>, shared_tw_data: &SharedTWData,
@@ -69,6 +76,11 @@ impl Component<State, Action> for EditorComponent {
     });
   }
 
+  /// This shim simply calls [EditorEngine::apply](EditorEngine::render) w/ all the necessary
+  /// arguments:
+  /// - Global scope: [SharedStore], [SharedTwData].
+  /// - App scope: [State], [ComponentRegistry<State, Action>].
+  /// - User input (from [main_event_loop]): [InputEvent].
   async fn render(
     &mut self, component_registry: &mut ComponentRegistry<State, Action>, current_box: &FlexBox,
     state: &State, _: &SharedStore<State, Action>, shared_tw_data: &SharedTWData,

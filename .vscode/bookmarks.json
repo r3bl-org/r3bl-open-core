@@ -4,17 +4,22 @@
 			"path": "src/tui/ed/editor_engine.rs",
 			"bookmarks": [
 				{
-					"line": 62,
+					"line": 28,
 					"column": 2,
+					"label": ""
+				},
+				{
+					"line": 89,
+					"column": 4,
 					"label": ""
 				}
 			]
 		},
 		{
-			"path": "src/tui/ed/editor_buffer.rs",
+			"path": "src/tui/terminal_window/main_event_loop.rs",
 			"bookmarks": [
 				{
-					"line": 82,
+					"line": 35,
 					"column": 0,
 					"label": ""
 				}
