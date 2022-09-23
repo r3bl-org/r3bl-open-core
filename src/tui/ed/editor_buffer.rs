@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Display, Result};
+use std::{fmt::{Debug, Display, Result},
+          ops::Add};
 
 use get_size::GetSize;
 use r3bl_rs_utils_core::*;
@@ -26,7 +27,9 @@ use crate::*;
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 // │ EditorBuffer │
 // ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-/// Stores the data for a single editor buffer.
+/// Stores the data for a single editor buffer. This struct is stored in the [Store]. And it is
+/// paired w/ [EditorEngine] at runtime; which provides all the operations that can be performed on
+/// this.
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
@@ -81,22 +84,22 @@ pub mod access_and_mutate {
 // ╯                                       ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 impl EditorBuffer {
   pub fn apply_editor_event<S, A>(
-    this: &mut EditorBuffer, editor_event: EditorEvent, shared_tw_data: &SharedTWData,
-    component_registry: &mut ComponentRegistry<S, A>, self_id: &str,
+    engine: &mut EditorEngine, this: &mut EditorBuffer, editor_buffer_command: EditorBufferCommand,
+    shared_tw_data: &SharedTWData, component_registry: &mut ComponentRegistry<S, A>, self_id: &str,
   ) where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
-    let EditorEvent {
-      editor_buffer_command,
+    let EditorEngine {
       bounds_size,
       origin_pos,
-    } = editor_event;
+      ..
+    } = engine;
 
-    // TK: 🚨 get style_adjusted_bounds_size & style_adjusted_origin_pos from EditorEvent
+    // TK: 🚨 pass engine to all the functions below
     match editor_buffer_command {
       EditorBufferCommand::InsertChar(character) => this.insert_char(character),
-      EditorBufferCommand::InsertNewLine => this.insert_new_line(),
+      EditorBufferCommand::InsertNewLine => this.insert_new_line(engine),
       EditorBufferCommand::Delete => this.delete(),
       EditorBufferCommand::Backspace => this.backspace(),
       EditorBufferCommand::MoveCaret(direction) => this.move_caret(direction),
@@ -105,14 +108,15 @@ impl EditorBuffer {
   }
 
   pub fn apply_editor_events<S, A>(
-    this: &mut EditorBuffer, editor_event_vec: Vec<EditorEvent>, shared_tw_data: &SharedTWData,
-    component_registry: &mut ComponentRegistry<S, A>, self_id: &str,
+    engine: &mut EditorEngine, this: &mut EditorBuffer, editor_event_vec: Vec<EditorBufferCommand>,
+    shared_tw_data: &SharedTWData, component_registry: &mut ComponentRegistry<S, A>, self_id: &str,
   ) where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
     for editor_event in editor_event_vec {
       EditorBuffer::apply_editor_event(
+        engine,
         this,
         editor_event,
         shared_tw_data,
@@ -129,7 +133,9 @@ impl EditorBuffer {
 impl EditorBuffer {
   pub fn is_empty(&self) -> bool { self.lines.is_empty() }
 
-  pub fn insert_new_line(&mut self) { line_buffer_content_mut::insert_new_line_at_caret(self); }
+  pub fn insert_new_line(&mut self, engine: &mut EditorEngine) {
+    line_buffer_content_mut::insert_new_line_at_caret(self, engine);
+  }
 
   /// Insert [char] at the current [caret position](EditorBuffer::get_caret) into the current line.
   pub fn insert_char(&mut self, character: char) {

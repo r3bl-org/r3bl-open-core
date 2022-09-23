@@ -104,7 +104,8 @@ pub mod line_buffer_caret {
 // ╭┄┄┄┄┄┄┄┄┄┄┄╮
 // │ Caret mut │
 // ╯           ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-// TK: 💉 use injected bounds_size & origin of box in the command to restrict caret movement past bounds
+// TK: 🚨 use engine { bounds_size, origin_pos } to restrict the caret movement
+// TK: 🚨 set engine { scroll_offset } to restrict the caret movement
 pub mod line_buffer_caret_mut {
   use super::*;
 
@@ -284,7 +285,8 @@ pub mod line_buffer_content {
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 // │ Content mut │
 // ╯             ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-// TK: 💉 use injected bounds_size & origin of box in the command to restrict caret movement past bounds
+// TK: 🚨 use engine { bounds_size, origin_pos } to restrict the caret movement
+// TK: 🚨 set engine { scroll_offset } to restrict the caret movement
 pub mod line_buffer_content_mut {
   use super::*;
 
@@ -300,7 +302,7 @@ pub mod line_buffer_content_mut {
     }
   }
 
-  pub fn insert_new_line_at_caret(this: &mut EditorBuffer) {
+  pub fn insert_new_line_at_caret(this: &mut EditorBuffer, engine: &mut EditorEngine) {
     if this.is_empty() {
       mutate::change_editor_buffer(this, |lines, _| {
         lines.push(String::new().into());

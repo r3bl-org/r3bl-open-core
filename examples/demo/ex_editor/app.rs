@@ -62,8 +62,7 @@ mod app_impl {
   impl App<State, Action> for AppWithLayout {
     async fn app_handle_event(
       &mut self, input_event: &InputEvent, state: &State,
-      shared_store: &SharedStore<State, Action>, _terminal_size: Size,
-      shared_tw_data: &SharedTWData,
+      shared_store: &SharedStore<State, Action>, _: Size, shared_tw_data: &SharedTWData,
     ) -> CommonResult<EventPropagation> {
       route_event_to_focused_component!(
         registry:       self.component_registry,
