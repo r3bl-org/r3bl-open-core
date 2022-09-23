@@ -59,7 +59,8 @@ fn test_delete() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
@@ -86,7 +87,8 @@ fn test_delete() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_caret(), position!(col: 0, row: 2));
 
@@ -122,7 +124,8 @@ fn test_delete() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_lines().len(), 2);
   assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
@@ -153,7 +156,8 @@ fn test_delete() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_lines().len(), 1);
   assert_eq2!(this.get_caret(), position!(col: 3, row: 0));
@@ -202,7 +206,8 @@ fn test_backspace() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
@@ -248,7 +253,8 @@ fn test_backspace() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_caret(), position!(col: 0, row: 1));
   this.backspace();
@@ -292,7 +298,8 @@ fn test_backspace() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_caret(), position!(col: 7, row: 0));
 
@@ -305,7 +312,8 @@ fn test_backspace() {
       Size::default(),
     ),
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert::line_at_caret(&this, "abcab");
 }
@@ -340,7 +348,8 @@ fn test_validate_caret_position_on_up() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 1));
 
@@ -384,7 +393,8 @@ fn test_validate_caret_position_on_down() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
 
@@ -409,7 +419,8 @@ fn test_validate_caret_position_on_down() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
 
@@ -465,7 +476,8 @@ fn test_move_caret_up_down() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
@@ -490,7 +502,8 @@ fn test_move_caret_up_down() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
@@ -523,7 +536,8 @@ fn test_move_caret_up_down() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
 
@@ -555,7 +569,8 @@ fn test_move_caret_up_down() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
 
@@ -662,7 +677,8 @@ fn test_insert_new_line() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
 
   assert::none_is_at_caret(&this);
@@ -697,7 +713,8 @@ fn test_insert_new_line() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert::str_is_at_caret(&this, "b");
   assert_eq2!(this.get_caret(), position!(col: 0, row: 3));
@@ -732,7 +749,8 @@ fn test_insert_new_line() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(this.get_lines().len(), 5);
   assert_eq2!(this.get_caret(), position!(col: 0, row: 3));
@@ -900,7 +918,8 @@ fn test_insertion() {
       ),
     ],
     &make_shared_tw_data(),
-    &make_component_registry(),
+    &mut make_component_registry(),
+    "",
   );
   assert_eq2!(
     *this.get_lines(),

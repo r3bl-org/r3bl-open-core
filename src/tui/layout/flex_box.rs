@@ -17,11 +17,13 @@
 
 use std::fmt::Debug;
 
+use serde::{Deserialize, Serialize};
+
 use crate::*;
 
 /// Direction of the layout of the box.
 #[non_exhaustive]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Direction {
   Horizontal,
   Vertical,
@@ -33,7 +35,7 @@ impl Default for Direction {
 
 /// A box is a rectangle with a position and size. The direction of the box
 /// determines how it's contained elements are positioned.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FlexBox {
   pub id: String,
   pub dir: Direction,

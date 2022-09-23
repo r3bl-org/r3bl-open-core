@@ -82,7 +82,7 @@ pub mod access_and_mutate {
 impl EditorBuffer {
   pub fn apply_editor_event<S, A>(
     this: &mut EditorBuffer, editor_event: EditorEvent, shared_tw_data: &SharedTWData,
-    component_registry: &ComponentRegistry<S, A>,
+    component_registry: &mut ComponentRegistry<S, A>, self_id: &str,
   ) where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
@@ -106,13 +106,19 @@ impl EditorBuffer {
 
   pub fn apply_editor_events<S, A>(
     this: &mut EditorBuffer, editor_event_vec: Vec<EditorEvent>, shared_tw_data: &SharedTWData,
-    component_registry: &ComponentRegistry<S, A>,
+    component_registry: &mut ComponentRegistry<S, A>, self_id: &str,
   ) where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
     for editor_event in editor_event_vec {
-      EditorBuffer::apply_editor_event(this, editor_event, shared_tw_data, component_registry);
+      EditorBuffer::apply_editor_event(
+        this,
+        editor_event,
+        shared_tw_data,
+        component_registry,
+        self_id,
+      );
     }
   }
 }
