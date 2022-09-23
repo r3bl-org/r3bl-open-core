@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use std::fmt::{Debug, Display};
+
 use r3bl_rs_utils::*;
 
 #[test]
@@ -29,7 +31,8 @@ fn test_delete() {
   // 2 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::InsertString("abc".into()),
@@ -58,6 +61,7 @@ fn test_delete() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
@@ -69,7 +73,8 @@ fn test_delete() {
   // 2 ▸          │
   //   └▴─────────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::MoveCaret(CaretDirection::Left),
@@ -83,6 +88,7 @@ fn test_delete() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_caret(), position!(col: 0, row: 2));
 
@@ -93,7 +99,8 @@ fn test_delete() {
   // 1 ▸ab        │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::MoveCaret(CaretDirection::Up),
@@ -117,6 +124,7 @@ fn test_delete() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_lines().len(), 2);
   assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
@@ -127,7 +135,8 @@ fn test_delete() {
   // 0 ▸abcab     │
   //   └───▴──────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::MoveCaret(CaretDirection::Up),
@@ -146,6 +155,7 @@ fn test_delete() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_lines().len(), 1);
   assert_eq2!(this.get_caret(), position!(col: 3, row: 0));
@@ -164,7 +174,8 @@ fn test_backspace() {
   // 2 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::InsertString("abc".into()),
@@ -193,6 +204,7 @@ fn test_backspace() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
@@ -223,7 +235,8 @@ fn test_backspace() {
   // 0 ▸abcab     │
   //   └───▴──────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::MoveCaret(CaretDirection::Left),
@@ -237,6 +250,7 @@ fn test_backspace() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_caret(), position!(col: 0, row: 1));
   this.backspace();
@@ -250,7 +264,8 @@ fn test_backspace() {
   // 0 ▸abcab😃   │
   //   └───────▴──┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::MoveCaret(CaretDirection::Right),
@@ -279,17 +294,20 @@ fn test_backspace() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_caret(), position!(col: 7, row: 0));
 
   // Press backspace.
-  this.apply_editor_event(
+  EditorBuffer::apply_editor_event(
+    &mut this,
     EditorEvent::new(
       EditorBufferCommand::Backspace,
       Position::default(),
       Size::default(),
     ),
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert::line_at_caret(&this, "abcab");
 }
@@ -304,7 +322,8 @@ fn test_validate_caret_position_on_up() {
   // 1 ▸1         │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::InsertString("😀".into()),
@@ -323,6 +342,7 @@ fn test_validate_caret_position_on_up() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 1));
 
@@ -346,7 +366,8 @@ fn test_validate_caret_position_on_down() {
   // 1 │😀        │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::InsertChar('1'),
@@ -365,6 +386,7 @@ fn test_validate_caret_position_on_down() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
 
@@ -374,7 +396,8 @@ fn test_validate_caret_position_on_down() {
   // 1 │😀        │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::MoveCaret(CaretDirection::Up),
@@ -388,6 +411,7 @@ fn test_validate_caret_position_on_down() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
 
@@ -413,7 +437,8 @@ fn test_move_caret_up_down() {
   // 2 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::InsertString("abc".into()),
@@ -442,11 +467,13 @@ fn test_move_caret_up_down() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
   // Move caret down. Noop.
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::MoveCaret(CaretDirection::Down),
@@ -465,6 +492,7 @@ fn test_move_caret_up_down() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 
@@ -477,7 +505,8 @@ fn test_move_caret_up_down() {
   assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
 
   // Move caret up a few times. Noop.
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::MoveCaret(CaretDirection::Up),
@@ -496,6 +525,7 @@ fn test_move_caret_up_down() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
 
@@ -507,7 +537,8 @@ fn test_move_caret_up_down() {
   // 2 │a         │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::MoveCaret(CaretDirection::Right),
@@ -526,6 +557,7 @@ fn test_move_caret_up_down() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
 
@@ -617,7 +649,8 @@ fn test_insert_new_line() {
   // 2 ▸ab        │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::MoveCaret(CaretDirection::Right),
@@ -631,6 +664,7 @@ fn test_insert_new_line() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
 
   assert::none_is_at_caret(&this);
@@ -650,7 +684,8 @@ fn test_insert_new_line() {
   // 3 ▸b         │
   //   └▴─────────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::MoveCaret(CaretDirection::Left),
@@ -664,6 +699,7 @@ fn test_insert_new_line() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert::str_is_at_caret(&this, "b");
   assert_eq2!(this.get_caret(), position!(col: 0, row: 3));
@@ -678,7 +714,8 @@ fn test_insert_new_line() {
   // 4 │b         │
   //   └▴─────────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::MoveCaret(CaretDirection::Up),
@@ -697,6 +734,7 @@ fn test_insert_new_line() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(this.get_lines().len(), 5);
   assert_eq2!(this.get_caret(), position!(col: 0, row: 3));
@@ -801,6 +839,11 @@ fn make_shared_tw_data() -> SharedTWData {
   shared_tw_data
 }
 
+fn make_component_registry() -> ComponentRegistry<String, String> {
+  let component_registry: ComponentRegistry<String, String> = ComponentRegistry::default();
+  component_registry
+}
+
 #[test]
 fn test_insertion() {
   let mut this = EditorBuffer::default();
@@ -840,7 +883,8 @@ fn test_insertion() {
   // 3 ▸😀░       │
   //   └──▴───────┘
   //   C0123456789
-  this.apply_editor_events(
+  EditorBuffer::apply_editor_events(
+    &mut this,
     vec![
       EditorEvent::new(
         EditorBufferCommand::InsertNewLine,
@@ -859,6 +903,7 @@ fn test_insertion() {
       ),
     ],
     &make_shared_tw_data(),
+    &make_component_registry(),
   );
   assert_eq2!(
     *this.get_lines(),
