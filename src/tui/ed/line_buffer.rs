@@ -537,11 +537,13 @@ pub(super) mod mutate {
   ) -> Nope {
     let (lines, caret) = this.get_mut();
     mutator(lines, caret);
-    validate_caret_position(lines, caret);
+    validate_caret_position_not_to_be_in_middle_of_grapheme_cluster(lines, caret);
     None
   }
 
-  fn validate_caret_position(lines: &mut [UnicodeString], caret: &mut Position) -> Nope {
+  fn validate_caret_position_not_to_be_in_middle_of_grapheme_cluster(
+    lines: &mut [UnicodeString], caret: &mut Position,
+  ) -> Nope {
     let line = lines.get(ch!(@to_usize caret.row))?;
     let segment = line.is_display_col_in_middle_of_grapheme_cluster(caret.col)?;
     // Is in middle.
