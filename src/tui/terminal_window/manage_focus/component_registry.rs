@@ -34,6 +34,7 @@ where
 {
   pub components: ComponentRegistryMap<S, A>,
   pub has_focus: HasFocus,
+  pub user_data: HashMap<String, HashMap<String, String>>,
 }
 
 pub type ComponentRegistryMap<S, A> = HashMap<String, SharedComponent<S, A>>;
@@ -52,6 +53,37 @@ where
   pub fn get(&self, name: &str) -> Option<&SharedComponent<S, A>> { self.components.get(name) }
 
   pub fn remove(&mut self, id: &str) -> Option<SharedComponent<S, A>> { self.components.remove(id) }
+}
+
+pub mod user_data_ops {
+  use super::*;
+
+  pub fn get<S, A>(
+    component_registry: &ComponentRegistry<S, A>, id: &str, key: &str,
+  ) -> Option<String>
+  where
+    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Display + Clone + Sync + Send,
+  {
+    component_registry
+      .user_data
+      .get(id)
+      .and_then(|map| map.get(key))
+      .map(|s| s.to_string())
+  }
+
+  pub fn put<S, A>(
+    component_registry: &mut ComponentRegistry<S, A>, id: &str, key: &str, value: &str,
+  ) where
+    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Display + Clone + Sync + Send,
+  {
+    let map = component_registry
+      .user_data
+      .entry(id.to_string())
+      .or_default();
+    map.insert(key.to_string(), value.to_string());
+  }
 }
 
 impl<S, A> ComponentRegistry<S, A>
