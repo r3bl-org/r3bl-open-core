@@ -28,9 +28,31 @@ const CONTAINER_ID: &str = "container";
 const EDITOR_ID: &str = "editor";
 
 /// Async trait object that implements the [TWApp] trait.
-#[derive(Default)]
 pub struct AppWithLayout {
   pub component_registry: ComponentRegistry<State, Action>,
+}
+
+mod constructor {
+
+  use super::*;
+
+  impl Default for AppWithLayout {
+    fn default() -> Self {
+      // Potentially do any other initialization here.
+      use crate::DEBUG;
+      call_if_true!(DEBUG, {
+        log_no_err!(
+          DEBUG,
+          "🪙 {}",
+          "construct ex_editor::AppWithLayout { ComponentRegistry }"
+        );
+      });
+
+      Self {
+        component_registry: ComponentRegistry::default(),
+      }
+    }
+  }
 }
 
 mod app_impl {
