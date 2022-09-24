@@ -64,13 +64,17 @@ impl Component<State, Action> for ColumnRenderComponent {
   /// - Down, `-` : fire `SubPop(1)`
   async fn handle_event(
     &mut self,
-    component_registry: &mut ComponentRegistry<State, Action>,
+    args: ComponentScopeArgs<'_, State, Action>,
     input_event: &InputEvent,
-    _state: &State,
-    shared_store: &SharedStore<State, Action>,
-    shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
+      let ComponentScopeArgs {
+        shared_tw_data,
+        shared_store,
+        state,
+        component_registry,
+      } = args;
+
       let mut event_consumed = false;
 
       if let InputEvent::Keyboard(Keypress::Plain { key }) = input_event {
@@ -111,13 +115,18 @@ impl Component<State, Action> for ColumnRenderComponent {
 
   async fn render(
     &mut self,
-    component_registry: &mut ComponentRegistry<State, Action>,
+    args: ComponentScopeArgs<'_, State, Action>,
+
     current_box: &FlexBox,
-    _: &State,
-    _: &SharedStore<State, Action>,
-    shared_tw_data: &SharedTWData,
   ) -> CommonResult<RenderPipeline> {
     throws_with_return!({
+      let ComponentScopeArgs {
+        state,
+        shared_store,
+        shared_tw_data,
+        component_registry,
+      } = args;
+
       // Fixed strings.
       let line_1 = format!("{} - Hello", current_box.id);
       let line_2 = format!("{} - World", current_box.id);

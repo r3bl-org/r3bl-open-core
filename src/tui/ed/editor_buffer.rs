@@ -94,11 +94,11 @@ impl EditorBuffer {
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
-    let EditorEngine {
-      bounds_size,
-      origin_pos,
+    let FlexBox {
+      style_adjusted_bounds_size: bounds_size,
+      style_adjusted_origin_pos: origin_pos,
       ..
-    } = engine;
+    } = engine.current_box;
 
     // TK: 📜 pass engine to all the functions below
     match editor_buffer_command {

@@ -51,10 +51,6 @@ pub struct EditorEngine {
   /// The col and row offset for scrolling if active.
   pub scroll_offset: ScrollOffset,
   /// Set by [render](EditorEngine::render).
-  pub origin_pos: Position,
-  /// Set by [render](EditorEngine::render).
-  pub bounds_size: Size,
-  /// Set by [render](EditorEngine::render).
   pub current_box: FlexBox,
 }
 
@@ -62,16 +58,21 @@ impl EditorEngine {
   // FIXME: impl apply #23
   pub async fn apply<S, A>(
     &mut self,
-    component_registry: &mut ComponentRegistry<S, A>,
-    editor_buffer: &EditorBuffer,
+    args: EditorEngineArgs<'_, S, A>,
     input_event: &InputEvent,
-    shared_tw_data: &SharedTWData,
-    self_id: &str,
   ) -> CommonResult<Option<EditorBuffer>>
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
+    let EditorEngineArgs {
+      editor_buffer,
+      component_registry,
+      shared_tw_data,
+      self_id,
+      ..
+    } = args;
+
     if let Ok(editor_event) = EditorBufferCommand::try_from(input_event) {
       let mut new_editor_buffer = editor_buffer.clone();
       EditorBuffer::apply_editor_event(
@@ -91,27 +92,28 @@ impl EditorEngine {
   // FIXME: impl render #23
   pub async fn render<S, A>(
     &mut self,
-    editor_buffer: &EditorBuffer,
-    component_registry: &mut ComponentRegistry<S, A>,
+    args: EditorEngineArgs<'_, S, A>,
     current_box: &FlexBox,
-    shared_tw_data: &SharedTWData,
-    self_id: &str,
   ) -> CommonResult<RenderPipeline>
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
     throws_with_return!({
-      self.bounds_size = current_box.style_adjusted_bounds_size;
-      self.origin_pos = current_box.style_adjusted_origin_pos;
+      let EditorEngineArgs {
+        editor_buffer,
+        component_registry,
+        ..
+      } = args;
+
       self.current_box = current_box.clone();
 
       // TK: remove debug
       log_no_err!(
         DEBUG,
         "🟨🟨🟨 self.bounds_size -> {:?}, self.origin_pos -> {:?}",
-        self.bounds_size,
-        self.origin_pos
+        self.current_box.style_adjusted_bounds_size,
+        self.current_box.style_adjusted_origin_pos,
       );
 
       // Create this struct to pass around fewer variables.
@@ -143,12 +145,14 @@ impl EditorEngine {
     let Size {
       col: max_content_display_cols,
       row: max_display_row_count,
-    } = self.bounds_size;
+    } = self.current_box.style_adjusted_bounds_size;
 
     // TK: manage scroll here -> manage_scroll::{detect(), mutate()}
-    if let Some(new_scroll_offset) =
-      manage_scroll::detect(&self.origin_pos, &self.bounds_size, editor_buffer)
-    {
+    if let Some(new_scroll_offset) = manage_scroll::detect(
+      &self.current_box.style_adjusted_origin_pos,
+      &self.current_box.style_adjusted_bounds_size,
+      editor_buffer,
+    ) {
       self.scroll_offset = new_scroll_offset;
     }
 
@@ -187,7 +191,7 @@ impl EditorEngine {
       render_pipeline! {
         @push_into render_pipeline at ZOrder::Normal =>
           RenderOp::MoveCursorPositionRelTo(
-            self.origin_pos, position! { col: 0 , row: ch!(@to_usize row_index) }
+            self.current_box.style_adjusted_origin_pos, position! { col: 0 , row: ch!(@to_usize row_index) }
           ),
           RenderOp::ApplyColors(self.current_box.get_computed_style()),
           RenderOp::PrintTextWithAttributes(truncated_line.into(), self.current_box.get_computed_style()),
@@ -233,7 +237,8 @@ impl EditorEngine {
         CaretPaintStyle::GlobalCursor => {
           render_pipeline! {
             @push_into render_pipeline at ZOrder::Caret =>
-              RenderOp::RequestShowCaretAtPositionRelTo(self.origin_pos, editor_buffer.get_caret())
+              RenderOp::RequestShowCaretAtPositionRelTo(
+                self.current_box.style_adjusted_origin_pos, editor_buffer.get_caret())
           };
         }
         CaretPaintStyle::LocalPaintedEffect => {
@@ -248,11 +253,13 @@ impl EditorEngine {
           };
           render_pipeline! {
             @push_into render_pipeline at ZOrder::Caret =>
-            RenderOp::MoveCursorPositionRelTo(self.origin_pos, editor_buffer.get_caret()),
+            RenderOp::MoveCursorPositionRelTo(
+              self.current_box.style_adjusted_origin_pos, editor_buffer.get_caret()),
               RenderOp::PrintTextWithAttributes(
                 str_at_caret,
                 style! { attrib: [reverse] }.into()),
-            RenderOp::MoveCursorPositionRelTo(self.origin_pos, editor_buffer.get_caret())
+            RenderOp::MoveCursorPositionRelTo(
+              self.current_box.style_adjusted_origin_pos, editor_buffer.get_caret())
           };
         }
       }
@@ -275,7 +282,8 @@ impl EditorEngine {
     // Paint the text.
     render_pipeline! {
       @push_into render_pipeline at ZOrder::Normal =>
-        RenderOp::MoveCursorPositionRelTo(self.origin_pos, position! { col: 0 , row: 0 }),
+        RenderOp::MoveCursorPositionRelTo(
+          self.current_box.style_adjusted_origin_pos, position! { col: 0 , row: 0 }),
         RenderOp::ApplyColors(style! {
           color_fg: TWColor::Red
         }.into()),
@@ -291,8 +299,9 @@ impl EditorEngine {
       render_pipeline! {
         @push_into render_pipeline at ZOrder::Normal =>
           RenderOp::MoveCursorPositionRelTo(
-            self.origin_pos,
-            content_cursor_pos.add_rows_with_bounds(ch!(1), self.bounds_size.row)),
+            self.current_box.style_adjusted_origin_pos,
+            content_cursor_pos.add_rows_with_bounds(
+              ch!(1), self.current_box.style_adjusted_bounds_size.row)),
           RenderOp::PrintTextWithAttributes("👀".into(), None)
       };
     }

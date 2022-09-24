@@ -41,6 +41,9 @@ impl EditorComponent {
 
 #[async_trait]
 impl Component<State, Action> for EditorComponent {
+  // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+  // │ handle_event │
+  // ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
   /// This shim simply calls [EditorEngine::apply](EditorEngine::apply) w/ all the necessary
   /// arguments:
   /// - Global scope: [SharedStore], [SharedTwData].
@@ -48,22 +51,30 @@ impl Component<State, Action> for EditorComponent {
   /// - User input (from [main_event_loop]): [InputEvent].
   async fn handle_event(
     &mut self,
-    component_registry: &mut ComponentRegistry<State, Action>,
+    args: ComponentScopeArgs<'_, State, Action>,
     input_event: &InputEvent,
-    state: &State,
-    shared_store: &SharedStore<State, Action>,
-    shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
+      let ComponentScopeArgs {
+        shared_tw_data,
+        shared_store,
+        state,
+        component_registry,
+      } = args;
+
       // Try to apply the `input_event` to `editor_engine` to decide whether to fire action.
       match self
         .editor_engine
         .apply(
-          component_registry,
-          &state.editor_buffer,
+          EditorEngineArgs {
+            state,
+            editor_buffer: &state.editor_buffer,
+            component_registry,
+            shared_tw_data,
+            shared_store,
+            self_id: &self.id,
+          },
           input_event,
-          shared_tw_data,
-          &self.id,
         )
         .await?
       {
@@ -80,6 +91,9 @@ impl Component<State, Action> for EditorComponent {
     });
   }
 
+  // ╭┄┄┄┄┄┄┄┄╮
+  // │ render │
+  // ╯        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
   /// This shim simply calls [EditorEngine::apply](EditorEngine::render) w/ all the necessary
   /// arguments:
   /// - Global scope: [SharedStore], [SharedTwData].
@@ -87,20 +101,28 @@ impl Component<State, Action> for EditorComponent {
   /// - User input (from [main_event_loop]): [InputEvent].
   async fn render(
     &mut self,
-    component_registry: &mut ComponentRegistry<State, Action>,
+    args: ComponentScopeArgs<'_, State, Action>,
     current_box: &FlexBox,
-    state: &State,
-    _: &SharedStore<State, Action>,
-    shared_tw_data: &SharedTWData,
   ) -> CommonResult<RenderPipeline> {
+    let ComponentScopeArgs {
+      state,
+      shared_store,
+      shared_tw_data,
+      component_registry,
+    } = args;
+
     self
       .editor_engine
       .render(
-        &state.editor_buffer,
-        component_registry,
+        EditorEngineArgs {
+          state,
+          editor_buffer: &state.editor_buffer,
+          component_registry,
+          shared_tw_data,
+          shared_store,
+          self_id: &self.id,
+        },
         current_box,
-        shared_tw_data,
-        &self.id,
       )
       .await
   }

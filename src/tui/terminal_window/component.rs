@@ -50,22 +50,16 @@ where
   ///   - Each implementation of this trait is solely responsible of taking care of these behaviors
   async fn render(
     &mut self,
-    component_registry: &mut ComponentRegistry<S, A>,
+    args: ComponentScopeArgs<'_, S, A>,
     current_box: &FlexBox,
-    state: &S,
-    shared_store: &SharedStore<S, A>,
-    shared_tw_data: &SharedTWData,
   ) -> CommonResult<RenderPipeline>;
 
   /// If this component has focus [HasFocus] then this method will be called to handle input event
   /// that is meant for it.
   async fn handle_event(
     &mut self,
-    component_registry: &mut ComponentRegistry<S, A>,
+    args: ComponentScopeArgs<'_, S, A>,
     input_event: &InputEvent,
-    state: &S,
-    shared_store: &SharedStore<S, A>,
-    shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation>;
 }
 
@@ -77,9 +71,7 @@ where
 {
   async fn run_on_surface(
     &mut self,
+    args: GlobalScopeArgs<'_, S, A>,
     surface: &mut Surface,
-    state: &S,
-    shared_store: &SharedStore<S, A>,
-    shared_tw_data: &SharedTWData,
   ) -> CommonResult<()>;
 }
