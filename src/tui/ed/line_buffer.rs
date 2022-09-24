@@ -104,8 +104,8 @@ pub mod line_buffer_caret {
 // ╭┄┄┄┄┄┄┄┄┄┄┄╮
 // │ Caret mut │
 // ╯           ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-// TK: 🚨 use engine { bounds_size, origin_pos } to restrict the caret movement
-// TK: 🚨 set engine { scroll_offset } to restrict the caret movement
+// TK: 📜 use engine { bounds_size, origin_pos } to restrict the caret movement
+// TK: 📜 set engine { scroll_offset } to restrict the caret movement
 pub mod line_buffer_caret_mut {
   use super::*;
 
@@ -285,8 +285,8 @@ pub mod line_buffer_content {
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 // │ Content mut │
 // ╯             ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-// TK: 🚨 use engine { bounds_size, origin_pos } to restrict the caret movement
-// TK: 🚨 set engine { scroll_offset } to restrict the caret movement
+// TK: 📜 use engine { bounds_size, origin_pos } to restrict the caret movement
+// TK: 📜 set engine { scroll_offset } to restrict the caret movement
 pub mod line_buffer_content_mut {
   use super::*;
 
@@ -439,7 +439,8 @@ pub mod line_buffer_content_mut {
     //   └─▴────────┘
     //   C0123456789
     fn backspace_in_middle_of_line(
-      this: &mut EditorBuffer, delete_at_this_display_idx: ChUnit,
+      this: &mut EditorBuffer,
+      delete_at_this_display_idx: ChUnit,
     ) -> Nope {
       let cur_line = line_buffer_content::line_at_caret_to_string(this)?;
       let NewUnicodeStringResult {
@@ -535,7 +536,8 @@ pub(super) mod mutate {
 
   /// Internal function.
   pub(super) fn change_editor_buffer(
-    this: &mut EditorBuffer, mutator: impl FnOnce(&mut Vec<UnicodeString>, &mut Position),
+    this: &mut EditorBuffer,
+    mutator: impl FnOnce(&mut Vec<UnicodeString>, &mut Position),
   ) -> Nope {
     let (lines, caret) = this.get_mut();
     mutator(lines, caret);
@@ -544,7 +546,8 @@ pub(super) mod mutate {
   }
 
   fn validate_caret_position_not_to_be_in_middle_of_grapheme_cluster(
-    lines: &mut [UnicodeString], caret: &mut Position,
+    lines: &mut [UnicodeString],
+    caret: &mut Position,
   ) -> Nope {
     let line = lines.get(ch!(@to_usize caret.row))?;
     let segment = line.is_display_col_in_middle_of_grapheme_cluster(caret.col)?;

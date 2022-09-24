@@ -84,8 +84,12 @@ pub mod access_and_mutate {
 // ╯                                       ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 impl EditorBuffer {
   pub fn apply_editor_event<S, A>(
-    engine: &mut EditorEngine, this: &mut EditorBuffer, editor_buffer_command: EditorBufferCommand,
-    shared_tw_data: &SharedTWData, component_registry: &mut ComponentRegistry<S, A>, self_id: &str,
+    engine: &mut EditorEngine,
+    buffer: &mut EditorBuffer,
+    editor_buffer_command: EditorBufferCommand,
+    shared_tw_data: &SharedTWData,
+    component_registry: &mut ComponentRegistry<S, A>,
+    self_id: &str,
   ) where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
@@ -96,20 +100,24 @@ impl EditorBuffer {
       ..
     } = engine;
 
-    // TK: 🚨 pass engine to all the functions below
+    // TK: 📜 pass engine to all the functions below
     match editor_buffer_command {
-      EditorBufferCommand::InsertChar(character) => this.insert_char(character),
-      EditorBufferCommand::InsertNewLine => this.insert_new_line(engine),
-      EditorBufferCommand::Delete => this.delete(),
-      EditorBufferCommand::Backspace => this.backspace(),
-      EditorBufferCommand::MoveCaret(direction) => this.move_caret(direction),
-      EditorBufferCommand::InsertString(string) => this.insert_str(&string),
+      EditorBufferCommand::InsertChar(character) => buffer.insert_char(character),
+      EditorBufferCommand::InsertNewLine => buffer.insert_new_line(engine),
+      EditorBufferCommand::Delete => buffer.delete(),
+      EditorBufferCommand::Backspace => buffer.backspace(),
+      EditorBufferCommand::MoveCaret(direction) => buffer.move_caret(direction),
+      EditorBufferCommand::InsertString(string) => buffer.insert_str(&string),
     };
   }
 
   pub fn apply_editor_events<S, A>(
-    engine: &mut EditorEngine, this: &mut EditorBuffer, editor_event_vec: Vec<EditorBufferCommand>,
-    shared_tw_data: &SharedTWData, component_registry: &mut ComponentRegistry<S, A>, self_id: &str,
+    engine: &mut EditorEngine,
+    buffer: &mut EditorBuffer,
+    editor_event_vec: Vec<EditorBufferCommand>,
+    shared_tw_data: &SharedTWData,
+    component_registry: &mut ComponentRegistry<S, A>,
+    self_id: &str,
   ) where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
@@ -117,7 +125,7 @@ impl EditorBuffer {
     for editor_event in editor_event_vec {
       EditorBuffer::apply_editor_event(
         engine,
-        this,
+        buffer,
         editor_event,
         shared_tw_data,
         component_registry,

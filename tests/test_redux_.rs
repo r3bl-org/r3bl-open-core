@@ -73,7 +73,8 @@ async fn reset_store(shared_store: &SharedStore<State, Action>) {
 }
 
 async fn run_reducer_and_subscriber(
-  shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>,
+  shared_vec: &Arc<RwLock<Vec<i32>>>,
+  shared_store: &SharedStore<State, Action>,
 ) {
   // Setup store w/ only reducer & subscriber (no middlewares).
   let my_subscriber = MySubscriber {

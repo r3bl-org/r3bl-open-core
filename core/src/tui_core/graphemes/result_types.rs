@@ -31,7 +31,9 @@ pub struct UnicodeStringSegmentSliceResult {
 
 impl UnicodeStringSegmentSliceResult {
   pub fn new(
-    string: &str, unicode_width: ChUnit, display_col_at_which_this_segment_starts: ChUnit,
+    string: &str,
+    unicode_width: ChUnit,
+    display_col_at_which_this_segment_starts: ChUnit,
   ) -> Self {
     Self {
       unicode_string_seg: string.into(),

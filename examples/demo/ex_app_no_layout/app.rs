@@ -54,7 +54,9 @@ macro_rules! fire {
 #[async_trait]
 impl App<State, Action> for AppNoLayout {
   async fn app_render(
-    &mut self, state: &State, _shared_store: &SharedStore<State, Action>,
+    &mut self,
+    state: &State,
+    _shared_store: &SharedStore<State, Action>,
     shared_tw_data: &SharedTWData,
   ) -> CommonResult<RenderPipeline> {
     throws_with_return!({
@@ -86,8 +88,12 @@ impl App<State, Action> for AppNoLayout {
   }
 
   async fn app_handle_event(
-    &mut self, input_event: &InputEvent, _state: &State, shared_store: &SharedStore<State, Action>,
-    _terminal_size: Size, shared_tw_data: &SharedTWData,
+    &mut self,
+    input_event: &InputEvent,
+    _state: &State,
+    shared_store: &SharedStore<State, Action>,
+    _terminal_size: Size,
+    shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       call_if_true!(

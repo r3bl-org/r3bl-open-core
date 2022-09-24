@@ -83,7 +83,8 @@ where
   A: Clone + Default + Send + Sync,
 {
   pub async fn add_subscriber(
-    &mut self, subscriber_fn: Box<dyn AsyncSubscriber<S> + Send + Sync>,
+    &mut self,
+    subscriber_fn: Box<dyn AsyncSubscriber<S> + Send + Sync>,
   ) -> &mut Store<S, A> {
     self.subscriber_vec.push(subscriber_fn);
     self
@@ -95,14 +96,16 @@ where
   }
 
   pub async fn add_middleware(
-    &mut self, middleware_fn: Box<dyn AsyncMiddleware<S, A> + Send + Sync>,
+    &mut self,
+    middleware_fn: Box<dyn AsyncMiddleware<S, A> + Send + Sync>,
   ) -> &mut Store<S, A> {
     self.middleware_vec.push(middleware_fn);
     self
   }
 
   pub async fn add_middleware_spawns(
-    &mut self, middleware_fn: Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>,
+    &mut self,
+    middleware_fn: Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>,
   ) -> &mut Store<S, A> {
     self.middleware_spawns_vec.push(middleware_fn);
     self
@@ -114,7 +117,8 @@ where
   }
 
   pub async fn add_reducer(
-    &mut self, reducer_fn: Box<dyn AsyncReducer<S, A> + Send + Sync>,
+    &mut self,
+    reducer_fn: Box<dyn AsyncReducer<S, A> + Send + Sync>,
   ) -> &mut Store<S, A> {
     self.reducer_vec.push(reducer_fn);
     self

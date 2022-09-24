@@ -47,8 +47,12 @@ impl Component<State, Action> for EditorComponent {
   /// - App scope: [State], [ComponentRegistry<State, Action>].
   /// - User input (from [main_event_loop]): [InputEvent].
   async fn handle_event(
-    &mut self, component_registry: &mut ComponentRegistry<State, Action>, input_event: &InputEvent,
-    state: &State, shared_store: &SharedStore<State, Action>, shared_tw_data: &SharedTWData,
+    &mut self,
+    component_registry: &mut ComponentRegistry<State, Action>,
+    input_event: &InputEvent,
+    state: &State,
+    shared_store: &SharedStore<State, Action>,
+    shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       // Try to apply the `input_event` to `editor_engine` to decide whether to fire action.
@@ -82,8 +86,12 @@ impl Component<State, Action> for EditorComponent {
   /// - App scope: [State], [ComponentRegistry<State, Action>].
   /// - User input (from [main_event_loop]): [InputEvent].
   async fn render(
-    &mut self, component_registry: &mut ComponentRegistry<State, Action>, current_box: &FlexBox,
-    state: &State, _: &SharedStore<State, Action>, shared_tw_data: &SharedTWData,
+    &mut self,
+    component_registry: &mut ComponentRegistry<State, Action>,
+    current_box: &FlexBox,
+    state: &State,
+    _: &SharedStore<State, Action>,
+    shared_tw_data: &SharedTWData,
   ) -> CommonResult<RenderPipeline> {
     self
       .editor_engine

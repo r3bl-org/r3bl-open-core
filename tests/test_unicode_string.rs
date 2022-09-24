@@ -36,8 +36,12 @@ fn test_unicode_string_ext() {
 #[test]
 fn test_grapheme_cluster_segment() {
   fn assert_segment(
-    segment: &GraphemeClusterSegment, byte_offset: usize, unicode_width: ChUnit,
-    logical_index: usize, byte_size: usize, string: &str,
+    segment: &GraphemeClusterSegment,
+    byte_offset: usize,
+    unicode_width: ChUnit,
+    logical_index: usize,
+    byte_size: usize,
+    string: &str,
   ) {
     assert_eq2!(segment.string, string);
     assert_eq2!(segment.byte_offset, byte_offset);

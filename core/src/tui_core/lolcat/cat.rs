@@ -113,7 +113,9 @@ impl Lolcat {
   /// - Print newlines correctly, resetting background.
   /// - If constantly_flush is on, it won't wait till a newline to flush stdout.
   fn format_iter<I: Iterator<Item = char>>(
-    &mut self, mut iter: I, constantly_flush: bool,
+    &mut self,
+    mut iter: I,
+    constantly_flush: bool,
   ) -> OutputCollector {
     let mut original_seed = self.color_wheel_control.seed;
     let mut ignore_whitespace = self.color_wheel_control.background_mode;

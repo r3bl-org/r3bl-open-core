@@ -60,7 +60,9 @@ pub mod user_data_ops {
   use super::*;
 
   pub fn get<S, A>(
-    component_registry: &ComponentRegistry<S, A>, id: &str, key: &str,
+    component_registry: &ComponentRegistry<S, A>,
+    id: &str,
+    key: &str,
   ) -> Option<String>
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
@@ -74,7 +76,10 @@ pub mod user_data_ops {
   }
 
   pub fn put<S, A>(
-    component_registry: &mut ComponentRegistry<S, A>, id: &str, key: &str, value: &str,
+    component_registry: &mut ComponentRegistry<S, A>,
+    id: &str,
+    key: &str,
+    value: &str,
   ) where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
@@ -104,7 +109,8 @@ where
   }
 
   pub fn get_component_ref_by_id(
-    this: &mut ComponentRegistry<S, A>, id: &str,
+    this: &mut ComponentRegistry<S, A>,
+    id: &str,
   ) -> Option<SharedComponent<S, A>> {
     if let Some(component) = this.get(id) {
       return Some(component.clone());
@@ -113,8 +119,11 @@ where
   }
 
   pub async fn route_event_to_focused_component(
-    this: &mut ComponentRegistry<S, A>, input_event: &InputEvent, state: &S,
-    shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
+    this: &mut ComponentRegistry<S, A>,
+    input_event: &InputEvent,
+    state: &S,
+    shared_store: &SharedStore<S, A>,
+    shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
       // If component has focus, then route input_event to it. Return its propagation enum.

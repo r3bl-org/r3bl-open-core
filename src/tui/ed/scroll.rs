@@ -23,7 +23,9 @@ pub mod manage_scroll {
   pub fn mutate() -> Nope { None }
 
   pub fn detect(
-    origin_pos: &Position, bounds_size: &Size, editor_buffer: &EditorBuffer,
+    origin_pos: &Position,
+    bounds_size: &Size,
+    editor_buffer: &EditorBuffer,
   ) -> Option<ScrollOffset> {
     let content_line_count = ch!(editor_buffer.get_lines().len()); /* 1 index */
 

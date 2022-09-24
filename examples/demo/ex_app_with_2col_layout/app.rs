@@ -40,8 +40,11 @@ mod app_impl {
   #[async_trait]
   impl App<State, Action> for AppWithLayout {
     async fn app_handle_event(
-      &mut self, input_event: &InputEvent, state: &State,
-      shared_store: &SharedStore<State, Action>, _terminal_size: Size,
+      &mut self,
+      input_event: &InputEvent,
+      state: &State,
+      shared_store: &SharedStore<State, Action>,
+      _terminal_size: Size,
       shared_tw_data: &SharedTWData,
     ) -> CommonResult<EventPropagation> {
       // Try to handle left and right arrow key input events & return if handled.
@@ -61,7 +64,9 @@ mod app_impl {
     }
 
     async fn app_render(
-      &mut self, state: &State, shared_store: &SharedStore<State, Action>,
+      &mut self,
+      state: &State,
+      shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
     ) -> CommonResult<RenderPipeline> {
       throws_with_return!({
@@ -89,7 +94,10 @@ mod app_impl {
   #[async_trait]
   impl SurfaceRunnable<State, Action> for AppWithLayout {
     async fn run_on_surface(
-      &mut self, surface: &mut Surface, state: &State, shared_store: &SharedStore<State, Action>,
+      &mut self,
+      surface: &mut Surface,
+      state: &State,
+      shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
       self.create_components_populate_registry_init_focus().await;
@@ -184,7 +192,10 @@ mod construct_components {
 
     /// Main container CONTAINER_ID.
     pub async fn create_main_container(
-      &mut self, surface: &mut Surface, state: &State, shared_store: &SharedStore<State, Action>,
+      &mut self,
+      surface: &mut Surface,
+      state: &State,
+      shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
       throws!({
@@ -214,7 +225,10 @@ mod layout_components {
   #[async_trait]
   impl<'a> SurfaceRunnable<State, Action> for TwoColLayout<'a> {
     async fn run_on_surface(
-      &mut self, surface: &mut Surface, state: &State, shared_store: &SharedStore<State, Action>,
+      &mut self,
+      surface: &mut Surface,
+      state: &State,
+      shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
       self
@@ -230,7 +244,10 @@ mod layout_components {
   impl<'a> TwoColLayout<'a> {
     /// Left column COL_1_ID.
     async fn create_left_col(
-      &mut self, surface: &mut Surface, state: &State, shared_store: &SharedStore<State, Action>,
+      &mut self,
+      surface: &mut Surface,
+      state: &State,
+      shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
       throws!({
@@ -252,7 +269,10 @@ mod layout_components {
 
     /// Right column COL_2_ID.
     async fn create_right_col(
-      &mut self, surface: &mut Surface, state: &State, shared_store: &SharedStore<State, Action>,
+      &mut self,
+      surface: &mut Surface,
+      state: &State,
+      shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
       throws!({

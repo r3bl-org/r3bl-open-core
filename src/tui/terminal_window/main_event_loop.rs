@@ -70,7 +70,9 @@ impl TerminalWindow {
   /// A: Default + Clone + Sync + Send,
   /// ```
   pub async fn main_event_loop<S, A>(
-    store: Store<S, A>, shared_app: SharedApp<S, A>, exit_keys: Vec<InputEvent>,
+    store: Store<S, A>,
+    shared_app: SharedApp<S, A>,
+    exit_keys: Vec<InputEvent>,
   ) -> CommonResult<()>
   where
     S: Display + Default + Clone + PartialEq + Debug + Sync + Send + 'static,
@@ -154,7 +156,9 @@ impl TerminalWindow {
   }
 
   async fn process_input_event<S, A>(
-    shared_tw_data: &SharedTWData, shared_store: &SharedStore<S, A>, shared_app: &SharedApp<S, A>,
+    shared_tw_data: &SharedTWData,
+    shared_store: &SharedStore<S, A>,
+    shared_app: &SharedApp<S, A>,
     input_event: &InputEvent,
   ) -> CommonResult<EventPropagation>
   where
@@ -249,7 +253,9 @@ where
   A: Display + Default + Clone + Sync + Send,
 {
   fn new_box(
-    shared_app: &SharedApp<S, A>, shared_store: &SharedStore<S, A>, shared_tw_data: &SharedTWData,
+    shared_app: &SharedApp<S, A>,
+    shared_store: &SharedStore<S, A>,
+    shared_tw_data: &SharedTWData,
   ) -> Box<Self> {
     Box::new(AppManager {
       shared_app: shared_app.clone(),
@@ -260,7 +266,9 @@ where
 
   /// Pass the event to the `shared_app` for further processing.
   pub async fn route_input_to_app(
-    shared_tw_data: &SharedTWData, shared_store: &SharedStore<S, A>, shared_app: &SharedApp<S, A>,
+    shared_tw_data: &SharedTWData,
+    shared_store: &SharedStore<S, A>,
+    shared_app: &SharedApp<S, A>,
     input_event: &InputEvent,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
@@ -281,7 +289,9 @@ where
   }
 
   pub async fn render_app(
-    shared_store: &SharedStore<S, A>, shared_app: &SharedApp<S, A>, shared_tw_data: &SharedTWData,
+    shared_store: &SharedStore<S, A>,
+    shared_app: &SharedApp<S, A>,
+    shared_tw_data: &SharedTWData,
     maybe_state: Option<S>,
   ) -> CommonResult<()> {
     throws!({

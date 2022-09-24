@@ -114,7 +114,8 @@ async fn reset_store(shared_store: &SharedStore<State, Action>) {
 /// 1. Test reducer and subscriber by dispatching `Add` and `AddPop` actions
 /// 2. No middlewares.
 async fn run_reducer_and_subscriber(
-  shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>,
+  shared_vec: &Arc<RwLock<Vec<i32>>>,
+  shared_store: &SharedStore<State, Action>,
 ) {
   // Setup store w/ only reducer & subscriber (no middlewares).
   let my_subscriber = MySubscriber {
@@ -166,7 +167,8 @@ async fn run_reducer_and_subscriber(
 /// 1. Does not involve any reducers or subscribers.
 /// 2. Just this middleware which modifies the `shared_vec`.
 async fn run_mw_example_no_spawn(
-  shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>,
+  shared_vec: &Arc<RwLock<Vec<i32>>>,
+  shared_store: &SharedStore<State, Action>,
 ) {
   let mw_returns_none = MwExampleNoSpawn {
     shared_vec: shared_vec.clone(),
@@ -218,7 +220,8 @@ async fn delay_for_spawned_mw_to_execute() {
 /// 2. Then dispatches an action to `MyReducer` that resets the store w/
 /// `[-100]`.
 async fn run_mw_example_spawns(
-  shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>,
+  shared_vec: &Arc<RwLock<Vec<i32>>>,
+  shared_store: &SharedStore<State, Action>,
 ) {
   let mw_returns_action = MwExampleSpawns {
     shared_vec: shared_vec.clone(),
