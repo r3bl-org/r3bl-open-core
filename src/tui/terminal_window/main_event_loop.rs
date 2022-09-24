@@ -278,11 +278,13 @@ where
         .write()
         .await
         .app_handle_event(
-          input_event,
-          &latest_state,
-          shared_store,
+          GlobalScopeArgs {
+            shared_tw_data,
+            shared_store,
+            state: &latest_state,
+          },
           window_size,
-          shared_tw_data,
+          input_event,
         )
         .await?
     });
@@ -304,7 +306,11 @@ where
       let render_result = shared_app
         .write()
         .await
-        .app_render(&state, shared_store, shared_tw_data)
+        .app_render(GlobalScopeArgs {
+          state: &state,
+          shared_store,
+          shared_tw_data,
+        })
         .await;
 
       match render_result {

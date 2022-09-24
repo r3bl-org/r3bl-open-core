@@ -183,11 +183,13 @@ macro_rules! call_handle_event {
       .write()
       .await
       .handle_event(
-        $component_registry,
+        ComponentScopeArgs {
+          shared_tw_data: $shared_tw_data,
+          shared_store: $shared_store,
+          state: $state,
+          component_registry: $component_registry,
+        },
         $input_event,
-        $state,
-        $shared_store,
-        $shared_tw_data,
       )
       .await?;
     return Ok(result_event_propagation);

@@ -55,11 +55,15 @@ macro_rules! fire {
 impl App<State, Action> for AppNoLayout {
   async fn app_render(
     &mut self,
-    state: &State,
-    _shared_store: &SharedStore<State, Action>,
-    shared_tw_data: &SharedTWData,
+    args: GlobalScopeArgs<'_, State, Action>,
   ) -> CommonResult<RenderPipeline> {
     throws_with_return!({
+      let GlobalScopeArgs {
+        state,
+        shared_store,
+        shared_tw_data,
+      } = args;
+
       let content = format!("{}", state);
 
       let content_size_col: ChUnit = content.len().into();
@@ -89,13 +93,17 @@ impl App<State, Action> for AppNoLayout {
 
   async fn app_handle_event(
     &mut self,
+    args: GlobalScopeArgs<'_, State, Action>,
+    _window_size: Size,
     input_event: &InputEvent,
-    _state: &State,
-    shared_store: &SharedStore<State, Action>,
-    _terminal_size: Size,
-    shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
+      let GlobalScopeArgs {
+        state,
+        shared_store,
+        shared_tw_data,
+      } = args;
+
       call_if_true!(
         DEBUG,
         log_no_err!(

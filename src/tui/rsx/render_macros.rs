@@ -34,11 +34,13 @@ macro_rules! render {
         .write()
         .await
         .render(
-          &mut $arg_registry,
+          ComponentScopeArgs {
+            shared_tw_data: $arg_shared_tw_data,
+            shared_store: $arg_shared_store,
+            state: $arg_state,
+            component_registry: &mut $arg_registry,
+          },
           current_box,
-          $arg_state,
-          $arg_shared_store,
-          $arg_shared_tw_data,
         )
         .await?;
       $arg_surface.render_pipeline += queue;

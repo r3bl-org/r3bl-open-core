@@ -69,7 +69,13 @@ macro_rules! box_start_with_runnable {
     };
 
     $arg_runnable
-      .run_on_surface($arg_surface, $arg_state, $arg_shared_store, $arg_shared_tw_data)
+      .run_on_surface(
+        GlobalScopeArgs {
+          shared_tw_data: $arg_shared_tw_data,
+          shared_store: $arg_shared_store,
+          state: $arg_state,
+        },
+        $arg_surface)
       .await?;
 
     $arg_surface.box_end()?;
@@ -102,10 +108,12 @@ macro_rules! surface_start_with_runnable {
 
     $arg_runnable
       .run_on_surface(
+        GlobalScopeArgs {
+          shared_tw_data: $arg_shared_tw_data,
+          shared_store: $arg_shared_store,
+          state: $arg_state,
+        },
         &mut surface,
-        $arg_state,
-        $arg_shared_store,
-        $arg_shared_tw_data,
       )
       .await?;
 

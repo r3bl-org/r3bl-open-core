@@ -40,12 +40,16 @@ mod app_impl {
   impl App<State, Action> for AppWithLayout {
     async fn app_handle_event(
       &mut self,
+      args: GlobalScopeArgs<'_, State, Action>,
+      _window_size: Size,
       input_event: &InputEvent,
-      state: &State,
-      shared_store: &SharedStore<State, Action>,
-      _terminal_size: Size,
-      shared_tw_data: &SharedTWData,
     ) -> CommonResult<EventPropagation> {
+      let GlobalScopeArgs {
+        state,
+        shared_store,
+        shared_tw_data,
+      } = args;
+
       route_event_to_focused_component!(
         registry:       self.component_registry,
         has_focus:      self.has_focus,
@@ -58,11 +62,15 @@ mod app_impl {
 
     async fn app_render(
       &mut self,
-      state: &State,
-      shared_store: &SharedStore<State, Action>,
-      shared_tw_data: &SharedTWData,
+      args: GlobalScopeArgs<'_, State, Action>,
     ) -> CommonResult<RenderPipeline> {
       throws_with_return!({
+        let GlobalScopeArgs {
+          state,
+          shared_store,
+          shared_tw_data,
+        } = args;
+
         let window_size = shared_tw_data.read().await.get_size();
         // Render container component.
         let mut surface = surface_start_with_runnable! {
@@ -88,11 +96,15 @@ mod app_impl {
   impl SurfaceRunnable<State, Action> for AppWithLayout {
     async fn run_on_surface(
       &mut self,
+      args: GlobalScopeArgs<'_, State, Action>,
       surface: &mut Surface,
-      state: &State,
-      shared_store: &SharedStore<State, Action>,
-      shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
+      let GlobalScopeArgs {
+        state,
+        shared_store,
+        shared_tw_data,
+      } = args;
+
       self.create_components_populate_registry_init_focus().await;
       self
         .create_main_container(surface, state, shared_store, shared_tw_data)

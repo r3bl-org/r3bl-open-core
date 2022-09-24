@@ -32,21 +32,14 @@ where
   A: Display + Default + Clone + Sync + Send,
 {
   /// Use the state to render the output (via crossterm). To change the state, dispatch an action.
-  async fn app_render(
-    &mut self,
-    state: &S,
-    shared_store: &SharedStore<S, A>,
-    shared_tw_data: &SharedTWData,
-  ) -> CommonResult<RenderPipeline>;
+  async fn app_render(&mut self, args: GlobalScopeArgs<'_, S, A>) -> CommonResult<RenderPipeline>;
 
   /// Use the input_event to dispatch an action to the store if needed.
   async fn app_handle_event(
     &mut self,
-    input_event: &InputEvent,
-    state: &S,
-    shared_store: &SharedStore<S, A>,
+    args: GlobalScopeArgs<'_, S, A>,
     window_size: Size,
-    shared_tw_data: &SharedTWData,
+    input_event: &InputEvent,
   ) -> CommonResult<EventPropagation>;
 
   /// Wrap a new instance in [Box].

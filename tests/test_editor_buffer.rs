@@ -405,7 +405,6 @@ fn test_move_caret_up_down() {
   assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
 }
 
-#[ignore]
 #[test]
 fn test_insert_new_line() {
   // Starts w/ an empty line.
