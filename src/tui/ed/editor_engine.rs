@@ -61,8 +61,12 @@ pub struct EditorEngine {
 impl EditorEngine {
   // FIXME: impl apply #23
   pub async fn apply<S, A>(
-    &mut self, component_registry: &mut ComponentRegistry<S, A>, editor_buffer: &EditorBuffer,
-    input_event: &InputEvent, shared_tw_data: &SharedTWData, self_id: &str,
+    &mut self,
+    component_registry: &mut ComponentRegistry<S, A>,
+    editor_buffer: &EditorBuffer,
+    input_event: &InputEvent,
+    shared_tw_data: &SharedTWData,
+    self_id: &str,
   ) -> CommonResult<Option<EditorBuffer>>
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
@@ -86,8 +90,12 @@ impl EditorEngine {
 
   // FIXME: impl render #23
   pub async fn render<S, A>(
-    &mut self, editor_buffer: &EditorBuffer, component_registry: &mut ComponentRegistry<S, A>,
-    current_box: &FlexBox, shared_tw_data: &SharedTWData, self_id: &str,
+    &mut self,
+    editor_buffer: &EditorBuffer,
+    component_registry: &mut ComponentRegistry<S, A>,
+    current_box: &FlexBox,
+    shared_tw_data: &SharedTWData,
+    self_id: &str,
   ) -> CommonResult<RenderPipeline>
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
@@ -123,6 +131,7 @@ impl EditorEngine {
   }
 
   // This simply clips the content to the `style_adj_box_bounds_size`.
+  // TK: 📜✅ scroll enable render_content
   fn render_content<S, A>(&mut self, render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
@@ -199,7 +208,9 @@ impl EditorEngine {
 
   /// Implement caret painting using two different strategies represented by [CaretPaintStyle].
   fn render_caret<S, A>(
-    &mut self, style: CaretPaintStyle, render_args: &RenderArgs<'_, S, A>,
+    &mut self,
+    style: CaretPaintStyle,
+    render_args: &RenderArgs<'_, S, A>,
   ) -> RenderPipeline
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,

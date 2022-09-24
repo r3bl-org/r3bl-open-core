@@ -289,7 +289,8 @@ pub mod convert_key_event {
     }
 
     fn generate_non_character_key_with_modifiers(
-      key: Key, mask: ModifierKeysMask,
+      key: Key,
+      mask: ModifierKeysMask,
     ) -> Result<Keypress, ()> {
       Ok(Keypress::WithModifiers { mask, key })
     }

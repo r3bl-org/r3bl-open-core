@@ -43,7 +43,8 @@ pub fn transform_named_fields_into_ts(
 /// If [syn::Data] contains [syn::DataStruct] then parse it, and generate a
 /// [proc_macro2::TokenStream] and return it.
 pub fn with_data_struct_make_ts(
-  data: &syn::Data, data_struct_transform_fn: &dyn Fn(&syn::DataStruct) -> proc_macro2::TokenStream,
+  data: &syn::Data,
+  data_struct_transform_fn: &dyn Fn(&syn::DataStruct) -> proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
   match data {
     Struct(ref data_struct) => data_struct_transform_fn(data_struct),

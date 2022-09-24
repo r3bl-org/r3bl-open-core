@@ -61,8 +61,12 @@ mod app_impl {
   #[async_trait]
   impl App<State, Action> for AppWithLayout {
     async fn app_handle_event(
-      &mut self, input_event: &InputEvent, state: &State,
-      shared_store: &SharedStore<State, Action>, _: Size, shared_tw_data: &SharedTWData,
+      &mut self,
+      input_event: &InputEvent,
+      state: &State,
+      shared_store: &SharedStore<State, Action>,
+      _: Size,
+      shared_tw_data: &SharedTWData,
     ) -> CommonResult<EventPropagation> {
       route_event_to_focused_component!(
         registry:       self.component_registry,
@@ -75,7 +79,9 @@ mod app_impl {
     }
 
     async fn app_render(
-      &mut self, state: &State, shared_store: &SharedStore<State, Action>,
+      &mut self,
+      state: &State,
+      shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
     ) -> CommonResult<RenderPipeline> {
       throws_with_return!({
@@ -105,7 +111,10 @@ mod app_impl {
   #[async_trait]
   impl SurfaceRunnable<State, Action> for AppWithLayout {
     async fn run_on_surface(
-      &mut self, surface: &mut Surface, state: &State, shared_store: &SharedStore<State, Action>,
+      &mut self,
+      surface: &mut Surface,
+      state: &State,
+      shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
       self.create_components_populate_registry_init_focus().await;
@@ -138,7 +147,10 @@ mod construct_components {
 
     /// Main container CONTAINER_ID.
     pub async fn create_main_container(
-      &mut self, surface: &mut Surface, state: &State, shared_store: &SharedStore<State, Action>,
+      &mut self,
+      surface: &mut Surface,
+      state: &State,
+      shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
       throws!({

@@ -155,7 +155,8 @@ fn make_new_where_clause_with_default_trait_bounds_for_named_fields(
 /// ]
 /// ```
 fn add_trait_bounds_to_existing_where_clause_ts(
-  where_clause: &Option<syn::WhereClause>, traits: &[&str],
+  where_clause: &Option<syn::WhereClause>,
+  traits: &[&str],
 ) -> proc_macro2::TokenStream {
   // Must parse the `traits.join("+")` string into a [syn::Type].
   let joined_traits: Type = parse_str(&traits.join(" + ")).unwrap();

@@ -101,7 +101,8 @@ impl UnicodeString {
   /// Return the string and unicode width of the grapheme cluster segment at the given `display_col`.
   /// If this `display_col` falls in the middle of a grapheme cluster, then return [None].
   pub fn get_string_at_display_col(
-    &self, display_col: ChUnit,
+    &self,
+    display_col: ChUnit,
   ) -> Option<UnicodeStringSegmentSliceResult> {
     let segment = self.at_display_col(display_col)?;
     // What if the display_col is in the middle of a grapheme cluster?
@@ -119,7 +120,8 @@ impl UnicodeString {
   /// If the given `display_col` falls in the middle of a grapheme cluster, then return the
   /// [GraphemeClusterSegment] at that `display_col`. Otherwise return [None].
   pub fn is_display_col_in_middle_of_grapheme_cluster(
-    &self, display_col: ChUnit,
+    &self,
+    display_col: ChUnit,
   ) -> Option<GraphemeClusterSegment> {
     let segment = self.at_display_col(display_col);
     if let Some(segment) = segment {
@@ -131,7 +133,8 @@ impl UnicodeString {
   }
 
   pub fn get_string_at_left_of_display_col(
-    &self, display_col: ChUnit,
+    &self,
+    display_col: ChUnit,
   ) -> Option<UnicodeStringSegmentSliceResult> {
     let segment_at_col = self.at_display_col(display_col)?;
     if segment_at_col.logical_index > 0 {

@@ -206,7 +206,9 @@ fn make_non_root_box_with_style(
     },
     maybe_styles: _,
   }: FlexBoxProps,
-  origin_pos: Position, container_bounds: Size, maybe_cascaded_style: Option<Style>,
+  origin_pos: Position,
+  container_bounds: Size,
+  maybe_cascaded_style: Option<Style>,
 ) -> FlexBox {
   let bounds_size = size!(
     col: calc_percentage(width_pc, container_bounds.col),
@@ -240,7 +242,8 @@ fn make_root_box_with_style(
     requested_size_percent,
     maybe_styles,
   }: FlexBoxProps,
-  origin_pos: Position, bounds_size: Size,
+  origin_pos: Position,
+  bounds_size: Size,
 ) -> FlexBox {
   let computed_style = Stylesheet::compute(&maybe_styles);
 
@@ -263,7 +266,9 @@ fn make_root_box_with_style(
 
 /// Adjust `origin` & `bounds_size` based on the `maybe_style`'s padding.
 fn adjust_with_style(
-  maybe_computed_style: &Option<Style>, origin_pos: Position, bounds_size: Size,
+  maybe_computed_style: &Option<Style>,
+  origin_pos: Position,
+  bounds_size: Size,
 ) -> (Position, Size) {
   let mut style_adjusted_origin_pos = origin_pos;
   let mut style_adjusted_bounds_size = bounds_size;

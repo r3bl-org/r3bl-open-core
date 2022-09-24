@@ -28,7 +28,9 @@ impl UnicodeString {
   /// Returns a new ([NewUnicodeStringResult]) tuple. Does not modify
   /// [self.string](UnicodeString::string).
   pub fn insert_char_at_display_col(
-    &self, display_col: ChUnit, chunk: &str,
+    &self,
+    display_col: ChUnit,
+    chunk: &str,
   ) -> Option<NewUnicodeStringResult> {
     let maybe_logical_index = self.logical_index_at_display_col(display_col);
     match maybe_logical_index {
@@ -73,7 +75,8 @@ impl UnicodeString {
   /// Returns two new tuples: *left* ([NewUnicodeStringResult]), *right*
   /// ([NewUnicodeStringResult]). Does not modify [self.string](UnicodeString::string).
   pub fn split_at_display_col(
-    &self, display_col: ChUnit,
+    &self,
+    display_col: ChUnit,
   ) -> Option<(NewUnicodeStringResult, NewUnicodeStringResult)> {
     let split_logical_index = self.logical_index_at_display_col(display_col)?;
     let max_logical_index = self.len();

@@ -36,7 +36,10 @@ pub struct RenderOpImplCrossterm;
 #[async_trait]
 impl PaintRenderOp for RenderOpImplCrossterm {
   async fn paint(
-    &self, skip_flush: &mut bool, command_ref: &RenderOp, shared_tw_data: &SharedTWData,
+    &self,
+    skip_flush: &mut bool,
+    command_ref: &RenderOp,
+    shared_tw_data: &SharedTWData,
   ) {
     match command_ref {
       RenderOp::Noop => {}
@@ -118,7 +121,9 @@ pub mod flush_impl {
 // │ Implement all the render ops │
 // ╯                              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 async fn move_cursor_position_rel_to(
-  box_origin_pos: &Position, content_rel_pos: &Position, shared_tw_data: &SharedTWData,
+  box_origin_pos: &Position,
+  content_rel_pos: &Position,
+  shared_tw_data: &SharedTWData,
 ) {
   let new_abs_pos = *box_origin_pos + *content_rel_pos;
   move_cursor_position_abs(&new_abs_pos, shared_tw_data).await;
@@ -167,7 +172,9 @@ async fn raw_mode_enter(skip_flush: &mut bool, shared_tw_data: &SharedTWData) {
 }
 
 async fn request_show_caret_at_position_rel_to(
-  box_origin_pos: &Position, content_rel_pos: &Position, shared_tw_data: &SharedTWData,
+  box_origin_pos: &Position,
+  content_rel_pos: &Position,
+  shared_tw_data: &SharedTWData,
 ) {
   let new_abs_pos = *box_origin_pos + *content_rel_pos;
   request_show_caret_at_position_abs(&new_abs_pos, shared_tw_data).await;
@@ -199,7 +206,9 @@ fn set_bg_color(color: &TWColor) {
 }
 
 async fn print_text_with_attributes(
-  text_arg: &String, maybe_style: &Option<Style>, shared_tw_data: &SharedTWData,
+  text_arg: &String,
+  maybe_style: &Option<Style>,
+  shared_tw_data: &SharedTWData,
 ) {
   // Are ANSI codes present?
   let truncation_policy = {

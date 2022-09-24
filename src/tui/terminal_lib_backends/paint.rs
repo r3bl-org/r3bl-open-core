@@ -33,7 +33,9 @@ use crate::{tui::DEBUG_SHOW_PIPELINE, *};
 /// 1. [RenderOp::RequestShowCaretAtPositionAbs]
 /// 2. [RenderOp::RequestShowCaretAtPositionRelTo]
 pub async fn paint(
-  pipeline: &RenderPipeline, flush_kind: FlushKind, shared_tw_data: &SharedTWData,
+  pipeline: &RenderPipeline,
+  flush_kind: FlushKind,
+  shared_tw_data: &SharedTWData,
 ) {
   let mut skip_flush = false;
 
@@ -94,7 +96,8 @@ pub async fn paint(
 ///    edge of the window. This clamped [Position] is returned.
 /// 3. This also saves the clamped [Position] to [SharedTWData].
 pub async fn sanitize_and_save_abs_position(
-  orig_abs_pos: Position, shared_tw_data: &SharedTWData,
+  orig_abs_pos: Position,
+  shared_tw_data: &SharedTWData,
 ) -> Position {
   let Size {
     col: max_cols,
@@ -146,7 +149,9 @@ pub async fn sanitize_and_save_abs_position(
 // │ Route paint RenderOp to backend │
 // ╯                                 ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 pub async fn route_paint_render_op_to_backend(
-  skip_flush: &mut bool, render_op: &RenderOp, shared_tw_data: &SharedTWData,
+  skip_flush: &mut bool,
+  render_op: &RenderOp,
+  shared_tw_data: &SharedTWData,
 ) {
   match TERMINAL_LIB_BACKEND {
     TerminalLibBackend::Crossterm => {
