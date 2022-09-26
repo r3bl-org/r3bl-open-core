@@ -56,7 +56,7 @@ where
   pub state: &'a S,
   pub component_registry: &'a mut ComponentRegistry<S, A>,
   pub self_id: &'a str,
-  pub editor_buffer: &'a EditorBuffer,
+  pub buffer: &'a EditorBuffer,
 }
 
 // ╭┄┄┄┄┄┄┄┄┄╮

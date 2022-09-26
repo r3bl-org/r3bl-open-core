@@ -26,14 +26,14 @@ use crate::{ex_editor::*, *};
 /// and [Store]. The main methods here simply pass thru all their arguments to the [EditorEngine].
 #[derive(Debug, Clone, Default)]
 pub struct EditorComponent {
-  pub editor_engine: EditorEngine,
+  pub editor_engine: EditorRenderEngine,
   pub id: String,
 }
 
 impl EditorComponent {
   pub fn new(id: &str) -> Self {
     Self {
-      editor_engine: EditorEngine::default(),
+      editor_engine: EditorRenderEngine::default(),
       id: id.to_string(),
     }
   }
@@ -68,7 +68,7 @@ impl Component<State, Action> for EditorComponent {
         .apply(
           EditorEngineArgs {
             state,
-            editor_buffer: &state.editor_buffer,
+            buffer: &state.editor_buffer,
             component_registry,
             shared_tw_data,
             shared_store,
@@ -116,7 +116,7 @@ impl Component<State, Action> for EditorComponent {
       .render(
         EditorEngineArgs {
           state,
-          editor_buffer: &state.editor_buffer,
+          buffer: &state.editor_buffer,
           component_registry,
           shared_tw_data,
           shared_store,

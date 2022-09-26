@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{Debug, Display, Result},
-          ops::Add};
+use std::fmt::{Debug, Display, Result};
 
 use get_size::GetSize;
 use r3bl_rs_utils_core::*;
@@ -34,9 +33,11 @@ use crate::*;
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
   lines: Vec<UnicodeString>,
-  /// The current caret position. This is the "display" and not "logical" position as defined in
-  /// [UnicodeString]. This works w/ [crate::RenderOp] as well, so you can directly move this
-  /// position.
+  /// The current caret position (relative to the
+  /// [style_adjusted_origin_pos](FlexBox::style_adjusted_origin_pos) of the enclosing [FlexBox]).
+  ///
+  /// 1. This is the "display" and not "logical" position as defined in [UnicodeString].
+  /// 2. This works w/ [crate::RenderOp::MoveCursorPositionRelTo] as well.
   caret: Position,
   /// Lolcat struct for generating rainbow colors.
   pub lolcat: Lolcat,
@@ -73,6 +74,16 @@ pub mod access_and_mutate {
       (&mut self.lines, &mut self.caret)
     }
 
+    pub fn apply_mut(
+      &mut self,
+      mutator: impl FnOnce(
+        /* EditorBuffer::lines */ &mut Vec<UnicodeString>,
+        /* EditorBuffer::caret */ &mut Position,
+      ),
+    ) {
+      mutator(&mut self.lines, &mut self.caret)
+    }
+
     pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.lines }
 
     pub fn get_caret(&self) -> Position { self.caret }
@@ -84,7 +95,7 @@ pub mod access_and_mutate {
 // ╯                                       ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 impl EditorBuffer {
   pub fn apply_editor_event<S, A>(
-    engine: &mut EditorEngine,
+    engine: &mut EditorRenderEngine,
     buffer: &mut EditorBuffer,
     editor_buffer_command: EditorBufferCommand,
     shared_tw_data: &SharedTWData,
@@ -94,25 +105,35 @@ impl EditorBuffer {
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
-    let FlexBox {
-      style_adjusted_bounds_size: bounds_size,
-      style_adjusted_origin_pos: origin_pos,
-      ..
-    } = engine.current_box;
-
-    // TK: 📜 pass engine to all the functions below
     match editor_buffer_command {
-      EditorBufferCommand::InsertChar(character) => buffer.insert_char(character),
-      EditorBufferCommand::InsertNewLine => buffer.insert_new_line(engine),
-      EditorBufferCommand::Delete => buffer.delete(),
-      EditorBufferCommand::Backspace => buffer.backspace(),
-      EditorBufferCommand::MoveCaret(direction) => buffer.move_caret(direction),
-      EditorBufferCommand::InsertString(string) => buffer.insert_str(&string),
+      EditorBufferCommand::InsertChar(character) => {
+        editor_ops_content_mut::insert_str_at_caret(buffer, engine, &String::from(character))
+      }
+      EditorBufferCommand::InsertNewLine => {
+        editor_ops_content_mut::insert_new_line_at_caret(buffer, engine);
+      }
+      EditorBufferCommand::Delete => {
+        editor_ops_content_mut::delete_at_caret(buffer, engine);
+      }
+      EditorBufferCommand::Backspace => {
+        editor_ops_content_mut::backspace_at_caret(buffer, engine);
+      }
+      EditorBufferCommand::MoveCaret(direction) => {
+        match direction {
+          CaretDirection::Left => editor_ops_caret_mut::left(buffer, engine),
+          CaretDirection::Right => editor_ops_caret_mut::right(buffer, engine),
+          CaretDirection::Up => editor_ops_caret_mut::up(buffer, engine),
+          CaretDirection::Down => editor_ops_caret_mut::down(buffer, engine),
+        };
+      }
+      EditorBufferCommand::InsertString(chunk) => {
+        editor_ops_content_mut::insert_str_at_caret(buffer, engine, &chunk)
+      }
     };
   }
 
   pub fn apply_editor_events<S, A>(
-    engine: &mut EditorEngine,
+    engine: &mut EditorRenderEngine,
     buffer: &mut EditorBuffer,
     editor_event_vec: Vec<EditorBufferCommand>,
     shared_tw_data: &SharedTWData,
@@ -133,42 +154,8 @@ impl EditorBuffer {
       );
     }
   }
-}
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ EditorBuffer -> Function based interface │
-// ╯                                          ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-impl EditorBuffer {
   pub fn is_empty(&self) -> bool { self.lines.is_empty() }
-
-  pub fn insert_new_line(&mut self, engine: &mut EditorEngine) {
-    line_buffer_content_mut::insert_new_line_at_caret(self, engine);
-  }
-
-  /// Insert [char] at the current [caret position](EditorBuffer::get_caret) into the current line.
-  pub fn insert_char(&mut self, character: char) {
-    line_buffer_content_mut::insert_str_at_caret(self, &String::from(character))
-  }
-
-  /// Insert [str] at the current [caret position](EditorBuffer::get_caret) into the current line.
-  pub fn insert_str(&mut self, chunk: &str) {
-    line_buffer_content_mut::insert_str_at_caret(self, chunk)
-  }
-
-  /// Move one character to the left, or right. Calculate how wide the current character is (unicode
-  /// width) and then move the "display" caret position back that many columns.
-  pub fn move_caret(&mut self, direction: CaretDirection) {
-    match direction {
-      CaretDirection::Left => line_buffer_caret_mut::left(self),
-      CaretDirection::Right => line_buffer_caret_mut::right(self),
-      CaretDirection::Up => line_buffer_caret_mut::up(self),
-      CaretDirection::Down => line_buffer_caret_mut::down(self),
-    };
-  }
-
-  pub fn delete(&mut self) { line_buffer_content_mut::delete_at_caret(self); }
-
-  pub fn backspace(&mut self) { line_buffer_content_mut::backspace_at_caret(self); }
 }
 
 mod debug_format_helpers {

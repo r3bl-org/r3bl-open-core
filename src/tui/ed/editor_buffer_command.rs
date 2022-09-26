@@ -21,7 +21,6 @@ use crate::*;
 
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 // │ EditorBufferCommand │
-
 // ╯                     ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// Commands that can be executed on an [EditorBuffer]. By providing a conversion from [InputEvent]
 /// to [EditorBufferCommand] it becomes easier to write event handlers that consume [InputEvent] and

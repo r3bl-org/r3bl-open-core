@@ -34,6 +34,7 @@ where
 {
   pub components: ComponentRegistryMap<S, A>,
   pub has_focus: HasFocus,
+  // FUTURE: 🐵 add user_data in ComponentRegistry
   pub user_data: HashMap<String, HashMap<String, String>>,
 }
 
@@ -55,7 +56,6 @@ where
   pub fn remove(&mut self, id: &str) -> Option<SharedComponent<S, A>> { self.components.remove(id) }
 }
 
-// TK: 🐵 add UserData to ComponentRegistry
 pub mod user_data_ops {
   use super::*;
 

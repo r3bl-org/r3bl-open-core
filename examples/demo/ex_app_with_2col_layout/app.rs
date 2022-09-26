@@ -241,7 +241,6 @@ mod layout_components {
       &mut self,
       args: GlobalScopeArgs<'_, State, Action>,
       surface: &mut Surface,
-      
     ) -> CommonResult<()> {
       let GlobalScopeArgs {
         state,
