@@ -19,7 +19,8 @@ use std::fmt::{Debug, Display};
 
 use crate::*;
 
-/// Global scope struct.
+/// Global scope args struct that holds references.
+/// ![Editor component lifecycle diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct GlobalScopeArgs<'a, S, A>
 where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
@@ -30,7 +31,8 @@ where
   pub state: &'a S,
 }
 
-/// Component scope struct.
+/// Component scope args struct that holds references.
+/// ![Editor component lifecycle diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct ComponentScopeArgs<'a, S, A>
 where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
@@ -42,7 +44,8 @@ where
   pub component_registry: &'a mut ComponentRegistry<S, A>,
 }
 
-/// [EditorEngine] common struct.
+/// [EditorEngine] args struct that holds references.
+/// ![Editor component lifecycle diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct EditorEngineArgs<'a, S, A>
 where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
