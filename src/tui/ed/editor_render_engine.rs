@@ -1,6 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
- *   All rights reserved.
+ *   Copyright (c) 2022 R3BLeditor_buffer: buffer: buffer rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -39,7 +38,7 @@ where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Display + Clone + Sync + Send,
 {
-  editor_buffer: &'a EditorBuffer,
+  buffer: &'a EditorBuffer,
   component_registry: &'a ComponentRegistry<S, A>,
 }
 
@@ -47,14 +46,14 @@ where
 /// [EditorBuffer] struct, which lives in the [Store]. The store provides the underlying document or
 /// buffer struct that holds the actual document.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EditorEngine {
+pub struct EditorRenderEngine {
   /// The col and row offset for scrolling if active.
   pub scroll_offset: ScrollOffset,
   /// Set by [render](EditorEngine::render).
   pub current_box: FlexBox,
 }
 
-impl EditorEngine {
+impl EditorRenderEngine {
   // FIXME: impl apply #23
   pub async fn apply<S, A>(
     &mut self,
@@ -66,7 +65,7 @@ impl EditorEngine {
     A: Default + Display + Clone + Sync + Send,
   {
     let EditorEngineArgs {
-      editor_buffer,
+      buffer,
       component_registry,
       shared_tw_data,
       self_id,
@@ -74,7 +73,7 @@ impl EditorEngine {
     } = args;
 
     if let Ok(editor_event) = EditorBufferCommand::try_from(input_event) {
-      let mut new_editor_buffer = editor_buffer.clone();
+      let mut new_editor_buffer = buffer.clone();
       EditorBuffer::apply_editor_event(
         self,
         &mut new_editor_buffer,
@@ -101,28 +100,20 @@ impl EditorEngine {
   {
     throws_with_return!({
       let EditorEngineArgs {
-        editor_buffer,
+        buffer,
         component_registry,
         ..
       } = args;
 
       self.current_box = current_box.clone();
 
-      // TK: remove debug
-      log_no_err!(
-        DEBUG,
-        "🟨🟨🟨 self.bounds_size -> {:?}, self.origin_pos -> {:?}",
-        self.current_box.style_adjusted_bounds_size,
-        self.current_box.style_adjusted_origin_pos,
-      );
-
       // Create this struct to pass around fewer variables.
       let render_args = RenderArgs {
-        editor_buffer,
+        buffer,
         component_registry,
       };
 
-      if editor_buffer.is_empty() {
+      if buffer.is_empty() {
         self.render_empty_state(&render_args)
       } else {
         let q_content = self.render_content(&render_args);
@@ -133,38 +124,21 @@ impl EditorEngine {
   }
 
   // This simply clips the content to the `style_adj_box_bounds_size`.
-  // TK: 📜✅ scroll enable render_content
   fn render_content<S, A>(&mut self, render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
-    let RenderArgs { editor_buffer, .. } = render_args;
+    let RenderArgs {
+      buffer: editor_buffer,
+      ..
+    } = render_args;
     let mut render_pipeline = render_pipeline!(@new_empty);
 
     let Size {
-      col: max_content_display_cols,
+      col: max_display_col_count,
       row: max_display_row_count,
     } = self.current_box.style_adjusted_bounds_size;
-
-    // TK: manage scroll here -> manage_scroll::{detect(), mutate()}
-    if let Some(new_scroll_offset) = manage_scroll::detect(
-      &self.current_box.style_adjusted_origin_pos,
-      &self.current_box.style_adjusted_bounds_size,
-      editor_buffer,
-    ) {
-      self.scroll_offset = new_scroll_offset;
-    }
-
-    // TK: remove debug
-    log_no_err!(
-      DEBUG,
-      "🟨🟨🟨 self.scroll_offset -> {:?}",
-      self.scroll_offset
-    );
-
-    // TK: handle vert scroll
-    // TK: handle horiz scroll
 
     // Paint each line in the buffer (skipping the scroll_offset.row).
     // https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip
@@ -176,18 +150,19 @@ impl EditorEngine {
     {
       // Clip the content to max rows.
       if ch!(row_index) > max_display_row_count {
-        // TK: remove debug
+        // TK: ‼️ remove debug
         log_no_err!(
           DEBUG,
-          "🟥🟥🟥 row_index {:?} > max_display_row_count {:?}",
+          "🟥🟥🟥 row_index {:?} > max_display_row_count {:?}, line: {:?}",
           row_index,
-          *max_display_row_count
+          *max_display_row_count,
+          line.string,
         );
         break;
       }
 
       // Clip the content to max cols.
-      let truncated_line = line.truncate_to_fit_display_cols(max_content_display_cols);
+      let truncated_line = line.truncate_to_fit_display_cols(max_display_col_count);
       render_pipeline! {
         @push_into render_pipeline at ZOrder::Normal =>
           RenderOp::MoveCursorPositionRelTo(
@@ -198,12 +173,13 @@ impl EditorEngine {
           RenderOp::ResetColor
       };
 
-      // TK: remove debug
+      // TK: ‼️ remove debug
       log_no_err!(
         DEBUG,
-        "🟡🟡🟡 row_index: {:?}, max_display_row_count: {:?}",
+        "🟡🟡🟡 row_index: {:?}, max_display_row_count: {:?}, line: {:?}",
         row_index,
-        *max_display_row_count
+        *max_display_row_count,
+        line.string,
       );
     }
 
@@ -222,7 +198,7 @@ impl EditorEngine {
   {
     let RenderArgs {
       component_registry,
-      editor_buffer,
+      buffer,
       ..
     } = render_args;
     let mut render_pipeline: RenderPipeline = RenderPipeline::default();
@@ -231,35 +207,43 @@ impl EditorEngine {
       .has_focus
       .does_current_box_have_focus(&self.current_box)
     {
-      // TK: Fix: caret can be painted PAST the bounds of the box!
-
       match style {
         CaretPaintStyle::GlobalCursor => {
           render_pipeline! {
             @push_into render_pipeline at ZOrder::Caret =>
               RenderOp::RequestShowCaretAtPositionRelTo(
-                self.current_box.style_adjusted_origin_pos, editor_buffer.get_caret())
+                self.current_box.style_adjusted_origin_pos, buffer.get_caret())
           };
         }
         CaretPaintStyle::LocalPaintedEffect => {
           let str_at_caret: String = if let Some(UnicodeStringSegmentSliceResult {
             unicode_string_seg: str_seg,
             ..
-          }) = line_buffer_content::string_at_caret(editor_buffer)
+          }) = editor_ops_content::string_at_caret(buffer, self)
           {
             str_seg.string
           } else {
             DEFAULT_CURSOR_CHAR.into()
           };
+
+          // TK: ‼️ remove debug
+          log_no_err!(
+            DEBUG,
+            "🔵🔵🔵 str_at_caret: {:?}, caret: {:?}, scroll_offset: {:?}",
+            str_at_caret,
+            buffer.get_caret(),
+            self.scroll_offset,
+          );
+
           render_pipeline! {
             @push_into render_pipeline at ZOrder::Caret =>
             RenderOp::MoveCursorPositionRelTo(
-              self.current_box.style_adjusted_origin_pos, editor_buffer.get_caret()),
+              self.current_box.style_adjusted_origin_pos, buffer.get_caret()),
               RenderOp::PrintTextWithAttributes(
                 str_at_caret,
                 style! { attrib: [reverse] }.into()),
             RenderOp::MoveCursorPositionRelTo(
-              self.current_box.style_adjusted_origin_pos, editor_buffer.get_caret())
+              self.current_box.style_adjusted_origin_pos, buffer.get_caret())
           };
         }
       }
@@ -300,7 +284,7 @@ impl EditorEngine {
         @push_into render_pipeline at ZOrder::Normal =>
           RenderOp::MoveCursorPositionRelTo(
             self.current_box.style_adjusted_origin_pos,
-            content_cursor_pos.add_rows_with_bounds(
+            content_cursor_pos.add_row_with_bounds(
               ch!(1), self.current_box.style_adjusted_bounds_size.row)),
           RenderOp::PrintTextWithAttributes("👀".into(), None)
       };

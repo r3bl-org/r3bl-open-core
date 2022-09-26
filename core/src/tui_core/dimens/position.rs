@@ -80,26 +80,26 @@ impl Position {
 
 impl Position {
   /// Reset given `col` count to `0`.
-  pub fn reset_cols(&mut self) -> Self {
+  pub fn reset_col(&mut self) -> Self {
     self.col = ch!(0);
     *self
   }
 
   /// Set given `col` count to `value`.
-  pub fn set_cols(&mut self, value: ChUnit) -> Self {
+  pub fn set_col(&mut self, value: ChUnit) -> Self {
     self.col = value;
     *self
   }
 
   /// Add given `col` count to `self`.
-  pub fn add_cols(&mut self, num_cols_to_add: usize) -> Self {
+  pub fn add_col(&mut self, num_cols_to_add: usize) -> Self {
     let value: ChUnit = ch!(num_cols_to_add);
     self.col += value;
     *self
   }
 
   /// Add given `col` count to `self` w/ bounds check for max cols.
-  pub fn add_cols_with_bounds(&mut self, value: ChUnit, max: ChUnit) -> Self {
+  pub fn add_col_with_bounds(&mut self, value: ChUnit, max: ChUnit) -> Self {
     if (self.col + value) >= max {
       self.col = max;
     } else {
@@ -109,22 +109,34 @@ impl Position {
   }
 
   /// Set `col` count to `max` if `self.col` is greater than `max`.
-  pub fn clip_cols_to_bounds(&mut self, max: ChUnit) -> Self {
+  pub fn clip_col_to_bounds(&mut self, max: ChUnit) -> Self {
     if self.col >= max {
       self.col = max;
     }
     *self
   }
 
+  /// Reset given `row` count to `0`.
+  pub fn reset_row(&mut self) -> Self {
+    self.row = ch!(0);
+    *self
+  }
+
+  /// Set given `row` count to `value`.
+  pub fn set_row(&mut self, value: ChUnit) -> Self {
+    self.row = value;
+    *self
+  }
+
   /// Add given `row` count to `self`.
-  pub fn add_rows(&mut self, num_rows_to_add: usize) -> Self {
+  pub fn add_row(&mut self, num_rows_to_add: usize) -> Self {
     let value: ChUnit = ch!(num_rows_to_add);
     self.row += value;
     *self
   }
 
   /// Add given `row` count to `self` w/ bounds check for max rows.
-  pub fn add_rows_with_bounds(&mut self, value: ChUnit, max: ChUnit) -> Self {
+  pub fn add_row_with_bounds(&mut self, value: ChUnit, max: ChUnit) -> Self {
     if (self.row + value) >= max {
       self.row = max;
     } else {
@@ -133,13 +145,13 @@ impl Position {
     *self
   }
 
-  pub fn sub_rows(&mut self, num_rows_to_sub: usize) -> Self {
+  pub fn sub_row(&mut self, num_rows_to_sub: usize) -> Self {
     let value: ChUnit = ch!(num_rows_to_sub);
     self.row -= value;
     *self
   }
 
-  pub fn sub_cols(&mut self, num_cols_to_sub: usize) -> Self {
+  pub fn sub_col(&mut self, num_cols_to_sub: usize) -> Self {
     let value: ChUnit = ch!(num_cols_to_sub);
     self.col -= value;
     *self

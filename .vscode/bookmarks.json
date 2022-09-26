@@ -1,10 +1,10 @@
 {
 	"files": [
 		{
-			"path": "src/tui/ed/editor_engine.rs",
+			"path": "src/tui/ed/editor_render_engine.rs",
 			"bookmarks": [
 				{
-					"line": 28,
+					"line": 27,
 					"column": 2,
 					"label": ""
 				}

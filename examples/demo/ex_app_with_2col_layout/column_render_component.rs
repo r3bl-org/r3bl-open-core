@@ -156,7 +156,7 @@ impl Component<State, Action> for ColumnRenderComponent {
         @push_into render_pipeline at ZOrder::Normal =>
           RenderOp::MoveCursorPositionRelTo(
             box_origin_pos,
-            content_cursor_pos.add_rows_with_bounds(ch!(1), box_bounds_size.row)
+            content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row)
           ),
           RenderOp::PrintTextWithAttributes(
             colorize_using_lolcat! {
@@ -178,7 +178,7 @@ impl Component<State, Action> for ColumnRenderComponent {
           @push_into render_pipeline at ZOrder::Normal =>
             RenderOp::MoveCursorPositionRelTo(
               box_origin_pos,
-              content_cursor_pos.add_rows_with_bounds(ch!(1), box_bounds_size.row)
+              content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row)
             ),
             RenderOp::PrintTextWithAttributes("👀".into(), None)
         };

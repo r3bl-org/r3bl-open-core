@@ -17,6 +17,9 @@
 
 use r3bl_rs_utils::*;
 
+// TK: 🚨🔮 fix tests for scrolling (vertical)
+// TK: 🚨🔮 fix tests for scrolling (horizontal)
+
 #[test]
 fn test_delete() {
   let mut this = EditorBuffer::default();
@@ -114,7 +117,7 @@ fn test_delete() {
 
 #[test]
 fn test_backspace() {
-  let mut this = EditorBuffer::default();
+  let mut buffer = EditorBuffer::default();
 
   // Insert "abc\nab\na".
   // `this` should look like:
@@ -126,7 +129,7 @@ fn test_backspace() {
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::InsertString("abc".into()),
       EditorBufferCommand::InsertNewLine,
@@ -138,7 +141,7 @@ fn test_backspace() {
     &mut make_component_registry(),
     "",
   );
-  assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
+  assert_eq2!(buffer.get_caret(), position!(col: 1, row: 2));
 
   // Remove the "a" on the last line.
   // `this` should look like:
@@ -148,8 +151,15 @@ fn test_backspace() {
   // 2 ▸          │
   //   └▴─────────┘
   //   C0123456789
-  this.backspace();
-  assert_eq2!(this.get_caret(), position!(col: 0, row: 2));
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::Backspace],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(buffer.get_caret(), position!(col: 0, row: 2));
 
   // Remove the last line.
   // `this` should look like:
@@ -158,8 +168,15 @@ fn test_backspace() {
   // 1 ▸ab        │
   //   └──▴───────┘
   //   C0123456789
-  this.backspace();
-  assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::Backspace],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(buffer.get_caret(), position!(col: 2, row: 1));
 
   // Move caret to start of 2nd line. Then press backspace.
   // `this` should look like:
@@ -169,7 +186,7 @@ fn test_backspace() {
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::MoveCaret(CaretDirection::Left),
       EditorBufferCommand::MoveCaret(CaretDirection::Left),
@@ -178,11 +195,18 @@ fn test_backspace() {
     &mut make_component_registry(),
     "",
   );
-  assert_eq2!(this.get_caret(), position!(col: 0, row: 1));
-  this.backspace();
-  assert_eq2!(this.get_lines().len(), 1);
-  assert_eq2!(this.get_caret(), position!(col: 3, row: 0));
-  assert::line_at_caret(&this, "abcab");
+  assert_eq2!(buffer.get_caret(), position!(col: 0, row: 1));
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::Backspace],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(buffer.get_lines().len(), 1);
+  assert_eq2!(buffer.get_caret(), position!(col: 3, row: 0));
+  assert::line_at_caret(&buffer, "abcab");
 
   // Move caret to end of line. Insert "😃". Then move caret to end of line.
   // `this` should look like:
@@ -192,7 +216,7 @@ fn test_backspace() {
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::MoveCaret(CaretDirection::Right),
       EditorBufferCommand::MoveCaret(CaretDirection::Right),
@@ -204,23 +228,23 @@ fn test_backspace() {
     &mut make_component_registry(),
     "",
   );
-  assert_eq2!(this.get_caret(), position!(col: 7, row: 0));
+  assert_eq2!(buffer.get_caret(), position!(col: 7, row: 0));
 
   // Press backspace.
   EditorBuffer::apply_editor_event(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     EditorBufferCommand::Backspace,
     &make_shared_tw_data(),
     &mut make_component_registry(),
     "",
   );
-  assert::line_at_caret(&this, "abcab");
+  assert::line_at_caret(&buffer, "abcab");
 }
 
 #[test]
 fn test_validate_caret_position_on_up() {
-  let mut this = EditorBuffer::default();
+  let mut buffer = EditorBuffer::default();
 
   // Insert "😀\n1".
   // R ┌──────────┐
@@ -230,7 +254,7 @@ fn test_validate_caret_position_on_up() {
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::InsertString("😀".into()),
       EditorBufferCommand::InsertNewLine,
@@ -240,7 +264,7 @@ fn test_validate_caret_position_on_up() {
     &mut make_component_registry(),
     "",
   );
-  assert_eq2!(this.get_caret(), position!(col: 1, row: 1));
+  assert_eq2!(buffer.get_caret(), position!(col: 1, row: 1));
 
   // Move caret up. It should not be in the middle of the smiley face.
   // R ┌──────────┐
@@ -248,13 +272,20 @@ fn test_validate_caret_position_on_up() {
   // 1 │1         │
   //   └──▴───────┘
   //   C0123456789
-  this.move_caret(CaretDirection::Up);
-  assert_eq2!(this.get_caret(), position!(col: 2, row: 0));
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::MoveCaret(CaretDirection::Up)],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(buffer.get_caret(), position!(col: 2, row: 0));
 }
 
 #[test]
 fn test_validate_caret_position_on_down() {
-  let mut this = EditorBuffer::default();
+  let mut buffer = EditorBuffer::default();
 
   // Insert "😀\n1".
   // R ┌──────────┐
@@ -264,7 +295,7 @@ fn test_validate_caret_position_on_down() {
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::InsertChar('1'),
       EditorBufferCommand::InsertNewLine,
@@ -274,7 +305,7 @@ fn test_validate_caret_position_on_down() {
     &mut make_component_registry(),
     "",
   );
-  assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
+  assert_eq2!(buffer.get_caret(), position!(col: 2, row: 1));
 
   // Move caret up, and 2 left.
   // R ┌──────────┐
@@ -284,7 +315,7 @@ fn test_validate_caret_position_on_down() {
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::MoveCaret(CaretDirection::Up),
       EditorBufferCommand::MoveCaret(CaretDirection::Right),
@@ -293,7 +324,7 @@ fn test_validate_caret_position_on_down() {
     &mut make_component_registry(),
     "",
   );
-  assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
+  assert_eq2!(buffer.get_caret(), position!(col: 1, row: 0));
 
   // Move caret down. It should not be in the middle of the smiley face.
   // R ┌──────────┐
@@ -301,13 +332,20 @@ fn test_validate_caret_position_on_down() {
   // 1 ▸😀        │
   //   └──▴───────┘
   //   C0123456789
-  this.move_caret(CaretDirection::Down);
-  assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::MoveCaret(CaretDirection::Down)],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(buffer.get_caret(), position!(col: 2, row: 1));
 }
 
 #[test]
 fn test_move_caret_up_down() {
-  let mut this = EditorBuffer::default();
+  let mut buffer = EditorBuffer::default();
 
   // Insert "abc\nab\na".
   // `this` should look like:
@@ -319,7 +357,7 @@ fn test_move_caret_up_down() {
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::InsertString("abc".into()),
       EditorBufferCommand::InsertNewLine,
@@ -331,12 +369,12 @@ fn test_move_caret_up_down() {
     &mut make_component_registry(),
     "",
   );
-  assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
+  assert_eq2!(buffer.get_caret(), position!(col: 1, row: 2));
 
   // Move caret down. Noop.
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::MoveCaret(CaretDirection::Down),
       EditorBufferCommand::MoveCaret(CaretDirection::Down),
@@ -346,20 +384,34 @@ fn test_move_caret_up_down() {
     &mut make_component_registry(),
     "",
   );
-  assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
+  assert_eq2!(buffer.get_caret(), position!(col: 1, row: 2));
 
   // Move caret up.
-  this.move_caret(CaretDirection::Up);
-  assert_eq2!(this.get_caret(), position!(col: 1, row: 1));
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::MoveCaret(CaretDirection::Up)],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(buffer.get_caret(), position!(col: 1, row: 1));
 
   // Move caret up.
-  this.move_caret(CaretDirection::Up);
-  assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::MoveCaret(CaretDirection::Up)],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(buffer.get_caret(), position!(col: 1, row: 0));
 
   // Move caret up a few times. Noop.
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::MoveCaret(CaretDirection::Up),
       EditorBufferCommand::MoveCaret(CaretDirection::Up),
@@ -369,7 +421,7 @@ fn test_move_caret_up_down() {
     &mut make_component_registry(),
     "",
   );
-  assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
+  assert_eq2!(buffer.get_caret(), position!(col: 1, row: 0));
 
   // Move right to end of line. Then down.
   // `this` should look like:
@@ -381,7 +433,7 @@ fn test_move_caret_up_down() {
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::MoveCaret(CaretDirection::Right),
       EditorBufferCommand::MoveCaret(CaretDirection::Right),
@@ -391,7 +443,7 @@ fn test_move_caret_up_down() {
     &mut make_component_registry(),
     "",
   );
-  assert_eq2!(this.get_caret(), position!(col: 2, row: 1));
+  assert_eq2!(buffer.get_caret(), position!(col: 2, row: 1));
 
   // Move caret down.
   // `this` should look like:
@@ -401,23 +453,30 @@ fn test_move_caret_up_down() {
   // 2 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.move_caret(CaretDirection::Down);
-  assert_eq2!(this.get_caret(), position!(col: 1, row: 2));
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::MoveCaret(CaretDirection::Down)],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(buffer.get_caret(), position!(col: 1, row: 2));
 }
 
 #[test]
 fn test_insert_new_line() {
   // Starts w/ an empty line.
-  let mut this = EditorBuffer::default();
-  assert_eq2!(this.get_lines().len(), 1);
+  let mut buffer = EditorBuffer::default();
+  assert_eq2!(buffer.get_lines().len(), 1);
 
   // `this` should look like:
   // R ┌──────────┐
   // 0 ▸          │
   //   └▴─────────┘
   //   C0123456789
-  assert_eq2!(this.get_lines().len(), 1);
-  assert::none_is_at_caret(&this);
+  assert_eq2!(buffer.get_lines().len(), 1);
+  assert::none_is_at_caret(&buffer, &mock_real_objects::make_editor_engine());
 
   // Insert "a".
   // `this` should look like:
@@ -425,9 +484,16 @@ fn test_insert_new_line() {
   // 0 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.insert_char('a');
-  assert::none_is_at_caret(&this);
-  assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::InsertChar('a')],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert::none_is_at_caret(&buffer, &mock_real_objects::make_editor_engine());
+  assert_eq2!(buffer.get_caret(), position!(col: 1, row: 0));
 
   // Insert new line (at end of line).
   // `this` should look like:
@@ -436,10 +502,17 @@ fn test_insert_new_line() {
   // 1 ▸          │
   //   └▴─────────┘
   //   C0123456789
-  this.insert_new_line(&mut make_editor_engine());
-  assert_eq2!(this.get_lines().len(), 2);
-  assert::none_is_at_caret(&this);
-  assert_eq2!(this.get_caret(), position!(col: 0, row: 1));
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::InsertNewLine],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(buffer.get_lines().len(), 2);
+  assert::none_is_at_caret(&buffer, &mock_real_objects::make_editor_engine());
+  assert_eq2!(buffer.get_caret(), position!(col: 0, row: 1));
 
   // Insert "a".
   // `this` should look like:
@@ -448,7 +521,14 @@ fn test_insert_new_line() {
   // 1 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.insert_char('a');
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::InsertChar('a')],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
 
   // Move caret left.
   // `this` should look like:
@@ -457,8 +537,15 @@ fn test_insert_new_line() {
   // 1 ▸a         │
   //   └▴─────────┘
   //   C0123456789
-  this.move_caret(CaretDirection::Left);
-  assert::str_is_at_caret(&this, "a");
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::MoveCaret(CaretDirection::Left)],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert::str_is_at_caret(&buffer, &mock_real_objects::make_editor_engine(), "a");
 
   // Insert new line (at start of line).
   // `this` should look like:
@@ -468,10 +555,17 @@ fn test_insert_new_line() {
   // 2 ▸a         │
   //   └▴─────────┘
   //   C0123456789
-  this.insert_new_line(&mut make_editor_engine());
-  assert_eq2!(this.get_lines().len(), 3);
-  assert::str_is_at_caret(&this, "a");
-  assert_eq2!(this.get_caret(), position!(col: 0, row: 2));
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::InsertNewLine],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(buffer.get_lines().len(), 3);
+  assert::str_is_at_caret(&buffer, &mock_real_objects::make_editor_engine(), "a");
+  assert_eq2!(buffer.get_caret(), position!(col: 0, row: 2));
 
   // Move caret right, insert "b".
   // `this` should look like:
@@ -483,7 +577,7 @@ fn test_insert_new_line() {
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::MoveCaret(CaretDirection::Right),
       EditorBufferCommand::InsertChar('b'),
@@ -493,9 +587,9 @@ fn test_insert_new_line() {
     "",
   );
 
-  assert::none_is_at_caret(&this);
+  assert::none_is_at_caret(&buffer, &mock_real_objects::make_editor_engine());
   assert_eq2!(
-    line_buffer_content::line_at_caret_to_string(&this)
+    editor_ops_content::line_at_caret_to_string(&buffer)
       .unwrap()
       .string,
     "ab"
@@ -512,7 +606,7 @@ fn test_insert_new_line() {
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::MoveCaret(CaretDirection::Left),
       EditorBufferCommand::InsertNewLine,
@@ -521,9 +615,9 @@ fn test_insert_new_line() {
     &mut make_component_registry(),
     "",
   );
-  assert::str_is_at_caret(&this, "b");
-  assert_eq2!(this.get_caret(), position!(col: 0, row: 3));
-  assert_eq2!(this.get_lines().len(), 4);
+  assert::str_is_at_caret(&buffer, &mock_real_objects::make_editor_engine(), "b");
+  assert_eq2!(buffer.get_caret(), position!(col: 0, row: 3));
+  assert_eq2!(buffer.get_lines().len(), 4);
 
   // Move caret to end of prev line. Press enter. `this` should look like:
   // R ┌──────────┐
@@ -536,7 +630,7 @@ fn test_insert_new_line() {
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::MoveCaret(CaretDirection::Up),
       EditorBufferCommand::MoveCaret(CaretDirection::Right),
@@ -546,13 +640,13 @@ fn test_insert_new_line() {
     &mut make_component_registry(),
     "",
   );
-  assert_eq2!(this.get_lines().len(), 5);
-  assert_eq2!(this.get_caret(), position!(col: 0, row: 3));
+  assert_eq2!(buffer.get_lines().len(), 5);
+  assert_eq2!(buffer.get_caret(), position!(col: 0, row: 3));
 }
 
 #[test]
 fn test_move_caret_left_right() {
-  let mut this = EditorBuffer::default();
+  let mut buffer = EditorBuffer::default();
 
   // Insert "a".
   // `this` should look like:
@@ -560,8 +654,15 @@ fn test_move_caret_left_right() {
   // 0 ▸a         │
   //   └─▴────────┘
   //   C0123456789
-  this.insert_char('a');
-  assert::none_is_at_caret(&this);
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::InsertChar('a')],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert::none_is_at_caret(&buffer, &mock_real_objects::make_editor_engine());
 
   // Move caret left.
   // `this` should look like:
@@ -569,9 +670,18 @@ fn test_move_caret_left_right() {
   // 0 ▸a         │
   //   └▴─────────┘
   //   C0123456789
-  this.move_caret(CaretDirection::Left);
-  this.move_caret(CaretDirection::Left); // Noop.
-  assert::str_is_at_caret(&this, "a");
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![
+      EditorBufferCommand::MoveCaret(CaretDirection::Left),
+      EditorBufferCommand::MoveCaret(CaretDirection::Left), // No-op.
+    ],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert::str_is_at_caret(&buffer, &mock_real_objects::make_editor_engine(), "a");
 
   // Insert "1".
   // `this` should look like:
@@ -579,14 +689,21 @@ fn test_move_caret_left_right() {
   // 0 ▸1a        │
   //   └─▴────────┘
   //   C0123456789
-  this.insert_char('1');
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::InsertChar('1')],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
   assert_eq2!(
-    line_buffer_content::line_at_caret_to_string(&this)
+    editor_ops_content::line_at_caret_to_string(&buffer)
       .unwrap()
       .string,
     "1a"
   );
-  assert::str_is_at_caret(&this, "a");
+  assert::str_is_at_caret(&buffer, &mock_real_objects::make_editor_engine(), "a");
 
   // Move caret left.
   // `this` should look like:
@@ -594,8 +711,15 @@ fn test_move_caret_left_right() {
   // 0 ▸1a        │
   //   └▴─────────┘
   //   C0123456789
-  this.move_caret(CaretDirection::Left);
-  assert::str_is_at_caret(&this, "1");
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::MoveCaret(CaretDirection::Left)],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert::str_is_at_caret(&buffer, &mock_real_objects::make_editor_engine(), "1");
 
   // Move caret right.
   // `this` should look like:
@@ -603,8 +727,15 @@ fn test_move_caret_left_right() {
   // 0 ▸1a        │
   //   └─▴────────┘
   //   C0123456789
-  this.move_caret(CaretDirection::Right);
-  assert::str_is_at_caret(&this, "a");
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::MoveCaret(CaretDirection::Right)],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert::str_is_at_caret(&buffer, &mock_real_objects::make_editor_engine(), "a");
 
   // Insert "2".
   // `this` should look like:
@@ -612,10 +743,17 @@ fn test_move_caret_left_right() {
   // 0 ▸12a       │
   //   └──▴───────┘
   //   C0123456789
-  this.insert_char('2');
-  assert::str_is_at_caret(&this, "a");
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::InsertChar('2')],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert::str_is_at_caret(&buffer, &mock_real_objects::make_editor_engine(), "a");
   assert_eq2!(
-    line_buffer_content::line_at_caret_to_string(&this)
+    editor_ops_content::line_at_caret_to_string(&buffer)
       .unwrap()
       .string,
     "12a"
@@ -627,9 +765,19 @@ fn test_move_caret_left_right() {
   // 0 ▸12a       │
   //   └───▴──────┘
   //   C0123456789
-  this.move_caret(CaretDirection::Right);
-  this.move_caret(CaretDirection::Right); // Noop.
-  assert::none_is_at_caret(&this);
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![
+      EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      EditorBufferCommand::MoveCaret(CaretDirection::Right), // No-op.
+    ],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+
+  assert::none_is_at_caret(&buffer, &mock_real_objects::make_editor_engine());
 }
 
 #[test]
@@ -656,13 +804,13 @@ mod mock_real_objects {
     component_registry
   }
 
-  pub fn make_editor_engine() -> EditorEngine { EditorEngine::default() }
+  pub fn make_editor_engine() -> EditorRenderEngine { EditorRenderEngine::default() }
 }
 use mock_real_objects::*;
 
 #[test]
 fn test_insertion() {
-  let mut this = EditorBuffer::default();
+  let mut buffer = EditorBuffer::default();
 
   // Move caret to col: 0, row: 0. Insert "a".
   // `this` should look like:
@@ -670,10 +818,17 @@ fn test_insertion() {
   // 0 ▸a░        │
   //   └─▴────────┘
   //   C0123456789
-  assert_eq2!(this.get_caret(), position!(col: 0, row: 0));
-  this.insert_char('a');
-  assert_eq2!(*this.get_lines(), vec![UnicodeString::from("a")]);
-  assert_eq2!(this.get_caret(), position!(col: 1, row: 0));
+  assert_eq2!(buffer.get_caret(), position!(col: 0, row: 0));
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::InsertChar('a')],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(*buffer.get_lines(), vec![UnicodeString::from("a")]);
+  assert_eq2!(buffer.get_caret(), position!(col: 1, row: 0));
 
   // Move caret to col: 0, row: 1. Insert "b".
   // `this` should look like:
@@ -682,13 +837,20 @@ fn test_insertion() {
   // 1 ▸b░        │
   //   └─▴────────┘
   //   C0123456789
-  line_buffer_content_mut::insert_new_line_at_caret(&mut this, &mut make_editor_engine());
-  this.insert_char('b');
+  editor_ops_content_mut::insert_new_line_at_caret(&mut buffer, &mut make_editor_engine());
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::InsertChar('b')],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
   assert_eq2!(
-    *this.get_lines(),
+    *buffer.get_lines(),
     vec![UnicodeString::from("a"), UnicodeString::from("b")]
   );
-  assert_eq2!(this.get_caret(), position!(col: 1, row: 1));
+  assert_eq2!(buffer.get_caret(), position!(col: 1, row: 1));
 
   // Move caret to col: 0, row: 3. Insert "😀" (unicode width = 2).
   // `this` should look like:
@@ -701,7 +863,7 @@ fn test_insertion() {
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut make_editor_engine(),
-    &mut this,
+    &mut buffer,
     vec![
       EditorBufferCommand::InsertNewLine,
       EditorBufferCommand::InsertNewLine,
@@ -712,7 +874,7 @@ fn test_insertion() {
     "",
   );
   assert_eq2!(
-    *this.get_lines(),
+    *buffer.get_lines(),
     vec![
       UnicodeString::from("a"),
       UnicodeString::from("b"),
@@ -720,7 +882,7 @@ fn test_insertion() {
       UnicodeString::from("😀")
     ]
   );
-  assert_eq2!(this.get_caret(), position!(col: 2, row: 3));
+  assert_eq2!(buffer.get_caret(), position!(col: 2, row: 3));
 
   // Insert "d".
   // `this` should look like:
@@ -731,9 +893,16 @@ fn test_insertion() {
   // 3 ▸😀d░      │
   //   └───▴──────┘
   //   C0123456789
-  this.insert_char('d');
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::InsertChar('d')],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
   assert_eq2!(
-    *this.get_lines(),
+    *buffer.get_lines(),
     vec![
       UnicodeString::from("a"),
       UnicodeString::from("b"),
@@ -741,7 +910,7 @@ fn test_insertion() {
       UnicodeString::from("😀d")
     ]
   );
-  assert_eq2!(this.get_caret(), position!(col: 3, row: 3));
+  assert_eq2!(buffer.get_caret(), position!(col: 3, row: 3));
 
   // Insert "🙏🏽" (unicode width = 4).
   // `this` should look like:
@@ -752,9 +921,16 @@ fn test_insertion() {
   // 3 ▸😀d🙏🏽  ░  │
   //   └───────▴──┘
   //   C0123456789
-  this.insert_str("🙏🏽");
+  EditorBuffer::apply_editor_events(
+    &mut make_editor_engine(),
+    &mut buffer,
+    vec![EditorBufferCommand::InsertString("🙏🏽".into())],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
   assert_eq2!(
-    *this.get_lines(),
+    *buffer.get_lines(),
     vec![
       UnicodeString::from("a"),
       UnicodeString::from("b"),
@@ -762,18 +938,22 @@ fn test_insertion() {
       UnicodeString::from("😀d🙏🏽")
     ]
   );
-  assert_eq2!(this.get_caret(), position!(col: 7, row: 3));
+  assert_eq2!(buffer.get_caret(), position!(col: 7, row: 3));
 }
 
 pub mod assert {
   use super::*;
 
-  pub fn none_is_at_caret(editor_buffer: &EditorBuffer) {
-    assert_eq2!(line_buffer_content::string_at_caret(editor_buffer), None);
+  pub fn none_is_at_caret(buffer: &EditorBuffer, engine: &EditorRenderEngine) {
+    assert_eq2!(editor_ops_content::string_at_caret(buffer, engine), None);
   }
 
-  pub fn str_is_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
-    match line_buffer_content::string_at_caret(editor_buffer) {
+  pub fn str_is_at_caret(
+    editor_buffer: &EditorBuffer,
+    engine: &EditorRenderEngine,
+    expected: &str,
+  ) {
+    match editor_ops_content::string_at_caret(editor_buffer, engine) {
       Some(UnicodeStringSegmentSliceResult {
         unicode_string_seg: s,
         ..
@@ -784,7 +964,7 @@ pub mod assert {
 
   pub fn line_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
     assert_eq2!(
-      line_buffer_content::line_at_caret_to_string(editor_buffer)
+      editor_ops_content::line_at_caret_to_string(editor_buffer)
         .unwrap()
         .string,
       expected

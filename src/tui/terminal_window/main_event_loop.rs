@@ -36,7 +36,7 @@ const SPAWN_PROCESS_INPUT: bool = true;
 pub struct TWData {
   pub size: Size,
   pub cursor_position: Position,
-  // TK: 🐵 add user_data_store here (contains key: String, value: HashMap<String, String>).
+  // FUTURE: 🐵 use global_user_data (contains key: String, value: HashMap<String, String>).
   pub global_user_data: HashMap<String, HashMap<String, String>>,
 }
 
