@@ -27,8 +27,8 @@ pub struct Reducer;
 impl AsyncReducer<State, Action> for Reducer {
   async fn run(&self, action: &Action, state: &State) -> State {
     match action {
-      Action::UpdateEditorBuffer(editor_buffer) => State {
-        editor_buffer: editor_buffer.clone(),
+      Action::UpdateEditorBuffer(buffer) => State {
+        buffer: buffer.clone(),
       },
       Action::Noop => state.clone(),
     }

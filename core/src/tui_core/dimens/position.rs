@@ -184,8 +184,8 @@ pub mod math_ops {
     type Output = Position;
     fn add(self, other: Size) -> Self {
       Self {
-        col: self.col + other.col,
-        row: self.row + other.row,
+        col: self.col + other.cols,
+        row: self.row + other.rows,
       }
     }
   }

@@ -21,11 +21,11 @@ use r3bl_rs_utils::*;
 
 #[derive(Clone, PartialEq, Debug, Default)]
 pub struct State {
-  pub editor_buffer: EditorBuffer,
+  pub buffer: EditorBuffer,
 }
 
 impl Display for State {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "State {{ editor_buffer: {:?} }}", self.editor_buffer)
+    write!(f, "State {{ buffer: {:?} }}", self.buffer)
   }
 }

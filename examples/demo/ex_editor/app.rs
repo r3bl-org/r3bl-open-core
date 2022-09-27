@@ -99,7 +99,7 @@ mod app_impl {
           shared_tw_data,
         } = args;
         let window_size = shared_tw_data.read().await.get_size();
-        let adjusted_window_size = size!(col: window_size.col, row: window_size.row - 1);
+        let adjusted_window_size = size!(cols: window_size.cols, rows: window_size.rows - 1);
 
         // Render container component.
         let mut surface = surface_start_with_runnable! {
@@ -236,8 +236,8 @@ mod status_bar_helpers {
     };
 
     let display_width = st_vec.display_width();
-    let col_center: ChUnit = (size.col - display_width) / 2;
-    let row_bottom: ChUnit = size.row - 1;
+    let col_center: ChUnit = (size.cols - display_width) / 2;
+    let row_bottom: ChUnit = size.rows - 1;
     let center: Position = position!(col: col_center, row: row_bottom);
 
     *render_pipeline += (ZOrder::Normal, RenderOp::MoveCursorPositionAbs(center));

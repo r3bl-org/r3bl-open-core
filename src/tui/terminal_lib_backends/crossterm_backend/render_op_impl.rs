@@ -298,7 +298,7 @@ async fn print_text_with_attributes(
   ) {
     // Check whether the text needs to be truncated to fit the terminal window.
     let current_cursor_col = shared_tw_data.read().await.cursor_position.col;
-    let max_terminal_width = shared_tw_data.read().await.size.col;
+    let max_terminal_width = shared_tw_data.read().await.size.cols;
     let max_display_cols = max_terminal_width - current_cursor_col;
     let ansi_text = text.ansi_text();
     let ansi_text_segments = ansi_text.segments(None);
@@ -333,7 +333,7 @@ async fn print_text_with_attributes(
   ) {
     // Check whether the text needs to be truncated to fit the terminal window.
     let cursor_position = shared_tw_data.read().await.cursor_position;
-    let max_cols = shared_tw_data.read().await.size.col;
+    let max_cols = shared_tw_data.read().await.size.cols;
     let plain_text_unicode_string: UnicodeString = text.as_ref().into();
     let plain_text_len = plain_text_unicode_string.display_width;
     if cursor_position.col + plain_text_len > max_cols {
