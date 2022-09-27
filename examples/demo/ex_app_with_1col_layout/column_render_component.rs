@@ -68,12 +68,7 @@ impl Component<State, Action> for ColumnRenderComponent {
     input_event: &InputEvent,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
-      let ComponentScopeArgs {
-        shared_tw_data,
-        shared_store,
-        state,
-        component_registry,
-      } = args;
+      let ComponentScopeArgs { shared_store, .. } = args;
 
       let mut event_consumed = false;
 
@@ -121,10 +116,7 @@ impl Component<State, Action> for ColumnRenderComponent {
   ) -> CommonResult<RenderPipeline> {
     throws_with_return!({
       let ComponentScopeArgs {
-        state,
-        shared_store,
-        shared_tw_data,
-        component_registry,
+        component_registry, ..
       } = args;
 
       // Fixed strings.
@@ -157,7 +149,7 @@ impl Component<State, Action> for ColumnRenderComponent {
         @push_into render_pipeline at ZOrder::Normal =>
           RenderOp::MoveCursorPositionRelTo(
             box_origin_pos,
-            content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row)
+            content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.rows)
           ),
           RenderOp::PrintTextWithAttributes(
             colorize_using_lolcat! {
@@ -179,7 +171,7 @@ impl Component<State, Action> for ColumnRenderComponent {
           @push_into render_pipeline at ZOrder::Normal =>
             RenderOp::MoveCursorPositionRelTo(
               box_origin_pos,
-              content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row)
+              content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.rows)
             ),
             RenderOp::PrintTextWithAttributes("👀".into(), None)
         };

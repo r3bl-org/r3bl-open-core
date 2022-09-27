@@ -27,7 +27,7 @@ fn test_surface_2_col_simple() -> CommonResult<()> {
 
     tw_surface.surface_start(SurfaceProps {
       pos: position!(col:0, row:0),
-      size: size!(col:500, row:500),
+      size: size!(cols:500, rows:500),
     })?;
 
     create_main_container(&mut tw_surface)?;
@@ -66,7 +66,7 @@ fn create_main_container(tw_surface: &mut Surface) -> CommonResult<()> {
       assert_eq2!(layout_item.id, "container");
       assert_eq2!(layout_item.dir, Direction::Horizontal);
       assert_eq2!(layout_item.origin_pos, position!(col:0,row: 0));
-      assert_eq2!(layout_item.bounds_size, size!(col:500, row:500)); // due to `padding: 1`
+      assert_eq2!(layout_item.bounds_size, size!(cols:500, rows:500)); // due to `padding: 1`
       assert_eq2!(
         layout_item.requested_size_percent,
         requested_size_percent!(width:100, height:100)
@@ -102,7 +102,7 @@ fn create_left_col(tw_surface: &mut Surface) -> CommonResult<()> {
       assert_eq2!(layout_item.dir, Direction::Vertical);
 
       assert_eq2!(layout_item.origin_pos, position!(col:0, row:0));
-      assert_eq2!(layout_item.bounds_size, size!(col:250, row:500));
+      assert_eq2!(layout_item.bounds_size, size!(cols:250, rows:500));
 
       assert_eq2!(
         layout_item.style_adjusted_origin_pos,
@@ -110,7 +110,7 @@ fn create_left_col(tw_surface: &mut Surface) -> CommonResult<()> {
       ); // Take padding into account.
       assert_eq2!(
         layout_item.style_adjusted_bounds_size,
-        size!(col:246, row:496)
+        size!(cols:246, rows:496)
       ); // Take padding into account.
 
       assert_eq2!(
@@ -147,7 +147,7 @@ fn create_right_col(tw_surface: &mut Surface) -> CommonResult<()> {
       assert_eq2!(current_box.dir, Direction::Vertical);
 
       assert_eq2!(current_box.origin_pos, position!(col:250, row:0));
-      assert_eq2!(current_box.bounds_size, size!(col:250, row:500));
+      assert_eq2!(current_box.bounds_size, size!(cols:250, rows:500));
 
       assert_eq2!(
         current_box.style_adjusted_origin_pos,
@@ -155,7 +155,7 @@ fn create_right_col(tw_surface: &mut Surface) -> CommonResult<()> {
       ); // Take padding into account.
       assert_eq2!(
         current_box.style_adjusted_bounds_size,
-        size!(col:244, row:494)
+        size!(cols:244, rows:494)
       ); // Take padding into account.
 
       assert_eq2!(

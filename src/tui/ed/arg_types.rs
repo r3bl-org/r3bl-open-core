@@ -19,8 +19,31 @@ use std::fmt::{Debug, Display};
 
 use crate::*;
 
-/// Global scope args struct that holds references.
-/// ![Editor component lifecycle diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+// ╭┄┄┄┄┄┄╮
+// │ Args │
+// ╯      ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+
+pub struct RenderArgs<'a, S, A>
+where
+  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Display + Clone + Sync + Send,
+{
+  pub buffer: &'a EditorBuffer,
+  pub component_registry: &'a ComponentRegistry<S, A>,
+}
+
+pub struct EditorArgsMut<'a> {
+  pub engine: &'a mut EditorRenderEngine,
+  pub buffer: &'a mut EditorBuffer,
+}
+
+pub struct EditorArgs<'a> {
+  pub engine: &'a EditorRenderEngine,
+  pub buffer: &'a EditorBuffer,
+}
+
+/// Global scope args struct that holds references. ![Editor component lifecycle
+/// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct GlobalScopeArgs<'a, S, A>
 where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
@@ -31,8 +54,8 @@ where
   pub state: &'a S,
 }
 
-/// Component scope args struct that holds references.
-/// ![Editor component lifecycle diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+/// Component scope args struct that holds references. ![Editor component lifecycle
+/// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct ComponentScopeArgs<'a, S, A>
 where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
@@ -44,8 +67,8 @@ where
   pub component_registry: &'a mut ComponentRegistry<S, A>,
 }
 
-/// [EditorEngine] args struct that holds references.
-/// ![Editor component lifecycle diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+/// [EditorRenderEngine] args struct that holds references. ![Editor component lifecycle
+/// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct EditorEngineArgs<'a, S, A>
 where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
@@ -62,5 +85,6 @@ where
 // ╭┄┄┄┄┄┄┄┄┄╮
 // │ Aliases │
 // ╯         ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+
 pub type ScrollOffset = Position;
 pub type Nope = Option<()>;

@@ -54,7 +54,7 @@ fn test_serde_position() {
 
 #[test]
 fn test_serde_size() {
-  let size = size!(col: 0, row:0);
+  let size = size!(cols: 0, rows:0);
   let ser_str = size.ser_to_string().unwrap();
   let og_size = Size::deser_from_str(&ser_str).unwrap();
   assert_eq2!(size, og_size);

@@ -1,21 +1,16 @@
 {
 	"files": [
 		{
-			"path": "src/tui/ed/editor_render_engine.rs",
+			"path": "src/tui/ed/editor_ops.rs",
 			"bookmarks": [
 				{
-					"line": 27,
+					"line": 114,
 					"column": 2,
 					"label": ""
-				}
-			]
-		},
-		{
-			"path": "src/tui/terminal_window/main_event_loop.rs",
-			"bookmarks": [
+				},
 				{
-					"line": 35,
-					"column": 0,
+					"line": 647,
+					"column": 4,
 					"label": ""
 				}
 			]

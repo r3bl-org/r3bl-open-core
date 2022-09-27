@@ -26,14 +26,14 @@ use crate::{ex_editor::*, *};
 /// and [Store]. The main methods here simply pass thru all their arguments to the [EditorEngine].
 #[derive(Debug, Clone, Default)]
 pub struct EditorComponent {
-  pub editor_engine: EditorRenderEngine,
+  pub engine: EditorRenderEngine,
   pub id: String,
 }
 
 impl EditorComponent {
   pub fn new(id: &str) -> Self {
     Self {
-      editor_engine: EditorRenderEngine::default(),
+      engine: EditorRenderEngine::default(),
       id: id.to_string(),
     }
   }
@@ -64,11 +64,11 @@ impl Component<State, Action> for EditorComponent {
 
       // Try to apply the `input_event` to `editor_engine` to decide whether to fire action.
       match self
-        .editor_engine
+        .engine
         .apply(
           EditorEngineArgs {
             state,
-            buffer: &state.editor_buffer,
+            buffer: &state.buffer,
             component_registry,
             shared_tw_data,
             shared_store,
@@ -78,8 +78,8 @@ impl Component<State, Action> for EditorComponent {
         )
         .await?
       {
-        Some(editor_buffer) => {
-          let action = Action::UpdateEditorBuffer(editor_buffer);
+        Some(buffer) => {
+          let action = Action::UpdateEditorBuffer(buffer);
           dispatch_editor_action!(@update_editor_buffer => shared_store, action);
           EventPropagation::Consumed
         }
@@ -112,11 +112,11 @@ impl Component<State, Action> for EditorComponent {
     } = args;
 
     self
-      .editor_engine
+      .engine
       .render(
         EditorEngineArgs {
           state,
-          buffer: &state.editor_buffer,
+          buffer: &state.buffer,
           component_registry,
           shared_tw_data,
           shared_store,

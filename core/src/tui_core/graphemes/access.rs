@@ -46,7 +46,7 @@ impl UnicodeString {
   }
 
   pub fn truncate_to_fit_size(&self, size: Size) -> &str {
-    let display_cols: ChUnit = size.col;
+    let display_cols: ChUnit = size.cols;
     self.truncate_to_fit_display_cols(display_cols)
   }
 

@@ -85,7 +85,7 @@ mod app_impl {
           runnable:       self,
           stylesheet:     style_helpers::create_stylesheet()?,
           pos:            position!(col:0, row:0),
-          size:           size!(col: window_size.col, row: window_size.row - 1), // Bottom row for status bar.
+          size:           size!(cols: window_size.cols, rows: window_size.rows - 1), // Bottom row for status bar.
           state:          state,
           shared_store:   shared_store,
           shared_tw_data: shared_tw_data
@@ -365,8 +365,8 @@ mod status_bar_helpers {
     };
 
     let display_width = st_vec.display_width();
-    let col_center: ChUnit = (size.col - display_width) / 2;
-    let row_bottom: ChUnit = size.row - 1;
+    let col_center: ChUnit = (size.cols - display_width) / 2;
+    let row_bottom: ChUnit = size.rows - 1;
     let center: Position = position!(col: col_center, row: row_bottom);
 
     *render_pipeline += (ZOrder::Normal, RenderOp::MoveCursorPositionAbs(center));

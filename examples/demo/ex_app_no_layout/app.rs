@@ -60,8 +60,8 @@ impl App<State, Action> for AppNoLayout {
     throws_with_return!({
       let GlobalScopeArgs {
         state,
-        shared_store,
         shared_tw_data,
+        ..
       } = args;
 
       let content = format!("{}", state);
@@ -69,8 +69,8 @@ impl App<State, Action> for AppNoLayout {
       let content_size_col: ChUnit = content.len().into();
       let window_size: Size = shared_tw_data.read().await.get_size();
 
-      let col: ChUnit = (window_size.col - content_size_col) / 2;
-      let row: ChUnit = window_size.row / 2;
+      let col: ChUnit = (window_size.cols - content_size_col) / 2;
+      let row: ChUnit = window_size.rows / 2;
 
       let colored_content = colorize_using_lolcat!(&mut self.lolcat, "{}", state);
 
@@ -98,11 +98,7 @@ impl App<State, Action> for AppNoLayout {
     input_event: &InputEvent,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
-      let GlobalScopeArgs {
-        state,
-        shared_store,
-        shared_tw_data,
-      } = args;
+      let GlobalScopeArgs { shared_store, .. } = args;
 
       call_if_true!(
         DEBUG,
@@ -167,8 +163,8 @@ mod status_bar_helpers {
     };
 
     let display_width = st_vec.display_width();
-    let col_center: ChUnit = (size.col - display_width) / 2;
-    let row_bottom: ChUnit = size.row - 1;
+    let col_center: ChUnit = (size.cols - display_width) / 2;
+    let row_bottom: ChUnit = size.rows - 1;
     let center: Position = position!(col: col_center, row: row_bottom);
 
     *render_pipeline += (ZOrder::Normal, RenderOp::MoveCursorPositionAbs(center));

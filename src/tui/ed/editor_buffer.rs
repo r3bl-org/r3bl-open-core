@@ -27,20 +27,29 @@ use crate::*;
 // │ EditorBuffer │
 // ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// Stores the data for a single editor buffer. This struct is stored in the [Store]. And it is
-/// paired w/ [EditorEngine] at runtime; which provides all the operations that can be performed on
-/// this.
+/// paired w/ [EditorRenderEngine] at runtime; which provides all the operations that can be
+/// performed on this.
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
   lines: Vec<UnicodeString>,
+
   /// The current caret position (relative to the
   /// [style_adjusted_origin_pos](FlexBox::style_adjusted_origin_pos) of the enclosing [FlexBox]).
   ///
   /// 1. This is the "display" and not "logical" position as defined in [UnicodeString].
   /// 2. This works w/ [crate::RenderOp::MoveCursorPositionRelTo] as well.
+  /// 3. This is not marked pub in order to guard mutation. In order to access it, use
+  ///    [get_mut](EditorBuffer::get_mut).
   caret: Position,
+
+  /// The col and row offset for scrolling if active.
+  /// 1. This is not marked pub in order to guard mutation. In order to access it, use
+  ///    [get_mut](EditorBuffer::get_mut).
+  scroll_offset: ScrollOffset,
+
   /// Lolcat struct for generating rainbow colors.
-  pub lolcat: Lolcat,
+  lolcat: Lolcat,
 }
 
 mod constructor {
@@ -61,32 +70,57 @@ mod constructor {
         lines: vec![UnicodeString::default()],
         caret: Position::default(),
         lolcat: Lolcat::default(),
+        scroll_offset: ScrollOffset::default(),
       }
     }
   }
+}
+
+pub enum CaretKind {
+  Raw,
+  ScrollAdjusted,
 }
 
 pub mod access_and_mutate {
   use super::*;
 
   impl EditorBuffer {
-    pub fn get_mut(&mut self) -> (&mut Vec<UnicodeString>, &mut Position) {
-      (&mut self.lines, &mut self.caret)
-    }
-
-    pub fn apply_mut(
-      &mut self,
-      mutator: impl FnOnce(
-        /* EditorBuffer::lines */ &mut Vec<UnicodeString>,
-        /* EditorBuffer::caret */ &mut Position,
-      ),
-    ) {
-      mutator(&mut self.lines, &mut self.caret)
-    }
-
     pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.lines }
 
-    pub fn get_caret(&self) -> Position { self.caret }
+    /// Returns the current caret position in two variants:
+    /// 1. [CaretKind::Raw] -> The raw caret position not adjusted for scrolling.
+    /// 2. [CaretKind::ScrollAdjusted] -> The caret position adjusted for scrolling using
+    ///    scroll_offset.
+    pub fn get_caret(&self, kind: CaretKind) -> Position {
+      match kind {
+        CaretKind::Raw => self.caret,
+        CaretKind::ScrollAdjusted => {
+          let position = self.caret;
+          let position_row_adjusted_for_scroll_offset = position.row + self.scroll_offset.row;
+          let position_col_adjusted_for_scroll_offset = position.col + self.scroll_offset.col;
+          position! {
+            col: position_col_adjusted_for_scroll_offset,
+            row: position_row_adjusted_for_scroll_offset
+          }
+        }
+      }
+    }
+
+    pub fn get_scroll_offset(&self) -> ScrollOffset { self.scroll_offset }
+
+    /// Even though this struct is mutable by editor_ops.rs, this method is provided to mark when
+    /// mutable access is made to this struct. This makes it easy to determine what code mutates
+    /// this struct, since it is necessary to validate things after mutation quite a bit in
+    /// editor_ops.rs.
+    pub fn get_mut(
+      &mut self,
+    ) -> (
+      /* lines */ &mut Vec<UnicodeString>,
+      /* caret */ &mut Position,
+      /* scroll_offset */ &mut ScrollOffset,
+    ) {
+      (&mut self.lines, &mut self.caret, &mut self.scroll_offset)
+    }
   }
 }
 
@@ -98,36 +132,37 @@ impl EditorBuffer {
     engine: &mut EditorRenderEngine,
     buffer: &mut EditorBuffer,
     editor_buffer_command: EditorBufferCommand,
-    shared_tw_data: &SharedTWData,
-    component_registry: &mut ComponentRegistry<S, A>,
-    self_id: &str,
+    _shared_tw_data: &SharedTWData,
+    _component_registry: &mut ComponentRegistry<S, A>,
+    _self_id: &str,
   ) where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
     match editor_buffer_command {
-      EditorBufferCommand::InsertChar(character) => {
-        editor_ops_content_mut::insert_str_at_caret(buffer, engine, &String::from(character))
-      }
+      EditorBufferCommand::InsertChar(character) => editor_ops_mut_content::insert_str_at_caret(
+        EditorArgsMut { buffer, engine },
+        &String::from(character),
+      ),
       EditorBufferCommand::InsertNewLine => {
-        editor_ops_content_mut::insert_new_line_at_caret(buffer, engine);
+        editor_ops_mut_content::insert_new_line_at_caret(EditorArgsMut { buffer, engine });
       }
       EditorBufferCommand::Delete => {
-        editor_ops_content_mut::delete_at_caret(buffer, engine);
+        editor_ops_mut_content::delete_at_caret(buffer, engine);
       }
       EditorBufferCommand::Backspace => {
-        editor_ops_content_mut::backspace_at_caret(buffer, engine);
+        editor_ops_mut_content::backspace_at_caret(buffer, engine);
       }
       EditorBufferCommand::MoveCaret(direction) => {
         match direction {
-          CaretDirection::Left => editor_ops_caret_mut::left(buffer, engine),
-          CaretDirection::Right => editor_ops_caret_mut::right(buffer, engine),
-          CaretDirection::Up => editor_ops_caret_mut::up(buffer, engine),
-          CaretDirection::Down => editor_ops_caret_mut::down(buffer, engine),
+          CaretDirection::Left => editor_ops_mut_caret::left(buffer, engine),
+          CaretDirection::Right => editor_ops_mut_caret::right(buffer, engine),
+          CaretDirection::Up => editor_ops_mut_caret::up(buffer, engine),
+          CaretDirection::Down => editor_ops_mut_caret::down(buffer, engine),
         };
       }
       EditorBufferCommand::InsertString(chunk) => {
-        editor_ops_content_mut::insert_str_at_caret(buffer, engine, &chunk)
+        editor_ops_mut_content::insert_str_at_caret(EditorArgsMut { buffer, engine }, &chunk)
       }
     };
   }

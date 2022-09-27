@@ -100,8 +100,8 @@ pub async fn sanitize_and_save_abs_position(
   shared_tw_data: &SharedTWData,
 ) -> Position {
   let Size {
-    col: max_cols,
-    row: max_rows,
+    cols: max_cols,
+    rows: max_rows,
   } = shared_tw_data.read().await.size;
 
   let mut sanitized_abs_pos: Position = orig_abs_pos;

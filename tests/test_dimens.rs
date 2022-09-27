@@ -21,7 +21,7 @@ use r3bl_rs_utils::*;
 async fn test_add_box_size_to_pos() {
   // [10, 10] + [30, 10] = [40, 20]
   let pos = position!(col: 10, row: 10);
-  let size = size!(col: 30, row: 10);
+  let size = size!(cols: 30, rows: 10);
   let new_pos = pos + size; // `size + pos` is not defined.
   assert_eq!(*new_pos.col, 40);
   assert_eq!(*new_pos.row, 20);
