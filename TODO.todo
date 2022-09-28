@@ -36,7 +36,7 @@ editor engine core (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
     ✔ refactor editor buffer lines write ops so they are funnelled through a single fn @done(22-09-19 16:17)
     ✔ refactor editor buffer caret write ops so they are funnelled through a single fn @done(22-09-19 16:17)
     ✔ up, down @done(22-09-28 11:07)
-    ☐ resize (caret & scroll fix by calling validate_caret_in_viewport_activate_scroll_if_needed in render)
+    ✔ resize (caret & scroll fix - `validate_caret_in_viewport_activate_scroll_if_needed` in `render`) @done(22-09-28 13:12)
     ☐ left, right
   ☐ move caret left / right -> move up / down as well (`validate_caret_position()`)
     ☐ left at start of line, move up to end of previous line
@@ -46,6 +46,8 @@ editor engine core (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
   ☐ other key inputs
     ☐ page up/down
     ☐ home/end
+
+editor engine extras (core):
   ☐ syntax highlighting support
   ☐ modal dialog support
 

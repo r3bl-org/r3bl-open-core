@@ -33,6 +33,7 @@ pub enum EditorBufferCommand {
   Delete,
   Backspace,
   MoveCaret(CaretDirection),
+  Resize(Size),
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -48,6 +49,7 @@ impl TryFrom<&InputEvent> for EditorBufferCommand {
 
   fn try_from(input_event: &InputEvent) -> Result<Self, Self::Error> {
     match input_event {
+      InputEvent::Resize(size) => Ok(EditorBufferCommand::Resize(*size)),
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::Character(character),
       }) => Ok(Self::InsertChar(*character)),

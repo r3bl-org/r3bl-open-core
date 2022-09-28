@@ -17,8 +17,8 @@
 
 use r3bl_rs_utils::*;
 
-// TK: 🚨🔮 fix tests for scrolling (vertical)
-// TK: 🚨🔮 fix tests for scrolling (horizontal)
+// TK: 🚨🔮 add tests for scrolling (vertical)
+// TK: 🚨🔮 add tests for scrolling (horizontal)
 
 #[test]
 fn test_delete() {

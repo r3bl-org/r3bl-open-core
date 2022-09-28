@@ -30,42 +30,6 @@ impl DefaultInputEventHandler {
     if input_event.matches(exit_keys) {
       return Continuation::Exit;
     }
-
-    // Default input event handling.
-    match input_event {
-      InputEvent::Keyboard(keypress) => {
-        call_if_true!(
-          DEBUG_TUI_MOD,
-          log_no_err!(INFO, "default_event_handler -> Keypress: {:?}", keypress)
-        );
-      }
-      InputEvent::Resize(size) => {
-        call_if_true!(
-          DEBUG_TUI_MOD,
-          log_no_err!(INFO, "default_event_handler -> Resize: {:?}", size)
-        );
-        return Continuation::ResizeAndContinue(size);
-      }
-      InputEvent::Mouse(mouse_event) => {
-        call_if_true!(
-          DEBUG_TUI_MOD,
-          log_no_err!(INFO, "default_event_handler -> Mouse: {:?}", mouse_event)
-        );
-      }
-      InputEvent::Focus(focus_event) => {
-        call_if_true!(
-          DEBUG_TUI_MOD,
-          log_no_err!(INFO, "default_event_handler -> Focus: {:?}", focus_event)
-        );
-      }
-      InputEvent::Paste(text) => {
-        call_if_true!(
-          DEBUG_TUI_MOD,
-          log_no_err!(INFO, "default_event_handler -> Paste: {:?}", text)
-        );
-      }
-    }
-
     Continuation::Continue
   }
 }

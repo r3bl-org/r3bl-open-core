@@ -60,12 +60,6 @@ impl EditorRenderEngine {
       ..
     } = args;
 
-    // TK: 🚨🔮 resize -> caret + scroll fix in editor buffer; need to handle resize event
-    // scroll::validate_caret_in_viewport_activate_scroll_if_needed(EditorArgsMut {
-    //   buffer,
-    //   engine: self,
-    // });
-
     if let Ok(editor_event) = EditorBufferCommand::try_from(input_event) {
       let mut new_editor_buffer = buffer.clone();
       EditorBuffer::apply_editor_event(
@@ -141,14 +135,6 @@ impl EditorRenderEngine {
     {
       // Clip the content to max rows.
       if ch!(row_index) > max_display_row_count {
-        // TK: ‼️ remove debug
-        log_no_err!(
-          DEBUG,
-          "🟥🟥🟥 row_index {:?} > max_display_row_count {:?}, line: {:?}",
-          row_index,
-          *max_display_row_count,
-          line.string,
-        );
         break;
       }
 
@@ -163,15 +149,6 @@ impl EditorRenderEngine {
           RenderOp::PrintTextWithAttributes(truncated_line.into(), self.current_box.get_computed_style()),
           RenderOp::ResetColor
       };
-
-      // TK: ‼️ remove debug
-      log_no_err!(
-        DEBUG,
-        "👉🟡🟡🟡 row_index: {:?}, max_display_row_count: {:?}, line: {:?}",
-        row_index,
-        *max_display_row_count,
-        line.string,
-      );
     }
 
     render_pipeline
@@ -216,15 +193,6 @@ impl EditorRenderEngine {
           } else {
             DEFAULT_CURSOR_CHAR.into()
           };
-
-          // TK: ‼️ remove debug
-          log_no_err!(
-            DEBUG,
-            "👆🔵🔵🔵 str_at_caret: {:?}, caret(Raw): {:?}, scroll_offset: {:?}",
-            str_at_caret,
-            buffer.get_caret(CaretKind::Raw),
-            buffer.get_scroll_offset(),
-          );
 
           render_pipeline! {
             @push_into render_pipeline at ZOrder::Caret =>
