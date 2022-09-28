@@ -111,7 +111,6 @@ pub mod editor_ops_get_caret {
 pub mod editor_ops_mut_caret {
   use super::*;
 
-  // TK: 🚨🌈 handle scrolling
   pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
     // let EditorArgs { buffer, engine } = args;
     empty_check_early_return!(buffer, @None);
@@ -120,11 +119,8 @@ pub mod editor_ops_mut_caret {
         // Do nothing.
       }
       CaretRowLocation::AtBottomOfBuffer | CaretRowLocation::InMiddleOfBuffer => {
-        let old_row_idx_raw = buffer.get_caret(CaretKind::Raw).row;
-        let old_row_idx = buffer.get_caret(CaretKind::ScrollAdjusted).row;
-
-        mutate::change_editor_buffer(buffer, engine, |_, caret, scroll_offset| {
-          scroll::dec_row(caret, scroll_offset);
+        mutate_buffer::apply_change(buffer, engine, |_, caret, scroll_offset| {
+          scroll_buffer::dec_row(caret, scroll_offset);
         });
 
         let line_display_width = editor_ops_get_content::line_display_width_at_row_index(
@@ -132,30 +128,15 @@ pub mod editor_ops_mut_caret {
           buffer.get_caret(CaretKind::ScrollAdjusted).row,
         );
 
-        mutate::change_editor_buffer(buffer, engine, |_, caret, _| {
+        mutate_buffer::apply_change(buffer, engine, |_, caret, _| {
           caret.clip_col_to_bounds(line_display_width);
         });
-
-        let new_row_idx_raw = buffer.get_caret(CaretKind::Raw).row;
-        let new_row_idx = buffer.get_caret(CaretKind::ScrollAdjusted).row;
-
-        // TK: ‼️ remove debug
-        log_no_err!(
-          DEBUG,
-          "🔼🔼🔼 \n\told_row [raw: {:?}, adj: {:?}], \n\tnew_row [raw: {:?}, adj: {:?}]\n\tscroll_offset: {:?}",
-          *old_row_idx_raw,
-          *old_row_idx,
-          *new_row_idx_raw,
-          *new_row_idx,
-          *buffer.get_scroll_offset().row
-        );
       }
     }
 
     None
   }
 
-  // TK: 🚨🌈 handle scrolling
   pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
     match editor_ops_get_caret::find_row(buffer, engine) {
@@ -169,7 +150,7 @@ pub mod editor_ops_mut_caret {
           let new_row = row_index + 1;
           let line_display_width =
             editor_ops_get_content::line_display_width_at_row_index(buffer, new_row);
-          mutate::change_editor_buffer(buffer, engine, |_, caret, _| {
+          mutate_buffer::apply_change(buffer, engine, |_, caret, _| {
             caret.row = new_row;
             caret.clip_col_to_bounds(line_display_width);
           });
@@ -180,7 +161,7 @@ pub mod editor_ops_mut_caret {
     None
   }
 
-  // TK: 🚨🔮 handle scrolling
+  // TK: 🚨🌈 handle horiz scrolling
   pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
     match editor_ops_get_caret::find_col(EditorArgs { buffer, engine }) {
@@ -191,7 +172,7 @@ pub mod editor_ops_mut_caret {
         let UnicodeStringSegmentSliceResult { unicode_width, .. } =
           editor_ops_get_content::string_at_caret(buffer, engine)?;
         let max_display_width = editor_ops_get_content::line_display_width_at_caret(buffer, engine);
-        mutate::change_editor_buffer(buffer, engine, |_, caret, _| {
+        mutate_buffer::apply_change(buffer, engine, |_, caret, _| {
           caret.add_col_with_bounds(unicode_width, max_display_width);
         });
       }
@@ -200,7 +181,7 @@ pub mod editor_ops_mut_caret {
     None
   }
 
-  // TK: 🚨🔮 handle scrolling
+  // TK: 🚨🌈 handle horiz scrolling
   pub fn left(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
     match editor_ops_get_caret::find_col(EditorArgs { buffer, engine }) {
@@ -210,14 +191,14 @@ pub mod editor_ops_mut_caret {
       CaretColLocation::AtEndOfLine => {
         let UnicodeStringSegmentSliceResult { unicode_width, .. } =
           editor_ops_get_content::string_at_end_of_line_at_caret(buffer, engine)?;
-        mutate::change_editor_buffer(buffer, engine, |_, caret, _| {
+        mutate_buffer::apply_change(buffer, engine, |_, caret, _| {
           caret.col -= unicode_width;
         });
       }
       CaretColLocation::InMiddleOfLine => {
         let UnicodeStringSegmentSliceResult { unicode_width, .. } =
           editor_ops_get_content::string_to_left_of_caret(buffer, engine)?;
-        mutate::change_editor_buffer(buffer, engine, |_, caret, _| {
+        mutate_buffer::apply_change(buffer, engine, |_, caret, _| {
           caret.col -= unicode_width;
         });
       }
@@ -355,7 +336,7 @@ pub mod editor_ops_mut_content {
     let EditorArgsMut { buffer, engine } = args;
 
     if buffer.is_empty() {
-      mutate::change_editor_buffer(buffer, engine, |lines, _, _| {
+      mutate_buffer::apply_change(buffer, engine, |lines, _, _| {
         lines.push(String::new().into());
       });
       return;
@@ -381,8 +362,8 @@ pub mod editor_ops_mut_content {
       let EditorArgsMut { buffer, engine } = args;
 
       // Insert empty line at caret.
-      mutate::change_editor_buffer(buffer, engine, |lines, caret, _| {
-        scroll::inc_row(caret);
+      mutate_buffer::apply_change(buffer, engine, |lines, caret, _| {
+        scroll_buffer::inc_row(caret);
         caret.reset_col();
         lines.insert(ch!(@to_usize caret.row), String::new().into());
       });
@@ -394,17 +375,17 @@ pub mod editor_ops_mut_content {
 
       let row_index = ch!(@to_usize buffer.get_caret(CaretKind::ScrollAdjusted).row);
       if row_index == 0 {
-        mutate::change_editor_buffer(buffer, engine, |lines, _, _| {
+        mutate_buffer::apply_change(buffer, engine, |lines, _, _| {
           lines.insert(0, String::new().into());
         });
       } else {
-        mutate::change_editor_buffer(buffer, engine, |lines, _, _| {
+        mutate_buffer::apply_change(buffer, engine, |lines, _, _| {
           lines.insert(row_index, String::new().into());
         });
       }
 
-      mutate::change_editor_buffer(buffer, engine, |_, caret, _| {
-        scroll::inc_row(caret);
+      mutate_buffer::apply_change(buffer, engine, |_, caret, _| {
+        scroll_buffer::inc_row(caret);
       });
     }
 
@@ -429,10 +410,10 @@ pub mod editor_ops_mut_content {
         )) = split_result
         {
           let row_index = ch!(@to_usize position.row);
-          mutate::change_editor_buffer(buffer, engine, |lines, caret, _| {
+          mutate_buffer::apply_change(buffer, engine, |lines, caret, _| {
             let _ = replace(&mut lines[row_index], left);
             lines.insert(row_index + 1, right);
-            scroll::inc_row(caret);
+            scroll_buffer::inc_row(caret);
             caret.reset_col();
           });
         }
@@ -469,7 +450,7 @@ pub mod editor_ops_mut_content {
         ..
       } = cur_line.delete_char_at_display_col(buffer.get_caret(CaretKind::ScrollAdjusted).col)?;
       let row_index = ch!(@to_usize buffer.get_caret(CaretKind::ScrollAdjusted).row);
-      mutate::change_editor_buffer(buffer, engine, |lines, _, _| {
+      mutate_buffer::apply_change(buffer, engine, |lines, _, _| {
         let _ = replace(&mut lines[row_index], new_line);
       });
       None
@@ -485,7 +466,7 @@ pub mod editor_ops_mut_content {
       let this_line = editor_ops_get_content::line_at_caret_to_string(buffer, engine)?;
       let next_line = editor_ops_get_content::next_line_below_caret_to_string(buffer, engine)?;
 
-      mutate::change_editor_buffer(buffer, engine, |lines, caret, _| {
+      mutate_buffer::apply_change(buffer, engine, |lines, caret, _| {
         let _ = replace(&mut lines[ch!(@to_usize caret.row)], this_line + &next_line);
         lines.remove(ch!(@to_usize caret.row, @inc));
       });
@@ -528,7 +509,7 @@ pub mod editor_ops_mut_content {
         new_unicode_string: new_line,
         ..
       } = cur_line.delete_char_at_display_col(delete_at_this_display_idx)?;
-      mutate::change_editor_buffer(buffer, engine, |lines, caret, _| {
+      mutate_buffer::apply_change(buffer, engine, |lines, caret, _| {
         let _ = replace(&mut lines[ch!(@to_usize caret.row)], new_line);
         caret.set_col(delete_at_this_display_idx);
       });
@@ -549,7 +530,7 @@ pub mod editor_ops_mut_content {
       let this_line = editor_ops_get_content::line_at_caret_to_string(buffer, engine)?;
       let prev_line = editor_ops_get_content::prev_line_above_caret_to_string(buffer, engine)?;
       let prev_line_cols = prev_line.display_width;
-      mutate::change_editor_buffer(buffer, engine, |lines, caret, _| {
+      mutate_buffer::apply_change(buffer, engine, |lines, caret, _| {
         let _ = replace(
           &mut lines[ch!(@to_usize caret.row, @dec)],
           prev_line + &this_line,
@@ -574,7 +555,7 @@ pub mod editor_ops_mut_content {
       unicode_width: char_display_width,
     } = line.insert_char_at_display_col(ch!(pos.col), chunk)?;
 
-    mutate::change_editor_buffer(buffer, engine, |lines, caret, _| {
+    mutate_buffer::apply_change(buffer, engine, |lines, caret, _| {
       // Replace existing line w/ new line.
       let _ = replace(&mut lines[row_index], new_line);
 
@@ -596,7 +577,7 @@ pub mod editor_ops_mut_content {
     if buffer.get_lines().get(caret_row).is_none() {
       for row_idx in 0..caret_row + 1 {
         if buffer.get_lines().get(row_idx).is_none() {
-          mutate::change_editor_buffer(buffer, engine, |lines, _, _| {
+          mutate_buffer::apply_change(buffer, engine, |lines, _, _| {
             lines.push(String::new().into());
           });
         }
@@ -610,7 +591,7 @@ pub mod editor_ops_mut_content {
     // Actually add the character to the correct line.
     let _ = buffer.get_lines().get(caret_row)?;
 
-    mutate::change_editor_buffer(buffer, engine, |lines, caret, _| {
+    mutate_buffer::apply_change(buffer, engine, |lines, caret, _| {
       let _ = replace(
         &mut lines[ch!(@to_usize caret_row)],
         UnicodeString::from(chunk),
@@ -622,16 +603,17 @@ pub mod editor_ops_mut_content {
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Internal module: mut EditorBuffer + EditorRenderEngine │
-// ╯                                                        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-pub(super) mod mutate {
-  use std::cmp::Ordering;
-
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Change EditorBuffer │
+// ╯                     ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+pub mod mutate_buffer {
   use super::*;
 
-  /// Internal function.
-  pub(super) fn change_editor_buffer(
+  /// In addition to mutating the buffer, this function also runs validation functions to ensure
+  /// that:
+  /// 1. the caret is in not in the middle of a unicode segment character.
+  /// 2. the caret is not out of bounds vertically and activates scrolling if needed.
+  pub fn apply_change(
     buffer: &mut EditorBuffer,
     engine: &mut EditorRenderEngine,
     mutator: impl FnOnce(
@@ -640,51 +622,18 @@ pub(super) mod mutate {
       /* EditorRenderEngine::scroll_offset */ &mut ScrollOffset,
     ),
   ) -> Nope {
-    // TK: ‼️ remove debug
-    let dbg_pre_mut_caret = buffer.get_caret(CaretKind::ScrollAdjusted);
-    let dbg_pre_mut_scroll_offset = buffer.get_scroll_offset();
-
     // Run the mutator first.
     let (lines, caret, scroll_offset) = buffer.get_mut();
     mutator(lines, caret, scroll_offset);
 
-    // TK: ‼️ remove debug
-    let dbg_post_mut_caret = buffer.get_caret(CaretKind::ScrollAdjusted);
-    let dbg_post_mut_scroll_offset = buffer.get_scroll_offset();
-
     // Check to see whether scroll is valid.
-    scroll::validate_caret_in_viewport_activate_scroll_if_needed(EditorArgsMut { buffer, engine });
+    scroll_buffer::validate_caret_in_viewport_activate_scroll_if_needed(EditorArgsMut {
+      buffer,
+      engine,
+    });
 
     // Check to see whether the caret is in the correct display column.
     validate_caret_col_position_not_in_middle_of_grapheme_cluster(buffer);
-
-    // TK: ‼️ remove debug
-    log_no_err!(
-      DEBUG,
-      "📜📜📜 pre_mut_caret -> {:?}, post_mut_caret -> {:?}",
-      dbg_pre_mut_caret,
-      dbg_post_mut_caret,
-    );
-
-    // TK: ‼️ remove debug
-    match dbg_post_mut_caret.row.cmp(&dbg_pre_mut_caret.row) {
-      Ordering::Greater => {}
-      Ordering::Less => {}
-      Ordering::Equal => {}
-    }
-
-    // TK: ‼️ remove debug
-    match dbg_post_mut_scroll_offset
-      .row
-      .cmp(&dbg_pre_mut_scroll_offset.row)
-    {
-      Ordering::Greater => {}
-      Ordering::Less => {}
-      Ordering::Equal => {}
-    }
-
-    // TK: 🚨🔮 Check to see if horizontal scroll is needed on caret inc
-    // TK: 🚨🔮 Check to see if horizontal scroll is needed on caret dec
 
     None
   }
@@ -701,16 +650,16 @@ pub(super) mod mutate {
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Internal module: scroll │
-// ╯                         ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-pub(super) mod scroll {
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Scroll EditorBuffer │
+// ╯                     ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+pub mod scroll_buffer {
   use super::*;
 
   /// This does not simply decrement the caret.row, and instead mutates scroll_offset if scrolling
   /// is active.
   ///
-  /// This is meant to be called inside [mutate::change_editor_buffer].
+  /// This is meant to be called inside [mutate_buffer::apply_change].
   pub fn dec_row(caret: &mut Position, scroll_offset: &mut ScrollOffset) {
     if scroll_offset.row > ch!(0) {
       // Scrolling is active.
@@ -728,14 +677,14 @@ pub(super) mod scroll {
   /// This is just a marker function that only increments the caret.row. You have to call
   /// [validate_caret_in_viewport_activate_scroll_if_needed] after this function is called.
   ///
-  /// This is meant to be called inside [mutate::change_editor_buffer], which automatically calls
+  /// This is meant to be called inside [mutate_buffer::apply_change], which automatically calls
   /// [validate_caret_in_viewport_activate_scroll_if_needed] for you.
   pub fn inc_row(caret: &mut Position) { caret.row += 1; }
 
   /// Check whether caret is vertically within the viewport.
   /// - If it isn't then scroll by mutating:
-  ///    1. [caret](EditorBuffer::caret)'s row , so it is within the viewport.
-  ///    2. [scroll_offset](EditorEngine::scroll_offset)'s row, to actually apply scrolling.
+  ///    1. [caret](EditorBuffer::get_caret())'s row , so it is within the viewport.
+  ///    2. [scroll_offset](EditorBuffer::get_scroll_offset())'s row, to actually apply scrolling.
   /// - Otherwise, no changes are made.
   pub fn validate_caret_in_viewport_activate_scroll_if_needed(args: EditorArgsMut<'_>) {
     let EditorArgsMut { buffer, engine } = args;
@@ -754,6 +703,7 @@ pub(super) mod scroll {
 
   // TK: 🚨🌈 impl this
   pub fn inc_col() {}
+
   // TK: 🚨🌈 impl this
   pub fn dec_col() {}
 }

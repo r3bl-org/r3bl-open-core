@@ -118,6 +118,16 @@ impl TerminalWindow {
         log_no_err!(INFO, "main_event_loop -> Tick: ⏰ {}", input_event)
       );
 
+      // Before any app gets to process the input_event, perform special handling in case it is a
+      // resize event. Even if TerminalWindow::process_input_event consumes the event, if the event
+      // is a resize event, then we still need to update the size of the terminal window. It also
+      // needs to be re-rendered.
+      if let InputEvent::Resize(new_size) = input_event {
+        shared_tw_data.write().await.set_size(new_size);
+        AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
+      }
+
+      // Pass the input_event to the app for processing.
       let propagation_result_from_app = TerminalWindow::process_input_event(
         &shared_tw_data,
         &shared_store,
@@ -126,27 +136,17 @@ impl TerminalWindow {
       )
       .await?;
 
-      // TK: 🚨🔮 resize -> caret + scroll fix in editor buffer; special case for resize event (will
-      // be consumed by app but still needs to be processed by main_event_loop!)
-
       // If event not consumed by app, propagate to the default input handler.
       match propagation_result_from_app {
+        EventPropagation::Propagate => {
+          if let Continuation::Exit =
+            DefaultInputEventHandler::no_consume(input_event, &exit_keys).await
+          {
+            break;
+          };
+        }
         EventPropagation::ConsumedRerender => {
           AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
-        }
-        EventPropagation::Propagate => {
-          let continuation_result_from_default_handler =
-            DefaultInputEventHandler::no_consume(input_event, &exit_keys).await;
-          match continuation_result_from_default_handler {
-            Continuation::Exit => {
-              break;
-            }
-            Continuation::ResizeAndContinue(new_size) => {
-              shared_tw_data.write().await.set_size(new_size);
-              AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
-            }
-            _ => {}
-          };
         }
         EventPropagation::Consumed => {}
       }

@@ -44,7 +44,7 @@ impl Component<State, Action> for EditorComponent {
   // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
   // │ handle_event │
   // ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-  /// This shim simply calls [EditorEngine::apply](EditorEngine::apply) w/ all the necessary
+  /// This shim simply calls [EditorEngine::apply](EditorRenderEngine::apply) w/ all the necessary
   /// arguments:
   /// - Global scope: [SharedStore], [SharedTwData].
   /// - App scope: [State], [ComponentRegistry<State, Action>].
@@ -61,10 +61,6 @@ impl Component<State, Action> for EditorComponent {
         state,
         component_registry,
       } = args;
-
-      // TK: 🚨🔮 resize -> caret + scroll fix in editor buffer; need to handle resize event and
-      // then consume it (main_event_loop needs to special case this)
-      // scroll::validate_caret_in_viewport_activate_scroll_if_needed(...)
 
       // Try to apply the `input_event` to `editor_engine` to decide whether to fire action.
       match self
@@ -98,7 +94,7 @@ impl Component<State, Action> for EditorComponent {
   // ╭┄┄┄┄┄┄┄┄╮
   // │ render │
   // ╯        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-  /// This shim simply calls [EditorEngine::apply](EditorEngine::render) w/ all the necessary
+  /// This shim simply calls [EditorEngine::apply](EditorRenderEngine::render) w/ all the necessary
   /// arguments:
   /// - Global scope: [SharedStore], [SharedTwData].
   /// - App scope: [State], [ComponentRegistry<State, Action>].

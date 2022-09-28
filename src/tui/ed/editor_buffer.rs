@@ -164,6 +164,12 @@ impl EditorBuffer {
       EditorBufferCommand::InsertString(chunk) => {
         editor_ops_mut_content::insert_str_at_caret(EditorArgsMut { buffer, engine }, &chunk)
       }
+      EditorBufferCommand::Resize(_) => {
+        scroll_buffer::validate_caret_in_viewport_activate_scroll_if_needed(EditorArgsMut {
+          buffer,
+          engine,
+        });
+      }
     };
   }
 
