@@ -60,6 +60,12 @@ impl EditorRenderEngine {
       ..
     } = args;
 
+    // TK: 🚨🔮 resize -> caret + scroll fix in editor buffer; need to handle resize event
+    // scroll::validate_caret_in_viewport_activate_scroll_if_needed(EditorArgsMut {
+    //   buffer,
+    //   engine: self,
+    // });
+
     if let Ok(editor_event) = EditorBufferCommand::try_from(input_event) {
       let mut new_editor_buffer = buffer.clone();
       EditorBuffer::apply_editor_event(

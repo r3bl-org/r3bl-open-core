@@ -739,9 +739,10 @@ pub(super) mod scroll {
       let max_display_row_count = engine.current_box.style_adjusted_bounds_size.rows;
       let caret_row = buffer.get_caret(CaretKind::Raw).row;
       if caret_row > max_display_row_count {
+        let row_diff = caret_row - max_display_row_count;
         let (_, caret, scroll_offset) = buffer.get_mut();
-        scroll_offset.row += 1;
-        caret.sub_row(1);
+        scroll_offset.row += row_diff;
+        caret.row -= row_diff;
       }
     }
   }
