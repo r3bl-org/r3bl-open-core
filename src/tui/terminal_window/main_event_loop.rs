@@ -126,6 +126,9 @@ impl TerminalWindow {
       )
       .await?;
 
+      // TK: 🚨🔮 resize -> caret + scroll fix in editor buffer; special case for resize event (will
+      // be consumed by app but still needs to be processed by main_event_loop!)
+
       // If event not consumed by app, propagate to the default input handler.
       match propagation_result_from_app {
         EventPropagation::ConsumedRerender => {

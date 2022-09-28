@@ -62,6 +62,10 @@ impl Component<State, Action> for EditorComponent {
         component_registry,
       } = args;
 
+      // TK: 🚨🔮 resize -> caret + scroll fix in editor buffer; need to handle resize event and
+      // then consume it (main_event_loop needs to special case this)
+      // scroll::validate_caret_in_viewport_activate_scroll_if_needed(...)
+
       // Try to apply the `input_event` to `editor_engine` to decide whether to fire action.
       match self
         .engine
