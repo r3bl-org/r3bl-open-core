@@ -4,8 +4,18 @@
 			"path": "src/tui/ed/editor_ops.rs",
 			"bookmarks": [
 				{
-					"line": 113,
+					"line": 116,
 					"column": 2,
+					"label": ""
+				},
+				{
+					"line": 632,
+					"column": 2,
+					"label": ""
+				},
+				{
+					"line": 746,
+					"column": 9,
 					"label": ""
 				}
 			]
