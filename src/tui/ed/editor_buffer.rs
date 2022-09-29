@@ -85,6 +85,8 @@ pub mod access_and_mutate {
   use super::*;
 
   impl EditorBuffer {
+    pub fn len(&self) -> ChUnit { ch!(self.lines.len()) }
+
     pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.lines }
 
     /// Returns the current caret position in two variants:
@@ -95,19 +97,31 @@ pub mod access_and_mutate {
       match kind {
         CaretKind::Raw => self.caret,
         CaretKind::ScrollAdjusted => {
-          let position = self.caret;
-          let position_row_adjusted_for_scroll_offset = position.row + self.scroll_offset.row;
-          let position_col_adjusted_for_scroll_offset = position.col + self.scroll_offset.col;
           position! {
-            col: position_col_adjusted_for_scroll_offset,
-            row: position_row_adjusted_for_scroll_offset
+            col: Self::calc_scroll_adj_caret_col(&self.caret, &self.scroll_offset),
+            row: Self::calc_scroll_adj_caret_row(&self.caret, &self.scroll_offset)
           }
         }
       }
     }
 
+    /// Scroll adjusted caret row = caret.row + scroll_offset.row.
+    pub fn calc_scroll_adj_caret_row(caret: &Position, scroll_offset: &ScrollOffset) -> usize {
+      ch!(@to_usize caret.row + scroll_offset.row)
+    }
+
+    /// Scroll adjusted caret col = caret.col + scroll_offset.col.
+    pub fn calc_scroll_adj_caret_col(caret: &Position, scroll_offset: &ScrollOffset) -> usize {
+      ch!(@to_usize caret.col + scroll_offset.col)
+    }
+
     pub fn get_scroll_offset(&self) -> ScrollOffset { self.scroll_offset }
 
+    /// Returns:
+    /// 1. /* lines */ &mut Vec<UnicodeString>,
+    /// 2. /* caret */ &mut Position,
+    /// 3. /* scroll_offset */ &mut ScrollOffset,
+    ///
     /// Even though this struct is mutable by editor_ops.rs, this method is provided to mark when
     /// mutable access is made to this struct. This makes it easy to determine what code mutates
     /// this struct, since it is necessary to validate things after mutation quite a bit in
@@ -165,7 +179,8 @@ impl EditorBuffer {
         editor_ops_mut_content::insert_str_at_caret(EditorArgsMut { buffer, engine }, &chunk)
       }
       EditorBufferCommand::Resize(_) => {
-        mutate_buffer::apply_change_with_validations(buffer, engine, |_, _, _| {});
+        // Check to see whether scroll is valid.
+        scroll_buffer::validate_scroll(EditorArgsMut { buffer, engine });
       }
     };
   }
