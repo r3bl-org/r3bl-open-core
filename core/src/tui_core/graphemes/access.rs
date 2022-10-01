@@ -47,10 +47,30 @@ impl UnicodeString {
 
   pub fn truncate_to_fit_size(&self, size: Size) -> &str {
     let display_cols: ChUnit = size.cols;
-    self.truncate_to_fit_display_cols(display_cols)
+    self.truncate_end_to_fit_display_cols(display_cols)
   }
 
-  pub fn truncate_to_fit_display_cols(&self, display_cols: ChUnit) -> &str {
+  /// Removes segments from the start of the string so that scroll_offset_col width is skipped.
+  pub fn truncate_start_by_n_col(&self, scroll_offset_col: ChUnit) -> &str {
+    let mut skip_col_count = scroll_offset_col;
+    let mut string_start_byte_index = 0;
+
+    for segment in self.iter() {
+      if skip_col_count != ch!(0) {
+        // Skip segment.unicode_width.
+        skip_col_count -= segment.unicode_width;
+        string_start_byte_index += segment.byte_size;
+      } else {
+        // We are done skipping.
+        break;
+      }
+    }
+
+    &self.string[string_start_byte_index..]
+  }
+
+  /// Removes segments from the end of the string that don't fit in the display_cols width.
+  pub fn truncate_end_to_fit_display_cols(&self, display_cols: ChUnit) -> &str {
     let mut avail_cols = display_cols;
     let mut string_end_byte_index = 0;
 

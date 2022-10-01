@@ -338,7 +338,7 @@ async fn print_text_with_attributes(
     let plain_text_len = plain_text_unicode_string.display_width;
     if cursor_position.col + plain_text_len > max_cols {
       let trunc_plain_text = plain_text_unicode_string
-        .truncate_to_fit_display_cols(max_cols - cursor_position.col)
+        .truncate_end_to_fit_display_cols(max_cols - cursor_position.col)
         .to_string();
       // Update plain_text & log_msg after truncating.
       *text = Cow::from(trunc_plain_text);

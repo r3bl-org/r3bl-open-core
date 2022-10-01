@@ -17,8 +17,8 @@
 
 use r3bl_rs_utils::*;
 
-// TK: 🚨🔮 add tests for scrolling (vertical)
-// TK: 🚨🔮 add tests for scrolling (horizontal)
+// TK: 🔮 add tests for scrolling (vertical)
+// TK: 🔮 add tests for scrolling (horizontal)
 
 #[test]
 fn test_delete() {
@@ -671,7 +671,7 @@ fn test_insert_new_line() {
 
   assert::none_is_at_caret(&buffer, &engine);
   assert_eq2!(
-    editor_ops_get_content::line_at_caret_to_string(&buffer, &engine)
+    get_content::line_at_caret_to_string(&buffer, &engine)
       .unwrap()
       .string,
     "ab"
@@ -787,7 +787,7 @@ fn test_move_caret_left_right() {
     "",
   );
   assert_eq2!(
-    editor_ops_get_content::line_at_caret_to_string(&buffer, &engine)
+    get_content::line_at_caret_to_string(&buffer, &engine)
       .unwrap()
       .string,
     "1a"
@@ -842,7 +842,7 @@ fn test_move_caret_left_right() {
   );
   assert::str_is_at_caret(&buffer, &engine, "a");
   assert_eq2!(
-    editor_ops_get_content::line_at_caret_to_string(&buffer, &engine)
+    get_content::line_at_caret_to_string(&buffer, &engine)
       .unwrap()
       .string,
     "12a"
@@ -941,7 +941,7 @@ fn test_insertion() {
   // 1 ▸b░        │
   //   └─▴────────┘
   //   C0123456789
-  editor_ops_mut_content::insert_new_line_at_caret(EditorArgsMut {
+  mut_content::insert_new_line_at_caret(EditorArgsMut {
     buffer: &mut buffer,
     engine: &mut engine,
   });
@@ -1064,10 +1064,7 @@ pub mod assert {
   use super::*;
 
   pub fn none_is_at_caret(buffer: &EditorBuffer, engine: &EditorRenderEngine) {
-    assert_eq2!(
-      editor_ops_get_content::string_at_caret(buffer, engine),
-      None
-    );
+    assert_eq2!(get_content::string_at_caret(buffer, engine), None);
   }
 
   pub fn str_is_at_caret(
@@ -1075,7 +1072,7 @@ pub mod assert {
     engine: &EditorRenderEngine,
     expected: &str,
   ) {
-    match editor_ops_get_content::string_at_caret(editor_buffer, engine) {
+    match get_content::string_at_caret(editor_buffer, engine) {
       Some(UnicodeStringSegmentSliceResult {
         unicode_string_seg: s,
         ..
@@ -1086,7 +1083,7 @@ pub mod assert {
 
   pub fn line_at_caret(editor_buffer: &EditorBuffer, engine: &EditorRenderEngine, expected: &str) {
     assert_eq2!(
-      editor_ops_get_content::line_at_caret_to_string(editor_buffer, engine)
+      get_content::line_at_caret_to_string(editor_buffer, engine)
         .unwrap()
         .string,
       expected

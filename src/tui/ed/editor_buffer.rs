@@ -154,33 +154,32 @@ impl EditorBuffer {
     A: Default + Display + Clone + Sync + Send,
   {
     match editor_buffer_command {
-      EditorBufferCommand::InsertChar(character) => editor_ops_mut_content::insert_str_at_caret(
-        EditorArgsMut { buffer, engine },
-        &String::from(character),
-      ),
+      EditorBufferCommand::InsertChar(character) => {
+        mut_content::insert_str_at_caret(EditorArgsMut { buffer, engine }, &String::from(character))
+      }
       EditorBufferCommand::InsertNewLine => {
-        editor_ops_mut_content::insert_new_line_at_caret(EditorArgsMut { buffer, engine });
+        mut_content::insert_new_line_at_caret(EditorArgsMut { buffer, engine });
       }
       EditorBufferCommand::Delete => {
-        editor_ops_mut_content::delete_at_caret(buffer, engine);
+        mut_content::delete_at_caret(buffer, engine);
       }
       EditorBufferCommand::Backspace => {
-        editor_ops_mut_content::backspace_at_caret(buffer, engine);
+        mut_content::backspace_at_caret(buffer, engine);
       }
       EditorBufferCommand::MoveCaret(direction) => {
         match direction {
-          CaretDirection::Left => editor_ops_mut_caret::left(buffer, engine),
-          CaretDirection::Right => editor_ops_mut_caret::right(buffer, engine),
-          CaretDirection::Up => editor_ops_mut_caret::up(buffer, engine),
-          CaretDirection::Down => editor_ops_mut_caret::down(buffer, engine),
+          CaretDirection::Left => move_caret::left(buffer, engine),
+          CaretDirection::Right => move_caret::right(buffer, engine),
+          CaretDirection::Up => move_caret::up(buffer, engine),
+          CaretDirection::Down => move_caret::down(buffer, engine),
         };
       }
       EditorBufferCommand::InsertString(chunk) => {
-        editor_ops_mut_content::insert_str_at_caret(EditorArgsMut { buffer, engine }, &chunk)
+        mut_content::insert_str_at_caret(EditorArgsMut { buffer, engine }, &chunk)
       }
       EditorBufferCommand::Resize(_) => {
         // Check to see whether scroll is valid.
-        scroll_buffer::validate_scroll(EditorArgsMut { buffer, engine });
+        scroll::validate_scroll(EditorArgsMut { buffer, engine });
       }
     };
   }
