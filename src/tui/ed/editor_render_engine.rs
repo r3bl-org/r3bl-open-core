@@ -42,6 +42,10 @@ pub struct EditorRenderEngine {
 }
 
 impl EditorRenderEngine {
+  pub fn viewport_width(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.cols }
+
+  pub fn viewport_height(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.rows }
+
   // FIXME: impl apply #23
   pub async fn apply<S, A>(
     &mut self,
@@ -138,8 +142,11 @@ impl EditorRenderEngine {
         break;
       }
 
-      // Clip the content to max cols.
-      let truncated_line = line.truncate_to_fit_display_cols(max_display_col_count);
+      // Clip the content [scroll_offset.col .. max cols].
+      let truncated_line = line.truncate_start_by_n_col(buffer.get_scroll_offset().col);
+      let truncated_line = UnicodeString::from(truncated_line);
+      let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+
       render_pipeline! {
         @push_into render_pipeline at ZOrder::Normal =>
           RenderOp::MoveCursorPositionRelTo(
@@ -187,7 +194,7 @@ impl EditorRenderEngine {
           let str_at_caret: String = if let Some(UnicodeStringSegmentSliceResult {
             unicode_string_seg: str_seg,
             ..
-          }) = editor_ops_get_content::string_at_caret(buffer, self)
+          }) = get_content::string_at_caret(buffer, self)
           {
             str_seg.string
           } else {
