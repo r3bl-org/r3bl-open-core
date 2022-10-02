@@ -15,10 +15,9 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils::*;
+use std::iter::repeat;
 
-// TK: 🔮 add tests for scrolling (vertical)
-// TK: 🔮 add tests for scrolling (horizontal)
+use r3bl_rs_utils::*;
 
 #[test]
 fn test_delete() {
@@ -250,8 +249,6 @@ fn test_backspace() {
       EditorBufferCommand::MoveCaret(CaretDirection::Right),
       EditorBufferCommand::MoveCaret(CaretDirection::Right),
       EditorBufferCommand::InsertString("😃".into()),
-      EditorBufferCommand::MoveCaret(CaretDirection::Right),
-      EditorBufferCommand::MoveCaret(CaretDirection::Right),
     ],
     &make_shared_tw_data(),
     &mut make_component_registry(),
@@ -350,11 +347,12 @@ fn test_validate_caret_position_on_down() {
     position!(col: 2, row: 1)
   );
 
-  // Move caret up, and 2 left.
+  // Move caret up, and right. It should wrap around to the start of the next line and be to the
+  // left of the smiley face.
   // R ┌──────────┐
   // 0 ▸1         │
   // 1 │😀        │
-  //   └─▴────────┘
+  //   └▴─────────┘
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut engine,
@@ -369,14 +367,14 @@ fn test_validate_caret_position_on_down() {
   );
   assert_eq2!(
     buffer.get_caret(CaretKind::ScrollAdjusted),
-    position!(col: 1, row: 0)
+    position!(col: 0, row: 1)
   );
 
-  // Move caret down. It should not be in the middle of the smiley face.
+  // Move caret down. It should move to the end of the last line.
   // R ┌──────────┐
   // 0 │1         │
   // 1 ▸😀        │
-  //   └──▴───────┘
+  //   └▴─────────┘
   //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut engine,
@@ -424,11 +422,19 @@ fn test_move_caret_up_down() {
     position!(col: 1, row: 2)
   );
 
-  // Move caret down. Noop.
+  // Move caret down. Goes to end of line 2 and stops.
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 │abc       │
+  // 1 │ab        │
+  // 2 ▸a         │
+  //   └─▴────────┘
+  //   C0123456789
   EditorBuffer::apply_editor_events(
     &mut engine,
     &mut buffer,
     vec![
+      EditorBufferCommand::MoveCaret(CaretDirection::Down),
       EditorBufferCommand::MoveCaret(CaretDirection::Down),
       EditorBufferCommand::MoveCaret(CaretDirection::Down),
       EditorBufferCommand::MoveCaret(CaretDirection::Down),
@@ -470,7 +476,7 @@ fn test_move_caret_up_down() {
     position!(col: 1, row: 0)
   );
 
-  // Move caret up a few times. Noop.
+  // Move caret up a few times. Caret moves to position 0.
   EditorBuffer::apply_editor_events(
     &mut engine,
     &mut buffer,
@@ -485,7 +491,7 @@ fn test_move_caret_up_down() {
   );
   assert_eq2!(
     buffer.get_caret(CaretKind::ScrollAdjusted),
-    position!(col: 1, row: 0)
+    position!(col: 0, row: 0)
   );
 
   // Move right to end of line. Then down.
@@ -848,7 +854,7 @@ fn test_move_caret_left_right() {
     "12a"
   );
 
-  // Move caret right.
+  // Move caret right. It should do nothing.
   // `this` should look like:
   // R ┌──────────┐
   // 0 ▸12a       │
@@ -865,8 +871,80 @@ fn test_move_caret_left_right() {
     &mut make_component_registry(),
     "",
   );
-
   assert::none_is_at_caret(&buffer, &engine);
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 3, row: 0)
+  );
+
+  // Move caret left.
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 ▸12a       │
+  //   └▴─────────┘
+  //   C0123456789
+  EditorBuffer::apply_editor_events(
+    &mut engine,
+    &mut buffer,
+    vec![
+      EditorBufferCommand::MoveCaret(CaretDirection::Left),
+      EditorBufferCommand::MoveCaret(CaretDirection::Left),
+      EditorBufferCommand::MoveCaret(CaretDirection::Left),
+    ],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 0, row: 0)
+  );
+
+  // Move caret to end of line, press enter, then move caret left (should be at end of prev line).
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 ▸12a       │
+  // 1 │          │
+  //   └───▴──────┘
+  //   C0123456789
+  EditorBuffer::apply_editor_events(
+    &mut engine,
+    &mut buffer,
+    vec![
+      EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      EditorBufferCommand::MoveCaret(CaretDirection::Right),
+      EditorBufferCommand::InsertNewLine,
+      EditorBufferCommand::MoveCaret(CaretDirection::Left),
+    ],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 3, row: 0)
+  );
+
+  // Move caret right (should be at start of next line).
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 │12a       │
+  // 1 ▸          │
+  //   └▴─────────┘
+  //   C0123456789
+  EditorBuffer::apply_editor_events(
+    &mut engine,
+    &mut buffer,
+    vec![EditorBufferCommand::MoveCaret(CaretDirection::Right)],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 0, row: 1)
+  );
 }
 
 #[test]
@@ -875,35 +953,6 @@ fn test_empty_state() {
   assert_eq2!(buffer.get_lines().len(), 1);
   assert!(!buffer.is_empty());
 }
-
-mod mock_real_objects {
-  use super::*;
-
-  pub fn make_shared_tw_data() -> SharedTWData {
-    use std::sync::Arc;
-
-    use tokio::sync::RwLock;
-
-    let shared_tw_data: SharedTWData = Arc::new(RwLock::new(TWData::default()));
-    shared_tw_data
-  }
-
-  pub fn make_component_registry() -> ComponentRegistry<String, String> {
-    let component_registry: ComponentRegistry<String, String> = ComponentRegistry::default();
-    component_registry
-  }
-
-  pub fn make_editor_engine() -> EditorRenderEngine {
-    EditorRenderEngine {
-      current_box: FlexBox {
-        style_adjusted_bounds_size: size!( cols: 10, rows: 10 ),
-        style_adjusted_origin_pos: position!( col: 0, row: 0 ),
-        ..Default::default()
-      },
-    }
-  }
-}
-use mock_real_objects::*;
 
 #[test]
 fn test_insertion() {
@@ -1060,7 +1109,309 @@ fn test_insertion() {
   );
 }
 
-pub mod assert {
+#[test]
+fn test_move_caret_home_end() {
+  let mut buffer = EditorBuffer::default();
+  let mut engine = make_editor_engine();
+
+  // Insert "hello". Then press home.
+  // `this` should look like:
+  // R ┌──────────┐
+  // 0 ▸hello     │
+  //   └▴─────────┘
+  //   C0123456789
+  EditorBuffer::apply_editor_events(
+    &mut engine,
+    &mut buffer,
+    vec![
+      EditorBufferCommand::InsertString("hello".to_string()),
+      EditorBufferCommand::Home,
+    ],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 0, row: 0)
+  );
+
+  // Press end.
+  EditorBuffer::apply_editor_events(
+    &mut engine,
+    &mut buffer,
+    vec![EditorBufferCommand::End],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 5, row: 0)
+  );
+}
+
+#[test]
+fn test_move_caret_page_up_page_down() {
+  let mut buffer = EditorBuffer::default();
+  let mut engine = make_editor_engine();
+
+  // Insert "hello" many times.
+  let max_lines = 20;
+  let mut count = max_lines;
+  while count > 0 {
+    EditorBuffer::apply_editor_events(
+      &mut engine,
+      &mut buffer,
+      vec![
+        EditorBufferCommand::InsertString(format!("{}: {}", count, "hello")),
+        EditorBufferCommand::InsertNewLine,
+      ],
+      &make_shared_tw_data(),
+      &mut make_component_registry(),
+      "",
+    );
+    count -= 1;
+  }
+  assert_eq2!(buffer.len(), ch!(max_lines + 1)); /* One empty line after content */
+
+  // Press page up.
+  EditorBuffer::apply_editor_events(
+    &mut engine,
+    &mut buffer,
+    vec![EditorBufferCommand::PageUp],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 0, row: 10)
+  );
+
+  // Press page up.
+  EditorBuffer::apply_editor_events(
+    &mut engine,
+    &mut buffer,
+    vec![EditorBufferCommand::PageUp],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 0, row: 0)
+  );
+
+  // Press page up.
+  EditorBuffer::apply_editor_events(
+    &mut engine,
+    &mut buffer,
+    vec![EditorBufferCommand::PageUp],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 0, row: 0)
+  );
+
+  // Press page down.
+  EditorBuffer::apply_editor_events(
+    &mut engine,
+    &mut buffer,
+    vec![EditorBufferCommand::PageDown],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 0, row: 10)
+  );
+
+  // Press page down.
+  EditorBuffer::apply_editor_events(
+    &mut engine,
+    &mut buffer,
+    vec![EditorBufferCommand::PageDown],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 0, row: 20)
+  );
+
+  // Press page down.
+  EditorBuffer::apply_editor_events(
+    &mut engine,
+    &mut buffer,
+    vec![EditorBufferCommand::PageDown],
+    &make_shared_tw_data(),
+    &mut make_component_registry(),
+    "",
+  );
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 0, row: 20)
+  );
+}
+
+#[test]
+fn test_scroll_vertical() {
+  let mut buffer = EditorBuffer::default();
+  let mut engine = make_editor_engine();
+
+  // Insert "hello" many times.
+  let max_lines = 20;
+  for count in 1..=max_lines {
+    EditorBuffer::apply_editor_events(
+      &mut engine,
+      &mut buffer,
+      vec![
+        EditorBufferCommand::InsertString(format!("{}: {}", count, "hello")),
+        EditorBufferCommand::InsertNewLine,
+      ],
+      &make_shared_tw_data(),
+      &mut make_component_registry(),
+      "",
+    );
+  }
+  assert_eq2!(buffer.len(), ch!(max_lines + 1)); /* One empty line after content */
+
+  // Press up 12 times.
+  for _ in 1..12 {
+    EditorBuffer::apply_editor_events(
+      &mut engine,
+      &mut buffer,
+      vec![EditorBufferCommand::MoveCaret(CaretDirection::Up)],
+      &make_shared_tw_data(),
+      &mut make_component_registry(),
+      "",
+    );
+  }
+  assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 0, row: 0));
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 0, row: 9)
+  );
+  assert_eq2!(buffer.get_scroll_offset(), position!(col: 0, row: 9));
+
+  // Press down 9 times.
+  for _ in 1..9 {
+    EditorBuffer::apply_editor_events(
+      &mut engine,
+      &mut buffer,
+      vec![EditorBufferCommand::MoveCaret(CaretDirection::Down)],
+      &make_shared_tw_data(),
+      &mut make_component_registry(),
+      "",
+    );
+  }
+  assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 0, row: 8));
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 0, row: 17)
+  );
+  assert_eq2!(buffer.get_scroll_offset(), position!(col: 0, row: 9));
+}
+
+#[test]
+fn test_scroll_horizontal() {
+  let mut buffer = EditorBuffer::default();
+  let mut engine = make_editor_engine();
+
+  // Insert a long line of text.
+  let max_cols = 15;
+  for count in 1..=max_cols {
+    EditorBuffer::apply_editor_events(
+      &mut engine,
+      &mut buffer,
+      vec![EditorBufferCommand::InsertString(format!("{}", count))],
+      &make_shared_tw_data(),
+      &mut make_component_registry(),
+      "",
+    );
+  }
+  assert_eq2!(buffer.len(), ch!(1));
+  assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 9, row: 0));
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 21, row: 0)
+  );
+  assert_eq2!(buffer.get_scroll_offset(), position!(col: 12, row: 0));
+
+  // Press left 5 times.
+  for _ in 1..5 {
+    EditorBuffer::apply_editor_events(
+      &mut engine,
+      &mut buffer,
+      vec![EditorBufferCommand::MoveCaret(CaretDirection::Left)],
+      &make_shared_tw_data(),
+      &mut make_component_registry(),
+      "",
+    );
+  }
+  assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 5, row: 0));
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 17, row: 0)
+  );
+  assert_eq2!(buffer.get_scroll_offset(), position!(col: 12, row: 0));
+
+  // Press right 3 times.
+  for _ in 1..3 {
+    EditorBuffer::apply_editor_events(
+      &mut engine,
+      &mut buffer,
+      vec![EditorBufferCommand::MoveCaret(CaretDirection::Right)],
+      &make_shared_tw_data(),
+      &mut make_component_registry(),
+      "",
+    );
+  }
+  assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 7, row: 0));
+  assert_eq2!(
+    buffer.get_caret(CaretKind::ScrollAdjusted),
+    position!(col: 19, row: 0)
+  );
+  assert_eq2!(buffer.get_scroll_offset(), position!(col: 12, row: 0));
+}
+
+mod mock_real_objects {
+  use super::*;
+
+  pub fn make_shared_tw_data() -> SharedTWData {
+    use std::sync::Arc;
+
+    use tokio::sync::RwLock;
+
+    let shared_tw_data: SharedTWData = Arc::new(RwLock::new(TWData::default()));
+    shared_tw_data
+  }
+
+  pub fn make_component_registry() -> ComponentRegistry<String, String> {
+    let component_registry: ComponentRegistry<String, String> = ComponentRegistry::default();
+    component_registry
+  }
+
+  pub fn make_editor_engine() -> EditorRenderEngine {
+    EditorRenderEngine {
+      current_box: FlexBox {
+        style_adjusted_bounds_size: size!( cols: 10, rows: 10 ),
+        style_adjusted_origin_pos: position!( col: 0, row: 0 ),
+        ..Default::default()
+      },
+    }
+  }
+}
+use mock_real_objects::*;
+
+mod assert {
   use super::*;
 
   pub fn none_is_at_caret(buffer: &EditorBuffer, engine: &EditorRenderEngine) {
