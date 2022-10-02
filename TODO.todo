@@ -38,14 +38,22 @@ editor engine core (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
     ✔ up, down @done(22-09-28 11:07)
     ✔ resize (caret & scroll fix - `validate_caret_in_viewport_activate_scroll_if_needed` in `render`) @done(22-09-28 13:12)
     ✔ left, right @done(22-10-01 16:15)
-  ☐ move caret left / right -> move up / down as well (`validate_caret_position()`)
-    ☐ left at start of line, move up to end of previous line
-    ☐ right at end of line, move down to start of next line
-    ☐ down at start of last line, move to end of line
-    ☐ up at end of first line, move to 0,0
-  ☐ other key inputs
-    ☐ page up/down
-    ☐ home/end
+  ✔ move caret left, right -> move up, down as well @done(22-10-03 08:56)
+    ✔ right at end of line, move down to start of next line @done(22-10-02 12:16)
+    ✔ left at start of line, move up to end of previous line @done(22-10-02 12:16)
+    ✔ down on last line, move to end of line @done(22-10-02 15:22)
+    ✔ up at first line, move to 0,0 @done(22-10-03 08:56)
+  ✔ other key inputs @done(22-10-03 11:22)
+    ✔ home/end @done(22-10-03 09:24)
+    ✔ page up/down @done(22-10-03 11:22)
+  ✔ tests for page up, down @done(22-10-03 12:08)
+  ✔ add docs for viewport & scrolling in editor_ops.rs @done(22-10-03 12:16)
+  ✔ tests for scrolling @done(22-10-03 15:44)
+
+create reorg (https://github.com/r3bl-org/r3bl_rs_utils/issues/42):
+  ☐ Break up r3bl_rs_utils into smaller crates
+    ☐ r3bl_redux
+    ☐ r3bl_tui (examples moved here)
 
 editor engine extras (core):
   ☐ syntax highlighting support

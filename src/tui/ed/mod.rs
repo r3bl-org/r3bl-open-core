@@ -19,12 +19,12 @@
 pub mod arg_types;
 pub mod editor_buffer;
 pub mod editor_buffer_command;
-pub mod editor_ops;
+pub mod editor_buffer_command_impl;
 pub mod editor_render_engine;
 
 // Re-export.
 pub use arg_types::*;
 pub use editor_buffer::*;
 pub use editor_buffer_command::*;
-pub use editor_ops::*;
+pub use editor_buffer_command_impl::*;
 pub use editor_render_engine::*;

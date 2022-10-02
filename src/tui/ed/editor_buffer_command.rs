@@ -32,6 +32,10 @@ pub enum EditorBufferCommand {
   InsertNewLine,
   Delete,
   Backspace,
+  Home,
+  End,
+  PageDown,
+  PageUp,
   MoveCaret(CaretDirection),
   Resize(Size),
 }
@@ -49,28 +53,52 @@ impl TryFrom<&InputEvent> for EditorBufferCommand {
 
   fn try_from(input_event: &InputEvent) -> Result<Self, Self::Error> {
     match input_event {
+      InputEvent::Keyboard(Keypress::Plain {
+        key: Key::SpecialKey(SpecialKey::PageDown),
+      }) => Ok(EditorBufferCommand::PageDown),
+
+      InputEvent::Keyboard(Keypress::Plain {
+        key: Key::SpecialKey(SpecialKey::PageUp),
+      }) => Ok(EditorBufferCommand::PageUp),
+
+      InputEvent::Keyboard(Keypress::Plain {
+        key: Key::SpecialKey(SpecialKey::Home),
+      }) => Ok(EditorBufferCommand::Home),
+
+      InputEvent::Keyboard(Keypress::Plain {
+        key: Key::SpecialKey(SpecialKey::End),
+      }) => Ok(EditorBufferCommand::End),
+
       InputEvent::Resize(size) => Ok(EditorBufferCommand::Resize(*size)),
+
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::Character(character),
       }) => Ok(Self::InsertChar(*character)),
+
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::SpecialKey(SpecialKey::Enter),
       }) => Ok(Self::InsertNewLine),
+
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::SpecialKey(SpecialKey::Delete),
       }) => Ok(Self::Delete),
+
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::SpecialKey(SpecialKey::Backspace),
       }) => Ok(Self::Backspace),
+
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::SpecialKey(SpecialKey::Up),
       }) => Ok(Self::MoveCaret(CaretDirection::Up)),
+
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::SpecialKey(SpecialKey::Down),
       }) => Ok(Self::MoveCaret(CaretDirection::Down)),
+
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::SpecialKey(SpecialKey::Left),
       }) => Ok(Self::MoveCaret(CaretDirection::Left)),
+
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::SpecialKey(SpecialKey::Right),
       }) => Ok(Self::MoveCaret(CaretDirection::Right)),

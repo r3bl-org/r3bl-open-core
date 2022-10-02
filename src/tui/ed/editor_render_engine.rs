@@ -46,7 +46,6 @@ impl EditorRenderEngine {
 
   pub fn viewport_height(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.rows }
 
-  // FIXME: impl apply #23
   pub async fn apply<S, A>(
     &mut self,
     args: EditorEngineArgs<'_, S, A>,
@@ -80,7 +79,6 @@ impl EditorRenderEngine {
     }
   }
 
-  // FIXME: impl render #23
   pub async fn render<S, A>(
     &mut self,
     args: EditorEngineArgs<'_, S, A>,

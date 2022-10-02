@@ -26,9 +26,82 @@ use crate::*;
 // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 // │ EditorBuffer │
 // ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-/// Stores the data for a single editor buffer. This struct is stored in the [Store]. And it is
-/// paired w/ [EditorRenderEngine] at runtime; which provides all the operations that can be
-/// performed on this.
+/// Stores the data for a single editor buffer.
+///
+/// 1. This struct is stored in the [Store].
+/// 2. And it is paired w/ [EditorRenderEngine] at runtime; which is responsible for rendering it to
+///    TUI, and handling user input.
+///
+/// # Modifying the buffer
+///
+/// You have to supply an [EditorBufferCommand] to the [EditorBuffer] to modify it via:
+/// 1. [apply_editor_event](EditorBuffer::apply_editor_event)
+/// 2. [apply_editor_events](EditorBuffer::apply_editor_events)
+///
+/// In order for the commands to be executed, the following functions are used (in
+/// `editor_buffer_command_impl.rs`):
+/// - [locate_caret]
+/// - [move_caret]
+/// - [get_content]
+/// - [mut_content]
+/// - [validate]
+/// - [scroll]
+///
+/// These functions take any one of the following args:
+/// 1. [EditorArgsMut]
+/// 2. [EditorArgs]
+/// 3. [EditorBuffer] and [EditorRenderEngine]
+///
+/// # Accessing and mutating the fields (w/ validation)
+///
+/// All the fields in this struct are private. In order to access them you have to use the accessor
+/// associated functions. To mutate them, you have to use the [get_mut](EditorBuffer::get_mut)
+/// method, which returns a tuple w/ mutable references to the fields. This rather strange design
+/// allows for all mutations to be tracked easily and allows for validation operations to be applied
+/// post mutation (by [validate::apply_change]).
+///
+/// # Different kinds of caret positions
+///
+/// There are two variants for the caret position value:
+/// 1. [CaretKind::Raw] - this is the position of the caret (unadjusted for scroll_offset) and this
+///    represents the position of the caret in the viewport.
+/// 2. [CaretKind::ScrollAdjusted] - this is the position of the caret (adjusted for scroll_offset)
+///    and represents the position of the caret in the buffer (not the viewport).
+///
+/// # Vertical scrolling and viewport
+///
+/// ```text
+///                    +0--------------------+
+///                    0                     |
+///                    |        above        | <- caret_row_adj
+///                    |                     |
+///                    +--- scroll_offset ---+
+///              ->    |         ↑           |      ↑
+///              |     |                     |      |
+///   caret.row  |     |      within vp      |  vp height
+///              |     |                     |      |
+///              ->    |         ↓           |      ↓
+///                    +--- scroll_offset ---+
+///                    |    + vp height      |
+///                    |                     |
+///                    |        below        | <- caret_row_adj
+///                    |                     |
+///                    +---------------------+
+/// ```
+///
+/// # Horizontal scrolling and viewport
+///
+/// ```text
+///           <-   vp width   ->
+/// +0--------+----------------+---------->
+/// 0         |                |
+/// | left of |<-  within vp ->| right of
+/// |         |                |
+/// +---------+----------------+---------->
+///       scroll_offset    scroll_offset
+///                        + vp width
+/// ```
+
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
@@ -180,6 +253,18 @@ impl EditorBuffer {
       EditorBufferCommand::Resize(_) => {
         // Check to see whether scroll is valid.
         scroll::validate_scroll(EditorArgsMut { buffer, engine });
+      }
+      EditorBufferCommand::Home => {
+        move_caret::to_start_of_line(buffer, engine);
+      }
+      EditorBufferCommand::End => {
+        move_caret::to_end_of_line(buffer, engine);
+      }
+      EditorBufferCommand::PageDown => {
+        move_caret::page_down(buffer, engine);
+      }
+      EditorBufferCommand::PageUp => {
+        move_caret::page_up(buffer, engine);
       }
     };
   }
