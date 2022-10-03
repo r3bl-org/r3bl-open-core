@@ -85,3 +85,9 @@ pub use render_op::*;
 pub use render_pipeline::*;
 pub use terminal_lib_operations::*;
 pub use termion_backend::*;
+
+// Tests.
+mod test_input_event;
+mod test_keypress;
+mod test_mouse_input;
+mod test_render_pipeline;

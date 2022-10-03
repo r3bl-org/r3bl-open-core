@@ -20,3 +20,6 @@ pub mod styled_text;
 
 // Re-export
 pub use styled_text::*;
+
+// Tests.
+mod test_styled_text;

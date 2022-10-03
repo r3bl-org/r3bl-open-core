@@ -15,15 +15,19 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::unwrap_option_or_compute_if_none;
+// Attach.
+pub mod arg_types;
+pub mod editor_buffer;
+pub mod editor_buffer_command;
+pub mod editor_buffer_command_impl;
+pub mod editor_render_engine;
 
-#[test]
-fn test_unwrap_option_or_compute_if_none() {
-  struct MyStruct {
-    field: Option<i32>,
-  }
-  let mut my_struct = MyStruct { field: None };
-  assert_eq!(my_struct.field, None);
-  unwrap_option_or_compute_if_none!(my_struct.field, { || 1 });
-  assert_eq!(my_struct.field, Some(1));
-}
+// Re-export.
+pub use arg_types::*;
+pub use editor_buffer::*;
+pub use editor_buffer_command::*;
+pub use editor_buffer_command_impl::*;
+pub use editor_render_engine::*;
+
+// Tests.
+pub mod test_editor;

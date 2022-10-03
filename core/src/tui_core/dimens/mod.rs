@@ -26,3 +26,7 @@ pub use ch_unit::*;
 pub use percent::*;
 pub use position::*;
 pub use size::*;
+
+// Tests.
+mod test_ch_unit;
+mod test_dimens;

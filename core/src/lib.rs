@@ -45,3 +45,6 @@ pub use color_text::{styles::*, *};
 pub use common::*;
 pub use decl_macros::*;
 pub use tui_core::*;
+
+// Tests.
+mod test_decl_macros;

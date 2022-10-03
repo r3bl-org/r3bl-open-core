@@ -504,3 +504,6 @@ pub use async_middleware::*;
 pub use async_reducer::*;
 pub use async_subscriber::*;
 pub use store::*;
+
+// Tests.
+mod test_redux;

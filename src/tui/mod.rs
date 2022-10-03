@@ -226,7 +226,7 @@ pub const DEBUG_SHOW_PIPELINE_EXPANDED: bool = false;
 pub const DEBUG_SHOW_TERMINAL_BACKEND: bool = false;
 
 // Attach sources.
-pub mod ed;
+pub mod editor;
 pub mod layout;
 pub mod rsx;
 pub mod syntax_highlighting;
@@ -234,9 +234,14 @@ pub mod terminal_lib_backends;
 pub mod terminal_window;
 
 // Re-export.
-pub use ed::*;
+pub use editor::*;
 pub use layout::*;
 pub use rsx::*;
 pub use syntax_highlighting::*;
 pub use terminal_lib_backends::*;
 pub use terminal_window::*;
+
+// Tests.
+mod test_tui_serde;
+mod test_style;
+mod test_make_style_macro;
