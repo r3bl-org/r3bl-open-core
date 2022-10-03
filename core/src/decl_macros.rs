@@ -20,6 +20,8 @@
 ///
 /// Here's an example.
 /// ```ignore
+/// use r3bl_rs_utils_core::CommonResult;
+/// 
 /// fn test_simple_2_col_layout() -> CommonResult<()> {
 ///   throws! {
 ///     match input_event {
@@ -33,7 +35,9 @@
 /// ```
 ///
 /// Here's another example.
-/// ```rust
+/// ```ignore
+/// use r3bl_rs_utils_core::{CommonResult, throws};
+/// 
 /// fn test_simple_2_col_layout() -> CommonResult<()> {
 ///   throws!({
 ///     let mut canvas = Canvas::default();
@@ -89,7 +93,7 @@ macro_rules! throws_with_return {
 ///
 /// Your block can be sync and `foo` is not async.
 ///
-/// ```no_run
+/// ```ignore
 /// pub fn foo() {
 ///   fire_and_forget!({
 ///     println!("Hello");
@@ -99,7 +103,7 @@ macro_rules! throws_with_return {
 ///
 /// Your block can be async and `foo` is still not async.
 ///
-/// ```no_run
+/// ```ignore
 /// pub fn foo() {
 ///   fire_and_forget!(
 ///      let fake_data = fake_contact_data_api()
@@ -122,7 +126,7 @@ macro_rules! fire_and_forget {
 }
 
 /// Syntactic sugar to run a conditional statement. Here's an example.
-/// ```rust
+/// ```ignore
 /// const DEBUG: bool = true;
 /// call_if_true!(
 ///   DEBUG,
@@ -150,6 +154,8 @@ macro_rules! call_if_true {
 /// the output is colorized for easy readability. You can use it like this.
 ///
 /// ```rust
+/// use r3bl_rs_utils_core::debug;
+/// 
 /// let my_string = "Hello World!";
 /// debug!(my_string);
 /// let my_number = 42;
@@ -159,7 +165,7 @@ macro_rules! call_if_true {
 /// You can also use it in these other forms for terminal raw mode output. This
 /// will dump the output to stderr.
 ///
-/// ```rust
+/// ```ignore
 /// if let Err(err) = $cmd {
 ///   let msg = format!("❌ Failed to {}", stringify!($cmd));
 ///   debug!(ERROR_RAW &msg, err);
@@ -169,6 +175,8 @@ macro_rules! call_if_true {
 /// This will dump the output to stdout.
 ///
 /// ```rust
+/// use r3bl_rs_utils_core::debug;
+/// 
 /// let msg = format!("✅ Did the thing to {}", stringify!($name));
 /// debug!(OK_RAW &msg);
 /// ```
@@ -354,7 +362,7 @@ macro_rules! unwrap_option_or_run_fn_returning_err {
 ///
 /// # Example
 ///
-/// ```
+/// ```ignore
 /// use r3bl_rs_utils::unwrap_option_or_compute_if_none;
 ///
 /// #[test]
@@ -391,9 +399,9 @@ macro_rules! assert_eq2 {
       $left,
       $right,
       "\n😮 {}\nleft-expr : {}\nright-expr: {}",
-      r3bl_rs_utils::style_prompt("Houston, we have a problem..."),
-      r3bl_rs_utils::style_error(stringify!($left)),
-      r3bl_rs_utils::style_error(stringify!($right))
+      $crate::style_prompt("Houston, we have a problem..."),
+      $crate::style_error(stringify!($left)),
+      $crate::style_error(stringify!($right))
     );
   };
 }

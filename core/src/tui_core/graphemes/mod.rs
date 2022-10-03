@@ -168,3 +168,6 @@ pub use convert::*;
 pub use mutate::*;
 pub use result_types::*;
 pub use unicode_string::*;
+
+// Tests.
+mod test_unicode_string;

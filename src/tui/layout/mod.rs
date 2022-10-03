@@ -26,3 +26,7 @@ pub use flex_box::*;
 pub use layout_error::*;
 pub use layout_management::*;
 pub use surface::*;
+
+// Tests.
+mod test_surface_2_col_complex;
+mod test_surface_2_col_simple;
