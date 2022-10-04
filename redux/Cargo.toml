@@ -2,6 +2,17 @@
 name = "r3bl_redux"
 version = "0.1.0"
 edition = "2021"
+description = "Redux library built using Tokio, concurrent & parallel"
+# At most 5 keywords w/ no spaces, each has max length of 20 char.
+keywords = ["redux"]
+categories = ["rust-patterns", "web-programming"]
+readme = "README.md" # This is not included in cargo docs.
+# Email address(es) has to be verified at https://crates.io/me/
+authors = ["Nazmul Idris <idris@developerlife.com>"]
+repository = "https://github.com/r3bl-org/r3bl-rs-utils"
+documentation = "https://docs.rs/r3bl_redux"
+homepage = "https://r3bl.com"
+license = "Apache-2.0"
 
 [lib]
 name = "r3bl_redux"
