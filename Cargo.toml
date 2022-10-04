@@ -28,6 +28,8 @@ path = "src/lib.rs"
 # r3bl_rs_utils
 r3bl_rs_utils_core = { version = "0.8.0", path = "core" }
 r3bl_rs_utils_macro = { version = "0.8.0", path = "macro" }
+r3bl_tui = { version = "0.1.0", path = "tui" }
+r3bl_redux = { version = "0.1.0", path = "redux" }
 
 # Logging
 log = "0.4.17"
@@ -68,7 +70,7 @@ get-size = { version = "0.1.1", features = ["derive"] }
 
 # https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html#creating-the-second-package-in-the-workspace
 [workspace]
-members = ["macro", "core"]
+members = ["macro", "core", "redux", "tui"]
 
 # For examples.
 # http://xion.io/post/code/rust-examples.html

@@ -57,3 +57,11 @@ atty = "0.2.14"
 
 # get-size.
 get-size = { version = "^0.1", features = ["derive"] }
+
+# Logging
+log = "0.4.17"
+simplelog = "0.12.0"
+
+# Time
+chrono = "0.4.22"
+time = "0.3.15"

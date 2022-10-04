@@ -1,3 +1,14 @@
+crate reorg (https://github.com/r3bl-org/r3bl_rs_utils/issues/42):
+  ✔ Move tests from tests/ into appropriate src/ module @done(22-10-04 09:21)
+    ✔ r3bl_rs_utils_core @done(22-10-04 09:21)
+    ✔ r3bl_rs_utils_macro @done(22-10-04 09:21)
+    ✔ r3bl_rs_utils @done(22-10-04 09:21)
+  ✔ Break up r3bl_rs_utils into smaller crates @done(22-10-04 13:52)
+    ✔ r3bl-redux @done(22-10-04 12:15)
+    ✔ r3bl-tui @done(22-10-04 12:15)
+    ✔ update all comments / docs @done(22-10-04 12:15)
+    ✔ update all READMEs & lib.rs docs @done(22-10-04 13:52)
+
 editor engine core (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
   ✔ wire up the engine into framework @done(22-08-31 13:56)
   ✔ fancy debug impl for editor buffer @done(22-08-31 13:57)
