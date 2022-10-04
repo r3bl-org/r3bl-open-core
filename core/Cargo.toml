@@ -13,6 +13,10 @@ documentation = "https://docs.rs/r3bl_rs_utils"
 homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
+[lib]
+name = "r3bl_rs_utils_core"
+path = "src/lib.rs"
+
 # Documentation for crate layout.
 # [General crate layout](https://stackoverflow.com/a/57767413/2085356)
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
