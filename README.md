@@ -118,6 +118,12 @@ Table of contents:
 For more information please read the README for the
 [r3bl_tui crate](https://docs.rs/r3bl_tui/latest/r3bl_tui/).
 
+<!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
+
+Here's a video of the demo in action:
+
+https://user-images.githubusercontent.com/2966499/193945607-4fd577af-e209-4e4e-94da-91f55fc5c633.webm
+
 ## redux
 <a id="markdown-redux" name="redux"></a>
 
