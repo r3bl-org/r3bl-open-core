@@ -1,15 +1,6 @@
 ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
 │ r3bl_rs_utils │
 ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-create reorg (https://github.com/r3bl-org/r3bl_rs_utils/issues/42):
-  ✔ Move tests from tests/ into appropriate src/ module @done(22-10-04 09:21)
-    ✔ r3bl_rs_utils_core @done(22-10-04 09:21)
-    ✔ r3bl_rs_utils_macro @done(22-10-04 09:21)
-    ✔ r3bl_rs_utils @done(22-10-04 09:21)
-  ☐ Break up r3bl_rs_utils into smaller crates
-    ☐ r3bl-redux
-    ☐ r3bl-tui (examples moved here)
-
 editor engine extras (core):
   ☐ syntax highlighting support
   ☐ modal dialog support

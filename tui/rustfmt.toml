@@ -1,0 +1,26 @@
+# https://rust-lang.github.io/rustfmt/
+
+# width
+max_width = 100
+
+# function 
+fn_args_layout = "Tall" # Possible values: "Compressed", "Tall", "Vertical"
+fn_single_line = true
+
+# imports
+imports_indent = "Visual"
+imports_layout = "HorizontalVertical"
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"
+reorder_imports = true
+
+# modules
+reorder_modules = true
+
+# misc
+hard_tabs = false
+tab_spaces = 2
+trailing_comma = "Vertical"
+color = "Always"
+empty_item_single_line = true
+trailing_semicolon = true

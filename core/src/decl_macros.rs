@@ -21,7 +21,7 @@
 /// Here's an example.
 /// ```ignore
 /// use r3bl_rs_utils_core::CommonResult;
-/// 
+///
 /// fn test_simple_2_col_layout() -> CommonResult<()> {
 ///   throws! {
 ///     match input_event {
@@ -37,7 +37,7 @@
 /// Here's another example.
 /// ```ignore
 /// use r3bl_rs_utils_core::{CommonResult, throws};
-/// 
+///
 /// fn test_simple_2_col_layout() -> CommonResult<()> {
 ///   throws!({
 ///     let mut canvas = Canvas::default();
@@ -155,7 +155,7 @@ macro_rules! call_if_true {
 ///
 /// ```rust
 /// use r3bl_rs_utils_core::debug;
-/// 
+///
 /// let my_string = "Hello World!";
 /// debug!(my_string);
 /// let my_number = 42;
@@ -176,7 +176,7 @@ macro_rules! call_if_true {
 ///
 /// ```rust
 /// use r3bl_rs_utils_core::debug;
-/// 
+///
 /// let msg = format!("✅ Did the thing to {}", stringify!($name));
 /// debug!(OK_RAW &msg);
 /// ```
