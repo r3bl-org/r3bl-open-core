@@ -91,7 +91,7 @@
 //!
 //! 🦀 You can also find all the Rust related content on developerlife.com
 //! [here](https://developerlife.com/category/Rust/).
-//! 
+//!
 //! # r3bl_tui
 //!
 //! You can build fully async TUI apps with a modern API that brings the best of reactive &
@@ -129,7 +129,7 @@
 //! ```text
 //! 🧍⌨️🖱️
 //! input → [TerminalWindow]
-//! event       ↑      ↓                 [ComponentRegistry] creates
+//! event       ↑      ↓               [ComponentRegistry] creates
 //!             ┊   [App] ───────────■ [Component]s at 1st render
 //!             ┊      │                 
 //!             ┊      │        ┌──────■ id=1 has focus
