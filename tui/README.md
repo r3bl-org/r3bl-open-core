@@ -164,6 +164,11 @@ main loop of [TerminalWindow].
 Now that we have seen this whirlwind overview of the life of an input event, let's look at the
 details in each of the sections below.
 
+Here's an architecture diagram that will be useful to keep in mind as we go through the details of
+the following sections:
+
+![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+
 ### The window
 <a id="markdown-the-window" name="the-window"></a>
 
