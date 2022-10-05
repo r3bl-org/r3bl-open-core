@@ -9,7 +9,7 @@ categories = ["rust-patterns", "web-programming"]
 readme = "README.md" # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/
 authors = ["Nazmul Idris <idris@developerlife.com>"]
-repository = "https://github.com/r3bl-org/r3bl-rs-utils"
+repository = "https://github.com/r3bl-org/r3bl_rs_utils/tree/main/redux"
 documentation = "https://docs.rs/r3bl_redux"
 homepage = "https://r3bl.com"
 license = "Apache-2.0"
