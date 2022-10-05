@@ -23,7 +23,7 @@ path = "src/lib.rs"
 [dependencies]
 # r3bl_rs_utils
 r3bl_rs_utils_core = { version = "0.8.1", path = "../core" }
-r3bl_rs_utils_macro = { version = "0.8.0", path = "../macro" }
+r3bl_rs_utils_macro = { version = "0.8.1", path = "../macro" }
 
 # Logging
 log = "0.4.17"
