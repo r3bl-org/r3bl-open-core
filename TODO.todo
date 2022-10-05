@@ -2,7 +2,9 @@
 │ r3bl_rs_utils │
 ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 editor engine extras (core):
-  ☐ modal dialog support
+  ☐ modal dialog support https://github.com/r3bl-org/r3bl_rs_utils/issues/43
+
+editor engine extras (core):
   ☐ syntax highlighting support
 
 editor engine extras (auto-completion providers):
