@@ -46,10 +46,10 @@ pub struct HasFocus {
 pub type CursorPositionMap = HashMap<String, Option<Position>>;
 
 impl HasFocus {
-  /// Set the id of the [FlexBox] that has keyboard focus.
+  /// Get the id of the [FlexBox] that has keyboard focus.
   pub fn get_id(&self) -> Option<String> { self.id.clone() }
 
-  /// Get the id of the [FlexBox] that has keyboard focus.
+  /// Set the id of the [FlexBox] that has keyboard focus.
   pub fn set_id(&mut self, id: &str) { self.id = Some(id.into()) }
 
   /// Check whether the given id currently has keyboard focus.
