@@ -3,8 +3,8 @@
 </p>
 
 # Context
-<a id="markdown-context" name="context"></a>
 
+<a id="markdown-context" name="context"></a>
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
@@ -49,8 +49,8 @@ it.
      3. integrations w/ calendar, email, contacts APIs
 
 # r3bl_tui
-<a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
+<a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
 <!-- TOC depthfrom:2 updateonsave:true orderedlist:false insertanchor:true -->
 
@@ -70,8 +70,8 @@ it.
 <!-- /TOC -->
 
 ## tui
-<a id="markdown-tui" name="tui"></a>
 
+<a id="markdown-tui" name="tui"></a>
 
 You can build fully async TUI apps with a modern API that brings the best of reactive &
 unidirectional data flow architecture from frontend web development (React, Redux, CSS, flexbox) to
@@ -96,8 +96,8 @@ Here are some framework highlights:
 - Support for Unicode grapheme clusters in strings.
 
 ### Examples to get you started
-<a id="markdown-examples-to-get-you-started" name="examples-to-get-you-started"></a>
 
+<a id="markdown-examples-to-get-you-started" name="examples-to-get-you-started"></a>
 
 <!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
 
@@ -113,8 +113,8 @@ https://user-images.githubusercontent.com/2966499/193947362-0c4fd1c8-d0fb-4bfc-9
    [`docs` folder](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/docs).
 
 ### Life of an input event
-<a id="markdown-life-of-an-input-event" name="life-of-an-input-event"></a>
 
+<a id="markdown-life-of-an-input-event" name="life-of-an-input-event"></a>
 
 There is a clear separation of concerns in this module. To illustrate what goes where, and how
 things work let's look at an example that puts the main event loop front and center & deals w/ how
@@ -128,7 +128,7 @@ the system handles an input event (key press or mouse).
 ```text
 🧍⌨️🖱️
 input → [TerminalWindow]
-event       ↑      ↓                 [ComponentRegistry] creates
+event       ↑      ↓               [ComponentRegistry] creates
             ┊   [App] ───────────■ [Component]s at 1st render
             ┊      │
             ┊      │        ┌──────■ id=1 has focus
@@ -170,8 +170,8 @@ the following sections:
 ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 
 ### The window
-<a id="markdown-the-window" name="the-window"></a>
 
+<a id="markdown-the-window" name="the-window"></a>
 
 The main building blocks of a TUI app are:
 
@@ -188,8 +188,8 @@ The main building blocks of a TUI app are:
     we have to deal with [FlexBox], [Component], and [crate::Style].
 
 ### Layout and styling
-<a id="markdown-layout-and-styling" name="layout-and-styling"></a>
 
+<a id="markdown-layout-and-styling" name="layout-and-styling"></a>
 
 Inside of your [App] if you want to use flexbox like layout and CSS like styling you can think of
 composing your code in the following way:
@@ -206,8 +206,8 @@ composing your code in the following way:
     dispatch actions to the store, and even have async middleware!
 
 ### Component, ComponentRegistry, focus management, and event routing
-<a id="markdown-component%2C-componentregistry%2C-focus-management%2C-and-event-routing" name="component%2C-componentregistry%2C-focus-management%2C-and-event-routing"></a>
 
+<a id="markdown-component%2C-componentregistry%2C-focus-management%2C-and-event-routing" name="component%2C-componentregistry%2C-focus-management%2C-and-event-routing"></a>
 
 Typically your [App] will look like this:
 
@@ -236,16 +236,16 @@ Another thing to keep in mind is that the [App] and [TerminalWindow] is persiste
 re-renders. The Redux store is also persistent between re-renders.
 
 ### Input event specificity
-<a id="markdown-input-event-specificity" name="input-event-specificity"></a>
 
+<a id="markdown-input-event-specificity" name="input-event-specificity"></a>
 
 [TerminalWindow] gives [Component] first dibs when it comes to handling input events. If it punts
 handling this event, it will be handled by the default input event handler. And if nothing there
 matches this event, then it is simply dropped.
 
 ### Redux for state management
-<a id="markdown-redux-for-state-management" name="redux-for-state-management"></a>
 
+<a id="markdown-redux-for-state-management" name="redux-for-state-management"></a>
 
 If you use Redux for state management, then you will create a [crate::redux] [crate::Store] that is
 passed into the [TerminalWindow]. Here's an example of this.
@@ -290,29 +290,29 @@ async fn create_store() -> Store<AppWithLayoutState, AppWithLayoutAction> {
 ```
 
 ### Grapheme support
-<a id="markdown-grapheme-support" name="grapheme-support"></a>
 
+<a id="markdown-grapheme-support" name="grapheme-support"></a>
 
 Unicode is supported (to an extent). There are some caveats. The [crate::UnicodeStringExt] trait has
 lots of great information on this graphemes and what is supported and what is not.
 
 ### Lolcat support
-<a id="markdown-lolcat-support" name="lolcat-support"></a>
 
+<a id="markdown-lolcat-support" name="lolcat-support"></a>
 
 An implementation of [crate::lolcat::cat] w/ a color wheel is provided.
 
 ## Other crates that depend on this
-<a id="markdown-other-crates-that-depend-on-this" name="other-crates-that-depend-on-this"></a>
 
+<a id="markdown-other-crates-that-depend-on-this" name="other-crates-that-depend-on-this"></a>
 
 This crate is a dependency of the following crates:
 
 1. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crates (the "main" library)
 
 ## Issues, comments, feedback, and PRs
-<a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
 
+<a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
 
 Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
 And if you have any feature requests, feel free to add them there too 👍.
