@@ -36,12 +36,12 @@ where
 }
 
 pub struct EditorArgsMut<'a> {
-  pub engine: &'a mut EditorRenderEngine,
+  pub engine: &'a mut EditorEngine,
   pub buffer: &'a mut EditorBuffer,
 }
 
 pub struct EditorArgs<'a> {
-  pub engine: &'a EditorRenderEngine,
+  pub engine: &'a EditorEngine,
   pub buffer: &'a EditorBuffer,
 }
 
@@ -70,7 +70,7 @@ where
   pub component_registry: &'a mut ComponentRegistry<S, A>,
 }
 
-/// [EditorRenderEngine] args struct that holds references. ![Editor component lifecycle
+/// [EditorEngine] args struct that holds references. ![Editor component lifecycle
 /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct EditorEngineArgs<'a, S, A>
 where

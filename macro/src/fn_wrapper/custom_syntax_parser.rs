@@ -46,7 +46,7 @@ use syn::{parse::{Parse, ParseBuffer, ParseStream},
 use crate::utils::{IdentExt, TypeExtHasGenericArgs, TypeExtHasIdent};
 
 /// Example of syntax to parse:
-/// ```no_run
+/// ```ignore
 /// make_safe_fn_wrapper! {
 ///   ╭─L1──────────────────────────────────────────
 ///   │     wrapper_name_type

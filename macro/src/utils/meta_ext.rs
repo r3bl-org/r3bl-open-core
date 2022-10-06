@@ -47,7 +47,7 @@ impl MetaExt for syn::Meta {
     }
   }
 
-  /// ```no_run
+  /// ```ignore
   /// Path {
   ///   leading_colon: None,
   ///   segments: [

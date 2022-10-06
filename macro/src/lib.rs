@@ -118,7 +118,7 @@ pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
 
 /// Example.
 ///
-/// ```
+/// ```ignore
 /// style! {
 ///   id: "my_style",          /* Optional. */
 ///   attrib: [dim, bold]      /* Optional. */

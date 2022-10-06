@@ -121,7 +121,7 @@ fn make_new_where_clause_with_default_trait_bounds_for_named_fields(
 /// to the where clause for each type parameter.
 ///
 /// Here's an example of a where clause token stream:
-/// ```no_run
+/// ```ignore
 /// [
 ///     Type(
 ///       PredicateType {

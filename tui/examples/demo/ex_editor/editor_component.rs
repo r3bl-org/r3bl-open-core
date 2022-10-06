@@ -27,14 +27,14 @@ use crate::{ex_editor::*, *};
 /// and [Store]. The main methods here simply pass thru all their arguments to the [EditorEngine].
 #[derive(Debug, Clone, Default)]
 pub struct EditorComponent {
-  pub engine: EditorRenderEngine,
+  pub engine: EditorEngine,
   pub id: String,
 }
 
 impl EditorComponent {
   pub fn new(id: &str) -> Self {
     Self {
-      engine: EditorRenderEngine::default(),
+      engine: EditorEngine::default(),
       id: id.to_string(),
     }
   }
@@ -45,7 +45,7 @@ impl Component<State, Action> for EditorComponent {
   // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
   // │ handle_event │
   // ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-  /// This shim simply calls [EditorEngine::apply](EditorRenderEngine::apply) w/ all the necessary
+  /// This shim simply calls [EditorEngine::apply](EditorEngine::apply) w/ all the necessary
   /// arguments:
   /// - Global scope: [SharedStore], [SharedTwData].
   /// - App scope: [State], [ComponentRegistry<State, Action>].
@@ -95,7 +95,7 @@ impl Component<State, Action> for EditorComponent {
   // ╭┄┄┄┄┄┄┄┄╮
   // │ render │
   // ╯        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-  /// This shim simply calls [EditorEngine::apply](EditorRenderEngine::render) w/ all the necessary
+  /// This shim simply calls [EditorEngine::apply](EditorEngine::render) w/ all the necessary
   /// arguments:
   /// - Global scope: [SharedStore], [SharedTwData].
   /// - App scope: [State], [ComponentRegistry<State, Action>].

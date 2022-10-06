@@ -19,7 +19,7 @@
 #![allow(dead_code)]
 
 /// The code in the test is equivalent to the code w/out using cyclic arc.
-/// ```no_run
+/// ```ignore
 /// fn test_simple_macro_expansion_4() {
 ///   type _Arc<T> = std::sync::Arc<T>;
 ///   type _RwLock<T> = std::sync::RwLock<T>;

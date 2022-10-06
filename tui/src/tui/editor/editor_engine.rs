@@ -38,12 +38,12 @@ enum CaretPaintStyle {
 /// [EditorBuffer] struct, which lives in the [r3bl_redux::Store]. The store provides the underlying
 /// document or buffer struct that holds the actual document.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EditorRenderEngine {
-  /// Set by [render](EditorRenderEngine::render).
+pub struct EditorEngine {
+  /// Set by [render](EditorEngine::render).
   pub current_box: FlexBox,
 }
 
-impl EditorRenderEngine {
+impl EditorEngine {
   pub fn viewport_width(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.cols }
 
   pub fn viewport_height(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.rows }

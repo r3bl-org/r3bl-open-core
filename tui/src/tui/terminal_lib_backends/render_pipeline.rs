@@ -42,7 +42,7 @@ use crate::{tui::DEBUG_SHOW_PIPELINE_EXPANDED, *};
 /// Here's an example.
 ///
 /// ```rust
-/// use r3bl_rs_utils::*;
+/// use r3bl_tui::*;
 ///
 /// let mut pipeline = render_pipeline!(@new ZOrder::Normal =>
 ///   RenderOp::ClearScreen,
@@ -55,7 +55,7 @@ use crate::{tui::DEBUG_SHOW_PIPELINE_EXPANDED, *};
 /// Another example.
 ///
 /// ```rust
-/// use r3bl_rs_utils::*;
+/// use r3bl_tui::*;
 ///
 /// let mut pipeline = render_pipeline!(@new_empty); // Returns the newly created pipeline.
 /// render_pipeline!(@push_into pipeline at ZOrder::Normal =>
@@ -137,7 +137,7 @@ macro_rules! render_pipeline {
 /// Here's an example. Consider using the macro for convenience (see [render_pipeline!]).
 ///
 /// ```rust
-/// use r3bl_rs_utils::*;
+/// use r3bl_tui::*;
 ///
 /// let mut pipeline = RenderPipeline::default();
 /// pipeline.push(&ZOrder::Normal, RenderOp::ClearScreen);
