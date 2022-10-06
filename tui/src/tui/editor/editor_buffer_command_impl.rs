@@ -55,7 +55,7 @@ pub mod locate_caret {
     }
   }
 
-  fn col_is_at_start_of_line(buffer: &EditorBuffer, engine: &EditorRenderEngine) -> bool {
+  fn col_is_at_start_of_line(buffer: &EditorBuffer, engine: &EditorEngine) -> bool {
     if get_content::line_at_caret_to_string(buffer, engine).is_some() {
       *buffer.get_caret(CaretKind::ScrollAdjusted).col == 0
     } else {
@@ -63,7 +63,7 @@ pub mod locate_caret {
     }
   }
 
-  fn col_is_at_end_of_line(buffer: &EditorBuffer, engine: &EditorRenderEngine) -> bool {
+  fn col_is_at_end_of_line(buffer: &EditorBuffer, engine: &EditorEngine) -> bool {
     if let Some(line) = get_content::line_at_caret_to_string(buffer, engine) {
       buffer.get_caret(CaretKind::ScrollAdjusted).col == line.display_width
     } else {
@@ -88,7 +88,7 @@ pub mod locate_caret {
   // 0 ▸          │
   //   └▴─────────┘
   //   C0123456789
-  fn row_is_at_top_of_buffer(buffer: &EditorBuffer, _engine: &EditorRenderEngine) -> bool {
+  fn row_is_at_top_of_buffer(buffer: &EditorBuffer, _engine: &EditorEngine) -> bool {
     *buffer.get_caret(CaretKind::ScrollAdjusted).row == 0
   }
 
@@ -97,7 +97,7 @@ pub mod locate_caret {
   // 1 ▸a         │
   //   └▴─────────┘
   //   C0123456789
-  fn row_is_at_bottom_of_buffer(buffer: &EditorBuffer, _engine: &EditorRenderEngine) -> bool {
+  fn row_is_at_bottom_of_buffer(buffer: &EditorBuffer, _engine: &EditorEngine) -> bool {
     if buffer.is_empty() || buffer.get_lines().len() == 1 {
       false // If there is only one line, then the caret is not at the bottom, its at the top.
     } else {
@@ -113,7 +113,7 @@ pub mod locate_caret {
 pub mod move_caret {
   use super::*;
 
-  pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
+  pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
 
     match locate_caret::find_row(EditorArgs { buffer, engine }) {
@@ -137,7 +137,7 @@ pub mod move_caret {
     None
   }
 
-  pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
+  pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
 
     if get_content::next_line_below_caret_exists(buffer, engine) {
@@ -156,7 +156,7 @@ pub mod move_caret {
   }
 
   /// Convenience function for simply calling [reset_caret_col].
-  pub fn to_start_of_line(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
+  pub fn to_start_of_line(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
 
     validate::apply_change(buffer, engine, |_, caret, scroll_offset| {
@@ -165,7 +165,7 @@ pub mod move_caret {
     None
   }
 
-  pub fn to_end_of_line(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
+  pub fn to_end_of_line(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
 
     let line_content_display_width = get_content::line_display_width_at_row_index(
@@ -186,7 +186,7 @@ pub mod move_caret {
     None
   }
 
-  pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
+  pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
 
     match locate_caret::find_col(EditorArgs { buffer, engine }) {
@@ -220,7 +220,7 @@ pub mod move_caret {
     None
   }
 
-  pub fn left(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
+  pub fn left(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
 
     match locate_caret::find_col(EditorArgs { buffer, engine }) {
@@ -251,7 +251,7 @@ pub mod move_caret {
     None
   }
 
-  pub fn page_up(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
+  pub fn page_up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     let viewport_height = engine.viewport_height();
     change_caret_row_by(
       EditorArgsMut { engine, buffer },
@@ -261,7 +261,7 @@ pub mod move_caret {
     None
   }
 
-  pub fn page_down(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
+  pub fn page_down(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     let viewport_height = engine.viewport_height();
     change_caret_row_by(
       EditorArgsMut { engine, buffer },
@@ -278,7 +278,7 @@ pub mod move_caret {
 pub mod get_content {
   use super::*;
 
-  pub fn line_display_width_at_caret(buffer: &EditorBuffer, engine: &EditorRenderEngine) -> ChUnit {
+  pub fn line_display_width_at_caret(buffer: &EditorBuffer, engine: &EditorEngine) -> ChUnit {
     let line = get_content::line_at_caret_to_string(buffer, engine);
     if let Some(line) = line {
       line.display_width
@@ -296,14 +296,14 @@ pub mod get_content {
     }
   }
 
-  pub fn next_line_below_caret_exists(buffer: &EditorBuffer, engine: &EditorRenderEngine) -> bool {
+  pub fn next_line_below_caret_exists(buffer: &EditorBuffer, engine: &EditorEngine) -> bool {
     let next_line = get_content::next_line_below_caret_to_string(buffer, engine);
     next_line.is_some()
   }
 
   pub fn line_at_caret_to_string(
     buffer: &EditorBuffer,
-    _engine: &EditorRenderEngine,
+    _engine: &EditorEngine,
   ) -> Option<UnicodeString> {
     empty_check_early_return!(buffer, @None);
     let row_index = buffer.get_caret(CaretKind::ScrollAdjusted).row;
@@ -313,7 +313,7 @@ pub mod get_content {
 
   pub fn next_line_below_caret_to_string(
     buffer: &EditorBuffer,
-    _engine: &EditorRenderEngine,
+    _engine: &EditorEngine,
   ) -> Option<UnicodeString> {
     empty_check_early_return!(buffer, @None);
     let row_index = buffer.get_caret(CaretKind::ScrollAdjusted).row;
@@ -321,14 +321,14 @@ pub mod get_content {
     Some(line.clone())
   }
 
-  pub fn prev_line_above_caret_exists(buffer: &EditorBuffer, engine: &EditorRenderEngine) -> bool {
+  pub fn prev_line_above_caret_exists(buffer: &EditorBuffer, engine: &EditorEngine) -> bool {
     let prev_line = get_content::prev_line_above_caret_to_string(buffer, engine);
     prev_line.is_some()
   }
 
   pub fn prev_line_above_caret_to_string(
     buffer: &EditorBuffer,
-    _engine: &EditorRenderEngine,
+    _engine: &EditorEngine,
   ) -> Option<UnicodeString> {
     empty_check_early_return!(buffer, @None);
     let row_index = buffer.get_caret(CaretKind::ScrollAdjusted).row;
@@ -341,7 +341,7 @@ pub mod get_content {
 
   pub fn string_at_caret(
     buffer: &EditorBuffer,
-    _engine: &EditorRenderEngine,
+    _engine: &EditorEngine,
   ) -> Option<UnicodeStringSegmentSliceResult> {
     empty_check_early_return!(buffer, @None);
     let caret_adj = buffer.get_caret(CaretKind::ScrollAdjusted);
@@ -352,7 +352,7 @@ pub mod get_content {
 
   pub fn string_to_left_of_caret(
     buffer: &EditorBuffer,
-    engine: &EditorRenderEngine,
+    engine: &EditorEngine,
   ) -> Option<UnicodeStringSegmentSliceResult> {
     empty_check_early_return!(buffer, @None);
     let caret_adj = buffer.get_caret(CaretKind::ScrollAdjusted);
@@ -367,7 +367,7 @@ pub mod get_content {
 
   pub fn string_at_end_of_line_at_caret(
     buffer: &EditorBuffer,
-    engine: &EditorRenderEngine,
+    engine: &EditorEngine,
   ) -> Option<UnicodeStringSegmentSliceResult> {
     empty_check_early_return!(buffer, @None);
     let line = get_content::line_at_caret_to_string(buffer, engine)?;
@@ -493,7 +493,7 @@ pub mod mut_content {
     }
   }
 
-  pub fn delete_at_caret(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
+  pub fn delete_at_caret(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
     if get_content::string_at_caret(buffer, engine).is_some() {
       delete_in_middle_of_line(buffer, engine)?;
@@ -512,10 +512,7 @@ pub mod mut_content {
     // 2 │a         │
     //   └─▴────────┘
     //   C0123456789
-    fn delete_in_middle_of_line(
-      buffer: &mut EditorBuffer,
-      engine: &mut EditorRenderEngine,
-    ) -> Nope {
+    fn delete_in_middle_of_line(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
       let cur_line = get_content::line_at_caret_to_string(buffer, engine)?;
       let NewUnicodeStringResult {
         new_unicode_string: new_line,
@@ -535,7 +532,7 @@ pub mod mut_content {
     // 2 │a         │
     //   └───▴──────┘
     //   C0123456789
-    fn delete_at_end_of_line(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
+    fn delete_at_end_of_line(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
       let this_line = get_content::line_at_caret_to_string(buffer, engine)?;
       let next_line = get_content::next_line_below_caret_to_string(buffer, engine)?;
 
@@ -548,7 +545,7 @@ pub mod mut_content {
     }
   }
 
-  pub fn backspace_at_caret(buffer: &mut EditorBuffer, engine: &mut EditorRenderEngine) -> Nope {
+  pub fn backspace_at_caret(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
 
     if let Some(UnicodeStringSegmentSliceResult {
@@ -575,7 +572,7 @@ pub mod mut_content {
     //   C0123456789
     fn backspace_in_middle_of_line(
       buffer: &mut EditorBuffer,
-      engine: &mut EditorRenderEngine,
+      engine: &mut EditorEngine,
       delete_at_this_display_col: ChUnit,
     ) -> Nope {
       let cur_line = get_content::line_at_caret_to_string(buffer, engine)?;
@@ -606,10 +603,7 @@ pub mod mut_content {
     // 2 │a         │
     //   └▴─────────┘
     //   C0123456789
-    fn backspace_at_start_of_line(
-      buffer: &mut EditorBuffer,
-      engine: &mut EditorRenderEngine,
-    ) -> Nope {
+    fn backspace_at_start_of_line(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
       let viewport_width = engine.viewport_width();
 
       let this_line = get_content::line_at_caret_to_string(buffer, engine)?;
@@ -730,11 +724,11 @@ pub mod validate {
   /// 2. the caret is not out of bounds vertically or horizontally and activates scrolling if needed.
   pub fn apply_change(
     buffer: &mut EditorBuffer,
-    engine: &mut EditorRenderEngine,
+    engine: &mut EditorEngine,
     mutator: impl FnOnce(
       /* EditorBuffer::lines */ &mut Vec<UnicodeString>,
       /* EditorBuffer::caret */ &mut Position,
-      /* EditorRenderEngine::scroll_offset */ &mut ScrollOffset,
+      /* EditorEngine::scroll_offset */ &mut ScrollOffset,
     ),
   ) -> Nope {
     // Run the mutator first.

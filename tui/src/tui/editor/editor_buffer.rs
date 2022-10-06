@@ -29,7 +29,7 @@ use crate::*;
 /// Stores the data for a single editor buffer.
 ///
 /// 1. This struct is stored in the [r3bl_redux::Store].
-/// 2. And it is paired w/ [EditorRenderEngine] at runtime; which is responsible for rendering it to
+/// 2. And it is paired w/ [EditorEngine] at runtime; which is responsible for rendering it to
 ///    TUI, and handling user input.
 ///
 /// # Modifying the buffer
@@ -50,7 +50,7 @@ use crate::*;
 /// These functions take any one of the following args:
 /// 1. [EditorArgsMut]
 /// 2. [EditorArgs]
-/// 3. [EditorBuffer] and [EditorRenderEngine]
+/// 3. [EditorBuffer] and [EditorEngine]
 ///
 /// # Accessing and mutating the fields (w/ validation)
 ///
@@ -216,7 +216,7 @@ pub mod access_and_mutate {
 // ╯                                       ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 impl EditorBuffer {
   pub fn apply_editor_event<S, A>(
-    engine: &mut EditorRenderEngine,
+    engine: &mut EditorEngine,
     buffer: &mut EditorBuffer,
     editor_buffer_command: EditorBufferCommand,
     _shared_tw_data: &SharedTWData,
@@ -270,7 +270,7 @@ impl EditorBuffer {
   }
 
   pub fn apply_editor_events<S, A>(
-    engine: &mut EditorRenderEngine,
+    engine: &mut EditorEngine,
     buffer: &mut EditorBuffer,
     editor_event_vec: Vec<EditorBufferCommand>,
     shared_tw_data: &SharedTWData,

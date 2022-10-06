@@ -24,7 +24,7 @@ use crate::utils::IdentExt;
 
 /// Here's a sample syntax to parse.
 ///
-/// ```
+/// ```ignore
 /// style! {
 ///   id: "my_style",          /* Optional. */
 ///   attrib: [dim, bold]      /* Optional. */

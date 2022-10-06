@@ -158,7 +158,7 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 }
 
 /// Example of syntax to parse:
-/// ```no_run
+/// ```ignore
 /// make_struct_safe_to_share_and_mutate! {
 ///   ╭─L1──────────────────────────────────────────
 ///   │     manager_type

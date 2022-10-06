@@ -23,7 +23,7 @@ pub trait AttributeArgsExt {
 
 /// The args take a key value pair like `#[attrib_macro_logger(key = "value")]`,
 /// which evaluates to:
-/// ```no_run
+/// ```ignore
 /// &args = [
 ///     Meta(
 ///         NameValue(

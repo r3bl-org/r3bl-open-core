@@ -1401,8 +1401,8 @@ mod tests {
       component_registry
     }
 
-    pub fn make_editor_engine() -> EditorRenderEngine {
-      EditorRenderEngine {
+    pub fn make_editor_engine() -> EditorEngine {
+      EditorEngine {
         current_box: FlexBox {
           style_adjusted_bounds_size: size!( cols: 10, rows: 10 ),
           style_adjusted_origin_pos: position!( col: 0, row: 0 ),
@@ -1416,15 +1416,11 @@ mod tests {
   mod assert {
     use super::*;
 
-    pub fn none_is_at_caret(buffer: &EditorBuffer, engine: &EditorRenderEngine) {
+    pub fn none_is_at_caret(buffer: &EditorBuffer, engine: &EditorEngine) {
       assert_eq2!(get_content::string_at_caret(buffer, engine), None);
     }
 
-    pub fn str_is_at_caret(
-      editor_buffer: &EditorBuffer,
-      engine: &EditorRenderEngine,
-      expected: &str,
-    ) {
+    pub fn str_is_at_caret(editor_buffer: &EditorBuffer, engine: &EditorEngine, expected: &str) {
       match get_content::string_at_caret(editor_buffer, engine) {
         Some(UnicodeStringSegmentSliceResult {
           unicode_string_seg: s,
@@ -1434,11 +1430,7 @@ mod tests {
       }
     }
 
-    pub fn line_at_caret(
-      editor_buffer: &EditorBuffer,
-      engine: &EditorRenderEngine,
-      expected: &str,
-    ) {
+    pub fn line_at_caret(editor_buffer: &EditorBuffer, engine: &EditorEngine, expected: &str) {
       assert_eq2!(
         get_content::line_at_caret_to_string(editor_buffer, engine)
           .unwrap()
