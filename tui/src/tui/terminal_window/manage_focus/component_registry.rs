@@ -128,22 +128,20 @@ where
     shared_store: &SharedStore<S, A>,
     shared_tw_data: &SharedTWData,
   ) -> CommonResult<EventPropagation> {
-    throws_with_return!({
-      // If component has focus, then route input_event to it. Return its propagation enum.
-      if let Some(shared_component_has_focus) = ComponentRegistry::get_focused_component_ref(this) {
-        call_handle_event!(
-          component_registry: this,
-          shared_component: shared_component_has_focus,
-          input_event: input_event,
-          state: state,
-          shared_store: shared_store,
-          shared_tw_data: shared_tw_data
-        )
-      };
-
+    // If component has focus, then route input_event to it. Return its propagation enum.
+    if let Some(shared_component_has_focus) = ComponentRegistry::get_focused_component_ref(this) {
+      call_handle_event!(
+        component_registry: this,
+        shared_component: shared_component_has_focus,
+        input_event: input_event,
+        state: state,
+        shared_store: shared_store,
+        shared_tw_data: shared_tw_data
+      )
+    } else {
       // input_event not handled, propagate it.
-      EventPropagation::Propagate
-    });
+      Ok(EventPropagation::Propagate)
+    }
   }
 }
 
