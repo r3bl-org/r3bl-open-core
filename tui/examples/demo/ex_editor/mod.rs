@@ -17,11 +17,9 @@
 
 // Attach sources.
 pub mod app;
-pub mod editor_component;
 pub mod launcher;
 pub mod state_management;
 
 // Re-export only inside this module.
 pub use app::*;
-pub use editor_component::*;
 pub use state_management::*;

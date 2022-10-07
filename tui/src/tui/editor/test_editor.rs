@@ -1408,6 +1408,7 @@ mod tests {
           style_adjusted_origin_pos: position!( col: 0, row: 0 ),
           ..Default::default()
         },
+        ..Default::default()
       }
     }
   }

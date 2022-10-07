@@ -34,6 +34,12 @@ enum CaretPaintStyle {
   LocalPaintedEffect,
 }
 
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EditorConfigOptions {
+  pub multi_line: bool,
+  pub syntax_highlight: bool,
+}
+
 /// Holds data related to rendering in between render calls. This is not stored in the
 /// [EditorBuffer] struct, which lives in the [r3bl_redux::Store]. The store provides the underlying
 /// document or buffer struct that holds the actual document.
@@ -41,6 +47,16 @@ enum CaretPaintStyle {
 pub struct EditorEngine {
   /// Set by [render](EditorEngine::render).
   pub current_box: FlexBox,
+  pub config_options: EditorConfigOptions,
+}
+
+impl EditorEngine {
+  pub fn new(config_options: EditorConfigOptions) -> Self {
+    Self {
+      current_box: FlexBox::default(),
+      config_options,
+    }
+  }
 }
 
 impl EditorEngine {

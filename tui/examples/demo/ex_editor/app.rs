@@ -15,20 +15,23 @@
  *   limitations under the License.
  */
 
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
 use async_trait::async_trait;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
 use r3bl_tui::*;
-use tokio::sync::RwLock;
+use strum_macros::Display;
 
 use super::*;
 
-// Constants for the ids.
-const CONTAINER_ID: &str = "container";
-const EDITOR_ID: &str = "editor";
+/// Constants for the ids.
+#[derive(Display, Debug)]
+enum Id {
+  Container,
+  Editor,
+}
 
 /// Async trait object that implements the [TWApp] trait.
 pub struct AppWithLayout {
@@ -36,7 +39,6 @@ pub struct AppWithLayout {
 }
 
 mod constructor {
-
   use super::*;
 
   impl Default for AppWithLayout {
@@ -150,17 +152,41 @@ mod construct_components {
 
   impl AppWithLayout {
     pub async fn create_components_populate_registry_init_focus(&mut self) {
-      let _component = EditorComponent::new(EDITOR_ID);
-      let shared_component_r1 = Arc::new(RwLock::new(_component));
+      let editor_id = &Id::Editor.to_string();
 
-      // Construct EDITOR_ID component.
-      if self.component_registry.id_does_not_exist(EDITOR_ID) {
-        self.component_registry.put(EDITOR_ID, shared_component_r1);
+      // Insert editor component into registry.
+      if self.component_registry.id_does_not_exist(editor_id) {
+        let shared_editor_component = {
+          let on_buffer_change: OnEditorBufferChangeFn<_, _> = |shared_store, my_id, buffer| {
+            spawn_dispatch_action!(shared_store, Action::UpdateEditorBuffer(my_id, buffer));
+          };
+          EditorComponent::new_shared(editor_id, EditorConfigOptions::default(), on_buffer_change)
+        };
+
+        self
+          .component_registry
+          .put(editor_id, shared_editor_component);
+
+        call_if_true!(DEBUG_TUI_MOD, {
+          log_no_err!(
+            DEBUG,
+            "🪙 {}",
+            "construct EditorComponent { on_buffer_change }"
+          );
+        });
       }
 
       // Init has focus.
       if self.component_registry.has_focus.get_id().is_none() {
-        self.component_registry.has_focus.set_id(EDITOR_ID);
+        self.component_registry.has_focus.set_id(editor_id);
+        call_if_true!(DEBUG_TUI_MOD, {
+          log_no_err!(
+            DEBUG,
+            "🪙 {} = {}",
+            "init component_registry.has_focus",
+            editor_id
+          );
+        });
       }
     }
 
@@ -172,13 +198,15 @@ mod construct_components {
       shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
     ) -> CommonResult<()> {
+      let editor_id = &Id::Editor.to_string();
+
       throws!({
         box_start_with_component! {
           in:                     surface,
-          id:                     EDITOR_ID,
+          id:                     editor_id,
           dir:                    Direction::Vertical,
           requested_size_percent: requested_size_percent!(width: 100, height: 100),
-          styles:                 [EDITOR_ID],
+          styles:                 [editor_id],
           render: {
             from:           self.component_registry,
             state:          state,
@@ -207,13 +235,16 @@ mod style_helpers {
   use super::*;
 
   pub fn create_stylesheet() -> CommonResult<Stylesheet> {
+    let container_id = &Id::Container.to_string();
+    let editor_id = &Id::Editor.to_string();
+
     throws_with_return!({
       stylesheet! {
         style! {
-          id: CONTAINER_ID
+          id: container_id
         },
         style! {
-          id: EDITOR_ID
+          id: editor_id
           attrib: [bold]
           padding: 1
           color_fg: TWColor::Blue

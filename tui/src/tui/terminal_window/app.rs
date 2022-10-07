@@ -48,7 +48,7 @@ where
   where
     Self: Default + Sync + Send + 'static,
   {
-    Box::new(Self::default())
+    Box::<Self>::default()
   }
 
   /// Wrap a new instance in [std::sync::Arc] & [tokio::sync::RwLock].

@@ -23,7 +23,7 @@ use r3bl_tui::*;
 #[non_exhaustive]
 #[allow(dead_code)]
 pub enum Action {
-  UpdateEditorBuffer(EditorBuffer),
+  UpdateEditorBuffer(String, EditorBuffer),
   Noop,
 }
 

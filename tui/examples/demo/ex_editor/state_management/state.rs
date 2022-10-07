@@ -15,17 +15,28 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Display, Formatter};
+use std::{collections::HashMap,
+          fmt::{Display, Formatter}};
 
 use r3bl_tui::*;
 
 #[derive(Clone, PartialEq, Debug, Default)]
 pub struct State {
-  pub buffer: EditorBuffer,
+  pub buffers: HashMap<String, EditorBuffer>,
 }
 
 impl Display for State {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "State {{ buffer: {:?} }}", self.buffer)
+    write!(f, "State {{ buffers: {:?} }}", self.buffers)
+  }
+}
+
+impl HasEditorBuffers for State {
+  fn get_editor_buffer(&self, id: &str) -> Option<&EditorBuffer> {
+    if let Some(buffer) = self.buffers.get(id) {
+      Some(buffer)
+    } else {
+      None
+    }
   }
 }

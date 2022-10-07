@@ -37,6 +37,6 @@ pub async fn run_app() -> CommonResult<()> {
     let exit_keys: Vec<InputEvent> = vec![InputEvent::Keyboard(keypress! { @char 'x' })];
 
     // Create a window.
-    TerminalWindow::main_event_loop(store, shared_app, exit_keys).await?
+    TerminalWindow::main_event_loop(shared_app, store, exit_keys).await?
   });
 }

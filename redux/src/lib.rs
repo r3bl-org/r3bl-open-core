@@ -91,9 +91,9 @@
 //!
 //! 🦀 You can also find all the Rust related content on developerlife.com
 //! [here](https://developerlife.com/category/Rust/).
-//! 
+//!
 //! # r3bl_redux
-//! 
+//!
 //! Here are some references to get you started.
 //!
 //! 1. [In depth guide on this Redux

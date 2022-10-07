@@ -72,8 +72,8 @@ impl TerminalWindow {
   /// A: Default + Clone + Sync + Send,
   /// ```
   pub async fn main_event_loop<S, A>(
-    store: Store<S, A>,
     shared_app: SharedApp<S, A>,
+    store: Store<S, A>,
     exit_keys: Vec<InputEvent>,
   ) -> CommonResult<()>
   where
