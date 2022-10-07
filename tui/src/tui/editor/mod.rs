@@ -20,6 +20,7 @@ pub mod arg_types;
 pub mod editor_buffer;
 pub mod editor_buffer_command;
 pub mod editor_buffer_command_impl;
+pub mod editor_component;
 pub mod editor_engine;
 
 // Re-export.
@@ -27,6 +28,7 @@ pub use arg_types::*;
 pub use editor_buffer::*;
 pub use editor_buffer_command::*;
 pub use editor_buffer_command_impl::*;
+pub use editor_component::*;
 pub use editor_engine::*;
 
 // Tests.

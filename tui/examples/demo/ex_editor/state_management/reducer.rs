@@ -27,9 +27,11 @@ pub struct Reducer;
 impl AsyncReducer<State, Action> for Reducer {
   async fn run(&self, action: &Action, state: &State) -> State {
     match action {
-      Action::UpdateEditorBuffer(buffer) => State {
-        buffer: buffer.clone(),
-      },
+      Action::UpdateEditorBuffer(id, buffer) => {
+        let mut new_state = state.clone();
+        new_state.buffers.insert(id.into(), buffer.clone());
+        new_state
+      }
       Action::Noop => state.clone(),
     }
   }

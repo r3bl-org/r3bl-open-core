@@ -186,18 +186,18 @@ mod construct_components {
 
   impl AppWithLayout {
     pub async fn create_components_populate_registry_init_focus(&mut self) {
-      let _component = ColumnRenderComponent::default();
-      let shared_component_r1 = Arc::new(RwLock::new(_component));
-      let shared_component_r2 = shared_component_r1.clone();
-
       // Construct COL_1_ID.
       if self.component_registry.id_does_not_exist(COL_1_ID) {
-        self.component_registry.put(COL_1_ID, shared_component_r1);
+        let component = ColumnRenderComponent::new(COL_1_ID.to_string());
+        let shared_component = Arc::new(RwLock::new(component));
+        self.component_registry.put(COL_1_ID, shared_component);
       }
 
       // Construct COL_2_ID.
       if self.component_registry.id_does_not_exist(COL_2_ID) {
-        self.component_registry.put(COL_2_ID, shared_component_r2);
+        let component = ColumnRenderComponent::new(COL_2_ID.to_string());
+        let shared_component = Arc::new(RwLock::new(component));
+        self.component_registry.put(COL_2_ID, shared_component);
       }
 
       // Init has focus.

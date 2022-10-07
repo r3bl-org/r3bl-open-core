@@ -15,44 +15,91 @@
  *   limitations under the License.
  */
 
-use std::fmt::Debug;
+use std::{borrow::Cow,
+          fmt::{Debug, Display},
+          sync::Arc};
 
 use async_trait::async_trait;
+use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
-use r3bl_tui::*;
+use tokio::sync::RwLock;
 
-use crate::{ex_editor::*, *};
+use crate::*;
 
 /// This is a shim which allows the reusable [EditorEngine] to be used in the context of [Component]
 /// and [Store]. The main methods here simply pass thru all their arguments to the [EditorEngine].
-#[derive(Debug, Clone, Default)]
-pub struct EditorComponent {
+#[derive(Clone, Default)]
+pub struct EditorComponent<S, A>
+where
+  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Display + Clone + Sync + Send,
+{
   pub engine: EditorEngine,
   pub id: String,
+  pub on_editor_buffer_change_handler: Option<OnEditorBufferChangeFn<S, A>>,
 }
 
-impl EditorComponent {
-  pub fn new(id: &str) -> Self {
+pub type OnEditorBufferChangeFn<S, A> = fn(&SharedStore<S, A>, String, EditorBuffer);
+
+impl<S, A> EditorComponent<S, A>
+where
+  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Display + Clone + Sync + Send,
+{
+  /// The on_change_handler is a lambda that is called if the editor buffer changes. Typically this
+  /// results in a Redux action being created and then dispatched to the given store.
+  pub fn new(
+    id: &str,
+    config_options: EditorConfigOptions,
+    on_buffer_change: OnEditorBufferChangeFn<S, A>,
+  ) -> Self {
     Self {
-      engine: EditorEngine::default(),
+      engine: EditorEngine::new(config_options),
       id: id.to_string(),
+      on_editor_buffer_change_handler: Some(on_buffer_change),
     }
+  }
+
+  pub fn new_shared(
+    id: &str,
+    config_options: EditorConfigOptions,
+    on_buffer_change: OnEditorBufferChangeFn<S, A>,
+  ) -> Arc<RwLock<Self>> {
+    Arc::new(RwLock::new(EditorComponent::new(
+      id,
+      config_options,
+      on_buffer_change,
+    )))
   }
 }
 
+/// This marker trait is meant to be implemented by whatever state struct is being used to store the
+/// editor buffer for this re-usable editor component. It is used in the `where` clause of the
+/// [EditorComponent] to ensure that the generic type `S` implements this trait, guaranteeing that
+/// it holds an [EditorBuffer].
+pub trait HasEditorBuffers {
+  fn get_editor_buffer(&self, id: &str) -> Option<&EditorBuffer>;
+}
+
 #[async_trait]
-impl Component<State, Action> for EditorComponent {
+impl<S, A> Component<S, A> for EditorComponent<S, A>
+where
+  S: HasEditorBuffers + Default + Display + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Display + Clone + Sync + Send,
+{
+  fn get_id(&self) -> &str { &self.id }
+
   // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
   // │ handle_event │
   // ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
   /// This shim simply calls [EditorEngine::apply](EditorEngine::apply) w/ all the necessary
   /// arguments:
   /// - Global scope: [SharedStore], [SharedTwData].
-  /// - App scope: [State], [ComponentRegistry<State, Action>].
+  /// - App scope: [S], [ComponentRegistry<S, A>].
   /// - User input (from [main_event_loop]): [InputEvent].
   async fn handle_event(
     &mut self,
-    args: ComponentScopeArgs<'_, State, Action>,
+    args: ComponentScopeArgs<'_, S, A>,
     input_event: &InputEvent,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
@@ -63,13 +110,21 @@ impl Component<State, Action> for EditorComponent {
         component_registry,
       } = args;
 
+      let my_buffer: Cow<EditorBuffer> = {
+        if let Some(buffer) = state.get_editor_buffer(self.get_id()) {
+          Cow::Borrowed(buffer)
+        } else {
+          Cow::Owned(EditorBuffer::default())
+        }
+      };
+
       // Try to apply the `input_event` to `editor_engine` to decide whether to fire action.
       match self
         .engine
         .apply(
           EditorEngineArgs {
             state,
-            buffer: &state.buffer,
+            buffer: &my_buffer,
             component_registry,
             shared_tw_data,
             shared_store,
@@ -80,8 +135,10 @@ impl Component<State, Action> for EditorComponent {
         .await?
       {
         Some(buffer) => {
-          let action = Action::UpdateEditorBuffer(buffer);
-          dispatch_editor_action!(@update_editor_buffer => shared_store, action);
+          if let Some(on_change_handler) = self.on_editor_buffer_change_handler {
+            let my_id = self.get_id().to_string();
+            on_change_handler(shared_store, my_id, buffer);
+          }
           EventPropagation::Consumed
         }
         None => {
@@ -102,7 +159,7 @@ impl Component<State, Action> for EditorComponent {
   /// - User input (from [main_event_loop]): [InputEvent].
   async fn render(
     &mut self,
-    args: ComponentScopeArgs<'_, State, Action>,
+    args: ComponentScopeArgs<'_, S, A>,
     current_box: &FlexBox,
   ) -> CommonResult<RenderPipeline> {
     let ComponentScopeArgs {
@@ -112,12 +169,20 @@ impl Component<State, Action> for EditorComponent {
       component_registry,
     } = args;
 
+    let my_buffer: Cow<EditorBuffer> = {
+      if let Some(buffer) = state.get_editor_buffer(self.get_id()) {
+        Cow::Borrowed(buffer)
+      } else {
+        Cow::Owned(EditorBuffer::default())
+      }
+    };
+
     self
       .engine
       .render(
         EditorEngineArgs {
           state,
-          buffer: &state.buffer,
+          buffer: &my_buffer,
           component_registry,
           shared_tw_data,
           shared_store,
@@ -127,31 +192,4 @@ impl Component<State, Action> for EditorComponent {
       )
       .await
   }
-}
-
-#[macro_export]
-macro_rules! dispatch_editor_action {
-  (
-    @update_editor_buffer =>
-    $arg_shared_store: ident,
-    $arg_action:       expr
-  ) => {{
-    let mut _event_consumed = false;
-    let action_clone_for_debug = $arg_action.clone();
-    spawn_and_consume_event!(_event_consumed, $arg_shared_store, $arg_action);
-    dispatch_editor_action!(@debug => action_clone_for_debug);
-    _event_consumed
-  }};
-  (
-    @debug => $arg_action: expr
-  ) => {
-    call_if_true!(
-      DEBUG_TUI_MOD,
-      log_no_err!(
-        INFO,
-        "⛵ EditorComponent::handle_event -> dispatch_spawn: {}",
-        $arg_action
-      )
-    );
-  };
 }

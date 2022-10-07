@@ -29,6 +29,8 @@ where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Display + Clone + Sync + Send,
 {
+  fn get_id(&self) -> &str;
+
   /// Render this component given the following.
   ///
   /// Arguments: Get from `current_box`:

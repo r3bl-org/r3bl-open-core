@@ -68,3 +68,5 @@ get-size = { version = "0.1.1", features = ["derive"] }
 [dev-dependencies]
 reedline = "0.12.0"
 textwrap = "0.15.1"
+strum = "0.24.1"
+strum_macros = "0.24.3"

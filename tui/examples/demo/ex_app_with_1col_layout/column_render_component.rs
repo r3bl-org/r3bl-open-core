@@ -24,6 +24,16 @@ use super::*;
 #[derive(Debug, Clone, Default)]
 pub struct ColumnRenderComponent {
   pub lolcat: Lolcat,
+  pub id: String,
+}
+
+impl ColumnRenderComponent {
+  pub fn new(id: String) -> Self {
+    Self {
+      id,
+      ..Default::default()
+    }
+  }
 }
 
 macro_rules! fire {
@@ -59,6 +69,8 @@ macro_rules! fire {
 
 #[async_trait]
 impl Component<State, Action> for ColumnRenderComponent {
+  fn get_id(&self) -> &str { &self.id }
+
   /// Handle following input events (and consume them):
   /// - Up,   `+` : fire `AddPop(1)`
   /// - Down, `-` : fire `SubPop(1)`
