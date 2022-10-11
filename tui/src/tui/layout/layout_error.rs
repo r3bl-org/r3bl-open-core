@@ -56,17 +56,13 @@ impl Display for LayoutError {
 
 /// Implement constructor that is compatible w/ [`CommonResult<T>`].
 impl LayoutError {
-  pub fn new_err<T>(err_type: LayoutErrorType) -> CommonResult<T> {
-    Err(LayoutError::new(err_type, None))
-  }
+  pub fn new_err<T>(err_type: LayoutErrorType) -> CommonResult<T> { Err(LayoutError::new(err_type, None)) }
 
   pub fn new_err_with_msg<T>(err_type: LayoutErrorType, msg: String) -> CommonResult<T> {
     Err(LayoutError::new(err_type, Some(msg)))
   }
 
-  pub fn new(err_type: LayoutErrorType, msg: Option<String>) -> Box<Self> {
-    Box::new(LayoutError { err_type, msg })
-  }
+  pub fn new(err_type: LayoutErrorType, msg: Option<String>) -> Box<Self> { Box::new(LayoutError { err_type, msg }) }
 
   pub fn format_msg_with_stack_len(stack_of_boxes: &Vec<FlexBox>, msg: &str) -> String {
     format!("{}, stack_of_boxes.len(): {}", msg, stack_of_boxes.len())

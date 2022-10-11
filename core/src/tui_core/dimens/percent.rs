@@ -39,9 +39,7 @@ impl fmt::Display for Percent {
 }
 
 impl Debug for Percent {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "PerCent value:{}%", self.value)
-  }
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "PerCent value:{}%", self.value) }
 }
 
 /// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>

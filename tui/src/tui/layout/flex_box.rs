@@ -73,19 +73,13 @@ impl Debug for FlexBox {
       .field("origin_pos", &self.origin_pos)
       .field("bounds_size", &self.bounds_size)
       .field("style_adjusted_origin_pos", &self.style_adjusted_origin_pos)
-      .field(
-        "style_adjusted_bounds_size",
-        &self.style_adjusted_bounds_size,
-      )
+      .field("style_adjusted_bounds_size", &self.style_adjusted_bounds_size)
       .field("requested_size_percent", &self.requested_size_percent)
       .field(
         "insertion_pos_for_next_box",
         format_option!(&self.insertion_pos_for_next_box),
       )
-      .field(
-        "maybe_computed_style",
-        format_option!(&self.maybe_computed_style),
-      )
+      .field("maybe_computed_style", format_option!(&self.maybe_computed_style))
       .finish()
   }
 }

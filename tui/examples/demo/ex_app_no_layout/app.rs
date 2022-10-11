@@ -55,15 +55,10 @@ macro_rules! fire {
 
 #[async_trait]
 impl App<State, Action> for AppNoLayout {
-  async fn app_render(
-    &mut self,
-    args: GlobalScopeArgs<'_, State, Action>,
-  ) -> CommonResult<RenderPipeline> {
+  async fn app_render(&mut self, args: GlobalScopeArgs<'_, State, Action>) -> CommonResult<RenderPipeline> {
     throws_with_return!({
       let GlobalScopeArgs {
-        state,
-        shared_tw_data,
-        ..
+        state, shared_tw_data, ..
       } = args;
 
       let content = format!("{}", state);
@@ -104,11 +99,7 @@ impl App<State, Action> for AppNoLayout {
 
       call_if_true!(
         DEBUG,
-        log_no_err!(
-          INFO,
-          "⛵ AppNoLayout::handle_event -> input_event: {}",
-          input_event
-        )
+        log_no_err!(INFO, "⛵ AppNoLayout::handle_event -> input_event: {}", input_event)
       );
 
       let mut event_consumed = false;

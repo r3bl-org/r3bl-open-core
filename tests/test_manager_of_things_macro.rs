@@ -61,12 +61,7 @@ async fn test_custom_syntax_full() {
 
   let map: HashMap<String, String> = HashMap::new();
   MyMapManager::with_ref_set_value(&arc_clone, map).await;
-  assert_eq!(
-    MyMapManager::with_ref_get_value_r_lock(&arc_clone)
-      .await
-      .len(),
-    0
-  );
+  assert_eq!(MyMapManager::with_ref_get_value_r_lock(&arc_clone).await.len(), 0);
 
   let map: HashMap<String, String> = HashMap::new();
   my_manager.set_value(map).await;

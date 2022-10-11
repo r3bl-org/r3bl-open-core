@@ -102,10 +102,7 @@ fn parse_optional_attrib(input: &ParseStream, metadata: &mut StyleMetadata) -> R
         path: Path { segments, .. },
       }) = item
       {
-        let PathSegment {
-          ident,
-          arguments: _,
-        } = segments.first().unwrap();
+        let PathSegment { ident, arguments: _ } = segments.first().unwrap();
         match ident.as_str().as_ref() {
           "bold" => metadata.attrib_vec.push(Attrib::Bold),
           "dim" => metadata.attrib_vec.push(Attrib::Dim),
@@ -139,10 +136,7 @@ fn parse_optional_padding(input: &ParseStream, metadata: &mut StyleMetadata) -> 
 
     metadata.padding = Some(padding_int);
 
-    call_if_true!(
-      DEBUG_MAKE_STYLE_MOD,
-      println!("🚀 padding: {:?}", &metadata.padding)
-    );
+    call_if_true!(DEBUG_MAKE_STYLE_MOD, println!("🚀 padding: {:?}", &metadata.padding));
   }
   Ok(())
 }
@@ -155,10 +149,7 @@ fn parse_optional_color_fg(input: &ParseStream, metadata: &mut StyleMetadata) ->
     input.parse::<Token![:]>()?;
     let color_expr = input.parse::<Expr>()?;
     metadata.color_fg = Some(color_expr);
-    call_if_true!(
-      DEBUG_MAKE_STYLE_MOD,
-      println!("🚀 color_fg: {:#?}", metadata.color_fg)
-    );
+    call_if_true!(DEBUG_MAKE_STYLE_MOD, println!("🚀 color_fg: {:#?}", metadata.color_fg));
   }
 
   Ok(())
@@ -172,10 +163,7 @@ fn parse_optional_color_bg(input: &ParseStream, metadata: &mut StyleMetadata) ->
     input.parse::<Token![:]>()?;
     let color_expr = input.parse::<Expr>()?;
     metadata.color_bg = Some(color_expr);
-    call_if_true!(
-      DEBUG_MAKE_STYLE_MOD,
-      println!("🚀 color_bg: {:#?}", metadata.color_bg)
-    );
+    call_if_true!(DEBUG_MAKE_STYLE_MOD, println!("🚀 color_bg: {:#?}", metadata.color_bg));
   }
 
   Ok(())

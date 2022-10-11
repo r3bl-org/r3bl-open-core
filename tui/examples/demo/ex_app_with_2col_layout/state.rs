@@ -28,7 +28,5 @@ impl Default for State {
 }
 
 impl Display for State {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "State {{ stack: {:?} }}", self.stack)
-  }
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "State {{ stack: {:?} }}", self.stack) }
 }

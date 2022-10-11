@@ -97,8 +97,6 @@ pub(crate) mod converters {
 
   impl TryFrom<KeyEvent> for InputEvent {
     type Error = ();
-    fn try_from(key_event: KeyEvent) -> Result<Self, Self::Error> {
-      Ok(InputEvent::Keyboard(key_event.try_into()?))
-    }
+    fn try_from(key_event: KeyEvent) -> Result<Self, Self::Error> { Ok(InputEvent::Keyboard(key_event.try_into()?)) }
   }
 }

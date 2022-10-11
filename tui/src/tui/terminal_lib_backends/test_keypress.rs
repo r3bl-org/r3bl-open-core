@@ -56,8 +56,7 @@ mod tests {
     }
     // With modifier.
     {
-      let macro_syntax =
-        keypress! { @special ModifierKeysMask::CTRL | ModifierKeysMask::ALT, SpecialKey::Left };
+      let macro_syntax = keypress! { @special ModifierKeysMask::CTRL | ModifierKeysMask::ALT, SpecialKey::Left };
       let struct_syntax = Keypress::WithModifiers {
         key: Key::SpecialKey(SpecialKey::Left),
         mask: ModifierKeysMask::CTRL | ModifierKeysMask::ALT,

@@ -40,10 +40,7 @@ mod tests {
       tw_surface.surface_end()?;
 
       println!("{:?}", &tw_surface.render_pipeline);
-      println!(
-        "{}",
-        serde_json::to_string_pretty(&tw_surface.render_pipeline).unwrap()
-      );
+      println!("{}", serde_json::to_string_pretty(&tw_surface.render_pipeline).unwrap());
     });
   }
 
@@ -76,10 +73,7 @@ mod tests {
           layout_item.requested_size_percent,
           requested_size_percent!(width:100, height:100)
         );
-        assert_eq2!(
-          layout_item.insertion_pos_for_next_box,
-          Some(position!(col:0, row:0))
-        );
+        assert_eq2!(layout_item.insertion_pos_for_next_box, Some(position!(col:0, row:0)));
         assert_eq2!(layout_item.get_computed_style(), None);
       });
     }
@@ -109,14 +103,8 @@ mod tests {
         assert_eq2!(layout_item.origin_pos, position!(col:0, row:0));
         assert_eq2!(layout_item.bounds_size, size!(cols:250, rows:500));
 
-        assert_eq2!(
-          layout_item.style_adjusted_origin_pos,
-          position!(col:2, row:2)
-        ); // Take padding into account.
-        assert_eq2!(
-          layout_item.style_adjusted_bounds_size,
-          size!(cols:246, rows:496)
-        ); // Take padding into account.
+        assert_eq2!(layout_item.style_adjusted_origin_pos, position!(col:2, row:2)); // Take padding into account.
+        assert_eq2!(layout_item.style_adjusted_bounds_size, size!(cols:246, rows:496)); // Take padding into account.
 
         assert_eq2!(
           layout_item.requested_size_percent,
@@ -154,14 +142,8 @@ mod tests {
         assert_eq2!(current_box.origin_pos, position!(col:250, row:0));
         assert_eq2!(current_box.bounds_size, size!(cols:250, rows:500));
 
-        assert_eq2!(
-          current_box.style_adjusted_origin_pos,
-          position!(col:253, row:3)
-        ); // Take padding into account.
-        assert_eq2!(
-          current_box.style_adjusted_bounds_size,
-          size!(cols:244, rows:494)
-        ); // Take padding into account.
+        assert_eq2!(current_box.style_adjusted_origin_pos, position!(col:253, row:3)); // Take padding into account.
+        assert_eq2!(current_box.style_adjusted_bounds_size, size!(cols:244, rows:494)); // Take padding into account.
 
         assert_eq2!(
           current_box.requested_size_percent,

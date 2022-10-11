@@ -223,12 +223,7 @@ macro_rules! exec_render_op {
         if let Err(err) = $arg_cmd {
           call_if_true!(
             DEBUG_SHOW_TERMINAL_BACKEND,
-            log!(
-              ERROR,
-              "crossterm: ❌ Failed to {} due to {}",
-              $arg_log_msg,
-              err
-            )
+            log!(ERROR, "crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err)
           );
         } else {
           call_if_true! {

@@ -48,8 +48,7 @@ pub enum Button {
 impl From<MouseEvent> for MouseInput {
   fn from(mouse_event: MouseEvent) -> Self {
     let pos: Position = position!(col:mouse_event.column, row:mouse_event.row);
-    let maybe_modifier_keys: Option<ModifierKeysMask> =
-      convert_key_modifiers(&mouse_event.modifiers);
+    let maybe_modifier_keys: Option<ModifierKeysMask> = convert_key_modifiers(&mouse_event.modifiers);
     let kind: MouseInputKind = mouse_event.kind.into();
     MouseInput {
       pos,

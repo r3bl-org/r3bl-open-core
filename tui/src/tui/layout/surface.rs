@@ -37,10 +37,7 @@ impl LayoutManagement for Surface {
       if !self.no_boxes_added() {
         LayoutError::new_err_with_msg(
           LayoutErrorType::MismatchedSurfaceStart,
-          LayoutError::format_msg_with_stack_len(
-            &self.stack_of_boxes,
-            "Stack of boxes should be empty",
-          ),
+          LayoutError::format_msg_with_stack_len(&self.stack_of_boxes, "Stack of boxes should be empty"),
         )?
       }
       self.origin_pos = pos;
@@ -54,10 +51,7 @@ impl LayoutManagement for Surface {
       if !self.no_boxes_added() {
         LayoutError::new_err_with_msg(
           LayoutErrorType::MismatchedSurfaceEnd,
-          LayoutError::format_msg_with_stack_len(
-            &self.stack_of_boxes,
-            "Stack of boxes should be empty",
-          ),
+          LayoutError::format_msg_with_stack_len(&self.stack_of_boxes, "Stack of boxes should be empty"),
         )?
       }
     });
@@ -78,10 +72,7 @@ impl LayoutManagement for Surface {
       if self.no_boxes_added() {
         LayoutError::new_err_with_msg(
           LayoutErrorType::MismatchedBoxEnd,
-          LayoutError::format_msg_with_stack_len(
-            &self.stack_of_boxes,
-            "Stack of boxes should not be empty",
-          ),
+          LayoutError::format_msg_with_stack_len(&self.stack_of_boxes, "Stack of boxes should not be empty"),
         )?
       }
       self.stack_of_boxes.pop();
@@ -145,10 +136,7 @@ impl PerformPositioningAndSizing for Surface {
 
       let maybe_cascaded_style: Option<Style> = cascade_styles(container_box, &flex_box_props);
 
-      let RequestedSizePercent {
-        width_pc,
-        height_pc,
-      } = flex_box_props.requested_size_percent;
+      let RequestedSizePercent { width_pc, height_pc } = flex_box_props.requested_size_percent;
 
       let requested_size_allocation = size!(
         cols: calc_percentage(width_pc, container_bounds.cols),
@@ -174,21 +162,16 @@ impl PerformPositioningAndSizing for Surface {
   /// 🌳 Handle root (first) box to add to stack of boxes, explicitly sized & positioned.
   fn add_root_box(&mut self, flex_box_props: FlexBoxProps) -> CommonResult<()> {
     throws!({
-      let RequestedSizePercent {
-        width_pc,
-        height_pc,
-      } = flex_box_props.requested_size_percent;
+      let RequestedSizePercent { width_pc, height_pc } = flex_box_props.requested_size_percent;
 
       let bounds_size = size!(
         cols: calc_percentage(width_pc, self.box_size.cols),
         rows: calc_percentage(height_pc, self.box_size.rows)
       );
 
-      self.stack_of_boxes.push(make_root_box_with_style(
-        flex_box_props,
-        self.origin_pos,
-        bounds_size,
-      ));
+      self
+        .stack_of_boxes
+        .push(make_root_box_with_style(flex_box_props, self.origin_pos, bounds_size));
     });
   }
 }
@@ -202,10 +185,7 @@ fn make_non_root_box_with_style(
   FlexBoxProps {
     id,
     dir,
-    requested_size_percent: RequestedSizePercent {
-      width_pc,
-      height_pc,
-    },
+    requested_size_percent: RequestedSizePercent { width_pc, height_pc },
     maybe_styles: _,
   }: FlexBoxProps,
   origin_pos: Position,
@@ -228,10 +208,7 @@ fn make_non_root_box_with_style(
     bounds_size,
     style_adjusted_origin_pos,
     style_adjusted_bounds_size,
-    requested_size_percent: RequestedSizePercent {
-      width_pc,
-      height_pc,
-    },
+    requested_size_percent: RequestedSizePercent { width_pc, height_pc },
     maybe_computed_style: maybe_cascaded_style,
     insertion_pos_for_next_box: None,
   }
@@ -293,9 +270,7 @@ fn cascade_styles(parent_box: &FlexBox, self_box_props: &FlexBoxProps) -> Option
   };
 
   if let Some(ref self_styles) = self_box_props.maybe_styles {
-    self_styles
-      .iter()
-      .for_each(|style| style_vec.push(style.clone()));
+    self_styles.iter().for_each(|style| style_vec.push(style.clone()));
   }
 
   if style_vec.is_empty() {

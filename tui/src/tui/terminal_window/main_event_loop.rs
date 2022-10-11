@@ -130,20 +130,13 @@ impl TerminalWindow {
       }
 
       // Pass the input_event to the app for processing.
-      let propagation_result_from_app = TerminalWindow::process_input_event(
-        &shared_tw_data,
-        &shared_store,
-        &shared_app,
-        &input_event,
-      )
-      .await?;
+      let propagation_result_from_app =
+        TerminalWindow::process_input_event(&shared_tw_data, &shared_store, &shared_app, &input_event).await?;
 
       // If event not consumed by app, propagate to the default input handler.
       match propagation_result_from_app {
         EventPropagation::Propagate => {
-          if let Continuation::Exit =
-            DefaultInputEventHandler::no_consume(input_event, &exit_keys).await
-          {
+          if let Continuation::Exit = DefaultInputEventHandler::no_consume(input_event, &exit_keys).await {
             break;
           };
         }
@@ -202,8 +195,7 @@ impl TerminalWindow {
       false => {
         // Blocking call.
         let propagation_result_from_app =
-          AppManager::route_input_to_app(shared_tw_data, shared_store, shared_app, input_event)
-            .await?;
+          AppManager::route_input_to_app(shared_tw_data, shared_store, shared_app, input_event).await?;
         call_if_true!(
           DEBUG_TUI_MOD,
           log_no_err!(
@@ -244,10 +236,7 @@ where
     )
     .await;
     if let Err(e) = result {
-      call_if_true!(
-        DEBUG_TUI_MOD,
-        log_no_err!(ERROR, "MySubscriber::run -> Error: {}", e)
-      )
+      call_if_true!(DEBUG_TUI_MOD, log_no_err!(ERROR, "MySubscriber::run -> Error: {}", e))
     }
   }
 }
@@ -322,9 +311,7 @@ where
           );
         }
         Ok(render_pipeline) => {
-          render_pipeline
-            .paint(FlushKind::ClearBeforeFlush, shared_tw_data)
-            .await;
+          render_pipeline.paint(FlushKind::ClearBeforeFlush, shared_tw_data).await;
           let window_size = shared_tw_data.read().await.get_size();
           call_if_true!(DEBUG_TUI_MOD, {
             log_no_err!(

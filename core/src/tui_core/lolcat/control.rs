@@ -79,12 +79,7 @@ impl From<ColorChangeSpeed> for f64 {
 }
 
 impl ColorWheelControl {
-  pub fn new(
-    seed: &str,
-    spread: &str,
-    frequency: &str,
-    color_change: ColorChangeSpeed,
-  ) -> ColorWheelControl {
+  pub fn new(seed: &str, spread: &str, frequency: &str, color_change: ColorChangeSpeed) -> ColorWheelControl {
     let mut seed: f64 = seed.parse().unwrap();
     if seed == 0.0 {
       seed = random::<f64>() * 10e9;

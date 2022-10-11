@@ -18,12 +18,8 @@
 use quote::quote;
 use syn::parse_macro_input;
 
-use super::{gen_fn_input_args_expr_list,
-            get_fn_input_args_ident_ref_from_fn_ty,
-            get_fn_output_type_from,
-            IdentRef};
-use crate::fn_wrapper::custom_syntax_parser::{make_opt_where_clause_from_generic_args,
-                                              SafeFnWrapperSyntaxInfo};
+use super::{gen_fn_input_args_expr_list, get_fn_input_args_ident_ref_from_fn_ty, get_fn_output_type_from, IdentRef};
+use crate::fn_wrapper::custom_syntax_parser::{make_opt_where_clause_from_generic_args, SafeFnWrapperSyntaxInfo};
 
 /// Example of using this macro:
 ///
@@ -82,11 +78,9 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     property_fn_type,
   } = safe_wrapper_syntax_info;
 
-  let fn_input_arg_type_vec: Vec<IdentRef> =
-    get_fn_input_args_ident_ref_from_fn_ty(&property_fn_type);
+  let fn_input_arg_type_vec: Vec<IdentRef> = get_fn_input_args_ident_ref_from_fn_ty(&property_fn_type);
 
-  let (fn_input_arg_expr_vec, fn_input_arg_name_ident_vec) =
-    gen_fn_input_args_expr_list(&fn_input_arg_type_vec);
+  let (fn_input_arg_expr_vec, fn_input_arg_name_ident_vec) = gen_fn_input_args_expr_list(&fn_input_arg_type_vec);
 
   let fn_output_return_type = get_fn_output_type_from(&property_fn_type);
 
