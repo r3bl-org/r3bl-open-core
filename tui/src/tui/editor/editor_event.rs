@@ -22,14 +22,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-// ╭┄┄┄┄┄┄┄┄┄┄╮
-// │ EditorOp │
-// ╯          ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-/// Commands that can be executed on an [EditorBuffer]. By providing a conversion from [InputEvent]
-/// to [EditorOp] it becomes easier to write event handlers that consume [InputEvent] and
-/// then execute [EditorOp] on an [EditorBuffer].
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ EditorEvent │
+// ╯             ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+/// Events that can be applied to the [EditorEngine] to modify an [EditorBuffer].
+///
+/// By providing a conversion from [InputEvent] to [EditorEvent] it becomes easier to write event
+/// handlers that consume [InputEvent] and then execute [EditorEvent] on an [EditorBuffer].
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum EditorOp {
+pub enum EditorEvent {
   InsertChar(char),
   InsertString(String),
   InsertNewLine,
@@ -51,28 +52,28 @@ pub enum CaretDirection {
   Right,
 }
 
-impl TryFrom<&InputEvent> for EditorOp {
+impl TryFrom<&InputEvent> for EditorEvent {
   type Error = String;
 
   fn try_from(input_event: &InputEvent) -> Result<Self, Self::Error> {
     match input_event {
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::SpecialKey(SpecialKey::PageDown),
-      }) => Ok(EditorOp::PageDown),
+      }) => Ok(EditorEvent::PageDown),
 
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::SpecialKey(SpecialKey::PageUp),
-      }) => Ok(EditorOp::PageUp),
+      }) => Ok(EditorEvent::PageUp),
 
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::SpecialKey(SpecialKey::Home),
-      }) => Ok(EditorOp::Home),
+      }) => Ok(EditorEvent::Home),
 
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::SpecialKey(SpecialKey::End),
-      }) => Ok(EditorOp::End),
+      }) => Ok(EditorEvent::End),
 
-      InputEvent::Resize(size) => Ok(EditorOp::Resize(*size)),
+      InputEvent::Resize(size) => Ok(EditorEvent::Resize(*size)),
 
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::Character(character),
@@ -110,11 +111,11 @@ impl TryFrom<&InputEvent> for EditorOp {
   }
 }
 
-impl EditorOp {
+impl EditorEvent {
   pub fn apply_editor_event<S, A>(
     engine: &mut EditorEngine,
     buffer: &mut EditorBuffer,
-    editor_buffer_command: EditorOp,
+    editor_buffer_command: EditorEvent,
     _shared_tw_data: &SharedTWData,
     _component_registry: &mut ComponentRegistry<S, A>,
     _self_id: &str,
@@ -123,42 +124,44 @@ impl EditorOp {
     A: Default + Display + Clone + Sync + Send,
   {
     match editor_buffer_command {
-      EditorOp::InsertChar(character) => {
-        mut_content::insert_str_at_caret(EditorArgsMut { buffer, engine }, &String::from(character))
+      EditorEvent::InsertChar(character) => {
+        EditorEngineDataApi::insert_str_at_caret(EditorArgsMut { buffer, engine }, &String::from(character))
       }
-      EditorOp::InsertNewLine => {
-        mut_content::insert_new_line_at_caret(EditorArgsMut { buffer, engine });
+      EditorEvent::InsertNewLine => {
+        EditorEngineDataApi::insert_new_line_at_caret(EditorArgsMut { buffer, engine });
       }
-      EditorOp::Delete => {
-        mut_content::delete_at_caret(buffer, engine);
+      EditorEvent::Delete => {
+        EditorEngineDataApi::delete_at_caret(buffer, engine);
       }
-      EditorOp::Backspace => {
-        mut_content::backspace_at_caret(buffer, engine);
+      EditorEvent::Backspace => {
+        EditorEngineDataApi::backspace_at_caret(buffer, engine);
       }
-      EditorOp::MoveCaret(direction) => {
+      EditorEvent::MoveCaret(direction) => {
         match direction {
-          CaretDirection::Left => move_caret::left(buffer, engine),
-          CaretDirection::Right => move_caret::right(buffer, engine),
-          CaretDirection::Up => move_caret::up(buffer, engine),
-          CaretDirection::Down => move_caret::down(buffer, engine),
+          CaretDirection::Left => EditorEngineDataApi::left(buffer, engine),
+          CaretDirection::Right => EditorEngineDataApi::right(buffer, engine),
+          CaretDirection::Up => EditorEngineDataApi::up(buffer, engine),
+          CaretDirection::Down => EditorEngineDataApi::down(buffer, engine),
         };
       }
-      EditorOp::InsertString(chunk) => mut_content::insert_str_at_caret(EditorArgsMut { buffer, engine }, &chunk),
-      EditorOp::Resize(_) => {
+      EditorEvent::InsertString(chunk) => {
+        EditorEngineDataApi::insert_str_at_caret(EditorArgsMut { buffer, engine }, &chunk)
+      }
+      EditorEvent::Resize(_) => {
         // Check to see whether scroll is valid.
-        scroll::validate_scroll(EditorArgsMut { buffer, engine });
+        EditorEngineDataApi::validate_scroll(EditorArgsMut { buffer, engine });
       }
-      EditorOp::Home => {
-        move_caret::to_start_of_line(buffer, engine);
+      EditorEvent::Home => {
+        EditorEngineDataApi::home(buffer, engine);
       }
-      EditorOp::End => {
-        move_caret::to_end_of_line(buffer, engine);
+      EditorEvent::End => {
+        EditorEngineDataApi::end(buffer, engine);
       }
-      EditorOp::PageDown => {
-        move_caret::page_down(buffer, engine);
+      EditorEvent::PageDown => {
+        EditorEngineDataApi::page_down(buffer, engine);
       }
-      EditorOp::PageUp => {
-        move_caret::page_up(buffer, engine);
+      EditorEvent::PageUp => {
+        EditorEngineDataApi::page_up(buffer, engine);
       }
     };
   }
@@ -166,7 +169,7 @@ impl EditorOp {
   pub fn apply_editor_events<S, A>(
     engine: &mut EditorEngine,
     buffer: &mut EditorBuffer,
-    editor_event_vec: Vec<EditorOp>,
+    editor_event_vec: Vec<EditorEvent>,
     shared_tw_data: &SharedTWData,
     component_registry: &mut ComponentRegistry<S, A>,
     self_id: &str,
@@ -175,7 +178,7 @@ impl EditorOp {
     A: Default + Display + Clone + Sync + Send,
   {
     for editor_event in editor_event_vec {
-      EditorOp::apply_editor_event(
+      EditorEvent::apply_editor_event(
         engine,
         buffer,
         editor_event,

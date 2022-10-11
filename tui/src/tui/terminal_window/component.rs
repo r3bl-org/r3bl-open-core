@@ -71,3 +71,15 @@ where
 {
   async fn run_on_surface(&mut self, args: GlobalScopeArgs<'_, S, A>, surface: &mut Surface) -> CommonResult<()>;
 }
+
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Response type for apply_event() │
+// ╯                                 ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+#[derive(Debug)]
+pub enum ApplyResponse<T>
+where
+  T: Debug,
+{
+  Applied(T),
+  NotApplied,
+}

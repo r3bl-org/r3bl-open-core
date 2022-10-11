@@ -26,8 +26,12 @@ use tokio::sync::RwLock;
 
 use crate::*;
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Editor Component struct │
+// ╯                         ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// This is a shim which allows the reusable [EditorEngine] to be used in the context of [Component]
-/// and [Store]. The main methods here simply pass thru all their arguments to the [EditorEngine].
+/// and [Store]. The main methods here simply pass thru all their arguments to the
+/// [EditorEngineRenderApi].
 #[derive(Clone, Default)]
 pub struct EditorComponent<S, A>
 where
@@ -88,8 +92,8 @@ where
   // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
   // │ handle_event │
   // ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-  /// This shim simply calls [EditorEngine::apply](EditorEngine::apply) w/ all the necessary
-  /// arguments:
+  /// This shim simply calls [apply_event](EditorEngineRenderApi::apply_event) w/ all the
+  /// necessary arguments:
   /// - Global scope: [SharedStore], [SharedTWData].
   /// - App scope: `S`, [ComponentRegistry<S, A>].
   /// - User input (from [main_event_loop]): [InputEvent].
@@ -122,17 +126,18 @@ where
         shared_tw_data,
         shared_store,
         self_id: &self.id,
+        engine: &mut self.engine,
       };
 
-      match self.engine.apply(engine_args, input_event).await? {
-        EngineResponse::Applied(buffer) => {
+      match EditorEngineRenderApi::apply_event(engine_args, input_event).await? {
+        ApplyResponse::Applied(buffer) => {
           if let Some(on_change_handler) = self.on_editor_buffer_change_handler {
             let my_id = self.get_id().to_string();
             on_change_handler(shared_store, my_id, buffer);
           }
           EventPropagation::Consumed
         }
-        EngineResponse::NotApplied => {
+        ApplyResponse::NotApplied => {
           // Optional: handle any `input_event` not consumed by `editor_engine`.
           EventPropagation::Propagate
         }
@@ -143,7 +148,7 @@ where
   // ╭┄┄┄┄┄┄┄┄╮
   // │ render │
   // ╯        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-  /// This shim simply calls [EditorEngine::apply](EditorEngine::render) w/ all the necessary
+  /// This shim simply calls [render](EditorEngineRenderApi::render) w/ all the necessary
   /// arguments:
   /// - Global scope: [SharedStore], [SharedTWData].
   /// - App scope: `S`, [ComponentRegistry<S, A>].
@@ -169,6 +174,7 @@ where
     };
 
     let render_args = EditorEngineArgs {
+      engine: &mut self.engine,
       state,
       buffer: &my_buffer,
       component_registry,
@@ -177,6 +183,6 @@ where
       self_id: &self.id,
     };
 
-    self.engine.render(render_args, current_box).await
+    EditorEngineRenderApi::render(render_args, current_box).await
   }
 }
