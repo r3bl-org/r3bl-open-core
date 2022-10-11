@@ -2,10 +2,12 @@
 │ r3bl_rs_utils │
 ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 editor engine extras (core):
-  ☐ modal dialog support https://github.com/r3bl-org/r3bl_rs_utils/issues/43
+  ✔ add editor config options to enable/disable multiline & update tests @done(22-10-11 15:29)
+  ☐ add modal dialog support https://github.com/r3bl-org/r3bl_rs_utils/issues/43
 
 editor engine extras (core):
   ☐ syntax highlighting support
+  ☐ support editor config options to enable/disable syntax highlighting & update tests
 
 editor engine extras (auto-completion providers):
   ☐ add support for auto completion providers
