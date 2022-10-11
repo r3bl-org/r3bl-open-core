@@ -160,7 +160,11 @@ mod construct_components {
           let on_buffer_change: OnEditorBufferChangeFn<_, _> = |shared_store, my_id, buffer| {
             spawn_dispatch_action!(shared_store, Action::UpdateEditorBuffer(my_id, buffer));
           };
-          EditorComponent::new_shared(editor_id, EditorConfigOptions::default(), on_buffer_change)
+          EditorComponent::new_shared(
+            editor_id,
+            EditorEngineConfigOptions::default(),
+            on_buffer_change,
+          )
         };
 
         self

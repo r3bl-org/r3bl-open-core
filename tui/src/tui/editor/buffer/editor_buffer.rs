@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Display, Result};
+use std::fmt::{Debug, Result};
 
 use get_size::GetSize;
 use r3bl_rs_utils_core::*;
@@ -34,9 +34,9 @@ use crate::*;
 ///
 /// # Modifying the buffer
 ///
-/// You have to supply an [EditorBufferCommand] to the [EditorBuffer] to modify it via:
-/// 1. [apply_editor_event](EditorBuffer::apply_editor_event)
-/// 2. [apply_editor_events](EditorBuffer::apply_editor_events)
+/// You have to supply an [EditorOp] to the [EditorBuffer] to modify it via:
+/// 1. [apply_editor_event](EditorOp::apply_editor_event)
+/// 2. [apply_editor_events](EditorOp::apply_editor_events)
 ///
 /// In order for the commands to be executed, the following functions are used (in
 /// `editor_buffer_command_impl.rs`):
@@ -158,6 +158,8 @@ pub mod access_and_mutate {
   use super::*;
 
   impl EditorBuffer {
+    pub fn is_empty(&self) -> bool { self.lines.is_empty() }
+
     pub fn len(&self) -> ChUnit { ch!(self.lines.len()) }
 
     pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.lines }
@@ -209,90 +211,6 @@ pub mod access_and_mutate {
       (&mut self.lines, &mut self.caret, &mut self.scroll_offset)
     }
   }
-}
-
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ EditorBuffer -> Event based interface │
-// ╯                                       ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-impl EditorBuffer {
-  pub fn apply_editor_event<S, A>(
-    engine: &mut EditorEngine,
-    buffer: &mut EditorBuffer,
-    editor_buffer_command: EditorBufferCommand,
-    _shared_tw_data: &SharedTWData,
-    _component_registry: &mut ComponentRegistry<S, A>,
-    _self_id: &str,
-  ) where
-    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Display + Clone + Sync + Send,
-  {
-    match editor_buffer_command {
-      EditorBufferCommand::InsertChar(character) => {
-        mut_content::insert_str_at_caret(EditorArgsMut { buffer, engine }, &String::from(character))
-      }
-      EditorBufferCommand::InsertNewLine => {
-        mut_content::insert_new_line_at_caret(EditorArgsMut { buffer, engine });
-      }
-      EditorBufferCommand::Delete => {
-        mut_content::delete_at_caret(buffer, engine);
-      }
-      EditorBufferCommand::Backspace => {
-        mut_content::backspace_at_caret(buffer, engine);
-      }
-      EditorBufferCommand::MoveCaret(direction) => {
-        match direction {
-          CaretDirection::Left => move_caret::left(buffer, engine),
-          CaretDirection::Right => move_caret::right(buffer, engine),
-          CaretDirection::Up => move_caret::up(buffer, engine),
-          CaretDirection::Down => move_caret::down(buffer, engine),
-        };
-      }
-      EditorBufferCommand::InsertString(chunk) => {
-        mut_content::insert_str_at_caret(EditorArgsMut { buffer, engine }, &chunk)
-      }
-      EditorBufferCommand::Resize(_) => {
-        // Check to see whether scroll is valid.
-        scroll::validate_scroll(EditorArgsMut { buffer, engine });
-      }
-      EditorBufferCommand::Home => {
-        move_caret::to_start_of_line(buffer, engine);
-      }
-      EditorBufferCommand::End => {
-        move_caret::to_end_of_line(buffer, engine);
-      }
-      EditorBufferCommand::PageDown => {
-        move_caret::page_down(buffer, engine);
-      }
-      EditorBufferCommand::PageUp => {
-        move_caret::page_up(buffer, engine);
-      }
-    };
-  }
-
-  pub fn apply_editor_events<S, A>(
-    engine: &mut EditorEngine,
-    buffer: &mut EditorBuffer,
-    editor_event_vec: Vec<EditorBufferCommand>,
-    shared_tw_data: &SharedTWData,
-    component_registry: &mut ComponentRegistry<S, A>,
-    self_id: &str,
-  ) where
-    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Display + Clone + Sync + Send,
-  {
-    for editor_event in editor_event_vec {
-      EditorBuffer::apply_editor_event(
-        engine,
-        buffer,
-        editor_event,
-        shared_tw_data,
-        component_registry,
-        self_id,
-      );
-    }
-  }
-
-  pub fn is_empty(&self) -> bool { self.lines.is_empty() }
 }
 
 mod debug_format_helpers {

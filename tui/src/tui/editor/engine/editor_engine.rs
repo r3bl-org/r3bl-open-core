@@ -25,17 +25,8 @@ use crate::*;
 
 const DEFAULT_CURSOR_CHAR: char = '▒';
 
-#[derive(Debug)]
-enum CaretPaintStyle {
-  /// Using cursor show / hide.
-  #[allow(dead_code)]
-  GlobalCursor,
-  /// Painting the editor_buffer.get_caret() position w/ reverse style.
-  LocalPaintedEffect,
-}
-
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EditorConfigOptions {
+pub struct EditorEngineConfigOptions {
   pub multi_line: bool,
   pub syntax_highlight: bool,
 }
@@ -43,32 +34,37 @@ pub struct EditorConfigOptions {
 /// Holds data related to rendering in between render calls. This is not stored in the
 /// [EditorBuffer] struct, which lives in the [r3bl_redux::Store]. The store provides the underlying
 /// document or buffer struct that holds the actual document.
+///
+/// In order to change the document, you can use the [apply](EditorEngine::apply) method which takes
+/// [InputEvent] and tries to convert it to an [EditorOp] and then execute them against this buffer.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditorEngine {
   /// Set by [render](EditorEngine::render).
   pub current_box: FlexBox,
-  pub config_options: EditorConfigOptions,
+  pub config_options: EditorEngineConfigOptions,
+}
+
+pub enum EngineResponse {
+  Applied(EditorBuffer),
+  NotApplied,
 }
 
 impl EditorEngine {
-  pub fn new(config_options: EditorConfigOptions) -> Self {
+  pub fn new(config_options: EditorEngineConfigOptions) -> Self {
     Self {
       current_box: FlexBox::default(),
       config_options,
     }
   }
-}
 
-impl EditorEngine {
-  pub fn viewport_width(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.cols }
-
-  pub fn viewport_height(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.rows }
-
+  /// Event based interface for the editor. This converts the [InputEvent] into an [EditorOp] and
+  /// then executes it. Returns a new [EditorBuffer] if the operation was applied otherwise returns
+  /// [None].
   pub async fn apply<S, A>(
     &mut self,
     args: EditorEngineArgs<'_, S, A>,
     input_event: &InputEvent,
-  ) -> CommonResult<Option<EditorBuffer>>
+  ) -> CommonResult<EngineResponse>
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
@@ -81,9 +77,9 @@ impl EditorEngine {
       ..
     } = args;
 
-    if let Ok(editor_event) = EditorBufferCommand::try_from(input_event) {
+    if let Ok(editor_event) = EditorOp::try_from(input_event) {
       let mut new_editor_buffer = buffer.clone();
-      EditorBuffer::apply_editor_event(
+      EditorOp::apply_editor_event(
         self,
         &mut new_editor_buffer,
         editor_event,
@@ -91,9 +87,9 @@ impl EditorEngine {
         component_registry,
         self_id,
       );
-      Ok(Some(new_editor_buffer))
+      Ok(EngineResponse::Applied(new_editor_buffer))
     } else {
-      Ok(None)
+      Ok(EngineResponse::NotApplied)
     }
   }
 
@@ -120,7 +116,7 @@ impl EditorEngine {
         buffer,
         component_registry,
       };
-
+      
       if buffer.is_empty() {
         self.render_empty_state(&render_args)
       } else {
@@ -274,4 +270,17 @@ impl EditorEngine {
 
     render_pipeline
   }
+
+  pub fn viewport_width(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.cols }
+
+  pub fn viewport_height(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.rows }
+}
+
+#[derive(Debug)]
+enum CaretPaintStyle {
+  /// Using cursor show / hide.
+  #[allow(dead_code)]
+  GlobalCursor,
+  /// Painting the editor_buffer.get_caret() position w/ reverse style.
+  LocalPaintedEffect,
 }

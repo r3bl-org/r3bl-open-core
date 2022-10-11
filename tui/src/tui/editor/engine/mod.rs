@@ -16,16 +16,11 @@
  */
 
 // Attach.
-pub mod arg_types;
-pub mod buffer;
-pub mod editor_component;
-pub mod engine;
+pub mod editor_engine;
+pub mod editor_op;
+pub mod editor_op_impl;
 
 // Re-export.
-pub use arg_types::*;
-pub use buffer::*;
-pub use editor_component::*;
-pub use engine::*;
-
-// Tests.
-pub mod test_editor;
+pub use editor_engine::*;
+pub use editor_op::*;
+pub use editor_op_impl::*;
