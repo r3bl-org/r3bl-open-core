@@ -168,10 +168,8 @@ pub mod move_caret {
   pub fn to_end_of_line(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
 
-    let line_content_display_width = get_content::line_display_width_at_row_index(
-      buffer,
-      buffer.get_caret(CaretKind::ScrollAdjusted).row,
-    );
+    let line_content_display_width =
+      get_content::line_display_width_at_row_index(buffer, buffer.get_caret(CaretKind::ScrollAdjusted).row);
     let viewport_width = engine.viewport_width();
     validate::apply_change(buffer, engine, |_, caret, scroll_offset| {
       set_caret_col(
@@ -201,18 +199,11 @@ pub mod move_caret {
         }
       }
       CaretColLocation::AtStartOfLine | CaretColLocation::InMiddleOfLine => {
-        let UnicodeStringSegmentSliceResult { unicode_width, .. } =
-          get_content::string_at_caret(buffer, engine)?;
+        let UnicodeStringSegmentSliceResult { unicode_width, .. } = get_content::string_at_caret(buffer, engine)?;
         let max_display_width = get_content::line_display_width_at_caret(buffer, engine);
         let viewport_width = engine.viewport_width();
         validate::apply_change(buffer, engine, |_, caret, scroll_offset| {
-          inc_caret_col(
-            caret,
-            scroll_offset,
-            unicode_width,
-            max_display_width,
-            viewport_width,
-          );
+          inc_caret_col(caret, scroll_offset, unicode_width, max_display_width, viewport_width);
         });
       }
     }
@@ -253,21 +244,13 @@ pub mod move_caret {
 
   pub fn page_up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     let viewport_height = engine.viewport_height();
-    change_caret_row_by(
-      EditorArgsMut { engine, buffer },
-      viewport_height,
-      CaretDirection::Up,
-    );
+    change_caret_row_by(EditorArgsMut { engine, buffer }, viewport_height, CaretDirection::Up);
     None
   }
 
   pub fn page_down(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     let viewport_height = engine.viewport_height();
-    change_caret_row_by(
-      EditorArgsMut { engine, buffer },
-      viewport_height,
-      CaretDirection::Down,
-    );
+    change_caret_row_by(EditorArgsMut { engine, buffer }, viewport_height, CaretDirection::Down);
     None
   }
 }
@@ -301,20 +284,14 @@ pub mod get_content {
     next_line.is_some()
   }
 
-  pub fn line_at_caret_to_string(
-    buffer: &EditorBuffer,
-    _engine: &EditorEngine,
-  ) -> Option<UnicodeString> {
+  pub fn line_at_caret_to_string(buffer: &EditorBuffer, _engine: &EditorEngine) -> Option<UnicodeString> {
     empty_check_early_return!(buffer, @None);
     let row_index = buffer.get_caret(CaretKind::ScrollAdjusted).row;
     let line = buffer.get_lines().get(ch!(@to_usize row_index))?;
     Some(line.clone())
   }
 
-  pub fn next_line_below_caret_to_string(
-    buffer: &EditorBuffer,
-    _engine: &EditorEngine,
-  ) -> Option<UnicodeString> {
+  pub fn next_line_below_caret_to_string(buffer: &EditorBuffer, _engine: &EditorEngine) -> Option<UnicodeString> {
     empty_check_early_return!(buffer, @None);
     let row_index = buffer.get_caret(CaretKind::ScrollAdjusted).row;
     let line = buffer.get_lines().get(ch!(@to_usize row_index + 1))?;
@@ -326,10 +303,7 @@ pub mod get_content {
     prev_line.is_some()
   }
 
-  pub fn prev_line_above_caret_to_string(
-    buffer: &EditorBuffer,
-    _engine: &EditorEngine,
-  ) -> Option<UnicodeString> {
+  pub fn prev_line_above_caret_to_string(buffer: &EditorBuffer, _engine: &EditorEngine) -> Option<UnicodeString> {
     empty_check_early_return!(buffer, @None);
     let row_index = buffer.get_caret(CaretKind::ScrollAdjusted).row;
     if row_index == ch!(0) {
@@ -339,10 +313,7 @@ pub mod get_content {
     Some(line.clone())
   }
 
-  pub fn string_at_caret(
-    buffer: &EditorBuffer,
-    _engine: &EditorEngine,
-  ) -> Option<UnicodeStringSegmentSliceResult> {
+  pub fn string_at_caret(buffer: &EditorBuffer, _engine: &EditorEngine) -> Option<UnicodeStringSegmentSliceResult> {
     empty_check_early_return!(buffer, @None);
     let caret_adj = buffer.get_caret(CaretKind::ScrollAdjusted);
     let line = buffer.get_lines().get(ch!(@to_usize caret_adj.row))?;
@@ -394,11 +365,7 @@ pub mod mut_content {
     let col: usize = ch!(@to_usize caret_adj.col);
 
     if buffer.get_lines().get(row).is_some() {
-      insert_into_existing_line(
-        EditorArgsMut { buffer, engine },
-        position!(col: col, row: row),
-        chunk,
-      );
+      insert_into_existing_line(EditorArgsMut { buffer, engine }, position!(col: col, row: row), chunk);
     } else {
       fill_in_missing_lines_up_to_row(EditorArgsMut { buffer, engine }, row);
       insert_into_new_line(EditorArgsMut { buffer, engine }, row, chunk);
@@ -690,10 +657,7 @@ pub mod mut_content {
 
     validate::apply_change(buffer, engine, |lines, caret, scroll_offset| {
       // Actually add the character to the correct line.
-      let _ = replace(
-        &mut lines[ch!(@to_usize caret_adj_row)],
-        UnicodeString::from(chunk),
-      );
+      let _ = replace(&mut lines[ch!(@to_usize caret_adj_row)], UnicodeString::from(chunk));
 
       let line_content_display_width = lines[caret_adj_row].display_width;
       let col_amt = ch!(UnicodeString::str_display_width(chunk));
@@ -743,19 +707,14 @@ pub mod validate {
 
   /// This function is visible inside the editor_ops.rs module only. It is not meant to be called
   /// directly, but instead is called by [validate::apply_change].
-  pub fn validate_caret_col_position_not_in_middle_of_grapheme_cluster(
-    args: EditorArgsMut<'_>,
-  ) -> Nope {
+  pub fn validate_caret_col_position_not_in_middle_of_grapheme_cluster(args: EditorArgsMut<'_>) -> Nope {
     let EditorArgsMut { buffer, engine } = args;
 
     let viewport_width = engine.viewport_width();
 
     let (lines, caret, scroll_offset) = buffer.get_mut();
     let row_idx = EditorBuffer::calc_scroll_adj_caret_row(caret, scroll_offset);
-    let col_idx = ch!(EditorBuffer::calc_scroll_adj_caret_col(
-      caret,
-      scroll_offset
-    ));
+    let col_idx = ch!(EditorBuffer::calc_scroll_adj_caret_col(caret, scroll_offset));
     let line = lines.get(row_idx)?;
     let segment = line.is_display_col_in_middle_of_grapheme_cluster(col_idx)?;
 
@@ -786,10 +745,7 @@ pub mod scroll {
     let scroll_offset = buffer.get_scroll_offset();
     let line_content_display_width = get_content::line_display_width_at_caret(buffer, engine);
 
-    let caret_adj_col = ch!(EditorBuffer::calc_scroll_adj_caret_col(
-      &caret,
-      &scroll_offset
-    ));
+    let caret_adj_col = ch!(EditorBuffer::calc_scroll_adj_caret_col(&caret, &scroll_offset));
 
     let is_caret_col_overflow_content_width = caret_adj_col >= line_content_display_width;
 
@@ -807,22 +763,13 @@ pub mod scroll {
     line_content_display_width: ChUnit,
     desired_col: ChUnit,
   ) {
-    let caret_adj_col = ch!(EditorBuffer::calc_scroll_adj_caret_col(
-      caret,
-      scroll_offset
-    ));
+    let caret_adj_col = ch!(EditorBuffer::calc_scroll_adj_caret_col(caret, scroll_offset));
 
     match caret_adj_col.cmp(&desired_col) {
       Ordering::Less => {
         // Move caret right.
         let diff = desired_col - caret_adj_col;
-        inc_caret_col(
-          caret,
-          scroll_offset,
-          diff,
-          line_content_display_width,
-          viewport_width,
-        );
+        inc_caret_col(caret, scroll_offset, diff, line_content_display_width, viewport_width);
       }
       Ordering::Greater => {
         // Move caret left.
@@ -991,10 +938,7 @@ pub mod scroll {
 
   /// Clip desired_caret_adj_row (to the max buffer length) if it overflows past the bottom of the
   /// buffer.
-  pub fn clip_caret_row_to_content_height(
-    buffer: &mut EditorBuffer,
-    desired_caret_adj_row: &mut ChUnit,
-  ) {
+  pub fn clip_caret_row_to_content_height(buffer: &mut EditorBuffer, desired_caret_adj_row: &mut ChUnit) {
     // Clip desired_caret_adj_row if it overflows past the bottom of the buffer.
     let max_row_count = ch!(buffer.get_lines().len(), @dec);
     let is_past_end_of_buffer = *desired_caret_adj_row > max_row_count;
@@ -1013,11 +957,7 @@ pub mod scroll {
   /// the viewport height.
   ///
   /// This is meant to be called inside [validate::apply_change].
-  pub fn inc_caret_row(
-    caret: &mut Position,
-    scroll_offset: &mut ScrollOffset,
-    viewport_height: ChUnit,
-  ) -> usize {
+  pub fn inc_caret_row(caret: &mut Position, scroll_offset: &mut ScrollOffset, viewport_height: ChUnit) -> usize {
     let at_bottom_of_viewport = caret.row >= viewport_height;
 
     // Fun fact: The following logic is the same whether scroll is active or not.
@@ -1103,8 +1043,8 @@ pub mod scroll {
       let caret_row_adj = buffer.get_caret(CaretKind::ScrollAdjusted).row;
       let scroll_offset_row = buffer.get_scroll_offset().row;
 
-      let is_caret_row_adj_within_viewport = caret_row_adj >= scroll_offset_row
-        && caret_row_adj <= (scroll_offset_row + viewport_height);
+      let is_caret_row_adj_within_viewport =
+        caret_row_adj >= scroll_offset_row && caret_row_adj <= (scroll_offset_row + viewport_height);
 
       match is_caret_row_adj_within_viewport {
         true => {

@@ -26,9 +26,7 @@ pub struct State {
 }
 
 impl Display for State {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "State {{ buffers: {:?} }}", self.buffers)
-  }
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "State {{ buffers: {:?} }}", self.buffers) }
 }
 
 impl HasEditorBuffers for State {

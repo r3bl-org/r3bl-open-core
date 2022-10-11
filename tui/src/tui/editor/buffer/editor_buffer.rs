@@ -132,11 +132,7 @@ mod constructor {
     fn default() -> Self {
       // Potentially do any other initialization here.
       call_if_true!(DEBUG_TUI_MOD, {
-        log_no_err!(
-          DEBUG,
-          "🪙 {}",
-          "construct EditorBuffer { lines, caret, lolcat }"
-        );
+        log_no_err!(DEBUG, "🪙 {}", "construct EditorBuffer { lines, caret, lolcat }");
       });
 
       Self {

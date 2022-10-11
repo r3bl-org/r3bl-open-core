@@ -33,10 +33,8 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
         RenderOp::EnterRawMode => "EnterRawMode".into(),
         RenderOp::ExitRawMode => "ExitRawMode".into(),
         RenderOp::MoveCursorPositionAbs(pos) => format!("MoveCursorPositionAbs({:?})", pos),
-        RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => format!(
-          "MoveCursorPositionRelTo({:?}, {:?})",
-          box_origin_pos, content_rel_pos
-        ),
+        RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) =>
+          format!("MoveCursorPositionRelTo({:?}, {:?})", box_origin_pos, content_rel_pos),
         RenderOp::ClearScreen => "ClearScreen".into(),
         RenderOp::SetFgColor(fg_color) => format!("SetFgColor({:?})", fg_color),
         RenderOp::SetBgColor(bg_color) => format!("SetBgColor({:?})", bg_color),
@@ -68,10 +66,8 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
         RenderOp::CursorShow => "CursorShow".into(),
         RenderOp::CursorHide => "CursorHide".into(),
         RenderOp::RequestShowCaretAtPositionAbs(pos) => format!("ShowCursorAtPosition({:?})", pos),
-        RenderOp::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => format!(
-          "ShowCursorAtPosition({:?}, {:?})",
-          box_origin_pos, content_rel_pos
-        ),
+        RenderOp::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) =>
+          format!("ShowCursorAtPosition({:?}, {:?})", box_origin_pos, content_rel_pos),
       }
     )
   }

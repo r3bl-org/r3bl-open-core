@@ -125,8 +125,7 @@ mod addition {
     }
 
     // Aggregate paddings.
-    let aggregate_padding: ChUnit =
-      lhs.padding.unwrap_or_else(|| ch!(0)) + rhs.padding.unwrap_or_else(|| ch!(0));
+    let aggregate_padding: ChUnit = lhs.padding.unwrap_or_else(|| ch!(0)) + rhs.padding.unwrap_or_else(|| ch!(0));
     if *aggregate_padding > 0 {
       new_style.padding = aggregate_padding.into();
     } else {

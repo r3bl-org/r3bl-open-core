@@ -112,9 +112,7 @@ use fn_wrapper::{make_safe_async, make_shareable};
 use proc_macro::TokenStream;
 
 #[proc_macro_derive(Builder)]
-pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
-  builder::derive_proc_macro_impl(input)
-}
+pub fn derive_macro_builder(input: TokenStream) -> TokenStream { builder::derive_proc_macro_impl(input) }
 
 /// Example.
 ///
@@ -145,12 +143,8 @@ pub fn make_struct_safe_to_share_and_mutate(input: TokenStream) -> TokenStream {
   note = "please use [`AsyncMiddleware`] or [`AsyncSubscriber`] instead"
 )]
 #[proc_macro]
-pub fn make_safe_async_fn_wrapper(input: TokenStream) -> TokenStream {
-  make_safe_async::fn_proc_macro_impl(input)
-}
+pub fn make_safe_async_fn_wrapper(input: TokenStream) -> TokenStream { make_safe_async::fn_proc_macro_impl(input) }
 
 #[deprecated(since = "0.7.12", note = "please use [`AsyncReducer`] instead")]
 #[proc_macro]
-pub fn make_shareable_fn_wrapper(input: TokenStream) -> TokenStream {
-  make_shareable::fn_proc_macro_impl(input)
-}
+pub fn make_shareable_fn_wrapper(input: TokenStream) -> TokenStream { make_shareable::fn_proc_macro_impl(input) }

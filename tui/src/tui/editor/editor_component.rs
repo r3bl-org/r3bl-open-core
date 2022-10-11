@@ -65,11 +65,7 @@ where
     config_options: EditorEngineConfigOptions,
     on_buffer_change: OnEditorBufferChangeFn<S, A>,
   ) -> Arc<RwLock<Self>> {
-    Arc::new(RwLock::new(EditorComponent::new(
-      id,
-      config_options,
-      on_buffer_change,
-    )))
+    Arc::new(RwLock::new(EditorComponent::new(id, config_options, on_buffer_change)))
   }
 }
 
@@ -127,7 +123,7 @@ where
         shared_store,
         self_id: &self.id,
       };
-      
+
       match self.engine.apply(engine_args, input_event).await? {
         EngineResponse::Applied(buffer) => {
           if let Some(on_change_handler) = self.on_editor_buffer_change_handler {

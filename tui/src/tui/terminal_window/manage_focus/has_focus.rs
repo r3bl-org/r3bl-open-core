@@ -56,9 +56,7 @@ impl HasFocus {
   pub fn does_id_have_focus(&self, id: &str) -> bool { self.id == Some(id.into()) }
 
   /// Check whether the id of the [FlexBox] currently has keyboard focus.
-  pub fn does_current_box_have_focus(&self, current_box: &FlexBox) -> bool {
-    self.does_id_have_focus(&current_box.id)
-  }
+  pub fn does_current_box_have_focus(&self, current_box: &FlexBox) -> bool { self.does_id_have_focus(&current_box.id) }
 
   /// For a given [FlexBox] id, set the position of the cursor inside of it.
   pub fn set_cursor_position_for_id(&mut self, id: &str, maybe_position: Option<Position>) {

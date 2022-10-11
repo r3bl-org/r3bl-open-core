@@ -116,7 +116,7 @@ impl EditorEngine {
         buffer,
         component_registry,
       };
-      
+
       if buffer.is_empty() {
         self.render_empty_state(&render_args)
       } else {
@@ -174,11 +174,7 @@ impl EditorEngine {
   }
 
   /// Implement caret painting using two different strategies represented by [CaretPaintStyle].
-  fn render_caret<S, A>(
-    &mut self,
-    style: CaretPaintStyle,
-    render_args: &RenderArgs<'_, S, A>,
-  ) -> RenderPipeline
+  fn render_caret<S, A>(&mut self, style: CaretPaintStyle, render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
@@ -235,9 +231,7 @@ impl EditorEngine {
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
-    let RenderArgs {
-      component_registry, ..
-    } = render_args;
+    let RenderArgs { component_registry, .. } = render_args;
     let mut render_pipeline: RenderPipeline = RenderPipeline::default();
     let mut content_cursor_pos = position! { col: 0 , row: 0 };
 

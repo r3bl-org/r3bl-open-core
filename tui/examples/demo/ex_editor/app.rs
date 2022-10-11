@@ -92,10 +92,7 @@ mod app_impl {
     // ╭┄┄┄┄┄┄┄┄┄┄┄┄╮
     // │ app_render │
     // ╯            ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-    async fn app_render(
-      &mut self,
-      args: GlobalScopeArgs<'_, State, Action>,
-    ) -> CommonResult<RenderPipeline> {
+    async fn app_render(&mut self, args: GlobalScopeArgs<'_, State, Action>) -> CommonResult<RenderPipeline> {
       throws_with_return!({
         let GlobalScopeArgs {
           state,
@@ -160,23 +157,14 @@ mod construct_components {
           let on_buffer_change: OnEditorBufferChangeFn<_, _> = |shared_store, my_id, buffer| {
             spawn_dispatch_action!(shared_store, Action::UpdateEditorBuffer(my_id, buffer));
           };
-          EditorComponent::new_shared(
-            editor_id,
-            EditorEngineConfigOptions::default(),
-            on_buffer_change,
-          )
+          let config_options = EditorEngineConfigOptions::default();
+          EditorComponent::new_shared(editor_id, config_options, on_buffer_change)
         };
 
-        self
-          .component_registry
-          .put(editor_id, shared_editor_component);
+        self.component_registry.put(editor_id, shared_editor_component);
 
         call_if_true!(DEBUG_TUI_MOD, {
-          log_no_err!(
-            DEBUG,
-            "🪙 {}",
-            "construct EditorComponent { on_buffer_change }"
-          );
+          log_no_err!(DEBUG, "🪙 {}", "construct EditorComponent { on_buffer_change }");
         });
       }
 
@@ -184,12 +172,7 @@ mod construct_components {
       if self.component_registry.has_focus.get_id().is_none() {
         self.component_registry.has_focus.set_id(editor_id);
         call_if_true!(DEBUG_TUI_MOD, {
-          log_no_err!(
-            DEBUG,
-            "🪙 {} = {}",
-            "init component_registry.has_focus",
-            editor_id
-          );
+          log_no_err!(DEBUG, "🪙 {} = {}", "init component_registry.has_focus", editor_id);
         });
       }
     }

@@ -143,9 +143,7 @@ impl EditorOp {
           CaretDirection::Down => move_caret::down(buffer, engine),
         };
       }
-      EditorOp::InsertString(chunk) => {
-        mut_content::insert_str_at_caret(EditorArgsMut { buffer, engine }, &chunk)
-      }
+      EditorOp::InsertString(chunk) => mut_content::insert_str_at_caret(EditorArgsMut { buffer, engine }, &chunk),
       EditorOp::Resize(_) => {
         // Check to see whether scroll is valid.
         scroll::validate_scroll(EditorArgsMut { buffer, engine });

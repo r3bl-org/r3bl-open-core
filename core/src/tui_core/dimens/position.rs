@@ -215,9 +215,7 @@ pub mod debug_formatter {
   use super::*;
 
   impl Debug for Position {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-      write!(f, "[col:{}, row:{}]", *self.col, *self.row)
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "[col:{}, row:{}]", *self.col, *self.row) }
   }
 }
 

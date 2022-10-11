@@ -31,9 +31,7 @@ pub fn make_unicode_string_from(this: &str) -> UnicodeString {
   let mut my_unicode_string_segments = vec![];
   let mut my_unicode_width_offset_accumulator: ChUnit = ch!(0);
 
-  for (grapheme_cluster_index, (byte_offset, grapheme_cluster_str)) in
-    this.grapheme_indices(true).enumerate()
-  {
+  for (grapheme_cluster_index, (byte_offset, grapheme_cluster_str)) in this.grapheme_indices(true).enumerate() {
     let unicode_width = ch!(grapheme_cluster_str.width());
     my_unicode_string_segments.push(GraphemeClusterSegment {
       string: grapheme_cluster_str.into(),

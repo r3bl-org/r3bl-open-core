@@ -40,10 +40,7 @@ macro_rules! fire {
   (@add_pop => $arg_event_consumed: ident, $arg_shared_store: ident, $arg_action: expr) => {
     spawn_and_consume_event!($arg_event_consumed, $arg_shared_store, $arg_action);
 
-    debug_log_action(
-      "ColumnRenderComponent::handle_event".to_string(),
-      $arg_action,
-    );
+    debug_log_action("ColumnRenderComponent::handle_event".to_string(), $arg_action);
 
     call_if_true!(
       DEBUG_TUI_MOD,
@@ -127,9 +124,7 @@ impl Component<State, Action> for ColumnRenderComponent {
     current_box: &FlexBox,
   ) -> CommonResult<RenderPipeline> {
     throws_with_return!({
-      let ComponentScopeArgs {
-        component_registry, ..
-      } = args;
+      let ComponentScopeArgs { component_registry, .. } = args;
 
       // Fixed strings.
       let line_1 = format!("{} - Hello", current_box.id);
@@ -175,10 +170,7 @@ impl Component<State, Action> for ColumnRenderComponent {
       };
 
       // Paint is_focused.
-      if component_registry
-        .has_focus
-        .does_current_box_have_focus(current_box)
-      {
+      if component_registry.has_focus.does_current_box_have_focus(current_box) {
         render_pipeline! {
           @push_into render_pipeline at ZOrder::Normal =>
             RenderOp::MoveCursorPositionRelTo(

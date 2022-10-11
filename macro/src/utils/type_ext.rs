@@ -33,9 +33,7 @@ pub trait TypeExtHasIdent {
 
 pub trait TypeExtHasGenericArgs {
   fn has_angle_bracketed_generic_args(&self) -> bool;
-  fn get_angle_bracketed_generic_args_result(
-    &self,
-  ) -> Result<Punctuated<GenericArgument, Comma>, ()>;
+  fn get_angle_bracketed_generic_args_result(&self) -> Result<Punctuated<GenericArgument, Comma>, ()>;
   fn get_angle_bracketed_generic_args_idents_result(&self) -> Result<Vec<Ident>, ()>;
   fn to_string(&self) -> String;
 }
@@ -112,9 +110,7 @@ impl TypeExtHasGenericArgs for syn::Type {
   }
 
   /// Ok if self.type_path.path.segments.first().arguments.args exists.
-  fn get_angle_bracketed_generic_args_result(
-    &self,
-  ) -> Result<Punctuated<GenericArgument, Comma>, ()> {
+  fn get_angle_bracketed_generic_args_result(&self) -> Result<Punctuated<GenericArgument, Comma>, ()> {
     if let Type::Path(ref type_path) = self {
       let path = &type_path.path;
       let path_arguments = &path.segments.first().unwrap().arguments;

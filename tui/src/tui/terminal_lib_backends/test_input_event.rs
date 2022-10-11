@@ -96,9 +96,7 @@ mod tests {
       };
       let maybe_modifier_keys = convert_key_modifiers(&key_event.modifiers);
       assert!(maybe_modifier_keys.is_some());
-      assert!(maybe_modifier_keys
-        .unwrap()
-        .contains(ModifierKeysMask::CTRL));
+      assert!(maybe_modifier_keys.unwrap().contains(ModifierKeysMask::CTRL));
     }
     // "Ctrl + Shift + X"
     {

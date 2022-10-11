@@ -93,19 +93,13 @@ impl EventStreamExt for EventStream {
         match input_event {
           Ok(input_event) => Some(input_event),
           Err(e) => {
-            call_if_true!(
-              DEBUG_SHOW_TERMINAL_BACKEND,
-              log_no_err!(ERROR, "Error: {:?}", e)
-            );
+            call_if_true!(DEBUG_SHOW_TERMINAL_BACKEND, log_no_err!(ERROR, "Error: {:?}", e));
             None
           }
         }
       }
       Some(Err(e)) => {
-        call_if_true!(
-          DEBUG_SHOW_TERMINAL_BACKEND,
-          log_no_err!(ERROR, "Error: {:?}", e)
-        );
+        call_if_true!(DEBUG_SHOW_TERMINAL_BACKEND, log_no_err!(ERROR, "Error: {:?}", e));
         None
       }
       _ => None,

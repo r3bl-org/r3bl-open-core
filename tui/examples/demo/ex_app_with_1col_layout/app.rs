@@ -63,10 +63,7 @@ mod app_impl {
       )
     }
 
-    async fn app_render(
-      &mut self,
-      args: GlobalScopeArgs<'_, State, Action>,
-    ) -> CommonResult<RenderPipeline> {
+    async fn app_render(&mut self, args: GlobalScopeArgs<'_, State, Action>) -> CommonResult<RenderPipeline> {
       throws_with_return!({
         let GlobalScopeArgs {
           state,

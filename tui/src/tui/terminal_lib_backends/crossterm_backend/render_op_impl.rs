@@ -36,20 +36,14 @@ pub struct RenderOpImplCrossterm;
 
 #[async_trait]
 impl PaintRenderOp for RenderOpImplCrossterm {
-  async fn paint(
-    &self,
-    skip_flush: &mut bool,
-    command_ref: &RenderOp,
-    shared_tw_data: &SharedTWData,
-  ) {
+  async fn paint(&self, skip_flush: &mut bool, command_ref: &RenderOp, shared_tw_data: &SharedTWData) {
     match command_ref {
       RenderOp::Noop => {}
       RenderOp::RequestShowCaretAtPositionAbs(pos) => {
         request_show_caret_at_position_abs(pos, shared_tw_data).await;
       }
       RenderOp::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => {
-        request_show_caret_at_position_rel_to(box_origin_pos, content_rel_pos, shared_tw_data)
-          .await;
+        request_show_caret_at_position_rel_to(box_origin_pos, content_rel_pos, shared_tw_data).await;
       }
       RenderOp::EnterRawMode => {
         raw_mode_enter(skip_flush, shared_tw_data).await;
@@ -206,11 +200,7 @@ fn set_bg_color(color: &TWColor) {
   )
 }
 
-async fn print_text_with_attributes(
-  text_arg: &String,
-  maybe_style: &Option<Style>,
-  shared_tw_data: &SharedTWData,
-) {
+async fn print_text_with_attributes(text_arg: &String, maybe_style: &Option<Style>, shared_tw_data: &SharedTWData) {
   // Are ANSI codes present?
   let truncation_policy = {
     if ANSIText::try_strip_ansi(text_arg).is_some() {

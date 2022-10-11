@@ -86,16 +86,13 @@ impl UnicodeString {
   }
 
   /// `local_index` is the index of the grapheme cluster in the `vec_segment`.
-  pub fn at_logical_index(&self, logical_index: usize) -> Option<&GraphemeClusterSegment> {
-    self.get(logical_index)
-  }
+  pub fn at_logical_index(&self, logical_index: usize) -> Option<&GraphemeClusterSegment> { self.get(logical_index) }
 
   /// `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
   pub fn at_display_col(&self, display_col: ChUnit) -> Option<&GraphemeClusterSegment> {
     self.iter().find(|&grapheme_cluster_segment| {
       let segment_display_col_start: ChUnit = grapheme_cluster_segment.display_col_offset;
-      let segment_display_col_end: ChUnit =
-        segment_display_col_start + grapheme_cluster_segment.unicode_width;
+      let segment_display_col_end: ChUnit = segment_display_col_start + grapheme_cluster_segment.unicode_width;
       display_col >= segment_display_col_start && display_col < segment_display_col_end
     })
   }
@@ -104,9 +101,7 @@ impl UnicodeString {
   /// - `local_index` is the index of the grapheme cluster in the `vec_segment`.
   /// - `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
   pub fn logical_index_at_display_col(&self, display_col: ChUnit) -> Option<usize> {
-    self
-      .at_display_col(display_col)
-      .map(|segment| segment.logical_index)
+    self.at_display_col(display_col).map(|segment| segment.logical_index)
   }
 
   /// Convert a `logical_index` to a `display_col`.
@@ -120,10 +115,7 @@ impl UnicodeString {
 
   /// Return the string and unicode width of the grapheme cluster segment at the given `display_col`.
   /// If this `display_col` falls in the middle of a grapheme cluster, then return [None].
-  pub fn get_string_at_display_col(
-    &self,
-    display_col: ChUnit,
-  ) -> Option<UnicodeStringSegmentSliceResult> {
+  pub fn get_string_at_display_col(&self, display_col: ChUnit) -> Option<UnicodeStringSegmentSliceResult> {
     let segment = self.at_display_col(display_col)?;
     // What if the display_col is in the middle of a grapheme cluster?
     if display_col != segment.display_col_offset {
@@ -139,10 +131,7 @@ impl UnicodeString {
 
   /// If the given `display_col` falls in the middle of a grapheme cluster, then return the
   /// [GraphemeClusterSegment] at that `display_col`. Otherwise return [None].
-  pub fn is_display_col_in_middle_of_grapheme_cluster(
-    &self,
-    display_col: ChUnit,
-  ) -> Option<GraphemeClusterSegment> {
+  pub fn is_display_col_in_middle_of_grapheme_cluster(&self, display_col: ChUnit) -> Option<GraphemeClusterSegment> {
     let segment = self.at_display_col(display_col);
     if let Some(segment) = segment {
       if display_col != segment.display_col_offset {
@@ -152,10 +141,7 @@ impl UnicodeString {
     None
   }
 
-  pub fn get_string_at_left_of_display_col(
-    &self,
-    display_col: ChUnit,
-  ) -> Option<UnicodeStringSegmentSliceResult> {
+  pub fn get_string_at_left_of_display_col(&self, display_col: ChUnit) -> Option<UnicodeStringSegmentSliceResult> {
     let segment_at_col = self.at_display_col(display_col)?;
     if segment_at_col.logical_index > 0 {
       let segment_left_of_col = self.at_logical_index(segment_at_col.logical_index - 1)?;

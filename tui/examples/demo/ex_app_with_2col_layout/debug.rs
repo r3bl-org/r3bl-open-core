@@ -30,11 +30,6 @@ pub fn debug_log_action(src: String, action: Action) {
 pub fn debug_log_has_focus(src: String, has_focus: &HasFocus) {
   call_if_true!(
     DEBUG_TUI_MOD,
-    log_no_err!(
-      INFO,
-      "👀 {} -> focus change & rerender: {:?}",
-      src,
-      has_focus
-    )
+    log_no_err!(INFO, "👀 {} -> focus change & rerender: {:?}", src, has_focus)
   );
 }

@@ -33,11 +33,7 @@ use crate::{tui::DEBUG_SHOW_PIPELINE, *};
 /// last, ie, on top of all else) regardless of the [ZOrder] they were added to in the pipeline:
 /// 1. [RenderOp::RequestShowCaretAtPositionAbs]
 /// 2. [RenderOp::RequestShowCaretAtPositionRelTo]
-pub async fn paint(
-  pipeline: &RenderPipeline,
-  flush_kind: FlushKind,
-  shared_tw_data: &SharedTWData,
-) {
+pub async fn paint(pipeline: &RenderPipeline, flush_kind: FlushKind, shared_tw_data: &SharedTWData) {
   let mut skip_flush = false;
 
   if let FlushKind::ClearBeforeFlush = flush_kind {
@@ -51,8 +47,8 @@ pub async fn paint(
   for z_order in RENDER_ORDERED_Z_ORDER_ARRAY.iter() {
     if let Some(render_ops) = pipeline.get(z_order) {
       for command_ref in render_ops.iter() {
-        if let RenderOp::RequestShowCaretAtPositionAbs(_)
-        | RenderOp::RequestShowCaretAtPositionRelTo(_, _) = command_ref
+        if let RenderOp::RequestShowCaretAtPositionAbs(_) | RenderOp::RequestShowCaretAtPositionRelTo(_, _) =
+          command_ref
         {
           hoisted_op_vec.push(command_ref.clone());
         } else {
@@ -83,11 +79,7 @@ pub async fn paint(
 
   // Debug output.
   call_if_true!(DEBUG_SHOW_PIPELINE, {
-    log_no_err!(
-      INFO,
-      "🎨 render_pipeline::paint() ok ✅: pipeline: \n{:?}",
-      pipeline,
-    );
+    log_no_err!(INFO, "🎨 render_pipeline::paint() ok ✅: pipeline: \n{:?}", pipeline,);
   });
 }
 
@@ -96,10 +88,7 @@ pub async fn paint(
 /// 2. If the [Position] is outside of the bounds of the window then it is clamped to the nearest
 ///    edge of the window. This clamped [Position] is returned.
 /// 3. This also saves the clamped [Position] to [SharedTWData].
-pub async fn sanitize_and_save_abs_position(
-  orig_abs_pos: Position,
-  shared_tw_data: &SharedTWData,
-) -> Position {
+pub async fn sanitize_and_save_abs_position(orig_abs_pos: Position, shared_tw_data: &SharedTWData) -> Position {
   let Size {
     cols: max_cols,
     rows: max_rows,

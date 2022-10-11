@@ -27,11 +27,7 @@ impl UnicodeString {
 
   /// Returns a new ([NewUnicodeStringResult]) tuple. Does not modify
   /// [self.string](UnicodeString::string).
-  pub fn insert_char_at_display_col(
-    &self,
-    display_col: ChUnit,
-    chunk: &str,
-  ) -> Option<NewUnicodeStringResult> {
+  pub fn insert_char_at_display_col(&self, display_col: ChUnit, chunk: &str) -> Option<NewUnicodeStringResult> {
     let maybe_logical_index = self.logical_index_at_display_col(display_col);
     match maybe_logical_index {
       // Insert somewhere inside bounds of self.string.
@@ -49,10 +45,7 @@ impl UnicodeString {
         let new_string = make_new_string_from(vec_segment_clone);
 
         // In the caller - update the caret position based on the unicode width of the character.
-        Some(NewUnicodeStringResult::new(
-          new_string,
-          character_display_width,
-        ))
+        Some(NewUnicodeStringResult::new(new_string, character_display_width))
       }
       // Add to end of self.string.
       None => {
@@ -64,20 +57,14 @@ impl UnicodeString {
         let character_display_width = UnicodeString::str_display_width(chunk);
 
         // In the caller - update the caret position based on the unicode width of the character.
-        Some(NewUnicodeStringResult::new(
-          new_string,
-          ch!(character_display_width),
-        ))
+        Some(NewUnicodeStringResult::new(new_string, ch!(character_display_width)))
       }
     }
   }
 
   /// Returns two new tuples: *left* ([NewUnicodeStringResult]), *right*
   /// ([NewUnicodeStringResult]). Does not modify [self.string](UnicodeString::string).
-  pub fn split_at_display_col(
-    &self,
-    display_col: ChUnit,
-  ) -> Option<(NewUnicodeStringResult, NewUnicodeStringResult)> {
+  pub fn split_at_display_col(&self, display_col: ChUnit) -> Option<(NewUnicodeStringResult, NewUnicodeStringResult)> {
     let split_logical_index = self.logical_index_at_display_col(display_col)?;
     let max_logical_index = self.len();
 
@@ -148,10 +135,7 @@ impl UnicodeString {
     str_left_unicode_width += str_right_unicode_width;
 
     if *str_left_unicode_width > 0 {
-      Some(NewUnicodeStringResult::new(
-        str_left,
-        str_left_unicode_width,
-      ))
+      Some(NewUnicodeStringResult::new(str_left, str_left_unicode_width))
     } else {
       None
     }

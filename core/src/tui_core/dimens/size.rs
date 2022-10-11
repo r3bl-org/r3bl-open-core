@@ -77,9 +77,7 @@ pub mod debug_formatter {
   use super::*;
 
   impl Display for Size {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-      write!(f, "Size: [{}, {}]", *self.rows, *self.cols)
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "Size: [{}, {}]", *self.rows, *self.cols) }
   }
 
   impl Debug for Size {

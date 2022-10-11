@@ -138,12 +138,8 @@ mod tests {
       padding: 1
     };
 
-    let mut my_style = style_bold_green_fg
-      + style_dim
-      + style_yellow_bg
-      + style_padding
-      + style_red_fg
-      + style_padding_another;
+    let mut my_style =
+      style_bold_green_fg + style_dim + style_yellow_bg + style_padding + style_red_fg + style_padding_another;
 
     debug!(my_style);
 
@@ -205,10 +201,7 @@ mod tests {
         assert_eq2!(result.as_ref().unwrap()[1].id, "style2");
       }
       // Does not contain.
-      assert_eq2!(
-        stylesheet.find_styles_by_ids(vec!["style3", "style4"]),
-        None
-      );
+      assert_eq2!(stylesheet.find_styles_by_ids(vec!["style3", "style4"]), None);
       assert_eq2!(get_styles!(from: stylesheet, ["style3", "style4"]), None);
     }
   }
@@ -253,10 +246,7 @@ mod tests {
     assert_eq2!(result.as_ref().unwrap().len(), 2);
     assert_eq2!(result.as_ref().unwrap()[0].id, "style1");
     assert_eq2!(result.as_ref().unwrap()[1].id, "style2");
-    assert_eq2!(
-      stylesheet.find_styles_by_ids(vec!["style13", "style41"]),
-      None
-    );
+    assert_eq2!(stylesheet.find_styles_by_ids(vec!["style13", "style41"]), None);
     let style7 = make_a_style("style7");
     let result = stylesheet.add_style(style7);
     result.unwrap();

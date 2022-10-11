@@ -62,11 +62,7 @@ where
 pub mod user_data_ops {
   use super::*;
 
-  pub fn get<S, A>(
-    component_registry: &ComponentRegistry<S, A>,
-    id: &str,
-    key: &str,
-  ) -> Option<String>
+  pub fn get<S, A>(component_registry: &ComponentRegistry<S, A>, id: &str, key: &str) -> Option<String>
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
@@ -78,19 +74,12 @@ pub mod user_data_ops {
       .map(|s| s.to_string())
   }
 
-  pub fn put<S, A>(
-    component_registry: &mut ComponentRegistry<S, A>,
-    id: &str,
-    key: &str,
-    value: &str,
-  ) where
+  pub fn put<S, A>(component_registry: &mut ComponentRegistry<S, A>, id: &str, key: &str, value: &str)
+  where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
-    let map = component_registry
-      .user_data
-      .entry(id.to_string())
-      .or_default();
+    let map = component_registry.user_data.entry(id.to_string()).or_default();
     map.insert(key.to_string(), value.to_string());
   }
 }
@@ -100,9 +89,7 @@ where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Display + Clone + Sync + Send,
 {
-  pub fn get_focused_component_ref(
-    this: &mut ComponentRegistry<S, A>,
-  ) -> Option<SharedComponent<S, A>> {
+  pub fn get_focused_component_ref(this: &mut ComponentRegistry<S, A>) -> Option<SharedComponent<S, A>> {
     if let Some(ref id) = this.has_focus.id {
       if let Some(component) = this.get(id) {
         return Some(component.clone());
@@ -111,10 +98,7 @@ where
     None
   }
 
-  pub fn get_component_ref_by_id(
-    this: &mut ComponentRegistry<S, A>,
-    id: &str,
-  ) -> Option<SharedComponent<S, A>> {
+  pub fn get_component_ref_by_id(this: &mut ComponentRegistry<S, A>, id: &str) -> Option<SharedComponent<S, A>> {
     if let Some(component) = this.get(id) {
       return Some(component.clone());
     }

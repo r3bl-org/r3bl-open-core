@@ -94,13 +94,8 @@ impl Parse for SafeFnWrapperSyntaxInfo {
     let wrapper_name_type: Type = input.parse()?;
 
     // 👀 Wrapper Name Type generic args, eg: `<K,V>`.
-    let wrapper_name_type_generic_args = match wrapper_name_type.has_angle_bracketed_generic_args()
-    {
-      true => Some(
-        wrapper_name_type
-          .get_angle_bracketed_generic_args_result()
-          .unwrap(),
-      ),
+    let wrapper_name_type_generic_args = match wrapper_name_type.has_angle_bracketed_generic_args() {
+      true => Some(wrapper_name_type.get_angle_bracketed_generic_args_result().unwrap()),
       false => None,
     };
 

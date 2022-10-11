@@ -22,10 +22,7 @@ use std::{collections::HashMap,
           sync::{atomic::AtomicUsize, Arc, RwLock}};
 
 use super::{arena_types::HasId, ArenaMap, FilterFn, NodeRef, ResultUidList, WeakNodeRef};
-use crate::utils::{call_if_some,
-                   unwrap_arc_read_lock_and_call,
-                   unwrap_arc_write_lock_and_call,
-                   with_mut};
+use crate::utils::{call_if_some, unwrap_arc_read_lock_and_call, unwrap_arc_write_lock_and_call, with_mut};
 /// This struct represents a node in a tree. It may have a parent. It can hold
 /// multiple children. And it has a payload. It also has an id that uniquely
 /// identifies it. An [`Arena`] or [`super::MTArena`] is used to hold nodes.
@@ -178,9 +175,7 @@ where
     result
   }
 
-  pub fn node_exists(&self, node_id: usize) -> bool {
-    self.map.read().unwrap().contains_key(&node_id.get_id())
-  }
+  pub fn node_exists(&self, node_id: usize) -> bool { self.map.read().unwrap().contains_key(&node_id.get_id()) }
 
   pub fn has_parent(&self, node_id: usize) -> bool {
     if self.node_exists(node_id) {
@@ -326,11 +321,7 @@ where
     new_node_id
   }
 
-  fn generate_uid(&self) -> usize {
-    self
-      .atomic_counter
-      .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
-  }
+  fn generate_uid(&self) -> usize { self.atomic_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst) }
 
   pub fn new() -> Self {
     Arena {
