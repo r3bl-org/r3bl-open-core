@@ -279,18 +279,15 @@ where
     throws_with_return!({
       let latest_state = shared_store.read().await.get_state();
       let window_size = shared_tw_data.read().await.get_size();
+      let global_scope_args = GlobalScopeArgs {
+        shared_tw_data,
+        shared_store,
+        state: &latest_state,
+      };
       shared_app
         .write()
         .await
-        .app_handle_event(
-          GlobalScopeArgs {
-            shared_tw_data,
-            shared_store,
-            state: &latest_state,
-          },
-          window_size,
-          input_event,
-        )
+        .app_handle_event(global_scope_args, window_size, input_event)
         .await?
     });
   }
@@ -308,15 +305,13 @@ where
         maybe_state.unwrap()
       };
 
-      let render_result = shared_app
-        .write()
-        .await
-        .app_render(GlobalScopeArgs {
-          state: &state,
-          shared_store,
-          shared_tw_data,
-        })
-        .await;
+      let global_scope_args = GlobalScopeArgs {
+        state: &state,
+        shared_store,
+        shared_tw_data,
+      };
+
+      let render_result = shared_app.write().await.app_render(global_scope_args).await;
 
       match render_result {
         Err(error) => {

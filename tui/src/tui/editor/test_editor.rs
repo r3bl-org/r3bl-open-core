@@ -34,15 +34,15 @@ mod tests {
     // 2 ▸a         │
     //   └─▴────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::InsertString("abc".into()),
-        EditorBufferCommand::InsertNewLine,
-        EditorBufferCommand::InsertString("ab".into()),
-        EditorBufferCommand::InsertNewLine,
-        EditorBufferCommand::InsertString("a".into()),
+        EditorOp::InsertString("abc".into()),
+        EditorOp::InsertNewLine,
+        EditorOp::InsertString("ab".into()),
+        EditorOp::InsertNewLine,
+        EditorOp::InsertString("a".into()),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -61,13 +61,10 @@ mod tests {
     // 2 ▸          │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Left),
-        EditorBufferCommand::Delete,
-      ],
+      vec![EditorOp::MoveCaret(CaretDirection::Left), EditorOp::Delete],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -84,14 +81,14 @@ mod tests {
     // 1 ▸ab        │
     //   └──▴───────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Up),
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
-        EditorBufferCommand::Delete,
+        EditorOp::MoveCaret(CaretDirection::Up),
+        EditorOp::MoveCaret(CaretDirection::Right),
+        EditorOp::MoveCaret(CaretDirection::Right),
+        EditorOp::Delete,
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -109,13 +106,13 @@ mod tests {
     // 0 ▸abcab     │
     //   └───▴──────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Up),
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
-        EditorBufferCommand::Delete,
+        EditorOp::MoveCaret(CaretDirection::Up),
+        EditorOp::MoveCaret(CaretDirection::Right),
+        EditorOp::Delete,
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -142,15 +139,15 @@ mod tests {
     // 2 ▸a         │
     //   └─▴────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::InsertString("abc".into()),
-        EditorBufferCommand::InsertNewLine,
-        EditorBufferCommand::InsertString("ab".into()),
-        EditorBufferCommand::InsertNewLine,
-        EditorBufferCommand::InsertString("a".into()),
+        EditorOp::InsertString("abc".into()),
+        EditorOp::InsertNewLine,
+        EditorOp::InsertString("ab".into()),
+        EditorOp::InsertNewLine,
+        EditorOp::InsertString("a".into()),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -169,10 +166,10 @@ mod tests {
     // 2 ▸          │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::Backspace],
+      vec![EditorOp::Backspace],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -189,10 +186,10 @@ mod tests {
     // 1 ▸ab        │
     //   └──▴───────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::Backspace],
+      vec![EditorOp::Backspace],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -208,12 +205,12 @@ mod tests {
     // 0 ▸abcab     │
     //   └───▴──────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Left),
-        EditorBufferCommand::MoveCaret(CaretDirection::Left),
+        EditorOp::MoveCaret(CaretDirection::Left),
+        EditorOp::MoveCaret(CaretDirection::Left),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -223,10 +220,10 @@ mod tests {
       buffer.get_caret(CaretKind::ScrollAdjusted),
       position!(col: 0, row: 1)
     );
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::Backspace],
+      vec![EditorOp::Backspace],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -244,13 +241,13 @@ mod tests {
     // 0 ▸abcab😃   │
     //   └───────▴──┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
-        EditorBufferCommand::InsertString("😃".into()),
+        EditorOp::MoveCaret(CaretDirection::Right),
+        EditorOp::MoveCaret(CaretDirection::Right),
+        EditorOp::InsertString("😃".into()),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -262,10 +259,10 @@ mod tests {
     );
 
     // Press backspace.
-    EditorBuffer::apply_editor_event(
+    EditorOp::apply_editor_event(
       &mut engine,
       &mut buffer,
-      EditorBufferCommand::Backspace,
+      EditorOp::Backspace,
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -284,13 +281,13 @@ mod tests {
     // 1 ▸1         │
     //   └─▴────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::InsertString("😀".into()),
-        EditorBufferCommand::InsertNewLine,
-        EditorBufferCommand::InsertChar('1'),
+        EditorOp::InsertString("😀".into()),
+        EditorOp::InsertNewLine,
+        EditorOp::InsertChar('1'),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -307,10 +304,10 @@ mod tests {
     // 1 │1         │
     //   └──▴───────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::MoveCaret(CaretDirection::Up)],
+      vec![EditorOp::MoveCaret(CaretDirection::Up)],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -332,13 +329,13 @@ mod tests {
     // 1 │😀        │
     //   └──▴───────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::InsertChar('1'),
-        EditorBufferCommand::InsertNewLine,
-        EditorBufferCommand::InsertString("😀".into()),
+        EditorOp::InsertChar('1'),
+        EditorOp::InsertNewLine,
+        EditorOp::InsertString("😀".into()),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -356,12 +353,12 @@ mod tests {
     // 1 │😀        │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Up),
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
+        EditorOp::MoveCaret(CaretDirection::Up),
+        EditorOp::MoveCaret(CaretDirection::Right),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -378,10 +375,10 @@ mod tests {
     // 1 ▸😀        │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::MoveCaret(CaretDirection::Down)],
+      vec![EditorOp::MoveCaret(CaretDirection::Down)],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -405,15 +402,15 @@ mod tests {
     // 2 ▸a         │
     //   └─▴────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::InsertString("abc".into()),
-        EditorBufferCommand::InsertNewLine,
-        EditorBufferCommand::InsertString("ab".into()),
-        EditorBufferCommand::InsertNewLine,
-        EditorBufferCommand::InsertString("a".into()),
+        EditorOp::InsertString("abc".into()),
+        EditorOp::InsertNewLine,
+        EditorOp::InsertString("ab".into()),
+        EditorOp::InsertNewLine,
+        EditorOp::InsertString("a".into()),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -432,14 +429,14 @@ mod tests {
     // 2 ▸a         │
     //   └─▴────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Down),
-        EditorBufferCommand::MoveCaret(CaretDirection::Down),
-        EditorBufferCommand::MoveCaret(CaretDirection::Down),
-        EditorBufferCommand::MoveCaret(CaretDirection::Down),
+        EditorOp::MoveCaret(CaretDirection::Down),
+        EditorOp::MoveCaret(CaretDirection::Down),
+        EditorOp::MoveCaret(CaretDirection::Down),
+        EditorOp::MoveCaret(CaretDirection::Down),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -451,10 +448,10 @@ mod tests {
     );
 
     // Move caret up.
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::MoveCaret(CaretDirection::Up)],
+      vec![EditorOp::MoveCaret(CaretDirection::Up)],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -465,10 +462,10 @@ mod tests {
     );
 
     // Move caret up.
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::MoveCaret(CaretDirection::Up)],
+      vec![EditorOp::MoveCaret(CaretDirection::Up)],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -479,13 +476,13 @@ mod tests {
     );
 
     // Move caret up a few times. Caret moves to position 0.
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Up),
-        EditorBufferCommand::MoveCaret(CaretDirection::Up),
-        EditorBufferCommand::MoveCaret(CaretDirection::Up),
+        EditorOp::MoveCaret(CaretDirection::Up),
+        EditorOp::MoveCaret(CaretDirection::Up),
+        EditorOp::MoveCaret(CaretDirection::Up),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -504,13 +501,13 @@ mod tests {
     // 2 │a         │
     //   └──▴───────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
-        EditorBufferCommand::MoveCaret(CaretDirection::Down),
+        EditorOp::MoveCaret(CaretDirection::Right),
+        EditorOp::MoveCaret(CaretDirection::Right),
+        EditorOp::MoveCaret(CaretDirection::Down),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -529,10 +526,10 @@ mod tests {
     // 2 ▸a         │
     //   └─▴────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::MoveCaret(CaretDirection::Down)],
+      vec![EditorOp::MoveCaret(CaretDirection::Down)],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -565,10 +562,10 @@ mod tests {
     // 0 ▸a         │
     //   └─▴────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::InsertChar('a')],
+      vec![EditorOp::InsertChar('a')],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -586,10 +583,10 @@ mod tests {
     // 1 ▸          │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::InsertNewLine],
+      vec![EditorOp::InsertNewLine],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -608,10 +605,10 @@ mod tests {
     // 1 ▸a         │
     //   └─▴────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::InsertChar('a')],
+      vec![EditorOp::InsertChar('a')],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -624,10 +621,10 @@ mod tests {
     // 1 ▸a         │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::MoveCaret(CaretDirection::Left)],
+      vec![EditorOp::MoveCaret(CaretDirection::Left)],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -642,10 +639,10 @@ mod tests {
     // 2 ▸a         │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::InsertNewLine],
+      vec![EditorOp::InsertNewLine],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -665,12 +662,12 @@ mod tests {
     // 2 ▸ab        │
     //   └──▴───────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
-        EditorBufferCommand::InsertChar('b'),
+        EditorOp::MoveCaret(CaretDirection::Right),
+        EditorOp::InsertChar('b'),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -694,12 +691,12 @@ mod tests {
     // 3 ▸b         │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Left),
-        EditorBufferCommand::InsertNewLine,
+        EditorOp::MoveCaret(CaretDirection::Left),
+        EditorOp::InsertNewLine,
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -721,13 +718,13 @@ mod tests {
     // 4 │b         │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Up),
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
-        EditorBufferCommand::InsertNewLine,
+        EditorOp::MoveCaret(CaretDirection::Up),
+        EditorOp::MoveCaret(CaretDirection::Right),
+        EditorOp::InsertNewLine,
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -751,10 +748,10 @@ mod tests {
     // 0 ▸a         │
     //   └─▴────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::InsertChar('a')],
+      vec![EditorOp::InsertChar('a')],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -767,12 +764,12 @@ mod tests {
     // 0 ▸a         │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Left),
-        EditorBufferCommand::MoveCaret(CaretDirection::Left), // No-op.
+        EditorOp::MoveCaret(CaretDirection::Left),
+        EditorOp::MoveCaret(CaretDirection::Left), // No-op.
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -786,10 +783,10 @@ mod tests {
     // 0 ▸1a        │
     //   └─▴────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::InsertChar('1')],
+      vec![EditorOp::InsertChar('1')],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -808,10 +805,10 @@ mod tests {
     // 0 ▸1a        │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::MoveCaret(CaretDirection::Left)],
+      vec![EditorOp::MoveCaret(CaretDirection::Left)],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -824,10 +821,10 @@ mod tests {
     // 0 ▸1a        │
     //   └─▴────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::MoveCaret(CaretDirection::Right)],
+      vec![EditorOp::MoveCaret(CaretDirection::Right)],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -840,10 +837,10 @@ mod tests {
     // 0 ▸12a       │
     //   └──▴───────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::InsertChar('2')],
+      vec![EditorOp::InsertChar('2')],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -862,12 +859,12 @@ mod tests {
     // 0 ▸12a       │
     //   └───▴──────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
-        EditorBufferCommand::MoveCaret(CaretDirection::Right), // No-op.
+        EditorOp::MoveCaret(CaretDirection::Right),
+        EditorOp::MoveCaret(CaretDirection::Right), // No-op.
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -885,13 +882,13 @@ mod tests {
     // 0 ▸12a       │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Left),
-        EditorBufferCommand::MoveCaret(CaretDirection::Left),
-        EditorBufferCommand::MoveCaret(CaretDirection::Left),
+        EditorOp::MoveCaret(CaretDirection::Left),
+        EditorOp::MoveCaret(CaretDirection::Left),
+        EditorOp::MoveCaret(CaretDirection::Left),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -909,15 +906,15 @@ mod tests {
     // 1 │          │
     //   └───▴──────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
-        EditorBufferCommand::MoveCaret(CaretDirection::Right),
-        EditorBufferCommand::InsertNewLine,
-        EditorBufferCommand::MoveCaret(CaretDirection::Left),
+        EditorOp::MoveCaret(CaretDirection::Right),
+        EditorOp::MoveCaret(CaretDirection::Right),
+        EditorOp::MoveCaret(CaretDirection::Right),
+        EditorOp::InsertNewLine,
+        EditorOp::MoveCaret(CaretDirection::Left),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -935,10 +932,10 @@ mod tests {
     // 1 ▸          │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::MoveCaret(CaretDirection::Right)],
+      vec![EditorOp::MoveCaret(CaretDirection::Right)],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -971,10 +968,10 @@ mod tests {
       buffer.get_caret(CaretKind::ScrollAdjusted),
       position!(col: 0, row: 0)
     );
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::InsertChar('a')],
+      vec![EditorOp::InsertChar('a')],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -996,10 +993,10 @@ mod tests {
       buffer: &mut buffer,
       engine: &mut engine,
     });
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::InsertChar('b')],
+      vec![EditorOp::InsertChar('b')],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -1022,13 +1019,13 @@ mod tests {
     // 3 ▸😀░       │
     //   └──▴───────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
       vec![
-        EditorBufferCommand::InsertNewLine,
-        EditorBufferCommand::InsertNewLine,
-        EditorBufferCommand::InsertChar('😀'),
+        EditorOp::InsertNewLine,
+        EditorOp::InsertNewLine,
+        EditorOp::InsertChar('😀'),
       ],
       &make_shared_tw_data(),
       &mut make_component_registry(),
@@ -1057,10 +1054,10 @@ mod tests {
     // 3 ▸😀d░      │
     //   └───▴──────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::InsertChar('d')],
+      vec![EditorOp::InsertChar('d')],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -1088,10 +1085,10 @@ mod tests {
     // 3 ▸😀d🙏🏽  ░  │
     //   └───────▴──┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::InsertString("🙏🏽".into())],
+      vec![EditorOp::InsertString("🙏🏽".into())],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -1122,13 +1119,10 @@ mod tests {
     // 0 ▸hello     │
     //   └▴─────────┘
     //   C0123456789
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![
-        EditorBufferCommand::InsertString("hello".to_string()),
-        EditorBufferCommand::Home,
-      ],
+      vec![EditorOp::InsertString("hello".to_string()), EditorOp::Home],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -1139,10 +1133,10 @@ mod tests {
     );
 
     // Press end.
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::End],
+      vec![EditorOp::End],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -1162,12 +1156,12 @@ mod tests {
     let max_lines = 20;
     let mut count = max_lines;
     while count > 0 {
-      EditorBuffer::apply_editor_events(
+      EditorOp::apply_editor_events(
         &mut engine,
         &mut buffer,
         vec![
-          EditorBufferCommand::InsertString(format!("{}: {}", count, "hello")),
-          EditorBufferCommand::InsertNewLine,
+          EditorOp::InsertString(format!("{}: {}", count, "hello")),
+          EditorOp::InsertNewLine,
         ],
         &make_shared_tw_data(),
         &mut make_component_registry(),
@@ -1178,10 +1172,10 @@ mod tests {
     assert_eq2!(buffer.len(), ch!(max_lines + 1)); /* One empty line after content */
 
     // Press page up.
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::PageUp],
+      vec![EditorOp::PageUp],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -1192,10 +1186,10 @@ mod tests {
     );
 
     // Press page up.
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::PageUp],
+      vec![EditorOp::PageUp],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -1206,10 +1200,10 @@ mod tests {
     );
 
     // Press page up.
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::PageUp],
+      vec![EditorOp::PageUp],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -1220,10 +1214,10 @@ mod tests {
     );
 
     // Press page down.
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::PageDown],
+      vec![EditorOp::PageDown],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -1235,10 +1229,10 @@ mod tests {
     );
 
     // Press page down.
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::PageDown],
+      vec![EditorOp::PageDown],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -1249,10 +1243,10 @@ mod tests {
     );
 
     // Press page down.
-    EditorBuffer::apply_editor_events(
+    EditorOp::apply_editor_events(
       &mut engine,
       &mut buffer,
-      vec![EditorBufferCommand::PageDown],
+      vec![EditorOp::PageDown],
       &make_shared_tw_data(),
       &mut make_component_registry(),
       "",
@@ -1271,12 +1265,12 @@ mod tests {
     // Insert "hello" many times.
     let max_lines = 20;
     for count in 1..=max_lines {
-      EditorBuffer::apply_editor_events(
+      EditorOp::apply_editor_events(
         &mut engine,
         &mut buffer,
         vec![
-          EditorBufferCommand::InsertString(format!("{}: {}", count, "hello")),
-          EditorBufferCommand::InsertNewLine,
+          EditorOp::InsertString(format!("{}: {}", count, "hello")),
+          EditorOp::InsertNewLine,
         ],
         &make_shared_tw_data(),
         &mut make_component_registry(),
@@ -1287,10 +1281,10 @@ mod tests {
 
     // Press up 12 times.
     for _ in 1..12 {
-      EditorBuffer::apply_editor_events(
+      EditorOp::apply_editor_events(
         &mut engine,
         &mut buffer,
-        vec![EditorBufferCommand::MoveCaret(CaretDirection::Up)],
+        vec![EditorOp::MoveCaret(CaretDirection::Up)],
         &make_shared_tw_data(),
         &mut make_component_registry(),
         "",
@@ -1305,10 +1299,10 @@ mod tests {
 
     // Press down 9 times.
     for _ in 1..9 {
-      EditorBuffer::apply_editor_events(
+      EditorOp::apply_editor_events(
         &mut engine,
         &mut buffer,
-        vec![EditorBufferCommand::MoveCaret(CaretDirection::Down)],
+        vec![EditorOp::MoveCaret(CaretDirection::Down)],
         &make_shared_tw_data(),
         &mut make_component_registry(),
         "",
@@ -1330,10 +1324,10 @@ mod tests {
     // Insert a long line of text.
     let max_cols = 15;
     for count in 1..=max_cols {
-      EditorBuffer::apply_editor_events(
+      EditorOp::apply_editor_events(
         &mut engine,
         &mut buffer,
-        vec![EditorBufferCommand::InsertString(format!("{}", count))],
+        vec![EditorOp::InsertString(format!("{}", count))],
         &make_shared_tw_data(),
         &mut make_component_registry(),
         "",
@@ -1349,10 +1343,10 @@ mod tests {
 
     // Press left 5 times.
     for _ in 1..5 {
-      EditorBuffer::apply_editor_events(
+      EditorOp::apply_editor_events(
         &mut engine,
         &mut buffer,
-        vec![EditorBufferCommand::MoveCaret(CaretDirection::Left)],
+        vec![EditorOp::MoveCaret(CaretDirection::Left)],
         &make_shared_tw_data(),
         &mut make_component_registry(),
         "",
@@ -1367,10 +1361,10 @@ mod tests {
 
     // Press right 3 times.
     for _ in 1..3 {
-      EditorBuffer::apply_editor_events(
+      EditorOp::apply_editor_events(
         &mut engine,
         &mut buffer,
-        vec![EditorBufferCommand::MoveCaret(CaretDirection::Right)],
+        vec![EditorOp::MoveCaret(CaretDirection::Right)],
         &make_shared_tw_data(),
         &mut make_component_registry(),
         "",

@@ -50,7 +50,7 @@ where
   /// results in a Redux action being created and then dispatched to the given store.
   pub fn new(
     id: &str,
-    config_options: EditorConfigOptions,
+    config_options: EditorEngineConfigOptions,
     on_buffer_change: OnEditorBufferChangeFn<S, A>,
   ) -> Self {
     Self {
@@ -62,7 +62,7 @@ where
 
   pub fn new_shared(
     id: &str,
-    config_options: EditorConfigOptions,
+    config_options: EditorEngineConfigOptions,
     on_buffer_change: OnEditorBufferChangeFn<S, A>,
   ) -> Arc<RwLock<Self>> {
     Arc::new(RwLock::new(EditorComponent::new(
@@ -94,8 +94,8 @@ where
   // ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
   /// This shim simply calls [EditorEngine::apply](EditorEngine::apply) w/ all the necessary
   /// arguments:
-  /// - Global scope: [SharedStore], [SharedTwData].
-  /// - App scope: [S], [ComponentRegistry<S, A>].
+  /// - Global scope: [SharedStore], [SharedTWData].
+  /// - App scope: `S`, [ComponentRegistry<S, A>].
   /// - User input (from [main_event_loop]): [InputEvent].
   async fn handle_event(
     &mut self,
@@ -119,29 +119,24 @@ where
       };
 
       // Try to apply the `input_event` to `editor_engine` to decide whether to fire action.
-      match self
-        .engine
-        .apply(
-          EditorEngineArgs {
-            state,
-            buffer: &my_buffer,
-            component_registry,
-            shared_tw_data,
-            shared_store,
-            self_id: &self.id,
-          },
-          input_event,
-        )
-        .await?
-      {
-        Some(buffer) => {
+      let engine_args = EditorEngineArgs {
+        state,
+        buffer: &my_buffer,
+        component_registry,
+        shared_tw_data,
+        shared_store,
+        self_id: &self.id,
+      };
+      
+      match self.engine.apply(engine_args, input_event).await? {
+        EngineResponse::Applied(buffer) => {
           if let Some(on_change_handler) = self.on_editor_buffer_change_handler {
             let my_id = self.get_id().to_string();
             on_change_handler(shared_store, my_id, buffer);
           }
           EventPropagation::Consumed
         }
-        None => {
+        EngineResponse::NotApplied => {
           // Optional: handle any `input_event` not consumed by `editor_engine`.
           EventPropagation::Propagate
         }
@@ -154,8 +149,8 @@ where
   // ╯        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
   /// This shim simply calls [EditorEngine::apply](EditorEngine::render) w/ all the necessary
   /// arguments:
-  /// - Global scope: [SharedStore], [SharedTwData].
-  /// - App scope: [State], [ComponentRegistry<State, Action>].
+  /// - Global scope: [SharedStore], [SharedTWData].
+  /// - App scope: `S`, [ComponentRegistry<S, A>].
   /// - User input (from [main_event_loop]): [InputEvent].
   async fn render(
     &mut self,
@@ -177,19 +172,15 @@ where
       }
     };
 
-    self
-      .engine
-      .render(
-        EditorEngineArgs {
-          state,
-          buffer: &my_buffer,
-          component_registry,
-          shared_tw_data,
-          shared_store,
-          self_id: &self.id,
-        },
-        current_box,
-      )
-      .await
+    let render_args = EditorEngineArgs {
+      state,
+      buffer: &my_buffer,
+      component_registry,
+      shared_tw_data,
+      shared_store,
+      self_id: &self.id,
+    };
+
+    self.engine.render(render_args, current_box).await
   }
 }
