@@ -36,6 +36,19 @@ macro_rules! empty_check_early_return {
   };
 }
 
+macro_rules! multiline_disabled_check_early_return {
+  ($arg_engine: expr, @None) => {
+    if !$arg_engine.config_options.multiline {
+      return None;
+    }
+  };
+  ($arg_engine: expr, @Nothing) => {
+    if !$arg_engine.config_options.multiline {
+      return;
+    }
+  };
+}
+
 // ╭┄┄┄┄┄┄┄┄┄┄┄╮
 // │ Caret get │
 // ╯           ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
@@ -115,6 +128,7 @@ pub mod move_caret {
 
   pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
+    multiline_disabled_check_early_return!(engine, @None);
 
     match locate_caret::find_row(EditorArgs { buffer, engine }) {
       CaretRowLocation::AtTopOfBuffer => {
@@ -139,6 +153,7 @@ pub mod move_caret {
 
   pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
     empty_check_early_return!(buffer, @None);
+    multiline_disabled_check_early_return!(engine, @None);
 
     if get_content::next_line_below_caret_exists(buffer, engine) {
       // There is a line below the caret.
@@ -243,12 +258,18 @@ pub mod move_caret {
   }
 
   pub fn page_up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    empty_check_early_return!(buffer, @None);
+    multiline_disabled_check_early_return!(engine, @None);
+
     let viewport_height = engine.viewport_height();
     change_caret_row_by(EditorArgsMut { engine, buffer }, viewport_height, CaretDirection::Up);
     None
   }
 
   pub fn page_down(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    empty_check_early_return!(buffer, @None);
+    multiline_disabled_check_early_return!(engine, @None);
+
     let viewport_height = engine.viewport_height();
     change_caret_row_by(EditorArgsMut { engine, buffer }, viewport_height, CaretDirection::Down);
     None
@@ -374,6 +395,8 @@ pub mod mut_content {
 
   pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
     let EditorArgsMut { buffer, engine } = args;
+
+    multiline_disabled_check_early_return!(engine, @Nothing);
 
     if buffer.is_empty() {
       validate::apply_change(buffer, engine, |lines, _, _| {

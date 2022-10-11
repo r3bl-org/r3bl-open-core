@@ -25,10 +25,19 @@ use crate::*;
 
 const DEFAULT_CURSOR_CHAR: char = '▒';
 
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditorEngineConfigOptions {
-  pub multi_line: bool,
+  pub multiline: bool,
   pub syntax_highlight: bool,
+}
+
+impl Default for EditorEngineConfigOptions {
+  fn default() -> Self {
+    Self {
+      multiline: true,
+      syntax_highlight: true,
+    }
+  }
 }
 
 /// Holds data related to rendering in between render calls. This is not stored in the

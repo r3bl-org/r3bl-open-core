@@ -16,15 +16,23 @@
  */
 
 #[cfg(test)]
-mod tests {
+mod test_config_options {
   use r3bl_rs_utils_core::*;
 
+  use super::*;
   use crate::*;
 
   #[test]
-  fn editor_delete() {
+  fn test_config_options_multiline_true() {
+    // multiline true.
     let mut buffer = EditorBuffer::default();
-    let mut engine = make_editor_engine();
+    let mut engine: EditorEngine = EditorEngine {
+      config_options: EditorEngineConfigOptions {
+        multiline: true,
+        ..Default::default()
+      },
+      ..mock_real_objects::make_editor_engine()
+    };
 
     // Insert "abc\nab\na".
     // `this` should look like:
@@ -44,8 +52,111 @@ mod tests {
         EditorOp::InsertNewLine,
         EditorOp::InsertString("a".into()),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
+      "",
+    );
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
+
+    EditorOp::apply_editor_events(
+      &mut engine,
+      &mut buffer,
+      vec![
+        EditorOp::MoveCaret(CaretDirection::Up),
+        EditorOp::MoveCaret(CaretDirection::Up),
+        EditorOp::MoveCaret(CaretDirection::Down),
+      ],
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
+      "",
+    );
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 1));
+  }
+
+  #[test]
+  fn test_config_options_multiline_false() {
+    // multiline false.
+    let mut buffer = EditorBuffer::default();
+    let mut engine: EditorEngine = EditorEngine {
+      config_options: EditorEngineConfigOptions {
+        multiline: false,
+        ..Default::default()
+      },
+      ..mock_real_objects::make_editor_engine()
+    };
+
+    // Insert "abc\nab\na".
+    // `this` should look like:
+    // R ┌──────────┐
+    // 0 ▸abcaba    │
+    //   └──────▴───┘
+    //   C0123456789
+    EditorOp::apply_editor_events(
+      &mut engine,
+      &mut buffer,
+      vec![
+        EditorOp::InsertString("abc".into()),
+        EditorOp::InsertNewLine,
+        EditorOp::InsertString("ab".into()),
+        EditorOp::InsertNewLine,
+        EditorOp::InsertString("a".into()),
+      ],
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
+      "",
+    );
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 6, row: 0));
+
+    EditorOp::apply_editor_events(
+      &mut engine,
+      &mut buffer,
+      vec![
+        EditorOp::MoveCaret(CaretDirection::Up),
+        EditorOp::MoveCaret(CaretDirection::Up),
+        EditorOp::MoveCaret(CaretDirection::Down),
+      ],
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
+      "",
+    );
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 6, row: 0));
+    let maybe_line_str: Option<UnicodeString> = get_content::line_at_caret_to_string(&buffer, &engine);
+    assert_eq2!(maybe_line_str.unwrap().string, "abcaba");
+  }
+}
+
+#[cfg(test)]
+mod test_editor_ops {
+  use r3bl_rs_utils_core::*;
+
+  use super::*;
+  use crate::*;
+
+  #[test]
+  fn editor_delete() {
+    let mut buffer = EditorBuffer::default();
+    let mut engine = mock_real_objects::make_editor_engine();
+
+    // Insert "abc\nab\na".
+    // `this` should look like:
+    // R ┌──────────┐
+    // 0 │abc       │
+    // 1 │ab        │
+    // 2 ▸a         │
+    //   └─▴────────┘
+    //   C0123456789
+    EditorOp::apply_editor_events(
+      &mut engine,
+      &mut buffer,
+      vec![
+        EditorOp::InsertString("abc".into()),
+        EditorOp::InsertNewLine,
+        EditorOp::InsertString("ab".into()),
+        EditorOp::InsertNewLine,
+        EditorOp::InsertString("a".into()),
+      ],
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
@@ -62,8 +173,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::MoveCaret(CaretDirection::Left), EditorOp::Delete],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 2));
@@ -84,8 +195,8 @@ mod tests {
         EditorOp::MoveCaret(CaretDirection::Right),
         EditorOp::Delete,
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_lines().len(), 2);
@@ -105,8 +216,8 @@ mod tests {
         EditorOp::MoveCaret(CaretDirection::Right),
         EditorOp::Delete,
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_lines().len(), 1);
@@ -117,7 +228,7 @@ mod tests {
   #[test]
   fn editor_backspace() {
     let mut buffer = EditorBuffer::default();
-    let mut engine = make_editor_engine();
+    let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "abc\nab\na".
     // `this` should look like:
@@ -137,8 +248,8 @@ mod tests {
         EditorOp::InsertNewLine,
         EditorOp::InsertString("a".into()),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
@@ -155,8 +266,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::Backspace],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 2));
@@ -172,8 +283,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::Backspace],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
@@ -191,8 +302,8 @@ mod tests {
         EditorOp::MoveCaret(CaretDirection::Left),
         EditorOp::MoveCaret(CaretDirection::Left),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 1));
@@ -200,8 +311,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::Backspace],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_lines().len(), 1);
@@ -222,8 +333,8 @@ mod tests {
         EditorOp::MoveCaret(CaretDirection::Right),
         EditorOp::InsertString("😃".into()),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 7, row: 0));
@@ -233,8 +344,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       EditorOp::Backspace,
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert::line_at_caret(&buffer, &engine, "abcab");
@@ -243,7 +354,7 @@ mod tests {
   #[test]
   fn editor_validate_caret_position_on_up() {
     let mut buffer = EditorBuffer::default();
-    let mut engine = make_editor_engine();
+    let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "😀\n1".
     // R ┌──────────┐
@@ -259,8 +370,8 @@ mod tests {
         EditorOp::InsertNewLine,
         EditorOp::InsertChar('1'),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 1));
@@ -275,8 +386,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::MoveCaret(CaretDirection::Up)],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 0));
@@ -285,7 +396,7 @@ mod tests {
   #[test]
   fn editor_validate_caret_position_on_down() {
     let mut buffer = EditorBuffer::default();
-    let mut engine = make_editor_engine();
+    let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "😀\n1".
     // R ┌──────────┐
@@ -301,8 +412,8 @@ mod tests {
         EditorOp::InsertNewLine,
         EditorOp::InsertString("😀".into()),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
@@ -321,8 +432,8 @@ mod tests {
         EditorOp::MoveCaret(CaretDirection::Up),
         EditorOp::MoveCaret(CaretDirection::Right),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 1));
@@ -337,8 +448,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::MoveCaret(CaretDirection::Down)],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
@@ -347,7 +458,7 @@ mod tests {
   #[test]
   fn editor_move_caret_up_down() {
     let mut buffer = EditorBuffer::default();
-    let mut engine = make_editor_engine();
+    let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "abc\nab\na".
     // `this` should look like:
@@ -367,8 +478,8 @@ mod tests {
         EditorOp::InsertNewLine,
         EditorOp::InsertString("a".into()),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
@@ -390,8 +501,8 @@ mod tests {
         EditorOp::MoveCaret(CaretDirection::Down),
         EditorOp::MoveCaret(CaretDirection::Down),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
@@ -401,8 +512,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::MoveCaret(CaretDirection::Up)],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 1));
@@ -412,8 +523,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::MoveCaret(CaretDirection::Up)],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 0));
@@ -427,8 +538,8 @@ mod tests {
         EditorOp::MoveCaret(CaretDirection::Up),
         EditorOp::MoveCaret(CaretDirection::Up),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
@@ -449,8 +560,8 @@ mod tests {
         EditorOp::MoveCaret(CaretDirection::Right),
         EditorOp::MoveCaret(CaretDirection::Down),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
@@ -467,8 +578,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::MoveCaret(CaretDirection::Down)],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
@@ -477,7 +588,7 @@ mod tests {
   #[test]
   fn editor_insert_new_line() {
     let mut buffer = EditorBuffer::default();
-    let mut engine = make_editor_engine();
+    let mut engine = mock_real_objects::make_editor_engine();
 
     // Starts w/ an empty line.
     assert_eq2!(buffer.get_lines().len(), 1);
@@ -500,8 +611,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::InsertChar('a')],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert::none_is_at_caret(&buffer, &engine);
@@ -518,8 +629,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::InsertNewLine],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_lines().len(), 2);
@@ -537,8 +648,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::InsertChar('a')],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
 
@@ -553,8 +664,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::MoveCaret(CaretDirection::Left)],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert::str_is_at_caret(&buffer, &engine, "a");
@@ -571,8 +682,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::InsertNewLine],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_lines().len(), 3);
@@ -591,8 +702,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::MoveCaret(CaretDirection::Right), EditorOp::InsertChar('b')],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
 
@@ -615,8 +726,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::MoveCaret(CaretDirection::Left), EditorOp::InsertNewLine],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert::str_is_at_caret(&buffer, &engine, "b");
@@ -640,8 +751,8 @@ mod tests {
         EditorOp::MoveCaret(CaretDirection::Right),
         EditorOp::InsertNewLine,
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_lines().len(), 5);
@@ -651,7 +762,7 @@ mod tests {
   #[test]
   fn editor_move_caret_left_right() {
     let mut buffer = EditorBuffer::default();
-    let mut engine = make_editor_engine();
+    let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "a".
     // `this` should look like:
@@ -663,8 +774,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::InsertChar('a')],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert::none_is_at_caret(&buffer, &engine);
@@ -682,8 +793,8 @@ mod tests {
         EditorOp::MoveCaret(CaretDirection::Left),
         EditorOp::MoveCaret(CaretDirection::Left), // No-op.
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert::str_is_at_caret(&buffer, &engine, "a");
@@ -698,8 +809,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::InsertChar('1')],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(
@@ -718,8 +829,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::MoveCaret(CaretDirection::Left)],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert::str_is_at_caret(&buffer, &engine, "1");
@@ -734,8 +845,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::MoveCaret(CaretDirection::Right)],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert::str_is_at_caret(&buffer, &engine, "a");
@@ -750,8 +861,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::InsertChar('2')],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert::str_is_at_caret(&buffer, &engine, "a");
@@ -773,8 +884,8 @@ mod tests {
         EditorOp::MoveCaret(CaretDirection::Right),
         EditorOp::MoveCaret(CaretDirection::Right), // No-op.
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert::none_is_at_caret(&buffer, &engine);
@@ -794,8 +905,8 @@ mod tests {
         EditorOp::MoveCaret(CaretDirection::Left),
         EditorOp::MoveCaret(CaretDirection::Left),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
@@ -817,8 +928,8 @@ mod tests {
         EditorOp::InsertNewLine,
         EditorOp::MoveCaret(CaretDirection::Left),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 3, row: 0));
@@ -834,8 +945,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::MoveCaret(CaretDirection::Right)],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 1));
@@ -851,7 +962,7 @@ mod tests {
   #[test]
   fn editor_insertion() {
     let mut buffer = EditorBuffer::default();
-    let mut engine = make_editor_engine();
+    let mut engine = mock_real_objects::make_editor_engine();
 
     // Move caret to col: 0, row: 0. Insert "a".
     // `this` should look like:
@@ -864,8 +975,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::InsertChar('a')],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(*buffer.get_lines(), vec![UnicodeString::from("a")]);
@@ -886,8 +997,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::InsertChar('b')],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(
@@ -913,8 +1024,8 @@ mod tests {
         EditorOp::InsertNewLine,
         EditorOp::InsertChar('😀'),
       ],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(
@@ -941,8 +1052,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::InsertChar('d')],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(
@@ -969,8 +1080,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::InsertString("🙏🏽".into())],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(
@@ -988,7 +1099,7 @@ mod tests {
   #[test]
   fn editor_move_caret_home_end() {
     let mut buffer = EditorBuffer::default();
-    let mut engine = make_editor_engine();
+    let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "hello". Then press home.
     // `this` should look like:
@@ -1000,8 +1111,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::InsertString("hello".to_string()), EditorOp::Home],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
@@ -1011,8 +1122,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::End],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 5, row: 0));
@@ -1021,7 +1132,7 @@ mod tests {
   #[test]
   fn editor_move_caret_page_up_page_down() {
     let mut buffer = EditorBuffer::default();
-    let mut engine = make_editor_engine();
+    let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "hello" many times.
     let max_lines = 20;
@@ -1034,8 +1145,8 @@ mod tests {
           EditorOp::InsertString(format!("{}: {}", count, "hello")),
           EditorOp::InsertNewLine,
         ],
-        &make_shared_tw_data(),
-        &mut make_component_registry(),
+        &mock_real_objects::make_shared_tw_data(),
+        &mut mock_real_objects::make_component_registry(),
         "",
       );
       count -= 1;
@@ -1047,8 +1158,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::PageUp],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 10));
@@ -1058,8 +1169,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::PageUp],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
@@ -1069,8 +1180,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::PageUp],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
@@ -1080,8 +1191,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::PageDown],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
 
@@ -1092,8 +1203,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::PageDown],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 20));
@@ -1103,8 +1214,8 @@ mod tests {
       &mut engine,
       &mut buffer,
       vec![EditorOp::PageDown],
-      &make_shared_tw_data(),
-      &mut make_component_registry(),
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
       "",
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 20));
@@ -1113,7 +1224,7 @@ mod tests {
   #[test]
   fn editor_scroll_vertical() {
     let mut buffer = EditorBuffer::default();
-    let mut engine = make_editor_engine();
+    let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "hello" many times.
     let max_lines = 20;
@@ -1125,8 +1236,8 @@ mod tests {
           EditorOp::InsertString(format!("{}: {}", count, "hello")),
           EditorOp::InsertNewLine,
         ],
-        &make_shared_tw_data(),
-        &mut make_component_registry(),
+        &mock_real_objects::make_shared_tw_data(),
+        &mut mock_real_objects::make_component_registry(),
         "",
       );
     }
@@ -1138,8 +1249,8 @@ mod tests {
         &mut engine,
         &mut buffer,
         vec![EditorOp::MoveCaret(CaretDirection::Up)],
-        &make_shared_tw_data(),
-        &mut make_component_registry(),
+        &mock_real_objects::make_shared_tw_data(),
+        &mut mock_real_objects::make_component_registry(),
         "",
       );
     }
@@ -1153,8 +1264,8 @@ mod tests {
         &mut engine,
         &mut buffer,
         vec![EditorOp::MoveCaret(CaretDirection::Down)],
-        &make_shared_tw_data(),
-        &mut make_component_registry(),
+        &mock_real_objects::make_shared_tw_data(),
+        &mut mock_real_objects::make_component_registry(),
         "",
       );
     }
@@ -1166,7 +1277,7 @@ mod tests {
   #[test]
   fn editor_scroll_horizontal() {
     let mut buffer = EditorBuffer::default();
-    let mut engine = make_editor_engine();
+    let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert a long line of text.
     let max_cols = 15;
@@ -1175,8 +1286,8 @@ mod tests {
         &mut engine,
         &mut buffer,
         vec![EditorOp::InsertString(format!("{}", count))],
-        &make_shared_tw_data(),
-        &mut make_component_registry(),
+        &mock_real_objects::make_shared_tw_data(),
+        &mut mock_real_objects::make_component_registry(),
         "",
       );
     }
@@ -1191,8 +1302,8 @@ mod tests {
         &mut engine,
         &mut buffer,
         vec![EditorOp::MoveCaret(CaretDirection::Left)],
-        &make_shared_tw_data(),
-        &mut make_component_registry(),
+        &mock_real_objects::make_shared_tw_data(),
+        &mut mock_real_objects::make_component_registry(),
         "",
       );
     }
@@ -1206,8 +1317,8 @@ mod tests {
         &mut engine,
         &mut buffer,
         vec![EditorOp::MoveCaret(CaretDirection::Right)],
-        &make_shared_tw_data(),
-        &mut make_component_registry(),
+        &mock_real_objects::make_shared_tw_data(),
+        &mut mock_real_objects::make_component_registry(),
         "",
       );
     }
@@ -1215,60 +1326,63 @@ mod tests {
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 19, row: 0));
     assert_eq2!(buffer.get_scroll_offset(), position!(col: 12, row: 0));
   }
+}
 
-  mod mock_real_objects {
-    use super::*;
+pub mod mock_real_objects {
+  use r3bl_rs_utils_core::*;
 
-    pub fn make_shared_tw_data() -> SharedTWData {
-      use std::sync::Arc;
+  use crate::*;
 
-      use tokio::sync::RwLock;
+  pub fn make_shared_tw_data() -> SharedTWData {
+    use std::sync::Arc;
 
-      let shared_tw_data: SharedTWData = Arc::new(RwLock::new(TWData::default()));
-      shared_tw_data
-    }
+    use tokio::sync::RwLock;
 
-    pub fn make_component_registry() -> ComponentRegistry<String, String> {
-      let component_registry: ComponentRegistry<String, String> = ComponentRegistry::default();
-      component_registry
-    }
+    let shared_tw_data: SharedTWData = Arc::new(RwLock::new(TWData::default()));
+    shared_tw_data
+  }
 
-    pub fn make_editor_engine() -> EditorEngine {
-      EditorEngine {
-        current_box: FlexBox {
-          style_adjusted_bounds_size: size!( cols: 10, rows: 10 ),
-          style_adjusted_origin_pos: position!( col: 0, row: 0 ),
-          ..Default::default()
-        },
+  pub fn make_component_registry() -> ComponentRegistry<String, String> {
+    let component_registry: ComponentRegistry<String, String> = ComponentRegistry::default();
+    component_registry
+  }
+
+  pub fn make_editor_engine() -> EditorEngine {
+    EditorEngine {
+      current_box: FlexBox {
+        style_adjusted_bounds_size: size!( cols: 10, rows: 10 ),
+        style_adjusted_origin_pos: position!( col: 0, row: 0 ),
         ..Default::default()
-      }
+      },
+      ..Default::default()
     }
   }
-  use mock_real_objects::*;
+}
 
-  mod assert {
-    use super::*;
+pub mod assert {
+  use r3bl_rs_utils_core::*;
 
-    pub fn none_is_at_caret(buffer: &EditorBuffer, engine: &EditorEngine) {
-      assert_eq2!(get_content::string_at_caret(buffer, engine), None);
+  use crate::*;
+
+  pub fn none_is_at_caret(buffer: &EditorBuffer, engine: &EditorEngine) {
+    assert_eq2!(get_content::string_at_caret(buffer, engine), None);
+  }
+
+  pub fn str_is_at_caret(editor_buffer: &EditorBuffer, engine: &EditorEngine, expected: &str) {
+    match get_content::string_at_caret(editor_buffer, engine) {
+      Some(UnicodeStringSegmentSliceResult {
+        unicode_string_seg: s, ..
+      }) => assert_eq2!(s.string, expected),
+      None => panic!("Expected string at caret, but got None."),
     }
+  }
 
-    pub fn str_is_at_caret(editor_buffer: &EditorBuffer, engine: &EditorEngine, expected: &str) {
-      match get_content::string_at_caret(editor_buffer, engine) {
-        Some(UnicodeStringSegmentSliceResult {
-          unicode_string_seg: s, ..
-        }) => assert_eq2!(s.string, expected),
-        None => panic!("Expected string at caret, but got None."),
-      }
-    }
-
-    pub fn line_at_caret(editor_buffer: &EditorBuffer, engine: &EditorEngine, expected: &str) {
-      assert_eq2!(
-        get_content::line_at_caret_to_string(editor_buffer, engine)
-          .unwrap()
-          .string,
-        expected
-      );
-    }
+  pub fn line_at_caret(editor_buffer: &EditorBuffer, engine: &EditorEngine, expected: &str) {
+    assert_eq2!(
+      get_content::line_at_caret_to_string(editor_buffer, engine)
+        .unwrap()
+        .string,
+      expected
+    );
   }
 }
