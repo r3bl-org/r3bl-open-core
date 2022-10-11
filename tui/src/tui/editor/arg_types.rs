@@ -31,6 +31,7 @@ where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Display + Clone + Sync + Send,
 {
+  pub engine: &'a mut EditorEngine,
   pub buffer: &'a EditorBuffer,
   pub component_registry: &'a ComponentRegistry<S, A>,
 }
@@ -83,6 +84,7 @@ where
   pub component_registry: &'a mut ComponentRegistry<S, A>,
   pub self_id: &'a str,
   pub buffer: &'a EditorBuffer,
+  pub engine: &'a mut EditorEngine,
 }
 
 // ╭┄┄┄┄┄┄┄┄┄╮

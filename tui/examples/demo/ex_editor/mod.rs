@@ -18,8 +18,8 @@
 // Attach sources.
 pub mod app;
 pub mod launcher;
-pub mod state_management;
+pub mod redux;
 
 // Re-export only inside this module.
 pub use app::*;
-pub use state_management::*;
+pub use redux::*;

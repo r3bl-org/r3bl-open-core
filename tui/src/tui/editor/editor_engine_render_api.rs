@@ -19,61 +19,25 @@ use std::fmt::{Debug, Display};
 
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
-use serde::*;
 
+use super::*;
 use crate::*;
-
 const DEFAULT_CURSOR_CHAR: char = '▒';
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EditorEngineConfigOptions {
-  pub multiline: bool,
-  pub syntax_highlight: bool,
-}
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ EditorEngine render API │
+// ╯                         ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+/// Functions that implement the editor engine.
+pub struct EditorEngineRenderApi;
 
-impl Default for EditorEngineConfigOptions {
-  fn default() -> Self {
-    Self {
-      multiline: true,
-      syntax_highlight: true,
-    }
-  }
-}
-
-/// Holds data related to rendering in between render calls. This is not stored in the
-/// [EditorBuffer] struct, which lives in the [r3bl_redux::Store]. The store provides the underlying
-/// document or buffer struct that holds the actual document.
-///
-/// In order to change the document, you can use the [apply](EditorEngine::apply) method which takes
-/// [InputEvent] and tries to convert it to an [EditorOp] and then execute them against this buffer.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EditorEngine {
-  /// Set by [render](EditorEngine::render).
-  pub current_box: FlexBox,
-  pub config_options: EditorEngineConfigOptions,
-}
-
-pub enum EngineResponse {
-  Applied(EditorBuffer),
-  NotApplied,
-}
-
-impl EditorEngine {
-  pub fn new(config_options: EditorEngineConfigOptions) -> Self {
-    Self {
-      current_box: FlexBox::default(),
-      config_options,
-    }
-  }
-
-  /// Event based interface for the editor. This converts the [InputEvent] into an [EditorOp] and
+impl EditorEngineRenderApi {
+  /// Event based interface for the editor. This converts the [InputEvent] into an [EditorEvent] and
   /// then executes it. Returns a new [EditorBuffer] if the operation was applied otherwise returns
   /// [None].
-  pub async fn apply<S, A>(
-    &mut self,
+  pub async fn apply_event<S, A>(
     args: EditorEngineArgs<'_, S, A>,
     input_event: &InputEvent,
-  ) -> CommonResult<EngineResponse>
+  ) -> CommonResult<ApplyResponse<EditorBuffer>>
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
@@ -83,30 +47,27 @@ impl EditorEngine {
       component_registry,
       shared_tw_data,
       self_id,
+      engine,
       ..
     } = args;
 
-    if let Ok(editor_event) = EditorOp::try_from(input_event) {
+    if let Ok(editor_event) = EditorEvent::try_from(input_event) {
       let mut new_editor_buffer = buffer.clone();
-      EditorOp::apply_editor_event(
-        self,
+      EditorEvent::apply_editor_event(
+        engine,
         &mut new_editor_buffer,
         editor_event,
         shared_tw_data,
         component_registry,
         self_id,
       );
-      Ok(EngineResponse::Applied(new_editor_buffer))
+      Ok(ApplyResponse::Applied(new_editor_buffer))
     } else {
-      Ok(EngineResponse::NotApplied)
+      Ok(ApplyResponse::NotApplied)
     }
   }
 
-  pub async fn render<S, A>(
-    &mut self,
-    args: EditorEngineArgs<'_, S, A>,
-    current_box: &FlexBox,
-  ) -> CommonResult<RenderPipeline>
+  pub async fn render<S, A>(args: EditorEngineArgs<'_, S, A>, current_box: &FlexBox) -> CommonResult<RenderPipeline>
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
@@ -115,40 +76,42 @@ impl EditorEngine {
       let EditorEngineArgs {
         buffer,
         component_registry,
+        engine,
         ..
       } = args;
 
-      self.current_box = current_box.clone();
+      engine.current_box = current_box.clone();
 
       // Create reusable args for render functions.
       let render_args = RenderArgs {
         buffer,
         component_registry,
+        engine,
       };
 
       if buffer.is_empty() {
-        self.render_empty_state(&render_args)
+        EditorEngineRenderApi::render_empty_state(&render_args)
       } else {
-        let q_content = self.render_content(&render_args);
-        let q_caret = self.render_caret(CaretPaintStyle::LocalPaintedEffect, &render_args);
+        let q_content = EditorEngineRenderApi::render_content(&render_args);
+        let q_caret = EditorEngineRenderApi::render_caret(CaretPaintStyle::LocalPaintedEffect, &render_args);
         render_pipeline!(@join_and_drop q_content, q_caret)
       }
     })
   }
 
   // This simply clips the content to the `style_adj_box_bounds_size`.
-  fn render_content<S, A>(&mut self, render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
+  fn render_content<S, A>(render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
-    let RenderArgs { buffer, .. } = render_args;
+    let RenderArgs { buffer, engine, .. } = render_args;
     let mut render_pipeline = render_pipeline!(@new_empty);
 
     let Size {
       cols: max_display_col_count,
       rows: max_display_row_count,
-    } = self.current_box.style_adjusted_bounds_size;
+    } = engine.current_box.style_adjusted_bounds_size;
 
     // Paint each line in the buffer (skipping the scroll_offset.row).
     // https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip
@@ -171,10 +134,10 @@ impl EditorEngine {
       render_pipeline! {
         @push_into render_pipeline at ZOrder::Normal =>
           RenderOp::MoveCursorPositionRelTo(
-            self.current_box.style_adjusted_origin_pos, position! { col: 0 , row: ch!(@to_usize row_index) }
+            engine.current_box.style_adjusted_origin_pos, position! { col: 0 , row: ch!(@to_usize row_index) }
           ),
-          RenderOp::ApplyColors(self.current_box.get_computed_style()),
-          RenderOp::PrintTextWithAttributes(truncated_line.into(), self.current_box.get_computed_style()),
+          RenderOp::ApplyColors(engine.current_box.get_computed_style()),
+          RenderOp::PrintTextWithAttributes(truncated_line.into(), engine.current_box.get_computed_style()),
           RenderOp::ResetColor
       };
     }
@@ -183,7 +146,7 @@ impl EditorEngine {
   }
 
   /// Implement caret painting using two different strategies represented by [CaretPaintStyle].
-  fn render_caret<S, A>(&mut self, style: CaretPaintStyle, render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
+  fn render_caret<S, A>(style: CaretPaintStyle, render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
@@ -191,27 +154,28 @@ impl EditorEngine {
     let RenderArgs {
       component_registry,
       buffer,
+      engine,
       ..
     } = render_args;
     let mut render_pipeline: RenderPipeline = RenderPipeline::default();
 
     if component_registry
       .has_focus
-      .does_current_box_have_focus(&self.current_box)
+      .does_current_box_have_focus(&engine.current_box)
     {
       match style {
         CaretPaintStyle::GlobalCursor => {
           render_pipeline! {
             @push_into render_pipeline at ZOrder::Caret =>
               RenderOp::RequestShowCaretAtPositionRelTo(
-                self.current_box.style_adjusted_origin_pos, buffer.get_caret(CaretKind::Raw))
+                engine.current_box.style_adjusted_origin_pos, buffer.get_caret(CaretKind::Raw))
           };
         }
         CaretPaintStyle::LocalPaintedEffect => {
           let str_at_caret: String = if let Some(UnicodeStringSegmentSliceResult {
             unicode_string_seg: str_seg,
             ..
-          }) = get_content::string_at_caret(buffer, self)
+          }) = EditorEngineDataApi::string_at_caret(buffer, engine)
           {
             str_seg.string
           } else {
@@ -221,12 +185,12 @@ impl EditorEngine {
           render_pipeline! {
             @push_into render_pipeline at ZOrder::Caret =>
             RenderOp::MoveCursorPositionRelTo(
-              self.current_box.style_adjusted_origin_pos, buffer.get_caret(CaretKind::Raw)),
+              engine.current_box.style_adjusted_origin_pos, buffer.get_caret(CaretKind::Raw)),
               RenderOp::PrintTextWithAttributes(
                 str_at_caret,
                 style! { attrib: [reverse] }.into()),
             RenderOp::MoveCursorPositionRelTo(
-              self.current_box.style_adjusted_origin_pos, buffer.get_caret(CaretKind::Raw))
+              engine.current_box.style_adjusted_origin_pos, buffer.get_caret(CaretKind::Raw))
           };
         }
       }
@@ -235,12 +199,16 @@ impl EditorEngine {
     render_pipeline
   }
 
-  fn render_empty_state<S, A>(&mut self, render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
+  pub fn render_empty_state<S, A>(render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
-    let RenderArgs { component_registry, .. } = render_args;
+    let RenderArgs {
+      component_registry,
+      engine,
+      ..
+    } = render_args;
     let mut render_pipeline: RenderPipeline = RenderPipeline::default();
     let mut content_cursor_pos = position! { col: 0 , row: 0 };
 
@@ -248,7 +216,7 @@ impl EditorEngine {
     render_pipeline! {
       @push_into render_pipeline at ZOrder::Normal =>
         RenderOp::MoveCursorPositionRelTo(
-          self.current_box.style_adjusted_origin_pos, position! { col: 0 , row: 0 }),
+          engine.current_box.style_adjusted_origin_pos, position! { col: 0 , row: 0 }),
         RenderOp::ApplyColors(style! {
           color_fg: TWColor::Red
         }.into()),
@@ -259,28 +227,27 @@ impl EditorEngine {
     // Paint the emoji.
     if component_registry
       .has_focus
-      .does_current_box_have_focus(&self.current_box)
+      .does_current_box_have_focus(&engine.current_box)
     {
       render_pipeline! {
         @push_into render_pipeline at ZOrder::Normal =>
           RenderOp::MoveCursorPositionRelTo(
-            self.current_box.style_adjusted_origin_pos,
+            engine.current_box.style_adjusted_origin_pos,
             content_cursor_pos.add_row_with_bounds(
-              ch!(1), self.current_box.style_adjusted_bounds_size.rows)),
+              ch!(1), engine.current_box.style_adjusted_bounds_size.rows)),
           RenderOp::PrintTextWithAttributes("👀".into(), None)
       };
     }
 
     render_pipeline
   }
-
-  pub fn viewport_width(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.cols }
-
-  pub fn viewport_height(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.rows }
 }
 
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ Internal enums │
+// ╯                ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 #[derive(Debug)]
-enum CaretPaintStyle {
+pub(super) enum CaretPaintStyle {
   /// Using cursor show / hide.
   #[allow(dead_code)]
   GlobalCursor,

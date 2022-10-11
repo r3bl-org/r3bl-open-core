@@ -23,29 +23,22 @@ use serde::*;
 
 use crate::*;
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ EditorBuffer │
-// ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
+// │ EditorBuffer struct │
+// ╯                     ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 /// Stores the data for a single editor buffer.
 ///
 /// 1. This struct is stored in the [r3bl_redux::Store].
-/// 2. And it is paired w/ [EditorEngine] at runtime; which is responsible for rendering it to
-///    TUI, and handling user input.
+/// 2. And it is paired w/ [EditorEngine] at runtime; which is responsible for rendering it to TUI,
+///    and handling user input.
 ///
 /// # Modifying the buffer
 ///
-/// You have to supply an [EditorOp] to the [EditorBuffer] to modify it via:
-/// 1. [apply_editor_event](EditorOp::apply_editor_event)
-/// 2. [apply_editor_events](EditorOp::apply_editor_events)
+/// You have to supply an [EditorEvent] to the [EditorBuffer] to modify it via:
+/// 1. [apply_editor_event](EditorEvent::apply_editor_event)
+/// 2. [apply_editor_events](EditorEvent::apply_editor_events)
 ///
-/// In order for the commands to be executed, the following functions are used (in
-/// `editor_buffer_command_impl.rs`):
-/// - [locate_caret]
-/// - [move_caret]
-/// - [get_content]
-/// - [mut_content]
-/// - [validate]
-/// - [scroll]
+/// In order for the commands to be executed, the functions in [EditorEngineDataApi] are used.
 ///
 /// These functions take any one of the following args:
 /// 1. [EditorArgsMut]

@@ -17,15 +17,21 @@
 
 // Attach.
 pub mod arg_types;
-pub mod buffer;
+pub mod editor_buffer;
 pub mod editor_component;
-pub mod engine;
+pub mod editor_engine;
+pub mod editor_engine_data_api;
+pub mod editor_engine_render_api;
+pub mod editor_event;
 
 // Re-export.
 pub use arg_types::*;
-pub use buffer::*;
+pub use editor_buffer::*;
 pub use editor_component::*;
-pub use engine::*;
+pub use editor_engine::*;
+pub use editor_engine_data_api::*;
+pub use editor_engine_render_api::*;
+pub use editor_event::*;
 
 // Tests.
 pub mod test_editor;
