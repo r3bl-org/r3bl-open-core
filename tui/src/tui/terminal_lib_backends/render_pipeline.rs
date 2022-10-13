@@ -193,7 +193,7 @@ pub mod z_order_impl {
   use super::*;
 
   /// Contains the priority that is used to paint the different groups of [RenderOp] items.
-  pub const RENDER_ORDERED_Z_ORDER_ARRAY: [ZOrder; 4] = [ZOrder::Normal, ZOrder::High, ZOrder::Caret, ZOrder::Glass];
+  pub const RENDER_ORDERED_Z_ORDER_ARRAY: [ZOrder; 4] = [ZOrder::Normal, ZOrder::High, ZOrder::Glass, ZOrder::Caret];
 
   #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
   pub enum ZOrder {
