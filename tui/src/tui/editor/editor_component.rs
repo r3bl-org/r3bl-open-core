@@ -92,11 +92,14 @@ where
   // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
   // │ handle_event │
   // ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-  /// This shim simply calls [apply_event](EditorEngineRenderApi::apply_event) w/ all the
-  /// necessary arguments:
+  /// This shim simply calls [apply_event](EditorEngineRenderApi::apply_event) w/ all the necessary
+  /// arguments:
   /// - Global scope: [SharedStore], [SharedTWData].
   /// - App scope: `S`, [ComponentRegistry<S, A>].
   /// - User input (from [main_event_loop]): [InputEvent].
+  ///
+  /// Usually a component must have focus in order for the [App] to
+  /// [route_event_to_focused_component!] in the first place.
   async fn handle_event(
     &mut self,
     args: ComponentScopeArgs<'_, S, A>,
