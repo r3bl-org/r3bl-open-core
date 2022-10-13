@@ -8,6 +8,9 @@ editor engine extras (core):
 
 editor engine extras (core):
   ☐ syntax highlighting support
+  ☐ markdown parsing
+    - https://iximiuz.com/en/posts/rust-writing-parsers-with-nom/
+    - https://blog.logrocket.com/parsing-in-rust-with-nom/
   ☐ support editor config options to enable/disable syntax highlighting & update tests
 
 editor engine extras (auto-completion providers):
@@ -57,3 +60,4 @@ writing:
   ☐ [Update DD for editor component](https://github.com/r3bl-org/r3bl_rs_utils/issues/23)
   ☐ [Write DD for render pipeline & paint](https://github.com/r3bl-org/r3bl_rs_utils/issues/37)
   ☐ [Write DD for tui module](https://github.com/r3bl-org/r3bl_rs_utils/issues/41)
+  ☐ [Write coding pattern article on OOP -> Rust](https://gist.github.com/nazmulidris/f975795b98bc4573d6a0fb1e9bcca090#no-oop-in-rust)
