@@ -27,12 +27,19 @@ pub struct Reducer;
 impl AsyncReducer<State, Action> for Reducer {
   async fn run(&self, action: &Action, state: &State) -> State {
     match action {
-      Action::UpdateEditorBuffer(id, buffer) => {
+      Action::Noop => state.clone(),
+      Action::InsertEditorBuffer(id, buffer) => {
         let mut new_state = state.clone();
         new_state.buffers.insert(id.into(), buffer.clone());
         new_state
       }
-      Action::Noop => state.clone(),
+      Action::SetDialog(title, text) => {
+        let mut new_state = state.clone();
+        let dialog_buffer = &mut new_state.dialog_buffer;
+        dialog_buffer.title = title.into();
+        dialog_buffer.buffer.set_lines(vec![text.into()]);
+        new_state
+      }
     }
   }
 }

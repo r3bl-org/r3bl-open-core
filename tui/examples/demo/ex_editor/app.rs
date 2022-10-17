@@ -31,6 +31,7 @@ use super::*;
 enum Id {
   Container,
   Editor,
+  Dialog,
 }
 
 /// Async trait object that implements the [TWApp] trait.
@@ -59,7 +60,7 @@ mod constructor {
   }
 }
 
-mod app_impl {
+mod impl_app {
   use super::*;
 
   #[async_trait]
@@ -78,6 +79,8 @@ mod app_impl {
         shared_tw_data,
         window_size,
       } = args;
+
+      self.try_activate(input_event);
 
       route_event_to_focused_component!(
         registry:       self.component_registry,
@@ -105,7 +108,7 @@ mod app_impl {
 
         // Render container component.
         let mut surface = surface_start_with_runnable! {
-          runnable:       self,
+          runnable:       app_render::AppWithLayoutRenderer(self),
           stylesheet:     style_helpers::create_stylesheet()?,
           pos:            position!(col:0, row:0),
           size:           adjusted_window_size, // Bottom row for status bar.
@@ -123,9 +126,38 @@ mod app_impl {
       });
     }
   }
+}
+
+mod modal_dialog {
+  use super::*;
+
+  impl AppWithLayout {
+    /// If `input_event` matches <kbd>Ctrl+l</kbd>, then toggle the modal dialog.
+    pub fn try_activate(&mut self, input_event: &InputEvent) {
+      if let Ok(DialogEvent::ActivateModal) = DialogEvent::try_from(
+        input_event,
+        Keypress::WithModifiers {
+          key: Key::Character('l'),
+          mask: ModifierKeysMask::CTRL,
+        },
+      ) {
+        call_if_true!(DEBUG_TUI_MOD, {
+          log_no_err!(DEBUG, "🅰️ activate modal");
+        });
+
+        self.component_registry.has_focus.set_modal_id(&Id::Dialog.to_string());
+      };
+    }
+  }
+}
+
+mod app_render {
+  use super::*;
+
+  pub struct AppWithLayoutRenderer<'a>(pub &'a mut AppWithLayout);
 
   #[async_trait]
-  impl SurfaceRunnable<State, Action> for AppWithLayout {
+  impl SurfaceRunnable<State, Action> for AppWithLayoutRenderer<'_> {
     async fn run_on_surface(
       &mut self,
       args: GlobalScopeArgs<'_, State, Action>,
@@ -138,59 +170,9 @@ mod app_impl {
         window_size,
       } = args;
 
-      self.create_components_populate_registry_init_focus().await;
-      self
-        .create_main_container(surface, state, shared_store, shared_tw_data, window_size)
-        .await
-    }
-  }
-}
+      component_registry::populate(self.0).await;
 
-// Handle component registry.
-mod construct_components {
-  use super::*;
-
-  impl AppWithLayout {
-    pub async fn create_components_populate_registry_init_focus(&mut self) {
       let editor_id = &Id::Editor.to_string();
-
-      // Insert editor component into registry.
-      if self.component_registry.id_does_not_exist(editor_id) {
-        let shared_editor_component = {
-          let on_buffer_change: OnEditorBufferChangeFn<_, _> = |shared_store, my_id, buffer| {
-            spawn_dispatch_action!(shared_store, Action::UpdateEditorBuffer(my_id, buffer));
-          };
-          let config_options = EditorEngineConfigOptions::default();
-          EditorComponent::new_shared(editor_id, config_options, on_buffer_change)
-        };
-
-        self.component_registry.put(editor_id, shared_editor_component);
-
-        call_if_true!(DEBUG_TUI_MOD, {
-          log_no_err!(DEBUG, "🪙 {}", "construct EditorComponent { on_buffer_change }");
-        });
-      }
-
-      // Init has focus.
-      if self.component_registry.has_focus.get_id().is_none() {
-        self.component_registry.has_focus.set_id(editor_id);
-        call_if_true!(DEBUG_TUI_MOD, {
-          log_no_err!(DEBUG, "🪙 {} = {}", "init component_registry.has_focus", editor_id);
-        });
-      }
-    }
-
-    /// Main container CONTAINER_ID.
-    pub async fn create_main_container(
-      &mut self,
-      surface: &mut Surface,
-      state: &State,
-      shared_store: &SharedStore<State, Action>,
-      shared_tw_data: &SharedTWData,
-      window_size: &Size,
-    ) -> CommonResult<()> {
-      let editor_id = &Id::Editor.to_string();
-
       throws!({
         box_start_with_component! {
           in:                     surface,
@@ -199,15 +181,96 @@ mod construct_components {
           requested_size_percent: requested_size_percent!(width: 100, height: 100),
           styles:                 [editor_id],
           render: {
-            from:           self.component_registry,
+            from:           self.0.component_registry,
             state:          state,
             shared_store:   shared_store,
             shared_tw_data: shared_tw_data,
             window_size:    window_size
           }
         }
-      });
+      })
     }
+  }
+}
+
+mod component_registry {
+  use super::*;
+
+  pub async fn populate(this: &mut AppWithLayout) {
+    let editor_id = &Id::Editor.to_string();
+    let dialog_id = &Id::Dialog.to_string();
+
+    try_insert_editor_component(this, editor_id);
+    try_insert_dialog_component(this, dialog_id);
+    try_init_has_focus(this, editor_id);
+  }
+
+  /// Switch focus to the editor component if focus is not set.
+  fn try_init_has_focus(this: &mut AppWithLayout, id: &str) {
+    if this.component_registry.has_focus.is_set() {
+      return;
+    }
+
+    this.component_registry.has_focus.set_id(id);
+    call_if_true!(DEBUG_TUI_MOD, {
+      log_no_err!(DEBUG, "🪙 {} = {}", "init component_registry.has_focus", id);
+    });
+  }
+
+  /// Insert dialog component into registry if it's not already there.
+  fn try_insert_dialog_component(this: &mut AppWithLayout, id: &str) {
+    if this.component_registry.has(id) {
+      return;
+    }
+
+    let shared_dialog_component = {
+      fn on_dialog_press(
+        my_id: String,
+        dialog_response: DialogResponse,
+        _prev_focus_id: String,
+        shared_store: &SharedStore<State, Action>,
+        _component_registry: &ComponentRegistry<State, Action>,
+      ) {
+        match dialog_response {
+          DialogResponse::Yes(text) => {
+            spawn_dispatch_action!(shared_store, Action::SetDialog(my_id, text));
+          }
+          DialogResponse::No => {
+            spawn_dispatch_action!(shared_store, Action::SetDialog(my_id, "".to_string()));
+          }
+        }
+      }
+
+      DialogComponent::new_shared(id, on_dialog_press)
+    };
+
+    this.component_registry.put(id, shared_dialog_component);
+
+    call_if_true!(DEBUG_TUI_MOD, {
+      log_no_err!(DEBUG, "🪙 {}", "construct DialogComponent { on_dialog_press }");
+    });
+  }
+
+  /// Insert editor component into registry if it's not already there.
+  fn try_insert_editor_component(this: &mut AppWithLayout, id: &str) {
+    if this.component_registry.has(id) {
+      return;
+    }
+
+    let shared_editor_component = {
+      fn on_buffer_change(shared_store: &SharedStore<State, Action>, my_id: String, buffer: EditorBuffer) {
+        spawn_dispatch_action!(shared_store, Action::InsertEditorBuffer(my_id, buffer));
+      }
+
+      let config_options = EditorEngineConfigOptions::default();
+      EditorComponent::new_shared(id, config_options, on_buffer_change)
+    };
+
+    this.component_registry.put(id, shared_editor_component);
+
+    call_if_true!(DEBUG_TUI_MOD, {
+      log_no_err!(DEBUG, "🪙 {}", "construct EditorComponent { on_buffer_change }");
+    });
   }
 }
 

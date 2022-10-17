@@ -16,17 +16,14 @@
  */
 
 use std::{collections::HashMap,
-          fmt::{Display, Formatter}};
+          fmt::{Debug, Display, Formatter, Result}};
 
 use r3bl_tui::*;
 
-#[derive(Clone, PartialEq, Debug, Default)]
+#[derive(Clone, PartialEq, Default)]
 pub struct State {
   pub buffers: HashMap<String, EditorBuffer>,
-}
-
-impl Display for State {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "State {{ buffers: {:?} }}", self.buffers) }
+  pub dialog_buffer: DialogBuffer,
 }
 
 impl HasEditorBuffers for State {
@@ -36,5 +33,35 @@ impl HasEditorBuffers for State {
     } else {
       None
     }
+  }
+}
+
+impl HasDialogBuffer for State {
+  fn get_dialog_buffer(&self) -> Option<&DialogBuffer> { Some(&self.dialog_buffer) }
+}
+
+mod debug_format_helpers {
+  use super::*;
+
+  fn fmt(this: &State, f: &mut Formatter<'_>) -> Result {
+    write! { f,
+      "\nState [                               \n\
+      - dialog_buffer: title: {:?}             \n\
+      - dialog_buffer: buffer: {:?}            \n\
+      - buffers: {:?}                          \n\
+      ]",
+      this.dialog_buffer.title,
+      // this.dialog_buffer.buffer,
+      this.dialog_buffer.buffer.get_lines().iter().map(|l| l.string.clone()).collect::<Vec<String>>().join(", "),
+      this.buffers,
+    }
+  }
+
+  impl Display for State {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
+  }
+
+  impl Debug for State {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
   }
 }

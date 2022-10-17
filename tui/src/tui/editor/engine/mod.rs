@@ -16,14 +16,11 @@
  */
 
 // Attach.
-pub mod buffer;
-pub mod component;
-pub mod engine;
+pub mod editor_engine;
+pub mod editor_engine_data_api;
+pub mod editor_engine_render_api;
 
 // Re-export.
-pub use component::*;
-pub use engine::*;
-pub use buffer::*;
-
-// Tests.
-pub mod test_editor;
+pub use editor_engine::*;
+pub use editor_engine_data_api::*;
+pub use editor_engine_render_api::*;

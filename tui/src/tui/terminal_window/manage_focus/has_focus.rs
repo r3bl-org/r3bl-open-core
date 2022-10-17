@@ -37,34 +37,62 @@ use crate::*;
 ///    - for a text viewer, it will be the cursor position which can be moved around
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct HasFocus {
-  /// Map of id to its [Position]. Each cursor ([Position]) is scoped to an id. The map is global.
+  /// Map of `id` to its [Position]. Each cursor ([Position]) is scoped to an `id`. The map is global.
   pub cursor_position_map: CursorPositionMap,
-  /// This id has keyboard focus. This is global.
+
+  /// This `id` has keyboard focus. This is global.
   pub id: Option<String>,
+
+  /// This `id` is saved only when [set_modal_id](HasFocus::set_modal_id) is called. This is global.
+  pub prev_id: Option<String>,
 }
 
 pub type CursorPositionMap = HashMap<String, Option<Position>>;
 
 impl HasFocus {
-  /// Get the id of the [FlexBox] that has keyboard focus.
+  /// Get the `id` of the [FlexBox] that has keyboard focus.
   pub fn get_id(&self) -> Option<String> { self.id.clone() }
 
-  /// Set the id of the [FlexBox] that has keyboard focus.
+  /// Check to see whether [set_id][HasFocus::set_id] has been called.
+  pub fn is_empty(&self) -> bool { self.id.is_none() }
+
+  /// Check to see whether [set_id][HasFocus::set_id] has been called.
+  pub fn is_set(&self) -> bool { !self.is_empty() }
+
+  /// Set the `id` of the [FlexBox] that has keyboard focus.
   pub fn set_id(&mut self, id: &str) { self.id = Some(id.into()) }
 
-  /// Check whether the given id currently has keyboard focus.
+  /// Check whether the given `id` currently has keyboard focus.
   pub fn does_id_have_focus(&self, id: &str) -> bool { self.id == Some(id.into()) }
 
-  /// Check whether the id of the [FlexBox] currently has keyboard focus.
+  /// Check whether the `id` of the [FlexBox] currently has keyboard focus.
   pub fn does_current_box_have_focus(&self, current_box: &FlexBox) -> bool { self.does_id_have_focus(&current_box.id) }
+}
 
-  /// For a given [FlexBox] id, set the position of the cursor inside of it.
+impl HasFocus {
+  /// Saves the current `id` to `prev_id` and sets `id` to the given `id`.
+  pub fn set_modal_id(&mut self, id: &str) {
+    self.prev_id = self.id.clone();
+    self.set_id(id);
+  }
+
+  /// Restores the `id` from `prev_id` and sets `prev_id` to `None`.
+  pub fn reset_modal_id(&mut self) {
+    if let Some(prev_id) = &self.prev_id {
+      self.id = Some(prev_id.clone());
+      self.prev_id = None;
+    }
+  }
+}
+
+impl HasFocus {
+  /// For a given [FlexBox] `id`, set the position of the cursor inside of it.
   pub fn set_cursor_position_for_id(&mut self, id: &str, maybe_position: Option<Position>) {
     let map = &mut self.cursor_position_map;
     map.insert(id.into(), maybe_position);
   }
 
-  /// For a given [FlexBox] id, get the position of the cursor inside of it.
+  /// For a given [FlexBox] `id`, get the position of the cursor inside of it.
   pub fn get_cursor_position_for_id(&self, id: &str) -> Option<Position> {
     let map = &self.cursor_position_map;
     if let Some(value) = map.get(id) {

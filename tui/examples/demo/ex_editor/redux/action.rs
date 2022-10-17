@@ -23,8 +23,9 @@ use r3bl_tui::*;
 #[non_exhaustive]
 #[allow(dead_code)]
 pub enum Action {
-  UpdateEditorBuffer(String, EditorBuffer),
   Noop,
+  InsertEditorBuffer(String /* id */, EditorBuffer),
+  SetDialog(String /* title */, String /* text */),
 }
 
 impl Default for Action {

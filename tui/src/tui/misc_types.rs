@@ -89,6 +89,22 @@ where
   pub engine: &'a mut EditorEngine,
 }
 
+/// [DialogEngine] args struct that holds references. ![Editor component lifecycle
+/// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+pub struct DialogEngineArgs<'a, S, A>
+where
+  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Display + Clone + Sync + Send,
+{
+  pub shared_tw_data: &'a SharedTWData,
+  pub shared_store: &'a SharedStore<S, A>,
+  pub state: &'a S,
+  pub component_registry: &'a mut ComponentRegistry<S, A>,
+  pub self_id: &'a str,
+  pub buffer: &'a DialogBuffer,
+  pub engine: &'a mut DialogEngine,
+}
+
 // ┏━━━━━━━━━┓
 // ┃ Aliases ┃
 // ┛         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
