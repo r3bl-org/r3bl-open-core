@@ -70,13 +70,13 @@ mod app_impl {
     async fn app_handle_event(
       &mut self,
       args: GlobalScopeArgs<'_, State, Action>,
-      _window_size: Size,
       input_event: &InputEvent,
     ) -> CommonResult<EventPropagation> {
       let GlobalScopeArgs {
         state,
         shared_store,
         shared_tw_data,
+        ..
       } = args;
 
       route_event_to_focused_component!(
@@ -98,8 +98,8 @@ mod app_impl {
           state,
           shared_store,
           shared_tw_data,
+          window_size,
         } = args;
-        let window_size = shared_tw_data.read().await.get_size();
         let adjusted_window_size = size!(cols: window_size.cols, rows: window_size.rows - 1);
 
         // Render container component.
@@ -110,7 +110,8 @@ mod app_impl {
           size:           adjusted_window_size, // Bottom row for status bar.
           state:          state,
           shared_store:   shared_store,
-          shared_tw_data: shared_tw_data
+          shared_tw_data: shared_tw_data,
+          window_size:    window_size
         };
 
         // Render status bar.
@@ -133,6 +134,7 @@ mod app_impl {
         state,
         shared_store,
         shared_tw_data,
+        ..
       } = args;
 
       self.create_components_populate_registry_init_focus().await;
@@ -245,7 +247,7 @@ mod status_bar_helpers {
   use super::*;
 
   /// Shows helpful messages at the bottom row of the screen.
-  pub fn render(render_pipeline: &mut RenderPipeline, size: Size) {
+  pub fn render(render_pipeline: &mut RenderPipeline, size: &Size) {
     let st_vec = styled_texts! {
       styled_text! { "Hints:",               style!(attrib: [dim])       },
       styled_text! { " Ctrl + x : Exit ⛔ ", style!(attrib: [bold])      },

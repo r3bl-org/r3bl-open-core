@@ -45,13 +45,13 @@ mod app_impl {
     async fn app_handle_event(
       &mut self,
       args: GlobalScopeArgs<'_, State, Action>,
-      _window_size: Size,
       input_event: &InputEvent,
     ) -> CommonResult<EventPropagation> {
       let GlobalScopeArgs {
         state,
         shared_store,
         shared_tw_data,
+        ..
       } = args;
 
       // Try to handle left and right arrow key input events & return if handled.
@@ -76,9 +76,8 @@ mod app_impl {
           state,
           shared_store,
           shared_tw_data,
+          window_size,
         } = args;
-
-        let window_size = shared_tw_data.read().await.get_size();
 
         // Render container component.
         let mut surface = surface_start_with_runnable! {
@@ -88,7 +87,8 @@ mod app_impl {
           size:           size!(cols: window_size.cols, rows: window_size.rows - 1), // Bottom row for status bar.
           state:          state,
           shared_store:   shared_store,
-          shared_tw_data: shared_tw_data
+          shared_tw_data: shared_tw_data,
+          window_size:    window_size
         };
 
         // Render status bar.
@@ -111,11 +111,12 @@ mod app_impl {
         state,
         shared_store,
         shared_tw_data,
+        window_size,
       } = args;
 
       self.create_components_populate_registry_init_focus().await;
       self
-        .create_main_container(surface, state, shared_store, shared_tw_data)
+        .create_main_container(surface, state, shared_store, shared_tw_data, window_size)
         .await
     }
   }
@@ -210,6 +211,7 @@ mod construct_components {
       state: &State,
       shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
+      window_size: &Size,
     ) -> CommonResult<()> {
       throws!({
         box_start_with_runnable! {
@@ -221,7 +223,8 @@ mod construct_components {
           styles:                 [CONTAINER_ID],
           state:                  state,
           shared_store:           shared_store,
-          shared_tw_data:         shared_tw_data
+          shared_tw_data:         shared_tw_data,
+          window_size:            window_size
         };
       });
     }
@@ -246,6 +249,7 @@ mod layout_components {
         state,
         shared_store,
         shared_tw_data,
+        ..
       } = args;
 
       self
@@ -352,7 +356,7 @@ mod status_bar_helpers {
   use super::*;
 
   /// Shows helpful messages at the bottom row of the screen.
-  pub fn render(render_pipeline: &mut RenderPipeline, size: Size) {
+  pub fn render(render_pipeline: &mut RenderPipeline, size: &Size) {
     let st_vec = styled_texts! {
       styled_text! { "Hints:",          style!(attrib: [dim])       },
       styled_text! { " x : Exit ⛔ ",   style!(attrib: [bold])      },

@@ -58,7 +58,8 @@ macro_rules! box_start_with_runnable {
     styles:                 [$($args_styles:tt)*],                // Eg: [ "style1" , "style2" ]
     state:                  $arg_state          : expr,           // Eg: state,
     shared_store:           $arg_shared_store   : expr,           // Eg: shared_store
-    shared_tw_data:         $arg_shared_tw_data : expr            // Eg: shared_tw_data
+    shared_tw_data:         $arg_shared_tw_data : expr,           // Eg: shared_tw_data
+    window_size:            $arg_window_size    : expr            // Eg: window_size
   ) => {
     box_start! {
       in:       $arg_surface,
@@ -74,6 +75,7 @@ macro_rules! box_start_with_runnable {
           shared_tw_data: $arg_shared_tw_data,
           shared_store: $arg_shared_store,
           state: $arg_state,
+          window_size: $arg_window_size
         },
         $arg_surface)
       .await?;
@@ -94,7 +96,8 @@ macro_rules! surface_start_with_runnable {
     size:           $arg_size           : expr, // Eg: (50, 100).into(),
     state:          $arg_state          : expr, // Eg: state,
     shared_store:   $arg_shared_store   : expr, // Eg: shared_store
-    shared_tw_data: $arg_shared_tw_data : expr  // Eg: shared_tw_data
+    shared_tw_data: $arg_shared_tw_data : expr, // Eg: shared_tw_data
+    window_size:    $arg_window_size    : expr  // Eg: window_size
   ) => {{
     let mut surface = Surface {
       stylesheet: $arg_stylesheet,
@@ -112,6 +115,7 @@ macro_rules! surface_start_with_runnable {
           shared_tw_data: $arg_shared_tw_data,
           shared_store: $arg_shared_store,
           state: $arg_state,
+          window_size: $arg_window_size,
         },
         &mut surface,
       )

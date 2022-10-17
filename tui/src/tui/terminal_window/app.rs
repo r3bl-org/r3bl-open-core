@@ -39,7 +39,6 @@ where
   async fn app_handle_event(
     &mut self,
     args: GlobalScopeArgs<'_, S, A>,
-    window_size: Size,
     input_event: &InputEvent,
   ) -> CommonResult<EventPropagation>;
 

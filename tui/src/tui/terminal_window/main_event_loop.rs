@@ -266,17 +266,19 @@ where
     input_event: &InputEvent,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
-      let latest_state = shared_store.read().await.get_state();
+      let state = shared_store.read().await.get_state();
       let window_size = shared_tw_data.read().await.get_size();
+
       let global_scope_args = GlobalScopeArgs {
         shared_tw_data,
         shared_store,
-        state: &latest_state,
+        state: &state,
+        window_size: &window_size,
       };
       shared_app
         .write()
         .await
-        .app_handle_event(global_scope_args, window_size, input_event)
+        .app_handle_event(global_scope_args, input_event)
         .await?
     });
   }
@@ -288,16 +290,19 @@ where
     maybe_state: Option<S>,
   ) -> CommonResult<()> {
     throws!({
-      let state: S = if maybe_state.is_none() {
-        shared_store.read().await.get_state()
+      let state: S = if let Some(state) = maybe_state {
+        state
       } else {
-        maybe_state.unwrap()
+        shared_store.read().await.get_state()
       };
+
+      let window_size = shared_tw_data.read().await.get_size();
 
       let global_scope_args = GlobalScopeArgs {
         state: &state,
         shared_store,
         shared_tw_data,
+        window_size: &window_size,
       };
 
       let render_result = shared_app.write().await.app_render(global_scope_args).await;
