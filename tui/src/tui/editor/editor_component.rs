@@ -111,6 +111,7 @@ where
         shared_store,
         state,
         component_registry,
+        ..
       } = args;
 
       let my_buffer: Cow<EditorBuffer> = {
@@ -166,6 +167,7 @@ where
       shared_store,
       shared_tw_data,
       component_registry,
+      ..
     } = args;
 
     let my_buffer: Cow<EditorBuffer> = {

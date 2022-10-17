@@ -51,7 +51,7 @@ mod app_impl {
         state,
         shared_store,
         shared_tw_data,
-        ..
+        window_size,
       } = args;
 
       // Try to handle left and right arrow key input events & return if handled.
@@ -66,7 +66,8 @@ mod app_impl {
         input_event:    input_event,
         state:          state,
         shared_store:   shared_store,
-        shared_tw_data: shared_tw_data
+        shared_tw_data: shared_tw_data,
+        window_size:    window_size
       )
     }
 
@@ -249,14 +250,14 @@ mod layout_components {
         state,
         shared_store,
         shared_tw_data,
-        ..
+        window_size,
       } = args;
 
       self
-        .create_left_col(surface, state, shared_store, shared_tw_data)
+        .create_left_col(surface, state, shared_store, shared_tw_data, window_size)
         .await?;
       self
-        .create_right_col(surface, state, shared_store, shared_tw_data)
+        .create_right_col(surface, state, shared_store, shared_tw_data, window_size)
         .await?;
       Ok(())
     }
@@ -270,6 +271,7 @@ mod layout_components {
       state: &State,
       shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
+      window_size: &Size,
     ) -> CommonResult<()> {
       throws!({
         box_start_with_component! {
@@ -282,7 +284,8 @@ mod layout_components {
             from:           self.app_with_layout.component_registry,
             state:          state,
             shared_store:   shared_store,
-            shared_tw_data: shared_tw_data
+            shared_tw_data: shared_tw_data,
+            window_size:    window_size
           }
         }
       });
@@ -295,6 +298,7 @@ mod layout_components {
       state: &State,
       shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
+      window_size: &Size,
     ) -> CommonResult<()> {
       throws!({
         box_start_with_component! {
@@ -307,7 +311,8 @@ mod layout_components {
             from:           self.app_with_layout.component_registry,
             state:          state,
             shared_store:   shared_store,
-            shared_tw_data: shared_tw_data
+            shared_tw_data: shared_tw_data,
+            window_size:    window_size
           }
         }
       });
