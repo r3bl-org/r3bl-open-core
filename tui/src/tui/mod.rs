@@ -37,6 +37,7 @@ pub mod rsx;
 pub mod syntax_highlighting;
 pub mod terminal_lib_backends;
 pub mod terminal_window;
+pub mod dialog;
 
 // Re-export.
 pub use editor::*;
@@ -46,6 +47,7 @@ pub use rsx::*;
 pub use syntax_highlighting::*;
 pub use terminal_lib_backends::*;
 pub use terminal_window::*;
+pub use dialog::*;
 
 // Tests.
 mod test_make_style_macro;

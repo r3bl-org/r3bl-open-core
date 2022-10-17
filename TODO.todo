@@ -5,13 +5,14 @@ editor engine extras (core):
   ✔ add editor config options to enable/disable multiline & update tests @done(22-10-11 15:29)
   ✔ Expose clear `EditorEngineApi` public API for editor engine & remove OOP from engine @done(22-10-12 11:39)
   ✔ make sure window_size is correctly passed down from main_event_loop -> app -> component @done(22-10-17 11:13)
-  ☐ add modal dialog support https://github.com/r3bl-org/r3bl_rs_utils/issues/43
+  ☐ add modal dialog support https://github.com/r3bl-org/r3bl_rs_utils/issues/45
 
 editor engine extras (core):
   ☐ syntax highlighting support
   ☐ markdown parsing
     - https://iximiuz.com/en/posts/rust-writing-parsers-with-nom/
     - https://blog.logrocket.com/parsing-in-rust-with-nom/
+    - https://naiveai.hashnode.dev/practical-parsing-nom
   ☐ support editor config options to enable/disable syntax highlighting & update tests
 
 editor engine extras (auto-completion providers):

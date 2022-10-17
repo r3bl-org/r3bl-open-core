@@ -123,7 +123,7 @@ mod construct_components {
   impl AppWithLayout {
     pub async fn create_components_populate_registry_init_focus(&mut self) {
       // Construct COL_1_ID.
-      if self.component_registry.id_does_not_exist(COL_1_ID) {
+      if self.component_registry.does_not_contain(COL_1_ID) {
         let _component = ColumnRenderComponent::new(COL_1_ID.to_string());
         let shared_component_r1 = Arc::new(RwLock::new(_component));
         self.component_registry.put(COL_1_ID, shared_component_r1);

@@ -16,14 +16,9 @@
  */
 
 // Attach.
-pub mod buffer;
-pub mod component;
-pub mod engine;
+pub mod dialog_engine_api;
+pub mod dialog_engine;
 
 // Re-export.
-pub use component::*;
-pub use engine::*;
-pub use buffer::*;
-
-// Tests.
-pub mod test_editor;
+pub use dialog_engine_api::*;
+pub use dialog_engine::*;

@@ -48,13 +48,15 @@ where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Display + Clone + Sync + Send,
 {
-  pub fn put(&mut self, name: &str, component: SharedComponent<S, A>) {
-    self.components.insert(name.to_string(), component);
+  pub fn put(&mut self, id: &str, component: SharedComponent<S, A>) {
+    self.components.insert(id.to_string(), component);
   }
 
-  pub fn id_does_not_exist(&self, name: &str) -> bool { !self.components.contains_key(name) }
+  pub fn does_not_contain(&self, id: &str) -> bool { !self.components.contains_key(id) }
 
-  pub fn get(&self, name: &str) -> Option<&SharedComponent<S, A>> { self.components.get(name) }
+  pub fn has(&self, id: &str) -> bool { self.components.contains_key(id) }
+
+  pub fn get(&self, id: &str) -> Option<&SharedComponent<S, A>> { self.components.get(id) }
 
   pub fn remove(&mut self, id: &str) -> Option<SharedComponent<S, A>> { self.components.remove(id) }
 }

@@ -34,7 +34,7 @@ use crate::*;
 /// convert it to an [EditorEvent] and then execute them against this buffer.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditorEngine {
-  /// Set by [render](EditorEngineRenderApi::render).
+  /// Set by [render](EditorEngineRenderApi::render_engine).
   pub current_box: FlexBox,
   pub config_options: EditorEngineConfigOptions,
 }

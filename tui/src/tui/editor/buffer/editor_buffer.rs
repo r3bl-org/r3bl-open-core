@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Result};
+use std::fmt::{Debug, Formatter, Result};
 
 use get_size::GetSize;
 use r3bl_rs_utils_core::*;
@@ -94,7 +94,6 @@ use crate::*;
 ///       scroll_offset    scroll_offset
 ///                        + vp width
 /// ```
-
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
   /// A list of lines representing the document being edited.
@@ -153,6 +152,15 @@ pub mod access_and_mutate {
 
     pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.lines }
 
+    pub fn set_lines(&mut self, lines: Vec<String>) {
+      // Set lines.
+      self.lines = lines.into_iter().map(UnicodeString::from).collect();
+      // Reset caret.
+      self.caret = Position::default();
+      // Reset scroll_offset.
+      self.scroll_offset = ScrollOffset::default();
+    }
+
     /// Returns the current caret position in two variants:
     /// 1. [CaretKind::Raw] -> The raw caret position not adjusted for scrolling.
     /// 2. [CaretKind::ScrollAdjusted] -> The caret position adjusted for scrolling using
@@ -206,12 +214,13 @@ mod debug_format_helpers {
   use super::*;
 
   impl Debug for EditorBuffer {
-    fn fmt(&self, f: &mut __private::Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
       write! { f,
-        "\nEditorBuffer [ \n \
-        ├ lines: {}, size: {}, \n \
-        ├ caret: {:?}, \n \
-        └ lolcat: [{}, {}, {}, {}] \n]",
+        "\nEditorBuffer [          \n \
+        ├ lines: {}, size: {},     \n \
+        ├ caret: {:?},             \n \
+        └ lolcat: [{}, {}, {}, {}] \n \
+        ]",
         self.lines.len(), self.lines.get_heap_size(),
         self.caret,
         pretty_print_f64(self.lolcat.color_wheel_control.seed),

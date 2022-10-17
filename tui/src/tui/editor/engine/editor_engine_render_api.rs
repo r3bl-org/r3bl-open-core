@@ -27,7 +27,7 @@ const DEFAULT_CURSOR_CHAR: char = '▒';
 // ┏━━━━━━━━━━━━━━━━━━━━━━━━━┓
 // ┃ EditorEngine render API ┃
 // ┛                         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// Functions that implement the editor engine.
+/// Things you can do with editor engine.
 pub struct EditorEngineRenderApi;
 
 impl EditorEngineRenderApi {
@@ -67,7 +67,10 @@ impl EditorEngineRenderApi {
     }
   }
 
-  pub async fn render<S, A>(args: EditorEngineArgs<'_, S, A>, current_box: &FlexBox) -> CommonResult<RenderPipeline>
+  pub async fn render_engine<S, A>(
+    args: EditorEngineArgs<'_, S, A>,
+    current_box: &FlexBox,
+  ) -> CommonResult<RenderPipeline>
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,

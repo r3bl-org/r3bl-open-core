@@ -15,15 +15,12 @@
  *   limitations under the License.
  */
 
-// Attach.
-pub mod buffer;
+// Attach sources.
 pub mod component;
 pub mod engine;
+pub mod buffer;
 
 // Re-export.
 pub use component::*;
 pub use engine::*;
 pub use buffer::*;
-
-// Tests.
-pub mod test_editor;

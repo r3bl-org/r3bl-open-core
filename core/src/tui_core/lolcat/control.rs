@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 
 use atty::Stream;
 use get_size::GetSize;
@@ -57,7 +57,7 @@ pub enum ColorChangeSpeed {
 }
 
 impl Display for ColorChangeSpeed {
-  fn fmt(&self, f: &mut __private::Formatter<'_>) -> std::fmt::Result {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
       ColorChangeSpeed::Rapid => write!(f, "Rapid"),
       ColorChangeSpeed::Slow => write!(f, "Slow"),
