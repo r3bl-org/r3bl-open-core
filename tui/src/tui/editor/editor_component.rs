@@ -26,9 +26,9 @@ use tokio::sync::RwLock;
 
 use crate::*;
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Editor Component struct │
-// ╯                         ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ Editor Component struct ┃
+// ┛                         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// This is a shim which allows the reusable [EditorEngine] to be used in the context of [Component]
 /// and [Store]. The main methods here simply pass thru all their arguments to the
 /// [EditorEngineRenderApi].
@@ -89,9 +89,9 @@ where
 {
   fn get_id(&self) -> &str { &self.id }
 
-  // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-  // │ handle_event │
-  // ╯              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+  // ┏━━━━━━━━━━━━━━┓
+  // ┃ handle_event ┃
+  // ┛              ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   /// This shim simply calls [apply_event](EditorEngineRenderApi::apply_event) w/ all the necessary
   /// arguments:
   /// - Global scope: [SharedStore], [SharedTWData].
@@ -149,9 +149,9 @@ where
     });
   }
 
-  // ╭┄┄┄┄┄┄┄┄╮
-  // │ render │
-  // ╯        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+  // ┏━━━━━━━━┓
+  // ┃ render ┃
+  // ┛        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   /// This shim simply calls [render](EditorEngineRenderApi::render) w/ all the necessary
   /// arguments:
   /// - Global scope: [SharedStore], [SharedTWData].

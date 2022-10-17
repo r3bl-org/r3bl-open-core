@@ -21,9 +21,9 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ StyledText │
-// ╯            ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━┓
+// ┃ StyledText ┃
+// ┛            ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Use [styled_text!] macro for easier construction.
 #[derive(Debug, Clone)]
 pub struct StyledText {
@@ -69,9 +69,9 @@ macro_rules! styled_text {
   };
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Vec<StyledText>, StyledTexts │
-// ╯                              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ Vec<StyledText>, StyledTexts ┃
+// ┛                              ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 impl Add<StyledText> for Vec<StyledText> {
   type Output = Vec<StyledText>;
   fn add(mut self, other: StyledText) -> Self::Output {
@@ -128,7 +128,7 @@ impl StyledTexts for Vec<StyledText> {
   }
 }
 
-/// Macro to make building [Vec<StyledText>] easy.
+/// Macro to make building [`Vec<StyledText>`] easy.
 ///
 /// Here's an example.
 /// ```ignore

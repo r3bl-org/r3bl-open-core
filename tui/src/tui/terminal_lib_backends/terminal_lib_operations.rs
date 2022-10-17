@@ -17,9 +17,9 @@
 
 use r3bl_rs_utils_core::*;
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Misc crossterm lookup commands │
-// ╯                                ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ Misc crossterm lookup commands ┃
+// ┛                                ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Interrogate crossterm [crossterm::terminal::size()] to get the size of the terminal window.
 pub fn lookup_size() -> CommonResult<Size> {
   let (col, row) = crossterm::terminal::size()?;

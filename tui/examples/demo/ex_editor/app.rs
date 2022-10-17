@@ -64,9 +64,9 @@ mod app_impl {
 
   #[async_trait]
   impl App<State, Action> for AppWithLayout {
-    // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-    // │ app_handle_event │
-    // ╯                  ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+    // ┏━━━━━━━━━━━━━━━━━━┓
+    // ┃ app_handle_event ┃
+    // ┛                  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     async fn app_handle_event(
       &mut self,
       args: GlobalScopeArgs<'_, State, Action>,
@@ -76,7 +76,7 @@ mod app_impl {
         state,
         shared_store,
         shared_tw_data,
-        window_size
+        window_size,
       } = args;
 
       route_event_to_focused_component!(
@@ -90,9 +90,9 @@ mod app_impl {
       )
     }
 
-    // ╭┄┄┄┄┄┄┄┄┄┄┄┄╮
-    // │ app_render │
-    // ╯            ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+    // ┏━━━━━━━━━━━━┓
+    // ┃ app_render ┃
+    // ┛            ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     async fn app_render(&mut self, args: GlobalScopeArgs<'_, State, Action>) -> CommonResult<RenderPipeline> {
       throws_with_return!({
         let GlobalScopeArgs {
@@ -135,7 +135,7 @@ mod app_impl {
         state,
         shared_store,
         shared_tw_data,
-        window_size
+        window_size,
       } = args;
 
       self.create_components_populate_registry_init_focus().await;

@@ -32,16 +32,16 @@ pub const DEBUG_SHOW_TERMINAL_BACKEND: bool = false;
 // Attach sources.
 pub mod editor;
 pub mod layout;
+pub mod misc_types;
 pub mod rsx;
 pub mod syntax_highlighting;
 pub mod terminal_lib_backends;
 pub mod terminal_window;
-pub mod misc_types;
 
 // Re-export.
-pub use misc_types::*;
 pub use editor::*;
 pub use layout::*;
+pub use misc_types::*;
 pub use rsx::*;
 pub use syntax_highlighting::*;
 pub use terminal_lib_backends::*;

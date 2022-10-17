@@ -19,9 +19,9 @@ use std::{borrow::Cow, fmt::Write, ops::Deref};
 
 use ansi_parser::{AnsiParser, Output};
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ ANSITextSegment │
-// ╯                 ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━┓
+// ┃ ANSITextSegment ┃
+// ┛                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Debug, PartialEq, Default)]
 pub struct ANSITextSegment<'a> {
   pub vec_parts: Vec<&'a Output<'a>>,
@@ -37,9 +37,9 @@ impl ANSITextSegment<'_> {
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ ANSITextSegments │
-// ╯                  ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━┓
+// ┃ ANSITextSegments ┃
+// ┛                  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Debug, PartialEq, Default)]
 pub struct ANSITextSegments<'a> {
   pub vec_segments: Vec<ANSITextSegment<'a>>,
@@ -80,9 +80,9 @@ impl<'a> From<ANSITextSegments<'a>> for String {
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ ANSIStringExt │
-// ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━┓
+// ┃ ANSIStringExt ┃
+// ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 pub trait ANSIStringExt {
   fn ansi_text(&self) -> ANSIText;
 }
@@ -91,9 +91,9 @@ impl ANSIStringExt for Cow<'_, str> {
   fn ansi_text(&self) -> ANSIText { ANSIText::new(self) }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄╮
-// │ ANSIText │
-// ╯          ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━┓
+// ┃ ANSIText ┃
+// ┛          ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Debug, PartialEq, Default)]
 pub struct ANSIText<'a> {
   pub ansi_text: &'a str,

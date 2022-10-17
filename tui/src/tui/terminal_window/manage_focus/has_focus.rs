@@ -21,9 +21,9 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-// ╭┄┄┄┄┄┄┄┄┄┄╮
-// │ HasFocus │
-// ╯          ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━┓
+// ┃ HasFocus ┃
+// ┛          ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// There are certain fields that need to be in each state struct to represent global information
 /// about keyboard focus.
 ///

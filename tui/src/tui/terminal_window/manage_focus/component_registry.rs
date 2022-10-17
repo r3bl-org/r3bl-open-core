@@ -23,9 +23,9 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ ComponentRegistry │
-// ╯                   ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━┓
+// ┃ ComponentRegistry ┃
+// ┛                   ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// This map is used to cache [Component]s that have been created and are meant to be reused
 /// between multiple renders. It is entirely up to the [App] how to use this map. The
 /// methods provided allow components to be added to the map.
@@ -150,7 +150,7 @@ macro_rules! route_event_to_focused_component {
       $arg_state,
       $arg_shared_store,
       $arg_shared_tw_data,
-      $arg_window_size
+      $arg_window_size,
     )
     .await
   };

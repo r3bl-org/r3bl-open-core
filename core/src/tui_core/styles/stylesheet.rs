@@ -17,9 +17,9 @@
 
 use crate::*;
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Stylesheet │
-// ╯            ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━┓
+// ┃ Stylesheet ┃
+// ┛            ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Default, Debug, Clone)]
 pub struct Stylesheet {
   pub styles: Vec<Style>,
@@ -95,9 +95,9 @@ impl Stylesheet {
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ stylesheet! │
-// ╯             ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━┓
+// ┃ stylesheet! ┃
+// ┛             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Macro to make building [Stylesheet] easy.
 ///
 /// Here's an example.
@@ -142,7 +142,7 @@ macro_rules! stylesheet {
 /// This trait exists to allow "pseudo operator overloading". Rust does not support operator
 /// overloading, and the method to add a single style has a different signature than the one to add
 /// a vector of styles. To get around this, the [TryAdd] trait is implemented for both [Style] and
-/// [Vec<Style>]. Then the [stylesheet!] macro can "pseudo overload" them.
+/// [`Vec<Style>`]. Then the [stylesheet!] macro can "pseudo overload" them.
 pub trait TryAdd<OtherType = Self> {
   fn try_add(&mut self, other: OtherType) -> CommonResult<()>;
 }

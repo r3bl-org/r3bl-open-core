@@ -23,9 +23,9 @@ use serde::*;
 
 use crate::*;
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ EditorBuffer struct │
-// ╯                     ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ EditorBuffer struct ┃
+// ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Stores the data for a single editor buffer.
 ///
 /// 1. This struct is stored in the [r3bl_redux::Store].
@@ -182,7 +182,7 @@ pub mod access_and_mutate {
     pub fn get_scroll_offset(&self) -> ScrollOffset { self.scroll_offset }
 
     /// Returns:
-    /// 1. /* lines */ &mut Vec<UnicodeString>,
+    /// 1. /* lines */ &mut `Vec<UnicodeString>`,
     /// 2. /* caret */ &mut Position,
     /// 3. /* scroll_offset */ &mut ScrollOffset,
     ///

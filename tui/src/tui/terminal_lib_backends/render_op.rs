@@ -24,9 +24,9 @@ use serde::{Deserialize, Serialize};
 use super::TERMINAL_LIB_BACKEND;
 use crate::*;
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ render_ops! │
-// ╯             ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━┓
+// ┃ render_ops! ┃
+// ┛             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[macro_export]
 macro_rules! render_ops {
   // Create a RenderOps. If any ($element)* are passed, then add it to its list. Finally return it.
@@ -52,9 +52,9 @@ macro_rules! render_ops {
   };
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄╮
-// │ RenderOps │
-// ╯           ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━┓
+// ┃ RenderOps ┃
+// ┛           ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RenderOps {
   pub list: Vec<RenderOp>,
@@ -86,9 +86,9 @@ pub mod render_ops_helpers {
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄╮
-// │ RenderOp │
-// ╯          ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━┓
+// ┃ RenderOp ┃
+// ┛          ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum RenderOp {
   EnterRawMode,
@@ -178,9 +178,9 @@ impl Flush for RenderOp {
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Debug formatter │
-// ╯                 ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━┓
+// ┃ Debug formatter ┃
+// ┛                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 impl Debug for RenderOp {
   /// When [RenderPipeline] is printed as debug, each [RenderOp] is printed using this method. Also
   /// [exec_render_op!] does not use this; it has its own way of logging output.
@@ -192,16 +192,16 @@ impl Debug for RenderOp {
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ DebugFormatRenderOp trait │
-// ╯                           ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ DebugFormatRenderOp trait ┃
+// ┛                           ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 pub trait DebugFormatRenderOp {
   fn debug_format(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result;
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ exec_render_op! │
-// ╯                 ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━┓
+// ┃ exec_render_op! ┃
+// ┛                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Given a crossterm command, this will run it and [log!] the [Result] that is returned. If [log!]
 /// fails, then it will print a message to stderr.
 ///

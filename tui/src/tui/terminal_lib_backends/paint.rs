@@ -21,9 +21,9 @@ use r3bl_rs_utils_core::*;
 use super::*;
 use crate::{tui::DEBUG_SHOW_PIPELINE, *};
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Paint the render pipeline │
-// ╯                           ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ Paint the render pipeline ┃
+// ┛                           ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// The render pipeline contains a list of [RenderOps] for each [ZOrder]. This function is
 /// responsible for:
 /// 1. Actually executing those [RenderOps] in the correct order.
@@ -135,9 +135,9 @@ pub async fn sanitize_and_save_abs_position(orig_abs_pos: Position, shared_tw_da
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Route paint RenderOp to backend │
-// ╯                                 ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ Route paint RenderOp to backend ┃
+// ┛                                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 pub async fn route_paint_render_op_to_backend(
   skip_flush: &mut bool,
   render_op: &RenderOp,
@@ -153,9 +153,9 @@ pub async fn route_paint_render_op_to_backend(
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ PaintRenderOp trait │
-// ╯                     ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ PaintRenderOp trait ┃
+// ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[async_trait]
 pub trait PaintRenderOp {
   async fn paint(&self, skip_flush: &mut bool, render_op: &RenderOp, shared_tw_data: &SharedTWData);
