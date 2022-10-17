@@ -56,6 +56,7 @@ where
   pub shared_tw_data: &'a SharedTWData,
   pub shared_store: &'a SharedStore<S, A>,
   pub state: &'a S,
+  pub window_size: &'a Size,
 }
 
 /// Component scope args struct that holds references. ![Editor component lifecycle

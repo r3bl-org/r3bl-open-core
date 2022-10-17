@@ -36,8 +36,10 @@ pub mod rsx;
 pub mod syntax_highlighting;
 pub mod terminal_lib_backends;
 pub mod terminal_window;
+pub mod misc_types;
 
 // Re-export.
+pub use misc_types::*;
 pub use editor::*;
 pub use layout::*;
 pub use rsx::*;

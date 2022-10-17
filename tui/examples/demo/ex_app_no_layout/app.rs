@@ -91,7 +91,6 @@ impl App<State, Action> for AppNoLayout {
   async fn app_handle_event(
     &mut self,
     args: GlobalScopeArgs<'_, State, Action>,
-    _window_size: Size,
     input_event: &InputEvent,
   ) -> CommonResult<EventPropagation> {
     throws_with_return!({
