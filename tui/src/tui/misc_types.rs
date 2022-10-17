@@ -70,6 +70,7 @@ where
   pub shared_store: &'a SharedStore<S, A>,
   pub state: &'a S,
   pub component_registry: &'a mut ComponentRegistry<S, A>,
+  pub window_size: &'a Size,
 }
 
 /// [EditorEngine] args struct that holds references. ![Editor component lifecycle

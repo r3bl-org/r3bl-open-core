@@ -111,6 +111,7 @@ where
     state: &S,
     shared_store: &SharedStore<S, A>,
     shared_tw_data: &SharedTWData,
+    window_size: &Size,
   ) -> CommonResult<EventPropagation> {
     // If component has focus, then route input_event to it. Return its propagation enum.
     if let Some(shared_component_has_focus) = ComponentRegistry::get_focused_component_ref(this) {
@@ -120,7 +121,8 @@ where
         input_event: input_event,
         state: state,
         shared_store: shared_store,
-        shared_tw_data: shared_tw_data
+        shared_tw_data: shared_tw_data,
+        window_size: window_size
       )
     } else {
       // input_event not handled, propagate it.
@@ -139,7 +141,8 @@ macro_rules! route_event_to_focused_component {
     input_event:    $arg_input_event        : expr,
     state:          $arg_state              : expr,
     shared_store:   $arg_shared_store       : expr,
-    shared_tw_data: $arg_shared_tw_data     : expr
+    shared_tw_data: $arg_shared_tw_data     : expr,
+    window_size:    $arg_window_size        : expr
   ) => {
     ComponentRegistry::route_event_to_focused_component(
       &mut $arg_component_registry,
@@ -147,6 +150,7 @@ macro_rules! route_event_to_focused_component {
       $arg_state,
       $arg_shared_store,
       $arg_shared_tw_data,
+      $arg_window_size
     )
     .await
   };
@@ -162,7 +166,8 @@ macro_rules! call_handle_event {
     input_event:        $input_event: expr,
     state:              $state: expr,
     shared_store:       $shared_store: expr,
-    shared_tw_data:     $shared_tw_data: expr
+    shared_tw_data:     $shared_tw_data: expr,
+    window_size:        $window_size: expr
   ) => {{
     let result_event_propagation = $shared_component
       .write()
@@ -173,6 +178,7 @@ macro_rules! call_handle_event {
           shared_store: $shared_store,
           state: $state,
           component_registry: $component_registry,
+          window_size: $window_size,
         },
         $input_event,
       )

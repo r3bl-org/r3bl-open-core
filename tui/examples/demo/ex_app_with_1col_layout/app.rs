@@ -50,7 +50,7 @@ mod app_impl {
         state,
         shared_store,
         shared_tw_data,
-        ..
+        window_size
       } = args;
 
       route_event_to_focused_component!(
@@ -59,7 +59,8 @@ mod app_impl {
         input_event:    input_event,
         state:          state,
         shared_store:   shared_store,
-        shared_tw_data: shared_tw_data
+        shared_tw_data: shared_tw_data,
+        window_size:    window_size
       )
     }
 
@@ -104,12 +105,12 @@ mod app_impl {
         state,
         shared_store,
         shared_tw_data,
-        ..
+        window_size
       } = args;
 
       self.create_components_populate_registry_init_focus().await;
       self
-        .create_main_container(surface, state, shared_store, shared_tw_data)
+        .create_main_container(surface, state, shared_store, shared_tw_data, window_size)
         .await
     }
   }
@@ -141,6 +142,7 @@ mod construct_components {
       state: &State,
       shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
+      windows_size: &Size
     ) -> CommonResult<()> {
       throws!({
         box_start_with_component! {
@@ -153,7 +155,8 @@ mod construct_components {
             from:           self.component_registry,
             state:          state,
             shared_store:   shared_store,
-            shared_tw_data: shared_tw_data
+            shared_tw_data: shared_tw_data,
+            window_size:    windows_size
           }
         }
       });
