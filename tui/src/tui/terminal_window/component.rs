@@ -32,25 +32,25 @@ where
   fn get_id(&self) -> &str;
 
   /// Render this component given the following.
-  ///
-  /// Arguments: Get from `current_box`:
-  ///   - box_origin_pos: Position
-  ///   - box_bounding_size: Size
-  ///   - maybe_box_style: Option<Style>
-  ///  
-  ///   Get from `state`:
-  ///   - Content to render
-  ///   - get_focus_id(): String to determine if this component has keyboard focus (might affect the
-  ///     way it gets rendered)
-  ///  
-  ///   Maybe use `shared_store`:
-  ///   - Dispatch an action if needed
-  ///
-  /// Returns:
+  /// 
+  /// - Arguments:
+  ///   - Get from `current_box`:
+  ///     - box_origin_pos: Position
+  ///     - box_bounding_size: Size
+  ///     - maybe_box_style: `Option<Style>`
+  ///   - Get from `state`:
+  ///     - Content to render
+  ///     - get_focus_id(): String to determine if this component has keyboard focus (might affect
+  ///       the way it gets rendered)
+  ///   - Maybe use `shared_store`:
+  ///     - Dispatch an action if needed
+  /// 
+  /// - Returns:
   ///   - [RenderPipeline] which must be rendered by the caller
-  ///
-  /// Clipping, scrolling, overdrawing:
+  /// 
+  /// - Clipping, scrolling, overdrawing:
   ///   - Each implementation of this trait is solely responsible of taking care of these behaviors
+  /// 
   async fn render(&mut self, args: ComponentScopeArgs<'_, S, A>, current_box: &FlexBox)
     -> CommonResult<RenderPipeline>;
 
@@ -72,9 +72,9 @@ where
   async fn run_on_surface(&mut self, args: GlobalScopeArgs<'_, S, A>, surface: &mut Surface) -> CommonResult<()>;
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Response type for apply_event() │
-// ╯                                 ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ Response type for apply_event() ┃
+// ┛                                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Debug)]
 pub enum ApplyResponse<T>
 where

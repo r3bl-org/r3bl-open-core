@@ -50,7 +50,7 @@ mod app_impl {
         state,
         shared_store,
         shared_tw_data,
-        window_size
+        window_size,
       } = args;
 
       route_event_to_focused_component!(
@@ -105,7 +105,7 @@ mod app_impl {
         state,
         shared_store,
         shared_tw_data,
-        window_size
+        window_size,
       } = args;
 
       self.create_components_populate_registry_init_focus().await;
@@ -142,7 +142,7 @@ mod construct_components {
       state: &State,
       shared_store: &SharedStore<State, Action>,
       shared_tw_data: &SharedTWData,
-      windows_size: &Size
+      windows_size: &Size,
     ) -> CommonResult<()> {
       throws!({
         box_start_with_component! {

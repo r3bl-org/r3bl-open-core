@@ -24,9 +24,9 @@ use serde::{Deserialize, Serialize};
 use super::*;
 use crate::{tui::DEBUG_SHOW_PIPELINE_EXPANDED, *};
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ render_pipeline! │
-// ╯                  ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━┓
+// ┃ render_pipeline! ┃
+// ┛                  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// This works w/ [RenderOp] items. It allows them to be added in sequence, and then flushed at the
 /// end.
 /// 1. This pipeline is meant to hold a list of [RenderOp] items.
@@ -131,9 +131,9 @@ macro_rules! render_pipeline {
   };
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ RenderPipeline │
-// ╯                ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━┓
+// ┃ RenderPipeline ┃
+// ┛                ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Here's an example. Consider using the macro for convenience (see [render_pipeline!]).
 ///
 /// ```rust

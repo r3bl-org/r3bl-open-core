@@ -17,9 +17,9 @@
 
 use crate::*;
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ UnicodeStringSegmentSliceResult │
-// ╯                                 ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ UnicodeStringSegmentSliceResult ┃
+// ┛                                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// We need a [String] (since we're returning a slice of a temporary [UnicodeString] that is
 /// dropped by the function that creates it, not as a result of mutation).
 #[derive(Debug, PartialEq, Eq)]
@@ -39,9 +39,9 @@ impl UnicodeStringSegmentSliceResult {
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ NewUnicodeStringResult │
-// ╯                        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ NewUnicodeStringResult ┃
+// ┛                        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// We need a [String] (since we're returning a new [String] as a result of this [UnicodeString]
 /// mutation).
 #[derive(Debug, Default, PartialEq, Eq)]

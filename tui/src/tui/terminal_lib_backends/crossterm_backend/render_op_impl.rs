@@ -85,9 +85,9 @@ impl PaintRenderOp for RenderOpImplCrossterm {
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Implement Flush │
-// ╯                 ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━┓
+// ┃ Implement Flush ┃
+// ┛                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 pub mod flush_impl {
   use super::*;
 
@@ -112,9 +112,9 @@ pub mod flush_impl {
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Implement all the render ops │
-// ╯                              ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ Implement all the render ops ┃
+// ┛                              ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async fn move_cursor_position_rel_to(
   box_origin_pos: &Position,
   content_rel_pos: &Position,
@@ -254,9 +254,9 @@ async fn print_text_with_attributes(text_arg: &String, maybe_style: &Option<Styl
   // Print plain_text.
   paint_style_and_text(&mut paint_args, &mut needs_reset).await;
 
-  // ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-  // │ Inner helpers │
-  // ╯               ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+  // ┏━━━━━━━━━━━━━━━┓
+  // ┃ Inner helpers ┃
+  // ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   #[derive(Debug, Clone, Copy)]
   enum TruncationPolicy {
     ANSIText,
@@ -458,9 +458,9 @@ fn apply_colors(style: &Option<Style>) {
   }
 }
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ Style to attribute map │
-// ╯                        ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ Style to attribute map ┃
+// ┛                        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 pub static STYLE_TO_ATTRIBUTE_MAP: Lazy<HashMap<StyleFlag, Attribute>> = Lazy::new(|| {
   let mut map = HashMap::new();
   map.insert(StyleFlag::BOLD_SET, Attribute::Bold);

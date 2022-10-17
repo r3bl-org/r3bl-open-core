@@ -22,9 +22,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-// ╭┄┄┄┄┄┄┄┄┄┄┄┄┄╮
-// │ EditorEvent │
-// ╯             ╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+// ┏━━━━━━━━━━━━━┓
+// ┃ EditorEvent ┃
+// ┛             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Events that can be applied to the [EditorEngine] to modify an [EditorBuffer].
 ///
 /// By providing a conversion from [InputEvent] to [EditorEvent] it becomes easier to write event
