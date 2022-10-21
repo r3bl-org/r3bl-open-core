@@ -81,7 +81,9 @@ mod impl_app {
         window_size,
       } = args;
 
-      self.try_activate(input_event);
+      if let EventPropagation::Consumed = self.try_activate(args, input_event) {
+        return Ok(EventPropagation::Consumed);
+      }
 
       route_event_to_focused_component!(
         registry:       self.component_registry,
@@ -134,7 +136,11 @@ mod modal_dialog {
 
   impl AppWithLayout {
     /// If `input_event` matches <kbd>Ctrl+l</kbd>, then toggle the modal dialog.
-    pub fn try_activate(&mut self, input_event: &InputEvent) {
+    pub fn try_activate(
+      &mut self,
+      args: GlobalScopeArgs<'_, State, Action>,
+      input_event: &InputEvent,
+    ) -> EventPropagation {
       if let Ok(DialogEvent::ActivateModal) = DialogEvent::try_from(
         input_event,
         Keypress::WithModifiers {
@@ -147,7 +153,21 @@ mod modal_dialog {
         });
 
         self.component_registry.has_focus.set_modal_id(Id::Dialog.int_value());
+
+        let GlobalScopeArgs { shared_store, .. } = args;
+
+        let title = "This is a modal dialog";
+        let text = "Press <Esc> to close it, or <Enter> to accept.";
+
+        spawn_dispatch_action!(
+          shared_store,
+          Action::SetDialog(format!("title: {}", title), text.into())
+        );
+
+        return EventPropagation::Consumed;
       };
+
+      EventPropagation::Propagate
     }
   }
 }
