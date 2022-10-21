@@ -18,20 +18,21 @@
 use std::fmt::Debug;
 
 use async_trait::async_trait;
+use int_enum::IntEnum;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
 use r3bl_tui::*;
-use strum_macros::Display;
 
 use super::*;
 
 /// Constants for the ids.
-#[derive(Display, Debug)]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
 enum Id {
-  Container,
-  Editor,
-  Dialog,
+  Container = 1,
+  Editor = 2,
+  Dialog = 3,
 }
 
 /// Async trait object that implements the [TWApp] trait.
@@ -145,7 +146,7 @@ mod modal_dialog {
           log_no_err!(DEBUG, "🅰️ activate modal");
         });
 
-        self.component_registry.has_focus.set_modal_id(&Id::Dialog.to_string());
+        self.component_registry.has_focus.set_modal_id(Id::Dialog.int_value());
       };
     }
   }
@@ -172,14 +173,13 @@ mod app_render {
 
       component_registry::populate(self.0).await;
 
-      let editor_id = &Id::Editor.to_string();
       throws!({
         box_start_with_component! {
           in:                     surface,
-          id:                     editor_id,
+          id:                     Id::Editor.int_value(),
           dir:                    Direction::Vertical,
           requested_size_percent: requested_size_percent!(width: 100, height: 100),
-          styles:                 [editor_id],
+          styles:                 [&Id::Editor.int_value().to_string()],
           render: {
             from:           self.0.component_registry,
             state:          state,
@@ -197,8 +197,8 @@ mod component_registry {
   use super::*;
 
   pub async fn populate(this: &mut AppWithLayout) {
-    let editor_id = &Id::Editor.to_string();
-    let dialog_id = &Id::Dialog.to_string();
+    let editor_id = Id::Editor.int_value();
+    let dialog_id = Id::Dialog.int_value();
 
     try_insert_editor_component(this, editor_id);
     try_insert_dialog_component(this, dialog_id);
@@ -206,7 +206,7 @@ mod component_registry {
   }
 
   /// Switch focus to the editor component if focus is not set.
-  fn try_init_has_focus(this: &mut AppWithLayout, id: &str) {
+  fn try_init_has_focus(this: &mut AppWithLayout, id: FlexBoxIdType) {
     if this.component_registry.has_focus.is_set() {
       return;
     }
@@ -218,25 +218,30 @@ mod component_registry {
   }
 
   /// Insert dialog component into registry if it's not already there.
-  fn try_insert_dialog_component(this: &mut AppWithLayout, id: &str) {
-    if this.component_registry.has(id) {
+  fn try_insert_dialog_component(this: &mut AppWithLayout, id: FlexBoxIdType) {
+    if this.component_registry.contains(id) {
       return;
     }
 
     let shared_dialog_component = {
       fn on_dialog_press(
-        my_id: String,
+        my_id: FlexBoxIdType,
         dialog_response: DialogResponse,
-        _prev_focus_id: String,
+        _prev_focus_id: FlexBoxIdType,
         shared_store: &SharedStore<State, Action>,
         _component_registry: &ComponentRegistry<State, Action>,
       ) {
         match dialog_response {
           DialogResponse::Yes(text) => {
-            spawn_dispatch_action!(shared_store, Action::SetDialog(my_id, text));
+            // TODO: replace this w/ something real
+            spawn_dispatch_action!(shared_store, Action::SetDialog(format!("title: {}", my_id), text));
           }
           DialogResponse::No => {
-            spawn_dispatch_action!(shared_store, Action::SetDialog(my_id, "".to_string()));
+            // TODO: replace this w/ something real
+            spawn_dispatch_action!(
+              shared_store,
+              Action::SetDialog(format!("title: {}", my_id), "".to_string())
+            );
           }
         }
       }
@@ -252,13 +257,13 @@ mod component_registry {
   }
 
   /// Insert editor component into registry if it's not already there.
-  fn try_insert_editor_component(this: &mut AppWithLayout, id: &str) {
-    if this.component_registry.has(id) {
+  fn try_insert_editor_component(this: &mut AppWithLayout, id: FlexBoxIdType) {
+    if this.component_registry.contains(id) {
       return;
     }
 
     let shared_editor_component = {
-      fn on_buffer_change(shared_store: &SharedStore<State, Action>, my_id: String, buffer: EditorBuffer) {
+      fn on_buffer_change(shared_store: &SharedStore<State, Action>, my_id: FlexBoxIdType, buffer: EditorBuffer) {
         spawn_dispatch_action!(shared_store, Action::InsertEditorBuffer(my_id, buffer));
       }
 
@@ -290,16 +295,13 @@ mod style_helpers {
   use super::*;
 
   pub fn create_stylesheet() -> CommonResult<Stylesheet> {
-    let container_id = &Id::Container.to_string();
-    let editor_id = &Id::Editor.to_string();
-
     throws_with_return!({
       stylesheet! {
         style! {
-          id: container_id
+          id: Id::Container.int_value().to_string()
         },
         style! {
-          id: editor_id
+          id: Id::Editor.int_value().to_string()
           attrib: [bold]
           padding: 1
           color_fg: TWColor::Blue

@@ -84,7 +84,7 @@ where
   pub shared_store: &'a SharedStore<S, A>,
   pub state: &'a S,
   pub component_registry: &'a mut ComponentRegistry<S, A>,
-  pub self_id: &'a str,
+  pub self_id: FlexBoxIdType,
   pub buffer: &'a EditorBuffer,
   pub engine: &'a mut EditorEngine,
 }
@@ -100,7 +100,7 @@ where
   pub shared_store: &'a SharedStore<S, A>,
   pub state: &'a S,
   pub component_registry: &'a mut ComponentRegistry<S, A>,
-  pub self_id: &'a str,
+  pub self_id: FlexBoxIdType,
   pub buffer: &'a DialogBuffer,
   pub engine: &'a mut DialogEngine,
 }

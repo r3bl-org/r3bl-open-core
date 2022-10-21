@@ -26,11 +26,11 @@ path = "src/lib.rs"
 r3bl_rs_utils_core = { version = "0.8.1", path = "../core" }
 
 # https://github.com/dtolnay/proc-macro-workshop#debugging-tips
-syn = { version = "1.0.101", features = ["extra-traits", "full", "derive", "parsing"] }
+syn = { version = "1.0.103", features = ["extra-traits", "full", "derive", "parsing"] }
 quote = "1.0.21"
-proc-macro2 = "1.0.46"
+proc-macro2 = "1.0.47"
 
 # Crossterm & EventStream support.
 crossterm = { version = "0.25.0", features = ["event-stream"] }
-futures-util = "0.3.24"
+futures-util = "0.3.25"
 paste = "1.0.9"

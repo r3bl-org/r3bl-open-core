@@ -18,6 +18,7 @@
 use std::{fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
+use int_enum::IntEnum;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
@@ -27,9 +28,13 @@ use tokio::sync::RwLock;
 use super::*;
 
 // Constants for the ids.
-const CONTAINER_ID: &str = "container";
-const COL_1_ID: &str = "col_1";
-const COL_2_ID: &str = "col_2";
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+pub enum Id {
+  Container = 1,
+  Col1 = 2,
+  Col2 = 3,
+}
 
 /// Async trait object that implements the [TWApp] trait.
 #[derive(Default)]
@@ -168,9 +173,9 @@ mod handle_focus {
     fn switch_focus(&mut self, special_key: SpecialKey) {
       if let Some(_id) = self.component_registry.has_focus.get_id() {
         if special_key == SpecialKey::Left {
-          self.component_registry.has_focus.set_id(COL_1_ID)
+          self.component_registry.has_focus.set_id(Id::Col1.int_value())
         } else {
-          self.component_registry.has_focus.set_id(COL_2_ID)
+          self.component_registry.has_focus.set_id(Id::Col2.int_value())
         }
       } else {
         log_no_err!(ERROR, "No focus id has been set, and it should be set!");
@@ -186,22 +191,24 @@ mod construct_components {
   impl AppWithLayout {
     pub async fn create_components_populate_registry_init_focus(&mut self) {
       // Construct COL_1_ID.
-      if self.component_registry.does_not_contain(COL_1_ID) {
-        let component = ColumnRenderComponent::new(COL_1_ID.to_string());
+      let col1_id = Id::Col1.int_value();
+      if self.component_registry.does_not_contain(col1_id) {
+        let component = ColumnRenderComponent::new(col1_id);
         let shared_component = Arc::new(RwLock::new(component));
-        self.component_registry.put(COL_1_ID, shared_component);
+        self.component_registry.put(col1_id, shared_component);
       }
 
       // Construct COL_2_ID.
-      if self.component_registry.does_not_contain(COL_2_ID) {
-        let component = ColumnRenderComponent::new(COL_2_ID.to_string());
+      let col2_id = Id::Col2.int_value();
+      if self.component_registry.does_not_contain(col2_id) {
+        let component = ColumnRenderComponent::new(col2_id);
         let shared_component = Arc::new(RwLock::new(component));
-        self.component_registry.put(COL_2_ID, shared_component);
+        self.component_registry.put(col2_id, shared_component);
       }
 
       // Init has focus.
       if self.component_registry.has_focus.get_id().is_none() {
-        self.component_registry.has_focus.set_id(COL_1_ID);
+        self.component_registry.has_focus.set_id(col1_id);
       }
     }
 
@@ -218,10 +225,10 @@ mod construct_components {
         box_start_with_runnable! {
           in:                     surface,
           runnable:               layout_components::TwoColLayout { app_with_layout: self },
-          id:                     CONTAINER_ID,
+          id:                     Id::Container.int_value(),
           dir:                    Direction::Horizontal,
           requested_size_percent: requested_size_percent!(width: 100, height: 100),
-          styles:                 [CONTAINER_ID],
+          styles:                 [&Id::Container.int_value().to_string()],
           state:                  state,
           shared_store:           shared_store,
           shared_tw_data:         shared_tw_data,
@@ -276,10 +283,10 @@ mod layout_components {
       throws!({
         box_start_with_component! {
           in:                     surface,
-          id:                     COL_1_ID,
+          id:                     Id::Col1.int_value(),
           dir:                    Direction::Vertical,
           requested_size_percent: requested_size_percent!(width: 50, height: 100),
-          styles:                 [COL_1_ID],
+          styles:                 [&Id::Col1.int_value().to_string()],
           render: {
             from:           self.app_with_layout.component_registry,
             state:          state,
@@ -303,10 +310,10 @@ mod layout_components {
       throws!({
         box_start_with_component! {
           in:                     surface,
-          id:                     COL_2_ID,
+          id:                     Id::Col2.int_value(),
           dir:                    Direction::Vertical,
           requested_size_percent: requested_size_percent!(width: 50, height: 100),
-          styles:                 [COL_2_ID],
+          styles:                 [&Id::Col2.int_value().to_string()],
           render: {
             from:           self.app_with_layout.component_registry,
             state:          state,
@@ -339,16 +346,16 @@ mod style_helpers {
     throws_with_return!({
       stylesheet! {
         style! {
-          id: CONTAINER_ID
+          id: Id::Container.int_value().to_string()
           padding: 1
         },
         style! {
-          id: COL_1_ID
+          id: Id::Col1.int_value().to_string()
           padding: 1
           color_bg: TWColor::Rgb { r: 55, g: 55, b: 100 }
         },
         style! {
-          id: COL_2_ID
+          id: Id::Col2.int_value().to_string()
           padding: 1
           color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
         }

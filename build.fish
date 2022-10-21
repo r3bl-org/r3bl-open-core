@@ -7,6 +7,6 @@
 # cargo build --release
 # RUST_BACKTRACE=1 cargo run
 
-# cargo clean
+cargo clean
 cargo +nightly -Z sparse-registry update
 cargo build

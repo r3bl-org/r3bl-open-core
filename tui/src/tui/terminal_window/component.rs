@@ -29,10 +29,10 @@ where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Display + Clone + Sync + Send,
 {
-  fn get_id(&self) -> &str;
+  fn get_id(&self) -> FlexBoxIdType;
 
   /// Render this component given the following.
-  /// 
+  ///
   /// - Arguments:
   ///   - Get from `current_box`:
   ///     - box_origin_pos: Position
@@ -44,13 +44,13 @@ where
   ///       the way it gets rendered)
   ///   - Maybe use `shared_store`:
   ///     - Dispatch an action if needed
-  /// 
+  ///
   /// - Returns:
   ///   - [RenderPipeline] which must be rendered by the caller
-  /// 
+  ///
   /// - Clipping, scrolling, overdrawing:
   ///   - Each implementation of this trait is solely responsible of taking care of these behaviors
-  /// 
+  ///
   async fn render(&mut self, args: ComponentScopeArgs<'_, S, A>, current_box: &FlexBox)
     -> CommonResult<RenderPipeline>;
 

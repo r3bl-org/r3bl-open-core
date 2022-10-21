@@ -30,7 +30,7 @@ impl AsyncReducer<State, Action> for Reducer {
       Action::Noop => state.clone(),
       Action::InsertEditorBuffer(id, buffer) => {
         let mut new_state = state.clone();
-        new_state.buffers.insert(id.into(), buffer.clone());
+        new_state.buffers.insert(*id, buffer.clone());
         new_state
       }
       Action::SetDialog(title, text) => {

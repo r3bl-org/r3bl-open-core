@@ -39,7 +39,7 @@ where
   A: Default + Display + Clone + Sync + Send,
 {
   pub engine: EditorEngine,
-  pub id: String,
+  pub id: FlexBoxIdType,
   pub on_editor_buffer_change_handler: Option<OnEditorBufferChangeFn<S, A>>,
 }
 
@@ -52,7 +52,7 @@ pub mod impl_component {
     S: HasEditorBuffers + Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
-    fn get_id(&self) -> &str { &self.id }
+    fn get_id(&self) -> FlexBoxIdType { self.id }
 
     // ┏━━━━━━━━━━━━━━┓
     // ┃ handle_event ┃
@@ -94,15 +94,14 @@ pub mod impl_component {
           component_registry,
           shared_tw_data,
           shared_store,
-          self_id: &self.id,
+          self_id: self.id,
           engine: &mut self.engine,
         };
 
         match EditorEngineRenderApi::apply_event(engine_args, input_event).await? {
           ApplyResponse::Applied(buffer) => {
             if let Some(on_change_handler) = self.on_editor_buffer_change_handler {
-              let my_id = self.get_id().to_string();
-              on_change_handler(shared_store, my_id, buffer);
+              on_change_handler(shared_store, self.get_id(), buffer);
             }
             EventPropagation::Consumed
           }
@@ -150,7 +149,7 @@ pub mod impl_component {
         component_registry,
         shared_tw_data,
         shared_store,
-        self_id: &self.id,
+        self_id: self.id,
       };
 
       EditorEngineRenderApi::render_engine(render_args, current_box).await
@@ -170,19 +169,19 @@ pub mod constructor {
     /// The on_change_handler is a lambda that is called if the editor buffer changes. Typically this
     /// results in a Redux action being created and then dispatched to the given store.
     pub fn new(
-      id: &str,
+      id: FlexBoxIdType,
       config_options: EditorEngineConfigOptions,
       on_buffer_change: OnEditorBufferChangeFn<S, A>,
     ) -> Self {
       Self {
         engine: EditorEngine::new(config_options),
-        id: id.to_string(),
+        id,
         on_editor_buffer_change_handler: Some(on_buffer_change),
       }
     }
 
     pub fn new_shared(
-      id: &str,
+      id: FlexBoxIdType,
       config_options: EditorEngineConfigOptions,
       on_buffer_change: OnEditorBufferChangeFn<S, A>,
     ) -> Arc<RwLock<Self>> {
@@ -195,14 +194,14 @@ pub use constructor::*;
 pub mod misc {
   use super::*;
 
-  pub type OnEditorBufferChangeFn<S, A> = fn(&SharedStore<S, A>, String, EditorBuffer);
+  pub type OnEditorBufferChangeFn<S, A> = fn(&SharedStore<S, A>, FlexBoxIdType, EditorBuffer);
 
   /// This marker trait is meant to be implemented by whatever state struct is being used to store the
   /// editor buffer for this re-usable editor component. It is used in the `where` clause of the
   /// [EditorComponent] to ensure that the generic type `S` implements this trait, guaranteeing that
   /// it holds a hash map of [EditorBuffer]s w/ key of `&str`.
   pub trait HasEditorBuffers {
-    fn get_editor_buffer(&self, id: &str) -> Option<&EditorBuffer>;
+    fn get_editor_buffer(&self, id: FlexBoxIdType) -> Option<&EditorBuffer>;
   }
 }
 pub use misc::*;
