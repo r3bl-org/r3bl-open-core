@@ -54,7 +54,7 @@ pub trait PerformPositioningAndSizing {
 /// Properties that are needed to create a [FlexBox].
 #[derive(Clone, Debug, Default)]
 pub struct FlexBoxProps {
-  pub id: String,
+  pub id: FlexBoxIdType,
   pub dir: Direction,
   pub requested_size_percent: RequestedSizePercent,
   pub maybe_styles: Option<Vec<Style>>,

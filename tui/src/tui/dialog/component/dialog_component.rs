@@ -37,8 +37,8 @@ where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Display + Clone + Sync + Send,
 {
-  pub id: String,
-  pub prev_focus_id: String,
+  pub id: FlexBoxIdType,
+  pub prev_focus_id: FlexBoxIdType,
   pub engine: DialogEngine,
   pub on_dialog_press_handler: Option<OnDialogPressFn<S, A>>,
 }
@@ -52,7 +52,7 @@ pub mod impl_component {
     S: HasDialogBuffer + Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
-    fn get_id(&self) -> &str { &self.id }
+    fn get_id(&self) -> FlexBoxIdType { self.id }
 
     // ┏━━━━━━━━━━━━━━┓
     // ┃ handle_event ┃
@@ -111,16 +111,16 @@ pub mod constructor {
     /// The on_dialog_press_handler is a lambda that is called if the user presses enter or escape.
     /// Typically this results in a Redux action being created and then dispatched to the given
     /// store.
-    pub fn new(id: &str, on_dialog_press_handler: OnDialogPressFn<S, A>) -> Self {
+    pub fn new(id: FlexBoxIdType, on_dialog_press_handler: OnDialogPressFn<S, A>) -> Self {
       Self {
-        engine: DialogEngine::default(),
-        prev_focus_id: String::default(),
-        id: id.to_string(),
+        engine: Default::default(),
+        prev_focus_id: Default::default(),
+        id,
         on_dialog_press_handler: Some(on_dialog_press_handler),
       }
     }
 
-    pub fn new_shared(id: &str, on_dialog_press_handler: OnDialogPressFn<S, A>) -> Arc<RwLock<Self>> {
+    pub fn new_shared(id: FlexBoxIdType, on_dialog_press_handler: OnDialogPressFn<S, A>) -> Arc<RwLock<Self>> {
       Arc::new(RwLock::new(DialogComponent::new(id, on_dialog_press_handler)))
     }
   }
@@ -144,9 +144,9 @@ pub mod misc {
   }
 
   pub type OnDialogPressFn<S, A> = fn(
-    String, /* my_id */
+    FlexBoxIdType, /* my_id */
     DialogResponse,
-    String, /* prev_focus_id */
+    FlexBoxIdType, /* prev_focus_id */
     &SharedStore<S, A>,
     &ComponentRegistry<S, A>,
   );

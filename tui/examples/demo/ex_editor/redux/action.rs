@@ -24,7 +24,7 @@ use r3bl_tui::*;
 #[allow(dead_code)]
 pub enum Action {
   Noop,
-  InsertEditorBuffer(String /* id */, EditorBuffer),
+  InsertEditorBuffer(FlexBoxIdType /* id */, EditorBuffer),
   SetDialog(String /* title */, String /* text */),
 }
 

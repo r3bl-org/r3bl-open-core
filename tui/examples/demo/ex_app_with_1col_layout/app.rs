@@ -18,6 +18,7 @@
 use std::{fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
+use int_enum::IntEnum;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
@@ -27,8 +28,12 @@ use tokio::sync::RwLock;
 use super::*;
 
 // Constants for the ids.
-const CONTAINER_ID: &str = "container";
-const COL_1_ID: &str = "col_1";
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+pub enum Id {
+  Container = 1,
+  Col = 2,
+}
 
 /// Async trait object that implements the [TWApp] trait.
 #[derive(Default)]
@@ -122,16 +127,17 @@ mod construct_components {
 
   impl AppWithLayout {
     pub async fn create_components_populate_registry_init_focus(&mut self) {
-      // Construct COL_1_ID.
-      if self.component_registry.does_not_contain(COL_1_ID) {
-        let _component = ColumnRenderComponent::new(COL_1_ID.to_string());
+      // Construct Col.
+      let col_id = Id::Col.int_value();
+      if self.component_registry.does_not_contain(col_id) {
+        let _component = ColumnRenderComponent::new(col_id);
         let shared_component_r1 = Arc::new(RwLock::new(_component));
-        self.component_registry.put(COL_1_ID, shared_component_r1);
+        self.component_registry.put(col_id, shared_component_r1);
       }
 
       // Init has focus.
       if self.component_registry.has_focus.get_id().is_none() {
-        self.component_registry.has_focus.set_id(COL_1_ID);
+        self.component_registry.has_focus.set_id(col_id);
       }
     }
 
@@ -144,13 +150,14 @@ mod construct_components {
       shared_tw_data: &SharedTWData,
       windows_size: &Size,
     ) -> CommonResult<()> {
+      let col_id = Id::Col.int_value();
       throws!({
         box_start_with_component! {
           in:                     surface,
-          id:                     COL_1_ID,
+          id:                     col_id,
           dir:                    Direction::Vertical,
           requested_size_percent: requested_size_percent!(width: 100, height: 100),
-          styles:                 [COL_1_ID],
+          styles:                 [&col_id.to_string()],
           render: {
             from:           self.component_registry,
             state:          state,
@@ -183,11 +190,11 @@ mod style_helpers {
     throws_with_return!({
       stylesheet! {
         style! {
-          id: CONTAINER_ID
+          id: Id::Container.int_value().to_string()
           padding: 1
         },
         style! {
-          id: COL_1_ID
+          id: Id::Col.int_value().to_string()
           padding: 1
           color_bg: TWColor::Rgb { r: 55, g: 55, b: 100 }
         }

@@ -47,10 +47,10 @@ mod tests {
   fn create_main_container(tw_surface: &mut Surface) -> CommonResult<()> {
     throws!({
       tw_surface.box_start(FlexBoxProps {
-        id: "container".to_string(),
+        id: 0,
         dir: Direction::Horizontal,
         requested_size_percent: requested_size_percent!(width:100, height:100),
-        maybe_styles: get_styles! { from: tw_surface.stylesheet, ["container"] },
+        maybe_styles: get_styles! { from: tw_surface.stylesheet, ["0"] },
       })?;
 
       make_container_assertions(tw_surface)?;
@@ -64,7 +64,7 @@ mod tests {
     fn make_container_assertions(tw_surface: &Surface) -> CommonResult<()> {
       throws!({
         let layout_item = tw_surface.stack_of_boxes.first().unwrap();
-        assert_eq2!(layout_item.id, "container");
+        assert_eq2!(layout_item.id, 0);
         assert_eq2!(layout_item.dir, Direction::Horizontal);
 
         assert_eq2!(layout_item.origin_pos, position!(col:0, row:0));
@@ -86,16 +86,16 @@ mod tests {
     }
   }
 
-  /// Left column "col_1".
+  /// Left column 1.
   fn create_left_col(tw_surface: &mut Surface) -> CommonResult<()> {
     throws!({
       // With macro.
       box_start! {
         in:                     tw_surface,
-        id:                     "col_1",
+        id:                     1,
         dir:                    Direction::Vertical,
         requested_size_percent: requested_size_percent!(width:50, height:100),
-        styles:                 ["col_1"]
+        styles:                 ["1"]
       }
       make_left_col_assertions(tw_surface)?;
       tw_surface.box_end()?;
@@ -104,7 +104,7 @@ mod tests {
     fn make_left_col_assertions(tw_surface: &Surface) -> CommonResult<()> {
       throws!({
         let layout_item = tw_surface.stack_of_boxes.last().unwrap();
-        assert_eq2!(layout_item.id, "col_1");
+        assert_eq2!(layout_item.id, 1);
         assert_eq2!(layout_item.dir, Direction::Vertical);
 
         assert_eq2!(layout_item.origin_pos, position!(col:0, row:0));
@@ -123,19 +123,19 @@ mod tests {
 
         assert_ne!(
           layout_item.get_computed_style(),
-          Stylesheet::compute(&tw_surface.stylesheet.find_styles_by_ids(vec!["col_1"]))
+          Stylesheet::compute(&tw_surface.stylesheet.find_styles_by_ids(vec!["1"]))
         );
       });
     }
   }
 
-  /// Right column "col_2".
+  /// Right column 2.
   fn create_right_col(tw_surface: &mut Surface) -> CommonResult<()> {
     throws!({
       // No macro.
       tw_surface.box_start(FlexBoxProps {
-        maybe_styles: get_styles! { from: tw_surface.stylesheet, ["col_2"] },
-        id: "col_2".to_string(),
+        maybe_styles: get_styles! { from: tw_surface.stylesheet, ["2"] },
+        id: 2,
         dir: Direction::Vertical,
         requested_size_percent: requested_size_percent!(width:50, height:100),
       })?;
@@ -146,7 +146,7 @@ mod tests {
     fn make_right_col_assertions(tw_surface: &Surface) -> CommonResult<()> {
       throws!({
         let current_box = tw_surface.stack_of_boxes.last().unwrap();
-        assert_eq2!(current_box.id, "col_2");
+        assert_eq2!(current_box.id, 2);
         assert_eq2!(current_box.dir, Direction::Vertical);
 
         assert_eq2!(current_box.origin_pos, position!(col:250, row:0));
@@ -163,7 +163,7 @@ mod tests {
 
         assert_ne!(
           current_box.get_computed_style(),
-          Stylesheet::compute(&tw_surface.stylesheet.find_styles_by_ids(vec!["col_2"]))
+          Stylesheet::compute(&tw_surface.stylesheet.find_styles_by_ids(vec!["2"]))
         );
       });
     }
@@ -174,18 +174,18 @@ mod tests {
     throws_with_return!({
       stylesheet! {
         style! {
-          id: "container"
+          id: "0"
           padding: 1
         },
         style! {
-          id: "col_1"
+          id: "1"
           attrib: [dim, bold]
           padding: 2
           color_fg: TWColor::Rgb { r: 255, g: 255, b: 0 } /* Yellow. */
           color_bg: TWColor::Rgb { r: 128, g: 128, b: 128 } /* Grey. */
         },
         style! {
-          id: "col_2"
+          id: "2"
           attrib: [underline, strikethrough]
           padding: 3
           color_fg: TWColor::Rgb { r: 0, g: 0, b: 0 } /* Black. */

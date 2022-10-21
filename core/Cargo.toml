@@ -23,7 +23,7 @@ path = "src/lib.rs"
 
 [dependencies]
 tokio = { version = "1.21.2", features = ["full"] }
-async-trait = "0.1.57"
+async-trait = "0.1.58"
 ansi_term = "0.12.1"
 
 # HTTP Client.
@@ -38,7 +38,7 @@ serde_json = "1.0"
 
 # Crossterm & EventStream support.
 crossterm = { version = "0.25.0", features = ["event-stream"] }
-futures-util = "0.3.24"
+futures-util = "0.3.25"
 paste = "1.0.9"
 
 # Unicode, grapheme clusters.

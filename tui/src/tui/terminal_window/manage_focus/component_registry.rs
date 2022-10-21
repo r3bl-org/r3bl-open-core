@@ -26,9 +26,10 @@ use crate::*;
 // ┏━━━━━━━━━━━━━━━━━━━┓
 // ┃ ComponentRegistry ┃
 // ┛                   ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// This map is used to cache [Component]s that have been created and are meant to be reused
-/// between multiple renders. It is entirely up to the [App] how to use this map. The
-/// methods provided allow components to be added to the map.
+/// This map is used to cache [Component]s that have been created and are meant to be reused between
+/// multiple renders.
+/// 1. It is entirely up to the [App] on how this [ComponentRegistryMap] is used.
+/// 2. The methods provided allow components to be added to the map.
 #[derive(Default)]
 pub struct ComponentRegistry<S, A>
 where
@@ -38,51 +39,49 @@ where
   pub components: ComponentRegistryMap<S, A>,
   pub has_focus: HasFocus,
   // FUTURE: 🐵 add user_data in ComponentRegistry
-  pub user_data: HashMap<String, HashMap<String, String>>,
+  pub user_data: HashMap<FlexBoxIdType, HashMap<String, String>>,
 }
 
-pub type ComponentRegistryMap<S, A> = HashMap<String, SharedComponent<S, A>>;
+pub type ComponentRegistryMap<S, A> = HashMap<FlexBoxIdType, SharedComponent<S, A>>;
 
 impl<S, A> ComponentRegistry<S, A>
 where
   S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Display + Clone + Sync + Send,
 {
-  pub fn put(&mut self, id: &str, component: SharedComponent<S, A>) {
-    self.components.insert(id.to_string(), component);
-  }
+  pub fn put(&mut self, id: FlexBoxIdType, component: SharedComponent<S, A>) { self.components.insert(id, component); }
 
-  pub fn does_not_contain(&self, id: &str) -> bool { !self.components.contains_key(id) }
+  pub fn does_not_contain(&self, id: FlexBoxIdType) -> bool { !self.components.contains_key(&id) }
 
-  pub fn has(&self, id: &str) -> bool { self.components.contains_key(id) }
+  pub fn contains(&self, id: FlexBoxIdType) -> bool { self.components.contains_key(&id) }
 
-  pub fn get(&self, id: &str) -> Option<&SharedComponent<S, A>> { self.components.get(id) }
+  pub fn get(&self, id: FlexBoxIdType) -> Option<&SharedComponent<S, A>> { self.components.get(&id) }
 
-  pub fn remove(&mut self, id: &str) -> Option<SharedComponent<S, A>> { self.components.remove(id) }
+  pub fn remove(&mut self, id: FlexBoxIdType) -> Option<SharedComponent<S, A>> { self.components.remove(&id) }
 }
 
 pub mod user_data_ops {
   use super::*;
 
-  pub fn get<S, A>(component_registry: &ComponentRegistry<S, A>, id: &str, key: &str) -> Option<String>
+  pub fn get<S, A>(component_registry: &ComponentRegistry<S, A>, id: FlexBoxIdType, key: &str) -> Option<String>
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
     component_registry
       .user_data
-      .get(id)
+      .get(&id)
       .and_then(|map| map.get(key))
-      .map(|s| s.to_string())
+      .map(|string_ref| string_ref.into())
   }
 
-  pub fn put<S, A>(component_registry: &mut ComponentRegistry<S, A>, id: &str, key: &str, value: &str)
+  pub fn put<S, A>(component_registry: &mut ComponentRegistry<S, A>, id: FlexBoxIdType, key: &str, value: &str)
   where
     S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Display + Clone + Sync + Send,
   {
-    let map = component_registry.user_data.entry(id.to_string()).or_default();
-    map.insert(key.to_string(), value.to_string());
+    let map = component_registry.user_data.entry(id).or_default();
+    map.insert(key.into(), value.into());
   }
 }
 
@@ -92,15 +91,17 @@ where
   A: Default + Display + Clone + Sync + Send,
 {
   pub fn get_focused_component_ref(this: &mut ComponentRegistry<S, A>) -> Option<SharedComponent<S, A>> {
-    if let Some(ref id) = this.has_focus.id {
-      if let Some(component) = this.get(id) {
-        return Some(component.clone());
-      }
+    if let Some(ref id) = this.has_focus.maybe_id {
+      ComponentRegistry::get_component_ref_by_id(this, *id)
+    } else {
+      None
     }
-    None
   }
 
-  pub fn get_component_ref_by_id(this: &mut ComponentRegistry<S, A>, id: &str) -> Option<SharedComponent<S, A>> {
+  pub fn get_component_ref_by_id(
+    this: &mut ComponentRegistry<S, A>,
+    id: FlexBoxIdType,
+  ) -> Option<SharedComponent<S, A>> {
     if let Some(component) = this.get(id) {
       return Some(component.clone());
     }

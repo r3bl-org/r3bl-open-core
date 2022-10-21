@@ -54,7 +54,7 @@ mod test_config_options {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
 
@@ -68,7 +68,7 @@ mod test_config_options {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 1));
   }
@@ -103,7 +103,7 @@ mod test_config_options {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 6, row: 0));
 
@@ -117,7 +117,7 @@ mod test_config_options {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 6, row: 0));
     let maybe_line_str: Option<UnicodeString> = EditorEngineDataApi::line_at_caret_to_string(&buffer, &engine);
@@ -157,7 +157,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
 
@@ -175,7 +175,7 @@ mod test_editor_ops {
       vec![EditorEvent::MoveCaret(CaretDirection::Left), EditorEvent::Delete],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 2));
 
@@ -197,7 +197,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_lines().len(), 2);
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
@@ -218,7 +218,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_lines().len(), 1);
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 3, row: 0));
@@ -250,7 +250,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
 
@@ -268,7 +268,7 @@ mod test_editor_ops {
       vec![EditorEvent::Backspace],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 2));
 
@@ -285,7 +285,7 @@ mod test_editor_ops {
       vec![EditorEvent::Backspace],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
 
@@ -304,7 +304,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 1));
     EditorEvent::apply_editor_events(
@@ -313,7 +313,7 @@ mod test_editor_ops {
       vec![EditorEvent::Backspace],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_lines().len(), 1);
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 3, row: 0));
@@ -335,7 +335,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 7, row: 0));
 
@@ -346,7 +346,7 @@ mod test_editor_ops {
       EditorEvent::Backspace,
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert::line_at_caret(&buffer, &engine, "abcab");
   }
@@ -372,7 +372,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 1));
 
@@ -388,7 +388,7 @@ mod test_editor_ops {
       vec![EditorEvent::MoveCaret(CaretDirection::Up)],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 0));
   }
@@ -414,7 +414,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
 
@@ -434,7 +434,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 1));
 
@@ -450,7 +450,7 @@ mod test_editor_ops {
       vec![EditorEvent::MoveCaret(CaretDirection::Down)],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
   }
@@ -480,7 +480,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
 
@@ -503,7 +503,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
 
@@ -514,7 +514,7 @@ mod test_editor_ops {
       vec![EditorEvent::MoveCaret(CaretDirection::Up)],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 1));
 
@@ -525,7 +525,7 @@ mod test_editor_ops {
       vec![EditorEvent::MoveCaret(CaretDirection::Up)],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 0));
 
@@ -540,7 +540,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
 
@@ -562,7 +562,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
 
@@ -580,7 +580,7 @@ mod test_editor_ops {
       vec![EditorEvent::MoveCaret(CaretDirection::Down)],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
   }
@@ -613,7 +613,7 @@ mod test_editor_ops {
       vec![EditorEvent::InsertChar('a')],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert::none_is_at_caret(&buffer, &engine);
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 0));
@@ -631,7 +631,7 @@ mod test_editor_ops {
       vec![EditorEvent::InsertNewLine],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_lines().len(), 2);
     assert::none_is_at_caret(&buffer, &engine);
@@ -650,7 +650,7 @@ mod test_editor_ops {
       vec![EditorEvent::InsertChar('a')],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
 
     // Move caret left.
@@ -666,7 +666,7 @@ mod test_editor_ops {
       vec![EditorEvent::MoveCaret(CaretDirection::Left)],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert::str_is_at_caret(&buffer, &engine, "a");
 
@@ -684,7 +684,7 @@ mod test_editor_ops {
       vec![EditorEvent::InsertNewLine],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_lines().len(), 3);
     assert::str_is_at_caret(&buffer, &engine, "a");
@@ -707,7 +707,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
 
     assert::none_is_at_caret(&buffer, &engine);
@@ -733,7 +733,7 @@ mod test_editor_ops {
       vec![EditorEvent::MoveCaret(CaretDirection::Left), EditorEvent::InsertNewLine],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert::str_is_at_caret(&buffer, &engine, "b");
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 3));
@@ -758,7 +758,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_lines().len(), 5);
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 3));
@@ -781,7 +781,7 @@ mod test_editor_ops {
       vec![EditorEvent::InsertChar('a')],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert::none_is_at_caret(&buffer, &engine);
 
@@ -800,7 +800,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert::str_is_at_caret(&buffer, &engine, "a");
 
@@ -816,7 +816,7 @@ mod test_editor_ops {
       vec![EditorEvent::InsertChar('1')],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(
       EditorEngineDataApi::line_at_caret_to_string(&buffer, &engine)
@@ -838,7 +838,7 @@ mod test_editor_ops {
       vec![EditorEvent::MoveCaret(CaretDirection::Left)],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert::str_is_at_caret(&buffer, &engine, "1");
 
@@ -854,7 +854,7 @@ mod test_editor_ops {
       vec![EditorEvent::MoveCaret(CaretDirection::Right)],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert::str_is_at_caret(&buffer, &engine, "a");
 
@@ -870,7 +870,7 @@ mod test_editor_ops {
       vec![EditorEvent::InsertChar('2')],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert::str_is_at_caret(&buffer, &engine, "a");
     assert_eq2!(
@@ -895,7 +895,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert::none_is_at_caret(&buffer, &engine);
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 3, row: 0));
@@ -916,7 +916,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
 
@@ -939,7 +939,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 3, row: 0));
 
@@ -956,7 +956,7 @@ mod test_editor_ops {
       vec![EditorEvent::MoveCaret(CaretDirection::Right)],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 1));
   }
@@ -986,7 +986,7 @@ mod test_editor_ops {
       vec![EditorEvent::InsertChar('a')],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(*buffer.get_lines(), vec![UnicodeString::from("a")]);
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 0));
@@ -1008,7 +1008,7 @@ mod test_editor_ops {
       vec![EditorEvent::InsertChar('b')],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(
       *buffer.get_lines(),
@@ -1035,7 +1035,7 @@ mod test_editor_ops {
       ],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(
       *buffer.get_lines(),
@@ -1063,7 +1063,7 @@ mod test_editor_ops {
       vec![EditorEvent::InsertChar('d')],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(
       *buffer.get_lines(),
@@ -1091,7 +1091,7 @@ mod test_editor_ops {
       vec![EditorEvent::InsertString("🙏🏽".into())],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(
       *buffer.get_lines(),
@@ -1122,7 +1122,7 @@ mod test_editor_ops {
       vec![EditorEvent::InsertString("hello".to_string()), EditorEvent::Home],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
 
@@ -1133,7 +1133,7 @@ mod test_editor_ops {
       vec![EditorEvent::End],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 5, row: 0));
   }
@@ -1156,7 +1156,7 @@ mod test_editor_ops {
         ],
         &mock_real_objects::make_shared_tw_data(),
         &mut mock_real_objects::make_component_registry(),
-        "",
+        0,
       );
       count -= 1;
     }
@@ -1169,7 +1169,7 @@ mod test_editor_ops {
       vec![EditorEvent::PageUp],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 10));
 
@@ -1180,7 +1180,7 @@ mod test_editor_ops {
       vec![EditorEvent::PageUp],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
 
@@ -1191,7 +1191,7 @@ mod test_editor_ops {
       vec![EditorEvent::PageUp],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
 
@@ -1202,7 +1202,7 @@ mod test_editor_ops {
       vec![EditorEvent::PageDown],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
 
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 10));
@@ -1214,7 +1214,7 @@ mod test_editor_ops {
       vec![EditorEvent::PageDown],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 20));
 
@@ -1225,7 +1225,7 @@ mod test_editor_ops {
       vec![EditorEvent::PageDown],
       &mock_real_objects::make_shared_tw_data(),
       &mut mock_real_objects::make_component_registry(),
-      "",
+      0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 20));
   }
@@ -1247,7 +1247,7 @@ mod test_editor_ops {
         ],
         &mock_real_objects::make_shared_tw_data(),
         &mut mock_real_objects::make_component_registry(),
-        "",
+        0,
       );
     }
     assert_eq2!(buffer.len(), ch!(max_lines + 1)); /* One empty line after content */
@@ -1260,7 +1260,7 @@ mod test_editor_ops {
         vec![EditorEvent::MoveCaret(CaretDirection::Up)],
         &mock_real_objects::make_shared_tw_data(),
         &mut mock_real_objects::make_component_registry(),
-        "",
+        0,
       );
     }
     assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 0, row: 0));
@@ -1275,7 +1275,7 @@ mod test_editor_ops {
         vec![EditorEvent::MoveCaret(CaretDirection::Down)],
         &mock_real_objects::make_shared_tw_data(),
         &mut mock_real_objects::make_component_registry(),
-        "",
+        0,
       );
     }
     assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 0, row: 8));
@@ -1297,7 +1297,7 @@ mod test_editor_ops {
         vec![EditorEvent::InsertString(format!("{}", count))],
         &mock_real_objects::make_shared_tw_data(),
         &mut mock_real_objects::make_component_registry(),
-        "",
+        0,
       );
     }
     assert_eq2!(buffer.len(), ch!(1));
@@ -1313,7 +1313,7 @@ mod test_editor_ops {
         vec![EditorEvent::MoveCaret(CaretDirection::Left)],
         &mock_real_objects::make_shared_tw_data(),
         &mut mock_real_objects::make_component_registry(),
-        "",
+        0,
       );
     }
     assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 5, row: 0));
@@ -1328,7 +1328,7 @@ mod test_editor_ops {
         vec![EditorEvent::MoveCaret(CaretDirection::Right)],
         &mock_real_objects::make_shared_tw_data(),
         &mut mock_real_objects::make_component_registry(),
-        "",
+        0,
       );
     }
     assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 7, row: 0));

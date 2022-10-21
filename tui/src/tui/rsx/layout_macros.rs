@@ -20,7 +20,7 @@
 macro_rules! box_start_with_component {
   (
     in:                     $arg_surface : expr,                 // Eg: in: tw_surface,
-    id:                     $arg_id : expr,                      // Eg: "foo",
+    id:                     $arg_id : expr,                      // Eg: 0,
     dir:                    $arg_dir : expr,                     // Eg: Direction::Horizontal,
     requested_size_percent: $arg_requested_size_percent : expr,  // Eg: (50, 100).try_into()?,
     styles:                 [$($args:tt)*],                      // Eg: [ "style1" , "style2" ]
@@ -52,7 +52,7 @@ macro_rules! box_start_with_runnable {
   (
     in:                     $arg_surface        : expr,           // Eg: in: tw_surface,
     runnable:               $arg_runnable       : expr,           // Eg: runnable: two_col_layout,
-    id:                     $arg_id             : expr,           // Eg: "foo",
+    id:                     $arg_id             : expr,           // Eg: 0,
     dir:                    $arg_dir            : expr,           // Eg: Direction::Horizontal,
     requested_size_percent: $arg_requested_size_percent : expr,   // Eg: (50, 100).try_into()?,
     styles:                 [$($args_styles:tt)*],                // Eg: [ "style1" , "style2" ]
@@ -131,7 +131,7 @@ macro_rules! surface_start_with_runnable {
 macro_rules! box_start {
   (
     in:                     $arg_surface : expr,                // Eg: in: tw_surface,
-    id:                     $arg_id : expr,                     // Eg: "foo",
+    id:                     $arg_id : expr,                     // Eg: 0,
     dir:                    $arg_dir : expr,                    // Eg: Direction::Horizontal,
     requested_size_percent: $arg_requested_size_percent : expr, // Eg: (50, 100).try_into()?,
     styles:                 [$($args:tt)*]                      // Eg: [ "style1" , "style2" ]
@@ -148,7 +148,7 @@ macro_rules! box_start {
 #[macro_export]
 macro_rules! box_props {
   (
-    id:                     $arg_id : expr,                     // Eg: "foo",
+    id:                     $arg_id : expr,                     // Eg: 0,
     dir:                    $arg_dir : expr,                    // Eg: Direction::Horizontal,
     requested_size_percent: $arg_requested_size_percent : expr, // Eg: (50, 100).try_into()?,
     maybe_styles:           $arg_styles: expr                   // Eg: get_styles!
@@ -156,32 +156,32 @@ macro_rules! box_props {
                                                                 //     ["style1", "style2"] };
   ) => {
     FlexBoxProps {
-      id: $arg_id.to_string(),
+      id: $arg_id,
       dir: $arg_dir,
       requested_size_percent: $arg_requested_size_percent,
       maybe_styles: $arg_styles,
     }
   };
   (
-    id:                     $arg_id : expr,                     // Eg: "foo",
+    id:                     $arg_id : expr,                     // Eg: 0,
     dir:                    $arg_dir : expr,                    // Eg: Direction::Horizontal,
     requested_size_percent: $arg_requested_size_percent : expr, // Eg: (50, 100).try_into()?,
     maybe_styles:           [$($args:tt)*]                      // Eg: [style!{...} , style!{...}]
   ) => {
     FlexBoxProps {
-      id: $arg_id.to_string(),
+      id: $arg_id,
       dir: $arg_dir,
       requested_size_percent: $arg_requested_size_percent,
       maybe_styles: Some(vec![$($args)*]),
     }
   };
   (
-    id:       $arg_id : expr,                                   // Eg: "foo",
+    id:       $arg_id : expr,                                   // Eg:0,
     dir:      $arg_dir : expr,                                  // Eg: Direction::Horizontal,
     requested_size_percent: $arg_requested_size_percent : expr, // Eg: (50, 100).try_into()?,
   ) => {
     FlexBoxProps {
-      id: $arg_id.to_string(),
+      id: $arg_id,
       dir: $arg_dir,
       requested_size_percent: $arg_requested_size_percent,
       maybe_styles: None,

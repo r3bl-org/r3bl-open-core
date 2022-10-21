@@ -24,11 +24,11 @@ use super::*;
 #[derive(Debug, Clone, Default)]
 pub struct ColumnRenderComponent {
   pub lolcat: Lolcat,
-  pub id: String,
+  pub id: FlexBoxIdType,
 }
 
 impl ColumnRenderComponent {
-  pub fn new(id: String) -> Self {
+  pub fn new(id: FlexBoxIdType) -> Self {
     Self {
       id,
       ..Default::default()
@@ -66,7 +66,7 @@ macro_rules! fire {
 
 #[async_trait]
 impl Component<State, Action> for ColumnRenderComponent {
-  fn get_id(&self) -> &str { &self.id }
+  fn get_id(&self) -> FlexBoxIdType { self.id }
 
   /// Handle following input events (and consume them):
   /// - Up,   `+` : fire `AddPop(1)`
@@ -120,15 +120,14 @@ impl Component<State, Action> for ColumnRenderComponent {
   async fn render(
     &mut self,
     args: ComponentScopeArgs<'_, State, Action>,
-
     current_box: &FlexBox,
   ) -> CommonResult<RenderPipeline> {
     throws_with_return!({
       let ComponentScopeArgs { component_registry, .. } = args;
 
       // Fixed strings.
-      let line_1 = format!("{} - Hello", current_box.id);
-      let line_2 = format!("{} - World", current_box.id);
+      let line_1 = format!("box.id: {} - Hello", current_box.id);
+      let line_2 = format!("box.id: {} - World", current_box.id);
 
       // Setup intermediate vars.
       let box_origin_pos = current_box.style_adjusted_origin_pos; // Adjusted for style margin (if any).
