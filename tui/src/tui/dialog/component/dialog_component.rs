@@ -34,8 +34,8 @@ use crate::*;
 #[derive(Clone, Default)]
 pub struct DialogComponent<S, A>
 where
-  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-  A: Default + Display + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Clone + Sync + Send,
 {
   pub id: FlexBoxIdType,
   pub prev_focus_id: FlexBoxIdType,
@@ -49,8 +49,8 @@ pub mod impl_component {
   #[async_trait]
   impl<S, A> Component<S, A> for DialogComponent<S, A>
   where
-    S: HasDialogBuffer + Default + Display + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Display + Clone + Sync + Send,
+    S: HasDialogBuffer + Default + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Clone + Sync + Send,
   {
     fn get_id(&self) -> FlexBoxIdType { self.id }
 
@@ -105,8 +105,8 @@ pub mod constructor {
 
   impl<S, A> DialogComponent<S, A>
   where
-    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Display + Clone + Sync + Send,
+    S: Default + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Clone + Sync + Send,
   {
     /// The on_dialog_press_handler is a lambda that is called if the user presses enter or escape.
     /// Typically this results in a Redux action being created and then dispatched to the given

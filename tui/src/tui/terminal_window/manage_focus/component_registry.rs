@@ -33,8 +33,8 @@ use crate::*;
 #[derive(Default)]
 pub struct ComponentRegistry<S, A>
 where
-  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-  A: Default + Display + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Clone + Sync + Send,
 {
   pub components: ComponentRegistryMap<S, A>,
   pub has_focus: HasFocus,
@@ -46,8 +46,8 @@ pub type ComponentRegistryMap<S, A> = HashMap<FlexBoxIdType, SharedComponent<S, 
 
 impl<S, A> ComponentRegistry<S, A>
 where
-  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-  A: Default + Display + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Clone + Sync + Send,
 {
   pub fn put(&mut self, id: FlexBoxIdType, component: SharedComponent<S, A>) { self.components.insert(id, component); }
 
@@ -65,8 +65,8 @@ pub mod user_data_ops {
 
   pub fn get<S, A>(component_registry: &ComponentRegistry<S, A>, id: FlexBoxIdType, key: &str) -> Option<String>
   where
-    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Display + Clone + Sync + Send,
+    S: Default + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Clone + Sync + Send,
   {
     component_registry
       .user_data
@@ -77,8 +77,8 @@ pub mod user_data_ops {
 
   pub fn put<S, A>(component_registry: &mut ComponentRegistry<S, A>, id: FlexBoxIdType, key: &str, value: &str)
   where
-    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Display + Clone + Sync + Send,
+    S: Default + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Clone + Sync + Send,
   {
     let map = component_registry.user_data.entry(id).or_default();
     map.insert(key.into(), value.into());
@@ -87,8 +87,8 @@ pub mod user_data_ops {
 
 impl<S, A> ComponentRegistry<S, A>
 where
-  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-  A: Default + Display + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Clone + Sync + Send,
 {
   pub fn get_focused_component_ref(this: &mut ComponentRegistry<S, A>) -> Option<SharedComponent<S, A>> {
     if let Some(ref id) = this.has_focus.maybe_id {
@@ -195,8 +195,8 @@ mod debug_helpers {
 
   impl<S, A> Debug for ComponentRegistry<S, A>
   where
-    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Display + Clone + Sync + Send,
+    S: Default + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Clone + Sync + Send,
   {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       f.debug_struct("ComponentRegistry")
