@@ -999,8 +999,8 @@ mod test_editor_ops {
     //   └─▴────────┘
     //   C0123456789
     EditorEngineDataApi::insert_new_line_at_caret(EditorArgsMut {
-      buffer: &mut buffer,
-      engine: &mut engine,
+      editor_buffer: &mut buffer,
+      editor_engine: &mut engine,
     });
     EditorEvent::apply_editor_events(
       &mut engine,

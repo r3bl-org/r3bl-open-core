@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{Debug, Display},
-          sync::Arc};
+use std::{fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
 use r3bl_redux::*;
@@ -38,12 +37,13 @@ where
   A: Default + Clone + Sync + Send,
 {
   pub id: FlexBoxIdType,
-  pub prev_focus_id: FlexBoxIdType,
-  pub engine: DialogEngine,
+  pub dialog_engine: DialogEngine,
   pub on_dialog_press_handler: Option<OnDialogPressFn<S, A>>,
 }
 
 pub mod impl_component {
+  use std::borrow::Cow;
+
   use super::*;
 
   #[async_trait]
@@ -70,8 +70,54 @@ pub mod impl_component {
       args: ComponentScopeArgs<'_, S, A>,
       input_event: &InputEvent,
     ) -> CommonResult<EventPropagation> {
-      // TODO: connect to DialogEngineApi::apply_event
-      Ok(EventPropagation::Propagate)
+      let ComponentScopeArgs {
+        state,
+        shared_store,
+        shared_tw_data,
+        component_registry,
+        ..
+      } = args;
+
+      let cow_dialog_buffer: Cow<DialogBuffer> = if let Some(dialog_buffer) = state.get_dialog_buffer() {
+        Cow::Borrowed(dialog_buffer)
+      } else {
+        Cow::Owned(DialogBuffer::default())
+      };
+
+      let dialog_args = {
+        DialogEngineArgs {
+          shared_tw_data,
+          shared_store,
+          state,
+          component_registry,
+          self_id: self.get_id(),
+          dialog_engine: &mut self.dialog_engine,
+          dialog_buffer: &cow_dialog_buffer,
+        }
+      };
+
+      if let DialogEngineApplyResponse::DialogChoice(dialog_choice) =
+        DialogEngineApi::apply_event(dialog_args, input_event).await?
+      {
+        // Restore focus to non-modal component.
+        let prev_focus_id = component_registry.has_focus.reset_modal_id();
+
+        // Run the handler (if any) w/ `dialog_choice`.
+        if let Some(handler) = &self.on_dialog_press_handler {
+          handler(
+            self.get_id(),
+            dialog_choice,
+            prev_focus_id,
+            shared_store,
+            component_registry,
+          );
+        }
+
+        // Trigger re-render, now that focus has been restored to non-modal component.
+        Ok(EventPropagation::ConsumedRerender)
+      } else {
+        Ok(EventPropagation::Propagate)
+      }
     }
 
     // ┏━━━━━━━━┓
@@ -93,13 +139,6 @@ pub mod impl_component {
   }
 }
 
-pub mod handle_focus_change {
-  use super::*;
-
-  // TODO: save prev_focus_id (called by App)
-  // TODO: restore prev_focus_id (called by DialogComponent)
-}
-
 pub mod constructor {
   use super::*;
 
@@ -113,8 +152,7 @@ pub mod constructor {
     /// store.
     pub fn new(id: FlexBoxIdType, on_dialog_press_handler: OnDialogPressFn<S, A>) -> Self {
       Self {
-        engine: Default::default(),
-        prev_focus_id: Default::default(),
+        dialog_engine: Default::default(),
         id,
         on_dialog_press_handler: Some(on_dialog_press_handler),
       }
@@ -138,15 +176,15 @@ pub mod misc {
   }
 
   #[derive(Debug)]
-  pub enum DialogResponse {
+  pub enum DialogChoice {
     Yes(String),
     No,
   }
 
   pub type OnDialogPressFn<S, A> = fn(
     FlexBoxIdType, /* my_id */
-    DialogResponse,
-    FlexBoxIdType, /* prev_focus_id */
+    DialogChoice,
+    Option<FlexBoxIdType>, /* prev_focus_id */
     &SharedStore<S, A>,
     &ComponentRegistry<S, A>,
   );

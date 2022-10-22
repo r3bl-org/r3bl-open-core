@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
 use r3bl_rs_utils_core::*;
 
@@ -27,23 +27,35 @@ use crate::*;
 /// Things you can do w/ a dialog engine.
 pub struct DialogEngineApi;
 
+#[derive(Debug)]
+pub enum DialogEngineApplyResponse {
+  Noop,
+  DialogChoice(DialogChoice),
+}
+
 impl DialogEngineApi {
-  /// Event based interface for the editor. This executes the [InputEvent]. Returns a new
-  /// [DialogBuffer] if the operation was applied otherwise returns [None].
+  /// Event based interface for the editor. This executes the [InputEvent].
+  /// 1. Returns [Some(DialogResponse)] if <kbd>Enter</kbd> or <kbd>Esc</kbd> was pressed.
+  /// 2. Otherwise returns [None].
   pub async fn apply_event<S, A>(
-    args: EditorEngineArgs<'_, S, A>,
+    args: DialogEngineArgs<'_, S, A>,
     input_event: &InputEvent,
-  ) -> CommonResult<ApplyResponse<DialogBuffer>>
+  ) -> CommonResult<DialogEngineApplyResponse>
   where
     S: Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
   {
-    // TODO: impl apply_event
-    todo!()
+    if let Some(choice) = try_handle_dialog_choice(input_event, args) {
+      return Ok(DialogEngineApplyResponse::DialogChoice(choice));
+    }
+
+    // TODO: handle passing thru input_event to the editor.
+
+    Ok(DialogEngineApplyResponse::Noop)
   }
 
   pub async fn render_engine<S, A>(
-    args: EditorEngineArgs<'_, S, A>,
+    args: DialogEngineArgs<'_, S, A>,
     current_box: &FlexBox,
   ) -> CommonResult<RenderPipeline>
   where
@@ -51,6 +63,31 @@ impl DialogEngineApi {
     A: Default + Clone + Sync + Send,
   {
     // TODO: impl render
-    todo!()
+    Ok(RenderPipeline::default())
   }
+}
+
+fn try_handle_dialog_choice<S, A>(input_event: &InputEvent, args: DialogEngineArgs<S, A>) -> Option<DialogChoice>
+where
+  S: Default + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Clone + Sync + Send,
+{
+  if let Some(dialog_event) = DialogEvent::try_from(input_event, None) {
+    match dialog_event {
+      // Handle Enter.
+      DialogEvent::EnterPressed => {
+        let DialogEngineArgs { dialog_buffer, .. } = args;
+        // Get the EditorBuffer content.
+        let text = dialog_buffer.editor_buffer.get_as_string();
+        return Some(DialogChoice::Yes(text));
+      }
+
+      // Handle Esc.
+      DialogEvent::EscPressed => {
+        return Some(DialogChoice::No);
+      }
+      _ => {}
+    }
+  }
+  None
 }

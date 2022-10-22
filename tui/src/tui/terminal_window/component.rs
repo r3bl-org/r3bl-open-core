@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
 use async_trait::async_trait;
 use r3bl_rs_utils_core::*;
@@ -70,16 +70,4 @@ where
   A: Default + Clone + Sync + Send,
 {
   async fn run_on_surface(&mut self, args: GlobalScopeArgs<'_, S, A>, surface: &mut Surface) -> CommonResult<()>;
-}
-
-// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ Response type for apply_event() ┃
-// ┛                                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#[derive(Debug)]
-pub enum ApplyResponse<T>
-where
-  T: Debug,
-{
-  Applied(T),
-  NotApplied,
 }

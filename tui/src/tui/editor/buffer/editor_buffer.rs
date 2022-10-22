@@ -152,6 +152,15 @@ pub mod access_and_mutate {
 
     pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.lines }
 
+    pub fn get_as_string(&self) -> String {
+      self
+        .get_lines()
+        .iter()
+        .map(|l| l.string.clone())
+        .collect::<Vec<String>>()
+        .join(", ")
+    }
+
     pub fn set_lines(&mut self, lines: Vec<String>) {
       // Set lines.
       self.lines = lines.into_iter().map(UnicodeString::from).collect();

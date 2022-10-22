@@ -15,9 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{borrow::Cow,
-          fmt::{Debug, Display},
-          sync::Arc};
+use std::{borrow::Cow, fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
 use r3bl_redux::*;
@@ -38,7 +36,7 @@ where
   S: Default + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Clone + Sync + Send,
 {
-  pub engine: EditorEngine,
+  pub editor_engine: EditorEngine,
   pub id: FlexBoxIdType,
   pub on_editor_buffer_change_handler: Option<OnEditorBufferChangeFn<S, A>>,
 }
@@ -79,7 +77,7 @@ pub mod impl_component {
           ..
         } = args;
 
-        let my_buffer: Cow<EditorBuffer> = {
+        let cow_editor_buffer: Cow<EditorBuffer> = {
           if let Some(buffer) = state.get_editor_buffer(self.get_id()) {
             Cow::Borrowed(buffer)
           } else {
@@ -90,12 +88,12 @@ pub mod impl_component {
         // Try to apply the `input_event` to `editor_engine` to decide whether to fire action.
         let engine_args = EditorEngineArgs {
           state,
-          buffer: &my_buffer,
+          editor_buffer: &cow_editor_buffer,
           component_registry,
           shared_tw_data,
           shared_store,
           self_id: self.id,
-          engine: &mut self.engine,
+          editor_engine: &mut self.editor_engine,
         };
 
         match EditorEngineRenderApi::apply_event(engine_args, input_event).await? {
@@ -143,9 +141,9 @@ pub mod impl_component {
       };
 
       let render_args = EditorEngineArgs {
-        engine: &mut self.engine,
+        editor_engine: &mut self.editor_engine,
         state,
-        buffer: &my_buffer,
+        editor_buffer: &my_buffer,
         component_registry,
         shared_tw_data,
         shared_store,
@@ -174,7 +172,7 @@ pub mod constructor {
       on_buffer_change: OnEditorBufferChangeFn<S, A>,
     ) -> Self {
       Self {
-        engine: EditorEngine::new(config_options),
+        editor_engine: EditorEngine::new(config_options),
         id,
         on_editor_buffer_change_handler: Some(on_buffer_change),
       }

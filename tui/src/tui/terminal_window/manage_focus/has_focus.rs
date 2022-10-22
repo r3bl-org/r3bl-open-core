@@ -45,7 +45,7 @@ pub struct HasFocus {
   pub maybe_id: Option<FlexBoxIdType>,
 
   /// This `id` is saved only when [set_modal_id](HasFocus::set_modal_id) is called. This is global.
-  pub maybe_prev_id: Option<FlexBoxIdType>,
+  pub maybe_id_before_modal: Option<FlexBoxIdType>,
 }
 
 pub type CursorPositionMap = HashMap<FlexBoxIdType, Option<Position>>;
@@ -73,15 +73,18 @@ impl HasFocus {
 impl HasFocus {
   /// Saves the current `id` to `prev_id` and sets `id` to the given `id`.
   pub fn set_modal_id(&mut self, id: FlexBoxIdType) {
-    self.maybe_prev_id = self.maybe_id;
+    self.maybe_id_before_modal = self.maybe_id;
     self.set_id(id);
   }
 
   /// Restores the `id` from `prev_id` and sets `prev_id` to `None`.
-  pub fn reset_modal_id(&mut self) {
-    if let Some(prev_id) = &self.maybe_prev_id {
-      self.maybe_id = Some(*prev_id);
-      self.maybe_prev_id = None;
+  pub fn reset_modal_id(&mut self) -> Option<FlexBoxIdType> {
+    if let Some(prev_id) = self.maybe_id_before_modal {
+      self.maybe_id = Some(prev_id);
+      self.maybe_id_before_modal = None;
+      Some(prev_id)
+    } else {
+      None
     }
   }
 }

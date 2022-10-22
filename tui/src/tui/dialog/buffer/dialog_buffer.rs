@@ -29,7 +29,7 @@ use crate::*;
 /// title that is displayed.
 #[derive(Default, Clone, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct DialogBuffer {
-  pub buffer: EditorBuffer,
+  pub editor_buffer: EditorBuffer,
   pub title: String,
 }
 
@@ -40,12 +40,12 @@ mod debug_format_helpers {
   impl Debug for DialogBuffer {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
       write! { f,
-        "\nDialogBuffer [  \n\
-        ├ title: {}        \n\
-        └ buffer: {:?}     \n\
+        "\nDialogBuffer [      \n\
+        ├ title: {}            \n\
+        └ editor_buffer: {:?}  \n\
         ]",
         self.title,
-        self.buffer
+        self.editor_buffer
       }
     }
   }
