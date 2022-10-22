@@ -29,8 +29,8 @@ use crate::*;
 #[async_trait]
 pub trait App<S, A>
 where
-  S: Display + Default + Clone + PartialEq + Debug + Sync + Send,
-  A: Display + Default + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Clone + Sync + Send,
 {
   /// Use the state to render the output (via crossterm). To change the state, dispatch an action.
   async fn app_render(&mut self, args: GlobalScopeArgs<'_, S, A>) -> CommonResult<RenderPipeline>;

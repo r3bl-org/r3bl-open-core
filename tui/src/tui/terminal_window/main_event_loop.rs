@@ -77,8 +77,8 @@ impl TerminalWindow {
     exit_keys: Vec<InputEvent>,
   ) -> CommonResult<()>
   where
-    S: Display + Default + Clone + PartialEq + Debug + Sync + Send + 'static,
-    A: Display + Default + Clone + Sync + Send + 'static,
+    S: Default + Clone + PartialEq + Debug + Sync + Send + 'static,
+    A: Default + Clone + Sync + Send + 'static,
   {
     // Initialize the terminal window data struct.
     let _tw_data = TWData::try_to_create_instance()?;
@@ -160,8 +160,8 @@ impl TerminalWindow {
     input_event: &InputEvent,
   ) -> CommonResult<EventPropagation>
   where
-    S: Display + Default + Clone + PartialEq + Debug + Sync + Send + 'static,
-    A: Display + Default + Clone + Sync + Send + 'static,
+    S: Default + Clone + PartialEq + Debug + Sync + Send + 'static,
+    A: Default + Clone + Sync + Send + 'static,
   {
     let propagation_result_from_app = match SPAWN_PROCESS_INPUT {
       true => {
@@ -213,8 +213,8 @@ impl TerminalWindow {
 
 struct AppManager<S, A>
 where
-  S: Display + Default + Clone + PartialEq + Debug + Sync + Send + 'static,
-  A: Display + Default + Clone + Sync + Send + 'static,
+  S: Default + Clone + PartialEq + Debug + Sync + Send + 'static,
+  A: Default + Clone + Sync + Send + 'static,
 {
   shared_app: SharedApp<S, A>,
   shared_store: SharedStore<S, A>,
@@ -224,8 +224,8 @@ where
 #[async_trait]
 impl<S, A> AsyncSubscriber<S> for AppManager<S, A>
 where
-  S: Display + Default + Clone + PartialEq + Debug + Sync + Send + 'static,
-  A: Display + Default + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send + 'static,
+  A: Default + Clone + Sync + Send,
 {
   async fn run(&self, my_state: S) {
     let result = AppManager::render_app(
@@ -243,8 +243,8 @@ where
 
 impl<S, A> AppManager<S, A>
 where
-  S: Display + Default + Clone + PartialEq + Debug + Sync + Send + 'static,
-  A: Display + Default + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send + 'static,
+  A: Default + Clone + Sync + Send,
 {
   fn new_box(
     shared_app: &SharedApp<S, A>,

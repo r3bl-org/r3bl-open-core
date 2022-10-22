@@ -28,8 +28,8 @@ use crate::*;
 
 pub struct RenderArgs<'a, S, A>
 where
-  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-  A: Default + Display + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Clone + Sync + Send,
 {
   pub engine: &'a mut EditorEngine,
   pub buffer: &'a EditorBuffer,
@@ -50,8 +50,8 @@ pub struct EditorArgs<'a> {
 /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct GlobalScopeArgs<'a, S, A>
 where
-  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-  A: Default + Display + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Clone + Sync + Send,
 {
   pub shared_tw_data: &'a SharedTWData,
   pub shared_store: &'a SharedStore<S, A>,
@@ -63,8 +63,8 @@ where
 /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct ComponentScopeArgs<'a, S, A>
 where
-  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-  A: Default + Display + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Clone + Sync + Send,
 {
   pub shared_tw_data: &'a SharedTWData,
   pub shared_store: &'a SharedStore<S, A>,
@@ -77,8 +77,8 @@ where
 /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct EditorEngineArgs<'a, S, A>
 where
-  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-  A: Default + Display + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Clone + Sync + Send,
 {
   pub shared_tw_data: &'a SharedTWData,
   pub shared_store: &'a SharedStore<S, A>,
@@ -93,8 +93,8 @@ where
 /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct DialogEngineArgs<'a, S, A>
 where
-  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-  A: Default + Display + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Clone + Sync + Send,
 {
   pub shared_tw_data: &'a SharedTWData,
   pub shared_store: &'a SharedStore<S, A>,

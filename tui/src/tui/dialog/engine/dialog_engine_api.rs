@@ -35,8 +35,8 @@ impl DialogEngineApi {
     input_event: &InputEvent,
   ) -> CommonResult<ApplyResponse<DialogBuffer>>
   where
-    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Display + Clone + Sync + Send,
+    S: Default + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Clone + Sync + Send,
   {
     // TODO: impl apply_event
     todo!()
@@ -47,8 +47,8 @@ impl DialogEngineApi {
     current_box: &FlexBox,
   ) -> CommonResult<RenderPipeline>
   where
-    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Display + Clone + Sync + Send,
+    S: Default + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Clone + Sync + Send,
   {
     // TODO: impl render
     todo!()

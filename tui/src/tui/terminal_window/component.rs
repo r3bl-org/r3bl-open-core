@@ -26,8 +26,8 @@ use crate::*;
 #[async_trait]
 pub trait Component<S, A>
 where
-  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-  A: Default + Display + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Clone + Sync + Send,
 {
   fn get_id(&self) -> FlexBoxIdType;
 
@@ -66,8 +66,8 @@ where
 #[async_trait]
 pub trait SurfaceRunnable<S, A>
 where
-  S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-  A: Default + Display + Clone + Sync + Send,
+  S: Default + Clone + PartialEq + Debug + Sync + Send,
+  A: Default + Clone + Sync + Send,
 {
   async fn run_on_surface(&mut self, args: GlobalScopeArgs<'_, S, A>, surface: &mut Surface) -> CommonResult<()>;
 }

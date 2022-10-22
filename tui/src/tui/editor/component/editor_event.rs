@@ -120,8 +120,8 @@ impl EditorEvent {
     _component_registry: &mut ComponentRegistry<S, A>,
     _self_id: FlexBoxIdType,
   ) where
-    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Display + Clone + Sync + Send,
+    S: Default + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Clone + Sync + Send,
   {
     match editor_buffer_command {
       EditorEvent::InsertChar(character) => {
@@ -174,8 +174,8 @@ impl EditorEvent {
     component_registry: &mut ComponentRegistry<S, A>,
     self_id: FlexBoxIdType,
   ) where
-    S: Default + Display + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Display + Clone + Sync + Send,
+    S: Default + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Clone + Sync + Send,
   {
     for editor_event in editor_event_vec {
       EditorEvent::apply_editor_event(
