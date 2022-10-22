@@ -81,6 +81,11 @@ mod impl_app {
         window_size,
       } = args;
 
+      call_if_true!(DEBUG_TUI_MOD, {
+        log_no_err!(DEBUG, "🐝 focus: {:?}", self.component_registry.has_focus);
+        log_no_err!(DEBUG, "💾 user_data: {:?}", self.component_registry.user_data);
+      });
+
       if let EventPropagation::Consumed = self.try_activate(args, input_event) {
         return Ok(EventPropagation::Consumed);
       }
@@ -141,28 +146,33 @@ mod modal_dialog {
       args: GlobalScopeArgs<'_, State, Action>,
       input_event: &InputEvent,
     ) -> EventPropagation {
-      if let Ok(DialogEvent::ActivateModal) = DialogEvent::try_from(
+      if let Some(DialogEvent::ActivateModal) = DialogEvent::try_from(
         input_event,
-        Keypress::WithModifiers {
+        Some(Keypress::WithModifiers {
           key: Key::Character('l'),
           mask: ModifierKeysMask::CTRL,
-        },
+        }),
       ) {
-        call_if_true!(DEBUG_TUI_MOD, {
-          log_no_err!(DEBUG, "🅰️ activate modal");
-        });
-
         self.component_registry.has_focus.set_modal_id(Id::Dialog.int_value());
 
-        let GlobalScopeArgs { shared_store, .. } = args;
+        call_if_true!(DEBUG_TUI_MOD, {
+          log_no_err!(DEBUG, "📣 activate modal: {:?}", self.component_registry.has_focus);
+        });
 
-        let title = "This is a modal dialog";
-        let text = "Press <Esc> to close it, or <Enter> to accept.";
+        let GlobalScopeArgs {
+          shared_store, state, ..
+        } = args;
 
-        spawn_dispatch_action!(
-          shared_store,
-          Action::SetDialog(format!("title: {}", title), text.into())
-        );
+        let text = {
+          if let Some(editor_buffer) = state.get_editor_buffer(Id::Editor.int_value()) {
+            editor_buffer.get_as_string()
+          } else {
+            "Press <Esc> to close, or <Enter> to accept".to_string()
+          }
+        };
+
+        let title = "Modal Dialog Title";
+        spawn_dispatch_action!(shared_store, Action::SetDialog(title.to_string(), text.to_string()));
 
         return EventPropagation::Consumed;
       };
@@ -245,23 +255,18 @@ mod component_registry {
 
     let shared_dialog_component = {
       fn on_dialog_press(
-        my_id: FlexBoxIdType,
-        dialog_response: DialogResponse,
-        _prev_focus_id: FlexBoxIdType,
+        _my_id: FlexBoxIdType,
+        dialog_choice: DialogChoice,
+        _prev_focus_id: Option<FlexBoxIdType>,
         shared_store: &SharedStore<State, Action>,
         _component_registry: &ComponentRegistry<State, Action>,
       ) {
-        match dialog_response {
-          DialogResponse::Yes(text) => {
-            // TODO: replace this w/ something real
-            spawn_dispatch_action!(shared_store, Action::SetDialog(format!("title: {}", my_id), text));
+        match dialog_choice {
+          DialogChoice::Yes(text) => {
+            spawn_dispatch_action!(shared_store, Action::SetDialog("Yes".to_string(), text));
           }
-          DialogResponse::No => {
-            // TODO: replace this w/ something real
-            spawn_dispatch_action!(
-              shared_store,
-              Action::SetDialog(format!("title: {}", my_id), "".to_string())
-            );
+          DialogChoice::No => {
+            spawn_dispatch_action!(shared_store, Action::SetDialog("No".to_string(), "".to_string()));
           }
         }
       }

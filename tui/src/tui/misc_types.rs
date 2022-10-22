@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
@@ -31,19 +31,19 @@ where
   S: Default + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Clone + Sync + Send,
 {
-  pub engine: &'a mut EditorEngine,
-  pub buffer: &'a EditorBuffer,
+  pub editor_engine: &'a mut EditorEngine,
+  pub editor_buffer: &'a EditorBuffer,
   pub component_registry: &'a ComponentRegistry<S, A>,
 }
 
 pub struct EditorArgsMut<'a> {
-  pub engine: &'a mut EditorEngine,
-  pub buffer: &'a mut EditorBuffer,
+  pub editor_engine: &'a mut EditorEngine,
+  pub editor_buffer: &'a mut EditorBuffer,
 }
 
 pub struct EditorArgs<'a> {
-  pub engine: &'a EditorEngine,
-  pub buffer: &'a EditorBuffer,
+  pub editor_engine: &'a EditorEngine,
+  pub editor_buffer: &'a EditorBuffer,
 }
 
 /// Global scope args struct that holds references. ![Editor component lifecycle
@@ -85,8 +85,8 @@ where
   pub state: &'a S,
   pub component_registry: &'a mut ComponentRegistry<S, A>,
   pub self_id: FlexBoxIdType,
-  pub buffer: &'a EditorBuffer,
-  pub engine: &'a mut EditorEngine,
+  pub editor_buffer: &'a EditorBuffer,
+  pub editor_engine: &'a mut EditorEngine,
 }
 
 /// [DialogEngine] args struct that holds references. ![Editor component lifecycle
@@ -101,8 +101,8 @@ where
   pub state: &'a S,
   pub component_registry: &'a mut ComponentRegistry<S, A>,
   pub self_id: FlexBoxIdType,
-  pub buffer: &'a DialogBuffer,
-  pub engine: &'a mut DialogEngine,
+  pub dialog_buffer: &'a DialogBuffer,
+  pub dialog_engine: &'a mut DialogEngine,
 }
 
 // ┏━━━━━━━━━┓

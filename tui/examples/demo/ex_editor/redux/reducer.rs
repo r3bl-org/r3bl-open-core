@@ -37,7 +37,7 @@ impl AsyncReducer<State, Action> for Reducer {
         let mut new_state = state.clone();
         let dialog_buffer = &mut new_state.dialog_buffer;
         dialog_buffer.title = title.into();
-        dialog_buffer.buffer.set_lines(vec![text.into()]);
+        dialog_buffer.editor_buffer.set_lines(vec![text.into()]);
         new_state
       }
     }

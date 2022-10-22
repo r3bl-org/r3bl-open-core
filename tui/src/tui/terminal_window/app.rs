@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{Debug, Display},
-          sync::Arc};
+use std::{fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
 use r3bl_rs_utils_core::*;

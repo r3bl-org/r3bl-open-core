@@ -15,9 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{collections::HashMap,
-          fmt::{Debug, Display},
-          sync::Arc};
+use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
 use r3bl_redux::*;

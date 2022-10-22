@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
 use r3bl_rs_utils_core::*;
 use serde::{Deserialize, Serialize};
@@ -113,9 +113,9 @@ impl TryFrom<&InputEvent> for EditorEvent {
 
 impl EditorEvent {
   pub fn apply_editor_event<S, A>(
-    engine: &mut EditorEngine,
-    buffer: &mut EditorBuffer,
-    editor_buffer_command: EditorEvent,
+    editor_engine: &mut EditorEngine,
+    editor_buffer: &mut EditorBuffer,
+    editor_event: EditorEvent,
     _shared_tw_data: &SharedTWData,
     _component_registry: &mut ComponentRegistry<S, A>,
     _self_id: FlexBoxIdType,
@@ -123,52 +123,66 @@ impl EditorEvent {
     S: Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
   {
-    match editor_buffer_command {
-      EditorEvent::InsertChar(character) => {
-        EditorEngineDataApi::insert_str_at_caret(EditorArgsMut { buffer, engine }, &String::from(character))
-      }
+    match editor_event {
+      EditorEvent::InsertChar(character) => EditorEngineDataApi::insert_str_at_caret(
+        EditorArgsMut {
+          editor_buffer,
+          editor_engine,
+        },
+        &String::from(character),
+      ),
       EditorEvent::InsertNewLine => {
-        EditorEngineDataApi::insert_new_line_at_caret(EditorArgsMut { buffer, engine });
+        EditorEngineDataApi::insert_new_line_at_caret(EditorArgsMut {
+          editor_buffer,
+          editor_engine,
+        });
       }
       EditorEvent::Delete => {
-        EditorEngineDataApi::delete_at_caret(buffer, engine);
+        EditorEngineDataApi::delete_at_caret(editor_buffer, editor_engine);
       }
       EditorEvent::Backspace => {
-        EditorEngineDataApi::backspace_at_caret(buffer, engine);
+        EditorEngineDataApi::backspace_at_caret(editor_buffer, editor_engine);
       }
       EditorEvent::MoveCaret(direction) => {
         match direction {
-          CaretDirection::Left => EditorEngineDataApi::left(buffer, engine),
-          CaretDirection::Right => EditorEngineDataApi::right(buffer, engine),
-          CaretDirection::Up => EditorEngineDataApi::up(buffer, engine),
-          CaretDirection::Down => EditorEngineDataApi::down(buffer, engine),
+          CaretDirection::Left => EditorEngineDataApi::left(editor_buffer, editor_engine),
+          CaretDirection::Right => EditorEngineDataApi::right(editor_buffer, editor_engine),
+          CaretDirection::Up => EditorEngineDataApi::up(editor_buffer, editor_engine),
+          CaretDirection::Down => EditorEngineDataApi::down(editor_buffer, editor_engine),
         };
       }
-      EditorEvent::InsertString(chunk) => {
-        EditorEngineDataApi::insert_str_at_caret(EditorArgsMut { buffer, engine }, &chunk)
-      }
+      EditorEvent::InsertString(chunk) => EditorEngineDataApi::insert_str_at_caret(
+        EditorArgsMut {
+          editor_buffer,
+          editor_engine,
+        },
+        &chunk,
+      ),
       EditorEvent::Resize(_) => {
         // Check to see whether scroll is valid.
-        EditorEngineDataApi::validate_scroll(EditorArgsMut { buffer, engine });
+        EditorEngineDataApi::validate_scroll(EditorArgsMut {
+          editor_buffer,
+          editor_engine,
+        });
       }
       EditorEvent::Home => {
-        EditorEngineDataApi::home(buffer, engine);
+        EditorEngineDataApi::home(editor_buffer, editor_engine);
       }
       EditorEvent::End => {
-        EditorEngineDataApi::end(buffer, engine);
+        EditorEngineDataApi::end(editor_buffer, editor_engine);
       }
       EditorEvent::PageDown => {
-        EditorEngineDataApi::page_down(buffer, engine);
+        EditorEngineDataApi::page_down(editor_buffer, editor_engine);
       }
       EditorEvent::PageUp => {
-        EditorEngineDataApi::page_up(buffer, engine);
+        EditorEngineDataApi::page_up(editor_buffer, editor_engine);
       }
     };
   }
 
   pub fn apply_editor_events<S, A>(
-    engine: &mut EditorEngine,
-    buffer: &mut EditorBuffer,
+    editor_engine: &mut EditorEngine,
+    editor_buffer: &mut EditorBuffer,
     editor_event_vec: Vec<EditorEvent>,
     shared_tw_data: &SharedTWData,
     component_registry: &mut ComponentRegistry<S, A>,
@@ -179,8 +193,8 @@ impl EditorEvent {
   {
     for editor_event in editor_event_vec {
       EditorEvent::apply_editor_event(
-        engine,
-        buffer,
+        editor_engine,
+        editor_buffer,
         editor_event,
         shared_tw_data,
         component_registry,

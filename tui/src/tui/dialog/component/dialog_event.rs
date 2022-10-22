@@ -33,40 +33,40 @@ pub enum DialogEvent {
 }
 
 impl DialogEvent {
-  /// Tries to convert the given [InputEvent] into a [DialogEvent]. The `modal_keypress` is used to
-  /// determine whether the [InputEvent] should be converted to [DialogEvent::ActivateModal].
-  pub fn try_from(input_event: &InputEvent, modal_keypress: Keypress) -> Result<Self, String> {
-    let mut maybe_dialog_event: Option<Self> = None;
-
+  /// Tries to convert the given [InputEvent] into a [DialogEvent].
+  /// - The optional `modal_keypress` is used to determine whether the [InputEvent] should be
+  ///   converted to [DialogEvent::ActivateModal].
+  /// - Enter and Esc are also matched against to return [DialogEvent::EnterPressed] and
+  ///   [DialogEvent::EscPressed]
+  /// - Otherwise, [Err] is returned.
+  pub fn try_from(input_event: &InputEvent, maybe_modal_keypress: Option<Keypress>) -> Option<Self> {
     if let InputEvent::Keyboard(keypress) = input_event {
-      if *keypress == modal_keypress {
-        maybe_dialog_event = Some(Self::ActivateModal);
+      // Compare to `modal_keypress` (if any).
+      if let Some(modal_keypress) = maybe_modal_keypress {
+        if keypress == &modal_keypress {
+          return Some(Self::ActivateModal);
+        }
       }
 
       match keypress {
+        // Compare to `Enter`.
         Keypress::Plain {
           key: Key::SpecialKey(SpecialKey::Enter),
         } => {
-          maybe_dialog_event = Some(Self::EnterPressed);
+          return Some(Self::EnterPressed);
         }
 
+        // Compare to `Esc`.
         Keypress::Plain {
           key: Key::SpecialKey(SpecialKey::Esc),
         } => {
-          maybe_dialog_event = Some(Self::EscPressed);
+          return Some(Self::EscPressed);
         }
 
         _ => {}
       }
     }
 
-    return if let Some(dialog_event) = maybe_dialog_event {
-      Ok(dialog_event)
-    } else {
-      Err(format!(
-        "Unable to convert this InputEvent to DialogEvent: {:?}",
-        input_event
-      ))
-    };
+    None
   }
 }

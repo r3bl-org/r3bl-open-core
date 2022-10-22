@@ -47,12 +47,12 @@ mod debug_format_helpers {
     write! { f,
       "\nState [                               \n\
       - dialog_buffer: title: {:?}             \n\
-      - dialog_buffer: buffer: {:?}            \n\
+      - dialog_buffer: editor_buffer: {:?}     \n\
       - buffers: {:?}                          \n\
       ]",
       this.dialog_buffer.title,
       // this.dialog_buffer.buffer,
-      this.dialog_buffer.buffer.get_lines().iter().map(|l| l.string.clone()).collect::<Vec<String>>().join(", "),
+      this.dialog_buffer.editor_buffer.get_as_string(),
       this.buffers,
     }
   }

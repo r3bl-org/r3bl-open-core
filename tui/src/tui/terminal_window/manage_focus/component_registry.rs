@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{collections::HashMap,
-          fmt::{Debug, Display}};
+use std::{collections::HashMap, fmt::Debug};
 
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
