@@ -42,8 +42,6 @@ where
 }
 
 pub mod impl_component {
-  use std::borrow::Cow;
-
   use super::*;
 
   #[async_trait]
@@ -127,8 +125,27 @@ pub mod impl_component {
       args: ComponentScopeArgs<'_, S, A>,
       current_box: &FlexBox,
     ) -> CommonResult<RenderPipeline> {
-      // TODO: connect to DialogEngineApi::render_engine
-      Ok(RenderPipeline::default())
+      let ComponentScopeArgs {
+        state,
+        shared_store,
+        shared_tw_data,
+        component_registry,
+        ..
+      } = args;
+
+      let dialog_engine_args = {
+        DialogEngineArgs {
+          shared_tw_data,
+          shared_store,
+          state,
+          component_registry,
+          self_id: self.get_id(),
+          dialog_engine: &mut self.dialog_engine,
+          dialog_buffer: state.get_dialog_buffer(),
+        }
+      };
+
+      DialogEngineApi::render_engine(dialog_engine_args, current_box).await
     }
   }
 }
