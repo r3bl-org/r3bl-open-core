@@ -78,13 +78,7 @@ pub mod impl_component {
         ..
       } = args;
 
-      let cow_dialog_buffer: Cow<DialogBuffer> = if let Some(dialog_buffer) = state.get_dialog_buffer() {
-        Cow::Borrowed(dialog_buffer)
-      } else {
-        Cow::Owned(DialogBuffer::default())
-      };
-
-      let dialog_args = {
+      let dialog_engine_args = {
         DialogEngineArgs {
           shared_tw_data,
           shared_store,
@@ -92,12 +86,12 @@ pub mod impl_component {
           component_registry,
           self_id: self.get_id(),
           dialog_engine: &mut self.dialog_engine,
-          dialog_buffer: &cow_dialog_buffer,
+          dialog_buffer: state.get_dialog_buffer(),
         }
       };
 
       if let DialogEngineApplyResponse::DialogChoice(dialog_choice) =
-        DialogEngineApi::apply_event(dialog_args, input_event).await?
+        DialogEngineApi::apply_event(dialog_engine_args, input_event).await?
       {
         // Restore focus to non-modal component.
         let prev_focus_id = component_registry.has_focus.reset_modal_id();
@@ -172,7 +166,7 @@ pub mod misc {
   /// [DialogComponent] to ensure that the generic type `S` implements this trait, guaranteeing that
   /// it holds a single [DialogBuffer].
   pub trait HasDialogBuffer {
-    fn get_dialog_buffer(&self) -> Option<&DialogBuffer>;
+    fn get_dialog_buffer(&self) -> &DialogBuffer;
   }
 
   #[derive(Debug)]
