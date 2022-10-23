@@ -38,7 +38,10 @@ where
 {
   pub id: FlexBoxIdType,
   pub dialog_engine: DialogEngine,
+  /// Make sure to dispatch actions to handle the user's dialog choice [DialogChoice].
   pub on_dialog_press_handler: Option<OnDialogPressFn<S, A>>,
+  /// Make sure to dispatch an action to update the dialog buffer's editor buffer.
+  pub on_dialog_editor_change_handler: Option<OnDialogEditorChangeFn<S, A>>,
 }
 
 pub mod impl_component {
@@ -73,7 +76,7 @@ pub mod impl_component {
         shared_store,
         shared_tw_data,
         component_registry,
-        ..
+        window_size,
       } = args;
 
       let dialog_engine_args = {
@@ -85,30 +88,38 @@ pub mod impl_component {
           self_id: self.get_id(),
           dialog_engine: &mut self.dialog_engine,
           dialog_buffer: state.get_dialog_buffer(),
+          window_size,
         }
       };
 
-      if let DialogEngineApplyResponse::DialogChoice(dialog_choice) =
-        DialogEngineApi::apply_event(dialog_engine_args, input_event).await?
-      {
-        // Restore focus to non-modal component.
-        let prev_focus_id = component_registry.has_focus.reset_modal_id();
+      match DialogEngineApi::apply_event(dialog_engine_args, input_event).await? {
+        // Handler user's choice.
+        DialogEngineApplyResponse::DialogChoice(dialog_choice) => {
+          // Restore focus to non-modal component.
+          let _ = component_registry.has_focus.reset_modal_id();
 
-        // Run the handler (if any) w/ `dialog_choice`.
-        if let Some(handler) = &self.on_dialog_press_handler {
-          handler(
-            self.get_id(),
-            dialog_choice,
-            prev_focus_id,
-            shared_store,
-            component_registry,
-          );
+          // Run the handler (if any) w/ `dialog_choice`.
+          if let Some(handler) = &self.on_dialog_press_handler {
+            handler(dialog_choice, shared_store);
+          };
+
+          // Trigger re-render, now that focus has been restored to non-modal component.
+          Ok(EventPropagation::ConsumedRerender)
         }
 
-        // Trigger re-render, now that focus has been restored to non-modal component.
-        Ok(EventPropagation::ConsumedRerender)
-      } else {
-        Ok(EventPropagation::Propagate)
+        // Handler user input that has updated the dialog_buffer.editor_buffer.
+        DialogEngineApplyResponse::UpdateEditorBuffer(new_editor_buffer) => {
+          // Run the handler (if any) w/ `new_editor_buffer`.
+          if let Some(handler) = &self.on_dialog_editor_change_handler {
+            handler(new_editor_buffer, shared_store);
+          };
+
+          // The handler should dispatch action to change state since dialog_buffer.editor_buffer is
+          // updated.
+          Ok(EventPropagation::Consumed)
+        }
+
+        _ => Ok(EventPropagation::Propagate),
       }
     }
 
@@ -130,7 +141,7 @@ pub mod impl_component {
         shared_store,
         shared_tw_data,
         component_registry,
-        ..
+        window_size,
       } = args;
 
       let dialog_engine_args = {
@@ -142,6 +153,7 @@ pub mod impl_component {
           self_id: self.get_id(),
           dialog_engine: &mut self.dialog_engine,
           dialog_buffer: state.get_dialog_buffer(),
+          window_size,
         }
       };
 
@@ -161,16 +173,29 @@ pub mod constructor {
     /// The on_dialog_press_handler is a lambda that is called if the user presses enter or escape.
     /// Typically this results in a Redux action being created and then dispatched to the given
     /// store.
-    pub fn new(id: FlexBoxIdType, on_dialog_press_handler: OnDialogPressFn<S, A>) -> Self {
+    pub fn new(
+      id: FlexBoxIdType,
+      on_dialog_press_handler: OnDialogPressFn<S, A>,
+      on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, A>,
+    ) -> Self {
       Self {
         dialog_engine: Default::default(),
         id,
         on_dialog_press_handler: Some(on_dialog_press_handler),
+        on_dialog_editor_change_handler: Some(on_dialog_editor_change_handler),
       }
     }
 
-    pub fn new_shared(id: FlexBoxIdType, on_dialog_press_handler: OnDialogPressFn<S, A>) -> Arc<RwLock<Self>> {
-      Arc::new(RwLock::new(DialogComponent::new(id, on_dialog_press_handler)))
+    pub fn new_shared(
+      id: FlexBoxIdType,
+      on_dialog_press_handler: OnDialogPressFn<S, A>,
+      on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, A>,
+    ) -> Arc<RwLock<Self>> {
+      Arc::new(RwLock::new(DialogComponent::new(
+        id,
+        on_dialog_press_handler,
+        on_dialog_editor_change_handler,
+      )))
     }
   }
 }
@@ -192,12 +217,8 @@ pub mod misc {
     No,
   }
 
-  pub type OnDialogPressFn<S, A> = fn(
-    FlexBoxIdType, /* my_id */
-    DialogChoice,
-    Option<FlexBoxIdType>, /* prev_focus_id */
-    &SharedStore<S, A>,
-    &ComponentRegistry<S, A>,
-  );
+  pub type OnDialogPressFn<S, A> = fn(DialogChoice, &SharedStore<S, A>);
+
+  pub type OnDialogEditorChangeFn<S, A> = fn(EditorBuffer, &SharedStore<S, A>);
 }
 pub use misc::*; // Re-export misc module for convenience.

@@ -38,7 +38,7 @@ use crate::*;
 /// 1. [apply_editor_event](EditorEvent::apply_editor_event)
 /// 2. [apply_editor_events](EditorEvent::apply_editor_events)
 ///
-/// In order for the commands to be executed, the functions in [EditorEngineDataApi] are used.
+/// In order for the commands to be executed, the functions in [EditorEngineInternalApi] are used.
 ///
 /// These functions take any one of the following args:
 /// 1. [EditorArgsMut]

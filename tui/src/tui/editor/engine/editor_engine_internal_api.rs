@@ -27,9 +27,9 @@ use crate::*;
 // ┃ EditorBuffer manipulation API ┃
 // ┛                               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Functions that implement the editor engine.
-pub struct EditorEngineDataApi;
+pub struct EditorEngineInternalApi;
 
-impl EditorEngineDataApi {
+impl EditorEngineInternalApi {
   pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope { move_caret::up(buffer, engine) }
 
   pub fn left(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope { move_caret::left(buffer, engine) }
@@ -290,7 +290,8 @@ mod move_caret {
         }
       }
       CaretColLocationInLine::AtStart | CaretColLocationInLine::InMiddle => {
-        let UnicodeStringSegmentSliceResult { unicode_width, .. } = get_content::string_at_caret(editor_buffer, editor_engine)?;
+        let UnicodeStringSegmentSliceResult { unicode_width, .. } =
+          get_content::string_at_caret(editor_buffer, editor_engine)?;
         let max_display_width = get_content::line_display_width_at_caret(editor_buffer, editor_engine);
         let viewport_width = editor_engine.viewport_width();
         validate::apply_change(editor_buffer, editor_engine, |_, caret, scroll_offset| {

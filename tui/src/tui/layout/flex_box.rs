@@ -20,6 +20,8 @@ use std::fmt::Debug;
 use r3bl_rs_utils_core::*;
 use serde::{Deserialize, Serialize};
 
+use crate::*;
+
 /// Direction of the layout of the box.
 #[non_exhaustive]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -53,20 +55,6 @@ pub struct FlexBox {
 
 impl FlexBox {
   pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style.clone() }
-}
-
-macro_rules! format_option {
-  ($opt:expr) => {
-    match ($opt) {
-      Some(v) => v,
-      None => &FormatMsg::None,
-    }
-  };
-}
-
-#[derive(Clone, Copy, Debug)]
-enum FormatMsg {
-  None,
 }
 
 impl Debug for FlexBox {

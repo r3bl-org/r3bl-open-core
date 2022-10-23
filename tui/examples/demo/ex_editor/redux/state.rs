@@ -22,13 +22,13 @@ use r3bl_tui::*;
 
 #[derive(Clone, PartialEq, Default)]
 pub struct State {
-  pub buffers: HashMap<FlexBoxIdType, EditorBuffer>,
+  pub editor_buffers: HashMap<FlexBoxIdType, EditorBuffer>,
   pub dialog_buffer: DialogBuffer,
 }
 
 impl HasEditorBuffers for State {
   fn get_editor_buffer(&self, id: FlexBoxIdType) -> Option<&EditorBuffer> {
-    if let Some(buffer) = self.buffers.get(&id) {
+    if let Some(buffer) = self.editor_buffers.get(&id) {
       Some(buffer)
     } else {
       None
@@ -53,7 +53,7 @@ mod debug_format_helpers {
       this.dialog_buffer.title,
       // this.dialog_buffer.buffer,
       this.dialog_buffer.editor_buffer.get_as_string(),
-      this.buffers,
+      this.editor_buffers,
     }
   }
 

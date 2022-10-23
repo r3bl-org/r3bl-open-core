@@ -41,7 +41,7 @@ pub struct AppWithLayout {
   pub component_registry: ComponentRegistry<State, Action>,
 }
 
-mod app_impl {
+mod app_trait_impl {
   use super::*;
 
   #[async_trait]
@@ -79,7 +79,7 @@ mod app_impl {
         } = args;
 
         // Render container component.
-        let mut surface = surface_start_with_runnable! {
+        let mut surface = surface_start_with_surface_renderer! {
           runnable:       self,
           stylesheet:     style_helpers::create_stylesheet()?,
           pos:            position!(col:0, row:0),
@@ -91,17 +91,21 @@ mod app_impl {
         };
 
         // Render status bar.
-        status_bar_helpers::render(&mut surface.render_pipeline, window_size);
+        status_bar_helpers::render_status_bar(&mut surface.render_pipeline, window_size);
 
         // Return RenderOps pipeline (which will actually be painted elsewhere).
         surface.render_pipeline
       });
     }
   }
+}
+
+mod container_layout_render {
+  use super::*;
 
   #[async_trait]
-  impl SurfaceRunnable<State, Action> for AppWithLayout {
-    async fn run_on_surface(
+  impl SurfaceRenderer<State, Action> for AppWithLayout {
+    async fn render_in_surface(
       &mut self,
       args: GlobalScopeArgs<'_, State, Action>,
       surface: &mut Surface,
@@ -113,34 +117,14 @@ mod app_impl {
         window_size,
       } = args;
 
-      self.create_components_populate_registry_init_focus().await;
+      self.init().await;
       self
         .create_main_container(surface, state, shared_store, shared_tw_data, window_size)
         .await
     }
   }
-}
-
-// Handle component registry.
-mod construct_components {
-  use super::*;
 
   impl AppWithLayout {
-    pub async fn create_components_populate_registry_init_focus(&mut self) {
-      // Construct Col.
-      let col_id = Id::Col.int_value();
-      if self.component_registry.does_not_contain(col_id) {
-        let _component = ColumnRenderComponent::new(col_id);
-        let shared_component_r1 = Arc::new(RwLock::new(_component));
-        self.component_registry.put(col_id, shared_component_r1);
-      }
-
-      // Init has focus.
-      if self.component_registry.has_focus.get_id().is_none() {
-        self.component_registry.has_focus.set_id(col_id);
-      }
-    }
-
     /// Main container CONTAINER_ID.
     pub async fn create_main_container(
       &mut self,
@@ -167,6 +151,28 @@ mod construct_components {
           }
         }
       });
+    }
+  }
+}
+
+// Handle component registry.
+mod component_registry {
+  use super::*;
+
+  impl AppWithLayout {
+    pub async fn init(&mut self) {
+      // Construct Col.
+      let col_id = Id::Col.int_value();
+      if self.component_registry.does_not_contain(col_id) {
+        let _component = ColumnRenderComponent::new(col_id);
+        let shared_component_r1 = Arc::new(RwLock::new(_component));
+        self.component_registry.put(col_id, shared_component_r1);
+      }
+
+      // Init has focus.
+      if self.component_registry.has_focus.get_id().is_none() {
+        self.component_registry.has_focus.set_id(col_id);
+      }
     }
   }
 }
@@ -207,7 +213,7 @@ mod status_bar_helpers {
   use super::*;
 
   /// Shows helpful messages at the bottom row of the screen.
-  pub fn render(render_pipeline: &mut RenderPipeline, size: &Size) {
+  pub fn render_status_bar(render_pipeline: &mut RenderPipeline, size: &Size) {
     let st_vec = styled_texts! {
       styled_text! { "Hints:",        style!(attrib: [dim])       },
       styled_text! { " x : Exit ⛔ ", style!(attrib: [bold])      },

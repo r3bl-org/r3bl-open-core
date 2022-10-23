@@ -77,6 +77,12 @@ impl HasFocus {
     self.set_id(id);
   }
 
+  /// Checks whether any modal `id` is set.
+  pub fn is_modal_set(&self) -> bool { self.maybe_id_before_modal.is_some() }
+
+  /// Checks whether the given `id` is the modal `id`.
+  pub fn is_modal_id(&self, id: FlexBoxIdType) -> bool { self.is_modal_set() && self.does_id_have_focus(id) }
+
   /// Restores the `id` from `prev_id` and sets `prev_id` to `None`.
   pub fn reset_modal_id(&mut self) -> Option<FlexBoxIdType> {
     if let Some(prev_id) = self.maybe_id_before_modal {
