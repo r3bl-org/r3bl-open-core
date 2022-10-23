@@ -37,7 +37,7 @@ impl HasEditorBuffers for State {
 }
 
 impl HasDialogBuffer for State {
-  fn get_dialog_buffer(&self) -> Option<&DialogBuffer> { Some(&self.dialog_buffer) }
+  fn get_dialog_buffer(&self) -> &DialogBuffer { &self.dialog_buffer }
 }
 
 mod debug_format_helpers {
