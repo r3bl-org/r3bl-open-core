@@ -35,14 +35,66 @@ use crate::*;
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditorEngine {
   /// Set by [render](EditorEngineRenderApi::render_engine).
-  pub current_box: FlexBox,
+  pub current_box: EditorEngineFlexBox,
   pub config_options: EditorEngineConfigOptions,
 }
+
+mod layout_struct_helper {
+  use super::*;
+
+  /// Holds a subset of the fields in [FlexBox] that are required by the editor engine.
+  #[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+  pub struct EditorEngineFlexBox {
+    pub id: FlexBoxIdType,
+    pub style_adjusted_origin_pos: Position,
+    pub style_adjusted_bounds_size: Size,
+    pub maybe_computed_style: Option<Style>,
+  }
+
+  impl EditorEngineFlexBox {
+    pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style.clone() }
+  }
+
+  impl Debug for EditorEngineFlexBox {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      f.debug_struct("FlexBox")
+        .field("id", &self.id)
+        .field("style_adjusted_origin_pos", &self.style_adjusted_origin_pos)
+        .field("style_adjusted_bounds_size", &self.style_adjusted_bounds_size)
+        .field("maybe_computed_style", format_option!(&self.maybe_computed_style))
+        .finish()
+    }
+  }
+
+  impl From<EditorEngineFlexBox> for FlexBox {
+    fn from(engine_box: EditorEngineFlexBox) -> Self {
+      Self {
+        id: engine_box.id,
+        style_adjusted_origin_pos: engine_box.style_adjusted_origin_pos,
+        style_adjusted_bounds_size: engine_box.style_adjusted_bounds_size,
+        maybe_computed_style: engine_box.maybe_computed_style,
+        ..Default::default()
+      }
+    }
+  }
+
+  impl From<&FlexBox> for EditorEngineFlexBox {
+    fn from(flex_box: &FlexBox) -> Self {
+      Self {
+        id: flex_box.id,
+        style_adjusted_origin_pos: flex_box.style_adjusted_origin_pos,
+        style_adjusted_bounds_size: flex_box.style_adjusted_bounds_size,
+        maybe_computed_style: flex_box.get_computed_style(),
+      }
+    }
+  }
+}
+pub use layout_struct_helper::*;
 
 impl EditorEngine {
   pub fn new(config_options: EditorEngineConfigOptions) -> Self {
     Self {
-      current_box: FlexBox::default(),
+      current_box: Default::default(),
       config_options,
     }
   }

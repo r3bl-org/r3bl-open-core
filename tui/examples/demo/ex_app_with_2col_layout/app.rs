@@ -42,7 +42,7 @@ pub struct AppWithLayout {
   pub component_registry: ComponentRegistry<State, Action>,
 }
 
-mod app_impl {
+mod app_trait_impl {
   use super::*;
 
   #[async_trait]
@@ -86,7 +86,7 @@ mod app_impl {
         } = args;
 
         // Render container component.
-        let mut surface = surface_start_with_runnable! {
+        let mut surface = surface_start_with_surface_renderer! {
           runnable:       self,
           stylesheet:     style_helpers::create_stylesheet()?,
           pos:            position!(col:0, row:0),
@@ -107,8 +107,8 @@ mod app_impl {
   }
 
   #[async_trait]
-  impl SurfaceRunnable<State, Action> for AppWithLayout {
-    async fn run_on_surface(
+  impl SurfaceRenderer<State, Action> for AppWithLayout {
+    async fn render_in_surface(
       &mut self,
       args: GlobalScopeArgs<'_, State, Action>,
       surface: &mut Surface,
@@ -120,7 +120,7 @@ mod app_impl {
         window_size,
       } = args;
 
-      self.create_components_populate_registry_init_focus().await;
+      self.init().await;
       self
         .create_main_container(surface, state, shared_store, shared_tw_data, window_size)
         .await
@@ -185,11 +185,11 @@ mod handle_focus {
 }
 
 // Handle component registry.
-mod construct_components {
+mod component_registry {
   use super::*;
 
   impl AppWithLayout {
-    pub async fn create_components_populate_registry_init_focus(&mut self) {
+    pub async fn init(&mut self) {
       // Construct COL_1_ID.
       let col1_id = Id::Col1.int_value();
       if self.component_registry.does_not_contain(col1_id) {
@@ -211,7 +211,13 @@ mod construct_components {
         self.component_registry.has_focus.set_id(col1_id);
       }
     }
+  }
+}
 
+mod container_layout_render {
+  use super::*;
+
+  impl AppWithLayout {
     /// Main container CONTAINER_ID.
     pub async fn create_main_container(
       &mut self,
@@ -222,9 +228,9 @@ mod construct_components {
       window_size: &Size,
     ) -> CommonResult<()> {
       throws!({
-        box_start_with_runnable! {
+        box_start_with_surface_renderer! {
           in:                     surface,
-          runnable:               layout_components::TwoColLayout { app_with_layout: self },
+          runnable:               container_layout_render::TwoColLayout { app_with_layout: self },
           id:                     Id::Container.int_value(),
           dir:                    Direction::Horizontal,
           requested_size_percent: requested_size_percent!(width: 100, height: 100),
@@ -237,18 +243,14 @@ mod construct_components {
       });
     }
   }
-}
-
-mod layout_components {
-  use super::*;
 
   pub(crate) struct TwoColLayout<'a> {
     pub(crate) app_with_layout: &'a mut AppWithLayout,
   }
 
   #[async_trait]
-  impl<'a> SurfaceRunnable<State, Action> for TwoColLayout<'a> {
-    async fn run_on_surface(
+  impl<'a> SurfaceRenderer<State, Action> for TwoColLayout<'a> {
+    async fn render_in_surface(
       &mut self,
       args: GlobalScopeArgs<'_, State, Action>,
       surface: &mut Surface,
@@ -260,26 +262,6 @@ mod layout_components {
         window_size,
       } = args;
 
-      self
-        .create_left_col(surface, state, shared_store, shared_tw_data, window_size)
-        .await?;
-      self
-        .create_right_col(surface, state, shared_store, shared_tw_data, window_size)
-        .await?;
-      Ok(())
-    }
-  }
-
-  impl<'a> TwoColLayout<'a> {
-    /// Left column COL_1_ID.
-    async fn create_left_col(
-      &mut self,
-      surface: &mut Surface,
-      state: &State,
-      shared_store: &SharedStore<State, Action>,
-      shared_tw_data: &SharedTWData,
-      window_size: &Size,
-    ) -> CommonResult<()> {
       throws!({
         box_start_with_component! {
           in:                     surface,
@@ -295,19 +277,7 @@ mod layout_components {
             window_size:    window_size
           }
         }
-      });
-    }
 
-    /// Right column COL_2_ID.
-    async fn create_right_col(
-      &mut self,
-      surface: &mut Surface,
-      state: &State,
-      shared_store: &SharedStore<State, Action>,
-      shared_tw_data: &SharedTWData,
-      window_size: &Size,
-    ) -> CommonResult<()> {
-      throws!({
         box_start_with_component! {
           in:                     surface,
           id:                     Id::Col2.int_value(),

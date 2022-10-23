@@ -64,10 +64,10 @@ where
 }
 
 #[async_trait]
-pub trait SurfaceRunnable<S, A>
+pub trait SurfaceRenderer<S, A>
 where
   S: Default + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Clone + Sync + Send,
 {
-  async fn run_on_surface(&mut self, args: GlobalScopeArgs<'_, S, A>, surface: &mut Surface) -> CommonResult<()>;
+  async fn render_in_surface(&mut self, args: GlobalScopeArgs<'_, S, A>, surface: &mut Surface) -> CommonResult<()>;
 }

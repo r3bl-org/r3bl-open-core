@@ -97,13 +97,13 @@ pub mod impl_component {
         };
 
         match EditorEngineRenderApi::apply_event(engine_args, input_event).await? {
-          ApplyResponse::Applied(buffer) => {
+          EditorEngineApplyResponse::Applied(buffer) => {
             if let Some(on_change_handler) = self.on_editor_buffer_change_handler {
               on_change_handler(shared_store, self.get_id(), buffer);
             }
             EventPropagation::Consumed
           }
-          ApplyResponse::NotApplied => {
+          EditorEngineApplyResponse::NotApplied => {
             // Optional: handle any `input_event` not consumed by `editor_engine`.
             EventPropagation::Propagate
           }

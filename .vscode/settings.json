@@ -45,6 +45,7 @@
     "punct",
     "qself",
     "reedline",
+    "Renderable",
     "renderop",
     "repr",
     "reqwest",

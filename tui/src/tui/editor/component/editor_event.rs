@@ -124,7 +124,7 @@ impl EditorEvent {
     A: Default + Clone + Sync + Send,
   {
     match editor_event {
-      EditorEvent::InsertChar(character) => EditorEngineDataApi::insert_str_at_caret(
+      EditorEvent::InsertChar(character) => EditorEngineInternalApi::insert_str_at_caret(
         EditorArgsMut {
           editor_buffer,
           editor_engine,
@@ -132,26 +132,26 @@ impl EditorEvent {
         &String::from(character),
       ),
       EditorEvent::InsertNewLine => {
-        EditorEngineDataApi::insert_new_line_at_caret(EditorArgsMut {
+        EditorEngineInternalApi::insert_new_line_at_caret(EditorArgsMut {
           editor_buffer,
           editor_engine,
         });
       }
       EditorEvent::Delete => {
-        EditorEngineDataApi::delete_at_caret(editor_buffer, editor_engine);
+        EditorEngineInternalApi::delete_at_caret(editor_buffer, editor_engine);
       }
       EditorEvent::Backspace => {
-        EditorEngineDataApi::backspace_at_caret(editor_buffer, editor_engine);
+        EditorEngineInternalApi::backspace_at_caret(editor_buffer, editor_engine);
       }
       EditorEvent::MoveCaret(direction) => {
         match direction {
-          CaretDirection::Left => EditorEngineDataApi::left(editor_buffer, editor_engine),
-          CaretDirection::Right => EditorEngineDataApi::right(editor_buffer, editor_engine),
-          CaretDirection::Up => EditorEngineDataApi::up(editor_buffer, editor_engine),
-          CaretDirection::Down => EditorEngineDataApi::down(editor_buffer, editor_engine),
+          CaretDirection::Left => EditorEngineInternalApi::left(editor_buffer, editor_engine),
+          CaretDirection::Right => EditorEngineInternalApi::right(editor_buffer, editor_engine),
+          CaretDirection::Up => EditorEngineInternalApi::up(editor_buffer, editor_engine),
+          CaretDirection::Down => EditorEngineInternalApi::down(editor_buffer, editor_engine),
         };
       }
-      EditorEvent::InsertString(chunk) => EditorEngineDataApi::insert_str_at_caret(
+      EditorEvent::InsertString(chunk) => EditorEngineInternalApi::insert_str_at_caret(
         EditorArgsMut {
           editor_buffer,
           editor_engine,
@@ -160,22 +160,22 @@ impl EditorEvent {
       ),
       EditorEvent::Resize(_) => {
         // Check to see whether scroll is valid.
-        EditorEngineDataApi::validate_scroll(EditorArgsMut {
+        EditorEngineInternalApi::validate_scroll(EditorArgsMut {
           editor_buffer,
           editor_engine,
         });
       }
       EditorEvent::Home => {
-        EditorEngineDataApi::home(editor_buffer, editor_engine);
+        EditorEngineInternalApi::home(editor_buffer, editor_engine);
       }
       EditorEvent::End => {
-        EditorEngineDataApi::end(editor_buffer, editor_engine);
+        EditorEngineInternalApi::end(editor_buffer, editor_engine);
       }
       EditorEvent::PageDown => {
-        EditorEngineDataApi::page_down(editor_buffer, editor_engine);
+        EditorEngineInternalApi::page_down(editor_buffer, editor_engine);
       }
       EditorEvent::PageUp => {
-        EditorEngineDataApi::page_up(editor_buffer, editor_engine);
+        EditorEngineInternalApi::page_up(editor_buffer, editor_engine);
       }
     };
   }

@@ -40,28 +40,7 @@ pub struct AppWithLayout {
   pub component_registry: ComponentRegistry<State, Action>,
 }
 
-mod constructor {
-  use super::*;
-
-  impl Default for AppWithLayout {
-    fn default() -> Self {
-      // Potentially do any other initialization here.
-      call_if_true!(DEBUG_TUI_MOD, {
-        log_no_err!(
-          DEBUG,
-          "🪙 {}",
-          "construct ex_editor::AppWithLayout { ComponentRegistry }"
-        );
-      });
-
-      Self {
-        component_registry: ComponentRegistry::default(),
-      }
-    }
-  }
-}
-
-mod impl_app {
+mod app_trait_impl {
   use super::*;
 
   #[async_trait]
@@ -115,8 +94,8 @@ mod impl_app {
         let adjusted_window_size = size!(cols: window_size.cols, rows: window_size.rows - 1);
 
         // Render container component.
-        let mut surface = surface_start_with_runnable! {
-          runnable:       app_render::AppWithLayoutRenderer(self),
+        let mut surface = surface_start_with_surface_renderer! {
+          runnable:       container_layout_render::RenderContainer{app_with_layout: self},
           stylesheet:     style_helpers::create_stylesheet()?,
           pos:            position!(col:0, row:0),
           size:           adjusted_window_size, // Bottom row for status bar.
@@ -127,7 +106,7 @@ mod impl_app {
         };
 
         // Render status bar.
-        status_bar_helpers::render(&mut surface.render_pipeline, window_size);
+        status_bar_helpers::render_status_bar(&mut surface.render_pipeline, window_size);
 
         // Return RenderOps pipeline (which will actually be painted elsewhere).
         surface.render_pipeline
@@ -136,7 +115,7 @@ mod impl_app {
   }
 }
 
-mod modal_dialog {
+mod modal_dialog_support {
   use super::*;
 
   impl AppWithLayout {
@@ -172,7 +151,10 @@ mod modal_dialog {
         };
 
         let title = "Modal Dialog Title";
-        spawn_dispatch_action!(shared_store, Action::SetDialog(title.to_string(), text.to_string()));
+        spawn_dispatch_action!(
+          shared_store,
+          Action::SetDialogBufferTitleAndText(title.to_string(), text.to_string())
+        );
 
         return EventPropagation::Consumed;
       };
@@ -182,28 +164,31 @@ mod modal_dialog {
   }
 }
 
-mod app_render {
+mod container_layout_render {
   use super::*;
 
-  pub struct AppWithLayoutRenderer<'a>(pub &'a mut AppWithLayout);
+  pub struct RenderContainer<'a> {
+    pub app_with_layout: &'a mut AppWithLayout,
+  }
 
   #[async_trait]
-  impl SurfaceRunnable<State, Action> for AppWithLayoutRenderer<'_> {
-    async fn run_on_surface(
+  impl SurfaceRenderer<State, Action> for RenderContainer<'_> {
+    async fn render_in_surface(
       &mut self,
       args: GlobalScopeArgs<'_, State, Action>,
       surface: &mut Surface,
     ) -> CommonResult<()> {
-      let GlobalScopeArgs {
-        state,
-        shared_store,
-        shared_tw_data,
-        window_size,
-      } = args;
-
-      component_registry::populate(self.0).await;
-
       throws!({
+        let GlobalScopeArgs {
+          state,
+          shared_store,
+          shared_tw_data,
+          window_size,
+        } = args;
+
+        component_registry::init(self.app_with_layout).await;
+
+        // Layout editor component, and render it.
         box_start_with_component! {
           in:                     surface,
           id:                     Id::Editor.int_value(),
@@ -211,14 +196,33 @@ mod app_render {
           requested_size_percent: requested_size_percent!(width: 100, height: 100),
           styles:                 [&Id::Editor.int_value().to_string()],
           render: {
-            from:           self.0.component_registry,
+            from:           self.app_with_layout.component_registry,
             state:          state,
             shared_store:   shared_store,
             shared_tw_data: shared_tw_data,
             window_size:    window_size
           }
         }
-      })
+
+        // Then, render modal dialog (if it is active).
+        if self
+          .app_with_layout
+          .component_registry
+          .has_focus
+          .is_modal_id(Id::Dialog.int_value())
+        {
+          render_in_box! {
+            in:             surface,
+            box:            DialogEngineApi::flex_box_from(Id::Dialog.int_value(), window_size)?,
+            component_id:   Id::Dialog.int_value(),
+            from:           self.app_with_layout.component_registry,
+            state:          state,
+            shared_store:   shared_store,
+            shared_tw_data: shared_tw_data,
+            window_size:    window_size
+          };
+        }
+      });
     }
   }
 }
@@ -226,7 +230,7 @@ mod app_render {
 mod component_registry {
   use super::*;
 
-  pub async fn populate(this: &mut AppWithLayout) {
+  pub async fn init(this: &mut AppWithLayout) {
     let editor_id = Id::Editor.int_value();
     let dialog_id = Id::Dialog.int_value();
 
@@ -254,24 +258,28 @@ mod component_registry {
     }
 
     let shared_dialog_component = {
-      fn on_dialog_press(
-        _my_id: FlexBoxIdType,
-        dialog_choice: DialogChoice,
-        _prev_focus_id: Option<FlexBoxIdType>,
-        shared_store: &SharedStore<State, Action>,
-        _component_registry: &ComponentRegistry<State, Action>,
-      ) {
+      fn on_dialog_press(dialog_choice: DialogChoice, shared_store: &SharedStore<State, Action>) {
         match dialog_choice {
           DialogChoice::Yes(text) => {
-            spawn_dispatch_action!(shared_store, Action::SetDialog("Yes".to_string(), text));
+            spawn_dispatch_action!(
+              shared_store,
+              Action::SetDialogBufferTitleAndText("Yes".to_string(), text)
+            );
           }
           DialogChoice::No => {
-            spawn_dispatch_action!(shared_store, Action::SetDialog("No".to_string(), "".to_string()));
+            spawn_dispatch_action!(
+              shared_store,
+              Action::SetDialogBufferTitleAndText("No".to_string(), "".to_string())
+            );
           }
         }
       }
 
-      DialogComponent::new_shared(id, on_dialog_press)
+      fn on_dialog_editor_change_handler(editor_buffer: EditorBuffer, shared_store: &SharedStore<State, Action>) {
+        spawn_dispatch_action!(shared_store, Action::UpdateDialogBuffer(editor_buffer));
+      }
+
+      DialogComponent::new_shared(id, on_dialog_press, on_dialog_editor_change_handler)
     };
 
     this.component_registry.put(id, shared_dialog_component);
@@ -289,7 +297,7 @@ mod component_registry {
 
     let shared_editor_component = {
       fn on_buffer_change(shared_store: &SharedStore<State, Action>, my_id: FlexBoxIdType, buffer: EditorBuffer) {
-        spawn_dispatch_action!(shared_store, Action::InsertEditorBuffer(my_id, buffer));
+        spawn_dispatch_action!(shared_store, Action::UpdateEditorBufferById(my_id, buffer));
       }
 
       let config_options = EditorEngineConfigOptions::default();
@@ -306,6 +314,23 @@ mod component_registry {
 
 mod debug_helpers {
   use super::*;
+
+  impl Default for AppWithLayout {
+    fn default() -> Self {
+      // Potentially do any other initialization here.
+      call_if_true!(DEBUG_TUI_MOD, {
+        log_no_err!(
+          DEBUG,
+          "🪙 {}",
+          "construct ex_editor::AppWithLayout { ComponentRegistry }"
+        );
+      });
+
+      Self {
+        component_registry: Default::default(),
+      }
+    }
+  }
 
   impl Debug for AppWithLayout {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -340,7 +365,7 @@ mod status_bar_helpers {
   use super::*;
 
   /// Shows helpful messages at the bottom row of the screen.
-  pub fn render(render_pipeline: &mut RenderPipeline, size: &Size) {
+  pub fn render_status_bar(render_pipeline: &mut RenderPipeline, size: &Size) {
     let st_vec = styled_texts! {
       styled_text! { "Hints:",               style!(attrib: [dim])       },
       styled_text! { " Ctrl + x : Exit ⛔ ", style!(attrib: [bold])      },

@@ -17,6 +17,7 @@
 
 use std::fmt::Debug;
 
+use int_enum::IntEnum;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 
@@ -103,6 +104,7 @@ where
   pub self_id: FlexBoxIdType,
   pub dialog_buffer: &'a DialogBuffer,
   pub dialog_engine: &'a mut DialogEngine,
+  pub window_size: &'a Size,
 }
 
 // ┏━━━━━━━━━┓
@@ -111,3 +113,33 @@ where
 
 pub type ScrollOffset = Position;
 pub type Nope = Option<()>;
+
+// ┏━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ Debug format helpers ┃
+// ┛                      ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#[macro_export]
+macro_rules! format_option {
+  ($opt:expr) => {
+    match ($opt) {
+      Some(v) => v,
+      None => &FormatMsg::None,
+    }
+  };
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum FormatMsg {
+  None,
+}
+
+// ┏━━━━━━━━━━━┓
+// ┃ Constants ┃
+// ┛           ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+pub enum MinSize {
+  Col = 40,
+  Row = 5,
+}

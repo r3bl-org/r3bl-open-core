@@ -120,7 +120,7 @@ mod test_config_options {
       0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 6, row: 0));
-    let maybe_line_str: Option<UnicodeString> = EditorEngineDataApi::line_at_caret_to_string(&buffer, &engine);
+    let maybe_line_str: Option<UnicodeString> = EditorEngineInternalApi::line_at_caret_to_string(&buffer, &engine);
     assert_eq2!(maybe_line_str.unwrap().string, "abcaba");
   }
 }
@@ -712,7 +712,7 @@ mod test_editor_ops {
 
     assert::none_is_at_caret(&buffer, &engine);
     assert_eq2!(
-      EditorEngineDataApi::line_at_caret_to_string(&buffer, &engine)
+      EditorEngineInternalApi::line_at_caret_to_string(&buffer, &engine)
         .unwrap()
         .string,
       "ab"
@@ -819,7 +819,7 @@ mod test_editor_ops {
       0,
     );
     assert_eq2!(
-      EditorEngineDataApi::line_at_caret_to_string(&buffer, &engine)
+      EditorEngineInternalApi::line_at_caret_to_string(&buffer, &engine)
         .unwrap()
         .string,
       "1a"
@@ -874,7 +874,7 @@ mod test_editor_ops {
     );
     assert::str_is_at_caret(&buffer, &engine, "a");
     assert_eq2!(
-      EditorEngineDataApi::line_at_caret_to_string(&buffer, &engine)
+      EditorEngineInternalApi::line_at_caret_to_string(&buffer, &engine)
         .unwrap()
         .string,
       "12a"
@@ -998,7 +998,7 @@ mod test_editor_ops {
     // 1 ▸b░        │
     //   └─▴────────┘
     //   C0123456789
-    EditorEngineDataApi::insert_new_line_at_caret(EditorArgsMut {
+    EditorEngineInternalApi::insert_new_line_at_caret(EditorArgsMut {
       editor_buffer: &mut buffer,
       editor_engine: &mut engine,
     });
@@ -1357,12 +1357,14 @@ pub mod mock_real_objects {
   }
 
   pub fn make_editor_engine() -> EditorEngine {
+    let flex_box = FlexBox {
+      style_adjusted_bounds_size: size!( cols: 10, rows: 10 ),
+      style_adjusted_origin_pos: position!( col: 0, row: 0 ),
+      ..Default::default()
+    };
+    let current_box: EditorEngineFlexBox = (&flex_box).into();
     EditorEngine {
-      current_box: FlexBox {
-        style_adjusted_bounds_size: size!( cols: 10, rows: 10 ),
-        style_adjusted_origin_pos: position!( col: 0, row: 0 ),
-        ..Default::default()
-      },
+      current_box,
       ..Default::default()
     }
   }
@@ -1374,11 +1376,11 @@ pub mod assert {
   use crate::*;
 
   pub fn none_is_at_caret(buffer: &EditorBuffer, engine: &EditorEngine) {
-    assert_eq2!(EditorEngineDataApi::string_at_caret(buffer, engine), None);
+    assert_eq2!(EditorEngineInternalApi::string_at_caret(buffer, engine), None);
   }
 
   pub fn str_is_at_caret(editor_buffer: &EditorBuffer, engine: &EditorEngine, expected: &str) {
-    match EditorEngineDataApi::string_at_caret(editor_buffer, engine) {
+    match EditorEngineInternalApi::string_at_caret(editor_buffer, engine) {
       Some(UnicodeStringSegmentSliceResult {
         unicode_string_seg: s, ..
       }) => assert_eq2!(s.string, expected),
@@ -1388,7 +1390,7 @@ pub mod assert {
 
   pub fn line_at_caret(editor_buffer: &EditorBuffer, engine: &EditorEngine, expected: &str) {
     assert_eq2!(
-      EditorEngineDataApi::line_at_caret_to_string(editor_buffer, engine)
+      EditorEngineInternalApi::line_at_caret_to_string(editor_buffer, engine)
         .unwrap()
         .string,
       expected

@@ -37,7 +37,7 @@ impl EditorEngineRenderApi {
   pub async fn apply_event<S, A>(
     args: EditorEngineArgs<'_, S, A>,
     input_event: &InputEvent,
-  ) -> CommonResult<ApplyResponse<EditorBuffer>>
+  ) -> CommonResult<EditorEngineApplyResponse<EditorBuffer>>
   where
     S: Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
@@ -61,9 +61,9 @@ impl EditorEngineRenderApi {
         component_registry,
         self_id,
       );
-      Ok(ApplyResponse::Applied(new_editor_buffer))
+      Ok(EditorEngineApplyResponse::Applied(new_editor_buffer))
     } else {
-      Ok(ApplyResponse::NotApplied)
+      Ok(EditorEngineApplyResponse::NotApplied)
     }
   }
 
@@ -83,7 +83,7 @@ impl EditorEngineRenderApi {
         ..
       } = args;
 
-      editor_engine.current_box = current_box.clone();
+      editor_engine.current_box = current_box.into();
 
       // Create reusable args for render functions.
       let render_args = RenderArgs {
@@ -168,7 +168,7 @@ impl EditorEngineRenderApi {
 
     if component_registry
       .has_focus
-      .does_current_box_have_focus(&editor_engine.current_box)
+      .does_id_have_focus(editor_engine.current_box.id)
     {
       match style {
         CaretPaintStyle::GlobalCursor => {
@@ -182,7 +182,7 @@ impl EditorEngineRenderApi {
           let str_at_caret: String = if let Some(UnicodeStringSegmentSliceResult {
             unicode_string_seg: str_seg,
             ..
-          }) = EditorEngineDataApi::string_at_caret(editor_buffer, editor_engine)
+          }) = EditorEngineInternalApi::string_at_caret(editor_buffer, editor_engine)
           {
             str_seg.string
           } else {
@@ -234,7 +234,7 @@ impl EditorEngineRenderApi {
     // Paint the emoji.
     if component_registry
       .has_focus
-      .does_current_box_have_focus(&editor_engine.current_box)
+      .does_id_have_focus(editor_engine.current_box.id)
     {
       render_pipeline! {
         @push_into render_pipeline at ZOrder::Normal =>
@@ -262,7 +262,7 @@ mod misc {
     LocalPaintedEffect,
   }
 
-  pub enum ApplyResponse<T>
+  pub enum EditorEngineApplyResponse<T>
   where
     T: Debug,
   {
