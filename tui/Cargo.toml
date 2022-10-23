@@ -70,4 +70,4 @@ int-enum = "0.5.0"
 # http://xion.io/post/code/rust-examples.html
 [dev-dependencies]
 reedline = "0.13.0"
-textwrap = "0.15.1"
+textwrap = "0.15.0"
