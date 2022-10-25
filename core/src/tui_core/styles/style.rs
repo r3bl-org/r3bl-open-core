@@ -30,24 +30,28 @@ use crate::*;
 /// Use [crate::style] proc macro to generate code for this struct. Here's an example.
 ///
 /// ```ignore
-/// // Turquoise:  Color::Rgb { r: 51, g: 255, b: 255 }
-/// // Pink:       Color::Rgb { r: 252, g: 157, b: 248 }
-/// // Blue:       Color::Rgb { r: 55, g: 55, b: 248 }
-/// // Faded blue: Color::Rgb { r: 85, g: 85, b: 255 }
+/// use r3bl_rs_utils_core::Stylesheet;
+/// use r3bl_rs_utils_macro::style;
+///
+/// // Turquoise:  TWColor::Rgb { r: 51, g: 255, b: 255 }
+/// // Pink:       TWColor::Rgb { r: 252, g: 157, b: 248 }
+/// // Blue:       TWColor::Rgb { r: 55, g: 55, b: 248 }
+/// // Faded blue: TWColor::Rgb { r: 85, g: 85, b: 255 }
 /// let mut stylesheet = Stylesheet::new();
 ///
 /// stylesheet.add_styles(vec![
 ///   style! {
 ///     id: style1
+///     attrib: [dim, bold]
 ///     padding: 1
-///     color_bg: Color::Rgb { r: 55, g: 55, b: 248 }
+///     color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
 ///   },
 ///   style! {
 ///     id: style2
 ///     padding: 1
-///     color_bg: Color::Rgb { r: 85, g: 85, b: 255 }
+///     color_bg: TWColor::Rgb { r: 85, g: 85, b: 255 }
 ///   }
-/// ])?;
+/// ]);
 /// ```
 #[derive(Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Style {

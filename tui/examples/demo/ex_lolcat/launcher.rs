@@ -21,7 +21,7 @@ use r3bl_rs_utils_core::*;
 use tokio::fs::File;
 
 pub async fn run_app() -> CommonResult<()> {
-  let mut my_lolcat = Lolcat::new();
+  let mut my_lolcat = Lolcat::default();
 
   println!("{:?}", my_lolcat);
 
