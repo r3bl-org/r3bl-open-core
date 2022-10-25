@@ -2,9 +2,6 @@
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 editor engine extras (core):
-  ✔ add editor config options to enable/disable multiline & update tests @done(22-10-11 15:29)
-  ✔ Expose clear `EditorEngineApi` public API for editor engine & remove OOP from engine @done(22-10-12 11:39)
-  ✔ make sure window_size is correctly passed down from main_event_loop -> app -> component @done(22-10-17 11:13)
   ☐ add modal dialog support https://github.com/r3bl-org/r3bl_rs_utils/issues/45
 
 editor engine extras (core):
@@ -50,16 +47,18 @@ tui:
   ☐ form
 
 framework:
-  ✔ [Enforce terminal window bounds in RenderPipeline](https://github.com/r3bl-org/r3bl_rs_utils/issues/28) @done(22-09-03 20:36)
-  ✔ [Z-ordering support in RenderPipeline](https://github.com/r3bl-org/r3bl_rs_utils/issues/27) @done(22-09-09 16:12)
-  ✔ [Fix broken unicode painting on different terminal + os combos](https://github.com/r3bl-org/r3bl_rs_utils/issues/33) @done(22-09-15 15:55)
-  ✔ [EditorBuffer rewrite](https://github.com/r3bl-org/r3bl_rs_utils/issues/40) @done(22-09-20 10:32)
-  ✔ [Migrate cmdr -> rs](https://github.com/r3bl-org/r3bl_rs_utils/issues/38) @done(22-09-20 13:59)
+  ☐ animation
+    - https://github.com/SergioBenitez/Rocket/discussions/1735#discussioncomment-941576
+    - https://notado.substack.com/p/do-you-really-need-a-message-queue?sd=pf
+    - https://github.com/smallnest/concurrency-programming-via-rust
+  ☐ [compositor](https://github.com/r3bl-org/r3bl_rs_utils/issues/46)
+    - https://www.reddit.com/r/rust/comments/ydi7xu/announcing_imaradiff_a_reliably_performant/
+    - https://github.com/pascalkuthe/imara-diff
+    - https://github.com/nazmulidris/rust-sloth
   ☐ [Add termion support](https://github.com/r3bl-org/r3bl_rs_utils/issues/24)
   ☐ [Filter unsupported graphemes in keypress](https://github.com/r3bl-org/r3bl_rs_utils/issues/26)
   ☐ [Write tests: rendering, component, etc](https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aissue+is%3Aopen+label%3Atesting)
-  ☐ [How to do animation?](https://github.com/smallnest/concurrency-programming-via-rust)
-
+  
 cmdr:
   ☐ [Create PRD](https://github.com/r3bl-org/r3bl_rs_utils/issues/39)
   

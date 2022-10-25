@@ -30,7 +30,7 @@ pub type SharedStore<S, A> = Arc<RwLock<Store<S, A>>>;
 
 #[macro_export]
 macro_rules! spawn_dispatch_action {
-  ($store: ident, $action: expr) => {{
+  ($store: expr, $action: expr) => {{
     let store_copy = $store.clone();
     tokio::spawn(async move {
       store_copy.write().await.dispatch_action($action).await;

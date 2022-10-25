@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{collections::HashMap,
+use std::{collections::{hash_map::Entry, HashMap},
           fmt::Debug,
           ops::{AddAssign, Deref, DerefMut}};
 
@@ -158,10 +158,10 @@ impl RenderPipeline {
   pub fn join_into(&mut self, mut rhs: RenderPipeline) {
     for (z_order, mut render_ops) in rhs.drain() {
       match self.entry(z_order) {
-        std::collections::hash_map::Entry::Occupied(mut entry) => {
+        Entry::Occupied(mut entry) => {
           entry.get_mut().append(&mut render_ops.list);
         }
-        std::collections::hash_map::Entry::Vacant(entry) => {
+        Entry::Vacant(entry) => {
           entry.insert(render_ops);
         }
       }
@@ -171,10 +171,10 @@ impl RenderPipeline {
   /// This will add the [RenderOp] to the correct [ZOrder].
   pub fn push(&mut self, z_order: &ZOrder, cmd_wrapper: RenderOp) -> &mut Self {
     match self.entry(*z_order) {
-      std::collections::hash_map::Entry::Occupied(mut entry) => {
+      Entry::Occupied(mut entry) => {
         entry.get_mut().push(cmd_wrapper);
       }
-      std::collections::hash_map::Entry::Vacant(entry) => {
+      Entry::Vacant(entry) => {
         entry.insert(render_ops!(@new *z_order => cmd_wrapper));
       }
     }
@@ -186,6 +186,25 @@ impl RenderPipeline {
   pub async fn paint(&self, flush_kind: FlushKind, shared_tw_data: &SharedTWData) {
     paint(self, flush_kind, shared_tw_data).await;
     // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
+  }
+
+  /// Elevate the [RenderOps] for the 'from' [ZOrder] to the 'to' [ZOrder].
+  pub fn hoist(&mut self, z_order_from: ZOrder, z_order_to: ZOrder) {
+    // If the 'from' [ZOrder] is not in the pipeline, then there's nothing to do.
+    if !self.pipeline_map.contains_key(&z_order_from) {
+      return;
+    }
+
+    // Move the [RenderOps] from the 'from' [ZOrder] to the 'to' [ZOrder].
+    let mut from_render_ops = self.pipeline_map.remove(&z_order_from).unwrap_or_default();
+    match self.pipeline_map.entry(z_order_to) {
+      Entry::Occupied(mut entry) => {
+        entry.get_mut().append(&mut from_render_ops.list);
+      }
+      Entry::Vacant(entry) => {
+        entry.insert(from_render_ops);
+      }
+    }
   }
 }
 

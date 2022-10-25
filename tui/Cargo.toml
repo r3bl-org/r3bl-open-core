@@ -66,6 +66,10 @@ get-size = { version = "0.1.1", features = ["derive"] }
 # int-enum.
 int-enum = "0.5.0"
 
+# strum.
+strum = "0.24.1"
+strum_macros = "0.24.3"
+
 # For examples.
 # http://xion.io/post/code/rust-examples.html
 [dev-dependencies]

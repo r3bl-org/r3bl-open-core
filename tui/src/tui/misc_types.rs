@@ -20,6 +20,7 @@ use std::fmt::Debug;
 use int_enum::IntEnum;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
+use strum_macros::AsRefStr;
 
 use crate::*;
 
@@ -142,4 +143,20 @@ pub enum FormatMsg {
 pub enum MinSize {
   Col = 65,
   Row = 10,
+}
+
+#[derive(Debug, Eq, PartialEq, AsRefStr)]
+pub enum BorderGlyphCharacter {
+  #[strum(to_string = "╮")]
+  TopRight,
+  #[strum(to_string = "╭")]
+  TopLeft,
+  #[strum(to_string = "╯")]
+  BottomRight,
+  #[strum(to_string = "╰")]
+  BottomLeft,
+  #[strum(to_string = "─")]
+  Horizontal,
+  #[strum(to_string = "│")]
+  Vertical,
 }
