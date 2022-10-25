@@ -65,7 +65,7 @@ mod app_trait_impl {
         log_no_err!(DEBUG, "💾 user_data: {:?}", self.component_registry.user_data);
       });
 
-      if let EventPropagation::Consumed = self.try_activate(args, input_event) {
+      if let EventPropagation::Consumed = self.try_activate_modal(args, input_event) {
         return Ok(EventPropagation::Consumed);
       }
 
@@ -120,46 +120,49 @@ mod modal_dialog_support {
 
   impl AppWithLayout {
     /// If `input_event` matches <kbd>Ctrl+l</kbd>, then toggle the modal dialog.
-    pub fn try_activate(
+    pub fn try_activate_modal(
       &mut self,
       args: GlobalScopeArgs<'_, State, Action>,
       input_event: &InputEvent,
     ) -> EventPropagation {
-      if let Some(DialogEvent::ActivateModal) = DialogEvent::try_from(
+      let maybe_input_event_matches_modal_activation_key = DialogEvent::try_from(
         input_event,
         Some(Keypress::WithModifiers {
           key: Key::Character('l'),
           mask: ModifierKeysMask::CTRL,
         }),
-      ) {
-        self.component_registry.has_focus.set_modal_id(Id::Dialog.int_value());
+      );
 
-        call_if_true!(DEBUG_TUI_MOD, {
-          log_no_err!(DEBUG, "📣 activate modal: {:?}", self.component_registry.has_focus);
-        });
+      match maybe_input_event_matches_modal_activation_key {
+        Some(DialogEvent::ActivateModal) => {
+          self.activate_modal(args);
+          EventPropagation::Consumed
+        }
+        _ => EventPropagation::Propagate,
+      }
+    }
 
-        let GlobalScopeArgs {
-          shared_store, state, ..
-        } = args;
+    fn activate_modal(&mut self, args: GlobalScopeArgs<State, Action>) {
+      self.component_registry.has_focus.set_modal_id(Id::Dialog.int_value());
 
-        let text = {
-          if let Some(editor_buffer) = state.get_editor_buffer(Id::Editor.int_value()) {
-            editor_buffer.get_as_string()
-          } else {
-            "Press <Esc> to close, or <Enter> to accept".to_string()
-          }
-        };
-
-        let title = "Modal Dialog Title";
-        spawn_dispatch_action!(
-          shared_store,
-          Action::SetDialogBufferTitleAndText(title.to_string(), text.to_string())
-        );
-
-        return EventPropagation::Consumed;
+      let text = {
+        if let Some(editor_buffer) = args.state.get_editor_buffer(Id::Editor.int_value()) {
+          editor_buffer.get_as_string()
+        } else {
+          "Press <Esc> to close, or <Enter> to accept".to_string()
+        }
       };
 
-      EventPropagation::Propagate
+      let title = "Modal Dialog Title";
+
+      spawn_dispatch_action!(
+        args.shared_store,
+        Action::SetDialogBufferTitleAndText(title.to_string(), text.to_string())
+      );
+
+      call_if_true!(DEBUG_TUI_MOD, {
+        log_no_err!(DEBUG, "📣 activate modal: {:?}", self.component_registry.has_focus);
+      });
     }
   }
 }
