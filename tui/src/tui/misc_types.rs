@@ -140,6 +140,6 @@ pub enum FormatMsg {
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
 pub enum MinSize {
-  Col = 40,
-  Row = 5,
+  Col = 65,
+  Row = 10,
 }

@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::{fmt::Display,
+use std::{borrow::Cow,
+          fmt::Display,
           io::{stdout, Write},
           thread::sleep,
           time::Duration};
@@ -26,11 +27,37 @@ use serde::*;
 
 use crate::*;
 
+/// Colorizes each of the [GraphemeClusterSegment]s in the [UnicodeString] with a rapidly changing
+/// color. If you don't pass in your own [Lolcat] then a random one will be created for you, which
+/// changes the color rapidly between each segment.
+pub fn lolcat_each_char_in_unicode_string(this: &UnicodeString, lolcat: Option<&mut Lolcat>) -> String {
+  let mut my_lolcat: Cow<Lolcat> = match lolcat {
+    Some(lolcat_arg) => Cow::Borrowed(lolcat_arg),
+    None => {
+      let color_wheel_control = ColorWheelControl {
+        color_change_speed: ColorChangeSpeed::Rapid,
+        ..Default::default()
+      };
+      Cow::Owned(Lolcat::new(color_wheel_control))
+    }
+  };
+
+  let mut return_vec: Vec<String> = vec![];
+  for letter in this.vec_segment.iter() {
+    let colored_letter = letter.string.color_with(my_lolcat.to_mut());
+    return_vec.push(colored_letter);
+  }
+
+  return_vec.join("")
+}
+
 /// Given a mutable [Lolcat], colorize the token tree that follows.
 ///
-/// ```ignore
-/// pub lolcat = Lolcat::default();
-/// pub content = "Hello, world!";
+/// ```rust
+/// use r3bl_rs_utils_core::*;
+///
+/// let mut lolcat = Lolcat::default();
+/// let content = "Hello, world!";
 /// let colored_content = colorize_using_lolcat!(
 ///   &mut lolcat, "{}", content
 /// );
@@ -93,12 +120,7 @@ pub struct Lolcat {
 }
 
 impl Lolcat {
-  pub fn new() -> Self {
-    let control = ColorWheelControl::default();
-    Self {
-      color_wheel_control: control,
-    }
-  }
+  pub fn new(color_wheel_control: ColorWheelControl) -> Self { Self { color_wheel_control } }
 
   pub fn format_str(&mut self, input_str: &str) -> OutputCollector {
     let chars_iter: std::str::Chars = input_str.chars();

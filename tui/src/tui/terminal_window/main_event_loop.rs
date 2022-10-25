@@ -18,8 +18,10 @@
 use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
+use int_enum::IntEnum;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_macro::style;
 use tokio::sync::RwLock;
 
 use crate::*;
@@ -304,8 +306,35 @@ where
         window_size: &window_size,
       };
 
-      // Call app_render.
-      let render_result = shared_app.write().await.app_render(global_scope_args).await;
+      // Check to see if the window_size is large enough to render.
+      let render_result =
+        if window_size.cols < ch!(MinSize::Col.int_value()) || window_size.rows < ch!(MinSize::Row.int_value()) {
+          // Show warning message that window_size is too small.
+          let display_msg = UnicodeString::from(format!(
+            "Window size is too small. Minimum size is {} cols x {} rows",
+            MinSize::Col.int_value(),
+            MinSize::Row.int_value()
+          ));
+          let trunc_display_msg = UnicodeString::from(display_msg.truncate_to_fit_size(window_size));
+          let trunc_display_msg_len = ch!(trunc_display_msg.len());
+
+          let row_pos = window_size.rows / 2;
+          let col_pos = (window_size.cols - trunc_display_msg_len) / 2;
+
+          Ok(render_pipeline!(@new ZOrder::Normal =>
+            RenderOp::ClearScreen,
+            RenderOp::ResetColor,
+            RenderOp::MoveCursorPositionAbs(position! {col: col_pos, row: row_pos}),
+            RenderOp::SetFgColor(TWColor::DarkRed),
+            RenderOp::PrintTextWithAttributes(
+              lolcat_each_char_in_unicode_string(&trunc_display_msg, None),
+              Some(style! {attrib: [bold]}))
+          ))
+        } else {
+          // Call app_render.
+          shared_app.write().await.app_render(global_scope_args).await
+        };
+
       match render_result {
         Err(error) => {
           RenderOp::default().flush();
