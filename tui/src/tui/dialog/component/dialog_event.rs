@@ -39,7 +39,7 @@ impl DialogEvent {
   /// - Enter and Esc are also matched against to return [DialogEvent::EnterPressed] and
   ///   [DialogEvent::EscPressed]
   /// - Otherwise, [Err] is returned.
-  pub fn try_from(input_event: &InputEvent, maybe_modal_keypress: Option<Keypress>) -> Option<Self> {
+  pub fn try_from(input_event: &InputEvent, maybe_modal_keypress: Option<KeyPress>) -> Option<Self> {
     if let InputEvent::Keyboard(keypress) = input_event {
       // Compare to `modal_keypress` (if any).
       if let Some(modal_keypress) = maybe_modal_keypress {
@@ -50,14 +50,14 @@ impl DialogEvent {
 
       match keypress {
         // Compare to `Enter`.
-        Keypress::Plain {
+        KeyPress::Plain {
           key: Key::SpecialKey(SpecialKey::Enter),
         } => {
           return Some(Self::EnterPressed);
         }
 
         // Compare to `Esc`.
-        Keypress::Plain {
+        KeyPress::Plain {
           key: Key::SpecialKey(SpecialKey::Esc),
         } => {
           return Some(Self::EscPressed);

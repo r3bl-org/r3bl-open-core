@@ -183,6 +183,7 @@ mod internal_impl {
     })
   }
 
+  // TODO: handle Style.lolcat is true
   pub async fn render_editor<S, A>(
     origin_pos: &Position,
     bounds_size: &Size,
@@ -218,6 +219,7 @@ mod internal_impl {
     Ok(pipeline)
   }
 
+  // TODO: handle Style.lolcat is true
   pub fn add_title(origin_pos: &Position, bounds_size: &Size, title: &str, engine: &DialogEngine) -> RenderPipeline {
     let mut pipeline = render_pipeline!(@new_empty);
 
@@ -239,6 +241,7 @@ mod internal_impl {
     pipeline
   }
 
+  // TODO: handle Style.lolcat is true
   pub fn clear_dialog_box(origin_pos: &Position, bounds_size: &Size, engine: &DialogEngine) -> RenderPipeline {
     let mut pipeline = render_pipeline!(@new_empty);
 

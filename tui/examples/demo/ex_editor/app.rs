@@ -134,7 +134,7 @@ mod detect_modal_dialog_activation_from_input_event {
     ) -> EventPropagation {
       let maybe_input_event_matches_modal_activation_key = DialogEvent::try_from(
         input_event,
-        Some(Keypress::WithModifiers {
+        Some(KeyPress::WithModifiers {
           key: Key::Character('l'),
           mask: ModifierKeysMask::CTRL,
         }),
@@ -371,16 +371,19 @@ mod style_helpers {
           padding: 1
           color_fg: TWColor::Blue
         },
+        // TODO: handle Style.lolcat is true
         style! {
           id: DialogStyleId::Title.as_ref()
           attrib: [bold]
           color_fg: TWColor::Yellow
         },
+        // TODO: handle Style.lolcat is true
         style! {
           id: DialogStyleId::Border.as_ref()
           attrib: [dim]
           color_fg: TWColor::Green
         },
+        // TODO: handle Style.lolcat is true
         style! {
           id: DialogStyleId::Editor.as_ref()
           attrib: [bold]

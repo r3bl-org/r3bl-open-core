@@ -58,8 +58,8 @@ pub type CommonResult<T> = OGResult<T, Box<dyn Error + Send + Sync>>;
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct CommonError {
-  err_type: CommonErrorType,
-  msg: Option<String>,
+  pub err_type: CommonErrorType,
+  pub err_msg: Option<String>,
 }
 
 /// Some common errors that can occur.
@@ -99,7 +99,7 @@ impl CommonError {
   pub fn new<T>(err_type: CommonErrorType, msg: &str) -> CommonResult<T> {
     Self::from_err(CommonError {
       err_type,
-      msg: msg.to_string().into(),
+      err_msg: msg.to_string().into(),
     })
   }
 
@@ -115,7 +115,7 @@ impl CommonError {
 
   /// Private helper method.
   fn from_err_type_and_msg<T>(err_type: CommonErrorType, msg: Option<String>) -> CommonResult<T> {
-    Self::from_err(CommonError { err_type, msg })
+    Self::from_err(CommonError { err_type, err_msg: msg })
   }
 
   /// Private helper method.

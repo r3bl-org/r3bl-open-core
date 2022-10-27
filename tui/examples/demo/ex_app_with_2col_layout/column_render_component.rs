@@ -81,7 +81,7 @@ impl Component<State, Action> for ColumnRenderComponent {
 
       let mut event_consumed = false;
 
-      if let InputEvent::Keyboard(Keypress::Plain { key }) = input_event {
+      if let InputEvent::Keyboard(KeyPress::Plain { key }) = input_event {
         // Check for + or - key.
         if let Key::Character(typed_char) = key {
           match typed_char {
