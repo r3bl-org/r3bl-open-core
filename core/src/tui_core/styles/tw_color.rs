@@ -147,8 +147,8 @@ mod helpers {
   impl Debug for TWColor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       match self {
-        TWColor::Rgb { r, g, b } => f.write_fmt(format_args!("{},{},{}", r, g, b)),
-        TWColor::AnsiValue(value) => f.write_fmt(format_args!("ansi_value({})", value)),
+        TWColor::Rgb { r, g, b } => f.write_fmt(format_args!("{r},{g},{b}")),
+        TWColor::AnsiValue(value) => f.write_fmt(format_args!("ansi_value({value})")),
         TWColor::Reset => f.write_fmt(format_args!("reset")),
         TWColor::Black => f.write_fmt(format_args!("black")),
         TWColor::DarkGrey => f.write_fmt(format_args!("dark_grey")),

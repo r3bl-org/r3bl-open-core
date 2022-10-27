@@ -246,12 +246,12 @@ mod render_pipeline_helpers {
       let mut vec_lines: Vec<String> = vec![];
       if DEBUG_SHOW_PIPELINE_EXPANDED {
         for (z_order, render_ops) in &**self {
-          let line: String = format!("[{:?}] {:?}", z_order, render_ops);
+          let line: String = format!("[{z_order:?}] {render_ops:?}");
           vec_lines.push(line);
         }
       } else {
         for (z_order, render_ops) in &**self {
-          let line: String = format!("[{:?}] {:?} ops", z_order, render_ops.len());
+          let line: String = format!("[{z_order:?}] {:?} ops", render_ops.len());
           vec_lines.push(line);
         }
       }

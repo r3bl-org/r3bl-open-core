@@ -60,7 +60,7 @@ mod helpers {
 
   impl Display for InputEvent {
     /// For [ToString].
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{:?}", self) }
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
   }
 }
 

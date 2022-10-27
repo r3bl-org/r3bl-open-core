@@ -1151,7 +1151,7 @@ mod test_editor_ops {
         &mut engine,
         &mut buffer,
         vec![
-          EditorEvent::InsertString(format!("{}: {}", count, "hello")),
+          EditorEvent::InsertString(format!("{count}: {}", "hello")),
           EditorEvent::InsertNewLine,
         ],
         &mock_real_objects::make_shared_tw_data(),
@@ -1242,7 +1242,7 @@ mod test_editor_ops {
         &mut engine,
         &mut buffer,
         vec![
-          EditorEvent::InsertString(format!("{}: {}", count, "hello")),
+          EditorEvent::InsertString(format!("{count}: {}", "hello")),
           EditorEvent::InsertNewLine,
         ],
         &mock_real_objects::make_shared_tw_data(),
@@ -1294,7 +1294,7 @@ mod test_editor_ops {
       EditorEvent::apply_editor_events(
         &mut engine,
         &mut buffer,
-        vec![EditorEvent::InsertString(format!("{}", count))],
+        vec![EditorEvent::InsertString(format!("{count}"))],
         &mock_real_objects::make_shared_tw_data(),
         &mut mock_real_objects::make_component_registry(),
         0,

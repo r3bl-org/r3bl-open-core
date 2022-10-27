@@ -47,8 +47,8 @@ pub fn derive_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::Tok
       let gen_props_ts = transform_named_fields_to_props_ts(data_struct);
 
       let doc_struct_str = format!(
-        " Implements the [builder pattern] for [`{}`].\n [builder pattern]: {}",
-        &struct_name_ident, BUILDER_DOC_URL
+        " Implements the [builder pattern] for [`{}`].\n [builder pattern]: {BUILDER_DOC_URL}",
+        &struct_name_ident
       );
 
       let gen_props_with_defaults_ts = transform_named_fields_to_props_with_defaults_ts(data_struct);

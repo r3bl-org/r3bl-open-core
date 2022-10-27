@@ -28,13 +28,13 @@ impl AsyncReducer<State, Action> for Reducer {
   async fn run(&self, action: &Action, state: &State) -> State {
     match action {
       Action::Noop => state.clone(),
-      
+
       Action::UpdateEditorBufferById(id, buffer) => {
         let mut new_state = state.clone();
         new_state.editor_buffers.insert(*id, buffer.clone());
         new_state
       }
-      
+
       Action::SetDialogBufferTitleAndText(title, text) => {
         let mut new_state = state.clone();
         let dialog_buffer = &mut new_state.dialog_buffer;
@@ -48,7 +48,6 @@ impl AsyncReducer<State, Action> for Reducer {
         new_state.dialog_buffer.editor_buffer = editor_buffer.clone();
         new_state
       }
-
     }
   }
 }

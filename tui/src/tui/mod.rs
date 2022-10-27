@@ -30,6 +30,7 @@ pub const DEBUG_SHOW_PIPELINE_EXPANDED: bool = false;
 pub const DEBUG_SHOW_TERMINAL_BACKEND: bool = false;
 
 // Attach sources.
+pub mod dialog;
 pub mod editor;
 pub mod layout;
 pub mod misc_types;
@@ -37,9 +38,9 @@ pub mod rsx;
 pub mod syntax_highlighting;
 pub mod terminal_lib_backends;
 pub mod terminal_window;
-pub mod dialog;
 
 // Re-export.
+pub use dialog::*;
 pub use editor::*;
 pub use layout::*;
 pub use misc_types::*;
@@ -47,7 +48,6 @@ pub use rsx::*;
 pub use syntax_highlighting::*;
 pub use terminal_lib_backends::*;
 pub use terminal_window::*;
-pub use dialog::*;
 
 // Tests.
 mod test_make_style_macro;

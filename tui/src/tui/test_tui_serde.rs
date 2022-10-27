@@ -43,7 +43,7 @@ mod tests {
     q.push(&ZOrder::Normal, RenderOp::ClearScreen);
     q.push(&ZOrder::Normal, RenderOp::SetBgColor(TWColor::Red));
     let ser_str = serde_json::to_string_pretty(&q).unwrap();
-    println!("{}", ser_str);
+    println!("{ser_str}");
     let og_q: RenderPipeline = serde_json::from_str(&ser_str).unwrap();
     assert_eq2!(q, og_q);
   }

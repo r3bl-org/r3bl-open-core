@@ -72,6 +72,7 @@ pub struct Style {
   /// [`FlexBox` docs](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/tui/layout/flex_box/struct.FlexBox.html).
   pub padding: Option<ChUnit>,
   pub cached_bitflags: Option<StyleFlag>,
+  pub lolcat: bool,
 }
 
 // ┏━━━━━━━━━━┓
@@ -159,7 +160,7 @@ mod helpers {
 
   impl Display for Style {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-      let msg = format!("{:?}", self);
+      let msg = format!("{self:?}");
       f.write_str(&msg)
     }
   }

@@ -68,7 +68,7 @@ pub fn gen_fn_input_args_expr_list(fn_arg_type_list: &[IdentRef]) -> (Vec<proc_m
     .iter()
     .map(|arg_ty_ident_ref| {
       count += 1;
-      let arg_name_ident: Ident = arg_ty_ident_ref.ident.create_from_string(&format!("arg{}", count));
+      let arg_name_ident: Ident = arg_ty_ident_ref.ident.create_from_string(&format!("arg{count}"));
       arg_name_ident_vec.push(arg_name_ident.clone());
 
       let arg_ty_ident = arg_ty_ident_ref.ident.clone();
