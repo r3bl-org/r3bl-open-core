@@ -400,6 +400,7 @@ macro_rules! assert_eq2 {
       $crate::style_prompt("Houston, we have a problem..."),
       $crate::style_error(stringify!($left)),
       $crate::style_error(stringify!($right))
-    );
+    )
+    ;
   };
 }

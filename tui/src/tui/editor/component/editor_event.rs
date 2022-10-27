@@ -57,53 +57,53 @@ impl TryFrom<&InputEvent> for EditorEvent {
 
   fn try_from(input_event: &InputEvent) -> Result<Self, Self::Error> {
     match input_event {
-      InputEvent::Keyboard(Keypress::Plain {
+      InputEvent::Keyboard(KeyPress::Plain {
         key: Key::SpecialKey(SpecialKey::PageDown),
       }) => Ok(EditorEvent::PageDown),
 
-      InputEvent::Keyboard(Keypress::Plain {
+      InputEvent::Keyboard(KeyPress::Plain {
         key: Key::SpecialKey(SpecialKey::PageUp),
       }) => Ok(EditorEvent::PageUp),
 
-      InputEvent::Keyboard(Keypress::Plain {
+      InputEvent::Keyboard(KeyPress::Plain {
         key: Key::SpecialKey(SpecialKey::Home),
       }) => Ok(EditorEvent::Home),
 
-      InputEvent::Keyboard(Keypress::Plain {
+      InputEvent::Keyboard(KeyPress::Plain {
         key: Key::SpecialKey(SpecialKey::End),
       }) => Ok(EditorEvent::End),
 
       InputEvent::Resize(size) => Ok(EditorEvent::Resize(*size)),
 
-      InputEvent::Keyboard(Keypress::Plain {
+      InputEvent::Keyboard(KeyPress::Plain {
         key: Key::Character(character),
       }) => Ok(Self::InsertChar(*character)),
 
-      InputEvent::Keyboard(Keypress::Plain {
+      InputEvent::Keyboard(KeyPress::Plain {
         key: Key::SpecialKey(SpecialKey::Enter),
       }) => Ok(Self::InsertNewLine),
 
-      InputEvent::Keyboard(Keypress::Plain {
+      InputEvent::Keyboard(KeyPress::Plain {
         key: Key::SpecialKey(SpecialKey::Delete),
       }) => Ok(Self::Delete),
 
-      InputEvent::Keyboard(Keypress::Plain {
+      InputEvent::Keyboard(KeyPress::Plain {
         key: Key::SpecialKey(SpecialKey::Backspace),
       }) => Ok(Self::Backspace),
 
-      InputEvent::Keyboard(Keypress::Plain {
+      InputEvent::Keyboard(KeyPress::Plain {
         key: Key::SpecialKey(SpecialKey::Up),
       }) => Ok(Self::MoveCaret(CaretDirection::Up)),
 
-      InputEvent::Keyboard(Keypress::Plain {
+      InputEvent::Keyboard(KeyPress::Plain {
         key: Key::SpecialKey(SpecialKey::Down),
       }) => Ok(Self::MoveCaret(CaretDirection::Down)),
 
-      InputEvent::Keyboard(Keypress::Plain {
+      InputEvent::Keyboard(KeyPress::Plain {
         key: Key::SpecialKey(SpecialKey::Left),
       }) => Ok(Self::MoveCaret(CaretDirection::Left)),
 
-      InputEvent::Keyboard(Keypress::Plain {
+      InputEvent::Keyboard(KeyPress::Plain {
         key: Key::SpecialKey(SpecialKey::Right),
       }) => Ok(Self::MoveCaret(CaretDirection::Right)),
       _ => Err(format!("Invalid input event: {input_event:?}")),

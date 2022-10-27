@@ -16,35 +16,276 @@
  */
 
 #[cfg(test)]
-mod test_dialog_api {
+mod test_dialog_event {
+  use r3bl_rs_utils_core::*;
+
+  use crate::*;
+
+  #[test]
+  fn dialog_event_handles_enter() {
+    let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Enter));
+    let dialog_event = DialogEvent::try_from(&input_event, None);
+    assert_eq2!(dialog_event, Some(DialogEvent::EnterPressed));
+  }
+
+  #[test]
+  fn dialog_event_handles_esc() {
+    let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Esc));
+    let dialog_event = DialogEvent::try_from(&input_event, None);
+    assert_eq2!(dialog_event, Some(DialogEvent::EscPressed));
+  }
+
+  #[test]
+  fn dialog_event_handles_modal_keypress() {
+    let modal_keypress = keypress!(@char ModifierKeysMask::CTRL, 'l');
+    let input_event = InputEvent::Keyboard(modal_keypress);
+    let dialog_event = DialogEvent::try_from(&input_event, Some(modal_keypress));
+    assert_eq2!(dialog_event, Some(DialogEvent::ActivateModal));
+  }
+}
+
+#[cfg(test)]
+mod test_dialog_api_make_flex_box_for_dialog {
+  use std::error::Error;
+
+  use r3bl_rs_utils_core::*;
+
+  use crate::*;
+
+  /// More info on `is` and downcasting:
+  /// - https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any
+  /// - https://ysantos.com/blog/downcast-rust
+  #[test]
+  fn make_flex_box_for_dialog_display_size_too_small() {
+    let surface = Surface::default();
+    let window_size = Size::default();
+    let dialog_id: FlexBoxIdType = 0;
+
+    // The window size is too small and will result in this error.
+    // Err(
+    //   CommonError {
+    //       err_type: DisplaySizeTooSmall,
+    //       err_msg: Some(
+    //           "Window size is too small. Min size is 65 cols x 10 rows",
+    //       ),
+    //   },
+    let result_flex_box = dbg!(DialogEngineApi::make_flex_box_for_dialog(
+      dialog_id,
+      &surface,
+      &window_size
+    ));
+
+    // Assert that a general `CommonError` is returned.
+    let my_err: Box<dyn Error + Send + Sync> = result_flex_box.err().unwrap();
+    assert_eq2!(my_err.is::<CommonError>(), true);
+
+    // Assert that this specific error is returned.
+    let result = matches!(
+      my_err.downcast_ref::<CommonError>(),
+      Some(CommonError {
+        err_type: CommonErrorType::DisplaySizeTooSmall,
+        err_msg: _,
+      })
+    );
+
+    assert_eq2!(result, true);
+  }
+
+  #[test]
+  fn make_flex_box_for_dialog() {
+    // 1. The surface and window_size are not the same width and height.
+    // 2. The surface is also not starting from the top left corner of the window.
+    let surface = Surface {
+      origin_pos: position! { col: 2, row: 2 },
+      box_size: size!( cols: 65, rows: 10 ),
+      ..Default::default()
+    };
+    let window_size = size!( cols: 70, rows: 15 );
+    let self_id: FlexBoxIdType = 0;
+
+    // The dialog box should be centered inside the surface.
+    let result_flex_box = dbg!(DialogEngineApi::make_flex_box_for_dialog(
+      self_id,
+      &surface,
+      &window_size
+    ));
+
+    assert_eq2!(result_flex_box.is_ok(), true);
+
+    let flex_box = result_flex_box.unwrap();
+    assert_eq2!(flex_box.id, self_id);
+    assert_eq2!(flex_box.style_adjusted_bounds_size, size!( cols: 58, rows: 4 ));
+    assert_eq2!(flex_box.style_adjusted_origin_pos, position!( col: 5, row: 5 ));
+  }
+}
+
+#[cfg(test)]
+mod test_dialog_api_apply_event {
+  use r3bl_rs_utils_core::*;
 
   use super::*;
   use crate::*;
 
-  #[test]
-  fn flex_box_from() {
-    // TODO: impl this
+  #[tokio::test]
+  async fn apply_event_esc() {
+    let self_id: FlexBoxIdType = 0;
+    let window_size = &size!( cols: 70, rows: 15 );
+    let dialog_buffer = &mut DialogBuffer::default();
+    let dialog_engine = &mut mock_real_objects::make_dialog_engine();
+    let shared_store = &mock_real_objects::create_store();
+    let state = &String::new();
+    let shared_tw_data = &test_editor::mock_real_objects::make_shared_tw_data();
+    let component_registry = &mut test_editor::mock_real_objects::make_component_registry();
+
+    let args = DialogEngineArgs {
+      shared_tw_data,
+      shared_store,
+      state,
+      component_registry,
+      window_size,
+      self_id,
+      dialog_buffer,
+      dialog_engine,
+    };
+
+    let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Esc));
+    let response = dbg!(DialogEngineApi::apply_event(args, &input_event).await.unwrap());
+    assert!(matches!(
+      response,
+      DialogEngineApplyResponse::DialogChoice(DialogChoice::No)
+    ));
   }
 
-  #[test]
-  fn apply_event() {
-    let mut buffer = DialogBuffer::default();
-    let mut engine = mock_real_objects::make_dialog_engine();
+  #[tokio::test]
+  async fn apply_event_enter() {
+    let self_id: FlexBoxIdType = 0;
+    let window_size = &size!( cols: 70, rows: 15 );
+    let dialog_buffer = &mut DialogBuffer::default();
+    let dialog_engine = &mut mock_real_objects::make_dialog_engine();
+    let shared_store = &mock_real_objects::create_store();
+    let state = &String::new();
+    let shared_tw_data = &test_editor::mock_real_objects::make_shared_tw_data();
+    let component_registry = &mut test_editor::mock_real_objects::make_component_registry();
 
-    // TODO: impl this
+    let args = DialogEngineArgs {
+      shared_tw_data,
+      shared_store,
+      state,
+      component_registry,
+      window_size,
+      self_id,
+      dialog_buffer,
+      dialog_engine,
+    };
+
+    let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Enter));
+    let response = dbg!(DialogEngineApi::apply_event(args, &input_event).await.unwrap());
+    if let DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(value)) = &response {
+      assert_eq2!(value, "");
+    }
+    assert!(matches!(
+      response,
+      DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(_))
+    ));
   }
 
-  #[test]
-  fn render_engine() {
-    let mut buffer = DialogBuffer::default();
-    let mut engine = mock_real_objects::make_dialog_engine();
+  #[tokio::test]
+  async fn apply_event_other_key() {
+    let self_id: FlexBoxIdType = 0;
+    let window_size = &size!( cols: 70, rows: 15 );
+    let dialog_buffer = &mut DialogBuffer::default();
+    let dialog_engine = &mut mock_real_objects::make_dialog_engine();
+    let shared_store = &mock_real_objects::create_store();
+    let state = &String::new();
+    let shared_tw_data = &test_editor::mock_real_objects::make_shared_tw_data();
+    let component_registry = &mut test_editor::mock_real_objects::make_component_registry();
 
-    // TODO: impl this
+    let args = DialogEngineArgs {
+      shared_tw_data,
+      shared_store,
+      state,
+      component_registry,
+      window_size,
+      self_id,
+      dialog_buffer,
+      dialog_engine,
+    };
+
+    let input_event = InputEvent::Keyboard(keypress!(@char 'a'));
+    let response = dbg!(DialogEngineApi::apply_event(args, &input_event).await.unwrap());
+    if let DialogEngineApplyResponse::UpdateEditorBuffer(editor_buffer) = &response {
+      assert_eq2!(editor_buffer.get_as_string(), "a");
+    }
+  }
+}
+
+#[cfg(test)]
+mod test_dialog_api_render_engine {
+  use r3bl_rs_utils_core::*;
+
+  use super::*;
+  use crate::*;
+
+  #[tokio::test]
+  async fn render_engine() {
+    let self_id: FlexBoxIdType = 0;
+    let window_size = &size!( cols: 70, rows: 15 );
+    let dialog_buffer = &mut DialogBuffer::default();
+    let dialog_engine = &mut mock_real_objects::make_dialog_engine();
+    let shared_store = &mock_real_objects::create_store();
+    let state = &String::new();
+    let shared_tw_data = &test_editor::mock_real_objects::make_shared_tw_data();
+    let component_registry = &mut test_editor::mock_real_objects::make_component_registry();
+
+    let args = DialogEngineArgs {
+      shared_tw_data,
+      shared_store,
+      state,
+      component_registry,
+      window_size,
+      self_id,
+      dialog_buffer,
+      dialog_engine,
+    };
+
+    // 1. The surface and window_size are not the same width and height.
+    // 2. The surface is also not starting from the top left corner of the window.
+    let surface = Surface {
+      origin_pos: position! { col: 2, row: 2 },
+      box_size: size!( cols: 65, rows: 10 ),
+      ..Default::default()
+    };
+    let window_size = size!( cols: 70, rows: 15 );
+    let self_id: FlexBoxIdType = 0;
+
+    // The dialog box should be centered inside the surface.
+    let result_flex_box = dbg!(DialogEngineApi::make_flex_box_for_dialog(
+      self_id,
+      &surface,
+      &window_size
+    ))
+    .unwrap();
+
+    let pipeline = dbg!(DialogEngineApi::render_engine(args, &result_flex_box).await.unwrap());
+    assert_eq2!(pipeline.len(), 1);
+    let render_ops = pipeline.get(&ZOrder::Glass).unwrap();
+    assert!(render_ops.len() > 0);
   }
 }
 
 pub mod mock_real_objects {
+  use std::sync::Arc;
+
+  use r3bl_redux::{SharedStore, Store};
+  use tokio::sync::RwLock;
+
   use crate::{test_editor::mock_real_objects, *};
+
+  pub fn create_store() -> Arc<RwLock<Store<String, String>>> {
+    let mut _store = Store::<String, String>::default();
+    let shared_store: SharedStore<String, String> = Arc::new(RwLock::new(_store));
+    shared_store
+  }
 
   pub fn make_dialog_engine() -> DialogEngine {
     DialogEngine {

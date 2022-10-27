@@ -139,7 +139,7 @@ mod handle_focus {
       // Handle Left, Right to switch focus between columns.
       if let InputEvent::Keyboard(keypress) = input_event {
         match keypress {
-          Keypress::Plain {
+          KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Left),
           } => {
             event_consumed = true;
@@ -149,7 +149,7 @@ mod handle_focus {
               &self.component_registry.has_focus,
             );
           }
-          Keypress::Plain {
+          KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Right),
           } => {
             event_consumed = true;

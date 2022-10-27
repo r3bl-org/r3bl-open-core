@@ -23,11 +23,11 @@ use serde::*;
 
 use crate::*;
 
-/// Please see [Keypress] for more information about handling keyboard input.
+/// Please see [KeyPress] for more information about handling keyboard input.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InputEvent {
-  Keyboard(Keypress),
+  Keyboard(KeyPress),
   Resize(Size),
   Mouse(MouseInput),
   Focus(FocusEvent),

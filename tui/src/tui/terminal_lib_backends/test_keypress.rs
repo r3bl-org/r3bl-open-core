@@ -27,7 +27,7 @@ mod tests {
     // No modifier.
     {
       let macro_syntax = keypress! { @char 'a' };
-      let struct_syntax = Keypress::Plain {
+      let struct_syntax = KeyPress::Plain {
         key: Key::Character('a'),
       };
       assert_eq2!(macro_syntax, struct_syntax);
@@ -36,7 +36,7 @@ mod tests {
     // With modifier.
     {
       let macro_syntax = keypress! { @char ModifierKeysMask::SHIFT | ModifierKeysMask::CTRL, 'a' };
-      let struct_syntax = Keypress::WithModifiers {
+      let struct_syntax = KeyPress::WithModifiers {
         key: Key::Character('a'),
         mask: ModifierKeysMask::SHIFT | ModifierKeysMask::CTRL,
       };
@@ -49,7 +49,7 @@ mod tests {
     // No modifier.
     {
       let macro_syntax = keypress! { @special SpecialKey::Left };
-      let struct_syntax = Keypress::Plain {
+      let struct_syntax = KeyPress::Plain {
         key: Key::SpecialKey(SpecialKey::Left),
       };
       assert_eq2!(macro_syntax, struct_syntax);
@@ -57,7 +57,7 @@ mod tests {
     // With modifier.
     {
       let macro_syntax = keypress! { @special ModifierKeysMask::CTRL | ModifierKeysMask::ALT, SpecialKey::Left };
-      let struct_syntax = Keypress::WithModifiers {
+      let struct_syntax = KeyPress::WithModifiers {
         key: Key::SpecialKey(SpecialKey::Left),
         mask: ModifierKeysMask::CTRL | ModifierKeysMask::ALT,
       };
@@ -70,7 +70,7 @@ mod tests {
     // No modifier.
     {
       let macro_syntax = keypress! { @fn FunctionKey::F1 };
-      let struct_syntax = Keypress::Plain {
+      let struct_syntax = KeyPress::Plain {
         key: Key::FunctionKey(FunctionKey::F1),
       };
       assert_eq2!(macro_syntax, struct_syntax);
@@ -78,7 +78,7 @@ mod tests {
     // With modifier.
     {
       let macro_syntax = keypress! { @fn ModifierKeysMask::SHIFT, FunctionKey::F1 };
-      let struct_syntax = Keypress::WithModifiers {
+      let struct_syntax = KeyPress::WithModifiers {
         key: Key::FunctionKey(FunctionKey::F1),
         mask: ModifierKeysMask::SHIFT,
       };
@@ -91,10 +91,10 @@ mod tests {
     // "x"
     {
       let key_event = keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::NONE);
-      let keypress: Keypress = key_event.try_into()?;
+      let keypress: KeyPress = key_event.try_into()?;
       assert_eq2!(
         keypress,
-        Keypress::Plain {
+        KeyPress::Plain {
           key: Key::Character('x'),
         }
       );
@@ -103,10 +103,10 @@ mod tests {
     // "Ctrl + x"
     {
       let key_event = keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::CONTROL);
-      let converted_keypress: Keypress = key_event.try_into()?;
+      let converted_keypress: KeyPress = key_event.try_into()?;
       assert_eq2!(
         converted_keypress,
-        Keypress::WithModifiers {
+        KeyPress::WithModifiers {
           mask: ModifierKeysMask::CTRL,
           key: Key::Character('x'),
         }
@@ -119,10 +119,10 @@ mod tests {
         code: KeyCode::Char('x'),
         modifiers: KeyModifiers::CONTROL | KeyModifiers::ALT
       );
-      let converted_keypress: Keypress = key_event.try_into()?;
+      let converted_keypress: KeyPress = key_event.try_into()?;
       assert_eq2!(
         converted_keypress,
-        Keypress::WithModifiers {
+        KeyPress::WithModifiers {
           mask: ModifierKeysMask::CTRL | ModifierKeysMask::ALT,
           key: Key::Character('x'),
         }

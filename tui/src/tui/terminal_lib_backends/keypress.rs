@@ -20,27 +20,83 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-/// This is equivalent to [crossterm::event::KeyEvent] except that it is cleaned up semantically and
-/// impossible states are removed. It enables the tui framework to use a different backend other
-/// than crossterm in the future. Apps written using this framework use [Keypress] and not
-/// [crossterm::event::KeyEvent]. See [convert_key_event] for more information on the conversion.
+/// Examples.
 ///
-/// Please use the [keypress!] macro instead of directly constructing this struct.
+/// ```rust
+/// use r3bl_tui::*;
 ///
-/// ```ignore
 /// fn make_keypress() {
-///   let alt_a = Keypress::WithModifiers {
+///   let a = keypress!(@char 'a');
+///   let a = KeyPress::Plain {
+///     key: Key::Character('a'),
+///   };
+///
+///   let alt_a = keypress!(@char ModifierKeysMask::ALT, 'a');
+///   let alt_a = KeyPress::WithModifiers {
 ///     key: Key::Character('a'),
 ///     mask: ModifierKeysMask::ALT,
 ///   };
-///   let alt_a = keypress!(@char ModifierKeysMask::ALT, 'a')
 ///
-///   let a = Keypress::Plain {
-///     key: Key::Character('a'),
+///   let enter = keypress!(@special SpecialKey::Enter);
+///   let enter = KeyPress::Plain {
+///     key: Key::SpecialKey(SpecialKey::Enter),
 ///   };
-///   let a = keypress!(@char 'a');
+///
+///   let alt_enter = keypress!(@special ModifierKeysMask::ALT, SpecialKey::Enter);
+///   let alt_enter = KeyPress::WithModifiers {
+///     key: Key::SpecialKey(SpecialKey::Enter),
+///     mask: ModifierKeysMask::ALT,
+///   };
 /// }
 /// ```
+#[macro_export]
+macro_rules! keypress {
+  // @char
+  (@char $arg_char : expr) => {
+    KeyPress::Plain {
+      key: Key::Character($arg_char),
+    }
+  };
+  (@char $arg_modifiers : expr, $arg_char : expr) => {
+    KeyPress::WithModifiers {
+      mask: $arg_modifiers,
+      key: Key::Character($arg_char),
+    }
+  };
+
+  // @special
+  (@special $arg_special : expr) => {
+    KeyPress::Plain {
+      key: Key::SpecialKey($arg_special),
+    }
+  };
+  (@special $arg_modifiers : expr, $arg_special : expr) => {
+    KeyPress::WithModifiers {
+      mask: $arg_modifiers,
+      key: Key::SpecialKey($arg_special),
+    }
+  };
+
+  // @fn
+  (@fn $arg_function : expr) => {
+    KeyPress::Plain {
+      key: Key::FunctionKey($arg_function),
+    }
+  };
+  (@fn $arg_modifiers : expr, $arg_function : expr) => {
+    KeyPress::WithModifiers {
+      mask: $arg_modifiers,
+      key: Key::FunctionKey($arg_function),
+    }
+  };
+}
+
+/// This is equivalent to [crossterm::event::KeyEvent] except that it is cleaned up semantically and
+/// impossible states are removed. It enables the tui framework to use a different backend other
+/// than crossterm in the future. Apps written using this framework use [KeyPress] and not
+/// [crossterm::event::KeyEvent]. See [convert_key_event] for more information on the conversion.
+///
+/// Please use the [keypress!] macro instead of directly constructing this struct.
 ///
 /// # Kitty keyboard protocol support limitations
 ///
@@ -51,54 +107,12 @@ use crate::*;
 ///    protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), in other words most terminals,
 ///    the `kind` is always `Press`. This is made explicit in the code.
 ///
-/// 2. Also, the [KeyEvent]'s `state` is totally ignored in the conversion to [Keypress]. The
+/// 2. Also, the [KeyEvent]'s `state` is totally ignored in the conversion to [KeyPress]. The
 ///    [KeyEventState] isn't even considered in the conversion code.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
-pub enum Keypress {
+pub enum KeyPress {
   Plain { key: Key },
   WithModifiers { key: Key, mask: ModifierKeysMask },
-}
-
-#[macro_export]
-macro_rules! keypress {
-  // @char
-  (@char $arg_char : expr) => {
-    Keypress::Plain {
-      key: Key::Character($arg_char),
-    }
-  };
-  (@char $arg_modifiers : expr, $arg_char : expr) => {
-    Keypress::WithModifiers {
-      mask: $arg_modifiers,
-      key: Key::Character($arg_char),
-    }
-  };
-
-  // @special
-  (@special $arg_special : expr) => {
-    Keypress::Plain {
-      key: Key::SpecialKey($arg_special),
-    }
-  };
-  (@special $arg_modifiers : expr, $arg_special : expr) => {
-    Keypress::WithModifiers {
-      mask: $arg_modifiers,
-      key: Key::SpecialKey($arg_special),
-    }
-  };
-
-  // @fn
-  (@fn $arg_function : expr) => {
-    Keypress::Plain {
-      key: Key::FunctionKey($arg_function),
-    }
-  };
-  (@fn $arg_modifiers : expr, $arg_function : expr) => {
-    Keypress::WithModifiers {
-      mask: $arg_modifiers,
-      key: Key::FunctionKey($arg_function),
-    }
-  };
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
@@ -198,14 +212,14 @@ pub enum SpecialKey {
   Esc,
 }
 
-/// Typecast / convert [KeyEvent] to [Keypress].
+/// Typecast / convert [KeyEvent] to [KeyPress].
 ///
 /// There is special handling of displayable characters in this conversion. This occurs if the
 /// [KeyEvent] is a [KeyCode::Char].
 ///
 /// An example is typing "X" by pressing "Shift + X" on the keyboard, which shows up in crossterm
 /// as "Shift + X". In this case, the [KeyModifiers] `SHIFT` and `NONE` are ignored when converted
-/// into a [Keypress]. This means the following:
+/// into a [KeyPress]. This means the following:
 ///
 /// ```text
 /// ╔════════════════════╦════════════════════════════════════════════════════════════════╗
@@ -230,13 +244,13 @@ pub enum SpecialKey {
 pub mod convert_key_event {
   use super::*;
 
-  impl TryFrom<KeyEvent> for Keypress {
+  impl TryFrom<KeyEvent> for KeyPress {
     type Error = ();
-    /// Convert [KeyEvent] to [Keypress].
+    /// Convert [KeyEvent] to [KeyPress].
     fn try_from(key_event: KeyEvent) -> Result<Self, Self::Error> { special_handling_of_character_key_event(key_event) }
   }
 
-  pub(crate) fn special_handling_of_character_key_event(key_event: KeyEvent) -> Result<Keypress, ()> {
+  pub(crate) fn special_handling_of_character_key_event(key_event: KeyEvent) -> Result<KeyPress, ()> {
     return match key_event {
       KeyEvent {
         kind: KeyEventKind::Press,
@@ -249,7 +263,7 @@ pub mod convert_key_event {
       }
     };
 
-    fn process_only_key_event_kind_press(key_event: KeyEvent) -> Result<Keypress, ()> {
+    fn process_only_key_event_kind_press(key_event: KeyEvent) -> Result<KeyPress, ()> {
       match key_event {
         // If character keys, then ignore SHIFT or NONE modifiers.
         KeyEvent {
@@ -276,12 +290,12 @@ pub mod convert_key_event {
       }
     }
 
-    fn generate_character_key(character: char) -> Result<Keypress, ()> { Ok(keypress! { @char character }) }
+    fn generate_character_key(character: char) -> Result<KeyPress, ()> { Ok(keypress! { @char character }) }
 
-    fn generate_non_character_key_without_modifiers(key: Key) -> Result<Keypress, ()> { Ok(Keypress::Plain { key }) }
+    fn generate_non_character_key_without_modifiers(key: Key) -> Result<KeyPress, ()> { Ok(KeyPress::Plain { key }) }
 
-    fn generate_non_character_key_with_modifiers(key: Key, mask: ModifierKeysMask) -> Result<Keypress, ()> {
-      Ok(Keypress::WithModifiers { mask, key })
+    fn generate_non_character_key_with_modifiers(key: Key, mask: ModifierKeysMask) -> Result<KeyPress, ()> {
+      Ok(KeyPress::WithModifiers { mask, key })
     }
   }
 
