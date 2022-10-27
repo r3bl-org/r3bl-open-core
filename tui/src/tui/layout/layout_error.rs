@@ -51,7 +51,7 @@ impl Error for LayoutError {}
 
 /// Implement [`Display`] trait (needed by [`Error`] trait).
 impl Display for LayoutError {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result { write!(f, "{:?}", self) }
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result { write!(f, "{self:?}") }
 }
 
 /// Implement constructor that is compatible w/ [`CommonResult<T>`].
@@ -65,7 +65,7 @@ impl LayoutError {
   pub fn new(err_type: LayoutErrorType, msg: Option<String>) -> Box<Self> { Box::new(LayoutError { err_type, msg }) }
 
   pub fn format_msg_with_stack_len(stack_of_boxes: &Vec<FlexBox>, msg: &str) -> String {
-    format!("{}, stack_of_boxes.len(): {}", msg, stack_of_boxes.len())
+    format!("{msg}, stack_of_boxes.len(): {}", stack_of_boxes.len())
   }
 }
 

@@ -110,7 +110,7 @@ fn parse_optional_attrib(input: &ParseStream, metadata: &mut StyleMetadata) -> R
           "reverse" => metadata.attrib_vec.push(Attrib::Reverse),
           "hidden" => metadata.attrib_vec.push(Attrib::Hidden),
           "strikethrough" => metadata.attrib_vec.push(Attrib::Strikethrough),
-          _ => panic!("🚀 unknown attrib: {}", ident),
+          _ => panic!("🚀 unknown attrib: {ident}"),
         }
       }
     }

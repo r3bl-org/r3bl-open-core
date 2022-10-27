@@ -91,7 +91,7 @@ fn test_can_walk_tree_and_delete_nodes_from_tree() {
   let gc_1_id = arena.add_new_node("gc1".to_string(), child1.into());
   let gc_2_id = arena.add_new_node("gc2".to_string(), child1.into());
   let child_2_id = arena.add_new_node("child2".to_string(), root.into());
-  println!("{}, {:#?}", style_primary("arena"), arena);
+  println!("{}, {arena:#?}", style_primary("arena"));
 
   // Test that the data is correct for each node.
   assert_node_data_is_eq(&arena, root, "root");
@@ -251,7 +251,7 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
       let thread_handle: JoinHandle<ResultUidList> = arena.tree_walk_parallel(0, fn_arc.clone());
 
       let result_node_list = thread_handle.join().unwrap();
-      println!("{:#?}", result_node_list);
+      println!("{result_node_list:#?}");
     }
 
     // Walk tree w/ a new thread using arc to lambda.
@@ -259,7 +259,7 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
       let thread_handle: JoinHandle<ResultUidList> = arena.tree_walk_parallel(1, fn_arc);
 
       let result_node_list = thread_handle.join().unwrap();
-      println!("{:#?}", result_node_list);
+      println!("{result_node_list:#?}");
     }
   }
 }

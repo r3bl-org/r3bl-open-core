@@ -61,7 +61,7 @@ impl App<State, Action> for AppNoLayout {
         state, shared_tw_data, ..
       } = args;
 
-      let content = format!("{}", state);
+      let content = format!("{state}");
 
       let content_size_col: ChUnit = content.len().into();
       let window_size: Size = shared_tw_data.read().await.get_size();

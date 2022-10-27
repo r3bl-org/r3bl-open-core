@@ -32,15 +32,15 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
         RenderOp::Noop => "Noop".into(),
         RenderOp::EnterRawMode => "EnterRawMode".into(),
         RenderOp::ExitRawMode => "ExitRawMode".into(),
-        RenderOp::MoveCursorPositionAbs(pos) => format!("MoveCursorPositionAbs({:?})", pos),
+        RenderOp::MoveCursorPositionAbs(pos) => format!("MoveCursorPositionAbs({pos:?})"),
         RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) =>
-          format!("MoveCursorPositionRelTo({:?}, {:?})", box_origin_pos, content_rel_pos),
+          format!("MoveCursorPositionRelTo({box_origin_pos:?}, {content_rel_pos:?})"),
         RenderOp::ClearScreen => "ClearScreen".into(),
-        RenderOp::SetFgColor(fg_color) => format!("SetFgColor({:?})", fg_color),
-        RenderOp::SetBgColor(bg_color) => format!("SetBgColor({:?})", bg_color),
+        RenderOp::SetFgColor(fg_color) => format!("SetFgColor({fg_color:?})"),
+        RenderOp::SetBgColor(bg_color) => format!("SetBgColor({bg_color:?})"),
         RenderOp::ResetColor => "ResetColor".into(),
         RenderOp::ApplyColors(maybe_style) => match maybe_style {
-          Some(style) => format!("ApplyColors({:?})", style),
+          Some(style) => format!("ApplyColors({style:?})"),
           None => "ApplyColors(None)".into(),
         },
         RenderOp::PrintTextWithAttributes(text, maybe_style) => {
@@ -48,15 +48,15 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
             Some(plain_text) => {
               // Successfully stripped ANSI escape codes.
               match maybe_style {
-                Some(style) => format!("PrintTextWithAttributes(\"{}\", {:?})", plain_text, style),
-                None => format!("PrintTextWithAttributes(\"{}\", None)", plain_text),
+                Some(style) => format!("PrintTextWithAttributes(\"{plain_text}\", {style:?})"),
+                None => format!("PrintTextWithAttributes(\"{plain_text}\", None)"),
               }
             }
             None => {
               // Couldn't strip ANSI, so just print the text.
               match maybe_style {
                 Some(style) => {
-                  format!("PrintTextWithAttributes({} bytes, {:?})", text.len(), style)
+                  format!("PrintTextWithAttributes({} bytes, {style:?})", text.len())
                 }
                 None => format!("PrintTextWithAttributes({} bytes, None)", text.len()),
               }
@@ -65,9 +65,9 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
         }
         RenderOp::CursorShow => "CursorShow".into(),
         RenderOp::CursorHide => "CursorHide".into(),
-        RenderOp::RequestShowCaretAtPositionAbs(pos) => format!("ShowCursorAtPosition({:?})", pos),
+        RenderOp::RequestShowCaretAtPositionAbs(pos) => format!("ShowCursorAtPosition({pos:?})"),
         RenderOp::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) =>
-          format!("ShowCursorAtPosition({:?}, {:?})", box_origin_pos, content_rel_pos),
+          format!("ShowCursorAtPosition({box_origin_pos:?}, {content_rel_pos:?})"),
       }
     )
   }

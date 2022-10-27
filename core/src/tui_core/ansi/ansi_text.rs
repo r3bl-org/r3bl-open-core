@@ -72,7 +72,7 @@ impl<'a> From<ANSITextSegments<'a>> for String {
 
     for segment in &*ansi_text_segments {
       for part in &segment.vec_parts {
-        write!(&mut buff, "{}", part).expect("failed to write");
+        write!(&mut buff, "{part}").expect("failed to write");
       }
     }
 

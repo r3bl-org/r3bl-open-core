@@ -23,7 +23,7 @@ use tokio::fs::File;
 pub async fn run_app() -> CommonResult<()> {
   let mut my_lolcat = Lolcat::default();
 
-  println!("{:?}", my_lolcat);
+  println!("{my_lolcat:?}");
 
   let file = File::open("Cargo.toml").await?;
   let file = file.into_std().await;
@@ -43,7 +43,7 @@ pub async fn run_app() -> CommonResult<()> {
 
     for (index, item_line) in line_wrapped_vec.iter().enumerate() {
       if index == 0 {
-        println!("\r{}{}", line_number_str, my_lolcat.format_str(item_line));
+        println!("\r{line_number_str}{}", my_lolcat.format_str(item_line));
       } else {
         println!(
           "\r{}{}",

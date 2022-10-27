@@ -110,7 +110,7 @@ macro_rules! my_print {
 
 /// Docs: <https://doc.rust-lang.org/stable/std/fmt/struct.Arguments.html>
 fn _print(output_vec: &mut OutputCollectorType, args: std::fmt::Arguments) {
-  let content = format!("{}", args);
+  let content = format!("{args}");
   output_vec.push(content);
 }
 

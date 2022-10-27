@@ -188,7 +188,7 @@ fn set_fg_color(color: &TWColor) {
   let color = color_converter::to_crossterm_color(*color);
   exec_render_op!(
     queue!(stdout(), SetForegroundColor(color)),
-    format!("SetFgColor({:?})", color)
+    format!("SetFgColor({color:?})")
   )
 }
 
@@ -196,7 +196,7 @@ fn set_bg_color(color: &TWColor) {
   let color: crossterm::style::Color = color_converter::to_crossterm_color(*color);
   exec_render_op!(
     queue!(stdout(), SetBackgroundColor(color)),
-    format!("SetBgColor({:?})", color)
+    format!("SetBgColor({color:?})")
   )
 }
 
@@ -213,7 +213,7 @@ async fn print_text_with_attributes(text_arg: &String, maybe_style: &Option<Styl
   // Gen log_msg.
   let log_msg = Cow::from(match truncation_policy {
     TruncationPolicy::PlainText => {
-      format!("\"{}\"", text_arg)
+      format!("\"{text_arg}\"")
     }
     TruncationPolicy::ANSIText => {
       call_if_true!(
@@ -333,7 +333,7 @@ async fn print_text_with_attributes(text_arg: &String, maybe_style: &Option<Styl
         .to_string();
       // Update plain_text & log_msg after truncating.
       *text = Cow::from(trunc_plain_text);
-      *log_msg = Cow::from(format!("\"{}✂️\"", text));
+      *log_msg = Cow::from(format!("\"{text}✂️\""));
     }
   }
 
@@ -348,7 +348,7 @@ async fn print_text_with_attributes(text_arg: &String, maybe_style: &Option<Styl
         if mask.contains(*flag) {
           exec_render_op!(
             queue!(stdout(), SetAttribute(*attr)),
-            format!("PrintWithAttributes -> SetAttribute({:?})", attr)
+            format!("PrintWithAttributes -> SetAttribute({attr:?})")
           );
           *needs_reset = true;
         }
@@ -417,7 +417,7 @@ async fn print_text_with_attributes(text_arg: &String, maybe_style: &Option<Styl
         pos.col + seg.display_col_offset + seg.unicode_width);
       exec_render_op!(
         queue!(stdout(), MoveToColumn(jump_to_col)),
-        format!("🦘 Jump cursor -> MoveToColumn({})", jump_to_col)
+        format!("🦘 Jump cursor -> MoveToColumn({jump_to_col})")
       );
     }
 
@@ -425,8 +425,8 @@ async fn print_text_with_attributes(text_arg: &String, maybe_style: &Option<Styl
       exec_render_op!(
         queue!(stdout(), Print(text)),
         match width {
-          SegmentWidth::Narrow => format!("Print( normal_segment {})", log_msg),
-          SegmentWidth::Wide => format!("Print( wide_segment {})", log_msg),
+          SegmentWidth::Narrow => format!("Print( normal_segment {log_msg})"),
+          SegmentWidth::Wide => format!("Print( wide_segment {log_msg})"),
         }
       );
     }
@@ -444,7 +444,7 @@ fn apply_colors(style: &Option<Style>) {
       let color_bg: crossterm::style::Color = color_converter::to_crossterm_color(color_bg);
       exec_render_op!(
         queue!(stdout(), SetBackgroundColor(color_bg)),
-        format!("ApplyColors -> SetBackgroundColor({:?})", color_bg)
+        format!("ApplyColors -> SetBackgroundColor({color_bg:?})")
       )
     }
     if mask.contains(StyleFlag::COLOR_FG_SET) {
@@ -452,7 +452,7 @@ fn apply_colors(style: &Option<Style>) {
       let color_fg: crossterm::style::Color = color_converter::to_crossterm_color(color_fg);
       exec_render_op!(
         queue!(stdout(), SetForegroundColor(color_fg)),
-        format!("ApplyColors -> SetForegroundColor({:?})", color_fg)
+        format!("ApplyColors -> SetForegroundColor({color_fg:?})")
       )
     }
   }

@@ -106,7 +106,7 @@ impl TryFrom<&InputEvent> for EditorEvent {
       InputEvent::Keyboard(Keypress::Plain {
         key: Key::SpecialKey(SpecialKey::Right),
       }) => Ok(Self::MoveCaret(CaretDirection::Right)),
-      _ => Err(format!("Invalid input event: {:?}", input_event)),
+      _ => Err(format!("Invalid input event: {input_event:?}")),
     }
   }
 }

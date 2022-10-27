@@ -17,8 +17,6 @@
 
 #[cfg(test)]
 mod test_dialog_api {
-  use r3bl_rs_utils_core::*;
-  use r3bl_rs_utils_macro::style;
 
   use super::*;
   use crate::*;

@@ -265,7 +265,7 @@ pub fn init_file_logger_once() -> CommonResult<()> {
     return match FILE_LOGGER_INIT_OK {
       true => Ok(()),
       false => {
-        let msg = format!("Failed to initialize file logger {}", FILE_PATH);
+        let msg = format!("Failed to initialize file logger {FILE_PATH}");
         return CommonError::new(CommonErrorType::IOError, &msg);
       }
     };
@@ -283,7 +283,7 @@ pub fn init_file_logger_once() -> CommonResult<()> {
         let file_logger = WriteLogger::new(level, config, new_file);
         let maybe_logger_init_err = CombinedLogger::init(vec![file_logger]);
         if let Err(e) = maybe_logger_init_err {
-          eprintln!("Failed to initialize file logger {} due to {}", FILE_PATH, e);
+          eprintln!("Failed to initialize file logger {FILE_PATH} due to {e}");
         } else {
           FILE_LOGGER_INIT_OK = true
         }

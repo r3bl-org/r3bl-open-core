@@ -90,7 +90,7 @@ impl Error for CommonError {}
 
 /// Implement [`Display`] trait (needed by [`Error`] trait).
 impl Display for CommonError {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> FmtResult { write!(f, "{:?}", self) }
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> FmtResult { write!(f, "{self:?}") }
 }
 
 impl CommonError {

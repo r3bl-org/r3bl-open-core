@@ -78,7 +78,7 @@ pub mod render_ops_helpers {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       let mut vec_lines: Vec<String> = vec![format!("RenderOps.len(): {}", self.list.len())];
       for render_op in self.iter() {
-        let line: String = format!("[{:?}]", render_op);
+        let line: String = format!("[{render_op:?}]");
         vec_lines.push(line);
       }
       write!(f, "\n    - {}", vec_lines.join("\n      - "))
