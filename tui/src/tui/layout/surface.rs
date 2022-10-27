@@ -19,8 +19,8 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-/// Represents a rectangular area of the terminal screen, and not necessarily
-/// the full terminal screen.
+/// Represents a rectangular area of the terminal screen, and not necessarily the full terminal
+/// screen.
 #[derive(Clone, Debug, Default)]
 pub struct Surface {
   pub origin_pos: Position,

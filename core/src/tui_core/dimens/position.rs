@@ -168,6 +168,13 @@ pub mod math_ops {
     }
   }
 
+  impl AddAssign<Position> for Position {
+    fn add_assign(&mut self, other: Position) {
+      self.col += other.col;
+      self.row += other.row;
+    }
+  }
+
   impl Add<Position> for Position {
     type Output = Position;
     fn add(self, other: Position) -> Self::Output {

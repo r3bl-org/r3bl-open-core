@@ -87,14 +87,14 @@ mod app_trait_impl {
 
         // Render container component.
         let mut surface = surface_start_with_surface_renderer! {
-          runnable:       self,
-          stylesheet:     style_helpers::create_stylesheet()?,
-          pos:            position!(col:0, row:0),
-          size:           size!(cols: window_size.cols, rows: window_size.rows - 1), // Bottom row for status bar.
-          state:          state,
-          shared_store:   shared_store,
-          shared_tw_data: shared_tw_data,
-          window_size:    window_size
+          surface_renderer: self,
+          stylesheet:       style_helpers::create_stylesheet()?,
+          pos:              position!(col:0, row:0),
+          size:             size!(cols: window_size.cols, rows: window_size.rows - 1), // Bottom row for status bar.
+          state:            state,
+          shared_store:     shared_store,
+          shared_tw_data:   shared_tw_data,
+          window_size:      window_size
         };
 
         // Render status bar.
@@ -230,7 +230,7 @@ mod container_layout_render {
       throws!({
         box_start_with_surface_renderer! {
           in:                     surface,
-          runnable:               container_layout_render::TwoColLayout { app_with_layout: self },
+          surface_renderer:       container_layout_render::TwoColLayout { app_with_layout: self },
           id:                     Id::Container.int_value(),
           dir:                    Direction::Horizontal,
           requested_size_percent: requested_size_percent!(width: 100, height: 100),

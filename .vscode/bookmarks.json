@@ -1,0 +1,34 @@
+{
+	"files": [
+		{
+			"path": "tui/src/tui/dialog/engine/dialog_engine_api.rs",
+			"bookmarks": [
+				{
+					"line": 102,
+					"column": 35,
+					"label": ""
+				},
+				{
+					"line": 144,
+					"column": 4,
+					"label": ""
+				},
+				{
+					"line": 236,
+					"column": 0,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "tui/examples/demo/ex_editor/app.rs",
+			"bookmarks": [
+				{
+					"line": 218,
+					"column": 45,
+					"label": ""
+				}
+			]
+		}
+	]
+}

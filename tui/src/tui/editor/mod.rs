@@ -21,9 +21,9 @@ pub mod component;
 pub mod engine;
 
 // Re-export.
+pub use buffer::*;
 pub use component::*;
 pub use engine::*;
-pub use buffer::*;
 
 // Tests.
 pub mod test_editor;

@@ -126,10 +126,12 @@ pub fn derive_macro_builder(input: TokenStream) -> TokenStream { builder::derive
 /// }
 /// ```
 ///
-/// `color_fg` and `color_bg` can take any of the following:
-/// 1. Color enum value.
-/// 2. Rgb value.
-/// 3. Variable holding either of the above.
+/// - All the attributes are:
+///   - `bold`, `dim`, `underline`, `reverse`, `hidden`, `strikethrough`
+/// - `color_fg` and `color_bg` can take any of the following:
+///   - Color enum value.
+///   - Rgb value.
+///   - Variable holding either of the above.
 #[proc_macro]
 pub fn style(input: TokenStream) -> TokenStream { make_style::fn_proc_macro_impl(input) }
 

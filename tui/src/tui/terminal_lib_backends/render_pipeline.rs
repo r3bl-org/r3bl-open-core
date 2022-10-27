@@ -188,7 +188,7 @@ impl RenderPipeline {
     // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
   }
 
-  /// Elevate the [RenderOps] for the 'from' [ZOrder] to the 'to' [ZOrder].
+  /// Move the [RenderOps] in the 'from' [ZOrder] to the 'to' [ZOrder].
   pub fn hoist(&mut self, z_order_from: ZOrder, z_order_to: ZOrder) {
     // If the 'from' [ZOrder] is not in the pipeline, then there's nothing to do.
     if !self.pipeline_map.contains_key(&z_order_from) {
@@ -199,7 +199,7 @@ impl RenderPipeline {
     let mut from_render_ops = self.pipeline_map.remove(&z_order_from).unwrap_or_default();
     match self.pipeline_map.entry(z_order_to) {
       Entry::Occupied(mut entry) => {
-        entry.get_mut().append(&mut from_render_ops.list);
+        entry.get_mut().append(&mut *from_render_ops);
       }
       Entry::Vacant(entry) => {
         entry.insert(from_render_ops);
