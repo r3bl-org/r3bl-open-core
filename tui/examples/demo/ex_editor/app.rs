@@ -23,6 +23,7 @@ use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
 use r3bl_tui::*;
+use strum_macros::AsRefStr;
 
 use super::*;
 
@@ -30,9 +31,15 @@ use super::*;
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
 enum Id {
-  Container = 1,
-  Editor = 2,
-  Dialog = 3,
+  Editor = 1,
+  Dialog = 2,
+}
+
+#[derive(Debug, Eq, PartialEq, AsRefStr)]
+pub enum DialogStyleId {
+  Border,
+  Title,
+  Editor,
 }
 
 /// Async trait object that implements the [TWApp] trait.
@@ -65,7 +72,7 @@ mod app_trait_impl {
         log_no_err!(DEBUG, "💾 user_data: {:?}", self.component_registry.user_data);
       });
 
-      if let EventPropagation::Consumed = self.try_activate_modal(args, input_event) {
+      if let EventPropagation::Consumed = self.try_input_event_activate_modal(args, input_event) {
         return Ok(EventPropagation::Consumed);
       }
 
@@ -95,14 +102,14 @@ mod app_trait_impl {
 
         // Render container component.
         let mut surface = surface_start_with_surface_renderer! {
-          runnable:       container_layout_render::RenderContainer{app_with_layout: self},
-          stylesheet:     style_helpers::create_stylesheet()?,
-          pos:            position!(col:0, row:0),
-          size:           adjusted_window_size, // Bottom row for status bar.
-          state:          state,
-          shared_store:   shared_store,
-          shared_tw_data: shared_tw_data,
-          window_size:    window_size
+          surface_renderer: container_layout_render::RenderContainer{ app_ref: self },
+          stylesheet:       style_helpers::create_stylesheet()?,
+          pos:              position!(col:0, row:0),
+          size:             adjusted_window_size, // Bottom row for status bar.
+          state:            state,
+          shared_store:     shared_store,
+          shared_tw_data:   shared_tw_data,
+          window_size:      window_size
         };
 
         // Render status bar.
@@ -115,12 +122,12 @@ mod app_trait_impl {
   }
 }
 
-mod modal_dialog_support {
+mod detect_modal_dialog_activation_from_input_event {
   use super::*;
 
   impl AppWithLayout {
     /// If `input_event` matches <kbd>Ctrl+l</kbd>, then toggle the modal dialog.
-    pub fn try_activate_modal(
+    pub fn try_input_event_activate_modal(
       &mut self,
       args: GlobalScopeArgs<'_, State, Action>,
       input_event: &InputEvent,
@@ -171,7 +178,7 @@ mod container_layout_render {
   use super::*;
 
   pub struct RenderContainer<'a> {
-    pub app_with_layout: &'a mut AppWithLayout,
+    pub app_ref: &'a mut AppWithLayout,
   }
 
   #[async_trait]
@@ -189,7 +196,7 @@ mod container_layout_render {
           window_size,
         } = args;
 
-        component_registry::init(self.app_with_layout).await;
+        populate_component_registry::init(self.app_ref, surface).await;
 
         // Layout editor component, and render it.
         box_start_with_component! {
@@ -199,7 +206,7 @@ mod container_layout_render {
           requested_size_percent: requested_size_percent!(width: 100, height: 100),
           styles:                 [&Id::Editor.int_value().to_string()],
           render: {
-            from:           self.app_with_layout.component_registry,
+            from:           self.app_ref.component_registry,
             state:          state,
             shared_store:   shared_store,
             shared_tw_data: shared_tw_data,
@@ -209,16 +216,16 @@ mod container_layout_render {
 
         // Then, render modal dialog (if it is active).
         if self
-          .app_with_layout
+          .app_ref
           .component_registry
           .has_focus
           .is_modal_id(Id::Dialog.int_value())
         {
           render_in_box! {
             in:             surface,
-            box:            DialogEngineApi::flex_box_from(Id::Dialog.int_value(), window_size)?,
+            box:            DialogEngineApi::make_flex_box_for_dialog(Id::Dialog.int_value(), surface, window_size)?,
             component_id:   Id::Dialog.int_value(),
-            from:           self.app_with_layout.component_registry,
+            from:           self.app_ref.component_registry,
             state:          state,
             shared_store:   shared_store,
             shared_tw_data: shared_tw_data,
@@ -230,33 +237,34 @@ mod container_layout_render {
   }
 }
 
-mod component_registry {
+mod populate_component_registry {
+
   use super::*;
 
-  pub async fn init(this: &mut AppWithLayout) {
+  pub async fn init(app_ref: &mut AppWithLayout, surface: &mut Surface) {
     let editor_id = Id::Editor.int_value();
     let dialog_id = Id::Dialog.int_value();
 
-    try_insert_editor_component(this, editor_id);
-    try_insert_dialog_component(this, dialog_id);
-    try_init_has_focus(this, editor_id);
+    try_insert_editor_component(app_ref, editor_id);
+    try_insert_dialog_component(app_ref, dialog_id, surface);
+    try_init_has_focus(app_ref, editor_id);
   }
 
   /// Switch focus to the editor component if focus is not set.
-  fn try_init_has_focus(this: &mut AppWithLayout, id: FlexBoxIdType) {
-    if this.component_registry.has_focus.is_set() {
+  fn try_init_has_focus(app_ref: &mut AppWithLayout, id: FlexBoxIdType) {
+    if app_ref.component_registry.has_focus.is_set() {
       return;
     }
 
-    this.component_registry.has_focus.set_id(id);
+    app_ref.component_registry.has_focus.set_id(id);
     call_if_true!(DEBUG_TUI_MOD, {
       log_no_err!(DEBUG, "🪙 {} = {}", "init component_registry.has_focus", id);
     });
   }
 
   /// Insert dialog component into registry if it's not already there.
-  fn try_insert_dialog_component(this: &mut AppWithLayout, id: FlexBoxIdType) {
-    if this.component_registry.contains(id) {
+  fn try_insert_dialog_component(app_ref: &mut AppWithLayout, id: FlexBoxIdType, surface: &mut Surface) {
+    if app_ref.component_registry.contains(id) {
       return;
     }
 
@@ -282,10 +290,17 @@ mod component_registry {
         spawn_dispatch_action!(shared_store, Action::UpdateDialogBuffer(editor_buffer));
       }
 
-      DialogComponent::new_shared(id, on_dialog_press, on_dialog_editor_change_handler)
+      DialogComponent::new_shared(
+        id,
+        on_dialog_press,
+        on_dialog_editor_change_handler,
+        get_style! { from: surface.stylesheet , DialogStyleId::Border.as_ref() },
+        get_style! { from: surface.stylesheet , DialogStyleId::Title.as_ref() },
+        get_style! { from: surface.stylesheet , DialogStyleId::Editor.as_ref() },
+      )
     };
 
-    this.component_registry.put(id, shared_dialog_component);
+    app_ref.component_registry.put(id, shared_dialog_component);
 
     call_if_true!(DEBUG_TUI_MOD, {
       log_no_err!(DEBUG, "🪙 {}", "construct DialogComponent { on_dialog_press }");
@@ -293,8 +308,8 @@ mod component_registry {
   }
 
   /// Insert editor component into registry if it's not already there.
-  fn try_insert_editor_component(this: &mut AppWithLayout, id: FlexBoxIdType) {
-    if this.component_registry.contains(id) {
+  fn try_insert_editor_component(app_ref: &mut AppWithLayout, id: FlexBoxIdType) {
+    if app_ref.component_registry.contains(id) {
       return;
     }
 
@@ -307,7 +322,7 @@ mod component_registry {
       EditorComponent::new_shared(id, config_options, on_buffer_change)
     };
 
-    this.component_registry.put(id, shared_editor_component);
+    app_ref.component_registry.put(id, shared_editor_component);
 
     call_if_true!(DEBUG_TUI_MOD, {
       log_no_err!(DEBUG, "🪙 {}", "construct EditorComponent { on_buffer_change }");
@@ -351,13 +366,25 @@ mod style_helpers {
     throws_with_return!({
       stylesheet! {
         style! {
-          id: Id::Container.int_value().to_string()
-        },
-        style! {
           id: Id::Editor.int_value().to_string()
           attrib: [bold]
           padding: 1
           color_fg: TWColor::Blue
+        },
+        style! {
+          id: DialogStyleId::Title.as_ref()
+          attrib: [bold]
+          color_fg: TWColor::Yellow
+        },
+        style! {
+          id: DialogStyleId::Border.as_ref()
+          attrib: [dim]
+          color_fg: TWColor::Green
+        },
+        style! {
+          id: DialogStyleId::Editor.as_ref()
+          attrib: [bold]
+          color_fg: TWColor::Magenta
         }
       }
     })

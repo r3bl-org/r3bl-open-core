@@ -67,6 +67,7 @@ pub struct CommonError {
 #[derive(Debug, Clone, Copy)]
 pub enum CommonErrorType {
   ExitLoop,
+  DisplaySizeTooSmall,
   General,
   InvalidArguments,
   InvalidResult,

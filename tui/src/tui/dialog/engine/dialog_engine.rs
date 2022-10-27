@@ -17,6 +17,7 @@
 
 use std::fmt::Debug;
 
+use r3bl_rs_utils_core::*;
 use serde::*;
 
 use crate::*;
@@ -34,6 +35,9 @@ use crate::*;
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DialogEngine {
   pub editor_engine: EditorEngine,
+  pub maybe_style_border: Option<Style>,
+  pub maybe_style_title: Option<Style>,
+  pub maybe_style_editor: Option<Style>,
 }
 
 pub mod constructor {
@@ -48,7 +52,10 @@ pub mod constructor {
         };
         EditorEngine::new(config_options)
       };
-      Self { editor_engine }
+      Self {
+        editor_engine,
+        ..Default::default()
+      }
     }
   }
 }

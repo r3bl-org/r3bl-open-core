@@ -37,8 +37,45 @@ pub enum DialogEngineApplyResponse {
 
 impl DialogEngineApi {
   /// Return the [FlexBox] for the dialog to be rendered in.
-  pub fn flex_box_from(id: FlexBoxIdType, window_size: &Size) -> CommonResult<FlexBox> {
-    internal_impl::flex_box_from(id, window_size)
+  /// - In non-modal contexts, this is determined by the layout engine.
+  /// - In the modal case, things are different because the dialog escapes the boundaries of the
+  ///   layout engine and really just paints itself on top of everything. It can reach any corner
+  ///   of the screen.
+  /// - However, it is still constrained by the bounds of the [Surface] itself and does not take
+  ///   into account the full window size (in case these are different).
+  pub fn make_flex_box_for_dialog(
+    dialog_id: FlexBoxIdType,
+    surface: &Surface,
+    window_size: &Size,
+  ) -> CommonResult<FlexBox> {
+    internal_impl::make_flex_box_for_dialog(dialog_id, surface, window_size)
+  }
+
+  /// See [make_flex_box](DialogEngineApi::make_flex_box_for_dialog) which actually generates the
+  /// [FlexBox] that is passed to this function.
+  pub async fn render_engine<S, A>(
+    args: DialogEngineArgs<'_, S, A>,
+    current_box: &FlexBox,
+  ) -> CommonResult<RenderPipeline>
+  where
+    S: Default + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Clone + Sync + Send,
+  {
+    let (origin_pos, bounds_size) = {
+      let dialog_flex_box: EditorEngineFlexBox = current_box.into();
+      (
+        dialog_flex_box.style_adjusted_origin_pos,
+        dialog_flex_box.style_adjusted_bounds_size,
+      )
+    };
+
+    let mut pipeline = render_pipeline!(@new_empty);
+
+    pipeline += internal_impl::clear_dialog_box(&origin_pos, &bounds_size, args.dialog_engine);
+    pipeline += internal_impl::add_title(&origin_pos, &bounds_size, &args.dialog_buffer.title, args.dialog_engine);
+    pipeline += internal_impl::render_editor(&origin_pos, &bounds_size, args).await?;
+
+    Ok(pipeline)
   }
 
   /// Event based interface for the editor. This executes the [InputEvent].
@@ -85,32 +122,6 @@ impl DialogEngineApi {
 
     Ok(DialogEngineApplyResponse::Noop)
   }
-
-  pub async fn render_engine<S, A>(
-    args: DialogEngineArgs<'_, S, A>,
-    current_box: &FlexBox,
-  ) -> CommonResult<RenderPipeline>
-  where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
-  {
-    let (origin_pos, bounds_size, maybe_style) = {
-      let dialog_flex_box: EditorEngineFlexBox = current_box.into();
-      (
-        dialog_flex_box.style_adjusted_origin_pos,
-        dialog_flex_box.style_adjusted_bounds_size,
-        dialog_flex_box.maybe_computed_style,
-      )
-    };
-
-    let mut pipeline = render_pipeline!(@new_empty);
-
-    pipeline += internal_impl::clear_dialog_box(&origin_pos, &bounds_size, &maybe_style);
-    pipeline += internal_impl::add_title(&origin_pos, &bounds_size, &maybe_style, &args.dialog_buffer.title);
-    pipeline += internal_impl::render_editor(&origin_pos, &bounds_size, &maybe_style, args).await?;
-
-    Ok(pipeline)
-  }
 }
 
 mod internal_impl {
@@ -118,20 +129,26 @@ mod internal_impl {
 
   /// Return the [FlexBox] for the dialog to be rendered in.
   ///
-  /// ```ignore
-  /// FlexBox {
-  ///   id: 0,
-  ///   style_adjusted_origin_pos: [col:0, row:0],
-  ///   style_adjusted_bounds_size: [width:0, height:0],
+  /// ```text
+  /// EditorEngineFlexBox {
+  ///   id: ..,
+  ///   style_adjusted_origin_pos: ..,
+  ///   style_adjusted_bounds_size: ..,
   ///   maybe_computed_style: None,
-  ///   ..
   /// }
-  /// window_size: [width:0, height:0]
   /// ```
-  pub fn flex_box_from(id: FlexBoxIdType, window_size: &Size) -> CommonResult<FlexBox> {
+  pub fn make_flex_box_for_dialog(
+    dialog_id: FlexBoxIdType,
+    surface: &Surface,
+    window_size: &Size,
+  ) -> CommonResult<FlexBox> {
+    let surface_size = surface.box_size;
+    let surface_origin_pos = surface.origin_pos;
+
+    // Check to ensure that the dialog box has enough space to be displayed.
     if window_size.cols < ch!(MinSize::Col.int_value()) || window_size.rows < ch!(MinSize::Row.int_value()) {
       return CommonError::new(
-        CommonErrorType::General,
+        CommonErrorType::DisplaySizeTooSmall,
         &format!(
           "Window size is too small. Min size is {} cols x {} rows",
           MinSize::Col.int_value(),
@@ -142,21 +159,22 @@ mod internal_impl {
 
     let dialog_size = {
       // Calc dialog bounds size based on window size.
-      let size = size! { cols: window_size.cols * 90/100, rows: 4 };
+      let size = size! { cols: surface_size.cols * 90/100, rows: 4 };
       assert!(size.rows < ch!(MinSize::Row.int_value()));
       size
     };
 
-    let origin_pos = {
+    let mut origin_pos = {
       // Calc origin pos based on window size & dialog size.
-      let origin_col = window_size.cols / 2 - dialog_size.cols / 2;
-      let origin_row = window_size.rows / 2 - dialog_size.rows / 2;
+      let origin_col = surface_size.cols / 2 - dialog_size.cols / 2;
+      let origin_row = surface_size.rows / 2 - dialog_size.rows / 2;
       position!(col: origin_col, row: origin_row)
     };
+    origin_pos += surface_origin_pos;
 
     throws_with_return!({
       EditorEngineFlexBox {
-        id,
+        id: dialog_id,
         style_adjusted_origin_pos: origin_pos,
         style_adjusted_bounds_size: dialog_size,
         maybe_computed_style: None,
@@ -168,18 +186,19 @@ mod internal_impl {
   pub async fn render_editor<S, A>(
     origin_pos: &Position,
     bounds_size: &Size,
-    maybe_style: &Option<Style>,
     args: DialogEngineArgs<'_, S, A>,
   ) -> CommonResult<RenderPipeline>
   where
     S: Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
   {
+    let maybe_style = args.dialog_engine.maybe_style_editor.clone();
+
     let flex_box: FlexBox = EditorEngineFlexBox {
       id: args.self_id,
       style_adjusted_origin_pos: position! {col: origin_pos.col + 1, row: origin_pos.row + 2},
       style_adjusted_bounds_size: size! {cols: bounds_size.cols - 2, rows: 1},
-      maybe_computed_style: maybe_style.clone(),
+      maybe_computed_style: maybe_style,
     }
     .into();
 
@@ -199,12 +218,7 @@ mod internal_impl {
     Ok(pipeline)
   }
 
-  pub fn add_title(
-    origin_pos: &Position,
-    bounds_size: &Size,
-    maybe_style: &Option<Style>,
-    title: &str,
-  ) -> RenderPipeline {
+  pub fn add_title(origin_pos: &Position, bounds_size: &Size, title: &str, engine: &DialogEngine) -> RenderPipeline {
     let mut pipeline = render_pipeline!(@new_empty);
 
     let row_pos = position!(col: origin_pos.col + 1, row: origin_pos.row + 1);
@@ -213,19 +227,24 @@ mod internal_impl {
       cols: bounds_size.cols - 2, rows: bounds_size.rows
     });
 
+    let maybe_style = engine.maybe_style_title.clone();
+
     render_pipeline!(@push_into pipeline at ZOrder::Glass =>
       RenderOp::ResetColor,
       RenderOp::MoveCursorPositionAbs(row_pos),
-      RenderOp::PrintTextWithAttributes(text_content.into(), maybe_style.clone())
+      RenderOp::ApplyColors(maybe_style.clone()),
+      RenderOp::PrintTextWithAttributes(text_content.into(), maybe_style)
     );
 
     pipeline
   }
 
-  pub fn clear_dialog_box(origin_pos: &Position, bounds_size: &Size, maybe_style: &Option<Style>) -> RenderPipeline {
+  pub fn clear_dialog_box(origin_pos: &Position, bounds_size: &Size, engine: &DialogEngine) -> RenderPipeline {
     let mut pipeline = render_pipeline!(@new_empty);
 
     let inner_spaces = " ".repeat(ch!(@to_usize bounds_size.cols - 2));
+
+    let maybe_style = engine.maybe_style_border.clone();
 
     for row_idx in 0..*bounds_size.rows {
       let row_pos = position!(col: origin_pos.col, row: origin_pos.row + row_idx);
@@ -235,7 +254,8 @@ mod internal_impl {
 
       render_pipeline!(@push_into pipeline at ZOrder::Glass =>
         RenderOp::ResetColor,
-        RenderOp::MoveCursorPositionAbs(row_pos)
+        RenderOp::MoveCursorPositionAbs(row_pos),
+        RenderOp::ApplyColors(maybe_style.clone())
       );
 
       match (is_first_line, is_last_line) {

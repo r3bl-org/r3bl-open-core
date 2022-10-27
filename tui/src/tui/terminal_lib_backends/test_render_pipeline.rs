@@ -65,4 +65,20 @@ mod tests {
     assert_eq2!(pipeline_merged.get(&ZOrder::Normal).unwrap().len(), 4);
     assert_eq2!(pipeline_merged.get(&ZOrder::Caret).unwrap().len(), 1);
   }
+
+  #[test]
+  fn test_hoist_z_order() {
+    let mut pipeline = render_pipeline!(@new_empty);
+
+    render_pipeline!(@push_into pipeline at ZOrder::Normal =>
+      RenderOp::ClearScreen,
+      RenderOp::ResetColor
+    );
+
+    pipeline.hoist(ZOrder::Normal, ZOrder::Glass);
+
+    assert_eq2!(pipeline.len(), 1);
+    assert_eq2!(pipeline.get(&ZOrder::Normal), None);
+    assert_eq2!(pipeline.get(&ZOrder::Glass).unwrap().len(), 2);
+  }
 }
