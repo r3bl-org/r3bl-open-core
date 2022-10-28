@@ -1,8 +1,9 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-editor engine extras (core):
-  ☐ add modal dialog support https://github.com/r3bl-org/r3bl_rs_utils/issues/45
+cleanup:
+  ☐ handle style local is true
+  ☐ rename jsx macro names (layout and render macros)
 
 editor engine extras (core):
   ☐ syntax highlighting support
