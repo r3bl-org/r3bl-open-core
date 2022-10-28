@@ -1,4 +1,7 @@
 editor engine extras (core):
+  ✔ add modal dialog support https://github.com/r3bl-org/r3bl_rs_utils/issues/45 @done(22-10-28 16:08)
+
+editor engine extras (core):
   ✔ add editor config options to enable/disable multiline & update tests @done(22-10-11 15:29)
   ✔ Expose clear `EditorEngineApi` public API for editor engine & remove OOP from engine @done(22-10-12 11:39)
   ✔ make sure window_size is correctly passed down from main_event_loop -> app -> component @done(22-10-17 11:13)
