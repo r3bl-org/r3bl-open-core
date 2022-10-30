@@ -34,7 +34,7 @@ macro_rules! box_start_with_component {
       styles:   [$($args)*]
     };
 
-    render_in_surface! {
+    render_component_in_surface! {
       in:           $arg_surface,
       component_id: $arg_id,
       $($tail)*

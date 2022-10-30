@@ -27,6 +27,7 @@ pub(crate) fn code_gen(
     padding,
     color_fg,
     color_bg,
+    lolcat,
   }: StyleMetadata,
 ) -> proc_macro::TokenStream {
   let has_attrib_bold = attrib_vec.contains(&Attrib::Bold);
@@ -64,6 +65,15 @@ pub(crate) fn code_gen(
     None => quote! {},
   };
 
+  let maybe_lolcat_expr = match lolcat {
+    Some(lolcat_bool) => {
+      quote! {
+        lolcat: #lolcat_bool,
+      }
+    }
+    None => quote! {},
+  };
+
   quote! {
     Style {
       id: #id.to_string(),
@@ -76,6 +86,7 @@ pub(crate) fn code_gen(
       #maybe_padding_expr
       #maybe_color_fg_expr
       #maybe_color_bg_expr
+      #maybe_lolcat_expr
       .. Default::default()
     }
   }

@@ -16,8 +16,9 @@
  */
 
 use std::{borrow::Cow,
-          fmt::Display,
+          fmt::{Debug, Display, Formatter, Result},
           io::{stdout, Write},
+          mem,
           thread::sleep,
           time::Duration};
 
@@ -27,12 +28,25 @@ use serde::*;
 
 use crate::*;
 
+pub fn apply_lolcat_from_style<'a>(maybe_style: &Option<Style>, lolcat: &'a mut Lolcat, text_content: &'a mut Cow<str>) {
+  if let Some(Style { lolcat: true, .. }) = maybe_style {
+    let unicode_string = UnicodeString::from(text_content.as_ref());
+    let mut colorized_string = lolcat_each_char_in_unicode_string(&unicode_string, Some(lolcat));
+    mem::swap(&mut colorized_string, text_content.to_mut());
+  }
+}
+
 /// Colorizes each of the [GraphemeClusterSegment]s in the [UnicodeString] with a rapidly changing
 /// color. If you don't pass in your own [Lolcat] then a random one will be created for you, which
 /// changes the color rapidly between each segment.
-pub fn lolcat_each_char_in_unicode_string(this: &UnicodeString, lolcat: Option<&mut Lolcat>) -> String {
+pub fn lolcat_each_char_in_unicode_string(unicode_string: &UnicodeString, lolcat: Option<&mut Lolcat>) -> String {
+  let mut saved_orig_speed = None;
   let mut my_lolcat: Cow<Lolcat> = match lolcat {
-    Some(lolcat_arg) => Cow::Borrowed(lolcat_arg),
+    Some(lolcat_arg) => {
+      saved_orig_speed = Some(lolcat_arg.color_wheel_control.color_change_speed);
+      lolcat_arg.color_wheel_control.color_change_speed = ColorChangeSpeed::Rapid;
+      Cow::Borrowed(lolcat_arg)
+    }
     None => {
       let color_wheel_control = ColorWheelControl {
         color_change_speed: ColorChangeSpeed::Rapid,
@@ -43,9 +57,14 @@ pub fn lolcat_each_char_in_unicode_string(this: &UnicodeString, lolcat: Option<&
   };
 
   let mut return_vec: Vec<String> = vec![];
-  for letter in this.vec_segment.iter() {
+  for letter in unicode_string.vec_segment.iter() {
     let colored_letter = letter.string.color_with(my_lolcat.to_mut());
     return_vec.push(colored_letter);
+  }
+
+  // Restore saved_orig_speed if it was set.
+  if let Some(orig_speed) = saved_orig_speed {
+    my_lolcat.to_mut().color_wheel_control.color_change_speed = orig_speed;
   }
 
   return_vec.join("")
@@ -114,9 +133,24 @@ fn _print(output_vec: &mut OutputCollectorType, args: std::fmt::Arguments) {
   output_vec.push(content);
 }
 
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, GetSize)]
+#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, GetSize)]
 pub struct Lolcat {
   pub color_wheel_control: ColorWheelControl,
+}
+
+impl Debug for Lolcat {
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    return write! { f,
+      "lolcat: [{}, {}, {}, {}]",
+      pretty_print_f64(self.color_wheel_control.seed),
+      pretty_print_f64(self.color_wheel_control.spread),
+      pretty_print_f64(self.color_wheel_control.frequency),
+      self.color_wheel_control.color_change_speed
+    };
+
+    /// More info: <https://stackoverflow.com/questions/63214346/how-to-truncate-f64-to-2-decimal-places>
+    fn pretty_print_f64(before: f64) -> f64 { f64::trunc(before * 100.0) / 100.0 }
+  }
 }
 
 impl Lolcat {

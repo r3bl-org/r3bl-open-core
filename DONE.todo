@@ -138,7 +138,7 @@ move `tui` from `r3bl-cmdr` here:
 
 Simplify mw:
   ✔ no longer returns `Option<Action>` @done(22-04-19 16:35)
-  ✔ be opinoninated about parallel execution @done(22-04-19 16:35)
+  ✔ be opinionated about parallel execution @done(22-04-19 16:35)
     - via `fire_and_forget!`
     - dispatch an `Action` afterwards
     - in a separate tokio thread

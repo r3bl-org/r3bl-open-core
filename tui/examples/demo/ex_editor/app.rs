@@ -221,7 +221,7 @@ mod container_layout_render {
           .has_focus
           .is_modal_id(Id::Dialog.int_value())
         {
-          render_in_box! {
+          render_component_in_box! {
             in:             surface,
             box:            DialogEngineApi::make_flex_box_for_dialog(Id::Dialog.int_value(), surface, window_size)?,
             component_id:   Id::Dialog.int_value(),
@@ -371,19 +371,18 @@ mod style_helpers {
           padding: 1
           color_fg: TWColor::Blue
         },
-        // TODO: handle Style.lolcat is true
         style! {
           id: DialogStyleId::Title.as_ref()
           attrib: [bold]
           color_fg: TWColor::Yellow
+          lolcat: true
         },
-        // TODO: handle Style.lolcat is true
         style! {
           id: DialogStyleId::Border.as_ref()
           attrib: [dim]
           color_fg: TWColor::Green
+          lolcat: true
         },
-        // TODO: handle Style.lolcat is true
         style! {
           id: DialogStyleId::Editor.as_ref()
           attrib: [bold]
@@ -400,12 +399,12 @@ mod status_bar_helpers {
   /// Shows helpful messages at the bottom row of the screen.
   pub fn render_status_bar(render_pipeline: &mut RenderPipeline, size: &Size) {
     let st_vec = styled_texts! {
-      styled_text! { "Hints:",               style!(attrib: [dim])       },
-      styled_text! { " Ctrl + x : Exit ⛔ ", style!(attrib: [bold])      },
-      styled_text! { " … ",                  style!(attrib: [dim])       },
-      styled_text! { " char : add ",         style!(attrib: [underline]) },
-      styled_text! { " … ",                  style!(attrib: [dim])       },
-      styled_text! { " TK / TK : TK ",        style!(attrib: [underline]) }
+      styled_text! { "Hints:",                       style!(attrib: [dim])  },
+      styled_text! { " Ctrl + x : Exit ⛔ ",         style!(attrib: [bold]) },
+      styled_text! { " … ",                          style!(attrib: [dim])  },
+      styled_text! { " Type content 🖖 ",            style!(attrib: [bold]) },
+      styled_text! { " … ",                          style!(attrib: [dim])  },
+      styled_text! { " Ctrl + l : Modal dialog 📣 ", style!(attrib: [bold]) }
     };
 
     let display_width = st_vec.display_width();

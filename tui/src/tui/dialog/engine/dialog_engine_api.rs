@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::Debug;
+use std::{borrow::Cow, fmt::Debug};
 
 use int_enum::IntEnum;
 use r3bl_rs_utils_core::*;
@@ -71,7 +71,7 @@ impl DialogEngineApi {
 
     let mut pipeline = render_pipeline!(@new_empty);
 
-    pipeline += internal_impl::clear_dialog_box(&origin_pos, &bounds_size, args.dialog_engine);
+    pipeline += internal_impl::clear_dialog_box_and_draw_border(&origin_pos, &bounds_size, args.dialog_engine);
     pipeline += internal_impl::add_title(&origin_pos, &bounds_size, &args.dialog_buffer.title, args.dialog_engine);
     pipeline += internal_impl::render_editor(&origin_pos, &bounds_size, args).await?;
 
@@ -183,7 +183,6 @@ mod internal_impl {
     })
   }
 
-  // TODO: handle Style.lolcat is true
   pub async fn render_editor<S, A>(
     origin_pos: &Position,
     bounds_size: &Size,
@@ -219,35 +218,47 @@ mod internal_impl {
     Ok(pipeline)
   }
 
-  // TODO: handle Style.lolcat is true
-  pub fn add_title(origin_pos: &Position, bounds_size: &Size, title: &str, engine: &DialogEngine) -> RenderPipeline {
+  pub fn add_title(
+    origin_pos: &Position,
+    bounds_size: &Size,
+    title: &str,
+    dialog_engine: &mut DialogEngine,
+  ) -> RenderPipeline {
     let mut pipeline = render_pipeline!(@new_empty);
 
     let row_pos = position!(col: origin_pos.col + 1, row: origin_pos.row + 1);
     let unicode_string = UnicodeString::from(title);
-    let text_content = unicode_string.truncate_to_fit_size(size! {
+    let mut text_content = Cow::Borrowed(unicode_string.truncate_to_fit_size(size! {
       cols: bounds_size.cols - 2, rows: bounds_size.rows
-    });
+    }));
 
-    let maybe_style = engine.maybe_style_title.clone();
+    // Apply lolcat override (if enabled) to the fg_color of text_content.
+    apply_lolcat_from_style(
+      &dialog_engine.maybe_style_title,
+      &mut dialog_engine.lolcat,
+      &mut text_content,
+    );
 
     render_pipeline!(@push_into pipeline at ZOrder::Glass =>
       RenderOp::ResetColor,
       RenderOp::MoveCursorPositionAbs(row_pos),
-      RenderOp::ApplyColors(maybe_style.clone()),
-      RenderOp::PrintTextWithAttributes(text_content.into(), maybe_style)
+      RenderOp::ApplyColors(dialog_engine.maybe_style_title.clone()),
+      RenderOp::PrintTextWithAttributes(text_content.into(), dialog_engine.maybe_style_title.clone())
     );
 
     pipeline
   }
 
-  // TODO: handle Style.lolcat is true
-  pub fn clear_dialog_box(origin_pos: &Position, bounds_size: &Size, engine: &DialogEngine) -> RenderPipeline {
+  pub fn clear_dialog_box_and_draw_border(
+    origin_pos: &Position,
+    bounds_size: &Size,
+    dialog_engine: &mut DialogEngine,
+  ) -> RenderPipeline {
     let mut pipeline = render_pipeline!(@new_empty);
 
     let inner_spaces = " ".repeat(ch!(@to_usize bounds_size.cols - 2));
 
-    let maybe_style = engine.maybe_style_border.clone();
+    let maybe_style = dialog_engine.maybe_style_border.clone();
 
     for row_idx in 0..*bounds_size.rows {
       let row_pos = position!(col: origin_pos.col, row: origin_pos.row + row_idx);
@@ -264,42 +275,49 @@ mod internal_impl {
       match (is_first_line, is_last_line) {
         // First line.
         (true, false) => {
-          let text_content = format!(
+          let mut text_content = Cow::Owned(format!(
             "{}{}{}",
             BorderGlyphCharacter::TopLeft.as_ref(),
             BorderGlyphCharacter::Horizontal
               .as_ref()
               .repeat(ch!(@to_usize bounds_size.cols - 2)),
             BorderGlyphCharacter::TopRight.as_ref()
-          );
+          ));
+          // Apply lolcat override (if enabled) to the fg_color of text_content.
+          apply_lolcat_from_style(&maybe_style, &mut dialog_engine.lolcat, &mut text_content);
+
           render_pipeline!(@push_into pipeline at ZOrder::Glass =>
-            RenderOp::PrintTextWithAttributes(text_content, maybe_style.clone())
+            RenderOp::PrintTextWithAttributes(text_content.into(), maybe_style.clone())
           );
         }
         // Last line.
         (false, true) => {
-          let text_content = format!(
+          let mut text_content = Cow::Owned(format!(
             "{}{}{}",
             BorderGlyphCharacter::BottomLeft.as_ref(),
             BorderGlyphCharacter::Horizontal
               .as_ref()
               .repeat(ch!(@to_usize bounds_size.cols - 2)),
             BorderGlyphCharacter::BottomRight.as_ref(),
-          );
+          ));
+          // Apply lolcat override (if enabled) to the fg_color of text_content.
+          apply_lolcat_from_style(&maybe_style, &mut dialog_engine.lolcat, &mut text_content);
           render_pipeline!(@push_into pipeline at ZOrder::Glass =>
-            RenderOp::PrintTextWithAttributes(text_content, maybe_style.clone())
+            RenderOp::PrintTextWithAttributes(text_content.into(), maybe_style.clone())
           );
         }
         // Middle line.
         (false, false) => {
-          let text_content = format!(
+          let mut text_content = Cow::Owned(format!(
             "{}{}{}",
             BorderGlyphCharacter::Vertical.as_ref(),
             inner_spaces,
             BorderGlyphCharacter::Vertical.as_ref()
-          );
+          ));
+          // Apply lolcat override (if enabled) to the fg_color of text_content.
+          apply_lolcat_from_style(&maybe_style, &mut dialog_engine.lolcat, &mut text_content);
           render_pipeline!(@push_into pipeline at ZOrder::Glass =>
-            RenderOp::PrintTextWithAttributes(text_content, maybe_style.clone())
+            RenderOp::PrintTextWithAttributes(text_content.into(), maybe_style.clone())
           );
         }
         _ => {}
