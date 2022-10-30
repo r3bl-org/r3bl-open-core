@@ -36,4 +36,5 @@ pub(crate) struct StyleMetadata {
   pub padding: Option<ChUnit>, /* Optional. */
   pub color_fg: Option<Expr>,  /* Optional. */
   pub color_bg: Option<Expr>,  /* Optional. */
+  pub lolcat: Option<LitBool>,    /* Optional. */
 }

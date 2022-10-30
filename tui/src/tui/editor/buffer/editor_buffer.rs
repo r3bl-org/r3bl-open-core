@@ -112,9 +112,6 @@ pub struct EditorBuffer {
   /// 1. This is not marked pub in order to guard mutation. In order to access it, use
   ///    [get_mut](EditorBuffer::get_mut).
   scroll_offset: ScrollOffset,
-
-  /// Lolcat struct for generating rainbow colors.
-  lolcat: Lolcat,
 }
 
 mod constructor {
@@ -130,7 +127,6 @@ mod constructor {
       Self {
         lines: vec![UnicodeString::default()],
         caret: Position::default(),
-        lolcat: Lolcat::default(),
         scroll_offset: ScrollOffset::default(),
       }
     }
@@ -227,19 +223,11 @@ mod debug_format_helpers {
       write! { f,
         "\nEditorBuffer [          \n \
         ├ lines: {}, size: {},     \n \
-        ├ caret: {:?},             \n \
-        └ lolcat: [{}, {}, {}, {}] \n \
+        └ caret: {:?}]             \n \
         ]",
         self.lines.len(), self.lines.get_heap_size(),
         self.caret,
-        pretty_print_f64(self.lolcat.color_wheel_control.seed),
-        pretty_print_f64(self.lolcat.color_wheel_control.spread),
-        pretty_print_f64(self.lolcat.color_wheel_control.frequency),
-        self.lolcat.color_wheel_control.color_change_speed
       }
     }
   }
-
-  /// More info: <https://stackoverflow.com/questions/63214346/how-to-truncate-f64-to-2-decimal-places>
-  fn pretty_print_f64(before: f64) -> f64 { f64::trunc(before * 100.0) / 100.0 }
 }

@@ -31,6 +31,7 @@ use crate::utils::IdentExt;
 ///   padding: 10,             /* Optional. */
 ///   color_fg: TWColor::Blue, /* Optional. */
 ///   color_bg: TWColor::Red,  /* Optional. */
+///   lolcat: true,            /* Optional. */
 /// }
 /// ```
 ///
@@ -46,6 +47,7 @@ impl Parse for StyleMetadata {
       padding: None,
       color_fg: None,
       color_bg: None,
+      lolcat: None,
     };
 
     // Run them all.
@@ -54,13 +56,14 @@ impl Parse for StyleMetadata {
     parse_optional_padding(&input, &mut metadata)?;
     parse_optional_color_fg(&input, &mut metadata)?;
     parse_optional_color_bg(&input, &mut metadata)?;
+    parse_optional_lolcat(&input, &mut metadata)?;
 
     Ok(metadata)
   }
 }
 
 /// [syn custom keywords docs](https://docs.rs/syn/latest/syn/macro.custom_keyword.html)
-pub(crate) mod kw {
+pub(crate) mod custom_keywords {
   syn::custom_keyword!(id);
   syn::custom_keyword!(bold);
   syn::custom_keyword!(attrib);
@@ -72,13 +75,14 @@ pub(crate) mod kw {
   syn::custom_keyword!(padding);
   syn::custom_keyword!(color_fg);
   syn::custom_keyword!(color_bg);
+  syn::custom_keyword!(lolcat);
 }
 
 // Parse id (optional).
 fn parse_optional_id(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
   let lookahead = input.lookahead1();
-  if lookahead.peek(kw::id) {
-    input.parse::<kw::id>()?;
+  if lookahead.peek(custom_keywords::id) {
+    input.parse::<custom_keywords::id>()?;
     input.parse::<Token![:]>()?;
     let id = input.parse::<Expr>()?;
     metadata.id = id;
@@ -87,11 +91,24 @@ fn parse_optional_id(input: &ParseStream, metadata: &mut StyleMetadata) -> Resul
   Ok(())
 }
 
+// Parse lolcat (optional).
+fn parse_optional_lolcat(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
+  let lookahead = input.lookahead1();
+  if lookahead.peek(custom_keywords::lolcat) {
+    input.parse::<custom_keywords::lolcat>()?;
+    input.parse::<Token![:]>()?;
+    let lolcat = input.parse::<LitBool>()?;
+    metadata.lolcat = Some(lolcat);
+  }
+  call_if_true!(DEBUG_MAKE_STYLE_MOD, println!("🚀 lolcat: {:?}", metadata.lolcat));
+  Ok(())
+}
+
 // Parse attrib (optional).
 fn parse_optional_attrib(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
   let lookahead = input.lookahead1();
-  if lookahead.peek(kw::attrib) {
-    input.parse::<kw::attrib>()?;
+  if lookahead.peek(custom_keywords::attrib) {
+    input.parse::<custom_keywords::attrib>()?;
     input.parse::<Token![:]>()?;
 
     let expr_array: ExprArray = input.parse()?;
@@ -126,8 +143,8 @@ fn parse_optional_attrib(input: &ParseStream, metadata: &mut StyleMetadata) -> R
 // Parse padding (optional).
 fn parse_optional_padding(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
   let lookahead = input.lookahead1();
-  if lookahead.peek(kw::padding) {
-    input.parse::<kw::padding>()?;
+  if lookahead.peek(custom_keywords::padding) {
+    input.parse::<custom_keywords::padding>()?;
     input.parse::<Token![:]>()?;
 
     let lit_int = input.parse::<LitInt>()?;
@@ -144,8 +161,8 @@ fn parse_optional_padding(input: &ParseStream, metadata: &mut StyleMetadata) -> 
 // Parse color_fg (optional).
 fn parse_optional_color_fg(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
   let lookahead = input.lookahead1();
-  if lookahead.peek(kw::color_fg) {
-    input.parse::<kw::color_fg>()?;
+  if lookahead.peek(custom_keywords::color_fg) {
+    input.parse::<custom_keywords::color_fg>()?;
     input.parse::<Token![:]>()?;
     let color_expr = input.parse::<Expr>()?;
     metadata.color_fg = Some(color_expr);
@@ -158,8 +175,8 @@ fn parse_optional_color_fg(input: &ParseStream, metadata: &mut StyleMetadata) ->
 // Parse color_bg (optional).
 fn parse_optional_color_bg(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
   let lookahead = input.lookahead1();
-  if lookahead.peek(kw::color_bg) {
-    input.parse::<kw::color_bg>()?;
+  if lookahead.peek(custom_keywords::color_bg) {
+    input.parse::<custom_keywords::color_bg>()?;
     input.parse::<Token![:]>()?;
     let color_expr = input.parse::<Expr>()?;
     metadata.color_bg = Some(color_expr);

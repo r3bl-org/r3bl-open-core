@@ -32,12 +32,13 @@ use crate::*;
 /// In order to change the document, you can use the
 /// [apply_event](DialogEngineApi::apply_event) method which takes [InputEvent] and tries to
 /// execute it against this buffer.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct DialogEngine {
   pub editor_engine: EditorEngine,
   pub maybe_style_border: Option<Style>,
   pub maybe_style_title: Option<Style>,
   pub maybe_style_editor: Option<Style>,
+  pub lolcat: Lolcat,
 }
 
 pub mod constructor {
