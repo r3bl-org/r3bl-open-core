@@ -53,7 +53,7 @@ use crate::*;
 ///   }
 /// ]);
 /// ```
-#[derive(Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct Style {
   pub id: String,
   pub bold: bool,

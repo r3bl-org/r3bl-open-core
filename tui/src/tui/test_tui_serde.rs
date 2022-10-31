@@ -39,9 +39,12 @@ mod tests {
 
   #[test]
   fn test_serde_tw_command_queue() {
-    let mut pipeline = render_pipeline!(@new_empty);
-    pipeline.push(&ZOrder::Normal, RenderOp::ClearScreen);
-    pipeline.push(&ZOrder::Normal, RenderOp::SetBgColor(TWColor::Red));
+    let pipeline = render_pipeline!(
+      @new ZOrder::Normal
+      =>
+        RenderOp::ClearScreen,
+        RenderOp::ResetColor
+    );
     let ser_str = serde_json::to_string_pretty(&pipeline).unwrap();
     println!("{ser_str}");
     let og_pipeline: RenderPipeline = serde_json::from_str(&ser_str).unwrap();

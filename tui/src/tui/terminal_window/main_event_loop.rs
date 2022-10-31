@@ -30,10 +30,16 @@ use crate::*;
 const SPAWN_PROCESS_INPUT: bool = true;
 
 /// These are global state values for the entire application:
-/// 1. The size holds the width and height of the terminal window.
-/// 2. The cursor_position (for purposes of drawing via [RenderOp], [RenderOps], and
-///    [RenderPipeline]). This is used for low level painting operations and are not meant to be
-///    used by code that renders components.
+/// - The size holds the width and height of the terminal window.
+/// - The cursor_position (for purposes of drawing via [RenderOp], [RenderOps], and
+///   [RenderPipeline]).
+///   1. This is used for low level painting operations and are not meant to be used by code that
+///      renders components.
+///   2. The contract that must be respected is that the cursor position is only valid inside a
+///      given [RenderOps] list.
+///   3. So when you create a [RenderPipeline] and populate it w/ [RenderOps] you can use the
+///      following ops [RenderOp::MoveCursorPositionAbs], [RenderOp::MoveCursorPositionRelTo] And
+///      they will be valid only for that [RenderOps] list.
 #[derive(Clone, Debug, Default)]
 pub struct TWData {
   pub size: Size,
@@ -307,29 +313,9 @@ where
       };
 
       // Check to see if the window_size is large enough to render.
-      let render_result =
-        if window_size.cols < ch!(MinSize::Col.int_value()) || window_size.rows < ch!(MinSize::Row.int_value()) {
-          // Show warning message that window_size is too small.
-          let display_msg = UnicodeString::from(format!(
-            "Window size is too small. Minimum size is {} cols x {} rows",
-            MinSize::Col.int_value(),
-            MinSize::Row.int_value()
-          ));
-          let trunc_display_msg = UnicodeString::from(display_msg.truncate_to_fit_size(window_size));
-          let trunc_display_msg_len = ch!(trunc_display_msg.len());
-
-          let row_pos = window_size.rows / 2;
-          let col_pos = (window_size.cols - trunc_display_msg_len) / 2;
-
-          Ok(render_pipeline!(@new ZOrder::Normal =>
-            RenderOp::ClearScreen,
-            RenderOp::ResetColor,
-            RenderOp::MoveCursorPositionAbs(position! {col: col_pos, row: row_pos}),
-            RenderOp::SetFgColor(TWColor::DarkRed),
-            RenderOp::PrintTextWithAttributes(
-              lolcat_each_char_in_unicode_string(&trunc_display_msg, None),
-              Some(style! {attrib: [bold]}))
-          ))
+      let render_result: CommonResult<RenderPipeline> =
+        if window_size.is_too_small_to_display(MinSize::Col.int_value(), MinSize::Row.int_value()) {
+          Ok(render_window_size_too_small(window_size))
         } else {
           // Call app_render.
           shared_app.write().await.app_render(global_scope_args).await
@@ -345,7 +331,7 @@ where
         }
         Ok(render_pipeline) => {
           render_pipeline.paint(FlushKind::ClearBeforeFlush, shared_tw_data).await;
-          let window_size = shared_tw_data.read().await.get_size();
+          // TODO: save a copy of the render_pipeline (speed up re-rendering) to shared_tw_data
           call_if_true!(DEBUG_TUI_MOD, {
             log_no_err!(
               INFO,
@@ -358,4 +344,28 @@ where
       }
     });
   }
+}
+
+fn render_window_size_too_small(window_size: Size) -> RenderPipeline {
+  // Show warning message that window_size is too small.
+  let display_msg = UnicodeString::from(format!(
+    "Window size is too small. Minimum size is {} cols x {} rows",
+    MinSize::Col.int_value(),
+    MinSize::Row.int_value()
+  ));
+  let trunc_display_msg = UnicodeString::from(display_msg.truncate_to_fit_size(window_size));
+  let trunc_display_msg_len = ch!(trunc_display_msg.len());
+
+  let row_pos = window_size.rows / 2;
+  let col_pos = (window_size.cols - trunc_display_msg_len) / 2;
+
+  render_pipeline!(@new ZOrder::Normal =>
+    RenderOp::ClearScreen,
+    RenderOp::ResetColor,
+    RenderOp::MoveCursorPositionAbs(position! {col: col_pos, row: row_pos}),
+    RenderOp::SetFgColor(TWColor::DarkRed),
+    RenderOp::PrintTextWithAttributes(
+      lolcat_each_char_in_unicode_string(&trunc_display_msg, None),
+      Some(style! {attrib: [bold]}))
+  )
 }

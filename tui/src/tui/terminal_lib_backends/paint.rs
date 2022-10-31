@@ -33,6 +33,9 @@ use crate::{tui::DEBUG_SHOW_PIPELINE, *};
 /// last, ie, on top of all else) regardless of the [ZOrder] they were added to in the pipeline:
 /// 1. [RenderOp::RequestShowCaretAtPositionAbs]
 /// 2. [RenderOp::RequestShowCaretAtPositionRelTo]
+///
+/// See [RenderOps] for more details of "atomic paint operations".
+// TODO: accept Option<RenderPipeline> from shared_tw_data to compare pipeline against (speed up re-rendering)
 pub async fn paint(pipeline: &RenderPipeline, flush_kind: FlushKind, shared_tw_data: &SharedTWData) {
   let mut skip_flush = false;
 
@@ -40,36 +43,38 @@ pub async fn paint(pipeline: &RenderPipeline, flush_kind: FlushKind, shared_tw_d
     RenderOp::default().clear_before_flush();
   }
 
-  // List of special commands that should only be rendered at the very end.
-  let mut hoisted_op_vec: Vec<RenderOp> = vec![];
+  // Vec of special (hoisted) RenderOp that should only be rendered at the very end.
+  let mut special_hoisted_op_vec: Vec<RenderOp> = vec![];
 
-  // Execute the RenderOps, in the correct order of the ZOrder enum.
+  // Execute the (unspecial) RenderOps, in the correct order of the ZOrder enum.
   for z_order in RENDER_ORDERED_Z_ORDER_ARRAY.iter() {
-    if let Some(render_ops) = pipeline.get(z_order) {
-      for command_ref in render_ops.iter() {
-        if let RenderOp::RequestShowCaretAtPositionAbs(_) | RenderOp::RequestShowCaretAtPositionRelTo(_, _) =
-          command_ref
-        {
-          hoisted_op_vec.push(command_ref.clone());
-        } else {
-          route_paint_render_op_to_backend(&mut skip_flush, command_ref, shared_tw_data).await;
+    if let Some(render_ops_set) = pipeline.get(z_order) {
+      for render_ops in render_ops_set.iter() {
+        for render_op in render_ops.iter() {
+          if let RenderOp::RequestShowCaretAtPositionAbs(_) | RenderOp::RequestShowCaretAtPositionRelTo(_, _) =
+            render_op
+          {
+            special_hoisted_op_vec.push(render_op.clone());
+          } else {
+            route_paint_render_op_to_backend(&mut skip_flush, render_op, shared_tw_data).await;
+          }
         }
       }
     }
   }
 
-  // Log error if hoisted_commands has more than one item.
-  if hoisted_op_vec.len() > 1 {
+  // Log error if special_hoisted_op_vec has more than one item.
+  if special_hoisted_op_vec.len() > 1 {
     log_no_err!(
       WARN,
-      "🥕 Too many requests to draw caret (some will be clobbered): {:?}",
-      hoisted_op_vec,
+      "🥕 Too many requests to show caret at position (some will be clobbered): {:?}",
+      special_hoisted_op_vec,
     );
   }
 
-  // Execute the hoisted commands (at the very end).
-  for command_ref in &hoisted_op_vec {
-    route_paint_render_op_to_backend(&mut skip_flush, command_ref, shared_tw_data).await;
+  // Execute the special ops (at the very end).
+  for special_render_op in &special_hoisted_op_vec {
+    route_paint_render_op_to_backend(&mut skip_flush, special_render_op, shared_tw_data).await;
   }
 
   // Flush everything to the terminal.

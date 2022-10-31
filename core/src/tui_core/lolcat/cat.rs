@@ -28,7 +28,11 @@ use serde::*;
 
 use crate::*;
 
-pub fn apply_lolcat_from_style<'a>(maybe_style: &Option<Style>, lolcat: &'a mut Lolcat, text_content: &'a mut Cow<str>) {
+pub fn apply_lolcat_from_style<'a>(
+  maybe_style: &Option<Style>,
+  lolcat: &'a mut Lolcat,
+  text_content: &'a mut Cow<str>,
+) {
   if let Some(Style { lolcat: true, .. }) = maybe_style {
     let unicode_string = UnicodeString::from(text_content.as_ref());
     let mut colorized_string = lolcat_each_char_in_unicode_string(&unicode_string, Some(lolcat));

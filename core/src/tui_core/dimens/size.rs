@@ -73,6 +73,12 @@ impl Size {
   }
 }
 
+impl Size {
+  pub fn is_too_small_to_display(&self, min_col: u8, min_row: u8) -> bool {
+    self.cols < ch!(min_col) || self.rows < ch!(min_row)
+  }
+}
+
 pub mod debug_formatter {
   use super::*;
 

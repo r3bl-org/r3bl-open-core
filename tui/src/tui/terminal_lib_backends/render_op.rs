@@ -27,13 +27,30 @@ use crate::*;
 // ┏━━━━━━━━━━━━━┓
 // ┃ render_ops! ┃
 // ┛             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/// Here's an example. Refer to [RenderOps] for more details.
+/// ```rust
+/// use r3bl_tui::*;
+///
+/// let mut render_ops = render_ops!(
+///   @new
+///   RenderOp::ClearScreen, RenderOp::CursorShow
+/// );
+/// let len = render_ops.len();
+/// let iter = render_ops.iter();
+/// ```
 #[macro_export]
 macro_rules! render_ops {
-  // Create a RenderOps. If any ($element)* are passed, then add it to its list. Finally return it.
+  // Empty.
+  () => {
+    RenderOps::default()
+  };
+
+  // @new: Create a RenderOps. If any ($arg_render_op)* are passed, then add it to its list. Finally
+  // return it.
   (
-    @new $arg_z_order: expr =>
+    @new
     $(                      /* Start a repetition. */
-      $element:expr         /* Expression. */
+      $arg_render_op: expr  /* Expression. */
     )                       /* End repetition. */
     ,                       /* Comma separated. */
     *                       /* Zero or more times. */
@@ -41,11 +58,10 @@ macro_rules! render_ops {
     /* Enclose the expansion in a block so that we can use multiple statements. */
     {
       let mut render_ops = RenderOps::default();
-      render_ops.z_order = $arg_z_order;
       /* Start a repetition. */
       $(
-        /* Each repeat will contain the following statement, with $element replaced. */
-        render_ops.list.push($element);
+        /* Each repeat will contain the following statement, with $arg_render_op replaced. */
+        render_ops.list.push($arg_render_op);
       )*
       render_ops
     }
@@ -55,10 +71,38 @@ macro_rules! render_ops {
 // ┏━━━━━━━━━━━┓
 // ┃ RenderOps ┃
 // ┛           ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
+/// It is a collection of *atomic* paint operations (aka [`RenderOps`] at various [`ZOrder`]s); each
+/// [`RenderOps`] is made up of a [vec] of [`RenderOp`]. It contains `Map<ZOrder, Vec<RenderOps>>`,
+/// eg:
+/// - [`ZOrder::Normal`] => vec![[`RenderOp::ResetColor`], [`RenderOp::MoveCursorPositionAbs(..)`],
+///   [`RenderOp::PrintTextWithAttributes(..)`]]
+/// - [`ZOrder::Glass`] => vec![[`RenderOp::ResetColor`], [`RenderOp::MoveCursorPositionAbs(..)`],
+///   [`RenderOp::PrintTextWithAttributes(..)`]]
+/// - etc.
+///
+/// What is an atomic paint operation?
+/// 1. It moves the cursor using:
+///     1. [`RenderOp::MoveCursorPositionAbs`]
+///     2. [`RenderOp::MoveCursorPositionRelTo`]
+/// 2.  And it does not assume that the cursor is in the correct position from some other previously
+///     executed operation!
+/// 3. So there are no side effects when re-ordering or omitting painting an atomic paint operation
+///    (eg in the case where it has already been painted before).
+///
+/// Here's an example. Consider using the macro for convenience (see [render_ops!]). Also see
+/// [TWData] for more information on scoping the [cursor_position](TWData::cursor_position) rules.
+/// ```rust
+/// use r3bl_tui::*;
+///
+/// let mut render_ops = RenderOps::default();
+/// render_ops.push(RenderOp::ClearScreen);
+/// render_ops.push(RenderOp::CursorShow);
+/// let len = render_ops.len();
+/// let iter = render_ops.iter();
+/// ```
+#[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct RenderOps {
   pub list: Vec<RenderOp>,
-  pub z_order: ZOrder,
 }
 
 pub mod render_ops_helpers {
@@ -89,7 +133,7 @@ pub mod render_ops_helpers {
 // ┏━━━━━━━━━━┓
 // ┃ RenderOp ┃
 // ┛          ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum RenderOp {
   EnterRawMode,
 

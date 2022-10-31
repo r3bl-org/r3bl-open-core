@@ -71,9 +71,8 @@ impl App<State, Action> for AppNoLayout {
 
       let colored_content = colorize_using_lolcat!(&mut self.lolcat, "{}", state);
 
-      let mut render_pipeline = render_pipeline!(
-        @new
-        ZOrder::Normal
+      let mut pipeline = render_pipeline!(
+        @new ZOrder::Normal
         =>
           RenderOp::ClearScreen,
           RenderOp::ResetColor,
@@ -82,9 +81,9 @@ impl App<State, Action> for AppNoLayout {
           RenderOp::ResetColor
       );
 
-      status_bar_helpers::create_status_bar_message(&mut render_pipeline, window_size);
+      status_bar_helpers::create_status_bar_message(&mut pipeline, window_size);
 
-      render_pipeline
+      pipeline
     });
   }
 
@@ -144,7 +143,7 @@ mod status_bar_helpers {
   use super::*;
 
   /// Shows helpful messages at the bottom row of the screen.
-  pub fn create_status_bar_message(render_pipeline: &mut RenderPipeline, size: Size) {
+  pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {
     let st_vec = styled_texts! {
       styled_text! { "Hints:",        style!(attrib: [dim])       },
       styled_text! { " x : Exit ⛔ ", style!(attrib: [bold])      },
@@ -159,7 +158,15 @@ mod status_bar_helpers {
     let row_bottom: ChUnit = size.rows - 1;
     let center: Position = position!(col: col_center, row: row_bottom);
 
-    *render_pipeline += (ZOrder::Normal, RenderOp::MoveCursorPositionAbs(center));
-    *render_pipeline += st_vec.render(ZOrder::Normal);
+    *pipeline += {
+      let mut it = render_pipeline!();
+      render_pipeline!(
+        @styled_text
+        it at ZOrder::Normal
+        => RenderOp::MoveCursorPositionAbs(center)
+        => st_vec
+      );
+      it
+    };
   }
 }

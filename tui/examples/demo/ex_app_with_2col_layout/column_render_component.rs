@@ -133,11 +133,13 @@ impl Component<State, Action> for ColumnRenderComponent {
       let box_origin_pos = current_box.style_adjusted_origin_pos; // Adjusted for style margin (if any).
       let box_bounds_size = current_box.style_adjusted_bounds_size; // Adjusted for style margin (if any).
       let mut content_cursor_pos = position! { col: 0 , row: 0 };
-      let mut render_pipeline: RenderPipeline = render_pipeline!(@new_empty);
+      let mut pipeline = render_pipeline!();
 
       // Line 1.
       render_pipeline! {
-        @push_into render_pipeline at ZOrder::Normal =>
+        @push_into pipeline
+        at ZOrder::Normal
+        =>
           RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_cursor_pos),
           RenderOp::ApplyColors(current_box.get_computed_style()),
           RenderOp::PrintTextWithAttributes(
@@ -152,7 +154,9 @@ impl Component<State, Action> for ColumnRenderComponent {
 
       // Line 2.
       render_pipeline! {
-        @push_into render_pipeline at ZOrder::Normal =>
+        @push_into pipeline
+        at ZOrder::Normal
+        =>
           RenderOp::MoveCursorPositionRelTo(
             box_origin_pos,
             content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.rows)
@@ -171,7 +175,9 @@ impl Component<State, Action> for ColumnRenderComponent {
       // Paint is_focused.
       if component_registry.has_focus.does_current_box_have_focus(current_box) {
         render_pipeline! {
-          @push_into render_pipeline at ZOrder::Normal =>
+          @push_into pipeline
+          at ZOrder::Normal
+          =>
             RenderOp::MoveCursorPositionRelTo(
               box_origin_pos,
               content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.rows)
@@ -194,12 +200,12 @@ impl Component<State, Action> for ColumnRenderComponent {
           box_origin_pos,
           box_bounds_size,
           content_cursor_pos,
-          render_pipeline
+          pipeline
         };
       });
 
       // Return the render_pipeline.
-      render_pipeline
+      pipeline
     });
   }
 }
