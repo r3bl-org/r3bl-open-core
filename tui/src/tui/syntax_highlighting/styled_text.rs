@@ -88,7 +88,7 @@ pub trait StyledTexts {
   fn len(&self) -> usize;
   fn is_empty(&self) -> bool;
   fn get_plain_text(&self) -> String;
-  fn render(&self, z_order: ZOrder) -> RenderPipeline;
+  fn render_into(&self, render_ops: &mut RenderOps);
   fn display_width(&self) -> ChUnit;
 }
 
@@ -110,21 +110,14 @@ impl StyledTexts for Vec<StyledText> {
     unicode_string.display_width
   }
 
-  fn render(&self, z_order: ZOrder) -> RenderPipeline {
-    let mut pipeline = render_pipeline!(@new_empty);
-
+  fn render_into(&self, render_ops: &mut RenderOps) {
     for styled_text in self {
       let style = styled_text.style.clone();
       let text = styled_text.plain_text.clone();
-      render_pipeline! {
-        @push_into pipeline at z_order =>
-          RenderOp::ApplyColors(style.clone().into()),
-          RenderOp::PrintTextWithAttributes(text, style.into()),
-          RenderOp::ResetColor
-      }
+      render_ops.push(RenderOp::ApplyColors(style.clone().into()));
+      render_ops.push(RenderOp::PrintTextWithAttributes(text, style.into()));
+      render_ops.push(RenderOp::ResetColor);
     }
-
-    pipeline
   }
 }
 

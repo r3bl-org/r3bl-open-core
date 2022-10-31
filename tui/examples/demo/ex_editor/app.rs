@@ -397,7 +397,7 @@ mod status_bar_helpers {
   use super::*;
 
   /// Shows helpful messages at the bottom row of the screen.
-  pub fn render_status_bar(render_pipeline: &mut RenderPipeline, size: &Size) {
+  pub fn render_status_bar(pipeline: &mut RenderPipeline, size: &Size) {
     let st_vec = styled_texts! {
       styled_text! { "Hints:",                       style!(attrib: [dim])  },
       styled_text! { " Ctrl + x : Exit ⛔ ",         style!(attrib: [bold]) },
@@ -412,7 +412,15 @@ mod status_bar_helpers {
     let row_bottom: ChUnit = size.rows - 1;
     let center: Position = position!(col: col_center, row: row_bottom);
 
-    *render_pipeline += (ZOrder::Normal, RenderOp::MoveCursorPositionAbs(center));
-    *render_pipeline += st_vec.render(ZOrder::Normal);
+    *pipeline += {
+      let mut it = render_pipeline!();
+      render_pipeline!(
+        @styled_text it
+        at ZOrder::Normal
+        => RenderOp::MoveCursorPositionAbs(center)
+        => st_vec
+      );
+      it
+    };
   }
 }

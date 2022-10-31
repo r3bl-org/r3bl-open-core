@@ -269,7 +269,7 @@ mod test_dialog_api_render_engine {
     let pipeline = dbg!(DialogEngineApi::render_engine(args, &result_flex_box).await.unwrap());
     assert_eq2!(pipeline.len(), 1);
     let render_ops = pipeline.get(&ZOrder::Glass).unwrap();
-    assert!(render_ops.len() > 0);
+    assert!(!render_ops.is_empty());
   }
 }
 

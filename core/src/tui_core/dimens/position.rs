@@ -53,7 +53,7 @@ use crate::*;
 /// ```ignore
 /// let pos: Position = position!(0, 0);
 /// ```
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Default, GetSize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Default, GetSize, Hash)]
 pub struct Position {
   pub col: ChUnit,
   pub row: ChUnit,

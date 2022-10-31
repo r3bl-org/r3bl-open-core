@@ -53,8 +53,12 @@ framework:
     - https://github.com/nazmulidris/rust-sloth
   ☐ [Add termion support](https://github.com/r3bl-org/r3bl_rs_utils/issues/24)
   ☐ [Filter unsupported graphemes in keypress](https://github.com/r3bl-org/r3bl_rs_utils/issues/26)
-  ☐ [Write tests: rendering, component, etc](https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aissue+is%3Aopen+label%3Atesting)
   
+testing:
+  ☐ Write integration test w/ input simulation using [enigo](https://github.com/enigo-rs/enigo)
+    - eg: https://github.com/enigo-rs/enigo/blob/master/examples/keyboard.rs
+  ☐ [Write tests: rendering, component, etc](https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aissue+is%3Aopen+label%3Atesting)
+
 cmdr:
   ☐ [Create PRD](https://github.com/r3bl-org/r3bl_rs_utils/issues/39)
 

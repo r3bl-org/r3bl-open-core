@@ -72,7 +72,7 @@ macro_rules! throws {
 /// ```ignore
 /// throws_with_return!({
 ///   println!("⛵ Draw -> draw: {}\r", state);
-///   render_pipeline!(@new_empty)
+///   render_pipeline!()
 /// });
 /// ```
 #[macro_export]
@@ -400,7 +400,6 @@ macro_rules! assert_eq2 {
       $crate::style_prompt("Houston, we have a problem..."),
       $crate::style_error(stringify!($left)),
       $crate::style_error(stringify!($right))
-    )
-    ;
+    );
   };
 }

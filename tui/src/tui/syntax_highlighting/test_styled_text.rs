@@ -35,10 +35,22 @@ mod tests {
   fn test_styled_text_renders_correctly() -> CommonResult<()> {
     throws!({
       let st_vec = helpers::create_styled_text()?;
-      let pipeline: RenderPipeline = st_vec.render(ZOrder::Normal);
+      let mut render_ops = render_ops!();
+      st_vec.render_into(&mut render_ops);
+
+      let mut pipeline = render_pipeline!();
+      pipeline.push(ZOrder::Normal, render_ops);
+
       debug!(pipeline);
       assert_eq2!(pipeline.len(), 1);
-      assert_eq2!(pipeline.get(&ZOrder::Normal).unwrap().len(), 6);
+
+      let set: &Vec<RenderOps> = pipeline.get(&ZOrder::Normal).unwrap();
+
+      // "Hello" and "World" together.
+      assert_eq2!(set.len(), 1);
+
+      // 3 RenderOp each for "Hello" & "World".
+      assert_eq2!(pipeline.get_all_render_op_in(ZOrder::Normal).unwrap().len(), 6);
     })
   }
 

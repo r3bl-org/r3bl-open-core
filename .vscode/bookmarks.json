@@ -1,21 +1,6 @@
 {
 	"files": [
 		{
-			"path": "tui/src/tui/terminal_lib_backends/render_pipeline.rs",
-			"bookmarks": [
-				{
-					"line": 76,
-					"column": 0,
-					"label": ""
-				},
-				{
-					"line": 161,
-					"column": 56,
-					"label": ""
-				}
-			]
-		},
-		{
 			"path": "tui/src/tui/dialog/engine/dialog_engine_api.rs",
 			"bookmarks": [
 				{
@@ -26,11 +11,11 @@
 			]
 		},
 		{
-			"path": "tui/src/tui/editor/engine/editor_engine_api.rs",
+			"path": "tui/src/tui/terminal_lib_backends/paint.rs",
 			"bookmarks": [
 				{
-					"line": 99,
-					"column": 8,
+					"line": 38,
+					"column": 2,
 					"label": ""
 				}
 			]

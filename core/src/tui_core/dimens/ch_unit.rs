@@ -31,7 +31,7 @@ pub type ChUnitPrimitiveType = u16;
 /// of a character.
 ///
 /// In order to create amounts of ch units, use the [ch!] macro.
-#[derive(Copy, Clone, Default, PartialEq, Serialize, Deserialize, GetSize, Ord, PartialOrd, Eq, Debug)]
+#[derive(Copy, Clone, Default, PartialEq, Serialize, Deserialize, GetSize, Ord, PartialOrd, Eq, Debug, Hash)]
 pub struct ChUnit {
   pub value: ChUnitPrimitiveType,
 }

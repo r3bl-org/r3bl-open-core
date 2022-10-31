@@ -23,6 +23,7 @@
     "editorbuffer",
     "editorcomponent",
     "editorengine",
+    "enigo",
     "enumflags",
     "globalcursor",
     "horiz",
@@ -61,6 +62,7 @@
     "treememoryarena",
     "trunc",
     "tuicore",
+    "unspecial",
     "withmutreturns"
   ]
 }

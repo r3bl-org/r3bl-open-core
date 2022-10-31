@@ -70,7 +70,7 @@ impl DialogEngineApi {
     };
 
     let pipeline = {
-      let mut it = render_pipeline!(@new_empty);
+      let mut it = render_pipeline!();
       it += internal_impl::render_border(&origin_pos, &bounds_size, args.dialog_engine);
       it += internal_impl::render_title(&origin_pos, &bounds_size, &args.dialog_buffer.title, args.dialog_engine);
       it += internal_impl::render_editor(&origin_pos, &bounds_size, args).await?;
@@ -226,7 +226,7 @@ mod internal_impl {
     title: &str,
     dialog_engine: &mut DialogEngine,
   ) -> RenderPipeline {
-    let mut pipeline = render_pipeline!(@new_empty);
+    let mut pipeline = render_pipeline!();
 
     let row_pos = position!(col: origin_pos.col + 1, row: origin_pos.row + 1);
     let unicode_string = UnicodeString::from(title);
@@ -241,18 +241,21 @@ mod internal_impl {
       &mut text_content,
     );
 
-    render_pipeline!(@push_into pipeline at ZOrder::Glass =>
-      RenderOp::ResetColor,
-      RenderOp::MoveCursorPositionAbs(row_pos),
-      RenderOp::ApplyColors(dialog_engine.maybe_style_title.clone()),
-      RenderOp::PrintTextWithAttributes(text_content.into(), dialog_engine.maybe_style_title.clone())
+    render_pipeline!(
+      @push_into pipeline
+      at ZOrder::Glass
+      =>
+        RenderOp::ResetColor,
+        RenderOp::MoveCursorPositionAbs(row_pos),
+        RenderOp::ApplyColors(dialog_engine.maybe_style_title.clone()),
+        RenderOp::PrintTextWithAttributes(text_content.into(), dialog_engine.maybe_style_title.clone())
     );
 
     pipeline
   }
 
   pub fn render_border(origin_pos: &Position, bounds_size: &Size, dialog_engine: &mut DialogEngine) -> RenderPipeline {
-    let mut pipeline = render_pipeline!(@new_empty);
+    let mut pipeline = render_pipeline!();
 
     let inner_spaces = " ".repeat(ch!(@to_usize bounds_size.cols - 2));
 
@@ -264,10 +267,13 @@ mod internal_impl {
       let is_first_line = row_idx == 0;
       let is_last_line = row_idx == (*bounds_size.rows - 1);
 
-      render_pipeline!(@push_into pipeline at ZOrder::Glass =>
-        RenderOp::ResetColor,
-        RenderOp::MoveCursorPositionAbs(row_pos),
-        RenderOp::ApplyColors(maybe_style.clone())
+      render_pipeline!(
+        @push_into pipeline
+        at ZOrder::Glass
+        =>
+          RenderOp::ResetColor,
+          RenderOp::MoveCursorPositionAbs(row_pos),
+          RenderOp::ApplyColors(maybe_style.clone())
       );
 
       match (is_first_line, is_last_line) {

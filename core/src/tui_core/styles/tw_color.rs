@@ -19,7 +19,7 @@ use core::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Copy)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Copy, Hash)]
 pub enum TWColor {
   /// Resets the terminal color.
   Reset,
