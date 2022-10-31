@@ -148,7 +148,7 @@ This is very similar to [`throws!`](#throws) but it also returns the result of t
 fn test_simple_2_col_layout() -> CommonResult<RenderPipeline> {
   throws_with_return!({
     println!("⛵ Draw -> draw: {}\r", state);
-    RenderPipeline::default()
+    render_pipeline!(@new_empty)
   });
 }
 ```

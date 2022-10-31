@@ -111,20 +111,20 @@ impl StyledTexts for Vec<StyledText> {
   }
 
   fn render(&self, z_order: ZOrder) -> RenderPipeline {
-    let mut render_pipeline = RenderPipeline::default();
+    let mut pipeline = render_pipeline!(@new_empty);
 
     for styled_text in self {
       let style = styled_text.style.clone();
       let text = styled_text.plain_text.clone();
       render_pipeline! {
-        @push_into render_pipeline at z_order =>
+        @push_into pipeline at z_order =>
           RenderOp::ApplyColors(style.clone().into()),
           RenderOp::PrintTextWithAttributes(text, style.into()),
           RenderOp::ResetColor
       }
     }
 
-    render_pipeline
+    pipeline
   }
 }
 

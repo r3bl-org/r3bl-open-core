@@ -39,13 +39,13 @@ mod tests {
 
   #[test]
   fn test_serde_tw_command_queue() {
-    let mut q = RenderPipeline::default();
-    q.push(&ZOrder::Normal, RenderOp::ClearScreen);
-    q.push(&ZOrder::Normal, RenderOp::SetBgColor(TWColor::Red));
-    let ser_str = serde_json::to_string_pretty(&q).unwrap();
+    let mut pipeline = render_pipeline!(@new_empty);
+    pipeline.push(&ZOrder::Normal, RenderOp::ClearScreen);
+    pipeline.push(&ZOrder::Normal, RenderOp::SetBgColor(TWColor::Red));
+    let ser_str = serde_json::to_string_pretty(&pipeline).unwrap();
     println!("{ser_str}");
-    let og_q: RenderPipeline = serde_json::from_str(&ser_str).unwrap();
-    assert_eq2!(q, og_q);
+    let og_pipeline: RenderPipeline = serde_json::from_str(&ser_str).unwrap();
+    assert_eq2!(pipeline, og_pipeline);
   }
 
   #[test]
