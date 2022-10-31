@@ -69,11 +69,13 @@ impl DialogEngineApi {
       )
     };
 
-    let mut pipeline = render_pipeline!(@new_empty);
-
-    pipeline += internal_impl::clear_dialog_box_and_draw_border(&origin_pos, &bounds_size, args.dialog_engine);
-    pipeline += internal_impl::add_title(&origin_pos, &bounds_size, &args.dialog_buffer.title, args.dialog_engine);
-    pipeline += internal_impl::render_editor(&origin_pos, &bounds_size, args).await?;
+    let pipeline = {
+      let mut it = render_pipeline!(@new_empty);
+      it += internal_impl::render_border(&origin_pos, &bounds_size, args.dialog_engine);
+      it += internal_impl::render_title(&origin_pos, &bounds_size, &args.dialog_buffer.title, args.dialog_engine);
+      it += internal_impl::render_editor(&origin_pos, &bounds_size, args).await?;
+      it
+    };
 
     Ok(pipeline)
   }
@@ -218,7 +220,7 @@ mod internal_impl {
     Ok(pipeline)
   }
 
-  pub fn add_title(
+  pub fn render_title(
     origin_pos: &Position,
     bounds_size: &Size,
     title: &str,
@@ -249,11 +251,7 @@ mod internal_impl {
     pipeline
   }
 
-  pub fn clear_dialog_box_and_draw_border(
-    origin_pos: &Position,
-    bounds_size: &Size,
-    dialog_engine: &mut DialogEngine,
-  ) -> RenderPipeline {
+  pub fn render_border(origin_pos: &Position, bounds_size: &Size, dialog_engine: &mut DialogEngine) -> RenderPipeline {
     let mut pipeline = render_pipeline!(@new_empty);
 
     let inner_spaces = " ".repeat(ch!(@to_usize bounds_size.cols - 2));

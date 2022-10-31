@@ -72,7 +72,7 @@ macro_rules! throws {
 /// ```ignore
 /// throws_with_return!({
 ///   println!("⛵ Draw -> draw: {}\r", state);
-///   RenderPipeline::default()
+///   render_pipeline!(@new_empty)
 /// });
 /// ```
 #[macro_export]

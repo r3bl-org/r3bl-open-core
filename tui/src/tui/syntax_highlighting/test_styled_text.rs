@@ -35,10 +35,10 @@ mod tests {
   fn test_styled_text_renders_correctly() -> CommonResult<()> {
     throws!({
       let st_vec = helpers::create_styled_text()?;
-      let tw_queue: RenderPipeline = st_vec.render(ZOrder::Normal);
-      debug!(tw_queue);
-      assert_eq2!(tw_queue.len(), 1);
-      assert_eq2!(tw_queue.get(&ZOrder::Normal).unwrap().len(), 6);
+      let pipeline: RenderPipeline = st_vec.render(ZOrder::Normal);
+      debug!(pipeline);
+      assert_eq2!(pipeline.len(), 1);
+      assert_eq2!(pipeline.get(&ZOrder::Normal).unwrap().len(), 6);
     })
   }
 

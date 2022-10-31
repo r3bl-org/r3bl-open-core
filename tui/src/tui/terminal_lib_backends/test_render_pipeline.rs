@@ -43,15 +43,15 @@ mod tests {
 
     // Merge multiple pipelines.
     let pipeline_1: RenderPipeline = {
-      let mut p = render_pipeline!(@new ZOrder::Normal
+      let mut it = render_pipeline!(@new ZOrder::Normal
         =>
           RenderOp::ClearScreen,
           RenderOp::ResetColor
       );
-      render_pipeline!(@push_into p at ZOrder::Caret =>
+      render_pipeline!(@push_into it at ZOrder::Caret =>
         RenderOp::ResetColor
       );
-      p
+      it
     };
 
     let pipeline_2: RenderPipeline = render_pipeline!(@new ZOrder::Normal
