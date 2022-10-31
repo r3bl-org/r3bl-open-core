@@ -1,3 +1,7 @@
+cleanup:
+  ✔ handle style local is true @done(22-10-30 19:31)
+  ✔ rename jsx macro names (layout and render macros) @done(22-10-30 19:31)
+
 editor engine extras (core):
   ✔ add modal dialog support https://github.com/r3bl-org/r3bl_rs_utils/issues/45 @done(22-10-28 16:08)
 

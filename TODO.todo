@@ -1,10 +1,6 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-cleanup:
-  ☐ handle style local is true
-  ☐ rename jsx macro names (layout and render macros)
-
 editor engine extras (core):
   ☐ syntax highlighting support
   ☐ markdown parsing
@@ -44,7 +40,6 @@ editor engine enhancements (multi-user editing):
 
 tui:
   ☐ checkbox (single, multi select)
-  ☐ radio button
   ☐ form
 
 framework:
@@ -62,7 +57,11 @@ framework:
   
 cmdr:
   ☐ [Create PRD](https://github.com/r3bl-org/r3bl_rs_utils/issues/39)
-  
+
+vscode ext:
+  ☐ write vscode ext to help w/ parsing RSX
+    - eg: https://github.com/TechTheAwesome/code-yew-server
+
 writing:
   ☐ [RSX & DSL articles](https://github.com/r3bl-org/r3bl_rs_utils/issues/19)
   ☐ [Update DD for editor component](https://github.com/r3bl-org/r3bl_rs_utils/issues/23)
