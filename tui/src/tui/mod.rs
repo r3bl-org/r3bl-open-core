@@ -26,6 +26,7 @@ pub const DEBUG_TUI_MOD: bool = true;
 
 // Enable or disable debug logging for this `terminal_lib_backends` module.
 pub const DEBUG_SHOW_PIPELINE: bool = true;
+pub const DEBUG_SHOW_PAINT_OPTIMIZATION_HEURISTIC: bool = true;
 pub const DEBUG_SHOW_PIPELINE_EXPANDED: bool = false;
 pub const DEBUG_SHOW_TERMINAL_BACKEND: bool = false;
 

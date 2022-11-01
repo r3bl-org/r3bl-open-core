@@ -61,7 +61,7 @@ mod tests {
           RenderOp::ResetColor
       );
 
-      render_pipeline!(@push_into it at ZOrder::Caret =>
+      render_pipeline!(@push_into it at ZOrder::High =>
         RenderOp::ResetColor
       );
 
@@ -70,7 +70,7 @@ mod tests {
         vec![RenderOp::ClearScreen, RenderOp::ResetColor]
       );
       assert_eq2!(
-        it.get_all_render_op_in(ZOrder::Caret).unwrap(),
+        it.get_all_render_op_in(ZOrder::High).unwrap(),
         vec![RenderOp::ResetColor]
       );
 
@@ -98,7 +98,7 @@ mod tests {
       assert_eq2!(pipeline_merged.len(), 2);
 
       let normal_set = pipeline_merged.get(&ZOrder::Normal).unwrap();
-      let caret_set = pipeline_merged.get(&ZOrder::Caret).unwrap();
+      let caret_set = pipeline_merged.get(&ZOrder::High).unwrap();
 
       assert_eq2!(normal_set.len(), 2);
       assert_eq2!(caret_set.len(), 1);
@@ -113,7 +113,7 @@ mod tests {
         ]
       );
       assert_eq2!(
-        pipeline_merged.get_all_render_op_in(ZOrder::Caret).unwrap(),
+        pipeline_merged.get_all_render_op_in(ZOrder::High).unwrap(),
         vec![RenderOp::ResetColor]
       );
 

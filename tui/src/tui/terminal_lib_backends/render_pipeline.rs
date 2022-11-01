@@ -161,7 +161,7 @@ macro_rules! render_pipeline {
 ///
 /// let mut pipeline = render_pipeline!();
 /// pipeline.push(ZOrder::Normal, render_ops!(@new RenderOp::ClearScreen));
-/// pipeline.push(ZOrder::Caret, render_ops!(@new RenderOp::CursorShow));
+/// pipeline.push(ZOrder::Glass, render_ops!(@new RenderOp::CursorShow));
 /// let len = pipeline.len();
 /// let iter = pipeline.iter();
 /// ```
@@ -171,7 +171,6 @@ pub struct RenderPipeline {
   pub pipeline_map: PipelineMap,
 }
 
-// TODO: Change value to Set<RenderOps>; affects join_into()
 type PipelineMap = HashMap<ZOrder, Vec<RenderOps>>;
 
 impl RenderPipeline {
@@ -255,13 +254,12 @@ pub mod z_order_impl {
   use super::*;
 
   /// Contains the priority that is used to paint the different groups of [RenderOp] items.
-  pub const RENDER_ORDERED_Z_ORDER_ARRAY: [ZOrder; 4] = [ZOrder::Normal, ZOrder::High, ZOrder::Glass, ZOrder::Caret];
+  pub const RENDER_ORDERED_Z_ORDER_ARRAY: [ZOrder; 3] = [ZOrder::Normal, ZOrder::High, ZOrder::Glass];
 
   #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
   pub enum ZOrder {
     Normal,
     High,
-    Caret,
     Glass,
   }
 
@@ -293,8 +291,8 @@ mod render_pipeline_helpers {
           vec_lines.push(line);
         }
       } else {
-        for (z_order, render_ops) in &**self {
-          let line: String = format!("[{z_order:?}] {:?} ops", render_ops.len());
+        for (z_order, vec_render_ops) in &**self {
+          let line: String = format!("[{z_order:?}] {:?} RenderOps", vec_render_ops.len());
           vec_lines.push(line);
         }
       }

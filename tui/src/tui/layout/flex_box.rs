@@ -24,7 +24,7 @@ use crate::*;
 
 /// Direction of the layout of the box.
 #[non_exhaustive]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum Direction {
   Horizontal,
   Vertical,
@@ -40,7 +40,7 @@ impl Default for Direction {
 
 /// A box is a rectangle with a position and size. The direction of the box
 /// determines how it's contained elements are positioned.
-#[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct FlexBox {
   pub id: FlexBoxIdType,
   pub dir: Direction,

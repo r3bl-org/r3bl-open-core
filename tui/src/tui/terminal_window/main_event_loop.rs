@@ -44,6 +44,7 @@ const SPAWN_PROCESS_INPUT: bool = true;
 pub struct TWData {
   pub size: Size,
   pub cursor_position: Position,
+  pub maybe_render_pipeline: Option<RenderPipeline>,
   // FUTURE: 🐵 use global_user_data (contains key: String, value: HashMap<String, String>).
   pub global_user_data: HashMap<String, HashMap<String, String>>,
 }
@@ -132,6 +133,7 @@ impl TerminalWindow {
       // needs to be re-rendered.
       if let InputEvent::Resize(new_size) = input_event {
         shared_tw_data.write().await.set_size(new_size);
+        shared_tw_data.write().await.maybe_render_pipeline = None;
         AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
       }
 
@@ -315,6 +317,7 @@ where
       // Check to see if the window_size is large enough to render.
       let render_result: CommonResult<RenderPipeline> =
         if window_size.is_too_small_to_display(MinSize::Col.int_value(), MinSize::Row.int_value()) {
+          shared_tw_data.write().await.maybe_render_pipeline = None;
           Ok(render_window_size_too_small(window_size))
         } else {
           // Call app_render.
@@ -331,7 +334,6 @@ where
         }
         Ok(render_pipeline) => {
           render_pipeline.paint(FlushKind::ClearBeforeFlush, shared_tw_data).await;
-          // TODO: save a copy of the render_pipeline (speed up re-rendering) to shared_tw_data
           call_if_true!(DEBUG_TUI_MOD, {
             log_no_err!(
               INFO,
@@ -360,7 +362,6 @@ fn render_window_size_too_small(window_size: Size) -> RenderPipeline {
   let col_pos = (window_size.cols - trunc_display_msg_len) / 2;
 
   render_pipeline!(@new ZOrder::Normal =>
-    RenderOp::ClearScreen,
     RenderOp::ResetColor,
     RenderOp::MoveCursorPositionAbs(position! {col: col_pos, row: row_pos}),
     RenderOp::SetFgColor(TWColor::DarkRed),

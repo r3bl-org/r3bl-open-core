@@ -133,12 +133,12 @@ impl Component<State, Action> for ColumnRenderComponent {
       let box_origin_pos = current_box.style_adjusted_origin_pos; // Adjusted for style margin (if any).
       let box_bounds_size = current_box.style_adjusted_bounds_size; // Adjusted for style margin (if any).
       let mut content_cursor_pos = position! { col: 0 , row: 0 };
-      let mut pipeline = render_pipeline!();
+
+      let mut render_ops = render_ops!();
 
       // Line 1.
-      render_pipeline! {
-        @push_into pipeline
-        at ZOrder::Normal
+      render_ops! {
+        @add_to render_ops
         =>
           RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_cursor_pos),
           RenderOp::ApplyColors(current_box.get_computed_style()),
@@ -153,9 +153,8 @@ impl Component<State, Action> for ColumnRenderComponent {
       };
 
       // Line 2.
-      render_pipeline! {
-        @push_into pipeline
-        at ZOrder::Normal
+      render_ops! {
+        @add_to render_ops
         =>
           RenderOp::MoveCursorPositionRelTo(
             box_origin_pos,
@@ -174,10 +173,9 @@ impl Component<State, Action> for ColumnRenderComponent {
 
       // Paint is_focused.
       if component_registry.has_focus.does_current_box_have_focus(current_box) {
-        render_pipeline! {
-          @push_into pipeline
-          at ZOrder::Normal
-          =>
+        render_ops! {
+          @add_to render_ops
+            =>
             RenderOp::MoveCursorPositionRelTo(
               box_origin_pos,
               content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.rows)
@@ -186,6 +184,12 @@ impl Component<State, Action> for ColumnRenderComponent {
         };
       }
 
+      // Add render_ops to pipeline.
+      let mut pipeline = render_pipeline!();
+      render_ops.flex_box = Some(current_box.clone());
+      pipeline.push(ZOrder::Normal, render_ops);
+
+      // Log pipeline.
       call_if_true!(DEBUG_TUI_MOD, {
         log_no_err! {
           INFO,
@@ -204,7 +208,7 @@ impl Component<State, Action> for ColumnRenderComponent {
         };
       });
 
-      // Return the render_pipeline.
+      // Return the pipeline.
       pipeline
     });
   }

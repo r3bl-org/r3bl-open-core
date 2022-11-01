@@ -74,7 +74,6 @@ impl App<State, Action> for AppNoLayout {
       let mut pipeline = render_pipeline!(
         @new ZOrder::Normal
         =>
-          RenderOp::ClearScreen,
           RenderOp::ResetColor,
           RenderOp::MoveCursorPositionAbs(position!(col:col, row:row)),
           RenderOp::PrintTextWithAttributes(colored_content, None),

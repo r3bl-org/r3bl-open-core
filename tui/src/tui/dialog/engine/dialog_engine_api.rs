@@ -71,9 +71,19 @@ impl DialogEngineApi {
 
     let pipeline = {
       let mut it = render_pipeline!();
-      it += internal_impl::render_border(&origin_pos, &bounds_size, args.dialog_engine);
-      it += internal_impl::render_title(&origin_pos, &bounds_size, &args.dialog_buffer.title, args.dialog_engine);
+
+      it.push(
+        ZOrder::Glass,
+        internal_impl::render_border(&origin_pos, &bounds_size, args.dialog_engine),
+      );
+
+      it.push(
+        ZOrder::Glass,
+        internal_impl::render_title(&origin_pos, &bounds_size, &args.dialog_buffer.title, args.dialog_engine),
+      );
+
       it += internal_impl::render_editor(&origin_pos, &bounds_size, args).await?;
+
       it
     };
 
@@ -225,8 +235,8 @@ mod internal_impl {
     bounds_size: &Size,
     title: &str,
     dialog_engine: &mut DialogEngine,
-  ) -> RenderPipeline {
-    let mut pipeline = render_pipeline!();
+  ) -> RenderOps {
+    let mut ops = render_ops!();
 
     let row_pos = position!(col: origin_pos.col + 1, row: origin_pos.row + 1);
     let unicode_string = UnicodeString::from(title);
@@ -241,21 +251,19 @@ mod internal_impl {
       &mut text_content,
     );
 
-    render_pipeline!(
-      @push_into pipeline
-      at ZOrder::Glass
-      =>
-        RenderOp::ResetColor,
-        RenderOp::MoveCursorPositionAbs(row_pos),
-        RenderOp::ApplyColors(dialog_engine.maybe_style_title.clone()),
-        RenderOp::PrintTextWithAttributes(text_content.into(), dialog_engine.maybe_style_title.clone())
-    );
+    ops.push(RenderOp::ResetColor);
+    ops.push(RenderOp::MoveCursorPositionAbs(row_pos));
+    ops.push(RenderOp::ApplyColors(dialog_engine.maybe_style_title.clone()));
+    ops.push(RenderOp::PrintTextWithAttributes(
+      text_content.into(),
+      dialog_engine.maybe_style_title.clone(),
+    ));
 
-    pipeline
+    ops
   }
 
-  pub fn render_border(origin_pos: &Position, bounds_size: &Size, dialog_engine: &mut DialogEngine) -> RenderPipeline {
-    let mut pipeline = render_pipeline!();
+  pub fn render_border(origin_pos: &Position, bounds_size: &Size, dialog_engine: &mut DialogEngine) -> RenderOps {
+    let mut ops = render_ops!();
 
     let inner_spaces = " ".repeat(ch!(@to_usize bounds_size.cols - 2));
 
@@ -267,14 +275,9 @@ mod internal_impl {
       let is_first_line = row_idx == 0;
       let is_last_line = row_idx == (*bounds_size.rows - 1);
 
-      render_pipeline!(
-        @push_into pipeline
-        at ZOrder::Glass
-        =>
-          RenderOp::ResetColor,
-          RenderOp::MoveCursorPositionAbs(row_pos),
-          RenderOp::ApplyColors(maybe_style.clone())
-      );
+      ops.push(RenderOp::ResetColor);
+      ops.push(RenderOp::MoveCursorPositionAbs(row_pos));
+      ops.push(RenderOp::ApplyColors(maybe_style.clone()));
 
       match (is_first_line, is_last_line) {
         // First line.
@@ -290,9 +293,10 @@ mod internal_impl {
           // Apply lolcat override (if enabled) to the fg_color of text_content.
           apply_lolcat_from_style(&maybe_style, &mut dialog_engine.lolcat, &mut text_content);
 
-          render_pipeline!(@push_into pipeline at ZOrder::Glass =>
-            RenderOp::PrintTextWithAttributes(text_content.into(), maybe_style.clone())
-          );
+          ops.push(RenderOp::PrintTextWithAttributes(
+            text_content.into(),
+            maybe_style.clone(),
+          ));
         }
         // Last line.
         (false, true) => {
@@ -306,9 +310,10 @@ mod internal_impl {
           ));
           // Apply lolcat override (if enabled) to the fg_color of text_content.
           apply_lolcat_from_style(&maybe_style, &mut dialog_engine.lolcat, &mut text_content);
-          render_pipeline!(@push_into pipeline at ZOrder::Glass =>
-            RenderOp::PrintTextWithAttributes(text_content.into(), maybe_style.clone())
-          );
+          ops.push(RenderOp::PrintTextWithAttributes(
+            text_content.into(),
+            maybe_style.clone(),
+          ));
         }
         // Middle line.
         (false, false) => {
@@ -320,15 +325,16 @@ mod internal_impl {
           ));
           // Apply lolcat override (if enabled) to the fg_color of text_content.
           apply_lolcat_from_style(&maybe_style, &mut dialog_engine.lolcat, &mut text_content);
-          render_pipeline!(@push_into pipeline at ZOrder::Glass =>
-            RenderOp::PrintTextWithAttributes(text_content.into(), maybe_style.clone())
-          );
+          ops.push(RenderOp::PrintTextWithAttributes(
+            text_content.into(),
+            maybe_style.clone(),
+          ));
         }
         _ => {}
       };
     }
 
-    pipeline
+    ops
   }
 
   pub fn try_handle_dialog_choice(input_event: &InputEvent, dialog_buffer: &DialogBuffer) -> Option<DialogChoice> {

@@ -95,15 +95,19 @@ impl EditorEngineRenderApi {
       if editor_buffer.is_empty() {
         EditorEngineRenderApi::render_empty_state(&render_args)
       } else {
-        let pipeline_content = EditorEngineRenderApi::render_content(&render_args);
-        let pipeline_caret = EditorEngineRenderApi::render_caret(CaretPaintStyle::LocalPaintedEffect, &render_args);
-        render_pipeline!(@join_and_drop pipeline_content, pipeline_caret)
+        let mut render_ops = render_ops!();
+        render_ops.flex_box = Some(current_box.clone());
+        EditorEngineRenderApi::render_content(&render_args, &mut render_ops);
+        EditorEngineRenderApi::render_caret(CaretPaintStyle::LocalPaintedEffect, &render_args, &mut render_ops);
+        let mut render_pipeline = render_pipeline!();
+        render_pipeline.push(ZOrder::Normal, render_ops);
+        render_pipeline
       }
     })
   }
 
   // This simply clips the content to the `style_adj_box_bounds_size`.
-  fn render_content<S, A>(render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
+  fn render_content<S, A>(render_args: &RenderArgs<'_, S, A>, render_ops: &mut RenderOps)
   where
     S: Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
@@ -113,8 +117,6 @@ impl EditorEngineRenderApi {
       editor_engine,
       ..
     } = render_args;
-    let mut pipeline = render_pipeline!();
-
     let Size {
       cols: max_display_col_count,
       rows: max_display_row_count,
@@ -138,24 +140,21 @@ impl EditorEngineRenderApi {
       let truncated_line = UnicodeString::from(truncated_line);
       let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
 
-      render_pipeline! {
-        @push_into pipeline
-        at ZOrder::Normal
-        =>
-          RenderOp::MoveCursorPositionRelTo(
-            editor_engine.current_box.style_adjusted_origin_pos, position! { col: 0 , row: ch!(@to_usize row_index) }
-          ),
-          RenderOp::ApplyColors(editor_engine.current_box.get_computed_style()),
-          RenderOp::PrintTextWithAttributes(truncated_line.into(), editor_engine.current_box.get_computed_style()),
-          RenderOp::ResetColor
-      };
+      render_ops.push(RenderOp::MoveCursorPositionRelTo(
+        editor_engine.current_box.style_adjusted_origin_pos,
+        position! { col: 0 , row: ch!(@to_usize row_index) },
+      ));
+      render_ops.push(RenderOp::ApplyColors(editor_engine.current_box.get_computed_style()));
+      render_ops.push(RenderOp::PrintTextWithAttributes(
+        truncated_line.into(),
+        editor_engine.current_box.get_computed_style(),
+      ));
+      render_ops.push(RenderOp::ResetColor);
     }
-
-    pipeline
   }
 
   /// Implement caret painting using two different strategies represented by [CaretPaintStyle].
-  fn render_caret<S, A>(style: CaretPaintStyle, render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
+  fn render_caret<S, A>(style: CaretPaintStyle, render_args: &RenderArgs<'_, S, A>, render_ops: &mut RenderOps)
   where
     S: Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
@@ -166,19 +165,16 @@ impl EditorEngineRenderApi {
       editor_engine,
       ..
     } = render_args;
-    let mut pipeline = render_pipeline!();
-
     if component_registry
       .has_focus
       .does_id_have_focus(editor_engine.current_box.id)
     {
       match style {
         CaretPaintStyle::GlobalCursor => {
-          render_pipeline! {
-            @push_into pipeline at ZOrder::Caret =>
-              RenderOp::RequestShowCaretAtPositionRelTo(
-                editor_engine.current_box.style_adjusted_origin_pos, editor_buffer.get_caret(CaretKind::Raw))
-          };
+          render_ops.push(RenderOp::RequestShowCaretAtPositionRelTo(
+            editor_engine.current_box.style_adjusted_origin_pos,
+            editor_buffer.get_caret(CaretKind::Raw),
+          ));
         }
         CaretPaintStyle::LocalPaintedEffect => {
           let str_at_caret: String = if let Some(UnicodeStringSegmentSliceResult {
@@ -191,23 +187,22 @@ impl EditorEngineRenderApi {
             DEFAULT_CURSOR_CHAR.into()
           };
 
-          render_pipeline! {
-            @push_into pipeline
-            at ZOrder::Caret
-            =>
-              RenderOp::MoveCursorPositionRelTo(
-                editor_engine.current_box.style_adjusted_origin_pos, editor_buffer.get_caret(CaretKind::Raw)),
-              RenderOp::PrintTextWithAttributes(
-                str_at_caret,
-                style! { attrib: [reverse] }.into()),
-              RenderOp::MoveCursorPositionRelTo(
-                editor_engine.current_box.style_adjusted_origin_pos, editor_buffer.get_caret(CaretKind::Raw))
-          };
+          render_ops.push(RenderOp::MoveCursorPositionRelTo(
+            editor_engine.current_box.style_adjusted_origin_pos,
+            editor_buffer.get_caret(CaretKind::Raw),
+          ));
+          render_ops.push(RenderOp::PrintTextWithAttributes(
+            str_at_caret,
+            style! { attrib: [reverse] }.into(),
+          ));
+          render_ops.push(RenderOp::MoveCursorPositionRelTo(
+            editor_engine.current_box.style_adjusted_origin_pos,
+            editor_buffer.get_caret(CaretKind::Raw),
+          ));
+          render_ops.push(RenderOp::ResetColor);
         }
       }
     }
-
-    pipeline
   }
 
   pub fn render_empty_state<S, A>(render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
@@ -250,7 +245,8 @@ impl EditorEngineRenderApi {
             editor_engine.current_box.style_adjusted_origin_pos,
             content_cursor_pos.add_row_with_bounds(
               ch!(1), editor_engine.current_box.style_adjusted_bounds_size.rows)),
-          RenderOp::PrintTextWithAttributes("👀".into(), None)
+          RenderOp::PrintTextWithAttributes("👀".into(), None),
+          RenderOp::ResetColor
       };
     }
 
