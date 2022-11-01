@@ -66,6 +66,27 @@ macro_rules! render_ops {
       render_ops
     }
   };
+
+  // @add_to: If any ($arg_render_op)* are passed, then add to it.
+  (
+    @add_to
+    $arg_render_ops: expr
+    =>
+    $(                      /* Start a repetition. */
+      $arg_render_op: expr  /* Expression. */
+    )                       /* End repetition. */
+    ,                       /* Comma separated. */
+    *                       /* Zero or more times. */
+  ) => {
+    /* Enclose the expansion in a block so that we can use multiple statements. */
+    {
+      /* Start a repetition. */
+      $(
+        /* Each repeat will contain the following statement, with $arg_render_op replaced. */
+        $arg_render_ops.list.push($arg_render_op);
+      )*
+    }
+  };
 }
 
 // ┏━━━━━━━━━━━┓
@@ -80,7 +101,7 @@ macro_rules! render_ops {
 ///   [`RenderOp::PrintTextWithAttributes(..)`]]
 /// - etc.
 ///
-/// What is an atomic paint operation?
+/// # What is an atomic paint operation?
 /// 1. It moves the cursor using:
 ///     1. [`RenderOp::MoveCursorPositionAbs`]
 ///     2. [`RenderOp::MoveCursorPositionRelTo`]
@@ -100,9 +121,18 @@ macro_rules! render_ops {
 /// let len = render_ops.len();
 /// let iter = render_ops.iter();
 /// ```
+///
+/// # Paint optimization
+/// In order to ensure that things on the terminal screen aren't being needlessly drawn (when they
+/// have already been drawn before and are on screen), it is important to keep track of the position
+/// and bounds of each [RenderOps]. This allows [optimized_paint::clear_flex_box] to perform its
+/// magic by clearing out the space for a [RenderOps] before it is painted. This is needed for
+/// managing cursor movement (cursors are painted when moved, but the old cursor doesn't get
+/// cleared).
 #[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct RenderOps {
   pub list: Vec<RenderOp>,
+  pub flex_box: Option<FlexBox>,
 }
 
 pub mod render_ops_helpers {
@@ -120,11 +150,31 @@ pub mod render_ops_helpers {
 
   impl Debug for RenderOps {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      let mut vec_lines: Vec<String> = vec![format!("RenderOps.len(): {}", self.list.len())];
+      let mut vec_lines: Vec<String> = vec![];
+
+      // First line.
+      let first_line: String = {
+        let mut line = format!("RenderOps.len(): {}", self.list.len());
+        if let Some(ref flex_box) = self.flex_box {
+          let flex_box_str = format!(
+            ", origin: {:?}, size: {:?}",
+            flex_box.style_adjusted_origin_pos, flex_box.style_adjusted_bounds_size
+          );
+          line.push_str(&flex_box_str);
+        } else {
+          line.push_str(", flex_box: None");
+        }
+        line
+      };
+      vec_lines.push(first_line);
+
+      // Subsequent lines (optional).
       for render_op in self.iter() {
         let line: String = format!("[{render_op:?}]");
         vec_lines.push(line);
       }
+
+      // Join all lines.
       write!(f, "\n    - {}", vec_lines.join("\n      - "))
     }
   }
@@ -192,6 +242,7 @@ impl Default for RenderOp {
   fn default() -> Self { Self::Noop }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum FlushKind {
   JustFlush,
   ClearBeforeFlush,

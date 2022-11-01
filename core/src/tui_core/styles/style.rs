@@ -196,7 +196,7 @@ mod helpers {
       write!(
         f,
         "Style {{ {} | fg: {:?} | bg: {:?} | padding: {:?} }}",
-        msg_vec.join("+"),
+        msg_vec.join(" + "),
         self.color_fg,
         self.color_bg,
         self.padding.unwrap_or_else(|| ch!(0))

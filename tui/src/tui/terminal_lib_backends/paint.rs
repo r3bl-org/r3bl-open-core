@@ -35,8 +35,264 @@ use crate::{tui::DEBUG_SHOW_PIPELINE, *};
 /// 2. [RenderOp::RequestShowCaretAtPositionRelTo]
 ///
 /// See [RenderOps] for more details of "atomic paint operations".
-// TODO: accept Option<RenderPipeline> from shared_tw_data to compare pipeline against (speed up re-rendering)
 pub async fn paint(pipeline: &RenderPipeline, flush_kind: FlushKind, shared_tw_data: &SharedTWData) {
+  let maybe_saved_pipeline = shared_tw_data.read().await.maybe_render_pipeline.clone();
+
+  if let Some(saved_pipeline) = maybe_saved_pipeline {
+    optimized_paint::paint(pipeline, &saved_pipeline, flush_kind, shared_tw_data).await;
+  } else {
+    no_optimize_paint(pipeline, flush_kind, shared_tw_data).await;
+  }
+
+  shared_tw_data.write().await.maybe_render_pipeline = Some(pipeline.clone());
+}
+
+pub mod optimized_paint {
+  use super::*;
+
+  impl RenderOps {
+    async fn paint(&self, skip_flush: &mut bool, shared_tw_data: &SharedTWData) {
+      for op in self.iter() {
+        route_paint_render_op_to_backend(skip_flush, op, shared_tw_data).await;
+      }
+    }
+
+    fn contains_hoisted_ops(&self) -> bool {
+      self.iter().any(|op| {
+        matches!(
+          op,
+          RenderOp::RequestShowCaretAtPositionAbs(_) | RenderOp::RequestShowCaretAtPositionRelTo(_, _)
+        )
+      })
+    }
+
+    fn contains_paint_caret_ops(&self) -> bool {
+      self.iter().any(|op| {
+        if let RenderOp::PrintTextWithAttributes(_, Some(style)) = op {
+          style.reverse
+        } else {
+          false
+        }
+      })
+    }
+
+    fn contains_clear_screen_ops(&self) -> bool { self.iter().any(|op| matches!(op, RenderOp::ClearScreen)) }
+
+    fn get_text_with_attributes_ops(&self) -> Vec<usize> {
+      let vec_op: Vec<&RenderOp> = self
+        .iter()
+        .filter(|op| matches!(op, RenderOp::PrintTextWithAttributes(_, _)))
+        .collect();
+
+      vec_op
+        .iter()
+        .map(|op| {
+          if let RenderOp::PrintTextWithAttributes(string, _) = op {
+            string.len()
+          } else {
+            0
+          }
+        })
+        .collect()
+    }
+
+    /// Text can be more or less but not equal. Heuristic to determine if we should paint the entire
+    /// screen or just the changed parts.
+    fn has_less_or_more_text_than(&self, other: &Self) -> bool {
+      let lhs_ops = self.get_text_with_attributes_ops();
+      let rhs_ops = other.get_text_with_attributes_ops();
+      lhs_ops.iter().sum::<usize>() != rhs_ops.iter().sum::<usize>()
+    }
+
+    // Heuristic to determine if we should paint the entire screen or just the changed parts.
+    fn has_different_lines_than(&self, other: &Self) -> bool {
+      let lhs_ops = self.get_text_with_attributes_ops();
+      let rhs_ops = other.get_text_with_attributes_ops();
+      lhs_ops.len() != rhs_ops.len()
+    }
+
+    fn has_fewer_ops_than(&self, other: &Self) -> bool { self.len() < other.len() }
+  }
+
+  impl<'a> From<&'a RenderPipeline> for Vec<&'a RenderOps> {
+    fn from(pipeline: &'a RenderPipeline) -> Self {
+      // Vec of special (hoisted) RenderOps that should only be rendered at the very end.
+      let mut vec_hoisted_ops: Vec<&RenderOps> = vec![];
+
+      // Vec of all other RenderOps that should be rendered in the order they were added to the
+      // pipeline.
+      let mut vec_ops: Vec<&RenderOps> = vec![];
+
+      // Iterate over all ZOrder in the pipeline, populate vec_ops, and vec_hoisted_ops.
+      for z_order in RENDER_ORDERED_Z_ORDER_ARRAY.iter() {
+        if let Some(vec_render_ops) = pipeline.get(z_order) {
+          for render_ops in vec_render_ops.iter() {
+            if render_ops.contains_hoisted_ops() {
+              vec_hoisted_ops.push(render_ops);
+            } else {
+              vec_ops.push(render_ops);
+            }
+          }
+        }
+      }
+
+      // Log error if special_hoisted_op_vec has more than one item.
+      if vec_hoisted_ops.len() > 1 {
+        log_no_err!(
+          WARN,
+          "🥕 Too many requests to show caret at position (some will be clobbered): {:?}",
+          vec_hoisted_ops,
+        );
+      }
+
+      // Add the special (hoisted) RenderOps to the end of the ops Vec.
+      vec_ops.extend(vec_hoisted_ops);
+
+      vec_ops
+    }
+  }
+
+  pub async fn paint(
+    pipeline: &RenderPipeline,
+    saved_pipeline: &RenderPipeline,
+    flush_kind: FlushKind,
+    shared_tw_data: &SharedTWData,
+  ) {
+    let mut skip_flush = false;
+
+    let new_vec_render_ops: Vec<&RenderOps> = pipeline.into();
+    let saved_vec_render_ops: Vec<&RenderOps> = saved_pipeline.into();
+
+    // Fewer new_vec_render_ops than saved_vec_render_ops so abort optimization.
+    if new_vec_render_ops.len() < saved_vec_render_ops.len() {
+      no_optimize_paint(pipeline, flush_kind, shared_tw_data).await;
+      return;
+    }
+
+    // More or equal new_vec_render_ops than saved_vec_render_ops so continue optimization.
+    for (new_vec_index, new_ops) in new_vec_render_ops.iter().enumerate() {
+      match saved_vec_render_ops.get(new_vec_index) {
+        // RenderOps found at new_vec_index in new_vec_render_ops & saved_vec_render_ops.
+        Some(saved_ops) => {
+          if new_ops != saved_ops {
+            call_if_true!(DEBUG_SHOW_PAINT_OPTIMIZATION_HEURISTIC, {
+              log_no_err!(
+                DEBUG,
+                "\
+\n🤔🧨🎨 [Repaint heuristics] new_ops != saved_ops, 
+\rnew_ops: {:?}, 
+\rsaved_ops: {:?}, 
+\nhas_fewer_ops_than:        {:?}\
+\nhas_less_or_more_text_than:{:?}\
+\nhas_different_lines_than:  {:?}\
+\ncontains_paint_caret_ops:  {:?}\
+\n",
+                new_ops,
+                saved_ops,
+                if new_ops.has_fewer_ops_than(saved_ops) {
+                  "✅"
+                } else {
+                  "🚫"
+                },
+                if new_ops.has_less_or_more_text_than(saved_ops) {
+                  "✅"
+                } else {
+                  "🚫"
+                },
+                if new_ops.has_different_lines_than(saved_ops) {
+                  "✅"
+                } else {
+                  "🚫"
+                },
+                if new_ops.contains_paint_caret_ops() {
+                  "✅"
+                } else {
+                  "🚫"
+                },
+              );
+            });
+
+            // Trigger a partial or full screen repaint only when these heuristics are triggered.
+            let should_clear_and_repaint_ops = {
+              new_ops.has_fewer_ops_than(saved_ops)
+                || new_ops.has_less_or_more_text_than(saved_ops)
+                || new_ops.has_different_lines_than(saved_ops)
+                || new_ops.contains_paint_caret_ops()
+            };
+            if should_clear_and_repaint_ops {
+              if new_ops.flex_box.is_some() {
+                call_if_true!(DEBUG_SHOW_PIPELINE, {
+                  log_no_err!(DEBUG, "⚡⚡⚡ PARTIAL CLEAR & REPAINT");
+                });
+                clear_flex_box(new_ops, &mut skip_flush, shared_tw_data).await;
+                new_ops.paint(&mut skip_flush, shared_tw_data).await;
+              } else {
+                call_if_true!(DEBUG_SHOW_PIPELINE, {
+                  log_no_err!(DEBUG, "🔁🔁🔁 FULL CLEAR & REPAINT");
+                });
+                no_optimize_paint(pipeline, flush_kind, shared_tw_data).await;
+                return;
+              }
+            } else {
+              new_ops.paint(&mut skip_flush, shared_tw_data).await;
+            }
+          }
+        }
+        // No RenderOps found at new_vec_index in saved_vec_render_ops.
+        None => {
+          // Paint the whole RenderOps.
+          if new_ops.contains_clear_screen_ops() {
+            no_optimize_paint(pipeline, flush_kind, shared_tw_data).await;
+            return;
+          } else {
+            new_ops.paint(&mut skip_flush, shared_tw_data).await;
+          }
+        }
+      }
+    }
+
+    // Flush everything to the terminal.
+    if !skip_flush {
+      RenderOp::default().flush()
+    };
+
+    // Debug output.
+    call_if_true!(DEBUG_SHOW_PIPELINE, {
+      log_no_err!(INFO, "🎨 render_pipeline::paint() ok ✅: pipeline: \n{:?}", pipeline,);
+    });
+  }
+
+  /// See [RenderOps] for a detailed explanation of why [flex_box](RenderOps::flex_box) is
+  /// necessary.
+  pub async fn clear_flex_box(new_ops: &RenderOps, skip_flush: &mut bool, shared_tw_data: &SharedTWData) {
+    if let Some(ref flex_box) = new_ops.flex_box {
+      let editor_box: EditorEngineFlexBox = flex_box.into();
+      let EditorEngineFlexBox {
+        style_adjusted_origin_pos: origin_pos,
+        style_adjusted_bounds_size: box_size,
+        ..
+      } = editor_box;
+
+      let mut clear_render_ops = render_ops!();
+
+      let cols = box_size.cols;
+      let rows = box_size.rows;
+
+      for row_idx in 0..ch!(@to_usize rows) {
+        clear_render_ops.push(RenderOp::MoveCursorPositionAbs(
+          position!( col: origin_pos.col, row: origin_pos.row + ch!(row_idx)),
+        ));
+        clear_render_ops.push(RenderOp::ResetColor);
+        let empty_spaces = " ".repeat(ch!(@to_usize cols));
+        clear_render_ops.push(RenderOp::PrintTextWithAttributes(empty_spaces, None));
+      }
+
+      clear_render_ops.paint(skip_flush, shared_tw_data).await;
+    }
+  }
+}
+
+pub async fn no_optimize_paint(pipeline: &RenderPipeline, flush_kind: FlushKind, shared_tw_data: &SharedTWData) {
   let mut skip_flush = false;
 
   if let FlushKind::ClearBeforeFlush = flush_kind {
@@ -48,15 +304,16 @@ pub async fn paint(pipeline: &RenderPipeline, flush_kind: FlushKind, shared_tw_d
 
   // Execute the (unspecial) RenderOps, in the correct order of the ZOrder enum.
   for z_order in RENDER_ORDERED_Z_ORDER_ARRAY.iter() {
-    if let Some(render_ops_set) = pipeline.get(z_order) {
-      for render_ops in render_ops_set.iter() {
-        for render_op in render_ops.iter() {
-          if let RenderOp::RequestShowCaretAtPositionAbs(_) | RenderOp::RequestShowCaretAtPositionRelTo(_, _) =
-            render_op
-          {
-            special_hoisted_op_vec.push(render_op.clone());
-          } else {
-            route_paint_render_op_to_backend(&mut skip_flush, render_op, shared_tw_data).await;
+    if let Some(render_ops_vec) = pipeline.get(z_order) {
+      for (_render_ops_index, render_ops) in render_ops_vec.iter().enumerate() {
+        for (_render_op_index, render_op) in render_ops.iter().enumerate() {
+          match render_op {
+            RenderOp::RequestShowCaretAtPositionAbs(_) | RenderOp::RequestShowCaretAtPositionRelTo(_, _) => {
+              special_hoisted_op_vec.push(render_op.clone());
+            }
+            _ => {
+              route_paint_render_op_to_backend(&mut skip_flush, render_op, shared_tw_data).await;
+            }
           }
         }
       }
