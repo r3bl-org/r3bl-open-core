@@ -85,6 +85,20 @@ impl UnicodeString {
     &self.string[..string_end_byte_index]
   }
 
+  /// If the `self.string` is shorter than `max_display_col_count` then a padding string is returned
+  /// (that is comprised of the `pad_char` repeated).
+  pub fn postfix_pad_with(&self, pad_char: char, max_display_col_count: ChUnit) -> Option<String> {
+    // Pad the line to the max cols w/ spaces. This removes any "ghost" carets that were painted in
+    // a previous render.
+    let truncated_line_display_width = UnicodeString::from(&self.string).display_width;
+    if truncated_line_display_width < max_display_col_count {
+      let padding = max_display_col_count - truncated_line_display_width;
+      Some(pad_char.to_string().repeat(ch!(@to_usize padding)))
+    } else {
+      None
+    }
+  }
+
   /// `local_index` is the index of the grapheme cluster in the `vec_segment`.
   pub fn at_logical_index(&self, logical_index: usize) -> Option<&GraphemeClusterSegment> { self.get(logical_index) }
 

@@ -220,13 +220,13 @@ pub mod optimized_paint {
                 || new_ops.contains_paint_caret_ops()
             };
             if should_clear_and_repaint_ops {
+              // Try partial clear & paint.
               if new_ops.flex_box.is_some() {
-                call_if_true!(DEBUG_SHOW_PIPELINE, {
-                  log_no_err!(DEBUG, "⚡⚡⚡ PARTIAL CLEAR & REPAINT");
-                });
                 clear_flex_box(new_ops, &mut skip_flush, shared_tw_data).await;
                 new_ops.paint(&mut skip_flush, shared_tw_data).await;
-              } else {
+              }
+              // If can't do partial, do a full un-optimized repaint.
+              else {
                 call_if_true!(DEBUG_SHOW_PIPELINE, {
                   log_no_err!(DEBUG, "🔁🔁🔁 FULL CLEAR & REPAINT");
                 });
@@ -263,9 +263,16 @@ pub mod optimized_paint {
   }
 
   /// See [RenderOps] for a detailed explanation of why [flex_box](RenderOps::flex_box) is
-  /// necessary.
+  /// necessary. If [flex_box](RenderOps::flex_box) is not None, but it is default, then don't
+  /// perform the clear optimization. This means that the component "cleans up" after itself when it
+  /// moves the caret.
   pub async fn clear_flex_box(new_ops: &RenderOps, skip_flush: &mut bool, shared_tw_data: &SharedTWData) {
     if let Some(ref flex_box) = new_ops.flex_box {
+      // Check whether to skip the clear optimization.
+      if flex_box == &FlexBox::default() {
+        return;
+      }
+
       let editor_box: EditorEngineFlexBox = flex_box.into();
       let EditorEngineFlexBox {
         style_adjusted_origin_pos: origin_pos,
@@ -288,6 +295,10 @@ pub mod optimized_paint {
       }
 
       clear_render_ops.paint(skip_flush, shared_tw_data).await;
+
+      call_if_true!(DEBUG_SHOW_PIPELINE, {
+        log_no_err!(DEBUG, "⚡⚡⚡ PARTIAL CLEAR & REPAINT");
+      });
     }
   }
 }
