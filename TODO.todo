@@ -42,16 +42,18 @@ tui:
   ☐ checkbox (single, multi select)
   ☐ form
 
-framework:
-  ☐ animation
-    - https://github.com/SergioBenitez/Rocket/discussions/1735#discussioncomment-941576
-    - https://notado.substack.com/p/do-you-really-need-a-message-queue?sd=pf
-    - https://github.com/smallnest/concurrency-programming-via-rust
+performance:
   ☐ [compositor](https://github.com/r3bl-org/r3bl_rs_utils/issues/46)
     - https://www.reddit.com/r/rust/comments/ydi7xu/announcing_imaradiff_a_reliably_performant/
     - https://github.com/pascalkuthe/imara-diff
     - https://github.com/nazmulidris/rust-sloth
   ☐ [Add termion support](https://github.com/r3bl-org/r3bl_rs_utils/issues/24)
+
+framework:
+  ☐ animation
+    - https://github.com/SergioBenitez/Rocket/discussions/1735#discussioncomment-941576
+    - https://notado.substack.com/p/do-you-really-need-a-message-queue?sd=pf
+    - https://github.com/smallnest/concurrency-programming-via-rust
   ☐ [Filter unsupported graphemes in keypress](https://github.com/r3bl-org/r3bl_rs_utils/issues/26)
   
 testing:
