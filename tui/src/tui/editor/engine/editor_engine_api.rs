@@ -96,7 +96,12 @@ impl EditorEngineRenderApi {
         EditorEngineRenderApi::render_empty_state(&render_args)
       } else {
         let mut render_ops = render_ops!();
-        render_ops.flex_box = Some(current_box.clone());
+
+        // Opt-in to optimized painting for caret RenderOp, but don't really actually use it since
+        // there is no need (as the editor cleans up the caret painting by rendering whitespace at
+        // the end of each line of content that is rendered.
+        render_ops.flex_box = Some(FlexBox::default());
+
         EditorEngineRenderApi::render_content(&render_args, &mut render_ops);
         EditorEngineRenderApi::render_caret(CaretPaintStyle::LocalPaintedEffect, &render_args, &mut render_ops);
         let mut render_pipeline = render_pipeline!();
@@ -140,6 +145,10 @@ impl EditorEngineRenderApi {
       let truncated_line = UnicodeString::from(truncated_line);
       let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
 
+      // Pad the line to the max cols w/ spaces. This removes any "ghost" carets that were painted
+      // in a previous render.
+      let truncated_line_unicode_str = UnicodeString::from(truncated_line);
+
       render_ops.push(RenderOp::MoveCursorPositionRelTo(
         editor_engine.current_box.style_adjusted_origin_pos,
         position! { col: 0 , row: ch!(@to_usize row_index) },
@@ -149,6 +158,13 @@ impl EditorEngineRenderApi {
         truncated_line.into(),
         editor_engine.current_box.get_computed_style(),
       ));
+      // Remove any "ghost" carets that were painted in a previous render.
+      if let Some(postfix_padding) = truncated_line_unicode_str.postfix_pad_with(' ', max_display_col_count) {
+        render_ops.push(RenderOp::PrintTextWithAttributes(
+          postfix_padding,
+          editor_engine.current_box.get_computed_style(),
+        ));
+      }
       render_ops.push(RenderOp::ResetColor);
     }
   }
