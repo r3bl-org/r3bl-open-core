@@ -160,3 +160,5 @@ pub enum BorderGlyphCharacter {
   #[strum(to_string = "│")]
   Vertical,
 }
+
+pub const SPACER: &str = " ";

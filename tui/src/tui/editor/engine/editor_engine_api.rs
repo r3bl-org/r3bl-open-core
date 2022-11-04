@@ -139,26 +139,17 @@ impl EditorEngineRenderApi {
       let truncated_line = UnicodeString::from(truncated_line);
       let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
 
-      // Pad the line to the max cols w/ spaces. This removes any "ghost" carets that were painted
-      // in a previous render.
-      let truncated_line_unicode_str = UnicodeString::from(truncated_line);
-
       render_ops.push(RenderOp::MoveCursorPositionRelTo(
         editor_engine.current_box.style_adjusted_origin_pos,
         position! { col: 0 , row: ch!(@to_usize row_index) },
       ));
       render_ops.push(RenderOp::ApplyColors(editor_engine.current_box.get_computed_style()));
-      render_ops.push(RenderOp::PrintTextWithAttributes(
+      // Remove any "ghost" carets that were painted in a previous render.
+      render_ops.push(RenderOp::PrintTextWithAttributesAndPadding(
         truncated_line.into(),
         editor_engine.current_box.get_computed_style(),
+        max_display_col_count,
       ));
-      // Remove any "ghost" carets that were painted in a previous render.
-      if let Some(postfix_padding) = truncated_line_unicode_str.postfix_pad_with(' ', max_display_col_count) {
-        render_ops.push(RenderOp::PrintTextWithAttributes(
-          postfix_padding,
-          editor_engine.current_box.get_computed_style(),
-        ));
-      }
       render_ops.push(RenderOp::ResetColor);
     }
   }

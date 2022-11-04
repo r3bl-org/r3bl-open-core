@@ -23,6 +23,27 @@ use crate::*;
 
 pub struct CrosstermDebugFormatRenderOp;
 
+fn format_print_text(text: &String, maybe_style: &Option<Style>) -> String {
+  match ANSIText::try_strip_ansi(text) {
+    Some(plain_text) => {
+      // Successfully stripped ANSI escape codes.
+      match maybe_style {
+        Some(style) => format!("PrintTextWithAttributes(\"{plain_text}\", {style:?})"),
+        None => format!("PrintTextWithAttributes(\"{plain_text}\", None)"),
+      }
+    }
+    None => {
+      // Couldn't strip ANSI, so just print the text.
+      match maybe_style {
+        Some(style) => {
+          format!("PrintTextWithAttributes({} bytes, {style:?})", text.len())
+        }
+        None => format!("PrintTextWithAttributes({} bytes, None)", text.len()),
+      }
+    }
+  }
+}
+
 impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
   fn debug_format(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result {
     write!(
@@ -44,24 +65,14 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
           None => "ApplyColors(None)".into(),
         },
         RenderOp::PrintTextWithAttributes(text, maybe_style) => {
-          match ANSIText::try_strip_ansi(text) {
-            Some(plain_text) => {
-              // Successfully stripped ANSI escape codes.
-              match maybe_style {
-                Some(style) => format!("PrintTextWithAttributes(\"{plain_text}\", {style:?})"),
-                None => format!("PrintTextWithAttributes(\"{plain_text}\", None)"),
-              }
-            }
-            None => {
-              // Couldn't strip ANSI, so just print the text.
-              match maybe_style {
-                Some(style) => {
-                  format!("PrintTextWithAttributes({} bytes, {style:?})", text.len())
-                }
-                None => format!("PrintTextWithAttributes({} bytes, None)", text.len()),
-              }
-            }
-          }
+          format_print_text(text, maybe_style)
+        }
+        RenderOp::PrintTextWithAttributesAndPadding(text, maybe_style, max_display_col) => {
+          format!(
+            "{}, postfix pad to {:?}",
+            format_print_text(text, maybe_style),
+            ch!(@to_usize *max_display_col)
+          )
         }
         RenderOp::CursorShow => "CursorShow".into(),
         RenderOp::CursorHide => "CursorHide".into(),

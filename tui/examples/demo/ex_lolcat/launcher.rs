@@ -18,6 +18,7 @@
 use std::io::{BufRead, BufReader};
 
 use r3bl_rs_utils_core::*;
+use r3bl_tui::SPACER;
 use tokio::fs::File;
 
 pub async fn run_app() -> CommonResult<()> {
@@ -47,7 +48,7 @@ pub async fn run_app() -> CommonResult<()> {
       } else {
         println!(
           "\r{}{}",
-          " ".repeat(line_number_str_width.into()),
+          SPACER.repeat(line_number_str_width.into()),
           my_lolcat.format_str(item_line)
         );
       }

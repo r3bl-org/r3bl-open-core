@@ -140,22 +140,17 @@ impl Component<State, Action> for ColumnRenderComponent {
       {
         let line_1_us = UnicodeString::from(line_1);
         let line_1_us_trunc = line_1_us.truncate_to_fit_size(box_bounds_size);
-        let line_1_postfix_padding = UnicodeString::from(line_1_us_trunc).postfix_pad_with(' ', box_bounds_size.cols);
         render_ops! {
           @add_to render_ops
           =>
             RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_cursor_pos),
             RenderOp::ApplyColors(current_box.get_computed_style()),
-            RenderOp::PrintTextWithAttributes(
+            RenderOp::PrintTextWithAttributesAndPadding(
               colorize_using_lolcat! (&mut self.lolcat,"{}",line_1_us_trunc),
               current_box.get_computed_style(),
+              box_bounds_size.cols
             ),
-            RenderOp::ResetColor,
-            if let Some(line_1_postfix_padding) = line_1_postfix_padding {
-              RenderOp::PrintTextWithAttributes(line_1_postfix_padding, None)
-            } else {
-              RenderOp::Noop
-            }
+            RenderOp::ResetColor
         };
       }
 

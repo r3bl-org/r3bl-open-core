@@ -69,9 +69,12 @@ impl App<State, Action> for AppNoLayout {
       let col: ChUnit = (window_size.cols - content_size_col) / 2;
       let row: ChUnit = window_size.rows / 2;
 
-      let colored_content = colorize_using_lolcat!(&mut self.lolcat, "{}", state);
+      let plain_content = format!("{}", state);
+      let unicode_string = UnicodeString::from(plain_content);
+      let colored_content = lolcat_each_char_in_unicode_string(&unicode_string, Some(&mut self.lolcat));
+      self.lolcat.color_wheel_control.seed += 1.0;
 
-      let spaces = " ".repeat(ch!(@to_usize window_size.cols));
+      let spaces = SPACER.repeat(ch!(@to_usize window_size.cols));
 
       let mut pipeline = render_pipeline!(
         @new ZOrder::Normal

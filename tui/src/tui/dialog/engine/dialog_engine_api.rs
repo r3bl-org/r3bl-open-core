@@ -265,7 +265,7 @@ mod internal_impl {
   pub fn render_border(origin_pos: &Position, bounds_size: &Size, dialog_engine: &mut DialogEngine) -> RenderOps {
     let mut ops = render_ops!();
 
-    let inner_spaces = " ".repeat(ch!(@to_usize bounds_size.cols - 2));
+    let inner_spaces = SPACER.repeat(ch!(@to_usize bounds_size.cols - 2));
 
     let maybe_style = dialog_engine.maybe_style_border.clone();
 
