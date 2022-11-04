@@ -124,15 +124,13 @@ macro_rules! render_ops {
 ///
 /// # Paint optimization
 /// In order to ensure that things on the terminal screen aren't being needlessly drawn (when they
-/// have already been drawn before and are on screen), it is important to keep track of the position
-/// and bounds of each [RenderOps]. This allows [optimized_paint::clear_flex_box] to perform its
-/// magic by clearing out the space for a [RenderOps] before it is painted. This is needed for
-/// managing cursor movement (cursors are painted when moved, but the old cursor doesn't get
-/// cleared).
+/// have already been drawn before and are on screen), it is important that a component that
+/// generates these [RenderOps] takes care of managing its own whitespace. It is best to "fill" a
+/// component's drawing area w/ spaces before drawing anything else. This way there won't be any
+/// "ghosts" from repaints past.
 #[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct RenderOps {
   pub list: Vec<RenderOp>,
-  pub flex_box: Option<FlexBox>,
 }
 
 pub mod render_ops_helpers {
@@ -153,19 +151,7 @@ pub mod render_ops_helpers {
       let mut vec_lines: Vec<String> = vec![];
 
       // First line.
-      let first_line: String = {
-        let mut line = format!("RenderOps.len(): {}", self.list.len());
-        if let Some(ref flex_box) = self.flex_box {
-          let flex_box_str = format!(
-            ", origin: {:?}, size: {:?}",
-            flex_box.style_adjusted_origin_pos, flex_box.style_adjusted_bounds_size
-          );
-          line.push_str(&flex_box_str);
-        } else {
-          line.push_str(", flex_box: None");
-        }
-        line
-      };
+      let first_line: String = format!("RenderOps.len(): {}", self.list.len());
       vec_lines.push(first_line);
 
       // Subsequent lines (optional).

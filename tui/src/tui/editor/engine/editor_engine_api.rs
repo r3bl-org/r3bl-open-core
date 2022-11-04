@@ -96,12 +96,6 @@ impl EditorEngineRenderApi {
         EditorEngineRenderApi::render_empty_state(&render_args)
       } else {
         let mut render_ops = render_ops!();
-
-        // Opt-in to optimized painting for caret RenderOp, but don't really actually use it since
-        // there is no need (as the editor cleans up the caret painting by rendering whitespace at
-        // the end of each line of content that is rendered.
-        render_ops.flex_box = Some(FlexBox::default());
-
         EditorEngineRenderApi::render_content(&render_args, &mut render_ops);
         EditorEngineRenderApi::render_caret(CaretPaintStyle::LocalPaintedEffect, &render_args, &mut render_ops);
         let mut render_pipeline = render_pipeline!();

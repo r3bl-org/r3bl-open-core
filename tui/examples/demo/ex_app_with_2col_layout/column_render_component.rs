@@ -137,42 +137,33 @@ impl Component<State, Action> for ColumnRenderComponent {
       let mut render_ops = render_ops!();
 
       // Line 1.
-      render_ops! {
-        @add_to render_ops
-        =>
-          RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_cursor_pos),
-          RenderOp::ApplyColors(current_box.get_computed_style()),
-          RenderOp::PrintTextWithAttributes(
-            colorize_using_lolcat! {
-              &mut self.lolcat,
-              "{}",
-              UnicodeString::from(line_1).truncate_to_fit_size(box_bounds_size)
-            },
-            current_box.get_computed_style(),
-          )
-      };
+      {
+        let line_1_us = UnicodeString::from(line_1);
+        let line_1_us_trunc = line_1_us.truncate_to_fit_size(box_bounds_size);
+        let line_1_postfix_padding = UnicodeString::from(line_1_us_trunc).postfix_pad_with(' ', box_bounds_size.cols);
+        render_ops! {
+          @add_to render_ops
+          =>
+            RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_cursor_pos),
+            RenderOp::ApplyColors(current_box.get_computed_style()),
+            RenderOp::PrintTextWithAttributes(
+              colorize_using_lolcat! (&mut self.lolcat,"{}",line_1_us_trunc),
+              current_box.get_computed_style(),
+            ),
+            RenderOp::ResetColor,
+            if let Some(line_1_postfix_padding) = line_1_postfix_padding {
+              RenderOp::PrintTextWithAttributes(line_1_postfix_padding, None)
+            } else {
+              RenderOp::Noop
+            }
+        };
+      }
 
       // Line 2.
-      render_ops! {
-        @add_to render_ops
-        =>
-          RenderOp::MoveCursorPositionRelTo(
-            box_origin_pos,
-            content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.rows)
-          ),
-          RenderOp::PrintTextWithAttributes(
-            colorize_using_lolcat! {
-              &mut self.lolcat,
-              "{}",
-              UnicodeString::from(line_2).truncate_to_fit_size(box_bounds_size)
-            },
-            current_box.get_computed_style(),
-          ),
-          RenderOp::ResetColor
-      };
-
-      // Paint is_focused.
-      if component_registry.has_focus.does_current_box_have_focus(current_box) {
+      {
+        let line_2_us = UnicodeString::from(line_2);
+        let line_2_us_trunc = line_2_us.truncate_to_fit_size(box_bounds_size);
+        let line_2_postfix_padding = UnicodeString::from(line_2_us_trunc).postfix_pad_with(' ', box_bounds_size.cols);
         render_ops! {
           @add_to render_ops
           =>
@@ -180,13 +171,38 @@ impl Component<State, Action> for ColumnRenderComponent {
               box_origin_pos,
               content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.rows)
             ),
-            RenderOp::PrintTextWithAttributes("👀".into(), None)
+            RenderOp::ApplyColors(current_box.get_computed_style()),
+            RenderOp::PrintTextWithAttributes(
+              colorize_using_lolcat! (&mut self.lolcat,"{}",line_2_us_trunc),
+              current_box.get_computed_style(),
+            ),
+            RenderOp::ResetColor,
+            if let Some(line_2_postfix_padding) = line_2_postfix_padding {
+              RenderOp::PrintTextWithAttributes(line_2_postfix_padding, None)
+            } else {
+              RenderOp::Noop
+            }
         };
       }
 
+      // Paint is_focused.
+      render_ops! {
+        @add_to render_ops
+        =>
+          RenderOp::MoveCursorPositionRelTo(
+            box_origin_pos,
+            content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.rows)
+          ),
+          if component_registry.has_focus.does_current_box_have_focus(current_box) {
+            RenderOp::PrintTextWithAttributes("👀".into(), None)
+          }
+          else {
+            RenderOp::PrintTextWithAttributes(" ".into(), None)
+          }
+      };
+
       // Add render_ops to pipeline.
       let mut pipeline = render_pipeline!();
-      render_ops.flex_box = Some(current_box.clone());
       pipeline.push(ZOrder::Normal, render_ops);
 
       // Log pipeline.
