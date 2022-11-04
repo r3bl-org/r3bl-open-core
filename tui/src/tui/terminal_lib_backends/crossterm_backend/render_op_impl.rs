@@ -79,7 +79,10 @@ impl PaintRenderOp for RenderOpImplCrossterm {
         apply_colors(style);
       }
       RenderOp::PrintTextWithAttributes(text, maybe_style) => {
-        print_text_with_attributes(text, maybe_style, shared_tw_data).await;
+        print_text_with_attributes(text, maybe_style, shared_tw_data, None).await;
+      }
+      RenderOp::PrintTextWithAttributesAndPadding(text, maybe_style, max_display_col) => {
+        print_text_with_attributes(text, maybe_style, shared_tw_data, Some(*max_display_col)).await;
       }
     }
   }
@@ -200,7 +203,12 @@ fn set_bg_color(color: &TWColor) {
   )
 }
 
-async fn print_text_with_attributes(text_arg: &String, maybe_style: &Option<Style>, shared_tw_data: &SharedTWData) {
+async fn print_text_with_attributes(
+  text_arg: &String,
+  maybe_style: &Option<Style>,
+  shared_tw_data: &SharedTWData,
+  maybe_max_display_col: Option<ChUnit>,
+) {
   // Are ANSI codes present?
   let truncation_policy = {
     if ANSIText::try_strip_ansi(text_arg).is_some() {
@@ -244,10 +252,10 @@ async fn print_text_with_attributes(text_arg: &String, maybe_style: &Option<Styl
 
   match truncation_policy {
     TruncationPolicy::ANSIText => {
-      truncate_ansi_text(&mut paint_args, &mut needs_reset).await;
+      truncate_ansi_text(&mut paint_args, &mut needs_reset, maybe_max_display_col).await;
     }
     TruncationPolicy::PlainText => {
-      truncate_plain_text(&mut paint_args).await;
+      truncate_plain_text(&mut paint_args, maybe_max_display_col).await;
     }
   }
 
@@ -280,37 +288,66 @@ async fn print_text_with_attributes(text_arg: &String, maybe_style: &Option<Styl
 
   async fn truncate_ansi_text<'a>(
     PaintArgs {
-      text,
-      log_msg,
+      text: mut_text_arg,
+      log_msg: mut_log_msg,
       shared_tw_data,
       ..
     }: &mut PaintArgs<'a>,
     needs_reset: &mut bool,
+    maybe_max_display_col: Option<ChUnit>,
   ) {
     // Check whether the text needs to be truncated to fit the terminal window.
     let current_cursor_col = shared_tw_data.read().await.cursor_position.col;
     let max_terminal_width = shared_tw_data.read().await.size.cols;
-    let max_display_cols = max_terminal_width - current_cursor_col;
-    let ansi_text = text.ansi_text();
-    let ansi_text_segments = ansi_text.segments(None);
+    let max_terminal_display_cols = max_terminal_width - current_cursor_col;
 
-    if ansi_text_segments.len() > ch!(@to_usize max_display_cols) {
-      // Truncate the text.
-      let truncated_segments = ansi_text.segments(Some(ch!(@to_usize max_display_cols)));
+    // Padding (postfix add spaces to fit max_display_col).
+    {
+      let arg = mut_text_arg.to_string();
+      let ansi_text = arg.ansi_text();
+      let ansi_text_segments = ansi_text.segments(None);
 
-      let truncated_seg_len = truncated_segments.len();
-      let truncated_seg_unicode_width = truncated_segments.unicode_width;
+      if let Some(max_display_col) = maybe_max_display_col {
+        let ansi_len = ansi_text_segments.len();
+        let max_cols = ch!(@to_usize max_display_col);
+        if max_cols > ansi_len {
+          let prefix: String = ansi_text_segments.into();
+          let postfix = SPACER.repeat(max_cols - ansi_len);
+          let padded_text = format!("{}{}", prefix, postfix);
+          *mut_text_arg = Cow::from(padded_text);
+          *mut_log_msg = Cow::from(format!(
+            "ANSI 🥊 display_cols: {:?}, #seg: {:?}, bytes: {:?}, text: {:?}",
+            max_cols,
+            ansi_len,
+            mut_text_arg.len(),
+            mut_text_arg
+          ));
+        }
+      }
+    }
 
-      let buff: String = truncated_segments.into();
-      *text = Cow::from(buff);
-      *log_msg = Cow::from(format!(
-        "ANSI ✂️ display_cols: {:?}, #seg: {:?}, bytes: {:?}, text: {:?}",
-        truncated_seg_unicode_width,
-        truncated_seg_len,
-        text.len(),
-        text
-      ));
-      *needs_reset = true;
+    // Truncation (clip to window width, max_window_cols).
+    {
+      let arg = mut_text_arg.to_string();
+      let ansi_text = arg.ansi_text();
+      let ansi_text_segments = ansi_text.segments(None);
+      if ansi_text_segments.len() > ch!(@to_usize max_terminal_display_cols) {
+        let truncated_segments = ansi_text.segments(Some(ch!(@to_usize max_terminal_display_cols)));
+
+        let truncated_seg_len = truncated_segments.len();
+        let truncated_seg_unicode_width = truncated_segments.unicode_width;
+
+        let buff: String = truncated_segments.into();
+        *mut_text_arg = Cow::from(buff);
+        *mut_log_msg = Cow::from(format!(
+          "ANSI ✂️ display_cols: {:?}, #seg: {:?}, bytes: {:?}, text: {:?}",
+          truncated_seg_unicode_width,
+          truncated_seg_len,
+          mut_text_arg.len(),
+          mut_text_arg
+        ));
+        *needs_reset = true;
+      }
     }
   }
 
@@ -321,15 +358,29 @@ async fn print_text_with_attributes(text_arg: &String, maybe_style: &Option<Styl
       shared_tw_data,
       ..
     }: &mut PaintArgs<'a>,
+    maybe_max_display_col: Option<ChUnit>,
   ) {
     // Check whether the text needs to be truncated to fit the terminal window.
     let cursor_position = shared_tw_data.read().await.cursor_position;
-    let max_cols = shared_tw_data.read().await.size.cols;
+    let max_window_cols = shared_tw_data.read().await.size.cols;
     let plain_text_unicode_string: UnicodeString = text.as_ref().into();
     let plain_text_len = plain_text_unicode_string.display_width;
-    if cursor_position.col + plain_text_len > max_cols {
+
+    // Padding (postfix add spaces to fit max_display_col).
+    if let Some(max_display_cols) = maybe_max_display_col {
+      let pad_len = max_display_cols - plain_text_len;
+      if pad_len > ch!(0) {
+        let pad_str = SPACER.repeat(ch!(@to_usize pad_len));
+        // Update plain_text & log_msg after truncating.
+        *text = Cow::from(format!("{}{}", text, pad_str));
+        *log_msg = Cow::from(format!("\"{text}🥊\""));
+      }
+    }
+
+    // Truncation (clip to window width, max_window_cols).
+    if cursor_position.col + plain_text_len > max_window_cols {
       let trunc_plain_text = plain_text_unicode_string
-        .truncate_end_to_fit_display_cols(max_cols - cursor_position.col)
+        .truncate_end_to_fit_display_cols(max_window_cols - cursor_position.col)
         .to_string();
       // Update plain_text & log_msg after truncating.
       *text = Cow::from(trunc_plain_text);

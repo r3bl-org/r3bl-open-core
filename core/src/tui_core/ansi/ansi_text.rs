@@ -91,6 +91,10 @@ impl ANSIStringExt for Cow<'_, str> {
   fn ansi_text(&self) -> ANSIText { ANSIText::new(self) }
 }
 
+impl ANSIStringExt for String {
+  fn ansi_text(&self) -> ANSIText { ANSIText::new(self) }
+}
+
 // ┏━━━━━━━━━━┓
 // ┃ ANSIText ┃
 // ┛          ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
