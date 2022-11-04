@@ -71,11 +71,15 @@ impl App<State, Action> for AppNoLayout {
 
       let colored_content = colorize_using_lolcat!(&mut self.lolcat, "{}", state);
 
+      let spaces = " ".repeat(ch!(@to_usize window_size.cols));
+
       let mut pipeline = render_pipeline!(
         @new ZOrder::Normal
         =>
           RenderOp::ResetColor,
-          RenderOp::MoveCursorPositionAbs(position!(col:col, row:row)),
+          RenderOp::MoveCursorPositionAbs(position!(col: 0, row:row)),
+          RenderOp::PrintTextWithAttributes(spaces, None),
+          RenderOp::MoveCursorPositionAbs(position!(col: col, row: row)),
           RenderOp::PrintTextWithAttributes(colored_content, None),
           RenderOp::ResetColor
       );

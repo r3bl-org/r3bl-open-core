@@ -1,11 +1,11 @@
 {
 	"files": [
 		{
-			"path": "tui/src/tui/dialog/engine/dialog_engine_api.rs",
+			"path": "tui/src/tui/editor/engine/editor_engine_internal_api.rs",
 			"bookmarks": [
 				{
-					"line": 71,
-					"column": 6,
+					"line": 1206,
+					"column": 28,
 					"label": ""
 				}
 			]
