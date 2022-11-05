@@ -1,0 +1,18 @@
+┏━━━━━━━━━━━━━━━┓
+┃ r3bl_rs_utils ┃
+┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+performance:
+  ☐ [compositor](https://github.com/r3bl-org/r3bl_rs_utils/issues/46)
+    - https://www.reddit.com/r/rust/comments/ydi7xu/announcing_imaradiff_a_reliably_performant/
+    - https://github.com/pascalkuthe/imara-diff
+    - https://github.com/nazmulidris/rust-sloth
+
+  ☐ [Add termion support](https://github.com/r3bl-org/r3bl_rs_utils/issues/24)
+
+multi user editor:
+  ☐ editor engine enhancements (multi-user editing):
+    - add support for multiple carets & network service providers to move them
+
+vscode ext:
+  ☐ write vscode ext to help w/ parsing RSX
+    - eg: https://github.com/TechTheAwesome/code-yew-server

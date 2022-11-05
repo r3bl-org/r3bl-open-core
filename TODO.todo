@@ -34,20 +34,9 @@ editor engine extras (save/load buffer to/from file/surrealdb):
   ☐ persist buffer to surrealdb
   ☐ load buffer to surrealdb
 
-editor engine enhancements (multi-user editing):
-  ☐ multiple carets:
-    ☐ add support for multiple carets & network service providers to move them
-
 tui:
   ☐ checkbox (single, multi select)
   ☐ form
-
-performance:
-  ☐ [compositor](https://github.com/r3bl-org/r3bl_rs_utils/issues/46)
-    - https://www.reddit.com/r/rust/comments/ydi7xu/announcing_imaradiff_a_reliably_performant/
-    - https://github.com/pascalkuthe/imara-diff
-    - https://github.com/nazmulidris/rust-sloth
-  ☐ [Add termion support](https://github.com/r3bl-org/r3bl_rs_utils/issues/24)
 
 framework:
   ☐ animation
@@ -63,11 +52,7 @@ testing:
 
 cmdr:
   ☐ [Create PRD](https://github.com/r3bl-org/r3bl_rs_utils/issues/39)
-
-vscode ext:
-  ☐ write vscode ext to help w/ parsing RSX
-    - eg: https://github.com/TechTheAwesome/code-yew-server
-
+    
 writing:
   ☐ [RSX & DSL articles](https://github.com/r3bl-org/r3bl_rs_utils/issues/19)
   ☐ [Update DD for editor component](https://github.com/r3bl-org/r3bl_rs_utils/issues/23)
