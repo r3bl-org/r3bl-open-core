@@ -137,8 +137,7 @@
 //! # Examples to get you started
 //!
 //! Here's a video of the demo in action:
-//!
-//! ![](https://user-images.githubusercontent.com/2966499/200138653-c0cf925f-2c91-4908-9ed5-1e216b5dd547.webm)
+//! <https://user-images.githubusercontent.com/2966499/200138653-c0cf925f-2c91-4908-9ed5-1e216b5dd547.webm>
 //!
 //! 1. You can run `cargo run --example demo` in the `tui/examples` folder to see a demo of the
 //!    library in action and play with it. The examples cover the entire surface area of the TUI
