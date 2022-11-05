@@ -56,6 +56,10 @@ pub enum ColorChangeSpeed {
   Slow,
 }
 
+impl Default for ColorChangeSpeed {
+  fn default() -> Self { Self::Rapid }
+}
+
 impl Display for ColorChangeSpeed {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
