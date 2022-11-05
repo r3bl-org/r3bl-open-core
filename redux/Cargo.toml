@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_redux"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Redux library built using Tokio, concurrent & parallel"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
@@ -22,8 +22,8 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl_rs_utils
-r3bl_rs_utils_core = { version = "0.8.1", path = "../core" }
-r3bl_rs_utils_macro = { version = "0.8.1", path = "../macro" }
+r3bl_rs_utils_core = { version = "0.8.2", path = "../core" }
+r3bl_rs_utils_macro = { version = "0.8.2", path = "../macro" }
 
 # Logging
 log = "0.4.17"
@@ -31,7 +31,7 @@ simplelog = "0.12.0"
 
 # Time
 chrono = "0.4.22"
-time = "0.3.15"
+time = "0.3.16"
 
 # Misc
 rand = "0.8.5"
@@ -53,7 +53,7 @@ futures-util = "0.3.25"
 bitflags = "1.3.2"
 
 # lazy_static replacement.
-once_cell = "1.15.0"
+once_cell = "1.16.0"
 
 # https://github.com/serde-rs/serde.
 serde = { version = "1.0", features = ["derive"] }
