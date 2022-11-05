@@ -16,8 +16,6 @@
  */
 
 //! # Context
-//! <a id="markdown-context" name="context"></a>
-//!
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
@@ -64,9 +62,9 @@
 //! This crate provides lots of useful functionality to help you build TUI (text user interface)
 //! apps, along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 //!
-//! 1. Thread-safe & fully asynchronous [Redux](https://docs.rs/r3bl_redux/latest/r3bl_redux/)
-//!    crate (using Tokio to run subscribers and middleware in separate tasks). The reducer
-//!    functions are run sequentially.
+//! 1. Thread-safe & fully asynchronous [Redux](https://docs.rs/r3bl_redux/latest/r3bl_redux/) crate
+//!    (using Tokio to run subscribers and middleware in separate tasks). The reducer functions are
+//!    run sequentially.
 //! 2. Loosely coupled & fully asynchronous [TUI
 //!    framework](https://docs.rs/r3bl_tui/latest/r3bl_tui/) to make it possible (and easy) to build
 //!    sophisticated TUIs (Text User Interface apps) in Rust.
@@ -92,30 +90,75 @@
 //! 🦀 You can also find all the Rust related content on developerlife.com
 //! [here](https://developerlife.com/category/Rust/).
 //!
-//! # r3bl_tui
+//! # r3bl_tui crate
 //!
-//! You can build fully async TUI apps with a modern API that brings the best of reactive &
-//! unidirectional data flow architecture from frontend web development (React, Redux, CSS, flexbox)
-//! to Rust and TUI apps. And since this is using Tokio you get the advantages of concurrency and
-//! parallelism built-in. No more blocking on the main thread for user input, for async middleware,
-//! or even rendering 🎉.
+//! You can build fully async TUI (text user interface) apps with a modern API that brings the best
+//! of the web frontend development ideas to TUI apps written in Rust:
 //!
-//! This framework is [loosely coupled and strongly
-//! coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/) meaning that
-//! you can pick and choose whatever pieces you would like to use w/out having the cognitive load of
-//! having to grok all the things in the codebase. Its more like a collection of mostly independent
-//! modules that work well w/ each other, but know very little about each other.
+//! 1. Reactive & unidirectional data flow architecture from frontend web development (React,
+//!    Redux).
+//! 2. Responsive design w/ CSS, flexbox like concepts.
+//! 3. Declarative style of expressing styling and layouts.
+//!
+//! And since this is using Rust and Tokio you get the advantages of concurrency and parallelism
+//! built-in. No more blocking the main thread for user input, for async middleware, or even
+//! rendering 🎉.
+//!
+//! > This framework is [loosely coupled and strongly
+//! > coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/) meaning
+//! > that you can pick and choose whatever pieces you would like to use w/out having the cognitive
+//! > load of having to grok all the things in the codebase. Its more like a collection of mostly
+//! > independent modules that work well w/ each other, but know very little about each other.
 //!
 //! Here are some framework highlights:
+//!
+//! - An easy to use and approachable API that is inspired by React, JSX, CSS, and Redux. Lots of
+//!   components and things are provided for you so you don't have to build them from scratch. This
+//!   is a full featured component library including:
+//!   - Redux for state management (fully async, concurrent & parallel).
+//!   - CSS like declarative styling engine.
+//!   - CSS flexbox like declarative layout engine which is fully responsive. You can resize your
+//!     terminal window and everything will be laid out correctly.
+//!   - A terminal independent underlying rendering and painting engine (can use crossterm or
+//!     termion or whatever you want).
+//!   - Text editor w/ syntax highlighting support.
+//!   - Modal dialog boxes.
+//!   - Lolcat implementation w/ a rainbow color-wheel palette.
+//!   - Support for Unicode grapheme clusters in strings. You can safely use emojis, and other
+//!     Unicode characters in your TUI apps.
+//!   - Support for ANSI text.
+//!   - Support for mouse events.
 //! - The entire TUI framework itself supports concurrency & parallelism (user input, rendering,
 //!   etc. are generally non blocking).
-//! - Flexbox-like responsive layout.
-//! - CSS-like styling.
-//! - Redux for state management (fully async, concurrent & parallel).
-//! - Lolcat implementation w/ a rainbow color-wheel palette.
-//! - Support for Unicode grapheme clusters in strings.
+//! - It is fast! There are no needless re-renders, or flickering. Animations and color changes are
+//!   smooth (check this out for yourself by running the examples). You can even build your TUI in
+//!   layers (like z-order in a browser's DOM).
 //!
-//! ## Life of an input event
+//! # Examples to get you started
+//!
+//! Here's a video of the demo in action:
+//!
+//! ![](https://user-images.githubusercontent.com/2966499/200138653-c0cf925f-2c91-4908-9ed5-1e216b5dd547.webm)
+//!
+//! 1. You can run `cargo run --example demo` in the `tui/examples` folder to see a demo of the
+//!    library in action and play with it. The examples cover the entire surface area of the TUI
+//!    API. You can also take a look at the tests in the source as well `tui/src/`.
+//!
+//! 2. The design docs and architecture diagrams in the [`docs`
+//!    folder](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/docs) are a good place to start
+//!    to get a feel for the architecture of the framework. You can get a mental model of how
+//!    everything fits and what the TUI lifecycle is.
+//!
+//! 3. Additionally the [r3bl_rs_utils_core](https://crates.io/crates/r3bl_rs_utils_core) has the
+//!    `tui_core` module which contains dependencies that are used by the `tui` module. They
+//!    include:
+//!    1. ANSI text support.
+//!    2. Core dimensions and units that are used for positioning and sizing.
+//!    3. Grapheme cluster segment and unicode support (emoji support).
+//!    4. Lolcat support.
+//!    5. CSS like styling support.
+//!
+//! # Life of an input event
 //!
 //! There is a clear separation of concerns in this module. To illustrate what goes where, and how
 //! things work let's look at an example that puts the main event loop front and center & deals w/
@@ -170,7 +213,7 @@
 //!
 //! ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 //!
-//! ## The window
+//! # The window
 //!
 //! The main building blocks of a TUI app are:
 //! 1. [TerminalWindow] - You can think of this as the main "window" of the app. All the content of
@@ -185,7 +228,7 @@
 //!    don't really need any sophisticated layout or styling. But if you want layout and styling,
 //!    now we have to deal with [FlexBox], [Component], and [r3bl_rs_utils_core::Style].
 //!
-//! ## Layout and styling
+//! # Layout and styling
 //!
 //! Inside of your [App] if you want to use flexbox like layout and CSS like styling you can think
 //! of composing your code in the following way:
@@ -202,7 +245,7 @@
 //!    components and ultimately painted to the screen, for each render! You can also use Redux to
 //!    maintain your app's state, and dispatch actions to the store, and even have async middleware!
 //!
-//! ## [Component] and [ComponentRegistry], focus management, and event routing
+//! # [Component] and [ComponentRegistry], focus management, and event routing
 //!
 //! Typically your [App] will look like this:
 //!
@@ -230,13 +273,13 @@
 //! Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent between
 //! re-renders. The Redux store is also persistent between re-renders.
 //!
-//! ## Input event specificity
+//! # Input event specificity
 //!
 //! [TerminalWindow] gives [Component] first dibs when it comes to handling input events. If it
 //! punts handling this event, it will be handled by the default input event handler. And if nothing
 //! there matches this event, then it is simply dropped.
 //!
-//! ## Redux for state management
+//! # Redux for state management
 //!
 //! If you use Redux for state management, then you will create a [r3bl_redux::Store] that is passed
 //! into the [TerminalWindow]. Here's an example of this.
@@ -280,21 +323,15 @@
 //! }
 //! ```
 //!
-//! ## Grapheme support
+//! # Grapheme support
 //!
 //! Unicode is supported (to an extent). There are some caveats. The
 //! [r3bl_rs_utils_core::UnicodeString] struct has lots of great information on this graphemes and
 //! what is supported and what is not.
 //!
-//! ## Lolcat support
+//! # Lolcat support
 //!
 //! An implementation of [r3bl_rs_utils_core::lolcat::cat] w/ a color wheel is provided.
-//!
-//! ## Examples to get you started
-//!
-//! 1. [Code example of an address book using
-//!    Redux](https://github.com/r3bl-org/address-book-with-redux-tui).
-//! 2. [Code example of TUI apps using Redux](https://github.com/r3bl-org/r3bl-cmdr).
 
 // Attach.
 pub mod tui;

@@ -3,8 +3,8 @@
 </p>
 
 # Context
-
 <a id="markdown-context" name="context"></a>
+
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
@@ -48,73 +48,102 @@ it.
      2. integrations w/ github issues
      3. integrations w/ calendar, email, contacts APIs
 
-# r3bl_tui
+# r3bl_tui crate
+<a id="markdown-r3bl_tui-crate" name="r3bl_tui-crate"></a>
 
-<a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
 <!-- TOC depthfrom:2 updateonsave:true orderedlist:false insertanchor:true -->
 
-- [tui](#tui)
-  - [Examples to get you started](#examples-to-get-you-started)
-  - [Life of an input event](#life-of-an-input-event)
-  - [The window](#the-window)
-  - [Layout and styling](#layout-and-styling)
-  - [Component, ComponentRegistry, focus management, and event routing](#component-componentregistry-focus-management-and-event-routing)
-  - [Input event specificity](#input-event-specificity)
-  - [Redux for state management](#redux-for-state-management)
-  - [Grapheme support](#grapheme-support)
-  - [Lolcat support](#lolcat-support)
+- [Text User Interface library for Rust](#text-user-interface-library-for-rust)
+- [Examples to get you started](#examples-to-get-you-started)
+- [Life of an input event](#life-of-an-input-event)
+- [The window](#the-window)
+- [Layout and styling](#layout-and-styling)
+- [Component, ComponentRegistry, focus management, and event routing](#component-componentregistry-focus-management-and-event-routing)
+- [Input event specificity](#input-event-specificity)
+- [Redux for state management](#redux-for-state-management)
+- [Grapheme support](#grapheme-support)
+- [Lolcat support](#lolcat-support)
 - [Other crates that depend on this](#other-crates-that-depend-on-this)
 - [Issues, comments, feedback, and PRs](#issues-comments-feedback-and-prs)
 
 <!-- /TOC -->
 
-## tui
+## Text User Interface library for Rust
+<a id="markdown-text-user-interface-library-for-rust" name="text-user-interface-library-for-rust"></a>
 
-<a id="markdown-tui" name="tui"></a>
 
-You can build fully async TUI apps with a modern API that brings the best of reactive &
-unidirectional data flow architecture from frontend web development (React, Redux, CSS, flexbox) to
-Rust and TUI apps. And since this is using Tokio you get the advantages of concurrency and
-parallelism built-in. No more blocking on the main thread for user input, for async middleware, or
-even rendering 🎉.
+You can build fully async TUI (text user interface) apps with a modern API that brings the best of
+the web frontend development ideas to TUI apps written in Rust:
 
-This framework is
-[loosely coupled and strongly coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
-meaning that you can pick and choose whatever pieces you would like to use w/out having the
-cognitive load of having to grok all the things in the codebase. Its more like a collection of
-mostly independent modules that work well w/ each other, but know very little about each other.
+1. Reactive & unidirectional data flow architecture from frontend web development (React, Redux).
+2. Responsive design w/ CSS, flexbox like concepts.
+3. Declarative style of expressing styling and layouts.
+
+And since this is using Rust and Tokio you get the advantages of concurrency and parallelism
+built-in. No more blocking the main thread for user input, for async middleware, or even rendering
+🎉.
+
+> This framework is
+> [loosely coupled and strongly coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
+> meaning that you can pick and choose whatever pieces you would like to use w/out having the
+> cognitive load of having to grok all the things in the codebase. Its more like a collection of
+> mostly independent modules that work well w/ each other, but know very little about each other.
 
 Here are some framework highlights:
 
+- An easy to use and approachable API that is inspired by React, JSX, CSS, and Redux. Lots of
+  components and things are provided for you so you don't have to build them from scratch. This is a
+  full featured component library including:
+  - Redux for state management (fully async, concurrent & parallel).
+  - CSS like declarative styling engine.
+  - CSS flexbox like declarative layout engine which is fully responsive. You can resize your
+    terminal window and everything will be laid out correctly.
+  - A terminal independent underlying rendering and painting engine (can use crossterm or termion or
+    whatever you want).
+  - Text editor w/ syntax highlighting support.
+  - Modal dialog boxes.
+  - Lolcat implementation w/ a rainbow color-wheel palette.
+  - Support for Unicode grapheme clusters in strings. You can safely use emojis, and other Unicode
+    characters in your TUI apps.
+  - Support for ANSI text.
+  - Support for mouse events.
 - The entire TUI framework itself supports concurrency & parallelism (user input, rendering, etc.
   are generally non blocking).
-- Flexbox-like responsive layout.
-- CSS-like styling.
-- Redux for state management (fully async, concurrent & parallel).
-- Lolcat implementation w/ a rainbow color-wheel palette.
-- Support for Unicode grapheme clusters in strings.
+- It is fast! There are no needless re-renders, or flickering. Animations and color changes are
+  smooth (check this out for yourself by running the examples). You can even build your TUI in
+  layers (like z-order in a browser's DOM).
 
-### Examples to get you started
-
+## Examples to get you started
 <a id="markdown-examples-to-get-you-started" name="examples-to-get-you-started"></a>
+
 
 <!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
 
 Here's a video of the demo in action:
 
-https://user-images.githubusercontent.com/2966499/193947362-0c4fd1c8-d0fb-4bfc-9a07-9d36a9dda5ce.webm
+https://user-images.githubusercontent.com/2966499/200138653-c0cf925f-2c91-4908-9ed5-1e216b5dd547.webm
 
-1. You can run `cargo run --example demo` in order to see a demo of the library and play with it.
-   All the examples are in the `tui/examples` folder and they cover the entire surface area of the
-   TUI API.
+1. You can run `cargo run --example demo` in the `tui/examples` folder to see a demo of the library
+   in action and play with it. The examples cover the entire surface area of the TUI API. You can
+   also take a look at the tests in the source as well `tui/src/`.
 
-2. You can also take a look at design docs and architecture diagrams in the
-   [`docs` folder](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/docs).
+2. The design docs and architecture diagrams in the
+   [`docs` folder](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/docs) are a good place to
+   start to get a feel for the architecture of the framework. You can get a mental model of how
+   everything fits and what the TUI lifecycle is.
 
-### Life of an input event
+3. Additionally the [r3bl_rs_utils_core](https://crates.io/crates/r3bl_rs_utils_core) has the
+   `tui_core` module which contains dependencies that are used by the `tui` module. They include:
+   1. ANSI text support.
+   2. Core dimensions and units that are used for positioning and sizing.
+   3. Grapheme cluster segment and unicode support (emoji support).
+   4. Lolcat support.
+   5. CSS like styling support.
 
+## Life of an input event
 <a id="markdown-life-of-an-input-event" name="life-of-an-input-event"></a>
+
 
 There is a clear separation of concerns in this module. To illustrate what goes where, and how
 things work let's look at an example that puts the main event loop front and center & deals w/ how
@@ -169,9 +198,9 @@ the following sections:
 
 ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 
-### The window
-
+## The window
 <a id="markdown-the-window" name="the-window"></a>
+
 
 The main building blocks of a TUI app are:
 
@@ -187,9 +216,9 @@ The main building blocks of a TUI app are:
     don't really need any sophisticated layout or styling. But if you want layout and styling, now
     we have to deal with [FlexBox], [Component], and [crate::Style].
 
-### Layout and styling
-
+## Layout and styling
 <a id="markdown-layout-and-styling" name="layout-and-styling"></a>
+
 
 Inside of your [App] if you want to use flexbox like layout and CSS like styling you can think of
 composing your code in the following way:
@@ -205,9 +234,9 @@ composing your code in the following way:
     painted to the screen, for each render! You can also use Redux to maintain your app's state, and
     dispatch actions to the store, and even have async middleware!
 
-### Component, ComponentRegistry, focus management, and event routing
-
+## Component, ComponentRegistry, focus management, and event routing
 <a id="markdown-component%2C-componentregistry%2C-focus-management%2C-and-event-routing" name="component%2C-componentregistry%2C-focus-management%2C-and-event-routing"></a>
+
 
 Typically your [App] will look like this:
 
@@ -235,17 +264,17 @@ The [HasFocus] struct takes care of this. This provides 2 things:
 Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent between
 re-renders. The Redux store is also persistent between re-renders.
 
-### Input event specificity
-
+## Input event specificity
 <a id="markdown-input-event-specificity" name="input-event-specificity"></a>
+
 
 [TerminalWindow] gives [Component] first dibs when it comes to handling input events. If it punts
 handling this event, it will be handled by the default input event handler. And if nothing there
 matches this event, then it is simply dropped.
 
-### Redux for state management
-
+## Redux for state management
 <a id="markdown-redux-for-state-management" name="redux-for-state-management"></a>
+
 
 If you use Redux for state management, then you will create a [crate::redux] [crate::Store] that is
 passed into the [TerminalWindow]. Here's an example of this.
@@ -289,30 +318,30 @@ async fn create_store() -> Store<AppWithLayoutState, AppWithLayoutAction> {
 }
 ```
 
-### Grapheme support
-
+## Grapheme support
 <a id="markdown-grapheme-support" name="grapheme-support"></a>
+
 
 Unicode is supported (to an extent). There are some caveats. The [crate::UnicodeStringExt] trait has
 lots of great information on this graphemes and what is supported and what is not.
 
-### Lolcat support
-
+## Lolcat support
 <a id="markdown-lolcat-support" name="lolcat-support"></a>
+
 
 An implementation of [crate::lolcat::cat] w/ a color wheel is provided.
 
 ## Other crates that depend on this
-
 <a id="markdown-other-crates-that-depend-on-this" name="other-crates-that-depend-on-this"></a>
+
 
 This crate is a dependency of the following crates:
 
 1. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crates (the "main" library)
 
 ## Issues, comments, feedback, and PRs
-
 <a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
+
 
 Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
 And if you have any feature requests, feel free to add them there too 👍.
