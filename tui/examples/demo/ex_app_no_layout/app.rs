@@ -72,7 +72,7 @@ impl App<State, Action> for AppNoLayout {
       let plain_content = format!("{}", state);
       let unicode_string = UnicodeString::from(plain_content);
       let colored_content = lolcat_each_char_in_unicode_string(&unicode_string, Some(&mut self.lolcat));
-      self.lolcat.color_wheel_control.seed += 1.0;
+      self.lolcat.next_color();
 
       let spaces = SPACER.repeat(ch!(@to_usize window_size.cols));
 

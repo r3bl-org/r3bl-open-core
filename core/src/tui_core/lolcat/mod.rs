@@ -19,8 +19,12 @@
 pub mod cat;
 pub mod color_utils;
 pub mod control;
+pub mod builder;
+pub mod lolcat_api;
 
 // Re-export.
 pub use cat::*;
 pub use color_utils::*;
 pub use control::*;
+pub use builder::*;
+pub use lolcat_api::*;
