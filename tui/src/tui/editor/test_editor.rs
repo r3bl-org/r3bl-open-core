@@ -959,6 +959,28 @@ mod test_editor_ops {
       0,
     );
     assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 1));
+
+    // Press enter. Press up. Press right (should be at start of next line).
+    // `this` should look like:
+    // R ┌──────────┐
+    // 0 │12a       │
+    // 1 │          │
+    // 2 ▸          │
+    //   └▴─────────┘
+    //   C0123456789
+    EditorEvent::apply_editor_events(
+      &mut engine,
+      &mut buffer,
+      vec![
+        EditorEvent::InsertNewLine,
+        EditorEvent::MoveCaret(CaretDirection::Up),
+        EditorEvent::MoveCaret(CaretDirection::Right),
+      ],
+      &mock_real_objects::make_shared_tw_data(),
+      &mut mock_real_objects::make_component_registry(),
+      0,
+    );
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 2));
   }
 
   #[test]
