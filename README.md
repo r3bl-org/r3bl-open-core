@@ -92,7 +92,7 @@ Table of contents:
 
 <!-- TOC depthfrom:2 updateonsave:true orderedlist:false insertanchor:true -->
 
-- [tui](#tui)
+- [tui and tui_core](#tui-and-tui_core)
 - [redux](#redux)
 - [Macros](#macros)
   - [Declarative](#declarative)
@@ -111,8 +111,8 @@ Table of contents:
 
 <hr/>
 
-## tui
-<a id="markdown-tui" name="tui"></a>
+## tui and tui_core
+<a id="markdown-tui-and-tui_core" name="tui-and-tui_core"></a>
 
 
 For more information please read the README for the

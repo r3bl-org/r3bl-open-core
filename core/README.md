@@ -3,8 +3,8 @@
 </p>
 
 # Context
-
 <a id="markdown-context" name="context"></a>
+
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
@@ -49,11 +49,12 @@ it.
      3. integrations w/ calendar, email, contacts APIs
 
 # r3bl_rs_utils_core
-
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
+
 
 <!-- TOC depthfrom:2 updateonsave:true orderedlist:false insertanchor:true -->
 
+- [tui-core](#tui-core)
 - [Macros](#macros)
   - [Declarative](#declarative)
     - [assert_eq2!](#assert_eq2)
@@ -79,29 +80,42 @@ it.
 
 <!-- /TOC -->
 
-## Macros
+## tui-core
+<a id="markdown-tui-core" name="tui-core"></a>
 
+
+This crate contains the core functionality for building rich text user interfaces (TUI) in Rust. The
+[r3bl_tui](https://crates.io/crates/r3bl_tui) crate depends on it. Here are the main features:
+
+1. ANSI text support
+2. Core dimensions and units that are used for positioning and sizing
+3. Grapheme cluster segment and unicode support (emoji support)
+4. Lolcat support
+5. CSS like styling support
+
+## Macros
 <a id="markdown-macros" name="macros"></a>
 
-### Declarative
 
+### Declarative
 <a id="markdown-declarative" name="declarative"></a>
+
 
 There are quite a few declarative macros that you will find in the library. They tend to be used
 internally in the implementation of the library itself. Here are some that are actually externally
 exposed via `#[macro_export]`.
 
 #### assert_eq2!
-
 <a id="markdown-assert_eq2!" name="assert_eq2!"></a>
+
 
 Similar to [`assert_eq!`] but automatically prints the left and right hand side variables if the
 assertion fails. Useful for debugging tests, since the cargo would just print out the left and right
 values w/out providing information on what variables were being compared.
 
 #### throws!
-
 <a id="markdown-throws!" name="throws!"></a>
+
 
 Wrap the given `block` or `stmt` so that it returns a `Result<()>`. It is just syntactic sugar that
 helps having to write `Ok(())` repeatedly at the end of each block. Here's an example.
@@ -139,8 +153,8 @@ fn test_simple_2_col_layout() -> CommonResult<()> {
 ```
 
 #### throws_with_return!
-
 <a id="markdown-throws_with_return!" name="throws_with_return!"></a>
+
 
 This is very similar to [`throws!`](#throws) but it also returns the result of the block.
 
@@ -154,8 +168,8 @@ fn test_simple_2_col_layout() -> CommonResult<RenderPipeline> {
 ```
 
 #### log!
-
 <a id="markdown-log!" name="log!"></a>
+
 
 You can use this macro to dump log messages at 3 levels to a file. By default this file is named
 `log.txt` and is dumped in the current directory. Here's how you can use it.
@@ -241,8 +255,8 @@ Please check out the source
 [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/src/utils/file_logging.rs).
 
 #### log_no_err!
-
 <a id="markdown-log_no_err!" name="log_no_err!"></a>
+
 
 This macro is very similar to the [log!](#log) macro, except that it won't return any error if the
 underlying logging system fails. It will simply print a message to `stderr`. Here's an example.
@@ -255,8 +269,8 @@ pub fn log_state(&self, msg: &str) {
 ```
 
 #### debug_log_no_err!
-
 <a id="markdown-debug_log_no_err!" name="debug_log_no_err!"></a>
+
 
 This is a really simple macro to make it effortless to debug into a log file. It outputs `DEBUG`
 level logs. It takes a single identifier as an argument, or any number of them. It simply dumps an
@@ -270,8 +284,8 @@ debug_log_no_err!(my_string);
 ```
 
 #### trace_log_no_err!
-
 <a id="markdown-trace_log_no_err!" name="trace_log_no_err!"></a>
+
 
 This is very similar to [debug_log_no_err!](#debuglognoerr) except that it outputs `TRACE` level
 logs.
@@ -282,8 +296,8 @@ trace_log_no_err!(my_string);
 ```
 
 #### make_api_call_for!
-
 <a id="markdown-make_api_call_for!" name="make_api_call_for!"></a>
+
 
 This macro makes it easy to create simple HTTP GET requests using the `reqwest` crate. It generates
 an `async` function called `make_request()` that returns a `CommonResult<T>` where `T` is the type
@@ -324,8 +338,8 @@ You can find lots of
 [examples here](https://github.com/r3bl-org/address-book-with-redux-tui/blob/main/src/tui/middlewares).
 
 #### fire_and_forget!
-
 <a id="markdown-fire_and_forget!" name="fire_and_forget!"></a>
+
 
 This is a really simple wrapper around `tokio::spawn()` for the given block. Its just syntactic
 sugar. Here's an example of using it for a non-`async` block.
@@ -357,8 +371,8 @@ pub fn foo() {
 ```
 
 #### call_if_true!
-
 <a id="markdown-call_if_true!" name="call_if_true!"></a>
+
 
 Syntactic sugar to run a conditional statement. Here's an example.
 
@@ -376,8 +390,8 @@ call_if_true!(
 ```
 
 #### debug!
-
 <a id="markdown-debug!" name="debug!"></a>
+
 
 This is a really simple macro to make it effortless to use the color console logger. It takes a
 single identifier as an argument, or any number of them. It simply dumps an arrow symbol, followed
@@ -409,8 +423,8 @@ debug!(OK_RAW &msg);
 ```
 
 #### with!
-
 <a id="markdown-with!" name="with!"></a>
+
 
 This is a macro that takes inspiration from the `with` scoping function in Kotlin. It just makes it
 easier to express a block of code that needs to run after an expression is evaluated and saved to a
@@ -439,8 +453,8 @@ It does the following:
 2. Runs the `$code` block.
 
 #### with_mut!
-
 <a id="markdown-with_mut!" name="with_mut!"></a>
+
 
 This macro is just like [`with!`](#with) but it takes a mutable reference to the `$id` variable.
 Here's a code example.
@@ -461,8 +475,8 @@ with_mut! {
 ```
 
 #### with_mut_returns!
-
 <a id="markdown-with_mut_returns!" name="with_mut_returns!"></a>
+
 
 This macro is just like [`with_mut!`](#withmutreturns) except that it returns the value of the
 `$code` block. Here's a code example.
@@ -478,8 +492,8 @@ let tw_queue = with_mut_returns! {
 ```
 
 #### unwrap_option_or_run_fn_returning_err!
-
 <a id="markdown-unwrap_option_or_run_fn_returning_err!" name="unwrap_option_or_run_fn_returning_err!"></a>
+
 
 This macro can be useful when you are working w/ an expression that returns an `Option` and if that
 `Option` is `None` then you want to abort and return an error immediately. The idea is that you are
@@ -502,8 +516,8 @@ pub fn from(
 ```
 
 #### unwrap_option_or_compute_if_none!
-
 <a id="markdown-unwrap_option_or_compute_if_none!" name="unwrap_option_or_compute_if_none!"></a>
+
 
 This macro is basically a way to compute something lazily when it (the `Option`) is set to `None`.
 Unwrap the `$option`, and if `None` then run the `$next` closure which must return a value that is
@@ -525,12 +539,12 @@ fn test_unwrap_option_or_compute_if_none() {
 ```
 
 ## Common
-
 <a id="markdown-common" name="common"></a>
 
-### CommonResult and CommonError
 
+### CommonResult and CommonError
 <a id="markdown-commonresult-and-commonerror" name="commonresult-and-commonerror"></a>
+
 
 These two structs make it easier to work w/ `Result`s. They are just syntactic sugar and helper
 structs. You will find them used everywhere in the
@@ -561,8 +575,8 @@ impl Stylesheet {
 ```
 
 ## Other crates that depend on this
-
 <a id="markdown-other-crates-that-depend-on-this" name="other-crates-that-depend-on-this"></a>
+
 
 This crate is a dependency of the following crates:
 
@@ -570,8 +584,8 @@ This crate is a dependency of the following crates:
 2. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crates (the "main" library)
 
 ## Issues, comments, feedback, and PRs
-
 <a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
+
 
 Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
 And if you have any feature requests, feel free to add them there too 👍.
