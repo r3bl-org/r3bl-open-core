@@ -26,7 +26,7 @@ path = "src/lib.rs"
 [dependencies]
 
 # r3bl_rs_utils
-r3bl_rs_utils_core = { version = "0.8.2", path = "core" }
+r3bl_rs_utils_core = { version = "0.8.3", path = "core" }
 r3bl_rs_utils_macro = { version = "0.8.2", path = "macro" }
 r3bl_tui = { version = "0.1.2", path = "tui" }
 r3bl_redux = { version = "0.1.2", path = "redux" }
