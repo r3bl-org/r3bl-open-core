@@ -17,6 +17,8 @@
 
 //! # Context
 //!
+//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/r3bl-term.svg)
+//!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
 //! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363">
@@ -59,15 +61,16 @@
 //!      2. integrations w/ github issues
 //!      3. integrations w/ calendar, email, contacts APIs
 //!
-//! This crate provides lots of useful functionality to help you build TUI (text user interface)
+//! These crates provides lots of useful functionality to help you build TUI (text user interface)
 //! apps, along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 //!
-//! 1. Thread-safe & fully asynchronous [Redux](https://docs.rs/r3bl_redux/latest/r3bl_redux/) crate
-//!    (using Tokio to run subscribers and middleware in separate tasks). The reducer functions are
-//!    run sequentially.
-//! 2. Loosely coupled & fully asynchronous [TUI
+//! 1. Loosely coupled & fully asynchronous [TUI
 //!    framework](https://docs.rs/r3bl_tui/latest/r3bl_tui/) to make it possible (and easy) to build
-//!    sophisticated TUIs (Text User Interface apps) in Rust.
+//!    sophisticated TUIs (Text User Interface apps) in Rust that are inspired by React, Redux, CSS
+//!    and Flexbox.
+//! 2. Thread-safe & fully asynchronous [Redux](https://docs.rs/r3bl_redux/latest/r3bl_redux/)
+//!    crate (using Tokio to run subscribers and middleware in separate tasks). The reducer
+//!    functions are run sequentially.
 //! 3. Lots of [declarative macros](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/),
 //!    and [procedural macros](https://docs.rs/r3bl_rs_utils_macro/latest/r3bl_rs_utils_macro/)
 //!    (both function like and derive) to avoid having to write lots of boilerplate code for many

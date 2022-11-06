@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="r3bl-term.svg" height="128px">
+  <img src="https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/r3bl-term.svg" height="128px">
 </p>
 
 # Context
@@ -52,9 +52,9 @@ it.
 <a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
 
 
-This crate is the first thing that's described above. It provides lots of useful functionality to
-help you build TUI (text user interface) apps, along w/ general niceties & ergonomics that all
-Rustaceans 🦀 can enjoy 🎉:
+This crate is related to the first thing that's described above. It provides lots of useful
+functionality to help you build TUI (text user interface) apps, along w/ general niceties &
+ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 
 This crate provides lots of useful functionality to help you build TUI (text user interface) apps,
 along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
