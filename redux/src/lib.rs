@@ -16,8 +16,8 @@
  */
 
 //! # Context
-//! <a id="markdown-context" name="context"></a>
 //!
+//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/r3bl-term.svg)
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
@@ -61,15 +61,16 @@
 //!      2. integrations w/ github issues
 //!      3. integrations w/ calendar, email, contacts APIs
 //!
-//! This crate provides lots of useful functionality to help you build TUI (text user interface)
+//! These crates provides lots of useful functionality to help you build TUI (text user interface)
 //! apps, along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 //!
-//! 1. Thread-safe & fully asynchronous [Redux](https://docs.rs/r3bl_redux/latest/r3bl_redux/)
+//! 1. Loosely coupled & fully asynchronous [TUI
+//!    framework](https://docs.rs/r3bl_tui/latest/r3bl_tui/) to make it possible (and easy) to build
+//!    sophisticated TUIs (Text User Interface apps) in Rust that are inspired by React, Redux, CSS
+//!    and Flexbox.
+//! 2. Thread-safe & fully asynchronous [Redux](https://docs.rs/r3bl_redux/latest/r3bl_redux/)
 //!    crate (using Tokio to run subscribers and middleware in separate tasks). The reducer
 //!    functions are run sequentially.
-//! 2. Loosely coupled & fully asynchronous [TUI
-//!    framework](https://docs.rs/r3bl_tui/latest/r3bl_tui/) to make it possible (and easy) to build
-//!    sophisticated TUIs (Text User Interface apps) in Rust.
 //! 3. Lots of [declarative macros](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/),
 //!    and [procedural macros](https://docs.rs/r3bl_rs_utils_macro/latest/r3bl_rs_utils_macro/)
 //!    (both function like and derive) to avoid having to write lots of boilerplate code for many
@@ -94,158 +95,6 @@
 //!
 //! # r3bl_redux
 //!
-//! Here are some references to get you started.
-//!
-//! 1. [In depth guide on this Redux
-//!    implementation](https://developerlife.com/2022/03/12/rust-redux/).
-//! 2. [Code example of an address book using
-//!    Redux](https://github.com/r3bl-org/address-book-with-redux-tui).
-//! 3. [Code example of TUI apps using Redux](https://github.com/r3bl-org/r3bl-cmdr).
-//!
-//! # Short example
-//!
-//! ```ignore
-//! use std::sync::Arc;
-//!
-//! use async_trait::async_trait;
-//! use r3bl_rs_utils::{redux::{AsyncReducer, AsyncSubscriber, Store},
-//!                     SharedStore};
-//! use tokio::sync::RwLock;
-//!
-//! #[allow(non_camel_case_types)]
-//! #[derive(Debug, PartialEq, Eq, Clone)]
-//! pub enum Action {
-//!   // Reducer actions.
-//!   Add(i32, i32),
-//!   AddPop(i32),
-//!   Reset,
-//!   Clear,
-//!   // Middleware actions for MwExampleNoSpawn.
-//!   MwExampleNoSpawn_Foo(i32, i32),
-//!   MwExampleNoSpawn_Bar(i32),
-//!   MwExampleNoSpawn_Baz,
-//!   // Middleware actions for MwExampleSpawns.
-//!   MwExampleSpawns_ModifySharedObject_ResetState,
-//!   // For Default impl.
-//!   Noop,
-//! }
-//!
-//! impl Default for Action {
-//!   fn default() -> Self { Action::Noop }
-//! }
-//!
-//! #[derive(Clone, Default, PartialEq, Eq, Debug)]
-//! pub struct State {
-//!   pub stack: Vec<i32>,
-//! }
-//!
-//! #[tokio::test]
-//! async fn test_redux_store_works_for_main_use_cases() {
-//!   // This shared object is used to collect results from the subscriber &
-//!   // middleware & reducer functions & test it later.
-//!   let shared_vec = Arc::new(RwLock::new(Vec::<i32>::new()));
-//!
-//!   // Create the store.
-//!   let mut _store = Store::<State, Action>::default();
-//!   let shared_store: SharedStore<State, Action> = Arc::new(RwLock::new(_store));
-//!
-//!   run_reducer_and_subscriber(&shared_vec, &shared_store.clone()).await;
-//! }
-//!
-//! async fn reset_shared_object(shared_vec: &Arc<RwLock<Vec<i32>>>) {
-//!   shared_vec.write().await.clear();
-//! }
-//!
-//! async fn reset_store(shared_store: &SharedStore<State, Action>) {
-//!   shared_store.write().await.clear_reducers().await;
-//!   shared_store.write().await.clear_subscribers().await;
-//!   shared_store.write().await.clear_middlewares().await;
-//! }
-//!
-//! async fn run_reducer_and_subscriber(
-//!   shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>,
-//! ) {
-//!   // Setup store w/ only reducer & subscriber (no middlewares).
-//!   let my_subscriber = MySubscriber {
-//!     shared_vec: shared_vec.clone(),
-//!   };
-//!   reset_shared_object(shared_vec).await;
-//!   reset_store(shared_store).await;
-//!
-//!   shared_store
-//!     .write()
-//!     .await
-//!     .add_reducer(MyReducer::new())
-//!     .await
-//!     .add_subscriber(Box::new(my_subscriber))
-//!     .await;
-//!
-//!   shared_store
-//!     .write()
-//!     .await
-//!     .dispatch_action(Action::Add(1, 2))
-//!     .await;
-//!
-//!   assert_eq!(shared_vec.write().await.pop(), Some(3));
-//!
-//!   shared_store
-//!     .write()
-//!     .await
-//!     .dispatch_action(Action::AddPop(1))
-//!     .await;
-//!
-//!   assert_eq!(shared_vec.write().await.pop(), Some(4));
-//!
-//!   // Clean up the store's state.
-//!   shared_store
-//!     .write()
-//!     .await
-//!     .dispatch_action(Action::Clear)
-//!     .await;
-//!
-//!   let state = shared_store.read().await.get_state();
-//!   assert_eq!(state.stack.len(), 0);
-//! }
-//!
-//! struct MySubscriber {
-//!   pub shared_vec: Arc<RwLock<Vec<i32>>>,
-//! }
-//!
-//! #[async_trait]
-//! impl AsyncSubscriber<State> for MySubscriber {
-//!   async fn run(&self, state: State) {
-//!     let mut stack = self.shared_vec.write().await;
-//!     if !state.stack.is_empty() {
-//!       stack.push(state.stack[0]);
-//!     }
-//!   }
-//! }
-//!
-//! #[derive(Default)]
-//! struct MyReducer;
-//!
-//! #[async_trait]
-//! impl AsyncReducer<State, Action> for MyReducer {
-//!   async fn run(&self, action: &Action, state: &State) -> State {
-//!     match action {
-//!       Action::Add(a, b) => {
-//!         let sum = a + b;
-//!         State { stack: vec![sum] }
-//!       }
-//!       Action::AddPop(a) => {
-//!         let sum = a + state.stack[0];
-//!         State { stack: vec![sum] }
-//!       }
-//!       Action::Clear => State { stack: vec![] },
-//!       Action::Reset => State { stack: vec![-100] },
-//!       _ => state.clone(),
-//!     }
-//!   }
-//! }
-//! ```
-//!
-//! # In depth
-//!
 //! `Store` is thread safe and asynchronous (using Tokio). You have to implement `async` traits in
 //! order to use it, by defining your own reducer, subscriber, and middleware trait objects. You
 //! also have to supply the Tokio runtime, this library will not create its own runtime. However,
@@ -259,7 +108,16 @@
 //! code, however you still have to provide a Tokio executor / runtime, without which you will get a
 //! panic when `spawn_dispatch_action!()` is called.
 //!
-//! ### Middlewares
+//! > Here are some interesting links for you to look into further:
+//! >
+//! > 1. [In depth guide on this Redux
+//! >    implementation](https://developerlife.com/2022/03/12/rust-redux/).
+//! > 2. [Code example of an address book using
+//! >    Redux](https://github.com/r3bl-org/address-book-with-redux-tui).
+//! > 3. [Code example of TUI apps using
+//! >    Redux](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/tui/examples/demo).
+//!
+//! ## Middlewares
 //!
 //! Your middleware (`async` trait implementations) will be run concurrently or in parallel via
 //! Tokio tasks. You get to choose which `async` trait to implement to do one or the other. And
@@ -279,13 +137,13 @@
 //!    [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
 //!    These are added to the store via a call to `add_middleware(...)`.
 //!
-//! ### Subscribers
+//! ## Subscribers
 //!
 //! The subscribers will be run asynchronously via Tokio tasks. They are all run together
 //! concurrently but not in parallel, using
 //! [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
 //!
-//! ### Reducers
+//! ## Reducers
 //!
 //! The reducer functions are also are `async` functions that are run in the tokio runtime. They're
 //! also run one after another in the order in which they're added.
@@ -320,7 +178,7 @@
 //!    - The `run()` method will be passed a `State` object as an argument.
 //!    - It returns nothing `()`.
 //!
-//! ### Summary
+//! ## Summary
 //!
 //! Here's the gist of how to make & use one of these:
 //!
@@ -340,7 +198,7 @@
 //!      function or use the following as an argument to the `add_???()` methods:
 //!      `Box::new($YOUR_STRUCT))`.
 //!
-//! ### Examples
+//! # Small example step by step
 //!
 //! 💡 There are lots of examples in the
 //! [tests](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/test_redux.rs) for this
@@ -571,6 +429,149 @@
 //! assert_eq!(store.get_state().stack.len(), 0);
 //! ```
 //!
+//! # Complete example in one go
+//!
+//! If you like to learn by example, below is a full example of using this Redux crate.
+//!
+//! ```ignore
+//! use std::sync::Arc;
+//!
+//! use async_trait::async_trait;
+//! use r3bl_rs_utils::{redux::{AsyncReducer, AsyncSubscriber, Store},
+//!                     SharedStore};
+//! use tokio::sync::RwLock;
+//!
+//! #[allow(non_camel_case_types)]
+//! #[derive(Debug, PartialEq, Eq, Clone)]
+//! pub enum Action {
+//!   // Reducer actions.
+//!   Add(i32, i32),
+//!   AddPop(i32),
+//!   Reset,
+//!   Clear,
+//!   // Middleware actions for MwExampleNoSpawn.
+//!   MwExampleNoSpawn_Foo(i32, i32),
+//!   MwExampleNoSpawn_Bar(i32),
+//!   MwExampleNoSpawn_Baz,
+//!   // Middleware actions for MwExampleSpawns.
+//!   MwExampleSpawns_ModifySharedObject_ResetState,
+//!   // For Default impl.
+//!   Noop,
+//! }
+//!
+//! impl Default for Action {
+//!   fn default() -> Self { Action::Noop }
+//! }
+//!
+//! #[derive(Clone, Default, PartialEq, Eq, Debug)]
+//! pub struct State {
+//!   pub stack: Vec<i32>,
+//! }
+//!
+//! #[tokio::test]
+//! async fn test_redux_store_works_for_main_use_cases() {
+//!   // This shared object is used to collect results from the subscriber &
+//!   // middleware & reducer functions & test it later.
+//!   let shared_vec = Arc::new(RwLock::new(Vec::<i32>::new()));
+//!
+//!   // Create the store.
+//!   let mut _store = Store::<State, Action>::default();
+//!   let shared_store: SharedStore<State, Action> = Arc::new(RwLock::new(_store));
+//!
+//!   run_reducer_and_subscriber(&shared_vec, &shared_store.clone()).await;
+//! }
+//!
+//! async fn reset_shared_object(shared_vec: &Arc<RwLock<Vec<i32>>>) {
+//!   shared_vec.write().await.clear();
+//! }
+//!
+//! async fn reset_store(shared_store: &SharedStore<State, Action>) {
+//!   shared_store.write().await.clear_reducers().await;
+//!   shared_store.write().await.clear_subscribers().await;
+//!   shared_store.write().await.clear_middlewares().await;
+//! }
+//!
+//! async fn run_reducer_and_subscriber(
+//!   shared_vec: &Arc<RwLock<Vec<i32>>>, shared_store: &SharedStore<State, Action>,
+//! ) {
+//!   // Setup store w/ only reducer & subscriber (no middlewares).
+//!   let my_subscriber = MySubscriber {
+//!     shared_vec: shared_vec.clone(),
+//!   };
+//!   reset_shared_object(shared_vec).await;
+//!   reset_store(shared_store).await;
+//!
+//!   shared_store
+//!     .write()
+//!     .await
+//!     .add_reducer(MyReducer::new())
+//!     .await
+//!     .add_subscriber(Box::new(my_subscriber))
+//!     .await;
+//!
+//!   shared_store
+//!     .write()
+//!     .await
+//!     .dispatch_action(Action::Add(1, 2))
+//!     .await;
+//!
+//!   assert_eq!(shared_vec.write().await.pop(), Some(3));
+//!
+//!   shared_store
+//!     .write()
+//!     .await
+//!     .dispatch_action(Action::AddPop(1))
+//!     .await;
+//!
+//!   assert_eq!(shared_vec.write().await.pop(), Some(4));
+//!
+//!   // Clean up the store's state.
+//!   shared_store
+//!     .write()
+//!     .await
+//!     .dispatch_action(Action::Clear)
+//!     .await;
+//!
+//!   let state = shared_store.read().await.get_state();
+//!   assert_eq!(state.stack.len(), 0);
+//! }
+//!
+//! struct MySubscriber {
+//!   pub shared_vec: Arc<RwLock<Vec<i32>>>,
+//! }
+//!
+//! #[async_trait]
+//! impl AsyncSubscriber<State> for MySubscriber {
+//!   async fn run(&self, state: State) {
+//!     let mut stack = self.shared_vec.write().await;
+//!     if !state.stack.is_empty() {
+//!       stack.push(state.stack[0]);
+//!     }
+//!   }
+//! }
+//!
+//! #[derive(Default)]
+//! struct MyReducer;
+//!
+//! #[async_trait]
+//! impl AsyncReducer<State, Action> for MyReducer {
+//!   async fn run(&self, action: &Action, state: &State) -> State {
+//!     match action {
+//!       Action::Add(a, b) => {
+//!         let sum = a + b;
+//!         State { stack: vec![sum] }
+//!       }
+//!       Action::AddPop(a) => {
+//!         let sum = a + state.stack[0];
+//!         State { stack: vec![sum] }
+//!       }
+//!       Action::Clear => State { stack: vec![] },
+//!       Action::Reset => State { stack: vec![-100] },
+//!       _ => state.clone(),
+//!     }
+//!   }
+//! }
+//! ```
 
 // https://github.com/rust-lang/rust-clippy
 // https://rust-lang.github.io/rust-clippy/master/index.html

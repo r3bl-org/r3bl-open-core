@@ -16,8 +16,8 @@
  */
 
 //! # Context
-//! <a id="markdown-context" name="context"></a>
 //!
+//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/r3bl-term.svg)
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
@@ -61,15 +61,16 @@
 //!      2. integrations w/ github issues
 //!      3. integrations w/ calendar, email, contacts APIs
 //!
-//! This crate provides lots of useful functionality to help you build TUI (text user interface)
+//! These crates provides lots of useful functionality to help you build TUI (text user interface)
 //! apps, along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 //!
-//! 1. Thread-safe & fully asynchronous [Redux](https://docs.rs/r3bl_redux/latest/r3bl_redux/)
+//! 1. Loosely coupled & fully asynchronous [TUI
+//!    framework](https://docs.rs/r3bl_tui/latest/r3bl_tui/) to make it possible (and easy) to build
+//!    sophisticated TUIs (Text User Interface apps) in Rust that are inspired by React, Redux, CSS
+//!    and Flexbox.
+//! 2. Thread-safe & fully asynchronous [Redux](https://docs.rs/r3bl_redux/latest/r3bl_redux/)
 //!    crate (using Tokio to run subscribers and middleware in separate tasks). The reducer
 //!    functions are run sequentially.
-//! 2. Loosely coupled & fully asynchronous [TUI
-//!    framework](https://docs.rs/r3bl_tui/latest/r3bl_tui/) to make it possible (and easy) to build
-//!    sophisticated TUIs (Text User Interface apps) in Rust.
 //! 3. Lots of [declarative macros](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/),
 //!    and [procedural macros](https://docs.rs/r3bl_rs_utils_macro/latest/r3bl_rs_utils_macro/)
 //!    (both function like and derive) to avoid having to write lots of boilerplate code for many
@@ -96,7 +97,9 @@
 //!
 //! This crate is a dependency of the following crates:
 //! 1. [`r3bl_rs_utils_macro`](https://crates.io/crates/r3bl_rs_utils_macro) (procedural macros)
-//! 2. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils)
+//! 2. [`r3bl_tui`](https://crates.io/crates/r3bl_tui)
+//! 3. [`r3bl_redux`](https://crates.io/crates/r3bl_redux)
+//! 4. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils)
 //!
 //! Due to the [requirements of proc macros being in a separate
 //! crate](https://developerlife.com/2022/03/30/rust-proc-macro/#add-an-internal-or-core-crate),
