@@ -3,20 +3,14 @@
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 editor engine extras (core):
   ☐ syntax highlighting support
-  ☐ markdown parsing
-    - https://iximiuz.com/en/posts/rust-writing-parsers-with-nom/
-    - https://blog.logrocket.com/parsing-in-rust-with-nom/
-    - https://naiveai.hashnode.dev/practical-parsing-nom
   ☐ support editor config options to enable/disable syntax highlighting & update tests
+  ☐ markdown parsing (MD frontmatter in JSON format, and MD -> AST)
 
 editor engine extras (auto-completion providers):
   ☐ add support for auto completion providers
-  ☐ modal dialogs for autocompletion provider
+  ☐ modal dialogs for autocompletion provider, which just use a nested multiline editor component
   ☐ implement auto completion provider for file paths
   ☐ implement auto completion provider for github issues (store creds in env vars)
-
-editor engine extras (markdown syntax highlighting):
-  ☐ syntax highlighting for markdown
 
 editor engine extras (search & replace):
   ☐ search & replace
@@ -24,19 +18,35 @@ editor engine extras (search & replace):
     ☐ add support for text selection highlighting
     ☐ selection, copy, paste
 
-editor engine extras (configurable shortcuts):
-  ☐ configurable keyboard shortcuts
+editor engine extras (smart MD editing support like github web app):
+  ☐ handle automatically propagating ordered `1. ` & unordered list `- ` like MD editor on github
+  ☐ handle automatically propagating `- [ ]` and `- [x]` like MD editor on github
 
-editor engine extras (save/load buffer to/from file/surrealdb):
+tui components (all implemented w/ editor component):
+  ☐ checkbox (single, multi select) implemented w/ editor component (different config options)
+  ☐ form implemented w/ editor component (different config options)
+  
+framework (configurable keyboard shortcuts):
+  ☐ a json file w/ keybindings needs to be loaded / stored from `~/.config/r3bl/keybindings.json`
+  ☐ there should be defaults provided if the file doesn't exist
+  ☐ the keybindings should be configurable via the UI (using an editor component)
+  ☐ each keybinding is made up of a keyboard shortcut sequence and an "action name"
+  ☐ the action name is a string that maps to a function
+  ☐ each component or app that deals w/ input events should convert the event into an action
+  ☐ all action names go into a global "action registry" along w/ the shortcuts that trigger them
+
+framework (jarvis mode):
+  ☐ w/ shortcuts & autocomplete, impl modal to allow user to type a command and have it executed
+  ☐ list of available commands come from the global "action registry" w/ its triggering shortcut
+
+framework (save/load buffer to/from file/surrealdb):
+  ☐ learn surrealdb
+    - https://ori-cohen.medium.com/list/surrealdb-deep-dive-ddefbefaf1ef
   ☐ keyboard shortcut to save/load buffer
   ☐ persist buffer to file
   ☐ load buffer to file
   ☐ persist buffer to surrealdb
   ☐ load buffer to surrealdb
-
-tui:
-  ☐ checkbox (single, multi select)
-  ☐ form
 
 framework:
   ☐ animation
