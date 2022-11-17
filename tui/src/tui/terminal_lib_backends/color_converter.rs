@@ -15,52 +15,52 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::TWColor;
+use r3bl_rs_utils_core::TuiColor;
 
-pub fn from_crossterm_color(other: crossterm::style::Color) -> TWColor {
+pub fn from_crossterm_color(other: crossterm::style::Color) -> TuiColor {
   match other {
-    crossterm::style::Color::Reset => TWColor::Reset,
-    crossterm::style::Color::Black => TWColor::Black,
-    crossterm::style::Color::DarkGrey => TWColor::DarkGrey,
-    crossterm::style::Color::Red => TWColor::Red,
-    crossterm::style::Color::DarkRed => TWColor::DarkRed,
-    crossterm::style::Color::Green => TWColor::Green,
-    crossterm::style::Color::DarkGreen => TWColor::DarkGreen,
-    crossterm::style::Color::Yellow => TWColor::Yellow,
-    crossterm::style::Color::DarkYellow => TWColor::DarkYellow,
-    crossterm::style::Color::Blue => TWColor::Blue,
-    crossterm::style::Color::DarkBlue => TWColor::DarkBlue,
-    crossterm::style::Color::Magenta => TWColor::Magenta,
-    crossterm::style::Color::DarkMagenta => TWColor::DarkMagenta,
-    crossterm::style::Color::Cyan => TWColor::Cyan,
-    crossterm::style::Color::DarkCyan => TWColor::DarkCyan,
-    crossterm::style::Color::White => TWColor::White,
-    crossterm::style::Color::Grey => TWColor::Grey,
-    crossterm::style::Color::Rgb { r, g, b } => TWColor::Rgb { r, g, b },
-    crossterm::style::Color::AnsiValue(u8) => TWColor::AnsiValue(u8),
+    crossterm::style::Color::Reset => TuiColor::Reset,
+    crossterm::style::Color::Black => TuiColor::Black,
+    crossterm::style::Color::DarkGrey => TuiColor::DarkGrey,
+    crossterm::style::Color::Red => TuiColor::Red,
+    crossterm::style::Color::DarkRed => TuiColor::DarkRed,
+    crossterm::style::Color::Green => TuiColor::Green,
+    crossterm::style::Color::DarkGreen => TuiColor::DarkGreen,
+    crossterm::style::Color::Yellow => TuiColor::Yellow,
+    crossterm::style::Color::DarkYellow => TuiColor::DarkYellow,
+    crossterm::style::Color::Blue => TuiColor::Blue,
+    crossterm::style::Color::DarkBlue => TuiColor::DarkBlue,
+    crossterm::style::Color::Magenta => TuiColor::Magenta,
+    crossterm::style::Color::DarkMagenta => TuiColor::DarkMagenta,
+    crossterm::style::Color::Cyan => TuiColor::Cyan,
+    crossterm::style::Color::DarkCyan => TuiColor::DarkCyan,
+    crossterm::style::Color::White => TuiColor::White,
+    crossterm::style::Color::Grey => TuiColor::Grey,
+    crossterm::style::Color::Rgb { r, g, b } => TuiColor::Rgb { r, g, b },
+    crossterm::style::Color::AnsiValue(u8) => TuiColor::AnsiValue(u8),
   }
 }
 
-pub fn to_crossterm_color(other: TWColor) -> crossterm::style::Color {
+pub fn to_crossterm_color(other: TuiColor) -> crossterm::style::Color {
   match other {
-    TWColor::Reset => crossterm::style::Color::Reset,
-    TWColor::Black => crossterm::style::Color::Black,
-    TWColor::DarkGrey => crossterm::style::Color::DarkGrey,
-    TWColor::Red => crossterm::style::Color::Red,
-    TWColor::DarkRed => crossterm::style::Color::DarkRed,
-    TWColor::Green => crossterm::style::Color::Green,
-    TWColor::DarkGreen => crossterm::style::Color::DarkGreen,
-    TWColor::Yellow => crossterm::style::Color::Yellow,
-    TWColor::DarkYellow => crossterm::style::Color::DarkYellow,
-    TWColor::Blue => crossterm::style::Color::Blue,
-    TWColor::DarkBlue => crossterm::style::Color::DarkBlue,
-    TWColor::Magenta => crossterm::style::Color::Magenta,
-    TWColor::DarkMagenta => crossterm::style::Color::DarkMagenta,
-    TWColor::Cyan => crossterm::style::Color::Cyan,
-    TWColor::DarkCyan => crossterm::style::Color::DarkCyan,
-    TWColor::White => crossterm::style::Color::White,
-    TWColor::Grey => crossterm::style::Color::Grey,
-    TWColor::Rgb { r, g, b } => crossterm::style::Color::Rgb { r, g, b },
-    TWColor::AnsiValue(u8) => crossterm::style::Color::AnsiValue(u8),
+    TuiColor::Reset => crossterm::style::Color::Reset,
+    TuiColor::Black => crossterm::style::Color::Black,
+    TuiColor::DarkGrey => crossterm::style::Color::DarkGrey,
+    TuiColor::Red => crossterm::style::Color::Red,
+    TuiColor::DarkRed => crossterm::style::Color::DarkRed,
+    TuiColor::Green => crossterm::style::Color::Green,
+    TuiColor::DarkGreen => crossterm::style::Color::DarkGreen,
+    TuiColor::Yellow => crossterm::style::Color::Yellow,
+    TuiColor::DarkYellow => crossterm::style::Color::DarkYellow,
+    TuiColor::Blue => crossterm::style::Color::Blue,
+    TuiColor::DarkBlue => crossterm::style::Color::DarkBlue,
+    TuiColor::Magenta => crossterm::style::Color::Magenta,
+    TuiColor::DarkMagenta => crossterm::style::Color::DarkMagenta,
+    TuiColor::Cyan => crossterm::style::Color::Cyan,
+    TuiColor::DarkCyan => crossterm::style::Color::DarkCyan,
+    TuiColor::White => crossterm::style::Color::White,
+    TuiColor::Grey => crossterm::style::Color::Grey,
+    TuiColor::Rgb { r, g, b } => crossterm::style::Color::Rgb { r, g, b },
+    TuiColor::AnsiValue(u8) => crossterm::style::Color::AnsiValue(u8),
   }
 }

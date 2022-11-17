@@ -41,7 +41,7 @@ const SPAWN_PROCESS_INPUT: bool = true;
 ///      following ops [RenderOp::MoveCursorPositionAbs], [RenderOp::MoveCursorPositionRelTo] And
 ///      they will be valid only for that [RenderOps] list.
 #[derive(Clone, Debug, Default)]
-pub struct TWData {
+pub struct GlobalData {
   pub size: Size,
   pub cursor_position: Position,
   pub maybe_render_pipeline: Option<RenderPipeline>,
@@ -49,11 +49,11 @@ pub struct TWData {
   pub global_user_data: HashMap<String, HashMap<String, String>>,
 }
 
-impl TWData {
-  fn try_to_create_instance() -> CommonResult<TWData> {
-    let mut tw_data = TWData::default();
-    tw_data.set_size(terminal_lib_operations::lookup_size()?);
-    Ok(tw_data)
+impl GlobalData {
+  fn try_to_create_instance() -> CommonResult<GlobalData> {
+    let mut global_data = GlobalData::default();
+    global_data.set_size(terminal_lib_operations::lookup_size()?);
+    Ok(global_data)
   }
 
   pub fn set_size(&mut self, new_size: Size) {
@@ -88,26 +88,26 @@ impl TerminalWindow {
     A: Default + Clone + Sync + Send + 'static,
   {
     // Initialize the terminal window data struct.
-    let _tw_data = TWData::try_to_create_instance()?;
-    let shared_tw_data: SharedTWData = Arc::new(RwLock::new(_tw_data));
+    let _global_data = GlobalData::try_to_create_instance()?;
+    let shared_global_data: SharedGlobalData = Arc::new(RwLock::new(_global_data));
 
     // Start raw mode.
-    let my_raw_mode = RawMode::start(&shared_tw_data).await;
+    let my_raw_mode = RawMode::start(&shared_global_data).await;
 
     // Move the store into an Arc & RwLock.
     let shared_store: SharedStore<S, A> = Arc::new(RwLock::new(store));
 
     // Create a subscriber (AppManager) & attach it to the store.
-    let _subscriber = AppManager::new_box(&shared_app, &shared_store, &shared_tw_data);
+    let _subscriber = AppManager::new_box(&shared_app, &shared_store, &shared_global_data);
     shared_store.write().await.add_subscriber(_subscriber).await;
 
     // Create a new event stream (async).
     let mut async_event_stream = AsyncEventStream::default();
 
     // Perform first render.
-    AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
+    AppManager::render_app(&shared_store, &shared_app, &shared_global_data, None).await?;
 
-    shared_tw_data
+    shared_global_data
       .read()
       .await
       .dump_state_to_log("main_event_loop -> Startup 🚀");
@@ -132,14 +132,14 @@ impl TerminalWindow {
       // is a resize event, then we still need to update the size of the terminal window. It also
       // needs to be re-rendered.
       if let InputEvent::Resize(new_size) = input_event {
-        shared_tw_data.write().await.set_size(new_size);
-        shared_tw_data.write().await.maybe_render_pipeline = None;
-        AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
+        shared_global_data.write().await.set_size(new_size);
+        shared_global_data.write().await.maybe_render_pipeline = None;
+        AppManager::render_app(&shared_store, &shared_app, &shared_global_data, None).await?;
       }
 
       // Pass the input_event to the app for processing.
       let propagation_result_from_app =
-        TerminalWindow::process_input_event(&shared_tw_data, &shared_store, &shared_app, &input_event).await?;
+        TerminalWindow::process_input_event(&shared_global_data, &shared_store, &shared_app, &input_event).await?;
 
       // If event not consumed by app, propagate to the default input handler.
       match propagation_result_from_app {
@@ -149,20 +149,20 @@ impl TerminalWindow {
           };
         }
         EventPropagation::ConsumedRerender => {
-          AppManager::render_app(&shared_store, &shared_app, &shared_tw_data, None).await?;
+          AppManager::render_app(&shared_store, &shared_app, &shared_global_data, None).await?;
         }
         EventPropagation::Consumed => {}
       }
     }
 
     // End raw mode.
-    my_raw_mode.end(&shared_tw_data).await;
+    my_raw_mode.end(&shared_global_data).await;
 
     Ok(())
   }
 
   async fn process_input_event<S, A>(
-    shared_tw_data: &SharedTWData,
+    shared_global_data: &SharedGlobalData,
     shared_store: &SharedStore<S, A>,
     shared_app: &SharedApp<S, A>,
     input_event: &InputEvent,
@@ -175,13 +175,13 @@ impl TerminalWindow {
       true => {
         // Tokio spawn.
         let propagation_result_from_app = {
-          let shared_tw_data_clone = shared_tw_data.clone();
+          let shared_global_data_clone = shared_global_data.clone();
           let shared_store_clone = shared_store.clone();
           let shared_app_clone = shared_app.clone();
           let input_event_clone = input_event.clone();
           let join_handle = tokio::spawn(async move {
             AppManager::route_input_to_app(
-              &shared_tw_data_clone,
+              &shared_global_data_clone,
               &shared_store_clone,
               &shared_app_clone,
               &input_event_clone,
@@ -203,7 +203,7 @@ impl TerminalWindow {
       false => {
         // Blocking call.
         let propagation_result_from_app =
-          AppManager::route_input_to_app(shared_tw_data, shared_store, shared_app, input_event).await?;
+          AppManager::route_input_to_app(shared_global_data, shared_store, shared_app, input_event).await?;
         call_if_true!(
           DEBUG_TUI_MOD,
           log_no_err!(
@@ -226,7 +226,7 @@ where
 {
   shared_app: SharedApp<S, A>,
   shared_store: SharedStore<S, A>,
-  shared_tw_data: SharedTWData,
+  shared_global_data: SharedGlobalData,
 }
 
 #[async_trait]
@@ -239,7 +239,7 @@ where
     let result = AppManager::render_app(
       &self.shared_store,
       &self.shared_app,
-      &self.shared_tw_data,
+      &self.shared_global_data,
       my_state.into(),
     )
     .await;
@@ -257,18 +257,18 @@ where
   fn new_box(
     shared_app: &SharedApp<S, A>,
     shared_store: &SharedStore<S, A>,
-    shared_tw_data: &SharedTWData,
+    shared_global_data: &SharedGlobalData,
   ) -> Box<Self> {
     Box::new(AppManager {
       shared_app: shared_app.clone(),
       shared_store: shared_store.clone(),
-      shared_tw_data: shared_tw_data.clone(),
+      shared_global_data: shared_global_data.clone(),
     })
   }
 
   /// Pass the event to the `shared_app` for further processing.
   pub async fn route_input_to_app(
-    shared_tw_data: &SharedTWData,
+    shared_global_data: &SharedGlobalData,
     shared_store: &SharedStore<S, A>,
     shared_app: &SharedApp<S, A>,
     input_event: &InputEvent,
@@ -276,9 +276,9 @@ where
     throws_with_return!({
       // Create global scope args.
       let state = shared_store.read().await.get_state();
-      let window_size = shared_tw_data.read().await.get_size();
+      let window_size = shared_global_data.read().await.get_size();
       let global_scope_args = GlobalScopeArgs {
-        shared_tw_data,
+        shared_global_data,
         shared_store,
         state: &state,
         window_size: &window_size,
@@ -296,12 +296,12 @@ where
   pub async fn render_app(
     shared_store: &SharedStore<S, A>,
     shared_app: &SharedApp<S, A>,
-    shared_tw_data: &SharedTWData,
+    shared_global_data: &SharedGlobalData,
     maybe_state: Option<S>,
   ) -> CommonResult<()> {
     throws!({
       // Create global scope args.
-      let window_size = shared_tw_data.read().await.get_size();
+      let window_size = shared_global_data.read().await.get_size();
       let state: S = if let Some(state) = maybe_state {
         state
       } else {
@@ -310,14 +310,14 @@ where
       let global_scope_args = GlobalScopeArgs {
         state: &state,
         shared_store,
-        shared_tw_data,
+        shared_global_data,
         window_size: &window_size,
       };
 
       // Check to see if the window_size is large enough to render.
       let render_result: CommonResult<RenderPipeline> =
         if window_size.is_too_small_to_display(MinSize::Col.int_value(), MinSize::Row.int_value()) {
-          shared_tw_data.write().await.maybe_render_pipeline = None;
+          shared_global_data.write().await.maybe_render_pipeline = None;
           Ok(render_window_size_too_small(window_size))
         } else {
           // Call app_render.
@@ -333,7 +333,9 @@ where
           );
         }
         Ok(render_pipeline) => {
-          render_pipeline.paint(FlushKind::ClearBeforeFlush, shared_tw_data).await;
+          render_pipeline
+            .paint(FlushKind::ClearBeforeFlush, shared_global_data)
+            .await;
           call_if_true!(DEBUG_TUI_MOD, {
             log_no_err!(
               INFO,
@@ -364,7 +366,7 @@ fn render_window_size_too_small(window_size: Size) -> RenderPipeline {
   render_pipeline!(@new ZOrder::Normal =>
     RenderOp::ResetColor,
     RenderOp::MoveCursorPositionAbs(position! {col: col_pos, row: row_pos}),
-    RenderOp::SetFgColor(TWColor::DarkRed),
+    RenderOp::SetFgColor(TuiColor::DarkRed),
     RenderOp::PrintTextWithAttributes(
       lolcat_each_char_in_unicode_string(&trunc_display_msg, None),
       Some(style! {attrib: [bold]}))

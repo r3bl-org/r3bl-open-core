@@ -35,11 +35,11 @@ Create an editor component that is very similar to
 <a id="markdown-timeline-%26-features" name="timeline-%26-features"></a>
 
 
-1. Editor component that can fit in a `TWBox` and is implemented as a `Component`. Example of a
+1. Editor component that can fit in a `FlexBox` and is implemented as a `Component`. Example of a
    `Component`
    [`column_render_component.rs`](https://github.com/r3bl-org/r3bl-cmdr/blob/main/src/ex_app_with_layout/column_render_component.rs).
 2. Supports editing but not saving.
-3. Supports focus management, so there may be multiple editor components in a single `TWApp`.
+3. Supports focus management, so there may be multiple editor components in a single `App`.
 4. Support unicode grapheme clusters (cursor navigation).
 5. Support for scrolling.
 6. Support for selection (for copy / paste).
@@ -195,7 +195,7 @@ constraints).
     is constantly moved around in order to paint anything (eg:
     `MoveTo(col, row), SetColor, PaintText(...)` sequence).
 3.  So it must be guaranteed by
-    [RenderPipeline via RenderOp::ShowCaretAtPosition???To(...)](https://github.com/r3bl-org/r3bl_rs_utils/blob/main/src/tui/crossterm_helpers/tw_command.rs#L171).
+    [RenderPipeline via RenderOp::ShowCaretAtPosition???To(...)](https://github.com/r3bl-org/r3bl_rs_utils/blob/main/tui/src/tui/terminal_lib_backends/render_op.rs#L217).
     The downside here too is that there's a chance that different components and render functions
     will clobber this value that's already been set. There's currently a weak warning that's
     displayed after the 1st time this value is set which isn't robust either.

@@ -29,7 +29,7 @@ where
   S: Default + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Clone + Sync + Send,
 {
-  fn get_id(&self) -> FlexBoxIdType;
+  fn get_id(&self) -> FlexBoxId;
 
   /// Render this component given the following.
   ///

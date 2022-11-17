@@ -122,8 +122,8 @@ pub fn derive_macro_builder(input: TokenStream) -> TokenStream { builder::derive
 ///   id: "my_style",          /* Optional. */
 ///   attrib: [dim, bold]      /* Optional. */
 ///   padding: 10,             /* Optional. */
-///   color_fg: TWColor::Blue, /* Optional. */
-///   color_bg: TWColor::Red,  /* Optional. */
+///   color_fg: TuiColor::Blue, /* Optional. */
+///   color_bg: TuiColor::Red,  /* Optional. */
 /// }
 /// ```
 ///

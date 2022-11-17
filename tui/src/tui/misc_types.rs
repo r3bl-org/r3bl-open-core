@@ -55,7 +55,7 @@ where
   S: Default + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Clone + Sync + Send,
 {
-  pub shared_tw_data: &'a SharedTWData,
+  pub shared_global_data: &'a SharedGlobalData,
   pub shared_store: &'a SharedStore<S, A>,
   pub state: &'a S,
   pub window_size: &'a Size,
@@ -68,7 +68,7 @@ where
   S: Default + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Clone + Sync + Send,
 {
-  pub shared_tw_data: &'a SharedTWData,
+  pub shared_global_data: &'a SharedGlobalData,
   pub shared_store: &'a SharedStore<S, A>,
   pub state: &'a S,
   pub component_registry: &'a mut ComponentRegistry<S, A>,
@@ -82,11 +82,11 @@ where
   S: Default + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Clone + Sync + Send,
 {
-  pub shared_tw_data: &'a SharedTWData,
+  pub shared_global_data: &'a SharedGlobalData,
   pub shared_store: &'a SharedStore<S, A>,
   pub state: &'a S,
   pub component_registry: &'a mut ComponentRegistry<S, A>,
-  pub self_id: FlexBoxIdType,
+  pub self_id: FlexBoxId,
   pub editor_buffer: &'a EditorBuffer,
   pub editor_engine: &'a mut EditorEngine,
 }
@@ -98,11 +98,11 @@ where
   S: Default + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Clone + Sync + Send,
 {
-  pub shared_tw_data: &'a SharedTWData,
+  pub shared_global_data: &'a SharedGlobalData,
   pub shared_store: &'a SharedStore<S, A>,
   pub state: &'a S,
   pub component_registry: &'a mut ComponentRegistry<S, A>,
-  pub self_id: FlexBoxIdType,
+  pub self_id: FlexBoxId,
   pub dialog_buffer: &'a DialogBuffer,
   pub dialog_engine: &'a mut DialogEngine,
   pub window_size: &'a Size,

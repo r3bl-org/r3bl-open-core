@@ -36,26 +36,26 @@ pub struct RenderOpImplCrossterm;
 
 #[async_trait]
 impl PaintRenderOp for RenderOpImplCrossterm {
-  async fn paint(&self, skip_flush: &mut bool, command_ref: &RenderOp, shared_tw_data: &SharedTWData) {
+  async fn paint(&self, skip_flush: &mut bool, command_ref: &RenderOp, shared_global_data: &SharedGlobalData) {
     match command_ref {
       RenderOp::Noop => {}
       RenderOp::RequestShowCaretAtPositionAbs(pos) => {
-        request_show_caret_at_position_abs(pos, shared_tw_data).await;
+        request_show_caret_at_position_abs(pos, shared_global_data).await;
       }
       RenderOp::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => {
-        request_show_caret_at_position_rel_to(box_origin_pos, content_rel_pos, shared_tw_data).await;
+        request_show_caret_at_position_rel_to(box_origin_pos, content_rel_pos, shared_global_data).await;
       }
       RenderOp::EnterRawMode => {
-        raw_mode_enter(skip_flush, shared_tw_data).await;
+        raw_mode_enter(skip_flush, shared_global_data).await;
       }
       RenderOp::ExitRawMode => {
         raw_mode_exit(skip_flush);
       }
       RenderOp::MoveCursorPositionAbs(abs_pos) => {
-        move_cursor_position_abs(abs_pos, shared_tw_data).await;
+        move_cursor_position_abs(abs_pos, shared_global_data).await;
       }
       RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
-        move_cursor_position_rel_to(box_origin_pos, content_rel_pos, shared_tw_data).await;
+        move_cursor_position_rel_to(box_origin_pos, content_rel_pos, shared_global_data).await;
       }
       RenderOp::ClearScreen => {
         exec_render_op!(queue!(stdout(), Clear(ClearType::All)), "ClearScreen")
@@ -79,10 +79,10 @@ impl PaintRenderOp for RenderOpImplCrossterm {
         apply_colors(style);
       }
       RenderOp::PrintTextWithAttributes(text, maybe_style) => {
-        print_text_with_attributes(text, maybe_style, shared_tw_data, None).await;
+        print_text_with_attributes(text, maybe_style, shared_global_data, None).await;
       }
-      RenderOp::PrintTextWithAttributesAndPadding(text, maybe_style, max_display_col) => {
-        print_text_with_attributes(text, maybe_style, shared_tw_data, Some(*max_display_col)).await;
+      RenderOp::PrintTextWithAttributesWithPadding(text, maybe_style, max_display_col) => {
+        print_text_with_attributes(text, maybe_style, shared_global_data, Some(*max_display_col)).await;
       }
     }
   }
@@ -121,14 +121,14 @@ pub mod flush_impl {
 async fn move_cursor_position_rel_to(
   box_origin_pos: &Position,
   content_rel_pos: &Position,
-  shared_tw_data: &SharedTWData,
+  shared_global_data: &SharedGlobalData,
 ) {
   let new_abs_pos = *box_origin_pos + *content_rel_pos;
-  move_cursor_position_abs(&new_abs_pos, shared_tw_data).await;
+  move_cursor_position_abs(&new_abs_pos, shared_global_data).await;
 }
 
-async fn move_cursor_position_abs(abs_pos: &Position, shared_tw_data: &SharedTWData) {
-  let Position { col, row } = sanitize_and_save_abs_position(*abs_pos, shared_tw_data).await;
+async fn move_cursor_position_abs(abs_pos: &Position, shared_global_data: &SharedGlobalData) {
+  let Position { col, row } = sanitize_and_save_abs_position(*abs_pos, shared_global_data).await;
   exec_render_op!(
     queue!(stdout(), MoveTo(*col, *row)),
     format!("MoveCursorPosition(col: {}, row: {})", *col, *row)
@@ -149,8 +149,8 @@ fn raw_mode_exit(skip_flush: &mut bool) {
   *skip_flush = true;
 }
 
-async fn raw_mode_enter(skip_flush: &mut bool, shared_tw_data: &SharedTWData) {
-  shared_tw_data.write().await.cursor_position = position! {col: 0, row: 0};
+async fn raw_mode_enter(skip_flush: &mut bool, shared_global_data: &SharedGlobalData) {
+  shared_global_data.write().await.cursor_position = position! {col: 0, row: 0};
   exec_render_op! {
     terminal::enable_raw_mode(),
     "EnterRawMode -> enable_raw_mode()"
@@ -172,14 +172,14 @@ async fn raw_mode_enter(skip_flush: &mut bool, shared_tw_data: &SharedTWData) {
 async fn request_show_caret_at_position_rel_to(
   box_origin_pos: &Position,
   content_rel_pos: &Position,
-  shared_tw_data: &SharedTWData,
+  shared_global_data: &SharedGlobalData,
 ) {
   let new_abs_pos = *box_origin_pos + *content_rel_pos;
-  request_show_caret_at_position_abs(&new_abs_pos, shared_tw_data).await;
+  request_show_caret_at_position_abs(&new_abs_pos, shared_global_data).await;
 }
 
-async fn request_show_caret_at_position_abs(pos: &Position, shared_tw_data: &SharedTWData) {
-  let sanitized_pos = sanitize_and_save_abs_position(*pos, shared_tw_data).await;
+async fn request_show_caret_at_position_abs(pos: &Position, shared_global_data: &SharedGlobalData) {
+  let sanitized_pos = sanitize_and_save_abs_position(*pos, shared_global_data).await;
   let Position { col, row } = sanitized_pos;
   exec_render_op!(
     queue!(stdout(), MoveTo(*col, *row), Show),
@@ -187,7 +187,7 @@ async fn request_show_caret_at_position_abs(pos: &Position, shared_tw_data: &Sha
   );
 }
 
-fn set_fg_color(color: &TWColor) {
+fn set_fg_color(color: &TuiColor) {
   let color = color_converter::to_crossterm_color(*color);
   exec_render_op!(
     queue!(stdout(), SetForegroundColor(color)),
@@ -195,7 +195,7 @@ fn set_fg_color(color: &TWColor) {
   )
 }
 
-fn set_bg_color(color: &TWColor) {
+fn set_bg_color(color: &TuiColor) {
   let color: crossterm::style::Color = color_converter::to_crossterm_color(*color);
   exec_render_op!(
     queue!(stdout(), SetBackgroundColor(color)),
@@ -206,7 +206,7 @@ fn set_bg_color(color: &TWColor) {
 async fn print_text_with_attributes(
   text_arg: &String,
   maybe_style: &Option<Style>,
-  shared_tw_data: &SharedTWData,
+  shared_global_data: &SharedGlobalData,
   maybe_max_display_col: Option<ChUnit>,
 ) {
   // Are ANSI codes present?
@@ -244,7 +244,7 @@ async fn print_text_with_attributes(
     text,
     log_msg,
     maybe_style,
-    shared_tw_data,
+    shared_global_data,
     truncation_policy,
   };
 
@@ -276,7 +276,7 @@ async fn print_text_with_attributes(
     pub text: Cow<'a, str>,
     pub log_msg: Cow<'a, str>,
     pub maybe_style: &'a Option<Style>,
-    pub shared_tw_data: &'a SharedTWData,
+    pub shared_global_data: &'a SharedGlobalData,
     pub truncation_policy: TruncationPolicy,
   }
 
@@ -290,22 +290,22 @@ async fn print_text_with_attributes(
     PaintArgs {
       text: mut_text_arg,
       log_msg: mut_log_msg,
-      shared_tw_data,
+      shared_global_data,
       ..
     }: &mut PaintArgs<'a>,
     needs_reset: &mut bool,
     maybe_max_display_col: Option<ChUnit>,
   ) {
     // Check whether the text needs to be truncated to fit the terminal window.
-    let current_cursor_col = shared_tw_data.read().await.cursor_position.col;
-    let max_terminal_width = shared_tw_data.read().await.size.cols;
+    let current_cursor_col = shared_global_data.read().await.cursor_position.col;
+    let max_terminal_width = shared_global_data.read().await.size.cols;
     let max_terminal_display_cols = max_terminal_width - current_cursor_col;
 
     // Padding (postfix add spaces to fit max_display_col).
     {
       let arg = mut_text_arg.to_string();
       let ansi_text = arg.ansi_text();
-      let ansi_text_segments = ansi_text.segments(None);
+      let ansi_text_segments = ansi_text.segments(None, None);
 
       if let Some(max_display_col) = maybe_max_display_col {
         let ansi_len = ansi_text_segments.len();
@@ -330,9 +330,9 @@ async fn print_text_with_attributes(
     {
       let arg = mut_text_arg.to_string();
       let ansi_text = arg.ansi_text();
-      let ansi_text_segments = ansi_text.segments(None);
+      let ansi_text_segments = ansi_text.segments(None, None);
       if ansi_text_segments.len() > ch!(@to_usize max_terminal_display_cols) {
-        let truncated_segments = ansi_text.segments(Some(ch!(@to_usize max_terminal_display_cols)));
+        let truncated_segments = ansi_text.segments(None, Some(ch!(@to_usize max_terminal_display_cols)));
 
         let truncated_seg_len = truncated_segments.len();
         let truncated_seg_unicode_width = truncated_segments.unicode_width;
@@ -355,14 +355,14 @@ async fn print_text_with_attributes(
     PaintArgs {
       text,
       log_msg,
-      shared_tw_data,
+      shared_global_data,
       ..
     }: &mut PaintArgs<'a>,
     maybe_max_display_col: Option<ChUnit>,
   ) {
     // Check whether the text needs to be truncated to fit the terminal window.
-    let cursor_position = shared_tw_data.read().await.cursor_position;
-    let max_window_cols = shared_tw_data.read().await.size.cols;
+    let cursor_position = shared_global_data.read().await.cursor_position;
+    let max_window_cols = shared_global_data.read().await.size.cols;
     let plain_text_unicode_string: UnicodeString = text.as_ref().into();
     let plain_text_len = plain_text_unicode_string.display_width;
 
@@ -420,13 +420,13 @@ async fn print_text_with_attributes(
     let PaintArgs {
       text,
       log_msg,
-      shared_tw_data,
+      shared_global_data,
       truncation_policy,
       ..
     } = paint_args;
 
     let unicode_string: UnicodeString = text.as_ref().into();
-    let mut cursor_position_copy = shared_tw_data.read().await.cursor_position;
+    let mut cursor_position_copy = shared_global_data.read().await.cursor_position;
 
     match unicode_string.contains_wide_segments() {
       true => {
@@ -452,14 +452,14 @@ async fn print_text_with_attributes(
     let display_width = match truncation_policy {
       TruncationPolicy::ANSIText => {
         let ansi_text = text.ansi_text();
-        let ansi_text_segments = ansi_text.segments(None);
+        let ansi_text_segments = ansi_text.segments(None, None);
         let unicode_width = ansi_text_segments.unicode_width;
         ch!(unicode_width)
       }
       TruncationPolicy::PlainText => unicode_string.display_width,
     };
     cursor_position_copy.col += display_width;
-    sanitize_and_save_abs_position(cursor_position_copy, shared_tw_data).await;
+    sanitize_and_save_abs_position(cursor_position_copy, shared_global_data).await;
 
     // Move cursor "manually" to cover "extra" width.
     fn jump_cursor(pos: &Position, seg: &GraphemeClusterSegment) {

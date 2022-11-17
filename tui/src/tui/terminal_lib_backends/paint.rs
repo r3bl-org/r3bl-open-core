@@ -35,25 +35,25 @@ use crate::{tui::DEBUG_SHOW_PIPELINE, *};
 /// 2. [RenderOp::RequestShowCaretAtPositionRelTo]
 ///
 /// See [RenderOps] for more details of "atomic paint operations".
-pub async fn paint(pipeline: &RenderPipeline, flush_kind: FlushKind, shared_tw_data: &SharedTWData) {
-  let maybe_saved_pipeline = shared_tw_data.read().await.maybe_render_pipeline.clone();
+pub async fn paint(pipeline: &RenderPipeline, flush_kind: FlushKind, shared_global_data: &SharedGlobalData) {
+  let maybe_saved_pipeline = shared_global_data.read().await.maybe_render_pipeline.clone();
 
   if let Some(saved_pipeline) = maybe_saved_pipeline {
-    optimized_paint::paint(pipeline, &saved_pipeline, flush_kind, shared_tw_data).await;
+    optimized_paint::paint(pipeline, &saved_pipeline, flush_kind, shared_global_data).await;
   } else {
-    no_optimize_paint(pipeline, flush_kind, shared_tw_data).await;
+    no_optimize_paint(pipeline, flush_kind, shared_global_data).await;
   }
 
-  shared_tw_data.write().await.maybe_render_pipeline = Some(pipeline.clone());
+  shared_global_data.write().await.maybe_render_pipeline = Some(pipeline.clone());
 }
 
 pub mod optimized_paint {
   use super::*;
 
   impl RenderOps {
-    async fn paint(&self, skip_flush: &mut bool, shared_tw_data: &SharedTWData) {
+    async fn paint(&self, skip_flush: &mut bool, shared_global_data: &SharedGlobalData) {
       for op in self.iter() {
-        route_paint_render_op_to_backend(skip_flush, op, shared_tw_data).await;
+        route_paint_render_op_to_backend(skip_flush, op, shared_global_data).await;
       }
     }
 
@@ -156,7 +156,7 @@ pub mod optimized_paint {
     pipeline: &RenderPipeline,
     saved_pipeline: &RenderPipeline,
     flush_kind: FlushKind,
-    shared_tw_data: &SharedTWData,
+    shared_global_data: &SharedGlobalData,
   ) {
     let mut skip_flush = false;
 
@@ -167,7 +167,7 @@ pub mod optimized_paint {
     // the ZOrder::Glass layer has been removed, and this will require a full repaint, so the dialog
     // box itself doesn't "ghost".
     if new_vec_render_ops.len() < saved_vec_render_ops.len() {
-      no_optimize_paint(pipeline, flush_kind, shared_tw_data).await;
+      no_optimize_paint(pipeline, flush_kind, shared_global_data).await;
       return;
     }
 
@@ -177,7 +177,7 @@ pub mod optimized_paint {
         // RenderOps found at new_vec_index in new_vec_render_ops & saved_vec_render_ops.
         Some(saved_ops) => {
           if new_ops != saved_ops {
-            new_ops.paint(&mut skip_flush, shared_tw_data).await;
+            new_ops.paint(&mut skip_flush, shared_global_data).await;
             print_debug_diff_render_ops(new_ops, saved_ops);
           }
         }
@@ -185,10 +185,10 @@ pub mod optimized_paint {
         None => {
           // Paint the whole RenderOps.
           if new_ops.contains_clear_screen_ops() {
-            no_optimize_paint(pipeline, flush_kind, shared_tw_data).await;
+            no_optimize_paint(pipeline, flush_kind, shared_global_data).await;
             return;
           } else {
-            new_ops.paint(&mut skip_flush, shared_tw_data).await;
+            new_ops.paint(&mut skip_flush, shared_global_data).await;
           }
         }
       }
@@ -252,7 +252,11 @@ pub mod optimized_paint {
   }
 }
 
-pub async fn no_optimize_paint(pipeline: &RenderPipeline, flush_kind: FlushKind, shared_tw_data: &SharedTWData) {
+pub async fn no_optimize_paint(
+  pipeline: &RenderPipeline,
+  flush_kind: FlushKind,
+  shared_global_data: &SharedGlobalData,
+) {
   let mut skip_flush = false;
 
   if let FlushKind::ClearBeforeFlush = flush_kind {
@@ -272,7 +276,7 @@ pub async fn no_optimize_paint(pipeline: &RenderPipeline, flush_kind: FlushKind,
               special_hoisted_op_vec.push(render_op.clone());
             }
             _ => {
-              route_paint_render_op_to_backend(&mut skip_flush, render_op, shared_tw_data).await;
+              route_paint_render_op_to_backend(&mut skip_flush, render_op, shared_global_data).await;
             }
           }
         }
@@ -291,7 +295,7 @@ pub async fn no_optimize_paint(pipeline: &RenderPipeline, flush_kind: FlushKind,
 
   // Execute the special ops (at the very end).
   for special_render_op in &special_hoisted_op_vec {
-    route_paint_render_op_to_backend(&mut skip_flush, special_render_op, shared_tw_data).await;
+    route_paint_render_op_to_backend(&mut skip_flush, special_render_op, shared_global_data).await;
   }
 
   // Flush everything to the terminal.
@@ -306,15 +310,15 @@ pub async fn no_optimize_paint(pipeline: &RenderPipeline, flush_kind: FlushKind,
 }
 
 /// 1. Ensure that the [Position] is within the bounds of the terminal window using
-///    [SharedTWData].
+///    [SharedGlobalData].
 /// 2. If the [Position] is outside of the bounds of the window then it is clamped to the nearest
 ///    edge of the window. This clamped [Position] is returned.
-/// 3. This also saves the clamped [Position] to [SharedTWData].
-pub async fn sanitize_and_save_abs_position(orig_abs_pos: Position, shared_tw_data: &SharedTWData) -> Position {
+/// 3. This also saves the clamped [Position] to [SharedGlobalData].
+pub async fn sanitize_and_save_abs_position(orig_abs_pos: Position, shared_global_data: &SharedGlobalData) -> Position {
   let Size {
     cols: max_cols,
     rows: max_rows,
-  } = shared_tw_data.read().await.size;
+  } = shared_global_data.read().await.size;
 
   let mut sanitized_abs_pos: Position = orig_abs_pos;
 
@@ -327,7 +331,7 @@ pub async fn sanitize_and_save_abs_position(orig_abs_pos: Position, shared_tw_da
   }
 
   // Save the cursor position.
-  shared_tw_data.write().await.cursor_position = sanitized_abs_pos;
+  shared_global_data.write().await.cursor_position = sanitized_abs_pos;
 
   debug(orig_abs_pos, sanitized_abs_pos);
 
@@ -350,7 +354,7 @@ pub async fn sanitize_and_save_abs_position(orig_abs_pos: Position, shared_tw_da
       log_no_err!(
         INFO,
         "pipeline : 📍 Save the cursor position {:?} \
-          to SharedTWData",
+          to SharedGlobalData",
         sanitized_pos
       );
     });
@@ -363,12 +367,12 @@ pub async fn sanitize_and_save_abs_position(orig_abs_pos: Position, shared_tw_da
 pub async fn route_paint_render_op_to_backend(
   skip_flush: &mut bool,
   render_op: &RenderOp,
-  shared_tw_data: &SharedTWData,
+  shared_global_data: &SharedGlobalData,
 ) {
   match TERMINAL_LIB_BACKEND {
     TerminalLibBackend::Crossterm => {
       RenderOpImplCrossterm {}
-        .paint(skip_flush, render_op, shared_tw_data)
+        .paint(skip_flush, render_op, shared_global_data)
         .await;
     }
     TerminalLibBackend::Termion => todo!(), // FUTURE: implement PaintRenderOp trait for termion
@@ -380,5 +384,5 @@ pub async fn route_paint_render_op_to_backend(
 // ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[async_trait]
 pub trait PaintRenderOp {
-  async fn paint(&self, skip_flush: &mut bool, render_op: &RenderOp, shared_tw_data: &SharedTWData);
+  async fn paint(&self, skip_flush: &mut bool, render_op: &RenderOp, shared_global_data: &SharedGlobalData);
 }

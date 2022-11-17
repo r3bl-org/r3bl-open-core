@@ -21,7 +21,7 @@ use crate::*;
 
 /// Public API interface to create nested & responsive layout based UIs.
 pub trait LayoutManagement {
-  /// Set the origin pos (x, y) & tw_surface size (width, height) of our box (container).
+  /// Set the origin pos (x, y) & surface size (width, height) of our box (container).
   fn surface_start(&mut self, bounds_props: SurfaceProps) -> CommonResult<()>;
 
   fn surface_end(&mut self) -> CommonResult<()>;
@@ -54,7 +54,7 @@ pub trait PerformPositioningAndSizing {
 /// Properties that are needed to create a [FlexBox].
 #[derive(Clone, Debug, Default)]
 pub struct FlexBoxProps {
-  pub id: FlexBoxIdType,
+  pub id: FlexBoxId,
   pub dir: Direction,
   pub requested_size_percent: RequestedSizePercent,
   pub maybe_styles: Option<Vec<Style>>,

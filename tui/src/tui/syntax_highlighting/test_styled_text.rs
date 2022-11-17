@@ -23,6 +23,97 @@ mod tests {
   use crate::*;
 
   #[test]
+  fn syntect_conversion() {
+    let st_color_1 = syntect::highlighting::Color {
+      r: 255,
+      g: 255,
+      b: 255,
+      a: 0,
+    };
+
+    let st_color_2 = syntect::highlighting::Color { r: 0, g: 0, b: 0, a: 0 };
+
+    let st_vec: Vec<(syntect::highlighting::Style, &str)> = vec![
+      // item 1.
+      (
+        syntect::highlighting::Style {
+          foreground: st_color_1,
+          background: st_color_1,
+          font_style: syntect::highlighting::FontStyle::empty(),
+        },
+        "st_color_1",
+      ),
+      // item 2.
+      (
+        syntect::highlighting::Style {
+          foreground: st_color_2,
+          background: st_color_2,
+          font_style: syntect::highlighting::FontStyle::BOLD,
+        },
+        "st_color_2",
+      ),
+      // item 3.
+      (
+        syntect::highlighting::Style {
+          foreground: st_color_1,
+          background: st_color_2,
+          font_style: syntect::highlighting::FontStyle::UNDERLINE
+            | syntect::highlighting::FontStyle::BOLD
+            | syntect::highlighting::FontStyle::ITALIC,
+        },
+        "st_color_1 and 2",
+      ),
+    ];
+
+    let styled_texts = dbg!(StyledTexts::from(st_vec));
+
+    // Should have 3 items.
+    assert_eq2!(styled_texts.len(), 3);
+
+    // item 1.
+    {
+      assert_eq2!(styled_texts[0].get_plain_text(), "st_color_1");
+      assert_eq2!(
+        styled_texts[0].get_style().color_fg.unwrap(),
+        TuiColor::Rgb { r: 255, g: 255, b: 255 }
+      );
+      assert_eq2!(
+        styled_texts[0].get_style().color_bg.unwrap(),
+        TuiColor::Rgb { r: 255, g: 255, b: 255 }
+      );
+    }
+
+    // item 2.
+    {
+      assert_eq2!(styled_texts[1].get_plain_text(), "st_color_2");
+      assert_eq2!(
+        styled_texts[1].get_style().color_fg.unwrap(),
+        TuiColor::Rgb { r: 0, g: 0, b: 0 }
+      );
+      assert_eq2!(
+        styled_texts[1].get_style().color_bg.unwrap(),
+        TuiColor::Rgb { r: 0, g: 0, b: 0 }
+      );
+      assert_eq2!(styled_texts[1].get_style().bold, true);
+    }
+
+    // item 3.
+    {
+      assert_eq2!(styled_texts[2].get_plain_text(), "st_color_1 and 2");
+      assert_eq2!(
+        styled_texts[2].get_style().color_fg.unwrap(),
+        TuiColor::Rgb { r: 255, g: 255, b: 255 }
+      );
+      assert_eq2!(
+        styled_texts[2].get_style().color_bg.unwrap(),
+        TuiColor::Rgb { r: 0, g: 0, b: 0 }
+      );
+      assert_eq2!(styled_texts[2].get_style().bold, true);
+      assert_eq2!(styled_texts[2].get_style().underline, true);
+    }
+  }
+
+  #[test]
   fn test_create_styled_text_with_dsl() -> CommonResult<()> {
     throws!({
       let st_vec = helpers::create_styled_text()?;
@@ -57,7 +148,7 @@ mod tests {
   mod helpers {
     use super::*;
 
-    pub fn create_styled_text() -> CommonResult<Vec<StyledText>> {
+    pub fn create_styled_text() -> CommonResult<StyledTexts> {
       throws_with_return!({
         let stylesheet = create_stylesheet()?;
         let maybe_style1 = stylesheet.find_style_by_id("style1");
@@ -82,12 +173,12 @@ mod tests {
           style! {
             id: "style1"
             padding: 1
-            color_bg: TWColor::Rgb { r: 55, g: 55, b: 100 }
+            color_bg: TuiColor::Rgb { r: 55, g: 55, b: 100 }
           },
           style! {
             id: "style2"
             padding: 1
-            color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
+            color_bg: TuiColor::Rgb { r: 55, g: 55, b: 248 }
           }
         }
       })

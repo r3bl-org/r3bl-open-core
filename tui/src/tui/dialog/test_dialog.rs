@@ -59,7 +59,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
   fn make_flex_box_for_dialog_display_size_too_small() {
     let surface = Surface::default();
     let window_size = Size::default();
-    let dialog_id: FlexBoxIdType = 0;
+    let dialog_id: FlexBoxId = 0;
 
     // The window size is too small and will result in this error.
     // Err(
@@ -101,7 +101,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
       ..Default::default()
     };
     let window_size = size!( cols: 70, rows: 15 );
-    let self_id: FlexBoxIdType = 0;
+    let self_id: FlexBoxId = 0;
 
     // The dialog box should be centered inside the surface.
     let result_flex_box = dbg!(DialogEngineApi::make_flex_box_for_dialog(
@@ -128,17 +128,17 @@ mod test_dialog_api_apply_event {
 
   #[tokio::test]
   async fn apply_event_esc() {
-    let self_id: FlexBoxIdType = 0;
+    let self_id: FlexBoxId = 0;
     let window_size = &size!( cols: 70, rows: 15 );
     let dialog_buffer = &mut DialogBuffer::default();
     let dialog_engine = &mut mock_real_objects::make_dialog_engine();
     let shared_store = &mock_real_objects::create_store();
     let state = &String::new();
-    let shared_tw_data = &test_editor::mock_real_objects::make_shared_tw_data();
+    let shared_global_data = &test_editor::mock_real_objects::make_shared_global_data();
     let component_registry = &mut test_editor::mock_real_objects::make_component_registry();
 
     let args = DialogEngineArgs {
-      shared_tw_data,
+      shared_global_data,
       shared_store,
       state,
       component_registry,
@@ -158,17 +158,17 @@ mod test_dialog_api_apply_event {
 
   #[tokio::test]
   async fn apply_event_enter() {
-    let self_id: FlexBoxIdType = 0;
+    let self_id: FlexBoxId = 0;
     let window_size = &size!( cols: 70, rows: 15 );
     let dialog_buffer = &mut DialogBuffer::default();
     let dialog_engine = &mut mock_real_objects::make_dialog_engine();
     let shared_store = &mock_real_objects::create_store();
     let state = &String::new();
-    let shared_tw_data = &test_editor::mock_real_objects::make_shared_tw_data();
+    let shared_global_data = &test_editor::mock_real_objects::make_shared_global_data();
     let component_registry = &mut test_editor::mock_real_objects::make_component_registry();
 
     let args = DialogEngineArgs {
-      shared_tw_data,
+      shared_global_data,
       shared_store,
       state,
       component_registry,
@@ -191,17 +191,17 @@ mod test_dialog_api_apply_event {
 
   #[tokio::test]
   async fn apply_event_other_key() {
-    let self_id: FlexBoxIdType = 0;
+    let self_id: FlexBoxId = 0;
     let window_size = &size!( cols: 70, rows: 15 );
     let dialog_buffer = &mut DialogBuffer::default();
     let dialog_engine = &mut mock_real_objects::make_dialog_engine();
     let shared_store = &mock_real_objects::create_store();
     let state = &String::new();
-    let shared_tw_data = &test_editor::mock_real_objects::make_shared_tw_data();
+    let shared_global_data = &test_editor::mock_real_objects::make_shared_global_data();
     let component_registry = &mut test_editor::mock_real_objects::make_component_registry();
 
     let args = DialogEngineArgs {
-      shared_tw_data,
+      shared_global_data,
       shared_store,
       state,
       component_registry,
@@ -228,17 +228,17 @@ mod test_dialog_api_render_engine {
 
   #[tokio::test]
   async fn render_engine() {
-    let self_id: FlexBoxIdType = 0;
+    let self_id: FlexBoxId = 0;
     let window_size = &size!( cols: 70, rows: 15 );
     let dialog_buffer = &mut DialogBuffer::default();
     let dialog_engine = &mut mock_real_objects::make_dialog_engine();
     let shared_store = &mock_real_objects::create_store();
     let state = &String::new();
-    let shared_tw_data = &test_editor::mock_real_objects::make_shared_tw_data();
+    let shared_global_data = &test_editor::mock_real_objects::make_shared_global_data();
     let component_registry = &mut test_editor::mock_real_objects::make_component_registry();
 
     let args = DialogEngineArgs {
-      shared_tw_data,
+      shared_global_data,
       shared_store,
       state,
       component_registry,
@@ -256,7 +256,7 @@ mod test_dialog_api_render_engine {
       ..Default::default()
     };
     let window_size = size!( cols: 70, rows: 15 );
-    let self_id: FlexBoxIdType = 0;
+    let self_id: FlexBoxId = 0;
 
     // The dialog box should be centered inside the surface.
     let result_flex_box = dbg!(DialogEngineApi::make_flex_box_for_dialog(

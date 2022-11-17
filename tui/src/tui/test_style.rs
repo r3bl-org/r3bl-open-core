@@ -23,6 +23,22 @@ mod tests {
   use r3bl_rs_utils_macro::style;
 
   #[test]
+  fn syntect_style_conversion() {
+    let st_style: syntect::highlighting::Style = syntect::highlighting::Style {
+      foreground: syntect::highlighting::Color::WHITE,
+      background: syntect::highlighting::Color::BLACK,
+      font_style: syntect::highlighting::FontStyle::BOLD
+        | syntect::highlighting::FontStyle::ITALIC
+        | syntect::highlighting::FontStyle::UNDERLINE,
+    };
+    let style = Style::from(st_style);
+    assert_eq2!(style.color_fg.unwrap(), TuiColor::Rgb { r: 255, g: 255, b: 255 });
+    assert_eq2!(style.color_bg.unwrap(), TuiColor::Rgb { r: 0, g: 0, b: 0 });
+    assert_eq2!(style.bold, true);
+    assert_eq2!(style.underline, true);
+  }
+
+  #[test]
   fn test_bitflags() {
     with_mut! {
       StyleFlag::empty(),
@@ -110,7 +126,7 @@ mod tests {
     let style_bold_green_fg = style! {
       id: "bold_green_fg"
       attrib: [bold]
-      color_fg: TWColor::Green
+      color_fg: TuiColor::Green
     };
 
     let style_dim = style! {
@@ -120,7 +136,7 @@ mod tests {
 
     let style_yellow_bg = style! {
       id: "yellow_bg"
-      color_bg: TWColor::Yellow
+      color_bg: TuiColor::Yellow
     };
 
     let style_padding = style! {
@@ -130,7 +146,7 @@ mod tests {
 
     let style_red_fg = style! {
       id: "red_fg"
-      color_fg: TWColor::Red
+      color_fg: TuiColor::Red
     };
 
     let style_padding_another = style! {
@@ -156,8 +172,8 @@ mod tests {
     );
 
     assert_eq2!(my_style.padding.unwrap(), ch!(3));
-    assert_eq2!(my_style.color_bg.unwrap(), TWColor::Yellow);
-    assert_eq2!(my_style.color_fg.unwrap(), TWColor::Red);
+    assert_eq2!(my_style.color_bg.unwrap(), TuiColor::Yellow);
+    assert_eq2!(my_style.color_fg.unwrap(), TuiColor::Red);
     assert!(my_style.bold);
     assert!(my_style.dim);
     assert!(my_style.computed);
@@ -215,19 +231,19 @@ mod tests {
       style! {
             id: id_2 /* using a variable instead of string literal */
             padding: 1
-            color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
+            color_bg: TuiColor::Rgb { r: 55, g: 55, b: 248 }
       },
       make_a_style("style3"),
       vec![
         style! {
           id: "style4"
           padding: 1
-          color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
+          color_bg: TuiColor::Rgb { r: 55, g: 55, b: 248 }
         },
         style! {
           id: "style5"
           padding: 1
-          color_bg: TWColor::Rgb { r: 85, g: 85, b: 255 }
+          color_bg: TuiColor::Rgb { r: 85, g: 85, b: 255 }
         },
       ],
       make_a_style("style6")

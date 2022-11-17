@@ -18,9 +18,9 @@
 // Attach sources.
 pub mod style;
 pub mod stylesheet;
-pub mod tw_color;
+pub mod tui_color;
 
 // Re-export.
 pub use style::*;
 pub use stylesheet::*;
-pub use tw_color::*;
+pub use tui_color::*;

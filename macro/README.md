@@ -3,8 +3,8 @@
 </p>
 
 # Context
-<a id="markdown-context" name="context"></a>
 
+<a id="markdown-context" name="context"></a>
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
@@ -49,8 +49,8 @@ it.
      3. integrations w/ calendar, email, contacts APIs
 
 # r3bl_rs_utils_macro
-<a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>
 
+<a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>
 
 This crate is related to the first thing that's described above. It provides lots of useful
 functionality to help you build TUI (text user interface) apps, along w/ general niceties &
@@ -70,20 +70,20 @@ ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 <!-- /TOC -->
 
 ## Macros
+
 <a id="markdown-macros" name="macros"></a>
 
-
 ### Procedural
-<a id="markdown-procedural" name="procedural"></a>
 
+<a id="markdown-procedural" name="procedural"></a>
 
 All the procedural macros are organized in 3 crates
 [using an internal or core crate](https://developerlife.com/2022/03/30/rust-proc-macro/#add-an-internal-or-core-crate):
 the public crate, an internal or core crate, and the proc macro crate.
 
 #### style! macro
-<a id="markdown-style!-macro" name="style!-macro"></a>
 
+<a id="markdown-style!-macro" name="style!-macro"></a>
 
 Here's an example of the `style!` macro:
 
@@ -92,8 +92,8 @@ style! {
   id: "my_style",          /* Optional. */
   attrib: [dim, bold]      /* Optional. */
   padding: 10,             /* Optional. */
-  color_fg: TWColor::Blue, /* Optional. */
-  color_bg: TWColor::Red,  /* Optional. */
+  color_fg: TuiColor::Blue, /* Optional. */
+  color_bg: TuiColor::Red,  /* Optional. */
 }
 ```
 
@@ -104,8 +104,8 @@ style! {
 3. Variable holding either of the above.
 
 #### Builder derive macro
-<a id="markdown-builder-derive-macro" name="builder-derive-macro"></a>
 
+<a id="markdown-builder-derive-macro" name="builder-derive-macro"></a>
 
 This derive macro makes it easy to generate builders when annotating a `struct` or `enum`. It
 generates It has full support for generics. It can be used like this.
@@ -131,8 +131,8 @@ assert_eq!(my_pt.y, 2);
 ```
 
 #### make_struct_safe_to_share_and_mutate!
-<a id="markdown-make_struct_safe_to_share_and_mutate!" name="make_struct_safe_to_share_and_mutate!"></a>
 
+<a id="markdown-make_struct_safe_to_share_and_mutate!" name="make_struct_safe_to_share_and_mutate!"></a>
 
 This function like macro (with custom syntax) makes it easy to manage shareability and interior
 mutability of a struct. We call this pattern the "manager" of "things").
@@ -176,8 +176,8 @@ async fn test_custom_syntax_no_where_clause() {
 ```
 
 #### make_safe_async_fn_wrapper!
-<a id="markdown-make_safe_async_fn_wrapper!" name="make_safe_async_fn_wrapper!"></a>
 
+<a id="markdown-make_safe_async_fn_wrapper!" name="make_safe_async_fn_wrapper!"></a>
 
 This function like macro (with custom syntax) makes it easy to share functions and lambdas that are
 async. They should be safe to share between threads and they should support either being invoked or
@@ -221,15 +221,15 @@ make_safe_async_fn_wrapper! {
 ```
 
 ## Other crates that depend on this
-<a id="markdown-other-crates-that-depend-on-this" name="other-crates-that-depend-on-this"></a>
 
+<a id="markdown-other-crates-that-depend-on-this" name="other-crates-that-depend-on-this"></a>
 
 This crate is a dependency of [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crate (the
 "main" library).
 
 ## Issues, comments, feedback, and PRs
-<a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
 
+<a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
 
 Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
 And if you have any feature requests, feel free to add them there too 👍.

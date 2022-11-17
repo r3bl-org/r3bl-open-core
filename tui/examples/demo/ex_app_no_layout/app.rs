@@ -58,13 +58,15 @@ impl App<State, Action> for AppNoLayout {
   async fn app_render(&mut self, args: GlobalScopeArgs<'_, State, Action>) -> CommonResult<RenderPipeline> {
     throws_with_return!({
       let GlobalScopeArgs {
-        state, shared_tw_data, ..
+        state,
+        shared_global_data,
+        ..
       } = args;
 
       let content = format!("{state}");
 
       let content_size_col: ChUnit = content.len().into();
-      let window_size: Size = shared_tw_data.read().await.get_size();
+      let window_size: Size = shared_global_data.read().await.get_size();
 
       let col: ChUnit = (window_size.cols - content_size_col) / 2;
       let row: ChUnit = window_size.rows / 2;

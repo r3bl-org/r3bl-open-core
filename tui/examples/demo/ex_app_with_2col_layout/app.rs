@@ -36,7 +36,7 @@ pub enum Id {
   Col2 = 3,
 }
 
-/// Async trait object that implements the [TWApp] trait.
+/// Async trait object that implements the [App] trait.
 #[derive(Default)]
 pub struct AppWithLayout {
   pub component_registry: ComponentRegistry<State, Action>,
@@ -55,7 +55,7 @@ mod app_trait_impl {
       let GlobalScopeArgs {
         state,
         shared_store,
-        shared_tw_data,
+        shared_global_data,
         window_size,
       } = args;
 
@@ -71,7 +71,7 @@ mod app_trait_impl {
         input_event:    input_event,
         state:          state,
         shared_store:   shared_store,
-        shared_tw_data: shared_tw_data,
+        shared_global_data: shared_global_data,
         window_size:    window_size
       )
     }
@@ -81,7 +81,7 @@ mod app_trait_impl {
         let GlobalScopeArgs {
           state,
           shared_store,
-          shared_tw_data,
+          shared_global_data,
           window_size,
         } = args;
 
@@ -93,7 +93,7 @@ mod app_trait_impl {
           size:             size!(cols: window_size.cols, rows: window_size.rows - 1), // Bottom row for status bar.
           state:            state,
           shared_store:     shared_store,
-          shared_tw_data:   shared_tw_data,
+          shared_global_data:   shared_global_data,
           window_size:      window_size
         };
 
@@ -116,13 +116,13 @@ mod app_trait_impl {
       let GlobalScopeArgs {
         state,
         shared_store,
-        shared_tw_data,
+        shared_global_data,
         window_size,
       } = args;
 
       self.init().await;
       self
-        .create_main_container(surface, state, shared_store, shared_tw_data, window_size)
+        .create_main_container(surface, state, shared_store, shared_global_data, window_size)
         .await
     }
   }
@@ -224,7 +224,7 @@ mod container_layout_render {
       surface: &mut Surface,
       state: &State,
       shared_store: &SharedStore<State, Action>,
-      shared_tw_data: &SharedTWData,
+      shared_global_data: &SharedGlobalData,
       window_size: &Size,
     ) -> CommonResult<()> {
       throws!({
@@ -237,7 +237,7 @@ mod container_layout_render {
           styles:                 [&Id::Container.int_value().to_string()],
           state:                  state,
           shared_store:           shared_store,
-          shared_tw_data:         shared_tw_data,
+          shared_global_data:         shared_global_data,
           window_size:            window_size
         };
       });
@@ -258,7 +258,7 @@ mod container_layout_render {
       let GlobalScopeArgs {
         state,
         shared_store,
-        shared_tw_data,
+        shared_global_data,
         window_size,
       } = args;
 
@@ -273,7 +273,7 @@ mod container_layout_render {
             from:           self.app_with_layout.component_registry,
             state:          state,
             shared_store:   shared_store,
-            shared_tw_data: shared_tw_data,
+            shared_global_data: shared_global_data,
             window_size:    window_size
           }
         }
@@ -288,7 +288,7 @@ mod container_layout_render {
             from:           self.app_with_layout.component_registry,
             state:          state,
             shared_store:   shared_store,
-            shared_tw_data: shared_tw_data,
+            shared_global_data: shared_global_data,
             window_size:    window_size
           }
         }
@@ -322,12 +322,12 @@ mod style_helpers {
         style! {
           id: Id::Col1.int_value().to_string()
           padding: 1
-          color_bg: TWColor::Rgb { r: 55, g: 55, b: 100 }
+          color_bg: TuiColor::Rgb { r: 55, g: 55, b: 100 }
         },
         style! {
           id: Id::Col2.int_value().to_string()
           padding: 1
-          color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
+          color_bg: TuiColor::Rgb { r: 55, g: 55, b: 248 }
         }
       }
     })

@@ -38,31 +38,31 @@ where
   pub components: ComponentRegistryMap<S, A>,
   pub has_focus: HasFocus,
   // FUTURE: 🐵 add user_data in ComponentRegistry
-  pub user_data: HashMap<FlexBoxIdType, HashMap<String, String>>,
+  pub user_data: HashMap<FlexBoxId, HashMap<String, String>>,
 }
 
-pub type ComponentRegistryMap<S, A> = HashMap<FlexBoxIdType, SharedComponent<S, A>>;
+pub type ComponentRegistryMap<S, A> = HashMap<FlexBoxId, SharedComponent<S, A>>;
 
 impl<S, A> ComponentRegistry<S, A>
 where
   S: Default + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Clone + Sync + Send,
 {
-  pub fn put(&mut self, id: FlexBoxIdType, component: SharedComponent<S, A>) { self.components.insert(id, component); }
+  pub fn put(&mut self, id: FlexBoxId, component: SharedComponent<S, A>) { self.components.insert(id, component); }
 
-  pub fn does_not_contain(&self, id: FlexBoxIdType) -> bool { !self.components.contains_key(&id) }
+  pub fn does_not_contain(&self, id: FlexBoxId) -> bool { !self.components.contains_key(&id) }
 
-  pub fn contains(&self, id: FlexBoxIdType) -> bool { self.components.contains_key(&id) }
+  pub fn contains(&self, id: FlexBoxId) -> bool { self.components.contains_key(&id) }
 
-  pub fn get(&self, id: FlexBoxIdType) -> Option<&SharedComponent<S, A>> { self.components.get(&id) }
+  pub fn get(&self, id: FlexBoxId) -> Option<&SharedComponent<S, A>> { self.components.get(&id) }
 
-  pub fn remove(&mut self, id: FlexBoxIdType) -> Option<SharedComponent<S, A>> { self.components.remove(&id) }
+  pub fn remove(&mut self, id: FlexBoxId) -> Option<SharedComponent<S, A>> { self.components.remove(&id) }
 }
 
 pub mod user_data_ops {
   use super::*;
 
-  pub fn get<S, A>(component_registry: &ComponentRegistry<S, A>, id: FlexBoxIdType, key: &str) -> Option<String>
+  pub fn get<S, A>(component_registry: &ComponentRegistry<S, A>, id: FlexBoxId, key: &str) -> Option<String>
   where
     S: Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
@@ -74,7 +74,7 @@ pub mod user_data_ops {
       .map(|string_ref| string_ref.into())
   }
 
-  pub fn put<S, A>(component_registry: &mut ComponentRegistry<S, A>, id: FlexBoxIdType, key: &str, value: &str)
+  pub fn put<S, A>(component_registry: &mut ComponentRegistry<S, A>, id: FlexBoxId, key: &str, value: &str)
   where
     S: Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
@@ -97,10 +97,7 @@ where
     }
   }
 
-  pub fn get_component_ref_by_id(
-    this: &mut ComponentRegistry<S, A>,
-    id: FlexBoxIdType,
-  ) -> Option<SharedComponent<S, A>> {
+  pub fn get_component_ref_by_id(this: &mut ComponentRegistry<S, A>, id: FlexBoxId) -> Option<SharedComponent<S, A>> {
     if let Some(component) = this.get(id) {
       return Some(component.clone());
     }
@@ -112,7 +109,7 @@ where
     input_event: &InputEvent,
     state: &S,
     shared_store: &SharedStore<S, A>,
-    shared_tw_data: &SharedTWData,
+    shared_global_data: &SharedGlobalData,
     window_size: &Size,
   ) -> CommonResult<EventPropagation> {
     // If component has focus, then route input_event to it. Return its propagation enum.
@@ -123,7 +120,7 @@ where
         input_event: input_event,
         state: state,
         shared_store: shared_store,
-        shared_tw_data: shared_tw_data,
+        shared_global_data: shared_global_data,
         window_size: window_size
       )
     } else {
@@ -143,7 +140,7 @@ macro_rules! route_event_to_focused_component {
     input_event:    $arg_input_event        : expr,
     state:          $arg_state              : expr,
     shared_store:   $arg_shared_store       : expr,
-    shared_tw_data: $arg_shared_tw_data     : expr,
+    shared_global_data: $arg_shared_global_data     : expr,
     window_size:    $arg_window_size        : expr
   ) => {
     ComponentRegistry::route_event_to_focused_component(
@@ -151,7 +148,7 @@ macro_rules! route_event_to_focused_component {
       $arg_input_event,
       $arg_state,
       $arg_shared_store,
-      $arg_shared_tw_data,
+      $arg_shared_global_data,
       $arg_window_size,
     )
     .await
@@ -168,7 +165,7 @@ macro_rules! call_handle_event {
     input_event:        $input_event: expr,
     state:              $state: expr,
     shared_store:       $shared_store: expr,
-    shared_tw_data:     $shared_tw_data: expr,
+    shared_global_data:     $shared_global_data: expr,
     window_size:        $window_size: expr
   ) => {{
     let result_event_propagation = $shared_component
@@ -176,7 +173,7 @@ macro_rules! call_handle_event {
       .await
       .handle_event(
         ComponentScopeArgs {
-          shared_tw_data: $shared_tw_data,
+          shared_global_data: $shared_global_data,
           shared_store: $shared_store,
           state: $state,
           component_registry: $component_registry,

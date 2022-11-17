@@ -25,7 +25,7 @@ mod test_config_options {
   #[test]
   fn test_config_options_multiline_true() {
     // multiline true.
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine: EditorEngine = EditorEngine {
       config_options: EditorEngineConfigOptions {
         multiline: true,
@@ -52,7 +52,7 @@ mod test_config_options {
         EditorEvent::InsertNewLine,
         EditorEvent::InsertString("a".into()),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -66,7 +66,7 @@ mod test_config_options {
         EditorEvent::MoveCaret(CaretDirection::Up),
         EditorEvent::MoveCaret(CaretDirection::Down),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -76,7 +76,7 @@ mod test_config_options {
   #[test]
   fn test_config_options_multiline_false() {
     // multiline false.
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine: EditorEngine = EditorEngine {
       config_options: EditorEngineConfigOptions {
         multiline: false,
@@ -101,7 +101,7 @@ mod test_config_options {
         EditorEvent::InsertNewLine,
         EditorEvent::InsertString("a".into()),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -115,7 +115,7 @@ mod test_config_options {
         EditorEvent::MoveCaret(CaretDirection::Up),
         EditorEvent::MoveCaret(CaretDirection::Down),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -134,7 +134,7 @@ mod test_editor_ops {
 
   #[test]
   fn editor_delete() {
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "abc\nab\na".
@@ -155,7 +155,7 @@ mod test_editor_ops {
         EditorEvent::InsertNewLine,
         EditorEvent::InsertString("a".into()),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -173,7 +173,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::MoveCaret(CaretDirection::Left), EditorEvent::Delete],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -195,7 +195,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Right),
         EditorEvent::Delete,
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -216,7 +216,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Right),
         EditorEvent::Delete,
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -227,7 +227,7 @@ mod test_editor_ops {
 
   #[test]
   fn editor_backspace() {
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "abc\nab\na".
@@ -248,7 +248,7 @@ mod test_editor_ops {
         EditorEvent::InsertNewLine,
         EditorEvent::InsertString("a".into()),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -266,7 +266,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::Backspace],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -283,7 +283,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::Backspace],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -302,7 +302,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Left),
         EditorEvent::MoveCaret(CaretDirection::Left),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -311,7 +311,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::Backspace],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -333,7 +333,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Right),
         EditorEvent::InsertString("😃".into()),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -344,7 +344,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       EditorEvent::Backspace,
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -353,7 +353,7 @@ mod test_editor_ops {
 
   #[test]
   fn editor_validate_caret_position_on_up() {
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "😀\n1".
@@ -370,7 +370,7 @@ mod test_editor_ops {
         EditorEvent::InsertNewLine,
         EditorEvent::InsertChar('1'),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -386,7 +386,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::MoveCaret(CaretDirection::Up)],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -395,7 +395,7 @@ mod test_editor_ops {
 
   #[test]
   fn editor_validate_caret_position_on_down() {
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "😀\n1".
@@ -412,7 +412,7 @@ mod test_editor_ops {
         EditorEvent::InsertNewLine,
         EditorEvent::InsertString("😀".into()),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -432,7 +432,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Up),
         EditorEvent::MoveCaret(CaretDirection::Right),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -448,7 +448,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::MoveCaret(CaretDirection::Down)],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -457,7 +457,7 @@ mod test_editor_ops {
 
   #[test]
   fn editor_move_caret_up_down() {
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "abc\nab\na".
@@ -478,7 +478,7 @@ mod test_editor_ops {
         EditorEvent::InsertNewLine,
         EditorEvent::InsertString("a".into()),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -501,7 +501,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Down),
         EditorEvent::MoveCaret(CaretDirection::Down),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -512,7 +512,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::MoveCaret(CaretDirection::Up)],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -523,7 +523,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::MoveCaret(CaretDirection::Up)],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -538,7 +538,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Up),
         EditorEvent::MoveCaret(CaretDirection::Up),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -560,7 +560,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Right),
         EditorEvent::MoveCaret(CaretDirection::Down),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -578,7 +578,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::MoveCaret(CaretDirection::Down)],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -587,7 +587,7 @@ mod test_editor_ops {
 
   #[test]
   fn editor_insert_new_line() {
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine = mock_real_objects::make_editor_engine();
 
     // Starts w/ an empty line.
@@ -611,7 +611,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::InsertChar('a')],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -629,7 +629,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::InsertNewLine],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -648,7 +648,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::InsertChar('a')],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -664,7 +664,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::MoveCaret(CaretDirection::Left)],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -682,7 +682,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::InsertNewLine],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -705,7 +705,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Right),
         EditorEvent::InsertChar('b'),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -731,7 +731,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::MoveCaret(CaretDirection::Left), EditorEvent::InsertNewLine],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -756,7 +756,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Right),
         EditorEvent::InsertNewLine,
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -766,7 +766,7 @@ mod test_editor_ops {
 
   #[test]
   fn editor_move_caret_left_right() {
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "a".
@@ -779,7 +779,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::InsertChar('a')],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -798,7 +798,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Left),
         EditorEvent::MoveCaret(CaretDirection::Left), // No-op.
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -814,7 +814,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::InsertChar('1')],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -836,7 +836,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::MoveCaret(CaretDirection::Left)],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -852,7 +852,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::MoveCaret(CaretDirection::Right)],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -868,7 +868,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::InsertChar('2')],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -893,7 +893,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Right),
         EditorEvent::MoveCaret(CaretDirection::Right), // No-op.
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -914,7 +914,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Left),
         EditorEvent::MoveCaret(CaretDirection::Left),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -937,7 +937,7 @@ mod test_editor_ops {
         EditorEvent::InsertNewLine,
         EditorEvent::MoveCaret(CaretDirection::Left),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -954,7 +954,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::MoveCaret(CaretDirection::Right)],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -976,7 +976,7 @@ mod test_editor_ops {
         EditorEvent::MoveCaret(CaretDirection::Up),
         EditorEvent::MoveCaret(CaretDirection::Right),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -985,14 +985,14 @@ mod test_editor_ops {
 
   #[test]
   fn editor_empty_state() {
-    let buffer = EditorBuffer::default();
+    let buffer = EditorBuffer::new_empty();
     assert_eq2!(buffer.get_lines().len(), 1);
     assert!(!buffer.is_empty());
   }
 
   #[test]
   fn editor_insertion() {
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine = mock_real_objects::make_editor_engine();
 
     // Move caret to col: 0, row: 0. Insert "a".
@@ -1006,7 +1006,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::InsertChar('a')],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -1028,7 +1028,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::InsertChar('b')],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -1055,7 +1055,7 @@ mod test_editor_ops {
         EditorEvent::InsertNewLine,
         EditorEvent::InsertChar('😀'),
       ],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -1083,7 +1083,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::InsertChar('d')],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -1111,7 +1111,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::InsertString("🙏🏽".into())],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -1129,7 +1129,7 @@ mod test_editor_ops {
 
   #[test]
   fn editor_move_caret_home_end() {
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "hello". Then press home.
@@ -1142,7 +1142,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::InsertString("hello".to_string()), EditorEvent::Home],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -1153,7 +1153,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::End],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -1162,7 +1162,7 @@ mod test_editor_ops {
 
   #[test]
   fn editor_move_caret_page_up_page_down() {
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "hello" many times.
@@ -1176,7 +1176,7 @@ mod test_editor_ops {
           EditorEvent::InsertString(format!("{count}: {}", "hello")),
           EditorEvent::InsertNewLine,
         ],
-        &mock_real_objects::make_shared_tw_data(),
+        &mock_real_objects::make_shared_global_data(),
         &mut mock_real_objects::make_component_registry(),
         0,
       );
@@ -1189,7 +1189,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::PageUp],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -1200,7 +1200,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::PageUp],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -1211,7 +1211,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::PageUp],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -1222,7 +1222,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::PageDown],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -1234,7 +1234,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::PageDown],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -1245,7 +1245,7 @@ mod test_editor_ops {
       &mut engine,
       &mut buffer,
       vec![EditorEvent::PageDown],
-      &mock_real_objects::make_shared_tw_data(),
+      &mock_real_objects::make_shared_global_data(),
       &mut mock_real_objects::make_component_registry(),
       0,
     );
@@ -1254,7 +1254,7 @@ mod test_editor_ops {
 
   #[test]
   fn editor_scroll_vertical() {
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert "hello" many times.
@@ -1267,7 +1267,7 @@ mod test_editor_ops {
           EditorEvent::InsertString(format!("{count}: {}", "hello")),
           EditorEvent::InsertNewLine,
         ],
-        &mock_real_objects::make_shared_tw_data(),
+        &mock_real_objects::make_shared_global_data(),
         &mut mock_real_objects::make_component_registry(),
         0,
       );
@@ -1280,7 +1280,7 @@ mod test_editor_ops {
         &mut engine,
         &mut buffer,
         vec![EditorEvent::MoveCaret(CaretDirection::Up)],
-        &mock_real_objects::make_shared_tw_data(),
+        &mock_real_objects::make_shared_global_data(),
         &mut mock_real_objects::make_component_registry(),
         0,
       );
@@ -1295,7 +1295,7 @@ mod test_editor_ops {
         &mut engine,
         &mut buffer,
         vec![EditorEvent::MoveCaret(CaretDirection::Down)],
-        &mock_real_objects::make_shared_tw_data(),
+        &mock_real_objects::make_shared_global_data(),
         &mut mock_real_objects::make_component_registry(),
         0,
       );
@@ -1307,7 +1307,7 @@ mod test_editor_ops {
 
   #[test]
   fn editor_scroll_horizontal() {
-    let mut buffer = EditorBuffer::default();
+    let mut buffer = EditorBuffer::new_empty();
     let mut engine = mock_real_objects::make_editor_engine();
 
     // Insert a long line of text.
@@ -1317,7 +1317,7 @@ mod test_editor_ops {
         &mut engine,
         &mut buffer,
         vec![EditorEvent::InsertString(format!("{count}"))],
-        &mock_real_objects::make_shared_tw_data(),
+        &mock_real_objects::make_shared_global_data(),
         &mut mock_real_objects::make_component_registry(),
         0,
       );
@@ -1333,7 +1333,7 @@ mod test_editor_ops {
         &mut engine,
         &mut buffer,
         vec![EditorEvent::MoveCaret(CaretDirection::Left)],
-        &mock_real_objects::make_shared_tw_data(),
+        &mock_real_objects::make_shared_global_data(),
         &mut mock_real_objects::make_component_registry(),
         0,
       );
@@ -1348,7 +1348,7 @@ mod test_editor_ops {
         &mut engine,
         &mut buffer,
         vec![EditorEvent::MoveCaret(CaretDirection::Right)],
-        &mock_real_objects::make_shared_tw_data(),
+        &mock_real_objects::make_shared_global_data(),
         &mut mock_real_objects::make_component_registry(),
         0,
       );
@@ -1364,13 +1364,13 @@ pub mod mock_real_objects {
 
   use crate::*;
 
-  pub fn make_shared_tw_data() -> SharedTWData {
+  pub fn make_shared_global_data() -> SharedGlobalData {
     use std::sync::Arc;
 
     use tokio::sync::RwLock;
 
-    let shared_tw_data: SharedTWData = Arc::new(RwLock::new(TWData::default()));
-    shared_tw_data
+    let shared_global_data: SharedGlobalData = Arc::new(RwLock::new(GlobalData::default()));
+    shared_global_data
   }
 
   pub fn make_component_registry() -> ComponentRegistry<String, String> {

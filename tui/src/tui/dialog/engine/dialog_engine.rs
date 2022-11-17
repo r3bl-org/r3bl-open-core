@@ -32,7 +32,7 @@ use crate::*;
 /// In order to change the document, you can use the
 /// [apply_event](DialogEngineApi::apply_event) method which takes [InputEvent] and tries to
 /// execute it against this buffer.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct DialogEngine {
   pub editor_engine: EditorEngine,
   pub maybe_style_border: Option<Style>,
@@ -45,17 +45,13 @@ pub mod constructor {
   use super::*;
 
   impl DialogEngine {
-    pub fn new() -> Self {
-      let editor_engine = {
-        let config_options = EditorEngineConfigOptions {
-          multiline: false,
-          syntax_highlight: false,
-        };
-        EditorEngine::new(config_options)
-      };
+    pub fn new(editor_engine_config_options: EditorEngineConfigOptions) -> Self {
       Self {
-        editor_engine,
-        ..Default::default()
+        editor_engine: EditorEngine::new(editor_engine_config_options),
+        maybe_style_border: None,
+        maybe_style_title: None,
+        maybe_style_editor: None,
+        lolcat: Lolcat::default(),
       }
     }
   }

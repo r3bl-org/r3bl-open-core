@@ -22,23 +22,23 @@ mod tests {
   use crate::*;
 
   #[test]
-  fn test_serde_tw_color_simple() {
-    let color: TWColor = TWColor::Red;
+  fn test_serde_tui_color_simple() {
+    let color: TuiColor = TuiColor::Red;
     let ser_str = serde_json::to_string(&color).unwrap();
-    let og_color: TWColor = serde_json::from_str(&ser_str).unwrap();
+    let og_color: TuiColor = serde_json::from_str(&ser_str).unwrap();
     assert_eq2!(color, og_color);
   }
 
   #[test]
-  fn test_serde_tw_color_rgb() {
-    let color = TWColor::Rgb { r: 0, g: 0, b: 0 };
+  fn test_serde_tui_color_rgb() {
+    let color = TuiColor::Rgb { r: 0, g: 0, b: 0 };
     let ser_str = serde_json::to_string(&color).unwrap();
-    let og_color: TWColor = serde_json::from_str(&ser_str).unwrap();
+    let og_color: TuiColor = serde_json::from_str(&ser_str).unwrap();
     assert_eq2!(color, og_color);
   }
 
   #[test]
-  fn test_serde_tw_command_queue() {
+  fn test_serde_render_pipeline() {
     let pipeline = render_pipeline!(
       @new ZOrder::Normal
       =>

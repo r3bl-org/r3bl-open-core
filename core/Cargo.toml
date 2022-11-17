@@ -65,3 +65,6 @@ simplelog = "0.12.0"
 # Time
 chrono = "0.4.22"
 time = "0.3.17"
+
+# Syntax highlighting.
+syntect = "5.0.0"

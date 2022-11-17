@@ -21,8 +21,8 @@ use tokio::sync::RwLock;
 
 use crate::*;
 
-// TWData.
-pub type SharedTWData = Arc<RwLock<TWData>>;
+// GlobalData.
+pub type SharedGlobalData = Arc<RwLock<GlobalData>>;
 
 // App.
 pub type SafeApp<S, A> = dyn App<S, A> + Send + Sync;
