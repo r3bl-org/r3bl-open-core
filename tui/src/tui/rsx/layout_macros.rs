@@ -19,7 +19,7 @@
 #[macro_export]
 macro_rules! box_start_with_component {
   (
-    in:                     $arg_surface : expr,                 // Eg: in: tw_surface,
+    in:                     $arg_surface : expr,                 // Eg: in: surface,
     id:                     $arg_id : expr,                      // Eg: 0,
     dir:                    $arg_dir : expr,                     // Eg: Direction::Horizontal,
     requested_size_percent: $arg_requested_size_percent : expr,  // Eg: (50, 100).try_into()?,
@@ -50,7 +50,7 @@ macro_rules! box_start_with_component {
 #[macro_export]
 macro_rules! box_start_with_surface_renderer {
   (
-    in:                     $arg_surface        : expr,           // Eg: in: tw_surface,
+    in:                     $arg_surface        : expr,           // Eg: in: surface,
     surface_renderer:       $arg_renderer       : expr,           // Eg: surface_renderer: two_col_layout,
     id:                     $arg_id             : expr,           // Eg: 0,
     dir:                    $arg_dir            : expr,           // Eg: Direction::Horizontal,
@@ -58,7 +58,7 @@ macro_rules! box_start_with_surface_renderer {
     styles:                 [$($args_styles:tt)*],                // Eg: [ "style1" , "style2" ]
     state:                  $arg_state          : expr,           // Eg: state,
     shared_store:           $arg_shared_store   : expr,           // Eg: shared_store
-    shared_tw_data:         $arg_shared_tw_data : expr,           // Eg: shared_tw_data
+    shared_global_data:         $arg_shared_global_data : expr,           // Eg: shared_global_data
     window_size:            $arg_window_size    : expr            // Eg: window_size
   ) => {
     box_start! {
@@ -72,7 +72,7 @@ macro_rules! box_start_with_surface_renderer {
     $arg_renderer
       .render_in_surface(
         GlobalScopeArgs {
-          shared_tw_data: $arg_shared_tw_data,
+          shared_global_data: $arg_shared_global_data,
           shared_store: $arg_shared_store,
           state: $arg_state,
           window_size: $arg_window_size
@@ -96,7 +96,7 @@ macro_rules! surface_start_with_surface_renderer {
     size:             $arg_size           : expr, // Eg: (50, 100).into(),
     state:            $arg_state          : expr, // Eg: state,
     shared_store:     $arg_shared_store   : expr, // Eg: shared_store
-    shared_tw_data:   $arg_shared_tw_data : expr, // Eg: shared_tw_data
+    shared_global_data:   $arg_shared_global_data : expr, // Eg: shared_global_data
     window_size:      $arg_window_size    : expr  // Eg: window_size
   ) => {{
     let mut surface = Surface {
@@ -112,7 +112,7 @@ macro_rules! surface_start_with_surface_renderer {
     $arg_renderer
       .render_in_surface(
         GlobalScopeArgs {
-          shared_tw_data: $arg_shared_tw_data,
+          shared_global_data: $arg_shared_global_data,
           shared_store: $arg_shared_store,
           state: $arg_state,
           window_size: $arg_window_size,
@@ -130,7 +130,7 @@ macro_rules! surface_start_with_surface_renderer {
 #[macro_export]
 macro_rules! box_start {
   (
-    in:                     $arg_surface : expr,                // Eg: in: tw_surface,
+    in:                     $arg_surface : expr,                // Eg: in: surface,
     id:                     $arg_id : expr,                     // Eg: 0,
     dir:                    $arg_dir : expr,                    // Eg: Direction::Horizontal,
     requested_size_percent: $arg_requested_size_percent : expr, // Eg: (50, 100).try_into()?,

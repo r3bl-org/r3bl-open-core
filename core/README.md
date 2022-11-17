@@ -486,11 +486,11 @@ This macro is just like [`with_mut!`](#withmutreturns) except that it returns th
 `$code` block. Here's a code example.
 
 ```rust
-let tw_queue = with_mut_returns! {
+let queue = with_mut_returns! {
     ColumnRenderComponent { lolcat },
     as it,
     return {
-      it.render_component(tw_surface.current_box()?, state, shared_store).await?
+      it.render_component(surface.current_box()?, state, shared_store).await?
     }
 };
 ```

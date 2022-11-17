@@ -24,11 +24,11 @@ use super::*;
 #[derive(Debug, Clone, Default)]
 pub struct ColumnRenderComponent {
   pub lolcat: Lolcat,
-  pub id: FlexBoxIdType,
+  pub id: FlexBoxId,
 }
 
 impl ColumnRenderComponent {
-  pub fn new(id: FlexBoxIdType) -> Self {
+  pub fn new(id: FlexBoxId) -> Self {
     Self {
       id,
       ..Default::default()
@@ -66,7 +66,7 @@ macro_rules! fire {
 
 #[async_trait]
 impl Component<State, Action> for ColumnRenderComponent {
-  fn get_id(&self) -> FlexBoxIdType { self.id }
+  fn get_id(&self) -> FlexBoxId { self.id }
 
   /// Handle following input events (and consume them):
   /// - Up,   `+` : fire `AddPop(1)`
@@ -145,7 +145,7 @@ impl Component<State, Action> for ColumnRenderComponent {
           =>
             RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_cursor_pos),
             RenderOp::ApplyColors(current_box.get_computed_style()),
-            RenderOp::PrintTextWithAttributesAndPadding(
+            RenderOp::PrintTextWithAttributesWithPadding(
               colorize_using_lolcat! (&mut self.lolcat,"{}",line_1_us_trunc),
               current_box.get_computed_style(),
               box_bounds_size.cols

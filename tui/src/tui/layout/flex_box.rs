@@ -32,7 +32,7 @@ pub enum Direction {
 
 /// This works w/ the [int-enum](https://crates.io/crates/int-enum) crate in order to allow for the
 /// definition of enums that are represented in memory as [u8]s.
-pub type FlexBoxIdType = u8;
+pub type FlexBoxId = u8;
 
 impl Default for Direction {
   fn default() -> Direction { Direction::Horizontal }
@@ -42,7 +42,7 @@ impl Default for Direction {
 /// determines how it's contained elements are positioned.
 #[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct FlexBox {
-  pub id: FlexBoxIdType,
+  pub id: FlexBoxId,
   pub dir: Direction,
   pub origin_pos: Position,
   pub bounds_size: Size,

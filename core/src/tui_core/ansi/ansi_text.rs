@@ -22,7 +22,7 @@ use ansi_parser::{AnsiParser, Output};
 // ┏━━━━━━━━━━━━━━━━━┓
 // ┃ ANSITextSegment ┃
 // ┛                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct ANSITextSegment<'a> {
   pub vec_parts: Vec<&'a Output<'a>>,
   pub unicode_width: usize,
@@ -40,7 +40,7 @@ impl ANSITextSegment<'_> {
 // ┏━━━━━━━━━━━━━━━━━━┓
 // ┃ ANSITextSegments ┃
 // ┛                  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct ANSITextSegments<'a> {
   pub vec_segments: Vec<ANSITextSegment<'a>>,
   pub unicode_width: usize,
@@ -115,60 +115,80 @@ impl<'a> ANSIText<'a> {
   ///    [Output::TextBlock].
   /// 2. If max_display_col is provided, return the maximum number of segments that will fit in
   ///    the given display column width.
-  pub fn segments(&'a self, max_display_col: Option<usize>) -> ANSITextSegments<'a> {
-    let mut vec_segments = Vec::new();
+  pub fn segments(
+    &'a self,
+    // TODO: impl this!
+    start_at_display_col: Option<usize>,
+    max_display_col: Option<usize>,
+  ) -> ANSITextSegments<'a> {
+    let mut vec_segment_copy = self.make_copy();
+    let mut unicode_width_total = 0;
 
-    let mut current_segment = ANSITextSegment::new();
+    match (start_at_display_col, max_display_col) {
+      (None, None) => {
+        // Calculate the unicode_width of each segment.
+        for segment in &mut vec_segment_copy {
+          for part in &segment.vec_parts {
+            if let Output::TextBlock(text) = part {
+              segment.unicode_width += unicode_width::UnicodeWidthStr::width(*text);
+              unicode_width_total += segment.unicode_width;
+            }
+          }
+        }
+      }
+      (None, Some(max_display_col)) => {
+        // If max_display_col is provided then filter the vec_segment_copy.
+        let mut vec_segment_filtered = Vec::new();
+        let mut col_count = 0;
+        unicode_width_total = 0;
+
+        for segment in vec_segment_copy {
+          if col_count + segment.unicode_width > max_display_col {
+            break;
+          }
+          col_count += segment.unicode_width;
+          unicode_width_total += segment.unicode_width;
+          vec_segment_filtered.push(segment);
+        }
+
+        vec_segment_copy = vec_segment_filtered;
+      }
+      (Some(start_at_display_col), Some(max_display_col)) => {
+        // TODO: impl this
+      }
+      _ => {}
+    }
+
+    ANSITextSegments::new(vec_segment_copy, unicode_width_total)
+  }
+
+  fn make_copy(&'a self) -> Vec<ANSITextSegment<'a>> {
+    let mut ret_val = vec![];
+
+    let mut cur_item = ANSITextSegment::new();
 
     for part in &self.parts {
       match part {
-        Output::TextBlock(_text) => {
-          current_segment.vec_parts.push(part);
-          // Start a new segment & save the current one.
-          vec_segments.push(current_segment);
-          current_segment = ANSITextSegment::new();
-        }
-        Output::Escape(_ansi_sequence) => {
-          current_segment.vec_parts.push(part);
-        }
-      }
-    }
+        Output::TextBlock(_) => {
+          // Save the current segment.
+          cur_item.vec_parts.push(part);
 
-    // Take care of dangling current_segment.
-    if !vec_segments.contains(&current_segment) {
-      vec_segments.push(current_segment);
-    }
-
-    // Calculate the unicode_width of each segment.
-    let mut unicode_width_total = 0;
-    for segment in &mut vec_segments {
-      for part in &segment.vec_parts {
-        if let Output::TextBlock(text) = part {
-          segment.unicode_width += unicode_width::UnicodeWidthStr::width(*text);
-          unicode_width_total += segment.unicode_width;
+          // Save the current one & start a new segment.
+          ret_val.push(cur_item);
+          cur_item = ANSITextSegment::new();
+        }
+        Output::Escape(_) => {
+          // Save the current segment.
+          cur_item.vec_parts.push(part);
         }
       }
     }
 
-    // If max_display_col is provided then filter the vec_segments.
-    if let Some(max_display_col) = max_display_col {
-      let mut vec_segments_filtered = Vec::new();
-      let mut col_count = 0;
-      unicode_width_total = 0;
-
-      for segment in vec_segments {
-        if col_count + segment.unicode_width > max_display_col {
-          break;
-        }
-        col_count += segment.unicode_width;
-        unicode_width_total += segment.unicode_width;
-        vec_segments_filtered.push(segment);
-      }
-
-      vec_segments = vec_segments_filtered;
+    if !ret_val.contains(&cur_item) {
+      ret_val.push(cur_item);
     }
 
-    ANSITextSegments::new(vec_segments, unicode_width_total)
+    ret_val
   }
 }
 

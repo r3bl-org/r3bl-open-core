@@ -19,6 +19,7 @@ use std::fmt::Debug;
 
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
+use syntect::{easy::HighlightLines, util::as_24_bit_terminal_escaped};
 
 use super::*;
 use crate::*;
@@ -45,7 +46,7 @@ impl EditorEngineRenderApi {
     let EditorEngineArgs {
       editor_buffer,
       component_registry,
-      shared_tw_data,
+      shared_global_data,
       self_id,
       editor_engine,
       ..
@@ -57,7 +58,7 @@ impl EditorEngineRenderApi {
         editor_engine,
         &mut new_editor_buffer,
         editor_event,
-        shared_tw_data,
+        shared_global_data,
         component_registry,
         self_id,
       );
@@ -105,7 +106,6 @@ impl EditorEngineRenderApi {
     })
   }
 
-  // This simply clips the content to the `style_adj_box_bounds_size`.
   fn render_content<S, A>(render_args: &RenderArgs<'_, S, A>, render_ops: &mut RenderOps)
   where
     S: Default + Clone + PartialEq + Debug + Sync + Send,
@@ -120,6 +120,7 @@ impl EditorEngineRenderApi {
       cols: max_display_col_count,
       rows: max_display_row_count,
     } = editor_engine.current_box.style_adjusted_bounds_size;
+    let syntax_highlight_enabled = editor_engine.config_options.syntax_highlight;
 
     // Paint each line in the buffer (skipping the scroll_offset.row).
     // https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip
@@ -134,23 +135,109 @@ impl EditorEngineRenderApi {
         break;
       }
 
-      // Clip the content [scroll_offset.col .. max cols].
-      let truncated_line = line.truncate_start_by_n_col(editor_buffer.get_scroll_offset().col);
-      let truncated_line = UnicodeString::from(truncated_line);
-      let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
-
       render_ops.push(RenderOp::MoveCursorPositionRelTo(
         editor_engine.current_box.style_adjusted_origin_pos,
         position! { col: 0 , row: ch!(@to_usize row_index) },
       ));
-      render_ops.push(RenderOp::ApplyColors(editor_engine.current_box.get_computed_style()));
-      // Remove any "ghost" carets that were painted in a previous render.
-      render_ops.push(RenderOp::PrintTextWithAttributesAndPadding(
-        truncated_line.into(),
-        editor_engine.current_box.get_computed_style(),
-        max_display_col_count,
-      ));
+
+      // Try and load syntax highlighting for the current line.
+      let maybe_my_syntax = {
+        if !syntax_highlight_enabled {
+          None
+        } else {
+          let syntax_set = &editor_engine.syntax_set;
+          let file_extension = editor_buffer.get_file_extension();
+          let it = syntax_set.find_syntax_by_extension(file_extension);
+          it
+        }
+      };
+
+      // TODO: debug
+      let syntax_highlight_enabled = false;
+
+      match (syntax_highlight_enabled, maybe_my_syntax) {
+        (true, Some(my_syntax)) => {
+          // Load the syntax highlighting theme & create a highlighter.
+          let mut my_highlight_lines = HighlightLines::new(my_syntax, &editor_engine.theme);
+          if let Ok(vec_styled_str) = my_highlight_lines.highlight_line(&line.string, &editor_engine.syntax_set) {
+            render_line_with_syntax_highlight(vec_styled_str, line, editor_buffer, max_display_col_count, render_ops);
+          } else {
+            render_line_no_syntax_highlight(line, editor_buffer, max_display_col_count, render_ops, editor_engine);
+          }
+        }
+        _ => {
+          render_line_no_syntax_highlight(line, editor_buffer, max_display_col_count, render_ops, editor_engine);
+        }
+      }
+
       render_ops.push(RenderOp::ResetColor);
+
+      // TODO: impl this
+      fn render_line_with_syntax_highlight(
+        vec_styled_str: Vec<(syntect::highlighting::Style, &str)>,
+        line: &UnicodeString,
+        editor_buffer: &&EditorBuffer,
+        max_display_col_count: ChUnit,
+        render_ops: &mut RenderOps,
+      ) {
+        // Clip the content [scroll_offset.col .. max cols].
+        let truncated_line = line.truncate_start_by_n_col(editor_buffer.get_scroll_offset().col);
+        let truncated_line = UnicodeString::from(truncated_line);
+        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+
+        // TODO: debug
+        let use_styled_texts = false;
+
+        if use_styled_texts {
+          // Convert vec_styled_str to StyledTexts.
+          let styled_texts = StyledTexts::from(vec_styled_str);
+          styled_texts.render_into(render_ops);
+        } else {
+          // Figure out what start index to end index from styled_texts to render.
+
+          // let start_idx = ch!(@to_usize editor_buffer.get_scroll_offset().col);
+          // let end_idx = ch!(@to_usize start_idx) + truncated_line.len();
+
+          let escaped = as_24_bit_terminal_escaped(&vec_styled_str, false);
+
+          let ansi_text = escaped.ansi_text();
+          let filtered = ansi_text.segments(
+            Some(ch!(@to_usize editor_buffer.get_scroll_offset().col)),
+            Some(ch!(@to_usize max_display_col_count)),
+          );
+          let filtered_string = String::from(filtered);
+
+          // TODO: cleanup
+          log_no_err!(DEBUG, "🔵🔵🔵🔵🔵filtered_string: {}", filtered_string);
+
+          // Remove any "ghost" carets that were painted in a previous render.
+          render_ops.push(RenderOp::PrintTextWithAttributesWithPadding(
+            escaped,
+            None,
+            max_display_col_count,
+          ));
+        }
+      }
+
+      fn render_line_no_syntax_highlight(
+        line: &UnicodeString,
+        editor_buffer: &&EditorBuffer,
+        max_display_col_count: ChUnit,
+        render_ops: &mut RenderOps,
+        editor_engine: &&mut EditorEngine,
+      ) {
+        // Clip the content [scroll_offset.col .. max cols].
+        let truncated_line = line.truncate_start_by_n_col(editor_buffer.get_scroll_offset().col);
+        let truncated_line = UnicodeString::from(truncated_line);
+        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+        render_ops.push(RenderOp::ApplyColors(editor_engine.current_box.get_computed_style()));
+        // Remove any "ghost" carets that were painted in a previous render.
+        render_ops.push(RenderOp::PrintTextWithAttributesWithPadding(
+          truncated_line.into(),
+          editor_engine.current_box.get_computed_style(),
+          max_display_col_count,
+        ));
+      }
     }
   }
 
@@ -227,7 +314,7 @@ impl EditorEngineRenderApi {
         RenderOp::MoveCursorPositionRelTo(
           editor_engine.current_box.style_adjusted_origin_pos, position! { col: 0 , row: 0 }),
         RenderOp::ApplyColors(style! {
-          color_fg: TWColor::Red
+          color_fg: TuiColor::Red
         }.into()),
         RenderOp::PrintTextWithAttributes("No content added".into(), None),
         RenderOp::ResetColor

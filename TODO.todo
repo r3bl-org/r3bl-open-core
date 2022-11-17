@@ -1,7 +1,7 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-editor engine extras (core):
+editor engine extras core (https://github.com/r3bl-org/r3bl_rs_utils/issues/48): 
   ☐ syntax highlighting support
   ☐ support editor config options to enable/disable syntax highlighting & update tests
   ☐ markdown parsing (MD frontmatter in JSON format, and MD -> AST)
@@ -39,9 +39,11 @@ framework (jarvis mode):
   ☐ w/ shortcuts & autocomplete, impl modal to allow user to type a command and have it executed
   ☐ list of available commands come from the global "action registry" w/ its triggering shortcut
 
-framework (save/load buffer to/from file/surrealdb):
+framework (save/load buffer to/from file/db):
   ☐ learn surrealdb
     - https://ori-cohen.medium.com/list/surrealdb-deep-dive-ddefbefaf1ef
+  ☐ learn terminusdb
+    - https://terminusdb.com/blog/terminusdb-internals/
   ☐ keyboard shortcut to save/load buffer
   ☐ persist buffer to file
   ☐ load buffer to file

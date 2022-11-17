@@ -32,7 +32,7 @@ use crate::{tui::DEBUG_SHOW_PIPELINE_EXPANDED, *};
 /// 1. This pipeline is meant to hold a list of [RenderOp] items.
 /// 2. Once all the [RenderOp] items are added to the correct [ZOrder]s they can then be flushed at
 ///    the end in order to [paint](RenderPipeline::paint) them to the screen.
-/// 3. All the paint operations mutate the global [cursor_position](TWData::cursor_position).
+/// 3. All the paint operations mutate the global [cursor_position](GlobalData::cursor_position).
 /// 4. The [RENDER_ORDERED_Z_ORDER_ARRAY] contains the priority that is used to paint the different
 ///    groups of [RenderOp] items.
 ///
@@ -154,7 +154,7 @@ macro_rules! render_pipeline {
 // ┃ RenderPipeline ┃
 // ┛                ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Here's an example. Consider using the macro for convenience (see [render_pipeline!]). Also see
-/// [TWData] for more information on scoping the [cursor_position](TWData::cursor_position) rules.
+/// [GlobalData] for more information on scoping the [cursor_position](GlobalData::cursor_position) rules.
 ///
 /// ```rust
 /// use r3bl_tui::*;
@@ -220,9 +220,9 @@ impl RenderPipeline {
     Some(vec_render_op)
   }
 
-  /// Some of the paint operations mutate the global [cursor_position](TWData::cursor_position).
-  pub async fn paint(&self, flush_kind: FlushKind, shared_tw_data: &SharedTWData) {
-    paint(self, flush_kind, shared_tw_data).await;
+  /// Some of the paint operations mutate the global [cursor_position](GlobalData::cursor_position).
+  pub async fn paint(&self, flush_kind: FlushKind, shared_global_data: &SharedGlobalData) {
+    paint(self, flush_kind, shared_global_data).await;
     // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
   }
 

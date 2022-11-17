@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::ops::{Add, AddAssign};
+use std::ops::{Add, AddAssign, Deref, DerefMut};
 
 use r3bl_rs_utils_core::*;
 
@@ -69,59 +69,79 @@ macro_rules! styled_text {
   };
 }
 
-// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ Vec<StyledText>, StyledTexts ┃
-// ┛                              ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-impl Add<StyledText> for Vec<StyledText> {
-  type Output = Vec<StyledText>;
-  fn add(mut self, other: StyledText) -> Self::Output {
-    self.push(other);
-    self
-  }
+// ┏━━━━━━━━━━━━━┓
+// ┃ StyledTexts ┃
+// ┛             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#[derive(Default, Debug, Clone)]
+pub struct StyledTexts {
+  styled_texts: Vec<StyledText>,
 }
 
-impl AddAssign<StyledText> for Vec<StyledText> {
-  fn add_assign(&mut self, other: StyledText) { self.push(other); }
-}
+mod impl_styled_texts {
+  use super::*;
 
-pub trait StyledTexts {
-  fn len(&self) -> usize;
-  fn is_empty(&self) -> bool;
-  fn get_plain_text(&self) -> String;
-  fn render_into(&self, render_ops: &mut RenderOps);
-  fn display_width(&self) -> ChUnit;
-}
-
-impl StyledTexts for Vec<StyledText> {
-  fn len(&self) -> usize { self.len() }
-
-  fn is_empty(&self) -> bool { self.is_empty() }
-
-  fn get_plain_text(&self) -> String {
-    let mut plain_text = String::new();
-    for styled_text in self {
-      plain_text.push_str(&styled_text.plain_text);
-    }
-    plain_text
-  }
-
-  fn display_width(&self) -> ChUnit {
-    let unicode_string: UnicodeString = self.get_plain_text().into();
-    unicode_string.display_width
-  }
-
-  fn render_into(&self, render_ops: &mut RenderOps) {
-    for styled_text in self {
-      let style = styled_text.style.clone();
-      let text = styled_text.plain_text.clone();
-      render_ops.push(RenderOp::ApplyColors(style.clone().into()));
-      render_ops.push(RenderOp::PrintTextWithAttributes(text, style.into()));
-      render_ops.push(RenderOp::ResetColor);
+  impl Add<StyledText> for StyledTexts {
+    type Output = StyledTexts;
+    fn add(mut self, other: StyledText) -> Self::Output {
+      self.push(other);
+      self
     }
   }
+
+  impl AddAssign<StyledText> for StyledTexts {
+    fn add_assign(&mut self, other: StyledText) { self.push(other); }
+  }
+
+  impl Deref for StyledTexts {
+    type Target = Vec<StyledText>;
+    fn deref(&self) -> &Self::Target { &self.styled_texts }
+  }
+
+  impl DerefMut for StyledTexts {
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.styled_texts }
+  }
+
+  impl StyledTexts {
+    pub fn get_plain_text(&self) -> String {
+      let mut plain_text = String::new();
+      for styled_text in self.iter() {
+        plain_text.push_str(&styled_text.plain_text);
+      }
+      plain_text
+    }
+
+    pub fn display_width(&self) -> ChUnit {
+      let unicode_string: UnicodeString = self.get_plain_text().into();
+      unicode_string.display_width
+    }
+
+    pub fn render_into_with_padding(&self, render_ops: &mut RenderOps, max_col_count: ChUnit) {
+      for styled_text in self.iter() {
+        let style = styled_text.style.clone();
+        let text = styled_text.plain_text.clone();
+        render_ops.push(RenderOp::ApplyColors(style.clone().into()));
+        render_ops.push(RenderOp::PrintTextWithAttributesWithPadding(
+          text,
+          style.into(),
+          max_col_count,
+        ));
+        render_ops.push(RenderOp::ResetColor);
+      }
+    }
+
+    pub fn render_into(&self, render_ops: &mut RenderOps) {
+      for styled_text in self.iter() {
+        let style = styled_text.style.clone();
+        let text = styled_text.plain_text.clone();
+        render_ops.push(RenderOp::ApplyColors(style.clone().into()));
+        render_ops.push(RenderOp::PrintTextWithAttributes(text, style.into()));
+        render_ops.push(RenderOp::ResetColor);
+      }
+    }
+  }
 }
 
-/// Macro to make building [`Vec<StyledText>`] easy.
+/// Macro to make building [`StyledTexts`] easy.
 ///
 /// Here's an example.
 /// ```ignore
@@ -140,11 +160,32 @@ impl StyledTexts for Vec<StyledText> {
 macro_rules! styled_texts {
   ($($style:expr),*) => {
     {
-      let mut styled_text_vec: Vec<StyledText> = Default::default();
+      let mut styled_texts: StyledTexts = Default::default();
       $(
-        styled_text_vec += $style;
+        styled_texts += $style;
       )*
-      styled_text_vec
+      styled_texts
     }
   };
+}
+
+mod conversion {
+  use super::*;
+
+  type SyntectStyle = syntect::highlighting::Style;
+
+  impl From<Vec<(SyntectStyle, &str)>> for StyledTexts {
+    fn from(value: Vec<(SyntectStyle, &str)>) -> Self { (&value).into() }
+  }
+
+  impl From<&Vec<(SyntectStyle, &str)>> for StyledTexts {
+    fn from(styles: &Vec<(SyntectStyle, &str)>) -> Self {
+      let mut styled_texts = StyledTexts::default();
+      for (style, text) in styles {
+        let my_style: Style = (*style).into();
+        styled_texts.push(StyledText::new(text.to_string(), my_style));
+      }
+      styled_texts
+    }
+  }
 }

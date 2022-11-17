@@ -116,9 +116,9 @@ impl EditorEvent {
     editor_engine: &mut EditorEngine,
     editor_buffer: &mut EditorBuffer,
     editor_event: EditorEvent,
-    _shared_tw_data: &SharedTWData,
+    _shared_global_data: &SharedGlobalData,
     _component_registry: &mut ComponentRegistry<S, A>,
-    _self_id: FlexBoxIdType,
+    _self_id: FlexBoxId,
   ) where
     S: Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
@@ -184,9 +184,9 @@ impl EditorEvent {
     editor_engine: &mut EditorEngine,
     editor_buffer: &mut EditorBuffer,
     editor_event_vec: Vec<EditorEvent>,
-    shared_tw_data: &SharedTWData,
+    shared_global_data: &SharedGlobalData,
     component_registry: &mut ComponentRegistry<S, A>,
-    self_id: FlexBoxIdType,
+    self_id: FlexBoxId,
   ) where
     S: Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
@@ -196,7 +196,7 @@ impl EditorEvent {
         editor_engine,
         editor_buffer,
         editor_event,
-        shared_tw_data,
+        shared_global_data,
         component_registry,
         self_id,
       );

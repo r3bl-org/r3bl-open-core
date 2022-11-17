@@ -36,7 +36,7 @@ where
   S: Default + Clone + PartialEq + Debug + Sync + Send,
   A: Default + Clone + Sync + Send,
 {
-  pub id: FlexBoxIdType,
+  pub id: FlexBoxId,
   pub dialog_engine: DialogEngine,
   /// Make sure to dispatch actions to handle the user's dialog choice [DialogChoice].
   pub on_dialog_press_handler: Option<OnDialogPressFn<S, A>>,
@@ -53,14 +53,14 @@ pub mod impl_component {
     S: HasDialogBuffer + Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
   {
-    fn get_id(&self) -> FlexBoxIdType { self.id }
+    fn get_id(&self) -> FlexBoxId { self.id }
 
     // ┏━━━━━━━━━━━━━━┓
     // ┃ handle_event ┃
     // ┛              ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     /// This shim simply calls [apply_event](DialogEngineApi::apply_event) w/ all the necessary
     /// arguments:
-    /// - Global scope: [SharedStore], [SharedTWData].
+    /// - Global scope: [SharedStore], [SharedGlobalData].
     /// - App scope: `S`, [ComponentRegistry<S, A>].
     /// - User input (from [main_event_loop]): [InputEvent].
     ///
@@ -74,14 +74,14 @@ pub mod impl_component {
       let ComponentScopeArgs {
         state,
         shared_store,
-        shared_tw_data,
+        shared_global_data,
         component_registry,
         window_size,
       } = args;
 
       let dialog_engine_args = {
         DialogEngineArgs {
-          shared_tw_data,
+          shared_global_data,
           shared_store,
           state,
           component_registry,
@@ -128,7 +128,7 @@ pub mod impl_component {
     // ┛        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     /// This shim simply calls [render](DialogEngineApi::render_engine) w/ all the necessary
     /// arguments:
-    /// - Global scope: [SharedStore], [SharedTWData].
+    /// - Global scope: [SharedStore], [SharedGlobalData].
     /// - App scope: `S`, [ComponentRegistry<S, A>].
     /// - User input (from [main_event_loop]): [InputEvent].
     async fn render(
@@ -139,14 +139,14 @@ pub mod impl_component {
       let ComponentScopeArgs {
         state,
         shared_store,
-        shared_tw_data,
+        shared_global_data,
         component_registry,
         window_size,
       } = args;
 
       let dialog_engine_args = {
         DialogEngineArgs {
-          shared_tw_data,
+          shared_global_data,
           shared_store,
           state,
           component_registry,
@@ -174,18 +174,20 @@ pub mod constructor {
     /// Typically this results in a Redux action being created and then dispatched to the given
     /// store.
     pub fn new(
-      id: FlexBoxIdType,
+      id: FlexBoxId,
       on_dialog_press_handler: OnDialogPressFn<S, A>,
       on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, A>,
       maybe_style_border: Option<Style>,
       maybe_style_title: Option<Style>,
       maybe_style_editor: Option<Style>,
+      editor_engine_config_options: EditorEngineConfigOptions,
     ) -> Self {
       Self {
         dialog_engine: DialogEngine {
           maybe_style_border,
           maybe_style_title,
           maybe_style_editor,
+          editor_engine: EditorEngine::new(editor_engine_config_options),
           ..Default::default()
         },
         id,
@@ -195,12 +197,13 @@ pub mod constructor {
     }
 
     pub fn new_shared(
-      id: FlexBoxIdType,
+      id: FlexBoxId,
       on_dialog_press_handler: OnDialogPressFn<S, A>,
       on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, A>,
       maybe_style_border: Option<Style>,
       maybe_style_title: Option<Style>,
       maybe_style_editor: Option<Style>,
+      editor_engine_config_options: EditorEngineConfigOptions,
     ) -> Arc<RwLock<Self>> {
       Arc::new(RwLock::new(DialogComponent::new(
         id,
@@ -209,6 +212,7 @@ pub mod constructor {
         maybe_style_border,
         maybe_style_title,
         maybe_style_editor,
+        editor_engine_config_options,
       )))
     }
   }

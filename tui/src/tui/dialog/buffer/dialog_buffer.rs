@@ -27,10 +27,19 @@ use crate::*;
 // ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Stores the data for a modal dialog. It contains the text content in an [EditorBuffer] and a
 /// title that is displayed.
-#[derive(Default, Clone, PartialEq, Serialize, Deserialize, GetSize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct DialogBuffer {
   pub editor_buffer: EditorBuffer,
   pub title: String,
+}
+
+impl Default for DialogBuffer {
+  fn default() -> Self {
+    Self {
+      editor_buffer: EditorBuffer::new_empty(),
+      title: String::default(),
+    }
+  }
 }
 
 mod debug_format_helpers {

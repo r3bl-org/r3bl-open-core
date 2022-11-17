@@ -33,10 +33,10 @@ use crate::*;
 /// use r3bl_rs_utils_core::Stylesheet;
 /// use r3bl_rs_utils_macro::style;
 ///
-/// // Turquoise:  TWColor::Rgb { r: 51, g: 255, b: 255 }
-/// // Pink:       TWColor::Rgb { r: 252, g: 157, b: 248 }
-/// // Blue:       TWColor::Rgb { r: 55, g: 55, b: 248 }
-/// // Faded blue: TWColor::Rgb { r: 85, g: 85, b: 255 }
+/// // Turquoise:  TuiColor::Rgb { r: 51, g: 255, b: 255 }
+/// // Pink:       TuiColor::Rgb { r: 252, g: 157, b: 248 }
+/// // Blue:       TuiColor::Rgb { r: 55, g: 55, b: 248 }
+/// // Faded blue: TuiColor::Rgb { r: 85, g: 85, b: 255 }
 /// let mut stylesheet = Stylesheet::new();
 ///
 /// stylesheet.add_styles(vec![
@@ -44,15 +44,18 @@ use crate::*;
 ///     id: style1
 ///     attrib: [dim, bold]
 ///     padding: 1
-///     color_bg: TWColor::Rgb { r: 55, g: 55, b: 248 }
+///     color_bg: TuiColor::Rgb { r: 55, g: 55, b: 248 }
 ///   },
 ///   style! {
 ///     id: style2
 ///     padding: 1
-///     color_bg: TWColor::Rgb { r: 85, g: 85, b: 255 }
+///     color_bg: TuiColor::Rgb { r: 85, g: 85, b: 255 }
 ///   }
 /// ]);
 /// ```
+///
+/// Here are the [crossterm docs on
+/// attributes](https://docs.rs/crossterm/0.25.0/crossterm/style/enum.Attribute.html)
 #[derive(Default, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct Style {
   pub id: String,
@@ -63,8 +66,8 @@ pub struct Style {
   pub hidden: bool,
   pub strikethrough: bool,
   pub computed: bool,
-  pub color_fg: Option<TWColor>,
-  pub color_bg: Option<TWColor>,
+  pub color_fg: Option<TuiColor>,
+  pub color_bg: Option<TuiColor>,
   /// The semantics of this are the same as CSS. The padding is space that is taken up inside a
   /// `FlexBox`. This does not affect the size or position of a `FlexBox`, it only applies to the
   /// contents inside of that `FlexBox`.
@@ -171,24 +174,32 @@ mod helpers {
 
       if self.computed {
         msg_vec.push("computed".to_string())
+      } else if self.id.is_empty() {
+        msg_vec.push("id: N/A".to_string())
       } else {
         msg_vec.push(self.id.to_string());
       }
+
       if self.bold {
         msg_vec.push("bold".to_string())
       }
+
       if self.dim {
         msg_vec.push("dim".to_string())
       }
+
       if self.underline {
         msg_vec.push("underline".to_string())
       }
+
       if self.reverse {
         msg_vec.push("reverse".to_string())
       }
+
       if self.hidden {
         msg_vec.push("hidden".to_string())
       }
+
       if self.strikethrough {
         msg_vec.push("strikethrough".to_string())
       }
@@ -277,5 +288,38 @@ impl Style {
     }
 
     it
+  }
+}
+
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ syntect::highlighting::Style -> Style ┃
+// ┛                                       ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+mod conversion {
+  use super::*;
+
+  type SyntectStyle = syntect::highlighting::Style;
+  type SyntectFontStyle = syntect::highlighting::FontStyle;
+  type SyntectColor = syntect::highlighting::Color;
+
+  impl From<SyntectStyle> for Style {
+    fn from(st_style: SyntectStyle) -> Self {
+      Style {
+        color_fg: Some(st_style.foreground.into()),
+        color_bg: Some(st_style.background.into()),
+        bold: st_style.font_style.contains(SyntectFontStyle::BOLD),
+        underline: st_style.font_style.contains(SyntectFontStyle::UNDERLINE),
+        ..Default::default()
+      }
+    }
+  }
+
+  impl From<SyntectColor> for TuiColor {
+    fn from(st_color: SyntectColor) -> Self {
+      TuiColor::Rgb {
+        r: st_color.r,
+        g: st_color.g,
+        b: st_color.b,
+      }
+    }
   }
 }

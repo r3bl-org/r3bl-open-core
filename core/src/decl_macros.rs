@@ -308,11 +308,11 @@ macro_rules! with_mut {
 ///
 /// # Examples:
 /// ```ignore
-/// let tw_queue = with_mut_returns! {
+/// let queue = with_mut_returns! {
 ///   ColumnRenderComponent { lolcat },
 ///   as it,
 ///   return {
-///     let current_box = tw_surface.current_box()?;
+///     let current_box = surface.current_box()?;
 ///     it.render_component(current_box, state, shared_store).await?
 ///   }
 /// };

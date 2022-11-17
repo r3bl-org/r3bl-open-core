@@ -111,7 +111,7 @@ macro_rules! render_ops {
 ///    (eg in the case where it has already been painted before).
 ///
 /// Here's an example. Consider using the macro for convenience (see [render_ops!]). Also see
-/// [TWData] for more information on scoping the [cursor_position](TWData::cursor_position) rules.
+/// [GlobalData] for more information on scoping the [cursor_position](GlobalData::cursor_position) rules.
 /// ```rust
 /// use r3bl_tui::*;
 ///
@@ -188,10 +188,10 @@ pub enum RenderOp {
   ClearScreen,
 
   /// Directly set the fg color for crossterm w/out using [Style].
-  SetFgColor(TWColor),
+  SetFgColor(TuiColor),
 
   /// Directly set the bg color for crossterm w/out using [Style].
-  SetBgColor(TWColor),
+  SetBgColor(TuiColor),
 
   ResetColor,
 
@@ -207,7 +207,7 @@ pub enum RenderOp {
   /// 2. If the [String] argument contains ANSI sequences then it will be printed as-is. You are
   ///    responsible for handling clipping of the text to the bounds of the terminal screen.
   PrintTextWithAttributes(String, Option<Style>),
-  PrintTextWithAttributesAndPadding(String, Option<Style>, ChUnit),
+  PrintTextWithAttributesWithPadding(String, Option<Style>, ChUnit),
 
   CursorShow,
   CursorHide,

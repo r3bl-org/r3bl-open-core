@@ -42,7 +42,7 @@ pub enum DialogStyleId {
   Editor,
 }
 
-/// Async trait object that implements the [TWApp] trait.
+/// Async trait object that implements the [App] trait.
 pub struct AppWithLayout {
   pub component_registry: ComponentRegistry<State, Action>,
 }
@@ -63,7 +63,7 @@ mod app_trait_impl {
       let GlobalScopeArgs {
         state,
         shared_store,
-        shared_tw_data,
+        shared_global_data,
         window_size,
       } = args;
 
@@ -82,7 +82,7 @@ mod app_trait_impl {
         input_event:    input_event,
         state:          state,
         shared_store:   shared_store,
-        shared_tw_data: shared_tw_data,
+        shared_global_data: shared_global_data,
         window_size:    window_size
       )
     }
@@ -95,7 +95,7 @@ mod app_trait_impl {
         let GlobalScopeArgs {
           state,
           shared_store,
-          shared_tw_data,
+          shared_global_data,
           window_size,
         } = args;
         let adjusted_window_size = size!(cols: window_size.cols, rows: window_size.rows - 1);
@@ -108,7 +108,7 @@ mod app_trait_impl {
           size:             adjusted_window_size, // Bottom row for status bar.
           state:            state,
           shared_store:     shared_store,
-          shared_tw_data:   shared_tw_data,
+          shared_global_data:   shared_global_data,
           window_size:      window_size
         };
 
@@ -192,7 +192,7 @@ mod container_layout_render {
         let GlobalScopeArgs {
           state,
           shared_store,
-          shared_tw_data,
+          shared_global_data,
           window_size,
         } = args;
 
@@ -209,7 +209,7 @@ mod container_layout_render {
             from:           self.app_ref.component_registry,
             state:          state,
             shared_store:   shared_store,
-            shared_tw_data: shared_tw_data,
+            shared_global_data: shared_global_data,
             window_size:    window_size
           }
         }
@@ -228,7 +228,7 @@ mod container_layout_render {
             from:           self.app_ref.component_registry,
             state:          state,
             shared_store:   shared_store,
-            shared_tw_data: shared_tw_data,
+            shared_global_data: shared_global_data,
             window_size:    window_size
           };
         }
@@ -251,7 +251,7 @@ mod populate_component_registry {
   }
 
   /// Switch focus to the editor component if focus is not set.
-  fn try_init_has_focus(app_ref: &mut AppWithLayout, id: FlexBoxIdType) {
+  fn try_init_has_focus(app_ref: &mut AppWithLayout, id: FlexBoxId) {
     if app_ref.component_registry.has_focus.is_set() {
       return;
     }
@@ -263,7 +263,7 @@ mod populate_component_registry {
   }
 
   /// Insert dialog component into registry if it's not already there.
-  fn try_insert_dialog_component(app_ref: &mut AppWithLayout, id: FlexBoxIdType, surface: &mut Surface) {
+  fn try_insert_dialog_component(app_ref: &mut AppWithLayout, id: FlexBoxId, surface: &mut Surface) {
     if app_ref.component_registry.contains(id) {
       return;
     }
@@ -297,6 +297,10 @@ mod populate_component_registry {
         get_style! { from: surface.stylesheet , DialogStyleId::Border.as_ref() },
         get_style! { from: surface.stylesheet , DialogStyleId::Title.as_ref() },
         get_style! { from: surface.stylesheet , DialogStyleId::Editor.as_ref() },
+        EditorEngineConfigOptions {
+          multiline: false,
+          syntax_highlight: false,
+        },
       )
     };
 
@@ -308,13 +312,13 @@ mod populate_component_registry {
   }
 
   /// Insert editor component into registry if it's not already there.
-  fn try_insert_editor_component(app_ref: &mut AppWithLayout, id: FlexBoxIdType) {
+  fn try_insert_editor_component(app_ref: &mut AppWithLayout, id: FlexBoxId) {
     if app_ref.component_registry.contains(id) {
       return;
     }
 
     let shared_editor_component = {
-      fn on_buffer_change(shared_store: &SharedStore<State, Action>, my_id: FlexBoxIdType, buffer: EditorBuffer) {
+      fn on_buffer_change(shared_store: &SharedStore<State, Action>, my_id: FlexBoxId, buffer: EditorBuffer) {
         spawn_dispatch_action!(shared_store, Action::UpdateEditorBufferById(my_id, buffer));
       }
 
@@ -369,24 +373,24 @@ mod style_helpers {
           id: Id::Editor.int_value().to_string()
           attrib: [bold]
           padding: 1
-          color_fg: TWColor::Blue
+          color_fg: TuiColor::Blue
         },
         style! {
           id: DialogStyleId::Title.as_ref()
           attrib: [bold]
-          color_fg: TWColor::Yellow
+          color_fg: TuiColor::Yellow
           lolcat: true
         },
         style! {
           id: DialogStyleId::Border.as_ref()
           attrib: [dim]
-          color_fg: TWColor::Green
+          color_fg: TuiColor::Green
           lolcat: true
         },
         style! {
           id: DialogStyleId::Editor.as_ref()
           attrib: [bold]
-          color_fg: TWColor::Magenta
+          color_fg: TuiColor::Magenta
         }
       }
     })

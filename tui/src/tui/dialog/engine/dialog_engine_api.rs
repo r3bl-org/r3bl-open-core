@@ -44,7 +44,7 @@ impl DialogEngineApi {
   /// - However, it is still constrained by the bounds of the [Surface] itself and does not take
   ///   into account the full window size (in case these are different).
   pub fn make_flex_box_for_dialog(
-    dialog_id: FlexBoxIdType,
+    dialog_id: FlexBoxId,
     surface: &Surface,
     window_size: &Size,
   ) -> CommonResult<FlexBox> {
@@ -105,7 +105,7 @@ impl DialogEngineApi {
       self_id,
       component_registry,
       shared_store,
-      shared_tw_data,
+      shared_global_data,
       state,
       dialog_buffer,
       dialog_engine,
@@ -118,7 +118,7 @@ impl DialogEngineApi {
 
     let editor_engine_args = EditorEngineArgs {
       component_registry,
-      shared_tw_data,
+      shared_global_data,
       self_id,
       editor_buffer: &dialog_buffer.editor_buffer,
       editor_engine: &mut dialog_engine.editor_engine,
@@ -150,7 +150,7 @@ mod internal_impl {
   /// }
   /// ```
   pub fn make_flex_box_for_dialog(
-    dialog_id: FlexBoxIdType,
+    dialog_id: FlexBoxId,
     surface: &Surface,
     window_size: &Size,
   ) -> CommonResult<FlexBox> {
@@ -216,7 +216,7 @@ mod internal_impl {
 
     let editor_engine_args = EditorEngineArgs {
       component_registry: args.component_registry,
-      shared_tw_data: args.shared_tw_data,
+      shared_global_data: args.shared_global_data,
       self_id: args.self_id,
       editor_buffer: &args.dialog_buffer.editor_buffer,
       editor_engine: &mut args.dialog_engine.editor_engine,

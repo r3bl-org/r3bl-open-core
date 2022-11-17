@@ -112,22 +112,33 @@ pub struct EditorBuffer {
   /// 1. This is not marked pub in order to guard mutation. In order to access it, use
   ///    [get_mut](EditorBuffer::get_mut).
   scroll_offset: ScrollOffset,
+
+  /// This is used for syntax highlighting. It is a 2 character string, eg: `rs` or `md` that is
+  /// used to lookup the syntax highlighting rules for the language in
+  /// [find_syntax_by_extension[syntect::parsing::SyntaxSet::find_syntax_by_extension].
+  file_extension: String,
 }
 
 mod constructor {
   use super::*;
 
-  impl Default for EditorBuffer {
-    fn default() -> Self {
+  impl EditorBuffer {
+    /// Marker method to make it easy to search for where an empty instance is created.
+    pub fn new_empty() -> Self {
       // Potentially do any other initialization here.
       call_if_true!(DEBUG_TUI_MOD, {
-        log_no_err!(DEBUG, "🪙 {}", "construct EditorBuffer { lines, caret, lolcat }");
+        log_no_err!(
+          DEBUG,
+          "🪙 {}",
+          "construct EditorBuffer { lines, caret, lolcat, file_extension }"
+        );
       });
 
       Self {
         lines: vec![UnicodeString::default()],
         caret: Position::default(),
         scroll_offset: ScrollOffset::default(),
+        file_extension: "md".to_string(),
       }
     }
   }
@@ -142,6 +153,8 @@ pub mod access_and_mutate {
   use super::*;
 
   impl EditorBuffer {
+    pub fn get_file_extension(&self) -> &str { &self.file_extension }
+
     pub fn is_empty(&self) -> bool { self.lines.is_empty() }
 
     pub fn len(&self) -> ChUnit { ch!(self.lines.len()) }
@@ -223,10 +236,10 @@ mod debug_format_helpers {
       write! { f,
         "\nEditorBuffer [          \n \
         ├ lines: {}, size: {},     \n \
-        └ caret: {:?}]             \n \
+        └ ext: {:?}, caret: {:?}]  \n \
         ]",
         self.lines.len(), self.lines.get_heap_size(),
-        self.caret,
+        self.file_extension, self.caret,
       }
     }
   }

@@ -16,10 +16,18 @@
  */
 
 // Attach sources.
+pub mod md_frontmatter;
 pub mod styled_text;
+pub mod r3bl_syntect_theme;
 
 // Re-export
+pub use md_frontmatter::*;
 pub use styled_text::*;
+pub use r3bl_syntect_theme::*;
 
 // Tests.
+mod test_md_frontmatter;
 mod test_styled_text;
+mod test_common;
+mod test_md_parse;
+mod test_r3bl_syntect_theme;

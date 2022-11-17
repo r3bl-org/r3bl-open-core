@@ -27,7 +27,7 @@ use crate::*;
 /// There are certain fields that need to be in each state struct to represent global information
 /// about keyboard focus.
 ///
-/// 1. An `id` [FlexBoxIdType] is used to store which [FlexBox] id currently holds keyboard focus.
+/// 1. An `id` [FlexBoxId] is used to store which [FlexBox] id currently holds keyboard focus.
 ///    This is global.
 /// 2. Each `id` may have a [Position] associated with it, which is used to draw the "cursor" (the
 ///    meaning of which depends on the specific [Component] impl). This cursor is scoped to each
@@ -42,17 +42,17 @@ pub struct HasFocus {
   pub cursor_position_map: CursorPositionMap,
 
   /// This `id` has keyboard focus. This is global.
-  pub maybe_id: Option<FlexBoxIdType>,
+  pub maybe_id: Option<FlexBoxId>,
 
   /// This `id` is saved only when [set_modal_id](HasFocus::set_modal_id) is called. This is global.
-  pub maybe_id_before_modal: Option<FlexBoxIdType>,
+  pub maybe_id_before_modal: Option<FlexBoxId>,
 }
 
-pub type CursorPositionMap = HashMap<FlexBoxIdType, Option<Position>>;
+pub type CursorPositionMap = HashMap<FlexBoxId, Option<Position>>;
 
 impl HasFocus {
   /// Get the `id` of the [FlexBox] that has keyboard focus.
-  pub fn get_id(&self) -> Option<FlexBoxIdType> { self.maybe_id }
+  pub fn get_id(&self) -> Option<FlexBoxId> { self.maybe_id }
 
   /// Check to see whether [set_id][HasFocus::set_id] has been called.
   pub fn is_empty(&self) -> bool { self.maybe_id.is_none() }
@@ -61,10 +61,10 @@ impl HasFocus {
   pub fn is_set(&self) -> bool { !self.is_empty() }
 
   /// Set the `id` of the [FlexBox] that has keyboard focus.
-  pub fn set_id(&mut self, id: FlexBoxIdType) { self.maybe_id = Some(id) }
+  pub fn set_id(&mut self, id: FlexBoxId) { self.maybe_id = Some(id) }
 
   /// Check whether the given `id` currently has keyboard focus.
-  pub fn does_id_have_focus(&self, id: FlexBoxIdType) -> bool { self.maybe_id == Some(id) }
+  pub fn does_id_have_focus(&self, id: FlexBoxId) -> bool { self.maybe_id == Some(id) }
 
   /// Check whether the `id` of the [FlexBox] currently has keyboard focus.
   pub fn does_current_box_have_focus(&self, current_box: &FlexBox) -> bool { self.does_id_have_focus(current_box.id) }
@@ -72,7 +72,7 @@ impl HasFocus {
 
 impl HasFocus {
   /// Saves the current `id` to `prev_id` and sets `id` to the given `id`.
-  pub fn set_modal_id(&mut self, id: FlexBoxIdType) {
+  pub fn set_modal_id(&mut self, id: FlexBoxId) {
     self.maybe_id_before_modal = self.maybe_id;
     self.set_id(id);
   }
@@ -81,10 +81,10 @@ impl HasFocus {
   pub fn is_modal_set(&self) -> bool { self.maybe_id_before_modal.is_some() }
 
   /// Checks whether the given `id` is the modal `id`.
-  pub fn is_modal_id(&self, id: FlexBoxIdType) -> bool { self.is_modal_set() && self.does_id_have_focus(id) }
+  pub fn is_modal_id(&self, id: FlexBoxId) -> bool { self.is_modal_set() && self.does_id_have_focus(id) }
 
   /// Restores the `id` from `prev_id` and sets `prev_id` to `None`.
-  pub fn reset_modal_id(&mut self) -> Option<FlexBoxIdType> {
+  pub fn reset_modal_id(&mut self) -> Option<FlexBoxId> {
     if let Some(prev_id) = self.maybe_id_before_modal {
       self.maybe_id = Some(prev_id);
       self.maybe_id_before_modal = None;
@@ -97,13 +97,13 @@ impl HasFocus {
 
 impl HasFocus {
   /// For a given [FlexBox] `id`, set the position of the cursor inside of it.
-  pub fn set_cursor_position_for_id(&mut self, id: FlexBoxIdType, maybe_position: Option<Position>) {
+  pub fn set_cursor_position_for_id(&mut self, id: FlexBoxId, maybe_position: Option<Position>) {
     let map = &mut self.cursor_position_map;
     map.insert(id, maybe_position);
   }
 
   /// For a given [FlexBox] `id`, get the position of the cursor inside of it.
-  pub fn get_cursor_position_for_id(&self, id: FlexBoxIdType) -> Option<Position> {
+  pub fn get_cursor_position_for_id(&self, id: FlexBoxId) -> Option<Position> {
     let map = &self.cursor_position_map;
     if let Some(value) = map.get(&id) {
       *value
