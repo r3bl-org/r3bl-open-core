@@ -6,3 +6,5 @@ docs/*.dtmp
 .idea
 log.txt
 crash_log.txt
+**/flamegraph.svg
+**/perf.data
