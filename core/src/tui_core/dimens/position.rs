@@ -54,6 +54,7 @@ use crate::*;
 /// let pos: Position = position!(0, 0);
 /// ```
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Default, GetSize, Hash)]
+// TODO: rename col -> col_index, row -> row_index
 pub struct Position {
   pub col: ChUnit,
   pub row: ChUnit,

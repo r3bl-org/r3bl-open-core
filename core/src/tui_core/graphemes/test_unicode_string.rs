@@ -125,7 +125,7 @@ mod tests {
 
   #[allow(clippy::zero_prefixed_literal)]
   #[test]
-  fn test_unicode_string_truncate() {
+  fn test_unicode_string_truncate_to_fit_display_cols() {
     let test_string: String = TEST_STRING.to_string();
     let u_s = UnicodeString::from(test_string);
 
@@ -155,5 +155,39 @@ mod tests {
     assert_eq2! {u_s.truncate_end_to_fit_display_cols(23.into()), "Hi 😃 📦 🙏🏽 "};
     assert_eq2! {u_s.truncate_end_to_fit_display_cols(24.into()), "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿"};
     assert_eq2! {u_s.truncate_end_to_fit_display_cols(25.into()), "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
+  }
+
+  #[allow(clippy::zero_prefixed_literal)]
+  #[test]
+  fn test_unicode_string_truncate_end_by_n_col() {
+    let test_string: String = TEST_STRING.to_string();
+    let u_s = UnicodeString::from(test_string);
+
+    assert_eq2! {u_s.truncate_end_by_n_col(01.into()), "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿"};
+    assert_eq2! {u_s.truncate_end_by_n_col(02.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_by_n_col(03.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_by_n_col(04.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_by_n_col(05.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_by_n_col(06.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_by_n_col(07.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_by_n_col(08.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_by_n_col(09.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_by_n_col(10.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_by_n_col(11.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_by_n_col(12.into()), "Hi 😃 📦 🙏🏽"};
+  }
+
+  #[allow(clippy::zero_prefixed_literal)]
+  #[test]
+  fn test_unicode_string_truncate_start_by_n_col() {
+    let test_string: String = TEST_STRING.to_string();
+    let u_s = UnicodeString::from(test_string);
+
+    assert_eq2! {u_s.truncate_start_by_n_col(01.into()), "i 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
+    assert_eq2! {u_s.truncate_start_by_n_col(02.into()), " 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
+    assert_eq2! {u_s.truncate_start_by_n_col(03.into()), "😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
+    assert_eq2! {u_s.truncate_start_by_n_col(04.into()), " 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
+    assert_eq2! {u_s.truncate_start_by_n_col(05.into()), " 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
+    assert_eq2! {u_s.truncate_start_by_n_col(06.into()), "📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
   }
 }

@@ -50,9 +50,44 @@ impl UnicodeString {
     self.truncate_end_to_fit_display_cols(display_cols)
   }
 
-  /// Removes segments from the start of the string so that scroll_offset_col width is skipped.
-  pub fn truncate_start_by_n_col(&self, scroll_offset_col: ChUnit) -> &str {
-    let mut skip_col_count = scroll_offset_col;
+  pub fn truncate_end_by_n_col(&self, n_display_col: ChUnit) -> &str {
+    let mut countdown_col_count = n_display_col;
+    let mut string_end_byte_index = 0;
+
+    for segment in self.iter().rev() {
+      let segment_display_width = segment.unicode_width;
+      string_end_byte_index = segment.byte_offset;
+      countdown_col_count -= segment_display_width;
+      if countdown_col_count == ch!(0) {
+        // We are done skipping.
+        break;
+      }
+    }
+
+    &self.string[..string_end_byte_index]
+  }
+
+  /// Removes segments from the start of the string so that `col_count` (width) is skipped.
+  ///
+  /// ```rust
+  /// use r3bl_rs_utils_core::UnicodeString;
+  /// use r3bl_rs_utils_core::ChUnit;
+  ///
+  /// let col_count:r3bl_rs_utils_core::ChUnit = 2.into();
+  /// let display_cols:r3bl_rs_utils_core::ChUnit = 5.into();
+  /// let expected_clipped_string = "rst s";
+  /// let line = "first second";
+  /// let line = UnicodeString::from(line);
+  ///
+  /// let truncated_line = line.truncate_start_by_n_col(col_count);
+  /// let truncated_line = UnicodeString::from(truncated_line);
+  ///
+  /// let truncated_line = truncated_line.truncate_end_to_fit_display_cols(display_cols);
+  ///
+  /// assert_eq!(truncated_line, expected_clipped_string);
+  /// ```
+  pub fn truncate_start_by_n_col(&self, col_count: ChUnit) -> &str {
+    let mut skip_col_count = col_count;
     let mut string_start_byte_index = 0;
 
     for segment in self.iter() {
@@ -69,7 +104,26 @@ impl UnicodeString {
     &self.string[string_start_byte_index..]
   }
 
-  /// Removes segments from the end of the string that don't fit in the display_cols width.
+  /// Removes segments from the end of the string that don't fit in the `display_cols` (index). Note
+  /// that the `display_cols` *index* is NOT included in the result; please see the example below.
+  ///
+  /// ```rust
+  /// use r3bl_rs_utils_core::UnicodeString;
+  /// use r3bl_rs_utils_core::ChUnit;
+  ///
+  /// let scroll_offset_col:r3bl_rs_utils_core::ChUnit = 2.into();
+  /// let display_cols:r3bl_rs_utils_core::ChUnit = 5.into();
+  /// let expected_clipped_string = "rst s";
+  /// let line = "first second";
+  /// let line = UnicodeString::from(line);
+  ///
+  /// let truncated_line = line.truncate_start_by_n_col(scroll_offset_col);
+  /// let truncated_line = UnicodeString::from(truncated_line);
+  ///
+  /// let truncated_line = truncated_line.truncate_end_to_fit_display_cols(display_cols);
+  ///
+  /// assert_eq!(truncated_line, expected_clipped_string);
+  /// ```
   pub fn truncate_end_to_fit_display_cols(&self, display_cols: ChUnit) -> &str {
     let mut avail_cols = display_cols;
     let mut string_end_byte_index = 0;

@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::ops::Deref;
+use std::{fmt::{Display, Formatter},
+          ops::Deref};
 
 use get_size::GetSize;
 use serde::{Deserialize, Serialize};
@@ -115,6 +116,10 @@ macro_rules! ch {
     let u16_value: u16 = *ch_value_copy;
     u16_value
   }};
+}
+
+impl Display for ChUnit {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{}", self.value) }
 }
 
 impl Deref for ChUnit {

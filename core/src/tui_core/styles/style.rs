@@ -241,6 +241,12 @@ bitflags! {
 // ┃ Style impl ┃
 // ┛            ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 impl Style {
+  pub fn remove_bg_color(&mut self) {
+    self.color_bg = None;
+    self.reset_bitflags();
+    self.get_bitflags();
+  }
+
   /// The `StyleFlag` is lazily computed and cached after the first time it is evaluated. A `Style`
   /// can be built simply or by using the [crate::style] proc macro and the expectation is that once
   /// built, the style won't be modified.

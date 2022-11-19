@@ -19,7 +19,7 @@
 mod syntect {
   use r3bl_rs_utils_core::{assert_eq2, color};
 
-  use crate::{syntax_highlighting::test_common::shared::*, try_load_r3bl_theme, StyledTexts};
+  use crate::{syntax_highlighting::test_common::shared::*, *};
 
   /// Use a [std::io::Cursor] as a fake [std::fs::File]:
   /// <https://stackoverflow.com/a/41069910/2085356>
@@ -55,7 +55,7 @@ mod syntect {
       // let escaped = as_24_bit_terminal_escaped(&vec_styled_str[..], false);
       // print!("{}", escaped);
 
-      let styled_texts: StyledTexts = vec_styled_str.into();
+      let styled_texts = StyledTexts::from(vec_styled_str);
       line_idx += 1;
       for (col_idx, styled_text) in styled_texts.iter().enumerate() {
         println!("[L#:{line_idx} => C#:{col_idx}] {:#?}", styled_text);
@@ -70,7 +70,7 @@ mod syntect {
     {
       let line = &vec_styled_texts[0];
       assert_eq2!(line.len(), 4);
-      assert_eq2!(line.get_plain_text(), "# My Heading\n");
+      assert_eq2!(line.get_plain_text(), "# My Heading\n".into());
       let col1 = &line[0];
       assert_eq2!(col1.get_style().bold, true);
       let col3 = &line[2];
@@ -81,7 +81,7 @@ mod syntect {
     {
       let line = &vec_styled_texts[41];
       assert_eq2!(line.len(), 1);
-      assert_eq2!(line.get_plain_text(), "--- END ---\n");
+      assert_eq2!(line.get_plain_text(), "--- END ---\n".into());
       let col1 = &line[0];
       assert_eq2!(col1.get_style().color_fg.unwrap(), color!(193, 179, 208));
     }

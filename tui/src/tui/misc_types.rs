@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::fmt::Debug;
+use std::{fmt::Debug,
+          ops::{Deref, DerefMut}};
 
 use int_enum::IntEnum;
 use r3bl_redux::*;
@@ -162,3 +163,23 @@ pub enum BorderGlyphCharacter {
 }
 
 pub const SPACER: &str = " ";
+
+// ┏━━━━━━━━━┓
+// ┃ General ┃
+// ┛         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for [List] of `T`.
+/// Where `T` is any number of types in the tui crate.
+#[derive(Debug, Clone, Default)]
+pub struct List<T> {
+  pub items: Vec<T>,
+}
+
+impl<T> Deref for List<T> {
+  type Target = Vec<T>;
+  fn deref(&self) -> &Self::Target { &self.items }
+}
+
+impl<T> DerefMut for List<T> {
+  fn deref_mut(&mut self) -> &mut Self::Target { &mut self.items }
+}

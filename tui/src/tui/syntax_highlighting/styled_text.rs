@@ -25,9 +25,9 @@ use crate::*;
 // ┃ StyledText ┃
 // ┛            ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Use [styled_text!] macro for easier construction.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct StyledText {
-  plain_text: String,
+  plain_text: UnicodeString,
   style: Style,
 }
 
@@ -39,10 +39,13 @@ impl StyledText {
       Some(plain_text) => plain_text,
       None => text,
     };
-    StyledText { plain_text, style }
+    StyledText {
+      plain_text: UnicodeString::from(plain_text),
+      style,
+    }
   }
 
-  pub fn get_plain_text(&self) -> &str { &self.plain_text }
+  pub fn get_plain_text(&self) -> &UnicodeString { &self.plain_text }
 
   pub fn get_style(&self) -> &Style { &self.style }
 }
@@ -74,7 +77,7 @@ macro_rules! styled_text {
 // ┛             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Default, Debug, Clone)]
 pub struct StyledTexts {
-  styled_texts: Vec<StyledText>,
+  styled_texts: List<StyledText>,
 }
 
 mod impl_styled_texts {
@@ -102,30 +105,59 @@ mod impl_styled_texts {
   }
 
   impl StyledTexts {
-    pub fn get_plain_text(&self) -> String {
-      let mut plain_text = String::new();
-      for styled_text in self.iter() {
-        plain_text.push_str(&styled_text.plain_text);
+    pub fn pretty_print(&self) -> String {
+      let mut it = vec![];
+      for (index, item) in self.iter().enumerate() {
+        let string = format!("{index}: [{}, {}]", item.get_style(), item.get_plain_text().string);
+        it.push(string);
       }
-      plain_text
+      it.join("\n")
     }
 
-    pub fn display_width(&self) -> ChUnit {
-      let unicode_string: UnicodeString = self.get_plain_text().into();
-      unicode_string.display_width
-    }
-
-    pub fn render_into_with_padding(&self, render_ops: &mut RenderOps, max_col_count: ChUnit) {
+    pub fn get_plain_text(&self) -> UnicodeString {
+      let mut it = UnicodeString::default();
       for styled_text in self.iter() {
-        let style = styled_text.style.clone();
+        it = it + &styled_text.plain_text;
+      }
+      it
+    }
+
+    pub fn display_width(&self) -> ChUnit { self.get_plain_text().display_width }
+
+    pub fn render_into_with_padding(
+      &self,
+      render_ops: &mut RenderOps,
+      max_col_count: ChUnit,
+      maybe_style: Option<Style>,
+    ) {
+      let mut total_display_width = ch!(0);
+
+      for styled_text in self.iter() {
+        let text_style = styled_text.style.clone();
         let text = styled_text.plain_text.clone();
-        render_ops.push(RenderOp::ApplyColors(style.clone().into()));
-        render_ops.push(RenderOp::PrintTextWithAttributesWithPadding(
-          text,
-          style.into(),
-          max_col_count,
-        ));
+
+        let style = {
+          if let Some(current_box_style) = maybe_style.clone() {
+            current_box_style + text_style
+          } else {
+            text_style
+          }
+        };
+
+        render_ops.push(RenderOp::ApplyColors(Some(style.clone())));
+        render_ops.push(RenderOp::PrintTextWithAttributes(text.string, Some(style)));
         render_ops.push(RenderOp::ResetColor);
+
+        total_display_width += text.display_width;
+      }
+
+      if total_display_width < max_col_count {
+        let padding = max_col_count - total_display_width + 1;
+        render_ops.push(RenderOp::ResetColor);
+        render_ops.push(RenderOp::PrintTextWithAttributes(
+          SPACER.repeat(ch!(@to_usize padding)),
+          None,
+        ));
       }
     }
 
@@ -134,7 +166,7 @@ mod impl_styled_texts {
         let style = styled_text.style.clone();
         let text = styled_text.plain_text.clone();
         render_ops.push(RenderOp::ApplyColors(style.clone().into()));
-        render_ops.push(RenderOp::PrintTextWithAttributes(text, style.into()));
+        render_ops.push(RenderOp::PrintTextWithAttributes(text.string, style.into()));
         render_ops.push(RenderOp::ResetColor);
       }
     }
@@ -167,25 +199,4 @@ macro_rules! styled_texts {
       styled_texts
     }
   };
-}
-
-mod conversion {
-  use super::*;
-
-  type SyntectStyle = syntect::highlighting::Style;
-
-  impl From<Vec<(SyntectStyle, &str)>> for StyledTexts {
-    fn from(value: Vec<(SyntectStyle, &str)>) -> Self { (&value).into() }
-  }
-
-  impl From<&Vec<(SyntectStyle, &str)>> for StyledTexts {
-    fn from(styles: &Vec<(SyntectStyle, &str)>) -> Self {
-      let mut styled_texts = StyledTexts::default();
-      for (style, text) in styles {
-        let my_style: Style = (*style).into();
-        styled_texts.push(StyledText::new(text.to_string(), my_style));
-      }
-      styled_texts
-    }
-  }
 }

@@ -209,18 +209,13 @@ pub mod optimized_paint {
     call_if_true!(DEBUG_SHOW_PAINT_OPTIMIZATION_HEURISTIC, {
       log_no_err!(
         DEBUG,
-        "\n🤔🧨🎨 [Repaint introspection] new_ops != saved_ops, 
-        \rnew_ops: {:?}, 
-        \rsaved_ops: {:?}, 
-        \nhas_fewer_ops_than:        {:?}\
-        \nhas_less_or_more_text_than:{:?}\
-        \nhas_different_lines_than:  {:?}\
-        \ncontains_paint_caret_ops:  {:?}\
-        \ncontains_clear_screen_ops: {:?}\
-        \ncontains_hoisted_ops:      {:?}\
-        \n",
-        new_ops,
-        saved_ops,
+        r#"
+🤔🧨🎨 [Repaint introspection] new_ops != saved_ops,
+{:?} has_fewer_ops_than          {:?} has_less_or_more_text_than  {:?} has_different_lines_than
+{:?} contains_paint_caret_ops    {:?} contains_clear_screen_ops   {:?} contains_hoisted_ops
+new_ops: {:?}, 
+saved_ops: {:?}
+"#,
         if new_ops.has_fewer_ops_than(saved_ops) {
           "✅"
         } else {
@@ -247,6 +242,8 @@ pub mod optimized_paint {
           "🚫"
         },
         if new_ops.contains_hoisted_ops() { "✅" } else { "🚫" },
+        new_ops,
+        saved_ops,
       );
     });
   }

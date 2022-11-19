@@ -22,6 +22,343 @@ mod tests {
 
   use crate::*;
 
+  /// Make sure that the code to clip styled text to a range [ start_col .. end_col ] works. The
+  /// list of styled unicode string represents a single line of text in an editor component.
+  #[cfg(test)]
+  mod clip_styled_texts {
+    use super::*;
+
+    mod helpers {
+      use super::*;
+
+      pub fn get_s1() -> Style {
+        style! {
+          id: "s1"
+          color_bg: TuiColor::Rgb { r: 1, g: 1, b: 1 }
+        }
+      }
+
+      pub fn get_s2() -> Style {
+        style! {
+          id: "s2"
+          color_bg: TuiColor::Rgb { r: 2, g: 2, b: 2 }
+        }
+      }
+
+      /// ```ignore
+      /// <span style="s1">first</span>
+      /// <span style="s1"> </span>
+      /// <span style="s2">second</span>
+      /// ```
+      pub fn get_list() -> List<(Style, UnicodeString)> {
+        let mut it = List::default();
+        it.push((get_s1(), UnicodeString::from("first")));
+        it.push((get_s1(), UnicodeString::from(" ")));
+        it.push((get_s2(), UnicodeString::from("second")));
+        it
+      }
+    }
+
+    #[test]
+    fn list_1_range_2_5() {
+      use helpers::*;
+
+      assert_eq!(get_list().len(), 3);
+
+      let scroll_offset_col_index = ch!(2);
+      let max_display_col_count = ch!(5);
+      let expected_clipped_string = "rst s";
+
+      // BEFORE:
+      //    ┌→s1
+      //    │    ┌→s2
+      //    │    │┌→s3
+      //    ▒▒▒▒▒█▒▒▒▒▒▒
+      // R ┌────────────┐
+      // 0 │first second│
+      //   └────────────┘
+      //   C012345678901
+      //
+      // AFTER: Cut [ 2 .. 5 ].
+      //      ┌→s1
+      //      │  ┌→s2
+      //      │  │┌→s3
+      // R   ┌─────┐
+      // 0 fi│rst s│econd
+      //     └─────┘
+      //     C01234 5678901
+
+      // Equivalent no highlight version.
+      {
+        let line = StyledTexts::from(get_list()).get_plain_text().string;
+        let line = UnicodeString::from(line);
+        let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+        let truncated_line = UnicodeString::from(truncated_line);
+        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+        assert_eq2!(truncated_line, expected_clipped_string);
+      }
+
+      // clip2 version.
+      {
+        let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
+        // println!("{}", clipped.pretty_print());
+        assert_eq2!(clipped.len(), 3);
+        let lhs = clipped.get_plain_text().string;
+        assert_eq2!(lhs, expected_clipped_string);
+      }
+    }
+
+    #[test]
+    fn list_1_range_0_3() {
+      use helpers::*;
+
+      assert_eq!(get_list().len(), 3);
+
+      let scroll_offset_col_index = ch!(0);
+      let max_display_col_count = ch!(3);
+      let expected_clipped_string = "fir";
+
+      // BEFORE:
+      //    ┌→s1
+      //    │    ┌→s2
+      //    │    │┌→s3
+      //    ▒▒▒▒▒█▒▒▒▒▒▒
+      // R ┌────────────┐
+      // 0 │first second│
+      //   └────────────┘
+      //   C012345678901
+      //
+      // AFTER: Cut [ 0 .. 3 ].
+      //    ┌→s1
+      //    │     ┌→s2
+      //    │     │┌→s3
+      // R ┌───┐
+      // 0 │fir│st second
+      //   └───┘
+      //   C012 345678901
+
+      // Equivalent no highlight version.
+      {
+        let line = StyledTexts::from(helpers::get_list()).get_plain_text().string;
+        let line = UnicodeString::from(line);
+        let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+        let truncated_line = UnicodeString::from(truncated_line);
+        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+        assert_eq2!(truncated_line, expected_clipped_string);
+      }
+
+      // clip2 version.
+      {
+        let clipped = helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
+        // println!("{}", clipped.pretty_print());
+        assert_eq2!(clipped.len(), 1);
+        let left = clipped.get_plain_text().string;
+        let right = expected_clipped_string;
+        assert_eq2!(left, right);
+      }
+    }
+
+    #[test]
+    fn list_1_range_0_5() {
+      use helpers::*;
+
+      assert_eq!(get_list().len(), 3);
+
+      let scroll_offset_col_index = ch!(0);
+      let max_display_col_count = ch!(5);
+      let expected_clipped_string = "first";
+
+      // BEFORE:
+      //    ┌→s1
+      //    │    ┌→s2
+      //    │    │┌→s3
+      //    ▒▒▒▒▒█▒▒▒▒▒▒
+      // R ┌────────────┐
+      // 0 │first second│
+      //   └────────────┘
+      //   C012345678901
+      //
+      // AFTER: Cut [ 0 .. 5 ].
+      //    ┌→s1
+      //    │     ┌→s2
+      //    │     │┌→s3
+      // R ┌─────┐
+      // 0 │first│ second
+      //   └─────┘
+      //   C01234 5678901
+
+      // Equivalent no highlight version.
+      {
+        let line = StyledTexts::from(helpers::get_list()).get_plain_text().string;
+        let line = UnicodeString::from(line);
+        let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+        let truncated_line = UnicodeString::from(truncated_line);
+        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+        assert_eq2!(truncated_line, expected_clipped_string);
+      }
+
+      // clip2 version.
+      {
+        let clipped = helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
+        // println!("{}", clipped.pretty_print());
+        assert_eq2!(clipped.len(), 1);
+        let lhs = clipped.get_plain_text().string;
+        let rhs = expected_clipped_string;
+        assert_eq2!(lhs, rhs);
+      }
+    }
+
+    #[test]
+    fn list_1_range_2_8() {
+      use helpers::*;
+
+      assert_eq!(get_list().len(), 3);
+
+      let scroll_offset_col_index = ch!(2);
+      let max_display_col_count = ch!(8);
+      let expected_clipped_string = "rst seco";
+
+      // BEFORE:
+      //    ┌→s1
+      //    │    ┌→s2
+      //    │    │┌→s3
+      //    ▒▒▒▒▒█▒▒▒▒▒▒
+      // R ┌────────────┐
+      // 0 │first second│
+      //   └────────────┘
+      //   C012345678901
+      //
+      // AFTER: Cut [ 2 .. 8 ].
+      //      ┌→s1
+      //      │  ┌→s2
+      //      │  │┌→s3
+      // R   ┌────────┐
+      // 0 fi│rst seco│nd
+      //     └────────┘
+      //     C01234567 8901
+
+      // Expected no highlight version.
+      {
+        let line = StyledTexts::from(helpers::get_list()).get_plain_text().string;
+        let line = UnicodeString::from(line);
+        let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+        let truncated_line = UnicodeString::from(truncated_line);
+        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+        assert_eq2!(truncated_line, expected_clipped_string);
+      }
+
+      // clip2 version.
+      {
+        let clipped = helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
+        // println!("{}", clipped.pretty_print());
+        assert_eq2!(clipped.len(), 3);
+        let left = clipped.get_plain_text().string;
+        let right = expected_clipped_string;
+        assert_eq2!(left, right);
+      }
+    }
+
+    #[test]
+    fn list_2() {
+      use helpers::*;
+
+      fn get_list() -> List<(Style, UnicodeString)> {
+        let mut list = List::default();
+        list.push((
+          get_s1(),
+          UnicodeString::from("01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234"),
+        ));
+        list
+      }
+
+      let scroll_offset_col_index = ch!(1);
+      let max_display_col_count = ch!(77);
+      let expected_clipped_string = "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234";
+
+      // BEFORE:
+      // ┌→0                                                                              │
+      // │                                                                           ┌→77 │
+      // .............................................................................    │ viewport
+      // 01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234
+      //
+      // AFTER:
+      // ┌→0                                                                              │
+      // │                                                                           ┌→77 │
+      // .............................................................................    │ viewport
+      // 1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234
+
+      // Expected no highlight version.
+      {
+        let line = StyledTexts::from(get_list()).get_plain_text().string;
+        let line = UnicodeString::from(line);
+        let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+        let truncated_line = UnicodeString::from(truncated_line);
+        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+        assert_eq2!(truncated_line, expected_clipped_string);
+      }
+
+      // clip2 version.
+      {
+        let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
+        // println!("{}", clipped.pretty_print());
+        assert_eq2!(clipped.len(), 1);
+        let lhs = clipped.get_plain_text().string;
+        let rhs = expected_clipped_string;
+        assert_eq2!(lhs, rhs);
+      }
+    }
+
+    #[test]
+    fn list_3() {
+      use helpers::*;
+
+      fn get_list() -> List<(Style, UnicodeString)> {
+        let mut list = List::default();
+        list.push((
+          get_s1(),
+          UnicodeString::from("01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 0123456"),
+        ));
+        list
+      }
+
+      let scroll_offset_col_index = ch!(1);
+      let max_display_col_count = ch!(77);
+      let expected_clipped_string = "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 012345";
+
+      // BEFORE:
+      // ┌→0                                                                              │
+      // │                                                                           ┌→77 │
+      // .............................................................................    │ viewport
+      // 01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 0123456
+      //
+      // AFTER:
+      // ┌→0                                                                              │
+      // │                                                                           ┌→77 │
+      // .............................................................................    │ viewport
+      // 1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 012345
+
+      // Expected no highlight version.
+      {
+        let line = StyledTexts::from(get_list()).get_plain_text().string;
+        let line = UnicodeString::from(line);
+        let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+        let truncated_line = UnicodeString::from(truncated_line);
+        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+        assert_eq2!(truncated_line, expected_clipped_string);
+      }
+
+      // clip2 version.
+      {
+        let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
+        // println!("{}", clipped.pretty_print());
+        assert_eq2!(clipped.len(), 1);
+        let left = clipped.get_plain_text().string;
+        let right = expected_clipped_string;
+        assert_eq2!(left, right);
+      }
+    }
+  }
+
   #[test]
   fn syntect_conversion() {
     let st_color_1 = syntect::highlighting::Color {
@@ -65,14 +402,14 @@ mod tests {
       ),
     ];
 
-    let styled_texts = dbg!(StyledTexts::from(st_vec));
+    let styled_texts = StyledTexts::from(st_vec);
 
     // Should have 3 items.
     assert_eq2!(styled_texts.len(), 3);
 
     // item 1.
     {
-      assert_eq2!(styled_texts[0].get_plain_text(), "st_color_1");
+      assert_eq2!(styled_texts[0].get_plain_text(), &UnicodeString::from("st_color_1"));
       assert_eq2!(
         styled_texts[0].get_style().color_fg.unwrap(),
         TuiColor::Rgb { r: 255, g: 255, b: 255 }
@@ -85,7 +422,7 @@ mod tests {
 
     // item 2.
     {
-      assert_eq2!(styled_texts[1].get_plain_text(), "st_color_2");
+      assert_eq2!(styled_texts[1].get_plain_text(), &UnicodeString::from("st_color_2"));
       assert_eq2!(
         styled_texts[1].get_style().color_fg.unwrap(),
         TuiColor::Rgb { r: 0, g: 0, b: 0 }
@@ -99,7 +436,10 @@ mod tests {
 
     // item 3.
     {
-      assert_eq2!(styled_texts[2].get_plain_text(), "st_color_1 and 2");
+      assert_eq2!(
+        styled_texts[2].get_plain_text(),
+        &UnicodeString::from("st_color_1 and 2")
+      );
       assert_eq2!(
         styled_texts[2].get_style().color_fg.unwrap(),
         TuiColor::Rgb { r: 255, g: 255, b: 255 }
