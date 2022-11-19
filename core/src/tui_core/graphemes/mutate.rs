@@ -62,8 +62,9 @@ impl UnicodeString {
     }
   }
 
-  /// Returns two new tuples: *left* ([NewUnicodeStringResult]), *right*
-  /// ([NewUnicodeStringResult]). Does not modify [self.string](UnicodeString::string).
+  /// Does not modify [self.string](UnicodeString::string) & returns two new tuples:
+  /// 1. *left* ([NewUnicodeStringResult]),
+  /// 2. *right* ([NewUnicodeStringResult]).
   pub fn split_at_display_col(&self, display_col: ChUnit) -> Option<(NewUnicodeStringResult, NewUnicodeStringResult)> {
     let split_logical_index = self.logical_index_at_display_col(display_col)?;
     let max_logical_index = self.len();

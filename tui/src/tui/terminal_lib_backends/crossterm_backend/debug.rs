@@ -67,7 +67,7 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
         RenderOp::PrintTextWithAttributes(text, maybe_style) => {
           format_print_text(text, maybe_style)
         }
-        RenderOp::PrintTextWithAttributesWithPadding(text, maybe_style, max_display_col) => {
+        RenderOp::PrintTextWithAttributesAndPadding(text, maybe_style, max_display_col) => {
           format!(
             "{}, postfix pad to {:?}",
             format_print_text(text, maybe_style),

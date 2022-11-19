@@ -145,7 +145,7 @@ impl Component<State, Action> for ColumnRenderComponent {
           =>
             RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_cursor_pos),
             RenderOp::ApplyColors(current_box.get_computed_style()),
-            RenderOp::PrintTextWithAttributesWithPadding(
+            RenderOp::PrintTextWithAttributesAndPadding(
               line_1_us_trunc.into(),
               current_box.get_computed_style(),
               box_bounds_size.cols

@@ -81,7 +81,7 @@ impl PaintRenderOp for RenderOpImplCrossterm {
       RenderOp::PrintTextWithAttributes(text, maybe_style) => {
         print_text_with_attributes(text, maybe_style, shared_global_data, None).await;
       }
-      RenderOp::PrintTextWithAttributesWithPadding(text, maybe_style, max_display_col) => {
+      RenderOp::PrintTextWithAttributesAndPadding(text, maybe_style, max_display_col) => {
         print_text_with_attributes(text, maybe_style, shared_global_data, Some(*max_display_col)).await;
       }
     }
@@ -305,7 +305,7 @@ async fn print_text_with_attributes(
     {
       let arg = mut_text_arg.to_string();
       let ansi_text = arg.ansi_text();
-      let ansi_text_segments = ansi_text.segments(None, None);
+      let ansi_text_segments = ansi_text.segments(None);
 
       if let Some(max_display_col) = maybe_max_display_col {
         let ansi_len = ansi_text_segments.len();
@@ -330,9 +330,9 @@ async fn print_text_with_attributes(
     {
       let arg = mut_text_arg.to_string();
       let ansi_text = arg.ansi_text();
-      let ansi_text_segments = ansi_text.segments(None, None);
+      let ansi_text_segments = ansi_text.segments(None);
       if ansi_text_segments.len() > ch!(@to_usize max_terminal_display_cols) {
-        let truncated_segments = ansi_text.segments(None, Some(ch!(@to_usize max_terminal_display_cols)));
+        let truncated_segments = ansi_text.segments(Some(ch!(@to_usize max_terminal_display_cols)));
 
         let truncated_seg_len = truncated_segments.len();
         let truncated_seg_unicode_width = truncated_segments.unicode_width;
@@ -452,7 +452,7 @@ async fn print_text_with_attributes(
     let display_width = match truncation_policy {
       TruncationPolicy::ANSIText => {
         let ansi_text = text.ansi_text();
-        let ansi_text_segments = ansi_text.segments(None, None);
+        let ansi_text_segments = ansi_text.segments(None);
         let unicode_width = ansi_text_segments.unicode_width;
         ch!(unicode_width)
       }

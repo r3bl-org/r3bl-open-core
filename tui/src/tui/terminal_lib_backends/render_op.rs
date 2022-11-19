@@ -207,7 +207,7 @@ pub enum RenderOp {
   /// 2. If the [String] argument contains ANSI sequences then it will be printed as-is. You are
   ///    responsible for handling clipping of the text to the bounds of the terminal screen.
   PrintTextWithAttributes(String, Option<Style>),
-  PrintTextWithAttributesWithPadding(String, Option<Style>, ChUnit),
+  PrintTextWithAttributesAndPadding(String, Option<Style>, ChUnit),
 
   CursorShow,
   CursorHide,

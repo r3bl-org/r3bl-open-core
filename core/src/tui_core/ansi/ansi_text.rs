@@ -115,48 +115,36 @@ impl<'a> ANSIText<'a> {
   ///    [Output::TextBlock].
   /// 2. If max_display_col is provided, return the maximum number of segments that will fit in
   ///    the given display column width.
-  pub fn segments(
-    &'a self,
-    // TODO: impl this!
-    start_at_display_col: Option<usize>,
-    max_display_col: Option<usize>,
-  ) -> ANSITextSegments<'a> {
+  pub fn segments(&'a self, max_display_col: Option<usize>) -> ANSITextSegments<'a> {
     let mut vec_segment_copy = self.make_copy();
+
+    // Calculate the unicode_width of each segment.
     let mut unicode_width_total = 0;
-
-    match (start_at_display_col, max_display_col) {
-      (None, None) => {
-        // Calculate the unicode_width of each segment.
-        for segment in &mut vec_segment_copy {
-          for part in &segment.vec_parts {
-            if let Output::TextBlock(text) = part {
-              segment.unicode_width += unicode_width::UnicodeWidthStr::width(*text);
-              unicode_width_total += segment.unicode_width;
-            }
-          }
-        }
-      }
-      (None, Some(max_display_col)) => {
-        // If max_display_col is provided then filter the vec_segment_copy.
-        let mut vec_segment_filtered = Vec::new();
-        let mut col_count = 0;
-        unicode_width_total = 0;
-
-        for segment in vec_segment_copy {
-          if col_count + segment.unicode_width > max_display_col {
-            break;
-          }
-          col_count += segment.unicode_width;
+    for segment in &mut vec_segment_copy {
+      for part in &segment.vec_parts {
+        if let Output::TextBlock(text) = part {
+          segment.unicode_width += unicode_width::UnicodeWidthStr::width(*text);
           unicode_width_total += segment.unicode_width;
-          vec_segment_filtered.push(segment);
         }
+      }
+    }
 
-        vec_segment_copy = vec_segment_filtered;
+    // If max_display_col is provided then filter the vec_segments.
+    if let Some(max_display_col) = max_display_col {
+      let mut vec_segments_filtered = Vec::new();
+      let mut col_count = 0;
+      unicode_width_total = 0;
+
+      for segment in vec_segment_copy {
+        if col_count + segment.unicode_width > max_display_col {
+          break;
+        }
+        col_count += segment.unicode_width;
+        unicode_width_total += segment.unicode_width;
+        vec_segments_filtered.push(segment);
       }
-      (Some(start_at_display_col), Some(max_display_col)) => {
-        // TODO: impl this
-      }
-      _ => {}
+
+      vec_segment_copy = vec_segments_filtered;
     }
 
     ANSITextSegments::new(vec_segment_copy, unicode_width_total)

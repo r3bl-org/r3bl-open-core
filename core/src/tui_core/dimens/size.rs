@@ -49,6 +49,7 @@ use crate::*;
 /// let size: Size = size!(cols: 10, rows: 10);
 /// ```
 #[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Hash)]
+// TODO: rename cols -> col_count, rows -> row_count
 pub struct Size {
   pub cols: ChUnit, // width = number of cols (y).
   pub rows: ChUnit, // height = number of rows (x).
