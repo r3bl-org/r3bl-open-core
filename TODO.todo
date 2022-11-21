@@ -1,11 +1,6 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-editor engine extras core (https://github.com/r3bl-org/r3bl_rs_utils/issues/48): 
-  ☐ syntax highlighting support
-  ☐ support editor config options to enable/disable syntax highlighting & update tests
-  ☐ markdown parsing (MD frontmatter in JSON format, and MD -> AST)
-
 editor engine extras (auto-completion providers):
   ☐ add support for auto completion providers
   ☐ modal dialogs for autocompletion provider, which just use a nested multiline editor component

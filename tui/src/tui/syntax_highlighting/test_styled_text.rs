@@ -98,7 +98,7 @@ mod tests {
         assert_eq2!(truncated_line, expected_clipped_string);
       }
 
-      // clip2 version.
+      // clip version.
       {
         let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
         // println!("{}", clipped.pretty_print());
@@ -147,7 +147,7 @@ mod tests {
         assert_eq2!(truncated_line, expected_clipped_string);
       }
 
-      // clip2 version.
+      // clip version.
       {
         let clipped = helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
         // println!("{}", clipped.pretty_print());
@@ -197,7 +197,7 @@ mod tests {
         assert_eq2!(truncated_line, expected_clipped_string);
       }
 
-      // clip2 version.
+      // clip version.
       {
         let clipped = helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
         // println!("{}", clipped.pretty_print());
@@ -247,7 +247,7 @@ mod tests {
         assert_eq2!(truncated_line, expected_clipped_string);
       }
 
-      // clip2 version.
+      // clip version.
       {
         let clipped = helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
         // println!("{}", clipped.pretty_print());
@@ -297,7 +297,7 @@ mod tests {
         assert_eq2!(truncated_line, expected_clipped_string);
       }
 
-      // clip2 version.
+      // clip version.
       {
         let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
         // println!("{}", clipped.pretty_print());
@@ -347,7 +347,7 @@ mod tests {
         assert_eq2!(truncated_line, expected_clipped_string);
       }
 
-      // clip2 version.
+      // clip version.
       {
         let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
         // println!("{}", clipped.pretty_print());
