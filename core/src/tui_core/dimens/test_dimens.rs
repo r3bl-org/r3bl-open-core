@@ -22,31 +22,31 @@ mod tests {
   #[tokio::test]
   async fn test_add_box_size_to_pos() {
     // [10, 10] + [30, 10] = [40, 20]
-    let pos = position!(col: 10, row: 10);
-    let size = size!(cols: 30, rows: 10);
+    let pos = position!(col_index: 10, row_index: 10);
+    let size = size!(col_count: 30, row_count: 10);
     let new_pos = pos + size; // `size + pos` is not defined.
-    assert_eq!(*new_pos.col, 40);
-    assert_eq!(*new_pos.row, 20);
+    assert_eq!(*new_pos.col_index, 40);
+    assert_eq!(*new_pos.row_index, 20);
   }
 
   #[tokio::test]
   async fn test_mul_box_pos_to_pair() {
     // [30, 10] * [1, 0] = [30, 0]
     {
-      let pos: Position = position!(col: 30, row: 10);
+      let pos: Position = position!(col_index: 30, row_index: 10);
       let pair_cancel_row = (1, 0);
       let new_pair = pos * pair_cancel_row;
-      assert_eq!(*new_pair.col, 30);
-      assert_eq!(*new_pair.row, 0);
+      assert_eq!(*new_pair.col_index, 30);
+      assert_eq!(*new_pair.row_index, 0);
     }
 
     // [30, 10] * [0, 1] = [0, 10]
     {
-      let pos: Position = position!(col: 30, row: 10);
+      let pos: Position = position!(col_index: 30, row_index: 10);
       let pair_cancel_col = (0, 1);
       let new_pair = pos * pair_cancel_col;
-      assert_eq!(*new_pair.col, 0);
-      assert_eq!(*new_pair.row, 10);
+      assert_eq!(*new_pair.col_index, 0);
+      assert_eq!(*new_pair.row_index, 10);
     }
   }
 

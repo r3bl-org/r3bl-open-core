@@ -1,6 +1,10 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+refactor https://github.com/r3bl-org/r3bl_rs_utils/issues/63:
+  ☐ index (starts at 0) vs size (starts at 1) confusion cleanup
+  ☐ move get_plain_text_clipped() to access.rs
+
 editor engine extras (auto-completion providers):
   ☐ add support for auto completion providers
   ☐ modal dialogs for autocompletion provider, which just use a nested multiline editor component

@@ -118,9 +118,9 @@ mod constructor {
 }
 
 impl EditorEngine {
-  pub fn viewport_width(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.cols }
+  pub fn viewport_width(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.col_count }
 
-  pub fn viewport_height(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.rows }
+  pub fn viewport_height(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.row_count }
 }
 
 // ┏━━━━━━━━━━━━━━━━┓

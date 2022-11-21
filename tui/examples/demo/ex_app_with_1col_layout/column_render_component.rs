@@ -132,7 +132,7 @@ impl Component<State, Action> for ColumnRenderComponent {
       // Setup intermediate vars.
       let box_origin_pos = current_box.style_adjusted_origin_pos; // Adjusted for style margin (if any).
       let box_bounds_size = current_box.style_adjusted_bounds_size; // Adjusted for style margin (if any).
-      let mut content_cursor_pos = position! { col: 0 , row: 0 };
+      let mut content_cursor_pos = position! { col_index: 0 , row_index: 0 };
 
       let mut render_ops = render_ops!();
 
@@ -148,7 +148,7 @@ impl Component<State, Action> for ColumnRenderComponent {
             RenderOp::PrintTextWithAttributesAndPadding(
               line_1_us_trunc.into(),
               current_box.get_computed_style(),
-              box_bounds_size.cols
+              box_bounds_size.col_count
             ),
             RenderOp::ResetColor
         };
@@ -158,13 +158,14 @@ impl Component<State, Action> for ColumnRenderComponent {
       {
         let line_2_us = UnicodeString::from(line_2);
         let line_2_us_trunc = line_2_us.truncate_to_fit_size(box_bounds_size);
-        let line_2_postfix_padding = UnicodeString::from(line_2_us_trunc).postfix_pad_with(' ', box_bounds_size.cols);
+        let line_2_postfix_padding =
+          UnicodeString::from(line_2_us_trunc).postfix_pad_with(' ', box_bounds_size.col_count);
         render_ops! {
           @add_to render_ops
           =>
             RenderOp::MoveCursorPositionRelTo(
               box_origin_pos,
-              content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.rows)
+              content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row_count)
             ),
             RenderOp::ApplyColors(current_box.get_computed_style()),
             RenderOp::PrintTextWithAttributes(
@@ -186,7 +187,7 @@ impl Component<State, Action> for ColumnRenderComponent {
         =>
           RenderOp::MoveCursorPositionRelTo(
             box_origin_pos,
-            content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.rows)
+            content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row_count)
           ),
           if component_registry.has_focus.does_current_box_have_focus(current_box) {
             RenderOp::PrintTextWithAttributes("👀".into(), None)

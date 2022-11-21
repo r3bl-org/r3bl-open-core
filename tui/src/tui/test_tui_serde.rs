@@ -53,7 +53,7 @@ mod tests {
 
   #[test]
   fn test_serde_position() {
-    let position = position!(col: 0, row:0);
+    let position = position!(col_index: 0, row_index:0);
     let ser_str = position.ser_to_string().unwrap();
     let og_position = Position::deser_from_str(&ser_str).unwrap();
     assert_eq2!(position, og_position);
@@ -61,7 +61,7 @@ mod tests {
 
   #[test]
   fn test_serde_size() {
-    let size = size!(cols: 0, rows:0);
+    let size = size!(col_count: 0, row_count:0);
     let ser_str = size.ser_to_string().unwrap();
     let og_size = Size::deser_from_str(&ser_str).unwrap();
     assert_eq2!(size, og_size);

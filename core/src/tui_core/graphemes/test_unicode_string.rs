@@ -129,32 +129,32 @@ mod tests {
     let test_string: String = TEST_STRING.to_string();
     let u_s = UnicodeString::from(test_string);
 
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(00.into()), ""};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(01.into()), "H"};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(02.into()), "Hi"};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(03.into()), "Hi "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(04.into()), "Hi "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(05.into()), "Hi 😃"};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(06.into()), "Hi 😃 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(07.into()), "Hi 😃 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(08.into()), "Hi 😃 📦"};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(09.into()), "Hi 😃 📦 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(10.into()), "Hi 😃 📦 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(11.into()), "Hi 😃 📦 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(12.into()), "Hi 😃 📦 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(13.into()), "Hi 😃 📦 🙏🏽"};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(14.into()), "Hi 😃 📦 🙏🏽 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(15.into()), "Hi 😃 📦 🙏🏽 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(16.into()), "Hi 😃 📦 🙏🏽 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(17.into()), "Hi 😃 📦 🙏🏽 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(18.into()), "Hi 😃 📦 🙏🏽 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(19.into()), "Hi 😃 📦 🙏🏽 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(20.into()), "Hi 😃 📦 🙏🏽 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(21.into()), "Hi 😃 📦 🙏🏽 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(22.into()), "Hi 😃 📦 🙏🏽 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(23.into()), "Hi 😃 📦 🙏🏽 "};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(24.into()), "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿"};
-    assert_eq2! {u_s.truncate_end_to_fit_display_cols(25.into()), "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
+    assert_eq2! {u_s.truncate_end_to_fit_width(00.into()), ""};
+    assert_eq2! {u_s.truncate_end_to_fit_width(01.into()), "H"};
+    assert_eq2! {u_s.truncate_end_to_fit_width(02.into()), "Hi"};
+    assert_eq2! {u_s.truncate_end_to_fit_width(03.into()), "Hi "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(04.into()), "Hi "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(05.into()), "Hi 😃"};
+    assert_eq2! {u_s.truncate_end_to_fit_width(06.into()), "Hi 😃 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(07.into()), "Hi 😃 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(08.into()), "Hi 😃 📦"};
+    assert_eq2! {u_s.truncate_end_to_fit_width(09.into()), "Hi 😃 📦 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(10.into()), "Hi 😃 📦 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(11.into()), "Hi 😃 📦 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(12.into()), "Hi 😃 📦 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(13.into()), "Hi 😃 📦 🙏🏽"};
+    assert_eq2! {u_s.truncate_end_to_fit_width(14.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(15.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(16.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(17.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(18.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(19.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(20.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(21.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(22.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(23.into()), "Hi 😃 📦 🙏🏽 "};
+    assert_eq2! {u_s.truncate_end_to_fit_width(24.into()), "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿"};
+    assert_eq2! {u_s.truncate_end_to_fit_width(25.into()), "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
   }
 
   #[allow(clippy::zero_prefixed_literal)]

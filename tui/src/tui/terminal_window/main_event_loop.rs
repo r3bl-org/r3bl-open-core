@@ -360,12 +360,12 @@ fn render_window_size_too_small(window_size: Size) -> RenderPipeline {
   let trunc_display_msg = UnicodeString::from(display_msg.truncate_to_fit_size(window_size));
   let trunc_display_msg_len = ch!(trunc_display_msg.len());
 
-  let row_pos = window_size.rows / 2;
-  let col_pos = (window_size.cols - trunc_display_msg_len) / 2;
+  let row_pos = window_size.row_count / 2;
+  let col_pos = (window_size.col_count - trunc_display_msg_len) / 2;
 
   render_pipeline!(@new ZOrder::Normal =>
     RenderOp::ResetColor,
-    RenderOp::MoveCursorPositionAbs(position! {col: col_pos, row: row_pos}),
+    RenderOp::MoveCursorPositionAbs(position! {col_index: col_pos, row_index: row_pos}),
     RenderOp::SetFgColor(TuiColor::DarkRed),
     RenderOp::PrintTextWithAttributes(
       lolcat_each_char_in_unicode_string(&trunc_display_msg, None),

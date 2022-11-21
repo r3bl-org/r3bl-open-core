@@ -117,8 +117,8 @@ impl EditorEngineRenderApi {
       ..
     } = render_args;
     let Size {
-      cols: max_display_col_count,
-      rows: max_display_row_count,
+      col_count: max_display_col_count,
+      row_count: max_display_row_count,
     } = editor_engine.current_box.style_adjusted_bounds_size;
     let mut syntax_highlight_enabled = editor_engine.config_options.syntax_highlight;
 
@@ -127,7 +127,7 @@ impl EditorEngineRenderApi {
     for (row_index, line) in editor_buffer
       .get_lines()
       .iter()
-      .skip(ch!(@to_usize editor_buffer.get_scroll_offset().row))
+      .skip(ch!(@to_usize editor_buffer.get_scroll_offset().row_index))
       .enumerate()
     {
       // Clip the content to max rows.
@@ -137,7 +137,7 @@ impl EditorEngineRenderApi {
 
       render_ops.push(RenderOp::MoveCursorPositionRelTo(
         editor_engine.current_box.style_adjusted_origin_pos,
-        position! { col: 0 , row: ch!(@to_usize row_index) },
+        position! { col_index: 0 , row_index: ch!(@to_usize row_index) },
       ));
 
       // Try and load syntax highlighting for the current line.
@@ -184,7 +184,7 @@ impl EditorEngineRenderApi {
         render_ops: &mut RenderOps,
         editor_engine: &&mut EditorEngine,
       ) {
-        let scroll_offset_col = editor_buffer.get_scroll_offset().col;
+        let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
 
         let list: List<(Style, UnicodeString)> = styled_text_conversion::from_syntect_to_tui(vec_styled_str);
         let styled_texts: StyledTexts = list.clip(scroll_offset_col, max_display_col_count);
@@ -203,10 +203,10 @@ impl EditorEngineRenderApi {
         render_ops: &mut RenderOps,
         editor_engine: &&mut EditorEngine,
       ) {
-        let scroll_offset_col_index = editor_buffer.get_scroll_offset().col;
+        let scroll_offset_col_index = editor_buffer.get_scroll_offset().col_index;
 
         // Clip the content [scroll_offset.col .. max cols].
-        let truncated_line = get_plain_text_clipped(line, scroll_offset_col_index, max_display_col_count);
+        let truncated_line = line.clip(scroll_offset_col_index, max_display_col_count);
 
         render_ops.push(RenderOp::ApplyColors(editor_engine.current_box.get_computed_style()));
         // Remove any "ghost" carets that were painted in a previous render.
@@ -282,7 +282,7 @@ impl EditorEngineRenderApi {
       ..
     } = render_args;
     let mut pipeline = render_pipeline!();
-    let mut content_cursor_pos = position! { col: 0 , row: 0 };
+    let mut content_cursor_pos = position! { col_index: 0 , row_index: 0 };
 
     // Paint the text.
     render_pipeline! {
@@ -290,7 +290,7 @@ impl EditorEngineRenderApi {
       at ZOrder::Normal
       =>
         RenderOp::MoveCursorPositionRelTo(
-          editor_engine.current_box.style_adjusted_origin_pos, position! { col: 0 , row: 0 }),
+          editor_engine.current_box.style_adjusted_origin_pos, position! { col_index: 0 , row_index: 0 }),
         RenderOp::ApplyColors(style! {
           color_fg: TuiColor::Red
         }.into()),
@@ -310,7 +310,7 @@ impl EditorEngineRenderApi {
           RenderOp::MoveCursorPositionRelTo(
             editor_engine.current_box.style_adjusted_origin_pos,
             content_cursor_pos.add_row_with_bounds(
-              ch!(1), editor_engine.current_box.style_adjusted_bounds_size.rows)),
+              ch!(1), editor_engine.current_box.style_adjusted_bounds_size.row_count)),
           RenderOp::PrintTextWithAttributes("👀".into(), None),
           RenderOp::ResetColor
       };

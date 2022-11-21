@@ -56,7 +56,7 @@ mod test_config_options {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 1, row_index: 2));
 
     EditorEvent::apply_editor_events(
       &mut engine,
@@ -70,7 +70,7 @@ mod test_config_options {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 1));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 1, row_index: 1));
   }
 
   #[test]
@@ -105,7 +105,7 @@ mod test_config_options {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 6, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 6, row_index: 0));
 
     EditorEvent::apply_editor_events(
       &mut engine,
@@ -119,7 +119,7 @@ mod test_config_options {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 6, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 6, row_index: 0));
     let maybe_line_str: Option<UnicodeString> = EditorEngineInternalApi::line_at_caret_to_string(&buffer, &engine);
     assert_eq2!(maybe_line_str.unwrap().string, "abcaba");
   }
@@ -159,7 +159,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 1, row_index: 2));
 
     // Remove the "a" on the last line.
     // `this` should look like:
@@ -177,7 +177,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 2));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 2));
 
     // Move to the end of the 2nd line. Press delete.
     // `this` should look like:
@@ -200,7 +200,7 @@ mod test_editor_ops {
       0,
     );
     assert_eq2!(buffer.get_lines().len(), 2);
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 2, row_index: 1));
 
     // Move to the end of the 1st line.
     // `this` should look like:
@@ -221,7 +221,7 @@ mod test_editor_ops {
       0,
     );
     assert_eq2!(buffer.get_lines().len(), 1);
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 3, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 3, row_index: 0));
     assert::line_at_caret(&buffer, &engine, "abcab");
   }
 
@@ -252,7 +252,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 1, row_index: 2));
 
     // Remove the "a" on the last line.
     // `this` should look like:
@@ -270,7 +270,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 2));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 2));
 
     // Remove the last line.
     // `this` should look like:
@@ -287,7 +287,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 2, row_index: 1));
 
     // Move caret to start of 2nd line. Then press backspace.
     // `this` should look like:
@@ -306,7 +306,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 1));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 1));
     EditorEvent::apply_editor_events(
       &mut engine,
       &mut buffer,
@@ -316,7 +316,7 @@ mod test_editor_ops {
       0,
     );
     assert_eq2!(buffer.get_lines().len(), 1);
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 3, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 3, row_index: 0));
     assert::line_at_caret(&buffer, &engine, "abcab");
 
     // Move caret to end of line. Insert "😃". Then move caret to end of line.
@@ -337,7 +337,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 7, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 7, row_index: 0));
 
     // Press backspace.
     EditorEvent::apply_editor_event(
@@ -374,7 +374,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 1));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 1, row_index: 1));
 
     // Move caret up. It should not be in the middle of the smiley face.
     // R ┌──────────┐
@@ -390,7 +390,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 2, row_index: 0));
   }
 
   #[test]
@@ -416,7 +416,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 2, row_index: 1));
 
     // Move caret up, and right. It should wrap around to the start of the next line and be to the
     // left of the smiley face.
@@ -436,7 +436,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 1));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 1));
 
     // Move caret down. It should move to the end of the last line.
     // R ┌──────────┐
@@ -452,7 +452,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 2, row_index: 1));
   }
 
   #[test]
@@ -482,7 +482,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 1, row_index: 2));
 
     // Move caret down. Goes to end of line 2 and stops.
     // `this` should look like:
@@ -505,7 +505,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 1, row_index: 2));
 
     // Move caret up.
     EditorEvent::apply_editor_events(
@@ -516,7 +516,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 1));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 1, row_index: 1));
 
     // Move caret up.
     EditorEvent::apply_editor_events(
@@ -527,7 +527,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 1, row_index: 0));
 
     // Move caret up a few times. Caret moves to position 0.
     EditorEvent::apply_editor_events(
@@ -542,7 +542,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 0));
 
     // Move right to end of line. Then down.
     // `this` should look like:
@@ -564,7 +564,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 1));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 2, row_index: 1));
 
     // Move caret down.
     // `this` should look like:
@@ -582,7 +582,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 2));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 1, row_index: 2));
   }
 
   #[test]
@@ -616,7 +616,7 @@ mod test_editor_ops {
       0,
     );
     assert::none_is_at_caret(&buffer, &engine);
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 1, row_index: 0));
 
     // Insert new line (at end of line).
     // `this` should look like:
@@ -635,7 +635,7 @@ mod test_editor_ops {
     );
     assert_eq2!(buffer.get_lines().len(), 2);
     assert::none_is_at_caret(&buffer, &engine);
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 1));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 1));
 
     // Insert "a".
     // `this` should look like:
@@ -688,7 +688,7 @@ mod test_editor_ops {
     );
     assert_eq2!(buffer.get_lines().len(), 3);
     assert::str_is_at_caret(&buffer, &engine, "a");
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 2));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 2));
 
     // Move caret right, insert "b".
     // `this` should look like:
@@ -736,7 +736,7 @@ mod test_editor_ops {
       0,
     );
     assert::str_is_at_caret(&buffer, &engine, "b");
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 3));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 3));
     assert_eq2!(buffer.get_lines().len(), 4);
 
     // Move caret to end of prev line. Press enter. `this` should look like:
@@ -761,7 +761,7 @@ mod test_editor_ops {
       0,
     );
     assert_eq2!(buffer.get_lines().len(), 5);
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 3));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 3));
   }
 
   #[test]
@@ -898,7 +898,7 @@ mod test_editor_ops {
       0,
     );
     assert::none_is_at_caret(&buffer, &engine);
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 3, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 3, row_index: 0));
 
     // Move caret left.
     // `this` should look like:
@@ -918,7 +918,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 0));
 
     // Move caret to end of line, press enter, then move caret left (should be at end of prev line).
     // `this` should look like:
@@ -941,7 +941,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 3, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 3, row_index: 0));
 
     // Move caret right (should be at start of next line).
     // `this` should look like:
@@ -958,7 +958,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 1));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 1));
 
     // Press enter. Press up. Press right (should be at start of next line).
     // `this` should look like:
@@ -980,7 +980,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 2));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 2));
   }
 
   #[test]
@@ -1001,7 +1001,7 @@ mod test_editor_ops {
     // 0 ▸a░        │
     //   └─▴────────┘
     //   C0123456789
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 0));
     EditorEvent::apply_editor_events(
       &mut engine,
       &mut buffer,
@@ -1011,7 +1011,7 @@ mod test_editor_ops {
       0,
     );
     assert_eq2!(*buffer.get_lines(), vec![UnicodeString::from("a")]);
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 1, row_index: 0));
 
     // Move caret to col: 0, row: 1. Insert "b".
     // `this` should look like:
@@ -1036,7 +1036,7 @@ mod test_editor_ops {
       *buffer.get_lines(),
       vec![UnicodeString::from("a"), UnicodeString::from("b")]
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 1, row: 1));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 1, row_index: 1));
 
     // Move caret to col: 0, row: 3. Insert "😀" (unicode width = 2).
     // `this` should look like:
@@ -1068,7 +1068,7 @@ mod test_editor_ops {
         UnicodeString::from("😀")
       ]
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 2, row: 3));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 2, row_index: 3));
 
     // Insert "d".
     // `this` should look like:
@@ -1096,7 +1096,7 @@ mod test_editor_ops {
         UnicodeString::from("😀d")
       ]
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 3, row: 3));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 3, row_index: 3));
 
     // Insert "🙏🏽" (unicode width = 4).
     // `this` should look like:
@@ -1124,7 +1124,7 @@ mod test_editor_ops {
         UnicodeString::from("😀d🙏🏽")
       ]
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 7, row: 3));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 7, row_index: 3));
   }
 
   #[test]
@@ -1146,7 +1146,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 0));
 
     // Press end.
     EditorEvent::apply_editor_events(
@@ -1157,7 +1157,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 5, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 5, row_index: 0));
   }
 
   #[test]
@@ -1193,7 +1193,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 10));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 10));
 
     // Press page up.
     EditorEvent::apply_editor_events(
@@ -1204,7 +1204,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 0));
 
     // Press page up.
     EditorEvent::apply_editor_events(
@@ -1215,7 +1215,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 0));
 
     // Press page down.
     EditorEvent::apply_editor_events(
@@ -1227,7 +1227,7 @@ mod test_editor_ops {
       0,
     );
 
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 10));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 10));
 
     // Press page down.
     EditorEvent::apply_editor_events(
@@ -1238,7 +1238,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 20));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 20));
 
     // Press page down.
     EditorEvent::apply_editor_events(
@@ -1249,7 +1249,7 @@ mod test_editor_ops {
       &mut mock_real_objects::make_component_registry(),
       0,
     );
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 20));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 20));
   }
 
   #[test]
@@ -1285,9 +1285,9 @@ mod test_editor_ops {
         0,
       );
     }
-    assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 0, row: 0));
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 9));
-    assert_eq2!(buffer.get_scroll_offset(), position!(col: 0, row: 9));
+    assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col_index: 0, row_index: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 9));
+    assert_eq2!(buffer.get_scroll_offset(), position!(col_index: 0, row_index: 9));
 
     // Press down 9 times.
     for _ in 1..9 {
@@ -1300,9 +1300,9 @@ mod test_editor_ops {
         0,
       );
     }
-    assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 0, row: 8));
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 0, row: 17));
-    assert_eq2!(buffer.get_scroll_offset(), position!(col: 0, row: 9));
+    assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col_index: 0, row_index: 8));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 0, row_index: 17));
+    assert_eq2!(buffer.get_scroll_offset(), position!(col_index: 0, row_index: 9));
   }
 
   #[test]
@@ -1323,9 +1323,9 @@ mod test_editor_ops {
       );
     }
     assert_eq2!(buffer.len(), ch!(1));
-    assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 9, row: 0));
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 21, row: 0));
-    assert_eq2!(buffer.get_scroll_offset(), position!(col: 12, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col_index: 9, row_index: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 21, row_index: 0));
+    assert_eq2!(buffer.get_scroll_offset(), position!(col_index: 12, row_index: 0));
 
     // Press left 5 times.
     for _ in 1..5 {
@@ -1338,9 +1338,9 @@ mod test_editor_ops {
         0,
       );
     }
-    assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 5, row: 0));
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 17, row: 0));
-    assert_eq2!(buffer.get_scroll_offset(), position!(col: 12, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col_index: 5, row_index: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 17, row_index: 0));
+    assert_eq2!(buffer.get_scroll_offset(), position!(col_index: 12, row_index: 0));
 
     // Press right 3 times.
     for _ in 1..3 {
@@ -1353,9 +1353,9 @@ mod test_editor_ops {
         0,
       );
     }
-    assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col: 7, row: 0));
-    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col: 19, row: 0));
-    assert_eq2!(buffer.get_scroll_offset(), position!(col: 12, row: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::Raw), position!(col_index: 7, row_index: 0));
+    assert_eq2!(buffer.get_caret(CaretKind::ScrollAdjusted), position!(col_index: 19, row_index: 0));
+    assert_eq2!(buffer.get_scroll_offset(), position!(col_index: 12, row_index: 0));
   }
 }
 
@@ -1380,8 +1380,8 @@ pub mod mock_real_objects {
 
   pub fn make_editor_engine() -> EditorEngine {
     let flex_box = FlexBox {
-      style_adjusted_bounds_size: size!( cols: 10, rows: 10 ),
-      style_adjusted_origin_pos: position!( col: 0, row: 0 ),
+      style_adjusted_bounds_size: size!( col_count: 10, row_count: 10 ),
+      style_adjusted_origin_pos: position!( col_index: 0, row_index: 0 ),
       ..Default::default()
     };
     let current_box: EditorEngineFlexBox = (&flex_box).into();

@@ -96,7 +96,7 @@ impl List<(Style, UnicodeString)> {
   /// Clip the content [scroll_offset.col .. max cols].
   pub fn get_plain_text_clipped(&self, scroll_offset_col_index: ChUnit, max_display_col_count: ChUnit) -> String {
     let line = UnicodeString::from(self.get_plain_text());
-    get_plain_text_clipped(&line, scroll_offset_col_index, max_display_col_count)
+    line.clip(scroll_offset_col_index, max_display_col_count)
   }
 
   /// Clip the text (in one line) in this range: [ `start_col` .. `end_col` ]. Each line is
@@ -161,16 +161,4 @@ impl From<List<(Style, UnicodeString)>> for StyledTexts {
     }
     styled_texts
   }
-}
-
-/// Clip the content [scroll_offset.col .. max cols].
-pub fn get_plain_text_clipped(
-  line: &UnicodeString,
-  scroll_offset_col_index: ChUnit,
-  max_display_col_count: ChUnit,
-) -> String {
-  let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
-  let truncated_line = UnicodeString::from(truncated_line);
-  let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
-  truncated_line.into()
 }

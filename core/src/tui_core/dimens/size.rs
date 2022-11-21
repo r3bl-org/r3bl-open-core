@@ -49,10 +49,9 @@ use crate::*;
 /// let size: Size = size!(cols: 10, rows: 10);
 /// ```
 #[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Hash)]
-// TODO: rename cols -> col_count, rows -> row_count
 pub struct Size {
-  pub cols: ChUnit, // width = number of cols (y).
-  pub rows: ChUnit, // height = number of rows (x).
+  pub col_count: ChUnit, // width = number of cols (y).
+  pub row_count: ChUnit, // height = number of rows (x).
 }
 
 impl Size {
@@ -76,7 +75,7 @@ impl Size {
 
 impl Size {
   pub fn is_too_small_to_display(&self, min_col: u8, min_row: u8) -> bool {
-    self.cols < ch!(min_col) || self.rows < ch!(min_row)
+    self.col_count < ch!(min_col) || self.row_count < ch!(min_row)
   }
 }
 
@@ -84,12 +83,14 @@ pub mod debug_formatter {
   use super::*;
 
   impl Display for Size {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "Size: [{}, {}]", *self.rows, *self.cols) }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+      write!(f, "Size: [{}, {}]", *self.row_count, *self.col_count)
+    }
   }
 
   impl Debug for Size {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-      write!(f, "[width:{}, height:{}]", *self.cols, *self.rows)
+      write!(f, "[width:{}, height:{}]", *self.col_count, *self.row_count)
     }
   }
 }
@@ -99,8 +100,8 @@ pub mod math_ops {
 
   impl SubAssign<ChUnit> for Size {
     fn sub_assign(&mut self, other: ChUnit) {
-      self.cols = sub_unsigned!(*self.cols, *other).into();
-      self.rows = sub_unsigned!(*self.rows, *other).into();
+      self.col_count = sub_unsigned!(*self.col_count, *other).into();
+      self.row_count = sub_unsigned!(*self.row_count, *other).into();
     }
   }
 }
@@ -112,12 +113,12 @@ pub mod math_ops {
 #[macro_export]
 macro_rules! size {
   (
-    cols: $arg_col:expr,
-    rows: $arg_row:expr
+    col_count: $arg_col:expr,
+    row_count: $arg_row:expr
   ) => {
     Size {
-      cols: $arg_col.into(),
-      rows: $arg_row.into(),
+      col_count: $arg_col.into(),
+      row_count: $arg_row.into(),
     }
   };
 }
