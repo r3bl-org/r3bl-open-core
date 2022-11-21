@@ -1,3 +1,8 @@
+editor engine extras core (https://github.com/r3bl-org/r3bl_rs_utils/issues/48): 
+  ✔ syntax highlighting support @done(22-11-20 17:41)
+  ✔ support editor config options to enable/disable syntax highlighting & update tests @done(22-11-20 17:41)
+  ✔ markdown parsing (MD frontmatter in JSON format, and MD -> AST) @done(22-11-20 17:41)
+
 cleanup:
   ✔ handle style local is true @done(22-10-30 19:31)
   ✔ rename jsx macro names (layout and render macros) @done(22-10-30 19:31)
