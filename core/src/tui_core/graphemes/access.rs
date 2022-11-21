@@ -46,8 +46,8 @@ impl UnicodeString {
   }
 
   pub fn truncate_to_fit_size(&self, size: Size) -> &str {
-    let display_cols: ChUnit = size.cols;
-    self.truncate_end_to_fit_display_cols(display_cols)
+    let display_cols: ChUnit = size.col_count;
+    self.truncate_end_to_fit_width(display_cols)
   }
 
   pub fn truncate_end_by_n_col(&self, n_display_col: ChUnit) -> &str {
@@ -82,12 +82,12 @@ impl UnicodeString {
   /// let truncated_line = line.truncate_start_by_n_col(col_count);
   /// let truncated_line = UnicodeString::from(truncated_line);
   ///
-  /// let truncated_line = truncated_line.truncate_end_to_fit_display_cols(display_cols);
+  /// let truncated_line = truncated_line.truncate_end_to_fit_width(display_cols);
   ///
   /// assert_eq!(truncated_line, expected_clipped_string);
   /// ```
-  pub fn truncate_start_by_n_col(&self, col_count: ChUnit) -> &str {
-    let mut skip_col_count = col_count;
+  pub fn truncate_start_by_n_col(&self, n_display_col: ChUnit) -> &str {
+    let mut skip_col_count = n_display_col;
     let mut string_start_byte_index = 0;
 
     for segment in self.iter() {
@@ -104,28 +104,38 @@ impl UnicodeString {
     &self.string[string_start_byte_index..]
   }
 
-  /// Removes segments from the end of the string that don't fit in the `display_cols` (index). Note
-  /// that the `display_cols` *index* is NOT included in the result; please see the example below.
+  /// Removes segments from the end of the string that don't fit in the given viewport width (which
+  /// is 1 index). Note that the character at `display_col_count` *index* is NOT included in the
+  /// result; please see the example below.
   ///
+  /// ```text
+  ///   ←─3─→ : size (width)
+  /// R ┌───┐
+  /// 0 │fir│st second
+  ///   └───┘
+  ///   C012 345678901
+  /// ```
+  ///
+  /// Example.
   /// ```rust
   /// use r3bl_rs_utils_core::UnicodeString;
   /// use r3bl_rs_utils_core::ChUnit;
   ///
-  /// let scroll_offset_col:r3bl_rs_utils_core::ChUnit = 2.into();
-  /// let display_cols:r3bl_rs_utils_core::ChUnit = 5.into();
-  /// let expected_clipped_string = "rst s";
+  /// let scroll_offset_col:r3bl_rs_utils_core::ChUnit = 0.into();
+  /// let display_cols:r3bl_rs_utils_core::ChUnit = 3.into();
+  /// let expected_clipped_string = "fir";
   /// let line = "first second";
   /// let line = UnicodeString::from(line);
   ///
   /// let truncated_line = line.truncate_start_by_n_col(scroll_offset_col);
   /// let truncated_line = UnicodeString::from(truncated_line);
   ///
-  /// let truncated_line = truncated_line.truncate_end_to_fit_display_cols(display_cols);
+  /// let truncated_line = truncated_line.truncate_end_to_fit_width(display_cols);
   ///
   /// assert_eq!(truncated_line, expected_clipped_string);
   /// ```
-  pub fn truncate_end_to_fit_display_cols(&self, display_cols: ChUnit) -> &str {
-    let mut avail_cols = display_cols;
+  pub fn truncate_end_to_fit_width(&self, display_col_count: ChUnit) -> &str {
+    let mut avail_cols = display_col_count;
     let mut string_end_byte_index = 0;
 
     for segment in self.iter() {
@@ -137,6 +147,14 @@ impl UnicodeString {
     }
 
     &self.string[..string_end_byte_index]
+  }
+
+  /// Clip the content [scroll_offset.col .. max cols].
+  pub fn clip(&self, scroll_offset_col_index: ChUnit, max_display_col_count: ChUnit) -> String {
+    let truncated_line = self.truncate_start_by_n_col(scroll_offset_col_index);
+    let truncated_line = UnicodeString::from(truncated_line);
+    let truncated_line = truncated_line.truncate_end_to_fit_width(max_display_col_count);
+    truncated_line.into()
   }
 
   /// If the `self.string` is shorter than `max_display_col_count` then a padding string is returned

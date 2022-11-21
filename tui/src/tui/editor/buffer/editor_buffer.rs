@@ -188,8 +188,8 @@ pub mod access_and_mutate {
         CaretKind::Raw => self.caret,
         CaretKind::ScrollAdjusted => {
           position! {
-            col: Self::calc_scroll_adj_caret_col(&self.caret, &self.scroll_offset),
-            row: Self::calc_scroll_adj_caret_row(&self.caret, &self.scroll_offset)
+            col_index: Self::calc_scroll_adj_caret_col(&self.caret, &self.scroll_offset),
+            row_index: Self::calc_scroll_adj_caret_row(&self.caret, &self.scroll_offset)
           }
         }
       }
@@ -197,12 +197,12 @@ pub mod access_and_mutate {
 
     /// Scroll adjusted caret row = caret.row + scroll_offset.row.
     pub fn calc_scroll_adj_caret_row(caret: &Position, scroll_offset: &ScrollOffset) -> usize {
-      ch!(@to_usize caret.row + scroll_offset.row)
+      ch!(@to_usize caret.row_index + scroll_offset.row_index)
     }
 
     /// Scroll adjusted caret col = caret.col + scroll_offset.col.
     pub fn calc_scroll_adj_caret_col(caret: &Position, scroll_offset: &ScrollOffset) -> usize {
-      ch!(@to_usize caret.col + scroll_offset.col)
+      ch!(@to_usize caret.col_index + scroll_offset.col_index)
     }
 
     pub fn get_scroll_offset(&self) -> ScrollOffset { self.scroll_offset }

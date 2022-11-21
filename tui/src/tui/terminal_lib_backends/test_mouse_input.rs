@@ -34,7 +34,7 @@ mod tests {
       };
       let converted_mouse_input: MouseInput = mouse_event.into();
       assert_eq2!(converted_mouse_input.kind, MouseInputKind::MouseMove);
-      assert_eq2!(converted_mouse_input.pos, position!(col: 0, row: 0));
+      assert_eq2!(converted_mouse_input.pos, position!(col_index: 0, row_index: 0));
       assert_eq2!(converted_mouse_input.maybe_modifier_keys, Some(ModifierKeysMask::SHIFT));
     }
     // Mouse moved.
@@ -47,7 +47,7 @@ mod tests {
       };
       let converted_mouse_input: MouseInput = mouse_event.into();
       assert_eq2!(converted_mouse_input.kind, MouseInputKind::MouseMove);
-      assert_eq2!(converted_mouse_input.pos, position!(col: 0, row: 0));
+      assert_eq2!(converted_mouse_input.pos, position!(col_index: 0, row_index: 0));
     }
   }
   #[test]
@@ -63,7 +63,7 @@ mod tests {
       };
       let converted_mouse_input: MouseInput = mouse_event.into();
       assert_eq2!(converted_mouse_input.kind, MouseInputKind::ScrollDown);
-      assert_eq2!(converted_mouse_input.pos, position!(col: 0, row: 0));
+      assert_eq2!(converted_mouse_input.pos, position!(col_index: 0, row_index: 0));
     }
     // Mouse scroll up.
     {
@@ -75,7 +75,7 @@ mod tests {
       };
       let converted_mouse_input: MouseInput = mouse_event.into();
       assert_eq2!(converted_mouse_input.kind, MouseInputKind::ScrollUp);
-      assert_eq2!(converted_mouse_input.pos, position!(col: 0, row: 0));
+      assert_eq2!(converted_mouse_input.pos, position!(col_index: 0, row_index: 0));
     }
   }
 
@@ -91,7 +91,7 @@ mod tests {
       };
       let converted_mouse_input: MouseInput = mouse_event.into();
       assert_eq2!(converted_mouse_input.kind, MouseInputKind::MouseDown(Button::Left));
-      assert_eq2!(converted_mouse_input.pos, position!(col: 0, row: 0));
+      assert_eq2!(converted_mouse_input.pos, position!(col_index: 0, row_index: 0));
     }
     // Mouse down w/ modifier.
     {
@@ -103,7 +103,7 @@ mod tests {
       };
       let converted_mouse_input: MouseInput = mouse_event.into();
       assert_eq2!(converted_mouse_input.kind, MouseInputKind::MouseDown(Button::Left));
-      assert_eq2!(converted_mouse_input.pos, position!(col: 0, row: 0));
+      assert_eq2!(converted_mouse_input.pos, position!(col_index: 0, row_index: 0));
       assert_eq2!(converted_mouse_input.maybe_modifier_keys, Some(ModifierKeysMask::SHIFT));
     }
     // Mouse up.
@@ -116,7 +116,7 @@ mod tests {
       };
       let converted_mouse_input: MouseInput = mouse_event.into();
       assert_eq2!(converted_mouse_input.kind, MouseInputKind::MouseUp(Button::Left));
-      assert_eq2!(converted_mouse_input.pos, position!(col: 0, row: 0));
+      assert_eq2!(converted_mouse_input.pos, position!(col_index: 0, row_index: 0));
     }
   }
 
@@ -132,7 +132,7 @@ mod tests {
       };
       let converted_mouse_input: MouseInput = mouse_event.into();
       assert_eq2!(converted_mouse_input.kind, MouseInputKind::MouseDrag(Button::Left));
-      assert_eq2!(converted_mouse_input.pos, position!(col: 0, row: 0));
+      assert_eq2!(converted_mouse_input.pos, position!(col_index: 0, row_index: 0));
     }
     // Mouse drag w/ modifiers.
     {
@@ -144,7 +144,7 @@ mod tests {
       };
       let converted_mouse_input: MouseInput = mouse_event.into();
       assert_eq2!(converted_mouse_input.kind, MouseInputKind::MouseDrag(Button::Left));
-      assert_eq2!(converted_mouse_input.pos, position!(col: 0, row: 0));
+      assert_eq2!(converted_mouse_input.pos, position!(col_index: 0, row_index: 0));
       assert_eq2!(
         converted_mouse_input.maybe_modifier_keys,
         Some(ModifierKeysMask::SHIFT | ModifierKeysMask::ALT)

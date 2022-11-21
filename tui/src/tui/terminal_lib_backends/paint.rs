@@ -313,18 +313,18 @@ pub async fn no_optimize_paint(
 /// 3. This also saves the clamped [Position] to [SharedGlobalData].
 pub async fn sanitize_and_save_abs_position(orig_abs_pos: Position, shared_global_data: &SharedGlobalData) -> Position {
   let Size {
-    cols: max_cols,
-    rows: max_rows,
+    col_count: max_cols,
+    row_count: max_rows,
   } = shared_global_data.read().await.size;
 
   let mut sanitized_abs_pos: Position = orig_abs_pos;
 
-  if orig_abs_pos.col > max_cols {
-    sanitized_abs_pos.col = max_cols;
+  if orig_abs_pos.col_index > max_cols {
+    sanitized_abs_pos.col_index = max_cols;
   }
 
-  if orig_abs_pos.row > max_rows {
-    sanitized_abs_pos.row = max_rows;
+  if orig_abs_pos.row_index > max_rows {
+    sanitized_abs_pos.row_index = max_rows;
   }
 
   // Save the cursor position.

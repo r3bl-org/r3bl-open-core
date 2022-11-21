@@ -68,23 +68,23 @@ impl App<State, Action> for AppNoLayout {
       let content_size_col: ChUnit = content.len().into();
       let window_size: Size = shared_global_data.read().await.get_size();
 
-      let col: ChUnit = (window_size.cols - content_size_col) / 2;
-      let row: ChUnit = window_size.rows / 2;
+      let col: ChUnit = (window_size.col_count - content_size_col) / 2;
+      let row: ChUnit = window_size.row_count / 2;
 
       let plain_content = format!("{}", state);
       let unicode_string = UnicodeString::from(plain_content);
       let colored_content = lolcat_each_char_in_unicode_string(&unicode_string, Some(&mut self.lolcat));
       self.lolcat.next_color();
 
-      let spaces = SPACER.repeat(ch!(@to_usize window_size.cols));
+      let spaces = SPACER.repeat(ch!(@to_usize window_size.col_count));
 
       let mut pipeline = render_pipeline!(
         @new ZOrder::Normal
         =>
           RenderOp::ResetColor,
-          RenderOp::MoveCursorPositionAbs(position!(col: 0, row:row)),
+          RenderOp::MoveCursorPositionAbs(position!(col_index: 0, row_index: row)),
           RenderOp::PrintTextWithAttributes(spaces, None),
-          RenderOp::MoveCursorPositionAbs(position!(col: col, row: row)),
+          RenderOp::MoveCursorPositionAbs(position!(col_index: col, row_index: row)),
           RenderOp::PrintTextWithAttributes(colored_content, None),
           RenderOp::ResetColor
       );
@@ -162,9 +162,9 @@ mod status_bar_helpers {
     };
 
     let display_width = st_vec.display_width();
-    let col_center: ChUnit = (size.cols - display_width) / 2;
-    let row_bottom: ChUnit = size.rows - 1;
-    let center: Position = position!(col: col_center, row: row_bottom);
+    let col_center: ChUnit = (size.col_count - display_width) / 2;
+    let row_bottom: ChUnit = size.row_count - 1;
+    let center: Position = position!(col_index: col_center, row_index: row_bottom);
 
     *pipeline += {
       let mut it = render_pipeline!();

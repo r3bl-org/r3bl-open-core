@@ -82,8 +82,8 @@ mod app_trait_impl {
         let mut surface = surface_start_with_surface_renderer! {
           surface_renderer: self,
           stylesheet:       style_helpers::create_stylesheet()?,
-          pos:              position!(col:0, row:0),
-          size:             size!(cols: window_size.cols, rows: window_size.rows - 1), // Bottom row for status bar.
+          pos:              position!(col_index: 0, row_index: 0),
+          size:             size!(col_count: window_size.col_count, row_count: window_size.row_count - 1), // Bottom row for status bar.
           state:            state,
           shared_store:     shared_store,
           shared_global_data:   shared_global_data,
@@ -224,9 +224,9 @@ mod status_bar_helpers {
     };
 
     let display_width = st_vec.display_width();
-    let col_center: ChUnit = (size.cols - display_width) / 2;
-    let row_bottom: ChUnit = size.rows - 1;
-    let center: Position = position!(col: col_center, row: row_bottom);
+    let col_center: ChUnit = (size.col_count - display_width) / 2;
+    let row_bottom: ChUnit = size.row_count - 1;
+    let center: Position = position!(col_index: col_center, row_index: row_bottom);
 
     *pipeline += {
       let mut it = render_pipeline!();

@@ -86,7 +86,7 @@ pub(crate) mod converters {
     /// Typecast / convert [(u16, u16)] to [InputEvent::Resize].
     fn from(size: (u16, u16)) -> Self {
       let (rows, cols) = size;
-      InputEvent::Resize(size! { cols: cols, rows: rows })
+      InputEvent::Resize(size! { col_count: cols, row_count: rows })
     }
   }
 

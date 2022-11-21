@@ -128,7 +128,10 @@ async fn move_cursor_position_rel_to(
 }
 
 async fn move_cursor_position_abs(abs_pos: &Position, shared_global_data: &SharedGlobalData) {
-  let Position { col, row } = sanitize_and_save_abs_position(*abs_pos, shared_global_data).await;
+  let Position {
+    col_index: col,
+    row_index: row,
+  } = sanitize_and_save_abs_position(*abs_pos, shared_global_data).await;
   exec_render_op!(
     queue!(stdout(), MoveTo(*col, *row)),
     format!("MoveCursorPosition(col: {}, row: {})", *col, *row)
@@ -150,7 +153,7 @@ fn raw_mode_exit(skip_flush: &mut bool) {
 }
 
 async fn raw_mode_enter(skip_flush: &mut bool, shared_global_data: &SharedGlobalData) {
-  shared_global_data.write().await.cursor_position = position! {col: 0, row: 0};
+  shared_global_data.write().await.cursor_position = position! {col_index: 0, row_index: 0};
   exec_render_op! {
     terminal::enable_raw_mode(),
     "EnterRawMode -> enable_raw_mode()"
@@ -180,7 +183,10 @@ async fn request_show_caret_at_position_rel_to(
 
 async fn request_show_caret_at_position_abs(pos: &Position, shared_global_data: &SharedGlobalData) {
   let sanitized_pos = sanitize_and_save_abs_position(*pos, shared_global_data).await;
-  let Position { col, row } = sanitized_pos;
+  let Position {
+    col_index: col,
+    row_index: row,
+  } = sanitized_pos;
   exec_render_op!(
     queue!(stdout(), MoveTo(*col, *row), Show),
     format!("ShowCaretAt -> MoveTo(col: {}, row: {}) & Show", *col, *row)
@@ -297,8 +303,8 @@ async fn print_text_with_attributes(
     maybe_max_display_col: Option<ChUnit>,
   ) {
     // Check whether the text needs to be truncated to fit the terminal window.
-    let current_cursor_col = shared_global_data.read().await.cursor_position.col;
-    let max_terminal_width = shared_global_data.read().await.size.cols;
+    let current_cursor_col = shared_global_data.read().await.cursor_position.col_index;
+    let max_terminal_width = shared_global_data.read().await.size.col_count;
     let max_terminal_display_cols = max_terminal_width - current_cursor_col;
 
     // Padding (postfix add spaces to fit max_display_col).
@@ -362,7 +368,7 @@ async fn print_text_with_attributes(
   ) {
     // Check whether the text needs to be truncated to fit the terminal window.
     let cursor_position = shared_global_data.read().await.cursor_position;
-    let max_window_cols = shared_global_data.read().await.size.cols;
+    let max_window_cols = shared_global_data.read().await.size.col_count;
     let plain_text_unicode_string: UnicodeString = text.as_ref().into();
     let plain_text_len = plain_text_unicode_string.display_width;
 
@@ -378,9 +384,9 @@ async fn print_text_with_attributes(
     }
 
     // Truncation (clip to window width, max_window_cols).
-    if cursor_position.col + plain_text_len > max_window_cols {
+    if cursor_position.col_index + plain_text_len > max_window_cols {
       let trunc_plain_text = plain_text_unicode_string
-        .truncate_end_to_fit_display_cols(max_window_cols - cursor_position.col)
+        .truncate_end_to_fit_width(max_window_cols - cursor_position.col_index)
         .to_string();
       // Update plain_text & log_msg after truncating.
       *text = Cow::from(trunc_plain_text);
@@ -458,14 +464,14 @@ async fn print_text_with_attributes(
       }
       TruncationPolicy::PlainText => unicode_string.display_width,
     };
-    cursor_position_copy.col += display_width;
+    cursor_position_copy.col_index += display_width;
     sanitize_and_save_abs_position(cursor_position_copy, shared_global_data).await;
 
     // Move cursor "manually" to cover "extra" width.
     fn jump_cursor(pos: &Position, seg: &GraphemeClusterSegment) {
       let jump_to_col = ch!(
         @to_u16
-        pos.col + seg.display_col_offset + seg.unicode_width);
+        pos.col_index + seg.display_col_offset + seg.unicode_width);
       exec_render_op!(
         queue!(stdout(), MoveToColumn(jump_to_col)),
         format!("🦘 Jump cursor -> MoveToColumn({jump_to_col})")

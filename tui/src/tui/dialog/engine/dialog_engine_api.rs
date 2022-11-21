@@ -158,7 +158,7 @@ mod internal_impl {
     let surface_origin_pos = surface.origin_pos;
 
     // Check to ensure that the dialog box has enough space to be displayed.
-    if window_size.cols < ch!(MinSize::Col.int_value()) || window_size.rows < ch!(MinSize::Row.int_value()) {
+    if window_size.col_count < ch!(MinSize::Col.int_value()) || window_size.row_count < ch!(MinSize::Row.int_value()) {
       return CommonError::new(
         CommonErrorType::DisplaySizeTooSmall,
         &format!(
@@ -171,16 +171,16 @@ mod internal_impl {
 
     let dialog_size = {
       // Calc dialog bounds size based on window size.
-      let size = size! { cols: surface_size.cols * 90/100, rows: 4 };
-      assert!(size.rows < ch!(MinSize::Row.int_value()));
+      let size = size! { col_count: surface_size.col_count * 90/100, row_count: 4 };
+      assert!(size.row_count < ch!(MinSize::Row.int_value()));
       size
     };
 
     let mut origin_pos = {
       // Calc origin pos based on window size & dialog size.
-      let origin_col = surface_size.cols / 2 - dialog_size.cols / 2;
-      let origin_row = surface_size.rows / 2 - dialog_size.rows / 2;
-      position!(col: origin_col, row: origin_row)
+      let origin_col = surface_size.col_count / 2 - dialog_size.col_count / 2;
+      let origin_row = surface_size.row_count / 2 - dialog_size.row_count / 2;
+      position!(col_index: origin_col, row_index: origin_row)
     };
     origin_pos += surface_origin_pos;
 
@@ -208,8 +208,8 @@ mod internal_impl {
 
     let flex_box: FlexBox = EditorEngineFlexBox {
       id: args.self_id,
-      style_adjusted_origin_pos: position! {col: origin_pos.col + 1, row: origin_pos.row + 2},
-      style_adjusted_bounds_size: size! {cols: bounds_size.cols - 2, rows: 1},
+      style_adjusted_origin_pos: position! {col_index: origin_pos.col_index + 1, row_index: origin_pos.row_index + 2},
+      style_adjusted_bounds_size: size! {col_count: bounds_size.col_count - 2, row_count: 1},
       maybe_computed_style: maybe_style,
     }
     .into();
@@ -238,10 +238,10 @@ mod internal_impl {
   ) -> RenderOps {
     let mut ops = render_ops!();
 
-    let row_pos = position!(col: origin_pos.col + 1, row: origin_pos.row + 1);
+    let row_pos = position!(col_index: origin_pos.col_index + 1, row_index: origin_pos.row_index + 1);
     let unicode_string = UnicodeString::from(title);
     let mut text_content = Cow::Borrowed(unicode_string.truncate_to_fit_size(size! {
-      cols: bounds_size.cols - 2, rows: bounds_size.rows
+      col_count: bounds_size.col_count - 2, row_count: bounds_size.row_count
     }));
 
     // Apply lolcat override (if enabled) to the fg_color of text_content.
@@ -265,15 +265,15 @@ mod internal_impl {
   pub fn render_border(origin_pos: &Position, bounds_size: &Size, dialog_engine: &mut DialogEngine) -> RenderOps {
     let mut ops = render_ops!();
 
-    let inner_spaces = SPACER.repeat(ch!(@to_usize bounds_size.cols - 2));
+    let inner_spaces = SPACER.repeat(ch!(@to_usize bounds_size.col_count - 2));
 
     let maybe_style = dialog_engine.maybe_style_border.clone();
 
-    for row_idx in 0..*bounds_size.rows {
-      let row_pos = position!(col: origin_pos.col, row: origin_pos.row + row_idx);
+    for row_idx in 0..*bounds_size.row_count {
+      let row_pos = position!(col_index: origin_pos.col_index, row_index: origin_pos.row_index + row_idx);
 
       let is_first_line = row_idx == 0;
-      let is_last_line = row_idx == (*bounds_size.rows - 1);
+      let is_last_line = row_idx == (*bounds_size.row_count - 1);
 
       ops.push(RenderOp::ResetColor);
       ops.push(RenderOp::MoveCursorPositionAbs(row_pos));
@@ -287,7 +287,7 @@ mod internal_impl {
             BorderGlyphCharacter::TopLeft.as_ref(),
             BorderGlyphCharacter::Horizontal
               .as_ref()
-              .repeat(ch!(@to_usize bounds_size.cols - 2)),
+              .repeat(ch!(@to_usize bounds_size.col_count - 2)),
             BorderGlyphCharacter::TopRight.as_ref()
           ));
           // Apply lolcat override (if enabled) to the fg_color of text_content.
@@ -305,7 +305,7 @@ mod internal_impl {
             BorderGlyphCharacter::BottomLeft.as_ref(),
             BorderGlyphCharacter::Horizontal
               .as_ref()
-              .repeat(ch!(@to_usize bounds_size.cols - 2)),
+              .repeat(ch!(@to_usize bounds_size.col_count - 2)),
             BorderGlyphCharacter::BottomRight.as_ref(),
           ));
           // Apply lolcat override (if enabled) to the fg_color of text_content.

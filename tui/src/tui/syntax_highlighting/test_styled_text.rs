@@ -94,7 +94,7 @@ mod tests {
         let line = UnicodeString::from(line);
         let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
         let truncated_line = UnicodeString::from(truncated_line);
-        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+        let truncated_line = truncated_line.truncate_end_to_fit_width(max_display_col_count);
         assert_eq2!(truncated_line, expected_clipped_string);
       }
 
@@ -143,7 +143,7 @@ mod tests {
         let line = UnicodeString::from(line);
         let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
         let truncated_line = UnicodeString::from(truncated_line);
-        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+        let truncated_line = truncated_line.truncate_end_to_fit_width(max_display_col_count);
         assert_eq2!(truncated_line, expected_clipped_string);
       }
 
@@ -193,7 +193,7 @@ mod tests {
         let line = UnicodeString::from(line);
         let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
         let truncated_line = UnicodeString::from(truncated_line);
-        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+        let truncated_line = truncated_line.truncate_end_to_fit_width(max_display_col_count);
         assert_eq2!(truncated_line, expected_clipped_string);
       }
 
@@ -243,7 +243,7 @@ mod tests {
         let line = UnicodeString::from(line);
         let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
         let truncated_line = UnicodeString::from(truncated_line);
-        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+        let truncated_line = truncated_line.truncate_end_to_fit_width(max_display_col_count);
         assert_eq2!(truncated_line, expected_clipped_string);
       }
 
@@ -293,7 +293,7 @@ mod tests {
         let line = UnicodeString::from(line);
         let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
         let truncated_line = UnicodeString::from(truncated_line);
-        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+        let truncated_line = truncated_line.truncate_end_to_fit_width(max_display_col_count);
         assert_eq2!(truncated_line, expected_clipped_string);
       }
 
@@ -343,7 +343,7 @@ mod tests {
         let line = UnicodeString::from(line);
         let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
         let truncated_line = UnicodeString::from(truncated_line);
-        let truncated_line = truncated_line.truncate_end_to_fit_display_cols(max_display_col_count);
+        let truncated_line = truncated_line.truncate_end_to_fit_width(max_display_col_count);
         assert_eq2!(truncated_line, expected_clipped_string);
       }
 

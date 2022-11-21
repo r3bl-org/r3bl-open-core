@@ -96,11 +96,11 @@ mod test_dialog_api_make_flex_box_for_dialog {
     // 1. The surface and window_size are not the same width and height.
     // 2. The surface is also not starting from the top left corner of the window.
     let surface = Surface {
-      origin_pos: position! { col: 2, row: 2 },
-      box_size: size!( cols: 65, rows: 10 ),
+      origin_pos: position! { col_index: 2, row_index: 2 },
+      box_size: size!( col_count: 65, row_count: 10 ),
       ..Default::default()
     };
-    let window_size = size!( cols: 70, rows: 15 );
+    let window_size = size!( col_count: 70, row_count: 15 );
     let self_id: FlexBoxId = 0;
 
     // The dialog box should be centered inside the surface.
@@ -114,8 +114,8 @@ mod test_dialog_api_make_flex_box_for_dialog {
 
     let flex_box = result_flex_box.unwrap();
     assert_eq2!(flex_box.id, self_id);
-    assert_eq2!(flex_box.style_adjusted_bounds_size, size!( cols: 58, rows: 4 ));
-    assert_eq2!(flex_box.style_adjusted_origin_pos, position!( col: 5, row: 5 ));
+    assert_eq2!(flex_box.style_adjusted_bounds_size, size!( col_count: 58, row_count: 4 ));
+    assert_eq2!(flex_box.style_adjusted_origin_pos, position!( col_index: 5, row_index: 5 ));
   }
 }
 
@@ -129,7 +129,7 @@ mod test_dialog_api_apply_event {
   #[tokio::test]
   async fn apply_event_esc() {
     let self_id: FlexBoxId = 0;
-    let window_size = &size!( cols: 70, rows: 15 );
+    let window_size = &size!( col_count: 70, row_count: 15 );
     let dialog_buffer = &mut DialogBuffer::default();
     let dialog_engine = &mut mock_real_objects::make_dialog_engine();
     let shared_store = &mock_real_objects::create_store();
@@ -159,7 +159,7 @@ mod test_dialog_api_apply_event {
   #[tokio::test]
   async fn apply_event_enter() {
     let self_id: FlexBoxId = 0;
-    let window_size = &size!( cols: 70, rows: 15 );
+    let window_size = &size!( col_count: 70, row_count: 15 );
     let dialog_buffer = &mut DialogBuffer::default();
     let dialog_engine = &mut mock_real_objects::make_dialog_engine();
     let shared_store = &mock_real_objects::create_store();
@@ -192,7 +192,7 @@ mod test_dialog_api_apply_event {
   #[tokio::test]
   async fn apply_event_other_key() {
     let self_id: FlexBoxId = 0;
-    let window_size = &size!( cols: 70, rows: 15 );
+    let window_size = &size!( col_count: 70, row_count: 15 );
     let dialog_buffer = &mut DialogBuffer::default();
     let dialog_engine = &mut mock_real_objects::make_dialog_engine();
     let shared_store = &mock_real_objects::create_store();
@@ -229,7 +229,7 @@ mod test_dialog_api_render_engine {
   #[tokio::test]
   async fn render_engine() {
     let self_id: FlexBoxId = 0;
-    let window_size = &size!( cols: 70, rows: 15 );
+    let window_size = &size!( col_count: 70, row_count: 15 );
     let dialog_buffer = &mut DialogBuffer::default();
     let dialog_engine = &mut mock_real_objects::make_dialog_engine();
     let shared_store = &mock_real_objects::create_store();
@@ -251,11 +251,11 @@ mod test_dialog_api_render_engine {
     // 1. The surface and window_size are not the same width and height.
     // 2. The surface is also not starting from the top left corner of the window.
     let surface = Surface {
-      origin_pos: position! { col: 2, row: 2 },
-      box_size: size!( cols: 65, rows: 10 ),
+      origin_pos: position! { col_index: 2, row_index: 2 },
+      box_size: size!( col_count: 65, row_count: 10 ),
       ..Default::default()
     };
-    let window_size = size!( cols: 70, rows: 15 );
+    let window_size = size!( col_count: 70, row_count: 15 );
     let self_id: FlexBoxId = 0;
 
     // The dialog box should be centered inside the surface.
