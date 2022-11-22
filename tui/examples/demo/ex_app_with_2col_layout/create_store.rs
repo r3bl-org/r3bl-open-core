@@ -20,7 +20,7 @@ use r3bl_redux::*;
 use super::*;
 
 pub async fn create_store() -> Store<State, Action> {
-  let mut store: Store<State, Action> = Store::default();
-  store.add_reducer(Reducer::new()).await;
-  store
+    let mut store: Store<State, Action> = Store::default();
+    store.add_reducer(Reducer::new()).await;
+    store
 }

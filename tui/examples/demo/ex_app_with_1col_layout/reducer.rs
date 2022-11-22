@@ -26,39 +26,39 @@ pub struct Reducer;
 
 #[async_trait]
 impl AsyncReducer<State, Action> for Reducer {
-  async fn run(&self, action: &Action, state: &State) -> State {
-    let State { stack: stack_copy } = &mut state.clone();
-    reduce_mut(stack_copy, action);
-    State {
-      stack: stack_copy.to_vec(),
+    async fn run(&self, action: &Action, state: &State) -> State {
+        let State { stack: stack_copy } = &mut state.clone();
+        reduce_mut(stack_copy, action);
+        State {
+            stack: stack_copy.to_vec(),
+        }
     }
-  }
 }
 
 fn reduce_mut(stack: &mut Vec<i32>, action: &Action) {
-  match action {
-    Action::AddPop(arg) => {
-      if stack.is_empty() {
-        stack.push(*arg)
-      } else {
-        let top = stack.pop().unwrap();
-        let sum = top + arg;
-        stack.push(sum);
-      }
+    match action {
+        Action::AddPop(arg) => {
+            if stack.is_empty() {
+                stack.push(*arg)
+            } else {
+                let top = stack.pop().unwrap();
+                let sum = top + arg;
+                stack.push(sum);
+            }
+        }
+
+        Action::SubPop(arg) => {
+            if stack.is_empty() {
+                stack.push(*arg)
+            } else {
+                let top = stack.pop().unwrap();
+                let sum = top - arg;
+                stack.push(sum);
+            }
+        }
+
+        Action::Clear => stack.clear(),
+
+        _ => {}
     }
-
-    Action::SubPop(arg) => {
-      if stack.is_empty() {
-        stack.push(*arg)
-      } else {
-        let top = stack.pop().unwrap();
-        let sum = top - arg;
-        stack.push(sum);
-      }
-    }
-
-    Action::Clear => stack.clear(),
-
-    _ => {}
-  }
 }

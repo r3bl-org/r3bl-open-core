@@ -21,24 +21,26 @@ use r3bl_tui::*;
 use super::*;
 
 pub async fn run_app() -> CommonResult<()> {
-  throws!({
-    // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
-    if DEBUG_TUI_MOD {
-      try_to_set_log_level(log::LevelFilter::Trace).ok();
-    } else {
-      try_to_set_log_level(log::LevelFilter::Off).ok();
-    }
+    throws!({
+        // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
+        if DEBUG_TUI_MOD {
+            try_to_set_log_level(log::LevelFilter::Trace).ok();
+        } else {
+            try_to_set_log_level(log::LevelFilter::Off).ok();
+        }
 
-    // Create store.
-    let store = create_store().await;
+        // Create store.
+        let store = create_store().await;
 
-    // Create an App (renders & responds to user input).
-    let shared_app = AppWithLayout::new_shared();
+        // Create an App (renders & responds to user input).
+        let shared_app = AppWithLayout::new_shared();
 
-    // Exit if these keys are pressed.
-    let exit_keys: Vec<InputEvent> = vec![InputEvent::Keyboard(keypress! { @char ModifierKeysMask::CTRL, 'x' })];
+        // Exit if these keys are pressed.
+        let exit_keys: Vec<InputEvent> = vec![InputEvent::Keyboard(
+            keypress! { @char ModifierKeysMask::CTRL, 'x' },
+        )];
 
-    // Create a window.
-    TerminalWindow::main_event_loop(shared_app, store, exit_keys).await?
-  });
+        // Create a window.
+        TerminalWindow::main_event_loop(shared_app, store, exit_keys).await?
+    });
 }

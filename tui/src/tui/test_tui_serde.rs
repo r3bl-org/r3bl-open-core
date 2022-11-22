@@ -17,53 +17,53 @@
 
 #[cfg(test)]
 mod tests {
-  use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::*;
 
-  use crate::*;
+    use crate::*;
 
-  #[test]
-  fn test_serde_tui_color_simple() {
-    let color: TuiColor = TuiColor::Red;
-    let ser_str = serde_json::to_string(&color).unwrap();
-    let og_color: TuiColor = serde_json::from_str(&ser_str).unwrap();
-    assert_eq2!(color, og_color);
-  }
+    #[test]
+    fn test_serde_tui_color_simple() {
+        let color: TuiColor = TuiColor::Red;
+        let ser_str = serde_json::to_string(&color).unwrap();
+        let og_color: TuiColor = serde_json::from_str(&ser_str).unwrap();
+        assert_eq2!(color, og_color);
+    }
 
-  #[test]
-  fn test_serde_tui_color_rgb() {
-    let color = TuiColor::Rgb { r: 0, g: 0, b: 0 };
-    let ser_str = serde_json::to_string(&color).unwrap();
-    let og_color: TuiColor = serde_json::from_str(&ser_str).unwrap();
-    assert_eq2!(color, og_color);
-  }
+    #[test]
+    fn test_serde_tui_color_rgb() {
+        let color = TuiColor::Rgb { r: 0, g: 0, b: 0 };
+        let ser_str = serde_json::to_string(&color).unwrap();
+        let og_color: TuiColor = serde_json::from_str(&ser_str).unwrap();
+        assert_eq2!(color, og_color);
+    }
 
-  #[test]
-  fn test_serde_render_pipeline() {
-    let pipeline = render_pipeline!(
-      @new ZOrder::Normal
-      =>
-        RenderOp::ClearScreen,
-        RenderOp::ResetColor
-    );
-    let ser_str = serde_json::to_string_pretty(&pipeline).unwrap();
-    println!("{ser_str}");
-    let og_pipeline: RenderPipeline = serde_json::from_str(&ser_str).unwrap();
-    assert_eq2!(pipeline, og_pipeline);
-  }
+    #[test]
+    fn test_serde_render_pipeline() {
+        let pipeline = render_pipeline!(
+          @new ZOrder::Normal
+          =>
+            RenderOp::ClearScreen,
+            RenderOp::ResetColor
+        );
+        let ser_str = serde_json::to_string_pretty(&pipeline).unwrap();
+        println!("{ser_str}");
+        let og_pipeline: RenderPipeline = serde_json::from_str(&ser_str).unwrap();
+        assert_eq2!(pipeline, og_pipeline);
+    }
 
-  #[test]
-  fn test_serde_position() {
-    let position = position!(col_index: 0, row_index:0);
-    let ser_str = position.ser_to_string().unwrap();
-    let og_position = Position::deser_from_str(&ser_str).unwrap();
-    assert_eq2!(position, og_position);
-  }
+    #[test]
+    fn test_serde_position() {
+        let position = position!(col_index: 0, row_index:0);
+        let ser_str = position.ser_to_string().unwrap();
+        let og_position = Position::deser_from_str(&ser_str).unwrap();
+        assert_eq2!(position, og_position);
+    }
 
-  #[test]
-  fn test_serde_size() {
-    let size = size!(col_count: 0, row_count:0);
-    let ser_str = size.ser_to_string().unwrap();
-    let og_size = Size::deser_from_str(&ser_str).unwrap();
-    assert_eq2!(size, og_size);
-  }
+    #[test]
+    fn test_serde_size() {
+        let size = size!(col_count: 0, row_count:0);
+        let ser_str = size.ser_to_string().unwrap();
+        let og_size = Size::deser_from_str(&ser_str).unwrap();
+        assert_eq2!(size, og_size);
+    }
 }

@@ -26,8 +26,8 @@ use crate::*;
 #[non_exhaustive]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum Direction {
-  Horizontal,
-  Vertical,
+    Horizontal,
+    Vertical,
 }
 
 /// This works w/ the [int-enum](https://crates.io/crates/int-enum) crate in order to allow for the
@@ -35,43 +35,49 @@ pub enum Direction {
 pub type FlexBoxId = u8;
 
 impl Default for Direction {
-  fn default() -> Direction { Direction::Horizontal }
+    fn default() -> Direction { Direction::Horizontal }
 }
 
 /// A box is a rectangle with a position and size. The direction of the box
 /// determines how it's contained elements are positioned.
 #[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct FlexBox {
-  pub id: FlexBoxId,
-  pub dir: Direction,
-  pub origin_pos: Position,
-  pub bounds_size: Size,
-  pub style_adjusted_origin_pos: Position,
-  pub style_adjusted_bounds_size: Size,
-  pub requested_size_percent: RequestedSizePercent,
-  pub insertion_pos_for_next_box: Option<Position>,
-  pub maybe_computed_style: Option<Style>,
+    pub id: FlexBoxId,
+    pub dir: Direction,
+    pub origin_pos: Position,
+    pub bounds_size: Size,
+    pub style_adjusted_origin_pos: Position,
+    pub style_adjusted_bounds_size: Size,
+    pub requested_size_percent: RequestedSizePercent,
+    pub insertion_pos_for_next_box: Option<Position>,
+    pub maybe_computed_style: Option<Style>,
 }
 
 impl FlexBox {
-  pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style.clone() }
+    pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style.clone() }
 }
 
 impl Debug for FlexBox {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("FlexBox")
-      .field("id", &self.id)
-      .field("dir", &self.dir)
-      .field("origin_pos", &self.origin_pos)
-      .field("bounds_size", &self.bounds_size)
-      .field("style_adjusted_origin_pos", &self.style_adjusted_origin_pos)
-      .field("style_adjusted_bounds_size", &self.style_adjusted_bounds_size)
-      .field("requested_size_percent", &self.requested_size_percent)
-      .field(
-        "insertion_pos_for_next_box",
-        format_option!(&self.insertion_pos_for_next_box),
-      )
-      .field("maybe_computed_style", format_option!(&self.maybe_computed_style))
-      .finish()
-  }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FlexBox")
+            .field("id", &self.id)
+            .field("dir", &self.dir)
+            .field("origin_pos", &self.origin_pos)
+            .field("bounds_size", &self.bounds_size)
+            .field("style_adjusted_origin_pos", &self.style_adjusted_origin_pos)
+            .field(
+                "style_adjusted_bounds_size",
+                &self.style_adjusted_bounds_size,
+            )
+            .field("requested_size_percent", &self.requested_size_percent)
+            .field(
+                "insertion_pos_for_next_box",
+                format_option!(&self.insertion_pos_for_next_box),
+            )
+            .field(
+                "maybe_computed_style",
+                format_option!(&self.maybe_computed_style),
+            )
+            .finish()
+    }
 }

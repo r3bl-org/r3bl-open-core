@@ -23,14 +23,14 @@ use r3bl_rs_utils_core::style_primary;
 
 #[test]
 fn test_color_styles_work() {
-  let text = "foo";
-  let styled_text = style_primary(text);
-  assert_eq!(Green.bold().paint(text), styled_text);
+    let text = "foo";
+    let styled_text = style_primary(text);
+    assert_eq!(Green.bold().paint(text), styled_text);
 }
 
 #[test]
 fn test_type_of_works() {
-  let text = "foo".to_string();
-  let type_of_text = type_of(&text);
-  assert_eq!(type_of_text, "alloc::string::String");
+    let text = "foo".to_string();
+    let type_of_text = type_of(&text);
+    assert_eq!(type_of_text, "alloc::string::String");
 }

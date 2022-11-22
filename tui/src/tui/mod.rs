@@ -17,18 +17,22 @@
 
 /// This is the global `DEBUG` const. It is possible to create local (module scoped) `DEBUG` const.
 /// However, you would have to use that symbol explicitly in the relevant module, eg:
-/// - `use $crate::terminal_lib_backends::DEBUG;`
+/// - `use $crate::terminal_lib_backends::DEBUG_TUI...;`
 ///
 /// If set to `true`:
-/// 1. Enables or disables file logging for entire module.
+/// 1. Enables file logging for entire module.
 /// 2. If a call to [r3bl_rs_utils_core::log!] fails, then it will print the error to stderr.
 pub const DEBUG_TUI_MOD: bool = true;
 
+/// Enable or disable compositor debug logging.
+pub const DEBUG_TUI_COMPOSITOR: bool = true;
 // Enable or disable debug logging for this `terminal_lib_backends` module.
-pub const DEBUG_SHOW_PIPELINE: bool = true;
-pub const DEBUG_SHOW_PAINT_OPTIMIZATION_HEURISTIC: bool = true;
-pub const DEBUG_SHOW_PIPELINE_EXPANDED: bool = false;
-pub const DEBUG_SHOW_TERMINAL_BACKEND: bool = false;
+pub const DEBUG_TUI_SHOW_PIPELINE: bool = true;
+pub const DEBUG_TUI_SHOW_PAINT_OPTIMIZATION_HEURISTIC: bool = true;
+pub const DEBUG_TUI_SHOW_PIPELINE_EXPANDED: bool = false;
+/// Controls input event debugging [crate::EventStreamExt], and execution of render ops [crate::exec_render_op!] debugging
+/// output.
+pub const DEBUG_TUI_SHOW_TERMINAL_BACKEND: bool = false;
 
 // Attach sources.
 pub mod dialog;

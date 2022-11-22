@@ -49,19 +49,19 @@ use tokio::task::JoinHandle;
 #[async_trait]
 pub trait AsyncMiddleware<S, A>
 where
-  S: Sync + Send,
-  A: Sync + Send,
+    S: Sync + Send,
+    A: Sync + Send,
 {
-  async fn run(&self, action: A, state: S) -> Option<A>;
+    async fn run(&self, action: A, state: S) -> Option<A>;
 
-  /// <https://doc.rust-lang.org/book/ch10-02-traits.html>
-  #[allow(clippy::all)]
-  fn new() -> Box<AsyncMiddlewareTraitObject<S, A>>
-  where
-    Self: Default + Sized + Sync + Send + 'static,
-  {
-    Box::new(Self::default())
-  }
+    /// <https://doc.rust-lang.org/book/ch10-02-traits.html>
+    #[allow(clippy::all)]
+    fn new() -> Box<AsyncMiddlewareTraitObject<S, A>>
+    where
+        Self: Default + Sized + Sync + Send + 'static,
+    {
+        Box::new(Self::default())
+    }
 }
 
 pub type AsyncMiddlewareTraitObject<S, A> = dyn AsyncMiddleware<S, A> + Send + Sync;
@@ -103,19 +103,19 @@ pub type AsyncMiddlewareVec<S, A> = Vec<AsyncMiddlewareItem<S, A>>;
 #[async_trait]
 pub trait AsyncMiddlewareSpawns<S, A>
 where
-  S: Sync + Send,
-  A: Sync + Send,
+    S: Sync + Send,
+    A: Sync + Send,
 {
-  async fn run(&self, action: A, state: S) -> JoinHandle<Option<A>>;
+    async fn run(&self, action: A, state: S) -> JoinHandle<Option<A>>;
 
-  /// <https://doc.rust-lang.org/book/ch10-02-traits.html>
-  #[allow(clippy::all)]
-  fn new() -> AsyncMiddlewareSpawnsItem<S, A>
-  where
-    Self: Default + Sized + Sync + Send + 'static,
-  {
-    Box::new(Self::default())
-  }
+    /// <https://doc.rust-lang.org/book/ch10-02-traits.html>
+    #[allow(clippy::all)]
+    fn new() -> AsyncMiddlewareSpawnsItem<S, A>
+    where
+        Self: Default + Sized + Sync + Send + 'static,
+    {
+        Box::new(Self::default())
+    }
 }
 
 pub type AsyncMiddlewareSpawnsTraitObject<S, A> = dyn AsyncMiddlewareSpawns<S, A> + Send + Sync;

@@ -23,60 +23,61 @@ use crate::*;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub struct MouseInput {
-  pub pos: Position,
-  pub kind: MouseInputKind,
-  pub maybe_modifier_keys: Option<ModifierKeysMask>,
+    pub pos: Position,
+    pub kind: MouseInputKind,
+    pub maybe_modifier_keys: Option<ModifierKeysMask>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub enum MouseInputKind {
-  MouseDown(Button),
-  MouseUp(Button),
-  MouseMove,
-  MouseDrag(Button),
-  ScrollUp,
-  ScrollDown,
+    MouseDown(Button),
+    MouseUp(Button),
+    MouseMove,
+    MouseDrag(Button),
+    ScrollUp,
+    ScrollDown,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub enum Button {
-  Left,
-  Right,
-  Middle,
+    Left,
+    Right,
+    Middle,
 }
 
 impl From<MouseEvent> for MouseInput {
-  fn from(mouse_event: MouseEvent) -> Self {
-    let pos: Position = position!(col_index: mouse_event.column, row_index: mouse_event.row);
-    let maybe_modifier_keys: Option<ModifierKeysMask> = convert_key_modifiers(&mouse_event.modifiers);
-    let kind: MouseInputKind = mouse_event.kind.into();
-    MouseInput {
-      pos,
-      kind,
-      maybe_modifier_keys,
+    fn from(mouse_event: MouseEvent) -> Self {
+        let pos: Position = position!(col_index: mouse_event.column, row_index: mouse_event.row);
+        let maybe_modifier_keys: Option<ModifierKeysMask> =
+            convert_key_modifiers(&mouse_event.modifiers);
+        let kind: MouseInputKind = mouse_event.kind.into();
+        MouseInput {
+            pos,
+            kind,
+            maybe_modifier_keys,
+        }
     }
-  }
 }
 
 impl From<MouseEventKind> for MouseInputKind {
-  fn from(mouse_event_kind: MouseEventKind) -> Self {
-    match mouse_event_kind {
-      MouseEventKind::Down(button) => MouseInputKind::MouseDown(button.into()),
-      MouseEventKind::Up(button) => MouseInputKind::MouseUp(button.into()),
-      MouseEventKind::Moved => MouseInputKind::MouseMove,
-      MouseEventKind::Drag(button) => MouseInputKind::MouseDrag(button.into()),
-      MouseEventKind::ScrollUp => MouseInputKind::ScrollUp,
-      MouseEventKind::ScrollDown => MouseInputKind::ScrollDown,
+    fn from(mouse_event_kind: MouseEventKind) -> Self {
+        match mouse_event_kind {
+            MouseEventKind::Down(button) => MouseInputKind::MouseDown(button.into()),
+            MouseEventKind::Up(button) => MouseInputKind::MouseUp(button.into()),
+            MouseEventKind::Moved => MouseInputKind::MouseMove,
+            MouseEventKind::Drag(button) => MouseInputKind::MouseDrag(button.into()),
+            MouseEventKind::ScrollUp => MouseInputKind::ScrollUp,
+            MouseEventKind::ScrollDown => MouseInputKind::ScrollDown,
+        }
     }
-  }
 }
 
 impl From<MouseButton> for Button {
-  fn from(mouse_button: MouseButton) -> Self {
-    match mouse_button {
-      MouseButton::Left => Button::Left,
-      MouseButton::Right => Button::Right,
-      MouseButton::Middle => Button::Middle,
+    fn from(mouse_button: MouseButton) -> Self {
+        match mouse_button {
+            MouseButton::Left => Button::Left,
+            MouseButton::Right => Button::Right,
+            MouseButton::Middle => Button::Middle,
+        }
     }
-  }
 }

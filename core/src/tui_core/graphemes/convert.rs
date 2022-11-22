@@ -23,24 +23,43 @@ use crate::*;
 // ┃ Convert to UnicodeString ┃
 // ┛                          ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 impl From<&str> for UnicodeString {
-  fn from(s: &str) -> Self { make_unicode_string_from(s) }
+    fn from(s: &str) -> Self { make_unicode_string_from(s) }
 }
 
 impl From<String> for UnicodeString {
-  fn from(s: String) -> Self { make_unicode_string_from(&s) }
+    fn from(s: String) -> Self { make_unicode_string_from(&s) }
 }
 
 impl From<Cow<'_, str>> for UnicodeString {
-  fn from(s: Cow<'_, str>) -> Self { make_unicode_string_from(&s) }
+    fn from(s: Cow<'_, str>) -> Self { make_unicode_string_from(&s) }
 }
 
 impl From<&String> for UnicodeString {
-  fn from(s: &String) -> Self { make_unicode_string_from(s) }
+    fn from(s: &String) -> Self { make_unicode_string_from(s) }
 }
 
 // ┏━━━━━━━━━━━━━━━━━━━┓
 // ┃ Convert to String ┃
 // ┛                   ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 impl From<UnicodeString> for String {
-  fn from(s: UnicodeString) -> Self { s.string }
+    fn from(s: UnicodeString) -> Self { s.string }
+}
+
+// ┏━━━━━━━━━━━━━━━━━━┓
+// ┃ UnicodeStringExt ┃
+// ┛                  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+pub trait UnicodeStringExt {
+    fn unicode_string(&self) -> UnicodeString;
+}
+
+impl UnicodeStringExt for Cow<'_, str> {
+    fn unicode_string(&self) -> UnicodeString { make_unicode_string_from(self) }
+}
+
+impl UnicodeStringExt for &str {
+    fn unicode_string(&self) -> UnicodeString { make_unicode_string_from(self) }
+}
+
+impl UnicodeStringExt for String {
+    fn unicode_string(&self) -> UnicodeString { UnicodeString::from(self) }
 }

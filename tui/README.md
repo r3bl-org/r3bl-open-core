@@ -145,6 +145,16 @@ https://user-images.githubusercontent.com/2966499/200138653-c0cf925f-2c91-4908-9
    4. Lolcat support.
    5. CSS like styling support.
 
+> Quite a few scripts are provided for your convenience in the root folder of the repo. They are all
+> `fish` script files. Here are a few worth mentioning here which are related to running the
+> example.
+>
+> 1. `run.fish`: This will simply run the examples. You can watch the logs by running `log.fish`.
+> 2. `run-with-flamegraph-profiling.fish`: This will run the examples and generate a flamegraph at
+>    the end so you can see profile the performance of the app.
+> 3. `run-with-crash-reporting.fish`: This will run the examples and generate a `crash_log.txt` file
+>    (in the `tui` folder) in case the app crashes. This is useful for debugging.
+
 ## Life of an input event
 <a id="markdown-life-of-an-input-event" name="life-of-an-input-event"></a>
 

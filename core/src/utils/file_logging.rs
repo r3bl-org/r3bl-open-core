@@ -94,18 +94,18 @@ macro_rules! log {
 /// If you would like to ignore the error just call `ok()` on the result that's returned. [More
 /// info](https://doc.rust-lang.org/std/result/enum.Result.html#method.ok).
 pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
-  unsafe {
-    return match FILE_LOGGER_INIT_OK {
-      true => CommonError::new(
-        CommonErrorType::InvalidState,
-        "Logger already initialized, can't set log file path",
-      ),
-      false => {
-        FILE_PATH = path;
-        Ok(path.to_string())
-      }
-    };
-  }
+    unsafe {
+        return match FILE_LOGGER_INIT_OK {
+            true => CommonError::new(
+                CommonErrorType::InvalidState,
+                "Logger already initialized, can't set log file path",
+            ),
+            false => {
+                FILE_PATH = path;
+                Ok(path.to_string())
+            }
+        };
+    }
 }
 
 /// If you want to override the default log level [LOG_LEVEL], you can use this function. If the
@@ -115,18 +115,18 @@ pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
 /// If you would like to ignore the error just call `ok()` on the result that's returned. [More
 /// info](https://doc.rust-lang.org/std/result/enum.Result.html#method.ok).
 pub fn try_to_set_log_level(level: LevelFilter) -> CommonResult<String> {
-  unsafe {
-    return match FILE_LOGGER_INIT_OK {
-      true => CommonError::new(
-        CommonErrorType::InvalidState,
-        "Logger already initialized, can't set log level",
-      ),
-      false => {
-        LOG_LEVEL = level;
-        Ok(level.to_string())
-      }
-    };
-  }
+    unsafe {
+        return match FILE_LOGGER_INIT_OK {
+            true => CommonError::new(
+                CommonErrorType::InvalidState,
+                "Logger already initialized, can't set log level",
+            ),
+            false => {
+                LOG_LEVEL = level;
+                Ok(level.to_string())
+            }
+        };
+    }
 }
 
 /// This is very similar to [log!] except that if it fails, it will not propagate the log error.
@@ -193,6 +193,7 @@ macro_rules! log_no_err_debug {
     )                       /* End repetition. */
     ,                       /* Comma separated. */
     *                       /* Zero or more times. */
+    $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
   ) => {
     /* Enclose the expansion in a block so that we can use multiple statements. */
     {
@@ -223,6 +224,7 @@ macro_rules! log_no_err_trace {
     )                       /* End repetition. */
     ,                       /* Comma separated. */
     *                       /* Zero or more times. */
+    $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
   ) => {
     /* Enclose the expansion in a block so that we can use multiple statements. */
     {
@@ -250,60 +252,60 @@ macro_rules! log_no_err_trace {
 ///   - <https://github.com/drakulix/simplelog.rs>
 /// - `format_description!`: <https://time-rs.github.io/book/api/format-description.html>
 pub fn init_file_logger_once() -> CommonResult<()> {
-  unsafe {
-    if LOG_LEVEL == LevelFilter::Off {
-      FILE_LOGGER_INIT_OK = true;
-      return Ok(());
-    }
-  }
-
-  // Run the lambda once & save bool to static `FILE_LOGGER_INIT_OK`.
-  FILE_LOGGER_INIT_FN.call_once(actually_init_file_logger);
-
-  // Use saved bool in static `FILE_LOGGER_INIT_OK` to throw error if needed.
-  unsafe {
-    return match FILE_LOGGER_INIT_OK {
-      true => Ok(()),
-      false => {
-        let msg = format!("Failed to initialize file logger {FILE_PATH}");
-        return CommonError::new(CommonErrorType::IOError, &msg);
-      }
-    };
-  }
-
-  /// [FILE_LOGGER_INIT_OK] is `false` at the start. Only this function (if it succeeds) can set
-  /// that to `true`. This function does *not* panic if there's a problem initializing the logger.
-  /// It just prints a message to stderr & returns.
-  fn actually_init_file_logger() {
     unsafe {
-      let maybe_new_file = File::create(FILE_PATH);
-      if let Ok(new_file) = maybe_new_file {
-        let config = new_config();
-        let level = LOG_LEVEL;
-        let file_logger = WriteLogger::new(level, config, new_file);
-        let maybe_logger_init_err = CombinedLogger::init(vec![file_logger]);
-        if let Err(e) = maybe_logger_init_err {
-          eprintln!("Failed to initialize file logger {FILE_PATH} due to {e}");
-        } else {
-          FILE_LOGGER_INIT_OK = true
+        if LOG_LEVEL == LevelFilter::Off {
+            FILE_LOGGER_INIT_OK = true;
+            return Ok(());
         }
-      }
-    }
-  }
-
-  /// Try to make a [`Config`] with local timezone offset. If that fails, return a default. The
-  /// implementation used here works w/ Tokio.
-  fn new_config() -> Config {
-    let mut builder = ConfigBuilder::new();
-
-    let offset_in_sec = Local::now().offset().local_minus_utc();
-    let utc_offset_result = UtcOffset::from_whole_seconds(offset_in_sec);
-    if let Ok(utc_offset) = utc_offset_result {
-      builder.set_time_offset(utc_offset);
     }
 
-    builder.set_time_format_custom(format_description!("[hour repr:12]:[minute] [period]"));
+    // Run the lambda once & save bool to static `FILE_LOGGER_INIT_OK`.
+    FILE_LOGGER_INIT_FN.call_once(actually_init_file_logger);
 
-    builder.build()
-  }
+    // Use saved bool in static `FILE_LOGGER_INIT_OK` to throw error if needed.
+    unsafe {
+        return match FILE_LOGGER_INIT_OK {
+            true => Ok(()),
+            false => {
+                let msg = format!("Failed to initialize file logger {FILE_PATH}");
+                return CommonError::new(CommonErrorType::IOError, &msg);
+            }
+        };
+    }
+
+    /// [FILE_LOGGER_INIT_OK] is `false` at the start. Only this function (if it succeeds) can set
+    /// that to `true`. This function does *not* panic if there's a problem initializing the logger.
+    /// It just prints a message to stderr & returns.
+    fn actually_init_file_logger() {
+        unsafe {
+            let maybe_new_file = File::create(FILE_PATH);
+            if let Ok(new_file) = maybe_new_file {
+                let config = new_config();
+                let level = LOG_LEVEL;
+                let file_logger = WriteLogger::new(level, config, new_file);
+                let maybe_logger_init_err = CombinedLogger::init(vec![file_logger]);
+                if let Err(e) = maybe_logger_init_err {
+                    eprintln!("Failed to initialize file logger {FILE_PATH} due to {e}");
+                } else {
+                    FILE_LOGGER_INIT_OK = true
+                }
+            }
+        }
+    }
+
+    /// Try to make a [`Config`] with local timezone offset. If that fails, return a default. The
+    /// implementation used here works w/ Tokio.
+    fn new_config() -> Config {
+        let mut builder = ConfigBuilder::new();
+
+        let offset_in_sec = Local::now().offset().local_minus_utc();
+        let utc_offset_result = UtcOffset::from_whole_seconds(offset_in_sec);
+        if let Ok(utc_offset) = utc_offset_result {
+            builder.set_time_offset(utc_offset);
+        }
+
+        builder.set_time_format_custom(format_description!("[hour repr:12]:[minute] [period]"));
+
+        builder.build()
+    }
 }

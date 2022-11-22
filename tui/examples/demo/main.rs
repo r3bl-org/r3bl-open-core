@@ -37,63 +37,65 @@ mod ex_lolcat;
 use reedline::*;
 
 const HELP_MSG: &str = "\
+Welcome to the R3BL TUI demo app.
 Type a number to run corresponding example:
-  1. App with no layout                  ❌
-  2. App with 1 column responsive layout ✅
-  3. App with 2 column responsive layout ✅✅
-  4. lolcat                              🦜
-  5. Text editor                         📜
+  1. 📏 App w/ no layout
+  2. 📐 App w/ 1 column responsive layout
+  3. 📐 App w/ 2 column responsive layout
+  4. 🦜 lolcat
+  5. 🐒 Text editor, syntax highlighting, modal dialog, and emoji.
+
 or type Ctrl+C / Ctrl+D / 'x' to exit";
 
 #[tokio::main]
 async fn main() -> CommonResult<()> {
-  throws!({
-    loop {
-      let continuation = get_user_selection_from_terminal();
-      match continuation {
-        Continuation::Exit => break,
-        Continuation::Result(user_selection) => {
-          run_user_selected_example(user_selection).await?;
+    throws!({
+        loop {
+            let continuation = get_user_selection_from_terminal();
+            match continuation {
+                Continuation::Exit => break,
+                Continuation::Result(user_selection) => {
+                    run_user_selected_example(user_selection).await?;
+                }
+                _ => {}
+            }
         }
-        _ => {}
-      }
-    }
-  })
+    })
 }
 
 async fn run_user_selected_example(selection: String) -> CommonResult<()> {
-  throws!({
-    if !selection.is_empty() {
-      match selection.as_ref() {
-        "1" => throws!(ex_app_no_layout::launcher::run_app().await?),
-        "2" => throws!(ex_app_with_1col_layout::launcher::run_app().await?),
-        "3" => throws!(ex_app_with_2col_layout::launcher::run_app().await?),
-        "4" => throws!(ex_lolcat::launcher::run_app().await?),
-        "5" => throws!(ex_editor::launcher::run_app().await?),
-        _ => eprintln!("{}", style_error("Unknown selection 🤷")),
-      }
-    }
-  })
+    throws!({
+        if !selection.is_empty() {
+            match selection.as_ref() {
+                "1" => throws!(ex_app_no_layout::launcher::run_app().await?),
+                "2" => throws!(ex_app_with_1col_layout::launcher::run_app().await?),
+                "3" => throws!(ex_app_with_2col_layout::launcher::run_app().await?),
+                "4" => throws!(ex_lolcat::launcher::run_app().await?),
+                "5" => throws!(ex_editor::launcher::run_app().await?),
+                _ => eprintln!("{}", style_error("Unknown selection 🤷")),
+            }
+        }
+    })
 }
 
 /// This is a single threaded blocking function. The R3BL examples are all async and non-blocking.
 fn get_user_selection_from_terminal() -> Continuation<String> {
-  println!("{}", style_prompt(HELP_MSG));
+    println!("{}", style_prompt(HELP_MSG));
 
-  let mut line_editor = Reedline::create();
-  let prompt = DefaultPrompt::default();
+    let mut line_editor = Reedline::create();
+    let prompt = DefaultPrompt::default();
 
-  loop {
-    let maybe_signal = &line_editor.read_line(&prompt);
-    if let Ok(Signal::Success(user_input_text)) = maybe_signal {
-      match user_input_text.as_str() {
-        "x" => break,
-        _ => return Continuation::Result(user_input_text.into()),
-      }
-    } else if let Ok(Signal::CtrlC) | Ok(Signal::CtrlD) = maybe_signal {
-      break;
+    loop {
+        let maybe_signal = &line_editor.read_line(&prompt);
+        if let Ok(Signal::Success(user_input_text)) = maybe_signal {
+            match user_input_text.as_str() {
+                "x" => break,
+                _ => return Continuation::Result(user_input_text.into()),
+            }
+        } else if let Ok(Signal::CtrlC) | Ok(Signal::CtrlD) = maybe_signal {
+            break;
+        }
     }
-  }
 
-  Continuation::Exit
+    Continuation::Exit
 }

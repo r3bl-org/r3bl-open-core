@@ -29,35 +29,35 @@ bitflags! {
 }
 
 pub fn convert_key_modifiers(modifiers: &KeyModifiers) -> Option<ModifierKeysMask> {
-  // Start w/ empty my_modifiers.
-  let my_modifiers: ModifierKeysMask = (*modifiers).into();
-  if modifiers.is_empty() {
-    None
-  } else {
-    Some(my_modifiers)
-  }
+    // Start w/ empty my_modifiers.
+    let my_modifiers: ModifierKeysMask = (*modifiers).into();
+    if modifiers.is_empty() {
+        None
+    } else {
+        Some(my_modifiers)
+    }
 }
 
 impl From<KeyModifiers> for ModifierKeysMask {
-  /// Difference in meaning between `intersects` and `contains`:
-  /// - `intersects` -> means that the given bit shows up in your variable, but it might contain other
-  ///   bits.
-  /// - `contains` -> means that your variable ONLY contains these bits.
-  fn from(other: KeyModifiers) -> Self {
-    // Start w/ empty my_modifiers.
-    let mut my_modifiers: ModifierKeysMask = ModifierKeysMask::empty(); // 0b0000_0000
+    /// Difference in meaning between `intersects` and `contains`:
+    /// - `intersects` -> means that the given bit shows up in your variable, but it might contain other
+    ///   bits.
+    /// - `contains` -> means that your variable ONLY contains these bits.
+    fn from(other: KeyModifiers) -> Self {
+        // Start w/ empty my_modifiers.
+        let mut my_modifiers: ModifierKeysMask = ModifierKeysMask::empty(); // 0b0000_0000
 
-    // Try and set any bitflags from key_event.
-    if other.intersects(KeyModifiers::SHIFT) {
-      my_modifiers.insert(ModifierKeysMask::SHIFT) // my_modifiers = 0b0000_0001;
-    }
-    if other.intersects(KeyModifiers::CONTROL) {
-      my_modifiers.insert(ModifierKeysMask::CTRL) // my_modifiers = 0b0000_0010;
-    }
-    if other.intersects(KeyModifiers::ALT) {
-      my_modifiers.insert(ModifierKeysMask::ALT) // my_modifiers = 0b0000_0100;
-    }
+        // Try and set any bitflags from key_event.
+        if other.intersects(KeyModifiers::SHIFT) {
+            my_modifiers.insert(ModifierKeysMask::SHIFT) // my_modifiers = 0b0000_0001;
+        }
+        if other.intersects(KeyModifiers::CONTROL) {
+            my_modifiers.insert(ModifierKeysMask::CTRL) // my_modifiers = 0b0000_0010;
+        }
+        if other.intersects(KeyModifiers::ALT) {
+            my_modifiers.insert(ModifierKeysMask::ALT) // my_modifiers = 0b0000_0100;
+        }
 
-    my_modifiers
-  }
+        my_modifiers
+    }
 }

@@ -77,12 +77,12 @@ macro_rules! throws {
 /// ```
 #[macro_export]
 macro_rules! throws_with_return {
-  ($it: block) => {{
-    return Ok($it);
-  }};
-  ($it: stmt) => {{
-    return Ok($it);
-  }};
+    ($it: block) => {{
+        return Ok($it);
+    }};
+    ($it: stmt) => {{
+        return Ok($it);
+    }};
 }
 
 /// Declarative macro to surround the given block with a call to
@@ -120,9 +120,9 @@ macro_rules! throws_with_return {
 /// ```
 #[macro_export]
 macro_rules! fire_and_forget {
-  ($block:block) => {
-    return tokio::spawn(async move { $block });
-  };
+    ($block:block) => {
+        return tokio::spawn(async move { $block });
+    };
 }
 
 /// Syntactic sugar to run a conditional statement. Here's an example.
@@ -140,11 +140,11 @@ macro_rules! fire_and_forget {
 /// ```
 #[macro_export]
 macro_rules! call_if_true {
-  ($cond:ident, $block: expr) => {{
-    if $cond {
-      $block
-    }
-  }};
+    ($cond:ident, $block: expr) => {{
+        if $cond {
+            $block
+        }
+    }};
 }
 
 /// This is a really simple macro to make it effortless to use the color console
@@ -189,7 +189,7 @@ macro_rules! debug {
       "{} {} {}\r",
       r3bl_rs_utils_core::style_error("▶"),
       r3bl_rs_utils_core::style_prompt($msg),
-      r3bl_rs_utils_core::style_dimmed(&format!("{:#?}", $err))
+      r3bl_rs_utils_core::style_underline(&format!("{:#?}", $err))
     );
   }};
 
@@ -207,6 +207,7 @@ macro_rules! debug {
     )                       /* End repetition. */
     ,                       /* Comma separated. */
     *                       /* Zero or more times. */
+    $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
   ) => {
     /* Enclose the expansion in a block so that we can use multiple statements. */
       {
@@ -217,7 +218,7 @@ macro_rules! debug {
           "{} {} = {}",
           r3bl_rs_utils_core::style_error("▶"),
           r3bl_rs_utils_core::style_prompt(stringify!($element)),
-          r3bl_rs_utils_core::style_dimmed(&format!("{:#?}", $element))
+          r3bl_rs_utils_core::style_underline(&format!("{:#?}", $element))
         );
       )*
   }};
@@ -230,22 +231,24 @@ macro_rules! debug {
 /// - impl `Display` trait to for the struct using `to_string()` above.
 #[macro_export]
 macro_rules! make_api_call_for {
-  ($IDENT:ident at $ENDPOINT:ident) => {
-    pub async fn make_request() -> Result<$IDENT, Box<dyn Error>> {
-      let res = reqwest::get($ENDPOINT).await?;
-      let res_text = res.text().await?;
-      let res_json: $IDENT = serde_json::from_str(&res_text)?;
-      Ok(res_json)
-    }
+    ($IDENT:ident at $ENDPOINT:ident) => {
+        pub async fn make_request() -> Result<$IDENT, Box<dyn Error>> {
+            let res = reqwest::get($ENDPOINT).await?;
+            let res_text = res.text().await?;
+            let res_json: $IDENT = serde_json::from_str(&res_text)?;
+            Ok(res_json)
+        }
 
-    impl $IDENT {
-      pub fn to_string(&self) -> String { serde_json::to_string(&self).unwrap() }
-    }
+        impl $IDENT {
+            pub fn to_string(&self) -> String { serde_json::to_string(&self).unwrap() }
+        }
 
-    impl Display for $IDENT {
-      fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "{}", self.to_string()) }
-    }
-  };
+        impl Display for $IDENT {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.to_string())
+            }
+        }
+    };
 }
 
 /// Runs the `$code` block after evaluating the `$eval` expression and assigning
@@ -270,10 +273,10 @@ macro_rules! make_api_call_for {
 /// ```
 #[macro_export]
 macro_rules! with {
-  ($eval:expr, as $id:ident, run $code:block) => {
-    let $id = $eval;
-    $code;
-  };
+    ($eval:expr, as $id:ident, run $code:block) => {
+        let $id = $eval;
+        $code;
+    };
 }
 
 /// Similar to [`with!`] except `$id` is a mutable reference to the `$eval`
@@ -297,10 +300,10 @@ macro_rules! with {
 
 #[macro_export]
 macro_rules! with_mut {
-  ($eval:expr, as $id:ident, run $code:block) => {
-    let mut $id = $eval;
-    $code;
-  };
+    ($eval:expr, as $id:ident, run $code:block) => {
+        let mut $id = $eval;
+        $code;
+    };
 }
 
 /// Similar to [`with_mut!`] except that it returns the value of the `$code`
@@ -319,10 +322,10 @@ macro_rules! with_mut {
 /// ```
 #[macro_export]
 macro_rules! with_mut_returns {
-  ($eval:expr, as $id:ident, return $code:block) => {{
-    let mut $id = $eval;
-    $code
-  }};
+    ($eval:expr, as $id:ident, return $code:block) => {{
+        let mut $id = $eval;
+        $code
+    }};
 }
 
 /// Unwrap the `$option`, and if `None` then run the `$next` closure which must
@@ -346,12 +349,12 @@ macro_rules! with_mut_returns {
 /// ```
 #[macro_export]
 macro_rules! unwrap_option_or_run_fn_returning_err {
-  ($option:expr, $next:expr) => {
-    match $option {
-      Some(value) => value,
-      None => return $next(),
-    }
-  };
+    ($option:expr, $next:expr) => {
+        match $option {
+            Some(value) => value,
+            None => return $next(),
+        }
+    };
 }
 
 /// Unwrap the `$option`, and if `None` then run the `$next` closure which must
@@ -376,15 +379,15 @@ macro_rules! unwrap_option_or_run_fn_returning_err {
 /// ```
 #[macro_export]
 macro_rules! unwrap_option_or_compute_if_none {
-  ($option:expr, $next:expr) => {
-    match $option {
-      Some(value) => value,
-      None => {
-        $option = Some($next());
-        $option.unwrap()
-      }
-    }
-  };
+    ($option:expr, $next:expr) => {
+        match $option {
+            Some(value) => value,
+            None => {
+                $option = Some($next());
+                $option.unwrap()
+            }
+        }
+    };
 }
 
 /// Similar to [`assert_eq!`] but automatically prints the left and right hand side variables if the
@@ -392,14 +395,14 @@ macro_rules! unwrap_option_or_compute_if_none {
 /// values *w/out* providing information on *what variables* were being compared.
 #[macro_export]
 macro_rules! assert_eq2 {
-  ($left:expr, $right:expr $(,)?) => {
-    assert_eq!(
-      $left,
-      $right,
-      "\n😮 {}\nleft-expr : {}\nright-expr: {}",
-      $crate::style_prompt("Houston, we have a problem..."),
-      $crate::style_error(stringify!($left)),
-      $crate::style_error(stringify!($right))
-    );
-  };
+    ($left:expr, $right:expr $(,)?) => {
+        assert_eq!(
+            $left,
+            $right,
+            "\n😮 {}\nleft-expr : {}\nright-expr: {}",
+            $crate::style_prompt("Houston, we have a problem..."),
+            $crate::style_error(stringify!($left)),
+            $crate::style_error(stringify!($right))
+        );
+    };
 }

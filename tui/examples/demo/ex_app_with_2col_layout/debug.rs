@@ -21,15 +21,20 @@ use r3bl_tui::*;
 use super::*;
 
 pub fn debug_log_action(src: String, action: Action) {
-  call_if_true!(
-    DEBUG_TUI_MOD,
-    log_no_err!(INFO, "🚀 {} -> dispatch action: {}", src, action,)
-  );
+    call_if_true!(
+        DEBUG_TUI_MOD,
+        log_no_err!(INFO, "🚀 {} -> dispatch action: {}", src, action,)
+    );
 }
 
 pub fn debug_log_has_focus(src: String, has_focus: &HasFocus) {
-  call_if_true!(
-    DEBUG_TUI_MOD,
-    log_no_err!(INFO, "👀 {} -> focus change & rerender: {:?}", src, has_focus)
-  );
+    call_if_true!(
+        DEBUG_TUI_MOD,
+        log_no_err!(
+            INFO,
+            "👀 {} -> focus change & rerender: {:?}",
+            src,
+            has_focus
+        )
+    );
 }

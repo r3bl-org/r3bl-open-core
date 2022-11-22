@@ -18,8 +18,12 @@
 use quote::quote;
 use syn::parse_macro_input;
 
-use super::{gen_fn_input_args_expr_list, get_fn_input_args_ident_ref_from_fn_ty, get_fn_output_type_from, IdentRef};
-use crate::fn_wrapper::custom_syntax_parser::{make_opt_where_clause_from_generic_args, SafeFnWrapperSyntaxInfo};
+use super::{gen_fn_input_args_expr_list,
+            get_fn_input_args_ident_ref_from_fn_ty,
+            get_fn_output_type_from,
+            IdentRef};
+use crate::fn_wrapper::custom_syntax_parser::{make_opt_where_clause_from_generic_args,
+                                              SafeFnWrapperSyntaxInfo};
 
 /// Example of using this macro:
 ///
@@ -68,62 +72,64 @@ use crate::fn_wrapper::custom_syntax_parser::{make_opt_where_clause_from_generic
 /// }
 /// ```
 pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-  let safe_wrapper_syntax_info: SafeFnWrapperSyntaxInfo = parse_macro_input!(input);
+    let safe_wrapper_syntax_info: SafeFnWrapperSyntaxInfo = parse_macro_input!(input);
 
-  let SafeFnWrapperSyntaxInfo {
-    wrapper_name_ident: _,
-    wrapper_name_type,
-    wrapper_name_type_generic_args,
-    property_name_ident,
-    property_fn_type,
-  } = safe_wrapper_syntax_info;
+    let SafeFnWrapperSyntaxInfo {
+        wrapper_name_ident: _,
+        wrapper_name_type,
+        wrapper_name_type_generic_args,
+        property_name_ident,
+        property_fn_type,
+    } = safe_wrapper_syntax_info;
 
-  let fn_input_arg_type_vec: Vec<IdentRef> = get_fn_input_args_ident_ref_from_fn_ty(&property_fn_type);
+    let fn_input_arg_type_vec: Vec<IdentRef> =
+        get_fn_input_args_ident_ref_from_fn_ty(&property_fn_type);
 
-  let (fn_input_arg_expr_vec, fn_input_arg_name_ident_vec) = gen_fn_input_args_expr_list(&fn_input_arg_type_vec);
+    let (fn_input_arg_expr_vec, fn_input_arg_name_ident_vec) =
+        gen_fn_input_args_expr_list(&fn_input_arg_type_vec);
 
-  let fn_output_return_type = get_fn_output_type_from(&property_fn_type);
+    let fn_output_return_type = get_fn_output_type_from(&property_fn_type);
 
-  let opt_generic_args = if wrapper_name_type_generic_args.is_some() {
-    let args = wrapper_name_type_generic_args.as_ref().unwrap();
-    quote! { < #args > }
-  } else {
-    quote! {}
-  };
+    let opt_generic_args = if wrapper_name_type_generic_args.is_some() {
+        let args = wrapper_name_type_generic_args.as_ref().unwrap();
+        quote! { < #args > }
+    } else {
+        quote! {}
+    };
 
-  let opt_where_clause = make_opt_where_clause_from_generic_args(wrapper_name_type_generic_args);
+    let opt_where_clause = make_opt_where_clause_from_generic_args(wrapper_name_type_generic_args);
 
-  quote! {
-    // Type aliases to make the code more readable.
-    type ARC<T> = std::sync::Arc<T>;
-    type RWLOCK<T> = std::sync::RwLock<T>;
-    type WRITE_G<'a, T> = std::sync::RwLockWriteGuard<'a, T>;
-    type READ_G<'a, T> = std::sync::RwLockReadGuard<'a, T>;
+    quote! {
+      // Type aliases to make the code more readable.
+      type ARC<T> = std::sync::Arc<T>;
+      type RWLOCK<T> = std::sync::RwLock<T>;
+      type WRITE_G<'a, T> = std::sync::RwLockWriteGuard<'a, T>;
+      type READ_G<'a, T> = std::sync::RwLockReadGuard<'a, T>;
 
-    pub struct #wrapper_name_type {
-      pub #property_name_ident: ARC<RWLOCK<dyn #property_fn_type + Send + Sync + 'static>>
+      pub struct #wrapper_name_type {
+        pub #property_name_ident: ARC<RWLOCK<dyn #property_fn_type + Send + Sync + 'static>>
+      }
+
+      impl #opt_generic_args #wrapper_name_type
+      #opt_where_clause
+      {
+        pub fn from(
+          #property_name_ident: impl #property_fn_type + Send + Sync + 'static
+        ) -> Self {
+          Self { #property_name_ident: ARC::new(RWLOCK::new(#property_name_ident)) }
+        }
+
+        pub fn get_ref(&self) -> ARC<RWLOCK<dyn #property_fn_type + Send + Sync + 'static>> {
+          self.#property_name_ident.clone()
+        }
+
+        pub fn invoke(&self, #(#fn_input_arg_expr_vec),*) -> #fn_output_return_type {
+          let arc_lock_fn_mut = self.get_ref();
+          let mut fn_mut = arc_lock_fn_mut.write().unwrap();
+          fn_mut(#(#fn_input_arg_name_ident_vec),*)
+        }
+      }
+
     }
-
-    impl #opt_generic_args #wrapper_name_type
-    #opt_where_clause
-    {
-      pub fn from(
-        #property_name_ident: impl #property_fn_type + Send + Sync + 'static
-      ) -> Self {
-        Self { #property_name_ident: ARC::new(RWLOCK::new(#property_name_ident)) }
-      }
-
-      pub fn get_ref(&self) -> ARC<RWLOCK<dyn #property_fn_type + Send + Sync + 'static>> {
-        self.#property_name_ident.clone()
-      }
-
-      pub fn invoke(&self, #(#fn_input_arg_expr_vec),*) -> #fn_output_return_type {
-        let arc_lock_fn_mut = self.get_ref();
-        let mut fn_mut = arc_lock_fn_mut.write().unwrap();
-        fn_mut(#(#fn_input_arg_name_ident_vec),*)
-      }
-    }
-
-  }
-  .into()
+    .into()
 }

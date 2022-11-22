@@ -20,18 +20,18 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait AsyncSubscriber<S>
 where
-  S: Sync + Send,
+    S: Sync + Send,
 {
-  async fn run(&self, state: S);
+    async fn run(&self, state: S);
 
-  /// <https://doc.rust-lang.org/book/ch10-02-traits.html>
-  #[allow(clippy::all)]
-  fn new() -> AsyncSubscriberItem<S>
-  where
-    Self: Default + Sized + Sync + Send + 'static,
-  {
-    Box::new(Self::default())
-  }
+    /// <https://doc.rust-lang.org/book/ch10-02-traits.html>
+    #[allow(clippy::all)]
+    fn new() -> AsyncSubscriberItem<S>
+    where
+        Self: Default + Sized + Sync + Send + 'static,
+    {
+        Box::new(Self::default())
+    }
 }
 
 pub type AsyncSubscriberTraitObject<S> = dyn AsyncSubscriber<S> + Send + Sync;

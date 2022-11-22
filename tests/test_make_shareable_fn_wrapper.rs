@@ -29,40 +29,40 @@ use r3bl_rs_utils_macro::make_shareable_fn_wrapper;
 
 #[test]
 fn test_simple_macro_expansion() {
-  #![allow(deprecated)]
-  make_shareable_fn_wrapper! {
-    named FnWrapper1<A>
-    containing fn_mut
-    of_type FnMut(A) -> Option<A>
-  }
+    #![allow(deprecated)]
+    make_shareable_fn_wrapper! {
+      named FnWrapper1<A>
+      containing fn_mut
+      of_type FnMut(A) -> Option<A>
+    }
 }
 
 #[test]
 fn test_simple_macro_expansion_2() {
-  #![allow(deprecated)]
-  make_shareable_fn_wrapper! {
-    named FnWrapper2<A>
-    containing fn_mut
-    of_type Fn(A) -> Option<A>
-  }
+    #![allow(deprecated)]
+    make_shareable_fn_wrapper! {
+      named FnWrapper2<A>
+      containing fn_mut
+      of_type Fn(A) -> Option<A>
+    }
 }
 
 #[test]
 fn test_simple_macro_expansion_3() {
-  #![allow(deprecated)]
-  make_shareable_fn_wrapper! {
-    named FnWrapper3<A, B>
-    containing fn_mut
-    of_type Fn(A) -> Option<B>
-  }
+    #![allow(deprecated)]
+    make_shareable_fn_wrapper! {
+      named FnWrapper3<A, B>
+      containing fn_mut
+      of_type Fn(A) -> Option<B>
+    }
 }
 
 #[test]
 fn test_simple_macro_expansion_4() {
-  #![allow(deprecated)]
-  make_shareable_fn_wrapper! {
-    named FnWrapper4<S, A>
-    containing fn_mut
-    of_type Fn(&S, &A) -> S
-  }
+    #![allow(deprecated)]
+    make_shareable_fn_wrapper! {
+      named FnWrapper4<S, A>
+      containing fn_mut
+      of_type Fn(&S, &A) -> S
+    }
 }

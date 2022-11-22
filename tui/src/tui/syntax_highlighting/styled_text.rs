@@ -27,27 +27,27 @@ use crate::*;
 /// Use [styled_text!] macro for easier construction.
 #[derive(Debug, Clone, Default)]
 pub struct StyledText {
-  plain_text: UnicodeString,
-  style: Style,
+    plain_text: UnicodeString,
+    style: Style,
 }
 
 impl StyledText {
-  /// Just as a precaution, the `text` argument is passed through
-  /// [try_strip_ansi](ANSIText::try_strip_ansi) method to remove any ANSI escape sequences.
-  pub fn new(text: String, style: Style) -> Self {
-    let plain_text = match ANSIText::try_strip_ansi(&text) {
-      Some(plain_text) => plain_text,
-      None => text,
-    };
-    StyledText {
-      plain_text: UnicodeString::from(plain_text),
-      style,
+    /// Just as a precaution, the `text` argument is passed through
+    /// [try_strip_ansi](ANSIText::try_strip_ansi) method to remove any ANSI escape sequences.
+    pub fn new(text: String, style: Style) -> Self {
+        let plain_text = match ANSIText::try_strip_ansi(&text) {
+            Some(plain_text) => plain_text,
+            None => text,
+        };
+        StyledText {
+            plain_text: UnicodeString::from(plain_text),
+            style,
+        }
     }
-  }
 
-  pub fn get_plain_text(&self) -> &UnicodeString { &self.plain_text }
+    pub fn get_plain_text(&self) -> &UnicodeString { &self.plain_text }
 
-  pub fn get_style(&self) -> &Style { &self.style }
+    pub fn get_style(&self) -> &Style { &self.style }
 }
 
 /// Macro to make building [StyledText] easy.
@@ -61,15 +61,15 @@ impl StyledText {
 /// ```
 #[macro_export]
 macro_rules! styled_text {
-  () => {
-    StyledText::new(String::new(), Style::default())
-  };
-  ($text:expr) => {
-    StyledText::new($text.to_string(), Style::default())
-  };
-  ($text:expr, $style:expr) => {
-    StyledText::new($text.to_string(), $style)
-  };
+    () => {
+        StyledText::new(String::new(), Style::default())
+    };
+    ($text:expr) => {
+        StyledText::new($text.to_string(), Style::default())
+    };
+    ($text:expr, $style:expr) => {
+        StyledText::new($text.to_string(), $style)
+    };
 }
 
 // ┏━━━━━━━━━━━━━┓
@@ -77,100 +77,67 @@ macro_rules! styled_text {
 // ┛             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Default, Debug, Clone)]
 pub struct StyledTexts {
-  styled_texts: List<StyledText>,
+    styled_texts: List<StyledText>,
 }
 
 mod impl_styled_texts {
-  use super::*;
+    use super::*;
 
-  impl Add<StyledText> for StyledTexts {
-    type Output = StyledTexts;
-    fn add(mut self, other: StyledText) -> Self::Output {
-      self.push(other);
-      self
-    }
-  }
-
-  impl AddAssign<StyledText> for StyledTexts {
-    fn add_assign(&mut self, other: StyledText) { self.push(other); }
-  }
-
-  impl Deref for StyledTexts {
-    type Target = Vec<StyledText>;
-    fn deref(&self) -> &Self::Target { &self.styled_texts }
-  }
-
-  impl DerefMut for StyledTexts {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.styled_texts }
-  }
-
-  impl StyledTexts {
-    pub fn pretty_print(&self) -> String {
-      let mut it = vec![];
-      for (index, item) in self.iter().enumerate() {
-        let string = format!("{index}: [{}, {}]", item.get_style(), item.get_plain_text().string);
-        it.push(string);
-      }
-      it.join("\n")
+    impl Add<StyledText> for StyledTexts {
+        type Output = StyledTexts;
+        fn add(mut self, other: StyledText) -> Self::Output {
+            self.push(other);
+            self
+        }
     }
 
-    pub fn get_plain_text(&self) -> UnicodeString {
-      let mut it = UnicodeString::default();
-      for styled_text in self.iter() {
-        it = it + &styled_text.plain_text;
-      }
-      it
+    impl AddAssign<StyledText> for StyledTexts {
+        fn add_assign(&mut self, other: StyledText) { self.push(other); }
     }
 
-    pub fn display_width(&self) -> ChUnit { self.get_plain_text().display_width }
-
-    pub fn render_into_with_padding(
-      &self,
-      render_ops: &mut RenderOps,
-      max_col_count: ChUnit,
-      maybe_style: Option<Style>,
-    ) {
-      let mut total_display_width = ch!(0);
-
-      for styled_text in self.iter() {
-        let text_style = styled_text.style.clone();
-        let text = styled_text.plain_text.clone();
-
-        let style = {
-          if let Some(current_box_style) = maybe_style.clone() {
-            current_box_style + text_style
-          } else {
-            text_style
-          }
-        };
-
-        render_ops.push(RenderOp::ApplyColors(Some(style.clone())));
-        render_ops.push(RenderOp::PrintTextWithAttributes(text.string, Some(style)));
-        render_ops.push(RenderOp::ResetColor);
-
-        total_display_width += text.display_width;
-      }
-
-      if total_display_width < max_col_count {
-        let padding = max_col_count - total_display_width + 1;
-        render_ops.push(RenderOp::ResetColor);
-        render_ops.push(RenderOp::PrintTextWithAttributes(
-          SPACER.repeat(ch!(@to_usize padding)),
-          None,
-        ));
-      }
+    impl Deref for StyledTexts {
+        type Target = Vec<StyledText>;
+        fn deref(&self) -> &Self::Target { &self.styled_texts }
     }
 
-    pub fn render_into(&self, render_ops: &mut RenderOps) {
-      for styled_text in self.iter() {
-        let style = styled_text.style.clone();
-        let text = styled_text.plain_text.clone();
-        render_ops.push(RenderOp::ApplyColors(style.clone().into()));
-        render_ops.push(RenderOp::PrintTextWithAttributes(text.string, style.into()));
-        render_ops.push(RenderOp::ResetColor);
-      }
+    impl DerefMut for StyledTexts {
+        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.styled_texts }
     }
-  }
+
+    impl StyledTexts {
+        pub fn pretty_print(&self) -> String {
+            let mut it = vec![];
+            for (index, item) in self.iter().enumerate() {
+                let string = format!(
+                    "{index}: [{}, {}]",
+                    item.get_style(),
+                    item.get_plain_text().string
+                );
+                it.push(string);
+            }
+            it.join("\n")
+        }
+
+        pub fn get_plain_text(&self) -> UnicodeString {
+            let mut it = UnicodeString::default();
+            for styled_text in self.iter() {
+                it = it + &styled_text.plain_text;
+            }
+            it
+        }
+
+        pub fn display_width(&self) -> ChUnit { self.get_plain_text().display_width }
+
+        pub fn render_into(&self, render_ops: &mut RenderOps) {
+            for styled_text in self.iter() {
+                let style = styled_text.style.clone();
+                let text = styled_text.plain_text.clone();
+                render_ops.push(RenderOp::ApplyColors(style.clone().into()));
+                render_ops.push(RenderOp::PrintTextWithAttributes(text.string, style.into()));
+                render_ops.push(RenderOp::ResetColor);
+            }
+        }
+    }
 }
 
 /// Macro to make building [`StyledTexts`] easy.

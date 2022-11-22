@@ -48,8 +48,8 @@
 //!   - repo: <https://github.com/redox-os/sodium>
 
 pub enum TerminalLibBackend {
-  Crossterm,
-  Termion,
+    Crossterm,
+    Termion,
 }
 
 pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
@@ -63,10 +63,12 @@ pub mod input_event;
 pub mod keypress;
 pub mod modifier_keys_mask;
 pub mod mouse_input;
+pub mod offscreen_buffer;
 pub mod paint;
 pub mod raw_mode;
 pub mod render_op;
 pub mod render_pipeline;
+pub mod render_pipeline_to_offscreen_buffer;
 pub mod terminal_lib_operations;
 pub mod termion_backend;
 
@@ -79,10 +81,12 @@ pub use input_event::*;
 pub use keypress::*;
 pub use modifier_keys_mask::*;
 pub use mouse_input::*;
+pub use offscreen_buffer::*;
 pub use paint::*;
 pub use raw_mode::*;
 pub use render_op::*;
 pub use render_pipeline::*;
+pub use render_pipeline_to_offscreen_buffer::*;
 pub use terminal_lib_operations::*;
 pub use termion_backend::*;
 

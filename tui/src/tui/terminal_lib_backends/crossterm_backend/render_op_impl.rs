@@ -36,495 +36,450 @@ pub struct RenderOpImplCrossterm;
 
 #[async_trait]
 impl PaintRenderOp for RenderOpImplCrossterm {
-  async fn paint(&self, skip_flush: &mut bool, command_ref: &RenderOp, shared_global_data: &SharedGlobalData) {
-    match command_ref {
-      RenderOp::Noop => {}
-      RenderOp::RequestShowCaretAtPositionAbs(pos) => {
-        request_show_caret_at_position_abs(pos, shared_global_data).await;
-      }
-      RenderOp::RequestShowCaretAtPositionRelTo(box_origin_pos, content_rel_pos) => {
-        request_show_caret_at_position_rel_to(box_origin_pos, content_rel_pos, shared_global_data).await;
-      }
-      RenderOp::EnterRawMode => {
-        raw_mode_enter(skip_flush, shared_global_data).await;
-      }
-      RenderOp::ExitRawMode => {
-        raw_mode_exit(skip_flush);
-      }
-      RenderOp::MoveCursorPositionAbs(abs_pos) => {
-        move_cursor_position_abs(abs_pos, shared_global_data).await;
-      }
-      RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
-        move_cursor_position_rel_to(box_origin_pos, content_rel_pos, shared_global_data).await;
-      }
-      RenderOp::ClearScreen => {
-        exec_render_op!(queue!(stdout(), Clear(ClearType::All)), "ClearScreen")
-      }
-      RenderOp::SetFgColor(color) => {
-        set_fg_color(color);
-      }
-      RenderOp::SetBgColor(color) => {
-        set_bg_color(color);
-      }
-      RenderOp::ResetColor => {
-        exec_render_op!(queue!(stdout(), ResetColor), "ResetColor")
-      }
-      RenderOp::CursorShow => {
-        exec_render_op!(queue!(stdout(), Show), "CursorShow")
-      }
-      RenderOp::CursorHide => {
-        exec_render_op!(queue!(stdout(), Hide), "CursorHide")
-      }
-      RenderOp::ApplyColors(style) => {
-        apply_colors(style);
-      }
-      RenderOp::PrintTextWithAttributes(text, maybe_style) => {
-        print_text_with_attributes(text, maybe_style, shared_global_data, None).await;
-      }
-      RenderOp::PrintTextWithAttributesAndPadding(text, maybe_style, max_display_col) => {
-        print_text_with_attributes(text, maybe_style, shared_global_data, Some(*max_display_col)).await;
-      }
+    async fn paint(
+        &mut self,
+        skip_flush: &mut bool,
+        command_ref: &RenderOp,
+        shared_global_data: &SharedGlobalData,
+        local_data: &mut RenderOpsLocalData,
+    ) {
+        match command_ref {
+            RenderOp::Noop => {}
+            RenderOp::EnterRawMode => {
+                raw_mode_enter(skip_flush, shared_global_data).await;
+            }
+            RenderOp::ExitRawMode => {
+                raw_mode_exit(skip_flush);
+            }
+            RenderOp::MoveCursorPositionAbs(abs_pos) => {
+                move_cursor_position_abs(abs_pos, shared_global_data, local_data).await;
+            }
+            RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
+                move_cursor_position_rel_to(
+                    box_origin_pos,
+                    content_rel_pos,
+                    shared_global_data,
+                    local_data,
+                )
+                .await;
+            }
+            RenderOp::ClearScreen => {
+                exec_render_op!(queue!(stdout(), Clear(ClearType::All)), "ClearScreen")
+            }
+            RenderOp::SetFgColor(color) => {
+                set_fg_color(color);
+            }
+            RenderOp::SetBgColor(color) => {
+                set_bg_color(color);
+            }
+            RenderOp::ResetColor => {
+                exec_render_op!(queue!(stdout(), ResetColor), "ResetColor")
+            }
+            RenderOp::ApplyColors(style) => {
+                apply_colors(style);
+            }
+            RenderOp::CompositorNoClipTruncPrintTextWithAttributes(text, maybe_style) => {
+                print_text_with_attributes(text, maybe_style, shared_global_data, local_data).await;
+            }
+            RenderOp::PrintTextWithAttributes(_text, _maybe_style) => {
+                // This should never be executed! The compositor always renders to an offscreen
+                // buffer first, then that is diff'd and then painted via calls to
+                // CompositorNoClipTruncPrintTextWithAttributes.
+            }
+        }
     }
-  }
 }
 
 // ┏━━━━━━━━━━━━━━━━━┓
 // ┃ Implement Flush ┃
 // ┛                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 pub mod flush_impl {
-  use super::*;
+    use super::*;
 
-  impl Flush for RenderOpImplCrossterm {
-    fn flush(&mut self) { flush(); }
-    fn clear_before_flush(&mut self) { clear_before_flush(); }
-  }
-
-  fn clear_before_flush() {
-    exec_render_op! {
-      queue!(stdout(),
-        ResetColor,
-        Clear(ClearType::All),
-      ),
-    "flush() -> after ResetColor, Clear"
+    impl Flush for RenderOpImplCrossterm {
+        fn flush(&mut self) { flush(); }
+        fn clear_before_flush(&mut self) { clear_before_flush(); }
     }
-  }
 
-  pub fn flush() {
-    exec_render_op!(stdout().flush(), "flush() -> stdout");
-    exec_render_op!(stderr().flush(), "flush() -> stderr");
-  }
+    fn clear_before_flush() {
+        exec_render_op! {
+          queue!(stdout(),
+            ResetColor,
+            Clear(ClearType::All),
+          ),
+        "flush() -> after ResetColor, Clear"
+        }
+    }
+
+    pub fn flush() {
+        exec_render_op!(stdout().flush(), "flush() -> stdout");
+        exec_render_op!(stderr().flush(), "flush() -> stderr");
+    }
 }
 
 // ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 // ┃ Implement all the render ops ┃
 // ┛                              ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async fn move_cursor_position_rel_to(
-  box_origin_pos: &Position,
-  content_rel_pos: &Position,
-  shared_global_data: &SharedGlobalData,
+    box_origin_pos: &Position,
+    content_rel_pos: &Position,
+    shared_global_data: &SharedGlobalData,
+    local_data: &mut RenderOpsLocalData,
 ) {
-  let new_abs_pos = *box_origin_pos + *content_rel_pos;
-  move_cursor_position_abs(&new_abs_pos, shared_global_data).await;
+    let new_abs_pos = *box_origin_pos + *content_rel_pos;
+    move_cursor_position_abs(&new_abs_pos, shared_global_data, local_data).await;
 }
 
-async fn move_cursor_position_abs(abs_pos: &Position, shared_global_data: &SharedGlobalData) {
-  let Position {
-    col_index: col,
-    row_index: row,
-  } = sanitize_and_save_abs_position(*abs_pos, shared_global_data).await;
-  exec_render_op!(
-    queue!(stdout(), MoveTo(*col, *row)),
-    format!("MoveCursorPosition(col: {}, row: {})", *col, *row)
-  )
+async fn move_cursor_position_abs(
+    abs_pos: &Position,
+    shared_global_data: &SharedGlobalData,
+    local_data: &mut RenderOpsLocalData,
+) {
+    let Position {
+        col_index: col,
+        row_index: row,
+    } = sanitize_and_save_abs_position(*abs_pos, shared_global_data, local_data).await;
+    exec_render_op!(
+        queue!(stdout(), MoveTo(*col, *row)),
+        format!("MoveCursorPosition(col: {}, row: {})", *col, *row)
+    )
 }
 
 fn raw_mode_exit(skip_flush: &mut bool) {
-  exec_render_op! {
-    queue!(stdout(),
-      Show,
-      LeaveAlternateScreen,
-      DisableMouseCapture
-    ),
-    "ExitRawMode -> Show, LeaveAlternateScreen, DisableMouseCapture"
-  };
-  flush_impl::flush();
-  exec_render_op! {terminal::disable_raw_mode(), "ExitRawMode -> disable_raw_mode()"}
-  *skip_flush = true;
+    exec_render_op! {
+      queue!(stdout(),
+        Show,
+        LeaveAlternateScreen,
+        DisableMouseCapture
+      ),
+      "ExitRawMode -> Show, LeaveAlternateScreen, DisableMouseCapture"
+    };
+    flush_impl::flush();
+    exec_render_op! {terminal::disable_raw_mode(), "ExitRawMode -> disable_raw_mode()"}
+    *skip_flush = true;
 }
 
-async fn raw_mode_enter(skip_flush: &mut bool, shared_global_data: &SharedGlobalData) {
-  shared_global_data.write().await.cursor_position = position! {col_index: 0, row_index: 0};
-  exec_render_op! {
-    terminal::enable_raw_mode(),
-    "EnterRawMode -> enable_raw_mode()"
-  };
-  exec_render_op! {
-    queue!(stdout(),
-      EnableMouseCapture,
-      EnterAlternateScreen,
-      MoveTo(0,0),
-      Clear(ClearType::All),
-      Hide,
-    ),
-  "EnterRawMode -> EnableMouseCapture, EnterAlternateScreen, MoveTo(0,0), Clear(ClearType::All), Hide"
-  }
-  flush_impl::flush();
-  *skip_flush = true;
-}
-
-async fn request_show_caret_at_position_rel_to(
-  box_origin_pos: &Position,
-  content_rel_pos: &Position,
-  shared_global_data: &SharedGlobalData,
-) {
-  let new_abs_pos = *box_origin_pos + *content_rel_pos;
-  request_show_caret_at_position_abs(&new_abs_pos, shared_global_data).await;
-}
-
-async fn request_show_caret_at_position_abs(pos: &Position, shared_global_data: &SharedGlobalData) {
-  let sanitized_pos = sanitize_and_save_abs_position(*pos, shared_global_data).await;
-  let Position {
-    col_index: col,
-    row_index: row,
-  } = sanitized_pos;
-  exec_render_op!(
-    queue!(stdout(), MoveTo(*col, *row), Show),
-    format!("ShowCaretAt -> MoveTo(col: {}, row: {}) & Show", *col, *row)
-  );
+async fn raw_mode_enter(skip_flush: &mut bool, _shared_global_data: &SharedGlobalData) {
+    exec_render_op! {
+      terminal::enable_raw_mode(),
+      "EnterRawMode -> enable_raw_mode()"
+    };
+    exec_render_op! {
+      queue!(stdout(),
+        EnableMouseCapture,
+        EnterAlternateScreen,
+        MoveTo(0,0),
+        Clear(ClearType::All),
+        Hide,
+      ),
+    "EnterRawMode -> EnableMouseCapture, EnterAlternateScreen, MoveTo(0,0), Clear(ClearType::All), Hide"
+    }
+    flush_impl::flush();
+    *skip_flush = true;
 }
 
 fn set_fg_color(color: &TuiColor) {
-  let color = color_converter::to_crossterm_color(*color);
-  exec_render_op!(
-    queue!(stdout(), SetForegroundColor(color)),
-    format!("SetFgColor({color:?})")
-  )
+    let color = color_converter::to_crossterm_color(*color);
+    exec_render_op!(
+        queue!(stdout(), SetForegroundColor(color)),
+        format!("SetFgColor({color:?})")
+    )
 }
 
 fn set_bg_color(color: &TuiColor) {
-  let color: crossterm::style::Color = color_converter::to_crossterm_color(*color);
-  exec_render_op!(
-    queue!(stdout(), SetBackgroundColor(color)),
-    format!("SetBgColor({color:?})")
-  )
+    let color: crossterm::style::Color = color_converter::to_crossterm_color(*color);
+    exec_render_op!(
+        queue!(stdout(), SetBackgroundColor(color)),
+        format!("SetBgColor({color:?})")
+    )
 }
 
 async fn print_text_with_attributes(
-  text_arg: &String,
-  maybe_style: &Option<Style>,
-  shared_global_data: &SharedGlobalData,
-  maybe_max_display_col: Option<ChUnit>,
+    text_arg: &String,
+    maybe_style: &Option<Style>,
+    shared_global_data: &SharedGlobalData,
+    local_data: &mut RenderOpsLocalData,
 ) {
-  // Are ANSI codes present?
-  let truncation_policy = {
-    if ANSIText::try_strip_ansi(text_arg).is_some() {
-      TruncationPolicy::ANSIText
-    } else {
-      TruncationPolicy::PlainText
-    }
-  };
+    use print_impl::*;
 
-  // Gen log_msg.
-  let log_msg = Cow::from(match truncation_policy {
-    TruncationPolicy::PlainText => {
-      format!("\"{text_arg}\"")
-    }
-    TruncationPolicy::ANSIText => {
-      call_if_true!(
-        DEBUG_SHOW_PIPELINE_EXPANDED,
-        log_no_err!(
-          DEBUG,
-          "ANSI {:?}, len: {:?}, plain: {:?}",
-          text_arg,
-          text_arg.len(),
-          ANSIText::try_strip_ansi(text_arg)
-        )
-      );
-      format!("ANSI detected, size: {} bytes", text_arg.len())
-    }
-  });
-
-  let text: Cow<'_, str> = Cow::from(text_arg);
-
-  let mut paint_args = PaintArgs {
-    text,
-    log_msg,
-    maybe_style,
-    shared_global_data,
-    truncation_policy,
-  };
-
-  let mut needs_reset = false;
-
-  match truncation_policy {
-    TruncationPolicy::ANSIText => {
-      truncate_ansi_text(&mut paint_args, &mut needs_reset, maybe_max_display_col).await;
-    }
-    TruncationPolicy::PlainText => {
-      truncate_plain_text(&mut paint_args, maybe_max_display_col).await;
-    }
-  }
-
-  // Print plain_text.
-  paint_style_and_text(&mut paint_args, &mut needs_reset).await;
-
-  // ┏━━━━━━━━━━━━━━━┓
-  // ┃ Inner helpers ┃
-  // ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  #[derive(Debug, Clone, Copy)]
-  enum TruncationPolicy {
-    ANSIText,
-    PlainText,
-  }
-
-  #[derive(Debug, Clone)]
-  struct PaintArgs<'a> {
-    pub text: Cow<'a, str>,
-    pub log_msg: Cow<'a, str>,
-    pub maybe_style: &'a Option<Style>,
-    pub shared_global_data: &'a SharedGlobalData,
-    pub truncation_policy: TruncationPolicy,
-  }
-
-  #[derive(Debug, Clone, Copy)]
-  enum SegmentWidth {
-    Narrow,
-    Wide,
-  }
-
-  async fn truncate_ansi_text<'a>(
-    PaintArgs {
-      text: mut_text_arg,
-      log_msg: mut_log_msg,
-      shared_global_data,
-      ..
-    }: &mut PaintArgs<'a>,
-    needs_reset: &mut bool,
-    maybe_max_display_col: Option<ChUnit>,
-  ) {
-    // Check whether the text needs to be truncated to fit the terminal window.
-    let current_cursor_col = shared_global_data.read().await.cursor_position.col_index;
-    let max_terminal_width = shared_global_data.read().await.size.col_count;
-    let max_terminal_display_cols = max_terminal_width - current_cursor_col;
-
-    // Padding (postfix add spaces to fit max_display_col).
-    {
-      let arg = mut_text_arg.to_string();
-      let ansi_text = arg.ansi_text();
-      let ansi_text_segments = ansi_text.segments(None);
-
-      if let Some(max_display_col) = maybe_max_display_col {
-        let ansi_len = ansi_text_segments.len();
-        let max_cols = ch!(@to_usize max_display_col);
-        if max_cols > ansi_len {
-          let prefix: String = ansi_text_segments.into();
-          let postfix = SPACER.repeat(max_cols - ansi_len);
-          let padded_text = format!("{}{}", prefix, postfix);
-          *mut_text_arg = Cow::from(padded_text);
-          *mut_log_msg = Cow::from(format!(
-            "ANSI 🥊 display_cols: {:?}, #seg: {:?}, bytes: {:?}, text: {:?}",
-            max_cols,
-            ansi_len,
-            mut_text_arg.len(),
-            mut_text_arg
-          ));
+    // Are ANSI codes present?
+    let content_type = {
+        if ANSIText::try_strip_ansi(text_arg).is_some() {
+            ContentType::ANSIText
+        } else {
+            ContentType::PlainText
         }
-      }
-    }
-
-    // Truncation (clip to window width, max_window_cols).
-    {
-      let arg = mut_text_arg.to_string();
-      let ansi_text = arg.ansi_text();
-      let ansi_text_segments = ansi_text.segments(None);
-      if ansi_text_segments.len() > ch!(@to_usize max_terminal_display_cols) {
-        let truncated_segments = ansi_text.segments(Some(ch!(@to_usize max_terminal_display_cols)));
-
-        let truncated_seg_len = truncated_segments.len();
-        let truncated_seg_unicode_width = truncated_segments.unicode_width;
-
-        let buff: String = truncated_segments.into();
-        *mut_text_arg = Cow::from(buff);
-        *mut_log_msg = Cow::from(format!(
-          "ANSI ✂️ display_cols: {:?}, #seg: {:?}, bytes: {:?}, text: {:?}",
-          truncated_seg_unicode_width,
-          truncated_seg_len,
-          mut_text_arg.len(),
-          mut_text_arg
-        ));
-        *needs_reset = true;
-      }
-    }
-  }
-
-  async fn truncate_plain_text<'a>(
-    PaintArgs {
-      text,
-      log_msg,
-      shared_global_data,
-      ..
-    }: &mut PaintArgs<'a>,
-    maybe_max_display_col: Option<ChUnit>,
-  ) {
-    // Check whether the text needs to be truncated to fit the terminal window.
-    let cursor_position = shared_global_data.read().await.cursor_position;
-    let max_window_cols = shared_global_data.read().await.size.col_count;
-    let plain_text_unicode_string: UnicodeString = text.as_ref().into();
-    let plain_text_len = plain_text_unicode_string.display_width;
-
-    // Padding (postfix add spaces to fit max_display_col).
-    if let Some(max_display_cols) = maybe_max_display_col {
-      let pad_len = max_display_cols - plain_text_len;
-      if pad_len > ch!(0) {
-        let pad_str = SPACER.repeat(ch!(@to_usize pad_len));
-        // Update plain_text & log_msg after truncating.
-        *text = Cow::from(format!("{}{}", text, pad_str));
-        *log_msg = Cow::from(format!("\"{text}🥊\""));
-      }
-    }
-
-    // Truncation (clip to window width, max_window_cols).
-    if cursor_position.col_index + plain_text_len > max_window_cols {
-      let trunc_plain_text = plain_text_unicode_string
-        .truncate_end_to_fit_width(max_window_cols - cursor_position.col_index)
-        .to_string();
-      // Update plain_text & log_msg after truncating.
-      *text = Cow::from(trunc_plain_text);
-      *log_msg = Cow::from(format!("\"{text}✂️\""));
-    }
-  }
-
-  /// Use [Style] to set crossterm [Attributes] ([docs](
-  /// https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes)).
-  async fn paint_style_and_text<'a>(paint_args: &mut PaintArgs<'a>, needs_reset: &mut bool) {
-    let PaintArgs { maybe_style, .. } = paint_args;
-
-    if let Some(style) = maybe_style {
-      let mask = style.clone().get_bitflags();
-      STYLE_TO_ATTRIBUTE_MAP.iter().for_each(|(flag, attr)| {
-        if mask.contains(*flag) {
-          exec_render_op!(
-            queue!(stdout(), SetAttribute(*attr)),
-            format!("PrintWithAttributes -> SetAttribute({attr:?})")
-          );
-          *needs_reset = true;
-        }
-      });
-    }
-
-    paint_text(paint_args).await;
-
-    if *needs_reset {
-      exec_render_op!(
-        queue!(stdout(), SetAttribute(Attribute::Reset)),
-        format!("PrintWithAttributes -> SetAttribute(Reset))")
-      );
-    }
-  }
-
-  async fn paint_text<'a>(paint_args: &PaintArgs<'a>) {
-    let PaintArgs {
-      text,
-      log_msg,
-      shared_global_data,
-      truncation_policy,
-      ..
-    } = paint_args;
-
-    let unicode_string: UnicodeString = text.as_ref().into();
-    let mut cursor_position_copy = shared_global_data.read().await.cursor_position;
-
-    match unicode_string.contains_wide_segments() {
-      true => {
-        for seg in unicode_string.iter() {
-          // Special handling of cursor based on unicode width.
-          if seg.unicode_width > ch!(1) {
-            // Paint text.
-            paint(Cow::Borrowed(&seg.string), log_msg, SegmentWidth::Wide);
-            jump_cursor(&cursor_position_copy, seg);
-          } else {
-            // Paint text.
-            paint(Cow::Borrowed(&seg.string), log_msg, SegmentWidth::Narrow);
-          }
-        }
-      }
-      false => {
-        // Simple print operation.
-        paint(Cow::Borrowed(text), log_msg, SegmentWidth::Narrow);
-      }
-    }
-
-    // Update cursor position after paint.
-    let display_width = match truncation_policy {
-      TruncationPolicy::ANSIText => {
-        let ansi_text = text.ansi_text();
-        let ansi_text_segments = ansi_text.segments(None);
-        let unicode_width = ansi_text_segments.unicode_width;
-        ch!(unicode_width)
-      }
-      TruncationPolicy::PlainText => unicode_string.display_width,
     };
-    cursor_position_copy.col_index += display_width;
-    sanitize_and_save_abs_position(cursor_position_copy, shared_global_data).await;
 
-    // Move cursor "manually" to cover "extra" width.
-    fn jump_cursor(pos: &Position, seg: &GraphemeClusterSegment) {
-      let jump_to_col = ch!(
-        @to_u16
-        pos.col_index + seg.display_col_offset + seg.unicode_width);
-      exec_render_op!(
-        queue!(stdout(), MoveToColumn(jump_to_col)),
-        format!("🦘 Jump cursor -> MoveToColumn({jump_to_col})")
-      );
-    }
-
-    fn paint(text: Cow<'_, str>, log_msg: &str, width: SegmentWidth) {
-      exec_render_op!(
-        queue!(stdout(), Print(text)),
-        match width {
-          SegmentWidth::Narrow => format!("Print( normal_segment {log_msg})"),
-          SegmentWidth::Wide => format!("Print( wide_segment {log_msg})"),
+    // Gen log_msg.
+    let log_msg = Cow::from(match content_type {
+        ContentType::PlainText => {
+            format!("\"{text_arg}\"")
         }
-      );
+        ContentType::ANSIText => {
+            call_if_true!(
+                DEBUG_TUI_SHOW_PIPELINE_EXPANDED,
+                log_no_err!(
+                    DEBUG,
+                    "ANSI {:?}, len: {:?}, plain: {:?}",
+                    text_arg,
+                    text_arg.len(),
+                    ANSIText::try_strip_ansi(text_arg)
+                )
+            );
+            format!("ANSI detected, size: {} bytes", text_arg.len())
+        }
+    });
+
+    let text: Cow<'_, str> = Cow::from(text_arg);
+
+    let mut paint_args = PaintArgs {
+        text,
+        log_msg,
+        maybe_style,
+        shared_global_data,
+        content_type,
+    };
+
+    let mut needs_reset = false;
+
+    // Print plain_text.
+    print_style_and_text(&mut paint_args, &mut needs_reset, local_data).await;
+}
+
+mod print_impl {
+    use super::*;
+
+    #[derive(Debug, Clone, Copy)]
+    pub enum ContentType {
+        ANSIText,
+        PlainText,
     }
-  }
+
+    #[derive(Debug)]
+    pub struct PaintArgs<'a> {
+        pub text: Cow<'a, str>,
+        pub log_msg: Cow<'a, str>,
+        pub maybe_style: &'a Option<Style>,
+        pub shared_global_data: &'a SharedGlobalData,
+        pub content_type: ContentType,
+    }
+
+    // BUG: [remove]
+    // #[derive(Debug, Clone, Copy)]
+    // pub enum SegmentWidth {
+    //     Narrow,
+    //     Wide,
+    // }
+
+    /// Use [Style] to set crossterm [Attributes] ([docs](
+    /// https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes)).
+    pub async fn print_style_and_text<'a>(
+        paint_args: &mut PaintArgs<'a>,
+        needs_reset: &mut bool,
+        local_data: &mut RenderOpsLocalData,
+    ) {
+        let PaintArgs { maybe_style, .. } = paint_args;
+
+        if let Some(style) = maybe_style {
+            let mask = style.clone().get_bitflags();
+            STYLE_TO_ATTRIBUTE_MAP.iter().for_each(|(flag, attr)| {
+                if mask.contains(*flag) {
+                    exec_render_op!(
+                        queue!(stdout(), SetAttribute(*attr)),
+                        format!("PrintWithAttributes -> SetAttribute({attr:?})")
+                    );
+                    *needs_reset = true;
+                }
+            });
+        }
+
+        print_text(paint_args, local_data).await;
+
+        if *needs_reset {
+            exec_render_op!(
+                queue!(stdout(), SetAttribute(Attribute::Reset)),
+                format!("PrintWithAttributes -> SetAttribute(Reset))")
+            );
+        }
+    }
+
+    // BUG: fix this (move to editor_engine_internal_api.rs)
+    pub async fn print_text<'a>(paint_args: &PaintArgs<'a>, local_data: &mut RenderOpsLocalData) {
+        let PaintArgs {
+            text,
+            log_msg,
+            shared_global_data,
+            content_type,
+            ..
+        } = paint_args;
+
+        let unicode_string: UnicodeString = text.as_ref().into();
+        let mut cursor_position_copy = local_data.cursor_position;
+
+        // BUG: [remove] ... code smell -> this should be in the editor!
+        // match unicode_string.contains_wide_segments() {
+        //     true => {
+        //         for seg in unicode_string.iter() {
+        //             // Special handling of cursor based on unicode width.
+        //             if seg.unicode_width > ch!(1) {
+        //                 // Paint text.
+        //                 actually_print(Cow::Borrowed(&seg.string), log_msg, SegmentWidth::Wide);
+        //                 jump_cursor(&cursor_position_copy, seg);
+        //             } else {
+        //                 // Paint text.
+        //                 actually_print(Cow::Borrowed(&seg.string), log_msg, SegmentWidth::Narrow);
+        //             }
+        //         }
+        //     }
+        //     false => {
+        //         // Simple print operation.
+        //         actually_print(Cow::Borrowed(text), log_msg, SegmentWidth::Narrow);
+        //     }
+        // }
+
+        // Actually print text.
+        {
+            let text = Cow::Borrowed(text);
+            let log_msg: &str = log_msg;
+            exec_render_op!(
+                queue!(stdout(), Print(&text)),
+                format!("Print( {} {log_msg})", &text)
+            );
+        };
+
+        // Update cursor position after print.
+        let display_width = match content_type {
+            ContentType::ANSIText => {
+                let ansi_text = text.ansi_text();
+                let ansi_text_segments = ansi_text.segments(None);
+                let unicode_width = ansi_text_segments.display_width;
+                ch!(unicode_width)
+            }
+            ContentType::PlainText => unicode_string.display_width,
+        };
+        cursor_position_copy.col_index += display_width;
+        sanitize_and_save_abs_position(cursor_position_copy, shared_global_data, local_data).await;
+
+        // BUG: [remove] this is a needless optimization that is covered by render_pipeline_to_offscreen_buffer.rs::print_???_text
+        // Move cursor "manually" to cover "extra" (display) width of a single character. This is a
+        // necessary precautionary measure, to make sure the behavior is the same on all terminals.
+        // In practice this means that terminals will be "broken" in the same way across multiple
+        // terminal emulators and OSes.
+        // 1. Terminals vary in their support of complex grapheme clusters (joined emoji). This code
+        //    uses the crate unicode_width to display a given UTF-8 character "correctly" in all
+        //    terminals. The number reported by this crate and the actual display width that the
+        //    specific terminal emulator + OS combo will display may be different.
+        // 2. This means that in some terminals, the caret itself has to be manually "jumped" to
+        //    covert the special case of a really wide UTF-8 character.
+        // 3. The cursor_pos is calculated based on the unicode_width crate values. So there is no
+        //    need to adjust that number in this function.
+        // fn jump_cursor(pos: &Position, seg: &GraphemeClusterSegment) {
+        //     let jump_to_col =
+        //         ch!(@to_u16 pos.col_index + seg.display_col_offset + seg.unicode_width);
+        //     exec_render_op!(
+        //         queue!(stdout(), MoveToColumn(jump_to_col)),
+        //         format!("🦘 Jump cursor -> MoveToColumn({jump_to_col})")
+        //     );
+        // }
+        // fn actually_print(text: Cow<'_, str>, log_msg: &str, width: SegmentWidth) {
+        //     exec_render_op!(
+        //         queue!(stdout(), Print(text)),
+        //         match width {
+        //             SegmentWidth::Narrow => format!("Print( normal_segment {log_msg})"),
+        //             SegmentWidth::Wide => format!("Print( wide_segment {log_msg})"),
+        //         }
+        //     );
+        // }
+    }
 }
 
 fn apply_colors(style: &Option<Style>) {
-  if style.is_some() {
-    // Use Style to set crossterm Colors.
-    // Docs: https://docs.rs/crossterm/latest/crossterm/style/index.html#colors
-    let mut style = style.clone().unwrap();
-    let mask = style.get_bitflags();
-    if mask.contains(StyleFlag::COLOR_BG_SET) {
-      let color_bg = style.color_bg.unwrap();
-      let color_bg: crossterm::style::Color = color_converter::to_crossterm_color(color_bg);
-      exec_render_op!(
-        queue!(stdout(), SetBackgroundColor(color_bg)),
-        format!("ApplyColors -> SetBackgroundColor({color_bg:?})")
-      )
+    if style.is_some() {
+        // Use Style to set crossterm Colors.
+        // Docs: https://docs.rs/crossterm/latest/crossterm/style/index.html#colors
+        let mut style = style.clone().unwrap();
+        let mask = style.get_bitflags();
+        if mask.contains(StyleFlag::COLOR_BG_SET) {
+            let color_bg = style.color_bg.unwrap();
+            let color_bg: crossterm::style::Color = color_converter::to_crossterm_color(color_bg);
+            exec_render_op!(
+                queue!(stdout(), SetBackgroundColor(color_bg)),
+                format!("ApplyColors -> SetBackgroundColor({color_bg:?})")
+            )
+        }
+        if mask.contains(StyleFlag::COLOR_FG_SET) {
+            let color_fg = style.color_fg.unwrap();
+            let color_fg: crossterm::style::Color = color_converter::to_crossterm_color(color_fg);
+            exec_render_op!(
+                queue!(stdout(), SetForegroundColor(color_fg)),
+                format!("ApplyColors -> SetForegroundColor({color_fg:?})")
+            )
+        }
     }
-    if mask.contains(StyleFlag::COLOR_FG_SET) {
-      let color_fg = style.color_fg.unwrap();
-      let color_fg: crossterm::style::Color = color_converter::to_crossterm_color(color_fg);
-      exec_render_op!(
-        queue!(stdout(), SetForegroundColor(color_fg)),
-        format!("ApplyColors -> SetForegroundColor({color_fg:?})")
-      )
-    }
-  }
 }
 
 // ┏━━━━━━━━━━━━━━━━━━━━━━━━┓
 // ┃ Style to attribute map ┃
 // ┛                        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 pub static STYLE_TO_ATTRIBUTE_MAP: Lazy<HashMap<StyleFlag, Attribute>> = Lazy::new(|| {
-  let mut map = HashMap::new();
-  map.insert(StyleFlag::BOLD_SET, Attribute::Bold);
-  map.insert(StyleFlag::DIM_SET, Attribute::Dim);
-  map.insert(StyleFlag::UNDERLINE_SET, Attribute::Underlined);
-  map.insert(StyleFlag::REVERSE_SET, Attribute::Reverse);
-  map.insert(StyleFlag::HIDDEN_SET, Attribute::Hidden);
-  map.insert(StyleFlag::STRIKETHROUGH_SET, Attribute::Fraktur);
-  map
+    let mut map = HashMap::new();
+    map.insert(StyleFlag::BOLD_SET, Attribute::Bold);
+    map.insert(StyleFlag::DIM_SET, Attribute::Dim);
+    map.insert(StyleFlag::UNDERLINE_SET, Attribute::Underlined);
+    map.insert(StyleFlag::REVERSE_SET, Attribute::Reverse);
+    map.insert(StyleFlag::HIDDEN_SET, Attribute::Hidden);
+    map.insert(StyleFlag::STRIKETHROUGH_SET, Attribute::Fraktur);
+    map
 });
+
+// ┏━━━━━━━━━━━━━━━━━┓
+// ┃ exec_render_op! ┃
+// ┛                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/// Given a crossterm command, this will run it and [log!] the [Result] that is returned. If [log!]
+/// fails, then it will print a message to stderr.
+///
+/// Paste docs: <https://github.com/dtolnay/paste>
+#[macro_export]
+macro_rules! exec_render_op {
+    (
+    $arg_cmd: expr,
+    $arg_log_msg: expr
+  ) => {{
+        // Generate a new function that returns [CommonResult]. This needs to be called. The only
+        // purpose of this generated method is to handle errors that may result from calling log! macro
+        // when there are issues accessing the log file for whatever reason.
+        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
+
+        let _fn_wrap_for_logging_err = || -> CommonResult<()> {
+            throws!({
+                // Execute the command.
+                if let Err(err) = $arg_cmd {
+                    call_if_true!(
+                        DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+                        log!(ERROR, "crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err)
+                    );
+                } else {
+                    call_if_true! {
+                      DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+                      log!(INFO, "crossterm: ✅ {} successfully", $arg_log_msg)
+                    };
+                }
+            })
+        };
+
+        // Call this generated function. It will fail if there are problems w/ log!(). In this case, if
+        // `DEBUG_TUI_SHOW_TERMINAL_BACKEND` is true, then it will dump the error to stderr.
+        if let Err(logging_err) = _fn_wrap_for_logging_err() {
+            let msg = format!(
+                "❌ Failed to log exec output of {}, {}",
+                stringify!($arg_cmd),
+                $arg_log_msg
+            );
+            call_if_true! {
+              DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+              debug!(ERROR_RAW &msg, logging_err)
+            };
+        }
+    }};
+}

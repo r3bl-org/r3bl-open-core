@@ -20,21 +20,21 @@ use syn::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Attrib {
-  Bold,
-  Dim,
-  Underline,
-  Reverse,
-  Hidden,
-  Strikethrough,
+    Bold,
+    Dim,
+    Underline,
+    Reverse,
+    Hidden,
+    Strikethrough,
 }
 
 /// Docs: https://docs.rs/syn/1.0.98/syn/parse/struct.ParseBuffer.html
 #[derive(Debug, Clone)]
 pub(crate) struct StyleMetadata {
-  pub id: Expr,                /* Only required field. */
-  pub attrib_vec: Vec<Attrib>, /* Attributes are optional. */
-  pub padding: Option<ChUnit>, /* Optional. */
-  pub color_fg: Option<Expr>,  /* Optional. */
-  pub color_bg: Option<Expr>,  /* Optional. */
-  pub lolcat: Option<LitBool>, /* Optional. */
+    pub id: Expr,                /* Only required field. */
+    pub attrib_vec: Vec<Attrib>, /* Attributes are optional. */
+    pub padding: Option<ChUnit>, /* Optional. */
+    pub color_fg: Option<Expr>,  /* Optional. */
+    pub color_bg: Option<Expr>,  /* Optional. */
+    pub lolcat: Option<LitBool>, /* Optional. */
 }

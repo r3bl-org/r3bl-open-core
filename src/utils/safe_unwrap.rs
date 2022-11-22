@@ -30,86 +30,92 @@ pub type WriteGuarded<'a, T> = RwLockWriteGuard<'a, T>;
 /// Macros to unwrap various locks.
 #[macro_export]
 macro_rules! unwrap {
-  (mutex from $arc_mutex: expr) => {
-    $arc_mutex.lock().unwrap()
-  };
-  (r_lock from $arc_rw_lock: expr) => {
-    $arc_rw_lock.read().unwrap()
-  };
-  (w_lock from $arc_rw_lock: expr) => {
-    $arc_rw_lock.write().unwrap()
-  };
+    (mutex from $arc_mutex: expr) => {
+        $arc_mutex.lock().unwrap()
+    };
+    (r_lock from $arc_rw_lock: expr) => {
+        $arc_rw_lock.read().unwrap()
+    };
+    (w_lock from $arc_rw_lock: expr) => {
+        $arc_rw_lock.write().unwrap()
+    };
 }
 
 // Functions to unwrap various locks.
 
-pub fn unwrap_arc_read_lock_and_call<T, F, R>(arc_lock_wrapped_value: &Arc<RwLock<T>>, receiver_fn: &mut F) -> R
+pub fn unwrap_arc_read_lock_and_call<T, F, R>(
+    arc_lock_wrapped_value: &Arc<RwLock<T>>,
+    receiver_fn: &mut F,
+) -> R
 where
-  F: FnMut(&T) -> R,
+    F: FnMut(&T) -> R,
 {
-  let arc_clone = arc_lock_wrapped_value.clone();
-  let read_guarded: ReadGuarded<'_, T> = unwrap!(r_lock from arc_clone);
-  receiver_fn(&read_guarded)
+    let arc_clone = arc_lock_wrapped_value.clone();
+    let read_guarded: ReadGuarded<'_, T> = unwrap!(r_lock from arc_clone);
+    receiver_fn(&read_guarded)
 }
 
-pub fn unwrap_arc_write_lock_and_call<T, F, R>(arc_lock_wrapped_value: &Arc<RwLock<T>>, receiver_fn: &mut F) -> R
+pub fn unwrap_arc_write_lock_and_call<T, F, R>(
+    arc_lock_wrapped_value: &Arc<RwLock<T>>,
+    receiver_fn: &mut F,
+) -> R
 where
-  F: FnMut(&mut T) -> R,
+    F: FnMut(&mut T) -> R,
 {
-  let arc_clone = arc_lock_wrapped_value.clone();
-  let mut write_guarded: WriteGuarded<'_, T> = unwrap!(w_lock from arc_clone);
-  receiver_fn(&mut write_guarded)
+    let arc_clone = arc_lock_wrapped_value.clone();
+    let mut write_guarded: WriteGuarded<'_, T> = unwrap!(w_lock from arc_clone);
+    receiver_fn(&mut write_guarded)
 }
 
 // Helper lambdas.
 
 pub fn with_mut<T, F, R>(arg: &mut T, receiver_fn: &mut F) -> R
 where
-  F: FnMut(&mut T) -> R,
+    F: FnMut(&mut T) -> R,
 {
-  receiver_fn(arg)
+    receiver_fn(arg)
 }
 
 pub fn with<T, F, R>(arg: T, receiver_fn: F) -> R
 where
-  F: Fn(T) -> R,
+    F: Fn(T) -> R,
 {
-  receiver_fn(arg)
+    receiver_fn(arg)
 }
 
 pub fn call_if_some<T, F>(option_wrapped_value: &Option<T>, receiver_fn: &F)
 where
-  F: Fn(&T),
+    F: Fn(&T),
 {
-  if let Some(value) = option_wrapped_value {
-    receiver_fn(value);
-  }
+    if let Some(value) = option_wrapped_value {
+        receiver_fn(value);
+    }
 }
 
 pub fn call_if_none<T, F>(option_wrapped_value: &Option<T>, receiver_fn: &F)
 where
-  F: Fn(),
+    F: Fn(),
 {
-  if (option_wrapped_value).is_none() {
-    receiver_fn();
-  }
+    if (option_wrapped_value).is_none() {
+        receiver_fn();
+    }
 }
 
 pub fn call_if_ok<T, F, E>(option_wrapped_value: &Result<T, E>, receiver_fn: &F)
 where
-  F: Fn(&T),
+    F: Fn(&T),
 {
-  if let Ok(value) = option_wrapped_value {
-    receiver_fn(value);
-  }
+    if let Ok(value) = option_wrapped_value {
+        receiver_fn(value);
+    }
 }
 
 pub fn call_if_err<T, F, E>(option_wrapped_value: &Result<T, E>, receiver_fn: &F)
 where
-  F: Fn(&E),
-  T: Debug,
+    F: Fn(&E),
+    T: Debug,
 {
-  if option_wrapped_value.is_err() {
-    receiver_fn(option_wrapped_value.as_ref().unwrap_err());
-  }
+    if option_wrapped_value.is_err() {
+        receiver_fn(option_wrapped_value.as_ref().unwrap_err());
+    }
 }

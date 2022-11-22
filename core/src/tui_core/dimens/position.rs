@@ -55,188 +55,188 @@ use crate::*;
 /// ```
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Copy, Default, GetSize, Hash)]
 pub struct Position {
-  pub col_index: ChUnit,
-  pub row_index: ChUnit,
+    pub col_index: ChUnit,
+    pub row_index: ChUnit,
 }
 
 impl Position {
-  pub fn deser_from_str(ser_str: &str) -> Option<Position> {
-    if let Ok(position) = serde_json::from_str(ser_str) {
-      Some(position)
-    } else {
-      None
+    pub fn deser_from_str(ser_str: &str) -> Option<Position> {
+        if let Ok(position) = serde_json::from_str(ser_str) {
+            Some(position)
+        } else {
+            None
+        }
     }
-  }
 
-  pub fn ser_to_string(&self) -> Option<String> {
-    let ser_str = serde_json::to_string(self);
-    if let Ok(ser_str) = ser_str {
-      Some(ser_str)
-    } else {
-      None
+    pub fn ser_to_string(&self) -> Option<String> {
+        let ser_str = serde_json::to_string(self);
+        if let Ok(ser_str) = ser_str {
+            Some(ser_str)
+        } else {
+            None
+        }
     }
-  }
 }
 
 impl Position {
-  /// Reset given `col` count to `0`.
-  pub fn reset_col(&mut self) -> Self {
-    self.col_index = ch!(0);
-    *self
-  }
-
-  /// Set given `col` count to `value`.
-  pub fn set_col(&mut self, value: ChUnit) -> Self {
-    self.col_index = value;
-    *self
-  }
-
-  /// Add given `col` count to `self`.
-  pub fn add_col(&mut self, num_cols_to_add: usize) -> Self {
-    let value: ChUnit = ch!(num_cols_to_add);
-    self.col_index += value;
-    *self
-  }
-
-  /// Add given `col` count to `self` w/ bounds check for max cols.
-  pub fn add_col_with_bounds(&mut self, value: ChUnit, max: ChUnit) -> Self {
-    if (self.col_index + value) >= max {
-      self.col_index = max;
-    } else {
-      self.col_index += value;
+    /// Reset given `col` count to `0`.
+    pub fn reset_col(&mut self) -> Self {
+        self.col_index = ch!(0);
+        *self
     }
-    *self
-  }
 
-  /// Set `col` count to `max` if `self.col` is greater than `max`.
-  pub fn clip_col_to_bounds(&mut self, max: ChUnit) -> Self {
-    if self.col_index >= max {
-      self.col_index = max;
+    /// Set given `col` count to `value`.
+    pub fn set_col(&mut self, value: ChUnit) -> Self {
+        self.col_index = value;
+        *self
     }
-    *self
-  }
 
-  /// Reset given `row` count to `0`.
-  pub fn reset_row(&mut self) -> Self {
-    self.row_index = ch!(0);
-    *self
-  }
-
-  /// Set given `row` count to `value`.
-  pub fn set_row(&mut self, value: ChUnit) -> Self {
-    self.row_index = value;
-    *self
-  }
-
-  /// Add given `row` count to `self`.
-  pub fn add_row(&mut self, num_rows_to_add: usize) -> Self {
-    let value: ChUnit = ch!(num_rows_to_add);
-    self.row_index += value;
-    *self
-  }
-
-  /// Add given `row` count to `self` w/ bounds check for max rows.
-  pub fn add_row_with_bounds(&mut self, value: ChUnit, max: ChUnit) -> Self {
-    if (self.row_index + value) >= max {
-      self.row_index = max;
-    } else {
-      self.row_index += value;
+    /// Add given `col` count to `self`.
+    pub fn add_col(&mut self, num_cols_to_add: usize) -> Self {
+        let value: ChUnit = ch!(num_cols_to_add);
+        self.col_index += value;
+        *self
     }
-    *self
-  }
 
-  pub fn sub_row(&mut self, num_rows_to_sub: usize) -> Self {
-    let value: ChUnit = ch!(num_rows_to_sub);
-    self.row_index -= value;
-    *self
-  }
+    /// Add given `col` count to `self` w/ bounds check for max cols.
+    pub fn add_col_with_bounds(&mut self, value: ChUnit, max: ChUnit) -> Self {
+        if (self.col_index + value) >= max {
+            self.col_index = max;
+        } else {
+            self.col_index += value;
+        }
+        *self
+    }
 
-  pub fn sub_col(&mut self, num_cols_to_sub: usize) -> Self {
-    let value: ChUnit = ch!(num_cols_to_sub);
-    self.col_index -= value;
-    *self
-  }
+    /// Set `col` count to `max` if `self.col` is greater than `max`.
+    pub fn clip_col_to_bounds(&mut self, max: ChUnit) -> Self {
+        if self.col_index >= max {
+            self.col_index = max;
+        }
+        *self
+    }
+
+    /// Reset given `row` count to `0`.
+    pub fn reset_row(&mut self) -> Self {
+        self.row_index = ch!(0);
+        *self
+    }
+
+    /// Set given `row` count to `value`.
+    pub fn set_row(&mut self, value: ChUnit) -> Self {
+        self.row_index = value;
+        *self
+    }
+
+    /// Add given `row` count to `self`.
+    pub fn add_row(&mut self, num_rows_to_add: usize) -> Self {
+        let value: ChUnit = ch!(num_rows_to_add);
+        self.row_index += value;
+        *self
+    }
+
+    /// Add given `row` count to `self` w/ bounds check for max rows.
+    pub fn add_row_with_bounds(&mut self, value: ChUnit, max: ChUnit) -> Self {
+        if (self.row_index + value) >= max {
+            self.row_index = max;
+        } else {
+            self.row_index += value;
+        }
+        *self
+    }
+
+    pub fn sub_row(&mut self, num_rows_to_sub: usize) -> Self {
+        let value: ChUnit = ch!(num_rows_to_sub);
+        self.row_index -= value;
+        *self
+    }
+
+    pub fn sub_col(&mut self, num_cols_to_sub: usize) -> Self {
+        let value: ChUnit = ch!(num_cols_to_sub);
+        self.col_index -= value;
+        *self
+    }
 }
 
 pub mod math_ops {
-  use super::*;
+    use super::*;
 
-  impl AddAssign<ChUnit> for Position {
-    fn add_assign(&mut self, other: ChUnit) {
-      self.col_index += other;
-      self.row_index += other;
+    impl AddAssign<ChUnit> for Position {
+        fn add_assign(&mut self, other: ChUnit) {
+            self.col_index += other;
+            self.row_index += other;
+        }
     }
-  }
 
-  impl AddAssign<Position> for Position {
-    fn add_assign(&mut self, other: Position) {
-      self.col_index += other.col_index;
-      self.row_index += other.row_index;
+    impl AddAssign<Position> for Position {
+        fn add_assign(&mut self, other: Position) {
+            self.col_index += other.col_index;
+            self.row_index += other.row_index;
+        }
     }
-  }
 
-  impl Add<Position> for Position {
-    type Output = Position;
-    fn add(self, other: Position) -> Self::Output {
-      Position {
-        col_index: self.col_index + other.col_index,
-        row_index: self.row_index + other.row_index,
-      }
+    impl Add<Position> for Position {
+        type Output = Position;
+        fn add(self, other: Position) -> Self::Output {
+            Position {
+                col_index: self.col_index + other.col_index,
+                row_index: self.row_index + other.row_index,
+            }
+        }
     }
-  }
 
-  /// Add: BoxPosition + BoxSize = BoxPosition.
-  /// <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
-  impl Add<Size> for Position {
-    type Output = Position;
-    fn add(self, other: Size) -> Self {
-      Self {
-        col_index: self.col_index + other.col_count,
-        row_index: self.row_index + other.row_count,
-      }
+    /// Add: BoxPosition + BoxSize = BoxPosition.
+    /// <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
+    impl Add<Size> for Position {
+        type Output = Position;
+        fn add(self, other: Size) -> Self {
+            Self {
+                col_index: self.col_index + other.col_count,
+                row_index: self.row_index + other.row_count,
+            }
+        }
     }
-  }
 
-  /// Mul: BoxPosition * Pair = BoxPosition.
-  /// <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
-  impl Mul<(u16, u16)> for Position {
-    type Output = Position;
-    fn mul(self, other: (u16, u16)) -> Self {
-      Self {
-        col_index: self.col_index * ch!(other.0),
-        row_index: self.row_index * ch!(other.1),
-      }
+    /// Mul: BoxPosition * Pair = BoxPosition.
+    /// <https://doc.rust-lang.org/book/ch19-03-advanced-traits.html>
+    impl Mul<(u16, u16)> for Position {
+        type Output = Position;
+        fn mul(self, other: (u16, u16)) -> Self {
+            Self {
+                col_index: self.col_index * ch!(other.0),
+                row_index: self.row_index * ch!(other.1),
+            }
+        }
     }
-  }
 }
 
 pub mod convert_position_to_other_type {
-  use super::*;
+    use super::*;
 
-  impl From<Position> for (ChUnit, ChUnit) {
-    fn from(position: Position) -> Self { (position.col_index, position.row_index) }
-  }
+    impl From<Position> for (ChUnit, ChUnit) {
+        fn from(position: Position) -> Self { (position.col_index, position.row_index) }
+    }
 }
 
 pub mod debug_formatter {
-  use super::*;
+    use super::*;
 
-  impl Debug for Position {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-      write!(f, "[col:{}, row:{}]", *self.col_index, *self.row_index)
+    impl Debug for Position {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "[col:{}, row:{}]", *self.col_index, *self.row_index)
+        }
     }
-  }
 }
 
 #[macro_export]
 macro_rules! position {
-  (
+    (
     col_index: $arg_col:expr,
     row_index: $arg_row:expr
   ) => {
-    Position {
-      col_index: $arg_col.into(),
-      row_index: $arg_row.into(),
-    }
-  };
+        Position {
+            col_index: $arg_col.into(),
+            row_index: $arg_row.into(),
+        }
+    };
 }

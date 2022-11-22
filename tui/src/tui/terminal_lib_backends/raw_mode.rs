@@ -22,26 +22,26 @@ use crate::*;
 pub struct RawMode;
 
 impl RawMode {
-  pub async fn start(shared_global_data: &SharedGlobalData) -> Self {
-    render_pipeline!(
-      @new
-      ZOrder::Normal
-      =>
-        RenderOp::EnterRawMode
-    )
-    .paint(FlushKind::JustFlush, shared_global_data)
-    .await;
-    RawMode
-  }
+    pub async fn start(shared_global_data: &SharedGlobalData) -> Self {
+        let mut skip_flush = false;
+        RenderOps::route_paint_render_op_to_backend(
+            &mut RenderOpsLocalData::default(),
+            &mut skip_flush,
+            &RenderOp::EnterRawMode,
+            shared_global_data,
+        )
+        .await;
+        RawMode
+    }
 
-  pub async fn end(&self, shared_global_data: &SharedGlobalData) {
-    render_pipeline!(
-      @new
-      ZOrder::Normal
-      =>
-        RenderOp::ExitRawMode
-    )
-    .paint(FlushKind::JustFlush, shared_global_data)
-    .await;
-  }
+    pub async fn end(&self, shared_global_data: &SharedGlobalData) {
+        let mut skip_flush = false;
+        RenderOps::route_paint_render_op_to_backend(
+            &mut RenderOpsLocalData::default(),
+            &mut skip_flush,
+            &RenderOp::ExitRawMode,
+            shared_global_data,
+        )
+        .await;
+    }
 }

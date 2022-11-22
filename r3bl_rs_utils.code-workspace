@@ -1,0 +1,11 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "copyrighter.author": "R3BL LLC",
+    "copyrighter.license": "Apache2"
+  }
+}

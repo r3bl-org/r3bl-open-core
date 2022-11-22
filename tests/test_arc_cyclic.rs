@@ -22,37 +22,37 @@ use std::sync::{Arc, RwLock, Weak};
 
 #[test]
 fn test_new() {
-  struct Gadget {
-    pub weak_me: Weak<RwLock<Gadget>>,
-    pub data: String,
-  }
-
-  impl Gadget {
-    /// Construct a reference counted Gadget.
-    fn new() -> Arc<RwLock<Self>> {
-      Arc::new_cyclic(|weak_me_ref| {
-        let weak_me_clone = weak_me_ref.clone();
-        RwLock::new(Gadget {
-          weak_me: weak_me_clone,
-          data: Default::default(),
-        })
-      })
+    struct Gadget {
+        pub weak_me: Weak<RwLock<Gadget>>,
+        pub data: String,
     }
 
-    /// Return a reference counted pointer to Self.
-    pub fn clone_arc(&self) -> Arc<RwLock<Self>> { self.weak_me.upgrade().unwrap() }
+    impl Gadget {
+        /// Construct a reference counted Gadget.
+        fn new() -> Arc<RwLock<Self>> {
+            Arc::new_cyclic(|weak_me_ref| {
+                let weak_me_clone = weak_me_ref.clone();
+                RwLock::new(Gadget {
+                    weak_me: weak_me_clone,
+                    data: Default::default(),
+                })
+            })
+        }
 
-    pub fn set_data(&mut self, arg: &str) { self.data = String::from(arg); }
+        /// Return a reference counted pointer to Self.
+        pub fn clone_arc(&self) -> Arc<RwLock<Self>> { self.weak_me.upgrade().unwrap() }
 
-    pub fn get_data(&self) -> String { self.data.clone() }
-  }
+        pub fn set_data(&mut self, arg: &str) { self.data = String::from(arg); }
 
-  let g_arc: Arc<RwLock<Gadget>> = Gadget::new();
+        pub fn get_data(&self) -> String { self.data.clone() }
+    }
 
-  g_arc.write().unwrap().set_data("foo");
-  assert_eq!(g_arc.read().unwrap().get_data(), "foo");
+    let g_arc: Arc<RwLock<Gadget>> = Gadget::new();
 
-  let g_arc_clone: Arc<RwLock<Gadget>> = g_arc.read().unwrap().clone_arc();
-  g_arc_clone.write().unwrap().set_data("dummy");
-  assert_eq!(g_arc_clone.read().unwrap().get_data(), "dummy");
+    g_arc.write().unwrap().set_data("foo");
+    assert_eq!(g_arc.read().unwrap().get_data(), "foo");
+
+    let g_arc_clone: Arc<RwLock<Gadget>> = g_arc.read().unwrap().clone_arc();
+    g_arc_clone.write().unwrap().set_data("dummy");
+    assert_eq!(g_arc_clone.read().unwrap().get_data(), "dummy");
 }

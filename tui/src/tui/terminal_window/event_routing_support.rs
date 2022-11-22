@@ -22,12 +22,12 @@ use r3bl_rs_utils_core::*;
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Continuation<T> {
-  Exit,
-  Continue,
-  ResizeAndContinue(Size),
-  Return,
-  Break,
-  Result(T),
+    Exit,
+    Continue,
+    ResizeAndContinue(Size),
+    Return,
+    Break,
+    Result(T),
 }
 
 /// This works w/ the input event routing system to provide the caller w/ information about whether
@@ -35,21 +35,21 @@ pub enum Continuation<T> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum EventPropagation {
-  ConsumedRerender,
-  Consumed,
-  Propagate,
+    ConsumedRerender,
+    Consumed,
+    Propagate,
 }
 
 /// Helper macro that works w/ [EventPropagation]. This code block commonly appears in places where
 /// an input event is processed and an [EventPropagation] is returned.
 #[macro_export]
 macro_rules! spawn_and_consume_event {
-  (
+    (
     $arg_event_consumed_bool: ident,
     $arg_shared_store:        ident,
     $arg_action:              expr
   ) => {
-    $arg_event_consumed_bool = true;
-    r3bl_redux::spawn_dispatch_action!($arg_shared_store, $arg_action);
-  };
+        $arg_event_consumed_bool = true;
+        r3bl_redux::spawn_dispatch_action!($arg_shared_store, $arg_action);
+    };
 }

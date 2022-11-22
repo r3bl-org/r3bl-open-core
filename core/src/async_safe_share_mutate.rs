@@ -28,9 +28,9 @@ type _ReadG<'a, T> = tokio::sync::RwLockReadGuard<'a, T>;
 /// [Async trait docs](https://github.com/dtolnay/async-trait).
 #[async_trait::async_trait]
 pub trait SafeToShare<T> {
-  async fn set_value(&self, value: T);
-  async fn get_value<'a>(&'a self) -> _ReadG<'a, T>;
-  fn get_ref(&self) -> _Arc<_RwLock<T>>;
+    async fn set_value(&self, value: T);
+    async fn get_value<'a>(&'a self) -> _ReadG<'a, T>;
+    fn get_ref(&self) -> _Arc<_RwLock<T>>;
 }
 
 /// This trait marks a type as being safe to mutate (interior mutability) across
@@ -41,7 +41,7 @@ pub trait SafeToShare<T> {
 /// [Async trait docs](https://github.com/dtolnay/async-trait).
 #[async_trait::async_trait]
 pub trait SafeToMutate<T> {
-  async fn with_ref_get_value_w_lock<'a>(my_arc: &'a _Arc<_RwLock<T>>) -> _WriteG<'a, T>;
-  async fn with_ref_get_value_r_lock<'a>(my_arc: &'a _Arc<_RwLock<T>>) -> _ReadG<'a, T>;
-  async fn with_ref_set_value(my_arc: &_Arc<_RwLock<T>>, value: T);
+    async fn with_ref_get_value_w_lock<'a>(my_arc: &'a _Arc<_RwLock<T>>) -> _WriteG<'a, T>;
+    async fn with_ref_get_value_r_lock<'a>(my_arc: &'a _Arc<_RwLock<T>>) -> _ReadG<'a, T>;
+    async fn with_ref_set_value(my_arc: &_Arc<_RwLock<T>>, value: T);
 }

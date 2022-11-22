@@ -58,51 +58,57 @@ use r3bl_rs_utils_core::*;
 use crate::*;
 
 pub struct AsyncEventStream {
-  event_stream: EventStream,
+    event_stream: EventStream,
 }
 
 impl AsyncEventStream {
-  pub async fn try_to_get_input_event(&mut self) -> Option<InputEvent> {
-    self.event_stream.try_to_get_input_event().await
-  }
+    pub async fn try_to_get_input_event(&mut self) -> Option<InputEvent> {
+        self.event_stream.try_to_get_input_event().await
+    }
 }
 
 impl Default for AsyncEventStream {
-  fn default() -> Self {
-    Self {
-      event_stream: EventStream::new(),
+    fn default() -> Self {
+        Self {
+            event_stream: EventStream::new(),
+        }
     }
-  }
 }
 
 #[async_trait]
 pub trait EventStreamExt {
-  /// Try and read an [Event] from the [EventStream], and convert it into an [InputEvent]. This is a
-  /// non-blocking call. It returns an [InputEvent] wrapped in a [Option]. [None] is returned if
-  /// there was an error.
-  async fn try_to_get_input_event(&mut self) -> Option<InputEvent>;
+    /// Try and read an [Event] from the [EventStream], and convert it into an [InputEvent]. This is a
+    /// non-blocking call. It returns an [InputEvent] wrapped in a [Option]. [None] is returned if
+    /// there was an error.
+    async fn try_to_get_input_event(&mut self) -> Option<InputEvent>;
 }
 
 #[async_trait]
 impl EventStreamExt for EventStream {
-  async fn try_to_get_input_event(&mut self) -> Option<InputEvent> {
-    let maybe_event = self.next().fuse().await;
-    match maybe_event {
-      Some(Ok(event)) => {
-        let input_event: Result<InputEvent, ()> = event.try_into();
-        match input_event {
-          Ok(input_event) => Some(input_event),
-          Err(e) => {
-            call_if_true!(DEBUG_SHOW_TERMINAL_BACKEND, log_no_err!(ERROR, "Error: {:?}", e));
-            None
-          }
+    async fn try_to_get_input_event(&mut self) -> Option<InputEvent> {
+        let maybe_event = self.next().fuse().await;
+        match maybe_event {
+            Some(Ok(event)) => {
+                let input_event: Result<InputEvent, ()> = event.try_into();
+                match input_event {
+                    Ok(input_event) => Some(input_event),
+                    Err(e) => {
+                        call_if_true!(
+                            DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+                            log_no_err!(ERROR, "Error: {:?}", e)
+                        );
+                        None
+                    }
+                }
+            }
+            Some(Err(e)) => {
+                call_if_true!(
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+                    log_no_err!(ERROR, "Error: {:?}", e)
+                );
+                None
+            }
+            _ => None,
         }
-      }
-      Some(Err(e)) => {
-        call_if_true!(DEBUG_SHOW_TERMINAL_BACKEND, log_no_err!(ERROR, "Error: {:?}", e));
-        None
-      }
-      _ => None,
     }
-  }
 }

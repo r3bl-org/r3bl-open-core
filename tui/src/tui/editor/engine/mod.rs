@@ -17,10 +17,10 @@
 
 // Attach.
 pub mod editor_engine;
-pub mod editor_engine_api;
 pub mod editor_engine_internal_api;
+pub mod editor_engine_render_api;
 
 // Re-export.
 pub use editor_engine::*;
-pub use editor_engine_api::*;
 pub use editor_engine_internal_api::*;
+pub use editor_engine_render_api::*;

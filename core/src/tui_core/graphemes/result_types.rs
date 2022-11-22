@@ -24,19 +24,23 @@ use crate::*;
 /// dropped by the function that creates it, not as a result of mutation).
 #[derive(Debug, PartialEq, Eq)]
 pub struct UnicodeStringSegmentSliceResult {
-  pub unicode_string_seg: UnicodeString,
-  pub unicode_width: ChUnit,
-  pub display_col_at_which_seg_starts: ChUnit,
+    pub unicode_string_seg: UnicodeString,
+    pub unicode_width: ChUnit,
+    pub display_col_at_which_seg_starts: ChUnit,
 }
 
 impl UnicodeStringSegmentSliceResult {
-  pub fn new(string: &str, unicode_width: ChUnit, display_col_at_which_this_segment_starts: ChUnit) -> Self {
-    Self {
-      unicode_string_seg: string.into(),
-      unicode_width,
-      display_col_at_which_seg_starts: display_col_at_which_this_segment_starts,
+    pub fn new(
+        string: &str,
+        unicode_width: ChUnit,
+        display_col_at_which_this_segment_starts: ChUnit,
+    ) -> Self {
+        Self {
+            unicode_string_seg: string.into(),
+            unicode_width,
+            display_col_at_which_seg_starts: display_col_at_which_this_segment_starts,
+        }
     }
-  }
 }
 
 // ┏━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -46,15 +50,15 @@ impl UnicodeStringSegmentSliceResult {
 /// mutation).
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct NewUnicodeStringResult {
-  pub new_unicode_string: UnicodeString,
-  pub unicode_width: ChUnit,
+    pub new_unicode_string: UnicodeString,
+    pub unicode_width: ChUnit,
 }
 
 impl NewUnicodeStringResult {
-  pub fn new(new_string: String, unicode_width: ChUnit) -> Self {
-    Self {
-      new_unicode_string: new_string.into(),
-      unicode_width,
+    pub fn new(new_string: String, unicode_width: ChUnit) -> Self {
+        Self {
+            new_unicode_string: new_string.into(),
+            unicode_width,
+        }
     }
-  }
 }

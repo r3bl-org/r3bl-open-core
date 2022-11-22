@@ -22,38 +22,38 @@ use r3bl_tui::SPACER;
 use tokio::fs::File;
 
 pub async fn run_app() -> CommonResult<()> {
-  let mut my_lolcat = Lolcat::default();
+    let mut my_lolcat = Lolcat::default();
 
-  println!("{my_lolcat:?}");
+    println!("{my_lolcat:?}");
 
-  let file = File::open("Cargo.toml").await?;
-  let file = file.into_std().await;
+    let file = File::open("Cargo.toml").await?;
+    let file = file.into_std().await;
 
-  let (terminal_size_cols, _terminal_size_rows) = crossterm::terminal::size().unwrap();
+    let (terminal_size_cols, _terminal_size_rows) = crossterm::terminal::size().unwrap();
 
-  let buffer_reader = BufReader::new(file);
-  for (index, line) in buffer_reader.lines().enumerate() {
-    let line = line.unwrap();
+    let buffer_reader = BufReader::new(file);
+    for (index, line) in buffer_reader.lines().enumerate() {
+        let line = line.unwrap();
 
-    let line_number_str = format!("{}: ", index + 1);
-    let line_number_str_width = UnicodeString::from(&line_number_str).display_width;
+        let line_number_str = format!("{}: ", index + 1);
+        let line_number_str_width = UnicodeString::from(&line_number_str).display_width;
 
-    let max_content_width: usize = (terminal_size_cols - *line_number_str_width).into();
+        let max_content_width: usize = (terminal_size_cols - *line_number_str_width).into();
 
-    let line_wrapped_vec = textwrap::wrap(&line, max_content_width);
+        let line_wrapped_vec = textwrap::wrap(&line, max_content_width);
 
-    for (index, item_line) in line_wrapped_vec.iter().enumerate() {
-      if index == 0 {
-        println!("\r{line_number_str}{}", my_lolcat.format_str(item_line));
-      } else {
-        println!(
-          "\r{}{}",
-          SPACER.repeat(line_number_str_width.into()),
-          my_lolcat.format_str(item_line)
-        );
-      }
+        for (index, item_line) in line_wrapped_vec.iter().enumerate() {
+            if index == 0 {
+                println!("\r{line_number_str}{}", my_lolcat.format_str(item_line));
+            } else {
+                println!(
+                    "\r{}{}",
+                    SPACER.repeat(line_number_str_width.into()),
+                    my_lolcat.format_str(item_line)
+                );
+            }
+        }
     }
-  }
 
-  Ok(())
+    Ok(())
 }

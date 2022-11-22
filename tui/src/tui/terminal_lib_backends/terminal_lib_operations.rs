@@ -22,7 +22,7 @@ use r3bl_rs_utils_core::*;
 // ┛                                ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Interrogate crossterm [crossterm::terminal::size()] to get the size of the terminal window.
 pub fn lookup_size() -> CommonResult<Size> {
-  let (col, row) = crossterm::terminal::size()?;
-  let size: Size = size!(col_count: col, row_count: row);
-  Ok(size)
+    let (col, row) = crossterm::terminal::size()?;
+    let size: Size = size!(col_count: col, row_count: row);
+    Ok(size)
 }

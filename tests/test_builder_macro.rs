@@ -28,62 +28,62 @@
 //! `./cargo-watch-one-test.fish test_builder_macro`
 
 mod test1 {
-  use r3bl_rs_utils::Builder;
+    use r3bl_rs_utils::Builder;
 
-  #[derive(Builder)]
-  pub struct MyStruct {
-    my_string: String,
-    my_enum: MyEnum,
-    my_number: i32,
-  }
-
-  pub enum MyEnum {
-    MyVariant1,
-  }
-
-  #[test]
-  fn test_proc_macro_struct_and_enum() {
-    impl Default for MyEnum {
-      fn default() -> Self { MyEnum::MyVariant1 }
+    #[derive(Builder)]
+    pub struct MyStruct {
+        my_string: String,
+        my_enum: MyEnum,
+        my_number: i32,
     }
-  }
+
+    pub enum MyEnum {
+        MyVariant1,
+    }
+
+    #[test]
+    fn test_proc_macro_struct_and_enum() {
+        impl Default for MyEnum {
+            fn default() -> Self { MyEnum::MyVariant1 }
+        }
+    }
 }
 
 mod test2 {
-  use r3bl_rs_utils::Builder;
+    use r3bl_rs_utils::Builder;
 
-  #[derive(Builder)]
-  pub struct Point<X, Y> {
-    x: X,
-    y: Y,
-  }
+    #[derive(Builder)]
+    pub struct Point<X, Y> {
+        x: X,
+        y: Y,
+    }
 
-  #[test]
-  fn test_proc_macro_no_where_clause() {
-    let my_pt: Point<i32, i32> = PointBuilder::new().set_x(1_i32).set_y(2_i32).build();
+    #[test]
+    fn test_proc_macro_no_where_clause() {
+        let my_pt: Point<i32, i32> = PointBuilder::new().set_x(1_i32).set_y(2_i32).build();
 
-    assert_eq!(my_pt.x, 1);
-    assert_eq!(my_pt.y, 2);
-  }
+        assert_eq!(my_pt.x, 1);
+        assert_eq!(my_pt.y, 2);
+    }
 }
 
 mod test3 {
-  use r3bl_rs_utils::Builder;
+    use r3bl_rs_utils::Builder;
 
-  #[derive(Builder)]
-  pub struct Point<X, Y>
-  where
-    X: std::fmt::Display + Clone,
-    Y: std::fmt::Display + Clone,
-  {
-    x: X,
-    y: Y,
-  }
+    #[derive(Builder)]
+    pub struct Point<X, Y>
+    where
+        X: std::fmt::Display + Clone,
+        Y: std::fmt::Display + Clone,
+    {
+        x: X,
+        y: Y,
+    }
 
-  #[test]
-  fn test_proc_macro_generics() {
-    let my_pt: Point<i32, i32> = PointBuilder::new().set_x(1_i32).set_y(2_i32).build();
-    assert_eq!(my_pt.x, 1);
-    assert_eq!(my_pt.y, 2);
-  }
+    #[test]
+    fn test_proc_macro_generics() {
+        let my_pt: Point<i32, i32> = PointBuilder::new().set_x(1_i32).set_y(2_i32).build();
+        assert_eq!(my_pt.x, 1);
+        assert_eq!(my_pt.y, 2);
+    }
 }

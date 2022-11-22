@@ -17,32 +17,30 @@
 
 #[cfg(test)]
 pub mod shared {
-  use std::borrow::Cow;
+    use std::borrow::Cow;
 
-  use crate::FRONTMATTER_DELIMITER_PATTERN;
+    use crate::FRONTMATTER_DELIMITER_PATTERN;
 
-  pub fn get_md_file_invalid_frontmatter<'caller>() -> Cow<'caller, str> {
-    let markdown_input = r#"
+    pub fn get_md_file_invalid_frontmatter<'caller>() -> Cow<'caller, str> {
+        let markdown_input = r#"
   ---
   # My Heading
   "#;
-    Cow::Borrowed(markdown_input)
-  }
+        Cow::Borrowed(markdown_input)
+    }
 
-  pub fn get_md_file_no_frontmatter<'caller>() -> Cow<'caller, str> {
-    let markdown_input = include_str!("test_assets/valid-content.md");
-    Cow::Borrowed(markdown_input)
-  }
+    pub fn get_md_file_no_frontmatter<'caller>() -> Cow<'caller, str> {
+        let markdown_input = include_str!("test_assets/valid-content.md");
+        Cow::Borrowed(markdown_input)
+    }
 
-  pub fn get_md_file_with_json_frontmatter<'caller>() -> Cow<'caller, str> {
-    let frontmatter_json = include_str!("test_assets/valid-frontmatter.json");
+    pub fn get_md_file_with_json_frontmatter<'caller>() -> Cow<'caller, str> {
+        let frontmatter_json = include_str!("test_assets/valid-frontmatter.json");
 
-    let markdown = get_md_file_no_frontmatter();
+        let markdown = get_md_file_no_frontmatter();
 
-    let final_str = format!(
-      "{}\n{}\n{}\n{}",
-      FRONTMATTER_DELIMITER_PATTERN, frontmatter_json, FRONTMATTER_DELIMITER_PATTERN, markdown
-    );
-    Cow::Owned(final_str)
-  }
+        let final_str =
+            format!("{FRONTMATTER_DELIMITER_PATTERN}\n{frontmatter_json}\n{FRONTMATTER_DELIMITER_PATTERN}\n{markdown}");
+        Cow::Owned(final_str)
+    }
 }

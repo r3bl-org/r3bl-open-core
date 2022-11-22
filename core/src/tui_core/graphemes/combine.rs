@@ -20,21 +20,21 @@ use std::ops::Add;
 use crate::*;
 
 impl Add<&str> for UnicodeString {
-  type Output = Self;
+    type Output = Self;
 
-  fn add(self, rhs: &str) -> Self::Output {
-    let mut new_string = self.string;
-    new_string.push_str(rhs);
-    new_string.into()
-  }
+    fn add(self, rhs: &str) -> Self::Output {
+        let mut new_string = self.string;
+        new_string.push_str(rhs);
+        new_string.into()
+    }
 }
 
 impl Add<&UnicodeString> for UnicodeString {
-  type Output = Self;
+    type Output = Self;
 
-  fn add(self, rhs: &UnicodeString) -> Self::Output {
-    let mut new_string = self.string;
-    new_string.push_str(&rhs.string);
-    new_string.into()
-  }
+    fn add(self, rhs: &UnicodeString) -> Self::Output {
+        let mut new_string = self.string;
+        new_string.push_str(&rhs.string);
+        new_string.into()
+    }
 }

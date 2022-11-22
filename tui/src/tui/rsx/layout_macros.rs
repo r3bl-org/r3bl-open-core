@@ -89,7 +89,7 @@ macro_rules! box_start_with_surface_renderer {
 /// from the calling scope.
 #[macro_export]
 macro_rules! surface_start_with_surface_renderer {
-  (
+    (
     surface_renderer: $arg_renderer       : expr, // Eg: surface_renderer: two_col_layout,
     stylesheet:       $arg_stylesheet     : expr, // Eg: stylesheet,
     pos:              $arg_pos            : expr, // Eg: (0, 0).into(),
@@ -99,32 +99,32 @@ macro_rules! surface_start_with_surface_renderer {
     shared_global_data:   $arg_shared_global_data : expr, // Eg: shared_global_data
     window_size:      $arg_window_size    : expr  // Eg: window_size
   ) => {{
-    let mut surface = Surface {
-      stylesheet: $arg_stylesheet,
-      ..Surface::default()
-    };
+        let mut surface = Surface {
+            stylesheet: $arg_stylesheet,
+            ..Surface::default()
+        };
 
-    surface.surface_start(SurfaceProps {
-      pos: $arg_pos,
-      size: $arg_size,
-    })?;
+        surface.surface_start(SurfaceProps {
+            pos: $arg_pos,
+            size: $arg_size,
+        })?;
 
-    $arg_renderer
-      .render_in_surface(
-        GlobalScopeArgs {
-          shared_global_data: $arg_shared_global_data,
-          shared_store: $arg_shared_store,
-          state: $arg_state,
-          window_size: $arg_window_size,
-        },
-        &mut surface,
-      )
-      .await?;
+        $arg_renderer
+            .render_in_surface(
+                GlobalScopeArgs {
+                    shared_global_data: $arg_shared_global_data,
+                    shared_store: $arg_shared_store,
+                    state: $arg_state,
+                    window_size: $arg_window_size,
+                },
+                &mut surface,
+            )
+            .await?;
 
-    surface.surface_end()?;
+        surface.surface_end()?;
 
-    surface
-  }};
+        surface
+    }};
 }
 
 #[macro_export]

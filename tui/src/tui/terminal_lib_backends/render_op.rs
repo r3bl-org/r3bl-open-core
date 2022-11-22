@@ -33,7 +33,7 @@ use crate::*;
 ///
 /// let mut render_ops = render_ops!(
 ///   @new
-///   RenderOp::ClearScreen, RenderOp::CursorShow
+///   RenderOp::ClearScreen, RenderOp::ResetColor
 /// );
 /// let len = render_ops.len();
 /// let iter = render_ops.iter();
@@ -54,6 +54,7 @@ macro_rules! render_ops {
     )                       /* End repetition. */
     ,                       /* Comma separated. */
     *                       /* Zero or more times. */
+    $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
   ) => {
     /* Enclose the expansion in a block so that we can use multiple statements. */
     {
@@ -77,6 +78,7 @@ macro_rules! render_ops {
     )                       /* End repetition. */
     ,                       /* Comma separated. */
     *                       /* Zero or more times. */
+    $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
   ) => {
     /* Enclose the expansion in a block so that we can use multiple statements. */
     {
@@ -110,14 +112,14 @@ macro_rules! render_ops {
 /// 3. So there are no side effects when re-ordering or omitting painting an atomic paint operation
 ///    (eg in the case where it has already been painted before).
 ///
-/// Here's an example. Consider using the macro for convenience (see [render_ops!]). Also see
-/// [GlobalData] for more information on scoping the [cursor_position](GlobalData::cursor_position) rules.
+/// Here's an example. Consider using the macro for convenience (see [render_ops!]).
+///
 /// ```rust
 /// use r3bl_tui::*;
 ///
 /// let mut render_ops = RenderOps::default();
 /// render_ops.push(RenderOp::ClearScreen);
-/// render_ops.push(RenderOp::CursorShow);
+/// render_ops.push(RenderOp::ResetColor);
 /// let len = render_ops.len();
 /// let iter = render_ops.iter();
 /// ```
@@ -130,40 +132,80 @@ macro_rules! render_ops {
 /// "ghosts" from repaints past.
 #[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct RenderOps {
-  pub list: Vec<RenderOp>,
+    pub list: Vec<RenderOp>,
 }
 
-pub mod render_ops_helpers {
-  use super::*;
+#[derive(Default, Debug)]
+pub struct RenderOpsLocalData {
+    pub cursor_position: Position,
+}
 
-  impl Deref for RenderOps {
-    type Target = Vec<RenderOp>;
+pub mod render_ops_impl {
+    use super::*;
 
-    fn deref(&self) -> &Self::Target { &self.list }
-  }
+    impl RenderOps {
+        pub async fn execute_all(
+            &self,
+            skip_flush: &mut bool,
+            shared_global_data: &SharedGlobalData,
+        ) {
+            let mut local_data = RenderOpsLocalData::default();
+            for render_op in self.list.iter() {
+                RenderOps::route_paint_render_op_to_backend(
+                    &mut local_data,
+                    skip_flush,
+                    render_op,
+                    shared_global_data,
+                )
+                .await;
+            }
+        }
 
-  impl DerefMut for RenderOps {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.list }
-  }
-
-  impl Debug for RenderOps {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      let mut vec_lines: Vec<String> = vec![];
-
-      // First line.
-      let first_line: String = format!("RenderOps.len(): {}", self.list.len());
-      vec_lines.push(first_line);
-
-      // Subsequent lines (optional).
-      for render_op in self.iter() {
-        let line: String = format!("[{render_op:?}]");
-        vec_lines.push(line);
-      }
-
-      // Join all lines.
-      write!(f, "\n    - {}", vec_lines.join("\n      - "))
+        pub async fn route_paint_render_op_to_backend(
+            local_data: &mut RenderOpsLocalData,
+            skip_flush: &mut bool,
+            render_op: &RenderOp,
+            shared_global_data: &SharedGlobalData,
+        ) {
+            match TERMINAL_LIB_BACKEND {
+                TerminalLibBackend::Crossterm => {
+                    RenderOpImplCrossterm {}
+                        .paint(skip_flush, render_op, shared_global_data, local_data)
+                        .await;
+                }
+                TerminalLibBackend::Termion => todo!(), // FUTURE: implement PaintRenderOp trait for termion
+            }
+        }
     }
-  }
+
+    impl Deref for RenderOps {
+        type Target = Vec<RenderOp>;
+
+        fn deref(&self) -> &Self::Target { &self.list }
+    }
+
+    impl DerefMut for RenderOps {
+        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.list }
+    }
+
+    impl Debug for RenderOps {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let mut vec_lines: Vec<String> = vec![];
+
+            // First line.
+            let first_line: String = format!("RenderOps.len(): {}", self.list.len());
+            vec_lines.push(first_line);
+
+            // Subsequent lines (optional).
+            for render_op in self.iter() {
+                let line: String = format!("[{render_op:?}]");
+                vec_lines.push(line);
+            }
+
+            // Join all lines.
+            write!(f, "\n    - {}", vec_lines.join("\n      - "))
+        }
+    }
 }
 
 // ┏━━━━━━━━━━┓
@@ -171,163 +213,109 @@ pub mod render_ops_helpers {
 // ┛          ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum RenderOp {
-  EnterRawMode,
+    EnterRawMode,
 
-  ExitRawMode,
+    ExitRawMode,
 
-  /// This is always painted on top. [Position] is the absolute column and row on the terminal
-  /// screen. This uses [sanitize_and_save_abs_position] to clean up the given
-  /// [Position].
-  MoveCursorPositionAbs(Position),
+    /// This is always painted on top. [Position] is the absolute column and row on the terminal
+    /// screen. This uses [sanitize_and_save_abs_position] to clean up the given
+    /// [Position].
+    MoveCursorPositionAbs(/* absolute position */ Position),
 
-  /// This is always painted on top. 1st [Position] is the origin column and row, and the 2nd
-  /// [Position] is the offset column and row. They are added together to move the absolute position
-  /// on the terminal screen. Then [RenderOp::MoveCursorPositionAbs] is used.
-  MoveCursorPositionRelTo(Position, Position),
+    /// This is always painted on top. 1st [Position] is the origin column and row, and the 2nd
+    /// [Position] is the offset column and row. They are added together to move the absolute position
+    /// on the terminal screen. Then [RenderOp::MoveCursorPositionAbs] is used.
+    MoveCursorPositionRelTo(
+        /* origin position */ Position,
+        /* relative position */ Position,
+    ),
 
-  ClearScreen,
+    ClearScreen,
 
-  /// Directly set the fg color for crossterm w/out using [Style].
-  SetFgColor(TuiColor),
+    /// Directly set the fg color for crossterm w/out using [Style].
+    SetFgColor(TuiColor),
 
-  /// Directly set the bg color for crossterm w/out using [Style].
-  SetBgColor(TuiColor),
+    /// Directly set the bg color for crossterm w/out using [Style].
+    SetBgColor(TuiColor),
 
-  ResetColor,
+    ResetColor,
 
-  /// Translate [Style] into fg and bg colors for crossterm.
-  ApplyColors(Option<Style>),
+    /// Translate [Style] into fg and bg colors for crossterm.
+    ApplyColors(Option<Style>),
 
-  /// Translate [Style] into attributes [static@STYLE_TO_ATTRIBUTE_MAP] for crossterm (bold,
-  /// underline, strikethrough, etc).
-  ///
-  /// 1. If the [String] argument is plain text (no ANSI sequences) then it will be clipped
-  ///    available width of the terminal screen).
-  ///
-  /// 2. If the [String] argument contains ANSI sequences then it will be printed as-is. You are
-  ///    responsible for handling clipping of the text to the bounds of the terminal screen.
-  PrintTextWithAttributes(String, Option<Style>),
-  PrintTextWithAttributesAndPadding(String, Option<Style>, ChUnit),
+    /// Translate [Style] into attributes [static@STYLE_TO_ATTRIBUTE_MAP] for crossterm (bold,
+    /// underline, strikethrough, etc).
+    ///
+    /// 1. If the [String] argument is plain text (no ANSI sequences) then it will be clipped
+    ///    available width of the terminal screen).
+    ///
+    /// 2. If the [String] argument contains ANSI sequences then it will be printed as-is. You are
+    ///    responsible for handling clipping of the text to the bounds of the terminal screen.
+    PrintTextWithAttributes(String, Option<Style>),
 
-  CursorShow,
-  CursorHide,
+    /// This is **not** meant for use directly by apps. It is to be used only by the
+    /// [OffscreenBuffer]. This operation skips the checks for content width padding & clipping, and
+    /// window bounds clipping. These are not needed when the compositor is painting an offscreen
+    /// buffer, since when the offscreen buffer was created the two render ops above were used which
+    /// already handle the clipping and padding.
+    CompositorNoClipTruncPrintTextWithAttributes(String, Option<Style>),
 
-  /// [Position] is the absolute column and row on the terminal screen. This uses
-  /// [sanitize_and_save_abs_position] to clean up the given [Position].
-  RequestShowCaretAtPositionAbs(Position),
-
-  /// 1st [Position] is the origin column and row, and the 2nd [Position] is the offset column and
-  /// row. They are added together to move the absolute position on the terminal screen. Then
-  /// [RenderOp::RequestShowCaretAtPositionAbs].
-  RequestShowCaretAtPositionRelTo(Position, Position),
-
-  /// For [Default] impl.
-  Noop,
+    /// For [Default] impl.
+    Noop,
 }
 
 impl Default for RenderOp {
-  fn default() -> Self { Self::Noop }
+    fn default() -> Self { Self::Noop }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum FlushKind {
-  JustFlush,
-  ClearBeforeFlush,
+    JustFlush,
+    ClearBeforeFlush,
 }
 
 pub trait Flush {
-  fn flush(&mut self);
-  fn clear_before_flush(&mut self);
+    fn flush(&mut self);
+    fn clear_before_flush(&mut self);
 }
 
 impl Flush for RenderOp {
-  fn flush(&mut self) {
-    match TERMINAL_LIB_BACKEND {
-      TerminalLibBackend::Crossterm => {
-        RenderOpImplCrossterm {}.flush();
-      }
-      TerminalLibBackend::Termion => todo!(), // FUTURE: implement flush for termion
+    fn flush(&mut self) {
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => {
+                RenderOpImplCrossterm {}.flush();
+            }
+            TerminalLibBackend::Termion => todo!(), // FUTURE: implement flush for termion
+        }
     }
-  }
 
-  fn clear_before_flush(&mut self) {
-    match TERMINAL_LIB_BACKEND {
-      TerminalLibBackend::Crossterm => {
-        RenderOpImplCrossterm {}.clear_before_flush();
-      }
-      TerminalLibBackend::Termion => todo!(), // FUTURE: implement clear_before_flush for termion
+    fn clear_before_flush(&mut self) {
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => {
+                RenderOpImplCrossterm {}.clear_before_flush();
+            }
+            TerminalLibBackend::Termion => todo!(), // FUTURE: implement clear_before_flush for termion
+        }
     }
-  }
 }
 
 // ┏━━━━━━━━━━━━━━━━━┓
 // ┃ Debug formatter ┃
 // ┛                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 impl Debug for RenderOp {
-  /// When [RenderPipeline] is printed as debug, each [RenderOp] is printed using this method. Also
-  /// [exec_render_op!] does not use this; it has its own way of logging output.
-  fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-    match TERMINAL_LIB_BACKEND {
-      TerminalLibBackend::Crossterm => CrosstermDebugFormatRenderOp {}.debug_format(self, f),
-      TerminalLibBackend::Termion => todo!(), // FUTURE: implement debug formatter for termion
+    /// When [RenderPipeline] is printed as debug, each [RenderOp] is printed using this method. Also
+    /// [exec_render_op!] does not use this; it has its own way of logging output.
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => CrosstermDebugFormatRenderOp {}.debug_format(self, f),
+            TerminalLibBackend::Termion => todo!(), // FUTURE: implement debug formatter for termion
+        }
     }
-  }
 }
 
 // ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 // ┃ DebugFormatRenderOp trait ┃
 // ┛                           ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 pub trait DebugFormatRenderOp {
-  fn debug_format(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result;
-}
-
-// ┏━━━━━━━━━━━━━━━━━┓
-// ┃ exec_render_op! ┃
-// ┛                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// Given a crossterm command, this will run it and [log!] the [Result] that is returned. If [log!]
-/// fails, then it will print a message to stderr.
-///
-/// Paste docs: <https://github.com/dtolnay/paste>
-#[macro_export]
-macro_rules! exec_render_op {
-  (
-    $arg_cmd: expr,
-    $arg_log_msg: expr
-  ) => {{
-    // Generate a new function that returns [CommonResult]. This needs to be called. The only
-    // purpose of this generated method is to handle errors that may result from calling log! macro
-    // when there are issues accessing the log file for whatever reason.
-    use $crate::tui::DEBUG_SHOW_TERMINAL_BACKEND;
-
-    let _fn_wrap_for_logging_err = || -> CommonResult<()> {
-      throws!({
-        // Execute the command.
-        if let Err(err) = $arg_cmd {
-          call_if_true!(
-            DEBUG_SHOW_TERMINAL_BACKEND,
-            log!(ERROR, "crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err)
-          );
-        } else {
-          call_if_true! {
-            DEBUG_SHOW_TERMINAL_BACKEND,
-            log!(INFO, "crossterm: ✅ {} successfully", $arg_log_msg)
-          };
-        }
-      })
-    };
-
-    // Call this generated function. It will fail if there are problems w/ log!(). In this case, if
-    // `DEBUG_SHOW_TERMINAL_BACKEND` is true, then it will dump the error to stderr.
-    if let Err(logging_err) = _fn_wrap_for_logging_err() {
-      let msg = format!(
-        "❌ Failed to log exec output of {}, {}",
-        stringify!($arg_cmd),
-        $arg_log_msg
-      );
-      call_if_true! {
-        DEBUG_SHOW_TERMINAL_BACKEND,
-        debug!(ERROR_RAW &msg, logging_err)
-      };
-    }
-  }};
+    fn debug_format(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result;
 }

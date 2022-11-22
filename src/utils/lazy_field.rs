@@ -17,49 +17,49 @@
 
 pub trait LazyExecutor<T>
 where
-  T: Send + Sync,
+    T: Send + Sync,
 {
-  fn compute(&mut self) -> T;
+    fn compute(&mut self) -> T;
 
-  /// Book: <https://doc.rust-lang.org/book/ch10-02-traits.html>
-  #[allow(clippy::all)]
-  fn new() -> Box<dyn LazyExecutor<T> + Send + Sync>
-  where
-    Self: Default + Sized + Sync + Send + 'static,
-  {
-    Box::new(Self::default())
-  }
+    /// Book: <https://doc.rust-lang.org/book/ch10-02-traits.html>
+    #[allow(clippy::all)]
+    fn new() -> Box<dyn LazyExecutor<T> + Send + Sync>
+    where
+        Self: Default + Sized + Sync + Send + 'static,
+    {
+        Box::new(Self::default())
+    }
 }
 
 pub struct LazyField<T>
 where
-  T: Send + Sync,
+    T: Send + Sync,
 {
-  pub lazy_executor: Box<dyn LazyExecutor<T> + Send + Sync>,
-  pub field: T,
-  pub has_computed: bool,
+    pub lazy_executor: Box<dyn LazyExecutor<T> + Send + Sync>,
+    pub field: T,
+    pub has_computed: bool,
 }
 
 impl<T> LazyField<T>
 where
-  T: Send + Sync,
-  T: Default + Clone,
+    T: Send + Sync,
+    T: Default + Clone,
 {
-  pub fn new(lazy_executor: Box<dyn LazyExecutor<T> + Send + Sync>) -> Self {
-    Self {
-      lazy_executor,
-      field: T::default(),
-      has_computed: false,
+    pub fn new(lazy_executor: Box<dyn LazyExecutor<T> + Send + Sync>) -> Self {
+        Self {
+            lazy_executor,
+            field: T::default(),
+            has_computed: false,
+        }
     }
-  }
 
-  pub fn compute(&mut self) -> T {
-    if self.has_computed {
-      self.field.clone()
-    } else {
-      self.field = self.lazy_executor.compute();
-      self.has_computed = true;
-      self.field.clone()
+    pub fn compute(&mut self) -> T {
+        if self.has_computed {
+            self.field.clone()
+        } else {
+            self.field = self.lazy_executor.compute();
+            self.has_computed = true;
+            self.field.clone()
+        }
     }
-  }
 }

@@ -19,21 +19,21 @@ use r3bl_rs_utils::{LazyExecutor, LazyField};
 
 #[test]
 fn test_lazy_field() {
-  struct MyExecutor;
-  impl LazyExecutor<i32> for MyExecutor {
-    fn compute(&mut self) -> i32 { 1 }
-  }
+    struct MyExecutor;
+    impl LazyExecutor<i32> for MyExecutor {
+        fn compute(&mut self) -> i32 { 1 }
+    }
 
-  let mut lazy_field = LazyField::new(Box::new(MyExecutor));
-  assert!(!lazy_field.has_computed);
+    let mut lazy_field = LazyField::new(Box::new(MyExecutor));
+    assert!(!lazy_field.has_computed);
 
-  // First access will trigger the computation.
-  let value = lazy_field.compute();
-  assert!(lazy_field.has_computed);
-  assert_eq!(value, 1);
+    // First access will trigger the computation.
+    let value = lazy_field.compute();
+    assert!(lazy_field.has_computed);
+    assert_eq!(value, 1);
 
-  // Subsequent accesses will not trigger the computation.
-  let value = lazy_field.compute();
-  assert!(lazy_field.has_computed);
-  assert_eq!(value, 1);
+    // Subsequent accesses will not trigger the computation.
+    let value = lazy_field.compute();
+    assert!(lazy_field.has_computed);
+    assert_eq!(value, 1);
 }

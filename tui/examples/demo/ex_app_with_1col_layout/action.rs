@@ -22,16 +22,16 @@ use std::fmt::{Display, Formatter};
 #[non_exhaustive]
 #[allow(dead_code)]
 pub enum Action {
-  AddPop(i32),
-  SubPop(i32),
-  Clear,
-  Noop,
+    AddPop(i32),
+    SubPop(i32),
+    Clear,
+    Noop,
 }
 
 impl Default for Action {
-  fn default() -> Self { Action::Noop }
+    fn default() -> Self { Action::Noop }
 }
 
 impl Display for Action {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
 }

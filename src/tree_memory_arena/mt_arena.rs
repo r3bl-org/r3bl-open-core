@@ -97,56 +97,60 @@ use crate::utils::ReadGuarded;
 #[derive(Debug)]
 pub struct MTArena<T>
 where
-  T: Debug + Send + Sync + Clone + 'static,
+    T: Debug + Send + Sync + Clone + 'static,
 {
-  arena_arc: ShareableArena<T>,
+    arena_arc: ShareableArena<T>,
 }
 
 impl<T> MTArena<T>
 where
-  T: Debug + Send + Sync + Clone + 'static,
+    T: Debug + Send + Sync + Clone + 'static,
 {
-  pub fn new() -> Self {
-    MTArena {
-      arena_arc: Arc::new(RwLock::new(Arena::new())),
+    pub fn new() -> Self {
+        MTArena {
+            arena_arc: Arc::new(RwLock::new(Arena::new())),
+        }
     }
-  }
 
-  pub fn get_arena_arc(&self) -> ShareableArena<T> { self.arena_arc.clone() }
+    pub fn get_arena_arc(&self) -> ShareableArena<T> { self.arena_arc.clone() }
 
-  /// `walker_fn` is a closure that captures variables. It is wrapped in an
-  /// `Arc` to be able to clone that and share it across threads.
-  /// More info:
-  /// 1. SO thread: <https://stackoverflow.com/a/36213377/2085356>
-  /// 2. Scoped threads: <https://docs.rs/crossbeam/0.3.0/crossbeam/struct.Scope.html>
-  pub fn tree_walk_parallel(&self, node_id: usize, walker_fn: Arc<WalkerFn<T>>) -> JoinHandle<ResultUidList> {
-    let arena_arc = self.get_arena_arc();
-    let walker_fn_arc = walker_fn.clone();
+    /// `walker_fn` is a closure that captures variables. It is wrapped in an
+    /// `Arc` to be able to clone that and share it across threads.
+    /// More info:
+    /// 1. SO thread: <https://stackoverflow.com/a/36213377/2085356>
+    /// 2. Scoped threads: <https://docs.rs/crossbeam/0.3.0/crossbeam/struct.Scope.html>
+    pub fn tree_walk_parallel(
+        &self,
+        node_id: usize,
+        walker_fn: Arc<WalkerFn<T>>,
+    ) -> JoinHandle<ResultUidList> {
+        let arena_arc = self.get_arena_arc();
+        let walker_fn_arc = walker_fn.clone();
 
-    spawn(move || {
-      let read_guard: ReadGuarded<'_, Arena<T>> = arena_arc.read().unwrap();
-      let return_value = read_guard.tree_walk_dfs(node_id);
+        spawn(move || {
+            let read_guard: ReadGuarded<'_, Arena<T>> = arena_arc.read().unwrap();
+            let return_value = read_guard.tree_walk_dfs(node_id);
 
-      // While walking the tree, in a separate thread, call the `walker_fn` for each
-      // node.
-      if let Some(result_list) = return_value.clone() {
-        result_list.into_iter().for_each(|uid| {
-          let node_arc_opt = read_guard.get_node_arc(uid);
-          if let Some(node_arc) = node_arc_opt {
-            let node_ref: ReadGuarded<'_, Node<T>> = node_arc.read().unwrap();
-            walker_fn_arc(uid, node_ref.payload.clone());
-          }
-        });
-      }
+            // While walking the tree, in a separate thread, call the `walker_fn` for each
+            // node.
+            if let Some(result_list) = return_value.clone() {
+                result_list.into_iter().for_each(|uid| {
+                    let node_arc_opt = read_guard.get_node_arc(uid);
+                    if let Some(node_arc) = node_arc_opt {
+                        let node_ref: ReadGuarded<'_, Node<T>> = node_arc.read().unwrap();
+                        walker_fn_arc(uid, node_ref.payload.clone());
+                    }
+                });
+            }
 
-      return_value
-    })
-  }
+            return_value
+        })
+    }
 }
 
 impl<T> Default for MTArena<T>
 where
-  T: Debug + Send + Sync + Clone + 'static,
+    T: Debug + Send + Sync + Clone + 'static,
 {
-  fn default() -> Self { Self::new() }
+    fn default() -> Self { Self::new() }
 }
