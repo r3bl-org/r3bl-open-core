@@ -34,26 +34,26 @@ use crate::*;
 /// execute it against this buffer.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct DialogEngine {
-  pub editor_engine: EditorEngine,
-  pub maybe_style_border: Option<Style>,
-  pub maybe_style_title: Option<Style>,
-  pub maybe_style_editor: Option<Style>,
-  pub lolcat: Lolcat,
+    pub editor_engine: EditorEngine,
+    pub maybe_style_border: Option<Style>,
+    pub maybe_style_title: Option<Style>,
+    pub maybe_style_editor: Option<Style>,
+    pub lolcat: Lolcat,
 }
 
 pub mod constructor {
-  use super::*;
+    use super::*;
 
-  impl DialogEngine {
-    pub fn new(editor_engine_config_options: EditorEngineConfigOptions) -> Self {
-      Self {
-        editor_engine: EditorEngine::new(editor_engine_config_options),
-        maybe_style_border: None,
-        maybe_style_title: None,
-        maybe_style_editor: None,
-        lolcat: Lolcat::default(),
-      }
+    impl DialogEngine {
+        pub fn new(editor_engine_config_options: EditorEngineConfigOptions) -> Self {
+            Self {
+                editor_engine: EditorEngine::new(editor_engine_config_options),
+                maybe_style_border: None,
+                maybe_style_title: None,
+                maybe_style_editor: None,
+                lolcat: Lolcat::default(),
+            }
+        }
     }
-  }
 }
 pub use constructor::*;

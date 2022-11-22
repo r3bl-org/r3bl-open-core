@@ -20,27 +20,27 @@ use std::io::{BufReader, Cursor};
 use syntect::highlighting::*;
 
 pub fn try_load_r3bl_theme() -> std::io::Result<Theme> {
-  // Load bytes from file asset.
-  let theme_bytes = include_bytes!("assets/r3bl.tmTheme");
+    // Load bytes from file asset.
+    let theme_bytes = include_bytes!("assets/r3bl.tmTheme");
 
-  // Cursor implements Seek for the byte array.
-  let cursor = Cursor::new(theme_bytes);
+    // Cursor implements Seek for the byte array.
+    let cursor = Cursor::new(theme_bytes);
 
-  // Wrap the cursor in a BufReader.
-  let mut buf_reader = BufReader::new(cursor);
+    // Wrap the cursor in a BufReader.
+    let mut buf_reader = BufReader::new(cursor);
 
-  // Load the theme from the BufReader.
-  let Ok(theme) = ThemeSet::load_from_reader(&mut buf_reader) else {
+    // Load the theme from the BufReader.
+    let Ok(theme) = ThemeSet::load_from_reader(&mut buf_reader) else {
     return Err(std::io::Error::new(
       std::io::ErrorKind::InvalidData,
       "Failed to load theme",
     ));
   };
 
-  Ok(theme)
+    Ok(theme)
 }
 
 pub fn load_default_theme() -> Theme {
-  let theme_set = ThemeSet::load_defaults();
-  theme_set.themes["base16-ocean.dark"].clone()
+    let theme_set = ThemeSet::load_defaults();
+    theme_set.themes["base16-ocean.dark"].clone()
 }

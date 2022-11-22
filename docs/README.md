@@ -1,4 +1,4 @@
-# Docs and images
+# Information on managing docs, videos, and images
 
 ## draw.io
 
@@ -27,3 +27,21 @@
      - It is easiest to view the diagram on github.com.
      - You can open the SVG file in a browser, then go to developer options, and apply a CSS
        property of background color of black.
+
+## figma.com
+
+New diagrams are best created in Figma and then exported to SVG. Draw.io is difficult to use.
+
+## Videos
+
+You can use the [GPU screen recorder](https://github.com/flathub/com.dec05eba.gpu_screen_recorder)
+app for Linux to capture a video of the focused window. You can use the default settings and save
+the video as MP4 for upload into github.com & reddit.com.
+
+- Github.com
+  - Edit an the main [README.md](https://github.com/r3bl-org/r3bl_rs_utils#readme) file and drag and
+    drop the MP4 file from your desktop to the editor. This will upload the video to github.com and
+    generate a URL like this: TK:
+- Reddit.com
+  - TK: only upload a video & add description in a comment below it
+  - TK: don't include "xbox" in any substring (eg: flexbox)

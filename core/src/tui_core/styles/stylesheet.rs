@@ -22,17 +22,17 @@ use crate::*;
 // ┛            ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Default, Debug, Clone)]
 pub struct Stylesheet {
-  pub styles: Vec<Style>,
+    pub styles: Vec<Style>,
 }
 
 #[macro_export]
 macro_rules! get_style {
-  (
+    (
     from: $arg_stylesheet : expr, // Eg: from: stylesheet,
     $arg_style_name : expr        // Eg: "style1"
   ) => {
-    $arg_stylesheet.find_style_by_id($arg_style_name)
-  };
+        $arg_stylesheet.find_style_by_id($arg_style_name)
+    };
 }
 
 #[macro_export]
@@ -46,53 +46,55 @@ macro_rules! get_styles {
 }
 
 impl Stylesheet {
-  pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self { Self::default() }
 
-  pub fn add_style(&mut self, style: Style) -> CommonResult<()> {
-    throws!({
-      if style.id.is_empty() {
-        return CommonError::new_err_with_only_msg("Style id cannot be empty");
-      }
-      self.styles.push(style);
-    });
-  }
-
-  pub fn add_styles(&mut self, styles: Vec<Style>) -> CommonResult<()> {
-    throws!({
-      for style in styles {
-        self.add_style(style)?;
-      }
-    });
-  }
-
-  pub fn find_style_by_id(&self, id: &str) -> Option<Style> { self.styles.iter().find(|style| style.id == id).cloned() }
-
-  /// Returns [None] if no style in `ids` [Vec] is found.
-  pub fn find_styles_by_ids(&self, ids: Vec<&str>) -> Option<Vec<Style>> {
-    let mut styles = Vec::new();
-
-    for id in ids {
-      if let Some(style) = self.find_style_by_id(id) {
-        styles.push(style.clone());
-      }
+    pub fn add_style(&mut self, style: Style) -> CommonResult<()> {
+        throws!({
+            if style.id.is_empty() {
+                return CommonError::new_err_with_only_msg("Style id cannot be empty");
+            }
+            self.styles.push(style);
+        });
     }
 
-    if styles.is_empty() {
-      None
-    } else {
-      styles.into()
+    pub fn add_styles(&mut self, styles: Vec<Style>) -> CommonResult<()> {
+        throws!({
+            for style in styles {
+                self.add_style(style)?;
+            }
+        });
     }
-  }
 
-  pub fn compute(styles: &Option<Vec<Style>>) -> Option<Style> {
-    if let Some(styles) = styles {
-      let mut computed = Style::default();
-      styles.iter().for_each(|style| computed += style);
-      computed.into()
-    } else {
-      None
+    pub fn find_style_by_id(&self, id: &str) -> Option<Style> {
+        self.styles.iter().find(|style| style.id == id).cloned()
     }
-  }
+
+    /// Returns [None] if no style in `ids` [Vec] is found.
+    pub fn find_styles_by_ids(&self, ids: Vec<&str>) -> Option<Vec<Style>> {
+        let mut styles = Vec::new();
+
+        for id in ids {
+            if let Some(style) = self.find_style_by_id(id) {
+                styles.push(style.clone());
+            }
+        }
+
+        if styles.is_empty() {
+            None
+        } else {
+            styles.into()
+        }
+    }
+
+    pub fn compute(styles: &Option<Vec<Style>>) -> Option<Style> {
+        if let Some(styles) = styles {
+            let mut computed = Style::default();
+            styles.iter().for_each(|style| computed += style);
+            computed.into()
+        } else {
+            None
+        }
+    }
 }
 
 // ┏━━━━━━━━━━━━━┓
@@ -144,13 +146,13 @@ macro_rules! stylesheet {
 /// a vector of styles. To get around this, the [TryAdd] trait is implemented for both [Style] and
 /// [`Vec<Style>`]. Then the [stylesheet!] macro can "pseudo overload" them.
 pub trait TryAdd<OtherType = Self> {
-  fn try_add(&mut self, other: OtherType) -> CommonResult<()>;
+    fn try_add(&mut self, other: OtherType) -> CommonResult<()>;
 }
 
 impl TryAdd<Style> for Stylesheet {
-  fn try_add(&mut self, other: Style) -> CommonResult<()> { self.add_style(other) }
+    fn try_add(&mut self, other: Style) -> CommonResult<()> { self.add_style(other) }
 }
 
 impl TryAdd<Vec<Style>> for Stylesheet {
-  fn try_add(&mut self, other: Vec<Style>) -> CommonResult<()> { self.add_styles(other) }
+    fn try_add(&mut self, other: Vec<Style>) -> CommonResult<()> { self.add_styles(other) }
 }

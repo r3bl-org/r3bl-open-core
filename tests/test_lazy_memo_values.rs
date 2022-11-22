@@ -23,32 +23,32 @@ use r3bl_rs_utils::{debug, utils::LazyMemoValues};
 
 #[test]
 fn test_lazy() {
-  // These are copied in the closure below.
-  let arc_atomic_count = AtomicUsize::new(0);
-  let mut a_variable = 123;
-  let mut a_flag = false;
+    // These are copied in the closure below.
+    let arc_atomic_count = AtomicUsize::new(0);
+    let mut a_variable = 123;
+    let mut a_flag = false;
 
-  debug!(a_variable);
-  debug!(a_flag);
+    debug!(a_variable);
+    debug!(a_flag);
 
-  let mut generate_value_fn = LazyMemoValues::new(|it| {
-    arc_atomic_count.fetch_add(1, SeqCst);
-    a_variable = 12;
-    a_flag = true;
-    a_variable + it
-  });
+    let mut generate_value_fn = LazyMemoValues::new(|it| {
+        arc_atomic_count.fetch_add(1, SeqCst);
+        a_variable = 12;
+        a_flag = true;
+        a_variable + it
+    });
 
-  assert_eq!(arc_atomic_count.load(SeqCst), 0);
-  assert_eq!(generate_value_fn.get_ref(&1), &13);
-  assert_eq!(arc_atomic_count.load(SeqCst), 1);
-  assert_eq!(generate_value_fn.get_ref(&1), &13); // Won't regenerate the value.
-  assert_eq!(arc_atomic_count.load(SeqCst), 1); // Doesn't change.
+    assert_eq!(arc_atomic_count.load(SeqCst), 0);
+    assert_eq!(generate_value_fn.get_ref(&1), &13);
+    assert_eq!(arc_atomic_count.load(SeqCst), 1);
+    assert_eq!(generate_value_fn.get_ref(&1), &13); // Won't regenerate the value.
+    assert_eq!(arc_atomic_count.load(SeqCst), 1); // Doesn't change.
 
-  assert_eq!(generate_value_fn.get_ref(&2), &14);
-  assert_eq!(arc_atomic_count.load(SeqCst), 2);
-  assert_eq!(generate_value_fn.get_ref(&2), &14);
-  assert_eq!(generate_value_fn.get_copy(&2), 14);
+    assert_eq!(generate_value_fn.get_ref(&2), &14);
+    assert_eq!(arc_atomic_count.load(SeqCst), 2);
+    assert_eq!(generate_value_fn.get_ref(&2), &14);
+    assert_eq!(generate_value_fn.get_copy(&2), 14);
 
-  assert_eq!(a_variable, 12);
-  assert!(a_flag);
+    assert_eq!(a_variable, 12);
+    assert!(a_flag);
 }

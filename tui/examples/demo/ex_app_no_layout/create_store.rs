@@ -22,9 +22,9 @@ use r3bl_redux::*;
 
 // Create a new store and attach the reducer.
 pub async fn create_store() -> Store<State, Action> {
-  let mut store: Store<State, Action> = Store::default();
-  store.add_reducer(AppReducer::new()).await;
-  store
+    let mut store: Store<State, Action> = Store::default();
+    store.add_reducer(AppReducer::new()).await;
+    store
 }
 
 /// Action.
@@ -32,33 +32,35 @@ pub async fn create_store() -> Store<State, Action> {
 #[non_exhaustive]
 #[allow(dead_code)]
 pub enum Action {
-  Startup,
-  AddPop(i32),
-  SubPop(i32),
-  Clear,
-  Noop,
+    Startup,
+    AddPop(i32),
+    SubPop(i32),
+    Clear,
+    Noop,
 }
 
 impl Default for Action {
-  fn default() -> Self { Action::Noop }
+    fn default() -> Self { Action::Noop }
 }
 
 impl Display for Action {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
 }
 
 /// State.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct State {
-  pub stack: Vec<i32>,
+    pub stack: Vec<i32>,
 }
 
 impl Default for State {
-  fn default() -> Self { Self { stack: vec![0] } }
+    fn default() -> Self { Self { stack: vec![0] } }
 }
 
 impl Display for State {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "State {{ stack: {:?} }}", self.stack) }
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "State {{ stack: {:?} }}", self.stack)
+    }
 }
 
 /// Reducer.
@@ -67,35 +69,35 @@ pub struct AppReducer;
 
 #[async_trait]
 impl AsyncReducer<State, Action> for AppReducer {
-  async fn run(&self, action: &Action, state: &State) -> State {
-    let mut stack_copy = state.stack.clone();
+    async fn run(&self, action: &Action, state: &State) -> State {
+        let mut stack_copy = state.stack.clone();
 
-    match action {
-      Action::AddPop(arg) => {
-        if stack_copy.is_empty() {
-          stack_copy.push(*arg)
-        } else {
-          let top = stack_copy.pop().unwrap();
-          let sum = top + arg;
-          stack_copy.push(sum);
+        match action {
+            Action::AddPop(arg) => {
+                if stack_copy.is_empty() {
+                    stack_copy.push(*arg)
+                } else {
+                    let top = stack_copy.pop().unwrap();
+                    let sum = top + arg;
+                    stack_copy.push(sum);
+                }
+            }
+
+            Action::SubPop(arg) => {
+                if stack_copy.is_empty() {
+                    stack_copy.push(*arg)
+                } else {
+                    let top = stack_copy.pop().unwrap();
+                    let sum = top - arg;
+                    stack_copy.push(sum);
+                }
+            }
+
+            Action::Clear => stack_copy = vec![],
+
+            _ => {}
         }
-      }
 
-      Action::SubPop(arg) => {
-        if stack_copy.is_empty() {
-          stack_copy.push(*arg)
-        } else {
-          let top = stack_copy.pop().unwrap();
-          let sum = top - arg;
-          stack_copy.push(sum);
-        }
-      }
-
-      Action::Clear => stack_copy = vec![],
-
-      _ => {}
+        State { stack: stack_copy }
     }
-
-    State { stack: stack_copy }
-  }
 }

@@ -56,39 +56,39 @@
 
 #[test]
 fn test_new() {
-  type _Weak<T> = std::sync::Weak<T>;
-  type _Arc<T> = std::sync::Arc<T>;
-  type _RwLock<T> = std::sync::RwLock<T>;
-  type _Box<T> = std::boxed::Box<T>;
+    type _Weak<T> = std::sync::Weak<T>;
+    type _Arc<T> = std::sync::Arc<T>;
+    type _RwLock<T> = std::sync::RwLock<T>;
+    type _Box<T> = std::boxed::Box<T>;
 
-  pub struct FnWrapper<S, A> {
-    pub weak_me: _Weak<_RwLock<Self>>,
-    pub fn_mut: _Box<dyn Fn(S, A) -> S + Send + Sync + 'static>,
-  }
-
-  impl<S, A> FnWrapper<S, A>
-  where
-    S: Send + Sync + 'static,
-    A: Send + Sync + 'static,
-  {
-    /// Constructor.
-    pub fn from(fn_mut: impl Fn(S, A) -> S + Sync + Send + 'static) -> _Arc<_RwLock<Self>> {
-      _Arc::new_cyclic(|weak_me_ref| {
-        _RwLock::new(FnWrapper {
-          weak_me: weak_me_ref.clone(),
-          fn_mut: _Box::new(fn_mut),
-        })
-      })
+    pub struct FnWrapper<S, A> {
+        pub weak_me: _Weak<_RwLock<Self>>,
+        pub fn_mut: _Box<dyn Fn(S, A) -> S + Send + Sync + 'static>,
     }
 
-    /// Returns a clone of my `Arc`.
-    pub fn get(&self) -> _Arc<_RwLock<Self>> { self.weak_me.upgrade().unwrap() }
+    impl<S, A> FnWrapper<S, A>
+    where
+        S: Send + Sync + 'static,
+        A: Send + Sync + 'static,
+    {
+        /// Constructor.
+        pub fn from(fn_mut: impl Fn(S, A) -> S + Sync + Send + 'static) -> _Arc<_RwLock<Self>> {
+            _Arc::new_cyclic(|weak_me_ref| {
+                _RwLock::new(FnWrapper {
+                    weak_me: weak_me_ref.clone(),
+                    fn_mut: _Box::new(fn_mut),
+                })
+            })
+        }
 
-    /// Proxy for `fu_mut` invocation.
-    pub fn invoke(&self, arg1: S, arg2: A) -> S {
-      let arc_me = self.get();
-      let box_fn_mut = &arc_me.write().unwrap().fn_mut;
-      box_fn_mut(arg1, arg2)
+        /// Returns a clone of my `Arc`.
+        pub fn get(&self) -> _Arc<_RwLock<Self>> { self.weak_me.upgrade().unwrap() }
+
+        /// Proxy for `fu_mut` invocation.
+        pub fn invoke(&self, arg1: S, arg2: A) -> S {
+            let arc_me = self.get();
+            let box_fn_mut = &arc_me.write().unwrap().fn_mut;
+            box_fn_mut(arg1, arg2)
+        }
     }
-  }
 }

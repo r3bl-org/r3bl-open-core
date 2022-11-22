@@ -27,46 +27,49 @@ use crate::*;
 /// [DialogEngineApi].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DialogEvent {
-  ActivateModal,
-  EnterPressed,
-  EscPressed,
+    ActivateModal,
+    EnterPressed,
+    EscPressed,
 }
 
 impl DialogEvent {
-  /// Tries to convert the given [InputEvent] into a [DialogEvent].
-  /// - The optional `modal_keypress` is used to determine whether the [InputEvent] should be
-  ///   converted to [DialogEvent::ActivateModal].
-  /// - Enter and Esc are also matched against to return [DialogEvent::EnterPressed] and
-  ///   [DialogEvent::EscPressed]
-  /// - Otherwise, [Err] is returned.
-  pub fn try_from(input_event: &InputEvent, maybe_modal_keypress: Option<KeyPress>) -> Option<Self> {
-    if let InputEvent::Keyboard(keypress) = input_event {
-      // Compare to `modal_keypress` (if any).
-      if let Some(modal_keypress) = maybe_modal_keypress {
-        if keypress == &modal_keypress {
-          return Some(Self::ActivateModal);
-        }
-      }
+    /// Tries to convert the given [InputEvent] into a [DialogEvent].
+    /// - The optional `modal_keypress` is used to determine whether the [InputEvent] should be
+    ///   converted to [DialogEvent::ActivateModal].
+    /// - Enter and Esc are also matched against to return [DialogEvent::EnterPressed] and
+    ///   [DialogEvent::EscPressed]
+    /// - Otherwise, [Err] is returned.
+    pub fn try_from(
+        input_event: &InputEvent,
+        maybe_modal_keypress: Option<KeyPress>,
+    ) -> Option<Self> {
+        if let InputEvent::Keyboard(keypress) = input_event {
+            // Compare to `modal_keypress` (if any).
+            if let Some(modal_keypress) = maybe_modal_keypress {
+                if keypress == &modal_keypress {
+                    return Some(Self::ActivateModal);
+                }
+            }
 
-      match keypress {
-        // Compare to `Enter`.
-        KeyPress::Plain {
-          key: Key::SpecialKey(SpecialKey::Enter),
-        } => {
-          return Some(Self::EnterPressed);
+            match keypress {
+                // Compare to `Enter`.
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Enter),
+                } => {
+                    return Some(Self::EnterPressed);
+                }
+
+                // Compare to `Esc`.
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Esc),
+                } => {
+                    return Some(Self::EscPressed);
+                }
+
+                _ => {}
+            }
         }
 
-        // Compare to `Esc`.
-        KeyPress::Plain {
-          key: Key::SpecialKey(SpecialKey::Esc),
-        } => {
-          return Some(Self::EscPressed);
-        }
-
-        _ => {}
-      }
+        None
     }
-
-    None
-  }
 }

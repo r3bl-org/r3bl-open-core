@@ -26,80 +26,107 @@ use crate::*;
 
 /// Constructor function that creates a [UnicodeString] from a string slice.
 pub fn make_unicode_string_from(this: &str) -> UnicodeString {
-  let mut total_byte_offset = 0;
-  let mut total_grapheme_cluster_count = 0;
-  let mut my_unicode_string_segments = vec![];
-  let mut my_unicode_width_offset_accumulator: ChUnit = ch!(0);
+    let mut total_byte_offset = 0;
+    let mut total_grapheme_cluster_count = 0;
+    let mut my_unicode_string_segments = vec![];
+    let mut my_unicode_width_offset_accumulator: ChUnit = ch!(0);
 
-  for (grapheme_cluster_index, (byte_offset, grapheme_cluster_str)) in this.grapheme_indices(true).enumerate() {
-    let unicode_width = ch!(grapheme_cluster_str.width());
-    my_unicode_string_segments.push(GraphemeClusterSegment {
-      string: grapheme_cluster_str.into(),
-      byte_offset,
-      unicode_width,
-      logical_index: grapheme_cluster_index,
-      byte_size: grapheme_cluster_str.len(),
-      display_col_offset: my_unicode_width_offset_accumulator,
-    });
-    my_unicode_width_offset_accumulator += unicode_width;
-    total_byte_offset = byte_offset;
-    total_grapheme_cluster_count = grapheme_cluster_index;
-  }
+    for (grapheme_cluster_index, (byte_offset, grapheme_cluster_str)) in
+        this.grapheme_indices(true).enumerate()
+    {
+        let unicode_width = ch!(grapheme_cluster_str.width());
+        my_unicode_string_segments.push(GraphemeClusterSegment {
+            string: grapheme_cluster_str.into(),
+            byte_offset,
+            unicode_width,
+            logical_index: grapheme_cluster_index,
+            byte_size: grapheme_cluster_str.len(),
+            display_col_offset: my_unicode_width_offset_accumulator,
+        });
+        my_unicode_width_offset_accumulator += unicode_width;
+        total_byte_offset = byte_offset;
+        total_grapheme_cluster_count = grapheme_cluster_index;
+    }
 
-  UnicodeString {
-    string: this.into(),
-    vec_segment: my_unicode_string_segments,
-    display_width: my_unicode_width_offset_accumulator,
-    byte_size: if total_byte_offset > 0 {
-      total_byte_offset + 1 /* size = byte_offset (index) + 1 */
-    } else {
-      total_byte_offset
-    },
-    grapheme_cluster_segment_count: if total_grapheme_cluster_count > 0 {
-      total_grapheme_cluster_count + 1 /* count = grapheme_cluster_index + 1 */
-    } else {
-      total_grapheme_cluster_count
-    },
-  }
+    UnicodeString {
+        string: this.into(),
+        vec_segment: my_unicode_string_segments,
+        display_width: my_unicode_width_offset_accumulator,
+        byte_size: if total_byte_offset > 0 {
+            total_byte_offset + 1 /* size = byte_offset (index) + 1 */
+        } else {
+            total_byte_offset
+        },
+        grapheme_cluster_segment_count: if total_grapheme_cluster_count > 0 {
+            total_grapheme_cluster_count + 1 /* count = grapheme_cluster_index + 1 */
+        } else {
+            total_grapheme_cluster_count
+        },
+    }
 }
 
 // ┏━━━━━━━━━━━━━━━━━━━━━━━━┓
 // ┃ GraphemeClusterSegment ┃
 // ┛                        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Hash)]
 pub struct GraphemeClusterSegment {
-  /// The actual grapheme cluster `&str`. Eg: "H", "📦", "🙏🏽".
-  pub string: String,
-  /// The byte offset (in the original string) of the start of the `grapheme_cluster`.
-  pub byte_offset: usize,
-  /// Display width of the `string` via [`unicode_width::UnicodeWidthChar`].
-  pub unicode_width: ChUnit,
-  /// The index of this entry in the `grapheme_cluster_segment_vec`.
-  pub logical_index: usize,
-  /// The number of bytes the `string` takes up in memory.
-  pub byte_size: usize,
-  /// Display col at which this grapheme cluster starts.
-  pub display_col_offset: ChUnit,
+    /// The actual grapheme cluster `&str`. Eg: "H", "📦", "🙏🏽".
+    pub string: String,
+    /// The byte offset (in the original string) of the start of the `grapheme_cluster`.
+    pub byte_offset: usize,
+    /// Display width of the `string` via [`unicode_width::UnicodeWidthChar`].
+    pub unicode_width: ChUnit,
+    /// The index of this entry in the `grapheme_cluster_segment_vec`.
+    pub logical_index: usize,
+    /// The number of bytes the `string` takes up in memory.
+    pub byte_size: usize,
+    /// Display col at which this grapheme cluster starts.
+    pub display_col_offset: ChUnit,
+}
+
+impl From<&str> for GraphemeClusterSegment {
+    fn from(s: &str) -> Self { make_new_grapheme_cluster_segment_from(s) }
+}
+
+impl From<String> for GraphemeClusterSegment {
+    fn from(s: String) -> Self { make_new_grapheme_cluster_segment_from(&s) }
+}
+
+/// Convert [&str] to [GraphemeClusterSegment]. This is used to create a new [String] after the
+/// [UnicodeString] is modified.
+fn make_new_grapheme_cluster_segment_from(chunk: &str) -> GraphemeClusterSegment {
+    let my_string: String = chunk.to_string();
+    let unicode_string: UnicodeString = my_string.into();
+    let result = unicode_string[0].clone();
+
+    GraphemeClusterSegment {
+        string: result.string,
+        ..result
+    }
 }
 
 // ┏━━━━━━━━━━━━━━━┓
 // ┃ UnicodeString ┃
 // ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Hash)]
 pub struct UnicodeString {
-  pub string: String,
-  pub vec_segment: Vec<GraphemeClusterSegment>,
-  pub byte_size: usize,
-  pub grapheme_cluster_segment_count: usize,
-  pub display_width: ChUnit,
+    pub string: String,
+    pub vec_segment: Vec<GraphemeClusterSegment>,
+    pub byte_size: usize,
+    pub grapheme_cluster_segment_count: usize,
+    pub display_width: ChUnit,
+}
+
+impl UnicodeString {
+    pub fn get_char_width(arg: char) -> ChUnit { UnicodeWidthChar::width(arg).unwrap_or(0).into() }
 }
 
 impl Deref for UnicodeString {
-  type Target = Vec<GraphemeClusterSegment>;
+    type Target = Vec<GraphemeClusterSegment>;
 
-  fn deref(&self) -> &Self::Target { &self.vec_segment }
+    fn deref(&self) -> &Self::Target { &self.vec_segment }
 }
 
 impl DerefMut for UnicodeString {
-  fn deref_mut(&mut self) -> &mut Self::Target { &mut self.vec_segment }
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.vec_segment }
 }

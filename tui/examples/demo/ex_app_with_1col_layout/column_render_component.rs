@@ -23,205 +23,209 @@ use super::*;
 
 #[derive(Debug, Clone, Default)]
 pub struct ColumnRenderComponent {
-  pub lolcat: Lolcat,
-  pub id: FlexBoxId,
+    pub lolcat: Lolcat,
+    pub id: FlexBoxId,
 }
 
 impl ColumnRenderComponent {
-  pub fn new(id: FlexBoxId) -> Self {
-    Self {
-      id,
-      ..Default::default()
+    pub fn new(id: FlexBoxId) -> Self {
+        Self {
+            id,
+            ..Default::default()
+        }
     }
-  }
 }
 
 macro_rules! fire {
-  (@add_pop => $arg_event_consumed: ident, $arg_shared_store: ident, $arg_action: expr) => {
-    spawn_and_consume_event!($arg_event_consumed, $arg_shared_store, $arg_action);
+    (@add_pop => $arg_event_consumed: ident, $arg_shared_store: ident, $arg_action: expr) => {
+        spawn_and_consume_event!($arg_event_consumed, $arg_shared_store, $arg_action);
 
-    debug_log_action("ColumnRenderComponent::handle_event".to_string(), $arg_action);
+        debug_log_action(
+            "ColumnRenderComponent::handle_event".to_string(),
+            $arg_action,
+        );
 
-    call_if_true!(
-      DEBUG_TUI_MOD,
-      log_no_err!(
-        INFO,
-        "⛵ ColumnRenderComponent::handle_event -> + -> dispatch_spawn: {}",
-        $arg_action
-      )
-    );
-  };
-  (@sub_pop => $arg_event_consumed: ident, $arg_shared_store: ident, $arg_action: expr) => {
-    spawn_and_consume_event!($arg_event_consumed, $arg_shared_store, $arg_action);
-    call_if_true!(
-      DEBUG_TUI_MOD,
-      log_no_err!(
-        INFO,
-        "⛵ ColumnRenderComponent::handle_event -> - -> dispatch_spawn: {}",
-        $arg_action
-      )
-    );
-  };
+        call_if_true!(
+            DEBUG_TUI_MOD,
+            log_no_err!(
+                INFO,
+                "⛵ ColumnRenderComponent::handle_event -> + -> dispatch_spawn: {}",
+                $arg_action
+            )
+        );
+    };
+    (@sub_pop => $arg_event_consumed: ident, $arg_shared_store: ident, $arg_action: expr) => {
+        spawn_and_consume_event!($arg_event_consumed, $arg_shared_store, $arg_action);
+        call_if_true!(
+            DEBUG_TUI_MOD,
+            log_no_err!(
+                INFO,
+                "⛵ ColumnRenderComponent::handle_event -> - -> dispatch_spawn: {}",
+                $arg_action
+            )
+        );
+    };
 }
 
 #[async_trait]
 impl Component<State, Action> for ColumnRenderComponent {
-  fn get_id(&self) -> FlexBoxId { self.id }
+    fn get_id(&self) -> FlexBoxId { self.id }
 
-  /// Handle following input events (and consume them):
-  /// - Up,   `+` : fire `AddPop(1)`
-  /// - Down, `-` : fire `SubPop(1)`
-  async fn handle_event(
-    &mut self,
-    args: ComponentScopeArgs<'_, State, Action>,
-    input_event: &InputEvent,
-  ) -> CommonResult<EventPropagation> {
-    throws_with_return!({
-      let ComponentScopeArgs { shared_store, .. } = args;
+    /// Handle following input events (and consume them):
+    /// - Up,   `+` : fire `AddPop(1)`
+    /// - Down, `-` : fire `SubPop(1)`
+    async fn handle_event(
+        &mut self,
+        args: ComponentScopeArgs<'_, State, Action>,
+        input_event: &InputEvent,
+    ) -> CommonResult<EventPropagation> {
+        throws_with_return!({
+            let ComponentScopeArgs { shared_store, .. } = args;
 
-      let mut event_consumed = false;
+            let mut event_consumed = false;
 
-      if let InputEvent::Keyboard(KeyPress::Plain { key }) = input_event {
-        // Check for + or - key.
-        if let Key::Character(typed_char) = key {
-          match typed_char {
-            '+' => {
-              fire!(@add_pop => event_consumed, shared_store, Action::AddPop(1));
+            if let InputEvent::Keyboard(KeyPress::Plain { key }) = input_event {
+                // Check for + or - key.
+                if let Key::Character(typed_char) = key {
+                    match typed_char {
+                        '+' => {
+                            fire!(@add_pop => event_consumed, shared_store, Action::AddPop(1));
+                        }
+                        '-' => {
+                            fire!(@sub_pop => event_consumed, shared_store, Action::SubPop(1));
+                        }
+                        _ => {}
+                    }
+                }
+
+                // Check for up or down arrow key.
+                if let Key::SpecialKey(special_key) = key {
+                    match special_key {
+                        SpecialKey::Up => {
+                            fire!(@add_pop => event_consumed, shared_store, Action::AddPop(1));
+                        }
+                        SpecialKey::Down => {
+                            fire!(@sub_pop => event_consumed, shared_store, Action::SubPop(1));
+                        }
+                        _ => {}
+                    }
+                }
             }
-            '-' => {
-              fire!(@sub_pop => event_consumed, shared_store, Action::SubPop(1));
-            }
-            _ => {}
-          }
-        }
 
-        // Check for up or down arrow key.
-        if let Key::SpecialKey(special_key) = key {
-          match special_key {
-            SpecialKey::Up => {
-              fire!(@add_pop => event_consumed, shared_store, Action::AddPop(1));
-            }
-            SpecialKey::Down => {
-              fire!(@sub_pop => event_consumed, shared_store, Action::SubPop(1));
-            }
-            _ => {}
-          }
-        }
-      }
-
-      if event_consumed {
-        EventPropagation::Consumed
-      } else {
-        EventPropagation::Propagate
-      }
-    });
-  }
-
-  async fn render(
-    &mut self,
-    args: ComponentScopeArgs<'_, State, Action>,
-    current_box: &FlexBox,
-  ) -> CommonResult<RenderPipeline> {
-    throws_with_return!({
-      let ComponentScopeArgs { component_registry, .. } = args;
-
-      // Fixed strings.
-      let line_1 = format!("box.id: {} - Hello", current_box.id);
-      let line_2 = format!("box.id: {} - World", current_box.id);
-
-      // Setup intermediate vars.
-      let box_origin_pos = current_box.style_adjusted_origin_pos; // Adjusted for style margin (if any).
-      let box_bounds_size = current_box.style_adjusted_bounds_size; // Adjusted for style margin (if any).
-      let mut content_cursor_pos = position! { col_index: 0 , row_index: 0 };
-
-      let mut render_ops = render_ops!();
-
-      // Line 1.
-      {
-        let line_1_us = UnicodeString::from(line_1);
-        let line_1_us_trunc = line_1_us.truncate_to_fit_size(box_bounds_size);
-        render_ops! {
-          @add_to render_ops
-          =>
-            RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_cursor_pos),
-            RenderOp::ApplyColors(current_box.get_computed_style()),
-            RenderOp::PrintTextWithAttributesAndPadding(
-              line_1_us_trunc.into(),
-              current_box.get_computed_style(),
-              box_bounds_size.col_count
-            ),
-            RenderOp::ResetColor
-        };
-      }
-
-      // Line 2.
-      {
-        let line_2_us = UnicodeString::from(line_2);
-        let line_2_us_trunc = line_2_us.truncate_to_fit_size(box_bounds_size);
-        let line_2_postfix_padding =
-          UnicodeString::from(line_2_us_trunc).postfix_pad_with(' ', box_bounds_size.col_count);
-        render_ops! {
-          @add_to render_ops
-          =>
-            RenderOp::MoveCursorPositionRelTo(
-              box_origin_pos,
-              content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row_count)
-            ),
-            RenderOp::ApplyColors(current_box.get_computed_style()),
-            RenderOp::PrintTextWithAttributes(
-              colorize_using_lolcat! (&mut self.lolcat,"{}",line_2_us_trunc),
-              current_box.get_computed_style(),
-            ),
-            RenderOp::ResetColor,
-            if let Some(line_2_postfix_padding) = line_2_postfix_padding {
-              RenderOp::PrintTextWithAttributes(line_2_postfix_padding, None)
+            if event_consumed {
+                EventPropagation::Consumed
             } else {
-              RenderOp::Noop
+                EventPropagation::Propagate
             }
-        };
-      }
+        });
+    }
 
-      // Paint is_focused.
-      render_ops! {
-        @add_to render_ops
-        =>
-          RenderOp::MoveCursorPositionRelTo(
-            box_origin_pos,
-            content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row_count)
-          ),
-          if component_registry.has_focus.does_current_box_have_focus(current_box) {
-            RenderOp::PrintTextWithAttributes("👀".into(), None)
-          }
-          else {
-            RenderOp::PrintTextWithAttributes(" ".into(), None)
-          }
-      };
+    async fn render(
+        &mut self,
+        args: ComponentScopeArgs<'_, State, Action>,
+        current_box: &FlexBox,
+    ) -> CommonResult<RenderPipeline> {
+        throws_with_return!({
+            let ComponentScopeArgs {
+                component_registry, ..
+            } = args;
 
-      // Add render_ops to pipeline.
-      let mut pipeline = render_pipeline!();
-      pipeline.push(ZOrder::Normal, render_ops);
+            // Fixed strings.
+            let line_1 = format!("box.id: {} - Hello", current_box.id);
+            let line_2 = format!("box.id: {} - World", current_box.id);
 
-      // Log pipeline.
-      call_if_true!(DEBUG_TUI_MOD, {
-        log_no_err! {
-          INFO,
-          "\
+            // Setup intermediate vars.
+            let box_origin_pos = current_box.style_adjusted_origin_pos; // Adjusted for style margin (if any).
+            let box_bounds_size = current_box.style_adjusted_bounds_size; // Adjusted for style margin (if any).
+            let mut content_cursor_pos = position! { col_index: 0 , row_index: 0 };
+
+            let mut render_ops = render_ops!();
+
+            // Line 1.
+            {
+                let line_1_us = UnicodeString::from(line_1);
+                let line_1_us_trunc = line_1_us.truncate_to_fit_size(box_bounds_size);
+                render_ops! {
+                  @add_to render_ops
+                  =>
+                    RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_cursor_pos),
+                    RenderOp::ApplyColors(current_box.get_computed_style()),
+                    RenderOp::PrintTextWithAttributes(
+                      line_1_us_trunc.into(),
+                      current_box.get_computed_style(),
+                    ),
+                    RenderOp::ResetColor
+                };
+            }
+
+            // Line 2.
+            {
+                let line_2_us = UnicodeString::from(line_2);
+                let line_2_us_trunc = line_2_us.truncate_to_fit_size(box_bounds_size);
+                let line_2_postfix_padding = UnicodeString::from(line_2_us_trunc)
+                    .try_get_postfix_padding_for(' ', box_bounds_size.col_count);
+                render_ops! {
+                  @add_to render_ops
+                  =>
+                    RenderOp::MoveCursorPositionRelTo(
+                      box_origin_pos,
+                      content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row_count)
+                    ),
+                    RenderOp::ApplyColors(current_box.get_computed_style()),
+                    RenderOp::PrintTextWithAttributes(
+                      colorize_using_lolcat! (&mut self.lolcat,"{}",line_2_us_trunc),
+                      current_box.get_computed_style(),
+                    ),
+                    RenderOp::ResetColor,
+                    if let Some(line_2_postfix_padding) = line_2_postfix_padding {
+                      RenderOp::PrintTextWithAttributes(line_2_postfix_padding, None)
+                    } else {
+                      RenderOp::Noop
+                    }
+                };
+            }
+
+            // Paint is_focused.
+            render_ops! {
+              @add_to render_ops
+              =>
+                RenderOp::MoveCursorPositionRelTo(
+                  box_origin_pos,
+                  content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row_count)
+                ),
+                if component_registry.has_focus.does_current_box_have_focus(current_box) {
+                  RenderOp::PrintTextWithAttributes("👀".into(), None)
+                }
+                else {
+                  RenderOp::PrintTextWithAttributes(" ".into(), None)
+                }
+            };
+
+            // Add render_ops to pipeline.
+            let mut pipeline = render_pipeline!();
+            pipeline.push(ZOrder::Normal, render_ops);
+
+            // Log pipeline.
+            call_if_true!(DEBUG_TUI_MOD, {
+                log_no_err! {
+                  INFO,
+                  "\
 🦜 ColumnComponent::render ->
   - current_box: {:?},
   - box_origin_pos: {:?},
   - box_bounds_size: {:?},
   - content_pos: {:?},
   - render_pipeline: {:?}",
-          current_box,
-          box_origin_pos,
-          box_bounds_size,
-          content_cursor_pos,
-          pipeline
-        };
-      });
+                  current_box,
+                  box_origin_pos,
+                  box_bounds_size,
+                  content_cursor_pos,
+                  pipeline
+                };
+            });
 
-      // Return the pipeline.
-      pipeline
-    });
-  }
+            // Return the pipeline.
+            pipeline
+        });
+    }
 }

@@ -50,60 +50,60 @@ use crate::*;
 /// ```
 #[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Hash)]
 pub struct Size {
-  pub col_count: ChUnit, // width = number of cols (y).
-  pub row_count: ChUnit, // height = number of rows (x).
+    pub col_count: ChUnit, // width = number of cols (y).
+    pub row_count: ChUnit, // height = number of rows (x).
 }
 
 impl Size {
-  pub fn deser_from_str(ser_str: &str) -> Option<Size> {
-    if let Ok(size) = serde_json::from_str(ser_str) {
-      Some(size)
-    } else {
-      None
+    pub fn deser_from_str(ser_str: &str) -> Option<Size> {
+        if let Ok(size) = serde_json::from_str(ser_str) {
+            Some(size)
+        } else {
+            None
+        }
     }
-  }
 
-  pub fn ser_to_string(&self) -> Option<String> {
-    let ser_str = serde_json::to_string(self);
-    if let Ok(ser_str) = ser_str {
-      Some(ser_str)
-    } else {
-      None
+    pub fn ser_to_string(&self) -> Option<String> {
+        let ser_str = serde_json::to_string(self);
+        if let Ok(ser_str) = ser_str {
+            Some(ser_str)
+        } else {
+            None
+        }
     }
-  }
 }
 
 impl Size {
-  pub fn is_too_small_to_display(&self, min_col: u8, min_row: u8) -> bool {
-    self.col_count < ch!(min_col) || self.row_count < ch!(min_row)
-  }
+    pub fn is_too_small_to_display(&self, min_col: u8, min_row: u8) -> bool {
+        self.col_count < ch!(min_col) || self.row_count < ch!(min_row)
+    }
 }
 
 pub mod debug_formatter {
-  use super::*;
+    use super::*;
 
-  impl Display for Size {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-      write!(f, "Size: [{}, {}]", *self.row_count, *self.col_count)
+    impl Display for Size {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "Size: [{}, {}]", *self.row_count, *self.col_count)
+        }
     }
-  }
 
-  impl Debug for Size {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-      write!(f, "[width:{}, height:{}]", *self.col_count, *self.row_count)
+    impl Debug for Size {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "[width:{}, height:{}]", *self.col_count, *self.row_count)
+        }
     }
-  }
 }
 
 pub mod math_ops {
-  use super::*;
+    use super::*;
 
-  impl SubAssign<ChUnit> for Size {
-    fn sub_assign(&mut self, other: ChUnit) {
-      self.col_count = sub_unsigned!(*self.col_count, *other).into();
-      self.row_count = sub_unsigned!(*self.row_count, *other).into();
+    impl SubAssign<ChUnit> for Size {
+        fn sub_assign(&mut self, other: ChUnit) {
+            self.col_count = sub_unsigned!(*self.col_count, *other).into();
+            self.row_count = sub_unsigned!(*self.row_count, *other).into();
+        }
     }
-  }
 }
 
 /// Example:
@@ -112,13 +112,13 @@ pub mod math_ops {
 /// ```
 #[macro_export]
 macro_rules! size {
-  (
+    (
     col_count: $arg_col:expr,
     row_count: $arg_row:expr
   ) => {
-    Size {
-      col_count: $arg_col.into(),
-      row_count: $arg_row.into(),
-    }
-  };
+        Size {
+            col_count: $arg_col.into(),
+            row_count: $arg_row.into(),
+        }
+    };
 }

@@ -28,20 +28,20 @@
 use r3bl_rs_utils_macro::make_safe_async_fn_wrapper;
 #[tokio::test]
 async fn test_custom_syntax_full() {
-  #![allow(deprecated)]
-  make_safe_async_fn_wrapper! {
-    named FnWrapper<A>
-    containing fn_mut
-    of_type FnMut(A) -> Option<A>
-  }
+    #![allow(deprecated)]
+    make_safe_async_fn_wrapper! {
+      named FnWrapper<A>
+      containing fn_mut
+      of_type FnMut(A) -> Option<A>
+    }
 }
 
 #[test]
 fn test_simple_macro_expansion() {
-  #![allow(deprecated)]
-  make_safe_async_fn_wrapper! {
-    named FnWrapper<A>
-    containing fn_mut
-    of_type FnMut(A) -> Option<A>
-  }
+    #![allow(deprecated)]
+    make_safe_async_fn_wrapper! {
+      named FnWrapper<A>
+      containing fn_mut
+      of_type FnMut(A) -> Option<A>
+    }
 }

@@ -1,7 +1,7 @@
 # https://rust-lang.github.io/rustfmt/
 
 # width
-max_width = 120
+max_width = 100
 
 # function 
 fn_args_layout = "Tall" # Possible values: "Compressed", "Tall", "Vertical"
@@ -19,7 +19,7 @@ reorder_modules = true
 
 # misc
 hard_tabs = false
-tab_spaces = 2
+tab_spaces = 4
 trailing_comma = "Vertical"
 color = "Always"
 empty_item_single_line = true

@@ -17,7 +17,7 @@
 
 #[macro_export]
 macro_rules! render_component_in_surface {
-  (
+    (
     in:           $arg_surface          : expr, // Eg: in: surface
     component_id: $arg_component_id     : expr, // Eg: "component1"
     from:         $arg_registry         : expr, // Eg: from: registry
@@ -26,32 +26,33 @@ macro_rules! render_component_in_surface {
     shared_global_data: $arg_shared_global_data : expr, // Eg: shared_global_data
     window_size:  $arg_window_size      : expr  // Eg: window_size
   ) => {
-    let maybe_component_ref = ComponentRegistry::get_component_ref_by_id(&mut $arg_registry, $arg_component_id);
+        let maybe_component_ref =
+            ComponentRegistry::get_component_ref_by_id(&mut $arg_registry, $arg_component_id);
 
-    if let Some(component_ref) = maybe_component_ref {
-      let current_box = $arg_surface.current_box()?;
-      let queue = component_ref
-        .write()
-        .await
-        .render(
-          ComponentScopeArgs {
-            shared_global_data: $arg_shared_global_data,
-            shared_store: $arg_shared_store,
-            state: $arg_state,
-            component_registry: &mut $arg_registry,
-            window_size: $arg_window_size,
-          },
-          current_box,
-        )
-        .await?;
-      $arg_surface.render_pipeline += queue;
-    }
-  };
+        if let Some(component_ref) = maybe_component_ref {
+            let current_box = $arg_surface.current_box()?;
+            let queue = component_ref
+                .write()
+                .await
+                .render(
+                    ComponentScopeArgs {
+                        shared_global_data: $arg_shared_global_data,
+                        shared_store: $arg_shared_store,
+                        state: $arg_state,
+                        component_registry: &mut $arg_registry,
+                        window_size: $arg_window_size,
+                    },
+                    current_box,
+                )
+                .await?;
+            $arg_surface.render_pipeline += queue;
+        }
+    };
 }
 
 #[macro_export]
 macro_rules! render_component_in_box {
-  (
+    (
     in:           $arg_surface          : expr, // Eg: in: surface
     box:          $arg_box              : expr, // Eg: box: FlexBox::default()
     component_id: $arg_component_id     : expr, // Eg: "component1"
@@ -61,24 +62,25 @@ macro_rules! render_component_in_box {
     shared_global_data: $arg_shared_global_data : expr, // Eg: shared_global_data
     window_size:  $arg_window_size      : expr  // Eg: window_size
   ) => {{
-    let maybe_component_ref = ComponentRegistry::get_component_ref_by_id(&mut $arg_registry, $arg_component_id);
+        let maybe_component_ref =
+            ComponentRegistry::get_component_ref_by_id(&mut $arg_registry, $arg_component_id);
 
-    if let Some(component_ref) = maybe_component_ref {
-      let queue: RenderPipeline = component_ref
-        .write()
-        .await
-        .render(
-          ComponentScopeArgs {
-            shared_global_data: $arg_shared_global_data,
-            shared_store: $arg_shared_store,
-            state: $arg_state,
-            component_registry: &mut $arg_registry,
-            window_size: $arg_window_size,
-          },
-          &$arg_box,
-        )
-        .await?;
-      $arg_surface.render_pipeline += queue;
-    }
-  }};
+        if let Some(component_ref) = maybe_component_ref {
+            let queue: RenderPipeline = component_ref
+                .write()
+                .await
+                .render(
+                    ComponentScopeArgs {
+                        shared_global_data: $arg_shared_global_data,
+                        shared_store: $arg_shared_store,
+                        state: $arg_state,
+                        component_registry: &mut $arg_registry,
+                        window_size: $arg_window_size,
+                    },
+                    &$arg_box,
+                )
+                .await?;
+            $arg_surface.render_pipeline += queue;
+        }
+    }};
 }

@@ -22,46 +22,46 @@ use r3bl_tui::*;
 
 #[derive(Clone, PartialEq, Default)]
 pub struct State {
-  pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
-  pub dialog_buffer: DialogBuffer,
+    pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
+    pub dialog_buffer: DialogBuffer,
 }
 
 impl HasEditorBuffers for State {
-  fn get_editor_buffer(&self, id: FlexBoxId) -> Option<&EditorBuffer> {
-    if let Some(buffer) = self.editor_buffers.get(&id) {
-      Some(buffer)
-    } else {
-      None
+    fn get_editor_buffer(&self, id: FlexBoxId) -> Option<&EditorBuffer> {
+        if let Some(buffer) = self.editor_buffers.get(&id) {
+            Some(buffer)
+        } else {
+            None
+        }
     }
-  }
 }
 
 impl HasDialogBuffer for State {
-  fn get_dialog_buffer(&self) -> &DialogBuffer { &self.dialog_buffer }
+    fn get_dialog_buffer(&self) -> &DialogBuffer { &self.dialog_buffer }
 }
 
 mod debug_format_helpers {
-  use super::*;
+    use super::*;
 
-  fn fmt(this: &State, f: &mut Formatter<'_>) -> Result {
-    write! { f,
-      "\nState [                               \n\
-      - dialog_buffer: title: {:?}             \n\
-      - dialog_buffer: editor_buffer: {:?}     \n\
-      - buffers: {:?}                          \n\
-      ]",
-      this.dialog_buffer.title,
-      // this.dialog_buffer.buffer,
-      this.dialog_buffer.editor_buffer.get_as_string(),
-      this.editor_buffers,
+    fn fmt(this: &State, f: &mut Formatter<'_>) -> Result {
+        write! { f,
+          "\nState [                               \n\
+          - dialog_buffer: title: {:?}             \n\
+          - dialog_buffer: editor_buffer: {:?}     \n\
+          - buffers: {:?}                          \n\
+          ]",
+          this.dialog_buffer.title,
+          // this.dialog_buffer.buffer,
+          this.dialog_buffer.editor_buffer.get_as_string(),
+          this.editor_buffers,
+        }
     }
-  }
 
-  impl Display for State {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
-  }
+    impl Display for State {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
+    }
 
-  impl Debug for State {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
-  }
+    impl Debug for State {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
+    }
 }

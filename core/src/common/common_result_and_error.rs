@@ -58,31 +58,32 @@ pub type CommonResult<T> = OGResult<T, Box<dyn Error + Send + Sync>>;
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct CommonError {
-  pub err_type: CommonErrorType,
-  pub err_msg: Option<String>,
+    pub err_type: CommonErrorType,
+    pub err_msg: Option<String>,
 }
 
 /// Some common errors that can occur.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy)]
 pub enum CommonErrorType {
-  ExitLoop,
-  DisplaySizeTooSmall,
-  General,
-  InvalidArguments,
-  InvalidResult,
-  InvalidState,
-  StackOverflow,
-  StackUnderflow,
-  ParsingError,
-  IOError,
-  ValueOutOfRange,
-  InvalidValue,
-  DoesNotApply,
+    ExitLoop,
+    DisplaySizeTooSmall,
+    General,
+    InvalidArguments,
+    InvalidResult,
+    InvalidState,
+    StackOverflow,
+    StackUnderflow,
+    ParsingError,
+    IOError,
+    ValueOutOfRange,
+    InvalidValue,
+    DoesNotApply,
+    IndexOutOfBounds,
 }
 
 impl Default for CommonErrorType {
-  fn default() -> Self { CommonErrorType::General }
+    fn default() -> Self { CommonErrorType::General }
 }
 
 /// Implement [`Error`] trait.
@@ -90,34 +91,37 @@ impl Error for CommonError {}
 
 /// Implement [`Display`] trait (needed by [`Error`] trait).
 impl Display for CommonError {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> FmtResult { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> FmtResult { write!(f, "{self:?}") }
 }
 
 impl CommonError {
-  /// Constructor that is compatible w/ [`CommonResult`].
-  #[allow(clippy::all)]
-  pub fn new<T>(err_type: CommonErrorType, msg: &str) -> CommonResult<T> {
-    Self::from_err(CommonError {
-      err_type,
-      err_msg: msg.to_string().into(),
-    })
-  }
+    /// Constructor that is compatible w/ [`CommonResult`].
+    #[allow(clippy::all)]
+    pub fn new<T>(err_type: CommonErrorType, msg: &str) -> CommonResult<T> {
+        Self::from_err(CommonError {
+            err_type,
+            err_msg: msg.to_string().into(),
+        })
+    }
 
-  /// Constructor that is compatible w/ [`CommonResult`].
-  pub fn new_err_with_only_type<T>(err_type: CommonErrorType) -> CommonResult<T> {
-    CommonError::from_err_type_and_msg(err_type, None)
-  }
+    /// Constructor that is compatible w/ [`CommonResult`].
+    pub fn new_err_with_only_type<T>(err_type: CommonErrorType) -> CommonResult<T> {
+        CommonError::from_err_type_and_msg(err_type, None)
+    }
 
-  /// Constructor that is compatible w/ [`CommonResult`].
-  pub fn new_err_with_only_msg<T>(msg: &str) -> CommonResult<T> {
-    CommonError::from_err_type_and_msg(CommonErrorType::General, Some(msg.to_string()))
-  }
+    /// Constructor that is compatible w/ [`CommonResult`].
+    pub fn new_err_with_only_msg<T>(msg: &str) -> CommonResult<T> {
+        CommonError::from_err_type_and_msg(CommonErrorType::General, Some(msg.to_string()))
+    }
 
-  /// Private helper method.
-  fn from_err_type_and_msg<T>(err_type: CommonErrorType, msg: Option<String>) -> CommonResult<T> {
-    Self::from_err(CommonError { err_type, err_msg: msg })
-  }
+    /// Private helper method.
+    fn from_err_type_and_msg<T>(err_type: CommonErrorType, msg: Option<String>) -> CommonResult<T> {
+        Self::from_err(CommonError {
+            err_type,
+            err_msg: msg,
+        })
+    }
 
-  /// Private helper method.
-  fn from_err<T>(err: CommonError) -> CommonResult<T> { Err(Box::new(err)) }
+    /// Private helper method.
+    fn from_err<T>(err: CommonError) -> CommonResult<T> { Err(Box::new(err)) }
 }

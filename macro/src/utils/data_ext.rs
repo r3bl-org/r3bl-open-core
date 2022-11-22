@@ -16,9 +16,9 @@
  */
 
 pub trait DataExt {
-  fn is_struct(&self) -> bool;
+    fn is_struct(&self) -> bool;
 }
 
 impl DataExt for syn::Data {
-  fn is_struct(&self) -> bool { matches!(self, syn::Data::Struct(_data_struct)) }
+    fn is_struct(&self) -> bool { matches!(self, syn::Data::Struct(_data_struct)) }
 }

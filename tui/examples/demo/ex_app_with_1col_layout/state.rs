@@ -20,13 +20,15 @@ use std::fmt::{Display, Formatter};
 /// State.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct State {
-  pub stack: Vec<i32>,
+    pub stack: Vec<i32>,
 }
 
 impl Default for State {
-  fn default() -> Self { Self { stack: vec![0] } }
+    fn default() -> Self { Self { stack: vec![0] } }
 }
 
 impl Display for State {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "State {{ stack: {:?} }}", self.stack) }
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "State {{ stack: {:?} }}", self.stack)
+    }
 }

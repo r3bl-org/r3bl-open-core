@@ -28,32 +28,33 @@ use crate::*;
 #[async_trait]
 pub trait App<S, A>
 where
-  S: Default + Clone + PartialEq + Debug + Sync + Send,
-  A: Default + Clone + Sync + Send,
+    S: Default + Clone + PartialEq + Debug + Sync + Send,
+    A: Default + Clone + Sync + Send,
 {
-  /// Use the state to render the output (via crossterm). To change the state, dispatch an action.
-  async fn app_render(&mut self, args: GlobalScopeArgs<'_, S, A>) -> CommonResult<RenderPipeline>;
+    /// Use the state to render the output (via crossterm). To change the state, dispatch an action.
+    async fn app_render(&mut self, args: GlobalScopeArgs<'_, S, A>)
+        -> CommonResult<RenderPipeline>;
 
-  /// Use the input_event to dispatch an action to the store if needed.
-  async fn app_handle_event(
-    &mut self,
-    args: GlobalScopeArgs<'_, S, A>,
-    input_event: &InputEvent,
-  ) -> CommonResult<EventPropagation>;
+    /// Use the input_event to dispatch an action to the store if needed.
+    async fn app_handle_event(
+        &mut self,
+        args: GlobalScopeArgs<'_, S, A>,
+        input_event: &InputEvent,
+    ) -> CommonResult<EventPropagation>;
 
-  /// Wrap a new instance in [Box].
-  fn new_owned() -> BoxedSafeApp<S, A>
-  where
-    Self: Default + Sync + Send + 'static,
-  {
-    Box::<Self>::default()
-  }
+    /// Wrap a new instance in [Box].
+    fn new_owned() -> BoxedSafeApp<S, A>
+    where
+        Self: Default + Sync + Send + 'static,
+    {
+        Box::<Self>::default()
+    }
 
-  /// Wrap a new instance in [std::sync::Arc] & [tokio::sync::RwLock].
-  fn new_shared() -> SharedApp<S, A>
-  where
-    Self: Default + Sync + Send + 'static,
-  {
-    Arc::new(RwLock::new(Self::default()))
-  }
+    /// Wrap a new instance in [std::sync::Arc] & [tokio::sync::RwLock].
+    fn new_shared() -> SharedApp<S, A>
+    where
+        Self: Default + Sync + Send + 'static,
+    {
+        Arc::new(RwLock::new(Self::default()))
+    }
 }

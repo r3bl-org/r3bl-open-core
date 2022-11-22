@@ -58,35 +58,35 @@ use std::{collections::HashMap, hash::Hash};
 #[derive(Debug)]
 pub struct LazyMemoValues<F, T, V>
 where
-  F: FnMut(&T) -> V,
-  T: Clone + Eq + Hash,
-  V: Clone,
+    F: FnMut(&T) -> V,
+    T: Clone + Eq + Hash,
+    V: Clone,
 {
-  pub create_value_fn: F,
-  pub value_map: HashMap<T, V>,
+    pub create_value_fn: F,
+    pub value_map: HashMap<T, V>,
 }
 
 impl<F, T, V> LazyMemoValues<F, T, V>
 where
-  F: FnMut(&T) -> V,
-  T: Clone + Eq + Hash,
-  V: Clone,
+    F: FnMut(&T) -> V,
+    T: Clone + Eq + Hash,
+    V: Clone,
 {
-  pub fn new(create_value_fn: F) -> Self {
-    LazyMemoValues {
-      create_value_fn,
-      value_map: HashMap::new(),
+    pub fn new(create_value_fn: F) -> Self {
+        LazyMemoValues {
+            create_value_fn,
+            value_map: HashMap::new(),
+        }
     }
-  }
 
-  pub fn get_ref(&mut self, arg: &T) -> &V {
-    if !self.value_map.contains_key(arg) {
-      let arg = arg.clone();
-      let value = (self.create_value_fn)(&arg);
-      self.value_map.insert(arg, value);
+    pub fn get_ref(&mut self, arg: &T) -> &V {
+        if !self.value_map.contains_key(arg) {
+            let arg = arg.clone();
+            let value = (self.create_value_fn)(&arg);
+            self.value_map.insert(arg, value);
+        }
+        self.value_map.get(arg).as_ref().unwrap()
     }
-    self.value_map.get(arg).as_ref().unwrap()
-  }
 
-  pub fn get_copy(&mut self, arg: &T) -> V { self.get_ref(arg).clone() }
+    pub fn get_copy(&mut self, arg: &T) -> V { self.get_ref(arg).clone() }
 }

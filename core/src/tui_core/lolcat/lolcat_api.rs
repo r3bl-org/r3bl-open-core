@@ -47,15 +47,16 @@ macro_rules! colorize_using_lolcat {
 /// - If `maybe_style` is [None], then `text_content` will not be colored.
 /// - If [Style] has `lolcat` field set to false, then `text_content` will not be colored.
 pub fn apply_lolcat_from_style<'a>(
-  maybe_style: &Option<Style>,
-  lolcat: &'a mut Lolcat,
-  text_content: &'a mut Cow<str>,
+    maybe_style: &Option<Style>,
+    lolcat: &'a mut Lolcat,
+    text_content: &'a mut Cow<str>,
 ) {
-  if let Some(Style { lolcat: true, .. }) = maybe_style {
-    let unicode_string = UnicodeString::from(text_content.as_ref());
-    let mut colorized_string = lolcat_each_char_in_unicode_string(&unicode_string, Some(lolcat));
-    mem::swap(&mut colorized_string, text_content.to_mut());
-  }
+    if let Some(Style { lolcat: true, .. }) = maybe_style {
+        let unicode_string = UnicodeString::from(text_content.as_ref());
+        let mut colorized_string =
+            lolcat_each_char_in_unicode_string(&unicode_string, Some(lolcat));
+        mem::swap(&mut colorized_string, text_content.to_mut());
+    }
 }
 
 /// Given a mutable [Lolcat] reference, colorize each character of the given [UnicodeString].
@@ -75,31 +76,34 @@ pub fn apply_lolcat_from_style<'a>(
 /// Colorizes each of the [GraphemeClusterSegment]s in the [UnicodeString] with a rapidly changing
 /// color. If you don't pass in your own [Lolcat] then a random one will be created for you, which
 /// changes the color rapidly between each segment.
-pub fn lolcat_each_char_in_unicode_string(unicode_string: &UnicodeString, lolcat: Option<&mut Lolcat>) -> String {
-  let mut saved_orig_speed = None;
-  let mut my_lolcat: Cow<Lolcat> = match lolcat {
-    Some(lolcat_arg) => {
-      saved_orig_speed = Some(lolcat_arg.color_wheel_control.color_change_speed);
-      lolcat_arg.color_wheel_control.color_change_speed = ColorChangeSpeed::Rapid;
-      Cow::Borrowed(lolcat_arg)
+pub fn lolcat_each_char_in_unicode_string(
+    unicode_string: &UnicodeString,
+    lolcat: Option<&mut Lolcat>,
+) -> String {
+    let mut saved_orig_speed = None;
+    let mut my_lolcat: Cow<Lolcat> = match lolcat {
+        Some(lolcat_arg) => {
+            saved_orig_speed = Some(lolcat_arg.color_wheel_control.color_change_speed);
+            lolcat_arg.color_wheel_control.color_change_speed = ColorChangeSpeed::Rapid;
+            Cow::Borrowed(lolcat_arg)
+        }
+        None => Cow::Owned(
+            LolcatBuilder::new()
+                .set_color_change_speed(ColorChangeSpeed::Rapid)
+                .build(),
+        ),
+    };
+
+    let mut return_vec: Vec<String> = vec![];
+    for letter in unicode_string.vec_segment.iter() {
+        let colored_letter = letter.string.color_with(my_lolcat.to_mut());
+        return_vec.push(colored_letter);
     }
-    None => Cow::Owned(
-      LolcatBuilder::new()
-        .set_color_change_speed(ColorChangeSpeed::Rapid)
-        .build(),
-    ),
-  };
 
-  let mut return_vec: Vec<String> = vec![];
-  for letter in unicode_string.vec_segment.iter() {
-    let colored_letter = letter.string.color_with(my_lolcat.to_mut());
-    return_vec.push(colored_letter);
-  }
+    // Restore saved_orig_speed if it was set.
+    if let Some(orig_speed) = saved_orig_speed {
+        my_lolcat.to_mut().color_wheel_control.color_change_speed = orig_speed;
+    }
 
-  // Restore saved_orig_speed if it was set.
-  if let Some(orig_speed) = saved_orig_speed {
-    my_lolcat.to_mut().color_wheel_control.color_change_speed = orig_speed;
-  }
-
-  return_vec.join("")
+    return_vec.join("")
 }

@@ -27,23 +27,23 @@ use crate::*;
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct LayoutError {
-  err_type: LayoutErrorType,
-  msg: Option<String>,
+    err_type: LayoutErrorType,
+    msg: Option<String>,
 }
 
 /// Specific types of errors.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy)]
 pub enum LayoutErrorType {
-  MismatchedSurfaceEnd,
-  MismatchedSurfaceStart,
-  MismatchedBoxEnd,
-  StackOfBoxesShouldNotBeEmpty,
-  InvalidSizePercentage,
-  ErrorCalculatingNextBoxPos,
-  ContainerBoxBoundsUndefined,
-  BoxCursorPositionUndefined,
-  ContentCursorPositionUndefined,
+    MismatchedSurfaceEnd,
+    MismatchedSurfaceStart,
+    MismatchedBoxEnd,
+    StackOfBoxesShouldNotBeEmpty,
+    InvalidSizePercentage,
+    ErrorCalculatingNextBoxPos,
+    ContainerBoxBoundsUndefined,
+    BoxCursorPositionUndefined,
+    ContentCursorPositionUndefined,
 }
 
 /// Implement [`Error`] trait.
@@ -51,22 +51,26 @@ impl Error for LayoutError {}
 
 /// Implement [`Display`] trait (needed by [`Error`] trait).
 impl Display for LayoutError {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result { write!(f, "{self:?}") }
 }
 
 /// Implement constructor that is compatible w/ [`CommonResult<T>`].
 impl LayoutError {
-  pub fn new_err<T>(err_type: LayoutErrorType) -> CommonResult<T> { Err(LayoutError::new(err_type, None)) }
+    pub fn new_err<T>(err_type: LayoutErrorType) -> CommonResult<T> {
+        Err(LayoutError::new(err_type, None))
+    }
 
-  pub fn new_err_with_msg<T>(err_type: LayoutErrorType, msg: String) -> CommonResult<T> {
-    Err(LayoutError::new(err_type, Some(msg)))
-  }
+    pub fn new_err_with_msg<T>(err_type: LayoutErrorType, msg: String) -> CommonResult<T> {
+        Err(LayoutError::new(err_type, Some(msg)))
+    }
 
-  pub fn new(err_type: LayoutErrorType, msg: Option<String>) -> Box<Self> { Box::new(LayoutError { err_type, msg }) }
+    pub fn new(err_type: LayoutErrorType, msg: Option<String>) -> Box<Self> {
+        Box::new(LayoutError { err_type, msg })
+    }
 
-  pub fn format_msg_with_stack_len(stack_of_boxes: &Vec<FlexBox>, msg: &str) -> String {
-    format!("{msg}, stack_of_boxes.len(): {}", stack_of_boxes.len())
-  }
+    pub fn format_msg_with_stack_len(stack_of_boxes: &Vec<FlexBox>, msg: &str) -> String {
+        format!("{msg}, stack_of_boxes.len(): {}", stack_of_boxes.len())
+    }
 }
 
 /// Unwrap the `$option`, and if `None` then return the given `$err_type`.

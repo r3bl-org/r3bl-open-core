@@ -70,62 +70,67 @@ use crate::utils::{IdentExt, TypeExtHasGenericArgs, TypeExtHasIdent};
 /// ```
 #[derive(Debug)]
 pub struct SafeFnWrapperSyntaxInfo {
-  pub wrapper_name_ident: Ident,
-  pub wrapper_name_type: Type,
-  pub wrapper_name_type_generic_args: Option<Punctuated<GenericArgument, Comma>>,
-  pub property_name_ident: Ident,
-  pub property_fn_type: Type,
+    pub wrapper_name_ident: Ident,
+    pub wrapper_name_type: Type,
+    pub wrapper_name_type_generic_args: Option<Punctuated<GenericArgument, Comma>>,
+    pub property_name_ident: Ident,
+    pub property_fn_type: Type,
 }
 
 /// [syn custom keywords docs](https://docs.rs/syn/latest/syn/macro.custom_keyword.html)
 mod kw {
-  syn::custom_keyword!(named);
-  syn::custom_keyword!(containing);
-  syn::custom_keyword!(of_type);
+    syn::custom_keyword!(named);
+    syn::custom_keyword!(containing);
+    syn::custom_keyword!(of_type);
 }
 
 /// [Parse docs](https://docs.rs/syn/latest/syn/parse/index.html)
 impl Parse for SafeFnWrapperSyntaxInfo {
-  fn parse(input: ParseStream) -> Result<Self> {
-    // 👀 "named" keyword.
-    input.parse::<kw::named>()?;
+    fn parse(input: ParseStream) -> Result<Self> {
+        // 👀 "named" keyword.
+        input.parse::<kw::named>()?;
 
-    // 👀 Wrapper Name Type, eg: `FnWrapper<K,V>`.
-    let wrapper_name_type: Type = input.parse()?;
+        // 👀 Wrapper Name Type, eg: `FnWrapper<K,V>`.
+        let wrapper_name_type: Type = input.parse()?;
 
-    // 👀 Wrapper Name Type generic args, eg: `<K,V>`.
-    let wrapper_name_type_generic_args = match wrapper_name_type.has_angle_bracketed_generic_args() {
-      true => Some(wrapper_name_type.get_angle_bracketed_generic_args_result().unwrap()),
-      false => None,
-    };
+        // 👀 Wrapper Name Type generic args, eg: `<K,V>`.
+        let wrapper_name_type_generic_args =
+            match wrapper_name_type.has_angle_bracketed_generic_args() {
+                true => Some(
+                    wrapper_name_type
+                        .get_angle_bracketed_generic_args_result()
+                        .unwrap(),
+                ),
+                false => None,
+            };
 
-    // 👀 "containing" keyword.
-    input.parse::<kw::containing>()?;
+        // 👀 "containing" keyword.
+        input.parse::<kw::containing>()?;
 
-    // 👀 use Ident, eg: `fn_mut`.
-    let property_name_ident: Ident = input.parse()?;
+        // 👀 use Ident, eg: `fn_mut`.
+        let property_name_ident: Ident = input.parse()?;
 
-    // 👀 "of_type" keyword.
-    input.parse::<kw::of_type>()?;
+        // 👀 "of_type" keyword.
+        input.parse::<kw::of_type>()?;
 
-    // 👀 Fn Type, eg: `FnMut(A) -> Option(A) + Sync + Send + 'static`.
-    let property_fn_type: Type = input.parse()?;
+        // 👀 Fn Type, eg: `FnMut(A) -> Option(A) + Sync + Send + 'static`.
+        let property_fn_type: Type = input.parse()?;
 
-    // Done parsing. Extract the manager name.
-    let wrapper_name_ident: Ident = if wrapper_name_type.has_ident() {
-      wrapper_name_type.get_ident().unwrap()
-    } else {
-      panic!("Expected Type::Path::TypePath.segments to have an Ident")
-    };
+        // Done parsing. Extract the manager name.
+        let wrapper_name_ident: Ident = if wrapper_name_type.has_ident() {
+            wrapper_name_type.get_ident().unwrap()
+        } else {
+            panic!("Expected Type::Path::TypePath.segments to have an Ident")
+        };
 
-    Ok(SafeFnWrapperSyntaxInfo {
-      wrapper_name_ident,
-      wrapper_name_type,
-      wrapper_name_type_generic_args,
-      property_name_ident,
-      property_fn_type,
-    })
-  }
+        Ok(SafeFnWrapperSyntaxInfo {
+            wrapper_name_ident,
+            wrapper_name_type,
+            wrapper_name_type_generic_args,
+            property_name_ident,
+            property_fn_type,
+        })
+    }
 }
 
 /// Given optional `GenericArgument`s that are separated by `Comma`s, generate
@@ -133,34 +138,34 @@ impl Parse for SafeFnWrapperSyntaxInfo {
 /// - Eg of input: `A, B`
 /// - Eg of return: `where A : Sync + Send + 'static, B : Sync + Send + 'static`
 pub fn make_opt_where_clause_from_generic_args(
-  wrapper_name_type_generic_args: Option<Punctuated<GenericArgument, Comma>>,
+    wrapper_name_type_generic_args: Option<Punctuated<GenericArgument, Comma>>,
 ) -> proc_macro2::TokenStream {
-  if wrapper_name_type_generic_args.is_some() {
-    let generic_args_list = wrapper_name_type_generic_args.as_ref().unwrap();
+    if wrapper_name_type_generic_args.is_some() {
+        let generic_args_list = wrapper_name_type_generic_args.as_ref().unwrap();
 
-    let generic_args_ident_vec: Vec<Ident> = generic_args_list
-      .iter()
-      .map(|it: &GenericArgument| match it {
-        GenericArgument::Type(Type::Path(it)) => {
-          if !it.path.segments.is_empty() {
-            it.path.segments.first().unwrap().ident.clone()
-          } else {
-            panic!("Expected generic arg type")
-          }
-        }
-        _ => panic!("Expected generic arg type"),
-      })
-      .collect();
+        let generic_args_ident_vec: Vec<Ident> = generic_args_list
+            .iter()
+            .map(|it: &GenericArgument| match it {
+                GenericArgument::Type(Type::Path(it)) => {
+                    if !it.path.segments.is_empty() {
+                        it.path.segments.first().unwrap().ident.clone()
+                    } else {
+                        panic!("Expected generic arg type")
+                    }
+                }
+                _ => panic!("Expected generic arg type"),
+            })
+            .collect();
 
-    let ts_vec: Vec<proc_macro2::TokenStream> = generic_args_ident_vec
-      .iter()
-      .map(|it| {
-        quote! { #it: Sync + Send + 'static }
-      })
-      .collect();
+        let ts_vec: Vec<proc_macro2::TokenStream> = generic_args_ident_vec
+            .iter()
+            .map(|it| {
+                quote! { #it: Sync + Send + 'static }
+            })
+            .collect();
 
-    quote! { where #( #ts_vec ),* }
-  } else {
-    quote! {}
-  }
+        quote! { where #( #ts_vec ),* }
+    } else {
+        quote! {}
+    }
 }

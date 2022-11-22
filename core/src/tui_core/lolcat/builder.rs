@@ -41,57 +41,57 @@ use crate::*;
 
 #[derive(Clone, Copy, Serialize, Deserialize, PartialEq, GetSize)]
 pub struct LolcatBuilder {
-  /// Rate at which the color changes when [format_str](Lolcat::format_str) is called.
-  color_change_speed: ColorChangeSpeed,
-  /// Initial color of the wheel.
-  seed: f64,
-  /// Delta that should be applied to the seed for it to change colors.
-  seed_delta: f64,
+    /// Rate at which the color changes when [format_str](Lolcat::format_str) is called.
+    color_change_speed: ColorChangeSpeed,
+    /// Initial color of the wheel.
+    seed: f64,
+    /// Delta that should be applied to the seed for it to change colors.
+    seed_delta: f64,
 }
 
 impl Default for LolcatBuilder {
-  fn default() -> Self {
-    Self {
-      color_change_speed: ColorChangeSpeed::Slow,
-      seed: 1.0,
-      seed_delta: 1.0,
+    fn default() -> Self {
+        Self {
+            color_change_speed: ColorChangeSpeed::Slow,
+            seed: 1.0,
+            seed_delta: 1.0,
+        }
     }
-  }
 }
 
 impl LolcatBuilder {
-  pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self { Self::default() }
 
-  pub fn set_color_change_speed(mut self, color_change_speed: ColorChangeSpeed) -> Self {
-    self.color_change_speed = color_change_speed;
-    self
-  }
+    pub fn set_color_change_speed(mut self, color_change_speed: ColorChangeSpeed) -> Self {
+        self.color_change_speed = color_change_speed;
+        self
+    }
 
-  pub fn set_seed(mut self, seed: f64) -> Self {
-    self.seed = seed;
-    self
-  }
+    pub fn set_seed(mut self, seed: f64) -> Self {
+        self.seed = seed;
+        self
+    }
 
-  pub fn set_seed_delta(mut self, seed_delta: f64) -> Self {
-    self.seed_delta = seed_delta;
-    self
-  }
+    pub fn set_seed_delta(mut self, seed_delta: f64) -> Self {
+        self.seed_delta = seed_delta;
+        self
+    }
 
-  pub fn build(self) -> Lolcat {
-    let mut new_lolcat = Lolcat {
-      seed_delta: self.seed_delta,
-      color_wheel_control: Default::default(),
-    };
+    pub fn build(self) -> Lolcat {
+        let mut new_lolcat = Lolcat {
+            seed_delta: self.seed_delta,
+            color_wheel_control: Default::default(),
+        };
 
-    new_lolcat.color_wheel_control.color_change_speed = self.color_change_speed;
-    new_lolcat.color_wheel_control.seed = self.seed;
+        new_lolcat.color_wheel_control.color_change_speed = self.color_change_speed;
+        new_lolcat.color_wheel_control.seed = self.seed;
 
-    new_lolcat
-  }
+        new_lolcat
+    }
 
-  pub fn apply(&self, lolcat: &mut Lolcat) {
-    lolcat.color_wheel_control.color_change_speed = self.color_change_speed;
-    lolcat.color_wheel_control.seed = self.seed;
-    lolcat.seed_delta = self.seed_delta;
-  }
+    pub fn apply(&self, lolcat: &mut Lolcat) {
+        lolcat.color_wheel_control.color_change_speed = self.color_change_speed;
+        lolcat.color_wheel_control.seed = self.seed;
+        lolcat.seed_delta = self.seed_delta;
+    }
 }

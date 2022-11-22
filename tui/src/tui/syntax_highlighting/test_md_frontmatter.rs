@@ -17,50 +17,50 @@
 
 #[cfg(test)]
 mod extract_frontmatter {
-  use serde_json::Value;
+    use serde_json::Value;
 
-  use crate::{syntax_highlighting::test_common::shared::*, FrontmatterExtractionResponse};
+    use crate::{syntax_highlighting::test_common::shared::*, FrontmatterExtractionResponse};
 
-  #[test]
-  fn no_frontmatter() {
-    let md_content = get_md_file_no_frontmatter();
-    let result: FrontmatterExtractionResponse = md_content.as_ref().into();
+    #[test]
+    fn no_frontmatter() {
+        let md_content = get_md_file_no_frontmatter();
+        let result: FrontmatterExtractionResponse = md_content.as_ref().into();
 
-    let FrontmatterExtractionResponse::NoFrontmatter = result else {
+        let FrontmatterExtractionResponse::NoFrontmatter = result else {
       panic!();
     };
-  }
+    }
 
-  #[test]
-  fn invalid_frontmatter() {
-    let md_content = get_md_file_invalid_frontmatter();
-    let result: FrontmatterExtractionResponse = md_content.as_ref().into();
+    #[test]
+    fn invalid_frontmatter() {
+        let md_content = get_md_file_invalid_frontmatter();
+        let result: FrontmatterExtractionResponse = md_content.as_ref().into();
 
-    let FrontmatterExtractionResponse::NoFrontmatter = result else {
+        let FrontmatterExtractionResponse::NoFrontmatter = result else {
       panic!();
     };
-  }
+    }
 
-  #[test]
-  fn valid_json_frontmatter() {
-    let md_content = get_md_file_with_json_frontmatter();
-    let result: FrontmatterExtractionResponse = md_content.as_ref().into();
+    #[test]
+    fn valid_json_frontmatter() {
+        let md_content = get_md_file_with_json_frontmatter();
+        let result: FrontmatterExtractionResponse = md_content.as_ref().into();
 
-    let FrontmatterExtractionResponse::ValidFrontmatter(frontmatter, content) = result else {
+        let FrontmatterExtractionResponse::ValidFrontmatter(frontmatter, content) = result else {
       panic!();
     };
 
-    let json: Value = serde_json::from_str(&frontmatter).unwrap();
+        let json: Value = serde_json::from_str(&frontmatter).unwrap();
 
-    let object = json.as_object().unwrap();
+        let object = json.as_object().unwrap();
 
-    assert_eq!(object.get("date").unwrap(), "2021-06-30");
-    assert_eq!(object.get("description").unwrap(), "My Description");
-    assert_eq!(object.get("title").unwrap(), "My Title");
-    matches!(
-      object.get("tags").unwrap(),
-      Value::Array(array) if array.len() == 2 && array[0] == "tag1" && array[1] == "tag2"
-    );
-    assert!(!content.is_empty());
-  }
+        assert_eq!(object.get("date").unwrap(), "2021-06-30");
+        assert_eq!(object.get("description").unwrap(), "My Description");
+        assert_eq!(object.get("title").unwrap(), "My Title");
+        matches!(
+          object.get("tags").unwrap(),
+          Value::Array(array) if array.len() == 2 && array[0] == "tag1" && array[1] == "tag2"
+        );
+        assert!(!content.is_empty());
+    }
 }

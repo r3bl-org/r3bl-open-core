@@ -17,16 +17,16 @@
 
 #[cfg(test)]
 mod tests {
-  use crate::unwrap_option_or_compute_if_none;
+    use crate::unwrap_option_or_compute_if_none;
 
-  #[test]
-  fn test_unwrap_option_or_compute_if_none() {
-    struct MyStruct {
-      field: Option<i32>,
+    #[test]
+    fn test_unwrap_option_or_compute_if_none() {
+        struct MyStruct {
+            field: Option<i32>,
+        }
+        let mut my_struct = MyStruct { field: None };
+        assert_eq!(my_struct.field, None);
+        unwrap_option_or_compute_if_none!(my_struct.field, { || 1 });
+        assert_eq!(my_struct.field, Some(1));
     }
-    let mut my_struct = MyStruct { field: None };
-    assert_eq!(my_struct.field, None);
-    unwrap_option_or_compute_if_none!(my_struct.field, { || 1 });
-    assert_eq!(my_struct.field, Some(1));
-  }
 }

@@ -30,39 +30,39 @@ pub const FRONTMATTER_DELIMITER_PATTERN: &str = "---";
 /// 1. Delimit frontmatter content using [FRONTMATTER_DELIMITER_PATTERN].
 /// 2. Trim whitespace for each line of frontmatter content.
 pub fn create_frontmatter_extractor<'caller>() -> Extractor<'caller> {
-  let splitter = Splitter::EnclosingLines(FRONTMATTER_DELIMITER_PATTERN);
-  let modifier = Modifier::TrimWhitespace;
-  let mut extractor = Extractor::new(splitter);
-  extractor.with_modifier(modifier);
-  extractor
+    let splitter = Splitter::EnclosingLines(FRONTMATTER_DELIMITER_PATTERN);
+    let modifier = Modifier::TrimWhitespace;
+    let mut extractor = Extractor::new(splitter);
+    extractor.with_modifier(modifier);
+    extractor
 }
 
 /// Extracts the frontmatter content from the given Markdown input. If the input does not contain
 /// the correct frontmatter delimiters, then [FrontmatterExtractionResponse::NoFrontmatter] is
 /// returned. Otherwise [FrontmatterExtractionResponse::ValidFrontmatter] is returned.
 pub fn try_extract_front_matter(markdown_input: &str) -> FrontmatterExtractionResponse {
-  let extractor = create_frontmatter_extractor();
-  let (frontmatter, content) = extractor.extract(markdown_input);
-  if content.is_empty() {
-    FrontmatterExtractionResponse::NoFrontmatter
-  } else {
-    FrontmatterExtractionResponse::ValidFrontmatter(frontmatter, Cow::Borrowed(content))
-  }
+    let extractor = create_frontmatter_extractor();
+    let (frontmatter, content) = extractor.extract(markdown_input);
+    if content.is_empty() {
+        FrontmatterExtractionResponse::NoFrontmatter
+    } else {
+        FrontmatterExtractionResponse::ValidFrontmatter(frontmatter, Cow::Borrowed(content))
+    }
 }
 
 #[derive(Debug, Clone)]
 pub enum FrontmatterExtractionResponse<'caller> {
-  /// No frontmatter was found in the Markdown input. Or invalid frontmatter was found (not
-  /// delimited correctly).
-  NoFrontmatter,
-  /// Valid frontmatter was found in the Markdown input.
-  ValidFrontmatter(
-    /* frontmatter: */ Cow<'caller, str>,
-    /* content: */ Cow<'caller, str>,
-  ),
+    /// No frontmatter was found in the Markdown input. Or invalid frontmatter was found (not
+    /// delimited correctly).
+    NoFrontmatter,
+    /// Valid frontmatter was found in the Markdown input.
+    ValidFrontmatter(
+        /* frontmatter: */ Cow<'caller, str>,
+        /* content: */ Cow<'caller, str>,
+    ),
 }
 
 /// Convenience trait implementation to convert &[str] to [FrontmatterExtractionResponse].
 impl<'caller> From<&'caller str> for FrontmatterExtractionResponse<'caller> {
-  fn from(markdown_input: &'caller str) -> Self { try_extract_front_matter(markdown_input) }
+    fn from(markdown_input: &'caller str) -> Self { try_extract_front_matter(markdown_input) }
 }

@@ -23,16 +23,16 @@ use r3bl_tui::*;
 #[non_exhaustive]
 #[allow(dead_code)]
 pub enum Action {
-  Noop,
-  UpdateEditorBufferById(FlexBoxId /* id */, EditorBuffer),
-  SetDialogBufferTitleAndText(String /* title */, String /* text */),
-  UpdateDialogBuffer(EditorBuffer),
+    Noop,
+    UpdateEditorBufferById(FlexBoxId /* id */, EditorBuffer),
+    SetDialogBufferTitleAndText(String /* title */, String /* text */),
+    UpdateDialogBuffer(EditorBuffer),
 }
 
 impl Default for Action {
-  fn default() -> Self { Action::Noop }
+    fn default() -> Self { Action::Noop }
 }
 
 impl Display for Action {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
 }

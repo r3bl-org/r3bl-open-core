@@ -20,6 +20,6 @@ use syn::parse_macro_input;
 use super::*;
 
 pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-  let style_metadata: StyleMetadata = parse_macro_input!(input);
-  code_gen(style_metadata)
+    let style_metadata: StyleMetadata = parse_macro_input!(input);
+    code_gen(style_metadata)
 }

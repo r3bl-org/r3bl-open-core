@@ -27,112 +27,112 @@
 
 #[cfg(test)]
 mod tests {
-  use r3bl_rs_utils_core::*;
-  use r3bl_rs_utils_macro::style;
+    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_macro::style;
 
-  #[test]
-  fn test_syntax_expansion() {
-    let _ = style! {
-      id:       "style2"
-      attrib:   [dim, bold]
-      padding:  1
-      color_fg: color!(@red)
-      color_bg: color!(0, 0, 0)
-    };
-  }
-
-  #[test]
-  fn test_syntax_expansion_dsl() {
-    let _ = style! {
-      id: "style_fixed"
-      attrib: [dim, bold]
-      padding: 1
-      color_fg: color!(@red)
-      color_bg: color!(0, 0, 0)
-    };
-    let _ = style! {
-      id: "style_fixed"
-      attrib: [dim, bold]
-      padding: 1
-      color_fg: color!(@red)
-      color_bg: color!(0, 0, 0)
-    };
-    let _ = style! {
-      id: "style_fixed"
-      attrib: [dim, bold]
-      padding: 1
-      color_fg: color!(@red)
-      color_bg: color!(0, 0, 0)
-    };
-  }
-
-  #[test]
-  fn test_with_nothing() {
-    let style: Style = style! {};
-    assert_eq2!(style.id, "_id");
-  }
-
-  #[test]
-  fn test_with_attrib() {
-    let style_no_attrib = style! {
-      id: "style1"
-    };
-    assert_eq!(style_no_attrib.id, "style1");
-    assert!(!style_no_attrib.bold);
-    assert!(!style_no_attrib.dim);
-
-    let style_with_attrib = style! {
-      id: "style2"
-      attrib: [dim, bold]
-    };
-    assert_eq!(style_with_attrib.id, "style2");
-    assert!(style_with_attrib.bold);
-    assert!(style_with_attrib.dim);
-    assert!(!style_with_attrib.underline);
-    assert!(!style_with_attrib.reverse);
-    assert!(!style_with_attrib.hidden);
-    assert!(!style_with_attrib.strikethrough);
-  }
-
-  #[test]
-  fn test_with_padding() {
-    with! {
-      style! {
-        id: "style1"
-        padding: 1
-      },
-      as it,
-      run {
-        assert_eq!(it.padding, Some(ch!(1)));
-      }
+    #[test]
+    fn test_syntax_expansion() {
+        let _ = style! {
+          id:       "style2"
+          attrib:   [dim, bold]
+          padding:  1
+          color_fg: color!(@red)
+          color_bg: color!(0, 0, 0)
+        };
     }
-  }
 
-  #[test]
-  fn test_with_color_fg() {
-    with! {
-      style! {
-        id: "style1"
-        color_fg: color!(@red)
-      },
-      as it,
-      run {
-        assert_eq!(it.color_fg, color!(@red).into());
-      }
+    #[test]
+    fn test_syntax_expansion_dsl() {
+        let _ = style! {
+          id: "style_fixed"
+          attrib: [dim, bold]
+          padding: 1
+          color_fg: color!(@red)
+          color_bg: color!(0, 0, 0)
+        };
+        let _ = style! {
+          id: "style_fixed"
+          attrib: [dim, bold]
+          padding: 1
+          color_fg: color!(@red)
+          color_bg: color!(0, 0, 0)
+        };
+        let _ = style! {
+          id: "style_fixed"
+          attrib: [dim, bold]
+          padding: 1
+          color_fg: color!(@red)
+          color_bg: color!(0, 0, 0)
+        };
     }
-  }
 
-  #[test]
-  fn test_with_color_bg() {
-    with! {
-      style! {
-        id: "style1"
-        color_bg: color!(0, 0, 0)
-      },
-      as it,
-      run {
-        assert_eq!(it.color_bg, color!(0, 0, 0).into());
-      }
+    #[test]
+    fn test_with_nothing() {
+        let style: Style = style! {};
+        assert_eq2!(style.id, "_id");
     }
-  }
+
+    #[test]
+    fn test_with_attrib() {
+        let style_no_attrib = style! {
+          id: "style1"
+        };
+        assert_eq!(style_no_attrib.id, "style1");
+        assert!(!style_no_attrib.bold);
+        assert!(!style_no_attrib.dim);
+
+        let style_with_attrib = style! {
+          id: "style2"
+          attrib: [dim, bold]
+        };
+        assert_eq!(style_with_attrib.id, "style2");
+        assert!(style_with_attrib.bold);
+        assert!(style_with_attrib.dim);
+        assert!(!style_with_attrib.underline);
+        assert!(!style_with_attrib.reverse);
+        assert!(!style_with_attrib.hidden);
+        assert!(!style_with_attrib.strikethrough);
+    }
+
+    #[test]
+    fn test_with_padding() {
+        with! {
+          style! {
+            id: "style1"
+            padding: 1
+          },
+          as it,
+          run {
+            assert_eq!(it.padding, Some(ch!(1)));
+          }
+        }
+    }
+
+    #[test]
+    fn test_with_color_fg() {
+        with! {
+          style! {
+            id: "style1"
+            color_fg: color!(@red)
+          },
+          as it,
+          run {
+            assert_eq!(it.color_fg, color!(@red).into());
+          }
+        }
+    }
+
+    #[test]
+    fn test_with_color_bg() {
+        with! {
+          style! {
+            id: "style1"
+            color_bg: color!(0, 0, 0)
+          },
+          as it,
+          run {
+            assert_eq!(it.color_bg, color!(0, 0, 0).into());
+          }
+        }
+    }
 }

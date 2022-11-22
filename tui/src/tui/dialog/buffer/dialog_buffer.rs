@@ -29,33 +29,33 @@ use crate::*;
 /// title that is displayed.
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct DialogBuffer {
-  pub editor_buffer: EditorBuffer,
-  pub title: String,
+    pub editor_buffer: EditorBuffer,
+    pub title: String,
 }
 
 impl Default for DialogBuffer {
-  fn default() -> Self {
-    Self {
-      editor_buffer: EditorBuffer::new_empty(),
-      title: String::default(),
+    fn default() -> Self {
+        Self {
+            editor_buffer: EditorBuffer::new_empty(),
+            title: String::default(),
+        }
     }
-  }
 }
 
 mod debug_format_helpers {
 
-  use super::*;
+    use super::*;
 
-  impl Debug for DialogBuffer {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-      write! { f,
-        "\nDialogBuffer [      \n\
-        ├ title: {}            \n\
-        └ editor_buffer: {:?}  \n\
-        ]",
-        self.title,
-        self.editor_buffer
-      }
+    impl Debug for DialogBuffer {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            write! { f,
+              "\nDialogBuffer [      \n\
+              ├ title: {}            \n\
+              └ editor_buffer: {:?}  \n\
+              ]",
+              self.title,
+              self.editor_buffer
+            }
+        }
     }
-  }
 }

@@ -20,19 +20,19 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait AsyncReducer<S, A>
 where
-  S: Sync + Send,
-  A: Sync + Send,
+    S: Sync + Send,
+    A: Sync + Send,
 {
-  async fn run(&self, action: &A, state: &S) -> S;
+    async fn run(&self, action: &A, state: &S) -> S;
 
-  /// <https://doc.rust-lang.org/book/ch10-02-traits.html>
-  #[allow(clippy::all)]
-  fn new() -> AsyncReducerItem<S, A>
-  where
-    Self: Default + Sized + Sync + Send + 'static,
-  {
-    Box::new(Self::default())
-  }
+    /// <https://doc.rust-lang.org/book/ch10-02-traits.html>
+    #[allow(clippy::all)]
+    fn new() -> AsyncReducerItem<S, A>
+    where
+        Self: Default + Sized + Sync + Send + 'static,
+    {
+        Box::new(Self::default())
+    }
 }
 
 pub type AsyncReducerTraitObject<S, A> = dyn AsyncReducer<S, A> + Send + Sync;

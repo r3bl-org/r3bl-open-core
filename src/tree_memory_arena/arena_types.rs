@@ -23,17 +23,17 @@ use std::{collections::HashMap,
 use super::{Arena, Node};
 
 pub trait HasId: Sync + Send {
-  type IdType;
+    type IdType;
 
-  /// Returns a clone of the id.
-  fn get_id(&self) -> Self::IdType;
+    /// Returns a clone of the id.
+    fn get_id(&self) -> Self::IdType;
 }
 
 impl HasId for usize {
-  type IdType = usize;
+    type IdType = usize;
 
-  /// Returns a clone of the id.
-  fn get_id(&self) -> usize { *self }
+    /// Returns a clone of the id.
+    fn get_id(&self) -> usize { *self }
 }
 
 // Type aliases for readability.
