@@ -114,7 +114,6 @@ Table of contents:
 ## tui and tui_core
 <a id="markdown-tui-and-tui_core" name="tui-and-tui_core"></a>
 
-
 For more information please read the README for the
 [r3bl_tui crate](https://docs.rs/r3bl_tui/latest/r3bl_tui/).
 
@@ -122,7 +121,7 @@ For more information please read the README for the
 
 Here's a video of the demo in action:
 
-https://user-images.githubusercontent.com/2966499/193947362-0c4fd1c8-d0fb-4bfc-9a07-9d36a9dda5ce.webm
+https://user-images.githubusercontent.com/2966499/206871072-fdd744f3-8b1e-4bce-9346-9514b42c2eb9.mp4
 
 ## redux
 <a id="markdown-redux" name="redux"></a>
