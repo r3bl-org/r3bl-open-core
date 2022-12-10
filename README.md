@@ -121,7 +121,7 @@ For more information please read the README for the
 
 Here's a video of the demo in action:
 
-https://user-images.githubusercontent.com/2966499/206871072-fdd744f3-8b1e-4bce-9346-9514b42c2eb9.mp4
+https://user-images.githubusercontent.com/2966499/206871793-b6e10867-a9e0-4b29-890f-531cffc476c5.mp4
 
 ## redux
 <a id="markdown-redux" name="redux"></a>
