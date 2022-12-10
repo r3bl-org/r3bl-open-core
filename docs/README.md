@@ -34,14 +34,42 @@ New diagrams are best created in Figma and then exported to SVG. Draw.io is diff
 
 ## Videos
 
-You can use the [GPU screen recorder](https://github.com/flathub/com.dec05eba.gpu_screen_recorder)
-app for Linux to capture a video of the focused window. You can use the default settings and save
-the video as MP4 for upload into github.com & reddit.com.
+You can use [Kooha](https://flathub.org/apps/details/io.github.seadve.Kooha) on Linux to record a
+video of the [Black Box](https://flathub.org/apps/details/com.raggesilver.BlackBox) terminal app.
+Change the default settings:
 
-- Github.com
+1. Capture 30 fps.
+2. Do not capture the mouse.
+3. Save as MP4.
+4. Make sure that the video is under 2 min (10M is the limit for github.com).
+
+Once captured you can upload to the following sites:
+
+- Github.com (r3bl_rs_utils repo)
+
   - Edit an the main [README.md](https://github.com/r3bl-org/r3bl_rs_utils#readme) file and drag and
     drop the MP4 file from your desktop to the editor. This will upload the video to github.com and
-    generate a URL like this: TK:
-- Reddit.com
-  - TK: only upload a video & add description in a comment below it
-  - TK: don't include "xbox" in any substring (eg: flexbox)
+    generate a URL like this:
+    <https://user-images.githubusercontent.com/2966499/206881196-37cf1220-8c1b-460e-a2cb-7e06d22d6a02.mp4>.
+    Make sure to commit the file.
+  - More info on how to upload video: <https://stackoverflow.com/a/68269430/2085356>
+
+- Reddit.com (r/rust)
+
+  - Create a new video only post, upload the .MP4 file & add description in a comment below it.
+  - Don't include "xbox" in any substring (eg: flexbox) of any text that is typed in the post title.
+
+## README and lib.rs updates
+
+After doing all the steps above, it is necessary to update all the `README.md` and `lib.rs` files w/
+the latest docs and links to SVG, MP4, etc.
+
+1. root folder of the repo:
+
+   - `README.md` - the links to SVG, MP4 files are relative to the source file.
+
+2. in `tui` sub-folder, the following files have the same documentation content:
+
+   - `README.md` - the links to SVG, MP4 files are relative to the source file.
+   - `src/lib.rs` - the links to SVG, MP4 files are direct to githubusercontent.com. For eg:
+     [memory-architecture.drawio.svg](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg).

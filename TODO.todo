@@ -43,14 +43,14 @@ compositor:
     ✔ scrolling this causes issues `# this is a line of x vars monk to y barf cook team by z bark mint🙏🏽😀░` @done(22-12-08 15:43)
     ✔ fix right at end of line not working @done(22-12-08 19:06)
   ✔ fix all broken tests @done(22-12-08 19:22)
-  ☐ fix scrolling left bugs for window_size: [width:81, height:13]
+  ✔ fix scrolling left bugs for window_size: [width:81, height:13] @done(22-12-10 11:27)
   ☐ update docs
     ✔ put the docs where they belong (in the code): EditorBuffer w/ info on caret & scroll offset @done(22-12-09 15:31)
     ✔ update `dd_compositor.md` - talk about `paint.rs`, offscreen buffer, no flicker, no need to pad w/ spaces @done(22-12-09 19:54)
     ✔ add figma diagram showing how the compositor works @done(22-12-09 19:54)
+    ✔ add docs for 2 scripts: `run-with-flamegraph-profiling.fish` & `run-with-crash-reporting.fish` @done(22-12-10 11:27)
     ☐ remove all the TODO:, BUG:, BM:, TK: from changes made in this branch
-    ☐ add docs for 2 scripts: `run-with-flamegraph-profiling.fish` & `run-with-crash-reporting.fish`
-  ☐ merge `compositor` branch into `main` & close issue https://github.com/r3bl-org/r3bl_rs_utils/issues/46
+  ✔ merge `compositor` branch into `main` & close issue https://github.com/r3bl-org/r3bl_rs_utils/issues/46 @done(22-12-10 11:27)
   ☐ cut releases & publish to crates.io
   ☐ make a video & publicize it on reddit
 
