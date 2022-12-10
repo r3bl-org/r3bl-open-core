@@ -4,16 +4,16 @@
 
 <!-- TOC -->
 
-- [Overview](#overview)
-- [Offscreen buffer](#offscreen-buffer)
-- [Render pipeline](#render-pipeline)
-- [First render](#first-render)
-- [Subsequent render](#subsequent-render)
+- [Rendering and painting](#rendering-and-painting)
+  - [Offscreen buffer](#offscreen-buffer)
+  - [Render pipeline](#render-pipeline)
+  - [First render](#first-render)
+  - [Subsequent render](#subsequent-render)
 
 <!-- /TOC -->
 
-## Overview
-<a id="markdown-overview" name="overview"></a>
+## Rendering and painting
+<a id="markdown-rendering-and-painting" name="rendering-and-painting"></a>
 
 
 The R3BL TUI engine uses a high performance compositor to render the UI to the terminal. This
@@ -22,7 +22,7 @@ concept of `PixelChar` which represents a single "pixel" in the terminal screen 
 row index position. There are only as many `PixelChar`s as there are rows and cols in a terminal
 screen. And the index maps directly to the position of the pixel in the terminal screen.
 
-## Offscreen buffer
+### Offscreen buffer
 <a id="markdown-offscreen-buffer" name="offscreen-buffer"></a>
 
 
@@ -75,7 +75,7 @@ Each `PixelChar` can be one of 4 things:
    information is encoded in the ANSI escape codes. `lolcat_api.rs` generates these ANSI strings for
    the rainbow effect. An example of this is the outline around a modal dialog box.
 
-## Render pipeline
+### Render pipeline
 <a id="markdown-render-pipeline" name="render-pipeline"></a>
 
 
@@ -97,7 +97,7 @@ Once a set of these `RenderPipeline`s have been generated, typically after the u
 input event, and that produces a new state which then has to be rendered, they are combined and
 painted into an `OffscreenBuffer`.
 
-## First render
+### First render
 <a id="markdown-first-render" name="first-render"></a>
 
 
@@ -118,7 +118,7 @@ Currently only `crossterm` is supported for actually painting to the terminal. B
 really simple making it very easy to swap out other terminal libraries such as `termion`, or even a
 GUI backend, or some other custom output driver.
 
-## Subsequent render
+### Subsequent render
 <a id="markdown-subsequent-render" name="subsequent-render"></a>
 
 
