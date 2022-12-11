@@ -1,59 +1,6 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-editor engine bug:
-  ✔ fix: type few lines, press backspace/delete (from end of file) and deleted lines are not removed @done(22-11-28 18:18)
-    - paint.rs::paint() does not work property ... the optimization to prevent flicker causes this problem
-    - this will be fixed by the compositor work!
-    - this is also fixed by printing SPACERs in empty lines of the editor component
-    - SHA: https://github.com/r3bl-org/r3bl_rs_utils/commit/e1c6b6b87de0b06ee1f634c72b547bf792d012a7
-
-compositor:
-  ✔ implement `render_pipeline_to_offscreen_buffer::RenderPipeline` to IR (`OffscreenBuffer`): @done(22-11-26 10:13)
-    ✔ test `RenderPipeline::convert()` @done(22-11-26 14:40)
-    ✔ implement ANSI text clipping & padding in `RenderPipeline::print_text_with_attributes()` @done(22-11-28 11:54)
-  ✔ test `RenderPipeline::convert()` (offscreen_buffer.rs) @done(22-11-28 11:55)
-    ✔ plain text @done(22-11-26 15:29)
-    ✔ ANSI text @done(22-11-28 11:55)
-    ✔ convert w/ 2 lines and position that isn't (0,0) @done(22-11-27 10:33)
-  ✔ implement `OffscreenBufferPaintImplCrossterm` @done(22-11-28 15:18)
-    ✔ implement `render()` & test @done(22-11-26 10:13)
-    ✔ implement `paint()` @done(22-11-28 15:18)
-    ✔ try it out w/ `compositor = true` in `paint.rs` @done(22-11-30 22:19)
-  ✔ 🐛bugs: @done(22-12-02 19:04)
-    ✔ window_size: [width:76, height:10] w/ editor eg doesn't display ` Ctrl + l : Modal dialog📣` @done(22-11-30 22:18)
-    ✔ modal dialog looks distorted, `print_ansi_text` has problems @done(22-12-02 19:04)
-  ✔ make offscreen buffer support serde @done(22-12-03 10:09)
-  ✔ impl diff between 2 offscreen buffers & paint only the changes pixel chars @done(22-12-03 19:22)
-    ✔ make sure it works, tests? @done(22-12-03 19:22)
-  ✔ fix bug in example w/ 2 col layout that has text missing @done(22-12-04 13:45)
-  ✔ fix things are being clipped twice (once during `convert`, and again on `render_op_impl`) @done(22-12-05 10:23)
-      ✔ create a new "dumb" `RenderOp::CompositorNoClipTruncPrintTextWithAttributes` which does NOT handle clipping & padding @done(22-12-05 10:26)
-      ✔ use this in `OffscreenBufferPaintImplCrossterm::render()` & `render_diff()` @done(22-12-05 10:26)
-  ✔ cleanup @done(22-12-05 10:27)
-    ✔ audit the use of `RwLock` for `main_event_loop::GlobalData` @done(22-12-05 10:11)
-  ✔ deprecate: @done(22-12-05 17:58)
-    ✔ `main_event_loop::GlobalData::cursor_position` @done(22-12-05 17:07)
-    ✔ `RenderOp::CursorShow`, `CursorHide` @done(22-12-05 17:07)
-    ✔ `RenderOp::RequestShowCaretAtPositionAbs`, `RequestShowCaretAtPositionRelTo` @done(22-12-05 17:07)
-    ✔ `RenderOp::PrintTextWithAttributesAndPadding` @done(22-12-05 17:57)
-    ✔ editor component should no longer pad empty lines w/ spaces thanks to compositor @done(22-12-05 17:57)
-  ✔ bug: @done(22-12-08 19:06)
-    ✔ fix log output so it is readable @done(22-12-06 12:24)
-    ✔ scrolling this causes issues `# this is a line of x vars monk to y barf cook team by z bark mint🙏🏽😀░` @done(22-12-08 15:43)
-    ✔ fix right at end of line not working @done(22-12-08 19:06)
-  ✔ fix all broken tests @done(22-12-08 19:22)
-  ✔ fix scrolling left bugs for window_size: [width:81, height:13] @done(22-12-10 11:27)
-  ☐ update docs
-    ✔ put the docs where they belong (in the code): EditorBuffer w/ info on caret & scroll offset @done(22-12-09 15:31)
-    ✔ update `dd_compositor.md` - talk about `paint.rs`, offscreen buffer, no flicker, no need to pad w/ spaces @done(22-12-09 19:54)
-    ✔ add figma diagram showing how the compositor works @done(22-12-09 19:54)
-    ✔ add docs for 2 scripts: `run-with-flamegraph-profiling.fish` & `run-with-crash-reporting.fish` @done(22-12-10 11:27)
-    ☐ remove all the TODO:, BUG:, BM:, TK: from changes made in this branch
-  ✔ merge `compositor` branch into `main` & close issue https://github.com/r3bl-org/r3bl_rs_utils/issues/46 @done(22-12-10 11:27)
-  ☐ cut releases & publish to crates.io
-  ☐ make a video & publicize it on reddit
-
 editor engine extras (auto-completion providers):
   ☐ add support for auto completion providers
   ☐ modal dialogs for autocompletion provider, which just use a nested multiline editor component
