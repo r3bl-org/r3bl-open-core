@@ -97,10 +97,10 @@ pub async fn paint(
 }
 
 /// 1. Ensure that the [Position] is within the bounds of the terminal window using
-///    [SharedGlobalData].
+///    [RenderOpsLocalData].
 /// 2. If the [Position] is outside of the bounds of the window then it is clamped to the nearest
 ///    edge of the window. This clamped [Position] is returned.
-/// 3. This also saves the clamped [Position] to [SharedGlobalData].
+/// 3. This also saves the clamped [Position] to [RenderOpsLocalData].
 pub async fn sanitize_and_save_abs_position(
     orig_abs_pos: Position,
     shared_global_data: &SharedGlobalData,

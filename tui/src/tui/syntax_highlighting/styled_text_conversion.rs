@@ -110,7 +110,6 @@ impl List<(Style, UnicodeString)> {
     /// Clip the text (in one line) in this range: [ `start_col` .. `end_col` ]. Each line is
     /// represented as a [List] of ([Style], [UnicodeString])`s.
     pub fn clip(
-        // BM: bp
         &self,
         scroll_offset_col_index: ChUnit,
         max_display_col_count: ChUnit,
@@ -132,8 +131,6 @@ impl List<(Style, UnicodeString)> {
             let mut clipped_text_fragment = String::new();
 
             for segment in formatted_text_unicode_string.iter() {
-                // BUG: this does not work for non-ascii characters!
-
                 for character in segment.string.chars() {
                     match matcher.match_next(character) {
                         CharacterMatchResult::Keep => {

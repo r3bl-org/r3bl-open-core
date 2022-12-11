@@ -164,7 +164,6 @@ impl EditorEngineRenderApi {
                         my_highlight_lines.highlight_line(&line.string, &editor_engine.syntax_set)
                     {
                         EditorEngineRenderApi::render_line_with_syntax_highlight(
-                            // BM: bp
                             vec_styled_str,
                             editor_buffer,
                             max_display_col_count,
@@ -203,7 +202,6 @@ impl EditorEngineRenderApi {
         render_ops: &mut RenderOps,
         _editor_engine: &&mut EditorEngine,
     ) {
-        // BM: bp
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
 
         let list: List<(Style, UnicodeString)> =
@@ -211,7 +209,6 @@ impl EditorEngineRenderApi {
 
         let styled_texts: StyledTexts = list.clip(scroll_offset_col, max_display_col_count);
 
-        // BM: ⚒️⛔at this pt, the start has been lopped off ... need to update the caret by that amount!
         styled_texts.render_into(render_ops);
     }
 

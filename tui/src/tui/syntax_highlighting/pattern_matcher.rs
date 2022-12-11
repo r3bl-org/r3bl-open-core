@@ -54,8 +54,6 @@ impl<'a> PatternMatcherStateMachine<'a> {
         // Skip the first "N" characters (these are display cols, so use the unicode width).
         if let Some(scroll_offset_col_index) = self.maybe_scroll_offset_col_index {
             if scroll_offset_col_index != ch!(0) {
-                // BUG: this way? let my_display_width = UnicodeWidthChar::width(character_to_test);
-                // Change the math below to: self.maybe_scroll_offset_col_index = (scroll_offset_col_index - my_display_width).into();
                 self.maybe_scroll_offset_col_index =
                     (scroll_offset_col_index - character_to_test_width).into();
                 return CharacterMatchResult::Skip;
