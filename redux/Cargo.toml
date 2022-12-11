@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_redux"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "Redux library built using Tokio, concurrent & parallel"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
