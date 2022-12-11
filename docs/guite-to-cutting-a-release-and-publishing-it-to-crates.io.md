@@ -29,7 +29,7 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 | Crate  | Version | Status                                       |
 | ------ | ------- | -------------------------------------------- |
 | core   | 0.8.4   | https://crates.io/crates/r3bl_rs_utils_core  |
-| macro  | 0.8.3   | https://crates.io/crates/r3bl_rs_utils_macro |
+| macro  | 0.8.4   | https://crates.io/crates/r3bl_rs_utils_macro |
 | redux  | 0.1.3   | https://crates.io/crates/r3bl_rs_utils_redux |
 | tui    | 0.1.3   | https://crates.io/crates/r3bl_rs_utils_tui   |
 | public | 0.1.3   | https://crates.io/crates/r3bl_rs_utils       |
