@@ -32,4 +32,4 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 | macro  | 0.8.4   | https://crates.io/crates/r3bl_rs_utils_macro |
 | redux  | 0.1.4   | https://crates.io/crates/r3bl_rs_utils_redux |
 | tui    | 0.2.0   | https://crates.io/crates/r3bl_rs_utils_tui   |
-| public | 0.1.3   | https://crates.io/crates/r3bl_rs_utils       |
+| public | 0.9.3   | https://crates.io/crates/r3bl_rs_utils       |
