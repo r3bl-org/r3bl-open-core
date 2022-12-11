@@ -265,13 +265,6 @@ mod print_impl {
         pub content_type: ContentType,
     }
 
-    // BUG: [remove]
-    // #[derive(Debug, Clone, Copy)]
-    // pub enum SegmentWidth {
-    //     Narrow,
-    //     Wide,
-    // }
-
     /// Use [Style] to set crossterm [Attributes] ([docs](
     /// https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes)).
     pub async fn print_style_and_text<'a>(
@@ -304,7 +297,6 @@ mod print_impl {
         }
     }
 
-    // BUG: fix this (move to editor_engine_internal_api.rs)
     pub async fn print_text<'a>(paint_args: &PaintArgs<'a>, local_data: &mut RenderOpsLocalData) {
         let PaintArgs {
             text,
@@ -316,27 +308,6 @@ mod print_impl {
 
         let unicode_string: UnicodeString = text.as_ref().into();
         let mut cursor_position_copy = local_data.cursor_position;
-
-        // BUG: [remove] ... code smell -> this should be in the editor!
-        // match unicode_string.contains_wide_segments() {
-        //     true => {
-        //         for seg in unicode_string.iter() {
-        //             // Special handling of cursor based on unicode width.
-        //             if seg.unicode_width > ch!(1) {
-        //                 // Paint text.
-        //                 actually_print(Cow::Borrowed(&seg.string), log_msg, SegmentWidth::Wide);
-        //                 jump_cursor(&cursor_position_copy, seg);
-        //             } else {
-        //                 // Paint text.
-        //                 actually_print(Cow::Borrowed(&seg.string), log_msg, SegmentWidth::Narrow);
-        //             }
-        //         }
-        //     }
-        //     false => {
-        //         // Simple print operation.
-        //         actually_print(Cow::Borrowed(text), log_msg, SegmentWidth::Narrow);
-        //     }
-        // }
 
         // Actually print text.
         {
@@ -358,39 +329,9 @@ mod print_impl {
             }
             ContentType::PlainText => unicode_string.display_width,
         };
+        
         cursor_position_copy.col_index += display_width;
         sanitize_and_save_abs_position(cursor_position_copy, shared_global_data, local_data).await;
-
-        // BUG: [remove] this is a needless optimization that is covered by render_pipeline_to_offscreen_buffer.rs::print_???_text
-        // Move cursor "manually" to cover "extra" (display) width of a single character. This is a
-        // necessary precautionary measure, to make sure the behavior is the same on all terminals.
-        // In practice this means that terminals will be "broken" in the same way across multiple
-        // terminal emulators and OSes.
-        // 1. Terminals vary in their support of complex grapheme clusters (joined emoji). This code
-        //    uses the crate unicode_width to display a given UTF-8 character "correctly" in all
-        //    terminals. The number reported by this crate and the actual display width that the
-        //    specific terminal emulator + OS combo will display may be different.
-        // 2. This means that in some terminals, the caret itself has to be manually "jumped" to
-        //    covert the special case of a really wide UTF-8 character.
-        // 3. The cursor_pos is calculated based on the unicode_width crate values. So there is no
-        //    need to adjust that number in this function.
-        // fn jump_cursor(pos: &Position, seg: &GraphemeClusterSegment) {
-        //     let jump_to_col =
-        //         ch!(@to_u16 pos.col_index + seg.display_col_offset + seg.unicode_width);
-        //     exec_render_op!(
-        //         queue!(stdout(), MoveToColumn(jump_to_col)),
-        //         format!("🦘 Jump cursor -> MoveToColumn({jump_to_col})")
-        //     );
-        // }
-        // fn actually_print(text: Cow<'_, str>, log_msg: &str, width: SegmentWidth) {
-        //     exec_render_op!(
-        //         queue!(stdout(), Print(text)),
-        //         match width {
-        //             SegmentWidth::Narrow => format!("Print( normal_segment {log_msg})"),
-        //             SegmentWidth::Wide => format!("Print( wide_segment {log_msg})"),
-        //         }
-        //     );
-        // }
     }
 }
 

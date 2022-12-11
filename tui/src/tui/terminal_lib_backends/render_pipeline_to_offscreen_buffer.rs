@@ -136,7 +136,6 @@ pub fn print_plain_text(
     maybe_max_display_col_count: Option<ChUnit>,
 ) -> CommonResult<Position> {
     // Are ANSI codes present?
-    // BM: bp
     let render_path = {
         if ANSIText::try_strip_ansi(arg_text_ref).is_some() {
             OffscreenRenderPath::ANSIText

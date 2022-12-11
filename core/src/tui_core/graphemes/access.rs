@@ -167,7 +167,6 @@ impl UnicodeString {
 
     /// Clip the content [scroll_offset.col .. max cols].
     pub fn clip(&self, scroll_offset_col_index: ChUnit, max_display_col_count: ChUnit) -> String {
-        // BM: bp
         let truncated_line = self.truncate_start_by_n_col(scroll_offset_col_index);
         let truncated_line = UnicodeString::from(truncated_line);
         let truncated_line = truncated_line.truncate_end_to_fit_width(max_display_col_count);
@@ -257,7 +256,6 @@ impl UnicodeString {
         None
     }
 
-    // BUG: [right] impl get_string_at_right_of_display_col_index
     pub fn get_string_at_right_of_display_col_index(
         &self,
         display_col: ChUnit,

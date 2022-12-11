@@ -246,14 +246,10 @@ mod pixel_char_line_impl {
                     _ => {}
                 }
 
-                // BUG: make the col index use dim style (ansi colored output, eg: style_dimmed)
-                {
-                    let index_txt = format!("{col_index:03}");
-                    let pixel_char_txt = pixel_char.pretty_print();
-                    let index_msg =
-                        format!("{}{}", style_dim_underline(&index_txt), pixel_char_txt);
-                    it.push(index_msg);
-                }
+                let index_txt = format!("{col_index:03}");
+                let pixel_char_txt = pixel_char.pretty_print();
+                let index_msg = format!("{}{}", style_dim_underline(&index_txt), pixel_char_txt);
+                it.push(index_msg);
 
                 // Add \n every MAX_CHARS_PER_LINE characters.
                 char_count += 1;

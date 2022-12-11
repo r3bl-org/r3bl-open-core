@@ -350,14 +350,15 @@ mod move_caret {
             }
         }
 
-        // BUG: [right] check for wide unicode character to the right
+        /// 1. Check for wide unicode character to the right of the caret.
+        /// 2. [validate::apply_change] checks for wide unicode character at the start of the
+        ///    viewport.
         fn right_normal(
             editor_buffer: &mut EditorBuffer,
             editor_engine: &mut EditorEngine,
         ) -> Option<()> {
             let UnicodeStringSegmentSliceResult {
                 unicode_width: unicode_width_at_caret,
-                unicode_string_seg: unicode_string_seg_at_caret,
                 ..
             } = get_content::string_at_caret(editor_buffer, editor_engine)?;
 
@@ -369,7 +370,6 @@ mod move_caret {
             let maybe_char_to_right_of_caret =
                 get_content::string_to_right_of_caret(editor_buffer, editor_engine);
 
-            // BUG: [right] remove debug
             match maybe_char_to_right_of_caret {
                 Some(right_of_caret_seg_slice_result) => {
                     let unicode_string_to_right_of_caret =
@@ -400,18 +400,6 @@ mod move_caret {
                                 },
                             );
                         }
-                        // BUG: [remove] debug
-                        log_no_err!(
-                            DEBUG,
-                            "\n🐒🐒🐒 jump: unicode_string_seg: '{}', width: {}, -> right_seg_us: '{}', contains_wide_seg: {}, width: {}, <- jump_by_col_width: {}, move_left: {}",
-                            unicode_string_seg_at_caret.string,
-                            unicode_string_seg_at_caret.display_width,
-                            unicode_string_to_right_of_caret.string,
-                            unicode_string_to_right_of_caret.contains_wide_segments(),
-                            unicode_string_to_right_of_caret.display_width,
-                            jump_by_col_width,
-                            move_left
-                        );
                     } else {
                         validate::apply_change(
                             editor_buffer,
@@ -445,9 +433,6 @@ mod move_caret {
                 }
             }
 
-            // BUG: 🦜🦜🦜[right] make sure that the start of the line is visible (the scroll_offset does
-            // not cut into a jumbo emoji!)
-
             None
         }
 
@@ -472,7 +457,6 @@ mod move_caret {
             editor_buffer,
             editor_engine,
         }) {
-            // BUG: [left] check for wide unicode character to the left
             CaretColLocationInLine::AtStart => {
                 if get_content::prev_line_above_caret_exists(editor_buffer, editor_engine) {
                     // If there is a line above the caret, move the caret to the end of the previous line.
@@ -615,7 +599,6 @@ mod get_content {
         Some(result)
     }
 
-    // BUG: [right] impl string_to_right_of_caret
     pub fn string_to_right_of_caret(
         buffer: &EditorBuffer,
         _engine: &EditorEngine,
@@ -1099,10 +1082,14 @@ mod mut_content {
 pub mod validate {
     use super::*;
 
-    /// In addition to mutating the buffer, this function also runs validation functions to ensure
-    /// that:
-    /// 1. the caret is in not in the middle of a unicode segment character.
-    /// 2. the caret is not out of bounds vertically or horizontally and activates scrolling if needed.
+    /// In addition to mutating the buffer, this function runs the following validations on the
+    /// [EditorBuffer]'s:
+    /// 1. `caret`:
+    ///    - the caret is in not in the middle of a unicode segment character.
+    ///    - if it is then it moves the caret.
+    /// 2. `scroll_offset`:
+    ///    - make sure that it's not in the middle of a wide unicode segment character.
+    ///    - if it is then it moves the scroll_offset and caret.
     pub fn apply_change(
         editor_buffer: &mut EditorBuffer,
         editor_engine: &mut EditorEngine,
@@ -1112,15 +1099,18 @@ pub mod validate {
             /* EditorEngine::scroll_offset */ &mut ScrollOffset,
         ),
     ) -> Nope {
-        // Run the mutator first.
         let (lines, caret, scroll_offset) = editor_buffer.get_mut();
+
+        // Run the mutator first.
         mutator(lines, caret, scroll_offset);
 
+        // Check caret validity.
         adjust_caret_col_if_not_in_middle_of_grapheme_cluster(EditorArgsMut {
             editor_engine,
             editor_buffer,
         });
 
+        // Check scroll_offset validity.
         if let Some(diff) = is_scroll_offset_in_middle_of_grapheme_cluster(EditorArgs {
             editor_engine,
             editor_buffer,
@@ -1174,7 +1164,6 @@ pub mod validate {
         None
     }
 
-    // BUG: 🦜🦜🦜 why does this not validate the scroll_offset?
     /// This function is visible inside the editor_ops.rs module only. It is not meant to be called
     /// directly, but instead is called by [validate::apply_change].
     pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(args: EditorArgsMut<'_>) -> Nope {
