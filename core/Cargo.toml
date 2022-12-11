@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_rs_utils_core"
-version = "0.8.3"
+version = "0.8.4"
 edition = "2021"
 description = """
 Helper crate for proc-macro library for reading attributes into structs when
@@ -22,12 +22,12 @@ path = "src/lib.rs"
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-tokio = { version = "1.21.2", features = ["full"] }
-async-trait = "0.1.58"
+tokio = { version = "1.23.0", features = ["full"] }
+async-trait = "0.1.59"
 ansi_term = "0.12.1"
 
 # HTTP Client.
-reqwest = { version = "0.11.12", features = ["json"] }
+reqwest = { version = "0.11.13", features = ["json"] }
 
 # Bitflags.
 bitflags = "1.3.2"
@@ -63,7 +63,7 @@ log = "0.4.17"
 simplelog = "0.12.0"
 
 # Time
-chrono = "0.4.22"
+chrono = "0.4.23"
 time = "0.3.17"
 
 # Syntax highlighting.
