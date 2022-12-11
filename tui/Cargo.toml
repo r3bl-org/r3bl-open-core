@@ -24,7 +24,7 @@ path = "src/lib.rs"
 # r3bl_rs_utils
 r3bl_rs_utils_core = { version = "0.8.4", path = "../core" }
 r3bl_rs_utils_macro = { version = "0.8.4", path = "../macro" }
-r3bl_redux = { version = "0.1.3", path = "../redux" }
+r3bl_redux = { version = "0.1.4", path = "../redux" }
 
 # Logging
 log = "0.4.17"
