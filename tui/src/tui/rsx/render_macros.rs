@@ -15,8 +15,10 @@
  *   limitations under the License.
  */
 
+/// Render the component in the current box (which is retrieved from the surface). This is the
+/// "normal" way to render a component, in the FlexBox that is currently being laid out.
 #[macro_export]
-macro_rules! render_component_in_surface {
+macro_rules! render_component_in_current_box {
     (
     in:           $arg_surface          : expr, // Eg: in: surface
     component_id: $arg_component_id     : expr, // Eg: "component1"
@@ -50,8 +52,11 @@ macro_rules! render_component_in_surface {
     };
 }
 
+/// Render the component in the given box (which is not retrieved from the surface). This is usually
+/// to do "absolute positioned" rendering of components (like for a modal dialog box that paints on
+/// top of everything else in the window).
 #[macro_export]
-macro_rules! render_component_in_box {
+macro_rules! render_component_in_given_box {
     (
     in:           $arg_surface          : expr, // Eg: in: surface
     box:          $arg_box              : expr, // Eg: box: FlexBox::default()

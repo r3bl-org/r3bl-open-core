@@ -55,6 +55,16 @@ where
     where
         Self: Default + Sync + Send + 'static,
     {
-        Arc::new(RwLock::new(Self::default()))
+        Arc::new(RwLock::new({
+            let mut it = Self::default();
+            it.init();
+            it
+        }))
     }
+
+    /// Called when [App::new_shared] runs.
+    fn init(&mut self);
+
+    /// It is a requirement that the [App] trait impl have one of these as a field.
+    fn get_component_registry(&mut self) -> &mut ComponentRegistry<S, A>;
 }

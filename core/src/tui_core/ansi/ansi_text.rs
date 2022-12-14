@@ -93,8 +93,8 @@ mod ansi_text_segments {
 mod ansi_text_segment {
     use super::*;
 
-    impl<'life0> From<&ANSITextSegment<'life0>> for String {
-        fn from(ansi_text_segment: &ANSITextSegment<'life0>) -> Self {
+    impl<'a> From<&ANSITextSegment<'a>> for String {
+        fn from(ansi_text_segment: &ANSITextSegment<'a>) -> Self {
             let mut buff = String::new();
 
             for part in &ansi_text_segment.vec_parts {

@@ -30,46 +30,46 @@ pub enum DialogEvent {
     ActivateModal,
     EnterPressed,
     EscPressed,
+    None,
 }
 
 impl DialogEvent {
+    /// The `modal_keypress` is used to determine whether the [InputEvent] should be converted to
+    /// [DialogEvent::ActivateModal].
+    pub fn should_activate_modal(input_event: &InputEvent, modal_keypress: KeyPress) -> Self {
+        if let InputEvent::Keyboard(keypress) = input_event {
+            if keypress == &modal_keypress {
+                return Self::ActivateModal;
+            }
+        }
+        Self::None
+    }
+
     /// Tries to convert the given [InputEvent] into a [DialogEvent].
-    /// - The optional `modal_keypress` is used to determine whether the [InputEvent] should be
-    ///   converted to [DialogEvent::ActivateModal].
     /// - Enter and Esc are also matched against to return [DialogEvent::EnterPressed] and
     ///   [DialogEvent::EscPressed]
     /// - Otherwise, [Err] is returned.
-    pub fn try_from(
-        input_event: &InputEvent,
-        maybe_modal_keypress: Option<KeyPress>,
-    ) -> Option<Self> {
+    pub fn from(input_event: &InputEvent) -> Self {
         if let InputEvent::Keyboard(keypress) = input_event {
-            // Compare to `modal_keypress` (if any).
-            if let Some(modal_keypress) = maybe_modal_keypress {
-                if keypress == &modal_keypress {
-                    return Some(Self::ActivateModal);
-                }
-            }
-
             match keypress {
                 // Compare to `Enter`.
                 KeyPress::Plain {
                     key: Key::SpecialKey(SpecialKey::Enter),
                 } => {
-                    return Some(Self::EnterPressed);
+                    return Self::EnterPressed;
                 }
 
                 // Compare to `Esc`.
                 KeyPress::Plain {
                     key: Key::SpecialKey(SpecialKey::Esc),
                 } => {
-                    return Some(Self::EscPressed);
+                    return Self::EscPressed;
                 }
 
                 _ => {}
             }
         }
 
-        None
+        Self::None
     }
 }

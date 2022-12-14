@@ -370,20 +370,18 @@ mod internal_impl {
         input_event: &InputEvent,
         dialog_buffer: &DialogBuffer,
     ) -> Option<DialogChoice> {
-        if let Some(dialog_event) = DialogEvent::try_from(input_event, None) {
-            match dialog_event {
-                // Handle Enter.
-                DialogEvent::EnterPressed => {
-                    let text = dialog_buffer.editor_buffer.get_as_string();
-                    return Some(DialogChoice::Yes(text));
-                }
-
-                // Handle Esc.
-                DialogEvent::EscPressed => {
-                    return Some(DialogChoice::No);
-                }
-                _ => {}
+        match DialogEvent::from(input_event) {
+            // Handle Enter.
+            DialogEvent::EnterPressed => {
+                let text = dialog_buffer.editor_buffer.get_as_string();
+                return Some(DialogChoice::Yes(text));
             }
+
+            // Handle Esc.
+            DialogEvent::EscPressed => {
+                return Some(DialogChoice::No);
+            }
+            _ => {}
         }
         None
     }

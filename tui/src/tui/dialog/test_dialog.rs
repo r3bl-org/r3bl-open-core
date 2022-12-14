@@ -24,23 +24,23 @@ mod test_dialog_event {
     #[test]
     fn dialog_event_handles_enter() {
         let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Enter));
-        let dialog_event = DialogEvent::try_from(&input_event, None);
-        assert_eq2!(dialog_event, Some(DialogEvent::EnterPressed));
+        let dialog_event = DialogEvent::from(&input_event);
+        assert_eq2!(dialog_event, DialogEvent::EnterPressed);
     }
 
     #[test]
     fn dialog_event_handles_esc() {
         let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Esc));
-        let dialog_event = DialogEvent::try_from(&input_event, None);
-        assert_eq2!(dialog_event, Some(DialogEvent::EscPressed));
+        let dialog_event = DialogEvent::from(&input_event);
+        assert_eq2!(dialog_event, DialogEvent::EscPressed);
     }
 
     #[test]
     fn dialog_event_handles_modal_keypress() {
         let modal_keypress = keypress!(@char ModifierKeysMask::CTRL, 'l');
         let input_event = InputEvent::Keyboard(modal_keypress);
-        let dialog_event = DialogEvent::try_from(&input_event, Some(modal_keypress));
-        assert_eq2!(dialog_event, Some(DialogEvent::ActivateModal));
+        let dialog_event = DialogEvent::should_activate_modal(&input_event, modal_keypress);
+        assert_eq2!(dialog_event, DialogEvent::ActivateModal);
     }
 }
 

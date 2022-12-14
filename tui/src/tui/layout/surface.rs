@@ -30,6 +30,30 @@ pub struct Surface {
     pub render_pipeline: RenderPipeline,
 }
 
+#[macro_export]
+macro_rules! surface {
+    (
+        stylesheet: $arg_stylesheet : expr
+    ) => {
+        Surface {
+            stylesheet: $arg_stylesheet,
+            ..Default::default()
+        }
+    };
+    (
+        origin_pos: $arg_origin_pos : expr,
+        box_size:   $arg_box_size   : expr,
+        stylesheet: $arg_stylesheet : expr
+    ) => {
+        Surface {
+            origin_pos: $arg_origin_pos,
+            box_size: $arg_box_size,
+            stylesheet: $arg_stylesheet,
+            ..Default::default()
+        }
+    };
+}
+
 impl LayoutManagement for Surface {
     fn surface_start(&mut self, SurfaceProps { pos, size }: SurfaceProps) -> CommonResult<()> {
         throws!({

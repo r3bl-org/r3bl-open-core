@@ -148,33 +148,9 @@ where
     }
 }
 
-/// Macro to help with the boilerplate of calling
-/// [route_event_to_focused_component()](ComponentRegistry::route_event_to_focused_component)
-#[macro_export]
-macro_rules! route_event_to_focused_component {
-    (
-    registry:       $arg_component_registry : expr,
-    has_focus:      $arg_has_focus          : expr,
-    input_event:    $arg_input_event        : expr,
-    state:          $arg_state              : expr,
-    shared_store:   $arg_shared_store       : expr,
-    shared_global_data: $arg_shared_global_data     : expr,
-    window_size:    $arg_window_size        : expr
-  ) => {
-        ComponentRegistry::route_event_to_focused_component(
-            &mut $arg_component_registry,
-            $arg_input_event,
-            $arg_state,
-            $arg_shared_store,
-            $arg_shared_global_data,
-            $arg_window_size,
-        )
-        .await
-    };
-}
-
 /// Macro to help with the boilerplate of calling [Component::handle_event] on a [SharedComponent].
-/// This is used by [route_event_to_focused_component!].
+/// This is used by
+/// [route_event_to_focused_component](ComponentRegistry::route_event_to_focused_component).
 #[macro_export]
 macro_rules! call_handle_event {
     (

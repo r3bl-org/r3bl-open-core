@@ -1,6 +1,7 @@
-# Design document for editor component, Aug 28 2022
-<a id="markdown-design-document-for-editor-component%2C-aug-28-2022" name="design-document-for-editor-component%2C-aug-28-2022"></a>
-
+---
+Title: Design document for editor component
+Date: 2022-08-28
+---
 
 <!-- TOC -->
 
@@ -83,7 +84,7 @@ Here are some other TUI frameworks:
 <a id="markdown-proposed-solution---add-an-editorengine-field-to-the-editorcomponent-and-add-an-editorbuffer-field-to-the-state" name="proposed-solution---add-an-editorengine-field-to-the-editorcomponent-and-add-an-editorbuffer-field-to-the-state"></a>
 
 
-![editor_component drawio](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/editor_component.drawio.svg)
+![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 
 ### Scope
 <a id="markdown-scope" name="scope"></a>

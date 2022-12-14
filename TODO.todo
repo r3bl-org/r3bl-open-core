@@ -1,6 +1,13 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+auto completion provider design:
+  ☐ how do dialog boxes currently work
+  ☐ how to make an http request to some api (dog, cat, etc), ref: address book code
+  ☐ how to add an editor component to bottom of dialog box (result box)
+    - left / right => goes to dialog's input box
+    - up / down => goes to editor component below (result box) & add '*' prefix to selected line
+
 editor engine extras (auto-completion providers):
   ☐ add support for auto completion providers
   ☐ modal dialogs for autocompletion provider, which just use a nested multiline editor component
@@ -23,6 +30,7 @@ tui components (all implemented w/ editor component):
   
 framework (configurable keyboard shortcuts):
   ☐ a json file w/ keybindings needs to be loaded / stored from `~/.config/r3bl/keybindings.json`
+    - https://crates.io/crates/config
   ☐ there should be defaults provided if the file doesn't exist
   ☐ the keybindings should be configurable via the UI (using an editor component)
   ☐ each keybinding is made up of a keyboard shortcut sequence and an "action name"

@@ -114,7 +114,6 @@ where
 // ┛         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 pub type ScrollOffset = Position;
-pub type Nope = Option<()>;
 
 // ┏━━━━━━━━━━━━━━━━━━━━━━┓
 // ┃ Debug format helpers ┃

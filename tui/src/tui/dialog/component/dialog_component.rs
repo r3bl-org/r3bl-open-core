@@ -65,7 +65,8 @@ pub mod impl_component {
         /// - User input (from [main_event_loop]): [InputEvent].
         ///
         /// Usually a component must have focus in order for the [App] to
-        /// [route_event_to_focused_component!] in the first place.
+        /// [route_event_to_focused_component](ComponentRegistry::route_event_to_focused_component)
+        /// in the first place.
         async fn handle_event(
             &mut self,
             args: ComponentScopeArgs<'_, S, A>,

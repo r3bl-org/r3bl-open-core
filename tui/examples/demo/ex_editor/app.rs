@@ -52,9 +52,21 @@ mod app_trait_impl {
 
     #[async_trait]
     impl App<State, Action> for AppWithLayout {
+        // ┏━━━━━━━━━━━━━━━━━━━━━━━━┓
+        // ┃ get_component_registry ┃
+        // ┛                        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
+            &mut self.component_registry
+        }
+
+        // ┏━━━━━━┓
+        // ┃ init ┃
+        // ┛      ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        fn init(&mut self) { populate_component_registry::init(self); }
+
         // ┏━━━━━━━━━━━━━━━━━━┓
         // ┃ app_handle_event ┃
-        // ┛                  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // ┛                  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         async fn app_handle_event(
             &mut self,
             args: GlobalScopeArgs<'_, State, Action>,
@@ -76,26 +88,28 @@ mod app_trait_impl {
                 );
             });
 
+            // Check to see if the modal dialog should be activated.
             if let EventPropagation::Consumed =
                 self.try_input_event_activate_modal(args, input_event)
             {
                 return Ok(EventPropagation::Consumed);
             }
 
-            route_event_to_focused_component!(
-              registry:       self.component_registry,
-              has_focus:      self.has_focus,
-              input_event:    input_event,
-              state:          state,
-              shared_store:   shared_store,
-              shared_global_data: shared_global_data,
-              window_size:    window_size
+            // If modal not activated, route the input event to the focused component.
+            ComponentRegistry::route_event_to_focused_component(
+                &mut self.component_registry,
+                input_event,
+                state,
+                shared_store,
+                shared_global_data,
+                window_size,
             )
+            .await
         }
 
         // ┏━━━━━━━━━━━━┓
         // ┃ app_render ┃
-        // ┛            ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // ┛            ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         async fn app_render(
             &mut self,
             args: GlobalScopeArgs<'_, State, Action>,
@@ -107,19 +121,33 @@ mod app_trait_impl {
                     shared_global_data,
                     window_size,
                 } = args;
-                let adjusted_window_size =
-                    size!(col_count: window_size.col_count, row_count: window_size.row_count - 1);
 
-                // Render container component.
-                let mut surface = surface_start_with_surface_renderer! {
-                  surface_renderer: container_layout_render::RenderContainer{ app_ref: self },
-                  stylesheet:       style_helpers::create_stylesheet()?,
-                  pos:              position!(col_index:0, row_index:0),
-                  size:             adjusted_window_size, // Bottom row for status bar.
-                  state:            state,
-                  shared_store:     shared_store,
-                  shared_global_data:   shared_global_data,
-                  window_size:      window_size
+                // Create a surface and then run the SurfaceRenderer (ContainerSurfaceRender) on it.
+                let mut surface = {
+                    let mut it = surface!(stylesheet: style_helpers::create_stylesheet()?);
+
+                    it.surface_start(SurfaceProps {
+                        pos: position!(col_index: 0, row_index: 0),
+                        size: size!(
+                            col_count: window_size.col_count,
+                            row_count: window_size.row_count - 1), // Bottom row for for status bar.
+                    })?;
+
+                    layout_container::ContainerSurfaceRender { app_ref: self }
+                        .render_in_surface(
+                            GlobalScopeArgs {
+                                shared_global_data,
+                                shared_store,
+                                state,
+                                window_size,
+                            },
+                            &mut it,
+                        )
+                        .await?;
+
+                    it.surface_end()?;
+
+                    it
                 };
 
                 // Render status bar.
@@ -136,69 +164,74 @@ mod detect_modal_dialog_activation_from_input_event {
     use super::*;
 
     impl AppWithLayout {
-        /// If `input_event` matches <kbd>Ctrl+l</kbd>, then toggle the modal dialog.
+        /// If `input_event` matches <kbd>Ctrl+l</kbd>, then toggle the modal dialog. Note that this
+        /// returns a [EventPropagation::Consumed] and not [EventPropagation::ConsumedRerender]
+        /// because the [Action::SetDialogBufferTitleAndText] is dispatched to the store & that will
+        /// cause a rerender.
         pub fn try_input_event_activate_modal(
             &mut self,
             args: GlobalScopeArgs<'_, State, Action>,
             input_event: &InputEvent,
         ) -> EventPropagation {
-            let maybe_input_event_matches_modal_activation_key = DialogEvent::try_from(
+            if let DialogEvent::ActivateModal = DialogEvent::should_activate_modal(
                 input_event,
-                Some(KeyPress::WithModifiers {
+                KeyPress::WithModifiers {
                     key: Key::Character('l'),
                     mask: ModifierKeysMask::CTRL,
-                }),
-            );
-
-            match maybe_input_event_matches_modal_activation_key {
-                Some(DialogEvent::ActivateModal) => {
-                    self.activate_modal(args);
-                    EventPropagation::Consumed
-                }
-                _ => EventPropagation::Propagate,
+                },
+            ) {
+                activate_modal(self, args);
+                return EventPropagation::Consumed;
+            } else {
+                return EventPropagation::Propagate;
             }
-        }
 
-        fn activate_modal(&mut self, args: GlobalScopeArgs<State, Action>) {
-            self.component_registry
-                .has_focus
-                .set_modal_id(Id::Dialog.int_value());
+            fn activate_modal(this: &mut AppWithLayout, args: GlobalScopeArgs<State, Action>) {
+                let title = "Modal Dialog Title";
+                let text = {
+                    if let Some(editor_buffer) =
+                        args.state.get_editor_buffer(Id::Editor.int_value())
+                    {
+                        editor_buffer.get_as_string()
+                    } else {
+                        "Press <Esc> to close, or <Enter> to accept".to_string()
+                    }
+                };
 
-            let text = {
-                if let Some(editor_buffer) = args.state.get_editor_buffer(Id::Editor.int_value()) {
-                    editor_buffer.get_as_string()
-                } else {
-                    "Press <Esc> to close, or <Enter> to accept".to_string()
-                }
-            };
+                // Setting the has_focus to Id::Dialog will cause the dialog to appear on the next
+                // render.
+                this.component_registry
+                    .has_focus
+                    .set_modal_id(Id::Dialog.int_value());
 
-            let title = "Modal Dialog Title";
-
-            spawn_dispatch_action!(
-                args.shared_store,
-                Action::SetDialogBufferTitleAndText(title.to_string(), text.to_string())
-            );
-
-            call_if_true!(DEBUG_TUI_MOD, {
-                log_no_err!(
-                    DEBUG,
-                    "📣 activate modal: {:?}",
-                    self.component_registry.has_focus
+                // Change the state so that it will trigger a render. This will show the title &
+                // text on the next render.
+                spawn_dispatch_action!(
+                    args.shared_store,
+                    Action::SetDialogBufferTitleAndText(title.to_string(), text.to_string())
                 );
-            });
+
+                call_if_true!(DEBUG_TUI_MOD, {
+                    log_no_err!(
+                        DEBUG,
+                        "📣 activate modal: {:?}",
+                        this.component_registry.has_focus
+                    );
+                });
+            }
         }
     }
 }
 
-mod container_layout_render {
+mod layout_container {
     use super::*;
 
-    pub struct RenderContainer<'a> {
+    pub struct ContainerSurfaceRender<'a> {
         pub app_ref: &'a mut AppWithLayout,
     }
 
     #[async_trait]
-    impl SurfaceRenderer<State, Action> for RenderContainer<'_> {
+    impl SurfaceRenderer<State, Action> for ContainerSurfaceRender<'_> {
         async fn render_in_surface(
             &mut self,
             args: GlobalScopeArgs<'_, State, Action>,
@@ -212,40 +245,43 @@ mod container_layout_render {
                     window_size,
                 } = args;
 
-                populate_component_registry::init(self.app_ref, surface).await;
-
                 // Layout editor component, and render it.
-                box_start_with_component! {
-                  in:                     surface,
-                  id:                     Id::Editor.int_value(),
-                  dir:                    Direction::Vertical,
-                  requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                  styles:                 [&Id::Editor.int_value().to_string()],
-                  render: {
-                    from:           self.app_ref.component_registry,
-                    state:          state,
-                    shared_store:   shared_store,
-                    shared_global_data: shared_global_data,
-                    window_size:    window_size
-                  }
+                {
+                    box_start! (
+                        in:                     surface,
+                        id:                     Id::Editor.int_value(),
+                        dir:                    Direction::Vertical,
+                        requested_size_percent: requested_size_percent!(width: 100, height: 100),
+                        styles:                 [&Id::Editor.int_value().to_string()]
+                    );
+                    render_component_in_current_box!(
+                        in:                 surface,
+                        component_id:       Id::Editor.int_value(),
+                        from:               self.app_ref.component_registry,
+                        state:              state,
+                        shared_store:       shared_store,
+                        shared_global_data: shared_global_data,
+                        window_size:        window_size
+                    );
+                    box_end!(in: surface);
                 }
 
-                // Then, render modal dialog (if it is active).
+                // Then, render modal dialog (if it is active, on top of the editor component).
                 if self
                     .app_ref
                     .component_registry
                     .has_focus
                     .is_modal_id(Id::Dialog.int_value())
                 {
-                    render_component_in_box! {
-                      in:             surface,
-                      box:            DialogEngineApi::make_flex_box_for_dialog(Id::Dialog.int_value(), surface, window_size)?,
-                      component_id:   Id::Dialog.int_value(),
-                      from:           self.app_ref.component_registry,
-                      state:          state,
-                      shared_store:   shared_store,
+                    render_component_in_given_box! {
+                      in:                 surface,
+                      box:                DialogEngineApi::make_flex_box_for_dialog(Id::Dialog.int_value(), surface, window_size)?,
+                      component_id:       Id::Dialog.int_value(),
+                      from:               self.app_ref.component_registry,
+                      state:              state,
+                      shared_store:       shared_store,
                       shared_global_data: shared_global_data,
-                      window_size:    window_size
+                      window_size:        window_size
                     };
                 }
             });
@@ -256,39 +292,58 @@ mod container_layout_render {
 mod populate_component_registry {
 
     use super::*;
+    use crate::ex_editor::app::style_helpers::create_stylesheet;
 
-    pub async fn init(app_ref: &mut AppWithLayout, surface: &mut Surface) {
+    pub fn init(this: &mut AppWithLayout) {
         let editor_id = Id::Editor.int_value();
         let dialog_id = Id::Dialog.int_value();
 
-        try_insert_editor_component(app_ref, editor_id);
-        try_insert_dialog_component(app_ref, dialog_id, surface);
-        try_init_has_focus(app_ref, editor_id);
+        insert_editor_component(this, editor_id);
+        insert_dialog_component(this, dialog_id);
+        init_has_focus(this, editor_id);
     }
 
     /// Switch focus to the editor component if focus is not set.
-    fn try_init_has_focus(app_ref: &mut AppWithLayout, id: FlexBoxId) {
-        if app_ref.component_registry.has_focus.is_set() {
-            return;
-        }
-
-        app_ref.component_registry.has_focus.set_id(id);
+    fn init_has_focus(this: &mut AppWithLayout, id: FlexBoxId) {
+        this.component_registry.has_focus.set_id(id);
         call_if_true!(DEBUG_TUI_MOD, {
             log_no_err!(DEBUG, "🪙 {} = {}", "init component_registry.has_focus", id);
         });
     }
 
     /// Insert dialog component into registry if it's not already there.
-    fn try_insert_dialog_component(
-        app_ref: &mut AppWithLayout,
-        id: FlexBoxId,
-        surface: &mut Surface,
-    ) {
-        if app_ref.component_registry.contains(id) {
-            return;
-        }
+    fn insert_dialog_component(this: &mut AppWithLayout, id: FlexBoxId) {
+        let maybe_stylesheet = create_stylesheet();
+
+        let maybe_border_style = match maybe_stylesheet {
+            Ok(ref stylesheet) => get_style! { from: stylesheet , DialogStyleId::Border.as_ref() },
+            Err(_) => None,
+        };
+
+        let maybe_title_style = match maybe_stylesheet {
+            Ok(ref stylesheet) => get_style! { from: stylesheet , DialogStyleId::Title.as_ref() },
+            Err(_) => None,
+        };
+
+        let maybe_editor_style = match maybe_stylesheet {
+            Ok(ref stylesheet) => get_style! { from: stylesheet , DialogStyleId::Editor.as_ref() },
+            Err(_) => None,
+        };
 
         let shared_dialog_component = {
+            let it = DialogComponent::new_shared(
+                id,
+                on_dialog_press,
+                on_dialog_editor_change_handler,
+                maybe_border_style,
+                maybe_title_style,
+                maybe_editor_style,
+                EditorEngineConfigOptions {
+                    multiline: false,
+                    syntax_highlight: false,
+                },
+            );
+
             fn on_dialog_press(
                 dialog_choice: DialogChoice,
                 shared_store: &SharedStore<State, Action>,
@@ -316,21 +371,10 @@ mod populate_component_registry {
                 spawn_dispatch_action!(shared_store, Action::UpdateDialogBuffer(editor_buffer));
             }
 
-            DialogComponent::new_shared(
-                id,
-                on_dialog_press,
-                on_dialog_editor_change_handler,
-                get_style! { from: surface.stylesheet , DialogStyleId::Border.as_ref() },
-                get_style! { from: surface.stylesheet , DialogStyleId::Title.as_ref() },
-                get_style! { from: surface.stylesheet , DialogStyleId::Editor.as_ref() },
-                EditorEngineConfigOptions {
-                    multiline: false,
-                    syntax_highlight: false,
-                },
-            )
+            it
         };
 
-        app_ref.component_registry.put(id, shared_dialog_component);
+        this.component_registry.put(id, shared_dialog_component);
 
         call_if_true!(DEBUG_TUI_MOD, {
             log_no_err!(
@@ -342,11 +386,7 @@ mod populate_component_registry {
     }
 
     /// Insert editor component into registry if it's not already there.
-    fn try_insert_editor_component(app_ref: &mut AppWithLayout, id: FlexBoxId) {
-        if app_ref.component_registry.contains(id) {
-            return;
-        }
-
+    fn insert_editor_component(this: &mut AppWithLayout, id: FlexBoxId) {
         let shared_editor_component = {
             fn on_buffer_change(
                 shared_store: &SharedStore<State, Action>,
@@ -360,7 +400,7 @@ mod populate_component_registry {
             EditorComponent::new_shared(id, config_options, on_buffer_change)
         };
 
-        app_ref.component_registry.put(id, shared_editor_component);
+        this.component_registry.put(id, shared_editor_component);
 
         call_if_true!(DEBUG_TUI_MOD, {
             log_no_err!(

@@ -45,6 +45,12 @@ mod app_trait_impl {
 
     #[async_trait]
     impl App<State, Action> for AppWithLayout {
+        fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
+            &mut self.component_registry
+        }
+
+        fn init(&mut self) { self.init_component_registry(); }
+
         async fn app_handle_event(
             &mut self,
             args: GlobalScopeArgs<'_, State, Action>,
@@ -57,15 +63,15 @@ mod app_trait_impl {
                 window_size,
             } = args;
 
-            route_event_to_focused_component!(
-              registry:       self.component_registry,
-              has_focus:      self.has_focus,
-              input_event:    input_event,
-              state:          state,
-              shared_store:   shared_store,
-              shared_global_data: shared_global_data,
-              window_size:    window_size
+            ComponentRegistry::route_event_to_focused_component(
+                &mut self.component_registry,
+                input_event,
+                state,
+                shared_store,
+                shared_global_data,
+                window_size,
             )
+            .await
         }
 
         async fn app_render(
@@ -80,16 +86,32 @@ mod app_trait_impl {
                     window_size,
                 } = args;
 
-                // Render container component.
-                let mut surface = surface_start_with_surface_renderer! {
-                  surface_renderer: layout_container::ContainerSurfaceRenderer(self),
-                  stylesheet:       style_helpers::create_stylesheet()?,
-                  pos:              position!(col_index: 0, row_index: 0),
-                  size:             size!(col_count: window_size.col_count, row_count: window_size.row_count - 1), // Bottom row for status bar.
-                  state:            state,
-                  shared_store:     shared_store,
-                  shared_global_data:   shared_global_data,
-                  window_size:      window_size
+                // Create a surface and then run the SurfaceRenderer (ContainerSurfaceRender) on it.
+                let mut surface = {
+                    let mut it = surface!(stylesheet: style_helpers::create_stylesheet()?);
+
+                    it.surface_start(SurfaceProps {
+                        pos: position!(col_index: 0, row_index: 0),
+                        size: size!(
+                            col_count: window_size.col_count,
+                            row_count: window_size.row_count - 1), // Bottom row for for status bar.
+                    })?;
+
+                    layout_container::ContainerSurfaceRender(self)
+                        .render_in_surface(
+                            GlobalScopeArgs {
+                                shared_global_data,
+                                shared_store,
+                                state,
+                                window_size,
+                            },
+                            &mut it,
+                        )
+                        .await?;
+
+                    it.surface_end()?;
+
+                    it
                 };
 
                 // Render status bar.
@@ -105,10 +127,10 @@ mod app_trait_impl {
 mod layout_container {
     use super::*;
 
-    pub struct ContainerSurfaceRenderer<'life0>(pub &'life0 mut AppWithLayout);
+    pub struct ContainerSurfaceRender<'a>(pub &'a mut AppWithLayout);
 
     #[async_trait]
-    impl SurfaceRenderer<State, Action> for ContainerSurfaceRenderer<'_> {
+    impl SurfaceRenderer<State, Action> for ContainerSurfaceRender<'_> {
         async fn render_in_surface(
             &mut self,
             args: GlobalScopeArgs<'_, State, Action>,
@@ -120,27 +142,28 @@ mod layout_container {
                 shared_global_data,
                 window_size,
             } = args;
-            let this = &mut self.0;
 
-            this.init_component_registry().await;
-
-            let col_id = Id::Col.int_value();
+            // Layout ColumnRenderComponent and render it.
             throws!({
-                box_start_with_component! {
-                  in:                     surface,
-                  id:                     col_id,
-                  dir:                    Direction::Vertical,
-                  requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                  styles:                 [&col_id.to_string()],
-                  render: {
-                    from:           this.component_registry,
-                    state:          state,
-                    shared_store:   shared_store,
+                let col_id = Id::Col.int_value();
+                box_start! (
+                    in:                     surface,
+                    id:                     col_id,
+                    dir:                    Direction::Vertical,
+                    requested_size_percent: requested_size_percent!(width: 100, height: 100),
+                    styles:                 [&col_id.to_string()]
+                );
+                render_component_in_current_box!(
+                    in:                 surface,
+                    component_id:       col_id,
+                    from:               self.0.component_registry,
+                    state:              state,
+                    shared_store:       shared_store,
                     shared_global_data: shared_global_data,
-                    window_size:    window_size
-                  }
-                }
-            });
+                    window_size:        window_size
+                );
+                box_end!(in: surface);
+            })
         }
     }
 }
@@ -150,7 +173,7 @@ mod component_registry {
     use super::*;
 
     impl AppWithLayout {
-        pub async fn init_component_registry(&mut self) {
+        pub fn init_component_registry(&mut self) {
             // Construct Col.
             let col_id = Id::Col.int_value();
             if self.component_registry.does_not_contain(col_id) {

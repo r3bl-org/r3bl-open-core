@@ -1,6 +1,7 @@
-# Design document for compositor, Nov 05 2022
-<a id="markdown-design-document-for-compositor%2C-nov-05-2022" name="design-document-for-compositor%2C-nov-05-2022"></a>
-
+---
+Title: Design document for compositor
+Date: 2022-11-05
+---
 
 <!-- TOC -->
 
