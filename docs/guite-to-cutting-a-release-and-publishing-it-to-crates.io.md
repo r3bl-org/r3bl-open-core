@@ -1,4 +1,9 @@
-# Guide to cutting a release and publishing it to crates.io
+---
+Title: Guide to cutting a release and publishing it to crates.io
+Date: 2022-11-06
+---
+
+## Cut a release and publish it to crates.io
 
 This is a lengthy and repetitive process. The following steps have to be applied repeatedly to all
 the crates in the project.
@@ -24,7 +29,7 @@ are applied to each crate (`core`, `macro`, `redux`, `tui`, and self):
 
 Finally, push the git commit and tag to the remote repo: `git push ; git push --tags`.
 
-# Current status Nov 6 2022
+## Current release status as of Dec 10 2022
 
 | Crate  | Version | Status                                       |
 | ------ | ------- | -------------------------------------------- |

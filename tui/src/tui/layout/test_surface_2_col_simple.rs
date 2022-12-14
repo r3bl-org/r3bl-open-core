@@ -100,7 +100,7 @@ mod tests {
               styles:                 ["1"]
             }
             make_left_col_assertions(surface)?;
-            surface.box_end()?;
+            box_end!(in: surface);
         });
 
         fn make_left_col_assertions(surface: &Surface) -> CommonResult<()> {

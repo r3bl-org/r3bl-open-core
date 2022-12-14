@@ -19,7 +19,6 @@ use std::{fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
 use int_enum::IntEnum;
-use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
 use r3bl_tui::*;
@@ -47,6 +46,12 @@ mod app_trait_impl {
 
     #[async_trait]
     impl App<State, Action> for AppWithLayout {
+        fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
+            &mut self.component_registry
+        }
+
+        fn init(&mut self) { self.init_component_registry(); }
+
         async fn app_handle_event(
             &mut self,
             args: GlobalScopeArgs<'_, State, Action>,
@@ -65,15 +70,15 @@ mod app_trait_impl {
             }
 
             // Route any unhandled event to the component that has focus.
-            route_event_to_focused_component!(
-              registry:       self.component_registry,
-              has_focus:      self.has_focus,
-              input_event:    input_event,
-              state:          state,
-              shared_store:   shared_store,
-              shared_global_data: shared_global_data,
-              window_size:    window_size
+            ComponentRegistry::route_event_to_focused_component(
+                &mut self.component_registry,
+                input_event,
+                state,
+                shared_store,
+                shared_global_data,
+                window_size,
             )
+            .await
         }
 
         async fn app_render(
@@ -88,16 +93,32 @@ mod app_trait_impl {
                     window_size,
                 } = args;
 
-                // Render container component.
-                let mut surface = surface_start_with_surface_renderer! {
-                  surface_renderer: layout_container::ContainerSurfaceRenderer(self),
-                  stylesheet:       style_helpers::create_stylesheet()?,
-                  pos:              position!(col_index:0, row_index:0),
-                  size:             size!(col_count: window_size.col_count, row_count: window_size.row_count - 1), // Bottom row for status bar.
-                  state:            state,
-                  shared_store:     shared_store,
-                  shared_global_data:   shared_global_data,
-                  window_size:      window_size
+                // Create a surface and then run the SurfaceRenderer (ContainerSurfaceRender) on it.
+                let mut surface = {
+                    let mut it = surface!(stylesheet: style_helpers::create_stylesheet()?);
+
+                    it.surface_start(SurfaceProps {
+                        pos: position!(col_index: 0, row_index: 0),
+                        size: size!(
+                            col_count: window_size.col_count,
+                            row_count: window_size.row_count - 1), // Bottom row for for status bar.
+                    })?;
+
+                    layout_container::ContainerSurfaceRenderer(self)
+                        .render_in_surface(
+                            GlobalScopeArgs {
+                                shared_global_data,
+                                shared_store,
+                                state,
+                                window_size,
+                            },
+                            &mut it,
+                        )
+                        .await?;
+
+                    it.surface_end()?;
+
+                    it
                 };
 
                 // Render status bar.
@@ -113,7 +134,7 @@ mod app_trait_impl {
 mod layout_container {
     use super::*;
 
-    pub struct ContainerSurfaceRenderer<'life0>(pub &'life0 mut AppWithLayout);
+    pub struct ContainerSurfaceRenderer<'a>(pub &'a mut AppWithLayout);
 
     #[async_trait]
     impl SurfaceRenderer<State, Action> for ContainerSurfaceRenderer<'_> {
@@ -128,95 +149,61 @@ mod layout_container {
                 shared_global_data,
                 window_size,
             } = args;
-            let this = &mut self.0;
 
-            this.init_component_registry().await;
-            this.create_main_container(
-                surface,
-                state,
-                shared_store,
-                shared_global_data,
-                window_size,
-            )
-            .await
-        }
-    }
-
-    impl AppWithLayout {
-        /// Main container CONTAINER_ID.
-        pub async fn create_main_container(
-            &mut self,
-            surface: &mut Surface,
-            state: &State,
-            shared_store: &SharedStore<State, Action>,
-            shared_global_data: &SharedGlobalData,
-            window_size: &Size,
-        ) -> CommonResult<()> {
+            // Layout and render the container.
             throws!({
-                box_start_with_surface_renderer! {
-                  in:                     surface,
-                  surface_renderer:       layout_container::TwoColLayoutSurfaceRenderer { app_with_layout: self },
-                  id:                     Id::Container.int_value(),
-                  dir:                    Direction::Horizontal,
-                  requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                  styles:                 [&Id::Container.int_value().to_string()],
-                  state:                  state,
-                  shared_store:           shared_store,
-                  shared_global_data:         shared_global_data,
-                  window_size:            window_size
-                };
-            });
-        }
-    }
+                // Container.
+                box_start!(
+                    in: surface,
+                    id: Id::Container.int_value(),
+                    dir: Direction::Horizontal,
+                    requested_size_percent: requested_size_percent!(width: 100, height: 100),
+                    styles:                 [&Id::Container.int_value().to_string()],
+                );
 
-    pub(crate) struct TwoColLayoutSurfaceRenderer<'a> {
-        pub(crate) app_with_layout: &'a mut AppWithLayout,
-    }
-
-    #[async_trait]
-    impl<'a> SurfaceRenderer<State, Action> for TwoColLayoutSurfaceRenderer<'a> {
-        async fn render_in_surface(
-            &mut self,
-            args: GlobalScopeArgs<'_, State, Action>,
-            surface: &mut Surface,
-        ) -> CommonResult<()> {
-            let GlobalScopeArgs {
-                state,
-                shared_store,
-                shared_global_data,
-                window_size,
-            } = args;
-
-            throws!({
-                box_start_with_component! {
-                  in:                     surface,
-                  id:                     Id::Col1.int_value(),
-                  dir:                    Direction::Vertical,
-                  requested_size_percent: requested_size_percent!(width: 50, height: 100),
-                  styles:                 [&Id::Col1.int_value().to_string()],
-                  render: {
-                    from:           self.app_with_layout.component_registry,
-                    state:          state,
-                    shared_store:   shared_store,
-                    shared_global_data: shared_global_data,
-                    window_size:    window_size
-                  }
+                // Col1.
+                {
+                    box_start!(
+                      in:                     surface,
+                      id:                     Id::Col1.int_value(),
+                      dir:                    Direction::Vertical,
+                      requested_size_percent: requested_size_percent!(width: 50, height: 100),
+                      styles:                 [&Id::Col1.int_value().to_string()],
+                    );
+                    render_component_in_current_box!(
+                        in:                 surface,
+                        component_id:       Id::Col1.int_value(),
+                        from:               self.0.component_registry,
+                        state:              state,
+                        shared_store:       shared_store,
+                        shared_global_data: shared_global_data,
+                        window_size:        window_size
+                    );
+                    box_end!(in: surface);
                 }
 
-                box_start_with_component! {
-                  in:                     surface,
-                  id:                     Id::Col2.int_value(),
-                  dir:                    Direction::Vertical,
-                  requested_size_percent: requested_size_percent!(width: 50, height: 100),
-                  styles:                 [&Id::Col2.int_value().to_string()],
-                  render: {
-                    from:           self.app_with_layout.component_registry,
-                    state:          state,
-                    shared_store:   shared_store,
-                    shared_global_data: shared_global_data,
-                    window_size:    window_size
-                  }
+                // Col2.
+                {
+                    box_start!(
+                      in:                     surface,
+                      id:                     Id::Col2.int_value(),
+                      dir:                    Direction::Vertical,
+                      requested_size_percent: requested_size_percent!(width: 50, height: 100),
+                      styles:                 [&Id::Col2.int_value().to_string()],
+                    );
+                    render_component_in_current_box!(
+                        in:                 surface,
+                        component_id:       Id::Col2.int_value(),
+                        from:               self.0.component_registry,
+                        state:              state,
+                        shared_store:       shared_store,
+                        shared_global_data: shared_global_data,
+                        window_size:        window_size
+                    );
+                    box_end!(in: surface);
                 }
+
+                box_end!(in: surface);
             });
         }
     }
@@ -287,7 +274,7 @@ mod component_registry {
     use super::*;
 
     impl AppWithLayout {
-        pub async fn init_component_registry(&mut self) {
+        pub fn init_component_registry(&mut self) {
             // Construct COL_1_ID.
             let col1_id = Id::Col1.int_value();
             if self.component_registry.does_not_contain(col1_id) {

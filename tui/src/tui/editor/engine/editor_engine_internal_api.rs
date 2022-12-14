@@ -30,35 +30,35 @@ use crate::*;
 pub struct EditorEngineInternalApi;
 
 impl EditorEngineInternalApi {
-    pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         move_caret::up(buffer, engine)
     }
 
-    pub fn left(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn left(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         move_caret::left(buffer, engine)
     }
 
-    pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         move_caret::right(buffer, engine)
     }
 
-    pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         move_caret::down(buffer, engine)
     }
 
-    pub fn page_up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn page_up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         move_caret::page_up(buffer, engine)
     }
 
-    pub fn page_down(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn page_down(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         move_caret::page_down(buffer, engine)
     }
 
-    pub fn home(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn home(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         move_caret::to_start_of_line(buffer, engine)
     }
 
-    pub fn end(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn end(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         move_caret::to_end_of_line(buffer, engine)
     }
 
@@ -90,11 +90,11 @@ impl EditorEngineInternalApi {
         mut_content::insert_new_line_at_caret(args);
     }
 
-    pub fn delete_at_caret(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn delete_at_caret(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         mut_content::delete_at_caret(buffer, engine)
     }
 
-    pub fn backspace_at_caret(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn backspace_at_caret(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         mut_content::backspace_at_caret(buffer, engine)
     }
 }
@@ -214,7 +214,7 @@ mod locate_caret {
 mod move_caret {
     use super::*;
 
-    pub fn up(editor_buffer: &mut EditorBuffer, editor_engine: &mut EditorEngine) -> Nope {
+    pub fn up(editor_buffer: &mut EditorBuffer, editor_engine: &mut EditorEngine) -> Option<()> {
         empty_check_early_return!(editor_buffer, @None);
         multiline_disabled_check_early_return!(editor_engine, @None);
 
@@ -249,7 +249,7 @@ mod move_caret {
         None
     }
 
-    pub fn down(editor_buffer: &mut EditorBuffer, editor_engine: &mut EditorEngine) -> Nope {
+    pub fn down(editor_buffer: &mut EditorBuffer, editor_engine: &mut EditorEngine) -> Option<()> {
         empty_check_early_return!(editor_buffer, @None);
         multiline_disabled_check_early_return!(editor_engine, @None);
 
@@ -272,7 +272,7 @@ mod move_caret {
     }
 
     /// Convenience function for simply calling [reset_caret_col].
-    pub fn to_start_of_line(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn to_start_of_line(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         empty_check_early_return!(buffer, @None);
 
         validate::apply_change(buffer, engine, |_, caret, scroll_offset| {
@@ -281,7 +281,7 @@ mod move_caret {
         None
     }
 
-    pub fn to_end_of_line(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn to_end_of_line(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         empty_check_early_return!(buffer, @None);
 
         let line_content_display_width = get_content::line_display_width_at_row_index(
@@ -321,7 +321,7 @@ mod move_caret {
     /// 0 ▸abcab     │
     ///   └─────▴────┘
     ///   C0123456789
-    pub fn right(editor_buffer: &mut EditorBuffer, editor_engine: &mut EditorEngine) -> Nope {
+    pub fn right(editor_buffer: &mut EditorBuffer, editor_engine: &mut EditorEngine) -> Option<()> {
         empty_check_early_return!(editor_buffer, @None);
 
         let line_is_empty =
@@ -450,7 +450,7 @@ mod move_caret {
         None
     }
 
-    pub fn left(editor_buffer: &mut EditorBuffer, editor_engine: &mut EditorEngine) -> Nope {
+    pub fn left(editor_buffer: &mut EditorBuffer, editor_engine: &mut EditorEngine) -> Option<()> {
         empty_check_early_return!(editor_buffer, @None);
 
         match locate_caret::find_col(EditorArgs {
@@ -488,7 +488,10 @@ mod move_caret {
         None
     }
 
-    pub fn page_up(editor_buffer: &mut EditorBuffer, editor_engine: &mut EditorEngine) -> Nope {
+    pub fn page_up(
+        editor_buffer: &mut EditorBuffer,
+        editor_engine: &mut EditorEngine,
+    ) -> Option<()> {
         empty_check_early_return!(editor_buffer, @None);
         multiline_disabled_check_early_return!(editor_engine, @None);
 
@@ -504,7 +507,10 @@ mod move_caret {
         None
     }
 
-    pub fn page_down(editor_buffer: &mut EditorBuffer, editor_engine: &mut EditorEngine) -> Nope {
+    pub fn page_down(
+        editor_buffer: &mut EditorBuffer,
+        editor_engine: &mut EditorEngine,
+    ) -> Option<()> {
         empty_check_early_return!(editor_buffer, @None);
         multiline_disabled_check_early_return!(editor_engine, @None);
 
@@ -829,7 +835,7 @@ mod mut_content {
         }
     }
 
-    pub fn delete_at_caret(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn delete_at_caret(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         empty_check_early_return!(buffer, @None);
         if get_content::string_at_caret(buffer, engine).is_some() {
             delete_in_middle_of_line(buffer, engine)?;
@@ -848,7 +854,10 @@ mod mut_content {
         // 2 │a         │
         //   └─▴────────┘
         //   C0123456789
-        fn delete_in_middle_of_line(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+        fn delete_in_middle_of_line(
+            buffer: &mut EditorBuffer,
+            engine: &mut EditorEngine,
+        ) -> Option<()> {
             let cur_line = get_content::line_at_caret_to_string(buffer, engine)?;
             let NewUnicodeStringResult {
                 new_unicode_string: new_line,
@@ -870,7 +879,10 @@ mod mut_content {
         // 2 │a         │
         //   └───▴──────┘
         //   C0123456789
-        fn delete_at_end_of_line(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+        fn delete_at_end_of_line(
+            buffer: &mut EditorBuffer,
+            engine: &mut EditorEngine,
+        ) -> Option<()> {
             let this_line = get_content::line_at_caret_to_string(buffer, engine)?;
             let next_line = get_content::next_line_below_caret_to_string(buffer, engine)?;
 
@@ -883,7 +895,7 @@ mod mut_content {
         }
     }
 
-    pub fn backspace_at_caret(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Nope {
+    pub fn backspace_at_caret(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         empty_check_early_return!(buffer, @None);
 
         if let Some(UnicodeStringSegmentSliceResult {
@@ -912,7 +924,7 @@ mod mut_content {
             buffer: &mut EditorBuffer,
             engine: &mut EditorEngine,
             delete_at_this_display_col: ChUnit,
-        ) -> Nope {
+        ) -> Option<()> {
             let cur_line = get_content::line_at_caret_to_string(buffer, engine)?;
             let NewUnicodeStringResult {
                 new_unicode_string: new_line,
@@ -944,7 +956,7 @@ mod mut_content {
         fn backspace_at_start_of_line(
             buffer: &mut EditorBuffer,
             engine: &mut EditorEngine,
-        ) -> Nope {
+        ) -> Option<()> {
             let viewport_width = engine.viewport_width();
 
             let this_line = get_content::line_at_caret_to_string(buffer, engine)?;
@@ -976,7 +988,7 @@ mod mut_content {
         args: EditorArgsMut<'_>,
         caret_adj: Position,
         chunk: &str,
-    ) -> Nope {
+    ) -> Option<()> {
         let EditorArgsMut {
             editor_buffer,
             editor_engine,
@@ -1036,7 +1048,11 @@ mod mut_content {
         }
     }
 
-    fn insert_into_new_line(args: EditorArgsMut<'_>, caret_adj_row: usize, chunk: &str) -> Nope {
+    fn insert_into_new_line(
+        args: EditorArgsMut<'_>,
+        caret_adj_row: usize,
+        chunk: &str,
+    ) -> Option<()> {
         let EditorArgsMut {
             editor_buffer,
             editor_engine,
@@ -1098,7 +1114,7 @@ pub mod validate {
             /* EditorBuffer::caret */ &mut Position,
             /* EditorEngine::scroll_offset */ &mut ScrollOffset,
         ),
-    ) -> Nope {
+    ) -> Option<()> {
         let (lines, caret, scroll_offset) = editor_buffer.get_mut();
 
         // Run the mutator first.
@@ -1156,7 +1172,7 @@ pub mod validate {
     pub fn adjust_scroll_offset_because_in_middle_of_grapheme_cluster(
         args: EditorArgsMut<'_>,
         diff: ChUnit,
-    ) -> Nope {
+    ) -> Option<()> {
         let EditorArgsMut { editor_buffer, .. } = args;
         let (_, caret, scroll_offset) = editor_buffer.get_mut();
         scroll_offset.col_index += diff;
@@ -1166,7 +1182,9 @@ pub mod validate {
 
     /// This function is visible inside the editor_ops.rs module only. It is not meant to be called
     /// directly, but instead is called by [validate::apply_change].
-    pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(args: EditorArgsMut<'_>) -> Nope {
+    pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(
+        args: EditorArgsMut<'_>,
+    ) -> Option<()> {
         let EditorArgsMut {
             editor_buffer,
             editor_engine,

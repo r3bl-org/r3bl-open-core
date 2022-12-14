@@ -329,7 +329,7 @@ mod print_impl {
             }
             ContentType::PlainText => unicode_string.display_width,
         };
-        
+
         cursor_position_copy.col_index += display_width;
         sanitize_and_save_abs_position(cursor_position_copy, shared_global_data, local_data).await;
     }

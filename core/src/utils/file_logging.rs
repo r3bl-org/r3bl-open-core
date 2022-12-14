@@ -24,7 +24,7 @@ use time::UtcOffset;
 
 use crate::*;
 
-pub static mut LOG_LEVEL: LevelFilter = LevelFilter::Trace;
+pub static mut LOG_LEVEL: LevelFilter = LevelFilter::Off;
 pub static mut FILE_PATH: &str = "log.txt";
 static mut FILE_LOGGER_INIT_OK: bool = false;
 static FILE_LOGGER_INIT_FN: Once = Once::new();

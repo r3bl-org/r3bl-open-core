@@ -23,9 +23,10 @@ use super::*;
 use crate::{DEBUG, *};
 
 /// Async trait object that implements the [Render] trait.
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default)]
 pub struct AppNoLayout {
     pub lolcat: Lolcat,
+    pub component_registry: ComponentRegistry<State, Action>,
 }
 
 macro_rules! fire {
@@ -55,6 +56,14 @@ macro_rules! fire {
 
 #[async_trait]
 impl App<State, Action> for AppNoLayout {
+    /// No-op.
+    fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
+        &mut self.component_registry
+    }
+
+    /// No-op.
+    fn init(&mut self) {}
+
     async fn app_render(
         &mut self,
         args: GlobalScopeArgs<'_, State, Action>,
