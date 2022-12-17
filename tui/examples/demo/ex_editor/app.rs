@@ -133,7 +133,7 @@ mod app_trait_impl {
                             row_count: window_size.row_count - 1), // Bottom row for for status bar.
                     })?;
 
-                    layout_container::ContainerSurfaceRender { app_ref: self }
+                    layout_container::ContainerSurfaceRender(self)
                         .render_in_surface(
                             GlobalScopeArgs {
                                 shared_global_data,
@@ -208,7 +208,11 @@ mod detect_modal_dialog_activation_from_input_event {
                 // text on the next render.
                 spawn_dispatch_action!(
                     args.shared_store,
-                    Action::SetDialogBufferTitleAndText(title.to_string(), text.to_string())
+                    Action::SetDialogBufferTitleAndTextById(
+                        Id::Dialog.int_value(),
+                        title.to_string(),
+                        text.to_string()
+                    )
                 );
 
                 call_if_true!(DEBUG_TUI_MOD, {
@@ -226,9 +230,7 @@ mod detect_modal_dialog_activation_from_input_event {
 mod layout_container {
     use super::*;
 
-    pub struct ContainerSurfaceRender<'a> {
-        pub app_ref: &'a mut AppWithLayout,
-    }
+    pub struct ContainerSurfaceRender<'a>(pub &'a mut AppWithLayout);
 
     #[async_trait]
     impl SurfaceRenderer<State, Action> for ContainerSurfaceRender<'_> {
@@ -257,7 +259,7 @@ mod layout_container {
                     render_component_in_current_box!(
                         in:                 surface,
                         component_id:       Id::Editor.int_value(),
-                        from:               self.app_ref.component_registry,
+                        from:               self.0.component_registry,
                         state:              state,
                         shared_store:       shared_store,
                         shared_global_data: shared_global_data,
@@ -268,7 +270,7 @@ mod layout_container {
 
                 // Then, render modal dialog (if it is active, on top of the editor component).
                 if self
-                    .app_ref
+                    .0
                     .component_registry
                     .has_focus
                     .is_modal_id(Id::Dialog.int_value())
@@ -277,7 +279,7 @@ mod layout_container {
                       in:                 surface,
                       box:                DialogEngineApi::make_flex_box_for_dialog(Id::Dialog.int_value(), surface, window_size)?,
                       component_id:       Id::Dialog.int_value(),
-                      from:               self.app_ref.component_registry,
+                      from:               self.0.component_registry,
                       state:              state,
                       shared_store:       shared_store,
                       shared_global_data: shared_global_data,
@@ -352,13 +354,21 @@ mod populate_component_registry {
                     DialogChoice::Yes(text) => {
                         spawn_dispatch_action!(
                             shared_store,
-                            Action::SetDialogBufferTitleAndText("Yes".to_string(), text)
+                            Action::SetDialogBufferTitleAndTextById(
+                                Id::Dialog.int_value(),
+                                "Yes".to_string(),
+                                text
+                            )
                         );
                     }
                     DialogChoice::No => {
                         spawn_dispatch_action!(
                             shared_store,
-                            Action::SetDialogBufferTitleAndText("No".to_string(), "".to_string())
+                            Action::SetDialogBufferTitleAndTextById(
+                                Id::Dialog.int_value(),
+                                "No".to_string(),
+                                "".to_string()
+                            )
                         );
                     }
                 }
@@ -368,7 +378,10 @@ mod populate_component_registry {
                 editor_buffer: EditorBuffer,
                 shared_store: &SharedStore<State, Action>,
             ) {
-                spawn_dispatch_action!(shared_store, Action::UpdateDialogBuffer(editor_buffer));
+                spawn_dispatch_action!(
+                    shared_store,
+                    Action::UpdateDialogBufferById(Id::Dialog.int_value(), editor_buffer)
+                );
             }
 
             it

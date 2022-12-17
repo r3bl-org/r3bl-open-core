@@ -17,6 +17,7 @@
 
 use async_trait::async_trait;
 use r3bl_redux::*;
+use r3bl_tui::DialogBuffer;
 
 use super::*;
 
@@ -35,17 +36,35 @@ impl AsyncReducer<State, Action> for Reducer {
                 new_state
             }
 
-            Action::SetDialogBufferTitleAndText(title, text) => {
+            Action::SetDialogBufferTitleAndTextById(id, title, text) => {
                 let mut new_state = state.clone();
-                let dialog_buffer = &mut new_state.dialog_buffer;
-                dialog_buffer.title = title.into();
-                dialog_buffer.editor_buffer.set_lines(vec![text.into()]);
+
+                let dialog_buffer = {
+                    let mut it = DialogBuffer {
+                        title: title.into(),
+                        ..Default::default()
+                    };
+                    it.editor_buffer.set_lines(vec![text.into()]);
+                    it
+                };
+
+                new_state.dialog_buffers.insert(*id, dialog_buffer);
+
                 new_state
             }
 
-            Action::UpdateDialogBuffer(editor_buffer) => {
+            Action::UpdateDialogBufferById(id, editor_buffer) => {
                 let mut new_state = state.clone();
-                new_state.dialog_buffer.editor_buffer = editor_buffer.clone();
+
+                new_state
+                    .dialog_buffers
+                    .entry(*id)
+                    .and_modify(|it| it.editor_buffer = editor_buffer.clone())
+                    .or_insert(DialogBuffer {
+                        editor_buffer: editor_buffer.clone(),
+                        ..Default::default()
+                    });
+
                 new_state
             }
         }

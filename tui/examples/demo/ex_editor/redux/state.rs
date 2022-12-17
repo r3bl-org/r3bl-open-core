@@ -23,7 +23,7 @@ use r3bl_tui::*;
 #[derive(Clone, PartialEq, Default)]
 pub struct State {
     pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
-    pub dialog_buffer: DialogBuffer,
+    pub dialog_buffers: HashMap<FlexBoxId, DialogBuffer>,
 }
 
 impl HasEditorBuffers for State {
@@ -36,23 +36,32 @@ impl HasEditorBuffers for State {
     }
 }
 
-impl HasDialogBuffer for State {
-    fn get_dialog_buffer(&self) -> &DialogBuffer { &self.dialog_buffer }
+impl HasDialogBuffers for State {
+    fn get_dialog_buffer(&self, id: FlexBoxId) -> Option<&DialogBuffer> {
+        self.dialog_buffers.get(&id)
+    }
 }
 
 mod debug_format_helpers {
     use super::*;
 
     fn fmt(this: &State, f: &mut Formatter<'_>) -> Result {
+        let mut vec_of_dialog_buffer_str = vec![];
+
+        this.dialog_buffers.iter().for_each(|(id, dialog_buffer)| {
+            vec_of_dialog_buffer_str.push(format!(
+                "{id}: [dialog_buffer: title: '{}', editor_buffer: '{}']",
+                dialog_buffer.title,
+                dialog_buffer.editor_buffer.get_as_string(),
+            ));
+        });
+
         write! { f,
-          "\nState [                               \n\
-          - dialog_buffer: title: {:?}             \n\
-          - dialog_buffer: editor_buffer: {:?}     \n\
-          - buffers: {:?}                          \n\
+          "\nState [\n\
+          - dialog_buffers:\n{}\n\
+          - editor_buffers:\n{:?}\n\
           ]",
-          this.dialog_buffer.title,
-          // this.dialog_buffer.buffer,
-          this.dialog_buffer.editor_buffer.get_as_string(),
+          vec_of_dialog_buffer_str.join("\n"),
           this.editor_buffers,
         }
     }
