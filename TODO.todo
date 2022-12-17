@@ -7,6 +7,7 @@ auto completion provider design:
   ☐ how to add an editor component to bottom of dialog box (result box)
     - left / right => goes to dialog's input box
     - up / down => goes to editor component below (result box) & add '*' prefix to selected line
+  ☐ incorporate `dd_autocomplete.md` & `dd_editor_component.md` into `tui/README/md` & `tui/src/lib.rs`
 
 editor engine extras (auto-completion providers):
   ☐ add support for auto completion providers

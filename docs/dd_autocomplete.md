@@ -7,8 +7,8 @@ Date: 2022-12-14
 
 - [How does layout, rendering, and event handling work in general?](#how-does-layout-rendering-and-event-handling-work-in-general)
 - [How do dialog boxes work?](#how-do-dialog-boxes-work)
-- [Making HTTP request to API](#making-http-request-to-api)
-- [How to add editor component to bottom of dialog box](#how-to-add-editor-component-to-bottom-of-dialog-box)
+  - [Two callback functions](#two-callback-functions)
+- [How to use this dialog to make an HTTP request & pipe the results into a selection area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
 
 <!-- /TOC -->
 
@@ -37,8 +37,10 @@ Date: 2022-12-14
 
 A modal dialog box is different than a normal reusable component. This is because:
 
-1. It paints on top of the entire screen.
-2. Is activated by a keyboard shortcut.
+1. It paints on top of the entire screen (in front of all other components, in ZOrder::Glass, and
+   outside of any layouts using `FlexBox`es).
+2. Is "activated" by a keyboard shortcut (hidden otherwise). Once activated, the user can accept or
+   cancel the dialog box. And this results in a callback being called w/ the result.
 
 So this activation trigger must be done at the `App` trait impl level (in the `app_handle_event()`
 method). Also, when this trigger is detected it has to:
@@ -48,10 +50,46 @@ method). Also, when this trigger is detected it has to:
 2. Set the title and text via a dispatch of the action `SetDialogBoxTitleAndText`. This will force a
    render, and the title and text in the dialog box on next render.
 
-## Making HTTP request to API
-<a id="markdown-making-http-request-to-api" name="making-http-request-to-api"></a>
+There is a question about where does the response from the user (once a dialog is shown) go? This
+seems as though it would be different in nature from an `EditorComponent` but it is the same. Here's
+why:
+
+- The `EditorComponent` is always updating its buffer based on user input, and there's no "handler"
+  for when the user performs some action on the editor. The editor needs to save all the changes to
+  the buffer to the state. This requires the trait bound `HasEditorBuffers` to be implemented by the
+  state.
+- The dialog box seems different in that you would think that it doesn't always updating its state
+  and that the only time we really care about what state the dialog box has is when the user has
+  accepted something they've typed into the dialog box and this needs to be sent to the callback
+  function that was passed in when the component was created. However, due to the reactive nature of
+  the TUI engine, even before the callback is called (due to the user accepting or cancelling),
+  while the user is typing things into the dialog box, it has to be updating the state, otherwise,
+  re-rendering the dialog box won't be triggered and the user won't see what they're typing. This
+  means that even intermediate information needs to be recorded into the state via the
+  `HasDialogBuffers` trait bound. This will hold stale data once the dialog is dismissed or
+  accepted, but that's ok since the title and text should always be set before it is shown.
+  - **Note**: it might be possible to save this type of intermediate data in
+    `ComponentRegistry::user_data`. And it is possible for `handle_event()` to return a
+    `EventPropagation::ConsumedRerender` to make sure that changes are re-rendered. This approach
+    may have other issues related to having both immutable and mutable borrows at the same time to
+    some portion of the component registry if one is not careful.
+
+### Two callback functions
+<a id="markdown-two-callback-functions" name="two-callback-functions"></a>
 
 
-## How to add editor component to bottom of dialog box
-<a id="markdown-how-to-add-editor-component-to-bottom-of-dialog-box" name="how-to-add-editor-component-to-bottom-of-dialog-box"></a>
+When creating a new dialog box component, two callback functions are passed in:
 
+1. `on_dialog_press_handler()` - this will be called if the user choose no, or yes (w/ their typed
+   text).
+2. `on_dialog_editors_changed_handler()` - this will be called if the user types something into the
+   editor.
+
+## How to use this dialog to make an HTTP request & pipe the results into a selection area?
+<a id="markdown-how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F" name="how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F"></a>
+
+
+- TODO:
+  - Make `DialogEngineConfigOptions`, similar to `EditorEngineConfigOptions`
+    - Used to specify whether to use autocomplete mode or not
+    - This must be passed in as an arg to `DialogComponent::new()` and `new_shared()`

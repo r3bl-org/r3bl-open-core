@@ -25,8 +25,12 @@ use r3bl_tui::*;
 pub enum Action {
     Noop,
     UpdateEditorBufferById(FlexBoxId /* id */, EditorBuffer),
-    SetDialogBufferTitleAndText(String /* title */, String /* text */),
-    UpdateDialogBuffer(EditorBuffer),
+    SetDialogBufferTitleAndTextById(
+        FlexBoxId, /* id */
+        String,    /* title */
+        String,    /* text */
+    ),
+    UpdateDialogBufferById(FlexBoxId /* id */, EditorBuffer),
 }
 
 impl Default for Action {

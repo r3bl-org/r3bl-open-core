@@ -45,12 +45,14 @@ where
 }
 
 pub mod impl_component {
+    use std::borrow::Cow;
+
     use super::*;
 
     #[async_trait]
     impl<S, A> Component<S, A> for DialogComponent<S, A>
     where
-        S: HasDialogBuffer + Default + Clone + PartialEq + Debug + Sync + Send,
+        S: HasDialogBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
         A: Default + Clone + Sync + Send,
     {
         fn get_id(&self) -> FlexBoxId { self.id }
@@ -80,6 +82,13 @@ pub mod impl_component {
                 window_size,
             } = args;
 
+            let dialog_buffer: Cow<DialogBuffer> =
+                if let Some(it) = state.get_dialog_buffer(self.get_id()) {
+                    Cow::Borrowed(it)
+                } else {
+                    Cow::Owned(DialogBuffer::default())
+                };
+
             let dialog_engine_args = {
                 DialogEngineArgs {
                     shared_global_data,
@@ -88,7 +97,7 @@ pub mod impl_component {
                     component_registry,
                     self_id: self.get_id(),
                     dialog_engine: &mut self.dialog_engine,
-                    dialog_buffer: state.get_dialog_buffer(),
+                    dialog_buffer: &dialog_buffer,
                     window_size,
                 }
             };
@@ -145,6 +154,13 @@ pub mod impl_component {
                 window_size,
             } = args;
 
+            let dialog_buffer: Cow<DialogBuffer> =
+                if let Some(it) = state.get_dialog_buffer(self.get_id()) {
+                    Cow::Borrowed(it)
+                } else {
+                    Cow::Owned(DialogBuffer::default())
+                };
+
             let dialog_engine_args = {
                 DialogEngineArgs {
                     shared_global_data,
@@ -153,7 +169,7 @@ pub mod impl_component {
                     component_registry,
                     self_id: self.get_id(),
                     dialog_engine: &mut self.dialog_engine,
-                    dialog_buffer: state.get_dialog_buffer(),
+                    dialog_buffer: &dialog_buffer,
                     window_size,
                 }
             };
@@ -226,8 +242,8 @@ pub mod misc {
     /// dialog buffer for this re-usable editor component. It is used in the `where` clause of the
     /// [DialogComponent] to ensure that the generic type `S` implements this trait, guaranteeing that
     /// it holds a single [DialogBuffer].
-    pub trait HasDialogBuffer {
-        fn get_dialog_buffer(&self) -> &DialogBuffer;
+    pub trait HasDialogBuffers {
+        fn get_dialog_buffer(&self, id: FlexBoxId) -> Option<&DialogBuffer>;
     }
 
     #[derive(Debug)]
