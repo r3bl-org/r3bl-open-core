@@ -119,7 +119,11 @@ impl EditorEngineRenderApi {
             col_count: max_display_col_count,
             row_count: max_display_row_count,
         } = editor_engine.current_box.style_adjusted_bounds_size;
-        let syntax_highlight_enabled = editor_engine.config_options.syntax_highlight;
+
+        let syntax_highlight_enabled = matches!(
+            editor_engine.config_options.syntax_highlight,
+            SyntaxHighlightConfig::Enable(_)
+        );
 
         let mut num_rows_rendered = ch!(0);
 

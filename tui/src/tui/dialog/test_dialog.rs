@@ -136,7 +136,7 @@ mod test_dialog_api_apply_event {
     async fn apply_event_esc() {
         let self_id: FlexBoxId = 0;
         let window_size = &size!( col_count: 70, row_count: 15 );
-        let dialog_buffer = &mut DialogBuffer::default();
+        let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects::make_dialog_engine();
         let shared_store = &mock_real_objects::create_store();
         let state = &String::new();
@@ -169,7 +169,7 @@ mod test_dialog_api_apply_event {
     async fn apply_event_enter() {
         let self_id: FlexBoxId = 0;
         let window_size = &size!( col_count: 70, row_count: 15 );
-        let dialog_buffer = &mut DialogBuffer::default();
+        let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects::make_dialog_engine();
         let shared_store = &mock_real_objects::create_store();
         let state = &String::new();
@@ -205,7 +205,7 @@ mod test_dialog_api_apply_event {
     async fn apply_event_other_key() {
         let self_id: FlexBoxId = 0;
         let window_size = &size!( col_count: 70, row_count: 15 );
-        let dialog_buffer = &mut DialogBuffer::default();
+        let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects::make_dialog_engine();
         let shared_store = &mock_real_objects::create_store();
         let state = &String::new();
@@ -245,7 +245,7 @@ mod test_dialog_api_render_engine {
     async fn render_engine() {
         let self_id: FlexBoxId = 0;
         let window_size = &size!( col_count: 70, row_count: 15 );
-        let dialog_buffer = &mut DialogBuffer::default();
+        let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects::make_dialog_engine();
         let shared_store = &mock_real_objects::create_store();
         let state = &String::new();

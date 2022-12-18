@@ -82,7 +82,12 @@ pub mod impl_component {
                     if let Some(buffer) = state.get_editor_buffer(self.get_id()) {
                         Cow::Borrowed(buffer)
                     } else {
-                        Cow::Owned(EditorBuffer::new_empty())
+                        Cow::Owned(EditorBuffer::new_empty(
+                            self.editor_engine
+                                .config_options
+                                .syntax_highlight
+                                .get_file_extension_for_new_empty_buffer(),
+                        ))
                     }
                 };
 
@@ -137,7 +142,12 @@ pub mod impl_component {
                 if let Some(buffer) = state.get_editor_buffer(self.get_id()) {
                     Cow::Borrowed(buffer)
                 } else {
-                    Cow::Owned(EditorBuffer::new_empty())
+                    Cow::Owned(EditorBuffer::new_empty(
+                        self.editor_engine
+                            .config_options
+                            .syntax_highlight
+                            .get_file_extension_for_new_empty_buffer(),
+                    ))
                 }
             };
 

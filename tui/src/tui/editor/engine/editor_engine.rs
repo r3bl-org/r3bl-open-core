@@ -26,6 +26,8 @@ use crate::*;
 // ┏━━━━━━━━━━━━━━━━━━━━━┓
 // ┃ EditorEngine struct ┃
 // ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/// Do not create this struct directly. Please use [new()](EditorEngine::new) instead.
+///
 /// Holds data related to rendering in between render calls. This is not stored in the
 /// [EditorBuffer] struct, which lives in the [r3bl_redux::Store]. The store provides the underlying
 /// document or buffer struct that holds the actual document.
@@ -134,17 +136,41 @@ impl EditorEngine {
 // ┏━━━━━━━━━━━━━━━━┓
 // ┃ Config options ┃
 // ┛                ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditorEngineConfigOptions {
-    pub multiline: bool,
-    pub syntax_highlight: bool,
+    pub multiline_mode: EditorLineMode,
+    pub syntax_highlight: SyntaxHighlightConfig,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EditorLineMode {
+    SingleLine,
+    MultiLine,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SyntaxHighlightConfig {
+    Disable,
+    /// This is only the default for buffers that are created by the component when not passed in
+    /// via state. The String represents the `file_extension_for_new_empty_buffer` which is used as
+    /// the argument to `EditorBuffer::new_empty()` when creating a new editor buffer.
+    Enable(String),
+}
+
+impl SyntaxHighlightConfig {
+    pub fn get_file_extension_for_new_empty_buffer(&self) -> String {
+        match self {
+            SyntaxHighlightConfig::Disable => DEFAULT_SYN_HI_FILE_EXT.to_string(),
+            SyntaxHighlightConfig::Enable(ref ext) => ext.clone(),
+        }
+    }
 }
 
 impl Default for EditorEngineConfigOptions {
     fn default() -> Self {
         Self {
-            multiline: true,
-            syntax_highlight: true,
+            multiline_mode: EditorLineMode::MultiLine,
+            syntax_highlight: SyntaxHighlightConfig::Enable(DEFAULT_SYN_HI_FILE_EXT.to_string()),
         }
     }
 }

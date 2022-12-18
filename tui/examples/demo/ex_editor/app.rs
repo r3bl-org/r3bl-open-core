@@ -341,8 +341,8 @@ mod populate_component_registry {
                 maybe_title_style,
                 maybe_editor_style,
                 EditorEngineConfigOptions {
-                    multiline: false,
-                    syntax_highlight: false,
+                    multiline_mode: EditorLineMode::SingleLine,
+                    syntax_highlight: SyntaxHighlightConfig::Disable,
                 },
             );
 

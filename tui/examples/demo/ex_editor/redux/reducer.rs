@@ -40,10 +40,8 @@ impl AsyncReducer<State, Action> for Reducer {
                 let mut new_state = state.clone();
 
                 let dialog_buffer = {
-                    let mut it = DialogBuffer {
-                        title: title.into(),
-                        ..Default::default()
-                    };
+                    let mut it = DialogBuffer::new_empty();
+                    it.title = title.into();
                     it.editor_buffer.set_lines(vec![text.into()]);
                     it
                 };
@@ -60,10 +58,16 @@ impl AsyncReducer<State, Action> for Reducer {
                     .dialog_buffers
                     .entry(*id)
                     .and_modify(|it| it.editor_buffer = editor_buffer.clone())
-                    .or_insert(DialogBuffer {
-                        editor_buffer: editor_buffer.clone(),
-                        ..Default::default()
-                    });
+                    .or_insert_with(
+                        // This code path should never execute, since to update the buffer given an
+                        // id, it should have already existed in the first place (created by
+                        // SetDialogBufferTitleAndTextById action).
+                        || {
+                            let mut it = DialogBuffer::new_empty();
+                            it.editor_buffer = editor_buffer.clone();
+                            it
+                        },
+                    );
 
                 new_state
             }
