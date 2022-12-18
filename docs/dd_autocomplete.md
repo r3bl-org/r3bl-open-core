@@ -13,8 +13,8 @@ Date: 2022-12-14
 <!-- /TOC -->
 
 ## How does layout, rendering, and event handling work in general?
-<a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>
 
+<a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>
 
 - The `App` trait impl is the main entry point for laying out the entire application. And this is
   where the `component_registry` lives and all the `Component`s are created and added to the
@@ -32,8 +32,8 @@ Date: 2022-12-14
 ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 
 ## How do dialog boxes work?
-<a id="markdown-how-do-dialog-boxes-work%3F" name="how-do-dialog-boxes-work%3F"></a>
 
+<a id="markdown-how-do-dialog-boxes-work%3F" name="how-do-dialog-boxes-work%3F"></a>
 
 A modal dialog box is different than a normal reusable component. This is because:
 
@@ -75,8 +75,8 @@ why:
     some portion of the component registry if one is not careful.
 
 ### Two callback functions
-<a id="markdown-two-callback-functions" name="two-callback-functions"></a>
 
+<a id="markdown-two-callback-functions" name="two-callback-functions"></a>
 
 When creating a new dialog box component, two callback functions are passed in:
 
@@ -86,10 +86,21 @@ When creating a new dialog box component, two callback functions are passed in:
    editor.
 
 ## How to use this dialog to make an HTTP request & pipe the results into a selection area?
+
 <a id="markdown-how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F" name="how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F"></a>
 
+# TODO:
 
-- TODO:
-  - Make `DialogEngineConfigOptions`, similar to `EditorEngineConfigOptions`
-    - Used to specify whether to use autocomplete mode or not
-    - This must be passed in as an arg to `DialogComponent::new()` and `new_shared()`
+1. [ ] Make `DialogEngineConfigOptions`, similar to `EditorEngineConfigOptions`
+
+   - Used to specify whether to use autocomplete mode or not
+   - This must be passed in as an arg to `DialogComponent::new()` and `new_shared()`
+   - This must be passed in as an arg to `DialogEngine::new()`
+
+2. [x] Should file extension (eg `md`) be passed into to the `???ConfigOptions`? Or should it be
+       part of the buffer that is in the state?
+
+   - Currently `EditorEngineConfigOptions` has `syntax_highlighting` field which is bool. Shouldn't
+     it also have a `file_extension_for_new_empty_buffer` field? This is only the default for
+     buffers that are created by the component & not passed in via state.
+   - Currently `EditorBuffer::new_empty()` automatically sets the extension to `md`, is this right?

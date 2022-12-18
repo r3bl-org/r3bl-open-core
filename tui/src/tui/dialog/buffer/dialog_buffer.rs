@@ -25,6 +25,9 @@ use crate::*;
 // ┏━━━━━━━━━━━━━━━━━━━━━┓
 // ┃ DialogBuffer struct ┃
 // ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/// Please do not construct this struct directly and use [new_empty](DialogBuffer::new_empty)
+/// instead. 
+/// 
 /// Stores the data for a modal dialog. It contains the text content in an [EditorBuffer] and a
 /// title that is displayed.
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
@@ -33,11 +36,11 @@ pub struct DialogBuffer {
     pub title: String,
 }
 
-impl Default for DialogBuffer {
-    fn default() -> Self {
-        Self {
-            editor_buffer: EditorBuffer::new_empty(),
-            title: String::default(),
+impl DialogBuffer {
+    pub fn new_empty() -> Self {
+        DialogBuffer {
+            editor_buffer: EditorBuffer::new_empty(DEFAULT_SYN_HI_FILE_EXT.to_string()),
+            title: Default::default(),
         }
     }
 }

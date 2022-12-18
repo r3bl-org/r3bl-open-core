@@ -119,12 +119,12 @@ mod macros {
     /// Check to see if multiline mode is disabled and return early if it is.
     macro_rules! multiline_disabled_check_early_return {
         ($arg_engine: expr, @None) => {
-            if !$arg_engine.config_options.multiline {
+            if let EditorLineMode::SingleLine = $arg_engine.config_options.multiline_mode {
                 return None;
             }
         };
         ($arg_engine: expr, @Nothing) => {
-            if !$arg_engine.config_options.multiline {
+            if let EditorLineMode::SingleLine = $arg_engine.config_options.multiline_mode {
                 return;
             }
         };

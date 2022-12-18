@@ -26,7 +26,8 @@ use crate::*;
 // ┏━━━━━━━━━━━━━━━━━━━━━┓
 // ┃ EditorBuffer struct ┃
 // ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// Stores the data for a single editor buffer.
+/// Stores the data for a single editor buffer. Please do not construct this struct directly and use
+/// [new_empty](EditorBuffer::new_empty) instead.
 ///
 /// 1. This struct is stored in the [r3bl_redux::Store].
 /// 2. And it is paired w/ [EditorEngine] at runtime; which is responsible for rendering it to TUI,
@@ -151,7 +152,7 @@ mod constructor {
 
     impl EditorBuffer {
         /// Marker method to make it easy to search for where an empty instance is created.
-        pub fn new_empty() -> Self {
+        pub fn new_empty(file_extension: String) -> Self {
             // Potentially do any other initialization here.
             call_if_true!(DEBUG_TUI_MOD, {
                 log_no_err!(
@@ -165,7 +166,7 @@ mod constructor {
                 lines: vec![UnicodeString::default()],
                 caret: Position::default(),
                 scroll_offset: ScrollOffset::default(),
-                file_extension: "md".to_string(),
+                file_extension,
             }
         }
     }

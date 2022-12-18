@@ -86,7 +86,7 @@ pub mod impl_component {
                 if let Some(it) = state.get_dialog_buffer(self.get_id()) {
                     Cow::Borrowed(it)
                 } else {
-                    Cow::Owned(DialogBuffer::default())
+                    Cow::Owned(DialogBuffer::new_empty())
                 };
 
             let dialog_engine_args = {
@@ -158,7 +158,7 @@ pub mod impl_component {
                 if let Some(it) = state.get_dialog_buffer(self.get_id()) {
                     Cow::Borrowed(it)
                 } else {
-                    Cow::Owned(DialogBuffer::default())
+                    Cow::Owned(DialogBuffer::new_empty())
                 };
 
             let dialog_engine_args = {
@@ -190,6 +190,7 @@ pub mod constructor {
         /// The on_dialog_press_handler is a lambda that is called if the user presses enter or escape.
         /// Typically this results in a Redux action being created and then dispatched to the given
         /// store.
+        // TODO: add new arg: DialogEngineMode
         pub fn new(
             id: FlexBoxId,
             on_dialog_press_handler: OnDialogPressFn<S, A>,
@@ -200,6 +201,7 @@ pub mod constructor {
             editor_engine_config_options: EditorEngineConfigOptions,
         ) -> Self {
             Self {
+                // TODO: use DialogEngine::new() ... check for this everywhere
                 dialog_engine: DialogEngine {
                     maybe_style_border,
                     maybe_style_title,
@@ -213,6 +215,7 @@ pub mod constructor {
             }
         }
 
+        // TODO: add new arg: DialogEngineMode
         pub fn new_shared(
             id: FlexBoxId,
             on_dialog_press_handler: OnDialogPressFn<S, A>,

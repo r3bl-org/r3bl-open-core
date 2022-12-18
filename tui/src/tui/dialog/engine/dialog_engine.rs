@@ -25,6 +25,8 @@ use crate::*;
 // ┏━━━━━━━━━━━━━━━━━━━━━┓
 // ┃ DialogEngine struct ┃
 // ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/// Please do not construct this struct directly, and use [new](DialogEngine::new) instead.
+///
 /// Holds data related to rendering in between render calls. This is not stored in the
 /// [DialogBuffer] struct, which lives in the [r3bl_redux::Store]. The store provides the underlying
 /// document or buffer struct that holds the actual document.
@@ -57,3 +59,25 @@ pub mod constructor {
     }
 }
 pub use constructor::*;
+
+// ┏━━━━━━━━━━━━━━━━┓
+// ┃ Config options ┃
+// ┛                ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DialogEngineConfigOptions {
+    pub mode: DialogEngineMode,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DialogEngineMode {
+    ModalSimple,
+    ModalAutocomplete,
+}
+
+impl Default for DialogEngineConfigOptions {
+    fn default() -> Self {
+        Self {
+            mode: DialogEngineMode::ModalSimple,
+        }
+    }
+}

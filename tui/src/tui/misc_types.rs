@@ -163,6 +163,7 @@ pub enum BorderGlyphCharacter {
 
 pub const SPACER: &str = " ";
 pub const DEFAULT_CURSOR_CHAR: char = '▒';
+pub const DEFAULT_SYN_HI_FILE_EXT: &str = "md";
 
 // ┏━━━━━━━━━┓
 // ┃ General ┃
