@@ -212,9 +212,9 @@ mod tests {
             assert_eq2!(stylesheet.find_style_by_id("style2").unwrap().id, "style2");
             assert!(stylesheet.find_style_by_id("style3").is_none());
             // Macro.
-            assert_eq2!(get_style!(from: stylesheet, "style1").unwrap().id, "style1");
-            assert_eq2!(get_style!(from: stylesheet, "style2").unwrap().id, "style2");
-            assert!(get_style!(from: stylesheet, "style3").is_none());
+            assert_eq2!(get_style!(@from: stylesheet, "style1").unwrap().id, "style1");
+            assert_eq2!(get_style!(@from: stylesheet, "style2").unwrap().id, "style2");
+            assert!(get_style!(@from: stylesheet, "style3").is_none());
         }
 
         // Test find_styles_by_ids.
@@ -224,7 +224,7 @@ mod tests {
                 &stylesheet.find_styles_by_ids(vec!["style1", "style2"]),
             );
             assertions_for_find_styles_by_ids(&get_styles!(
-                from: &stylesheet,
+                @from: &stylesheet,
                 ["style1", "style2"]
             ));
             fn assertions_for_find_styles_by_ids(result: &Option<Vec<Style>>) {
@@ -237,7 +237,7 @@ mod tests {
                 stylesheet.find_styles_by_ids(vec!["style3", "style4"]),
                 None
             );
-            assert_eq2!(get_styles!(from: stylesheet, ["style3", "style4"]), None);
+            assert_eq2!(get_styles!(@from: stylesheet, ["style3", "style4"]), None);
         }
     }
 

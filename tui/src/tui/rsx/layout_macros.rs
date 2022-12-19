@@ -40,7 +40,7 @@ macro_rules! box_start {
       id:                     $arg_id,
       dir:                    $arg_dir,
       requested_size_percent: $arg_requested_size_percent,
-      maybe_styles:           get_styles! { from: $arg_surface.stylesheet, [$($args)*] }
+      maybe_styles:           get_styles! { @from: $arg_surface.stylesheet, [$($args)*] }
     })?
   };
 }

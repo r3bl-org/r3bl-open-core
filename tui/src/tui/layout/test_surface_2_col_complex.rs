@@ -53,7 +53,7 @@ mod tests {
                 id: 0,
                 dir: Direction::Horizontal,
                 requested_size_percent: requested_size_percent!(width:100, height:100),
-                maybe_styles: get_styles! { from: surface.stylesheet, ["0"] },
+                maybe_styles: get_styles! { @from: surface.stylesheet, ["0"] },
             })?;
 
             make_container_assertions(surface)?;
@@ -155,7 +155,7 @@ mod tests {
         throws!({
             // No macro.
             surface.box_start(FlexBoxProps {
-                maybe_styles: get_styles! { from: surface.stylesheet, ["2"] },
+                maybe_styles: get_styles! { @from: surface.stylesheet, ["2"] },
                 id: 2,
                 dir: Direction::Vertical,
                 requested_size_percent: requested_size_percent!(width:50, height:100),

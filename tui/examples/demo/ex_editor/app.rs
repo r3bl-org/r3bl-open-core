@@ -315,31 +315,16 @@ mod populate_component_registry {
 
     /// Insert dialog component into registry if it's not already there.
     fn insert_dialog_component(this: &mut AppWithLayout, id: FlexBoxId) {
-        let maybe_stylesheet = create_stylesheet();
-
-        let maybe_border_style = match maybe_stylesheet {
-            Ok(ref stylesheet) => get_style! { from: stylesheet , DialogStyleId::Border.as_ref() },
-            Err(_) => None,
-        };
-
-        let maybe_title_style = match maybe_stylesheet {
-            Ok(ref stylesheet) => get_style! { from: stylesheet , DialogStyleId::Title.as_ref() },
-            Err(_) => None,
-        };
-
-        let maybe_editor_style = match maybe_stylesheet {
-            Ok(ref stylesheet) => get_style! { from: stylesheet , DialogStyleId::Editor.as_ref() },
-            Err(_) => None,
-        };
+        let result_stylesheet = create_stylesheet();
 
         let shared_dialog_component = {
             let it = DialogComponent::new_shared(
                 id,
                 on_dialog_press,
                 on_dialog_editor_change_handler,
-                maybe_border_style,
-                maybe_title_style,
-                maybe_editor_style,
+                get_style! { @from_result: result_stylesheet , DialogStyleId::Border.as_ref() },
+                get_style! { @from_result: result_stylesheet , DialogStyleId::Title.as_ref() },
+                get_style! { @from_result: result_stylesheet , DialogStyleId::Editor.as_ref() },
                 EditorEngineConfigOptions {
                     multiline_mode: EditorLineMode::SingleLine,
                     syntax_highlight: SyntaxHighlightConfig::Disable,

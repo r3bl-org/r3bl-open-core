@@ -91,16 +91,16 @@ When creating a new dialog box component, two callback functions are passed in:
 
 # TODO:
 
-1. [ ] Make `DialogEngineConfigOptions`, similar to `EditorEngineConfigOptions`
+[x] Should file extension (eg `md`) be passed into to the `???ConfigOptions`? Or should it be part
+of the buffer that is in the state?
 
-   - Used to specify whether to use autocomplete mode or not
-   - This must be passed in as an arg to `DialogComponent::new()` and `new_shared()`
-   - This must be passed in as an arg to `DialogEngine::new()`
+- Currently `EditorEngineConfigOptions` has `syntax_highlighting` field which is bool. Shouldn't it
+  also have a `file_extension_for_new_empty_buffer` field? This is only the default for buffers that
+  are created by the component & not passed in via state.
+- Currently `EditorBuffer::new_empty()` automatically sets the extension to `md`, is this right?
 
-2. [x] Should file extension (eg `md`) be passed into to the `???ConfigOptions`? Or should it be
-       part of the buffer that is in the state?
+[ ] Make `DialogEngineConfigOptions`, similar to `EditorEngineConfigOptions`
 
-   - Currently `EditorEngineConfigOptions` has `syntax_highlighting` field which is bool. Shouldn't
-     it also have a `file_extension_for_new_empty_buffer` field? This is only the default for
-     buffers that are created by the component & not passed in via state.
-   - Currently `EditorBuffer::new_empty()` automatically sets the extension to `md`, is this right?
+- Used to specify whether to use autocomplete mode or not
+- This must be passed in as an arg to `DialogComponent::new()` and `new_shared()`
+- This must be passed in as an arg to `DialogEngine::new()`
