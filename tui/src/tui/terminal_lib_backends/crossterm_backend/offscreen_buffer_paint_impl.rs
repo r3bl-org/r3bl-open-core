@@ -48,11 +48,10 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
         // Debug output.
         call_if_true!(DEBUG_TUI_SHOW_PIPELINE, {
-            log_no_err!(
-                INFO,
-                "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok ✅: render_ops: \n{:?}",
-                render_ops,
+            let msg = format!(
+                "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok ✅: render_ops: \n{render_ops:?}",
             );
+            log_info(msg);
         });
     }
 
@@ -71,11 +70,10 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
         // Debug output.
         call_if_true!(DEBUG_TUI_SHOW_PIPELINE, {
-            log_no_err!(
-                INFO,
-                "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok ✅: render_ops: \n{:?}",
-                render_ops,
+            let msg = format!(
+                "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok ✅: render_ops: \n{render_ops:?}"
             );
+            log_info(msg);
         });
     }
 
@@ -186,11 +184,9 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
     async fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOps {
         call_if_true!(DEBUG_TUI_COMPOSITOR, {
-            log_no_err!(
-                INFO,
-                "🎨 offscreen_buffer_paint_impl_crossterm::render_diff() ok ✅: \ndiff_chunks: \n{}",
-                diff_chunks.pretty_print(),
-            );
+            let msg = format!("🎨 offscreen_buffer_paint_impl_crossterm::render_diff() ok ✅: \ndiff_chunks: \n{}",
+            diff_chunks.pretty_print());
+            log_info(msg);
         });
 
         let mut it = render_ops!();

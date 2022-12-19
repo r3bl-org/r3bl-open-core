@@ -29,64 +29,6 @@ pub static mut FILE_PATH: &str = "log.txt";
 static mut FILE_LOGGER_INIT_OK: bool = false;
 static FILE_LOGGER_INIT_FN: Once = Once::new();
 
-/// This macro will log the message if the log level is set to the given level. The log is output to
-/// a file logger. Since there could be issues w/ accessing this file, this macro can itself throw
-/// an error. This is why it returns a [CommonResult]. If you want to use a version
-/// of this macro that does not throw an error, use [log_no_err!].
-///
-/// # Example
-///
-/// ```ignore
-/// use r3bl_rs_utils::{init_file_logger_once, log, CommonResult};
-/// fn run() -> CommonResult<()> {
-///   let msg = "foo";
-///   let msg_2 = "bar";
-///   log!(INFO, "This is a info message");
-///   log!(INFO, target: "foo", "This is a info message");
-///
-///   log!(WARN, "This is a warning message {}", msg);
-///   log!(WARN, target: "foo", "This is a warning message {}", msg);
-///
-///   log!(ERROR, "This is a error message {} {}", msg, msg_2);
-///   log!(ERROR, target: "foo", "This is a error message {} {}", msg, msg_2);
-///
-///   log!(DEBUG, "This is a debug message {} {}", msg, msg_2);
-///   log!(DEBUG, target: "foo", "This is a debug message {} {}", msg, msg_2);
-///
-///   log!(TRACE, "This is a debug message {} {}", msg, msg_2);
-///   log!(TRACE, target: "foo", "This is a debug message {} {}", msg, msg_2);
-///
-///   Ok(())
-/// }
-/// ```
-///
-/// # Docs for log crate
-///
-/// - [`log::info!`], [`log::warn!`], [`log::error!`]: <https://docs.rs/log/latest/log/>
-#[macro_export]
-macro_rules! log {
-  (INFO, $($arg:tt)*) => {{
-    init_file_logger_once()?;
-    log::info!($($arg)*);
-  }};
-  (WARN, $($arg:tt)*) => {{
-    init_file_logger_once()?;
-    log::warn!($($arg)*);
-  }};
-  (ERROR, $($arg:tt)*) => {{
-    init_file_logger_once()?;
-    log::error!($($arg)*);
-  }};
-  (DEBUG, $($arg:tt)*) => {{
-    init_file_logger_once()?;
-    log::error!($($arg)*);
-  }};
-  (TRACE, $($arg:tt)*) => {{
-    init_file_logger_once()?;
-    log::trace!($($arg)*);
-  }};
-}
-
 /// If you want to override the default log file path (stored in [FILE_PATH]), you can use this
 /// function. If the logger has already been initialized, then it will return a
 /// [CommonErrorType::InvalidState] error.
@@ -129,116 +71,79 @@ pub fn try_to_set_log_level(level: LevelFilter) -> CommonResult<String> {
     }
 }
 
-/// This is very similar to [log!] except that if it fails, it will not propagate the log error.
-/// Here's an example.
-///
-/// ```ignore
-/// pub fn log_state(&self, msg: &str) {
-///   log_no_err!(INFO, "{:?} -> {}", msg, self.to_string());
-///   log_no_err!(INFO, target: "foo", "{:?} -> {}", msg, self.to_string());
-/// }
-/// ```
-#[macro_export]
-macro_rules! log_no_err {
-  (INFO, $($arg:tt)*) => {{
+/// Log the message to the `INFO` log level using a file logger. There could be issues w/ accessing
+/// this file; if it fails this function will not propagate the log error.
+pub fn log_info(arg: String) {
     if init_file_logger_once().is_err() {
-      eprintln!("Error initializing file logger due to {}", init_file_logger_once().unwrap_err());
+        eprintln!(
+            "Error initializing file logger due to {}",
+            init_file_logger_once().unwrap_err()
+        );
     } else {
-      log::info!($($arg)*);
+        std::thread::spawn(move || {
+            log::info!("{}", arg);
+        });
     }
-  }};
-  (WARN, $($arg:tt)*) => {{
-    if init_file_logger_once().is_err() {
-      eprintln!("Error initializing file logger due to {}", init_file_logger_once().unwrap_err());
-    } else {
-      log::warn!($($arg)*);
-    }
-  }};
-  (ERROR, $($arg:tt)*) => {{
-    if init_file_logger_once().is_err() {
-      eprintln!("Error initializing file logger due to {}", init_file_logger_once().unwrap_err());
-    } else {
-      log::error!($($arg)*);
-    }
-  }};
-  (DEBUG, $($arg:tt)*) => {{
-    if init_file_logger_once().is_err() {
-      eprintln!("Error initializing file logger due to {}", init_file_logger_once().unwrap_err());
-    } else {
-      log::debug!($($arg)*);
-    }
-  }};
-  (TRACE, $($arg:tt)*) => {{
-    if init_file_logger_once().is_err() {
-      eprintln!("Error initializing file logger due to {}", init_file_logger_once().unwrap_err());
-    } else {
-      log::trace!($($arg)*);
-    }
-  }};
 }
 
-/// This is a really simple macro to make it effortless to debug into a log. It takes a single
-/// identifier as an argument, or any number of them. It simply dumps an arrow symbol, followed by
-/// the identifier ([stringify]'d) along with the value that it contains (using the [Debug]
-/// formatter). All of the output is colorized for easy readability. You can use it like this.
-///
-/// ```ignore
-/// let my_string = "Hello World!"; log_no_err_debug!(my_string);
-/// ```
-#[macro_export]
-macro_rules! log_no_err_debug {
-  (
-    $(                      /* Start a repetition. */
-      $element:expr         /* Expression. */
-    )                       /* End repetition. */
-    ,                       /* Comma separated. */
-    *                       /* Zero or more times. */
-    $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
-  ) => {
-    /* Enclose the expansion in a block so that we can use multiple statements. */
-    {
-      /* Start a repetition. */
-      $(
-        /* Each repeat will contain the following statement, with $element replaced. */
-        log_no_err! {
-          DEBUG,
-          "{} = {}",
-          stringify!($element),
-          &format!("{:#?}", $element)
-        }
-      )*
-  }};
+/// Log the message to the `DEBUG` log level using a file logger. There could be issues w/ accessing
+/// this file; if it fails this function will not propagate the log error.
+pub fn log_debug(arg: String) {
+    if init_file_logger_once().is_err() {
+        eprintln!(
+            "Error initializing file logger due to {}",
+            init_file_logger_once().unwrap_err()
+        );
+    } else {
+        std::thread::spawn(move || {
+            log::debug!("{}", arg);
+        });
+    }
 }
 
-/// Very similar to [log_no_err_debug!] except that it outputs TRACE. Here's an example.
-///
-/// ```ignore
-/// let my_string = "Hello World!";
-/// log_no_err_trace!(my_string);
-/// ```
-#[macro_export]
-macro_rules! log_no_err_trace {
-  (
-    $(                      /* Start a repetition. */
-      $element:expr         /* Expression. */
-    )                       /* End repetition. */
-    ,                       /* Comma separated. */
-    *                       /* Zero or more times. */
-    $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
-  ) => {
-    /* Enclose the expansion in a block so that we can use multiple statements. */
-    {
-      /* Start a repetition. */
-      $(
-        /* Each repeat will contain the following statement, with $element replaced. */
-        log_no_err! {
-          TRACE,
-          "{} = {}",
-          stringify!($element),
-          &format!("{:#?}", $element)
-        }
-      )*
-  }};
+/// Log the message to the `WARN` log level using a file logger. There could be issues w/ accessing
+/// this file; if it fails this function will not propagate the log error.
+pub fn log_warn(arg: String) {
+    if init_file_logger_once().is_err() {
+        eprintln!(
+            "Error initializing file logger due to {}",
+            init_file_logger_once().unwrap_err()
+        );
+    } else {
+        std::thread::spawn(move || {
+            log::warn!("{}", arg);
+        });
+    }
+}
+
+/// Log the message to the `TRACE` log level using a file logger. There could be issues w/ accessing
+/// this file; if it fails this function will not propagate the log error.
+pub fn log_trace(arg: String) {
+    if init_file_logger_once().is_err() {
+        eprintln!(
+            "Error initializing file logger due to {}",
+            init_file_logger_once().unwrap_err()
+        );
+    } else {
+        std::thread::spawn(move || {
+            log::trace!("{}", arg);
+        });
+    }
+}
+
+/// Log the message to the `ERROR` log level using a file logger. There could be issues w/ accessing
+/// this file; if it fails this function will not propagate the log error.
+pub fn log_error(arg: String) {
+    if init_file_logger_once().is_err() {
+        eprintln!(
+            "Error initializing file logger due to {}",
+            init_file_logger_once().unwrap_err()
+        );
+    } else {
+        std::thread::spawn(move || {
+            log::error!("{}", arg);
+        });
+    }
 }
 
 /// Simply open the file (location stored in [FILE_PATH] static above) and write the log message to

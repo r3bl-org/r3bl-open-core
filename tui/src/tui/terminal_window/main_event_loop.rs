@@ -40,7 +40,7 @@ const SPAWN_PROCESS_INPUT: bool = true;
 ///   3. So when you create a [RenderPipeline] and populate it w/ [RenderOps] you can use the
 ///      following ops [RenderOp::MoveCursorPositionAbs], [RenderOp::MoveCursorPositionRelTo] And
 ///      they will be valid only for that [RenderOps] list.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct GlobalData {
     pub window_size: Size,
     pub maybe_saved_offscreen_buffer: Option<OffscreenBuffer>,
@@ -48,22 +48,45 @@ pub struct GlobalData {
     pub global_user_data: HashMap<String, HashMap<String, String>>,
 }
 
-impl GlobalData {
-    fn try_to_create_instance() -> CommonResult<GlobalData> {
-        let mut global_data = GlobalData::default();
-        global_data.set_size(terminal_lib_operations::lookup_size()?);
-        Ok(global_data)
+mod global_data_impl {
+    use std::fmt::Formatter;
+
+    use super::*;
+
+    impl Debug for GlobalData {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            let mut vec_lines = vec![];
+            vec_lines.push(format!("{0:?}", self.window_size));
+            vec_lines.push(match &self.maybe_saved_offscreen_buffer {
+                None => "no saved offscreen buffer".to_string(),
+                Some(ref offscreen_buffer) => match DEBUG_TUI_COMPOSITOR {
+                    false => "offscreen buffer saved from previous render".to_string(),
+                    true => offscreen_buffer.pretty_print(),
+                },
+            });
+            vec_lines.push(format!("{0:?}", self.global_user_data));
+            write!(f, "\nGlobalData\n  - {}", vec_lines.join("\n  - "))
+        }
     }
 
-    pub fn set_size(&mut self, new_size: Size) {
-        self.window_size = new_size;
-        self.dump_state_to_log("main_event_loop -> Resize");
-    }
+    impl GlobalData {
+        pub fn try_to_create_instance() -> CommonResult<GlobalData> {
+            let mut global_data = GlobalData::default();
+            global_data.set_size(terminal_lib_operations::lookup_size()?);
+            Ok(global_data)
+        }
 
-    pub fn get_size(&self) -> Size { self.window_size }
+        pub fn set_size(&mut self, new_size: Size) {
+            self.window_size = new_size;
+            self.dump_to_log("main_event_loop -> Resize");
+        }
 
-    pub fn dump_state_to_log(&self, msg: &str) {
-        call_if_true!(DEBUG_TUI_MOD, log_no_err!(INFO, "{} -> {:?}", msg, self));
+        pub fn get_size(&self) -> Size { self.window_size }
+
+        pub fn dump_to_log(&self, msg: &str) {
+            let log_msg = format!("{msg} -> {self:?}");
+            call_if_true!(DEBUG_TUI_MOD, log_info(log_msg));
+        }
     }
 }
 
@@ -109,7 +132,7 @@ impl TerminalWindow {
         shared_global_data
             .read()
             .await
-            .dump_state_to_log("main_event_loop -> Startup 🚀");
+            .dump_to_log("main_event_loop -> Startup 🚀");
 
         // Main event loop.
         loop {
@@ -121,10 +144,10 @@ impl TerminalWindow {
                 Some(it) => it,
                 _ => continue,
             };
-            call_if_true!(
-                DEBUG_TUI_MOD,
-                log_no_err!(INFO, "main_event_loop -> Tick: ⏰ {}", input_event)
-            );
+            call_if_true!(DEBUG_TUI_MOD, {
+                let msg = format!("main_event_loop -> Tick: ⏰ {input_event}");
+                log_info(msg);
+            });
 
             // Before any app gets to process the input_event, perform special handling in case it is a
             // resize event. Even if TerminalWindow::process_input_event consumes the event, if the event
@@ -201,14 +224,12 @@ impl TerminalWindow {
                     });
                     join_handle.await??
                 };
-                call_if_true!(
-                    DEBUG_TUI_MOD,
-                    log_no_err!(
-                        INFO,
-                        "main_event_loop -> 🚥 SPAWN propagation_result_from_app: {:?}",
-                        propagation_result_from_app
-                    )
-                );
+                call_if_true!(DEBUG_TUI_MOD, {
+                    let msg = format!(
+                        "main_event_loop -> 🚥 SPAWN propagation_result_from_app: {propagation_result_from_app:?}"
+                    );
+                    log_info(msg);
+                });
                 propagation_result_from_app
             }
             false => {
@@ -220,14 +241,12 @@ impl TerminalWindow {
                     input_event,
                 )
                 .await?;
-                call_if_true!(
-                    DEBUG_TUI_MOD,
-                    log_no_err!(
-                        INFO,
-                        "main_event_loop -> 🚥 NO_SPAWN propagation_result_from_app: {:?}",
-                        propagation_result_from_app
-                    )
-                );
+                call_if_true!(DEBUG_TUI_MOD, {
+                    let msg = format!(
+                        "main_event_loop -> 🚥 NO_SPAWN propagation_result_from_app: {propagation_result_from_app:?}"
+                    );
+                    log_info(msg);
+                });
                 propagation_result_from_app
             }
         };
@@ -260,10 +279,10 @@ where
         )
         .await;
         if let Err(e) = result {
-            call_if_true!(
-                DEBUG_TUI_MOD,
-                log_no_err!(ERROR, "MySubscriber::run -> Error: {}", e)
-            )
+            call_if_true!(DEBUG_TUI_MOD, {
+                let msg = format!("MySubscriber::run -> Error: {e}");
+                log_error(msg);
+            })
         }
     }
 }
@@ -350,22 +369,20 @@ where
             match render_result {
                 Err(error) => {
                     RenderOp::default().flush();
-                    call_if_true!(
-                        DEBUG_TUI_MOD,
-                        log_no_err!(ERROR, "MySubscriber::render() error ❌: {}", error)
-                    );
+                    call_if_true!(DEBUG_TUI_MOD, {
+                        let msg = format!("MySubscriber::render() error ❌: {error}");
+                        log_error(msg);
+                    });
                 }
                 Ok(render_pipeline) => {
                     render_pipeline
                         .paint(FlushKind::ClearBeforeFlush, shared_global_data)
                         .await;
                     call_if_true!(DEBUG_TUI_MOD, {
-                        log_no_err!(
-                            INFO,
-                            "🎨 MySubscriber::paint() ok ✅: \n window_size: {:?}\n state: {:?}\n",
-                            window_size,
-                            state,
-                        );
+                        {
+                            let msg = format!("🎨 MySubscriber::paint() ok ✅: \n window_size: {window_size:?}\n state: {state:?}\n");
+                            log_info(msg);
+                        }
                     });
                 }
             }

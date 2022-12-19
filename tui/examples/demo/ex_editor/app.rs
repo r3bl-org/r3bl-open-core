@@ -80,12 +80,10 @@ mod app_trait_impl {
             } = args;
 
             call_if_true!(DEBUG_TUI_MOD, {
-                log_no_err!(DEBUG, "🐝 focus: {:?}", self.component_registry.has_focus);
-                log_no_err!(
-                    DEBUG,
-                    "💾 user_data: {:?}",
-                    self.component_registry.user_data
-                );
+                let msg_1 = format!("🐝 focus: {:?}", self.component_registry.has_focus);
+                let msg_2 = format!("💾 user_data: {:?}", self.component_registry.user_data);
+                log_debug(msg_1);
+                log_debug(msg_2);
             });
 
             // Check to see if the modal dialog should be activated.
@@ -216,11 +214,8 @@ mod detect_modal_dialog_activation_from_input_event {
                 );
 
                 call_if_true!(DEBUG_TUI_MOD, {
-                    log_no_err!(
-                        DEBUG,
-                        "📣 activate modal: {:?}",
-                        this.component_registry.has_focus
-                    );
+                    let msg = format!("📣 activate modal: {:?}", this.component_registry.has_focus);
+                    log_debug(msg);
                 });
             }
         }
@@ -309,7 +304,10 @@ mod populate_component_registry {
     fn init_has_focus(this: &mut AppWithLayout, id: FlexBoxId) {
         this.component_registry.has_focus.set_id(id);
         call_if_true!(DEBUG_TUI_MOD, {
-            log_no_err!(DEBUG, "🪙 {} = {}", "init component_registry.has_focus", id);
+            {
+                let msg = format!("🪙 {} = {}", "init component_registry.has_focus", id);
+                log_debug(msg);
+            }
         });
     }
 
@@ -375,11 +373,8 @@ mod populate_component_registry {
         this.component_registry.put(id, shared_dialog_component);
 
         call_if_true!(DEBUG_TUI_MOD, {
-            log_no_err!(
-                DEBUG,
-                "🪙 {}",
-                "construct DialogComponent { on_dialog_press }"
-            );
+            let msg = format!("🪙 {}", "construct DialogComponent { on_dialog_press }");
+            log_debug(msg);
         });
     }
 
@@ -401,11 +396,8 @@ mod populate_component_registry {
         this.component_registry.put(id, shared_editor_component);
 
         call_if_true!(DEBUG_TUI_MOD, {
-            log_no_err!(
-                DEBUG,
-                "🪙 {}",
-                "construct EditorComponent { on_buffer_change }"
-            );
+            let msg = format!("🪙 {}", "construct EditorComponent { on_buffer_change }");
+            log_debug(msg);
         });
     }
 }
@@ -417,11 +409,11 @@ mod debug_helpers {
         fn default() -> Self {
             // Potentially do any other initialization here.
             call_if_true!(DEBUG_TUI_MOD, {
-                log_no_err!(
-                    DEBUG,
+                let msg = format!(
                     "🪙 {}",
                     "construct ex_editor::AppWithLayout { ComponentRegistry }"
                 );
+                log_debug(msg);
             });
 
             Self {

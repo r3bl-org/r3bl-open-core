@@ -263,7 +263,7 @@ mod handle_focus {
                         .set_id(Id::Col2.int_value())
                 }
             } else {
-                log_no_err!(ERROR, "No focus id has been set, and it should be set!");
+                log_error("No focus id has been set, and it should be set!".to_string());
             }
         }
     }

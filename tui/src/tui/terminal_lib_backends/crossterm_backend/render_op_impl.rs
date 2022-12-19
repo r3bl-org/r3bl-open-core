@@ -217,16 +217,15 @@ async fn print_text_with_attributes(
             format!("\"{text_arg}\"")
         }
         ContentType::ANSIText => {
-            call_if_true!(
-                DEBUG_TUI_SHOW_PIPELINE_EXPANDED,
-                log_no_err!(
-                    DEBUG,
+            call_if_true!(DEBUG_TUI_SHOW_PIPELINE_EXPANDED, {
+                let msg = format!(
                     "ANSI {:?}, len: {:?}, plain: {:?}",
                     text_arg,
                     text_arg.len(),
                     ANSIText::try_strip_ansi(text_arg)
-                )
-            );
+                );
+                log_debug(msg);
+            });
             format!("ANSI detected, size: {} bytes", text_arg.len())
         }
     });
@@ -396,14 +395,16 @@ macro_rules! exec_render_op {
             throws!({
                 // Execute the command.
                 if let Err(err) = $arg_cmd {
+                    let msg = format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
                     call_if_true!(
                         DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                        log!(ERROR, "crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err)
+                        log_error(msg)
                     );
                 } else {
+                    let msg = format!("crossterm: ✅ {} successfully", $arg_log_msg);
                     call_if_true! {
                       DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                      log!(INFO, "crossterm: ✅ {} successfully", $arg_log_msg)
+                      log_info(msg)
                     };
                 }
             })
