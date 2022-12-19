@@ -193,22 +193,14 @@ pub mod constructor {
         // TODO: add new arg: DialogEngineMode
         pub fn new(
             id: FlexBoxId,
+            dialog_options: DialogEngineConfigOptions,
+            editor_options: EditorEngineConfigOptions,
             on_dialog_press_handler: OnDialogPressFn<S, A>,
             on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, A>,
-            maybe_style_border: Option<Style>,
-            maybe_style_title: Option<Style>,
-            maybe_style_editor: Option<Style>,
-            editor_engine_config_options: EditorEngineConfigOptions,
         ) -> Self {
             Self {
                 // TODO: use DialogEngine::new() ... check for this everywhere
-                dialog_engine: DialogEngine {
-                    maybe_style_border,
-                    maybe_style_title,
-                    maybe_style_editor,
-                    editor_engine: EditorEngine::new(editor_engine_config_options),
-                    ..Default::default()
-                },
+                dialog_engine: DialogEngine::new(dialog_options, editor_options),
                 id,
                 on_dialog_press_handler: Some(on_dialog_press_handler),
                 on_dialog_editor_change_handler: Some(on_dialog_editor_change_handler),
@@ -218,21 +210,17 @@ pub mod constructor {
         // TODO: add new arg: DialogEngineMode
         pub fn new_shared(
             id: FlexBoxId,
+            dialog_options: DialogEngineConfigOptions,
+            editor_options: EditorEngineConfigOptions,
             on_dialog_press_handler: OnDialogPressFn<S, A>,
             on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, A>,
-            maybe_style_border: Option<Style>,
-            maybe_style_title: Option<Style>,
-            maybe_style_editor: Option<Style>,
-            editor_engine_config_options: EditorEngineConfigOptions,
         ) -> Arc<RwLock<Self>> {
             Arc::new(RwLock::new(DialogComponent::new(
                 id,
+                dialog_options,
+                editor_options,
                 on_dialog_press_handler,
                 on_dialog_editor_change_handler,
-                maybe_style_border,
-                maybe_style_title,
-                maybe_style_editor,
-                editor_engine_config_options,
             )))
         }
     }

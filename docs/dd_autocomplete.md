@@ -89,19 +89,14 @@ When creating a new dialog box component, two callback functions are passed in:
 <a id="markdown-how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F" name="how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F"></a>
 
 
-# TODO:
-<a id="markdown-todo%3A" name="todo%3A"></a>
+So far we have covered the use case for a simple modal dialog box. In order to provide auto
+completion capaabilities, via some kind of web service, there needs to be a slightly more complex
+version of this. This is where the `DialogEngineConfigOptions` struct comes in. It allows us to
+create a dialog component and engine to be configured w/ the appropriate mode - simple or
+autocomplete.
 
-[x] Should file extension (eg `md`) be passed into to the `???ConfigOptions`? Or should it be part
-of the buffer that is in the state?
+In autocomplete mode, an extra "results panel" is displayed, and the layout of the dialog is
+different on the screen. Instead of being in the middle of the screen, it starts at the top of the
+screen. The callbacks are the same.
 
-- Currently `EditorEngineConfigOptions` has `syntax_highlighting` field which is bool. Shouldn't it
-  also have a `file_extension_for_new_empty_buffer` field? This is only the default for buffers that
-  are created by the component & not passed in via state.
-- Currently `EditorBuffer::new_empty()` automatically sets the extension to `md`, is this right?
-
-[ ] Make `DialogEngineConfigOptions`, similar to `EditorEngineConfigOptions`
-
-- Used to specify whether to use autocomplete mode or not
-- This must be passed in as an arg to `DialogComponent::new()` and `new_shared()`
-- This must be passed in as an arg to `DialogEngine::new()`
+TK: how does all of this work? what are the changes between normal mode and autocomplete?
