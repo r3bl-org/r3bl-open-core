@@ -50,14 +50,10 @@ impl RenderPipeline {
             }
         }
 
-        call_if_true!(
-            DEBUG_TUI_COMPOSITOR,
-            log_no_err!(
-                DEBUG,
-                "offscreen_buffer: \n🌟🌟🌟\n{:#?}",
-                my_offscreen_buffer
-            )
-        );
+        call_if_true!(DEBUG_TUI_COMPOSITOR, {
+            let msg = format!("offscreen_buffer: \n🌟🌟🌟\n{my_offscreen_buffer:#?}");
+            log_debug(msg);
+        });
 
         my_offscreen_buffer
     }
@@ -175,32 +171,34 @@ pub fn print_plain_text(
         text = trunc_unicode_str.unicode_string();
     }
 
-    call_if_true!(
-        DEBUG_TUI_COMPOSITOR,
-        log_no_err!(
-            DEBUG,
+    call_if_true!(DEBUG_TUI_COMPOSITOR, {
+        let msg = format!(
             "\n🚀🚀🚀 print_plain_text():
-insertion at: display_row_index: {}, display_col_index: {}, window_size: {:?},
-text: '{}',
-width: {}",
+            insertion at: display_row_index: {}, display_col_index: {}, window_size: {:?},
+            text: '{}',
+            width: {}",
             display_row_index,
             display_col_index,
             my_offscreen_buffer.window_size,
             text.string,
             text.display_width
-        )
-    );
+        );
+        log_debug(msg);
+    });
 
     // Make sure that the row and col are safe to access in the buffer.
     if let IsSafeToAccess::Unsafe =
         my_offscreen_buffer.is_safe_to_access_indices(display_row_index, display_col_index)
     {
-        log_no_err!(ERROR, "🚨🚨🚨print_plain_text() tried to access row:{}, col:{} to add {}. It is out of bounds of my_offscreen_buffer {}",
+        let log_msg = format!(
+            "🚨🚨🚨print_plain_text() tried to access row:{}, col:{} to add {}. It is out of bounds of my_offscreen_buffer {}",
             display_row_index,
             display_col_index,
             text.string,
             my_offscreen_buffer.pretty_print()
         );
+        log_error(log_msg);
+
         let msg = format!(
             "🚨🚨🚨print_plain_text() tried to access row:{}, col:{} to add {}. It is out of bounds of my_offscreen_buffer {}",
             display_row_index,
@@ -247,20 +245,15 @@ width: {}",
     call_if_true!(
         DEBUG_TUI_COMPOSITOR,
         if maybe_style.is_some() {
-            log_no_err!(
-                DEBUG,
-                "\n🔴🔴🔴\n[row: {}, col: {}] - style: {:?}",
-                display_row_index,
-                display_col_index,
-                maybe_style,
+            let msg = format!(
+                "\n🔴🔴🔴\n[row: {display_row_index}, col: {display_col_index}] - style: {maybe_style:?}",
             );
+            log_debug(msg);
         } else {
-            log_no_err!(
-                DEBUG,
-                "\n🟣🟣🟣\n[row: {}, col: {}] - style: None",
-                display_row_index,
-                display_col_index,
+            let msg = format!(
+                "\n🟣🟣🟣\n[row: {display_row_index}, col: {display_col_index}] - style: None",
             );
+            log_debug(msg);
         }
     );
 
@@ -410,34 +403,34 @@ pub fn print_ansi_text(
         ansi_text_segments = temp_ansi_text.segments(Some(ch!(@to_usize adj_max)));
     }
 
-    call_if_true!(
-        DEBUG_TUI_COMPOSITOR,
-        log_no_err!(
-            DEBUG,
+    call_if_true!(DEBUG_TUI_COMPOSITOR, {
+        let msg = format!(
             "\n🛸🛸🛸 print_ansi_text():
-insertion at: display_row_index: {}, display_col_index: {}, window_size: {:?},
-text: '{}',
-width: {}",
+                insertion at: display_row_index: {}, display_col_index: {}, window_size: {:?},
+                text: '{}',
+                width: {}",
             display_row_index,
             display_col_index,
             my_offscreen_buffer.window_size,
             String::from(&ansi_text_segments),
             ansi_text_segments.display_width
-        )
-    );
+        );
+        log_debug(msg);
+    });
 
     // Make sure that the row and col are safe to access in the buffer.
     if let IsSafeToAccess::Unsafe =
         my_offscreen_buffer.is_safe_to_access_indices(display_row_index, display_col_index)
     {
-        log_no_err!(
-            ERROR,
+        let log_msg = format!(
             "🚨🚨🚨print_ansi_text() tried to access row:{}, col:{} to add {} is out of bounds of my_offscreen_buffer {}",
             display_row_index,
             display_col_index,
             arg_text_ref,
             my_offscreen_buffer.pretty_print()
         );
+        log_error(log_msg);
+
         let msg = format!(
             "🚨🚨🚨print_ansi_text() tried to access row:{}, col:{} to add {} is out of bounds of my_offscreen_buffer {}",
             display_row_index,

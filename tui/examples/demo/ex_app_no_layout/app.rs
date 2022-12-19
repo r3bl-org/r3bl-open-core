@@ -32,25 +32,23 @@ pub struct AppNoLayout {
 macro_rules! fire {
     (@add_pop => $arg_event_consumed: ident, $arg_shared_store: ident, $arg_action: expr) => {
         spawn_and_consume_event!($arg_event_consumed, $arg_shared_store, $arg_action);
-        call_if_true!(
-            DEBUG,
-            log_no_err!(
-                INFO,
+        call_if_true!(DEBUG, {
+            let msg = format!(
                 "⛵ AppNoLayout::handle_event -> + -> dispatch_spawn: {}",
                 $arg_action
-            )
-        );
+            );
+            log_info(msg)
+        });
     };
     (@sub_pop => $arg_event_consumed: ident, $arg_shared_store: ident, $arg_action: expr) => {
         spawn_and_consume_event!($arg_event_consumed, $arg_shared_store, $arg_action);
-        call_if_true!(
-            DEBUG,
-            log_no_err!(
-                INFO,
+        call_if_true!(DEBUG, {
+            let msg = format!(
                 "⛵ AppNoLayout::handle_event -> - -> dispatch_spawn: {}",
                 $arg_action
-            )
-        );
+            );
+            log_info(msg)
+        });
     };
 }
 
@@ -111,14 +109,10 @@ impl App<State, Action> for AppNoLayout {
         throws_with_return!({
             let GlobalScopeArgs { shared_store, .. } = args;
 
-            call_if_true!(
-                DEBUG,
-                log_no_err!(
-                    INFO,
-                    "⛵ AppNoLayout::handle_event -> input_event: {}",
-                    input_event
-                )
-            );
+            call_if_true!(DEBUG, {
+                let msg = format!("⛵ AppNoLayout::handle_event -> input_event: {input_event}");
+                log_info(msg)
+            });
 
             let mut event_consumed = false;
 

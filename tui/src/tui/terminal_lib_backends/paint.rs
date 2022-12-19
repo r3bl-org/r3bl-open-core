@@ -131,23 +131,20 @@ pub async fn sanitize_and_save_abs_position(
     fn debug(orig_pos: Position, sanitized_pos: Position) {
         call_if_true!(DEBUG_TUI_MOD, {
             if sanitized_pos != orig_pos {
-                log_no_err!(
-                    INFO,
-                    "pipeline : 📍🗜️ Attempt to set cursor position {:?} \
-          outside of terminal window; clamping to nearest edge of window {:?}",
-                    orig_pos,
-                    sanitized_pos
+                let msg = format!(
+                    "pipeline : 📍🗜️ Attempt to set cursor position {orig_pos:?} \
+                    outside of terminal window; clamping to nearest edge of window {sanitized_pos:?}"
                 );
+                log_info(msg);
             }
         });
 
         call_if_true!(DEBUG_TUI_SHOW_PIPELINE_EXPANDED, {
-            log_no_err!(
-                INFO,
-                "pipeline : 📍 Save the cursor position {:?} \
-          to SharedGlobalData",
-                sanitized_pos
+            let msg = format!(
+                "pipeline : 📍 Save the cursor position {sanitized_pos:?} \
+                to SharedGlobalData"
             );
+            log_info(msg);
         });
     }
 }

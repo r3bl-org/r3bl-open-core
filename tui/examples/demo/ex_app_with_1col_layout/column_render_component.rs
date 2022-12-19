@@ -45,25 +45,23 @@ macro_rules! fire {
             $arg_action,
         );
 
-        call_if_true!(
-            DEBUG_TUI_MOD,
-            log_no_err!(
-                INFO,
+        call_if_true!(DEBUG_TUI_MOD, {
+            let msg = format!(
                 "⛵ ColumnRenderComponent::handle_event -> + -> dispatch_spawn: {}",
                 $arg_action
-            )
-        );
+            );
+            log_info(msg)
+        });
     };
     (@sub_pop => $arg_event_consumed: ident, $arg_shared_store: ident, $arg_action: expr) => {
         spawn_and_consume_event!($arg_event_consumed, $arg_shared_store, $arg_action);
-        call_if_true!(
-            DEBUG_TUI_MOD,
-            log_no_err!(
-                INFO,
+        call_if_true!(DEBUG_TUI_MOD, {
+            let msg = format!(
                 "⛵ ColumnRenderComponent::handle_event -> - -> dispatch_spawn: {}",
                 $arg_action
-            )
-        );
+            );
+            log_info(msg)
+        });
     };
 }
 
@@ -207,21 +205,16 @@ impl Component<State, Action> for ColumnRenderComponent {
 
             // Log pipeline.
             call_if_true!(DEBUG_TUI_MOD, {
-                log_no_err! {
-                  INFO,
-                  "\
-🦜 ColumnComponent::render ->
-  - current_box: {:?},
-  - box_origin_pos: {:?},
-  - box_bounds_size: {:?},
-  - content_pos: {:?},
-  - render_pipeline: {:?}",
-                  current_box,
-                  box_origin_pos,
-                  box_bounds_size,
-                  content_cursor_pos,
-                  pipeline
-                };
+                let msg = format!(
+                    "\
+                🦜 ColumnComponent::render ->
+                  - current_box: {current_box:?},
+                  - box_origin_pos: {box_origin_pos:?},
+                  - box_bounds_size: {box_bounds_size:?},
+                  - content_pos: {content_cursor_pos:?},
+                  - render_pipeline: {pipeline:?}"
+                );
+                log_info(msg);
             });
 
             // Return the pipeline.

@@ -25,10 +25,9 @@
 pub const DEBUG_TUI_MOD: bool = true;
 
 /// Enable or disable compositor debug logging.
-pub const DEBUG_TUI_COMPOSITOR: bool = true;
+pub const DEBUG_TUI_COMPOSITOR: bool = false;
 // Enable or disable debug logging for this `terminal_lib_backends` module.
-pub const DEBUG_TUI_SHOW_PIPELINE: bool = true;
-pub const DEBUG_TUI_SHOW_PAINT_OPTIMIZATION_HEURISTIC: bool = true;
+pub const DEBUG_TUI_SHOW_PIPELINE: bool = false;
 pub const DEBUG_TUI_SHOW_PIPELINE_EXPANDED: bool = false;
 /// Controls input event debugging [crate::EventStreamExt], and execution of render ops [crate::exec_render_op!] debugging
 /// output.

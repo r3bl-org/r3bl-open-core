@@ -155,11 +155,11 @@ mod constructor {
         pub fn new_empty(file_extension: String) -> Self {
             // Potentially do any other initialization here.
             call_if_true!(DEBUG_TUI_MOD, {
-                log_no_err!(
-                    DEBUG,
+                let msg = format!(
                     "🪙 {}",
                     "construct EditorBuffer { lines, caret, lolcat, file_extension }"
                 );
+                log_debug(msg);
             });
 
             Self {
