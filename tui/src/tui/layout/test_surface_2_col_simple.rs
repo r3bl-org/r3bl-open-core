@@ -139,7 +139,7 @@ mod tests {
         throws!({
             // No macro.
             surface.box_start(FlexBoxProps {
-                maybe_styles: get_styles! { from: surface.stylesheet, ["2"] },
+                maybe_styles: get_styles! { @from: surface.stylesheet, ["2"] },
                 id: 2,
                 dir: Direction::Vertical,
                 requested_size_percent: requested_size_percent!(width:50, height:100),

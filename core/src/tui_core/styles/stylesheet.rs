@@ -28,21 +28,41 @@ pub struct Stylesheet {
 #[macro_export]
 macro_rules! get_style {
     (
-    from: $arg_stylesheet : expr, // Eg: from: stylesheet,
-    $arg_style_name : expr        // Eg: "style1"
-  ) => {
+        @from_result: $arg_stylesheet_result : expr, // Eg: from: stylesheet,
+        $arg_style_name : expr                      // Eg: "style1"
+    ) => {
+        if let Ok(ref it) = $arg_stylesheet_result {
+            it.find_style_by_id($arg_style_name)
+        } else {
+            None
+        }
+    };
+    (
+        @from: $arg_stylesheet : expr, // Eg: from: stylesheet,
+        $arg_style_name : expr        // Eg: "style1"
+    ) => {
         $arg_stylesheet.find_style_by_id($arg_style_name)
     };
 }
 
 #[macro_export]
 macro_rules! get_styles {
-  (
-    from: $arg_stylesheet : expr,   // Eg: from: stylesheet,
-    [$($args:tt)*]                  // Eg: ["style1", "style2"]
-  ) => {
-    $arg_stylesheet.find_styles_by_ids(vec![$($args)*])
-  };
+    (
+        @from_result: $arg_stylesheet_result : expr, // Eg: from: stylesheet,
+        [$($args:tt)*]                              // Eg: ["style1", "style2"]
+    ) => {
+        if let Ok(ref it) = $arg_stylesheet_result {
+            it.find_styles_by_ids(vec![$($args)*])
+        } else {
+            None
+        }
+    };
+    (
+        @from: $arg_stylesheet : expr, // Eg: from: stylesheet,
+        [$($args:tt)*]                // Eg: ["style1", "style2"]
+    ) => {
+        $arg_stylesheet.find_styles_by_ids(vec![$($args)*])
+    };
 }
 
 impl Stylesheet {
@@ -100,7 +120,10 @@ impl Stylesheet {
 // ┏━━━━━━━━━━━━━┓
 // ┃ stylesheet! ┃
 // ┛             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// Macro to make building [Stylesheet] easy.
+/// Macro to make building [Stylesheet] easy. This returns a [CommonResult] because it checks to see
+/// that all [Style]s that are added have an `id`. If they don't, then an a [CommonError] is thrown.
+/// This is to ensure that valid styles are added to a stylesheet. Without an `id`, they can't be
+/// retrieved after they're added here, rendering them useless.
 ///
 /// Here's an example.
 /// ```ignore
