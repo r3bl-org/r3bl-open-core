@@ -34,12 +34,10 @@ use crate::*;
 /// In order to change the document, you can use the
 /// [apply_event](DialogEngineApi::apply_event) method which takes [InputEvent] and tries to
 /// execute it against this buffer.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct DialogEngine {
+    pub dialog_options: DialogEngineConfigOptions,
     pub editor_engine: EditorEngine,
-    pub maybe_style_border: Option<Style>,
-    pub maybe_style_title: Option<Style>,
-    pub maybe_style_editor: Option<Style>,
     pub lolcat: Lolcat,
 }
 
@@ -47,12 +45,13 @@ pub mod constructor {
     use super::*;
 
     impl DialogEngine {
-        pub fn new(editor_engine_config_options: EditorEngineConfigOptions) -> Self {
+        pub fn new(
+            dialog_options: DialogEngineConfigOptions,
+            editor_options: EditorEngineConfigOptions,
+        ) -> Self {
             Self {
-                editor_engine: EditorEngine::new(editor_engine_config_options),
-                maybe_style_border: None,
-                maybe_style_title: None,
-                maybe_style_editor: None,
+                dialog_options,
+                editor_engine: EditorEngine::new(editor_options),
                 lolcat: Lolcat::default(),
             }
         }
@@ -63,9 +62,12 @@ pub use constructor::*;
 // ┏━━━━━━━━━━━━━━━━┓
 // ┃ Config options ┃
 // ┛                ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DialogEngineConfigOptions {
     pub mode: DialogEngineMode,
+    pub maybe_style_border: Option<Style>,
+    pub maybe_style_title: Option<Style>,
+    pub maybe_style_editor: Option<Style>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -78,6 +80,9 @@ impl Default for DialogEngineConfigOptions {
     fn default() -> Self {
         Self {
             mode: DialogEngineMode::ModalSimple,
+            maybe_style_border: None,
+            maybe_style_editor: None,
+            maybe_style_title: None,
         }
     }
 }

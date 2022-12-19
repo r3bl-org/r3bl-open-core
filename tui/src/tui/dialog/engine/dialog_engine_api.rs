@@ -213,7 +213,7 @@ mod internal_impl {
         S: Default + Clone + PartialEq + Debug + Sync + Send,
         A: Default + Clone + Sync + Send,
     {
-        let maybe_style = args.dialog_engine.maybe_style_editor.clone();
+        let maybe_style = args.dialog_engine.dialog_options.maybe_style_editor.clone();
 
         let flex_box: FlexBox = EditorEngineFlexBox {
       id: args.self_id,
@@ -257,7 +257,7 @@ mod internal_impl {
 
         // Apply lolcat override (if enabled) to the fg_color of text_content.
         apply_lolcat_from_style(
-            &dialog_engine.maybe_style_title,
+            &dialog_engine.dialog_options.maybe_style_title,
             &mut dialog_engine.lolcat,
             &mut text_content,
         );
@@ -265,11 +265,11 @@ mod internal_impl {
         ops.push(RenderOp::ResetColor);
         ops.push(RenderOp::MoveCursorPositionAbs(row_pos));
         ops.push(RenderOp::ApplyColors(
-            dialog_engine.maybe_style_title.clone(),
+            dialog_engine.dialog_options.maybe_style_title.clone(),
         ));
         ops.push(RenderOp::PrintTextWithAttributes(
             text_content.into(),
-            dialog_engine.maybe_style_title.clone(),
+            dialog_engine.dialog_options.maybe_style_title.clone(),
         ));
 
         ops
@@ -284,7 +284,7 @@ mod internal_impl {
 
         let inner_spaces = SPACER.repeat(ch!(@to_usize bounds_size.col_count - 2));
 
-        let maybe_style = dialog_engine.maybe_style_border.clone();
+        let maybe_style = dialog_engine.dialog_options.maybe_style_border.clone();
 
         for row_idx in 0..*bounds_size.row_count {
             let row_pos = position!(col_index: origin_pos.col_index, row_index: origin_pos.row_index + row_idx);

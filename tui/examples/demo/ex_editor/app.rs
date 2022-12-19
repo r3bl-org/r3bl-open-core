@@ -315,18 +315,25 @@ mod populate_component_registry {
     fn insert_dialog_component(this: &mut AppWithLayout, id: FlexBoxId) {
         let result_stylesheet = create_stylesheet();
 
+        let dialog_options = DialogEngineConfigOptions {
+            mode: DialogEngineMode::ModalSimple,
+            maybe_style_border: get_style! { @from_result: result_stylesheet , DialogStyleId::Border.as_ref() },
+            maybe_style_title: get_style! { @from_result: result_stylesheet , DialogStyleId::Title.as_ref() },
+            maybe_style_editor: get_style! { @from_result: result_stylesheet , DialogStyleId::Editor.as_ref() },
+        };
+
+        let engine_options = EditorEngineConfigOptions {
+            multiline_mode: EditorLineMode::SingleLine,
+            syntax_highlight: SyntaxHighlightConfig::Disable,
+        };
+
         let shared_dialog_component = {
             let it = DialogComponent::new_shared(
                 id,
+                dialog_options,
+                engine_options,
                 on_dialog_press,
                 on_dialog_editor_change_handler,
-                get_style! { @from_result: result_stylesheet , DialogStyleId::Border.as_ref() },
-                get_style! { @from_result: result_stylesheet , DialogStyleId::Title.as_ref() },
-                get_style! { @from_result: result_stylesheet , DialogStyleId::Editor.as_ref() },
-                EditorEngineConfigOptions {
-                    multiline_mode: EditorLineMode::SingleLine,
-                    syntax_highlight: SyntaxHighlightConfig::Disable,
-                },
             );
 
             fn on_dialog_press(
