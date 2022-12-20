@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{collections::HashMap, fmt::Debug, sync::Arc};
+use std::{fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
 use int_enum::IntEnum;
@@ -28,67 +28,6 @@ use crate::*;
 
 /// Controls whether input events are process by spawning a new task or by blocking the current task.
 const SPAWN_PROCESS_INPUT: bool = true;
-
-/// These are global state values for the entire application:
-/// - The size holds the width and height of the terminal window.
-/// - The cursor_position (for purposes of drawing via [RenderOp], [RenderOps], and
-///   [RenderPipeline]).
-///   1. This is used for low level painting operations and are not meant to be used by code that
-///      renders components.
-///   2. The contract that must be respected is that the cursor position is only valid inside a
-///      given [RenderOps] list.
-///   3. So when you create a [RenderPipeline] and populate it w/ [RenderOps] you can use the
-///      following ops [RenderOp::MoveCursorPositionAbs], [RenderOp::MoveCursorPositionRelTo] And
-///      they will be valid only for that [RenderOps] list.
-#[derive(Clone, Default)]
-pub struct GlobalData {
-    pub window_size: Size,
-    pub maybe_saved_offscreen_buffer: Option<OffscreenBuffer>,
-    // FUTURE: 🐵 use global_user_data (contains key: String, value: HashMap<String, String>).
-    pub global_user_data: HashMap<String, HashMap<String, String>>,
-}
-
-mod global_data_impl {
-    use std::fmt::Formatter;
-
-    use super::*;
-
-    impl Debug for GlobalData {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            let mut vec_lines = vec![];
-            vec_lines.push(format!("{0:?}", self.window_size));
-            vec_lines.push(match &self.maybe_saved_offscreen_buffer {
-                None => "no saved offscreen buffer".to_string(),
-                Some(ref offscreen_buffer) => match DEBUG_TUI_COMPOSITOR {
-                    false => "offscreen buffer saved from previous render".to_string(),
-                    true => offscreen_buffer.pretty_print(),
-                },
-            });
-            vec_lines.push(format!("{0:?}", self.global_user_data));
-            write!(f, "\nGlobalData\n  - {}", vec_lines.join("\n  - "))
-        }
-    }
-
-    impl GlobalData {
-        pub fn try_to_create_instance() -> CommonResult<GlobalData> {
-            let mut global_data = GlobalData::default();
-            global_data.set_size(terminal_lib_operations::lookup_size()?);
-            Ok(global_data)
-        }
-
-        pub fn set_size(&mut self, new_size: Size) {
-            self.window_size = new_size;
-            self.dump_to_log("main_event_loop -> Resize");
-        }
-
-        pub fn get_size(&self) -> Size { self.window_size }
-
-        pub fn dump_to_log(&self, msg: &str) {
-            let log_msg = format!("{msg} -> {self:?}");
-            call_if_true!(DEBUG_TUI_MOD, log_info(log_msg));
-        }
-    }
-}
 
 pub struct TerminalWindow;
 
@@ -181,7 +120,7 @@ impl TerminalWindow {
                         break;
                     };
                 }
-                EventPropagation::ConsumedRerender => {
+                EventPropagation::ConsumedRender => {
                     AppManager::render_app(&shared_store, &shared_app, &shared_global_data, None)
                         .await?;
                 }

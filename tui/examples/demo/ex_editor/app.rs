@@ -30,13 +30,18 @@ use super::*;
 /// Constants for the ids.
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
-enum Id {
+enum ComponentId {
     Editor = 1,
     Dialog = 2,
 }
 
 #[derive(Debug, Eq, PartialEq, AsRefStr)]
-pub enum DialogStyleId {
+pub enum EditorStyleName {
+    Default,
+}
+
+#[derive(Debug, Eq, PartialEq, AsRefStr)]
+pub enum DialogStyleName {
     Border,
     Title,
     Editor,
@@ -52,59 +57,6 @@ mod app_trait_impl {
 
     #[async_trait]
     impl App<State, Action> for AppWithLayout {
-        // ┏━━━━━━━━━━━━━━━━━━━━━━━━┓
-        // ┃ get_component_registry ┃
-        // ┛                        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
-            &mut self.component_registry
-        }
-
-        // ┏━━━━━━┓
-        // ┃ init ┃
-        // ┛      ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        fn init(&mut self) { populate_component_registry::init(self); }
-
-        // ┏━━━━━━━━━━━━━━━━━━┓
-        // ┃ app_handle_event ┃
-        // ┛                  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        async fn app_handle_event(
-            &mut self,
-            args: GlobalScopeArgs<'_, State, Action>,
-            input_event: &InputEvent,
-        ) -> CommonResult<EventPropagation> {
-            let GlobalScopeArgs {
-                state,
-                shared_store,
-                shared_global_data,
-                window_size,
-            } = args;
-
-            call_if_true!(DEBUG_TUI_MOD, {
-                let msg_1 = format!("🐝 focus: {:?}", self.component_registry.has_focus);
-                let msg_2 = format!("💾 user_data: {:?}", self.component_registry.user_data);
-                log_debug(msg_1);
-                log_debug(msg_2);
-            });
-
-            // Check to see if the modal dialog should be activated.
-            if let EventPropagation::Consumed =
-                self.try_input_event_activate_modal(args, input_event)
-            {
-                return Ok(EventPropagation::Consumed);
-            }
-
-            // If modal not activated, route the input event to the focused component.
-            ComponentRegistry::route_event_to_focused_component(
-                &mut self.component_registry,
-                input_event,
-                state,
-                shared_store,
-                shared_global_data,
-                window_size,
-            )
-            .await
-        }
-
         // ┏━━━━━━━━━━━━┓
         // ┃ app_render ┃
         // ┛            ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -155,6 +107,59 @@ mod app_trait_impl {
                 surface.render_pipeline
             });
         }
+
+        // ┏━━━━━━━━━━━━━━━━━━┓
+        // ┃ app_handle_event ┃
+        // ┛                  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        async fn app_handle_event(
+            &mut self,
+            args: GlobalScopeArgs<'_, State, Action>,
+            input_event: &InputEvent,
+        ) -> CommonResult<EventPropagation> {
+            let GlobalScopeArgs {
+                state,
+                shared_store,
+                shared_global_data,
+                window_size,
+            } = args;
+
+            call_if_true!(DEBUG_TUI_MOD, {
+                let msg_1 = format!("🐝 focus: {:?}", self.component_registry.has_focus);
+                let msg_2 = format!("💾 user_data: {:?}", self.component_registry.user_data);
+                log_debug(msg_1);
+                log_debug(msg_2);
+            });
+
+            // Check to see if the modal dialog should be activated.
+            if let EventPropagation::Consumed =
+                self.try_input_event_activate_modal(args, input_event)
+            {
+                return Ok(EventPropagation::Consumed);
+            }
+
+            // If modal not activated, route the input event to the focused component.
+            ComponentRegistry::route_event_to_focused_component(
+                &mut self.component_registry,
+                input_event,
+                state,
+                shared_store,
+                shared_global_data,
+                window_size,
+            )
+            .await
+        }
+
+        // ┏━━━━━━┓
+        // ┃ init ┃
+        // ┛      ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        fn init(&mut self) { populate_component_registry::init(self); }
+
+        // ┏━━━━━━━━━━━━━━━━━━━━━━━━┓
+        // ┃ get_component_registry ┃
+        // ┛                        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
+            &mut self.component_registry
+        }
     }
 }
 
@@ -163,7 +168,7 @@ mod detect_modal_dialog_activation_from_input_event {
 
     impl AppWithLayout {
         /// If `input_event` matches <kbd>Ctrl+l</kbd>, then toggle the modal dialog. Note that this
-        /// returns a [EventPropagation::Consumed] and not [EventPropagation::ConsumedRerender]
+        /// returns a [EventPropagation::Consumed] and not [EventPropagation::ConsumedRender]
         /// because the [Action::SetDialogBufferTitleAndText] is dispatched to the store & that will
         /// cause a rerender.
         pub fn try_input_event_activate_modal(
@@ -171,7 +176,7 @@ mod detect_modal_dialog_activation_from_input_event {
             args: GlobalScopeArgs<'_, State, Action>,
             input_event: &InputEvent,
         ) -> EventPropagation {
-            if let DialogEvent::ActivateModal = DialogEvent::should_activate_modal(
+            return if let DialogEvent::ActivateModal = DialogEvent::should_activate_modal(
                 input_event,
                 KeyPress::WithModifiers {
                     key: Key::Character('l'),
@@ -179,16 +184,17 @@ mod detect_modal_dialog_activation_from_input_event {
                 },
             ) {
                 activate_modal(self, args);
-                return EventPropagation::Consumed;
+                EventPropagation::Consumed
             } else {
-                return EventPropagation::Propagate;
-            }
+                EventPropagation::Propagate
+            };
 
             fn activate_modal(this: &mut AppWithLayout, args: GlobalScopeArgs<State, Action>) {
                 let title = "Modal Dialog Title";
                 let text = {
-                    if let Some(editor_buffer) =
-                        args.state.get_editor_buffer(Id::Editor.int_value())
+                    if let Some(editor_buffer) = args
+                        .state
+                        .get_editor_buffer(ComponentId::Editor.int_value())
                     {
                         editor_buffer.get_as_string()
                     } else {
@@ -200,14 +206,14 @@ mod detect_modal_dialog_activation_from_input_event {
                 // render.
                 this.component_registry
                     .has_focus
-                    .set_modal_id(Id::Dialog.int_value());
+                    .set_modal_id(ComponentId::Dialog.int_value());
 
                 // Change the state so that it will trigger a render. This will show the title &
                 // text on the next render.
                 spawn_dispatch_action!(
                     args.shared_store,
                     Action::SetDialogBufferTitleAndTextById(
-                        Id::Dialog.int_value(),
+                        ComponentId::Dialog.int_value(),
                         title.to_string(),
                         text.to_string()
                     )
@@ -246,14 +252,14 @@ mod layout_container {
                 {
                     box_start! (
                         in:                     surface,
-                        id:                     Id::Editor.int_value(),
+                        id:                     ComponentId::Editor.int_value(),
                         dir:                    Direction::Vertical,
                         requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                        styles:                 [&Id::Editor.int_value().to_string()]
+                        styles:                 [EditorStyleName::Default.as_ref()]
                     );
                     render_component_in_current_box!(
                         in:                 surface,
-                        component_id:       Id::Editor.int_value(),
+                        component_id:       ComponentId::Editor.int_value(),
                         from:               self.0.component_registry,
                         state:              state,
                         shared_store:       shared_store,
@@ -268,12 +274,12 @@ mod layout_container {
                     .0
                     .component_registry
                     .has_focus
-                    .is_modal_id(Id::Dialog.int_value())
+                    .is_modal_id(ComponentId::Dialog.int_value())
                 {
                     render_component_in_given_box! {
                       in:                 surface,
-                      box:                DialogEngineApi::make_flex_box_for_dialog(Id::Dialog.int_value(), surface, window_size)?,
-                      component_id:       Id::Dialog.int_value(),
+                      box:                DialogEngineApi::make_flex_box_for_dialog(ComponentId::Dialog.int_value(), surface, window_size)?,
+                      component_id:       ComponentId::Dialog.int_value(),
                       from:               self.0.component_registry,
                       state:              state,
                       shared_store:       shared_store,
@@ -292,8 +298,8 @@ mod populate_component_registry {
     use crate::ex_editor::app::style_helpers::create_stylesheet;
 
     pub fn init(this: &mut AppWithLayout) {
-        let editor_id = Id::Editor.int_value();
-        let dialog_id = Id::Dialog.int_value();
+        let editor_id = ComponentId::Editor.int_value();
+        let dialog_id = ComponentId::Dialog.int_value();
 
         insert_editor_component(this, editor_id);
         insert_dialog_component(this, dialog_id);
@@ -317,9 +323,9 @@ mod populate_component_registry {
 
         let dialog_options = DialogEngineConfigOptions {
             mode: DialogEngineMode::ModalSimple,
-            maybe_style_border: get_style! { @from_result: result_stylesheet , DialogStyleId::Border.as_ref() },
-            maybe_style_title: get_style! { @from_result: result_stylesheet , DialogStyleId::Title.as_ref() },
-            maybe_style_editor: get_style! { @from_result: result_stylesheet , DialogStyleId::Editor.as_ref() },
+            maybe_style_border: get_style! { @from_result: result_stylesheet , DialogStyleName::Border.as_ref() },
+            maybe_style_title: get_style! { @from_result: result_stylesheet , DialogStyleName::Title.as_ref() },
+            maybe_style_editor: get_style! { @from_result: result_stylesheet , DialogStyleName::Editor.as_ref() },
         };
 
         let engine_options = EditorEngineConfigOptions {
@@ -345,7 +351,7 @@ mod populate_component_registry {
                         spawn_dispatch_action!(
                             shared_store,
                             Action::SetDialogBufferTitleAndTextById(
-                                Id::Dialog.int_value(),
+                                ComponentId::Dialog.int_value(),
                                 "Yes".to_string(),
                                 text
                             )
@@ -355,7 +361,7 @@ mod populate_component_registry {
                         spawn_dispatch_action!(
                             shared_store,
                             Action::SetDialogBufferTitleAndTextById(
-                                Id::Dialog.int_value(),
+                                ComponentId::Dialog.int_value(),
                                 "No".to_string(),
                                 "".to_string()
                             )
@@ -370,7 +376,7 @@ mod populate_component_registry {
             ) {
                 spawn_dispatch_action!(
                     shared_store,
-                    Action::UpdateDialogBufferById(Id::Dialog.int_value(), editor_buffer)
+                    Action::UpdateDialogBufferById(ComponentId::Dialog.int_value(), editor_buffer)
                 );
             }
 
@@ -445,25 +451,28 @@ mod style_helpers {
         throws_with_return!({
             stylesheet! {
               style! {
-                id: Id::Editor.int_value().to_string()
-                attrib: [bold]
+                id: EditorStyleName::Default.as_ref()
                 padding: 1
-                color_fg: TuiColor::Blue
+                // These are ignored due to syntax highlighting.
+                // attrib: [bold]
+                // color_fg: TuiColor::Blue
               },
               style! {
-                id: DialogStyleId::Title.as_ref()
-                attrib: [bold]
-                color_fg: TuiColor::Yellow
+                id: DialogStyleName::Title.as_ref()
                 lolcat: true
+                // These are ignored due to lolcat: true.
+                // attrib: [bold]
+                // color_fg: TuiColor::Yellow
               },
               style! {
-                id: DialogStyleId::Border.as_ref()
-                attrib: [dim]
-                color_fg: TuiColor::Green
+                id: DialogStyleName::Border.as_ref()
                 lolcat: true
+                // These are ignored due to lolcat: true.
+                // attrib: [dim]
+                // color_fg: TuiColor::Green
               },
               style! {
-                id: DialogStyleId::Editor.as_ref()
+                id: DialogStyleName::Editor.as_ref()
                 attrib: [bold]
                 color_fg: TuiColor::Magenta
               }

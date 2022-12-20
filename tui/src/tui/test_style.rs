@@ -212,8 +212,14 @@ mod tests {
             assert_eq2!(stylesheet.find_style_by_id("style2").unwrap().id, "style2");
             assert!(stylesheet.find_style_by_id("style3").is_none());
             // Macro.
-            assert_eq2!(get_style!(@from: stylesheet, "style1").unwrap().id, "style1");
-            assert_eq2!(get_style!(@from: stylesheet, "style2").unwrap().id, "style2");
+            assert_eq2!(
+                get_style!(@from: stylesheet, "style1").unwrap().id,
+                "style1"
+            );
+            assert_eq2!(
+                get_style!(@from: stylesheet, "style2").unwrap().id,
+                "style2"
+            );
             assert!(get_style!(@from: stylesheet, "style3").is_none());
         }
 

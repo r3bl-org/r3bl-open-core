@@ -70,7 +70,7 @@ async fn process_render_op(
         RenderOp::Noop | RenderOp::EnterRawMode | RenderOp::ExitRawMode => {}
         // Do process these.
         RenderOp::ClearScreen => {
-            my_offscreen_buffer.init_with_empty_chars();
+            my_offscreen_buffer.clear();
         }
         RenderOp::MoveCursorPositionAbs(new_abs_pos) => {
             my_offscreen_buffer.my_pos =
@@ -102,11 +102,13 @@ async fn process_render_op(
         }
         RenderOp::PrintTextWithAttributes(arg_text_ref, maybe_style_ref) => {
             let result_new_pos = print_text_with_attributes(
+                shared_global_data,
                 arg_text_ref,
                 maybe_style_ref,
                 my_offscreen_buffer,
                 None,
-            );
+            )
+            .await;
             if let Ok(new_pos) = result_new_pos {
                 my_offscreen_buffer.my_pos =
                     sanitize_and_save_abs_position(new_pos, shared_global_data, local_data).await;
@@ -125,23 +127,12 @@ async fn process_render_op(
 /// <---------------- maybe_max_display_col_count ---------------->
 /// C0123456789012345678901234567890123456789012345678901234567890
 /// ```
-pub fn print_plain_text(
+pub async fn print_plain_text(
     arg_text_ref: &str,
     maybe_style_ref: &Option<Style>,
     my_offscreen_buffer: &mut OffscreenBuffer,
     maybe_max_display_col_count: Option<ChUnit>,
 ) -> CommonResult<Position> {
-    // Are ANSI codes present?
-    let render_path = {
-        if ANSIText::try_strip_ansi(arg_text_ref).is_some() {
-            OffscreenRenderPath::ANSIText
-        } else {
-            OffscreenRenderPath::PlainText
-        }
-    };
-
-    assert_eq!(render_path, OffscreenRenderPath::PlainText);
-
     // Get col and row index from `my_pos`.
     let display_col_index = ch!(@to_usize my_offscreen_buffer.my_pos.col_index);
     let display_row_index = ch!(@to_usize my_offscreen_buffer.my_pos.row_index);
@@ -360,60 +351,77 @@ pub fn print_plain_text(
 /// <---------------- maybe_max_display_col_count ---------------->
 /// C0123456789012345678901234567890123456789012345678901234567890
 /// ```
-pub fn print_ansi_text(
+pub async fn print_ansi_text(
+    shared_global_data: &SharedGlobalData,
     arg_text_ref: &str,
     _maybe_style_ref: &Option<Style>,
     my_offscreen_buffer: &mut OffscreenBuffer,
     maybe_max_display_col_count: Option<ChUnit>,
 ) -> CommonResult<Position> {
-    // Are ANSI codes present?
-    let render_path = {
-        if ANSIText::try_strip_ansi(arg_text_ref).is_some() {
-            OffscreenRenderPath::ANSIText
-        } else {
-            OffscreenRenderPath::PlainText
-        }
-    };
-
-    assert_eq!(render_path, OffscreenRenderPath::ANSIText);
-
     // Get col and row index from `my_pos`.
     let display_col_index = ch!(@to_usize my_offscreen_buffer.my_pos.col_index);
     let display_row_index = ch!(@to_usize my_offscreen_buffer.my_pos.row_index);
 
+    // Keep track of clipping.
+    let mut clip_arg_text_ref = false;
+    let mut clip_ansi_text_segments = false;
+
     // ✂️Clip `arg_text_ref` (if needed) and make `ansi_text_segments`.
-    let og_ansi_text: ANSIText = arg_text_ref.ansi_text();
-    let mut ansi_text_segments: ANSITextSegments =
-        if let Some(max_display_col_count) = maybe_max_display_col_count {
-            let adj_max = max_display_col_count - (ch!(display_col_index));
-            let truncated_segments = og_ansi_text.segments(Some(ch!(@to_usize adj_max)));
-            truncated_segments
-        } else {
-            og_ansi_text.segments(None)
-        };
+    let mut ansi_text_segments = {
+        let og_ansi_text = shared_global_data
+            .write()
+            .await
+            .get_from_cache_ansi_text(arg_text_ref);
+
+        // Return it.
+        match maybe_max_display_col_count {
+            Some(max_display_col_count) => {
+                clip_arg_text_ref = true;
+                let adj_max = max_display_col_count - (ch!(display_col_index));
+                og_ansi_text.filter_segments_by_display_width(Some(ch!(@to_usize adj_max)))
+            }
+            None => og_ansi_text.filter_segments_by_display_width(None),
+        }
+    };
 
     // ✂️Clip `ansi_text_segments` (if needed) to the max display col count of the window.
     let window_max_display_col_count = my_offscreen_buffer.window_size.col_count;
     let text_fits_in_window = ch!(ansi_text_segments.display_width)
         <= window_max_display_col_count - ch!(display_col_index);
-    let temp_string = String::from(&ansi_text_segments);
-    let temp_ansi_text = temp_string.ansi_text();
+
     if !text_fits_in_window {
-        let adj_max = window_max_display_col_count - (ch!(display_col_index));
-        ansi_text_segments = temp_ansi_text.segments(Some(ch!(@to_usize adj_max)));
-    }
+        ansi_text_segments = match clip_arg_text_ref {
+            true => {
+                let temp_ansi_text = shared_global_data
+                    .write()
+                    .await
+                    .get_from_cache_ansi_text(&String::from(&ansi_text_segments));
+                let adj_max = window_max_display_col_count - (ch!(display_col_index));
+                temp_ansi_text.filter_segments_by_display_width(Some(ch!(@to_usize adj_max)))
+            }
+            false => {
+                let adj_max = window_max_display_col_count - (ch!(display_col_index));
+                ansi_text_segments.filter_segments_by_display_width(Some(ch!(@to_usize adj_max)))
+            }
+        };
+        clip_ansi_text_segments = true;
+    };
 
     call_if_true!(DEBUG_TUI_COMPOSITOR, {
         let msg = format!(
             "\n🛸🛸🛸 print_ansi_text():
                 insertion at: display_row_index: {}, display_col_index: {}, window_size: {:?},
                 text: '{}',
-                width: {}",
+                width: '{}',
+                clip_arg_text_ref: {},
+                clip_ansi_text_segments: {}",
             display_row_index,
             display_col_index,
             my_offscreen_buffer.window_size,
             String::from(&ansi_text_segments),
-            ansi_text_segments.display_width
+            ansi_text_segments.display_width,
+            clip_arg_text_ref,
+            clip_ansi_text_segments
         );
         log_debug(msg);
     });
@@ -542,43 +550,42 @@ pub fn print_ansi_text(
 ///
 /// 1. For plain text it supports counting [GraphemeClusterSegment]s. The display width of each
 ///    segment is taken into account when filling the offscreen buffer.
-/// 2. For ANSI text it supports counting [ANSITextSegments]s. The display width of each segment is
+/// 2. For ANSI text it supports counting [ANSITextSegment]s. The display width of each segment is
 ///    taken into account when filling the offscreen buffer.
-pub fn print_text_with_attributes(
+pub async fn print_text_with_attributes(
+    shared_global_data: &SharedGlobalData,
     arg_text_ref: &str,
     maybe_style_ref: &Option<Style>,
     my_offscreen_buffer: &mut OffscreenBuffer,
     maybe_max_display_col_count: Option<ChUnit>,
 ) -> CommonResult<Position> {
     // Are ANSI codes present?
-    let render_path = {
-        if ANSIText::try_strip_ansi(arg_text_ref).is_some() {
-            OffscreenRenderPath::ANSIText
-        } else {
-            OffscreenRenderPath::PlainText
+    let it = shared_global_data
+        .write()
+        .await
+        .get_from_cache_try_strip_ansi_text(arg_text_ref);
+
+    match it {
+        Some(_) => {
+            print_ansi_text(
+                shared_global_data,
+                arg_text_ref,
+                maybe_style_ref,
+                my_offscreen_buffer,
+                maybe_max_display_col_count,
+            )
+            .await
         }
-    };
-
-    match render_path {
-        OffscreenRenderPath::PlainText => print_plain_text(
-            arg_text_ref,
-            maybe_style_ref,
-            my_offscreen_buffer,
-            maybe_max_display_col_count,
-        ),
-        OffscreenRenderPath::ANSIText => print_ansi_text(
-            arg_text_ref,
-            maybe_style_ref,
-            my_offscreen_buffer,
-            maybe_max_display_col_count,
-        ),
+        None => {
+            print_plain_text(
+                arg_text_ref,
+                maybe_style_ref,
+                my_offscreen_buffer,
+                maybe_max_display_col_count,
+            )
+            .await
+        }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OffscreenRenderPath {
-    ANSIText,
-    PlainText,
 }
 
 #[derive(Debug, Clone)]
@@ -594,10 +601,11 @@ mod tests {
     use super::*;
     use crate::test_editor::mock_real_objects::make_shared_global_data;
 
-    #[test]
-    fn test_print_plain_text_render_path_reuse_buffer() {
+    #[tokio::test]
+    async fn test_print_plain_text_render_path_reuse_buffer() {
         let window_size = size! { col_count: 10, row_count: 2};
         let mut my_offscreen_buffer = OffscreenBuffer::new(window_size);
+        let shared_global_data = make_shared_global_data(Some(window_size));
 
         // Input:  R0 "hello12345😃"
         //            C0123456789
@@ -615,11 +623,13 @@ mod tests {
             let maybe_max_display_col_count = Some(10.into());
 
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+                &shared_global_data,
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
+            .await
             .ok();
 
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
@@ -678,11 +688,13 @@ mod tests {
             let maybe_max_display_col_count = Some(10.into());
 
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+                &shared_global_data,
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
+            .await
             .ok();
 
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
@@ -718,9 +730,10 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_print_plain_text_render_path_new_buffer_for_each_paint() {
+    #[tokio::test]
+    async fn test_print_plain_text_render_path_new_buffer_for_each_paint() {
         let window_size = size! { col_count: 10, row_count: 2};
+        let shared_global_data = make_shared_global_data(Some(window_size));
 
         // Input:  R0 "hello12345😃"
         //            C0123456789
@@ -739,11 +752,13 @@ mod tests {
             let maybe_max_display_col_count = Some(10.into());
 
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+                &shared_global_data,
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
+            .await
             .ok();
 
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
@@ -803,11 +818,13 @@ mod tests {
             let maybe_max_display_col_count = Some(10.into());
 
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+                &shared_global_data,
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
+            .await
             .ok();
 
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
@@ -857,11 +874,13 @@ mod tests {
             let maybe_max_display_col_count = Some(10.into());
 
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+                &shared_global_data,
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
+            .await
             .ok();
 
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
@@ -920,11 +939,13 @@ mod tests {
             let maybe_max_display_col_count = Some(10.into());
 
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+                &shared_global_data,
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
+            .await
             .ok();
 
             // my_offscreen_buffer:
@@ -987,10 +1008,11 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_ansi_text_render_path() {
+    #[tokio::test]
+    async fn test_ansi_text_render_path() {
         let window_size = size! { col_count: 10, row_count: 2};
         let mut my_offscreen_buffer = OffscreenBuffer::new(window_size);
+        let shared_global_data = make_shared_global_data(Some(window_size));
 
         let mut lolcat = LolcatBuilder::new().build();
         let text_1 = "😃hello";
@@ -1011,21 +1033,25 @@ mod tests {
         // Clip.
         my_offscreen_buffer.my_pos = position! { col_index: 6, row_index: 0 };
         render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            &shared_global_data,
             &text_1_color,
             &maybe_style,
             &mut my_offscreen_buffer,
             maybe_max_display_col_count,
         )
+        .await
         .ok();
 
         // Pad.
         my_offscreen_buffer.my_pos = position! { col_index: 2, row_index: 1 };
         render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            &shared_global_data,
             &text_2_color,
             &maybe_style,
             &mut my_offscreen_buffer,
             maybe_max_display_col_count,
         )
+        .await
         .ok();
 
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);

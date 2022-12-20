@@ -114,7 +114,7 @@ pub mod impl_component {
                     };
 
                     // Trigger re-render, now that focus has been restored to non-modal component.
-                    Ok(EventPropagation::ConsumedRerender)
+                    Ok(EventPropagation::ConsumedRender)
                 }
 
                 // Handler user input that has updated the dialog_buffer.editor_buffer.
