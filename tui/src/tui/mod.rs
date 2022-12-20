@@ -21,7 +21,9 @@
 ///
 /// If set to `true`:
 /// 1. Enables file logging for entire module.
-/// 2. If a call to [r3bl_rs_utils_core::log!] fails, then it will print the error to stderr.
+/// 2. If a call to [r3bl_rs_utils_core::log_info], [r3bl_rs_utils_core::log_debug],
+///    [r3bl_rs_utils_core::log_warn], [r3bl_rs_utils_core::log_trace],
+///    [r3bl_rs_utils_core::log_error] fails, then it will print the error to stderr.
 pub const DEBUG_TUI_MOD: bool = true;
 
 /// Enable or disable compositor debug logging.

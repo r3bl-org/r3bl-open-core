@@ -66,7 +66,7 @@ mod app_trait_impl {
 
             // Try to handle left and right arrow key input events & return if handled.
             if let Continuation::Return = self.handle_focus_switch(input_event) {
-                return Ok(EventPropagation::ConsumedRerender);
+                return Ok(EventPropagation::ConsumedRender);
             }
 
             // Route any unhandled event to the component that has focus.

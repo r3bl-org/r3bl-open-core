@@ -26,8 +26,8 @@ use crate::*;
 // ┃ DialogBuffer struct ┃
 // ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Please do not construct this struct directly and use [new_empty](DialogBuffer::new_empty)
-/// instead. 
-/// 
+/// instead.
+///
 /// Stores the data for a modal dialog. It contains the text content in an [EditorBuffer] and a
 /// title that is displayed.
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]

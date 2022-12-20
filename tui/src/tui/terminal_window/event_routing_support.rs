@@ -35,7 +35,7 @@ pub enum Continuation<T> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum EventPropagation {
-    ConsumedRerender,
+    ConsumedRender,
     Consumed,
     Propagate,
 }

@@ -342,7 +342,7 @@ mod render_helpers {
 
         // Update `display_col_index_for_line`.
         let ansi_text = ANSIText::new(context.buffer_ansi_text.as_str());
-        let ansi_text_segments = ansi_text.segments(None);
+        let ansi_text_segments = ansi_text.filter_segments_by_display_width(None);
         let ansi_text_display_width = ch!(ansi_text_segments.display_width);
 
         context.display_col_index_for_line += ansi_text_display_width;
@@ -358,10 +358,13 @@ mod tests {
     use r3bl_rs_utils_macro::*;
 
     use super::*;
+    use crate::test_editor::mock_real_objects::make_shared_global_data;
 
-    fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
+    /// Helper function to make an `OffscreenBuffer`.
+    async fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
         let window_size = size! { col_count: 10, row_count: 2};
         let mut my_offscreen_buffer = OffscreenBuffer::new(window_size);
+        let shared_global_data = make_shared_global_data(Some(window_size));
         // Input:  R0 "hello1234😃"
         //            C0123456789
         // Output: R0 "hello1234╳"
@@ -375,11 +378,13 @@ mod tests {
         my_offscreen_buffer.my_bg_color = Some(color!(@blue));
         let maybe_max_display_col_count: Option<ChUnit> = Some(10.into());
         render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            &shared_global_data,
             text,
             &maybe_style,
             &mut my_offscreen_buffer,
             maybe_max_display_col_count,
         )
+        .await
         .ok();
         my_offscreen_buffer
 
@@ -404,7 +409,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_render_plain_text() {
-        let my_offscreen_buffer = make_offscreen_buffer_plain_text();
+        let my_offscreen_buffer = make_offscreen_buffer_plain_text().await;
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
         let mut paint = OffscreenBufferPaintImplCrossterm {};
         let render_ops = paint.render(&my_offscreen_buffer).await;
@@ -463,10 +468,11 @@ mod tests {
         );
     }
 
-    fn make_offscreen_buffer_plain_ansi_text_mix() -> OffscreenBuffer {
+    /// Helper function to make an OffscreenBuffer.
+    async fn make_offscreen_buffer_plain_ansi_text_mix() -> OffscreenBuffer {
         let window_size = size! { col_count: 10, row_count: 2};
         let mut my_offscreen_buffer = OffscreenBuffer::new(window_size);
-
+        let shared_global_data = make_shared_global_data(Some(window_size));
         // Line1.
         {
             // Input:  R0 "hello1234😃"
@@ -483,11 +489,13 @@ mod tests {
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
             let maybe_max_display_col_count: Option<ChUnit> = Some(10.into());
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+                &shared_global_data,
                 plain_text_string,
                 &maybe_style,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
+            .await
             .ok();
         }
 
@@ -502,11 +510,13 @@ mod tests {
             my_offscreen_buffer.my_pos = position! { col_index: 2, row_index: 1 };
             let maybe_max_display_col_count: Option<ChUnit> = Some(10.into());
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+                &shared_global_data,
                 ansi_text_string.as_str(),
                 &None,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
+            .await
             .ok();
         }
 
@@ -537,7 +547,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_render_plain_ansi_text_mix() {
-        let my_offscreen_buffer = make_offscreen_buffer_plain_ansi_text_mix();
+        let my_offscreen_buffer = make_offscreen_buffer_plain_ansi_text_mix().await;
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
         let mut paint = OffscreenBufferPaintImplCrossterm {};
         let render_ops = paint.render(&my_offscreen_buffer).await;

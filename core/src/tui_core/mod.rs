@@ -31,6 +31,3 @@ pub use dimens::*;
 pub use graphemes::*;
 pub use lolcat::*;
 pub use styles::*;
-
-// Tests.
-mod test_ansi_text;

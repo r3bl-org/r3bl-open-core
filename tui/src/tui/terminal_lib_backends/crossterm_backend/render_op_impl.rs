@@ -203,8 +203,12 @@ async fn print_text_with_attributes(
     use print_impl::*;
 
     // Are ANSI codes present?
+    let it = shared_global_data
+        .write()
+        .await
+        .get_from_cache_try_strip_ansi_text(text_arg);
     let content_type = {
-        if ANSIText::try_strip_ansi(text_arg).is_some() {
+        if it.is_some() {
             ContentType::ANSIText
         } else {
             ContentType::PlainText
@@ -218,11 +222,16 @@ async fn print_text_with_attributes(
         }
         ContentType::ANSIText => {
             call_if_true!(DEBUG_TUI_SHOW_PIPELINE_EXPANDED, {
+                let it = shared_global_data
+                    .write()
+                    .await
+                    .get_from_cache_try_strip_ansi_text(text_arg);
+
                 let msg = format!(
                     "ANSI {:?}, len: {:?}, plain: {:?}",
                     text_arg,
                     text_arg.len(),
-                    ANSIText::try_strip_ansi(text_arg)
+                    it
                 );
                 log_debug(msg);
             });
@@ -322,7 +331,7 @@ mod print_impl {
         let display_width = match content_type {
             ContentType::ANSIText => {
                 let ansi_text = text.ansi_text();
-                let ansi_text_segments = ansi_text.segments(None);
+                let ansi_text_segments = ansi_text.filter_segments_by_display_width(None);
                 let unicode_width = ansi_text_segments.display_width;
                 ch!(unicode_width)
             }
@@ -376,8 +385,8 @@ pub static STYLE_TO_ATTRIBUTE_MAP: Lazy<HashMap<StyleFlag, Attribute>> = Lazy::n
 // ┏━━━━━━━━━━━━━━━━━┓
 // ┃ exec_render_op! ┃
 // ┛                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// Given a crossterm command, this will run it and [log!] the [Result] that is returned. If [log!]
-/// fails, then it will print a message to stderr.
+/// Given a crossterm command, this will run it and [log_error] or [log_info] the [Result] that is
+/// returned.
 ///
 /// Paste docs: <https://github.com/dtolnay/paste>
 #[macro_export]

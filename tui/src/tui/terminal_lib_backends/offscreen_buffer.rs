@@ -124,29 +124,29 @@ mod offscreen_buffer_impl {
                 my_fg_color: None,
                 my_bg_color: None,
             };
-            lines.init_with_empty_chars();
-            lines
-        }
 
-        pub fn init_with_empty_chars(&mut self) {
-            let window_height = ch!(@to_usize self.window_size.row_count);
+            let window_height = ch!(@to_usize lines.window_size.row_count);
 
-            match self.buffer.len().cmp(&window_height) {
+            match lines.buffer.len().cmp(&window_height) {
                 // Too long, truncate.
                 Ordering::Greater => {
-                    self.buffer.truncate(window_height);
+                    lines.buffer.truncate(window_height);
                 }
                 // Too short, pad.
                 Ordering::Less => {
-                    self.buffer
-                        .resize_with(window_height, || PixelCharLine::new(self.window_size));
+                    let empty_line = PixelCharLine::new(window_size);
+                    lines.buffer.resize(window_height, empty_line);
                 }
                 _ => {}
             }
 
-            // Make sure each line is full of empty chars.
-            self.buffer
-                .fill_with(|| PixelCharLine::new(self.window_size));
+            lines
+        }
+
+        // Make sure each line is full of empty chars.
+        pub fn clear(&mut self) {
+            let empty_line = PixelCharLine::new(self.window_size);
+            self.buffer.fill(empty_line);
         }
 
         pub fn is_safe_to_access_indices(
@@ -364,31 +364,25 @@ mod pixel_char_line_impl {
         /// Create a new row with the given width and fill it with the empty chars.
         pub fn new(window_size: Size) -> Self {
             let mut line = Self::default();
-            line.init_with_empty_chars(window_size);
-            line
-        }
 
-        /// Fill the line with empty chars: [PixelChar::Spacer].
-        /// 1. If the line is longer than the window, it will be truncated.
-        /// 2. If the line is shorter than the window, it will be padded with empty chars.
-        /// 3. The entire line will be filled with empty chars.
-        pub fn init_with_empty_chars(&mut self, window_size: Size) {
             let window_width = ch!(@to_usize window_size.col_count);
-            let pixel_chars_line = self;
 
-            match pixel_chars_line.len().cmp(&window_width) {
+            // Fill the line with empty chars: [PixelChar::Spacer].
+            // 1. If the line is longer than the window, it will be truncated.
+            // 2. If the line is shorter than the window, it will be padded with empty chars.
+            match line.len().cmp(&window_width) {
                 // Too long, truncate.
                 Ordering::Greater => {
-                    pixel_chars_line.truncate(window_width);
+                    line.truncate(window_width);
                 }
                 // Too short, pad.
                 Ordering::Less => {
-                    pixel_chars_line.resize_with(window_width, || PixelChar::Spacer);
+                    line.resize(window_width, PixelChar::Spacer);
                 }
                 _ => {}
             }
 
-            pixel_chars_line.fill_with(|| PixelChar::Spacer);
+            line
         }
     }
     impl Deref for PixelCharLine {
@@ -527,7 +521,7 @@ mod tests {
             maybe_style: Some(style! {color_bg: color!(@red) }),
         };
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
-        my_offscreen_buffer.init_with_empty_chars();
+        my_offscreen_buffer.clear();
         for line in my_offscreen_buffer.buffer.iter() {
             for pixel_char in line.iter() {
                 assert_eq2!(pixel_char, &PixelChar::Spacer);
