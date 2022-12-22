@@ -99,4 +99,51 @@ In autocomplete mode, an extra "results panel" is displayed, and the layout of t
 different on the screen. Instead of being in the middle of the screen, it starts at the top of the
 screen. The callbacks are the same.
 
-TK: how does all of this work? what are the changes between normal mode and autocomplete?
+TK:
+
+**dialog_engine_api.rs**
+
+- [ ] `apply_event()` -
+  - [ ] up / down handler to navigate the results panel (if in autocomplete mode)
+    - up / down will change the data in the `dialog_engine` data (**not state**)
+      - `selected_row_index` - tracks the selected row
+      - `scroll_offset_row_index` - tracks scroll offset (if viewport is smaller than # results)
+    - this code path should return an `ConsumedRender` so that the results panel is re-rendered
+- [ ] `render_engine()` -
+  - [ ] add `render_results_panel()` to display results panel (if in autocomplete mode)
+    - `DialogBuffer.results` is saved in the **state** & gets passed in here
+    - paint the `Vec<String>` in the panel
+    - paint the selected row
+    - deal w/ `scroll_offset_row_index`
+
+**dialog_buffer.rs**
+
+- [ ] add `results` field
+
+**dialog_engine.rs**
+
+- [ ] add `selected_row_index`
+- [ ] add `scroll_offset_row_index`
+
+**app.rs**
+
+- [ ] add a new dialog component w/ autocomplete (copy `insert_dialog_component()`)
+  - [ ] `on_dialog_press_handler` - add result to editor by dispatching action
+  - [ ] `on_dialog_editor_change_handler` -
+    - [ ] call web service
+    - [ ] get results
+    - [ ] dispatch action to update results panel
+      - the results are added to `Action::SetDialogBufferResults(FlexBoxId, Vec<String>`
+- [ ] add new keyboard shortcut to show autocomplete dialog (<kbd>ctrl + k</kbd>)
+  - [ ] change `try_input_event_activate_modal()`
+  - [ ] change status bar to show this shortcut
+
+**reducer.rs**
+
+- [ ] handle `SetDialogBufferResults(FlexBoxId, Vec<String>` case in `run()`
+  - add the results to the state (in `DialogBuffer`)
+
+**dialog_component.rs**
+
+- [x] `new_shared()` - add `DialogEngineConfigOptions` arg
+- [x] `new()` - add `DialogEngineConfigOptions` arg & save to `self.dialog_engine: DialogEngine`

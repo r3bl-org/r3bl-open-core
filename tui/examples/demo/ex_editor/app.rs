@@ -328,7 +328,7 @@ mod populate_component_registry {
             maybe_style_editor: get_style! { @from_result: result_stylesheet , DialogStyleName::Editor.as_ref() },
         };
 
-        let engine_options = EditorEngineConfigOptions {
+        let editor_options = EditorEngineConfigOptions {
             multiline_mode: EditorLineMode::SingleLine,
             syntax_highlight: SyntaxHighlightConfig::Disable,
         };
@@ -337,12 +337,12 @@ mod populate_component_registry {
             let it = DialogComponent::new_shared(
                 id,
                 dialog_options,
-                engine_options,
-                on_dialog_press,
+                editor_options,
+                on_dialog_press_handler,
                 on_dialog_editor_change_handler,
             );
 
-            fn on_dialog_press(
+            fn on_dialog_press_handler(
                 dialog_choice: DialogChoice,
                 shared_store: &SharedStore<State, Action>,
             ) {

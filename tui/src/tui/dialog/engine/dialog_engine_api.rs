@@ -216,12 +216,12 @@ mod internal_impl {
         let maybe_style = args.dialog_engine.dialog_options.maybe_style_editor.clone();
 
         let flex_box: FlexBox = EditorEngineFlexBox {
-      id: args.self_id,
-      style_adjusted_origin_pos: position! {col_index: origin_pos.col_index + 1, row_index: origin_pos.row_index + 2},
-      style_adjusted_bounds_size: size! {col_count: bounds_size.col_count - 2, row_count: 1},
-      maybe_computed_style: maybe_style,
-    }
-    .into();
+            id: args.self_id,
+            style_adjusted_origin_pos: position! {col_index: origin_pos.col_index + 1, row_index: origin_pos.row_index + 2},
+            style_adjusted_bounds_size: size! {col_count: bounds_size.col_count - 2, row_count: 1},
+            maybe_computed_style: maybe_style,
+        }
+        .into();
 
         let editor_engine_args = EditorEngineArgs {
             component_registry: args.component_registry,
