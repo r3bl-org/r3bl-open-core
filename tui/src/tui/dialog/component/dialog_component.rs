@@ -57,6 +57,50 @@ pub mod impl_component {
     {
         fn get_id(&self) -> FlexBoxId { self.id }
 
+        // ┏━━━━━━━━┓
+        // ┃ render ┃
+        // ┛        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        /// This shim simply calls [render](DialogEngineApi::render_engine) w/ all the necessary
+        /// arguments:
+        /// - Global scope: [SharedStore], [SharedGlobalData].
+        /// - App scope: `S`, [ComponentRegistry<S, A>].
+        /// - User input (from [main_event_loop]): [InputEvent].
+        async fn render(
+            &mut self,
+            args: ComponentScopeArgs<'_, S, A>,
+            current_box: &FlexBox,
+        ) -> CommonResult<RenderPipeline> {
+            let ComponentScopeArgs {
+                state,
+                shared_store,
+                shared_global_data,
+                component_registry,
+                window_size,
+            } = args;
+
+            let dialog_buffer: Cow<DialogBuffer> =
+                if let Some(it) = state.get_dialog_buffer(self.get_id()) {
+                    Cow::Borrowed(it)
+                } else {
+                    Cow::Owned(DialogBuffer::new_empty())
+                };
+
+            let dialog_engine_args = {
+                DialogEngineArgs {
+                    shared_global_data,
+                    shared_store,
+                    state,
+                    component_registry,
+                    self_id: self.get_id(),
+                    dialog_engine: &mut self.dialog_engine,
+                    dialog_buffer: &dialog_buffer,
+                    window_size,
+                }
+            };
+
+            DialogEngineApi::render_engine(dialog_engine_args, current_box).await
+        }
+
         // ┏━━━━━━━━━━━━━━┓
         // ┃ handle_event ┃
         // ┛              ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -109,8 +153,8 @@ pub mod impl_component {
                     let _ = component_registry.has_focus.reset_modal_id();
 
                     // Run the handler (if any) w/ `dialog_choice`.
-                    if let Some(handler) = &self.on_dialog_press_handler {
-                        handler(dialog_choice, shared_store);
+                    if let Some(it) = &self.on_dialog_press_handler {
+                        it(dialog_choice, shared_store);
                     };
 
                     // Trigger re-render, now that focus has been restored to non-modal component.
@@ -120,8 +164,8 @@ pub mod impl_component {
                 // Handler user input that has updated the dialog_buffer.editor_buffer.
                 DialogEngineApplyResponse::UpdateEditorBuffer(new_editor_buffer) => {
                     // Run the handler (if any) w/ `new_editor_buffer`.
-                    if let Some(handler) = &self.on_dialog_editor_change_handler {
-                        handler(new_editor_buffer, shared_store);
+                    if let Some(it) = &self.on_dialog_editor_change_handler {
+                        it(new_editor_buffer, shared_store);
                     };
 
                     // The handler should dispatch action to change state since dialog_buffer.editor_buffer is
@@ -131,50 +175,6 @@ pub mod impl_component {
 
                 _ => Ok(EventPropagation::Propagate),
             }
-        }
-
-        // ┏━━━━━━━━┓
-        // ┃ render ┃
-        // ┛        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        /// This shim simply calls [render](DialogEngineApi::render_engine) w/ all the necessary
-        /// arguments:
-        /// - Global scope: [SharedStore], [SharedGlobalData].
-        /// - App scope: `S`, [ComponentRegistry<S, A>].
-        /// - User input (from [main_event_loop]): [InputEvent].
-        async fn render(
-            &mut self,
-            args: ComponentScopeArgs<'_, S, A>,
-            current_box: &FlexBox,
-        ) -> CommonResult<RenderPipeline> {
-            let ComponentScopeArgs {
-                state,
-                shared_store,
-                shared_global_data,
-                component_registry,
-                window_size,
-            } = args;
-
-            let dialog_buffer: Cow<DialogBuffer> =
-                if let Some(it) = state.get_dialog_buffer(self.get_id()) {
-                    Cow::Borrowed(it)
-                } else {
-                    Cow::Owned(DialogBuffer::new_empty())
-                };
-
-            let dialog_engine_args = {
-                DialogEngineArgs {
-                    shared_global_data,
-                    shared_store,
-                    state,
-                    component_registry,
-                    self_id: self.get_id(),
-                    dialog_engine: &mut self.dialog_engine,
-                    dialog_buffer: &dialog_buffer,
-                    window_size,
-                }
-            };
-
-            DialogEngineApi::render_engine(dialog_engine_args, current_box).await
         }
     }
 }
