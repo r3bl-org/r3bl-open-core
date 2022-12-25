@@ -49,7 +49,9 @@ pub struct EditorArgs<'a> {
     pub editor_buffer: &'a EditorBuffer,
 }
 
-/// Global scope args struct that holds references. ![Editor component lifecycle
+/// Global scope args struct that holds references.
+///
+/// ![Editor component lifecycle
 /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct GlobalScopeArgs<'a, S, A>
 where
@@ -62,7 +64,9 @@ where
     pub window_size: &'a Size,
 }
 
-/// Component scope args struct that holds references. ![Editor component lifecycle
+/// Component scope args struct that holds references.
+///
+/// ![Editor component lifecycle
 /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct ComponentScopeArgs<'a, S, A>
 where
@@ -76,7 +80,9 @@ where
     pub window_size: &'a Size,
 }
 
-/// [EditorEngine] args struct that holds references. ![Editor component lifecycle
+/// [EditorEngine] args struct that holds references.
+///
+/// ![Editor component lifecycle
 /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct EditorEngineArgs<'a, S, A>
 where
@@ -92,7 +98,9 @@ where
     pub editor_engine: &'a mut EditorEngine,
 }
 
-/// [DialogEngine] args struct that holds references. ![Editor component lifecycle
+/// [DialogEngine] args struct that holds references.
+///
+/// ![Editor component lifecycle
 /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 pub struct DialogEngineArgs<'a, S, A>
 where

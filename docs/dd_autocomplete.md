@@ -103,18 +103,27 @@ TK:
 
 **dialog_engine_api.rs**
 
-- [ ] `apply_event()` -
+- [ ] `apply_event()` - called by `DialogComponent::handle_event()`
   - [ ] up / down handler to navigate the results panel (if in autocomplete mode)
-    - up / down will change the data in the `dialog_engine` data (**not state**)
+    - up / down will change the following in the `dialog_engine` data (**not state**)
       - `selected_row_index` - tracks the selected row
-      - `scroll_offset_row_index` - tracks scroll offset (if viewport is smaller than # results)
+        - used for `render`, `on_dialog_press_handler`
+      - `scroll_offset_row_index` - tracks scroll offset
+        - you can get viewport from `DialogEngine::flex_box`, saved by `DialogComponent::render()`
+        - if viewport is smaller than num results then scroll offset is applied
     - this code path should return an `ConsumedRender` so that the results panel is re-rendered
-- [ ] `render_engine()` -
+- [ ] `render_engine()` - called by `DialogComponent::render()`
   - [ ] add `render_results_panel()` to display results panel (if in autocomplete mode)
     - `DialogBuffer.results` is saved in the **state** & gets passed in here
     - paint the `Vec<String>` in the panel
     - paint the selected row
     - deal w/ `scroll_offset_row_index`
+- [ ] `make_flex_box_for_dialog()`
+  - [ ] pass arg into the function
+    - `DialogEngineMode` - this is the mode of the dialog engine (normal or autocomplete)
+  - [ ] this should just be a private function, in `internal_impl`, remove from `DialogEngineApi`
+  - [ ] based on the mode (normal / autocomplete) save the flex box to `dialog_engine.flex_box`
+    - if `dialog_engine.flex_box` is `Some` then skip this step
 
 **dialog_buffer.rs**
 
@@ -122,11 +131,14 @@ TK:
 
 **dialog_engine.rs**
 
-- [ ] add `selected_row_index`
-- [ ] add `scroll_offset_row_index`
+- [ ] add `selected_row_index: ChUnit`
+- [ ] add `scroll_offset_row_index: ChUnit`
+- [ ] add `flex_box: Option<FlexBox>`
 
 **app.rs**
 
+- [ ] `ContainerSurfaceRender::render_in_surface()` can't call `make_flex_box_for_dialog()`
+  - Pass in `Default::default()` knowing that it will be ignored by the dialog component
 - [ ] add a new dialog component w/ autocomplete (copy `insert_dialog_component()`)
   - [ ] `on_dialog_press_handler` - add result to editor by dispatching action
   - [ ] `on_dialog_editor_change_handler` -
@@ -145,5 +157,9 @@ TK:
 
 **dialog_component.rs**
 
+- [ ] `render()` actually calls `make_flex_box_for_dialog()`
+  - [ ] ignore the `current_box` arg (document this)
+  - [ ] pass the mode (`self.dialog_engine.dialog_optins.mode`) into `make_flex_box_for_dialog()`
+    - this `flex_box` is used later by the `DialogEngineApi::apply_event()` to perform scrolling
 - [x] `new_shared()` - add `DialogEngineConfigOptions` arg
 - [x] `new()` - add `DialogEngineConfigOptions` arg & save to `self.dialog_engine: DialogEngine`
