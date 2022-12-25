@@ -137,7 +137,7 @@ mod layout_container {
     pub struct ContainerSurfaceRenderer<'a>(pub &'a mut AppWithLayout);
 
     #[async_trait]
-    impl SurfaceRenderer<State, Action> for ContainerSurfaceRenderer<'_> {
+    impl SurfaceRender<State, Action> for ContainerSurfaceRenderer<'_> {
         async fn render_in_surface(
             &mut self,
             args: GlobalScopeArgs<'_, State, Action>,

@@ -67,7 +67,7 @@ where
 }
 
 #[async_trait]
-pub trait SurfaceRenderer<S, A>
+pub trait SurfaceRender<S, A>
 where
     S: Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
