@@ -38,25 +38,33 @@ impl DialogEngine {
         S: Default + Clone + PartialEq + Debug + Sync + Send,
         A: Default + Clone + Sync + Send,
     {
-        // TODO: make sure that this works when screen is resized
         let current_box: FlexBox = {
-            let it = internal_impl::make_flex_box_for_dialog(
-                &args.self_id,
-                &args.dialog_engine.dialog_options.mode,
-                args.window_size,
-                None,
-            )?;
-            args.dialog_engine.maybe_flex_box.replace(it.clone());
-            it
+            match &args.dialog_engine.maybe_flex_box {
+                // No need to calculate new flex box if the window size hasn't changed & there's an
+                // existing one.
+                Some((saved_window_size, saved_flex_box))
+                    if saved_window_size == args.window_size =>
+                {
+                    saved_flex_box.clone()
+                }
+                // Otherwise, calculate a new flex box & save it.
+                _ => {
+                    let it = internal_impl::make_flex_box_for_dialog(
+                        &args.self_id,
+                        &args.dialog_engine.dialog_options.mode,
+                        args.window_size,
+                        None,
+                    )?;
+                    args.dialog_engine
+                        .maybe_flex_box
+                        .replace((*args.window_size, it.clone()));
+                    it
+                }
+            }
         };
 
-        let (origin_pos, bounds_size) = {
-            let dialog_flex_box = EditorEngineFlexBox::from(current_box);
-            (
-                dialog_flex_box.style_adjusted_origin_pos,
-                dialog_flex_box.style_adjusted_bounds_size,
-            )
-        };
+        let (origin_pos, bounds_size) =
+            EditorEngineFlexBox::from(current_box).get_style_adjusted_position_and_size();
 
         let pipeline = {
             let mut it = render_pipeline!();

@@ -23,19 +23,33 @@ use tokio::sync::RwLock;
 
 use crate::*;
 
-/// See [Component].
-/// Async trait docs: <https://doc.rust-lang.org/book/ch10-02-traits.html>
+/// An app is typically a holder for [ComponentRegistry]. It then lays out a bunch of [Component]s
+/// on its [Surface] which do all the work of rendering and input event handling. There are examples
+/// of structs that implement this train in the [examples
+/// module](https://github.com/r3bl-org/r3bl_rs_utils/blob/autocomplete/tui/examples/demo/ex_editor/app.rs).
+///
+/// Notes:
+/// - Async trait docs: <https://doc.rust-lang.org/book/ch10-02-traits.html>
+/// - Limitations of linking to examples module: <https://users.rust-lang.org/t/how-to-link-to-examples/67918>
 #[async_trait]
 pub trait App<S, A>
 where
     S: Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
 {
-    /// Use the state to render the output (via crossterm). To change the state, dispatch an action.
+    /// Use the state to render the output (via crossterm). The state is immutable. If you want to
+    /// change it then it should be done in the [App::app_handle_event] method.
+    ///
+    /// More than likely a bunch of other [Component::render]s will perform the actual rendering.
     async fn app_render(&mut self, args: GlobalScopeArgs<'_, S, A>)
         -> CommonResult<RenderPipeline>;
 
-    /// Use the input_event to dispatch an action to the store if needed.
+    /// At a high level:
+    /// - Use the `input_event` to dispatch an action to the store if needed.
+    /// - It returns an [EventPropagation].
+    ///
+    /// More than likely a bunch of other [Component::handle_event]s will perform the actual event
+    /// handling.
     async fn app_handle_event(
         &mut self,
         args: GlobalScopeArgs<'_, S, A>,
