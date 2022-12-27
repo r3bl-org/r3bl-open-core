@@ -599,7 +599,7 @@ mod tests {
     use r3bl_rs_utils_macro::style;
 
     use super::*;
-    use crate::test_editor::mock_real_objects::make_shared_global_data;
+    use crate::test_editor::mock_real_objects_for_editor::make_shared_global_data;
 
     #[tokio::test]
     async fn test_print_plain_text_render_path_reuse_buffer() {

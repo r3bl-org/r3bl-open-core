@@ -358,7 +358,7 @@ mod tests {
     use r3bl_rs_utils_macro::*;
 
     use super::*;
-    use crate::test_editor::mock_real_objects::make_shared_global_data;
+    use crate::test_editor::mock_real_objects_for_editor::make_shared_global_data;
 
     /// Helper function to make an `OffscreenBuffer`.
     async fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {

@@ -39,6 +39,10 @@ pub struct DialogEngine {
     pub dialog_options: DialogEngineConfigOptions,
     pub editor_engine: EditorEngine,
     pub lolcat: Lolcat,
+    /// This is evaulated and saved when [render_engine](DialogEngineApi::render_engine) is called.
+    /// The dialog box is rendered outsideo of any layout [FlexBox] or [Surface], so it just paints
+    /// itself to the screen on top of everything else.
+    pub maybe_flex_box: Option<FlexBox>,
 }
 
 pub mod constructor {
@@ -52,7 +56,7 @@ pub mod constructor {
             Self {
                 dialog_options,
                 editor_engine: EditorEngine::new(editor_options),
-                lolcat: Lolcat::default(),
+                ..Default::default()
             }
         }
     }

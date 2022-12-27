@@ -85,10 +85,14 @@ mod layout_struct_helper {
                 id: engine_box.id,
                 style_adjusted_origin_pos: engine_box.style_adjusted_origin_pos,
                 style_adjusted_bounds_size: engine_box.style_adjusted_bounds_size,
-                maybe_computed_style: engine_box.maybe_computed_style,
+                maybe_computed_style: engine_box.get_computed_style(),
                 ..Default::default()
             }
         }
+    }
+
+    impl From<FlexBox> for EditorEngineFlexBox {
+        fn from(flex_box: FlexBox) -> Self { EditorEngineFlexBox::from(&flex_box) }
     }
 
     impl From<&FlexBox> for EditorEngineFlexBox {
