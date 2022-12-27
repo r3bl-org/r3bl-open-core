@@ -36,33 +36,27 @@ pub enum DialogEngineApplyResponse {
 }
 
 impl DialogEngineApi {
-    /// Return the [FlexBox] for the dialog to be rendered in.
-    /// - In non-modal contexts, this is determined by the layout engine.
-    /// - In the modal case, things are different because the dialog escapes the boundaries of the
-    ///   layout engine and really just paints itself on top of everything. It can reach any corner
-    ///   of the screen.
-    /// - However, it is still constrained by the bounds of the [Surface] itself and does not take
-    ///   into account the full window size (in case these are different).
-    pub fn make_flex_box_for_dialog(
-        dialog_id: FlexBoxId,
-        surface: &Surface,
-        window_size: &Size,
-    ) -> CommonResult<FlexBox> {
-        internal_impl::make_flex_box_for_dialog(dialog_id, surface, window_size)
-    }
-
-    /// See [make_flex_box](DialogEngineApi::make_flex_box_for_dialog) which actually generates the
-    /// [FlexBox] that is passed to this function.
     pub async fn render_engine<S, A>(
         args: DialogEngineArgs<'_, S, A>,
-        current_box: &FlexBox,
     ) -> CommonResult<RenderPipeline>
     where
         S: Default + Clone + PartialEq + Debug + Sync + Send,
         A: Default + Clone + Sync + Send,
     {
+        // TODO: make sure that this works when screen is resized
+        let current_box: FlexBox = {
+            let it = internal_impl::make_flex_box_for_dialog(
+                &args.self_id,
+                &args.dialog_engine.dialog_options.mode,
+                args.window_size,
+                None,
+            )?;
+            args.dialog_engine.maybe_flex_box.replace(it.clone());
+            it
+        };
+
         let (origin_pos, bounds_size) = {
-            let dialog_flex_box: EditorEngineFlexBox = current_box.into();
+            let dialog_flex_box = EditorEngineFlexBox::from(current_box);
             (
                 dialog_flex_box.style_adjusted_origin_pos,
                 dialog_flex_box.style_adjusted_bounds_size,
@@ -148,6 +142,15 @@ mod internal_impl {
 
     /// Return the [FlexBox] for the dialog to be rendered in.
     ///
+    /// - In non-modal contexts (which this is not), this is determined by the layout engine.
+    /// - In the modal case (which this is), things are different because the dialog escapes the
+    ///   boundaries of the layout engine and really just paints itself on top of everything. It can
+    ///   reach any corner of the screen.
+    ///   - In autocomplete mode it sizes itself differently than in normal mode.
+    /// - However, it is still constrained by the bounds of the [Surface] itself and does not take
+    ///   into account the full window size (in case these are different). This only applies if a
+    ///   [Surface] is passed in as an argument.
+    ///
     /// ```text
     /// EditorEngineFlexBox {
     ///   id: ..,
@@ -157,12 +160,22 @@ mod internal_impl {
     /// }
     /// ```
     pub fn make_flex_box_for_dialog(
-        dialog_id: FlexBoxId,
-        surface: &Surface,
+        dialog_id: &FlexBoxId,
+        _mode: &DialogEngineMode,
         window_size: &Size,
+        maybe_surface: Option<&Surface>,
     ) -> CommonResult<FlexBox> {
-        let surface_size = surface.box_size;
-        let surface_origin_pos = surface.origin_pos;
+        let surface_size = if let Some(surface) = maybe_surface {
+            surface.box_size
+        } else {
+            *window_size
+        };
+
+        let surface_origin_pos = if let Some(surface) = maybe_surface {
+            surface.origin_pos
+        } else {
+            position!(col_index: 0, row_index: 0)
+        };
 
         // Check to ensure that the dialog box has enough space to be displayed.
         if window_size.col_count < ch!(MinSize::Col.int_value())
@@ -178,6 +191,8 @@ mod internal_impl {
             );
         }
 
+        // TODO: use `_mode` in order to create the correct dialog_size
+
         let dialog_size = {
             // Calc dialog bounds size based on window size.
             let size = size! { col_count: surface_size.col_count * 90/100, row_count: 4 };
@@ -186,7 +201,7 @@ mod internal_impl {
         };
 
         let mut origin_pos = {
-            // Calc origin pos based on window size & dialog size.
+            // Calc origin position based on window size & dialog size.
             let origin_col = surface_size.col_count / 2 - dialog_size.col_count / 2;
             let origin_row = surface_size.row_count / 2 - dialog_size.row_count / 2;
             position!(col_index: origin_col, row_index: origin_row)
@@ -195,7 +210,7 @@ mod internal_impl {
 
         throws_with_return!({
             EditorEngineFlexBox {
-                id: dialog_id,
+                id: *dialog_id,
                 style_adjusted_origin_pos: origin_pos,
                 style_adjusted_bounds_size: dialog_size,
                 maybe_computed_style: None,
@@ -384,5 +399,270 @@ mod internal_impl {
             _ => {}
         }
         None
+    }
+}
+
+#[cfg(test)]
+mod test_dialog_engine_api_render_engine {
+    use r3bl_rs_utils_core::*;
+
+    use super::*;
+    use crate::test_dialog::mock_real_objects_for_dialog;
+
+    #[test]
+    fn test_make_flex_box_for_dialog() {
+        // 1. The surface and window_size are not the same width and height.
+        // 2. The surface is also not starting from the top left corner of the window.
+        let surface = Surface {
+            origin_pos: position! { col_index: 2, row_index: 2 },
+            box_size: size!( col_count: 65, row_count: 10 ),
+            ..Default::default()
+        };
+        let window_size = size!( col_count: 70, row_count: 15 );
+        let self_id: FlexBoxId = 0;
+
+        // The dialog box should be centered inside the surface.
+        let _result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
+            &self_id,
+            &DialogEngineMode::ModalSimple,
+            &window_size,
+            Some(&surface),
+        ))
+        .unwrap();
+
+        // TODO: impl this test
+    }
+
+    #[tokio::test]
+    async fn render_engine() {
+        let self_id: FlexBoxId = 0;
+        let window_size = &size!( col_count: 70, row_count: 15 );
+        let dialog_buffer = &mut DialogBuffer::new_empty();
+        let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
+        let shared_store = &mock_real_objects_for_dialog::create_store();
+        let state = &String::new();
+        let shared_global_data =
+            &test_editor::mock_real_objects_for_editor::make_shared_global_data(
+                (*window_size).into(),
+            );
+        let component_registry =
+            &mut test_editor::mock_real_objects_for_editor::make_component_registry();
+
+        let args = DialogEngineArgs {
+            shared_global_data,
+            shared_store,
+            state,
+            component_registry,
+            window_size,
+            self_id,
+            dialog_buffer,
+            dialog_engine,
+        };
+
+        let pipeline = dbg!(DialogEngineApi::render_engine(args).await.unwrap());
+        assert_eq2!(pipeline.len(), 1);
+        let render_ops = pipeline.get(&ZOrder::Glass).unwrap();
+        assert!(!render_ops.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod test_dialog_api_make_flex_box_for_dialog {
+    use std::error::Error;
+
+    use r3bl_rs_utils_core::*;
+
+    use crate::{dialog_engine_api::internal_impl, *};
+
+    /// More info on `is` and downcasting:
+    /// - https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any
+    /// - https://ysantos.com/blog/downcast-rust
+    #[test]
+    fn make_flex_box_for_dialog_display_size_too_small() {
+        let surface = Surface::default();
+        let window_size = Size::default();
+        let dialog_id: FlexBoxId = 0;
+
+        // The window size is too small and will result in this error.
+        // Err(
+        //   CommonError {
+        //       err_type: DisplaySizeTooSmall,
+        //       err_msg: Some(
+        //           "Window size is too small. Min size is 65 cols x 10 rows",
+        //       ),
+        //   },
+        let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
+            &dialog_id,
+            &DialogEngineMode::ModalSimple,
+            &window_size,
+            Some(&surface),
+        ));
+
+        // Assert that a general `CommonError` is returned.
+        let my_err: Box<dyn Error + Send + Sync> = result_flex_box.err().unwrap();
+        assert_eq2!(my_err.is::<CommonError>(), true);
+
+        // Assert that this specific error is returned.
+        let result = matches!(
+            my_err.downcast_ref::<CommonError>(),
+            Some(CommonError {
+                err_type: CommonErrorType::DisplaySizeTooSmall,
+                err_msg: _,
+            })
+        );
+
+        assert_eq2!(result, true);
+    }
+
+    #[test]
+    fn make_flex_box_for_dialog() {
+        // 1. The surface and window_size are not the same width and height.
+        // 2. The surface is also not starting from the top left corner of the window.
+        let surface = Surface {
+            origin_pos: position! { col_index: 2, row_index: 2 },
+            box_size: size!( col_count: 65, row_count: 10 ),
+            ..Default::default()
+        };
+        let window_size = size!( col_count: 70, row_count: 15 );
+        let self_id: FlexBoxId = 0;
+
+        // The dialog box should be centered inside the surface.
+        let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
+            &self_id,
+            &DialogEngineMode::ModalSimple,
+            &window_size,
+            Some(&surface),
+        ));
+
+        assert_eq2!(result_flex_box.is_ok(), true);
+
+        let flex_box = result_flex_box.unwrap();
+        assert_eq2!(flex_box.id, self_id);
+        assert_eq2!(
+            flex_box.style_adjusted_bounds_size,
+            size!( col_count: 58, row_count: 4 )
+        );
+        assert_eq2!(
+            flex_box.style_adjusted_origin_pos,
+            position!( col_index: 5, row_index: 5 )
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_dialog_engine_api_apply_event {
+    use r3bl_rs_utils_core::*;
+
+    use super::*;
+    use crate::test_dialog::mock_real_objects_for_dialog;
+
+    #[tokio::test]
+    async fn apply_event_esc() {
+        let self_id: FlexBoxId = 0;
+        let window_size = &size!( col_count: 70, row_count: 15 );
+        let dialog_buffer = &mut DialogBuffer::new_empty();
+        let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
+        let shared_store = &mock_real_objects_for_dialog::create_store();
+        let state = &String::new();
+        let shared_global_data =
+            &test_editor::mock_real_objects_for_editor::make_shared_global_data(
+                (*window_size).into(),
+            );
+        let component_registry =
+            &mut test_editor::mock_real_objects_for_editor::make_component_registry();
+
+        let args = DialogEngineArgs {
+            shared_global_data,
+            shared_store,
+            state,
+            component_registry,
+            window_size,
+            self_id,
+            dialog_buffer,
+            dialog_engine,
+        };
+
+        let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Esc));
+        let response = dbg!(DialogEngineApi::apply_event(args, &input_event)
+            .await
+            .unwrap());
+        assert!(matches!(
+            response,
+            DialogEngineApplyResponse::DialogChoice(DialogChoice::No)
+        ));
+    }
+
+    #[tokio::test]
+    async fn apply_event_enter() {
+        let self_id: FlexBoxId = 0;
+        let window_size = &size!( col_count: 70, row_count: 15 );
+        let dialog_buffer = &mut DialogBuffer::new_empty();
+        let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
+        let shared_store = &mock_real_objects_for_dialog::create_store();
+        let state = &String::new();
+        let shared_global_data =
+            &test_editor::mock_real_objects_for_editor::make_shared_global_data(
+                (*window_size).into(),
+            );
+        let component_registry =
+            &mut test_editor::mock_real_objects_for_editor::make_component_registry();
+
+        let args = DialogEngineArgs {
+            shared_global_data,
+            shared_store,
+            state,
+            component_registry,
+            window_size,
+            self_id,
+            dialog_buffer,
+            dialog_engine,
+        };
+
+        let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Enter));
+        let response = dbg!(DialogEngineApi::apply_event(args, &input_event)
+            .await
+            .unwrap());
+        if let DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(value)) = &response {
+            assert_eq2!(value, "");
+        }
+        assert!(matches!(
+            response,
+            DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn apply_event_other_key() {
+        let self_id: FlexBoxId = 0;
+        let window_size = &size!( col_count: 70, row_count: 15 );
+        let dialog_buffer = &mut DialogBuffer::new_empty();
+        let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
+        let shared_store = &mock_real_objects_for_dialog::create_store();
+        let state = &String::new();
+        let shared_global_data =
+            &test_editor::mock_real_objects_for_editor::make_shared_global_data(
+                (*window_size).into(),
+            );
+        let component_registry =
+            &mut test_editor::mock_real_objects_for_editor::make_component_registry();
+
+        let args = DialogEngineArgs {
+            shared_global_data,
+            shared_store,
+            state,
+            component_registry,
+            window_size,
+            self_id,
+            dialog_buffer,
+            dialog_engine,
+        };
+
+        let input_event = InputEvent::Keyboard(keypress!(@char 'a'));
+        let response = dbg!(DialogEngineApi::apply_event(args, &input_event)
+            .await
+            .unwrap());
+        if let DialogEngineApplyResponse::UpdateEditorBuffer(editor_buffer) = &response {
+            assert_eq2!(editor_buffer.get_as_string(), "a");
+        }
     }
 }

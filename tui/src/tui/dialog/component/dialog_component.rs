@@ -65,10 +65,13 @@ pub mod impl_component {
         /// - Global scope: [SharedStore], [SharedGlobalData].
         /// - App scope: `S`, [ComponentRegistry<S, A>].
         /// - User input (from [main_event_loop]): [InputEvent].
+        ///
+        /// Note: The 3rd argument [FlexBox] is ignored since the dialog component breaks out of whatever
+        /// box the layout places it in, and ends up painting itself over the entire screen.
         async fn render(
             &mut self,
             args: ComponentScopeArgs<'_, S, A>,
-            current_box: &FlexBox,
+            _: &FlexBox,
         ) -> CommonResult<RenderPipeline> {
             let ComponentScopeArgs {
                 state,
@@ -98,7 +101,7 @@ pub mod impl_component {
                 }
             };
 
-            DialogEngineApi::render_engine(dialog_engine_args, current_box).await
+            DialogEngineApi::render_engine(dialog_engine_args).await
         }
 
         // ┏━━━━━━━━━━━━━━┓

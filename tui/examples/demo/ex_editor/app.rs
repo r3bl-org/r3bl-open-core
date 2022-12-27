@@ -278,7 +278,7 @@ mod layout_container {
                 {
                     render_component_in_given_box! {
                       in:                 surface,
-                      box:                DialogEngineApi::make_flex_box_for_dialog(ComponentId::Dialog.int_value(), surface, window_size)?,
+                      box:                FlexBox::default(), /* This is not used as the modal breaks out of its box. */
                       component_id:       ComponentId::Dialog.int_value(),
                       from:               self.0.component_registry,
                       state:              state,
