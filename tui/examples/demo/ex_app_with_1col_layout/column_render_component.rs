@@ -148,7 +148,7 @@ impl Component<State, Action> for ColumnRenderComponent {
                   =>
                     RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_cursor_pos),
                     RenderOp::ApplyColors(current_box.get_computed_style()),
-                    RenderOp::PrintTextWithAttributes(
+                    RenderOp::PaintTextWithAttributes(
                       line_1_us_trunc.into(),
                       current_box.get_computed_style(),
                     ),
@@ -170,13 +170,13 @@ impl Component<State, Action> for ColumnRenderComponent {
                       content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row_count)
                     ),
                     RenderOp::ApplyColors(current_box.get_computed_style()),
-                    RenderOp::PrintTextWithAttributes(
+                    RenderOp::PaintTextWithAttributes(
                       colorize_using_lolcat! (&mut self.lolcat,"{}",line_2_us_trunc),
                       current_box.get_computed_style(),
                     ),
                     RenderOp::ResetColor,
                     if let Some(line_2_postfix_padding) = line_2_postfix_padding {
-                      RenderOp::PrintTextWithAttributes(line_2_postfix_padding, None)
+                      RenderOp::PaintTextWithAttributes(line_2_postfix_padding, None)
                     } else {
                       RenderOp::Noop
                     }
@@ -192,10 +192,10 @@ impl Component<State, Action> for ColumnRenderComponent {
                   content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row_count)
                 ),
                 if component_registry.has_focus.does_current_box_have_focus(current_box) {
-                  RenderOp::PrintTextWithAttributes("👀".into(), None)
+                  RenderOp::PaintTextWithAttributes("👀".into(), None)
                 }
                 else {
-                  RenderOp::PrintTextWithAttributes(" ".into(), None)
+                  RenderOp::PaintTextWithAttributes(" ".into(), None)
                 }
             };
 

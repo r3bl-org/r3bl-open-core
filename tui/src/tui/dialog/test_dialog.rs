@@ -15,7 +15,6 @@
  *   limitations under the License.
  */
 
-
 pub mod mock_real_objects_for_dialog {
     use std::sync::Arc;
 

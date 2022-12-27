@@ -21,14 +21,11 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-// ┏━━━━━━━━━━┓
-// ┃ HasFocus ┃
-// ┛          ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// There are certain fields that need to be in each state struct to represent global information
 /// about keyboard focus.
 ///
-/// 1. An `id` [FlexBoxId] is used to store which [FlexBox] id currently holds keyboard focus.
-///    This is global.
+/// 1. An `id` [FlexBoxId] is used to store which [FlexBox] id currently holds keyboard focus. This
+///    is global.
 /// 2. Each `id` may have a [Position] associated with it, which is used to draw the "cursor" (the
 ///    meaning of which depends on the specific [Component] impl). This cursor is scoped to each
 ///    `id` so it isn't strictly a single global value (like `id` itself). Here are examples of what

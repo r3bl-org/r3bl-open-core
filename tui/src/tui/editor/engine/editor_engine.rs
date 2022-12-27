@@ -23,21 +23,18 @@ use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
 use crate::*;
 
-// ┏━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ EditorEngine struct ┃
-// ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Do not create this struct directly. Please use [new()](EditorEngine::new) instead.
 ///
 /// Holds data related to rendering in between render calls. This is not stored in the
 /// [EditorBuffer] struct, which lives in the [r3bl_redux::Store]. The store provides the underlying
 /// document or buffer struct that holds the actual document.
 ///
-/// In order to change the document, you can use the
-/// [apply_event](EditorEngineRenderApi::apply_event) method which takes [InputEvent] and tries to
-/// convert it to an [EditorEvent] and then execute them against this buffer.
+/// In order to change the document, you can use the [apply_event](EditorEngine::apply_event) method
+/// which takes [InputEvent] and tries to convert it to an [EditorEvent] and then execute them
+/// against this buffer.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EditorEngine {
-    /// Set by [render](EditorEngineRenderApi::render_engine).
+    /// Set by [render](EditorEngine::render_engine).
     pub current_box: EditorEngineFlexBox,
     pub config_options: EditorEngineConfigOptions,
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
@@ -46,17 +43,46 @@ pub struct EditorEngine {
     pub theme: Theme,
 }
 
-mod layout_struct_helper {
+mod editor_engine_impl {
     use super::*;
 
-    /// Holds a subset of the fields in [FlexBox] that are required by the editor engine.
-    #[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-    pub struct EditorEngineFlexBox {
-        pub id: FlexBoxId,
-        pub style_adjusted_origin_pos: Position,
-        pub style_adjusted_bounds_size: Size,
-        pub maybe_computed_style: Option<Style>,
+    impl Default for EditorEngine {
+        fn default() -> Self { EditorEngine::new(Default::default()) }
     }
+
+    impl EditorEngine {
+        /// Syntax highlighting support - [SyntaxSet] and [Theme] are a very expensive objects to
+        /// create, so re-use them.
+        pub fn new(config_options: EditorEngineConfigOptions) -> Self {
+            Self {
+                current_box: Default::default(),
+                config_options,
+                syntax_set: SyntaxSet::load_defaults_newlines(),
+                theme: try_load_r3bl_theme().unwrap_or_else(|_| load_default_theme()),
+            }
+        }
+
+        pub fn viewport_width(&self) -> ChUnit {
+            self.current_box.style_adjusted_bounds_size.col_count
+        }
+
+        pub fn viewport_height(&self) -> ChUnit {
+            self.current_box.style_adjusted_bounds_size.row_count
+        }
+    }
+}
+
+/// Holds a subset of the fields in [FlexBox] that are required by the editor engine.
+#[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EditorEngineFlexBox {
+    pub id: FlexBoxId,
+    pub style_adjusted_origin_pos: Position,
+    pub style_adjusted_bounds_size: Size,
+    pub maybe_computed_style: Option<Style>,
+}
+
+mod editor_engine_flex_box_impl {
+    use super::*;
 
     impl EditorEngineFlexBox {
         pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style.clone() }
@@ -106,44 +132,26 @@ mod layout_struct_helper {
         }
     }
 }
-pub use layout_struct_helper::*;
 
-mod constructor {
-    use super::*;
-
-    impl Default for EditorEngine {
-        fn default() -> Self { EditorEngine::new(Default::default()) }
-    }
-
-    impl EditorEngine {
-        /// Syntax highlighting support - [SyntaxSet] and [Theme] are a very expensive objects to
-        /// create, so re-use them.
-        pub fn new(config_options: EditorEngineConfigOptions) -> Self {
-            Self {
-                current_box: Default::default(),
-                config_options,
-                syntax_set: SyntaxSet::load_defaults_newlines(),
-                theme: try_load_r3bl_theme().unwrap_or_else(|_| load_default_theme()),
-            }
-        }
-    }
-}
-
-impl EditorEngine {
-    pub fn viewport_width(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.col_count }
-
-    pub fn viewport_height(&self) -> ChUnit {
-        self.current_box.style_adjusted_bounds_size.row_count
-    }
-}
-
-// ┏━━━━━━━━━━━━━━━━┓
-// ┃ Config options ┃
-// ┛                ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditorEngineConfigOptions {
     pub multiline_mode: EditorLineMode,
     pub syntax_highlight: SyntaxHighlightConfig,
+}
+
+mod editor_engine_config_options_impl {
+    use super::*;
+
+    impl Default for EditorEngineConfigOptions {
+        fn default() -> Self {
+            Self {
+                multiline_mode: EditorLineMode::MultiLine,
+                syntax_highlight: SyntaxHighlightConfig::Enable(
+                    DEFAULT_SYN_HI_FILE_EXT.to_string(),
+                ),
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -161,20 +169,15 @@ pub enum SyntaxHighlightConfig {
     Enable(String),
 }
 
-impl SyntaxHighlightConfig {
-    pub fn get_file_extension_for_new_empty_buffer(&self) -> String {
-        match self {
-            SyntaxHighlightConfig::Disable => DEFAULT_SYN_HI_FILE_EXT.to_string(),
-            SyntaxHighlightConfig::Enable(ref ext) => ext.clone(),
-        }
-    }
-}
+mod syntax_highlight_config_impl {
+    use super::*;
 
-impl Default for EditorEngineConfigOptions {
-    fn default() -> Self {
-        Self {
-            multiline_mode: EditorLineMode::MultiLine,
-            syntax_highlight: SyntaxHighlightConfig::Enable(DEFAULT_SYN_HI_FILE_EXT.to_string()),
+    impl SyntaxHighlightConfig {
+        pub fn get_file_extension_for_new_empty_buffer(&self) -> String {
+            match self {
+                SyntaxHighlightConfig::Disable => DEFAULT_SYN_HI_FILE_EXT.to_string(),
+                SyntaxHighlightConfig::Enable(ref ext) => ext.clone(),
+            }
         }
     }
 }

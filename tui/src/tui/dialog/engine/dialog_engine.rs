@@ -22,9 +22,6 @@ use serde::*;
 
 use crate::*;
 
-// ┏━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ DialogEngine struct ┃
-// ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Please do not construct this struct directly, and use [new](DialogEngine::new) instead.
 ///
 /// Holds data related to rendering in between render calls. This is not stored in the
@@ -32,20 +29,20 @@ use crate::*;
 /// document or buffer struct that holds the actual document.
 ///
 /// In order to change the document, you can use the
-/// [apply_event](DialogEngineApi::apply_event) method which takes [InputEvent] and tries to
+/// [apply_event](DialogEngine::apply_event) method which takes [InputEvent] and tries to
 /// execute it against this buffer.
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct DialogEngine {
     pub dialog_options: DialogEngineConfigOptions,
     pub editor_engine: EditorEngine,
     pub lolcat: Lolcat,
-    /// This is evaulated and saved when [render_engine](DialogEngineApi::render_engine) is called.
-    /// The dialog box is rendered outsideo of any layout [FlexBox] or [Surface], so it just paints
+    /// This is evaluated and saved when [render_engine]( DialogEngine::render_engine) is called.
+    /// The dialog box is rendered outside of any layout [FlexBox] or [Surface], so it just paints
     /// itself to the screen on top of everything else.
     pub maybe_flex_box: Option<FlexBox>,
 }
 
-pub mod constructor {
+mod dialog_engine_impl {
     use super::*;
 
     impl DialogEngine {
@@ -61,11 +58,7 @@ pub mod constructor {
         }
     }
 }
-pub use constructor::*;
 
-// ┏━━━━━━━━━━━━━━━━┓
-// ┃ Config options ┃
-// ┛                ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DialogEngineConfigOptions {
     pub mode: DialogEngineMode,

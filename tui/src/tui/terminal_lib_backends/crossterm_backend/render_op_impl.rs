@@ -34,66 +34,78 @@ use crate::*;
 /// struct is needed since the [Flush] trait needs to be implemented.
 pub struct RenderOpImplCrossterm;
 
-#[async_trait]
-impl PaintRenderOp for RenderOpImplCrossterm {
-    async fn paint(
-        &mut self,
-        skip_flush: &mut bool,
-        command_ref: &RenderOp,
-        shared_global_data: &SharedGlobalData,
-        local_data: &mut RenderOpsLocalData,
-    ) {
-        match command_ref {
-            RenderOp::Noop => {}
-            RenderOp::EnterRawMode => {
-                raw_mode_enter(skip_flush, shared_global_data).await;
-            }
-            RenderOp::ExitRawMode => {
-                raw_mode_exit(skip_flush);
-            }
-            RenderOp::MoveCursorPositionAbs(abs_pos) => {
-                move_cursor_position_abs(abs_pos, shared_global_data, local_data).await;
-            }
-            RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
-                move_cursor_position_rel_to(
-                    box_origin_pos,
-                    content_rel_pos,
-                    shared_global_data,
-                    local_data,
-                )
-                .await;
-            }
-            RenderOp::ClearScreen => {
-                exec_render_op!(queue!(stdout(), Clear(ClearType::All)), "ClearScreen")
-            }
-            RenderOp::SetFgColor(color) => {
-                set_fg_color(color);
-            }
-            RenderOp::SetBgColor(color) => {
-                set_bg_color(color);
-            }
-            RenderOp::ResetColor => {
-                exec_render_op!(queue!(stdout(), ResetColor), "ResetColor")
-            }
-            RenderOp::ApplyColors(style) => {
-                apply_colors(style);
-            }
-            RenderOp::CompositorNoClipTruncPrintTextWithAttributes(text, maybe_style) => {
-                print_text_with_attributes(text, maybe_style, shared_global_data, local_data).await;
-            }
-            RenderOp::PrintTextWithAttributes(_text, _maybe_style) => {
-                // This should never be executed! The compositor always renders to an offscreen
-                // buffer first, then that is diff'd and then painted via calls to
-                // CompositorNoClipTruncPrintTextWithAttributes.
+mod render_op_impl_crossterm_impl_trait_paint_render_op {
+    use super::*;
+
+    #[async_trait]
+    impl PaintRenderOp for RenderOpImplCrossterm {
+        async fn paint(
+            &mut self,
+            skip_flush: &mut bool,
+            command_ref: &RenderOp,
+            shared_global_data: &SharedGlobalData,
+            local_data: &mut RenderOpsLocalData,
+        ) {
+            match command_ref {
+                RenderOp::Noop => {}
+                RenderOp::EnterRawMode => {
+                    RenderOpImplCrossterm::raw_mode_enter(skip_flush, shared_global_data).await;
+                }
+                RenderOp::ExitRawMode => {
+                    RenderOpImplCrossterm::raw_mode_exit(skip_flush);
+                }
+                RenderOp::MoveCursorPositionAbs(abs_pos) => {
+                    RenderOpImplCrossterm::move_cursor_position_abs(
+                        abs_pos,
+                        shared_global_data,
+                        local_data,
+                    )
+                    .await;
+                }
+                RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
+                    RenderOpImplCrossterm::move_cursor_position_rel_to(
+                        box_origin_pos,
+                        content_rel_pos,
+                        shared_global_data,
+                        local_data,
+                    )
+                    .await;
+                }
+                RenderOp::ClearScreen => {
+                    exec_render_op!(queue!(stdout(), Clear(ClearType::All)), "ClearScreen")
+                }
+                RenderOp::SetFgColor(color) => {
+                    RenderOpImplCrossterm::set_fg_color(color);
+                }
+                RenderOp::SetBgColor(color) => {
+                    RenderOpImplCrossterm::set_bg_color(color);
+                }
+                RenderOp::ResetColor => {
+                    exec_render_op!(queue!(stdout(), ResetColor), "ResetColor")
+                }
+                RenderOp::ApplyColors(style) => {
+                    RenderOpImplCrossterm::apply_colors(style);
+                }
+                RenderOp::CompositorNoClipTruncPaintTextWithAttributes(text, maybe_style) => {
+                    RenderOpImplCrossterm::paint_text_with_attributes(
+                        text,
+                        maybe_style,
+                        shared_global_data,
+                        local_data,
+                    )
+                    .await;
+                }
+                RenderOp::PaintTextWithAttributes(_text, _maybe_style) => {
+                    // This should never be executed! The compositor always renders to an offscreen
+                    // buffer first, then that is diff'd and then painted via calls to
+                    // CompositorNoClipTruncPaintTextWithAttributes.
+                }
             }
         }
     }
 }
 
-// ┏━━━━━━━━━━━━━━━━━┓
-// ┃ Implement Flush ┃
-// ┛                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-pub mod flush_impl {
+pub mod render_op_impl_crossterm_impl_trait_flush {
     use super::*;
 
     impl Flush for RenderOpImplCrossterm {
@@ -117,145 +129,175 @@ pub mod flush_impl {
     }
 }
 
-// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ Implement all the render ops ┃
-// ┛                              ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async fn move_cursor_position_rel_to(
-    box_origin_pos: &Position,
-    content_rel_pos: &Position,
-    shared_global_data: &SharedGlobalData,
-    local_data: &mut RenderOpsLocalData,
-) {
-    let new_abs_pos = *box_origin_pos + *content_rel_pos;
-    move_cursor_position_abs(&new_abs_pos, shared_global_data, local_data).await;
-}
+mod render_op_impl_crossterm_impl {
+    use super::*;
 
-async fn move_cursor_position_abs(
-    abs_pos: &Position,
-    shared_global_data: &SharedGlobalData,
-    local_data: &mut RenderOpsLocalData,
-) {
-    let Position {
-        col_index: col,
-        row_index: row,
-    } = sanitize_and_save_abs_position(*abs_pos, shared_global_data, local_data).await;
-    exec_render_op!(
-        queue!(stdout(), MoveTo(*col, *row)),
-        format!("MoveCursorPosition(col: {}, row: {})", *col, *row)
-    )
-}
-
-fn raw_mode_exit(skip_flush: &mut bool) {
-    exec_render_op! {
-      queue!(stdout(),
-        Show,
-        LeaveAlternateScreen,
-        DisableMouseCapture
-      ),
-      "ExitRawMode -> Show, LeaveAlternateScreen, DisableMouseCapture"
-    };
-    flush_impl::flush();
-    exec_render_op! {terminal::disable_raw_mode(), "ExitRawMode -> disable_raw_mode()"}
-    *skip_flush = true;
-}
-
-async fn raw_mode_enter(skip_flush: &mut bool, _shared_global_data: &SharedGlobalData) {
-    exec_render_op! {
-      terminal::enable_raw_mode(),
-      "EnterRawMode -> enable_raw_mode()"
-    };
-    exec_render_op! {
-      queue!(stdout(),
-        EnableMouseCapture,
-        EnterAlternateScreen,
-        MoveTo(0,0),
-        Clear(ClearType::All),
-        Hide,
-      ),
-    "EnterRawMode -> EnableMouseCapture, EnterAlternateScreen, MoveTo(0,0), Clear(ClearType::All), Hide"
-    }
-    flush_impl::flush();
-    *skip_flush = true;
-}
-
-fn set_fg_color(color: &TuiColor) {
-    let color = color_converter::to_crossterm_color(*color);
-    exec_render_op!(
-        queue!(stdout(), SetForegroundColor(color)),
-        format!("SetFgColor({color:?})")
-    )
-}
-
-fn set_bg_color(color: &TuiColor) {
-    let color: crossterm::style::Color = color_converter::to_crossterm_color(*color);
-    exec_render_op!(
-        queue!(stdout(), SetBackgroundColor(color)),
-        format!("SetBgColor({color:?})")
-    )
-}
-
-async fn print_text_with_attributes(
-    text_arg: &String,
-    maybe_style: &Option<Style>,
-    shared_global_data: &SharedGlobalData,
-    local_data: &mut RenderOpsLocalData,
-) {
-    use print_impl::*;
-
-    // Are ANSI codes present?
-    let it = shared_global_data
-        .write()
-        .await
-        .get_from_cache_try_strip_ansi_text(text_arg);
-    let content_type = {
-        if it.is_some() {
-            ContentType::ANSIText
-        } else {
-            ContentType::PlainText
+    impl RenderOpImplCrossterm {
+        pub async fn move_cursor_position_rel_to(
+            box_origin_pos: &Position,
+            content_rel_pos: &Position,
+            shared_global_data: &SharedGlobalData,
+            local_data: &mut RenderOpsLocalData,
+        ) {
+            let new_abs_pos = *box_origin_pos + *content_rel_pos;
+            Self::move_cursor_position_abs(&new_abs_pos, shared_global_data, local_data).await;
         }
-    };
 
-    // Gen log_msg.
-    let log_msg = Cow::from(match content_type {
-        ContentType::PlainText => {
-            format!("\"{text_arg}\"")
+        pub async fn move_cursor_position_abs(
+            abs_pos: &Position,
+            shared_global_data: &SharedGlobalData,
+            local_data: &mut RenderOpsLocalData,
+        ) {
+            let Position {
+                col_index: col,
+                row_index: row,
+            } = sanitize_and_save_abs_position(*abs_pos, shared_global_data, local_data).await;
+            exec_render_op!(
+                queue!(stdout(), MoveTo(*col, *row)),
+                format!("MoveCursorPosition(col: {}, row: {})", *col, *row)
+            )
         }
-        ContentType::ANSIText => {
-            call_if_true!(DEBUG_TUI_SHOW_PIPELINE_EXPANDED, {
-                let it = shared_global_data
-                    .write()
-                    .await
-                    .get_from_cache_try_strip_ansi_text(text_arg);
 
-                let msg = format!(
-                    "ANSI {:?}, len: {:?}, plain: {:?}",
-                    text_arg,
-                    text_arg.len(),
-                    it
-                );
-                log_debug(msg);
+        pub fn raw_mode_exit(skip_flush: &mut bool) {
+            exec_render_op! {
+              queue!(stdout(),
+                Show,
+                LeaveAlternateScreen,
+                DisableMouseCapture
+              ),
+              "ExitRawMode -> Show, LeaveAlternateScreen, DisableMouseCapture"
+            };
+            render_op_impl_crossterm_impl_trait_flush::flush();
+            exec_render_op! {terminal::disable_raw_mode(), "ExitRawMode -> disable_raw_mode()"}
+            *skip_flush = true;
+        }
+
+        pub async fn raw_mode_enter(skip_flush: &mut bool, _shared_global_data: &SharedGlobalData) {
+            exec_render_op! {
+              terminal::enable_raw_mode(),
+              "EnterRawMode -> enable_raw_mode()"
+            };
+            exec_render_op! {
+              queue!(stdout(),
+                EnableMouseCapture,
+                EnterAlternateScreen,
+                MoveTo(0,0),
+                Clear(ClearType::All),
+                Hide,
+              ),
+            "EnterRawMode -> EnableMouseCapture, EnterAlternateScreen, MoveTo(0,0), Clear(ClearType::All), Hide"
+            }
+            render_op_impl_crossterm_impl_trait_flush::flush();
+            *skip_flush = true;
+        }
+
+        pub fn set_fg_color(color: &TuiColor) {
+            let color = color_converter::to_crossterm_color(*color);
+            exec_render_op!(
+                queue!(stdout(), SetForegroundColor(color)),
+                format!("SetFgColor({color:?})")
+            )
+        }
+
+        pub fn set_bg_color(color: &TuiColor) {
+            let color: crossterm::style::Color = color_converter::to_crossterm_color(*color);
+            exec_render_op!(
+                queue!(stdout(), SetBackgroundColor(color)),
+                format!("SetBgColor({color:?})")
+            )
+        }
+
+        pub async fn paint_text_with_attributes(
+            text_arg: &String,
+            maybe_style: &Option<Style>,
+            shared_global_data: &SharedGlobalData,
+            local_data: &mut RenderOpsLocalData,
+        ) {
+            use perform_paint::*;
+
+            // Are ANSI codes present?
+            let it = shared_global_data
+                .write()
+                .await
+                .get_from_cache_try_strip_ansi_text(text_arg);
+            let content_type = {
+                if it.is_some() {
+                    ContentType::ANSIText
+                } else {
+                    ContentType::PlainText
+                }
+            };
+
+            // Gen log_msg.
+            let log_msg = Cow::from(match content_type {
+                ContentType::PlainText => {
+                    format!("\"{text_arg}\"")
+                }
+                ContentType::ANSIText => {
+                    call_if_true!(DEBUG_TUI_SHOW_PIPELINE_EXPANDED, {
+                        let it = shared_global_data
+                            .write()
+                            .await
+                            .get_from_cache_try_strip_ansi_text(text_arg);
+
+                        let msg = format!(
+                            "ANSI {:?}, len: {:?}, plain: {:?}",
+                            text_arg,
+                            text_arg.len(),
+                            it
+                        );
+                        log_debug(msg);
+                    });
+                    format!("ANSI detected, size: {} bytes", text_arg.len())
+                }
             });
-            format!("ANSI detected, size: {} bytes", text_arg.len())
+
+            let text: Cow<'_, str> = Cow::from(text_arg);
+
+            let mut paint_args = PaintArgs {
+                text,
+                log_msg,
+                maybe_style,
+                shared_global_data,
+                content_type,
+            };
+
+            let mut needs_reset = false;
+
+            // Paint plain_text.
+            paint_style_and_text(&mut paint_args, &mut needs_reset, local_data).await;
         }
-    });
 
-    let text: Cow<'_, str> = Cow::from(text_arg);
-
-    let mut paint_args = PaintArgs {
-        text,
-        log_msg,
-        maybe_style,
-        shared_global_data,
-        content_type,
-    };
-
-    let mut needs_reset = false;
-
-    // Print plain_text.
-    print_style_and_text(&mut paint_args, &mut needs_reset, local_data).await;
+        pub fn apply_colors(style: &Option<Style>) {
+            if style.is_some() {
+                // Use Style to set crossterm Colors.
+                // Docs: https://docs.rs/crossterm/latest/crossterm/style/index.html#colors
+                let mut style = style.clone().unwrap();
+                let mask = style.get_bitflags();
+                if mask.contains(StyleFlag::COLOR_BG_SET) {
+                    let color_bg = style.color_bg.unwrap();
+                    let color_bg: crossterm::style::Color =
+                        color_converter::to_crossterm_color(color_bg);
+                    exec_render_op!(
+                        queue!(stdout(), SetBackgroundColor(color_bg)),
+                        format!("ApplyColors -> SetBgColor({color_bg:?})")
+                    )
+                }
+                if mask.contains(StyleFlag::COLOR_FG_SET) {
+                    let color_fg = style.color_fg.unwrap();
+                    let color_fg: crossterm::style::Color =
+                        color_converter::to_crossterm_color(color_fg);
+                    exec_render_op!(
+                        queue!(stdout(), SetForegroundColor(color_fg)),
+                        format!("ApplyColors -> SetFgColor({color_fg:?})")
+                    )
+                }
+            }
+        }
+    }
 }
 
-mod print_impl {
+mod perform_paint {
     use super::*;
 
     #[derive(Debug, Clone, Copy)]
@@ -275,7 +317,7 @@ mod print_impl {
 
     /// Use [Style] to set crossterm [Attributes] ([docs](
     /// https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes)).
-    pub async fn print_style_and_text<'a>(
+    pub async fn paint_style_and_text<'a>(
         paint_args: &mut PaintArgs<'a>,
         needs_reset: &mut bool,
         local_data: &mut RenderOpsLocalData,
@@ -288,24 +330,24 @@ mod print_impl {
                 if mask.contains(*flag) {
                     exec_render_op!(
                         queue!(stdout(), SetAttribute(*attr)),
-                        format!("PrintWithAttributes -> SetAttribute({attr:?})")
+                        format!("PaintWithAttributes -> SetAttribute({attr:?})")
                     );
                     *needs_reset = true;
                 }
             });
         }
 
-        print_text(paint_args, local_data).await;
+        paint_text(paint_args, local_data).await;
 
         if *needs_reset {
             exec_render_op!(
                 queue!(stdout(), SetAttribute(Attribute::Reset)),
-                format!("PrintWithAttributes -> SetAttribute(Reset))")
+                format!("PaintWithAttributes -> SetAttribute(Reset))")
             );
         }
     }
 
-    pub async fn print_text<'a>(paint_args: &PaintArgs<'a>, local_data: &mut RenderOpsLocalData) {
+    pub async fn paint_text<'a>(paint_args: &PaintArgs<'a>, local_data: &mut RenderOpsLocalData) {
         let PaintArgs {
             text,
             log_msg,
@@ -317,7 +359,7 @@ mod print_impl {
         let unicode_string: UnicodeString = text.as_ref().into();
         let mut cursor_position_copy = local_data.cursor_position;
 
-        // Actually print text.
+        // Actually paint text.
         {
             let text = Cow::Borrowed(text);
             let log_msg: &str = log_msg;
@@ -327,7 +369,7 @@ mod print_impl {
             );
         };
 
-        // Update cursor position after print.
+        // Update cursor position after paint.
         let display_width = match content_type {
             ContentType::ANSIText => {
                 let ansi_text = text.ansi_text();
@@ -343,34 +385,6 @@ mod print_impl {
     }
 }
 
-fn apply_colors(style: &Option<Style>) {
-    if style.is_some() {
-        // Use Style to set crossterm Colors.
-        // Docs: https://docs.rs/crossterm/latest/crossterm/style/index.html#colors
-        let mut style = style.clone().unwrap();
-        let mask = style.get_bitflags();
-        if mask.contains(StyleFlag::COLOR_BG_SET) {
-            let color_bg = style.color_bg.unwrap();
-            let color_bg: crossterm::style::Color = color_converter::to_crossterm_color(color_bg);
-            exec_render_op!(
-                queue!(stdout(), SetBackgroundColor(color_bg)),
-                format!("ApplyColors -> SetBackgroundColor({color_bg:?})")
-            )
-        }
-        if mask.contains(StyleFlag::COLOR_FG_SET) {
-            let color_fg = style.color_fg.unwrap();
-            let color_fg: crossterm::style::Color = color_converter::to_crossterm_color(color_fg);
-            exec_render_op!(
-                queue!(stdout(), SetForegroundColor(color_fg)),
-                format!("ApplyColors -> SetForegroundColor({color_fg:?})")
-            )
-        }
-    }
-}
-
-// ┏━━━━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ Style to attribute map ┃
-// ┛                        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 pub static STYLE_TO_ATTRIBUTE_MAP: Lazy<HashMap<StyleFlag, Attribute>> = Lazy::new(|| {
     let mut map = HashMap::new();
     map.insert(StyleFlag::BOLD_SET, Attribute::Bold);
@@ -382,9 +396,6 @@ pub static STYLE_TO_ATTRIBUTE_MAP: Lazy<HashMap<StyleFlag, Attribute>> = Lazy::n
     map
 });
 
-// ┏━━━━━━━━━━━━━━━━━┓
-// ┃ exec_render_op! ┃
-// ┛                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Given a crossterm command, this will run it and [log_error] or [log_info] the [Result] that is
 /// returned.
 ///

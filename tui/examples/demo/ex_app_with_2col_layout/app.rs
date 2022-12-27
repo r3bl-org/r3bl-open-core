@@ -41,16 +41,58 @@ pub struct AppWithLayout {
     pub component_registry: ComponentRegistry<State, Action>,
 }
 
-mod app_trait_impl {
+mod app_with_layout_impl_trait_app {
     use super::*;
 
     #[async_trait]
     impl App<State, Action> for AppWithLayout {
-        fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
-            &mut self.component_registry
-        }
+        async fn app_render(
+            &mut self,
+            args: GlobalScopeArgs<'_, State, Action>,
+        ) -> CommonResult<RenderPipeline> {
+            throws_with_return!({
+                let GlobalScopeArgs {
+                    state,
+                    shared_store,
+                    shared_global_data,
+                    window_size,
+                } = args;
 
-        fn init(&mut self) { self.init_component_registry(); }
+                // Create a surface and then run the SurfaceRenderer (ContainerSurfaceRender) on it.
+                let mut surface = {
+                    let mut it = surface!(stylesheet: stylesheet::create_stylesheet()?);
+
+                    it.surface_start(SurfaceProps {
+                        pos: position!(col_index: 0, row_index: 0),
+                        size: size!(
+                            col_count: window_size.col_count,
+                            row_count: window_size.row_count - 1), // Bottom row for for status bar.
+                    })?;
+
+                    perform_layout::ContainerSurfaceRenderer(self)
+                        .render_in_surface(
+                            GlobalScopeArgs {
+                                shared_global_data,
+                                shared_store,
+                                state,
+                                window_size,
+                            },
+                            &mut it,
+                        )
+                        .await?;
+
+                    it.surface_end()?;
+
+                    it
+                };
+
+                // Render status bar.
+                status_bar::render(&mut surface.render_pipeline, window_size);
+
+                // Return RenderOps pipeline (which will actually be painted elsewhere).
+                surface.render_pipeline
+            });
+        }
 
         async fn app_handle_event(
             &mut self,
@@ -81,57 +123,15 @@ mod app_trait_impl {
             .await
         }
 
-        async fn app_render(
-            &mut self,
-            args: GlobalScopeArgs<'_, State, Action>,
-        ) -> CommonResult<RenderPipeline> {
-            throws_with_return!({
-                let GlobalScopeArgs {
-                    state,
-                    shared_store,
-                    shared_global_data,
-                    window_size,
-                } = args;
+        fn init(&mut self) { self.init_component_registry(); }
 
-                // Create a surface and then run the SurfaceRenderer (ContainerSurfaceRender) on it.
-                let mut surface = {
-                    let mut it = surface!(stylesheet: style_helpers::create_stylesheet()?);
-
-                    it.surface_start(SurfaceProps {
-                        pos: position!(col_index: 0, row_index: 0),
-                        size: size!(
-                            col_count: window_size.col_count,
-                            row_count: window_size.row_count - 1), // Bottom row for for status bar.
-                    })?;
-
-                    layout_container::ContainerSurfaceRenderer(self)
-                        .render_in_surface(
-                            GlobalScopeArgs {
-                                shared_global_data,
-                                shared_store,
-                                state,
-                                window_size,
-                            },
-                            &mut it,
-                        )
-                        .await?;
-
-                    it.surface_end()?;
-
-                    it
-                };
-
-                // Render status bar.
-                status_bar_helpers::render(&mut surface.render_pipeline, window_size);
-
-                // Return RenderOps pipeline (which will actually be painted elsewhere).
-                surface.render_pipeline
-            });
+        fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
+            &mut self.component_registry
         }
     }
 }
 
-mod layout_container {
+mod perform_layout {
     use super::*;
 
     pub struct ContainerSurfaceRenderer<'a>(pub &'a mut AppWithLayout);
@@ -209,7 +209,6 @@ mod layout_container {
     }
 }
 
-// Handle focus.
 mod handle_focus {
     use super::*;
 
@@ -269,8 +268,7 @@ mod handle_focus {
     }
 }
 
-// Handle component registry.
-mod component_registry {
+mod populate_component_registry {
     use super::*;
 
     impl AppWithLayout {
@@ -299,7 +297,7 @@ mod component_registry {
     }
 }
 
-mod debug_helpers {
+mod pretty_print {
     use super::*;
 
     impl Debug for AppWithLayout {
@@ -311,7 +309,7 @@ mod debug_helpers {
     }
 }
 
-mod style_helpers {
+mod stylesheet {
     use super::*;
 
     pub fn create_stylesheet() -> CommonResult<Stylesheet> {
@@ -336,7 +334,7 @@ mod style_helpers {
     }
 }
 
-mod status_bar_helpers {
+mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.

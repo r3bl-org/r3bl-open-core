@@ -197,20 +197,20 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
             match pixel_char {
                 PixelChar::Void => continue,
                 PixelChar::Spacer => it.push(
-                    RenderOp::CompositorNoClipTruncPrintTextWithAttributes(SPACER.into(), None),
+                    RenderOp::CompositorNoClipTruncPaintTextWithAttributes(SPACER.into(), None),
                 ),
                 PixelChar::PlainText {
                     content,
                     maybe_style,
                 } => {
                     it.push(RenderOp::ApplyColors(maybe_style.clone()));
-                    it.push(RenderOp::CompositorNoClipTruncPrintTextWithAttributes(
+                    it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                         content.string.clone(),
                         maybe_style.clone(),
                     ))
                 }
                 PixelChar::AnsiText { content } => it.push(
-                    RenderOp::CompositorNoClipTruncPrintTextWithAttributes(content.clone(), None),
+                    RenderOp::CompositorNoClipTruncPaintTextWithAttributes(content.clone(), None),
                 ),
             }
         }
@@ -309,7 +309,7 @@ mod render_helpers {
         // Deal w/ style attribs & actually paint the `temp_line_buffer`.
         context
             .render_ops
-            .push(RenderOp::CompositorNoClipTruncPrintTextWithAttributes(
+            .push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                 context.buffer_plain_text.to_string(),
                 context.prev_style.clone(),
             ));
@@ -335,7 +335,7 @@ mod render_helpers {
         // Deal w/ style attribs & actually paint the `temp_line_buffer`.
         context
             .render_ops
-            .push(RenderOp::CompositorNoClipTruncPrintTextWithAttributes(
+            .push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                 context.buffer_ansi_text.to_string(),
                 None,
             ));
@@ -439,7 +439,7 @@ mod tests {
         );
         assert_eq2!(
             render_ops[4],
-            RenderOp::CompositorNoClipTruncPrintTextWithAttributes(
+            RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                 "hello1234".to_string(),
                 Some(
                     style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
@@ -453,7 +453,7 @@ mod tests {
         );
         assert_eq2!(
             render_ops[7],
-            RenderOp::CompositorNoClipTruncPrintTextWithAttributes(SPACER.to_string(), None)
+            RenderOp::CompositorNoClipTruncPaintTextWithAttributes(SPACER.to_string(), None)
         );
         assert_eq2!(
             render_ops[8],
@@ -461,7 +461,7 @@ mod tests {
         );
         assert_eq2!(
             render_ops[9],
-            RenderOp::CompositorNoClipTruncPrintTextWithAttributes(
+            RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                 SPACER.to_string().repeat(10),
                 None
             )
@@ -584,7 +584,7 @@ mod tests {
             );
             assert_eq2!(
                 render_ops[4],
-                RenderOp::CompositorNoClipTruncPrintTextWithAttributes(
+                RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                     "hello1234".to_string(),
                     Some(
                         style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
@@ -598,7 +598,7 @@ mod tests {
             );
             assert_eq2!(
                 render_ops[7],
-                RenderOp::CompositorNoClipTruncPrintTextWithAttributes(" ".to_string(), None)
+                RenderOp::CompositorNoClipTruncPaintTextWithAttributes(" ".to_string(), None)
             );
         }
 
@@ -610,7 +610,7 @@ mod tests {
             );
             assert_eq2!(
                 render_ops[9],
-                RenderOp::CompositorNoClipTruncPrintTextWithAttributes("  ".to_string(), None)
+                RenderOp::CompositorNoClipTruncPaintTextWithAttributes("  ".to_string(), None)
             );
             assert_eq2!(
                 render_ops[10],
@@ -619,7 +619,7 @@ mod tests {
             let ansi_text = "\u{1b}[38;2;132;235;15mw\u{1b}[39m\u{1b}[38;2;136;233;14mo\u{1b}[39m\u{1b}[38;2;140;231;12mr\u{1b}[39m\u{1b}[38;2;144;228;10ml\u{1b}[39m\u{1b}[38;2;149;225;9md";
             assert_eq2!(
                 render_ops[11],
-                RenderOp::CompositorNoClipTruncPrintTextWithAttributes(ansi_text.into(), None)
+                RenderOp::CompositorNoClipTruncPaintTextWithAttributes(ansi_text.into(), None)
             );
             assert_eq2!(
                 render_ops[12],
@@ -627,7 +627,7 @@ mod tests {
             );
             assert_eq2!(
                 render_ops[13],
-                RenderOp::CompositorNoClipTruncPrintTextWithAttributes("   ".to_string(), None)
+                RenderOp::CompositorNoClipTruncPaintTextWithAttributes("   ".to_string(), None)
             );
         }
     }

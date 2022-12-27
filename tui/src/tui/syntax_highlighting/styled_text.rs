@@ -21,9 +21,6 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-// ┏━━━━━━━━━━━━┓
-// ┃ StyledText ┃
-// ┛            ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Use [styled_text!] macro for easier construction.
 #[derive(Debug, Clone, Default)]
 pub struct StyledText {
@@ -31,23 +28,27 @@ pub struct StyledText {
     style: Style,
 }
 
-impl StyledText {
-    /// Just as a precaution, the `text` argument is passed through
-    /// [try_strip_ansi](ANSIText::try_strip_ansi) method to remove any ANSI escape sequences.
-    pub fn new(text: String, style: Style) -> Self {
-        let plain_text = match ANSIText::try_strip_ansi(&text) {
-            Some(plain_text) => plain_text,
-            None => text,
-        };
-        StyledText {
-            plain_text: UnicodeString::from(plain_text),
-            style,
+mod styled_text_impl {
+    use super::*;
+
+    impl StyledText {
+        /// Just as a precaution, the `text` argument is passed through
+        /// [try_strip_ansi](ANSIText::try_strip_ansi) method to remove any ANSI escape sequences.
+        pub fn new(text: String, style: Style) -> Self {
+            let plain_text = match ANSIText::try_strip_ansi(&text) {
+                Some(plain_text) => plain_text,
+                None => text,
+            };
+            StyledText {
+                plain_text: UnicodeString::from(plain_text),
+                style,
+            }
         }
+
+        pub fn get_plain_text(&self) -> &UnicodeString { &self.plain_text }
+
+        pub fn get_style(&self) -> &Style { &self.style }
     }
-
-    pub fn get_plain_text(&self) -> &UnicodeString { &self.plain_text }
-
-    pub fn get_style(&self) -> &Style { &self.style }
 }
 
 /// Macro to make building [StyledText] easy.
@@ -72,9 +73,7 @@ macro_rules! styled_text {
     };
 }
 
-// ┏━━━━━━━━━━━━━┓
-// ┃ StyledTexts ┃
-// ┛             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/// Use [styled_texts!] macro for easier construction.
 #[derive(Default, Debug, Clone)]
 pub struct StyledTexts {
     styled_texts: List<StyledText>,
@@ -133,7 +132,7 @@ mod impl_styled_texts {
                 let style = styled_text.style.clone();
                 let text = styled_text.plain_text.clone();
                 render_ops.push(RenderOp::ApplyColors(style.clone().into()));
-                render_ops.push(RenderOp::PrintTextWithAttributes(text.string, style.into()));
+                render_ops.push(RenderOp::PaintTextWithAttributes(text.string, style.into()));
                 render_ops.push(RenderOp::ResetColor);
             }
         }

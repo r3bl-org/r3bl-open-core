@@ -19,12 +19,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-// ┏━━━━━━━━━━━━━┓
-// ┃ DialogEvent ┃
-// ┛             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// By providing a conversion from [InputEvent] to [DialogEvent] it becomes easier to write event
 /// handlers that consume [InputEvent] and then process events in [DialogComponent] and
-/// [DialogEngineApi].
+/// [DialogEngine].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DialogEvent {
     ActivateModal,
@@ -33,44 +30,48 @@ pub enum DialogEvent {
     None,
 }
 
-impl DialogEvent {
-    /// The `modal_keypress` is used to determine whether the [InputEvent] should be converted to
-    /// [DialogEvent::ActivateModal].
-    pub fn should_activate_modal(input_event: &InputEvent, modal_keypress: KeyPress) -> Self {
-        if let InputEvent::Keyboard(keypress) = input_event {
-            if keypress == &modal_keypress {
-                return Self::ActivateModal;
-            }
-        }
-        Self::None
-    }
+mod dialog_event_impl {
+    use super::*;
 
-    /// Tries to convert the given [InputEvent] into a [DialogEvent].
-    /// - Enter and Esc are also matched against to return [DialogEvent::EnterPressed] and
-    ///   [DialogEvent::EscPressed]
-    /// - Otherwise, [Err] is returned.
-    pub fn from(input_event: &InputEvent) -> Self {
-        if let InputEvent::Keyboard(keypress) = input_event {
-            match keypress {
-                // Compare to `Enter`.
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Enter),
-                } => {
-                    return Self::EnterPressed;
+    impl DialogEvent {
+        /// The `modal_keypress` is used to determine whether the [InputEvent] should be converted to
+        /// [DialogEvent::ActivateModal].
+        pub fn should_activate_modal(input_event: &InputEvent, modal_keypress: KeyPress) -> Self {
+            if let InputEvent::Keyboard(keypress) = input_event {
+                if keypress == &modal_keypress {
+                    return Self::ActivateModal;
                 }
-
-                // Compare to `Esc`.
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Esc),
-                } => {
-                    return Self::EscPressed;
-                }
-
-                _ => {}
             }
+            Self::None
         }
 
-        Self::None
+        /// Tries to convert the given [InputEvent] into a [DialogEvent].
+        /// - Enter and Esc are also matched against to return [DialogEvent::EnterPressed] and
+        ///   [DialogEvent::EscPressed]
+        /// - Otherwise, [Err] is returned.
+        pub fn from(input_event: &InputEvent) -> Self {
+            if let InputEvent::Keyboard(keypress) = input_event {
+                match keypress {
+                    // Compare to `Enter`.
+                    KeyPress::Plain {
+                        key: Key::SpecialKey(SpecialKey::Enter),
+                    } => {
+                        return Self::EnterPressed;
+                    }
+
+                    // Compare to `Esc`.
+                    KeyPress::Plain {
+                        key: Key::SpecialKey(SpecialKey::Esc),
+                    } => {
+                        return Self::EscPressed;
+                    }
+
+                    _ => {}
+                }
+            }
+
+            Self::None
+        }
     }
 }
 
