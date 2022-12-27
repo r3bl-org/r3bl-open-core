@@ -17,9 +17,6 @@
 
 use crate::*;
 
-// ┏━━━━━━━━━━━━┓
-// ┃ Stylesheet ┃
-// ┛            ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Default, Debug, Clone)]
 pub struct Stylesheet {
     pub styles: Vec<Style>,
@@ -117,9 +114,6 @@ impl Stylesheet {
     }
 }
 
-// ┏━━━━━━━━━━━━━┓
-// ┃ stylesheet! ┃
-// ┛             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Macro to make building [Stylesheet] easy. This returns a [CommonResult] because it checks to see
 /// that all [Style]s that are added have an `id`. If they don't, then an a [CommonError] is thrown.
 /// This is to ensure that valid styles are added to a stylesheet. Without an `id`, they can't be

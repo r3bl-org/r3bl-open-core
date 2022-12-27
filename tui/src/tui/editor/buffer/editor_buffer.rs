@@ -23,9 +23,6 @@ use serde::*;
 
 use crate::*;
 
-// ┏━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ EditorBuffer struct ┃
-// ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Stores the data for a single editor buffer. Please do not construct this struct directly and use
 /// [new_empty](EditorBuffer::new_empty) instead.
 ///
@@ -52,7 +49,7 @@ use crate::*;
 /// associated functions. To mutate them, you have to use the [get_mut](EditorBuffer::get_mut)
 /// method, which returns a tuple w/ mutable references to the fields. This rather strange design
 /// allows for all mutations to be tracked easily and allows for validation operations to be applied
-/// post mutation (by [validate::apply_change]).
+/// post mutation (by [validate_editor_buffer_change::apply_change]).
 ///
 /// # Different kinds of caret positions
 ///

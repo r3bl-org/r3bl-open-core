@@ -21,11 +21,8 @@ use r3bl_rs_utils_core::*;
 use super::*;
 use crate::*;
 
-// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ Paint the render pipeline ┃
-// ┛                           ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// The render pipeline contains a list of [RenderOps] for each [ZOrder]. This function is
-/// responsible for:
+/// Paint the render pipeline. The render pipeline contains a list of [RenderOps] for each [ZOrder].
+/// This function is responsible for:
 /// 1. Actually executing those [RenderOps] in the correct order.
 /// 2. And routing the execution to the correct backend specified in [TERMINAL_LIB_BACKEND].
 ///
@@ -149,16 +146,18 @@ pub async fn sanitize_and_save_abs_position(
     }
 }
 
-// ┏━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ PaintRenderOp trait ┃
-// ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#[async_trait]
-pub trait PaintRenderOp {
-    async fn paint(
-        &mut self,
-        skip_flush: &mut bool,
-        render_op: &RenderOp,
-        shared_global_data: &SharedGlobalData,
-        local_data: &mut RenderOpsLocalData,
-    );
+pub mod exports {
+    use super::*;
+
+    #[async_trait]
+    pub trait PaintRenderOp {
+        async fn paint(
+            &mut self,
+            skip_flush: &mut bool,
+            render_op: &RenderOp,
+            shared_global_data: &SharedGlobalData,
+            local_data: &mut RenderOpsLocalData,
+        );
+    }
 }
+pub use exports::*;

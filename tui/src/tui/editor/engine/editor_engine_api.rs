@@ -24,13 +24,7 @@ use syntect::easy::HighlightLines;
 use super::*;
 use crate::*;
 
-// ┏━━━━━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ EditorEngine render API ┃
-// ┛                         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// Things you can do with editor engine.
-pub struct EditorEngineRenderApi;
-
-impl EditorEngineRenderApi {
+impl EditorEngine {
     /// Event based interface for the editor. This converts the [InputEvent] into an [EditorEvent]
     /// and then executes it. Returns a new [EditorBuffer] if the operation was applied otherwise
     /// returns [None].
@@ -93,11 +87,11 @@ impl EditorEngineRenderApi {
             };
 
             if editor_buffer.is_empty() {
-                EditorEngineRenderApi::render_empty_state(&render_args)
+                EditorEngine::render_empty_state(&render_args)
             } else {
                 let mut render_ops = render_ops!();
-                EditorEngineRenderApi::render_content(&render_args, &mut render_ops);
-                EditorEngineRenderApi::render_caret(&render_args, &mut render_ops);
+                EditorEngine::render_content(&render_args, &mut render_ops);
+                EditorEngine::render_caret(&render_args, &mut render_ops);
                 let mut render_pipeline = render_pipeline!();
                 render_pipeline.push(ZOrder::Normal, render_ops);
                 render_pipeline
@@ -167,7 +161,7 @@ impl EditorEngineRenderApi {
                     if let Ok(vec_styled_str) =
                         my_highlight_lines.highlight_line(&line.string, &editor_engine.syntax_set)
                     {
-                        EditorEngineRenderApi::render_line_with_syntax_highlight(
+                        EditorEngine::render_line_with_syntax_highlight(
                             vec_styled_str,
                             editor_buffer,
                             max_display_col_count,
@@ -175,7 +169,7 @@ impl EditorEngineRenderApi {
                             editor_engine,
                         );
                     } else {
-                        EditorEngineRenderApi::render_line_no_syntax_highlight(
+                        EditorEngine::render_line_no_syntax_highlight(
                             line,
                             editor_buffer,
                             max_display_col_count,
@@ -185,7 +179,7 @@ impl EditorEngineRenderApi {
                     }
                 }
                 _ => {
-                    EditorEngineRenderApi::render_line_no_syntax_highlight(
+                    EditorEngine::render_line_no_syntax_highlight(
                         line,
                         editor_buffer,
                         max_display_col_count,
@@ -232,7 +226,7 @@ impl EditorEngineRenderApi {
             editor_engine.current_box.get_computed_style(),
         ));
 
-        render_ops.push(RenderOp::PrintTextWithAttributes(
+        render_ops.push(RenderOp::PaintTextWithAttributes(
             truncated_line,
             editor_engine.current_box.get_computed_style(),
         ));
@@ -269,7 +263,7 @@ impl EditorEngineRenderApi {
                 editor_engine.current_box.style_adjusted_origin_pos,
                 editor_buffer.get_caret(CaretKind::Raw),
             ));
-            render_ops.push(RenderOp::PrintTextWithAttributes(
+            render_ops.push(RenderOp::PaintTextWithAttributes(
                 str_at_caret,
                 style! { attrib: [reverse] }.into(),
             ));
@@ -304,7 +298,7 @@ impl EditorEngineRenderApi {
             RenderOp::ApplyColors(style! {
               color_fg: TuiColor::Red
             }.into()),
-            RenderOp::PrintTextWithAttributes("No content added".into(), None),
+            RenderOp::PaintTextWithAttributes("No content added".into(), None),
             RenderOp::ResetColor
         };
 
@@ -321,7 +315,7 @@ impl EditorEngineRenderApi {
                   editor_engine.current_box.style_adjusted_origin_pos,
                   content_cursor_pos.add_row_with_bounds(
                     ch!(1), editor_engine.current_box.style_adjusted_bounds_size.row_count)),
-                RenderOp::PrintTextWithAttributes("👀".into(), None),
+                RenderOp::PaintTextWithAttributes("👀".into(), None),
                 RenderOp::ResetColor
             };
         }
@@ -330,15 +324,10 @@ impl EditorEngineRenderApi {
     }
 }
 
-mod misc {
-    use super::*;
-
-    pub enum EditorEngineApplyResponse<T>
-    where
-        T: Debug,
-    {
-        Applied(T),
-        NotApplied,
-    }
+pub enum EditorEngineApplyResponse<T>
+where
+    T: Debug,
+{
+    Applied(T),
+    NotApplied,
 }
-pub use misc::*;

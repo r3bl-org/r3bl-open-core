@@ -25,171 +25,174 @@ use strum_macros::AsRefStr;
 
 use crate::*;
 
-// ┏━━━━━━┓
-// ┃ Args ┃
-// ┛      ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+pub mod args {
+    use super::*;
 
-pub struct RenderArgs<'a, S, A>
-where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
-{
-    pub editor_engine: &'a mut EditorEngine,
-    pub editor_buffer: &'a EditorBuffer,
-    pub component_registry: &'a ComponentRegistry<S, A>,
+    pub struct RenderArgs<'a, S, A>
+    where
+        S: Default + Clone + PartialEq + Debug + Sync + Send,
+        A: Default + Clone + Sync + Send,
+    {
+        pub editor_engine: &'a mut EditorEngine,
+        pub editor_buffer: &'a EditorBuffer,
+        pub component_registry: &'a ComponentRegistry<S, A>,
+    }
+
+    pub struct EditorArgsMut<'a> {
+        pub editor_engine: &'a mut EditorEngine,
+        pub editor_buffer: &'a mut EditorBuffer,
+    }
+
+    pub struct EditorArgs<'a> {
+        pub editor_engine: &'a EditorEngine,
+        pub editor_buffer: &'a EditorBuffer,
+    }
+
+    /// Global scope args struct that holds references.
+    ///
+    /// ![Editor component lifecycle
+    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+    pub struct GlobalScopeArgs<'a, S, A>
+    where
+        S: Default + Clone + PartialEq + Debug + Sync + Send,
+        A: Default + Clone + Sync + Send,
+    {
+        pub shared_global_data: &'a SharedGlobalData,
+        pub shared_store: &'a SharedStore<S, A>,
+        pub state: &'a S,
+        pub window_size: &'a Size,
+    }
+
+    /// Component scope args struct that holds references.
+    ///
+    /// ![Editor component lifecycle
+    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+    pub struct ComponentScopeArgs<'a, S, A>
+    where
+        S: Default + Clone + PartialEq + Debug + Sync + Send,
+        A: Default + Clone + Sync + Send,
+    {
+        pub shared_global_data: &'a SharedGlobalData,
+        pub shared_store: &'a SharedStore<S, A>,
+        pub state: &'a S,
+        pub component_registry: &'a mut ComponentRegistry<S, A>,
+        pub window_size: &'a Size,
+    }
+
+    /// [EditorEngine] args struct that holds references.
+    ///
+    /// ![Editor component lifecycle
+    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+    pub struct EditorEngineArgs<'a, S, A>
+    where
+        S: Default + Clone + PartialEq + Debug + Sync + Send,
+        A: Default + Clone + Sync + Send,
+    {
+        pub shared_global_data: &'a SharedGlobalData,
+        pub shared_store: &'a SharedStore<S, A>,
+        pub state: &'a S,
+        pub component_registry: &'a mut ComponentRegistry<S, A>,
+        pub self_id: FlexBoxId,
+        pub editor_buffer: &'a EditorBuffer,
+        pub editor_engine: &'a mut EditorEngine,
+    }
+
+    /// [DialogEngine] args struct that holds references.
+    ///
+    /// ![Editor component lifecycle
+    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+    pub struct DialogEngineArgs<'a, S, A>
+    where
+        S: Default + Clone + PartialEq + Debug + Sync + Send,
+        A: Default + Clone + Sync + Send,
+    {
+        pub shared_global_data: &'a SharedGlobalData,
+        pub shared_store: &'a SharedStore<S, A>,
+        pub state: &'a S,
+        pub component_registry: &'a mut ComponentRegistry<S, A>,
+        pub self_id: FlexBoxId,
+        pub dialog_buffer: &'a DialogBuffer,
+        pub dialog_engine: &'a mut DialogEngine,
+        pub window_size: &'a Size,
+    }
 }
+pub use args::*;
 
-pub struct EditorArgsMut<'a> {
-    pub editor_engine: &'a mut EditorEngine,
-    pub editor_buffer: &'a mut EditorBuffer,
+pub mod aliases {
+    use super::*;
+
+    pub type ScrollOffset = Position;
 }
+pub use aliases::*;
 
-pub struct EditorArgs<'a> {
-    pub editor_engine: &'a EditorEngine,
-    pub editor_buffer: &'a EditorBuffer,
+pub mod pretty_print_option {
+    use super::*;
+
+    #[macro_export]
+    macro_rules! format_option {
+        ($opt:expr) => {
+            match ($opt) {
+                Some(v) => v,
+                None => &FormatMsg::None,
+            }
+        };
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    pub enum FormatMsg {
+        None,
+    }
 }
+pub use pretty_print_option::*;
 
-/// Global scope args struct that holds references.
-///
-/// ![Editor component lifecycle
-/// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
-pub struct GlobalScopeArgs<'a, S, A>
-where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
-{
-    pub shared_global_data: &'a SharedGlobalData,
-    pub shared_store: &'a SharedStore<S, A>,
-    pub state: &'a S,
-    pub window_size: &'a Size,
+pub mod global_constants {
+    use super::*;
+
+    #[repr(u8)]
+    #[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+    pub enum MinSize {
+        Col = 65,
+        Row = 10,
+    }
+    #[derive(Debug, Eq, PartialEq, AsRefStr)]
+    pub enum BorderGlyphCharacter {
+        #[strum(to_string = "╮")]
+        TopRight,
+        #[strum(to_string = "╭")]
+        TopLeft,
+        #[strum(to_string = "╯")]
+        BottomRight,
+        #[strum(to_string = "╰")]
+        BottomLeft,
+        #[strum(to_string = "─")]
+        Horizontal,
+        #[strum(to_string = "│")]
+        Vertical,
+    }
+
+    pub const SPACER: &str = " ";
+    pub const DEFAULT_CURSOR_CHAR: char = '▒';
+    pub const DEFAULT_SYN_HI_FILE_EXT: &str = "md";
+    pub const GLOBAL_DATA_CACHE_SIZE: usize = 1000;
 }
+pub use global_constants::*;
 
-/// Component scope args struct that holds references.
-///
-/// ![Editor component lifecycle
-/// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
-pub struct ComponentScopeArgs<'a, S, A>
-where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
-{
-    pub shared_global_data: &'a SharedGlobalData,
-    pub shared_store: &'a SharedStore<S, A>,
-    pub state: &'a S,
-    pub component_registry: &'a mut ComponentRegistry<S, A>,
-    pub window_size: &'a Size,
+pub mod list_of {
+    use super::*;
+    /// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for [List] of `T`.
+    /// Where `T` is any number of types in the tui crate.
+    #[derive(Debug, Clone, Default)]
+    pub struct List<T> {
+        pub items: Vec<T>,
+    }
+
+    impl<T> Deref for List<T> {
+        type Target = Vec<T>;
+        fn deref(&self) -> &Self::Target { &self.items }
+    }
+
+    impl<T> DerefMut for List<T> {
+        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.items }
+    }
 }
-
-/// [EditorEngine] args struct that holds references.
-///
-/// ![Editor component lifecycle
-/// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
-pub struct EditorEngineArgs<'a, S, A>
-where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
-{
-    pub shared_global_data: &'a SharedGlobalData,
-    pub shared_store: &'a SharedStore<S, A>,
-    pub state: &'a S,
-    pub component_registry: &'a mut ComponentRegistry<S, A>,
-    pub self_id: FlexBoxId,
-    pub editor_buffer: &'a EditorBuffer,
-    pub editor_engine: &'a mut EditorEngine,
-}
-
-/// [DialogEngine] args struct that holds references.
-///
-/// ![Editor component lifecycle
-/// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
-pub struct DialogEngineArgs<'a, S, A>
-where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
-{
-    pub shared_global_data: &'a SharedGlobalData,
-    pub shared_store: &'a SharedStore<S, A>,
-    pub state: &'a S,
-    pub component_registry: &'a mut ComponentRegistry<S, A>,
-    pub self_id: FlexBoxId,
-    pub dialog_buffer: &'a DialogBuffer,
-    pub dialog_engine: &'a mut DialogEngine,
-    pub window_size: &'a Size,
-}
-
-// ┏━━━━━━━━━┓
-// ┃ Aliases ┃
-// ┛         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-pub type ScrollOffset = Position;
-
-// ┏━━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ Debug format helpers ┃
-// ┛                      ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-#[macro_export]
-macro_rules! format_option {
-    ($opt:expr) => {
-        match ($opt) {
-            Some(v) => v,
-            None => &FormatMsg::None,
-        }
-    };
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum FormatMsg {
-    None,
-}
-
-// ┏━━━━━━━━━━━┓
-// ┃ Constants ┃
-// ┛           ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
-pub enum MinSize {
-    Col = 65,
-    Row = 10,
-}
-
-#[derive(Debug, Eq, PartialEq, AsRefStr)]
-pub enum BorderGlyphCharacter {
-    #[strum(to_string = "╮")]
-    TopRight,
-    #[strum(to_string = "╭")]
-    TopLeft,
-    #[strum(to_string = "╯")]
-    BottomRight,
-    #[strum(to_string = "╰")]
-    BottomLeft,
-    #[strum(to_string = "─")]
-    Horizontal,
-    #[strum(to_string = "│")]
-    Vertical,
-}
-
-pub const SPACER: &str = " ";
-pub const DEFAULT_CURSOR_CHAR: char = '▒';
-pub const DEFAULT_SYN_HI_FILE_EXT: &str = "md";
-pub const GLOBAL_DATA_CACHE_SIZE: usize = 1000;
-
-// ┏━━━━━━━━━┓
-// ┃ General ┃
-// ┛         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-/// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for [List] of `T`.
-/// Where `T` is any number of types in the tui crate.
-#[derive(Debug, Clone, Default)]
-pub struct List<T> {
-    pub items: Vec<T>,
-}
-
-impl<T> Deref for List<T> {
-    type Target = Vec<T>;
-    fn deref(&self) -> &Self::Target { &self.items }
-}
-
-impl<T> DerefMut for List<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.items }
-}
+pub use list_of::*;

@@ -25,9 +25,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-// ┏━━━━━━━┓
-// ┃ Style ┃
-// ┛       ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Use [crate::style] proc macro to generate code for this struct. Here's an example.
 ///
 /// ```ignore
@@ -79,9 +76,6 @@ pub struct Style {
     pub lolcat: bool,
 }
 
-// ┏━━━━━━━━━━┓
-// ┃ Addition ┃
-// ┛          ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 mod addition {
     use super::*;
 
@@ -157,10 +151,7 @@ mod addition {
     }
 }
 
-// ┏━━━━━━━━━━━━━━━┓
-// ┃ Style helpers ┃
-// ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-mod helpers {
+mod style_helpers {
     use super::*;
 
     impl Display for Style {
@@ -262,9 +253,7 @@ mod helpers {
     }
 }
 
-// ┏━━━━━━━━━━━━━━━━┓
-// ┃ Style bitflags ┃
-// ┛                ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Style bitflags
 bitflags! {
   /// Bitflags for [Style].
   /// https://docs.rs/bitflags/0.8.2/bitflags/macro.bitflags.html
@@ -284,70 +273,68 @@ bitflags! {
   }
 }
 
-// ┏━━━━━━━━━━━━┓
-// ┃ Style impl ┃
-// ┛            ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-impl Style {
-    pub fn remove_bg_color(&mut self) {
-        self.color_bg = None;
-        self.reset_bitflags();
-        self.get_bitflags();
-    }
+mod style_impl {
+    use super::*;
 
-    /// The `StyleFlag` is lazily computed and cached after the first time it is evaluated. A `Style`
-    /// can be built simply or by using the [crate::style] proc macro and the expectation is that once
-    /// built, the style won't be modified.
-    pub fn get_bitflags(&mut self) -> StyleFlag {
-        unwrap_option_or_compute_if_none! {
-          self.cached_bitflags,
-          || self.compute_bitflags()
-        }
-    }
-
-    pub fn reset_bitflags(&mut self) { self.cached_bitflags = None; }
-
-    fn compute_bitflags(&self) -> StyleFlag {
-        let mut it = StyleFlag::empty();
-
-        if self.color_fg.is_some() {
-            it.insert(StyleFlag::COLOR_FG_SET);
-        }
-        if self.color_bg.is_some() {
-            it.insert(StyleFlag::COLOR_BG_SET);
-        }
-        if self.bold {
-            it.insert(StyleFlag::BOLD_SET);
-        }
-        if self.dim {
-            it.insert(StyleFlag::DIM_SET);
-        }
-        if self.underline {
-            it.insert(StyleFlag::UNDERLINE_SET);
-        }
-        if self.padding.is_some() {
-            it.insert(StyleFlag::PADDING_SET);
-        }
-        if self.computed {
-            it.insert(StyleFlag::COMPUTED_SET);
-        }
-        if self.reverse {
-            it.insert(StyleFlag::REVERSE_SET);
-        }
-        if self.hidden {
-            it.insert(StyleFlag::HIDDEN_SET);
-        }
-        if self.strikethrough {
-            it.insert(StyleFlag::STRIKETHROUGH_SET);
+    impl Style {
+        pub fn remove_bg_color(&mut self) {
+            self.color_bg = None;
+            self.reset_bitflags();
+            self.get_bitflags();
         }
 
-        it
+        /// The `StyleFlag` is lazily computed and cached after the first time it is evaluated. A `Style`
+        /// can be built simply or by using the [crate::style] proc macro and the expectation is that once
+        /// built, the style won't be modified.
+        pub fn get_bitflags(&mut self) -> StyleFlag {
+            unwrap_option_or_compute_if_none! {
+              self.cached_bitflags,
+              || self.compute_bitflags()
+            }
+        }
+
+        pub fn reset_bitflags(&mut self) { self.cached_bitflags = None; }
+
+        fn compute_bitflags(&self) -> StyleFlag {
+            let mut it = StyleFlag::empty();
+
+            if self.color_fg.is_some() {
+                it.insert(StyleFlag::COLOR_FG_SET);
+            }
+            if self.color_bg.is_some() {
+                it.insert(StyleFlag::COLOR_BG_SET);
+            }
+            if self.bold {
+                it.insert(StyleFlag::BOLD_SET);
+            }
+            if self.dim {
+                it.insert(StyleFlag::DIM_SET);
+            }
+            if self.underline {
+                it.insert(StyleFlag::UNDERLINE_SET);
+            }
+            if self.padding.is_some() {
+                it.insert(StyleFlag::PADDING_SET);
+            }
+            if self.computed {
+                it.insert(StyleFlag::COMPUTED_SET);
+            }
+            if self.reverse {
+                it.insert(StyleFlag::REVERSE_SET);
+            }
+            if self.hidden {
+                it.insert(StyleFlag::HIDDEN_SET);
+            }
+            if self.strikethrough {
+                it.insert(StyleFlag::STRIKETHROUGH_SET);
+            }
+
+            it
+        }
     }
 }
 
-// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ syntect::highlighting::Style -> Style ┃
-// ┛                                       ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-mod conversion {
+mod convert_syntect_highlighting_style {
     use super::*;
 
     type SyntectStyle = syntect::highlighting::Style;

@@ -24,10 +24,8 @@ use serde::{Deserialize, Serialize};
 use super::TERMINAL_LIB_BACKEND;
 use crate::*;
 
-// ┏━━━━━━━━━━━━━┓
-// ┃ render_ops! ┃
-// ┛             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Here's an example. Refer to [RenderOps] for more details.
+///
 /// ```rust
 /// use r3bl_tui::*;
 ///
@@ -91,9 +89,8 @@ macro_rules! render_ops {
   };
 }
 
-// ┏━━━━━━━━━━━┓
-// ┃ RenderOps ┃
-// ┛           ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/// For ease of use, please use the [render_ops!] macro.
+///
 /// It is a collection of *atomic* paint operations (aka [`RenderOps`] at various [`ZOrder`]s); each
 /// [`RenderOps`] is made up of a [vec] of [`RenderOp`]. It contains `Map<ZOrder, Vec<RenderOps>>`,
 /// eg:
@@ -103,7 +100,7 @@ macro_rules! render_ops {
 ///   [`RenderOp::PrintTextWithAttributes(..)`]]
 /// - etc.
 ///
-/// # What is an atomic paint operation?
+/// ## What is an atomic paint operation?
 /// 1. It moves the cursor using:
 ///     1. [`RenderOp::MoveCursorPositionAbs`]
 ///     2. [`RenderOp::MoveCursorPositionRelTo`]
@@ -124,12 +121,10 @@ macro_rules! render_ops {
 /// let iter = render_ops.iter();
 /// ```
 ///
-/// # Paint optimization
-/// In order to ensure that things on the terminal screen aren't being needlessly drawn (when they
-/// have already been drawn before and are on screen), it is important that a component that
-/// generates these [RenderOps] takes care of managing its own whitespace. It is best to "fill" a
-/// component's drawing area w/ spaces before drawing anything else. This way there won't be any
-/// "ghosts" from repaints past.
+/// ## Paint optimization
+/// Due to the compositor [OffscreenBuffer], there is no need to optimize the individual paint
+/// operations. You don't have to manage your own whitespace or doing clear before paint! 🎉 The
+/// compositor takes care of that for you!
 #[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct RenderOps {
     pub list: Vec<RenderOp>,
@@ -208,9 +203,6 @@ pub mod render_ops_impl {
     }
 }
 
-// ┏━━━━━━━━━━┓
-// ┃ RenderOp ┃
-// ┛          ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum RenderOp {
     EnterRawMode,
@@ -251,21 +243,62 @@ pub enum RenderOp {
     ///
     /// 2. If the [String] argument contains ANSI sequences then it will be printed as-is. You are
     ///    responsible for handling clipping of the text to the bounds of the terminal screen.
-    PrintTextWithAttributes(String, Option<Style>),
+    PaintTextWithAttributes(String, Option<Style>),
 
     /// This is **not** meant for use directly by apps. It is to be used only by the
     /// [OffscreenBuffer]. This operation skips the checks for content width padding & clipping, and
     /// window bounds clipping. These are not needed when the compositor is painting an offscreen
     /// buffer, since when the offscreen buffer was created the two render ops above were used which
     /// already handle the clipping and padding.
-    CompositorNoClipTruncPrintTextWithAttributes(String, Option<Style>),
+    CompositorNoClipTruncPaintTextWithAttributes(String, Option<Style>),
 
     /// For [Default] impl.
     Noop,
 }
 
-impl Default for RenderOp {
-    fn default() -> Self { Self::Noop }
+mod render_op_impl {
+    use super::*;
+
+    impl Default for RenderOp {
+        fn default() -> Self { Self::Noop }
+    }
+
+    impl Debug for RenderOp {
+        /// When [RenderPipeline] is printed as debug, each [RenderOp] is printed using this method. Also
+        /// [exec_render_op!] does not use this; it has its own way of logging output.
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            match TERMINAL_LIB_BACKEND {
+                TerminalLibBackend::Crossterm => {
+                    CrosstermDebugFormatRenderOp {}.debug_format(self, f)
+                }
+                TerminalLibBackend::Termion => todo!(), // FUTURE: implement debug formatter for termion
+            }
+        }
+    }
+}
+
+mod render_op_impl_trait_flush {
+    use super::*;
+
+    impl Flush for RenderOp {
+        fn flush(&mut self) {
+            match TERMINAL_LIB_BACKEND {
+                TerminalLibBackend::Crossterm => {
+                    RenderOpImplCrossterm {}.flush();
+                }
+                TerminalLibBackend::Termion => todo!(), // FUTURE: implement flush for termion
+            }
+        }
+
+        fn clear_before_flush(&mut self) {
+            match TERMINAL_LIB_BACKEND {
+                TerminalLibBackend::Crossterm => {
+                    RenderOpImplCrossterm {}.clear_before_flush();
+                }
+                TerminalLibBackend::Termion => todo!(), // FUTURE: implement clear_before_flush for termion
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -279,43 +312,6 @@ pub trait Flush {
     fn clear_before_flush(&mut self);
 }
 
-impl Flush for RenderOp {
-    fn flush(&mut self) {
-        match TERMINAL_LIB_BACKEND {
-            TerminalLibBackend::Crossterm => {
-                RenderOpImplCrossterm {}.flush();
-            }
-            TerminalLibBackend::Termion => todo!(), // FUTURE: implement flush for termion
-        }
-    }
-
-    fn clear_before_flush(&mut self) {
-        match TERMINAL_LIB_BACKEND {
-            TerminalLibBackend::Crossterm => {
-                RenderOpImplCrossterm {}.clear_before_flush();
-            }
-            TerminalLibBackend::Termion => todo!(), // FUTURE: implement clear_before_flush for termion
-        }
-    }
-}
-
-// ┏━━━━━━━━━━━━━━━━━┓
-// ┃ Debug formatter ┃
-// ┛                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-impl Debug for RenderOp {
-    /// When [RenderPipeline] is printed as debug, each [RenderOp] is printed using this method. Also
-    /// [exec_render_op!] does not use this; it has its own way of logging output.
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        match TERMINAL_LIB_BACKEND {
-            TerminalLibBackend::Crossterm => CrosstermDebugFormatRenderOp {}.debug_format(self, f),
-            TerminalLibBackend::Termion => todo!(), // FUTURE: implement debug formatter for termion
-        }
-    }
-}
-
-// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ DebugFormatRenderOp trait ┃
-// ┛                           ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 pub trait DebugFormatRenderOp {
     fn debug_format(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result;
 }

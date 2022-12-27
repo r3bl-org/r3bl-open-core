@@ -34,7 +34,7 @@ impl RenderPipeline {
 
         let mut local_data = RenderOpsLocalData::default();
 
-        for z_order in RENDER_ORDERED_Z_ORDER_ARRAY.iter() {
+        for z_order in ZOrder::get_render_order().iter() {
             if let Some(render_ops_vec) = self.get(z_order) {
                 for (_render_ops_index, render_ops) in render_ops_vec.iter().enumerate() {
                     for (_render_op_index, render_op) in render_ops.iter().enumerate() {
@@ -97,10 +97,10 @@ async fn process_render_op(
                 my_offscreen_buffer.my_bg_color = style_ref.color_bg;
             }
         }
-        RenderOp::CompositorNoClipTruncPrintTextWithAttributes(_arg_text_ref, _maybe_style_ref) => {
+        RenderOp::CompositorNoClipTruncPaintTextWithAttributes(_arg_text_ref, _maybe_style_ref) => {
             // This is a no-op. This operation is executed by RenderOpImplCrossterm.
         }
-        RenderOp::PrintTextWithAttributes(arg_text_ref, maybe_style_ref) => {
+        RenderOp::PaintTextWithAttributes(arg_text_ref, maybe_style_ref) => {
             let result_new_pos = print_text_with_attributes(
                 shared_global_data,
                 arg_text_ref,
@@ -1178,7 +1178,7 @@ mod tests {
             RenderOp::SetFgColor(color!(@green)),
             RenderOp::SetBgColor(color!(@blue)),
             RenderOp::MoveCursorPositionAbs(position! { col_index: 0, row_index: 0 }),
-            RenderOp::PrintTextWithAttributes(
+            RenderOp::PaintTextWithAttributes(
                 "hello12😃".to_string(), Some(style! { attrib: [dim, bold] })),
             RenderOp::ResetColor
         );
@@ -1254,13 +1254,13 @@ mod tests {
             RenderOp::SetFgColor(color!(@green)),
             RenderOp::SetBgColor(color!(@blue)),
             RenderOp::MoveCursorPositionAbs(position! { col_index: 2, row_index: 0 }),
-            RenderOp::PrintTextWithAttributes(
+            RenderOp::PaintTextWithAttributes(
                 "hello😃".to_string(), Some(style! { attrib: [dim, bold] })),
             RenderOp::ResetColor,
             RenderOp::SetFgColor(color!(@green)),
             RenderOp::SetBgColor(color!(@blue)),
             RenderOp::MoveCursorPositionAbs(position! { col_index: 4, row_index: 1 }),
-            RenderOp::PrintTextWithAttributes(
+            RenderOp::PaintTextWithAttributes(
                 "world".to_string(), Some(style! { attrib: [dim, bold] })),
             RenderOp::ResetColor,
         );

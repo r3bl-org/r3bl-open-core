@@ -155,7 +155,7 @@ impl Component<State, Action> for ColumnRenderComponent {
                     RenderOp::ResetColor,
                     RenderOp::MoveCursorPositionRelTo(box_origin_pos, position!(col_index: col, row_index: row)),
                     RenderOp::ApplyColors(current_box.get_computed_style()),
-                    RenderOp::PrintTextWithAttributes(
+                    RenderOp::PaintTextWithAttributes(
                       colorize_using_lolcat! (&mut self.lolcat,"{}",line_1_trunc),
                       current_box.get_computed_style(),
                     ),
@@ -170,7 +170,7 @@ impl Component<State, Action> for ColumnRenderComponent {
                   =>
                     RenderOp::MoveCursorPositionRelTo(box_origin_pos, position!(col_index: col, row_index: row)),
                     RenderOp::ApplyColors(current_box.get_computed_style()),
-                    RenderOp::PrintTextWithAttributes(
+                    RenderOp::PaintTextWithAttributes(
                       colorize_using_lolcat! (&mut self.lolcat,"{}",line_2_trunc),
                       current_box.get_computed_style(),
                     ),
@@ -187,10 +187,10 @@ impl Component<State, Action> for ColumnRenderComponent {
                     RenderOp::ResetColor,
                     RenderOp::MoveCursorPositionRelTo(box_origin_pos, position!(col_index: col, row_index: row)),
                     if component_registry.has_focus.does_current_box_have_focus(current_box) {
-                      RenderOp::PrintTextWithAttributes("👀".into(), None)
+                      RenderOp::PaintTextWithAttributes("👀".into(), None)
                     }
                     else {
-                      RenderOp::PrintTextWithAttributes(" ".into(), None)
+                      RenderOp::PaintTextWithAttributes(" ".into(), None)
                     }
                 };
             }

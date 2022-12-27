@@ -64,10 +64,10 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
                     Some(style) => format!("ApplyColors({style:?})"),
                     None => "ApplyColors(None)".into(),
                 },
-                RenderOp::CompositorNoClipTruncPrintTextWithAttributes(text, maybe_style) => {
+                RenderOp::CompositorNoClipTruncPaintTextWithAttributes(text, maybe_style) => {
                     format_print_text("Compositor..PrintText...", text, maybe_style)
                 }
-                RenderOp::PrintTextWithAttributes(text, maybe_style) => {
+                RenderOp::PaintTextWithAttributes(text, maybe_style) => {
                     format_print_text("PrintTextWithAttributes", text, maybe_style)
                 }
             }

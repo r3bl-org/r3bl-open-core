@@ -22,9 +22,6 @@ use serde::*;
 
 use crate::*;
 
-// ┏━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ DialogBuffer struct ┃
-// ┛                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// Please do not construct this struct directly and use [new_empty](DialogBuffer::new_empty)
 /// instead.
 ///
@@ -36,18 +33,17 @@ pub struct DialogBuffer {
     pub title: String,
 }
 
-impl DialogBuffer {
-    pub fn new_empty() -> Self {
-        DialogBuffer {
-            editor_buffer: EditorBuffer::new_empty(DEFAULT_SYN_HI_FILE_EXT.to_string()),
-            title: Default::default(),
+mod dialog_buffer_impl {
+    use super::*;
+
+    impl DialogBuffer {
+        pub fn new_empty() -> Self {
+            DialogBuffer {
+                editor_buffer: EditorBuffer::new_empty(DEFAULT_SYN_HI_FILE_EXT.to_string()),
+                title: Default::default(),
+            }
         }
     }
-}
-
-mod debug_format_helpers {
-
-    use super::*;
 
     impl Debug for DialogBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

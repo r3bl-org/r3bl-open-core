@@ -65,9 +65,6 @@ pub fn make_unicode_string_from(this: &str) -> UnicodeString {
     }
 }
 
-// ┏━━━━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ GraphemeClusterSegment ┃
-// ┛                        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Hash)]
 pub struct GraphemeClusterSegment {
     /// The actual grapheme cluster `&str`. Eg: "H", "📦", "🙏🏽".
@@ -84,30 +81,31 @@ pub struct GraphemeClusterSegment {
     pub display_col_offset: ChUnit,
 }
 
-impl From<&str> for GraphemeClusterSegment {
-    fn from(s: &str) -> Self { make_new_grapheme_cluster_segment_from(s) }
-}
+mod grapheme_cluster_segment_impl {
+    use super::*;
 
-impl From<String> for GraphemeClusterSegment {
-    fn from(s: String) -> Self { make_new_grapheme_cluster_segment_from(&s) }
-}
+    impl From<&str> for GraphemeClusterSegment {
+        fn from(s: &str) -> Self { make_new_grapheme_cluster_segment_from(s) }
+    }
 
-/// Convert [&str] to [GraphemeClusterSegment]. This is used to create a new [String] after the
-/// [UnicodeString] is modified.
-fn make_new_grapheme_cluster_segment_from(chunk: &str) -> GraphemeClusterSegment {
-    let my_string: String = chunk.to_string();
-    let unicode_string: UnicodeString = my_string.into();
-    let result = unicode_string[0].clone();
+    impl From<String> for GraphemeClusterSegment {
+        fn from(s: String) -> Self { make_new_grapheme_cluster_segment_from(&s) }
+    }
 
-    GraphemeClusterSegment {
-        string: result.string,
-        ..result
+    /// Convert [&str] to [GraphemeClusterSegment]. This is used to create a new [String] after the
+    /// [UnicodeString] is modified.
+    pub fn make_new_grapheme_cluster_segment_from(chunk: &str) -> GraphemeClusterSegment {
+        let my_string: String = chunk.to_string();
+        let unicode_string: UnicodeString = my_string.into();
+        let result = unicode_string[0].clone();
+
+        GraphemeClusterSegment {
+            string: result.string,
+            ..result
+        }
     }
 }
 
-// ┏━━━━━━━━━━━━━━━┓
-// ┃ UnicodeString ┃
-// ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Hash)]
 pub struct UnicodeString {
     pub string: String,
@@ -117,16 +115,22 @@ pub struct UnicodeString {
     pub display_width: ChUnit,
 }
 
-impl UnicodeString {
-    pub fn get_char_width(arg: char) -> ChUnit { UnicodeWidthChar::width(arg).unwrap_or(0).into() }
-}
+mod unicode_string_impl {
+    use super::*;
 
-impl Deref for UnicodeString {
-    type Target = Vec<GraphemeClusterSegment>;
+    impl UnicodeString {
+        pub fn get_char_width(arg: char) -> ChUnit {
+            UnicodeWidthChar::width(arg).unwrap_or(0).into()
+        }
+    }
 
-    fn deref(&self) -> &Self::Target { &self.vec_segment }
-}
+    impl Deref for UnicodeString {
+        type Target = Vec<GraphemeClusterSegment>;
 
-impl DerefMut for UnicodeString {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.vec_segment }
+        fn deref(&self) -> &Self::Target { &self.vec_segment }
+    }
+
+    impl DerefMut for UnicodeString {
+        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.vec_segment }
+    }
 }

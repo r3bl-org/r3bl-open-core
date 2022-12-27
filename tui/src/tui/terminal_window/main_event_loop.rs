@@ -346,7 +346,7 @@ fn render_window_size_too_small(window_size: Size) -> RenderPipeline {
       RenderOp::ResetColor,
       RenderOp::MoveCursorPositionAbs(position! {col_index: col_pos, row_index: row_pos}),
       RenderOp::SetFgColor(TuiColor::DarkRed),
-      RenderOp::PrintTextWithAttributes(
+      RenderOp::PaintTextWithAttributes(
         lolcat_each_char_in_unicode_string(&trunc_display_msg, None),
         Some(style! {attrib: [bold]}))
     )

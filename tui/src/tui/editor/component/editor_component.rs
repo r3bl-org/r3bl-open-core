@@ -24,12 +24,9 @@ use tokio::sync::RwLock;
 
 use crate::*;
 
-// ┏━━━━━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ Editor Component struct ┃
-// ┛                         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// This is a shim which allows the reusable [EditorEngine] to be used in the context of [Component]
 /// and [Store]. The main methods here simply pass thru all their arguments to the
-/// [EditorEngineRenderApi].
+/// [EditorEngine].
 #[derive(Clone, Default)]
 pub struct EditorComponent<S, A>
 where
@@ -52,10 +49,7 @@ pub mod impl_component {
     {
         fn get_id(&self) -> FlexBoxId { self.id }
 
-        // ┏━━━━━━━━━━━━━━┓
-        // ┃ handle_event ┃
-        // ┛              ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        /// This shim simply calls [apply_event](EditorEngineRenderApi::apply_event) w/ all the
+        /// This shim simply calls [apply_event](EditorEngine::apply_event) w/ all the
         /// necessary arguments:
         /// - Global scope: [SharedStore], [SharedGlobalData].
         /// - App scope: `S`, [ComponentRegistry<S, A>].
@@ -102,7 +96,7 @@ pub mod impl_component {
                     editor_engine: &mut self.editor_engine,
                 };
 
-                match EditorEngineRenderApi::apply_event(engine_args, input_event).await? {
+                match EditorEngine::apply_event(engine_args, input_event).await? {
                     EditorEngineApplyResponse::Applied(buffer) => {
                         if let Some(on_change_handler) = self.on_editor_buffer_change_handler {
                             on_change_handler(shared_store, self.get_id(), buffer);
@@ -117,10 +111,7 @@ pub mod impl_component {
             });
         }
 
-        // ┏━━━━━━━━┓
-        // ┃ render ┃
-        // ┛        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        /// This shim simply calls [render](EditorEngineRenderApi::render_engine) w/ all the necessary
+        /// This shim simply calls [render](EditorEngine::render_engine) w/ all the necessary
         /// arguments:
         /// - Global scope: [SharedStore], [SharedGlobalData].
         /// - App scope: `S`, [ComponentRegistry<S, A>].
@@ -161,7 +152,7 @@ pub mod impl_component {
                 self_id: self.id,
             };
 
-            EditorEngineRenderApi::render_engine(render_args, current_box).await
+            EditorEngine::render_engine(render_args, current_box).await
         }
     }
 }

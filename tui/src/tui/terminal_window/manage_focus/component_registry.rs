@@ -22,9 +22,6 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-// ┏━━━━━━━━━━━━━━━━━━━┓
-// ┃ ComponentRegistry ┃
-// ┛                   ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// This map is used to cache [Component]s that have been created and are meant to be reused between
 /// multiple renders.
 /// 1. It is entirely up to the [App] on how this [ComponentRegistryMap] is used.
@@ -43,107 +40,112 @@ where
 
 pub type ComponentRegistryMap<S, A> = HashMap<FlexBoxId, SharedComponent<S, A>>;
 
-impl<S, A> ComponentRegistry<S, A>
-where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
-{
-    pub fn put(&mut self, id: FlexBoxId, component: SharedComponent<S, A>) {
-        self.components.insert(id, component);
-    }
-
-    pub fn does_not_contain(&self, id: FlexBoxId) -> bool { !self.components.contains_key(&id) }
-
-    pub fn contains(&self, id: FlexBoxId) -> bool { self.components.contains_key(&id) }
-
-    pub fn get(&self, id: FlexBoxId) -> Option<&SharedComponent<S, A>> { self.components.get(&id) }
-
-    pub fn remove(&mut self, id: FlexBoxId) -> Option<SharedComponent<S, A>> {
-        self.components.remove(&id)
-    }
-}
-
-pub mod user_data_ops {
+mod component_registry_impl {
     use super::*;
 
-    pub fn get<S, A>(
-        component_registry: &ComponentRegistry<S, A>,
-        id: FlexBoxId,
-        key: &str,
-    ) -> Option<String>
+    impl<S, A> ComponentRegistry<S, A>
     where
         S: Default + Clone + PartialEq + Debug + Sync + Send,
         A: Default + Clone + Sync + Send,
     {
-        component_registry
-            .user_data
-            .get(&id)
-            .and_then(|map| map.get(key))
-            .map(|string_ref| string_ref.into())
+        pub fn put(&mut self, id: FlexBoxId, component: SharedComponent<S, A>) {
+            self.components.insert(id, component);
+        }
+
+        pub fn does_not_contain(&self, id: FlexBoxId) -> bool { !self.components.contains_key(&id) }
+
+        pub fn contains(&self, id: FlexBoxId) -> bool { self.components.contains_key(&id) }
+
+        pub fn get(&self, id: FlexBoxId) -> Option<&SharedComponent<S, A>> {
+            self.components.get(&id)
+        }
+
+        pub fn remove(&mut self, id: FlexBoxId) -> Option<SharedComponent<S, A>> {
+            self.components.remove(&id)
+        }
     }
 
-    pub fn put<S, A>(
-        component_registry: &mut ComponentRegistry<S, A>,
-        id: FlexBoxId,
-        key: &str,
-        value: &str,
-    ) where
+    impl<S, A> ComponentRegistry<S, A>
+    where
         S: Default + Clone + PartialEq + Debug + Sync + Send,
         A: Default + Clone + Sync + Send,
     {
-        let map = component_registry.user_data.entry(id).or_default();
-        map.insert(key.into(), value.into());
-    }
-}
+        pub fn get_user_data(&self, id: FlexBoxId, key: &str) -> Option<String> {
+            self.user_data
+                .get(&id)
+                .and_then(|map| map.get(key))
+                .map(|string_ref| string_ref.into())
+        }
 
-impl<S, A> ComponentRegistry<S, A>
-where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
-{
-    pub fn get_focused_component_ref(
-        this: &mut ComponentRegistry<S, A>,
-    ) -> Option<SharedComponent<S, A>> {
-        if let Some(ref id) = this.has_focus.maybe_id {
-            ComponentRegistry::get_component_ref_by_id(this, *id)
-        } else {
+        pub fn put_user_data(&mut self, id: FlexBoxId, key: &str, value: &str) {
+            let map = self.user_data.entry(id).or_default();
+            map.insert(key.into(), value.into());
+        }
+    }
+
+    impl<S, A> ComponentRegistry<S, A>
+    where
+        S: Default + Clone + PartialEq + Debug + Sync + Send,
+        A: Default + Clone + Sync + Send,
+    {
+        pub fn get_focused_component_ref(
+            this: &mut ComponentRegistry<S, A>,
+        ) -> Option<SharedComponent<S, A>> {
+            if let Some(ref id) = this.has_focus.maybe_id {
+                ComponentRegistry::get_component_ref_by_id(this, *id)
+            } else {
+                None
+            }
+        }
+
+        pub fn get_component_ref_by_id(
+            this: &mut ComponentRegistry<S, A>,
+            id: FlexBoxId,
+        ) -> Option<SharedComponent<S, A>> {
+            if let Some(component) = this.get(id) {
+                return Some(component.clone());
+            }
             None
         }
-    }
 
-    pub fn get_component_ref_by_id(
-        this: &mut ComponentRegistry<S, A>,
-        id: FlexBoxId,
-    ) -> Option<SharedComponent<S, A>> {
-        if let Some(component) = this.get(id) {
-            return Some(component.clone());
+        pub async fn route_event_to_focused_component(
+            this: &mut ComponentRegistry<S, A>,
+            input_event: &InputEvent,
+            state: &S,
+            shared_store: &SharedStore<S, A>,
+            shared_global_data: &SharedGlobalData,
+            window_size: &Size,
+        ) -> CommonResult<EventPropagation> {
+            // If component has focus, then route input_event to it. Return its propagation enum.
+            if let Some(shared_component_has_focus) =
+                ComponentRegistry::get_focused_component_ref(this)
+            {
+                call_handle_event!(
+                    component_registry: this,
+                    shared_component: shared_component_has_focus,
+                    input_event: input_event,
+                    state: state,
+                    shared_store: shared_store,
+                    shared_global_data: shared_global_data,
+                    window_size: window_size
+                )
+            } else {
+                // input_event not handled, propagate it.
+                Ok(EventPropagation::Propagate)
+            }
         }
-        None
     }
 
-    pub async fn route_event_to_focused_component(
-        this: &mut ComponentRegistry<S, A>,
-        input_event: &InputEvent,
-        state: &S,
-        shared_store: &SharedStore<S, A>,
-        shared_global_data: &SharedGlobalData,
-        window_size: &Size,
-    ) -> CommonResult<EventPropagation> {
-        // If component has focus, then route input_event to it. Return its propagation enum.
-        if let Some(shared_component_has_focus) = ComponentRegistry::get_focused_component_ref(this)
-        {
-            call_handle_event!(
-                component_registry: this,
-                shared_component: shared_component_has_focus,
-                input_event: input_event,
-                state: state,
-                shared_store: shared_store,
-                shared_global_data: shared_global_data,
-                window_size: window_size
-            )
-        } else {
-            // input_event not handled, propagate it.
-            Ok(EventPropagation::Propagate)
+    impl<S, A> Debug for ComponentRegistry<S, A>
+    where
+        S: Default + Clone + PartialEq + Debug + Sync + Send,
+        A: Default + Clone + Sync + Send,
+    {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("ComponentRegistry")
+                .field("components", &self.components.keys().enumerate())
+                .field("has_focus", &self.has_focus)
+                .finish()
         }
     }
 }
@@ -178,21 +180,4 @@ macro_rules! call_handle_event {
             .await?;
         return Ok(result_event_propagation);
     }};
-}
-
-mod debug_helpers {
-    use super::*;
-
-    impl<S, A> Debug for ComponentRegistry<S, A>
-    where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
-    {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            f.debug_struct("ComponentRegistry")
-                .field("components", &self.components.keys().enumerate())
-                .field("has_focus", &self.has_focus)
-                .finish()
-        }
-    }
 }

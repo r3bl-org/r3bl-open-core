@@ -24,16 +24,13 @@ use serde::{Deserialize, Serialize};
 use super::*;
 use crate::{tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED, *};
 
-// ┏━━━━━━━━━━━━━━━━━━┓
-// ┃ render_pipeline! ┃
-// ┛                  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// This works w/ [RenderOp] items. It allows them to be added in sequence, and then flushed at the
-/// end.
+/// This macro is a convenience macro for creating a [RenderPipeline]. It works w/ [RenderOp] items.
+/// It allows them to be added in sequence, and then flushed at the end.
 /// 1. This pipeline is meant to hold a list of [RenderOp] items.
 /// 2. Once all the [RenderOp] items are added to the correct [ZOrder]s they can then be flushed at
 ///    the end in order to [paint](RenderPipeline::paint) them to the screen.
-/// 3. The [RENDER_ORDERED_Z_ORDER_ARRAY] contains the priority that is used to paint the different
-///    groups of [RenderOp] items.
+/// 3. [get_render_order()](ZOrder::get_render_order) contains the priority that is used to paint
+///    the different groups of [RenderOp] items.
 ///
 /// This adds given [RenderOp]s to a [RenderOps] and adds that the the pipeline, but does not flush
 /// anything. It will return a [RenderPipeline].
@@ -132,9 +129,6 @@ macro_rules! render_pipeline {
   }};
 }
 
-// ┏━━━━━━━━━━━━━━━━┓
-// ┃ RenderPipeline ┃
-// ┛                ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// See [render_pipeline!] for the documentation. Also consider using it instead of this struct
 /// directly for convenience.
 ///
@@ -157,104 +151,84 @@ pub struct RenderPipeline {
 
 type PipelineMap = HashMap<ZOrder, Vec<RenderOps>>;
 
-impl RenderPipeline {
-    /// This will add `rhs` to `self`.
-    pub fn join_into(&mut self, mut rhs: RenderPipeline) {
-        for (z_order, mut rhs_render_ops_vec) in rhs.drain() {
-            // Insert rhs_render_ops_vec into self_render_ops_vec.
-            match self.entry(z_order) {
-                Entry::Occupied(mut self_existing_entry) => {
-                    let self_render_ops_vec = self_existing_entry.get_mut();
-                    rhs_render_ops_vec.drain(..).for_each(|render_ops| {
-                        self_render_ops_vec.push(render_ops);
+mod render_pipeline_impl {
+    use super::*;
+
+    impl RenderPipeline {
+        /// This will add `rhs` to `self`.
+        pub fn join_into(&mut self, mut rhs: RenderPipeline) {
+            for (z_order, mut rhs_render_ops_vec) in rhs.drain() {
+                // Insert rhs_render_ops_vec into self_render_ops_vec.
+                match self.entry(z_order) {
+                    Entry::Occupied(mut self_existing_entry) => {
+                        let self_render_ops_vec = self_existing_entry.get_mut();
+                        rhs_render_ops_vec.drain(..).for_each(|render_ops| {
+                            self_render_ops_vec.push(render_ops);
+                        });
+                    }
+                    Entry::Vacant(self_new_entry) => {
+                        self_new_entry.insert(rhs_render_ops_vec);
+                    }
+                }
+            }
+        }
+
+        /// Add the given [RenderOps] to the pipeline at the given [ZOrder].
+        pub fn push(&mut self, z_order: ZOrder, render_ops: RenderOps) {
+            match self.pipeline_map.entry(z_order) {
+                // Insert render_ops into existing set.
+                Entry::Occupied(mut existing_entry) => {
+                    let render_ops_vec = existing_entry.get_mut();
+                    render_ops_vec.push(render_ops);
+                }
+                // Create new set & insert render_ops in it.
+                Entry::Vacant(new_entry) => {
+                    new_entry.insert(vec![render_ops]);
+                }
+            }
+        }
+
+        /// At the given [ZOrder] there can be a [Vec] of [RenderOps]. Grab all the [RenderOps] in the
+        /// set, get all their [RenderOp] and return them in a [Vec].
+        pub fn get_all_render_op_in(&self, z_order: ZOrder) -> Option<Vec<RenderOp>> {
+            let vec_render_ops = self.pipeline_map.get(&z_order)?;
+            let mut vec_render_op: Vec<RenderOp> = vec![];
+            for render_ops in vec_render_ops {
+                for render_op in render_ops.iter() {
+                    vec_render_op.push(render_op.clone());
+                }
+            }
+            Some(vec_render_op)
+        }
+
+        pub async fn paint(&self, flush_kind: FlushKind, shared_global_data: &SharedGlobalData) {
+            paint(self, flush_kind, shared_global_data).await;
+            // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
+        }
+
+        /// Move the [RenderOps] in the 'from' [ZOrder] (in self) to the 'to' [ZOrder] (in self).
+        pub fn hoist(&mut self, z_order_from: ZOrder, z_order_to: ZOrder) {
+            // If the 'from' [ZOrder] is not in the pipeline, then there's nothing to do.
+            if !self.pipeline_map.contains_key(&z_order_from) {
+                return;
+            }
+
+            // Move the [RenderOps] from the 'from' [ZOrder] to the 'to' [ZOrder].
+            let mut from = self.pipeline_map.remove(&z_order_from).unwrap_or_default();
+
+            match self.pipeline_map.entry(z_order_to) {
+                Entry::Occupied(mut to_existing_entry) => {
+                    let to = to_existing_entry.get_mut();
+                    from.drain(..).for_each(|render_ops| {
+                        to.push(render_ops);
                     });
                 }
-                Entry::Vacant(self_new_entry) => {
-                    self_new_entry.insert(rhs_render_ops_vec);
+                Entry::Vacant(to_new_entry) => {
+                    to_new_entry.insert(from);
                 }
             }
         }
     }
-
-    /// Add the given [RenderOps] to the pipeline at the given [ZOrder].
-    pub fn push(&mut self, z_order: ZOrder, render_ops: RenderOps) {
-        match self.pipeline_map.entry(z_order) {
-            // Insert render_ops into existing set.
-            Entry::Occupied(mut existing_entry) => {
-                let render_ops_vec = existing_entry.get_mut();
-                render_ops_vec.push(render_ops);
-            }
-            // Create new set & insert render_ops in it.
-            Entry::Vacant(new_entry) => {
-                new_entry.insert(vec![render_ops]);
-            }
-        }
-    }
-
-    /// At the given [ZOrder] there can be a [Vec] of [RenderOps]. Grab all the [RenderOps] in the
-    /// set, get all their [RenderOp] and return them in a [Vec].
-    pub fn get_all_render_op_in(&self, z_order: ZOrder) -> Option<Vec<RenderOp>> {
-        let vec_render_ops = self.pipeline_map.get(&z_order)?;
-        let mut vec_render_op: Vec<RenderOp> = vec![];
-        for render_ops in vec_render_ops {
-            for render_op in render_ops.iter() {
-                vec_render_op.push(render_op.clone());
-            }
-        }
-        Some(vec_render_op)
-    }
-
-    pub async fn paint(&self, flush_kind: FlushKind, shared_global_data: &SharedGlobalData) {
-        paint(self, flush_kind, shared_global_data).await;
-        // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
-    }
-
-    /// Move the [RenderOps] in the 'from' [ZOrder] (in self) to the 'to' [ZOrder] (in self).
-    pub fn hoist(&mut self, z_order_from: ZOrder, z_order_to: ZOrder) {
-        // If the 'from' [ZOrder] is not in the pipeline, then there's nothing to do.
-        if !self.pipeline_map.contains_key(&z_order_from) {
-            return;
-        }
-
-        // Move the [RenderOps] from the 'from' [ZOrder] to the 'to' [ZOrder].
-        let mut from = self.pipeline_map.remove(&z_order_from).unwrap_or_default();
-
-        match self.pipeline_map.entry(z_order_to) {
-            Entry::Occupied(mut to_existing_entry) => {
-                let to = to_existing_entry.get_mut();
-                from.drain(..).for_each(|render_ops| {
-                    to.push(render_ops);
-                });
-            }
-            Entry::Vacant(to_new_entry) => {
-                to_new_entry.insert(from);
-            }
-        }
-    }
-}
-
-pub mod z_order_impl {
-    use super::*;
-
-    /// Contains the priority that is used to paint the different groups of [RenderOp] items.
-    pub const RENDER_ORDERED_Z_ORDER_ARRAY: [ZOrder; 3] =
-        [ZOrder::Normal, ZOrder::High, ZOrder::Glass];
-
-    #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-    pub enum ZOrder {
-        Normal,
-        High,
-        Glass,
-    }
-
-    impl Default for ZOrder {
-        fn default() -> Self { Self::Normal }
-    }
-}
-pub use z_order_impl::*;
-
-mod render_pipeline_helpers {
-    use super::*;
 
     impl Deref for RenderPipeline {
         type Target = PipelineMap;
@@ -287,5 +261,25 @@ mod render_pipeline_helpers {
 
     impl AddAssign for RenderPipeline {
         fn add_assign(&mut self, other: RenderPipeline) { self.join_into(other); }
+    }
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum ZOrder {
+    Normal,
+    High,
+    Glass,
+}
+
+mod z_order_impl {
+    use super::*;
+
+    impl ZOrder {
+        /// Contains the priority that is used to paint the different groups of [RenderOp] items.
+        pub fn get_render_order() -> [ZOrder; 3] { [ZOrder::Normal, ZOrder::High, ZOrder::Glass] }
+    }
+
+    impl Default for ZOrder {
+        fn default() -> Self { Self::Normal }
     }
 }

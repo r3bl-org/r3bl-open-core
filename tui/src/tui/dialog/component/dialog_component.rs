@@ -24,12 +24,9 @@ use tokio::sync::RwLock;
 
 use crate::*;
 
-// ┏━━━━━━━━━━━━━━━━━━━━━━━━━┓
-// ┃ Dialog Component struct ┃
-// ┛                         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /// This is a shim which allows the reusable [DialogEngine] to be used in the context of [Component]
 /// and [Store]. The main methods here simply pass thru all their arguments to the
-/// [DialogEngineApi].
+/// [DialogEngine].
 #[derive(Clone, Default)]
 pub struct DialogComponent<S, A>
 where
@@ -44,7 +41,7 @@ where
     pub on_dialog_editor_change_handler: Option<OnDialogEditorChangeFn<S, A>>,
 }
 
-pub mod impl_component {
+pub mod dialog_component_impl {
     use std::borrow::Cow;
 
     use super::*;
@@ -57,10 +54,7 @@ pub mod impl_component {
     {
         fn get_id(&self) -> FlexBoxId { self.id }
 
-        // ┏━━━━━━━━┓
-        // ┃ render ┃
-        // ┛        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        /// This shim simply calls [render](DialogEngineApi::render_engine) w/ all the necessary
+        /// This shim simply calls [render](DialogEngine::render_engine) w/ all the necessary
         /// arguments:
         /// - Global scope: [SharedStore], [SharedGlobalData].
         /// - App scope: `S`, [ComponentRegistry<S, A>].
@@ -101,13 +95,10 @@ pub mod impl_component {
                 }
             };
 
-            DialogEngineApi::render_engine(dialog_engine_args).await
+            DialogEngine::render_engine(dialog_engine_args).await
         }
 
-        // ┏━━━━━━━━━━━━━━┓
-        // ┃ handle_event ┃
-        // ┛              ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        /// This shim simply calls [apply_event](DialogEngineApi::apply_event) w/ all the necessary
+        /// This shim simply calls [apply_event](DialogEngine::apply_event) w/ all the necessary
         /// arguments:
         /// - Global scope: [SharedStore], [SharedGlobalData].
         /// - App scope: `S`, [ComponentRegistry<S, A>].
@@ -149,7 +140,7 @@ pub mod impl_component {
                 }
             };
 
-            match DialogEngineApi::apply_event(dialog_engine_args, input_event).await? {
+            match DialogEngine::apply_event(dialog_engine_args, input_event).await? {
                 // Handler user's choice.
                 DialogEngineApplyResponse::DialogChoice(dialog_choice) => {
                     // Restore focus to non-modal component.
@@ -180,10 +171,6 @@ pub mod impl_component {
             }
         }
     }
-}
-
-pub mod constructor {
-    use super::*;
 
     impl<S, A> DialogComponent<S, A>
     where
@@ -229,7 +216,7 @@ pub mod constructor {
     }
 }
 
-pub mod misc {
+pub mod exports {
     use super::*;
 
     /// This marker trait is meant to be implemented by whatever state struct is being used to store the
@@ -250,4 +237,4 @@ pub mod misc {
 
     pub type OnDialogEditorChangeFn<S, A> = fn(EditorBuffer, &SharedStore<S, A>);
 }
-pub use misc::*; // Re-export misc module for convenience.
+pub use exports::*;

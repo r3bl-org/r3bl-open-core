@@ -40,7 +40,7 @@ pub struct AppWithLayout {
     pub component_registry: ComponentRegistry<State, Action>,
 }
 
-mod app_trait_impl {
+mod app_with_layout_impl_trait_app {
     use super::*;
 
     #[async_trait]
@@ -88,7 +88,7 @@ mod app_trait_impl {
 
                 // Create a surface and then run the SurfaceRenderer (ContainerSurfaceRender) on it.
                 let mut surface = {
-                    let mut it = surface!(stylesheet: style_helpers::create_stylesheet()?);
+                    let mut it = surface!(stylesheet: stylesheet::create_stylesheet()?);
 
                     it.surface_start(SurfaceProps {
                         pos: position!(col_index: 0, row_index: 0),
@@ -97,7 +97,7 @@ mod app_trait_impl {
                             row_count: window_size.row_count - 1), // Bottom row for for status bar.
                     })?;
 
-                    layout_container::ContainerSurfaceRender(self)
+                    perform_layout::ContainerSurfaceRender(self)
                         .render_in_surface(
                             GlobalScopeArgs {
                                 shared_global_data,
@@ -115,7 +115,7 @@ mod app_trait_impl {
                 };
 
                 // Render status bar.
-                status_bar_helpers::render_status_bar(&mut surface.render_pipeline, window_size);
+                status_bar::render_status_bar(&mut surface.render_pipeline, window_size);
 
                 // Return RenderOps pipeline (which will actually be painted elsewhere).
                 surface.render_pipeline
@@ -124,7 +124,7 @@ mod app_trait_impl {
     }
 }
 
-mod layout_container {
+mod perform_layout {
     use super::*;
 
     pub struct ContainerSurfaceRender<'a>(pub &'a mut AppWithLayout);
@@ -168,8 +168,7 @@ mod layout_container {
     }
 }
 
-// Handle component registry.
-mod component_registry {
+mod populate_component_registry {
     use super::*;
 
     impl AppWithLayout {
@@ -190,7 +189,7 @@ mod component_registry {
     }
 }
 
-mod debug_helpers {
+mod pretty_print {
     use super::*;
 
     impl Debug for AppWithLayout {
@@ -202,7 +201,7 @@ mod debug_helpers {
     }
 }
 
-mod style_helpers {
+mod stylesheet {
     use super::*;
 
     pub fn create_stylesheet() -> CommonResult<Stylesheet> {
@@ -222,7 +221,7 @@ mod style_helpers {
     }
 }
 
-mod status_bar_helpers {
+mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.

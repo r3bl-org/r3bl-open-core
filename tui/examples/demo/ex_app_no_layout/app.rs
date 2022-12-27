@@ -52,108 +52,112 @@ macro_rules! fire {
     };
 }
 
-#[async_trait]
-impl App<State, Action> for AppNoLayout {
-    /// No-op.
-    fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
-        &mut self.component_registry
-    }
+mod app_no_layout_impl_trait_app {
+    use super::*;
 
-    /// No-op.
-    fn init(&mut self) {}
+    #[async_trait]
+    impl App<State, Action> for AppNoLayout {
+        async fn app_render(
+            &mut self,
+            args: GlobalScopeArgs<'_, State, Action>,
+        ) -> CommonResult<RenderPipeline> {
+            throws_with_return!({
+                let GlobalScopeArgs {
+                    state,
+                    shared_global_data,
+                    ..
+                } = args;
 
-    async fn app_render(
-        &mut self,
-        args: GlobalScopeArgs<'_, State, Action>,
-    ) -> CommonResult<RenderPipeline> {
-        throws_with_return!({
-            let GlobalScopeArgs {
-                state,
-                shared_global_data,
-                ..
-            } = args;
+                let content = format!("{state}");
 
-            let content = format!("{state}");
+                let content_size_col: ChUnit = content.len().into();
+                let window_size: Size = shared_global_data.read().await.get_size();
 
-            let content_size_col: ChUnit = content.len().into();
-            let window_size: Size = shared_global_data.read().await.get_size();
+                let col: ChUnit = (window_size.col_count - content_size_col) / 2;
+                let row: ChUnit = window_size.row_count / 2;
 
-            let col: ChUnit = (window_size.col_count - content_size_col) / 2;
-            let row: ChUnit = window_size.row_count / 2;
+                let plain_content = format!("{state}");
+                let unicode_string = UnicodeString::from(plain_content);
+                let colored_content =
+                    lolcat_each_char_in_unicode_string(&unicode_string, Some(&mut self.lolcat));
+                self.lolcat.next_color();
 
-            let plain_content = format!("{state}");
-            let unicode_string = UnicodeString::from(plain_content);
-            let colored_content =
-                lolcat_each_char_in_unicode_string(&unicode_string, Some(&mut self.lolcat));
-            self.lolcat.next_color();
+                let mut pipeline = render_pipeline!(
+                  @new ZOrder::Normal
+                  =>
+                    RenderOp::ResetColor,
+                    RenderOp::MoveCursorPositionAbs(position!(col_index: col, row_index: row)),
+                    RenderOp::PaintTextWithAttributes(colored_content, None),
+                );
 
-            let mut pipeline = render_pipeline!(
-              @new ZOrder::Normal
-              =>
-                RenderOp::ResetColor,
-                RenderOp::MoveCursorPositionAbs(position!(col_index: col, row_index: row)),
-                RenderOp::PrintTextWithAttributes(colored_content, None),
-            );
+                status_bar::create_status_bar_message(&mut pipeline, window_size);
 
-            status_bar_helpers::create_status_bar_message(&mut pipeline, window_size);
-
-            pipeline
-        });
-    }
-
-    async fn app_handle_event(
-        &mut self,
-        args: GlobalScopeArgs<'_, State, Action>,
-        input_event: &InputEvent,
-    ) -> CommonResult<EventPropagation> {
-        throws_with_return!({
-            let GlobalScopeArgs { shared_store, .. } = args;
-
-            call_if_true!(DEBUG, {
-                let msg = format!("⛵ AppNoLayout::handle_event -> input_event: {input_event}");
-                log_info(msg)
+                pipeline
             });
+        }
 
-            let mut event_consumed = false;
+        async fn app_handle_event(
+            &mut self,
+            args: GlobalScopeArgs<'_, State, Action>,
+            input_event: &InputEvent,
+        ) -> CommonResult<EventPropagation> {
+            throws_with_return!({
+                let GlobalScopeArgs { shared_store, .. } = args;
 
-            if let InputEvent::Keyboard(KeyPress::Plain { key }) = input_event {
-                // Check for + or - key.
-                if let Key::Character(typed_char) = key {
-                    match typed_char {
-                        '+' => {
-                            fire!(@add_pop => event_consumed, shared_store, Action::AddPop(1));
+                call_if_true!(DEBUG, {
+                    let msg = format!("⛵ AppNoLayout::handle_event -> input_event: {input_event}");
+                    log_info(msg)
+                });
+
+                let mut event_consumed = false;
+
+                if let InputEvent::Keyboard(KeyPress::Plain { key }) = input_event {
+                    // Check for + or - key.
+                    if let Key::Character(typed_char) = key {
+                        match typed_char {
+                            '+' => {
+                                fire!(@add_pop => event_consumed, shared_store, Action::AddPop(1));
+                            }
+                            '-' => {
+                                fire!(@sub_pop => event_consumed, shared_store, Action::SubPop(1));
+                            }
+                            _ => {}
                         }
-                        '-' => {
-                            fire!(@sub_pop => event_consumed, shared_store, Action::SubPop(1));
+                    }
+
+                    // Check for up or down arrow key.
+                    if let Key::SpecialKey(special_key) = key {
+                        match special_key {
+                            SpecialKey::Up => {
+                                fire!(@add_pop => event_consumed, shared_store, Action::AddPop(1));
+                            }
+                            SpecialKey::Down => {
+                                fire!(@sub_pop => event_consumed, shared_store, Action::SubPop(1));
+                            }
+                            _ => {}
                         }
-                        _ => {}
                     }
                 }
 
-                // Check for up or down arrow key.
-                if let Key::SpecialKey(special_key) = key {
-                    match special_key {
-                        SpecialKey::Up => {
-                            fire!(@add_pop => event_consumed, shared_store, Action::AddPop(1));
-                        }
-                        SpecialKey::Down => {
-                            fire!(@sub_pop => event_consumed, shared_store, Action::SubPop(1));
-                        }
-                        _ => {}
-                    }
+                if event_consumed {
+                    EventPropagation::Consumed
+                } else {
+                    EventPropagation::Propagate
                 }
-            }
+            });
+        }
 
-            if event_consumed {
-                EventPropagation::Consumed
-            } else {
-                EventPropagation::Propagate
-            }
-        });
+        /// No-op.
+        fn init(&mut self) {}
+
+        /// No-op.
+        fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
+            &mut self.component_registry
+        }
     }
 }
 
-mod status_bar_helpers {
+mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.

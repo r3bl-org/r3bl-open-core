@@ -22,12 +22,6 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-// ┏━━━━━━━━━━━━━━━━━━┓
-// ┃ DialogEngine API ┃
-// ┛                  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-/// Things you can do w/ a dialog engine.
-pub struct DialogEngineApi;
-
 #[derive(Debug)]
 pub enum DialogEngineApplyResponse {
     UpdateEditorBuffer(EditorBuffer),
@@ -35,7 +29,8 @@ pub enum DialogEngineApplyResponse {
     Noop,
 }
 
-impl DialogEngineApi {
+/// Things you can do with a [DialogEngine].
+impl DialogEngine {
     pub async fn render_engine<S, A>(
         args: DialogEngineArgs<'_, S, A>,
     ) -> CommonResult<RenderPipeline>
@@ -126,7 +121,7 @@ impl DialogEngineApi {
         };
 
         if let EditorEngineApplyResponse::Applied(new_editor_buffer) =
-            EditorEngineRenderApi::apply_event(editor_engine_args, input_event).await?
+            EditorEngine::apply_event(editor_engine_args, input_event).await?
         {
             return Ok(DialogEngineApplyResponse::UpdateEditorBuffer(
                 new_editor_buffer,
@@ -248,8 +243,7 @@ mod internal_impl {
             state: args.state,
         };
 
-        let mut pipeline =
-            EditorEngineRenderApi::render_engine(editor_engine_args, &flex_box).await?;
+        let mut pipeline = EditorEngine::render_engine(editor_engine_args, &flex_box).await?;
         pipeline.hoist(ZOrder::Normal, ZOrder::Glass);
 
         Ok(pipeline)
@@ -282,7 +276,7 @@ mod internal_impl {
         ops.push(RenderOp::ApplyColors(
             dialog_engine.dialog_options.maybe_style_title.clone(),
         ));
-        ops.push(RenderOp::PrintTextWithAttributes(
+        ops.push(RenderOp::PaintTextWithAttributes(
             text_content.into(),
             dialog_engine.dialog_options.maybe_style_title.clone(),
         ));
@@ -329,7 +323,7 @@ mod internal_impl {
                         &mut text_content,
                     );
 
-                    ops.push(RenderOp::PrintTextWithAttributes(
+                    ops.push(RenderOp::PaintTextWithAttributes(
                         text_content.into(),
                         maybe_style.clone(),
                     ));
@@ -350,7 +344,7 @@ mod internal_impl {
                         &mut dialog_engine.lolcat,
                         &mut text_content,
                     );
-                    ops.push(RenderOp::PrintTextWithAttributes(
+                    ops.push(RenderOp::PaintTextWithAttributes(
                         text_content.into(),
                         maybe_style.clone(),
                     ));
@@ -369,7 +363,7 @@ mod internal_impl {
                         &mut dialog_engine.lolcat,
                         &mut text_content,
                     );
-                    ops.push(RenderOp::PrintTextWithAttributes(
+                    ops.push(RenderOp::PaintTextWithAttributes(
                         text_content.into(),
                         maybe_style.clone(),
                     ));
@@ -459,7 +453,7 @@ mod test_dialog_engine_api_render_engine {
             dialog_engine,
         };
 
-        let pipeline = dbg!(DialogEngineApi::render_engine(args).await.unwrap());
+        let pipeline = dbg!(DialogEngine::render_engine(args).await.unwrap());
         assert_eq2!(pipeline.len(), 1);
         let render_ops = pipeline.get(&ZOrder::Glass).unwrap();
         assert!(!render_ops.is_empty());
@@ -583,9 +577,7 @@ mod test_dialog_engine_api_apply_event {
         };
 
         let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Esc));
-        let response = dbg!(DialogEngineApi::apply_event(args, &input_event)
-            .await
-            .unwrap());
+        let response = dbg!(DialogEngine::apply_event(args, &input_event).await.unwrap());
         assert!(matches!(
             response,
             DialogEngineApplyResponse::DialogChoice(DialogChoice::No)
@@ -619,9 +611,7 @@ mod test_dialog_engine_api_apply_event {
         };
 
         let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Enter));
-        let response = dbg!(DialogEngineApi::apply_event(args, &input_event)
-            .await
-            .unwrap());
+        let response = dbg!(DialogEngine::apply_event(args, &input_event).await.unwrap());
         if let DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(value)) = &response {
             assert_eq2!(value, "");
         }
@@ -658,9 +648,7 @@ mod test_dialog_engine_api_apply_event {
         };
 
         let input_event = InputEvent::Keyboard(keypress!(@char 'a'));
-        let response = dbg!(DialogEngineApi::apply_event(args, &input_event)
-            .await
-            .unwrap());
+        let response = dbg!(DialogEngine::apply_event(args, &input_event).await.unwrap());
         if let DialogEngineApplyResponse::UpdateEditorBuffer(editor_buffer) = &response {
             assert_eq2!(editor_buffer.get_as_string(), "a");
         }
