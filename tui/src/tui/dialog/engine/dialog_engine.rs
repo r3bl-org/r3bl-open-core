@@ -39,7 +39,10 @@ pub struct DialogEngine {
     /// This is evaluated and saved when [render_engine]( DialogEngine::render_engine) is called.
     /// The dialog box is rendered outside of any layout [FlexBox] or [Surface], so it just paints
     /// itself to the screen on top of everything else.
-    pub maybe_flex_box: Option<FlexBox>,
+    pub maybe_flex_box: Option<(
+        /* window size: */ Size,
+        /* flex box calculated by render_engine(): */ FlexBox,
+    )>,
 }
 
 mod dialog_engine_impl {

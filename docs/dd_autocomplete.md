@@ -9,13 +9,14 @@ Date: 2022-12-14
 - [How do dialog boxes work?](#how-do-dialog-boxes-work)
   - [Two callback functions](#two-callback-functions)
 - [How to use this dialog to make an HTTP request & pipe the results into a selection area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
-- [Implementation details](#implementation-details)
+- [Implementation details of the autocomplete mode](#implementation-details-of-the-autocomplete-mode)
+- [How to make HTTP requests](#how-to-make-http-requests)
 
 <!-- /TOC -->
 
 ## How does layout, rendering, and event handling work in general?
-
 <a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>
+
 
 - The `App` trait impl is the main entry point for laying out the entire application. And this is
   where the `component_registry` lives and all the `Component`s are created and added to the
@@ -33,8 +34,8 @@ Date: 2022-12-14
 ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 
 ## How do dialog boxes work?
-
 <a id="markdown-how-do-dialog-boxes-work%3F" name="how-do-dialog-boxes-work%3F"></a>
+
 
 A modal dialog box is different than a normal reusable component. This is because:
 
@@ -76,8 +77,8 @@ why:
     some portion of the component registry if one is not careful.
 
 ### Two callback functions
-
 <a id="markdown-two-callback-functions" name="two-callback-functions"></a>
+
 
 When creating a new dialog box component, two callback functions are passed in:
 
@@ -87,8 +88,8 @@ When creating a new dialog box component, two callback functions are passed in:
    editor.
 
 ## How to use this dialog to make an HTTP request & pipe the results into a selection area?
-
 <a id="markdown-how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F" name="how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F"></a>
+
 
 So far we have covered the use case for a simple modal dialog box. In order to provide
 auto-completion capabilities, via some kind of web service, there needs to be a slightly more
@@ -100,14 +101,13 @@ In autocomplete mode, an extra "results panel" is displayed, and the layout of t
 different on the screen. Instead of being in the middle of the screen, it starts at the top of the
 screen. The callbacks are the same.
 
-## Implementation details
+## Implementation details of the autocomplete mode
+<a id="markdown-implementation-details-of-the-autocomplete-mode" name="implementation-details-of-the-autocomplete-mode"></a>
 
-<a id="markdown-implementation-details" name="implementation-details"></a>
 
 **dialog_engine_api.rs**
 
 - [ ] `apply_event()` - called by `DialogComponent::handle_event()`
-
   - [ ] up / down handler to navigate the results panel (if in autocomplete mode)
     - up / down will change the following in the `dialog_engine` data (**not state**)
       - `selected_row_index` - tracks the selected row
@@ -116,28 +116,24 @@ screen. The callbacks are the same.
         - you can get viewport from `DialogEngine::flex_box`, saved by `DialogComponent::render()`
         - if viewport is smaller than num results then scroll offset is applied
     - this code path should return an `ConsumedRender` so that the results panel is re-rendered
-
-- [ ] `render_engine()` - called by `DialogComponent::render()`
- 
-  - [ ] add `render_results_panel()` to display results panel (if in autocomplete mode)
-    - `DialogBuffer.results` is saved in the **state** & gets passed in here
-    - paint the `Vec<String>` in the panel
-    - paint the selected row
-    - deal w/ `scroll_offset_row_index`
-
+- [ ] add `render_results_panel()` to display results panel (if in autocomplete mode)
+  - `DialogBuffer.results` is saved in the **state** & gets passed in here
+  - paint the `Vec<String>` in the panel
+  - paint the selected row
+  - deal w/ `scroll_offset_row_index`
   - [x] actually call `make_flex_box_for_dialog()`
     - [x] drop the `current_box` arg
-    - [x] pass the mode (`self.dialog_engine.dialog_optins.mode`) into `make_flex_box_for_dialog()`
+    - [x] pass the mode (`self.dialog_engine.dialog_options.mode`) into `make_flex_box_for_dialog()`
       - this `flex_box` is used later by the `DialogEngineApi::apply_event()` to perform scrolling
     - [x] save flex box to `dialog_engine.maybe_flex_box`
-  
 - [ ] `make_flex_box_for_dialog()`
- 
   - [x] pass arg into the function
     - `DialogEngineMode` - this is the mode of the dialog engine (normal or autocomplete)
   - [x] make the `Surface` arg optional (since it won't be passed in)
   - [x] this should just be a private function, in `internal_impl`, remove from `DialogEngineApi`
   - [ ] based on the mode (normal / autocomplete) generate the correct flex box
+- [ ] `render_engine()` - called by `DialogComponent::render()`
+  - [ ] called `render_results_panel()`
 
 **dialog_buffer.rs**
 
@@ -174,3 +170,12 @@ screen. The callbacks are the same.
 - [x] `render()` - ignore the 3rd arg (`current_box: FlexBox`) & document it
 - [x] `new_shared()` - add `DialogEngineConfigOptions` arg
 - [x] `new()` - add `DialogEngineConfigOptions` arg & save to `self.dialog_engine: DialogEngine`
+
+## How to make HTTP requests
+<a id="markdown-how-to-make-http-requests" name="how-to-make-http-requests"></a>
+
+
+Instead of using the `reqwest` crate, we should use the `hyper` crate (which is part of Tokio) and
+drop support for `reqwest` in all our crates.
+
+- https://blessed.rs/crates#section-networking-subsection-http-foundations

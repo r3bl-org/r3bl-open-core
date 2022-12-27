@@ -180,7 +180,6 @@ pub mod dialog_component_impl {
         /// The on_dialog_press_handler is a lambda that is called if the user presses enter or escape.
         /// Typically this results in a Redux action being created and then dispatched to the given
         /// store.
-        // TODO: add new arg: DialogEngineMode
         pub fn new(
             id: FlexBoxId,
             dialog_options: DialogEngineConfigOptions,
@@ -189,7 +188,6 @@ pub mod dialog_component_impl {
             on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, A>,
         ) -> Self {
             Self {
-                // TODO: use DialogEngine::new() ... check for this everywhere
                 dialog_engine: DialogEngine::new(dialog_options, editor_options),
                 id,
                 on_dialog_press_handler: Some(on_dialog_press_handler),
@@ -197,7 +195,6 @@ pub mod dialog_component_impl {
             }
         }
 
-        // TODO: add new arg: DialogEngineMode
         pub fn new_shared(
             id: FlexBoxId,
             dialog_options: DialogEngineConfigOptions,
