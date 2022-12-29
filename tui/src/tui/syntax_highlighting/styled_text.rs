@@ -129,9 +129,9 @@ mod impl_styled_texts {
 
         pub fn render_into(&self, render_ops: &mut RenderOps) {
             for styled_text in self.iter() {
-                let style = styled_text.style.clone();
+                let style = styled_text.style;
                 let text = styled_text.plain_text.clone();
-                render_ops.push(RenderOp::ApplyColors(style.clone().into()));
+                render_ops.push(RenderOp::ApplyColors(style.into()));
                 render_ops.push(RenderOp::PaintTextWithAttributes(text.string, style.into()));
                 render_ops.push(RenderOp::ResetColor);
             }

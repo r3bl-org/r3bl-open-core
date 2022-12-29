@@ -151,7 +151,7 @@ mod perform_layout {
                     id:                     col_id,
                     dir:                    Direction::Vertical,
                     requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                    styles:                 [&col_id.to_string()]
+                    styles:                 [col_id]
                 );
                 render_component_in_current_box!(
                     in:                 surface,
@@ -208,11 +208,11 @@ mod stylesheet {
         throws_with_return!({
             stylesheet! {
               style! {
-                id: Id::Container.int_value().to_string()
+                id: Id::Container.int_value()
                 padding: 1
               },
               style! {
-                id: Id::Col.int_value().to_string()
+                id: Id::Col.int_value()
                 padding: 1
                 color_bg: TuiColor::Rgb { r: 55, g: 55, b: 100 }
               }

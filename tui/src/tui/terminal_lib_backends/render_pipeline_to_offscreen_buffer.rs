@@ -215,7 +215,7 @@ pub async fn print_plain_text(
     let maybe_style: Option<Style> = {
         if let Some(maybe_style) = maybe_style_ref {
             // We get the attributes from `maybe_style_ref`.
-            let mut it = maybe_style.clone();
+            let mut it = *maybe_style;
             // We get the colors from `my_fg_color` and `my_bg_color`.
             it.color_fg = my_offscreen_buffer.my_fg_color;
             it.color_bg = my_offscreen_buffer.my_bg_color;
@@ -264,7 +264,7 @@ pub async fn print_plain_text(
                     (None, SPACER) => PixelChar::Spacer,
                     _ => PixelChar::PlainText {
                         content: new_gc_segment,
-                        maybe_style: maybe_style.clone(),
+                        maybe_style,
                     },
                 }
             };

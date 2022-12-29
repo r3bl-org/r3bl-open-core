@@ -42,7 +42,7 @@ use crate::utils::IdentExt;
 impl Parse for StyleMetadata {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut metadata = StyleMetadata {
-            id: Verbatim(quote! { "_id" }),
+            id: Verbatim(quote! { u8::MAX }),
             attrib_vec: Vec::new(),
             padding: None,
             color_fg: None,

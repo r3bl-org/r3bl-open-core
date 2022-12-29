@@ -76,7 +76,7 @@ pub(crate) fn code_gen(
 
     quote! {
       Style {
-        id: #id.to_string(),
+        id: #id,
         bold: #has_attrib_bold,
         dim: #has_attrib_dim,
         underline: #has_attrib_underline,

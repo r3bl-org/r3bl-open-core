@@ -117,7 +117,11 @@ pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
     builder::derive_proc_macro_impl(input)
 }
 
-/// Example.
+/// Creates a new [r3bl_rs_utils_core::Style] declaratively. If `id` isn't supplied, then
+/// [u8::MAX](u8::MAX) is used. This represents the "style does not have an assigned id" case.
+/// Computed styles don't have an id and are set to [u8::MAX](u8::MAX) as well.
+///
+/// Here's a usage example.
 ///
 /// ```ignore
 /// style! {

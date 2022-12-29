@@ -118,7 +118,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                     PixelChar::PlainText {
                         content,
                         maybe_style,
-                    } => (&content.string, maybe_style.clone(), RenderPath::PlainText),
+                    } => (&content.string, *maybe_style, RenderPath::PlainText),
                     PixelChar::AnsiText { content } => (content, None, RenderPath::AnsiText),
                 };
 
@@ -139,18 +139,18 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                 // Deal w/: fg and bg colors | text attrib style
                 if is_first_loop_iteration || !is_style_same_as_prev {
                     context.render_ops.push(RenderOp::ResetColor);
-                    if let Some(style) = pixel_char_style.clone() {
+                    if let Some(style) = pixel_char_style {
                         if let Some(color) = style.color_fg {
                             context.render_ops.push(RenderOp::SetFgColor(color));
                         }
                     }
-                    if let Some(style) = pixel_char_style.clone() {
+                    if let Some(style) = pixel_char_style {
                         if let Some(color) = style.color_bg {
                             context.render_ops.push(RenderOp::SetBgColor(color));
                         }
                     }
                     // Update prev_style.
-                    context.prev_style = pixel_char_style.clone();
+                    context.prev_style = pixel_char_style;
                 }
 
                 // Buffer it.
@@ -203,10 +203,10 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                     content,
                     maybe_style,
                 } => {
-                    it.push(RenderOp::ApplyColors(maybe_style.clone()));
+                    it.push(RenderOp::ApplyColors(*maybe_style));
                     it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                         content.string.clone(),
-                        maybe_style.clone(),
+                        *maybe_style,
                     ))
                 }
                 PixelChar::AnsiText { content } => it.push(
@@ -273,8 +273,8 @@ mod render_helpers {
         match (this.is_some(), other.is_some()) {
             (false, false) => true,
             (true, true) => {
-                let this = this.clone().unwrap();
-                let other = other.clone().unwrap();
+                let this = (*this).unwrap();
+                let other = (*other).unwrap();
                 this.color_fg == other.color_fg
                     && this.color_bg == other.color_bg
                     && this.bold == other.bold
@@ -311,7 +311,7 @@ mod render_helpers {
             .render_ops
             .push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                 context.buffer_plain_text.to_string(),
-                context.prev_style.clone(),
+                context.prev_style,
             ));
 
         // Update `display_col_index_for_line`.

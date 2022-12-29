@@ -158,7 +158,7 @@ mod perform_layout {
                     id: Id::Container.int_value(),
                     dir: Direction::Horizontal,
                     requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                    styles:                 [&Id::Container.int_value().to_string()],
+                    styles:                 [Id::Container.int_value()],
                 );
 
                 // Col1.
@@ -168,7 +168,7 @@ mod perform_layout {
                       id:                     Id::Col1.int_value(),
                       dir:                    Direction::Vertical,
                       requested_size_percent: requested_size_percent!(width: 50, height: 100),
-                      styles:                 [&Id::Col1.int_value().to_string()],
+                      styles:                 [Id::Col1.int_value()],
                     );
                     render_component_in_current_box!(
                         in:                 surface,
@@ -189,7 +189,7 @@ mod perform_layout {
                       id:                     Id::Col2.int_value(),
                       dir:                    Direction::Vertical,
                       requested_size_percent: requested_size_percent!(width: 50, height: 100),
-                      styles:                 [&Id::Col2.int_value().to_string()],
+                      styles:                 [Id::Col2.int_value()],
                     );
                     render_component_in_current_box!(
                         in:                 surface,
@@ -316,16 +316,16 @@ mod stylesheet {
         throws_with_return!({
             stylesheet! {
               style! {
-                id: Id::Container.int_value().to_string()
+                id: Id::Container.int_value()
                 padding: 1
               },
               style! {
-                id: Id::Col1.int_value().to_string()
+                id: Id::Col1.int_value()
                 padding: 1
                 color_bg: TuiColor::Rgb { r: 55, g: 55, b: 100 }
               },
               style! {
-                id: Id::Col2.int_value().to_string()
+                id: Id::Col2.int_value()
                 padding: 1
                 color_bg: TuiColor::Rgb { r: 55, g: 55, b: 248 }
               }

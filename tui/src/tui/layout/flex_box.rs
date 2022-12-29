@@ -40,7 +40,7 @@ impl Default for Direction {
 
 /// A box is a rectangle with a position and size. The direction of the box
 /// determines how it's contained elements are positioned.
-#[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct FlexBox {
     pub id: FlexBoxId,
     pub dir: Direction,
@@ -54,7 +54,7 @@ pub struct FlexBox {
 }
 
 impl FlexBox {
-    pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style.clone() }
+    pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style }
 }
 
 impl Debug for FlexBox {

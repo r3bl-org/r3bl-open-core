@@ -157,7 +157,7 @@ impl List<(Style, UnicodeString)> {
             }
 
             if !clipped_text_fragment.is_empty() {
-                list.push((style.clone(), clipped_text_fragment.into()));
+                list.push((*style, clipped_text_fragment.into()));
             }
         }
 
@@ -169,7 +169,7 @@ impl From<List<(Style, UnicodeString)>> for StyledTexts {
     fn from(styles: List<(Style, UnicodeString)>) -> Self {
         let mut styled_texts = StyledTexts::default();
         for (style, text) in styles.iter() {
-            let my_style: Style = style.clone();
+            let my_style: Style = *style;
             styled_texts.push(StyledText::new(text.string.clone(), my_style));
         }
         styled_texts
