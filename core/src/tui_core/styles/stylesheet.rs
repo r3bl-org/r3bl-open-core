@@ -69,8 +69,8 @@ impl Stylesheet {
 
     pub fn add_style(&mut self, style: Style) -> CommonResult<()> {
         throws!({
-            if style.id.is_empty() {
-                return CommonError::new_err_with_only_msg("Style id cannot be empty");
+            if style.id == u8::MAX {
+                return CommonError::new_err_with_only_msg("Style id must be defined");
             }
             self.styles.push(style);
         });
@@ -84,17 +84,17 @@ impl Stylesheet {
         });
     }
 
-    pub fn find_style_by_id(&self, id: &str) -> Option<Style> {
+    pub fn find_style_by_id(&self, id: u8) -> Option<Style> {
         self.styles.iter().find(|style| style.id == id).cloned()
     }
 
     /// Returns [None] if no style in `ids` [Vec] is found.
-    pub fn find_styles_by_ids(&self, ids: Vec<&str>) -> Option<Vec<Style>> {
+    pub fn find_styles_by_ids(&self, ids: Vec<u8>) -> Option<Vec<Style>> {
         let mut styles = Vec::new();
 
         for id in ids {
             if let Some(style) = self.find_style_by_id(id) {
-                styles.push(style.clone());
+                styles.push(style);
             }
         }
 

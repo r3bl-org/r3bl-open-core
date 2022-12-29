@@ -25,7 +25,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-/// Use [crate::style] proc macro to generate code for this struct. Here's an example.
+/// Please use [style!](crate::style) proc macro to generate code for this struct. For the macro, if
+/// `id` isn't supplied, then [u8::MAX](u8::MAX) is used. This represents the "style does not have
+/// an assigned id" case. Computed styles don't have an id and are set to [u8::MAX](u8::MAX) as
+/// well.
+///
+/// Here's an example.
 ///
 /// ```ignore
 /// use r3bl_rs_utils_core::Stylesheet;
@@ -54,9 +59,9 @@ use crate::*;
 ///
 /// Here are the [crossterm docs on
 /// attributes](https://docs.rs/crossterm/0.25.0/crossterm/style/enum.Attribute.html)
-#[derive(Default, Clone, PartialEq, Eq, Serialize, Deserialize, Hash, GetSize)]
+#[derive(Copy, Default, Clone, PartialEq, Eq, Serialize, Deserialize, Hash, GetSize)]
 pub struct Style {
-    pub id: String,
+    pub id: u8,
     pub bold: bool,
     pub dim: bool,
     pub underline: bool,
@@ -87,7 +92,7 @@ mod addition {
     pub fn add_styles(lhs: Style, rhs: Style) -> Style {
         // Computed style has no id.
         let mut new_style: Style = Style {
-            id: "".to_string(),
+            id: u8::MAX,
             computed: true,
             ..Style::default()
         };
@@ -145,7 +150,7 @@ mod addition {
 
     impl AddAssign<&Style> for Style {
         fn add_assign(&mut self, rhs: &Style) {
-            let sum = add_styles(self.clone(), rhs.clone());
+            let sum = add_styles(*self, *rhs);
             *self = sum;
         }
     }
@@ -211,7 +216,7 @@ mod style_helpers {
 
             if self.computed {
                 msg_vec.push("computed".to_string())
-            } else if self.id.is_empty() {
+            } else if self.id == u8::MAX {
                 msg_vec.push("id: N/A".to_string())
             } else {
                 msg_vec.push(self.id.to_string());

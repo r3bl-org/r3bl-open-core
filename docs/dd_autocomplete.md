@@ -104,6 +104,8 @@ screen. The callbacks are the same.
 ## Implementation details of the autocomplete mode
 <a id="markdown-implementation-details-of-the-autocomplete-mode" name="implementation-details-of-the-autocomplete-mode"></a>
 
+**style.rs**
+- [x] replace id from String to u8 for performance benefit & Copy trait derive
 
 **dialog_engine_api.rs**
 

@@ -85,7 +85,7 @@ mod editor_engine_flex_box_impl {
     use super::*;
 
     impl EditorEngineFlexBox {
-        pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style.clone() }
+        pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style }
 
         pub fn get_style_adjusted_position_and_size(&self) -> (Position, Size) {
             (

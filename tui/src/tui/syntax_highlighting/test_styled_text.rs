@@ -33,14 +33,14 @@ mod tests {
 
             pub fn get_s1() -> Style {
                 style! {
-                  id: "s1"
+                  id: 1
                   color_bg: TuiColor::Rgb { r: 1, g: 1, b: 1 }
                 }
             }
 
             pub fn get_s2() -> Style {
                 style! {
-                  id: "s2"
+                  id: 2
                   color_bg: TuiColor::Rgb { r: 2, g: 2, b: 2 }
                 }
             }
@@ -538,8 +538,8 @@ mod tests {
         pub fn create_styled_text() -> CommonResult<StyledTexts> {
             throws_with_return!({
                 let stylesheet = create_stylesheet()?;
-                let maybe_style1 = stylesheet.find_style_by_id("style1");
-                let maybe_style2 = stylesheet.find_style_by_id("style2");
+                let maybe_style1 = stylesheet.find_style_by_id(1);
+                let maybe_style2 = stylesheet.find_style_by_id(2);
 
                 styled_texts! {
                   styled_text! {
@@ -558,12 +558,12 @@ mod tests {
             throws_with_return!({
                 stylesheet! {
                   style! {
-                    id: "style1"
+                    id: 1
                     padding: 1
                     color_bg: TuiColor::Rgb { r: 55, g: 55, b: 100 }
                   },
                   style! {
-                    id: "style2"
+                    id: 2
                     padding: 1
                     color_bg: TuiColor::Rgb { r: 55, g: 55, b: 248 }
                   }

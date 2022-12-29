@@ -272,7 +272,7 @@ mod render_op_impl_crossterm_impl {
             if style.is_some() {
                 // Use Style to set crossterm Colors.
                 // Docs: https://docs.rs/crossterm/latest/crossterm/style/index.html#colors
-                let mut style = style.clone().unwrap();
+                let mut style = (*style).unwrap();
                 let mask = style.get_bitflags();
                 if mask.contains(StyleFlag::COLOR_BG_SET) {
                     let color_bg = style.color_bg.unwrap();

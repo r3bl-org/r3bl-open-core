@@ -23,7 +23,6 @@ use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
 use r3bl_tui::*;
-use strum_macros::AsRefStr;
 
 use super::*;
 
@@ -35,16 +34,18 @@ enum ComponentId {
     Dialog = 2,
 }
 
-#[derive(Debug, Eq, PartialEq, AsRefStr)]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
 pub enum EditorStyleName {
-    Default,
+    Default = 3,
 }
 
-#[derive(Debug, Eq, PartialEq, AsRefStr)]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
 pub enum DialogStyleName {
-    Border,
-    Title,
-    Editor,
+    Border = 4,
+    Title = 5,
+    Editor = 6,
 }
 
 /// Async trait object that implements the [App] trait.
@@ -243,7 +244,7 @@ mod perform_layout {
                         id:                     ComponentId::Editor.int_value(),
                         dir:                    Direction::Vertical,
                         requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                        styles:                 [EditorStyleName::Default.as_ref()]
+                        styles:                 [EditorStyleName::Default.int_value()]
                     );
                     render_component_in_current_box!(
                         in:                 surface,
@@ -311,9 +312,9 @@ mod populate_component_registry {
 
         let dialog_options = DialogEngineConfigOptions {
             mode: DialogEngineMode::ModalSimple,
-            maybe_style_border: get_style! { @from_result: result_stylesheet , DialogStyleName::Border.as_ref() },
-            maybe_style_title: get_style! { @from_result: result_stylesheet , DialogStyleName::Title.as_ref() },
-            maybe_style_editor: get_style! { @from_result: result_stylesheet , DialogStyleName::Editor.as_ref() },
+            maybe_style_border: get_style! { @from_result: result_stylesheet , DialogStyleName::Border.int_value() },
+            maybe_style_title: get_style! { @from_result: result_stylesheet , DialogStyleName::Title.int_value() },
+            maybe_style_editor: get_style! { @from_result: result_stylesheet , DialogStyleName::Editor.int_value() },
         };
 
         let editor_options = EditorEngineConfigOptions {
@@ -439,28 +440,28 @@ mod stylesheet {
         throws_with_return!({
             stylesheet! {
               style! {
-                id: EditorStyleName::Default.as_ref()
+                id: EditorStyleName::Default.int_value()
                 padding: 1
                 // These are ignored due to syntax highlighting.
                 // attrib: [bold]
                 // color_fg: TuiColor::Blue
               },
               style! {
-                id: DialogStyleName::Title.as_ref()
+                id: DialogStyleName::Title.int_value()
                 lolcat: true
                 // These are ignored due to lolcat: true.
                 // attrib: [bold]
                 // color_fg: TuiColor::Yellow
               },
               style! {
-                id: DialogStyleName::Border.as_ref()
+                id: DialogStyleName::Border.int_value()
                 lolcat: true
                 // These are ignored due to lolcat: true.
                 // attrib: [dim]
                 // color_fg: TuiColor::Green
               },
               style! {
-                id: DialogStyleName::Editor.as_ref()
+                id: DialogStyleName::Editor.int_value()
                 attrib: [bold]
                 color_fg: TuiColor::Magenta
               }

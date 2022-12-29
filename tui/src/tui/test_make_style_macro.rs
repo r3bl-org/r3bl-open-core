@@ -33,7 +33,7 @@ mod tests {
     #[test]
     fn test_syntax_expansion() {
         let _ = style! {
-          id:       "style2"
+          id:       1
           attrib:   [dim, bold]
           padding:  1
           color_fg: color!(@red)
@@ -44,21 +44,21 @@ mod tests {
     #[test]
     fn test_syntax_expansion_dsl() {
         let _ = style! {
-          id: "style_fixed"
+          id: 1
           attrib: [dim, bold]
           padding: 1
           color_fg: color!(@red)
           color_bg: color!(0, 0, 0)
         };
         let _ = style! {
-          id: "style_fixed"
+          id: 1
           attrib: [dim, bold]
           padding: 1
           color_fg: color!(@red)
           color_bg: color!(0, 0, 0)
         };
         let _ = style! {
-          id: "style_fixed"
+          id: 1
           attrib: [dim, bold]
           padding: 1
           color_fg: color!(@red)
@@ -69,23 +69,23 @@ mod tests {
     #[test]
     fn test_with_nothing() {
         let style: Style = style! {};
-        assert_eq2!(style.id, "_id");
+        assert_eq2!(style.id, u8::MAX);
     }
 
     #[test]
     fn test_with_attrib() {
         let style_no_attrib = style! {
-          id: "style1"
+          id: 1
         };
-        assert_eq!(style_no_attrib.id, "style1");
+        assert_eq!(style_no_attrib.id, 1);
         assert!(!style_no_attrib.bold);
         assert!(!style_no_attrib.dim);
 
         let style_with_attrib = style! {
-          id: "style2"
+          id: 2
           attrib: [dim, bold]
         };
-        assert_eq!(style_with_attrib.id, "style2");
+        assert_eq!(style_with_attrib.id, 2);
         assert!(style_with_attrib.bold);
         assert!(style_with_attrib.dim);
         assert!(!style_with_attrib.underline);
@@ -98,7 +98,7 @@ mod tests {
     fn test_with_padding() {
         with! {
           style! {
-            id: "style1"
+            id: 1
             padding: 1
           },
           as it,
@@ -112,7 +112,7 @@ mod tests {
     fn test_with_color_fg() {
         with! {
           style! {
-            id: "style1"
+            id: 1
             color_fg: color!(@red)
           },
           as it,
@@ -126,7 +126,7 @@ mod tests {
     fn test_with_color_bg() {
         with! {
           style! {
-            id: "style1"
+            id: 1
             color_bg: color!(0, 0, 0)
           },
           as it,

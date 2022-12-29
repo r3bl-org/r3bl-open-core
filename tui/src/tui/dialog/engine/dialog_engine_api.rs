@@ -42,9 +42,7 @@ impl DialogEngine {
             match &args.dialog_engine.maybe_flex_box {
                 // No need to calculate new flex box if:
                 // 1) there's an existing one & 2) the window size hasn't changed.
-                Some((saved_size, saved_box)) if saved_size == args.window_size => {
-                    saved_box.clone()
-                }
+                Some((saved_size, saved_box)) if saved_size == args.window_size => *saved_box,
                 // Otherwise, calculate a new flex box & save it.
                 _ => {
                     let it = internal_impl::make_flex_box_for_dialog(
@@ -55,7 +53,7 @@ impl DialogEngine {
                     )?;
                     args.dialog_engine
                         .maybe_flex_box
-                        .replace((*args.window_size, it.clone()));
+                        .replace((*args.window_size, it));
                     it
                 }
             }
@@ -229,7 +227,7 @@ mod internal_impl {
         S: Default + Clone + PartialEq + Debug + Sync + Send,
         A: Default + Clone + Sync + Send,
     {
-        let maybe_style = args.dialog_engine.dialog_options.maybe_style_editor.clone();
+        let maybe_style = args.dialog_engine.dialog_options.maybe_style_editor;
 
         let flex_box: FlexBox = EditorEngineFlexBox {
             id: args.self_id,
@@ -280,11 +278,11 @@ mod internal_impl {
         ops.push(RenderOp::ResetColor);
         ops.push(RenderOp::MoveCursorPositionAbs(row_pos));
         ops.push(RenderOp::ApplyColors(
-            dialog_engine.dialog_options.maybe_style_title.clone(),
+            dialog_engine.dialog_options.maybe_style_title,
         ));
         ops.push(RenderOp::PaintTextWithAttributes(
             text_content.into(),
-            dialog_engine.dialog_options.maybe_style_title.clone(),
+            dialog_engine.dialog_options.maybe_style_title,
         ));
 
         ops
@@ -299,7 +297,7 @@ mod internal_impl {
 
         let inner_spaces = SPACER.repeat(ch!(@to_usize bounds_size.col_count - 2));
 
-        let maybe_style = dialog_engine.dialog_options.maybe_style_border.clone();
+        let maybe_style = dialog_engine.dialog_options.maybe_style_border;
 
         for row_idx in 0..*bounds_size.row_count {
             let row_pos = position!(col_index: origin_pos.col_index, row_index: origin_pos.row_index + row_idx);
@@ -309,7 +307,7 @@ mod internal_impl {
 
             ops.push(RenderOp::ResetColor);
             ops.push(RenderOp::MoveCursorPositionAbs(row_pos));
-            ops.push(RenderOp::ApplyColors(maybe_style.clone()));
+            ops.push(RenderOp::ApplyColors(maybe_style));
 
             match (is_first_line, is_last_line) {
                 // First line.
@@ -331,7 +329,7 @@ mod internal_impl {
 
                     ops.push(RenderOp::PaintTextWithAttributes(
                         text_content.into(),
-                        maybe_style.clone(),
+                        maybe_style,
                     ));
                 }
                 // Last line.
@@ -352,7 +350,7 @@ mod internal_impl {
                     );
                     ops.push(RenderOp::PaintTextWithAttributes(
                         text_content.into(),
-                        maybe_style.clone(),
+                        maybe_style,
                     ));
                 }
                 // Middle line.
@@ -371,7 +369,7 @@ mod internal_impl {
                     );
                     ops.push(RenderOp::PaintTextWithAttributes(
                         text_content.into(),
-                        maybe_style.clone(),
+                        maybe_style,
                     ));
                 }
                 _ => {}

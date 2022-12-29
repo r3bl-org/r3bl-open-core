@@ -97,7 +97,7 @@ mod tests {
               id:                     1,
               dir:                    Direction::Vertical,
               requested_size_percent: requested_size_percent!(width:50, height:100),
-              styles:                 ["1"]
+              styles:                 [1]
             }
             make_left_col_assertions(surface)?;
             box_end!(in: surface);
@@ -128,7 +128,7 @@ mod tests {
                 assert_eq2!(layout_item.insertion_pos_for_next_box, None);
                 assert_eq2!(
                     layout_item.get_computed_style(),
-                    Stylesheet::compute(&surface.stylesheet.find_styles_by_ids(vec!["1"]))
+                    Stylesheet::compute(&surface.stylesheet.find_styles_by_ids(vec![1]))
                 );
             });
         }
@@ -139,7 +139,7 @@ mod tests {
         throws!({
             // No macro.
             surface.box_start(FlexBoxProps {
-                maybe_styles: get_styles! { @from: surface.stylesheet, ["2"] },
+                maybe_styles: get_styles! { @from: surface.stylesheet, [2] },
                 id: 2,
                 dir: Direction::Vertical,
                 requested_size_percent: requested_size_percent!(width:50, height:100),
@@ -176,7 +176,7 @@ mod tests {
                 assert_eq2!(current_box.insertion_pos_for_next_box, None);
                 assert_eq2!(
                     current_box.get_computed_style(),
-                    Stylesheet::compute(&surface.stylesheet.find_styles_by_ids(vec!["2"]))
+                    Stylesheet::compute(&surface.stylesheet.find_styles_by_ids(vec![2]))
                 );
             });
         }
@@ -187,14 +187,14 @@ mod tests {
         throws_with_return!({
             stylesheet! {
               style! {
-                id: "1"
+                id: 1
                 attrib: [dim, bold]
                 padding: 2
                 color_fg: TuiColor::Rgb { r: 255, g: 255, b: 0 } /* Yellow. */
                 color_bg: TuiColor::Rgb { r: 128, g: 128, b: 128 } /* Grey. */
               },
               style! {
-                id: "2"
+                id: 2
                 attrib: [underline, strikethrough]
                 padding: 3
                 color_fg: TuiColor::Rgb { r: 0, g: 0, b: 0 } /* Black. */
