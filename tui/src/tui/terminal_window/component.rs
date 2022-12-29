@@ -46,6 +46,9 @@ where
     ///       the way it gets rendered)
     ///   - Maybe use `shared_store`:
     ///     - Dispatch an action if needed
+    ///   - Maybe use `surface`:
+    ///     - Get the origin and size of the surface that can be drawn to (maybe different than the
+    ///       size of the window)
     ///
     /// - Returns:
     ///   - [RenderPipeline] which must be rendered by the caller
@@ -57,6 +60,7 @@ where
         &mut self,
         args: ComponentScopeArgs<'_, S, A>,
         current_box: &FlexBox,
+        surface_bounds: SurfaceBounds,
     ) -> CommonResult<RenderPipeline>;
 
     /// If this component has focus [HasFocus] then this method will be called to handle input event

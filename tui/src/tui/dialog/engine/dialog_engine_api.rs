@@ -40,12 +40,10 @@ impl DialogEngine {
     {
         let current_box: FlexBox = {
             match &args.dialog_engine.maybe_flex_box {
-                // No need to calculate new flex box if the window size hasn't changed & there's an
-                // existing one.
-                Some((saved_window_size, saved_flex_box))
-                    if saved_window_size == args.window_size =>
-                {
-                    saved_flex_box.clone()
+                // No need to calculate new flex box if:
+                // 1) there's an existing one & 2) the window size hasn't changed.
+                Some((saved_size, saved_box)) if saved_size == args.window_size => {
+                    saved_box.clone()
                 }
                 // Otherwise, calculate a new flex box & save it.
                 _ => {
@@ -53,7 +51,7 @@ impl DialogEngine {
                         &args.self_id,
                         &args.dialog_engine.dialog_options.mode,
                         args.window_size,
-                        None,
+                        args.dialog_engine.maybe_surface_bounds,
                     )?;
                     args.dialog_engine
                         .maybe_flex_box
@@ -166,16 +164,16 @@ mod internal_impl {
         dialog_id: &FlexBoxId,
         _mode: &DialogEngineMode,
         window_size: &Size,
-        maybe_surface: Option<&Surface>,
+        maybe_surface_bounds: Option<SurfaceBounds>,
     ) -> CommonResult<FlexBox> {
-        let surface_size = if let Some(surface) = maybe_surface {
-            surface.box_size
+        let surface_size = if let Some(surface_bounds) = maybe_surface_bounds {
+            surface_bounds.box_size
         } else {
             *window_size
         };
 
-        let surface_origin_pos = if let Some(surface) = maybe_surface {
-            surface.origin_pos
+        let surface_origin_pos = if let Some(surface_bounds) = maybe_surface_bounds {
+            surface_bounds.origin_pos
         } else {
             position!(col_index: 0, row_index: 0)
         };
@@ -428,7 +426,7 @@ mod test_dialog_engine_api_render_engine {
             &self_id,
             &DialogEngineMode::ModalSimple,
             &window_size,
-            Some(&surface),
+            Some(SurfaceBounds::from(&surface)),
         ))
         .unwrap();
 
@@ -497,7 +495,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
             &dialog_id,
             &DialogEngineMode::ModalSimple,
             &window_size,
-            Some(&surface),
+            Some(SurfaceBounds::from(&surface)),
         ));
 
         // Assert that a general `CommonError` is returned.
@@ -533,7 +531,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
             &self_id,
             &DialogEngineMode::ModalSimple,
             &window_size,
-            Some(&surface),
+            Some(SurfaceBounds::from(&surface)),
         ));
 
         assert_eq2!(result_flex_box.is_ok(), true);

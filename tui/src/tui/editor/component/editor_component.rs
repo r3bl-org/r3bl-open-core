@@ -120,6 +120,7 @@ pub mod impl_component {
             &mut self,
             args: ComponentScopeArgs<'_, S, A>,
             current_box: &FlexBox,
+            _surface_bounds: SurfaceBounds, /* Ignore this. */
         ) -> CommonResult<RenderPipeline> {
             let ComponentScopeArgs {
                 state,

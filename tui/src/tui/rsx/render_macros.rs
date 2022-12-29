@@ -32,6 +32,7 @@ macro_rules! render_component_in_current_box {
             ComponentRegistry::get_component_ref_by_id(&mut $arg_registry, $arg_component_id);
 
         if let Some(component_ref) = maybe_component_ref {
+            let surface_bounds = SurfaceBounds::from(&*($arg_surface));
             let current_box = $arg_surface.current_box()?;
             let queue = component_ref
                 .write()
@@ -45,6 +46,7 @@ macro_rules! render_component_in_current_box {
                         window_size: $arg_window_size,
                     },
                     current_box,
+                    surface_bounds,
                 )
                 .await?;
             $arg_surface.render_pipeline += queue;
@@ -71,6 +73,7 @@ macro_rules! render_component_in_given_box {
             ComponentRegistry::get_component_ref_by_id(&mut $arg_registry, $arg_component_id);
 
         if let Some(component_ref) = maybe_component_ref {
+            let surface_bounds = SurfaceBounds::from(&*($arg_surface));
             let queue: RenderPipeline = component_ref
                 .write()
                 .await
@@ -83,6 +86,7 @@ macro_rules! render_component_in_given_box {
                         window_size: $arg_window_size,
                     },
                     &$arg_box,
+                    surface_bounds,
                 )
                 .await?;
             $arg_surface.render_pipeline += queue;

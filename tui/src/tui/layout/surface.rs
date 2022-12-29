@@ -16,18 +16,38 @@
  */
 
 use r3bl_rs_utils_core::*;
+use serde::{Deserialize, Serialize};
 
 use crate::*;
 
 /// Represents a rectangular area of the terminal screen, and not necessarily the full terminal
 /// screen.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Surface {
     pub origin_pos: Position,
     pub box_size: Size,
     pub stack_of_boxes: Vec<FlexBox>,
     pub stylesheet: Stylesheet,
     pub render_pipeline: RenderPipeline,
+}
+
+#[derive(Copy, Clone, Debug, Default, Serialize, Deserialize)]
+pub struct SurfaceBounds {
+    pub origin_pos: Position,
+    pub box_size: Size,
+}
+
+mod surface_bounds_impl {
+    use super::*;
+
+    impl From<&Surface> for SurfaceBounds {
+        fn from(surface: &Surface) -> Self {
+            Self {
+                origin_pos: surface.origin_pos,
+                box_size: surface.box_size,
+            }
+        }
+    }
 }
 
 #[macro_export]

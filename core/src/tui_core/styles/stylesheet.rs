@@ -15,9 +15,11 @@
  *   limitations under the License.
  */
 
+use serde::{Deserialize, Serialize};
+
 use crate::*;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Stylesheet {
     pub styles: Vec<Style>,
 }

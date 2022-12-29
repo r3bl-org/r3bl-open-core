@@ -107,15 +107,13 @@ screen. The callbacks are the same.
 
 **dialog_engine_api.rs**
 
-- [ ] `apply_event()` - called by `DialogComponent::handle_event()`
-  - [ ] up / down handler to navigate the results panel (if in autocomplete mode)
-    - up / down will change the following in the `dialog_engine` data (**not state**)
-      - `selected_row_index` - tracks the selected row
-        - used for `render`, `on_dialog_press_handler`
-      - `scroll_offset_row_index` - tracks scroll offset
-        - you can get viewport from `DialogEngine::flex_box`, saved by `DialogComponent::render()`
-        - if viewport is smaller than num results then scroll offset is applied
-    - this code path should return an `ConsumedRender` so that the results panel is re-rendered
+- [ ] `make_flex_box_for_dialog()`
+  - [x] pass arg into the function
+    - `DialogEngineMode` - this is the mode of the dialog engine (normal or autocomplete)
+  - [x] make the `Surface` arg optional (since it won't be passed in)
+  - [x] this should just be a private function, in `internal_impl`, remove from `DialogEngineApi`
+  - [x] pass `SurfaceBounds` so that dialog paint can be constrained to this
+  - [ ] based on the mode (normal / autocomplete) generate the correct flex box
 - [ ] add `render_results_panel()` to display results panel (if in autocomplete mode)
   - `DialogBuffer.results` is saved in the **state** & gets passed in here
   - paint the `Vec<String>` in the panel
@@ -126,12 +124,15 @@ screen. The callbacks are the same.
     - [x] pass the mode (`self.dialog_engine.dialog_options.mode`) into `make_flex_box_for_dialog()`
       - this `flex_box` is used later by the `DialogEngineApi::apply_event()` to perform scrolling
     - [x] save flex box to `dialog_engine.maybe_flex_box`
-- [ ] `make_flex_box_for_dialog()`
-  - [x] pass arg into the function
-    - `DialogEngineMode` - this is the mode of the dialog engine (normal or autocomplete)
-  - [x] make the `Surface` arg optional (since it won't be passed in)
-  - [x] this should just be a private function, in `internal_impl`, remove from `DialogEngineApi`
-  - [ ] based on the mode (normal / autocomplete) generate the correct flex box
+- [ ] `apply_event()` - called by `DialogComponent::handle_event()`
+  - [ ] up / down handler to navigate the results panel (if in autocomplete mode)
+    - up / down will change the following in the `dialog_engine` data (**not state**)
+      - `selected_row_index` - tracks the selected row
+        - used for `render`, `on_dialog_press_handler`
+      - `scroll_offset_row_index` - tracks scroll offset
+        - you can get viewport from `DialogEngine::flex_box`, saved by `DialogComponent::render()`
+        - if viewport is smaller than num results then scroll offset is applied
+    - this code path should return an `ConsumedRender` so that the results panel is re-rendered
 - [ ] `render_engine()` - called by `DialogComponent::render()`
   - [ ] called `render_results_panel()`
 
