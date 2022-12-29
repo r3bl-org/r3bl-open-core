@@ -60,13 +60,20 @@ pub mod dialog_component_impl {
         /// - App scope: `S`, [ComponentRegistry<S, A>].
         /// - User input (from [main_event_loop]): [InputEvent].
         ///
-        /// Note: The 3rd argument [FlexBox] is ignored since the dialog component breaks out of whatever
-        /// box the layout places it in, and ends up painting itself over the entire screen.
+        /// Note:
+        /// 1. The 3rd argument `_current_box` [FlexBox] is ignored since the dialog component
+        ///    breaks out of whatever box the layout places it in, and ends up painting itself over
+        ///    the entire screen.
+        /// 2. However, `SurfaceBounds` is saved for later use. And it is used to restrict where the
+        ///    dialog can be placed on the screen.
         async fn render(
             &mut self,
             args: ComponentScopeArgs<'_, S, A>,
-            _: &FlexBox,
+            _current_box: &FlexBox,        /* Ignore this. */
+            surface_bounds: SurfaceBounds, /* Save this. */
         ) -> CommonResult<RenderPipeline> {
+            self.dialog_engine.maybe_surface_bounds = Some(surface_bounds);
+
             let ComponentScopeArgs {
                 state,
                 shared_store,

@@ -43,6 +43,7 @@ pub struct DialogEngine {
         /* window size: */ Size,
         /* flex box calculated by render_engine(): */ FlexBox,
     )>,
+    pub maybe_surface_bounds: Option<SurfaceBounds>,
 }
 
 mod dialog_engine_impl {

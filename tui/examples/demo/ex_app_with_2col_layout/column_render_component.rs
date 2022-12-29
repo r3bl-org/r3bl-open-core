@@ -122,6 +122,7 @@ impl Component<State, Action> for ColumnRenderComponent {
         &mut self,
         args: ComponentScopeArgs<'_, State, Action>,
         current_box: &FlexBox,
+        _surface_bounds: SurfaceBounds, /* Ignore this. */
     ) -> CommonResult<RenderPipeline> {
         throws_with_return!({
             let ComponentScopeArgs {
