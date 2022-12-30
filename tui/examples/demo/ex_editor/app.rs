@@ -315,6 +315,7 @@ mod populate_component_registry {
             maybe_style_border: get_style! { @from_result: result_stylesheet , DialogStyleName::Border.int_value() },
             maybe_style_title: get_style! { @from_result: result_stylesheet , DialogStyleName::Title.int_value() },
             maybe_style_editor: get_style! { @from_result: result_stylesheet , DialogStyleName::Editor.int_value() },
+            ..Default::default()
         };
 
         let editor_options = EditorEngineConfigOptions {

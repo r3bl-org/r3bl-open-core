@@ -1,3 +1,6 @@
+┏━━━━━━━━━━━━━━━┓
+┃ r3bl_rs_utils ┃
+┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 editor engine bug:
   ✔ fix: type few lines, press backspace/delete (from end of file) and deleted lines are not removed @done(22-11-28 18:18)
     - paint.rs::paint() does not work property ... the optimization to prevent flicker causes this problem

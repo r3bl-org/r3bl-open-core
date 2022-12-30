@@ -66,24 +66,32 @@ mod dialog_engine_impl {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DialogEngineConfigOptions {
     pub mode: DialogEngineMode,
+    pub result_panel_row_count: ChUnit,
     pub maybe_style_border: Option<Style>,
     pub maybe_style_title: Option<Style>,
     pub maybe_style_editor: Option<Style>,
+}
+
+mod dialog_engine_config_options_impl {
+    use int_enum::IntEnum;
+
+    use super::*;
+
+    impl Default for DialogEngineConfigOptions {
+        fn default() -> Self {
+            Self {
+                mode: DialogEngineMode::ModalSimple,
+                result_panel_row_count: ch!(DefaultSize::ResultPanelRowCount.int_value()),
+                maybe_style_border: None,
+                maybe_style_editor: None,
+                maybe_style_title: None,
+            }
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DialogEngineMode {
     ModalSimple,
     ModalAutocomplete,
-}
-
-impl Default for DialogEngineConfigOptions {
-    fn default() -> Self {
-        Self {
-            mode: DialogEngineMode::ModalSimple,
-            maybe_style_border: None,
-            maybe_style_editor: None,
-            maybe_style_title: None,
-        }
-    }
 }

@@ -9,7 +9,6 @@ Date: 2022-12-14
 - [How do dialog boxes work?](#how-do-dialog-boxes-work)
   - [Two callback functions](#two-callback-functions)
 - [How to use this dialog to make an HTTP request & pipe the results into a selection area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
-- [Implementation details of the autocomplete mode](#implementation-details-of-the-autocomplete-mode)
 - [How to make HTTP requests](#how-to-make-http-requests)
 
 <!-- /TOC -->
@@ -100,79 +99,6 @@ autocomplete.
 In autocomplete mode, an extra "results panel" is displayed, and the layout of the dialog is
 different on the screen. Instead of being in the middle of the screen, it starts at the top of the
 screen. The callbacks are the same.
-
-## Implementation details of the autocomplete mode
-<a id="markdown-implementation-details-of-the-autocomplete-mode" name="implementation-details-of-the-autocomplete-mode"></a>
-
-**style.rs**
-- [x] replace id from String to u8 for performance benefit & Copy trait derive
-
-**dialog_engine_api.rs**
-
-- [ ] `make_flex_box_for_dialog()`
-  - [x] pass arg into the function
-    - `DialogEngineMode` - this is the mode of the dialog engine (normal or autocomplete)
-  - [x] make the `Surface` arg optional (since it won't be passed in)
-  - [x] this should just be a private function, in `internal_impl`, remove from `DialogEngineApi`
-  - [x] pass `SurfaceBounds` so that dialog paint can be constrained to this
-  - [ ] based on the mode (normal / autocomplete) generate the correct flex box
-- [ ] add `render_results_panel()` to display results panel (if in autocomplete mode)
-  - `DialogBuffer.results` is saved in the **state** & gets passed in here
-  - paint the `Vec<String>` in the panel
-  - paint the selected row
-  - deal w/ `scroll_offset_row_index`
-  - [x] actually call `make_flex_box_for_dialog()`
-    - [x] drop the `current_box` arg
-    - [x] pass the mode (`self.dialog_engine.dialog_options.mode`) into `make_flex_box_for_dialog()`
-      - this `flex_box` is used later by the `DialogEngineApi::apply_event()` to perform scrolling
-    - [x] save flex box to `dialog_engine.maybe_flex_box`
-- [ ] `apply_event()` - called by `DialogComponent::handle_event()`
-  - [ ] up / down handler to navigate the results panel (if in autocomplete mode)
-    - up / down will change the following in the `dialog_engine` data (**not state**)
-      - `selected_row_index` - tracks the selected row
-        - used for `render`, `on_dialog_press_handler`
-      - `scroll_offset_row_index` - tracks scroll offset
-        - you can get viewport from `DialogEngine::flex_box`, saved by `DialogComponent::render()`
-        - if viewport is smaller than num results then scroll offset is applied
-    - this code path should return an `ConsumedRender` so that the results panel is re-rendered
-- [ ] `render_engine()` - called by `DialogComponent::render()`
-  - [ ] called `render_results_panel()`
-
-**dialog_buffer.rs**
-
-- [ ] add `results` field
-
-**dialog_engine.rs**
-
-- [ ] add `selected_row_index: ChUnit`
-- [ ] add `scroll_offset_row_index: ChUnit`
-- [x] add `maybe_flex_box: Option<FlexBox>` & document it
-
-**app.rs**
-
-- [ ] add a new dialog component w/ autocomplete (copy `insert_dialog_component()`)
-  - [ ] `on_dialog_press_handler` - add result to editor by dispatching action
-  - [ ] `on_dialog_editor_change_handler` -
-    - [ ] call web service
-    - [ ] get results
-    - [ ] dispatch action to update results panel
-      - the results are added to `Action::SetDialogBufferResults(FlexBoxId, Vec<String>`
-- [ ] add new keyboard shortcut to show autocomplete dialog (<kbd>ctrl + k</kbd>)
-  - [ ] change `try_input_event_activate_modal()`
-  - [ ] change status bar to show this shortcut
-- [x] `ContainerSurfaceRender::render_in_surface()` can't call `make_flex_box_for_dialog()`
-  - Pass in `Default::default()` knowing that it will be ignored by the dialog component
-
-**reducer.rs**
-
-- [ ] handle `SetDialogBufferResults(FlexBoxId, Vec<String>` case in `run()`
-  - add the results to the state (in `DialogBuffer`)
-
-**dialog_component.rs**
-
-- [x] `render()` - ignore the 3rd arg (`current_box: FlexBox`) & document it
-- [x] `new_shared()` - add `DialogEngineConfigOptions` arg
-- [x] `new()` - add `DialogEngineConfigOptions` arg & save to `self.dialog_engine: DialogEngine`
 
 ## How to make HTTP requests
 <a id="markdown-how-to-make-http-requests" name="how-to-make-http-requests"></a>

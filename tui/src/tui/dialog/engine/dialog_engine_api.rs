@@ -47,7 +47,7 @@ impl DialogEngine {
                 _ => {
                     let it = internal_impl::make_flex_box_for_dialog(
                         &args.self_id,
-                        &args.dialog_engine.dialog_options.mode,
+                        &args.dialog_engine.dialog_options,
                         args.window_size,
                         args.dialog_engine.maybe_surface_bounds,
                     )?;
@@ -160,7 +160,7 @@ mod internal_impl {
     /// ```
     pub fn make_flex_box_for_dialog(
         dialog_id: &FlexBoxId,
-        _mode: &DialogEngineMode,
+        dialog_options: &DialogEngineConfigOptions,
         window_size: &Size,
         maybe_surface_bounds: Option<SurfaceBounds>,
     ) -> CommonResult<FlexBox> {
@@ -190,22 +190,53 @@ mod internal_impl {
             );
         }
 
-        // TODO: use `_mode` in order to create the correct dialog_size
+        let (origin_pos, dialog_size) = match dialog_options.mode {
+            DialogEngineMode::ModalSimple => {
+                let dialog_size = {
+                    // Calc dialog bounds size based on window size.
+                    let col_count = surface_size.col_count * 90 / 100;
+                    let row_count = ch!(4); /* title, input, borders-top, border-bottom */
+                    let size = size! { col_count: col_count, row_count: row_count };
+                    assert!(size.row_count < ch!(MinSize::Row.int_value()));
+                    size
+                };
 
-        let dialog_size = {
-            // Calc dialog bounds size based on window size.
-            let size = size! { col_count: surface_size.col_count * 90/100, row_count: 4 };
-            assert!(size.row_count < ch!(MinSize::Row.int_value()));
-            size
-        };
+                let origin_pos = {
+                    // Calc origin position based on window size & dialog size.
+                    let origin_col = surface_size.col_count / 2 - dialog_size.col_count / 2;
+                    let origin_row = surface_size.row_count / 2 - dialog_size.row_count / 2;
+                    let mut it = position!(col_index: origin_col, row_index: origin_row);
+                    it += surface_origin_pos;
+                    it
+                };
 
-        let mut origin_pos = {
-            // Calc origin position based on window size & dialog size.
-            let origin_col = surface_size.col_count / 2 - dialog_size.col_count / 2;
-            let origin_row = surface_size.row_count / 2 - dialog_size.row_count / 2;
-            position!(col_index: origin_col, row_index: origin_row)
+                (origin_pos, dialog_size)
+            }
+            DialogEngineMode::ModalAutocomplete => {
+                let dialog_size = {
+                    // Calc dialog bounds size based on window size.
+                    let row_count =
+                        /* title, input, borders-top, border-bottom */ ch!(4) +
+                        /* empty line */ ch!(1) +
+                        /* results panel */ dialog_options.result_panel_row_count;
+                    let col_count = surface_size.col_count * 90 / 100;
+                    let size = size!(col_count: col_count, row_count: row_count);
+                    assert!(size.row_count < ch!(MinSize::Row.int_value()));
+                    size
+                };
+
+                let origin_pos = {
+                    // Calc origin position based on window size & dialog size.
+                    let origin_col = surface_size.col_count / 2 - dialog_size.col_count / 2;
+                    let origin_row = surface_size.row_count / 2 - dialog_size.row_count / 2;
+                    let mut it = position!(col_index: origin_col, row_index: origin_row);
+                    it += surface_origin_pos;
+                    it
+                };
+
+                (origin_pos, dialog_size)
+            }
         };
-        origin_pos += surface_origin_pos;
 
         throws_with_return!({
             EditorEngineFlexBox {
@@ -407,30 +438,6 @@ mod test_dialog_engine_api_render_engine {
     use super::*;
     use crate::test_dialog::mock_real_objects_for_dialog;
 
-    #[test]
-    fn test_make_flex_box_for_dialog() {
-        // 1. The surface and window_size are not the same width and height.
-        // 2. The surface is also not starting from the top left corner of the window.
-        let surface = Surface {
-            origin_pos: position! { col_index: 2, row_index: 2 },
-            box_size: size!( col_count: 65, row_count: 10 ),
-            ..Default::default()
-        };
-        let window_size = size!( col_count: 70, row_count: 15 );
-        let self_id: FlexBoxId = 0;
-
-        // The dialog box should be centered inside the surface.
-        let _result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
-            &self_id,
-            &DialogEngineMode::ModalSimple,
-            &window_size,
-            Some(SurfaceBounds::from(&surface)),
-        ))
-        .unwrap();
-
-        // TODO: impl this test
-    }
-
     #[tokio::test]
     async fn render_engine() {
         let self_id: FlexBoxId = 0;
@@ -476,7 +483,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
     /// - https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any
     /// - https://ysantos.com/blog/downcast-rust
     #[test]
-    fn make_flex_box_for_dialog_display_size_too_small() {
+    fn make_flex_box_for_dialog_simple_display_size_too_small() {
         let surface = Surface::default();
         let window_size = Size::default();
         let dialog_id: FlexBoxId = 0;
@@ -491,7 +498,53 @@ mod test_dialog_api_make_flex_box_for_dialog {
         //   },
         let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
             &dialog_id,
-            &DialogEngineMode::ModalSimple,
+            &DialogEngineConfigOptions {
+                mode: DialogEngineMode::ModalSimple,
+                ..Default::default()
+            },
+            &window_size,
+            Some(SurfaceBounds::from(&surface)),
+        ));
+
+        // Assert that a general `CommonError` is returned.
+        let my_err: Box<dyn Error + Send + Sync> = result_flex_box.err().unwrap();
+        assert_eq2!(my_err.is::<CommonError>(), true);
+
+        // Assert that this specific error is returned.
+        let result = matches!(
+            my_err.downcast_ref::<CommonError>(),
+            Some(CommonError {
+                err_type: CommonErrorType::DisplaySizeTooSmall,
+                err_msg: _,
+            })
+        );
+
+        assert_eq2!(result, true);
+    }
+
+    /// More info on `is` and downcasting:
+    /// - https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any
+    /// - https://ysantos.com/blog/downcast-rust
+    #[test]
+    fn make_flex_box_for_dialog_autocomplete_display_size_too_small() {
+        let surface = Surface::default();
+        let window_size = Size::default();
+        let dialog_id: FlexBoxId = 0;
+
+        // The window size is too small and will result in this error.
+        // Err(
+        //   CommonError {
+        //       err_type: DisplaySizeTooSmall,
+        //       err_msg: Some(
+        //           "Window size is too small. Min size is 65 cols x 10 rows",
+        //       ),
+        //   },
+        let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
+            &dialog_id,
+            &DialogEngineConfigOptions {
+                mode: DialogEngineMode::ModalAutocomplete,
+                ..Default::default()
+            },
             &window_size,
             Some(SurfaceBounds::from(&surface)),
         ));
@@ -513,7 +566,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
     }
 
     #[test]
-    fn make_flex_box_for_dialog() {
+    fn make_flex_box_for_dialog_simple() {
         // 1. The surface and window_size are not the same width and height.
         // 2. The surface is also not starting from the top left corner of the window.
         let surface = Surface {
@@ -527,7 +580,10 @@ mod test_dialog_api_make_flex_box_for_dialog {
         // The dialog box should be centered inside the surface.
         let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
             &self_id,
-            &DialogEngineMode::ModalSimple,
+            &DialogEngineConfigOptions {
+                mode: DialogEngineMode::ModalSimple,
+                ..Default::default()
+            },
             &window_size,
             Some(SurfaceBounds::from(&surface)),
         ));
@@ -543,6 +599,44 @@ mod test_dialog_api_make_flex_box_for_dialog {
         assert_eq2!(
             flex_box.style_adjusted_origin_pos,
             position!( col_index: 5, row_index: 5 )
+        );
+    }
+
+    #[test]
+
+    fn make_flex_box_for_dialog_autocomplete() {
+        // 1. The surface and window_size are not the same width and height.
+        // 2. The surface is also not starting from the top left corner of the window.
+        let surface = Surface {
+            origin_pos: position! { col_index: 2, row_index: 2 },
+            box_size: size!( col_count: 65, row_count: 10 ),
+            ..Default::default()
+        };
+        let window_size = size!( col_count: 70, row_count: 15 );
+        let self_id: FlexBoxId = 0;
+
+        // The dialog box should be centered inside the surface.
+        let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
+            &self_id,
+            &DialogEngineConfigOptions {
+                mode: DialogEngineMode::ModalAutocomplete,
+                ..Default::default()
+            },
+            &window_size,
+            Some(SurfaceBounds::from(&surface)),
+        ));
+
+        assert_eq2!(result_flex_box.is_ok(), true);
+
+        let flex_box = result_flex_box.unwrap();
+        assert_eq2!(flex_box.id, self_id);
+        assert_eq2!(
+            flex_box.style_adjusted_bounds_size,
+            size!( col_count: 58, row_count: 10 )
+        );
+        assert_eq2!(
+            flex_box.style_adjusted_origin_pos,
+            position!( col_index: 5, row_index: 2 )
         );
     }
 }
