@@ -1,18 +1,13 @@
 auto completion provider impl:
   **bug fixes**:
-  - [ ] https://github.com/r3bl-org/r3bl_rs_utils/issues/71
+  - [x] https://github.com/r3bl-org/r3bl_rs_utils/issues/71
 
   **dialog_engine_api.rs**:
   - [ ] add `render_results_panel()` to display results panel (if in autocomplete mode)
     - `DialogBuffer.results` is saved in the **state** & gets passed in here
-    - paint the `Vec<String>` in the panel
+    - paint the `results: Vec<String>` in the panel
     - paint the selected row
     - deal w/ `scroll_offset_row_index`
-    - [x] actually call `make_flex_box_for_dialog()`
-      - [x] drop the `current_box` arg
-      - [x] pass the mode (`self.dialog_engine.dialog_options.mode`) into `make_flex_box_for_dialog()`
-        - this `flex_box` is used later by the `DialogEngineApi::apply_event()` to perform scrolling
-      - [x] save flex box to `dialog_engine.maybe_flex_box`
   - [ ] `apply_event()` - called by `DialogComponent::handle_event()`
     - [ ] up / down handler to navigate the results panel (if in autocomplete mode)
       - up / down will change the following in the `dialog_engine` data (**not state**)
@@ -24,6 +19,11 @@ auto completion provider impl:
       - this code path should return an `ConsumedRender` so that the results panel is re-rendered
   - [ ] `render_engine()` - called by `DialogComponent::render()`
     - [ ] called `render_results_panel()`
+    - [x] actually call `make_flex_box_for_dialog()`
+      - [x] drop the `current_box` arg
+      - [x] pass the mode (`self.dialog_engine.dialog_options.mode`) into `make_flex_box_for_dialog()`
+        - this `flex_box` is used later by the `DialogEngineApi::apply_event()` to perform scrolling
+      - [x] save flex box to `dialog_engine.maybe_flex_box`
   - [x] `make_flex_box_for_dialog()`
     - [x] pass arg into the function
       - `DialogEngineMode` - this is the mode of the dialog engine (normal or autocomplete)
@@ -34,7 +34,7 @@ auto completion provider impl:
     - [x] write tests
 
   **dialog_buffer.rs**:
-  - [ ] add `results` field
+  - [ ] add `results: Vec<String>` field
 
   **dialog_engine.rs**:
   - [ ] add `selected_row_index: ChUnit`

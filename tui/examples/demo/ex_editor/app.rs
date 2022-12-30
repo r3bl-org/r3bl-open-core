@@ -179,6 +179,16 @@ mod detect_modal_dialog_activation_from_input_event {
             };
 
             fn activate_modal(this: &mut AppWithLayout, args: GlobalScopeArgs<State, Action>) {
+                // If the dialog already has focus, then don't activate it again. Simply a no-op.i
+                if this
+                    .component_registry
+                    .has_focus
+                    .does_id_have_focus(ComponentId::Dialog.int_value())
+                {
+                    return;
+                }
+
+                // Initialize the dialog buffer with title & text.
                 let title = "Modal Dialog Title";
                 let text = {
                     if let Some(editor_buffer) = args
