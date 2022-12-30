@@ -342,9 +342,7 @@ fn cascade_styles(parent_box: &FlexBox, self_box_props: &FlexBoxProps) -> Option
     };
 
     if let Some(ref self_styles) = self_box_props.maybe_styles {
-        self_styles
-            .iter()
-            .for_each(|style| style_vec.push(*style));
+        self_styles.iter().for_each(|style| style_vec.push(*style));
     }
 
     if style_vec.is_empty() {
