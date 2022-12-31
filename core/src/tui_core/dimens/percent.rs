@@ -75,17 +75,17 @@ impl Percent {
         }
         Percent { value: item as u8 }.into()
     }
-}
 
-/// Return the calculated percentage of the given value.
-pub fn calc_percentage(percentage: Percent, value: ChUnit) -> ChUnit {
-    let percentage_int = percentage.value;
-    let percentage_f32 = f32::from(percentage_int) / 100.0;
-    let result_f32 = percentage_f32 * f32::from(*value);
-    unsafe {
-        let converted_value: ChUnitPrimitiveType =
-            result_f32.to_int_unchecked::<ChUnitPrimitiveType>();
-        ch!(converted_value)
+    /// Return the calculated percentage of the given value.
+    pub fn calc_percentage(&self, value: ChUnit) -> ChUnit {
+        let percentage_int = self.value;
+        let percentage_f32 = f32::from(percentage_int) / 100.0;
+        let result_f32 = percentage_f32 * f32::from(*value);
+        unsafe {
+            let converted_value: ChUnitPrimitiveType =
+                result_f32.to_int_unchecked::<ChUnitPrimitiveType>();
+            ch!(converted_value)
+        }
     }
 }
 

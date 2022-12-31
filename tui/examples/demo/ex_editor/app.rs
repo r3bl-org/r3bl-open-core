@@ -46,6 +46,7 @@ pub enum DialogStyleName {
     Border = 4,
     Title = 5,
     Editor = 6,
+    ResultsPanel = 7,
 }
 
 /// Async trait object that implements the [App] trait.
@@ -325,6 +326,7 @@ mod populate_component_registry {
             maybe_style_border: get_style! { @from_result: result_stylesheet , DialogStyleName::Border.int_value() },
             maybe_style_title: get_style! { @from_result: result_stylesheet , DialogStyleName::Title.int_value() },
             maybe_style_editor: get_style! { @from_result: result_stylesheet , DialogStyleName::Editor.int_value() },
+            maybe_style_results_panel: get_style! { @from_result: result_stylesheet , DialogStyleName::ResultsPanel.int_value() },
             ..Default::default()
         };
 
@@ -475,6 +477,11 @@ mod stylesheet {
                 id: DialogStyleName::Editor.int_value()
                 attrib: [bold]
                 color_fg: TuiColor::Magenta
+              },
+              style! {
+                id: DialogStyleName::ResultsPanel.int_value()
+                // attrib: [bold]
+                color_fg: TuiColor::Blue
               }
             }
         })
