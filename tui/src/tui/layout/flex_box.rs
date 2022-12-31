@@ -53,31 +53,103 @@ pub struct FlexBox {
     pub maybe_computed_style: Option<Style>,
 }
 
-impl FlexBox {
-    pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style }
+mod flex_box_impl {
+    use super::*;
+
+    impl FlexBox {
+        pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style }
+    }
+
+    impl Debug for FlexBox {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("FlexBox")
+                .field("id", &self.id)
+                .field("dir", &self.dir)
+                .field("origin_pos", &self.origin_pos)
+                .field("bounds_size", &self.bounds_size)
+                .field("style_adjusted_origin_pos", &self.style_adjusted_origin_pos)
+                .field(
+                    "style_adjusted_bounds_size",
+                    &self.style_adjusted_bounds_size,
+                )
+                .field("requested_size_percent", &self.requested_size_percent)
+                .field(
+                    "insertion_pos_for_next_box",
+                    format_option!(&self.insertion_pos_for_next_box),
+                )
+                .field(
+                    "maybe_computed_style",
+                    format_option!(&self.maybe_computed_style),
+                )
+                .finish()
+        }
+    }
 }
 
-impl Debug for FlexBox {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FlexBox")
-            .field("id", &self.id)
-            .field("dir", &self.dir)
-            .field("origin_pos", &self.origin_pos)
-            .field("bounds_size", &self.bounds_size)
-            .field("style_adjusted_origin_pos", &self.style_adjusted_origin_pos)
-            .field(
-                "style_adjusted_bounds_size",
-                &self.style_adjusted_bounds_size,
+/// Holds a subset of the fields in [FlexBox] that are required by the editor and dialog engines.
+#[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PartialFlexBox {
+    pub id: FlexBoxId,
+    pub style_adjusted_origin_pos: Position,
+    pub style_adjusted_bounds_size: Size,
+    pub maybe_computed_style: Option<Style>,
+}
+
+mod partial_flex_box_impl {
+    use super::*;
+
+    impl PartialFlexBox {
+        pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style }
+
+        pub fn get_style_adjusted_position_and_size(&self) -> (Position, Size) {
+            (
+                self.style_adjusted_origin_pos,
+                self.style_adjusted_bounds_size,
             )
-            .field("requested_size_percent", &self.requested_size_percent)
-            .field(
-                "insertion_pos_for_next_box",
-                format_option!(&self.insertion_pos_for_next_box),
-            )
-            .field(
-                "maybe_computed_style",
-                format_option!(&self.maybe_computed_style),
-            )
-            .finish()
+        }
+    }
+
+    impl Debug for PartialFlexBox {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("FlexBox")
+                .field("id", &self.id)
+                .field("style_adjusted_origin_pos", &self.style_adjusted_origin_pos)
+                .field(
+                    "style_adjusted_bounds_size",
+                    &self.style_adjusted_bounds_size,
+                )
+                .field(
+                    "maybe_computed_style",
+                    format_option!(&self.maybe_computed_style),
+                )
+                .finish()
+        }
+    }
+
+    impl From<PartialFlexBox> for FlexBox {
+        fn from(engine_box: PartialFlexBox) -> Self {
+            Self {
+                id: engine_box.id,
+                style_adjusted_origin_pos: engine_box.style_adjusted_origin_pos,
+                style_adjusted_bounds_size: engine_box.style_adjusted_bounds_size,
+                maybe_computed_style: engine_box.get_computed_style(),
+                ..Default::default()
+            }
+        }
+    }
+
+    impl From<FlexBox> for PartialFlexBox {
+        fn from(flex_box: FlexBox) -> Self { PartialFlexBox::from(&flex_box) }
+    }
+
+    impl From<&FlexBox> for PartialFlexBox {
+        fn from(flex_box: &FlexBox) -> Self {
+            Self {
+                id: flex_box.id,
+                style_adjusted_origin_pos: flex_box.style_adjusted_origin_pos,
+                style_adjusted_bounds_size: flex_box.style_adjusted_bounds_size,
+                maybe_computed_style: flex_box.get_computed_style(),
+            }
+        }
     }
 }

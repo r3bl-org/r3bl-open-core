@@ -17,6 +17,7 @@ auto completion provider impl:
           - you can get viewport from `DialogEngine::flex_box`, saved by `DialogComponent::render()`
           - if viewport is smaller than num results then scroll offset is applied
       - this code path should return an `ConsumedRender` so that the results panel is re-rendered
+    - [ ] clean up engine data (`selected_row_index`, `scroll_offset_row_index`) when dialog is closed
   - [ ] `render_engine()` - called by `DialogComponent::render()`
     - [ ] called `render_results_panel()`
     - [x] actually call `make_flex_box_for_dialog()`
@@ -37,8 +38,8 @@ auto completion provider impl:
   - [ ] add `results: Vec<String>` field
 
   **dialog_engine.rs**:
-  - [ ] add `selected_row_index: ChUnit`
-  - [ ] add `scroll_offset_row_index: ChUnit`
+  - [x] add `selected_row_index: ChUnit`
+  - [x] add `scroll_offset_row_index: ChUnit`
   - [x] add `maybe_flex_box: Option<FlexBox>` & document it
 
   **app.rs**:

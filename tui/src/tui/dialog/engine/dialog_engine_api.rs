@@ -35,10 +35,10 @@ impl DialogEngine {
         args: DialogEngineArgs<'_, S, A>,
     ) -> CommonResult<RenderPipeline>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
+        S: HasDialogBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
         A: Default + Clone + Sync + Send,
     {
-        let current_box: FlexBox = {
+        let current_box: PartialFlexBox = {
             match &args.dialog_engine.maybe_flex_box {
                 // No need to calculate new flex box if:
                 // 1) there's an existing one & 2) the window size hasn't changed.
@@ -59,8 +59,7 @@ impl DialogEngine {
             }
         };
 
-        let (origin_pos, bounds_size) =
-            EditorEngineFlexBox::from(current_box).get_style_adjusted_position_and_size();
+        let (origin_pos, bounds_size) = current_box.get_style_adjusted_position_and_size();
 
         let pipeline = {
             let mut it = render_pipeline!();
@@ -80,6 +79,23 @@ impl DialogEngine {
                 ),
             );
 
+            // Call render_results_panel() if mode is autocomplete.
+            if matches!(
+                args.dialog_engine.dialog_options.mode,
+                DialogEngineMode::ModalAutocomplete
+            ) {
+                let results_panel_ops = internal_impl::render_results_panel(
+                    &origin_pos,
+                    &bounds_size,
+                    args.dialog_engine,
+                    args.self_id,
+                    args.state,
+                )?;
+                if !results_panel_ops.is_empty() {
+                    it.push(ZOrder::Glass, results_panel_ops);
+                }
+            }
+
             it += internal_impl::render_editor(&origin_pos, &bounds_size, args).await?;
 
             it
@@ -88,15 +104,18 @@ impl DialogEngine {
         Ok(pipeline)
     }
 
-    /// Event based interface for the editor. This executes the [InputEvent].
-    /// 1. Returns [Some(DialogResponse)] if <kbd>Enter</kbd> or <kbd>Esc</kbd> was pressed.
-    /// 2. Otherwise returns [None].
+    /// Event based interface for the editor. This executes the [InputEvent] and returns one of the
+    /// following:
+    /// - [DialogEngineApplyResponse::DialogChoice] => <kbd>Enter</kbd> or <kbd>Esc</kbd> was
+    ///   pressed.
+    /// - [DialogEngineApplyResponse::UpdateEditorBuffer] => the editor buffer was updated.
+    /// - [DialogEngineApplyResponse::Noop] => otherwise.
     pub async fn apply_event<S, A>(
         args: DialogEngineArgs<'_, S, A>,
         input_event: &InputEvent,
     ) -> CommonResult<DialogEngineApplyResponse>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
+        S: HasDialogBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
         A: Default + Clone + Sync + Send,
     {
         let DialogEngineArgs {
@@ -110,10 +129,15 @@ impl DialogEngine {
             ..
         } = args;
 
+        // Was a dialog choice made?
         if let Some(choice) = internal_impl::try_handle_dialog_choice(input_event, dialog_buffer) {
+            // Clean up any state in the engine, eg: selected_row_index or scroll_offset_row_index
+            dialog_engine.scroll_offset_row_index = ch!(0);
+            dialog_engine.selected_row_index = ch!(0);
             return Ok(DialogEngineApplyResponse::DialogChoice(choice));
         }
 
+        // Otherwise, pass the event to the editor engine.
         let editor_engine_args = EditorEngineArgs {
             component_registry,
             shared_global_data,
@@ -124,6 +148,7 @@ impl DialogEngine {
             state,
         };
 
+        // If the editor engine applied the event, return the new editor buffer.
         if let EditorEngineApplyResponse::Applied(new_editor_buffer) =
             EditorEngine::apply_event(editor_engine_args, input_event).await?
         {
@@ -132,8 +157,19 @@ impl DialogEngine {
             ));
         }
 
+        // Otherwise, return noop.
         Ok(DialogEngineApplyResponse::Noop)
     }
+}
+
+#[repr(u16)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+pub enum DisplayConstants {
+    ColPercent = 90,
+    /// border-top, title, input, border-bottom.
+    SimpleModalRowCount = 4,
+    EmptyLine = 1,
+    DefaultResultsPanelRowCount = 5,
 }
 
 mod internal_impl {
@@ -163,7 +199,7 @@ mod internal_impl {
         dialog_options: &DialogEngineConfigOptions,
         window_size: &Size,
         maybe_surface_bounds: Option<SurfaceBounds>,
-    ) -> CommonResult<FlexBox> {
+    ) -> CommonResult<PartialFlexBox> {
         let surface_size = if let Some(surface_bounds) = maybe_surface_bounds {
             surface_bounds.box_size
         } else {
@@ -190,12 +226,15 @@ mod internal_impl {
             );
         }
 
-        let (origin_pos, dialog_size) = match dialog_options.mode {
+        let (origin_pos, bounds_size) = match dialog_options.mode {
             DialogEngineMode::ModalSimple => {
-                let dialog_size = {
+                let simple_dialog_size = {
                     // Calc dialog bounds size based on window size.
-                    let col_count = surface_size.col_count * 90 / 100;
-                    let row_count = ch!(4); /* title, input, borders-top, border-bottom */
+                    let col_count = {
+                        let percent = percent!(DisplayConstants::ColPercent.int_value())?;
+                        percent.calc_percentage(surface_size.col_count)
+                    };
+                    let row_count = ch!(DisplayConstants::SimpleModalRowCount.int_value());
                     let size = size! { col_count: col_count, row_count: row_count };
                     assert!(size.row_count < ch!(MinSize::Row.int_value()));
                     size
@@ -203,23 +242,25 @@ mod internal_impl {
 
                 let origin_pos = {
                     // Calc origin position based on window size & dialog size.
-                    let origin_col = surface_size.col_count / 2 - dialog_size.col_count / 2;
-                    let origin_row = surface_size.row_count / 2 - dialog_size.row_count / 2;
+                    let origin_col = surface_size.col_count / 2 - simple_dialog_size.col_count / 2;
+                    let origin_row = surface_size.row_count / 2 - simple_dialog_size.row_count / 2;
                     let mut it = position!(col_index: origin_col, row_index: origin_row);
                     it += surface_origin_pos;
                     it
                 };
 
-                (origin_pos, dialog_size)
+                (origin_pos, simple_dialog_size)
             }
             DialogEngineMode::ModalAutocomplete => {
-                let dialog_size = {
+                let autocomplete_dialog_size = {
                     // Calc dialog bounds size based on window size.
-                    let row_count =
-                        /* title, input, borders-top, border-bottom */ ch!(4) +
-                        /* empty line */ ch!(1) +
-                        /* results panel */ dialog_options.result_panel_row_count;
-                    let col_count = surface_size.col_count * 90 / 100;
+                    let row_count = ch!(DisplayConstants::SimpleModalRowCount.int_value())
+                        + ch!(DisplayConstants::EmptyLine.int_value())
+                        + dialog_options.result_panel_row_count;
+                    let col_count = {
+                        let percent = percent!(DisplayConstants::ColPercent.int_value())?;
+                        percent.calc_percentage(surface_size.col_count)
+                    };
                     let size = size!(col_count: col_count, row_count: row_count);
                     assert!(size.row_count < ch!(MinSize::Row.int_value()));
                     size
@@ -227,25 +268,26 @@ mod internal_impl {
 
                 let origin_pos = {
                     // Calc origin position based on window size & dialog size.
-                    let origin_col = surface_size.col_count / 2 - dialog_size.col_count / 2;
-                    let origin_row = surface_size.row_count / 2 - dialog_size.row_count / 2;
+                    let origin_col =
+                        surface_size.col_count / 2 - autocomplete_dialog_size.col_count / 2;
+                    let origin_row =
+                        surface_size.row_count / 2 - autocomplete_dialog_size.row_count / 2;
                     let mut it = position!(col_index: origin_col, row_index: origin_row);
                     it += surface_origin_pos;
                     it
                 };
 
-                (origin_pos, dialog_size)
+                (origin_pos, autocomplete_dialog_size)
             }
         };
 
         throws_with_return!({
-            EditorEngineFlexBox {
+            PartialFlexBox {
                 id: *dialog_id,
                 style_adjusted_origin_pos: origin_pos,
-                style_adjusted_bounds_size: dialog_size,
+                style_adjusted_bounds_size: bounds_size,
                 maybe_computed_style: None,
             }
-            .into()
         })
     }
 
@@ -260,7 +302,7 @@ mod internal_impl {
     {
         let maybe_style = args.dialog_engine.dialog_options.maybe_style_editor;
 
-        let flex_box: FlexBox = EditorEngineFlexBox {
+        let flex_box: FlexBox = PartialFlexBox {
             id: args.self_id,
             style_adjusted_origin_pos: position! {col_index: origin_pos.col_index + 1, row_index: origin_pos.row_index + 2},
             style_adjusted_bounds_size: size! {col_count: bounds_size.col_count - 2, row_count: 1},
@@ -282,6 +324,90 @@ mod internal_impl {
         pipeline.hoist(ZOrder::Normal, ZOrder::Glass);
 
         Ok(pipeline)
+    }
+
+    pub fn render_results_panel<S>(
+        origin_pos: &Position,
+        bounds_size: &Size,
+        dialog_engine: &mut DialogEngine,
+        self_id: FlexBoxId,
+        state: &S,
+    ) -> CommonResult<RenderOps>
+    where
+        S: HasDialogBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
+    {
+        let mut it = render_ops!();
+
+        if let Some(dialog_buffer) = state.get_dialog_buffer(self_id) {
+            if let Some(results) = dialog_buffer.maybe_results.as_ref() {
+                if !results.is_empty() {
+                    paint_results(&mut it, origin_pos, bounds_size, results, dialog_engine);
+                };
+            }
+        };
+
+        return Ok(it);
+
+        pub fn paint_results(
+            ops: &mut RenderOps,
+            origin_pos: &Position,
+            bounds_size: &Size,
+            results: &[String],
+            dialog_engine: &mut DialogEngine,
+        ) {
+            // TODO: draw results panel from state.dialog_buffer.results (Vec<String>)
+            let max_row_count = dialog_engine.dialog_options.result_panel_row_count;
+            let col_start_index = ch!(1);
+            let row_start_index = ch!(DisplayConstants::SimpleModalRowCount.int_value())
+                + ch!(DisplayConstants::EmptyLine.int_value());
+
+            for (row_index, item) in results.iter().enumerate() {
+                let row_index = ch!(row_index);
+                let abs_insertion_pos = position!(
+                    col_index: col_start_index,
+                    row_index: row_start_index + ch!(row_index)
+                );
+
+                // TODO: check for text clipping using bounds_size
+
+                // TODO: does this work?
+                if row_index >= max_row_count {
+                    break;
+                }
+
+                ops.push(RenderOp::ResetColor);
+                ops.push(RenderOp::MoveCursorPositionRelTo(
+                    *origin_pos,
+                    abs_insertion_pos,
+                ));
+
+                // If the row_index == dialog_engine.selected_row_index (not in state) ie, it is
+                // selected, then change the attribute to underline.
+                if dialog_engine.selected_row_index == row_index {
+                    ops.push(RenderOp::ApplyColors(
+                        match dialog_engine.dialog_options.maybe_style_results_panel {
+                            Some(style) => {
+                                let mut new_style = style;
+                                new_style.underline = true;
+                                Some(new_style)
+                            }
+                            _ => None,
+                        },
+                    ));
+                }
+                // Regular row, not selected.
+                else {
+                    ops.push(RenderOp::ApplyColors(
+                        dialog_engine.dialog_options.maybe_style_results_panel,
+                    ));
+                }
+
+                ops.push(RenderOp::PaintTextWithAttributes(
+                    item.into(),
+                    dialog_engine.dialog_options.maybe_style_results_panel,
+                ));
+            }
+        }
     }
 
     pub fn render_title(
@@ -445,14 +571,13 @@ mod test_dialog_engine_api_render_engine {
         let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let shared_store = &mock_real_objects_for_dialog::create_store();
-        let state = &String::new();
         let shared_global_data =
             &test_editor::mock_real_objects_for_editor::make_shared_global_data(
                 (*window_size).into(),
             );
         let component_registry =
             &mut test_editor::mock_real_objects_for_editor::make_component_registry();
-
+        let state = &shared_store.read().await.state.clone();
         let args = DialogEngineArgs {
             shared_global_data,
             shared_store,
@@ -655,14 +780,13 @@ mod test_dialog_engine_api_apply_event {
         let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let shared_store = &mock_real_objects_for_dialog::create_store();
-        let state = &String::new();
         let shared_global_data =
             &test_editor::mock_real_objects_for_editor::make_shared_global_data(
                 (*window_size).into(),
             );
         let component_registry =
             &mut test_editor::mock_real_objects_for_editor::make_component_registry();
-
+        let state = &shared_store.read().await.state.clone();
         let args = DialogEngineArgs {
             shared_global_data,
             shared_store,
@@ -689,14 +813,13 @@ mod test_dialog_engine_api_apply_event {
         let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let shared_store = &mock_real_objects_for_dialog::create_store();
-        let state = &String::new();
         let shared_global_data =
             &test_editor::mock_real_objects_for_editor::make_shared_global_data(
                 (*window_size).into(),
             );
         let component_registry =
             &mut test_editor::mock_real_objects_for_editor::make_component_registry();
-
+        let state = &shared_store.read().await.state.clone();
         let args = DialogEngineArgs {
             shared_global_data,
             shared_store,
@@ -726,14 +849,13 @@ mod test_dialog_engine_api_apply_event {
         let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let shared_store = &mock_real_objects_for_dialog::create_store();
-        let state = &String::new();
         let shared_global_data =
             &test_editor::mock_real_objects_for_editor::make_shared_global_data(
                 (*window_size).into(),
             );
         let component_registry =
             &mut test_editor::mock_real_objects_for_editor::make_component_registry();
-
+        let state = &shared_store.read().await.state.clone();
         let args = DialogEngineArgs {
             shared_global_data,
             shared_store,

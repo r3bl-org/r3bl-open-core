@@ -1760,7 +1760,7 @@ mod test_editor_ops {
 pub mod mock_real_objects_for_editor {
     use r3bl_rs_utils_core::*;
 
-    use crate::*;
+    use crate::{test_dialog::mock_real_objects_for_dialog::State, *};
 
     pub fn make_shared_global_data(window_size: Option<Size>) -> SharedGlobalData {
         use std::sync::Arc;
@@ -1776,8 +1776,8 @@ pub mod mock_real_objects_for_editor {
         shared_global_data
     }
 
-    pub fn make_component_registry() -> ComponentRegistry<String, String> {
-        let component_registry: ComponentRegistry<String, String> = ComponentRegistry::default();
+    pub fn make_component_registry() -> ComponentRegistry<State, String> {
+        let component_registry: ComponentRegistry<_, _> = ComponentRegistry::default();
         component_registry
     }
 
@@ -1787,7 +1787,7 @@ pub mod mock_real_objects_for_editor {
             style_adjusted_origin_pos: position!( col_index: 0, row_index: 0 ),
             ..Default::default()
         };
-        let current_box: EditorEngineFlexBox = (&flex_box).into();
+        let current_box: PartialFlexBox = (&flex_box).into();
         EditorEngine {
             current_box,
             ..Default::default()
@@ -1800,7 +1800,7 @@ pub mod mock_real_objects_for_editor {
             style_adjusted_origin_pos: position!( col_index: 0, row_index: 0 ),
             ..Default::default()
         };
-        let current_box: EditorEngineFlexBox = (&flex_box).into();
+        let current_box: PartialFlexBox = (&flex_box).into();
         EditorEngine {
             current_box,
             ..Default::default()

@@ -22,7 +22,7 @@
     "rsbondi.highlight-words",
     "arzg.intellij-theme",
     "satokaz.vscode-markdown-header-coloring",
-    "saycv.fix-markdown-toc",
+    "huntertran.auto-markdown-toc",
     "pkief.material-icon-theme",
     "pkief.material-product-icons",
     "sdras.night-owl",
@@ -34,10 +34,11 @@
     "rust-lang.rust-analyzer",
     "alefragnani.separators",
     "newmeta.spacetime",
-    "jgclark.vscode-todo-highlight",
+    "wayou.vscode-todo-highlight",
     "fabiospampinato.vscode-todo-plus",
     "minhdo.tokyo-darker-night",
-    "enkia.tokyo-night"
+    "enkia.tokyo-night",
+    "bierner.emojisense"
   ],
   // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
   "unwantedRecommendations": []

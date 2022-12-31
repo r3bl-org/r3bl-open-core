@@ -16,16 +16,27 @@
  */
 
 pub mod mock_real_objects_for_dialog {
-    use std::sync::Arc;
+    use std::{collections::HashMap, sync::Arc};
 
     use r3bl_redux::{SharedStore, Store};
     use tokio::sync::RwLock;
 
     use crate::{test_editor::mock_real_objects_for_editor, *};
 
-    pub fn create_store() -> Arc<RwLock<Store<String, String>>> {
-        let mut _store = Store::<String, String>::default();
-        let shared_store: SharedStore<String, String> = Arc::new(RwLock::new(_store));
+    #[derive(Clone, PartialEq, Default, Debug)]
+    pub struct State {
+        pub dialog_buffers: HashMap<FlexBoxId, DialogBuffer>,
+    }
+
+    impl HasDialogBuffers for State {
+        fn get_dialog_buffer(&self, id: FlexBoxId) -> Option<&DialogBuffer> {
+            self.dialog_buffers.get(&id)
+        }
+    }
+
+    pub fn create_store() -> Arc<RwLock<Store<State, String>>> {
+        let mut _store = Store::<_, _>::default();
+        let shared_store: SharedStore<_, _> = Arc::new(RwLock::new(_store));
         shared_store
     }
 

@@ -46,23 +46,13 @@ mod debug_format_helpers {
     use super::*;
 
     fn fmt(this: &State, f: &mut Formatter<'_>) -> Result {
-        let mut vec_of_dialog_buffer_str = vec![];
-
-        this.dialog_buffers.iter().for_each(|(id, dialog_buffer)| {
-            vec_of_dialog_buffer_str.push(format!(
-                "{id}: [dialog_buffer: title: '{}', editor_buffer: '{}']",
-                dialog_buffer.title,
-                dialog_buffer.editor_buffer.get_as_string(),
-            ));
-        });
-
         write! { f,
-          "\nState [\n\
-          - dialog_buffers:\n{}\n\
-          - editor_buffers:\n{:?}\n\
-          ]",
-          vec_of_dialog_buffer_str.join("\n"),
-          this.editor_buffers,
+            "\nState [\n\
+            - dialog_buffers:\n{:?}\n\
+            - editor_buffers:\n{:?}\n\
+            ]",
+            this.dialog_buffers,
+            this.editor_buffers,
         }
     }
 

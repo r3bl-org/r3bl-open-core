@@ -158,7 +158,6 @@ pub mod global_constants {
     #[repr(usize)]
     #[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
     pub enum DefaultSize {
-        ResultPanelRowCount = 5,
         GlobalDataCacheSize = 1000,
     }
 

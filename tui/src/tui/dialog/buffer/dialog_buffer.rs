@@ -31,6 +31,7 @@ use crate::*;
 pub struct DialogBuffer {
     pub editor_buffer: EditorBuffer,
     pub title: String,
+    pub maybe_results: Option<Vec<String>>,
 }
 
 mod dialog_buffer_impl {
@@ -41,19 +42,23 @@ mod dialog_buffer_impl {
             DialogBuffer {
                 editor_buffer: EditorBuffer::new_empty(DEFAULT_SYN_HI_FILE_EXT.to_string()),
                 title: Default::default(),
+                maybe_results: None,
             }
         }
     }
 
     impl Debug for DialogBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            let maybe_results: &dyn Debug = format_option!(&self.maybe_results);
             write! { f,
               "\nDialogBuffer [      \n\
               ├ title: {}            \n\
-              └ editor_buffer: {:?}  \n\
+              ├ maybe_results: {:?}  \n\
+              └ editor_buffer: {}  \n\
               ]",
               self.title,
-              self.editor_buffer
+              maybe_results,
+              self.editor_buffer.get_as_string()
             }
         }
     }

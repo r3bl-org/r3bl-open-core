@@ -41,9 +41,11 @@ pub struct DialogEngine {
     /// itself to the screen on top of everything else.
     pub maybe_flex_box: Option<(
         /* window size: */ Size,
-        /* flex box calculated by render_engine(): */ FlexBox,
+        /* flex box calculated by render_engine(): */ PartialFlexBox,
     )>,
     pub maybe_surface_bounds: Option<SurfaceBounds>,
+    pub selected_row_index: ChUnit,
+    pub scroll_offset_row_index: ChUnit,
 }
 
 mod dialog_engine_impl {
@@ -70,6 +72,7 @@ pub struct DialogEngineConfigOptions {
     pub maybe_style_border: Option<Style>,
     pub maybe_style_title: Option<Style>,
     pub maybe_style_editor: Option<Style>,
+    pub maybe_style_results_panel: Option<Style>,
 }
 
 mod dialog_engine_config_options_impl {
@@ -81,10 +84,13 @@ mod dialog_engine_config_options_impl {
         fn default() -> Self {
             Self {
                 mode: DialogEngineMode::ModalSimple,
-                result_panel_row_count: ch!(DefaultSize::ResultPanelRowCount.int_value()),
+                result_panel_row_count: ch!(
+                    DisplayConstants::DefaultResultsPanelRowCount.int_value()
+                ),
                 maybe_style_border: None,
                 maybe_style_editor: None,
                 maybe_style_title: None,
+                maybe_style_results_panel: None,
             }
         }
     }
