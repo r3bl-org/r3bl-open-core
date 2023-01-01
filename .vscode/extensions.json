@@ -1,0 +1,44 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=827846 to learn about workspace recommendations.
+  // Extension identifier format: ${publisher}.${name}. Example: vscode.csharp
+
+  // This extension is recommended when you open this workspace. You have to clone it from github
+  // and install it manually as it isn't available in the marketplace. It is a fork of the one in
+  // the marketplace w/ bug fixes, since the original author doesn't seem to be maintaining it.
+  // https://github.com/nazmulidris/copyrighter
+
+  // List of extensions which should be recommended for users of this workspace.
+  "recommendations": [
+    "bungcip.better-toml",
+    "streetsidesoftware.code-spell-checker",
+    "vadimcn.vscode-lldb",
+    "serayuzgur.crates",
+    "rsbondi.highlight-words",
+    "perkovec.emoji",
+    "bmalehorn.vscode-fish",
+    "github.copilot",
+    "github.vscode-pull-request-github",
+    "mishkinf.goto-next-previous-member",
+    "rsbondi.highlight-words",
+    "arzg.intellij-theme",
+    "satokaz.vscode-markdown-header-coloring",
+    "saycv.fix-markdown-toc",
+    "pkief.material-icon-theme",
+    "pkief.material-product-icons",
+    "sdras.night-owl",
+    "nicholashsiang.vscode-opened-editors",
+    "esbenp.prettier-vscode",
+    "dbankier.vscode-quick-select",
+    "artdiniz.quitcontrol-vscode",
+    "stkb.rewrap",
+    "rust-lang.rust-analyzer",
+    "alefragnani.separators",
+    "newmeta.spacetime",
+    "jgclark.vscode-todo-highlight",
+    "fabiospampinato.vscode-todo-plus",
+    "minhdo.tokyo-darker-night",
+    "enkia.tokyo-night"
+  ],
+  // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
+  "unwantedRecommendations": []
+}
