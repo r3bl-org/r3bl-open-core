@@ -125,7 +125,7 @@ where
         walker_fn: Arc<WalkerFn<T>>,
     ) -> JoinHandle<ResultUidList> {
         let arena_arc = self.get_arena_arc();
-        let walker_fn_arc = walker_fn.clone();
+        let walker_fn_arc = walker_fn;
 
         spawn(move || {
             let read_guard: ReadGuarded<'_, Arena<T>> = arena_arc.read().unwrap();

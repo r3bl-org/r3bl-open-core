@@ -29,6 +29,11 @@ where
     S: Default + Clone + PartialEq + Debug + Sync + Send,
     A: Default + Clone + Sync + Send,
 {
+    /// This is an optional method that can be used to initialize the state of the component's
+    /// engines. This applies to modal dialog components that need their engine to be initialized
+    /// before they are shown / activated.
+    fn reset(&mut self);
+
     fn get_id(&self) -> FlexBoxId;
 
     /// Use the state to render the output. The state is immutable. If you want to change it then it

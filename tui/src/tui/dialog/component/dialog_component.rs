@@ -52,6 +52,8 @@ pub mod dialog_component_impl {
         S: HasDialogBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
         A: Default + Clone + Sync + Send,
     {
+        fn reset(&mut self) { self.dialog_engine.reset(); }
+
         fn get_id(&self) -> FlexBoxId { self.id }
 
         /// This shim simply calls [render](DialogEngine::render_engine) w/ all the necessary
