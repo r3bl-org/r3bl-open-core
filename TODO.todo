@@ -35,15 +35,19 @@ auto completion provider impl:
     - [x] write tests
 
   **dialog_buffer.rs**:
-  - [ ] add `results: Vec<String>` field
+  - [x] add `maybe_results: Option<Vec<String>>` field
 
   **dialog_engine.rs**:
   - [x] add `selected_row_index: ChUnit`
   - [x] add `scroll_offset_row_index: ChUnit`
   - [x] add `maybe_flex_box: Option<FlexBox>` & document it
+  - [x] add `reset()` and extend `Component` trait to have it as well & make sure others call it
+    - [x] `dialog_engine_api.rs::apply_event()`
+    - [x] `app.rs::try_input_event_activate_modal()`
 
   **app.rs**:
   - [ ] add a new dialog component w/ autocomplete (copy `insert_dialog_component()`)
+    - [ ] new `ComponentId` called `AutocompleteDialog` (rename the old one to `SimpleDialog`)
     - [ ] `on_dialog_press_handler` - add result to editor by dispatching action
     - [ ] `on_dialog_editor_change_handler` -
       - [ ] call web service

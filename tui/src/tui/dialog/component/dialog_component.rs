@@ -152,8 +152,17 @@ pub mod dialog_component_impl {
             match DialogEngine::apply_event(dialog_engine_args, input_event).await? {
                 // Handler user's choice.
                 DialogEngineApplyResponse::DialogChoice(dialog_choice) => {
-                    // Restore focus to non-modal component.
-                    let _ = component_registry.has_focus.reset_modal_id();
+                    component_registry.has_focus.reset_modal_id();
+
+                    call_if_true!(DEBUG_TUI_MOD, {
+                        let msg_1 = format!(
+                            "🐝 restore focus to non modal: {:?}",
+                            component_registry.has_focus
+                        );
+                        let msg_2 = format!("💾 user_data: {:?}", component_registry.user_data);
+                        log_debug(msg_1);
+                        log_debug(msg_2);
+                    });
 
                     // Run the handler (if any) w/ `dialog_choice`.
                     if let Some(it) = &self.on_dialog_press_handler {

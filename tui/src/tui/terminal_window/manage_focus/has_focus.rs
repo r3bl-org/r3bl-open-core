@@ -15,53 +15,79 @@
  *   limitations under the License.
  */
 
-use std::{collections::HashMap, fmt::Debug};
+use std::fmt::Debug;
 
 use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-/// There are certain fields that need to be in each state struct to represent global information
-/// about keyboard focus.
+/// This is a global (scoped to an [App]) struct that is used to store the `id` of the [FlexBox]
+/// that has keyboard focus.
 ///
-/// 1. An `id` [FlexBoxId] is used to store which [FlexBox] id currently holds keyboard focus. This
-///    is global.
-/// 2. Each `id` may have a [Position] associated with it, which is used to draw the "cursor" (the
-///    meaning of which depends on the specific [Component] impl). This cursor is scoped to each
-///    `id` so it isn't strictly a single global value (like `id` itself). Here are examples of what
-///    a "cursor" might mean for various [Component]s:
-///    - for an editor, it will be the insertion point where text is added / removed
-///    - for a text viewer, it will be the cursor position which can be moved around
-#[derive(Clone, PartialEq, Eq, Debug, Default)]
+/// There are 2 types of keyboard focus:
+/// 1. Non modal focus - This is just a single `id` that is stored. To change focus a new `id` is
+///    set in its place. Internally a `Vec` of capacity 2 is used to store this and the modal `id`.
+/// 2. Modal focus - There can only be one modal at a time. When a modal is active, the `id` of the
+///    [FlexBox] that had focus before the modal was activated is saved. When the modal is closed,
+///    the `id` of the [FlexBox] that had focus before the modal was activated is restored.
+///
+/// ## Modal `id`, which is used by modal dialog box
+///
+/// 1. Only one modal can be active at any time.
+/// 2. When a modal is active, the `id` of the [FlexBox] that had focus before the modal was
+///    activated is saved.
+/// 3. When the modal is closed, the `id` of the [FlexBox] that had focus before the modal was
+///    activated is restored.
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct HasFocus {
-    /// Map of `id` to its [Position]. Each cursor ([Position]) is scoped to an `id`. The map is
-    /// global.
-    pub cursor_position_map: CursorPositionMap,
-
     /// This `id` has keyboard focus. This is global.
-    pub maybe_id: Option<FlexBoxId>,
-
-    /// This `id` is saved only when [set_modal_id](HasFocus::set_modal_id) is called. This is global.
-    pub maybe_id_before_modal: Option<FlexBoxId>,
+    id_vec: Vec<FlexBoxId>,
 }
 
-pub type CursorPositionMap = HashMap<FlexBoxId, Option<Position>>;
+impl Default for HasFocus {
+    fn default() -> Self {
+        Self {
+            id_vec: Vec::with_capacity(2),
+        }
+    }
+}
 
 impl HasFocus {
-    /// Get the `id` of the [FlexBox] that has keyboard focus.
-    pub fn get_id(&self) -> Option<FlexBoxId> { self.maybe_id }
-
     /// Check to see whether [set_id][HasFocus::set_id] has been called.
-    pub fn is_empty(&self) -> bool { self.maybe_id.is_none() }
+    pub fn is_empty(&self) -> bool { self.id_vec.is_empty() }
 
     /// Check to see whether [set_id][HasFocus::set_id] has been called.
     pub fn is_set(&self) -> bool { !self.is_empty() }
 
+    /// Get the `id` of the [FlexBox] that has keyboard focus.
+    pub fn get_id(&self) -> Option<FlexBoxId> {
+        if self.id_vec.is_empty() {
+            None
+        } else {
+            let it = self.id_vec.last().unwrap();
+            Some(*it)
+        }
+    }
+
     /// Set the `id` of the [FlexBox] that has keyboard focus.
-    pub fn set_id(&mut self, id: FlexBoxId) { self.maybe_id = Some(id) }
+    pub fn set_id(&mut self, id: FlexBoxId) {
+        if self.id_vec.is_empty() {
+            self.id_vec.push(id);
+        } else {
+            let it = self.id_vec.last_mut().unwrap();
+            *it = id;
+        }
+    }
 
     /// Check whether the given `id` currently has keyboard focus.
-    pub fn does_id_have_focus(&self, id: FlexBoxId) -> bool { self.maybe_id == Some(id) }
+    pub fn does_id_have_focus(&self, id: FlexBoxId) -> bool {
+        if self.id_vec.is_empty() {
+            false
+        } else {
+            let it = self.id_vec.last().unwrap();
+            *it == id
+        }
+    }
 
     /// Check whether the `id` of the [FlexBox] currently has keyboard focus.
     pub fn does_current_box_have_focus(&self, current_box: &FlexBox) -> bool {
@@ -70,46 +96,131 @@ impl HasFocus {
 }
 
 impl HasFocus {
-    /// Saves the current `id` to `prev_id` and sets `id` to the given `id`.
-    pub fn set_modal_id(&mut self, id: FlexBoxId) {
-        self.maybe_id_before_modal = self.maybe_id;
-        self.set_id(id);
+    /// Pushes the `id` to the `id_vec`. The previous `id` is saved and can be restored with
+    /// [reset_modal_id](HasFocus::reset_modal_id).
+    pub fn try_set_modal_id(&mut self, id: FlexBoxId) -> CommonResult<()> {
+        // Must have a non modal id already set.
+        if !self.is_set() {
+            let msg = "Modal id can only be set if id is already set. id is not set.";
+            return CommonError::new_err_with_only_msg(msg);
+        }
+
+        // Must not have a modal id already set.
+        if self.is_modal_set() {
+            let msg = format!(
+                "Modal id is already set to {}. Can't set it to {id}.",
+                self.get_id().unwrap()
+            );
+            return CommonError::new_err_with_only_msg(&msg);
+        }
+
+        // Ok to set modal id.
+        self.id_vec.push(id);
+        Ok(())
     }
 
     /// Checks whether any modal `id` is set.
-    pub fn is_modal_set(&self) -> bool { self.maybe_id_before_modal.is_some() }
+    pub fn is_modal_set(&self) -> bool { self.id_vec.len() == 2 }
 
     /// Checks whether the given `id` is the modal `id`.
     pub fn is_modal_id(&self, id: FlexBoxId) -> bool {
         self.is_modal_set() && self.does_id_have_focus(id)
     }
 
-    /// Restores the `id` from `prev_id` and sets `prev_id` to `None`.
-    pub fn reset_modal_id(&mut self) -> Option<FlexBoxId> {
-        if let Some(prev_id) = self.maybe_id_before_modal {
-            self.maybe_id = Some(prev_id);
-            self.maybe_id_before_modal = None;
-            Some(prev_id)
-        } else {
-            None
+    /// Restores the modal `id` to the previous non-modal `id`. It does nothing if there's no modal
+    /// `id` set.
+    pub fn reset_modal_id(&mut self) {
+        if self.is_modal_set() {
+            self.id_vec.pop();
         }
     }
 }
 
-impl HasFocus {
-    /// For a given [FlexBox] `id`, set the position of the cursor inside of it.
-    pub fn set_cursor_position_for_id(&mut self, id: FlexBoxId, maybe_position: Option<Position>) {
-        let map = &mut self.cursor_position_map;
-        map.insert(id, maybe_position);
+#[cfg(test)]
+mod has_focus_tests {
+    use super::*;
+
+    #[test]
+    fn works_with_normal_id() {
+        let mut has_focus = HasFocus::default();
+        assert!(has_focus.is_empty());
+        assert!(!has_focus.is_set());
+
+        has_focus.set_id(1);
+        assert!(!has_focus.is_empty());
+        assert!(has_focus.is_set());
+        assert_eq2!(has_focus.get_id(), Some(1));
+        assert!(has_focus.does_id_have_focus(1));
+        let current_box_1 = FlexBox {
+            id: 1,
+            ..Default::default()
+        };
+        assert!(has_focus.does_current_box_have_focus(&current_box_1));
+
+        has_focus.set_id(2);
+        assert!(!has_focus.is_empty());
+        assert!(has_focus.is_set());
+        assert_eq2!(has_focus.get_id(), Some(2));
+        assert!(has_focus.does_id_have_focus(2));
+        let current_box_2 = FlexBox {
+            id: 2,
+            ..Default::default()
+        };
+        assert!(has_focus.does_current_box_have_focus(&current_box_2));
+        assert!(!has_focus.does_id_have_focus(1));
+        assert!(!has_focus.does_current_box_have_focus(&current_box_1));
     }
 
-    /// For a given [FlexBox] `id`, get the position of the cursor inside of it.
-    pub fn get_cursor_position_for_id(&self, id: FlexBoxId) -> Option<Position> {
-        let map = &self.cursor_position_map;
-        if let Some(value) = map.get(&id) {
-            *value
-        } else {
-            None
-        }
+    #[test]
+    fn fails_with_modal_id_with_no_id_set() {
+        let mut has_focus = HasFocus::default();
+        assert!(has_focus.is_empty());
+        assert!(!has_focus.is_set());
+
+        let my_err_box = has_focus.try_set_modal_id(1).err().unwrap();
+        assert_eq2!(my_err_box.is::<CommonError>(), true);
+
+        let my_err = my_err_box.downcast_ref::<CommonError>().unwrap();
+        let CommonError { err_msg: msg, .. } = my_err;
+        assert_eq2!(
+            msg.as_ref().unwrap(),
+            "Modal id can only be set if id is already set. id is not set."
+        );
+
+        assert!(!has_focus.is_modal_set());
+        assert!(!has_focus.is_modal_id(1));
+        has_focus.reset_modal_id();
+    }
+
+    #[test]
+    fn works_with_modal_id_when_id_is_set() {
+        let mut has_focus = HasFocus::default();
+        assert!(has_focus.is_empty());
+        assert!(!has_focus.is_set());
+
+        has_focus.set_id(1);
+        assert!(has_focus.try_set_modal_id(2).is_ok());
+
+        assert!(has_focus.is_modal_set());
+        assert!(has_focus.is_modal_id(2));
+        assert!(!has_focus.is_modal_id(1));
+        assert_eq2!(has_focus.get_id(), Some(2));
+
+        assert!(has_focus.try_set_modal_id(3).is_err());
+        assert!(has_focus.is_modal_set());
+        assert!(has_focus.is_modal_id(2));
+
+        has_focus.reset_modal_id();
+        assert!(!has_focus.is_modal_set());
+        assert!(!has_focus.is_modal_id(1));
+        assert_eq2!(has_focus.get_id(), Some(1));
+        assert_eq2!(has_focus.does_id_have_focus(1), true);
+        let current_box_1 = FlexBox {
+            id: 1,
+            ..Default::default()
+        };
+        assert!(has_focus.does_current_box_have_focus(&current_box_1));
+        assert!(has_focus.is_set());
+        assert!(!has_focus.is_empty());
     }
 }

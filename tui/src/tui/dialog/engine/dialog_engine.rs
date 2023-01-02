@@ -50,6 +50,7 @@ pub struct DialogEngine {
     /// itself to the screen on top of everything else.
     pub maybe_flex_box: Option<(
         /* window size: */ Size,
+        /* mode: */ DialogEngineMode,
         /* flex box calculated by render_engine(): */ PartialFlexBox,
     )>,
     pub maybe_surface_bounds: Option<SurfaceBounds>,

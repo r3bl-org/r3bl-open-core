@@ -65,11 +65,11 @@ macro_rules! styled_text {
     () => {
         StyledText::new(String::new(), Style::default())
     };
-    ($text:expr) => {
-        StyledText::new($text.to_string(), Style::default())
+    ($text_arg: expr) => {
+        StyledText::new($text_arg.to_string(), Style::default())
     };
-    ($text:expr, $style:expr) => {
-        StyledText::new($text.to_string(), $style)
+    ($text_arg: expr, $style_arg: expr) => {
+        StyledText::new($text_arg.to_string(), $style_arg)
     };
 }
 
@@ -156,13 +156,17 @@ mod impl_styled_texts {
 /// ```
 #[macro_export]
 macro_rules! styled_texts {
-  ($($style:expr),*) => {
+    (
+        $($style_arg : expr),*
+        $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+    ) =>
     {
-      let mut styled_texts: StyledTexts = Default::default();
-      $(
-        styled_texts += $style;
-      )*
-      styled_texts
-    }
-  };
+        {
+            let mut styled_texts: StyledTexts = Default::default();
+            $(
+                styled_texts += $style_arg;
+            )*
+            styled_texts
+        }
+    };
 }
