@@ -15,6 +15,9 @@
  *   limitations under the License.
  */
 
+//! This file is called `cat.rs` since `lolcat` is the name of the module and naming it `lolcat.rs`
+//! causes a clippy warning.
+
 use std::{fmt::{Debug, Display, Formatter, Result},
           io::{stdout, Write},
           thread::sleep,
@@ -70,6 +73,8 @@ fn _print(output_vec: &mut OutputCollectorType, args: std::fmt::Arguments) {
     output_vec.push(content);
 }
 
+/// Please use the [LolcatBuilder] to create this struct (lots of documentation is provided here).
+/// Please do not use this struct directly.
 #[derive(Clone, Copy, Serialize, Deserialize, PartialEq, GetSize)]
 pub struct Lolcat {
     pub color_wheel_control: ColorWheelControl,

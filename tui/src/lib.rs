@@ -21,17 +21,37 @@
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
-//! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363">
-//! </span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span style="color:#F31874">
-//! </span><span style="color:#F11678">l</span><span style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span style="color:#E10895">
-//! </span><span style="color:#DE0799">&amp;</span><span style="color:#DB069E">
-//! </span><span style="color:#D804A2">s</span><span style="color:#D503A6">u</span><span style="color:#D203AA">i</span><span style="color:#CF02AE">t</span><span style="color:#CB01B2">e</span><span style="color:#C801B6">
-//! </span><span style="color:#C501B9">o</span><span style="color:#C101BD">f</span><span style="color:#BD01C1">
-//! </span><span style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span style="color:#AA03D2">
-//! </span><span style="color:#A603D5">f</span><span style="color:#A204D8">o</span><span style="color:#9E06DB">c</span><span style="color:#9A07DE">u</span><span style="color:#9608E1">s</span><span style="color:#910AE3">e</span><span style="color:#8D0BE6">d</span><span style="color:#890DE8">
-//! </span><span style="color:#850FEB">o</span><span style="color:#8111ED">n</span><span style="color:#7C13EF">
-//! </span><span style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span style="color:#572CFC">r</span><span style="color:#532FFD">
-//! </span><span style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
+//! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span
+//! style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363">
+//! </span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span
+//! style="color:#F51A6F">I</span><span style="color:#F31874"> </span><span
+//! style="color:#F11678">l</span><span style="color:#EF137C">i</span><span
+//! style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span
+//! style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span
+//! style="color:#E40A91">y</span><span style="color:#E10895"> </span><span
+//! style="color:#DE0799">&amp;</span><span style="color:#DB069E"> </span><span
+//! style="color:#D804A2">s</span><span style="color:#D503A6">u</span><span
+//! style="color:#D203AA">i</span><span style="color:#CF02AE">t</span><span
+//! style="color:#CB01B2">e</span><span style="color:#C801B6"> </span><span
+//! style="color:#C501B9">o</span><span style="color:#C101BD">f</span><span style="color:#BD01C1">
+//! </span><span style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span
+//! style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span style="color:#AA03D2">
+//! </span><span style="color:#A603D5">f</span><span style="color:#A204D8">o</span><span
+//! style="color:#9E06DB">c</span><span style="color:#9A07DE">u</span><span
+//! style="color:#9608E1">s</span><span style="color:#910AE3">e</span><span
+//! style="color:#8D0BE6">d</span><span style="color:#890DE8"> </span><span
+//! style="color:#850FEB">o</span><span style="color:#8111ED">n</span><span style="color:#7C13EF">
+//! </span><span style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span
+//! style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span
+//! style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span
+//! style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span
+//! style="color:#572CFC">r</span><span style="color:#532FFD"> </span><span
+//! style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span
+//! style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span
+//! style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span
+//! style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span
+//! style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span
+//! style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
 //!
 //! We are working on building command line apps in Rust which have rich text user interfaces (TUI).
 //! We want to lean into the terminal as a place of productivity, and build all kinds of awesome
@@ -68,9 +88,9 @@
 //!    framework](https://docs.rs/r3bl_tui/latest/r3bl_tui/) to make it possible (and easy) to build
 //!    sophisticated TUIs (Text User Interface apps) in Rust that are inspired by React, Redux, CSS
 //!    and Flexbox.
-//! 2. Thread-safe & fully asynchronous [Redux](https://docs.rs/r3bl_redux/latest/r3bl_redux/)
-//!    crate (using Tokio to run subscribers and middleware in separate tasks). The reducer
-//!    functions are run sequentially.
+//! 2. Thread-safe & fully asynchronous [Redux](https://docs.rs/r3bl_redux/latest/r3bl_redux/) crate
+//!    (using Tokio to run subscribers and middleware in separate tasks). The reducer functions are
+//!    run sequentially.
 //! 3. Lots of [declarative macros](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/),
 //!    and [procedural macros](https://docs.rs/r3bl_rs_utils_macro/latest/r3bl_rs_utils_macro/)
 //!    (both function like and derive) to avoid having to write lots of boilerplate code for many
@@ -160,15 +180,16 @@
 //!    4. Lolcat support.
 //!    5. CSS like styling support.
 //!
-//! > Quite a few scripts are provided for your convenience in the root folder of the repo. They are all
-//! > `fish` script files. Here are a few worth mentioning here which are related to running the
+//! > Quite a few scripts are provided for your convenience in the root folder of the repo. They are
+//! > all `fish` script files. Here are a few worth mentioning here which are related to running the
 //! > example.
 //! >
-//! > 1. `run.fish`: This will simply run the examples. You can watch the logs by running `log.fish`.
-//! > 2. `run-with-flamegraph-profiling.fish`: This will run the examples and generate a flamegraph at
-//! >    the end so you can see profile the performance of the app.
-//! > 3. `run-with-crash-reporting.fish`: This will run the examples and generate a `crash_log.txt` file
-//! >    (in the `tui` folder) in case the app crashes. This is useful for debugging.
+//! > 1. `run.fish`: This will simply run the examples. You can watch the logs by running
+//! >    `log.fish`.
+//! > 2. `run-with-flamegraph-profiling.fish`: This will run the examples and generate a flamegraph
+//! >    at the end so you can see profile the performance of the app.
+//! > 3. `run-with-crash-reporting.fish`: This will run the examples and generate a `crash_log.txt`
+//! >    file (in the `tui` folder) in case the app crashes. This is useful for debugging.
 //!
 //! # Life of an input event
 //!
@@ -220,8 +241,8 @@
 //! Now that we have seen this whirlwind overview of the life of an input event, let's look at the
 //! details in each of the sections below.
 //!
-//! Here's an architecture diagram that will be useful to keep in mind as we go through the details of
-//! the following sections:
+//! Here's an architecture diagram that will be useful to keep in mind as we go through the details
+//! of the following sections:
 //!
 //! ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 //!
@@ -294,17 +315,18 @@
 //! # Rendering and painting
 //!
 //! The R3BL TUI engine uses a high performance compositor to render the UI to the terminal. This
-//! ensures that only "pixels" that have changed are painted to the terminal. This is done by creating a
-//! concept of `PixelChar` which represents a single "pixel" in the terminal screen at a given col and
-//! row index position. There are only as many `PixelChar`s as there are rows and cols in a terminal
-//! screen. And the index maps directly to the position of the pixel in the terminal screen.
+//! ensures that only "pixels" that have changed are painted to the terminal. This is done by
+//! creating a concept of `PixelChar` which represents a single "pixel" in the terminal screen at a
+//! given col and row index position. There are only as many `PixelChar`s as there are rows and cols
+//! in a terminal screen. And the index maps directly to the position of the pixel in the terminal
+//! screen.
 //!
 //! ## Offscreen buffer
 //!
 //! Here is an example of what a single row of rendered output might look like in a row of the
-//! `OffscreenBuffer`. This diagram shows each `PixelChar` in `row_index: 1` of the `OffscreenBuffer`.
-//! In this example, there are 80 columns in the terminal screen. This actual log output generated by
-//! the TUI engine when logging is enabled.
+//! `OffscreenBuffer`. This diagram shows each `PixelChar` in `row_index: 1` of the
+//! `OffscreenBuffer`. In this example, there are 80 columns in the terminal screen. This actual log
+//! output generated by the TUI engine when logging is enabled.
 //!
 //! ```text
 //! row_index: 1
@@ -324,47 +346,48 @@
 //! 078 S ░░░░░░░╳░░░░░░░░079 S ░░░░░░░╳░░░░░░░░080 S ░░░░░░░╳░░░░░░░░spacer [ 0, 16-80 ]
 //! ```
 //!
-//! When `RenderOps` are executed and used to create an `OffscreenBuffer` that maps to the size of the
-//! terminal window, clipping is performed automatically. This means that it isn't possible to move the
-//! caret outside of the bounds of the viewport (terminal window size). And it isn't possible to paint
-//! text that is larger than the size of the offscreen buffer. The buffer really represents the current
-//! state of the viewport. Scrolling has to be handled by the component itself (an example of this is
-//! the editor component).
+//! When `RenderOps` are executed and used to create an `OffscreenBuffer` that maps to the size of
+//! the terminal window, clipping is performed automatically. This means that it isn't possible to
+//! move the caret outside of the bounds of the viewport (terminal window size). And it isn't
+//! possible to paint text that is larger than the size of the offscreen buffer. The buffer really
+//! represents the current state of the viewport. Scrolling has to be handled by the component
+//! itself (an example of this is the editor component).
 //!
 //! Each `PixelChar` can be one of 4 things:
 //!
 //! 1. **Space**. This is just an empty space. There is no flickering in the TUI engine. When a new
-//!    offscreen buffer is created, it is fulled w/ spaces. Then components paint over the spaces. Then
-//!    the diffing algorithm only paints over the pixels that have changed. You don't have to worry
-//!    about clearing the screen and painting, which typically will cause flickering in terminals. You
-//!    also don't have to worry about printing empty spaces over areas that you would like to clear
-//!    between renders. All of this handled by the TUI engine.
-//! 2. **Void**. This is a special pixel that is used to indicate that the pixel should be ignored. It
-//!    is used to indicate a wide emoji is to the left somewhere. Most terminals don't support emojis,
-//!    so there's a discrepancy between the display width of the character and its index in the string.
+//!    offscreen buffer is created, it is fulled w/ spaces. Then components paint over the spaces.
+//!    Then the diffing algorithm only paints over the pixels that have changed. You don't have to
+//!    worry about clearing the screen and painting, which typically will cause flickering in
+//!    terminals. You also don't have to worry about printing empty spaces over areas that you would
+//!    like to clear between renders. All of this handled by the TUI engine.
+//! 2. **Void**. This is a special pixel that is used to indicate that the pixel should be ignored.
+//!    It is used to indicate a wide emoji is to the left somewhere. Most terminals don't support
+//!    emojis, so there's a discrepancy between the display width of the character and its index in
+//!    the string.
 //! 3. **Plain text**. This is a normal pixel which wraps a single character that maybe a grapheme
 //!    cluster segment. Styling information is encoded in each `PixelChar::PlainText` and is used to
-//!    paint the screen via the diffing algorithm which is smart enough to "stack" styles that appear
-//!    beside each other for quicker rendering in terminals.
+//!    paint the screen via the diffing algorithm which is smart enough to "stack" styles that
+//!    appear beside each other for quicker rendering in terminals.
 //! 4. **ANSI text**. Styling information in not available w/ these characters because the styling
-//!    information is encoded in the ANSI escape codes. `lolcat_api.rs` generates these ANSI strings for
-//!    the rainbow effect. An example of this is the outline around a modal dialog box.
+//!    information is encoded in the ANSI escape codes. `lolcat_api.rs` generates these ANSI strings
+//!    for the rainbow effect. An example of this is the outline around a modal dialog box.
 //!
 //! ## Render pipeline
 //!
-//! The following diagram provides a high level overview of how apps (that contain components, which may
-//! contain components, and so on) are rendered to the terminal screen.
+//! The following diagram provides a high level overview of how apps (that contain components, which
+//! may contain components, and so on) are rendered to the terminal screen.
 //!
 //! ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/compositor.svg)
 //!
 //! Each component produces a `RenderPipeline`, which is a map of `ZOrder` and `Vec<RenderOps>`.
-//! `RenderOps` are the instructions that are grouped together, such as move the caret to a position,
-//! set a color, and paint some text.
+//! `RenderOps` are the instructions that are grouped together, such as move the caret to a
+//! position, set a color, and paint some text.
 //!
 //! Inside of each `RenderOps` the caret is stateful, meaning that the caret position is remembered
-//! after each `RenderOp` is executed. However, once a new `RenderOps` is executed, the caret position
-//! reset just for that `RenderOps`. Caret position is not stored globally. You should read more about
-//! "atomic paint operations" in the `RenderOp` documentation.
+//! after each `RenderOp` is executed. However, once a new `RenderOps` is executed, the caret
+//! position reset just for that `RenderOps`. Caret position is not stored globally. You should read
+//! more about "atomic paint operations" in the `RenderOp` documentation.
 //!
 //! Once a set of these `RenderPipeline`s have been generated, typically after the user enters some
 //! input event, and that produces a new state which then has to be rendered, they are combined and
@@ -372,12 +395,13 @@
 //!
 //! ## First render
 //!
-//! The `paint.rs` file contains the `paint` function, which is the entry point for all rendering. Once
-//! the first render occurs, the `OffscreenBuffer` that is generated is saved to `GlobalSharedState`.
-//! The following table shows the various tasks that have to be performed in order to render to an
-//! `OffscreenBuffer`. There is a different code path that is taken for ANSI text and plain text (which
-//! includes `StyledText` which is just plain text with a color). Syntax highlighted text is also just
-//! `StyledText`. The ANSI text is an example of text that is generated by the `lolcat_api.rs`.
+//! The `paint.rs` file contains the `paint` function, which is the entry point for all rendering.
+//! Once the first render occurs, the `OffscreenBuffer` that is generated is saved to
+//! `GlobalSharedState`. The following table shows the various tasks that have to be performed in
+//! order to render to an `OffscreenBuffer`. There is a different code path that is taken for ANSI
+//! text and plain text (which includes `StyledText` which is just plain text with a color). Syntax
+//! highlighted text is also just `StyledText`. The ANSI text is an example of text that is
+//! generated by the `lolcat_api.rs`.
 //!
 //! | UTF-8 | ANSI | Task                                                                                                    |
 //! | ----- | ---- | ------------------------------------------------------------------------------------------------------- |
@@ -385,16 +409,16 @@
 //! | Y     | Y    | paint each `PixelChar` in `List<List<PixelChar>>` to stdout using `OffscreenBufferPainterImplCrossterm` |
 //! | Y     | Y    | save the `List<List<PixelChar>>` to `GlobalSharedState`                                                 |
 //!
-//! Currently only `crossterm` is supported for actually painting to the terminal. But this process is
-//! really simple making it very easy to swap out other terminal libraries such as `termion`, or even a
-//! GUI backend, or some other custom output driver.
+//! Currently only `crossterm` is supported for actually painting to the terminal. But this process
+//! is really simple making it very easy to swap out other terminal libraries such as `termion`, or
+//! even a GUI backend, or some other custom output driver.
 //!
 //! ## Subsequent render
 //!
-//! Since the `OffscreenBuffer` is cached in `GlobalSharedState` a diff to be performed for subsequent
-//! renders. And only those diff chunks are painted to the screen. This ensures that there is no flicker
-//! when the content of the screen changes. It also minimizes the amount of work that the terminal or
-//! terminal emulator has to do put the `PixelChar`s on the screen.
+//! Since the `OffscreenBuffer` is cached in `GlobalSharedState` a diff to be performed for
+//! subsequent renders. And only those diff chunks are painted to the screen. This ensures that
+//! there is no flicker when the content of the screen changes. It also minimizes the amount of work
+//! that the terminal or terminal emulator has to do put the `PixelChar`s on the screen.
 //!
 //! # Redux for state management
 //!
@@ -449,6 +473,32 @@
 //! # Lolcat support
 //!
 //! An implementation of [r3bl_rs_utils_core::lolcat::cat] w/ a color wheel is provided.
+//!
+//! ```ignore
+//! use r3bl_rs_utils_core::*;
+//!
+//! let mut lolcat = LolcatBuilder::new()
+//!   .set_color_change_speed(ColorChangeSpeed::Rapid)
+//!   .set_seed(1.0)
+//!   .set_seed_delta(1.0)
+//!   .build();
+//!
+//! let content = "Hello, world!";
+//! let colored_content = colorize_using_lolcat!(
+//!   &mut lolcat, "{}", content
+//! );
+//!
+//! lolcat.next_color();
+//! ```
+//!
+//! This [r3bl_rs_utils_core::lolcat::Lolcat] that is returned by `build()` is safe to re-use.
+//! - The colors it cycles through are "stable" meaning that once constructed via the
+//!   [builder](r3bl_rs_utils_core::lolcat::LolcatBuilder) (which sets the speed, seed, and delta
+//!   that determine where the color wheel starts when it is used). For eg, when used in a dialog
+//!   box component that re-uses the instance, repeated calls to the `render()` function of this
+//!   component will produce the same generated colors over and over again.
+//! - If you want to change where the color wheel "begins", you have to change the speed, seed, and
+//!   delta of this [r3bl_rs_utils_core::lolcat::Lolcat] instance.
 
 // Attach.
 pub mod tui;

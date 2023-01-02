@@ -17,6 +17,8 @@
 
 // Attach source files.
 pub mod builder;
+/// This file is called `cat.rs` since `lolcat` is the name of the module and naming it `lolcat.rs`
+/// causes a clippy warning.
 pub mod cat;
 pub mod color_utils;
 pub mod control;
