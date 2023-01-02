@@ -38,7 +38,15 @@ use crate::*;
 ///
 /// lolcat.next_color();
 /// ```
-
+///
+/// This [Lolcat] that is returned by `build()` is safe to re-use.
+/// - The colors it cycles through are "stable" meaning that once constructed via the
+///   [builder](LolcatBuilder) (which sets the speed, seed, and delta that determine where the color
+///   wheel starts when it is used). For eg, when used in a dialog box component that re-uses the
+///   instance, repeated calls to the `render()` function of this component will produce the
+///   same generated colors over and over again.
+/// - If you want to change where the color wheel "begins", you have to change the speed, seed, and
+///   delta of this [Lolcat] instance.
 #[derive(Clone, Copy, Serialize, Deserialize, PartialEq, GetSize)]
 pub struct LolcatBuilder {
     /// Rate at which the color changes when [format_str](Lolcat::format_str) is called.

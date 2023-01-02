@@ -35,8 +35,17 @@ use crate::*;
 pub struct DialogEngine {
     pub dialog_options: DialogEngineConfigOptions,
     pub editor_engine: EditorEngine,
+    /// This [Lolcat] is used to render the dialog box. It is created when
+    /// [new()](DialogEngine::new) is called.
+    /// - The colors it cycles through are "stable" meaning that once constructed via the
+    ///   [builder](LolcatBuilder) (which sets the speed, seed, and delta that determine where the
+    ///   color wheel starts when it is used). For eg, between repeated calls to
+    ///   [render_engine](DialogEngine::render_engine) which uses the same [Lolcat] instance, the
+    ///   generated colors will be the same.
+    /// - If you want to change where the color wheel "begins", you have to change the speed, seed,
+    ///   and delta of this [Lolcat] instance.
     pub lolcat: Lolcat,
-    /// This is evaluated and saved when [render_engine]( DialogEngine::render_engine) is called.
+    /// This is evaluated and saved when [render_engine](DialogEngine::render_engine) is called.
     /// The dialog box is rendered outside of any layout [FlexBox] or [Surface], so it just paints
     /// itself to the screen on top of everything else.
     pub maybe_flex_box: Option<(

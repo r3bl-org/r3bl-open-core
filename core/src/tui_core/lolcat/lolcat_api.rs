@@ -81,17 +81,19 @@ pub fn lolcat_each_char_in_unicode_string(
     lolcat: Option<&mut Lolcat>,
 ) -> String {
     let mut saved_orig_speed = None;
+
     let mut my_lolcat: Cow<Lolcat> = match lolcat {
         Some(lolcat_arg) => {
             saved_orig_speed = Some(lolcat_arg.color_wheel_control.color_change_speed);
             lolcat_arg.color_wheel_control.color_change_speed = ColorChangeSpeed::Rapid;
             Cow::Borrowed(lolcat_arg)
         }
-        None => Cow::Owned(
-            LolcatBuilder::new()
+        None => {
+            let lolcat_temp = LolcatBuilder::new()
                 .set_color_change_speed(ColorChangeSpeed::Rapid)
-                .build(),
-        ),
+                .build();
+            Cow::Owned(lolcat_temp)
+        }
     };
 
     let mut return_vec: Vec<String> = vec![];
