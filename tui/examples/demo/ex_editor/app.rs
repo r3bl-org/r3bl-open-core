@@ -128,7 +128,7 @@ mod app_with_layout_impl_trait_app {
 
             // Check to see if the modal dialog should be activated.
             if let EventPropagation::Consumed =
-                self.try_input_event_activate_modal(args, input_event)
+                self.try_input_event_activate_modal(args, input_event).await
             {
                 return Ok(EventPropagation::Consumed);
             }
@@ -161,7 +161,7 @@ mod detect_modal_dialog_activation_from_input_event {
         /// returns a [EventPropagation::Consumed] and not [EventPropagation::ConsumedRender]
         /// because the [Action::SetDialogBufferTitleAndText] is dispatched to the store & that will
         /// cause a rerender.
-        pub fn try_input_event_activate_modal(
+        pub async fn try_input_event_activate_modal(
             &mut self,
             args: GlobalScopeArgs<'_, State, Action>,
             input_event: &InputEvent,
@@ -173,14 +173,22 @@ mod detect_modal_dialog_activation_from_input_event {
                     mask: ModifierKeysMask::CTRL,
                 },
             ) {
+                // Reset the dialog component prior to activating / showing it.
+                ComponentRegistry::reset_component(
+                    &mut self.component_registry,
+                    ComponentId::Dialog.int_value(),
+                )
+                .await;
+
                 activate_modal(self, args);
+
                 EventPropagation::Consumed
             } else {
                 EventPropagation::Propagate
             };
 
             fn activate_modal(this: &mut AppWithLayout, args: GlobalScopeArgs<State, Action>) {
-                // If the dialog already has focus, then don't activate it again. Simply a no-op.i
+                // If the dialog already has focus, then don't activate it again. Simply a no-op.
                 if this
                     .component_registry
                     .has_focus

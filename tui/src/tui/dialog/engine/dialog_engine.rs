@@ -71,6 +71,12 @@ mod dialog_engine_impl {
                 ..Default::default()
             }
         }
+
+        /// Clean up any state in the engine, eg: selected_row_index or scroll_offset_row_index.
+        pub fn reset(&mut self) {
+            self.selected_row_index = ch!(0);
+            self.scroll_offset_row_index = ch!(0);
+        }
     }
 }
 

@@ -67,6 +67,8 @@ macro_rules! fire {
 
 #[async_trait]
 impl Component<State, Action> for ColumnRenderComponent {
+    fn reset(&mut self) {}
+
     fn get_id(&self) -> FlexBoxId { self.id }
 
     /// Handle following input events (and consume them):

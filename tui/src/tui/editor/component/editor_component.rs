@@ -47,6 +47,10 @@ pub mod impl_component {
         S: HasEditorBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
         A: Default + Clone + Sync + Send,
     {
+        fn reset(&mut self) {
+            // TODO: does anything need to be cleaned up in editor engine?
+        }
+
         fn get_id(&self) -> FlexBoxId { self.id }
 
         /// This shim simply calls [apply_event](EditorEngine::apply_event) w/ all the

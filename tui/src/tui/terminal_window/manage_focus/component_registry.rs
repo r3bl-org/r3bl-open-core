@@ -108,6 +108,18 @@ mod component_registry_impl {
             None
         }
 
+        pub async fn reset_component(this: &mut ComponentRegistry<S, A>, id: FlexBoxId) {
+            if let Some(it) = ComponentRegistry::get_component_ref_by_id(this, id) {
+                it.write().await.reset();
+            }
+        }
+
+        pub async fn reset_focused_component(this: &mut ComponentRegistry<S, A>) {
+            if let Some(it) = ComponentRegistry::get_focused_component_ref(this) {
+                it.write().await.reset();
+            }
+        }
+
         pub async fn route_event_to_focused_component(
             this: &mut ComponentRegistry<S, A>,
             input_event: &InputEvent,
@@ -117,12 +129,10 @@ mod component_registry_impl {
             window_size: &Size,
         ) -> CommonResult<EventPropagation> {
             // If component has focus, then route input_event to it. Return its propagation enum.
-            if let Some(shared_component_has_focus) =
-                ComponentRegistry::get_focused_component_ref(this)
-            {
+            if let Some(it) = ComponentRegistry::get_focused_component_ref(this) {
                 call_handle_event!(
                     component_registry: this,
-                    shared_component: shared_component_has_focus,
+                    shared_component: it,
                     input_event: input_event,
                     state: state,
                     shared_store: shared_store,

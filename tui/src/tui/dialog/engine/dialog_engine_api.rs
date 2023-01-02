@@ -131,9 +131,7 @@ impl DialogEngine {
 
         // Was a dialog choice made?
         if let Some(choice) = internal_impl::try_handle_dialog_choice(input_event, dialog_buffer) {
-            // Clean up any state in the engine, eg: selected_row_index or scroll_offset_row_index
-            dialog_engine.scroll_offset_row_index = ch!(0);
-            dialog_engine.selected_row_index = ch!(0);
+            dialog_engine.reset();
             return Ok(DialogEngineApplyResponse::DialogChoice(choice));
         }
 
