@@ -91,7 +91,7 @@ mod component_registry_impl {
         pub fn get_focused_component_ref(
             this: &mut ComponentRegistry<S, A>,
         ) -> Option<SharedComponent<S, A>> {
-            if let Some(ref id) = this.has_focus.maybe_id {
+            if let Some(ref id) = this.has_focus.get_id() {
                 ComponentRegistry::get_component_ref_by_id(this, *id)
             } else {
                 None

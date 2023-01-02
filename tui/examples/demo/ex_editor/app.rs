@@ -31,22 +31,23 @@ use super::*;
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
 enum ComponentId {
     Editor = 1,
-    Dialog = 2,
+    SimpleDialog = 2,
+    AutocompleteDialog = 3,
 }
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
 pub enum EditorStyleName {
-    Default = 3,
+    Default = 4,
 }
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
 pub enum DialogStyleName {
-    Border = 4,
-    Title = 5,
-    Editor = 6,
-    ResultsPanel = 7,
+    Border = 5,
+    Title = 6,
+    Editor = 7,
+    ResultsPanel = 8,
 }
 
 /// Async trait object that implements the [App] trait.
@@ -130,6 +131,15 @@ mod app_with_layout_impl_trait_app {
             if let EventPropagation::Consumed =
                 self.try_input_event_activate_modal(args, input_event).await
             {
+                call_if_true!(DEBUG_TUI_MOD, {
+                    let msg_1 = format!(
+                        "🐝 focus move to modal: {:?}",
+                        self.component_registry.has_focus
+                    );
+                    let msg_2 = format!("💾 user_data: {:?}", self.component_registry.user_data);
+                    log_debug(msg_1);
+                    log_debug(msg_2);
+                });
                 return Ok(EventPropagation::Consumed);
             }
 
@@ -157,16 +167,19 @@ mod detect_modal_dialog_activation_from_input_event {
     use super::*;
 
     impl AppWithLayout {
-        /// If `input_event` matches <kbd>Ctrl+l</kbd>, then toggle the modal dialog. Note that this
-        /// returns a [EventPropagation::Consumed] and not [EventPropagation::ConsumedRender]
-        /// because the [Action::SetDialogBufferTitleAndText] is dispatched to the store & that will
-        /// cause a rerender.
+        /// If `input_event` matches <kbd>Ctrl+l</kbd> or <kbd>Ctrl+k</kbd>, then toggle the modal
+        /// dialog.
+        ///
+        /// Note that this returns a [EventPropagation::Consumed] and not
+        /// [EventPropagation::ConsumedRender] because the [Action::SetDialogBufferTitleAndTextById]
+        /// is dispatched to the store & that will cause a rerender.
         pub async fn try_input_event_activate_modal(
             &mut self,
             args: GlobalScopeArgs<'_, State, Action>,
             input_event: &InputEvent,
         ) -> EventPropagation {
-            return if let DialogEvent::ActivateModal = DialogEvent::should_activate_modal(
+            // Ctrl + l => activate Simple.
+            if let DialogEvent::ActivateModal = DialogEvent::should_activate_modal(
                 input_event,
                 KeyPress::WithModifiers {
                     key: Key::Character('l'),
@@ -176,29 +189,61 @@ mod detect_modal_dialog_activation_from_input_event {
                 // Reset the dialog component prior to activating / showing it.
                 ComponentRegistry::reset_component(
                     &mut self.component_registry,
-                    ComponentId::Dialog.int_value(),
+                    ComponentId::SimpleDialog.int_value(),
                 )
                 .await;
-
-                activate_modal(self, args);
-
-                EventPropagation::Consumed
-            } else {
-                EventPropagation::Propagate
+                return match activate_simple_modal(self, args) {
+                    Ok(_) => EventPropagation::Consumed,
+                    Err(err) => {
+                        if let Some(CommonError {
+                            err_type: _,
+                            err_msg: msg,
+                        }) = err.downcast_ref::<CommonError>()
+                        {
+                            log_error(format!("📣 Error activating simple modal: {msg:?}"));
+                        }
+                        EventPropagation::Propagate
+                    }
+                };
             };
 
-            fn activate_modal(this: &mut AppWithLayout, args: GlobalScopeArgs<State, Action>) {
-                // If the dialog already has focus, then don't activate it again. Simply a no-op.
-                if this
-                    .component_registry
-                    .has_focus
-                    .does_id_have_focus(ComponentId::Dialog.int_value())
-                {
-                    return;
-                }
+            // Ctrl + k => activate Autocomplete.
+            if let DialogEvent::ActivateModal = DialogEvent::should_activate_modal(
+                input_event,
+                KeyPress::WithModifiers {
+                    key: Key::Character('k'),
+                    mask: ModifierKeysMask::CTRL,
+                },
+            ) {
+                // Reset the dialog component prior to activating / showing it.
+                ComponentRegistry::reset_component(
+                    &mut self.component_registry,
+                    ComponentId::AutocompleteDialog.int_value(),
+                )
+                .await;
+                return match activate_autocomplete_modal(self, args) {
+                    Ok(_) => EventPropagation::Consumed,
+                    Err(err) => {
+                        if let Some(CommonError {
+                            err_type: _,
+                            err_msg: msg,
+                        }) = err.downcast_ref::<CommonError>()
+                        {
+                            log_error(format!("📣 Error activating autocomplete modal: {msg:?}"));
+                        }
+                        EventPropagation::Propagate
+                    }
+                };
+            };
 
+            return EventPropagation::Propagate;
+
+            fn activate_simple_modal(
+                this: &mut AppWithLayout,
+                args: GlobalScopeArgs<State, Action>,
+            ) -> CommonResult<()> {
                 // Initialize the dialog buffer with title & text.
-                let title = "Modal Dialog Title";
+                let title = "Simple Modal Dialog Title";
                 let text = {
                     if let Some(editor_buffer) = args
                         .state
@@ -214,23 +259,73 @@ mod detect_modal_dialog_activation_from_input_event {
                 // render.
                 this.component_registry
                     .has_focus
-                    .set_modal_id(ComponentId::Dialog.int_value());
+                    .try_set_modal_id(ComponentId::SimpleDialog.int_value())?;
 
                 // Change the state so that it will trigger a render. This will show the title &
                 // text on the next render.
                 spawn_dispatch_action!(
                     args.shared_store,
                     Action::SetDialogBufferTitleAndTextById(
-                        ComponentId::Dialog.int_value(),
+                        ComponentId::SimpleDialog.int_value(),
                         title.to_string(),
                         text.to_string()
                     )
                 );
 
                 call_if_true!(DEBUG_TUI_MOD, {
-                    let msg = format!("📣 activate modal: {:?}", this.component_registry.has_focus);
+                    let msg = format!(
+                        "📣 activate modal simple: {:?}",
+                        this.component_registry.has_focus
+                    );
                     log_debug(msg);
                 });
+
+                Ok(())
+            }
+
+            fn activate_autocomplete_modal(
+                this: &mut AppWithLayout,
+                args: GlobalScopeArgs<State, Action>,
+            ) -> CommonResult<()> {
+                // Initialize the dialog buffer with title & text.
+                let title = "Autocomplete Modal Dialog Title";
+                let text = {
+                    if let Some(editor_buffer) = args
+                        .state
+                        .get_editor_buffer(ComponentId::Editor.int_value())
+                    {
+                        editor_buffer.get_as_string()
+                    } else {
+                        "Press <Esc> to close, or <Enter> to accept".to_string()
+                    }
+                };
+
+                // Setting the has_focus to Id::Dialog will cause the dialog to appear on the next
+                // render.
+                this.component_registry
+                    .has_focus
+                    .try_set_modal_id(ComponentId::AutocompleteDialog.int_value())?;
+
+                // Change the state so that it will trigger a render. This will show the title &
+                // text on the next render.
+                spawn_dispatch_action!(
+                    args.shared_store,
+                    Action::SetDialogBufferTitleAndTextById(
+                        ComponentId::AutocompleteDialog.int_value(),
+                        title.to_string(),
+                        text.to_string()
+                    )
+                );
+
+                call_if_true!(DEBUG_TUI_MOD, {
+                    let msg = format!(
+                        "📣 activate modal autocomplete: {:?}",
+                        this.component_registry.has_focus
+                    );
+                    log_debug(msg);
+                });
+
+                Ok(())
             }
         }
     }
@@ -277,17 +372,38 @@ mod perform_layout {
                     box_end!(in: surface);
                 }
 
-                // Then, render modal dialog (if it is active, on top of the editor component).
+                // Then, render simple modal dialog (if it is active, on top of the editor
+                // component).
                 if self
                     .0
                     .component_registry
                     .has_focus
-                    .is_modal_id(ComponentId::Dialog.int_value())
+                    .is_modal_id(ComponentId::SimpleDialog.int_value())
                 {
                     render_component_in_given_box! {
                       in:                 surface,
                       box:                FlexBox::default(), /* This is not used as the modal breaks out of its box. */
-                      component_id:       ComponentId::Dialog.int_value(),
+                      component_id:       ComponentId::SimpleDialog.int_value(),
+                      from:               self.0.component_registry,
+                      state:              state,
+                      shared_store:       shared_store,
+                      shared_global_data: shared_global_data,
+                      window_size:        window_size
+                    };
+                }
+
+                // Or, render autocomplete modal dialog (if it is active, on top of the editor
+                // component).
+                if self
+                    .0
+                    .component_registry
+                    .has_focus
+                    .is_modal_id(ComponentId::AutocompleteDialog.int_value())
+                {
+                    render_component_in_given_box! {
+                      in:                 surface,
+                      box:                FlexBox::default(), /* This is not used as the modal breaks out of its box. */
+                      component_id:       ComponentId::AutocompleteDialog.int_value(),
                       from:               self.0.component_registry,
                       state:              state,
                       shared_store:       shared_store,
@@ -306,27 +422,113 @@ mod populate_component_registry {
     use crate::ex_editor::app::stylesheet::create_stylesheet;
 
     pub fn init(this: &mut AppWithLayout) {
-        let editor_id = ComponentId::Editor.int_value();
-        let dialog_id = ComponentId::Dialog.int_value();
+        insert_editor_component(this);
+        insert_dialog_component_simple(this);
+        insert_dialog_component_autocomplete(this);
 
-        insert_editor_component(this, editor_id);
-        insert_dialog_component(this, dialog_id);
-        init_has_focus(this, editor_id);
-    }
-
-    /// Switch focus to the editor component if focus is not set.
-    fn init_has_focus(this: &mut AppWithLayout, id: FlexBoxId) {
-        this.component_registry.has_focus.set_id(id);
+        // Switch focus to the editor component if focus is not set.
+        this.component_registry
+            .has_focus
+            .set_id(ComponentId::Editor.int_value());
         call_if_true!(DEBUG_TUI_MOD, {
             {
-                let msg = format!("🪙 {} = {}", "init component_registry.has_focus", id);
+                let msg = format!(
+                    "🪙 {} = {:?}",
+                    "init component_registry.has_focus",
+                    this.component_registry.has_focus.get_id()
+                );
                 log_debug(msg);
             }
         });
     }
 
-    /// Insert dialog component into registry if it's not already there.
-    fn insert_dialog_component(this: &mut AppWithLayout, id: FlexBoxId) {
+    /// Insert autocomplete dialog component into registry if it's not already there.
+    fn insert_dialog_component_autocomplete(this: &mut AppWithLayout) {
+        let result_stylesheet = create_stylesheet();
+
+        let dialog_options = DialogEngineConfigOptions {
+            mode: DialogEngineMode::ModalAutocomplete,
+            maybe_style_border: get_style! { @from_result: result_stylesheet , DialogStyleName::Border.int_value() },
+            maybe_style_title: get_style! { @from_result: result_stylesheet , DialogStyleName::Title.int_value() },
+            maybe_style_editor: get_style! { @from_result: result_stylesheet , DialogStyleName::Editor.int_value() },
+            maybe_style_results_panel: get_style! { @from_result: result_stylesheet , DialogStyleName::ResultsPanel.int_value() },
+            ..Default::default()
+        };
+
+        let editor_options = EditorEngineConfigOptions {
+            multiline_mode: EditorLineMode::SingleLine,
+            syntax_highlight: SyntaxHighlightConfig::Disable,
+        };
+
+        let shared_dialog_component = {
+            let it = DialogComponent::new_shared(
+                ComponentId::AutocompleteDialog.int_value(),
+                dialog_options,
+                editor_options,
+                on_dialog_press_handler,
+                on_dialog_editor_change_handler,
+            );
+
+            fn on_dialog_press_handler(
+                dialog_choice: DialogChoice,
+                shared_store: &SharedStore<State, Action>,
+            ) {
+                match dialog_choice {
+                    DialogChoice::Yes(text) => {
+                        spawn_dispatch_action!(
+                            shared_store,
+                            Action::SetDialogBufferTitleAndTextById(
+                                ComponentId::AutocompleteDialog.int_value(),
+                                "Yes".to_string(),
+                                text
+                            )
+                        );
+                    }
+                    DialogChoice::No => {
+                        spawn_dispatch_action!(
+                            shared_store,
+                            Action::SetDialogBufferTitleAndTextById(
+                                ComponentId::AutocompleteDialog.int_value(),
+                                "No".to_string(),
+                                "".to_string()
+                            )
+                        );
+                    }
+                }
+            }
+
+            fn on_dialog_editor_change_handler(
+                editor_buffer: EditorBuffer,
+                shared_store: &SharedStore<State, Action>,
+            ) {
+                spawn_dispatch_action!(
+                    shared_store,
+                    Action::UpdateDialogBufferById(
+                        ComponentId::AutocompleteDialog.int_value(),
+                        editor_buffer
+                    )
+                );
+            }
+
+            it
+        };
+
+        this.component_registry.put(
+            ComponentId::AutocompleteDialog.int_value(),
+            shared_dialog_component,
+        );
+
+        call_if_true!(DEBUG_TUI_MOD, {
+            let msg = format!(
+                "🪙 {}",
+                "construct DialogComponent (autocomplete) { on_dialog_press }"
+            );
+            log_debug(msg);
+        });
+    }
+
+    /// Insert simple dialog component into registry if it's not already there.
+    fn insert_dialog_component_simple(this: &mut AppWithLayout) {
         let result_stylesheet = create_stylesheet();
 
         let dialog_options = DialogEngineConfigOptions {
@@ -345,7 +547,7 @@ mod populate_component_registry {
 
         let shared_dialog_component = {
             let it = DialogComponent::new_shared(
-                id,
+                ComponentId::SimpleDialog.int_value(),
                 dialog_options,
                 editor_options,
                 on_dialog_press_handler,
@@ -361,7 +563,7 @@ mod populate_component_registry {
                         spawn_dispatch_action!(
                             shared_store,
                             Action::SetDialogBufferTitleAndTextById(
-                                ComponentId::Dialog.int_value(),
+                                ComponentId::SimpleDialog.int_value(),
                                 "Yes".to_string(),
                                 text
                             )
@@ -371,7 +573,7 @@ mod populate_component_registry {
                         spawn_dispatch_action!(
                             shared_store,
                             Action::SetDialogBufferTitleAndTextById(
-                                ComponentId::Dialog.int_value(),
+                                ComponentId::SimpleDialog.int_value(),
                                 "No".to_string(),
                                 "".to_string()
                             )
@@ -386,23 +588,33 @@ mod populate_component_registry {
             ) {
                 spawn_dispatch_action!(
                     shared_store,
-                    Action::UpdateDialogBufferById(ComponentId::Dialog.int_value(), editor_buffer)
+                    Action::UpdateDialogBufferById(
+                        ComponentId::SimpleDialog.int_value(),
+                        editor_buffer
+                    )
                 );
             }
 
             it
         };
 
-        this.component_registry.put(id, shared_dialog_component);
+        this.component_registry.put(
+            ComponentId::SimpleDialog.int_value(),
+            shared_dialog_component,
+        );
 
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!("🪙 {}", "construct DialogComponent { on_dialog_press }");
+            let msg = format!(
+                "🪙 {}",
+                "construct DialogComponent (simple) { on_dialog_press }"
+            );
             log_debug(msg);
         });
     }
 
     /// Insert editor component into registry if it's not already there.
-    fn insert_editor_component(this: &mut AppWithLayout, id: FlexBoxId) {
+    fn insert_editor_component(this: &mut AppWithLayout) {
+        let id = ComponentId::Editor.int_value();
         let shared_editor_component = {
             fn on_buffer_change(
                 shared_store: &SharedStore<State, Action>,
@@ -502,12 +714,17 @@ mod status_bar {
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: &Size) {
         let styled_texts = styled_texts! {
-          styled_text! { "Hints:",                       style!(attrib: [dim])  },
-          styled_text! { " Ctrl + x : Exit ⛔ ",         style!(attrib: [bold]) },
-          styled_text! { " … ",                          style!(attrib: [dim])  },
-          styled_text! { " Type content 🖖 ",            style!(attrib: [bold]) },
-          styled_text! { " … ",                          style!(attrib: [dim])  },
-          styled_text! { " Ctrl + l : Modal dialog 📣 ", style!(attrib: [bold]) }
+            styled_text! { "Hints: ",             style!(attrib: [bold, dim]) },
+            styled_text! { "Ctrl + x",            style!(attrib: [dim, underline]) },
+            styled_text! { " : Exit 🖖",          style!(attrib: [bold]) },
+            styled_text! { " … ",                 style!(attrib: [dim]) },
+            styled_text! { "Ctrl + l",            style!(attrib: [dim, underline]) },
+            styled_text! { " : Simple 📣",        style!(attrib: [bold]) },
+            styled_text! { " … ",                 style!(attrib: [dim]) },
+            styled_text! { "Ctrl + k",            style!(attrib: [dim, underline]) },
+            styled_text! { " : Autocomplete 🤖",  style!(attrib: [bold]) },
+            styled_text! { " … ",                 style!(attrib: [dim]) },
+            styled_text! { "Type content 🌊",     style!(attrib: [underline]) },
         };
 
         let display_width = styled_texts.display_width();

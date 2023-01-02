@@ -38,11 +38,16 @@ impl DialogEngine {
         S: HasDialogBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
         A: Default + Clone + Sync + Send,
     {
-        let current_box: PartialFlexBox = {
+        let mode = args.dialog_engine.dialog_options.mode;
+        let overlay_flex_box: PartialFlexBox = {
             match &args.dialog_engine.maybe_flex_box {
                 // No need to calculate new flex box if:
                 // 1) there's an existing one & 2) the window size hasn't changed.
-                Some((saved_size, saved_box)) if saved_size == args.window_size => *saved_box,
+                Some((saved_size, saved_mode, saved_box))
+                    if saved_size == args.window_size && saved_mode == &mode =>
+                {
+                    *saved_box
+                }
                 // Otherwise, calculate a new flex box & save it.
                 _ => {
                     let it = internal_impl::make_flex_box_for_dialog(
@@ -53,13 +58,13 @@ impl DialogEngine {
                     )?;
                     args.dialog_engine
                         .maybe_flex_box
-                        .replace((*args.window_size, it));
+                        .replace((*args.window_size, mode, it));
                     it
                 }
             }
         };
 
-        let (origin_pos, bounds_size) = current_box.get_style_adjusted_position_and_size();
+        let (origin_pos, bounds_size) = overlay_flex_box.get_style_adjusted_position_and_size();
 
         let pipeline = {
             let mut it = render_pipeline!();
