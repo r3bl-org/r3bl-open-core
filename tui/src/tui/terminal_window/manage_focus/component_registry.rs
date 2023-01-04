@@ -34,8 +34,6 @@ where
 {
     pub components: ComponentRegistryMap<S, A>,
     pub has_focus: HasFocus,
-    // FUTURE: 🐵 add user_data in ComponentRegistry
-    pub user_data: HashMap<FlexBoxId, HashMap<String, String>>,
 }
 
 pub type ComponentRegistryMap<S, A> = HashMap<FlexBoxId, SharedComponent<S, A>>;
@@ -62,24 +60,6 @@ mod component_registry_impl {
 
         pub fn remove(&mut self, id: FlexBoxId) -> Option<SharedComponent<S, A>> {
             self.components.remove(&id)
-        }
-    }
-
-    impl<S, A> ComponentRegistry<S, A>
-    where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
-    {
-        pub fn get_user_data(&self, id: FlexBoxId, key: &str) -> Option<String> {
-            self.user_data
-                .get(&id)
-                .and_then(|map| map.get(key))
-                .map(|string_ref| string_ref.into())
-        }
-
-        pub fn put_user_data(&mut self, id: FlexBoxId, key: &str, value: &str) {
-            let map = self.user_data.entry(id).or_default();
-            map.insert(key.into(), value.into());
         }
     }
 

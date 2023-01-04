@@ -155,13 +155,11 @@ pub mod dialog_component_impl {
                     component_registry.has_focus.reset_modal_id();
 
                     call_if_true!(DEBUG_TUI_MOD, {
-                        let msg_1 = format!(
+                        let msg = format!(
                             "🐝 restore focus to non modal: {:?}",
                             component_registry.has_focus
                         );
-                        let msg_2 = format!("💾 user_data: {:?}", component_registry.user_data);
-                        log_debug(msg_1);
-                        log_debug(msg_2);
+                        log_debug(msg);
                     });
 
                     // Run the handler (if any) w/ `dialog_choice`.

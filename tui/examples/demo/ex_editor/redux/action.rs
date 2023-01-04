@@ -40,3 +40,5 @@ impl Default for Action {
 impl Display for Action {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
 }
+
+// FIXME: clean up action names so they make sense & update reducer & app (state?) to match
