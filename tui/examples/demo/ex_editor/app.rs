@@ -121,10 +121,8 @@ mod app_with_layout_impl_trait_app {
             } = args;
 
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg_1 = format!("🐝 focus: {:?}", self.component_registry.has_focus);
-                let msg_2 = format!("💾 user_data: {:?}", self.component_registry.user_data);
-                log_debug(msg_1);
-                log_debug(msg_2);
+                let msg = format!("🐝 focus: {:?}", self.component_registry.has_focus);
+                log_debug(msg);
             });
 
             // Check to see if the modal dialog should be activated.
@@ -132,13 +130,11 @@ mod app_with_layout_impl_trait_app {
                 self.try_input_event_activate_modal(args, input_event).await
             {
                 call_if_true!(DEBUG_TUI_MOD, {
-                    let msg_1 = format!(
+                    let msg = format!(
                         "🐝 focus move to modal: {:?}",
                         self.component_registry.has_focus
                     );
-                    let msg_2 = format!("💾 user_data: {:?}", self.component_registry.user_data);
-                    log_debug(msg_1);
-                    log_debug(msg_2);
+                    log_debug(msg);
                 });
                 return Ok(EventPropagation::Consumed);
             }
