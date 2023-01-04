@@ -261,7 +261,7 @@ mod detect_modal_dialog_activation_from_input_event {
                 // text on the next render.
                 spawn_dispatch_action!(
                     args.shared_store,
-                    Action::SetDialogBufferTitleAndTextById(
+                    Action::SimpleDialogComponentInitializeFocused(
                         ComponentId::SimpleDialog.int_value(),
                         title.to_string(),
                         text.to_string()
@@ -306,7 +306,7 @@ mod detect_modal_dialog_activation_from_input_event {
                 // text on the next render.
                 spawn_dispatch_action!(
                     args.shared_store,
-                    Action::SetDialogBufferTitleAndTextById(
+                    Action::AutocompleteDialogComponentInitializeFocused(
                         ComponentId::AutocompleteDialog.int_value(),
                         title.to_string(),
                         text.to_string()
@@ -473,7 +473,7 @@ mod populate_component_registry {
                     DialogChoice::Yes(text) => {
                         spawn_dispatch_action!(
                             shared_store,
-                            Action::SetDialogBufferTitleAndTextById(
+                            Action::AutocompleteDialogComponentInitializeFocused(
                                 ComponentId::AutocompleteDialog.int_value(),
                                 "Yes".to_string(),
                                 text
@@ -483,7 +483,7 @@ mod populate_component_registry {
                     DialogChoice::No => {
                         spawn_dispatch_action!(
                             shared_store,
-                            Action::SetDialogBufferTitleAndTextById(
+                            Action::AutocompleteDialogComponentInitializeFocused(
                                 ComponentId::AutocompleteDialog.int_value(),
                                 "No".to_string(),
                                 "".to_string()
@@ -499,7 +499,7 @@ mod populate_component_registry {
             ) {
                 spawn_dispatch_action!(
                     shared_store,
-                    Action::UpdateDialogBufferById(
+                    Action::AutocompleteDialogComponentUpdateContent(
                         ComponentId::AutocompleteDialog.int_value(),
                         editor_buffer
                     )
@@ -558,7 +558,7 @@ mod populate_component_registry {
                     DialogChoice::Yes(text) => {
                         spawn_dispatch_action!(
                             shared_store,
-                            Action::SetDialogBufferTitleAndTextById(
+                            Action::SimpleDialogComponentInitializeFocused(
                                 ComponentId::SimpleDialog.int_value(),
                                 "Yes".to_string(),
                                 text
@@ -568,7 +568,7 @@ mod populate_component_registry {
                     DialogChoice::No => {
                         spawn_dispatch_action!(
                             shared_store,
-                            Action::SetDialogBufferTitleAndTextById(
+                            Action::SimpleDialogComponentInitializeFocused(
                                 ComponentId::SimpleDialog.int_value(),
                                 "No".to_string(),
                                 "".to_string()
@@ -584,7 +584,7 @@ mod populate_component_registry {
             ) {
                 spawn_dispatch_action!(
                     shared_store,
-                    Action::UpdateDialogBufferById(
+                    Action::SimpleDialogComponentUpdateContent(
                         ComponentId::SimpleDialog.int_value(),
                         editor_buffer
                     )
@@ -617,7 +617,10 @@ mod populate_component_registry {
                 my_id: FlexBoxId,
                 buffer: EditorBuffer,
             ) {
-                spawn_dispatch_action!(shared_store, Action::UpdateEditorBufferById(my_id, buffer));
+                spawn_dispatch_action!(
+                    shared_store,
+                    Action::EditorComponentUpdateContent(my_id, buffer)
+                );
             }
 
             let config_options = EditorEngineConfigOptions::default();

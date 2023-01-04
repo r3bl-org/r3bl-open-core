@@ -354,7 +354,7 @@ mod internal_impl {
         pub fn paint_results(
             ops: &mut RenderOps,
             origin_pos: &Position,
-            bounds_size: &Size,
+            _bounds_size: &Size,
             results: &[String],
             dialog_engine: &mut DialogEngine,
         ) {
@@ -371,7 +371,7 @@ mod internal_impl {
                     row_index: row_start_index + ch!(row_index)
                 );
 
-                // TODO: check for text clipping using bounds_size
+                // TODO: check for text clipping using _bounds_size
 
                 // TODO: does this work?
                 if row_index >= max_row_count {

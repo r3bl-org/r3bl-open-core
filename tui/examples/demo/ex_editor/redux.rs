@@ -22,8 +22,6 @@ use async_trait::async_trait;
 use r3bl_redux::*;
 use r3bl_tui::{DialogBuffer, *};
 
-// FIXME: clean up action names so they make sense & update reducer & app (state?) to match
-
 pub async fn create_store() -> Store<State, Action> {
     let mut store: Store<State, Action> = Store::default();
     store.add_reducer(Reducer::new()).await;
@@ -35,13 +33,27 @@ pub async fn create_store() -> Store<State, Action> {
 /// Best practices for naming actions: <https://redux.js.org/style-guide/#write-action-types-as-domaineventname>
 pub enum Action {
     Noop,
-    UpdateEditorBufferById(FlexBoxId /* id */, EditorBuffer),
-    SetDialogBufferTitleAndTextById(
+
+    /// Domain: EditorComponent, Event: UpdateContent.
+    EditorComponentUpdateContent(FlexBoxId /* id */, EditorBuffer),
+
+    /// Domain: SimpleDialogComponent, Event: InitializeFocused.
+    SimpleDialogComponentInitializeFocused(
         FlexBoxId, /* id */
         String,    /* title */
         String,    /* text */
     ),
-    UpdateDialogBufferById(FlexBoxId /* id */, EditorBuffer),
+    /// Domain: SimpleDialogComponent, Event: UpdateContent.
+    SimpleDialogComponentUpdateContent(FlexBoxId /* id */, EditorBuffer),
+
+    /// Domain: AutocompleteDialogComponent, Event: InitializeFocused.
+    AutocompleteDialogComponentInitializeFocused(
+        FlexBoxId, /* id */
+        String,    /* title */
+        String,    /* text */
+    ),
+    /// Domain: AutocompleteDialogComponent, Event: UpdateContent.
+    AutocompleteDialogComponentUpdateContent(FlexBoxId /* id */, EditorBuffer),
 }
 
 mod action_impl {
@@ -52,7 +64,7 @@ mod action_impl {
     }
 
     impl Display for Action {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result { write!(f, "{self:?}") }
     }
 }
 
@@ -68,48 +80,83 @@ mod reducer_impl {
             match action {
                 Action::Noop => state.clone(),
 
-                Action::UpdateEditorBufferById(id, buffer) => {
-                    let mut new_state = state.clone();
-                    new_state.editor_buffers.insert(*id, buffer.clone());
-                    new_state
+                Action::EditorComponentUpdateContent(id, buffer) => {
+                    Self::editor_component_update_content(state, id, buffer)
                 }
 
-                Action::SetDialogBufferTitleAndTextById(id, title, text) => {
-                    let mut new_state = state.clone();
-
-                    let dialog_buffer = {
-                        let mut it = DialogBuffer::new_empty();
-                        it.title = title.into();
-                        it.editor_buffer.set_lines(vec![text.into()]);
-                        it
-                    };
-
-                    new_state.dialog_buffers.insert(*id, dialog_buffer);
-
-                    new_state
+                Action::SimpleDialogComponentInitializeFocused(id, title, text) => {
+                    Self::dialog_component_initialize_focused(state, id, title, text)
                 }
 
-                Action::UpdateDialogBufferById(id, editor_buffer) => {
-                    let mut new_state = state.clone();
+                Action::SimpleDialogComponentUpdateContent(id, editor_buffer) => {
+                    Self::dialog_component_update_content(state, id, editor_buffer)
+                }
 
-                    new_state
-                        .dialog_buffers
-                        .entry(*id)
-                        .and_modify(|it| it.editor_buffer = editor_buffer.clone())
-                        .or_insert_with(
-                            // This code path should never execute, since to update the buffer given an
-                            // id, it should have already existed in the first place (created by
-                            // SetDialogBufferTitleAndTextById action).
-                            || {
-                                let mut it = DialogBuffer::new_empty();
-                                it.editor_buffer = editor_buffer.clone();
-                                it
-                            },
-                        );
+                Action::AutocompleteDialogComponentInitializeFocused(id, title, text) => {
+                    Self::dialog_component_initialize_focused(state, id, title, text)
+                }
 
-                    new_state
+                Action::AutocompleteDialogComponentUpdateContent(id, editor_buffer) => {
+                    Self::dialog_component_update_content(state, id, editor_buffer)
                 }
             }
+        }
+    }
+
+    impl Reducer {
+        fn dialog_component_initialize_focused(
+            state: &State,
+            id: &FlexBoxId,
+            title: &String,
+            text: &String,
+        ) -> State {
+            let mut new_state = state.clone();
+
+            let dialog_buffer = {
+                let mut it = DialogBuffer::new_empty();
+                it.title = title.into();
+                it.editor_buffer.set_lines(vec![text.into()]);
+                it
+            };
+
+            new_state.dialog_buffers.insert(*id, dialog_buffer);
+
+            new_state
+        }
+
+        fn dialog_component_update_content(
+            state: &State,
+            id: &FlexBoxId,
+            editor_buffer: &EditorBuffer,
+        ) -> State {
+            let mut new_state = state.clone();
+
+            new_state
+                .dialog_buffers
+                .entry(*id)
+                .and_modify(|it| it.editor_buffer = editor_buffer.clone())
+                .or_insert_with(
+                    // This code path should never execute, since to update the buffer given an
+                    // id, it should have already existed in the first place (created by
+                    // SetDialogBufferTitleAndTextById action).
+                    || {
+                        let mut it = DialogBuffer::new_empty();
+                        it.editor_buffer = editor_buffer.clone();
+                        it
+                    },
+                );
+
+            new_state
+        }
+
+        fn editor_component_update_content(
+            state: &State,
+            id: &FlexBoxId,
+            buffer: &EditorBuffer,
+        ) -> State {
+            let mut new_state = state.clone();
+            new_state.editor_buffers.insert(*id, buffer.clone());
+            new_state
         }
     }
 }
