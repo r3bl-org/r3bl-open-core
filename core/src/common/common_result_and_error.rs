@@ -56,7 +56,6 @@ pub type CommonResult<T> = OGResult<T, Box<dyn Error + Send + Sync>>;
 /// }
 /// ```
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct CommonError {
     pub err_type: CommonErrorType,
     pub err_msg: Option<String>,
