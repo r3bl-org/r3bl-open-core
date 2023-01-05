@@ -247,7 +247,7 @@ mod detect_modal_dialog_activation_from_input_event {
                     {
                         editor_buffer.get_as_string()
                     } else {
-                        "Press <Esc> to close, or <Enter> to accept".to_string()
+                        "".to_string()
                     }
                 };
 
@@ -292,7 +292,7 @@ mod detect_modal_dialog_activation_from_input_event {
                     {
                         editor_buffer.get_as_string()
                     } else {
-                        "Press <Esc> to close, or <Enter> to accept".to_string()
+                        "".to_string()
                     }
                 };
 

@@ -326,6 +326,33 @@ mod internal_impl {
         let mut pipeline = EditorEngine::render_engine(editor_engine_args, &flex_box).await?;
         pipeline.hoist(ZOrder::Normal, ZOrder::Glass);
 
+        // Paint hint.
+        if args.dialog_buffer.editor_buffer.is_empty()
+            || args.dialog_buffer.editor_buffer.get_as_string() == ""
+        {
+            let mut ops = render_ops!();
+            let msg = "Press <Esc> to close, or <Enter> to accept".to_string();
+
+            ops.push(RenderOp::ResetColor);
+            ops.push(RenderOp::MoveCursorPositionAbs(
+                flex_box.style_adjusted_origin_pos,
+            ));
+
+            ops.push(RenderOp::PaintTextWithAttributes(
+                msg,
+                Some(if let Some(style) = maybe_style {
+                    Style { dim: true, ..style }
+                } else {
+                    Style {
+                        dim: true,
+                        ..Default::default()
+                    }
+                }),
+            ));
+
+            pipeline.push(ZOrder::Glass, ops);
+        };
+
         Ok(pipeline)
     }
 
@@ -361,15 +388,15 @@ mod internal_impl {
             // TODO: draw results panel from state.dialog_buffer.results (Vec<String>)
             let max_row_count = dialog_engine.dialog_options.result_panel_row_count;
             let col_start_index = ch!(1);
-            let row_start_index = ch!(DisplayConstants::SimpleModalRowCount.int_value())
-                + ch!(DisplayConstants::EmptyLine.int_value());
+            let row_start_index = ch!(DisplayConstants::SimpleModalRowCount.int_value()) - ch!(1);
 
+            let mut rel_insertion_pos =
+                position!(col_index: col_start_index, row_index: row_start_index);
+
+            // Print results panel.
             for (row_index, item) in results.iter().enumerate() {
                 let row_index = ch!(row_index);
-                let abs_insertion_pos = position!(
-                    col_index: col_start_index,
-                    row_index: row_start_index + ch!(row_index)
-                );
+                rel_insertion_pos.add_row(1);
 
                 // TODO: check for text clipping using _bounds_size
 
@@ -381,7 +408,7 @@ mod internal_impl {
                 ops.push(RenderOp::ResetColor);
                 ops.push(RenderOp::MoveCursorPositionRelTo(
                     *origin_pos,
-                    abs_insertion_pos,
+                    rel_insertion_pos,
                 ));
 
                 // If the row_index == dialog_engine.selected_row_index (not in state) ie, it is
@@ -454,9 +481,7 @@ mod internal_impl {
         dialog_engine: &mut DialogEngine,
     ) -> RenderOps {
         let mut ops = render_ops!();
-
         let inner_spaces = SPACER.repeat(ch!(@to_usize bounds_size.col_count - 2));
-
         let maybe_style = dialog_engine.dialog_options.maybe_style_border;
 
         for row_idx in 0..*bounds_size.row_count {
@@ -492,27 +517,6 @@ mod internal_impl {
                         maybe_style,
                     ));
                 }
-                // Last line.
-                (false, true) => {
-                    let mut text_content = Cow::Owned(format!(
-                        "{}{}{}",
-                        BorderGlyphCharacter::BottomLeft.as_ref(),
-                        BorderGlyphCharacter::Horizontal
-                            .as_ref()
-                            .repeat(ch!(@to_usize bounds_size.col_count - 2)),
-                        BorderGlyphCharacter::BottomRight.as_ref(),
-                    ));
-                    // Apply lolcat override (if enabled) to the fg_color of text_content.
-                    apply_lolcat_from_style(
-                        &maybe_style,
-                        &mut dialog_engine.lolcat,
-                        &mut text_content,
-                    );
-                    ops.push(RenderOp::PaintTextWithAttributes(
-                        text_content.into(),
-                        maybe_style,
-                    ));
-                }
                 // Middle line.
                 (false, false) => {
                     let mut text_content = Cow::Owned(format!(
@@ -532,8 +536,69 @@ mod internal_impl {
                         maybe_style,
                     ));
                 }
+                // Last line.
+                (false, true) => {
+                    // Paint bottom border.
+                    let mut text_content = Cow::Owned(format!(
+                        "{}{}{}",
+                        BorderGlyphCharacter::BottomLeft.as_ref(),
+                        BorderGlyphCharacter::Horizontal
+                            .as_ref()
+                            .repeat(ch!(@to_usize bounds_size.col_count - 2)),
+                        BorderGlyphCharacter::BottomRight.as_ref(),
+                    ));
+                    // Apply lolcat override (if enabled) to the fg_color of text_content.
+                    apply_lolcat_from_style(
+                        &maybe_style,
+                        &mut dialog_engine.lolcat,
+                        &mut text_content,
+                    );
+                    ops.push(RenderOp::PaintTextWithAttributes(
+                        text_content.into(),
+                        maybe_style,
+                    ));
+                }
                 _ => {}
             };
+
+            // Paint separator for results panel if in autocomplete mode.
+            match dialog_engine.dialog_options.mode {
+                DialogEngineMode::ModalSimple => {}
+                DialogEngineMode::ModalAutocomplete => {
+                    let inner_line = BorderGlyphCharacter::Horizontal
+                        .as_ref()
+                        .repeat(ch!(@to_usize bounds_size.col_count - 2))
+                        .to_string();
+                    let mut text_content = Cow::Owned(format!(
+                        "{}{}{}",
+                        BorderGlyphCharacter::LineUpDownRight.as_ref(),
+                        inner_line,
+                        BorderGlyphCharacter::LineUpDownLeft.as_ref()
+                    ));
+
+                    let col_start_index = ch!(0);
+                    let row_start_index =
+                        ch!(DisplayConstants::SimpleModalRowCount.int_value()) - ch!(1);
+                    let rel_insertion_pos =
+                        position!(col_index: col_start_index, row_index: row_start_index);
+
+                    ops.push(RenderOp::ResetColor);
+                    ops.push(RenderOp::MoveCursorPositionRelTo(
+                        *origin_pos,
+                        rel_insertion_pos,
+                    ));
+                    // Apply lolcat override (if enabled) to the fg_color of text_content.
+                    apply_lolcat_from_style(
+                        &maybe_style,
+                        &mut dialog_engine.lolcat,
+                        &mut text_content,
+                    );
+                    ops.push(RenderOp::PaintTextWithAttributes(
+                        text_content.into(),
+                        maybe_style,
+                    ));
+                }
+            }
         }
 
         ops

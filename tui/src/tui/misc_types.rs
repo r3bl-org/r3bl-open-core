@@ -165,16 +165,27 @@ pub mod global_constants {
     pub enum BorderGlyphCharacter {
         #[strum(to_string = "╮")]
         TopRight,
+
         #[strum(to_string = "╭")]
         TopLeft,
+
         #[strum(to_string = "╯")]
         BottomRight,
+
         #[strum(to_string = "╰")]
         BottomLeft,
+
         #[strum(to_string = "─")]
         Horizontal,
+
         #[strum(to_string = "│")]
         Vertical,
+
+        #[strum(to_string = "┤")]
+        LineUpDownLeft,
+
+        #[strum(to_string = "├")]
+        LineUpDownRight,
     }
 
     pub const SPACER: &str = " ";

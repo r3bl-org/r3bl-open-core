@@ -29,6 +29,7 @@ pub async fn create_store() -> Store<State, Action> {
 }
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 #[non_exhaustive]
 /// Best practices for naming actions: <https://redux.js.org/style-guide/#write-action-types-as-domaineventname>
 pub enum Action {
@@ -54,6 +55,9 @@ pub enum Action {
     ),
     /// Domain: AutocompleteDialogComponent, Event: UpdateContent.
     AutocompleteDialogComponentUpdateContent(FlexBoxId /* id */, EditorBuffer),
+
+    /// Domain: AutocompleteDialogComponent, Event: SetResults.
+    AutocompleteDialogComponentSetResults(FlexBoxId /* id */, Vec<String>),
 }
 
 mod action_impl {
@@ -99,6 +103,10 @@ mod reducer_impl {
                 Action::AutocompleteDialogComponentUpdateContent(id, editor_buffer) => {
                     Self::dialog_component_update_content(state, id, editor_buffer)
                 }
+
+                Action::AutocompleteDialogComponentSetResults(id, results) => {
+                    Self::dialog_component_set_results(state, id, results)
+                }
             }
         }
     }
@@ -131,17 +139,71 @@ mod reducer_impl {
         ) -> State {
             let mut new_state = state.clone();
 
+            // This is Some only if the content has changed (ignoring caret movements).
+            let results_have_changed: Option<Vec<String>> = {
+                match new_state.dialog_buffers.get_mut(id) {
+                    Some(dialog_buffer)
+                        if dialog_buffer.editor_buffer.get_lines() != editor_buffer.get_lines() =>
+                    {
+                        Some({
+                            let editor_buffer_str = editor_buffer.get_as_string();
+                            let start_rand_num = rand::random::<u8>() as usize;
+                            let max = 10;
+                            let mut it = Vec::with_capacity(max);
+                            for index in start_rand_num..(start_rand_num + max) {
+                                it.push(format!("{editor_buffer_str}{index}"));
+                            }
+                            it
+                        })
+                    }
+                    _ => None,
+                }
+            };
+
             new_state
                 .dialog_buffers
                 .entry(*id)
-                .and_modify(|it| it.editor_buffer = editor_buffer.clone())
+                .and_modify(|it| {
+                    it.editor_buffer = editor_buffer.clone();
+                    if let Some(results) = results_have_changed.clone() {
+                        it.maybe_results = Some(results);
+                    }
+                })
                 .or_insert_with(
-                    // This code path should never execute, since to update the buffer given an
-                    // id, it should have already existed in the first place (created by
+                    // This code path should never execute, since to update the buffer given an id,
+                    // it should have already existed in the first place (created by
                     // SetDialogBufferTitleAndTextById action).
                     || {
                         let mut it = DialogBuffer::new_empty();
                         it.editor_buffer = editor_buffer.clone();
+                        if let Some(results) = results_have_changed {
+                            it.maybe_results = Some(results);
+                        }
+                        it
+                    },
+                );
+
+            new_state
+        }
+
+        fn dialog_component_set_results(
+            state: &State,
+            id: &FlexBoxId,
+            results: &[String],
+        ) -> State {
+            let mut new_state = state.clone();
+
+            new_state
+                .dialog_buffers
+                .entry(*id)
+                .and_modify(|it| it.maybe_results = Some(results.to_vec()))
+                .or_insert_with(
+                    // This code path should never execute, since to update the buffer given an id,
+                    // it should have already existed in the first place (created by
+                    // SetDialogBufferTitleAndTextById action).
+                    || {
+                        let mut it = DialogBuffer::new_empty();
+                        it.maybe_results = Some(results.to_vec());
                         it
                     },
                 );
