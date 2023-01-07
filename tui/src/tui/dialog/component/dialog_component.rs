@@ -246,6 +246,8 @@ pub mod exports {
         No,
     }
 
+    // TODO: move these 2 types into an async trait that is implemented by the App
+    // TODO: make the App implement this trait & pass it into the DialogComponent constructor
     pub type OnDialogPressFn<S, A> = fn(DialogChoice, &SharedStore<S, A>);
 
     pub type OnDialogEditorChangeFn<S, A> = fn(EditorBuffer, &SharedStore<S, A>);

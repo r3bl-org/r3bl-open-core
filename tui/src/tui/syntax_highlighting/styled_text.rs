@@ -157,14 +157,14 @@ mod impl_styled_texts {
 #[macro_export]
 macro_rules! styled_texts {
     (
-        $($style_arg : expr),*
+        $($styled_text_arg : expr),*
         $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
     ) =>
     {
         {
             let mut styled_texts: StyledTexts = Default::default();
             $(
-                styled_texts += $style_arg;
+                styled_texts += $styled_text_arg;
             )*
             styled_texts
         }
