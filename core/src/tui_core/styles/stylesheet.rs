@@ -149,15 +149,18 @@ impl Stylesheet {
 /// ```
 #[macro_export]
 macro_rules! stylesheet {
-  ($($style:expr),*) => {
+    (
+        $($style:expr),*
+        $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+    ) => {
     {
-      let mut stylesheet = Stylesheet::new();
-      $(
-        stylesheet.try_add($style)?;
-      )*
-      stylesheet
-    }
-  };
+        let mut stylesheet = Stylesheet::new();
+            $(
+                stylesheet.try_add($style)?;
+            )*
+            stylesheet
+        }
+    };
 }
 
 /// This trait exists to allow "pseudo operator overloading". Rust does not support operator
