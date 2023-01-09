@@ -1,6 +1,82 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+auto completion provider impl:
+  **tracking bug**:
+  ✔ [x] https://github.com/r3bl-org/r3bl_rs_utils/issues/49 @done(23-01-09 15:57)
+  **bug fixes**:
+  - [x] https://github.com/r3bl-org/r3bl_rs_utils/issues/71
+
+  **dialog_engine_api.rs**:
+  - [x] add `render_results_panel()` to display results panel (if in autocomplete mode)
+    - `DialogBuffer.results` is saved in the **state** & gets passed in here
+    - paint the `results: Vec<String>` in the panel
+    - paint the selected row
+    - deal w/ `scroll_offset_row_index`
+  - [x] `apply_event()` - called by `DialogComponent::handle_event()`
+    - [x] up / down handler to navigate the results panel (if in autocomplete mode)
+      - up / down will change the following in the `dialog_engine` data (**not state**)
+        - `selected_row_index` - tracks the selected row
+          - used for `render`, `on_dialog_press_handler`
+        - `scroll_offset_row_index` - tracks scroll offset
+          - you can get viewport from `DialogEngine::flex_box`, saved by `DialogComponent::render()`
+          - if viewport is smaller than num results then scroll offset is applied
+      - this code path should return an `ConsumedRender` so that the results panel is re-rendered
+    - [x] clean up engine data (`selected_row_index`, `scroll_offset_row_index`) when dialog is closed
+  - [x] `render_engine()` - called by `DialogComponent::render()`
+    - [x] called `render_results_panel()`
+    - [x] actually call `make_flex_box_for_dialog()`
+      - [x] drop the `current_box` arg
+      - [x] pass the mode (`self.dialog_engine.dialog_options.mode`) into `make_flex_box_for_dialog()`
+        - this `flex_box` is used later by the `DialogEngineApi::apply_event()` to perform scrolling
+      - [x] save flex box to `dialog_engine.maybe_flex_box`
+  - [x] `make_flex_box_for_dialog()`
+    - [x] pass arg into the function
+      - `DialogEngineMode` - this is the mode of the dialog engine (normal or autocomplete)
+    - [x] make the `Surface` arg optional (since it won't be passed in)
+    - [x] this should just be a private function, in `internal_impl`, remove from `DialogEngineApi`
+    - [x] pass `SurfaceBounds` so that dialog paint can be constrained to this
+    - [x] based on the mode (normal / autocomplete) generate the correct flex box
+    - [x] write tests
+
+  **dialog_buffer.rs**:
+  - [x] add `maybe_results: Option<Vec<String>>` field
+
+  **dialog_engine.rs**:
+  - [x] add `selected_row_index: ChUnit`
+  - [x] add `scroll_offset_row_index: ChUnit`
+  - [x] add `maybe_flex_box: Option<FlexBox>` & document it
+  - [x] add `reset()` and extend `Component` trait to have it as well & make sure others call it
+    - [x] `dialog_engine_api.rs::apply_event()`
+    - [x] `app.rs::try_input_event_activate_modal()`
+
+  **app.rs**:
+  - [x] add a new dialog component w/ autocomplete (copy `insert_dialog_component()`)
+    - [x] new `ComponentId` called `AutocompleteDialog` (rename the old one to `SimpleDialog`)
+    - [x] `on_dialog_press_handler` - add result to editor by dispatching action
+    - [x] `on_dialog_editor_change_handler` -
+      - [x] generate fake results
+      - [x] dispatch action to update results panel
+        - the results are added to `Action::SetDialogBufferResults(FlexBoxId, Vec<String>`
+  - [x] add new keyboard shortcut to show autocomplete dialog (<kbd>ctrl + k</kbd>)
+    - [x] change `try_input_event_activate_modal()`
+    - [x] change status bar to show this shortcut
+  - [x] `ContainerSurfaceRender::render_in_surface()` can't call `make_flex_box_for_dialog()`
+    - Pass in `Default::default()` knowing that it will be ignored by the dialog component
+
+  **reducer.rs**:
+  - [x] add `Action::SetDialogBufferResultsPanel`
+  - [x] handle `SetDialogBufferResultsPanel(FlexBoxId, Vec<String>` case in `run()`
+    - add the results to the state (in `DialogBuffer`)
+
+  **dialog_component.rs**:
+  - [x] `render()` - ignore the 3rd arg (`current_box: FlexBox`) & document it
+  - [x] `new_shared()` - add `DialogEngineConfigOptions` arg
+  - [x] `new()` - add `DialogEngineConfigOptions` arg & save to `self.dialog_engine: DialogEngine`
+
+  **style.rs**:
+  - [x] replace id from String to u8 for performance benefit & Copy trait derive
+
 editor engine bug:
   ✔ fix: type few lines, press backspace/delete (from end of file) and deleted lines are not removed @done(22-11-28 18:18)
     - paint.rs::paint() does not work property ... the optimization to prevent flicker causes this problem

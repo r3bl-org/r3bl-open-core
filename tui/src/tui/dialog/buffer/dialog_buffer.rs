@@ -35,7 +35,19 @@ pub struct DialogBuffer {
 }
 
 mod dialog_buffer_impl {
+    use r3bl_rs_utils_core::{ch, ChUnit};
+
     use super::*;
+
+    impl DialogBuffer {
+        pub fn get_results_count(&self) -> ChUnit {
+            if let Some(ref it) = self.maybe_results {
+                ch!(it.len())
+            } else {
+                ch!(0)
+            }
+        }
+    }
 
     impl DialogBuffer {
         pub fn new_empty() -> Self {
