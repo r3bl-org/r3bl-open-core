@@ -183,6 +183,12 @@ pub mod dialog_component_impl {
                     Ok(EventPropagation::Consumed)
                 }
 
+                // Handle user input that has updated the results panel.
+                DialogEngineApplyResponse::SelectScrollResultsPanel => {
+                    Ok(EventPropagation::ConsumedRender)
+                }
+
+                // All else.
                 _ => Ok(EventPropagation::Propagate),
             }
         }

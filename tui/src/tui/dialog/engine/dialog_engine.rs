@@ -84,7 +84,8 @@ mod dialog_engine_impl {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DialogEngineConfigOptions {
     pub mode: DialogEngineMode,
-    pub result_panel_row_count: ChUnit,
+    /// Max height of the results panel.
+    pub result_panel_display_row_count: ChUnit,
     pub maybe_style_border: Option<Style>,
     pub maybe_style_title: Option<Style>,
     pub maybe_style_editor: Option<Style>,
@@ -100,7 +101,7 @@ mod dialog_engine_config_options_impl {
         fn default() -> Self {
             Self {
                 mode: DialogEngineMode::ModalSimple,
-                result_panel_row_count: ch!(
+                result_panel_display_row_count: ch!(
                     DisplayConstants::DefaultResultsPanelRowCount.int_value()
                 ),
                 maybe_style_border: None,

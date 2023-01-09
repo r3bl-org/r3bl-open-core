@@ -26,6 +26,7 @@ use crate::*;
 pub enum DialogEngineApplyResponse {
     UpdateEditorBuffer(EditorBuffer),
     DialogChoice(DialogChoice),
+    SelectScrollResultsPanel,
     Noop,
 }
 
@@ -135,9 +136,18 @@ impl DialogEngine {
         } = args;
 
         // Was a dialog choice made?
-        if let Some(choice) = internal_impl::try_handle_dialog_choice(input_event, dialog_buffer) {
+        if let Some(choice) =
+            internal_impl::try_handle_dialog_choice(input_event, dialog_buffer, dialog_engine)
+        {
             dialog_engine.reset();
             return Ok(DialogEngineApplyResponse::DialogChoice(choice));
+        }
+
+        // Was up / down pressed to select autocomplete results & vert scroll the results panel?
+        if let EventPropagation::ConsumedRender =
+            internal_impl::try_handle_up_down(input_event, dialog_buffer, dialog_engine)
+        {
+            return Ok(DialogEngineApplyResponse::SelectScrollResultsPanel);
         }
 
         // Otherwise, pass the event to the editor engine.
@@ -259,7 +269,7 @@ mod internal_impl {
                     // Calc dialog bounds size based on window size.
                     let row_count = ch!(DisplayConstants::SimpleModalRowCount.int_value())
                         + ch!(DisplayConstants::EmptyLine.int_value())
-                        + dialog_options.result_panel_row_count;
+                        + dialog_options.result_panel_display_row_count;
                     let col_count = {
                         let percent = percent!(DisplayConstants::ColPercent.int_value())?;
                         percent.calc_percentage(surface_size.col_count)
@@ -381,27 +391,53 @@ mod internal_impl {
         pub fn paint_results(
             ops: &mut RenderOps,
             origin_pos: &Position,
-            _bounds_size: &Size,
+            bounds_size: &Size,
             results: &[String],
             dialog_engine: &mut DialogEngine,
         ) {
-            // TODO: draw results panel from state.dialog_buffer.results (Vec<String>)
-            let max_row_count = dialog_engine.dialog_options.result_panel_row_count;
             let col_start_index = ch!(1);
             let row_start_index = ch!(DisplayConstants::SimpleModalRowCount.int_value()) - ch!(1);
 
             let mut rel_insertion_pos =
                 position!(col_index: col_start_index, row_index: row_start_index);
 
+            let scroll_offset_row_index = dialog_engine.scroll_offset_row_index;
+            let selected_row_index = dialog_engine.selected_row_index;
+
             // Print results panel.
             for (row_index, item) in results.iter().enumerate() {
                 let row_index = ch!(row_index);
+
+                // Skip rows that are above the scroll offset.
+                if row_index < scroll_offset_row_index {
+                    continue;
+                }
+
                 rel_insertion_pos.add_row(1);
 
-                // TODO: check for text clipping using _bounds_size
+                let text = UnicodeString::from(item.as_str());
+                let max_display_col_count = bounds_size.col_count - 2;
+                let clipped_text = if text.display_width > max_display_col_count {
+                    let snip_len = ch!(2); /* `..` */
+                    let postfix_len = ch!(5); /* last 5 characters */
 
-                // TODO: does this work?
-                if row_index >= max_row_count {
+                    let lhs_start_index = ch!(0);
+                    let lhs_end_index = max_display_col_count - postfix_len - snip_len;
+                    let lhs = text.clip(lhs_start_index, lhs_end_index);
+
+                    let rhs_start_index = text.display_width - postfix_len;
+                    let rhs_end_index = text.display_width;
+                    let rhs = text.clip(rhs_start_index, rhs_end_index);
+
+                    format!("{lhs}..{rhs}")
+                } else {
+                    text.string
+                };
+
+                let max_display_row_count =
+                    /* Viewport height: */ dialog_engine.dialog_options.result_panel_display_row_count +
+                    /* Scroll offset: */ scroll_offset_row_index;
+                if row_index >= max_display_row_count {
                     break;
                 }
 
@@ -411,31 +447,43 @@ mod internal_impl {
                     rel_insertion_pos,
                 ));
 
-                // If the row_index == dialog_engine.selected_row_index (not in state) ie, it is
-                // selected, then change the attribute to underline.
-                if dialog_engine.selected_row_index == row_index {
-                    ops.push(RenderOp::ApplyColors(
-                        match dialog_engine.dialog_options.maybe_style_results_panel {
-                            Some(style) => {
-                                let mut new_style = style;
-                                new_style.underline = true;
-                                Some(new_style)
+                // Set style to underline if selected row & paint.
+                match selected_row_index.eq(&row_index) {
+                    // This is the selected row.
+                    true => {
+                        let my_selected_style =
+                            match dialog_engine.dialog_options.maybe_style_results_panel {
+                                // Update existing style.
+                                Some(style) => Style {
+                                    underline: true,
+                                    ..style
+                                },
+                                // No existing style, so create a new style w/ only underline.
+                                _ => Style {
+                                    underline: true,
+                                    ..Default::default()
+                                },
                             }
-                            _ => None,
-                        },
-                    ));
+                            .into();
+                        // Paint the text for the row.
+                        ops.push(RenderOp::ApplyColors(my_selected_style));
+                        ops.push(RenderOp::PaintTextWithAttributes(
+                            clipped_text,
+                            my_selected_style,
+                        ));
+                    }
+                    // Regular row, not selected.
+                    false => {
+                        // Paint the text for the row.
+                        ops.push(RenderOp::ApplyColors(
+                            dialog_engine.dialog_options.maybe_style_results_panel,
+                        ));
+                        ops.push(RenderOp::PaintTextWithAttributes(
+                            clipped_text,
+                            dialog_engine.dialog_options.maybe_style_results_panel,
+                        ));
+                    }
                 }
-                // Regular row, not selected.
-                else {
-                    ops.push(RenderOp::ApplyColors(
-                        dialog_engine.dialog_options.maybe_style_results_panel,
-                    ));
-                }
-
-                ops.push(RenderOp::PaintTextWithAttributes(
-                    item.into(),
-                    dialog_engine.dialog_options.maybe_style_results_panel,
-                ));
             }
         }
     }
@@ -607,13 +655,26 @@ mod internal_impl {
     pub fn try_handle_dialog_choice(
         input_event: &InputEvent,
         dialog_buffer: &DialogBuffer,
+        dialog_engine: &mut DialogEngine,
     ) -> Option<DialogChoice> {
         match DialogEvent::from(input_event) {
             // Handle Enter.
-            DialogEvent::EnterPressed => {
-                let text = dialog_buffer.editor_buffer.get_as_string();
-                return Some(DialogChoice::Yes(text));
-            }
+            DialogEvent::EnterPressed => match dialog_engine.dialog_options.mode {
+                DialogEngineMode::ModalSimple => {
+                    let text = dialog_buffer.editor_buffer.get_as_string();
+                    return Some(DialogChoice::Yes(text));
+                }
+
+                DialogEngineMode::ModalAutocomplete => {
+                    let selected_index = ch!(@to_usize dialog_engine.selected_row_index);
+                    if let Some(results) = &dialog_buffer.maybe_results {
+                        if let Some(selected_result) = results.get(selected_index) {
+                            return Some(DialogChoice::Yes(selected_result.clone()));
+                        }
+                    }
+                    return Some(DialogChoice::No);
+                }
+            },
 
             // Handle Esc.
             DialogEvent::EscPressed => {
@@ -622,6 +683,51 @@ mod internal_impl {
             _ => {}
         }
         None
+    }
+
+    pub fn try_handle_up_down(
+        input_event: &InputEvent,
+        dialog_buffer: &DialogBuffer,
+        dialog_engine: &mut DialogEngine,
+    ) -> EventPropagation {
+        // Handle up arrow?
+        if input_event.matches(&[InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Up),
+        })]) {
+            if dialog_engine.selected_row_index > ch!(0) {
+                dialog_engine.selected_row_index -= 1;
+            }
+
+            if dialog_engine.selected_row_index < dialog_engine.scroll_offset_row_index {
+                dialog_engine.scroll_offset_row_index -= 1;
+            }
+
+            return EventPropagation::ConsumedRender;
+        }
+
+        // Handle down arrow?
+        if input_event.matches(&[InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Down),
+        })]) {
+            let max_abs_row_index = dialog_buffer.get_results_count() - ch!(1);
+
+            let results_panel_viewport_height_row_count =
+                dialog_engine.dialog_options.result_panel_display_row_count;
+
+            if dialog_engine.selected_row_index < max_abs_row_index {
+                dialog_engine.selected_row_index += 1;
+            }
+
+            if dialog_engine.selected_row_index
+                >= dialog_engine.scroll_offset_row_index + results_panel_viewport_height_row_count
+            {
+                dialog_engine.scroll_offset_row_index += 1;
+            }
+
+            return EventPropagation::ConsumedRender;
+        }
+
+        EventPropagation::Propagate
     }
 }
 

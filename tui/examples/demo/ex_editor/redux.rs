@@ -183,6 +183,14 @@ mod reducer_impl {
                     },
                 );
 
+            // Content is empty.
+            if editor_buffer.get_as_string() == "" {
+                if let Some(it) = new_state.dialog_buffers.get_mut(id) {
+                    it.maybe_results = None;
+                }
+                return new_state;
+            }
+
             new_state
         }
 
