@@ -188,16 +188,8 @@ pub async fn print_plain_text(
             text.string,
             my_offscreen_buffer.pretty_print()
         );
-        log_error(log_msg);
-
-        let msg = format!(
-            "🚨🚨🚨print_plain_text() tried to access row:{}, col:{} to add {}. It is out of bounds of my_offscreen_buffer {}",
-            display_row_index,
-            display_col_index,
-            text.string,
-            my_offscreen_buffer.pretty_print()
-        );
-        return CommonError::new(CommonErrorType::IndexOutOfBounds, &msg);
+        log_error(log_msg.clone());
+        return CommonError::new(CommonErrorType::IndexOutOfBounds, &log_msg);
     }
 
     // Get the line at `row_index`.
@@ -437,16 +429,8 @@ pub async fn print_ansi_text(
             arg_text_ref,
             my_offscreen_buffer.pretty_print()
         );
-        log_error(log_msg);
-
-        let msg = format!(
-            "🚨🚨🚨print_ansi_text() tried to access row:{}, col:{} to add {} is out of bounds of my_offscreen_buffer {}",
-            display_row_index,
-            display_col_index,
-            arg_text_ref,
-            my_offscreen_buffer.pretty_print()
-        );
-        return CommonError::new(CommonErrorType::IndexOutOfBounds, &msg);
+        log_error(log_msg.clone());
+        return CommonError::new(CommonErrorType::IndexOutOfBounds, &log_msg);
     }
 
     // Get the line at `row_index`.
