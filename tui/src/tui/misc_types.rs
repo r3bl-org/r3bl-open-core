@@ -158,7 +158,7 @@ pub mod global_constants {
     #[repr(usize)]
     #[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
     pub enum DefaultSize {
-        GlobalDataCacheSize = 1000,
+        GlobalDataCacheSize = 1_000_000,
     }
 
     #[derive(Debug, Eq, PartialEq, AsRefStr)]

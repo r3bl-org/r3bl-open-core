@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{cmp::Ordering,
-          fmt::{self, Debug},
+use std::{fmt::{self, Debug},
           ops::{Deref, DerefMut}};
 
 use async_trait::async_trait;
@@ -37,8 +36,7 @@ use crate::*;
 /// terminal screen. By inserting a [PixelChar::Void] pixel char in the next cell, we signal the
 /// rendering logic to skip it since it has already been painted. And this is different than a
 /// [PixelChar::Spacer] which has to be painted!
-///
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq, Hash, GetSize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash, GetSize)]
 pub struct OffscreenBuffer {
     pub buffer: PixelCharLines,
     pub window_size: Size,
@@ -116,37 +114,19 @@ mod offscreen_buffer_impl {
         }
 
         /// Create a new buffer and fill it with empty chars.
-        pub fn new(window_size: Size) -> Self {
-            let mut lines = Self {
-                buffer: Default::default(),
+        pub fn new_with_capacity_initialized(window_size: Size) -> Self {
+            Self {
+                buffer: PixelCharLines::new_with_capacity_initialized(window_size),
                 window_size,
                 my_pos: Default::default(),
                 my_fg_color: None,
                 my_bg_color: None,
-            };
-
-            let window_height = ch!(@to_usize lines.window_size.row_count);
-
-            match lines.buffer.len().cmp(&window_height) {
-                // Too long, truncate.
-                Ordering::Greater => {
-                    lines.buffer.truncate(window_height);
-                }
-                // Too short, pad.
-                Ordering::Less => {
-                    let empty_line = PixelCharLine::new(window_size);
-                    lines.buffer.resize(window_height, empty_line);
-                }
-                _ => {}
             }
-
-            lines
         }
 
         // Make sure each line is full of empty chars.
         pub fn clear(&mut self) {
-            let empty_line = PixelCharLine::new(self.window_size);
-            self.buffer.fill(empty_line);
+            self.buffer = PixelCharLines::new_with_capacity_initialized(self.window_size);
         }
 
         pub fn is_safe_to_access_indices(
@@ -192,7 +172,7 @@ mod offscreen_buffer_impl {
     }
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, GetSize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, GetSize)]
 pub struct PixelCharLines {
     pub lines: Vec<PixelCharLine>,
 }
@@ -208,9 +188,22 @@ mod pixel_char_lines_impl {
     impl DerefMut for PixelCharLines {
         fn deref_mut(&mut self) -> &mut Self::Target { &mut self.lines }
     }
+
+    impl PixelCharLines {
+        pub fn new_with_capacity_initialized(window_size: Size) -> Self {
+            let window_height = ch!(@to_usize window_size.row_count);
+            let window_width = ch!(@to_usize window_size.col_count);
+            Self {
+                lines: vec![
+                    PixelCharLine::new_with_capacity_initialized(window_width);
+                    window_height
+                ],
+            }
+        }
+    }
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, GetSize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, GetSize)]
 pub struct PixelCharLine {
     pub pixel_chars: Vec<PixelChar>,
 }
@@ -362,27 +355,10 @@ mod pixel_char_line_impl {
         }
 
         /// Create a new row with the given width and fill it with the empty chars.
-        pub fn new(window_size: Size) -> Self {
-            let mut line = Self::default();
-
-            let window_width = ch!(@to_usize window_size.col_count);
-
-            // Fill the line with empty chars: [PixelChar::Spacer].
-            // 1. If the line is longer than the window, it will be truncated.
-            // 2. If the line is shorter than the window, it will be padded with empty chars.
-            match line.len().cmp(&window_width) {
-                // Too long, truncate.
-                Ordering::Greater => {
-                    line.truncate(window_width);
-                }
-                // Too short, pad.
-                Ordering::Less => {
-                    line.resize(window_width, PixelChar::Spacer);
-                }
-                _ => {}
+        pub fn new_with_capacity_initialized(window_width: usize) -> Self {
+            Self {
+                pixel_chars: vec![PixelChar::Spacer; window_width],
             }
-
-            line
         }
     }
     impl Deref for PixelCharLine {
@@ -496,7 +472,7 @@ mod tests {
     #[test]
     fn test_offscreen_buffer_construction() {
         let window_size = size! { col_count: 10, row_count: 2};
-        let my_offscreen_buffer = OffscreenBuffer::new(window_size);
+        let my_offscreen_buffer = OffscreenBuffer::new_with_capacity_initialized(window_size);
         assert_eq2!(my_offscreen_buffer.buffer.len(), 2);
         assert_eq2!(my_offscreen_buffer.buffer[0].len(), 10);
         assert_eq2!(my_offscreen_buffer.buffer[1].len(), 10);
@@ -511,7 +487,7 @@ mod tests {
     #[test]
     fn test_offscreen_buffer_re_init() {
         let window_size = size! { col_count: 10, row_count: 2};
-        let mut my_offscreen_buffer = OffscreenBuffer::new(window_size);
+        let mut my_offscreen_buffer = OffscreenBuffer::new_with_capacity_initialized(window_size);
         my_offscreen_buffer.buffer[0][0] = PixelChar::PlainText {
             content: GraphemeClusterSegment::from("a"),
             maybe_style: Some(style! {color_bg: color!(@green) }),

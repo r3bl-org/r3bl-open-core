@@ -18,6 +18,7 @@
 use std::{fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
+use get_size::GetSize;
 use int_enum::IntEnum;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
@@ -317,10 +318,39 @@ where
                     render_pipeline
                         .paint(FlushKind::ClearBeforeFlush, shared_global_data)
                         .await;
+
+                    // Print debug message w/ memory utilization, etc.
                     call_if_true!(DEBUG_TUI_MOD, {
                         {
-                            let msg = format!("🎨 MySubscriber::paint() ok ✅: \n window_size: {window_size:?}\n state: {state:?}\n");
-                            log_info(msg);
+                            use int_enum::IntEnum;
+                            let msg_1 = format!("🎨 MySubscriber::paint() ok ✅: \n window_size: {window_size:?}\n state: {state:?}");
+                            let msg_2 = {
+                                format!(
+                                    "🌍 Cache utilization: #1 (ansi_text): {0:.2}%, #2 (strip_ansi_text): {1:.2}%",
+                                    shared_global_data.read().await.cache_ansi_text.len() as f32
+                                        / DefaultSize::GlobalDataCacheSize.int_value() as f32
+                                        * 100_f32,
+                                    shared_global_data
+                                        .read()
+                                        .await
+                                        .cache_try_strip_ansi_text
+                                        .len() as f32
+                                        / DefaultSize::GlobalDataCacheSize.int_value() as f32
+                                        * 100_f32,
+                                )
+                            };
+
+                            if let Some(ref offscreen_buffer) =
+                                &shared_global_data.read().await.maybe_saved_offscreen_buffer
+                            {
+                                let msg_3 = format!(
+                                    "offscreen_buffer: {0:.2}kb",
+                                    offscreen_buffer.get_size() as f32 / 1000_f32
+                                );
+                                log_info(format!("{msg_1}\n{msg_2}, {msg_3}"));
+                            } else {
+                                log_info(format!("{msg_1}\n{msg_2}"));
+                            }
                         }
                     });
                 }
