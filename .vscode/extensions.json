@@ -36,7 +36,8 @@
     "fabiospampinato.vscode-todo-plus",
     "minhdo.tokyo-darker-night",
     "enkia.tokyo-night",
-    "bierner.emojisense"
+    "bierner.emojisense",
+    "lorenzopirro.rust-flash-snippets"
   ],
   // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
   "unwantedRecommendations": []
