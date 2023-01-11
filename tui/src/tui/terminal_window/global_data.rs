@@ -35,9 +35,9 @@ pub struct GlobalData {
 
     pub maybe_saved_offscreen_buffer: Option<OffscreenBuffer>,
 
-    cache_ansi_text: HashMap<String, ANSIText>,
+    pub cache_ansi_text: HashMap<String, ANSIText>,
 
-    cache_try_strip_ansi_text: HashMap<String, Option<String>>,
+    pub cache_try_strip_ansi_text: HashMap<String, Option<String>>,
 
     // FUTURE: 🐵 use global_user_data (contains key: String, value: HashMap<String, String>).
     pub global_user_data: HashMap<String, HashMap<String, String>>,

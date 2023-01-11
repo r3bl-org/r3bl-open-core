@@ -30,7 +30,8 @@ impl RenderPipeline {
     pub async fn convert(&self, shared_global_data: &SharedGlobalData) -> OffscreenBuffer {
         let my_window_size = shared_global_data.read().await.window_size;
 
-        let mut my_offscreen_buffer = OffscreenBuffer::new(my_window_size);
+        let mut my_offscreen_buffer =
+            OffscreenBuffer::new_with_capacity_initialized(my_window_size);
 
         let mut local_data = RenderOpsLocalData::default();
 
@@ -588,7 +589,7 @@ mod tests {
     #[tokio::test]
     async fn test_print_plain_text_render_path_reuse_buffer() {
         let window_size = size! { col_count: 10, row_count: 2};
-        let mut my_offscreen_buffer = OffscreenBuffer::new(window_size);
+        let mut my_offscreen_buffer = OffscreenBuffer::new_with_capacity_initialized(window_size);
         let shared_global_data = make_shared_global_data(Some(window_size));
 
         // Input:  R0 "hello12345😃"
@@ -724,7 +725,8 @@ mod tests {
         // Output: R0 "hello12345"
         //            C0123456789
         {
-            let mut my_offscreen_buffer = OffscreenBuffer::new(window_size);
+            let mut my_offscreen_buffer =
+                OffscreenBuffer::new_with_capacity_initialized(window_size);
             let text = "hello12345😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
@@ -790,7 +792,8 @@ mod tests {
         // Output: R0 "hello1234╳"
         //            C0123456789
         {
-            let mut my_offscreen_buffer = OffscreenBuffer::new(window_size);
+            let mut my_offscreen_buffer =
+                OffscreenBuffer::new_with_capacity_initialized(window_size);
             let text = "hello1234😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
@@ -846,7 +849,8 @@ mod tests {
         // R0 "hello123😃"
         //    C0123456789
         {
-            let mut my_offscreen_buffer = OffscreenBuffer::new(window_size);
+            let mut my_offscreen_buffer =
+                OffscreenBuffer::new_with_capacity_initialized(window_size);
             let text = "hello123😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
@@ -911,7 +915,8 @@ mod tests {
         // R0 "hello12😃"
         //    C0123456789
         {
-            let mut my_offscreen_buffer = OffscreenBuffer::new(window_size);
+            let mut my_offscreen_buffer =
+                OffscreenBuffer::new_with_capacity_initialized(window_size);
             let text = "hello12😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
@@ -995,7 +1000,7 @@ mod tests {
     #[tokio::test]
     async fn test_ansi_text_render_path() {
         let window_size = size! { col_count: 10, row_count: 2};
-        let mut my_offscreen_buffer = OffscreenBuffer::new(window_size);
+        let mut my_offscreen_buffer = OffscreenBuffer::new_with_capacity_initialized(window_size);
         let shared_global_data = make_shared_global_data(Some(window_size));
 
         let mut lolcat = LolcatBuilder::new().build();

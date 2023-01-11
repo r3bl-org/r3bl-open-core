@@ -363,7 +363,7 @@ mod tests {
     /// Helper function to make an `OffscreenBuffer`.
     async fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
         let window_size = size! { col_count: 10, row_count: 2};
-        let mut my_offscreen_buffer = OffscreenBuffer::new(window_size);
+        let mut my_offscreen_buffer = OffscreenBuffer::new_with_capacity_initialized(window_size);
         let shared_global_data = make_shared_global_data(Some(window_size));
         // Input:  R0 "hello1234😃"
         //            C0123456789
@@ -471,7 +471,7 @@ mod tests {
     /// Helper function to make an OffscreenBuffer.
     async fn make_offscreen_buffer_plain_ansi_text_mix() -> OffscreenBuffer {
         let window_size = size! { col_count: 10, row_count: 2};
-        let mut my_offscreen_buffer = OffscreenBuffer::new(window_size);
+        let mut my_offscreen_buffer = OffscreenBuffer::new_with_capacity_initialized(window_size);
         let shared_global_data = make_shared_global_data(Some(window_size));
         // Line1.
         {
