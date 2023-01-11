@@ -29,8 +29,8 @@ use crate::*;
 #[derive(Default)]
 pub struct ComponentRegistry<S, A>
 where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
+    S: Debug + Default + Clone + PartialEq + Sync + Send,
+    A: Debug + Default + Clone + Sync + Send,
 {
     pub components: ComponentRegistryMap<S, A>,
     pub has_focus: HasFocus,
@@ -43,8 +43,8 @@ mod component_registry_impl {
 
     impl<S, A> ComponentRegistry<S, A>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         pub fn put(&mut self, id: FlexBoxId, component: SharedComponent<S, A>) {
             self.components.insert(id, component);
@@ -65,8 +65,8 @@ mod component_registry_impl {
 
     impl<S, A> ComponentRegistry<S, A>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         pub fn get_focused_component_ref(
             this: &mut ComponentRegistry<S, A>,
@@ -128,8 +128,8 @@ mod component_registry_impl {
 
     impl<S, A> Debug for ComponentRegistry<S, A>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("ComponentRegistry")

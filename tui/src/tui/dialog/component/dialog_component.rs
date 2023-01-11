@@ -30,8 +30,8 @@ use crate::*;
 #[derive(Clone, Default)]
 pub struct DialogComponent<S, A>
 where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
+    S: Debug + Default + Clone + PartialEq + Sync + Send,
+    A: Debug + Default + Clone + Sync + Send,
 {
     pub id: FlexBoxId,
     pub dialog_engine: DialogEngine,
@@ -50,7 +50,7 @@ pub mod dialog_component_impl {
     impl<S, A> Component<S, A> for DialogComponent<S, A>
     where
         S: HasDialogBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         fn reset(&mut self) { self.dialog_engine.reset(); }
 
@@ -196,8 +196,8 @@ pub mod dialog_component_impl {
 
     impl<S, A> DialogComponent<S, A>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         /// The on_dialog_press_handler is a lambda that is called if the user presses enter or escape.
         /// Typically this results in a Redux action being created and then dispatched to the given
@@ -252,8 +252,6 @@ pub mod exports {
         No,
     }
 
-    // TODO: move these 2 types into an async trait that is implemented by the App
-    // TODO: make the App implement this trait & pass it into the DialogComponent constructor
     pub type OnDialogPressFn<S, A> = fn(DialogChoice, &SharedStore<S, A>);
 
     pub type OnDialogEditorChangeFn<S, A> = fn(EditorBuffer, &SharedStore<S, A>);

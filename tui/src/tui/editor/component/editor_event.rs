@@ -117,8 +117,8 @@ impl EditorEvent {
         _component_registry: &mut ComponentRegistry<S, A>,
         _self_id: FlexBoxId,
     ) where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         match editor_event {
             EditorEvent::InsertChar(character) => EditorEngineInternalApi::insert_str_at_caret(
@@ -191,8 +191,8 @@ impl EditorEvent {
         component_registry: &mut ComponentRegistry<S, A>,
         self_id: FlexBoxId,
     ) where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         for editor_event in editor_event_vec {
             EditorEvent::apply_editor_event(

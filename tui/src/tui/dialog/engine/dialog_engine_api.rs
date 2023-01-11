@@ -37,7 +37,7 @@ impl DialogEngine {
     ) -> CommonResult<RenderPipeline>
     where
         S: HasDialogBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         let mode = args.dialog_engine.dialog_options.mode;
         let overlay_flex_box: PartialFlexBox = {
@@ -122,7 +122,7 @@ impl DialogEngine {
     ) -> CommonResult<DialogEngineApplyResponse>
     where
         S: HasDialogBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         let DialogEngineArgs {
             self_id,
@@ -310,8 +310,8 @@ mod internal_impl {
         args: DialogEngineArgs<'_, S, A>,
     ) -> CommonResult<RenderPipeline>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         let maybe_style = args.dialog_engine.dialog_options.maybe_style_editor;
 

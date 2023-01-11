@@ -34,8 +34,8 @@ use crate::*;
 #[async_trait]
 pub trait App<S, A>
 where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
+    S: Debug + Default + Clone + PartialEq + Sync + Send,
+    A: Debug + Default + Clone + Sync + Send,
 {
     /// Use the state to render the output (via crossterm). The state is immutable. If you want to
     /// change it then it should be done in the [App::app_handle_event] method.

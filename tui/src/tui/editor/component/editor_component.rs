@@ -30,8 +30,8 @@ use crate::*;
 #[derive(Clone, Default)]
 pub struct EditorComponent<S, A>
 where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
+    S: Debug + Default + Clone + PartialEq + Sync + Send,
+    A: Debug + Default + Clone + Sync + Send,
 {
     pub editor_engine: EditorEngine,
     pub id: FlexBoxId,
@@ -45,11 +45,9 @@ pub mod impl_component {
     impl<S, A> Component<S, A> for EditorComponent<S, A>
     where
         S: HasEditorBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
-        fn reset(&mut self) {
-            // TODO: does anything need to be cleaned up in editor engine?
-        }
+        fn reset(&mut self) {}
 
         fn get_id(&self) -> FlexBoxId { self.id }
 
@@ -168,8 +166,8 @@ pub mod constructor {
 
     impl<S, A> EditorComponent<S, A>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         /// The on_change_handler is a lambda that is called if the editor buffer changes. Typically this
         /// results in a Redux action being created and then dispatched to the given store.

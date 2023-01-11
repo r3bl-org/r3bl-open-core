@@ -30,8 +30,8 @@ pub mod args {
 
     pub struct RenderArgs<'a, S, A>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         pub editor_engine: &'a mut EditorEngine,
         pub editor_buffer: &'a EditorBuffer,
@@ -54,8 +54,8 @@ pub mod args {
     /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
     pub struct GlobalScopeArgs<'a, S, A>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         pub shared_global_data: &'a SharedGlobalData,
         pub shared_store: &'a SharedStore<S, A>,
@@ -69,8 +69,8 @@ pub mod args {
     /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
     pub struct ComponentScopeArgs<'a, S, A>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         pub shared_global_data: &'a SharedGlobalData,
         pub shared_store: &'a SharedStore<S, A>,
@@ -85,8 +85,8 @@ pub mod args {
     /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
     pub struct EditorEngineArgs<'a, S, A>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         pub shared_global_data: &'a SharedGlobalData,
         pub shared_store: &'a SharedStore<S, A>,
@@ -103,8 +103,8 @@ pub mod args {
     /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
     pub struct DialogEngineArgs<'a, S, A>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         pub shared_global_data: &'a SharedGlobalData,
         pub shared_store: &'a SharedStore<S, A>,

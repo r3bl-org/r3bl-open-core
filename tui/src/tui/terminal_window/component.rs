@@ -26,8 +26,8 @@ use crate::*;
 #[async_trait]
 pub trait Component<S, A>
 where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
+    S: Debug + Default + Clone + PartialEq + Sync + Send,
+    A: Debug + Default + Clone + Sync + Send,
 {
     /// This is an optional method that can be used to initialize the state of the component's
     /// engines. This applies to modal dialog components that need their engine to be initialized
@@ -92,8 +92,8 @@ where
 #[async_trait]
 pub trait SurfaceRender<S, A>
 where
-    S: Default + Clone + PartialEq + Debug + Sync + Send,
-    A: Default + Clone + Sync + Send,
+    S: Debug + Default + Clone + PartialEq + Sync + Send,
+    A: Debug + Default + Clone + Sync + Send,
 {
     async fn render_in_surface(
         &mut self,
