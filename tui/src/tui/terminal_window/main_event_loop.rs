@@ -37,8 +37,8 @@ impl TerminalWindow {
     ///
     /// ```ignore
     /// where
-    /// S: Default + Clone + PartialEq + Debug + Sync + Send,
-    /// A: Default + Clone + Sync + Send,
+    /// S: Debug + Default + Clone + PartialEq + Sync + Send,
+    /// A: Debug + Default + Clone + Sync + Send,
     /// ```
     pub async fn main_event_loop<S, A>(
         shared_app: SharedApp<S, A>,
@@ -46,8 +46,8 @@ impl TerminalWindow {
         exit_keys: Vec<InputEvent>,
     ) -> CommonResult<()>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send + 'static,
-        A: Default + Clone + Sync + Send + 'static,
+        S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
+        A: Debug + Default + Clone + Sync + Send + 'static,
     {
         // Initialize the terminal window data struct.
         let _global_data = GlobalData::try_to_create_instance()?;
@@ -142,8 +142,8 @@ impl TerminalWindow {
         input_event: &InputEvent,
     ) -> CommonResult<EventPropagation>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send + 'static,
-        A: Default + Clone + Sync + Send + 'static,
+        S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
+        A: Debug + Default + Clone + Sync + Send + 'static,
     {
         let propagation_result_from_app = match SPAWN_PROCESS_INPUT {
             true => {
@@ -196,8 +196,8 @@ impl TerminalWindow {
 
 struct AppManager<S, A>
 where
-    S: Default + Clone + PartialEq + Debug + Sync + Send + 'static,
-    A: Default + Clone + Sync + Send + 'static,
+    S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
+    A: Debug + Default + Clone + Sync + Send + 'static,
 {
     shared_app: SharedApp<S, A>,
     shared_store: SharedStore<S, A>,
@@ -207,8 +207,8 @@ where
 #[async_trait]
 impl<S, A> AsyncSubscriber<S> for AppManager<S, A>
 where
-    S: Default + Clone + PartialEq + Debug + Sync + Send + 'static,
-    A: Default + Clone + Sync + Send,
+    S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
+    A: Debug + Default + Clone + Sync + Send,
 {
     async fn run(&self, my_state: S) {
         let result = AppManager::render_app(
@@ -229,8 +229,8 @@ where
 
 impl<S, A> AppManager<S, A>
 where
-    S: Default + Clone + PartialEq + Debug + Sync + Send + 'static,
-    A: Default + Clone + Sync + Send,
+    S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
+    A: Debug + Default + Clone + Sync + Send,
 {
     fn new_box(
         shared_app: &SharedApp<S, A>,

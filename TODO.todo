@@ -1,5 +1,8 @@
+open: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abug%2Cenhancement%2Cperf%2Cplan+-label%3Abacklog+>
+
 auto completion provider design:
-  ☐ change the `OnDialogEditorChangeFn`, `OnDialogPressFn` to be async trait impl which takes `App`
+  ✔ change the `OnDialogEditorChangeFn`, `OnDialogPressFn` to be async trait impl which takes `App` @done(23-01-11 17:07)
+    - this can't be done
   ☐ how do dialog boxes currently work
   ☐ how to make an http request to some api (dog, cat, etc), ref: address book code
   ☐ how to add an editor component to bottom of dialog box (result box)
@@ -7,5 +10,13 @@ auto completion provider design:
     - up / down => goes to editor component below (result box) & add '*' prefix to selected line
   ☐ incorporate `dd_autocomplete.md` & `dd_editor_component.md` into `tui/README/md` & `tui/src/lib.rs`
 
+redux-no-clone:
+  ☐ evaluate <https://github.com/r3bl-org/r3bl_rs_utils/issues/70>
+
 editor component enhancement:
   ☐ allow for config options to make editor read only (but still have caret for movement)
+
+r3bl-cmdr:
+  ☐ start work on it
+
+backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abug%2Cenhancement+label%3Abacklog+>

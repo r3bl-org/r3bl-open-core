@@ -33,8 +33,8 @@ impl EditorEngine {
         input_event: &InputEvent,
     ) -> CommonResult<EditorEngineApplyResponse<EditorBuffer>>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         let EditorEngineArgs {
             editor_buffer,
@@ -66,8 +66,8 @@ impl EditorEngine {
         current_box: &FlexBox,
     ) -> CommonResult<RenderPipeline>
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         throws_with_return!({
             let EditorEngineArgs {
@@ -101,8 +101,8 @@ impl EditorEngine {
 
     fn render_content<S, A>(render_args: &RenderArgs<'_, S, A>, render_ops: &mut RenderOps)
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         let RenderArgs {
             editor_buffer,
@@ -235,8 +235,8 @@ impl EditorEngine {
     /// Implement caret painting using two different strategies represented by [CaretPaintStyle].
     fn render_caret<S, A>(render_args: &RenderArgs<'_, S, A>, render_ops: &mut RenderOps)
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         let RenderArgs {
             component_registry,
@@ -277,8 +277,8 @@ impl EditorEngine {
 
     pub fn render_empty_state<S, A>(render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
     where
-        S: Default + Clone + PartialEq + Debug + Sync + Send,
-        A: Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
     {
         let RenderArgs {
             component_registry,
