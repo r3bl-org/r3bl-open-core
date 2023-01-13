@@ -1,6 +1,7 @@
 ---
 Title: Design document for editor component
 Date: 2022-08-28
+Status: Copied to tui/src/lib.rs, tui/README.md
 ---
 
 <!-- TOC -->
@@ -14,8 +15,8 @@ Date: 2022-08-28
   - [Constraints](#constraints)
   - [Solution overview](#solution-overview)
 - [Painting caret using cursor and another approach](#painting-caret-using-cursor-and-another-approach)
-  - [**GlobalCursor** - Use the terminal's cursor show / hide.](#globalcursor---use-the-terminals-cursor-show--hide)
-  - [**LocalPaintedEffect** - Paint the character at the cursor w/ the colors inverted or some](#localpaintedeffect---paint-the-character-at-the-cursor-w-the-colors-inverted-or-some)
+  - [**GlobalCursor**](#globalcursor)
+  - [**LocalPaintedEffect**](#localpaintedeffect)
   - [Using both](#using-both)
 - [Mental mode of how data is stored in the editor](#mental-mode-of-how-data-is-stored-in-the-editor)
 
@@ -185,9 +186,11 @@ These commits are related to the work described here:
 There are two ways of showing cursors which are quite different (each w/ very different
 constraints).
 
-### 1. **`GlobalCursor`** - Use the terminal's cursor show / hide.
-<a id="markdown-**globalcursor**---use-the-terminal's-cursor-show-%2F-hide." name="**globalcursor**---use-the-terminal's-cursor-show-%2F-hide."></a>
+### 1. **`GlobalCursor`**
+<a id="markdown-**globalcursor**" name="**globalcursor**"></a>
 
+
+Use the terminal's cursor show / hide.
 
 1.  Both [termion::cursor](https://docs.rs/termion/1.5.6/termion/cursor/index.html) and
     [crossterm::cursor](https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html) support this.
@@ -209,11 +212,12 @@ constraints).
     };
     ```
 
-### 2. **`LocalPaintedEffect`** - Paint the character at the cursor w/ the colors inverted (or some
-<a id="markdown-**localpaintedeffect**---paint-the-character-at-the-cursor-w%2F-the-colors-inverted-or-some" name="**localpaintedeffect**---paint-the-character-at-the-cursor-w%2F-the-colors-inverted-or-some"></a>
+### 2. **`LocalPaintedEffect`**
+<a id="markdown-**localpaintedeffect**" name="**localpaintedeffect**"></a>
 
 
-other bg color) giving the visual effect of a cursor.
+Paint the character at the cursor w/ the colors inverted (or some other bg color) giving the visual
+effect of a cursor.
 
 1.  This has the benefit that we can display multiple cursors in the app, since this is not global,
     rather it is component specific. For the use case requiring google docs style multi user editing

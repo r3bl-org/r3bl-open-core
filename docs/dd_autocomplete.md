@@ -1,15 +1,16 @@
 ---
 Title: Autocompletion provider design document
 Date: 2022-12-14
+Status: Copied to tui/src/lib.rs, tui/README.md
 ---
 
 <!-- TOC -->
 
 - [How does layout, rendering, and event handling work in general?](#how-does-layout-rendering-and-event-handling-work-in-general)
-- [How do dialog boxes work?](#how-do-dialog-boxes-work)
+- [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
   - [Two callback functions](#two-callback-functions)
-- [How to use this dialog to make an HTTP request & pipe the results into a selection area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
-- [How to make HTTP requests](#how-to-make-http-requests)
+  - [How to use this dialog to make an HTTP request & pipe the results into a selection area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
+  - [How to make HTTP requests](#how-to-make-http-requests)
 
 <!-- /TOC -->
 
@@ -32,8 +33,8 @@ Date: 2022-12-14
 
 ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 
-## How do dialog boxes work?
-<a id="markdown-how-do-dialog-boxes-work%3F" name="how-do-dialog-boxes-work%3F"></a>
+## How do modal dialog boxes work?
+<a id="markdown-how-do-modal-dialog-boxes-work%3F" name="how-do-modal-dialog-boxes-work%3F"></a>
 
 
 A modal dialog box is different than a normal reusable component. This is because:
@@ -86,7 +87,7 @@ When creating a new dialog box component, two callback functions are passed in:
 2. `on_dialog_editors_changed_handler()` - this will be called if the user types something into the
    editor.
 
-## How to use this dialog to make an HTTP request & pipe the results into a selection area?
+### How to use this dialog to make an HTTP request & pipe the results into a selection area?
 <a id="markdown-how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F" name="how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F"></a>
 
 
@@ -100,7 +101,7 @@ In autocomplete mode, an extra "results panel" is displayed, and the layout of t
 different on the screen. Instead of being in the middle of the screen, it starts at the top of the
 screen. The callbacks are the same.
 
-## How to make HTTP requests
+### How to make HTTP requests
 <a id="markdown-how-to-make-http-requests" name="how-to-make-http-requests"></a>
 
 

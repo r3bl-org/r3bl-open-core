@@ -1,32 +1,14 @@
+# r3bl_rs_utils documentation workflow
+
+1. This folder contains diagrams that are used in the README.md and lib.rs files. These diagrams are
+   created in Figma and exported to SVG. The SVG files are then embedded in the README.md and lib.rs
+   files and stored in this folder.
+2. The MD files in this folder are not meant to be used directly by 3rd party developers. They are
+   more of a staging ground for content (design docs, architecture diagrams, etc) as a feature or
+   component is being built. Once these are stable, they should be copied to the README.md and
+   lib.rs (which is where 3rd party developers will see them).
+
 # Information on managing docs, videos, and images
-
-## draw.io
-
-1. Create a new diagram
-
-   - Create a new diagram using draw.io
-   - When you save it, make sure to use File -> Export as -> SVG... Make sure to use these settings:
-     - ✅ Transparent Background
-     - ✅ Dark
-     - ✅ Shadow
-     - ✅ Include a copy of my diagram
-     - Then Export
-   - Our convention is to use ".drawio.svg" as the file extension.
-
-2. Update an existing diagram
-
-   - Open the existing diagram (with .drawio.svg extension) in draw.io
-   - Make your changes
-   - Follow the same File -> Export as -> SVG... as shown above when it is time to save the file
-
-3. Viewing diagrams
-
-   - By following the above steps, the SVG file is really optimized to be viewed w/ a dark
-     background (viewing on github.com or on developerlife.com). And if you try to view it w/ a
-     light background, it either won't look good or will be illegible.
-     - It is easiest to view the diagram on github.com.
-     - You can open the SVG file in a browser, then go to developer options, and apply a CSS
-       property of background color of black.
 
 ## figma.com
 
@@ -73,3 +55,31 @@ the latest docs and links to SVG, MP4, etc.
    - `README.md` - the links to SVG, MP4 files are relative to the source file.
    - `src/lib.rs` - the links to SVG, MP4 files are direct to githubusercontent.com. For eg:
      [memory-architecture.drawio.svg](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg).
+
+## draw.io (deprecated)
+
+1. Create a new diagram
+
+   - Create a new diagram using draw.io
+   - When you save it, make sure to use File -> Export as -> SVG... Make sure to use these settings:
+     - ✅ Transparent Background
+     - ✅ Dark
+     - ✅ Shadow
+     - ✅ Include a copy of my diagram
+     - Then Export
+   - Our convention is to use ".drawio.svg" as the file extension.
+
+2. Update an existing diagram
+
+   - Open the existing diagram (with .drawio.svg extension) in draw.io
+   - Make your changes
+   - Follow the same File -> Export as -> SVG... as shown above when it is time to save the file
+
+3. Viewing diagrams
+
+   - By following the above steps, the SVG file is really optimized to be viewed w/ a dark
+     background (viewing on github.com or on developerlife.com). And if you try to view it w/ a
+     light background, it either won't look good or will be illegible.
+     - It is easiest to view the diagram on github.com.
+     - You can open the SVG file in a browser, then go to developer options, and apply a CSS
+       property of background color of black.

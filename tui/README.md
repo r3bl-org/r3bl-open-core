@@ -3,8 +3,8 @@
 </p>
 
 # Context
-
 <a id="markdown-context" name="context"></a>
+
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
@@ -49,8 +49,8 @@ it.
      3. integrations w/ calendar, email, contacts APIs
 
 # r3bl_tui crate
-
 <a id="markdown-r3bl_tui-crate" name="r3bl_tui-crate"></a>
+
 
 This crate is related to the first thing that's described above. It provides lots of useful
 functionality to help you build TUI (text user interface) apps, along w/ general niceties &
@@ -60,6 +60,7 @@ ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 
 - [Text User Interface engine for Rust](#text-user-interface-engine-for-rust)
 - [Examples to get you started](#examples-to-get-you-started)
+- [How does layout, rendering, and event handling work in general?](#how-does-layout-rendering-and-event-handling-work-in-general)
 - [Life of an input event](#life-of-an-input-event)
 - [The window](#the-window)
 - [Layout and styling](#layout-and-styling)
@@ -71,6 +72,12 @@ ergonomics that all Rustaceans 🦀 can enjoy 🎉:
   - [First render](#first-render)
   - [Subsequent render](#subsequent-render)
 - [Redux for state management](#redux-for-state-management)
+- [How does the editor component work?](#how-does-the-editor-component-work)
+  - [Painting the caret](#painting-the-caret)
+- [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
+  - [Two callback functions](#two-callback-functions)
+  - [How to use this dialog to make an HTTP request & pipe the results into a selection area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
+  - [How to make HTTP requests](#how-to-make-http-requests)
 - [Grapheme support](#grapheme-support)
 - [Lolcat support](#lolcat-support)
 - [Other crates that depend on this](#other-crates-that-depend-on-this)
@@ -79,8 +86,8 @@ ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 <!-- /TOC -->
 
 ## Text User Interface engine for Rust
-
 <a id="markdown-text-user-interface-engine-for-rust" name="text-user-interface-engine-for-rust"></a>
+
 
 You can build fully async TUI (text user interface) apps with a modern API that brings the best of
 the web frontend development ideas to TUI apps written in Rust:
@@ -124,8 +131,8 @@ Here are some framework highlights:
   layers (like z-order in a browser's DOM).
 
 ## Examples to get you started
-
 <a id="markdown-examples-to-get-you-started" name="examples-to-get-you-started"></a>
+
 
 <!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
 
@@ -137,10 +144,8 @@ https://user-images.githubusercontent.com/2966499/206881196-37cf1220-8c1b-460e-a
    in action and play with it. The examples cover the entire surface area of the TUI API. You can
    also take a look at the tests in the source as well `tui/src/`.
 
-2. The design docs and architecture diagrams in the
-   [`docs` folder](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/docs) are a good place to
-   start to get a feel for the architecture of the framework. You can get a mental model of how
-   everything fits and what the TUI lifecycle is.
+2. This document is a good place to start to get a feel for the architecture of the framework. You
+   can get a mental model of how everything fits and what the TUI lifecycle is.
 
 3. Additionally the [r3bl_rs_utils_core](https://crates.io/crates/r3bl_rs_utils_core) has the
    `tui_core` module which contains dependencies that are used by the `tui` module. They include:
@@ -160,9 +165,26 @@ https://user-images.githubusercontent.com/2966499/206881196-37cf1220-8c1b-460e-a
 > 3. `run-with-crash-reporting.fish`: This will run the examples and generate a `crash_log.txt` file
 >    (in the `tui` folder) in case the app crashes. This is useful for debugging.
 
-## Life of an input event
+## How does layout, rendering, and event handling work in general?
+<a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>
 
+
+- The `App` trait impl is the main entry point for laying out the entire application. And this is
+  where the `component_registry` lives and all the `Component`s are created and added to the
+  registry.
+- When an `App` trait impl is created by a call to `App::new_shared()`, then the `init()` method is
+  called, which should populate the `component_registry` with all the `Component`s that will be used
+  in the application.
+- This sets everything up so that `app_render()` and `app_handle_event()` can be called at a later
+  time.
+- The `app_render()` method is responsible for creating the layout by using `Surface` and `FlexBox`
+  to arrange whatever `Component`s are in the `component_registry`.
+- The `app_handle_event()` method is responsible for handling events that are sent to the `App`
+  trait when user input is detected from the keyboard or mouse.
+
+## Life of an input event
 <a id="markdown-life-of-an-input-event" name="life-of-an-input-event"></a>
+
 
 There is a clear separation of concerns in this module. To illustrate what goes where, and how
 things work let's look at an example that puts the main event loop front and center & deals w/ how
@@ -218,8 +240,8 @@ the following sections:
 ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 
 ## The window
-
 <a id="markdown-the-window" name="the-window"></a>
+
 
 The main building blocks of a TUI app are:
 
@@ -236,8 +258,8 @@ The main building blocks of a TUI app are:
     we have to deal with [FlexBox], [Component], and [crate::Style].
 
 ## Layout and styling
-
 <a id="markdown-layout-and-styling" name="layout-and-styling"></a>
+
 
 Inside of your [App] if you want to use flexbox like layout and CSS like styling you can think of
 composing your code in the following way:
@@ -254,8 +276,8 @@ composing your code in the following way:
     dispatch actions to the store, and even have async middleware!
 
 ## Component, ComponentRegistry, focus management, and event routing
-
 <a id="markdown-component%2C-componentregistry%2C-focus-management%2C-and-event-routing" name="component%2C-componentregistry%2C-focus-management%2C-and-event-routing"></a>
+
 
 Typically your [App] will look like this:
 
@@ -284,16 +306,16 @@ Another thing to keep in mind is that the [App] and [TerminalWindow] is persiste
 re-renders. The Redux store is also persistent between re-renders.
 
 ## Input event specificity
-
 <a id="markdown-input-event-specificity" name="input-event-specificity"></a>
+
 
 [TerminalWindow] gives [Component] first dibs when it comes to handling input events. If it punts
 handling this event, it will be handled by the default input event handler. And if nothing there
 matches this event, then it is simply dropped.
 
 ## Rendering and painting
-
 <a id="markdown-rendering-and-painting" name="rendering-and-painting"></a>
+
 
 The R3BL TUI engine uses a high performance compositor to render the UI to the terminal. This
 ensures that only "pixels" that have changed are painted to the terminal. This is done by creating a
@@ -302,8 +324,8 @@ row index position. There are only as many `PixelChar`s as there are rows and co
 screen. And the index maps directly to the position of the pixel in the terminal screen.
 
 ### Offscreen buffer
-
 <a id="markdown-offscreen-buffer" name="offscreen-buffer"></a>
+
 
 Here is an example of what a single row of rendered output might look like in a row of the
 `OffscreenBuffer`. This diagram shows each `PixelChar` in `row_index: 1` of the `OffscreenBuffer`.
@@ -355,8 +377,8 @@ Each `PixelChar` can be one of 4 things:
    the rainbow effect. An example of this is the outline around a modal dialog box.
 
 ### Render pipeline
-
 <a id="markdown-render-pipeline" name="render-pipeline"></a>
+
 
 The following diagram provides a high level overview of how apps (that contain components, which may
 contain components, and so on) are rendered to the terminal screen.
@@ -377,8 +399,8 @@ input event, and that produces a new state which then has to be rendered, they a
 painted into an `OffscreenBuffer`.
 
 ### First render
-
 <a id="markdown-first-render" name="first-render"></a>
+
 
 The `paint.rs` file contains the `paint` function, which is the entry point for all rendering. Once
 the first render occurs, the `OffscreenBuffer` that is generated is saved to `GlobalSharedState`.
@@ -398,8 +420,8 @@ really simple making it very easy to swap out other terminal libraries such as `
 GUI backend, or some other custom output driver.
 
 ### Subsequent render
-
 <a id="markdown-subsequent-render" name="subsequent-render"></a>
+
 
 Since the `OffscreenBuffer` is cached in `GlobalSharedState` a diff to be performed for subsequent
 renders. And only those diff chunks are painted to the screen. This ensures that there is no flicker
@@ -407,8 +429,8 @@ when the content of the screen changes. It also minimizes the amount of work tha
 terminal emulator has to do put the `PixelChar`s on the screen.
 
 ## Redux for state management
-
 <a id="markdown-redux-for-state-management" name="redux-for-state-management"></a>
+
 
 If you use Redux for state management, then you will create a [crate::redux] [crate::Store] that is
 passed into the [TerminalWindow]. Here's an example of this.
@@ -452,30 +474,181 @@ async fn create_store() -> Store<AppWithLayoutState, AppWithLayoutAction> {
 }
 ```
 
-## Grapheme support
+## How does the editor component work?
+<a id="markdown-how-does-the-editor-component-work%3F" name="how-does-the-editor-component-work%3F"></a>
 
+
+The `EditorComponent` struct can hold data in its own memory, in addition to relying on the state.
+
+- It has an `EditorEngine` which holds syntax highlighting information, and configuration options
+  for the editor (such as multiline mode enabled or not, syntax highlighting enabled or not, etc.).
+  Note that this information lives outside of the state.
+- It also implements the `Component<S,A>` trait.
+- However, for the reusable editor component we need the data representing the document being edited
+  to be stored in the state (`EditorBuffer`) and not inside of the `EditorComponent` itself.
+  - This is why the state must implement the trait `HasEditorBuffers` which is where the document
+    data is stored (the key is the id of the flex box in which the editor component is placed).
+  - The `EditorBuffer` contains the text content in a `Vec` of `UnicodeString`. Where each line is
+    represented by a `UnicodeString`. It also contains the scroll offset, caret position, and file
+    extension for syntax highlighting.
+
+In other words,
+
+1.  `EditorEngine` -> **This goes in `EditorComponent`**
+    - Contains the logic to process keypresses and modify an editor buffer.
+2.  `EditorBuffer` -> **This goes in the `State`**
+    - Contains the data that represents the document being edited. This contains the caret
+      (insertion point) position and scroll position. And in the future can contain lots of other
+      information such as undo / redo history, etc.
+
+Here are the connection points w/ the impl of `Component<S,A>` in `EditorComponent`:
+
+1.  `handle_event(input_event: &InputEvent, state: &S, shared_store: &SharedStore<S, A>)`
+    - Can simply relay the arguments to `EditorEngine::apply(state.editor_buffer, input_event)`
+      which will return another `EditorBuffer`.
+    - Return value can be dispatched to the store via an action `UpdateEditorBuffer(EditorBuffer)`.
+2.  `render(has_focus: &HasFocus, current_box: &FlexBox, state: &S, shared_store: &SharedStore<S,A>)`
+    - Can simply relay the arguments to `EditorEngine::render(state.editor_buffer)`
+    - Which will return a `RenderPipeline`.
+
+### Painting the caret
+<a id="markdown-painting-the-caret" name="painting-the-caret"></a>
+
+
+> Definitions
+>
+> **`Caret`** - the block that is visually displayed in a terminal which represents the insertion
+> point for whatever is in focus. While only one insertion point is editable for the local user,
+> there may be multiple of them, in which case there has to be a way to distinguish a local caret
+> from a remote one (this can be done w/ bg color).
+>
+> **`Cursor`** - the global "thing" provided in terminals that shows by blinking usually where the
+> cursor is. This cursor is moved around and then paint operations are performed on various
+> different areas in a terminal window to paint the output of render operations.
+
+There are two ways of showing cursors which are quite different (each w/ very different
+constraints).
+
+1. Using a global terminal cursor (we don't use this).
+
+   - Both [termion::cursor](https://docs.rs/termion/1.5.6/termion/cursor/index.html) and
+     [crossterm::cursor](https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html) support this.
+     The cursor has lots of effects like blink, etc.
+   - The downside is that there is one global cursor for any given terminal window. And this cursor
+     is constantly moved around in order to paint anything (eg:
+     `MoveTo(col, row), SetColor, PaintText(...)` sequence).
+
+2. Paint the character at the cursor w/ the colors inverted (or some other bg color) giving the
+   visual effect of a cursor.
+   - This has the benefit that we can display multiple cursors in the app, since this is not global,
+     rather it is component specific. For the use case requiring google docs style multi user
+     editing where multiple cursors need to be shown, this approach can be used in order to
+     implement that. Each user for eg can get a different caret background color to differentiate
+     their caret from others.
+   - The downside is that it isn't possible to blink the cursor or have all the other "standard"
+     cursor features that are provided by the actual global cursor (discussed above).
+
+## How do modal dialog boxes work?
+<a id="markdown-how-do-modal-dialog-boxes-work%3F" name="how-do-modal-dialog-boxes-work%3F"></a>
+
+
+A modal dialog box is different than a normal reusable component. This is because:
+
+1. It paints on top of the entire screen (in front of all other components, in ZOrder::Glass, and
+   outside of any layouts using `FlexBox`es).
+2. Is "activated" by a keyboard shortcut (hidden otherwise). Once activated, the user can accept or
+   cancel the dialog box. And this results in a callback being called w/ the result.
+
+So this activation trigger must be done at the `App` trait impl level (in the `app_handle_event()`
+method). Also, when this trigger is detected it has to:
+
+1. Set the focus to the dialog box, so that it will appear on the next render. When trigger is
+   detected it will return a `EventPropagation::Consumed` which won't force a render.
+2. Set the title and text via a dispatch of the action `SetDialogBoxTitleAndText`. This will force a
+   render, and the title and text in the dialog box on next render.
+
+There is a question about where does the response from the user (once a dialog is shown) go? This
+seems as though it would be different in nature from an `EditorComponent` but it is the same. Here's
+why:
+
+- The `EditorComponent` is always updating its buffer based on user input, and there's no "handler"
+  for when the user performs some action on the editor. The editor needs to save all the changes to
+  the buffer to the state. This requires the trait bound `HasEditorBuffers` to be implemented by the
+  state.
+- The dialog box seems different in that you would think that it doesn't always updating its state
+  and that the only time we really care about what state the dialog box has is when the user has
+  accepted something they've typed into the dialog box and this needs to be sent to the callback
+  function that was passed in when the component was created. However, due to the reactive nature of
+  the TUI engine, even before the callback is called (due to the user accepting or cancelling),
+  while the user is typing things into the dialog box, it has to be updating the state, otherwise,
+  re-rendering the dialog box won't be triggered and the user won't see what they're typing. This
+  means that even intermediate information needs to be recorded into the state via the
+  `HasDialogBuffers` trait bound. This will hold stale data once the dialog is dismissed or
+  accepted, but that's ok since the title and text should always be set before it is shown.
+  - **Note**: it might be possible to save this type of intermediate data in
+    `ComponentRegistry::user_data`. And it is possible for `handle_event()` to return a
+    `EventPropagation::ConsumedRerender` to make sure that changes are re-rendered. This approach
+    may have other issues related to having both immutable and mutable borrows at the same time to
+    some portion of the component registry if one is not careful.
+
+### Two callback functions
+<a id="markdown-two-callback-functions" name="two-callback-functions"></a>
+
+
+When creating a new dialog box component, two callback functions are passed in:
+
+1. `on_dialog_press_handler()` - this will be called if the user choose no, or yes (w/ their typed
+   text).
+2. `on_dialog_editors_changed_handler()` - this will be called if the user types something into the
+   editor.
+
+### How to use this dialog to make an HTTP request & pipe the results into a selection area?
+<a id="markdown-how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F" name="how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F"></a>
+
+
+So far we have covered the use case for a simple modal dialog box. In order to provide
+auto-completion capabilities, via some kind of web service, there needs to be a slightly more
+complex version of this. This is where the `DialogEngineConfigOptions` struct comes in. It allows us
+to create a dialog component and engine to be configured w/ the appropriate mode - simple or
+autocomplete.
+
+In autocomplete mode, an extra "results panel" is displayed, and the layout of the dialog is
+different on the screen. Instead of being in the middle of the screen, it starts at the top of the
+screen. The callbacks are the same.
+
+### How to make HTTP requests
+<a id="markdown-how-to-make-http-requests" name="how-to-make-http-requests"></a>
+
+
+Instead of using the `reqwest` crate, we should use the `hyper` crate (which is part of Tokio) and
+drop support for `reqwest` in all our crates.
+
+- https://blessed.rs/crates#section-networking-subsection-http-foundations
+
+## Grapheme support
 <a id="markdown-grapheme-support" name="grapheme-support"></a>
+
 
 Unicode is supported (to an extent). There are some caveats. The [crate::UnicodeStringExt] trait has
 lots of great information on this graphemes and what is supported and what is not.
 
 ## Lolcat support
-
 <a id="markdown-lolcat-support" name="lolcat-support"></a>
+
 
 An implementation of [crate::lolcat::cat] w/ a color wheel is provided.
 
 ## Other crates that depend on this
-
 <a id="markdown-other-crates-that-depend-on-this" name="other-crates-that-depend-on-this"></a>
+
 
 This crate is a dependency of the following crates:
 
 1. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crates (the "main" library)
 
 ## Issues, comments, feedback, and PRs
-
 <a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
+
 
 Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
 And if you have any feature requests, feel free to add them there too 👍.

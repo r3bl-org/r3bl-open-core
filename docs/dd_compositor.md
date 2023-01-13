@@ -1,6 +1,7 @@
 ---
 Title: Design document for compositor
 Date: 2022-11-05
+Status: Copied to tui/src/lib.rs, tui/README.md
 ---
 
 <!-- TOC -->
