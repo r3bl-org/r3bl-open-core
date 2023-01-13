@@ -1,6 +1,16 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+auto completion provider design:
+  ✔ change the `OnDialogEditorChangeFn`, `OnDialogPressFn` to be async trait impl which takes `App` @done(23-01-11 17:07)
+    - this can't be done
+  ✔ how do dialog boxes currently work @done(23-01-13 10:48)
+  ✔ how to make an http request to some api (dog, cat, etc), ref: address book code @done(23-01-13 10:48)
+  ✔ how to add an editor component to bottom of dialog box (result box) @done(23-01-13 10:48)
+    - left / right => goes to dialog's input box
+    - up / down => goes to editor component below (result box) & add '*' prefix to selected line
+  ✔ incorporate `dd_autocomplete.md` & `dd_editor_component.md` into `tui/README/md` & `tui/src/lib.rs` @done(23-01-13 10:48)
+
 auto completion provider impl:
   **tracking bug**:
   ✔ [x] https://github.com/r3bl-org/r3bl_rs_utils/issues/49 @done(23-01-09 15:57)
@@ -134,7 +144,7 @@ refactor https://github.com/r3bl-org/r3bl_rs_utils/issues/63:
   ✔ index (starts at 0) vs size (starts at 1) confusion cleanup @done(22-11-21 08:40)
   ✔ move get_plain_text_clipped() to access.rs @done(22-11-21 08:40)
 
-editor engine extras core (https://github.com/r3bl-org/r3bl_rs_utils/issues/48): 
+editor engine extras core (https://github.com/r3bl-org/r3bl_rs_utils/issues/48):
   ✔ syntax highlighting support @done(22-11-20 17:41)
   ✔ support editor config options to enable/disable syntax highlighting & update tests @done(22-11-20 17:41)
   ✔ markdown parsing (MD frontmatter in JSON format, and MD -> AST) @done(22-11-20 17:41)
@@ -232,7 +242,7 @@ build awareness:
   ✔ write tutorial on developerlife.com about `style!` DSL @done(22-08-05 17:11)
     - part 1 of a series on creating CSS like DSL in Rust
     - plan to add JSX like DSL in Rust as well for `tui` module
-  
+
 share this w/ the community:
   ✔ rust lang community forum @done(22-08-06 20:13)
   ✔ discord server for rust `proc-macro` & `tui-and-cli` @done(22-08-06 20:13)
