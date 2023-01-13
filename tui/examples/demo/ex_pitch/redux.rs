@@ -60,10 +60,11 @@ mod action_impl {
 #[derive(Default)]
 pub struct Reducer;
 
-pub const LINES_ARRAY: [&str; 11] = [
+pub const LINES_ARRAY: [&str; 12] = [
     include_str!("slide1.md"),
     include_str!("slide2.md"),
     include_str!("slide3.md"),
+    include_str!("slide3_1.md"),
     include_str!("slide4.md"),
     include_str!("slide5.md"),
     include_str!("slide6.md"),
