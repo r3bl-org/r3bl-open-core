@@ -14,7 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use std::fmt::Debug;
 
 use r3bl_rs_utils_core::*;
 
@@ -138,6 +137,9 @@ pub async fn print_plain_text(
     let display_col_index = ch!(@to_usize my_offscreen_buffer.my_pos.col_index);
     let display_row_index = ch!(@to_usize my_offscreen_buffer.my_pos.row_index);
 
+    // Make sure that the row and col are safe to access in the buffer.
+    my_offscreen_buffer.assert_is_safe_to_access_indices(display_col_index, display_row_index)?;
+
     // If `maybe_max_display_col_count` is `None`, then clip to the max bounds of the window
     // 1. take the pos into account when determining clip
     // 2. even if `maybe_max_display_col_count` is `None`, still clip to the max bounds of the
@@ -177,21 +179,6 @@ pub async fn print_plain_text(
         );
         log_debug(msg);
     });
-
-    // Make sure that the row and col are safe to access in the buffer.
-    if let IsSafeToAccess::Unsafe =
-        my_offscreen_buffer.is_safe_to_access_indices(display_row_index, display_col_index)
-    {
-        let log_msg = format!(
-            "🚨🚨🚨print_plain_text() tried to access row:{}, col:{} to add {}. It is out of bounds of my_offscreen_buffer {}",
-            display_row_index,
-            display_col_index,
-            text.string,
-            my_offscreen_buffer.pretty_print()
-        );
-        log_error(log_msg.clone());
-        return CommonError::new(CommonErrorType::IndexOutOfBounds, &log_msg);
-    }
 
     // Get the line at `row_index`.
     let mut line_copy = my_offscreen_buffer
@@ -355,6 +342,9 @@ pub async fn print_ansi_text(
     let display_col_index = ch!(@to_usize my_offscreen_buffer.my_pos.col_index);
     let display_row_index = ch!(@to_usize my_offscreen_buffer.my_pos.row_index);
 
+    // Make sure that the row and col are safe to access in the buffer.
+    my_offscreen_buffer.assert_is_safe_to_access_indices(display_col_index, display_row_index)?;
+
     // Keep track of clipping.
     let mut clip_arg_text_ref = false;
     let mut clip_ansi_text_segments = false;
@@ -418,21 +408,6 @@ pub async fn print_ansi_text(
         );
         log_debug(msg);
     });
-
-    // Make sure that the row and col are safe to access in the buffer.
-    if let IsSafeToAccess::Unsafe =
-        my_offscreen_buffer.is_safe_to_access_indices(display_row_index, display_col_index)
-    {
-        let log_msg = format!(
-            "🚨🚨🚨print_ansi_text() tried to access row:{}, col:{} to add {} is out of bounds of my_offscreen_buffer {}",
-            display_row_index,
-            display_col_index,
-            arg_text_ref,
-            my_offscreen_buffer.pretty_print()
-        );
-        log_error(log_msg.clone());
-        return CommonError::new(CommonErrorType::IndexOutOfBounds, &log_msg);
-    }
 
     // Get the line at `row_index`.
     let mut line_copy = my_offscreen_buffer
@@ -571,12 +546,6 @@ pub async fn print_text_with_attributes(
             .await
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub enum IsSafeToAccess {
-    Safe,
-    Unsafe,
 }
 
 #[cfg(test)]
