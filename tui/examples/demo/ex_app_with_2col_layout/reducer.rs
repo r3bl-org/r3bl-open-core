@@ -26,12 +26,8 @@ pub struct Reducer;
 
 #[async_trait]
 impl AsyncReducer<State, Action> for Reducer {
-    async fn run(&self, action: &Action, state: &State) -> State {
-        let State { stack: stack_copy } = &mut state.clone();
-        reduce_mut(stack_copy, action);
-        State {
-            stack: stack_copy.to_vec(),
-        }
+    async fn run(&self, action: &Action, state: &mut State) {
+        reduce_mut(&mut state.stack, action);
     }
 }
 

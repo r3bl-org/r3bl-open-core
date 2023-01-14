@@ -37,15 +37,23 @@ mod test1 {
         my_number: i32,
     }
 
+    #[derive(Default)]
     pub enum MyEnum {
+        #[default]
         MyVariant1,
     }
 
     #[test]
     fn test_proc_macro_struct_and_enum() {
-        impl Default for MyEnum {
-            fn default() -> Self { MyEnum::MyVariant1 }
+        let my_struct: MyStruct = MyStructBuilder::new()
+            .set_my_string("Hello".to_string())
+            .set_my_number(1_i32)
+            .build();
+        assert_eq!(my_struct.my_string, "Hello");
+        match my_struct.my_enum {
+            MyEnum::MyVariant1 => {}
         }
+        assert_eq!(my_struct.my_number, 1);
     }
 }
 

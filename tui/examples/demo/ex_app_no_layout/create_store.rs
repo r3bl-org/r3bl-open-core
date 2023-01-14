@@ -28,7 +28,7 @@ pub async fn create_store() -> Store<State, Action> {
 }
 
 /// Action.
-#[derive(Clone, Debug)]
+#[derive(Default, Clone, Debug)]
 #[non_exhaustive]
 #[allow(dead_code)]
 pub enum Action {
@@ -36,11 +36,8 @@ pub enum Action {
     AddPop(i32),
     SubPop(i32),
     Clear,
+    #[default]
     Noop,
-}
-
-impl Default for Action {
-    fn default() -> Self { Action::Noop }
 }
 
 impl Display for Action {
@@ -69,35 +66,31 @@ pub struct AppReducer;
 
 #[async_trait]
 impl AsyncReducer<State, Action> for AppReducer {
-    async fn run(&self, action: &Action, state: &State) -> State {
-        let mut stack_copy = state.stack.clone();
-
+    async fn run(&self, action: &Action, state: &mut State) {
         match action {
             Action::AddPop(arg) => {
-                if stack_copy.is_empty() {
-                    stack_copy.push(*arg)
+                if state.stack.is_empty() {
+                    state.stack.push(*arg)
                 } else {
-                    let top = stack_copy.pop().unwrap();
+                    let top = state.stack.pop().unwrap();
                     let sum = top + arg;
-                    stack_copy.push(sum);
+                    state.stack.push(sum);
                 }
             }
 
             Action::SubPop(arg) => {
-                if stack_copy.is_empty() {
-                    stack_copy.push(*arg)
+                if state.stack.is_empty() {
+                    state.stack.push(*arg)
                 } else {
-                    let top = stack_copy.pop().unwrap();
+                    let top = state.stack.pop().unwrap();
                     let sum = top - arg;
-                    stack_copy.push(sum);
+                    state.stack.push(sum);
                 }
             }
 
-            Action::Clear => stack_copy = vec![],
+            Action::Clear => state.stack = vec![],
 
             _ => {}
         }
-
-        State { stack: stack_copy }
     }
 }

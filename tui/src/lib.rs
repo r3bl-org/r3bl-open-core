@@ -628,7 +628,7 @@
 //! Instead of using the `reqwest` crate, we should use the `hyper` crate (which is part of Tokio) and
 //! drop support for `reqwest` in all our crates.
 //!
-//! - https://blessed.rs/crates#section-networking-subsection-http-foundations
+//! - <https://blessed.rs/crates#section-networking-subsection-http-foundations>
 //!
 //! # Grapheme support
 //!

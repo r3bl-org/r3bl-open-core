@@ -24,8 +24,9 @@ use crate::*;
 
 /// Direction of the layout of the box.
 #[non_exhaustive]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum Direction {
+    #[default]
     Horizontal,
     Vertical,
 }
@@ -33,10 +34,6 @@ pub enum Direction {
 /// This works w/ the [int-enum](https://crates.io/crates/int-enum) crate in order to allow for the
 /// definition of enums that are represented in memory as [u8]s.
 pub type FlexBoxId = u8;
-
-impl Default for Direction {
-    fn default() -> Direction { Direction::Horizontal }
-}
 
 /// A box is a rectangle with a position and size. The direction of the box
 /// determines how it's contained elements are positioned.

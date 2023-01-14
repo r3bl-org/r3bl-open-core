@@ -48,12 +48,10 @@ where
     A: Clone + Default + Send + Sync,
 {
     pub state: S,
-    pub history: Vec<S>,
     pub middleware_vec: AsyncMiddlewareVec<S, A>,
     pub middleware_spawns_vec: AsyncMiddlewareSpawnsVec<S, A>,
     pub subscriber_vec: AsyncSubscriberVec<S>,
     pub reducer_vec: AsyncReducerVec<S, A>,
-    pub maybe_previous_state: Option<S>,
 }
 
 impl<S, A> Default for Store<S, A>
@@ -64,12 +62,10 @@ where
     fn default() -> Store<S, A> {
         Store {
             state: Default::default(),
-            history: Default::default(),
             middleware_vec: Default::default(),
             middleware_spawns_vec: Default::default(),
             reducer_vec: Default::default(),
             subscriber_vec: Default::default(),
-            maybe_previous_state: None,
         }
     }
 }
@@ -138,8 +134,6 @@ where
 {
     pub fn get_state(&self) -> S { self.state.clone() }
 
-    pub fn get_history(&self) -> Vec<S> { self.history.clone() }
-
     pub async fn dispatch_spawn(&'static mut self, action: A) {
         tokio::spawn(async move {
             self.dispatch_action(action).await;
@@ -159,28 +153,8 @@ where
         self.run_subscribers().await;
     }
 
-    fn has_state_changed(&self) -> bool {
-        if let Some(previous_state) = &self.maybe_previous_state {
-            *previous_state != self.state
-        } else {
-            true
-        }
-    }
-
-    fn save_state_to_previous_state(&mut self) {
-        self.maybe_previous_state = Some(self.state.clone());
-    }
-
     /// Run these in parallel.
     async fn run_subscribers(&mut self) {
-        // Early return if state hasn't changed.
-        if !self.has_state_changed() {
-            return;
-        }
-
-        // Update previous state, for next time.
-        self.save_state_to_previous_state();
-
         // Actually run the subscribers.
         let mut vec_fut = vec![];
         let state_clone = self.get_state();
@@ -196,28 +170,8 @@ where
             return;
         }
         for reducer in &self.reducer_vec {
-            let new_state = reducer.run(action, &self.state).await;
-            self.state = new_state;
+            reducer.run(action, &mut self.state).await;
         }
-        self.update_history();
-    }
-
-    // Update history.
-    fn update_history(&mut self) {
-        let new_state = self.get_state();
-
-        // Update history.
-        let mut update_history = false;
-        if self.history.is_empty() {
-            update_history = true;
-        } else if let Some(last_known_state) = self.history.last() {
-            if *last_known_state != new_state {
-                update_history = true;
-            }
-        }
-        if update_history {
-            self.history.push(new_state)
-        };
     }
 
     /// Run these in parallel.

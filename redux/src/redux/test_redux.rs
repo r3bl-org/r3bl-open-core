@@ -36,7 +36,7 @@ mod tests {
     /// ╰──────────────────────────────────────────────────────╯
     /// ```
     #[allow(non_camel_case_types)]
-    #[derive(Debug, PartialEq, Eq, Clone)]
+    #[derive(Default, Debug, PartialEq, Eq, Clone)]
     pub enum Action {
         // Reducer actions.
         Add(i32, i32),
@@ -50,11 +50,8 @@ mod tests {
         // Middleware actions for MwExampleSpawns.
         MwExampleSpawns_ModifySharedObject_ResetState,
         // For Default impl.
+        #[default]
         Noop,
-    }
-
-    impl Default for Action {
-        fn default() -> Self { Action::Noop }
     }
 
     /// ```text
@@ -338,19 +335,19 @@ mod tests {
 
     #[async_trait]
     impl AsyncReducer<State, Action> for MyReducer {
-        async fn run(&self, action: &Action, state: &State) -> State {
+        async fn run(&self, action: &Action, state: &mut State) {
             match action {
                 Action::Add(a, b) => {
                     let sum = a + b;
-                    State { stack: vec![sum] }
+                    state.stack = vec![sum];
                 }
                 Action::AddPop(a) => {
                     let sum = a + state.stack[0];
-                    State { stack: vec![sum] }
+                    state.stack = vec![sum];
                 }
-                Action::Clear => State { stack: vec![] },
-                Action::Reset => State { stack: vec![-100] },
-                _ => state.clone(),
+                Action::Clear => state.stack.clear(),
+                Action::Reset => state.stack = vec![-100],
+                _ => {}
             }
         }
     }
