@@ -137,9 +137,6 @@ pub async fn print_plain_text(
     let display_col_index = ch!(@to_usize my_offscreen_buffer.my_pos.col_index);
     let display_row_index = ch!(@to_usize my_offscreen_buffer.my_pos.row_index);
 
-    // Make sure that the row and col are safe to access in the buffer.
-    my_offscreen_buffer.assert_is_safe_to_access_indices(display_col_index, display_row_index)?;
-
     // If `maybe_max_display_col_count` is `None`, then clip to the max bounds of the window
     // 1. take the pos into account when determining clip
     // 2. even if `maybe_max_display_col_count` is `None`, still clip to the max bounds of the
@@ -341,9 +338,6 @@ pub async fn print_ansi_text(
     // Get col and row index from `my_pos`.
     let display_col_index = ch!(@to_usize my_offscreen_buffer.my_pos.col_index);
     let display_row_index = ch!(@to_usize my_offscreen_buffer.my_pos.row_index);
-
-    // Make sure that the row and col are safe to access in the buffer.
-    my_offscreen_buffer.assert_is_safe_to_access_indices(display_col_index, display_row_index)?;
 
     // Keep track of clipping.
     let mut clip_arg_text_ref = false;

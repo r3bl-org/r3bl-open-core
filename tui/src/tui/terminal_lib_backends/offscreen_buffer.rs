@@ -129,52 +129,6 @@ mod offscreen_buffer_impl {
             self.buffer = PixelCharLines::new_with_capacity_initialized(self.window_size);
         }
 
-        pub fn assert_is_safe_to_access_indices(
-            &self,
-            col_index: usize,
-            row_index: usize,
-        ) -> CommonResult<()> {
-            let window_row_count = ch!(@to_usize self.window_size.row_count);
-            let window_col_count = ch!(@to_usize self.window_size.col_count);
-
-            // Arguments are out of bounds of the window itself.
-            if row_index >= window_row_count || col_index >= window_col_count {
-                return throw_err(col_index, row_index, self.window_size);
-            }
-
-            match self.buffer.get(row_index) {
-                // Arguments are out of bounds of the buffer (cols).
-                Some(row) => {
-                    if col_index >= row.len() {
-                        return throw_err(col_index, row_index, self.window_size);
-                    }
-                }
-
-                // Arguments are out of bounds of the buffer (rows).
-                None => {
-                    return throw_err(col_index, row_index, self.window_size);
-                }
-            }
-
-            return Ok(());
-
-            fn throw_err(
-                col_index: usize,
-                row_index: usize,
-                window_size: Size,
-            ) -> CommonResult<()> {
-                let window_height = ch!(@to_usize window_size.row_count);
-                let window_width = ch!(@to_usize window_size.col_count);
-                let msg_0 = format!(
-                    "🚨🚨🚨print_plain_text() tried to access col:{col_index}, row:{row_index}",
-                );
-                let msg_1 = format!("It is out of bounds of my_offscreen_buffer cols:{window_width}, rows:{window_height}");
-                let log_msg = format!("{msg_0}. {msg_1}");
-                log_error(format!("{msg_0}. {msg_1}"));
-                return CommonError::new(CommonErrorType::IndexOutOfBounds, &log_msg);
-            }
-        }
-
         pub fn pretty_print(&self) -> String {
             let mut lines = vec![];
             for row_index in 0..ch!(@to_usize self.window_size.row_count) {
