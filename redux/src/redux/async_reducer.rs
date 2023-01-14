@@ -23,7 +23,7 @@ where
     S: Sync + Send,
     A: Sync + Send,
 {
-    async fn run(&self, action: &A, state: &S) -> S;
+    async fn run(&self, action: &A, state: &mut S);
 
     /// <https://doc.rust-lang.org/book/ch10-02-traits.html>
     #[allow(clippy::all)]

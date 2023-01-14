@@ -28,11 +28,12 @@ pub async fn create_store() -> Store<State, Action> {
     store
 }
 
-#[derive(Clone, Debug)]
+#[derive(Default, Clone, Debug)]
 #[allow(dead_code)]
 #[non_exhaustive]
 /// Best practices for naming actions: <https://redux.js.org/style-guide/#write-action-types-as-domaineventname>
 pub enum Action {
+    #[default]
     Noop,
 
     /// Domain: EditorComponent, Event: UpdateContent.
@@ -47,10 +48,6 @@ pub enum Action {
 
 mod action_impl {
     use super::*;
-
-    impl Default for Action {
-        fn default() -> Self { Action::Noop }
-    }
 
     impl Display for Action {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result { write!(f, "{self:?}") }
@@ -83,63 +80,49 @@ mod reducer_impl {
 
     #[async_trait]
     impl AsyncReducer<State, Action> for Reducer {
-        async fn run(&self, action: &Action, state: &State) -> State {
+        async fn run(&self, action: &Action, state: &mut State) {
             match action {
-                Action::Noop => state.clone(),
+                Action::Noop => {}
                 Action::EditorComponentUpdateContent(id, buffer) => {
                     Self::editor_component_update_content(state, id, buffer)
                 }
                 Action::SlideControlNextSlide => Self::next_slide(state),
                 Action::SlideControlPreviousSlide => Self::prev_slide(state),
-            }
+            };
         }
     }
 
     impl Reducer {
-        fn next_slide(state: &State) -> State {
-            let mut new_state = state.clone();
-
+        fn next_slide(state: &mut State) {
             if state.current_slide_index < LINES_ARRAY.len() - 1 {
-                new_state.current_slide_index += 1;
-                new_state
+                state.current_slide_index += 1;
+                state
                     .editor_buffers
                     .entry(ComponentId::Editor.int_value())
                     .and_modify(|it| {
-                        it.set_lines(reducer_impl::get_slide_content(
-                            new_state.current_slide_index,
-                        ));
+                        it.set_lines(reducer_impl::get_slide_content(state.current_slide_index));
                     });
             }
-
-            new_state
         }
 
-        fn prev_slide(state: &State) -> State {
-            let mut new_state = state.clone();
-
+        fn prev_slide(state: &mut State) {
             if state.current_slide_index > 0 {
-                new_state.current_slide_index -= 1;
-                new_state
+                state.current_slide_index -= 1;
+                state
                     .editor_buffers
                     .entry(ComponentId::Editor.int_value())
                     .and_modify(|it| {
-                        it.set_lines(reducer_impl::get_slide_content(
-                            new_state.current_slide_index,
-                        ));
+                        it.set_lines(reducer_impl::get_slide_content(state.current_slide_index));
                     });
             }
-
-            new_state
         }
 
         fn editor_component_update_content(
-            state: &State,
+            state: &mut State,
             id: &FlexBoxId,
             buffer: &EditorBuffer,
-        ) -> State {
-            let mut new_state = state.clone();
-            new_state.editor_buffers.insert(*id, buffer.clone());
-            new_state
+        ) {
+            state.editor_buffers.insert(*id, buffer.clone());
         }
     }
 

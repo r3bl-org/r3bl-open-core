@@ -28,11 +28,12 @@ pub async fn create_store() -> Store<State, Action> {
     store
 }
 
-#[derive(Clone, Debug)]
+#[derive(Default, Clone, Debug)]
 #[allow(dead_code)]
 #[non_exhaustive]
 /// Best practices for naming actions: <https://redux.js.org/style-guide/#write-action-types-as-domaineventname>
 pub enum Action {
+    #[default]
     Noop,
 
     /// Domain: EditorComponent, Event: UpdateContent.
@@ -63,10 +64,6 @@ pub enum Action {
 mod action_impl {
     use super::*;
 
-    impl Default for Action {
-        fn default() -> Self { Action::Noop }
-    }
-
     impl Display for Action {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result { write!(f, "{self:?}") }
     }
@@ -80,9 +77,9 @@ mod reducer_impl {
 
     #[async_trait]
     impl AsyncReducer<State, Action> for Reducer {
-        async fn run(&self, action: &Action, state: &State) -> State {
+        async fn run(&self, action: &Action, state: &mut State) {
             match action {
-                Action::Noop => state.clone(),
+                Action::Noop => {}
 
                 Action::EditorComponentUpdateContent(id, buffer) => {
                     Self::editor_component_update_content(state, id, buffer)
@@ -107,41 +104,34 @@ mod reducer_impl {
                 Action::AutocompleteDialogComponentSetResults(id, results) => {
                     Self::dialog_component_set_results(state, id, results)
                 }
-            }
+            };
         }
     }
 
     impl Reducer {
         fn dialog_component_initialize_focused(
-            state: &State,
+            state: &mut State,
             id: &FlexBoxId,
             title: &String,
             text: &String,
-        ) -> State {
-            let mut new_state = state.clone();
-
+        ) {
             let dialog_buffer = {
                 let mut it = DialogBuffer::new_empty();
                 it.title = title.into();
                 it.editor_buffer.set_lines(vec![text.into()]);
                 it
             };
-
-            new_state.dialog_buffers.insert(*id, dialog_buffer);
-
-            new_state
+            state.dialog_buffers.insert(*id, dialog_buffer);
         }
 
         fn dialog_component_update_content(
-            state: &State,
+            state: &mut State,
             id: &FlexBoxId,
             editor_buffer: &EditorBuffer,
-        ) -> State {
-            let mut new_state = state.clone();
-
+        ) {
             // This is Some only if the content has changed (ignoring caret movements).
             let results_have_changed: Option<Vec<String>> = {
-                match new_state.dialog_buffers.get_mut(id) {
+                match state.dialog_buffers.get_mut(id) {
                     Some(dialog_buffer)
                         if dialog_buffer.editor_buffer.get_lines() != editor_buffer.get_lines() =>
                     {
@@ -160,7 +150,7 @@ mod reducer_impl {
                 }
             };
 
-            new_state
+            state
                 .dialog_buffers
                 .entry(*id)
                 .and_modify(|it| {
@@ -185,23 +175,14 @@ mod reducer_impl {
 
             // Content is empty.
             if editor_buffer.get_as_string() == "" {
-                if let Some(it) = new_state.dialog_buffers.get_mut(id) {
+                if let Some(it) = state.dialog_buffers.get_mut(id) {
                     it.maybe_results = None;
                 }
-                return new_state;
             }
-
-            new_state
         }
 
-        fn dialog_component_set_results(
-            state: &State,
-            id: &FlexBoxId,
-            results: &[String],
-        ) -> State {
-            let mut new_state = state.clone();
-
-            new_state
+        fn dialog_component_set_results(state: &mut State, id: &FlexBoxId, results: &[String]) {
+            state
                 .dialog_buffers
                 .entry(*id)
                 .and_modify(|it| it.maybe_results = Some(results.to_vec()))
@@ -215,18 +196,14 @@ mod reducer_impl {
                         it
                     },
                 );
-
-            new_state
         }
 
         fn editor_component_update_content(
-            state: &State,
+            state: &mut State,
             id: &FlexBoxId,
             buffer: &EditorBuffer,
-        ) -> State {
-            let mut new_state = state.clone();
-            new_state.editor_buffers.insert(*id, buffer.clone());
-            new_state
+        ) {
+            state.editor_buffers.insert(*id, buffer.clone());
         }
     }
 }

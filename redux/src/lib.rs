@@ -261,19 +261,21 @@
 //!   async fn run(
 //!     &self,
 //!     action: &Action,
-//!     state: &State,
-//!   ) -> State {
+//!     state: &mut State,
+//!   ) {
 //!     match action {
 //!       Action::Add(a, b) => {
 //!         let sum = a + b;
-//!         State { stack: vec![sum] }
+//!         state.stack = vec![sum];
 //!       }
 //!       Action::AddPop(a) => {
 //!         let sum = a + state.stack[0];
-//!         State { stack: vec![sum] }
+//!         state.stack = vec![sum];
 //!       }
-//!       Action::Clear => State { stack: vec![] },
-//!       _ => state.clone(),
+//!       Action::Clear => State {
+//!         state.stack.clear();
+//!       },
+//!       _ => {}
 //!     }
 //!   }
 //! }

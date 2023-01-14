@@ -63,10 +63,11 @@ pub struct CommonError {
 
 /// Some common errors that can occur.
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub enum CommonErrorType {
     ExitLoop,
     DisplaySizeTooSmall,
+    #[default]
     General,
     InvalidArguments,
     InvalidResult,
@@ -79,10 +80,6 @@ pub enum CommonErrorType {
     InvalidValue,
     DoesNotApply,
     IndexOutOfBounds,
-}
-
-impl Default for CommonErrorType {
-    fn default() -> Self { CommonErrorType::General }
 }
 
 /// Implement [`Error`] trait.

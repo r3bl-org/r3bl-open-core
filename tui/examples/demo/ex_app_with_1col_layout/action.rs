@@ -18,18 +18,15 @@
 use std::fmt::{Display, Formatter};
 
 /// Action.
-#[derive(Clone, Debug)]
+#[derive(Default, Clone, Debug)]
 #[non_exhaustive]
 #[allow(dead_code)]
 pub enum Action {
     AddPop(i32),
     SubPop(i32),
     Clear,
+    #[default]
     Noop,
-}
-
-impl Default for Action {
-    fn default() -> Self { Action::Noop }
 }
 
 impl Display for Action {
