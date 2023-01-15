@@ -1,12 +1,8 @@
-open: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abug%2Cenhancement%2Cperf%2Cplan+-label%3Abacklog+>
-
-redux-no-clone:
-  ☐ evaluate <https://github.com/r3bl-org/r3bl_rs_utils/issues/70>
-
-editor component enhancement:
-  ☐ allow for config options to make editor read only (but still have caret for movement)
+open: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+-label%3Abacklog+>
 
 r3bl-cmdr:
-  ☐ start work on it
+  ☐ multiple binaries in a single crate (one binary for each subcommand)
+  ☐ how to use clap to support sub commands
+  ☐ figma PRD & mocks
 
-backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abug%2Cenhancement+label%3Abacklog+>
+backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
