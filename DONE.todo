@@ -1,6 +1,9 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+redux-no-clone:
+  ✔ landed w/ huge performance boost <https://github.com/r3bl-org/r3bl_rs_utils/issues/70> @done(23-01-15 12:27)
+
 auto completion provider design:
   ✔ change the `OnDialogEditorChangeFn`, `OnDialogPressFn` to be async trait impl which takes `App` @done(23-01-11 17:07)
     - this can't be done
