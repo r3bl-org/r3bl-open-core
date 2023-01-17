@@ -78,6 +78,7 @@ impl TerminalWindow {
         loop {
             // Try and get the next event if available (asynchronously).
             let maybe_input_event = async_event_stream.try_to_get_input_event().await;
+            terminal_window_static_global_data::set_start_ts();
 
             // Process the input_event.
             let input_event = match maybe_input_event {
@@ -309,6 +310,9 @@ where
             match render_result {
                 Err(error) => {
                     RenderOp::default().flush();
+
+                    terminal_window_static_global_data::set_end_ts();
+
                     call_if_true!(DEBUG_TUI_MOD, {
                         let msg = format!("MySubscriber::render() error ❌: {error}");
                         log_error(msg);
@@ -319,6 +323,8 @@ where
                         .paint(FlushKind::ClearBeforeFlush, shared_global_data)
                         .await;
 
+                    terminal_window_static_global_data::set_end_ts();
+
                     // Print debug message w/ memory utilization, etc.
                     call_if_true!(DEBUG_TUI_MOD, {
                         {
@@ -326,7 +332,8 @@ where
                             let msg_1 = format!("🎨 MySubscriber::paint() ok ✅: \n window_size: {window_size:?}\n state: {state:?}");
                             let msg_2 = {
                                 format!(
-                                    "🌍 Cache utilization: #1 (ansi_text): {0:.2}%, #2 (strip_ansi_text): {1:.2}%",
+                                    "🌍🏎️   SPEED: {:?} Cache utilization: #1 (ansi_text): {1:.2}%, #2 (strip_ansi_text): {2:.2}%",
+                                    terminal_window_static_global_data::get_avg_response_time_micros(),
                                     shared_global_data.read().await.cache_ansi_text.len() as f32
                                         / DefaultSize::GlobalDataCacheSize.int_value() as f32
                                         * 100_f32,

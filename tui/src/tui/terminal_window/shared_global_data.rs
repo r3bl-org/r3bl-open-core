@@ -21,6 +21,10 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
+/// This is a global data structure that holds state for the entire application. This is wrapped in
+/// an [Arc](std::sync::Arc) and [Mutex](std::sync::Mutex) so that it can be accessed from anywhere
+/// as [SharedGlobalData].
+///
 /// These are global state values for the entire application:
 /// - The `window_size` holds the [Size] of the terminal window.
 /// - The `maybe_saved_offscreen_buffer` holds the last rendered [OffscreenBuffer].

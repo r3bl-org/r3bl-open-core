@@ -178,7 +178,7 @@ impl DialogEngine {
 #[repr(u16)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
 pub enum DisplayConstants {
-    ColPercent = 90,
+    DialogComponentBorderWidthPercent = 90,
     /// border-top, title, input, border-bottom.
     SimpleModalRowCount = 4,
     EmptyLine = 1,
@@ -244,7 +244,9 @@ mod internal_impl {
                 let simple_dialog_size = {
                     // Calc dialog bounds size based on window size.
                     let col_count = {
-                        let percent = percent!(DisplayConstants::ColPercent.int_value())?;
+                        let percent = percent!(
+                            DisplayConstants::DialogComponentBorderWidthPercent.int_value()
+                        )?;
                         percent.calc_percentage(surface_size.col_count)
                     };
                     let row_count = ch!(DisplayConstants::SimpleModalRowCount.int_value());
@@ -271,7 +273,9 @@ mod internal_impl {
                         + ch!(DisplayConstants::EmptyLine.int_value())
                         + dialog_options.result_panel_display_row_count;
                     let col_count = {
-                        let percent = percent!(DisplayConstants::ColPercent.int_value())?;
+                        let percent = percent!(
+                            DisplayConstants::DialogComponentBorderWidthPercent.int_value()
+                        )?;
                         percent.calc_percentage(surface_size.col_count)
                     };
                     let size = size!(col_count: col_count, row_count: row_count);
