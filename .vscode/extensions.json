@@ -9,6 +9,7 @@
 
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "nowsci.glassit-linux",
     "bungcip.better-toml",
     "streetsidesoftware.code-spell-checker",
     "vadimcn.vscode-lldb",

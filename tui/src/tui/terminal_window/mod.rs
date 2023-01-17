@@ -20,9 +20,10 @@ pub mod app;
 pub mod component;
 pub mod default_input_handler;
 pub mod event_routing_support;
-pub mod global_data;
 pub mod main_event_loop;
 pub mod manage_focus;
+pub mod shared_global_data;
+pub mod static_global_data;
 pub mod type_aliases;
 
 // Re-export.
@@ -30,7 +31,8 @@ pub use app::*;
 pub use component::*;
 pub use default_input_handler::*;
 pub use event_routing_support::*;
-pub use global_data::*;
 pub use main_event_loop::*;
 pub use manage_focus::*;
+pub use shared_global_data::*;
+pub use static_global_data::*;
 pub use type_aliases::*;
