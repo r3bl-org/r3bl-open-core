@@ -21,6 +21,7 @@ use std::{env::{args, Args},
           error::Error,
           io::{stdin, stdout, Write}};
 
+use is_terminal::IsTerminal;
 use r3bl_rs_utils_core::{style_error, style_prompt};
 
 use super::with;
@@ -60,16 +61,16 @@ pub fn readline_with_prompt(prompt: &str) -> Result<String, Box<dyn Error>> {
 }
 
 /// If you run `echo "test" | cargo run` the following will return true.
-pub fn is_stdin_piped() -> bool { atty::isnt(atty::Stream::Stdin) }
+pub fn is_stdin_piped() -> bool { !std::io::stdin().is_terminal() }
 
 /// If you run `cargo run | grep foo` the following will return true.
-pub fn is_stdout_piped() -> bool { atty::isnt(atty::Stream::Stdout) }
+pub fn is_stdout_piped() -> bool { !std::io::stdout().is_terminal() }
 
 /// If you run `cargo run` the following will return true.
 pub fn is_tty() -> bool {
-    atty::is(atty::Stream::Stdin)
-        && atty::is(atty::Stream::Stdout)
-        && atty::is(atty::Stream::Stderr)
+    std::io::stdin().is_terminal()
+        && std::io::stdout().is_terminal()
+        && std::io::stderr().is_terminal()
 }
 
 /// Helper trait and impl to convert [std::env::Args][Args] to a `Vec<String>`
