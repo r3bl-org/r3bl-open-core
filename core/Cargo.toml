@@ -53,7 +53,7 @@ ansi-parser = "0.8.0"
 
 # For lolcat.
 rand = "0.8.5"
-atty = "0.2.14"
+is-terminal = "0.4.2"
 
 # get-size.
 get-size = { version = "^0.1", features = ["derive"] }

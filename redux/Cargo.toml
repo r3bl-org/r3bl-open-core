@@ -38,7 +38,6 @@ rand = "0.8.5"
 
 # Terminal
 ansi_term = "0.12.1"
-atty = "0.2.14"
 
 # Async
 tokio = { version = "1.23.0", features = ["full"] }

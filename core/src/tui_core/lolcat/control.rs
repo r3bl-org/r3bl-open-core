@@ -17,8 +17,8 @@
 
 use std::fmt::{Display, Formatter};
 
-use atty::Stream;
 use get_size::GetSize;
+use is_terminal::IsTerminal;
 use rand::random;
 use serde::*;
 
@@ -103,7 +103,7 @@ impl ColorWheelControl {
             frequency,
             background_mode: false,
             dialup_mode: false,
-            print_color: atty::is(Stream::Stdout),
+            print_color: std::io::stdout().is_terminal(),
             color_change_speed: color_change,
         }
     }
