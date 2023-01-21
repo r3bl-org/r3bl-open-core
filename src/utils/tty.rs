@@ -17,14 +17,11 @@
 //! This module contains a set of functions to make it easier to work with
 //! terminals.
 
-use std::{env::{args, Args},
-          error::Error,
+use std::{error::Error,
           io::{stdin, stdout, Write}};
 
 use is_terminal::IsTerminal;
 use r3bl_rs_utils_core::{style_error, style_prompt};
-
-use super::with;
 
 /// Return String not &str due to "struct lifetime"
 /// - <https://stackoverflow.com/a/29026565/2085356>
@@ -71,21 +68,4 @@ pub fn is_tty() -> bool {
     std::io::stdin().is_terminal()
         && std::io::stdout().is_terminal()
         && std::io::stderr().is_terminal()
-}
-
-/// Helper trait and impl to convert [std::env::Args][Args] to a `Vec<String>`
-/// after removing the first item (which is the path to the executable)..
-pub trait ArgsToStrings {
-    fn filter_and_convert_to_strings(&self) -> Vec<String>;
-}
-
-impl ArgsToStrings for Args {
-    fn filter_and_convert_to_strings(&self) -> Vec<String> {
-        with(args().collect::<Vec<String>>(), |mut list| {
-            if !list.is_empty() {
-                list.remove(0);
-            }
-            list
-        })
-    }
 }

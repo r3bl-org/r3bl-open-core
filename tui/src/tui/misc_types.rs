@@ -196,8 +196,8 @@ pub use global_constants::*;
 
 pub mod list_of {
     use super::*;
-    /// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for [List] of `T`.
-    /// Where `T` is any number of types in the tui crate.
+    /// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for [List] of
+    /// `T`. Where `T` is any number of types in the tui crate.
     #[derive(Debug, Clone, Default)]
     pub struct List<T> {
         pub items: Vec<T>,
@@ -213,3 +213,43 @@ pub mod list_of {
     }
 }
 pub use list_of::*;
+
+mod cli_args {
+    use super::*;
+
+    /// Helper trait and impl to convert [std::env::Args] to a [`Vec<String>`] after removing the first
+    /// item (which is the path to the executable).
+    pub trait ArgsToStrings {
+        fn filter_and_convert_to_strings(&self) -> Vec<String>;
+        fn as_str<'a>(my_vec: &'a Vec<String>) -> Vec<&'a str>;
+    }
+
+    impl ArgsToStrings for std::env::Args {
+        fn filter_and_convert_to_strings(&self) -> Vec<String> {
+            let mut list = std::env::args().collect::<Vec<String>>();
+            if !list.is_empty() {
+                list.remove(0);
+            }
+            list
+        }
+
+        fn as_str<'a>(my_vec: &'a Vec<String>) -> Vec<&'a str> { List::from(my_vec).items }
+    }
+
+    impl<'a> From<&'a Vec<String>> for List<&'a str> {
+        /// The [From] trait is implemented for [List] instead of [Vec].
+        /// 1. [List] is defined in this crate.
+        /// 2. [Vec] is not.
+        ///
+        /// The [`Vec<String>`] reference is converted to a [List<&str>]. Which can then be converted into a
+        /// [Vec<&str>] if needed.
+        ///
+        /// More info on converting [`Vec<String>`] to [Vec<&str>]:
+        /// <https://users.rust-lang.org/t/is-this-the-best-way-to-go-from-vec-string-to-vec-str/37838>
+        fn from(my_vec: &'a Vec<String>) -> Self {
+            let items = my_vec.iter().map(String::as_str).collect::<Vec<&str>>();
+            List { items }
+        }
+    }
+}
+pub use cli_args::*;
