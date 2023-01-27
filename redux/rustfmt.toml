@@ -3,8 +3,8 @@
 # width
 max_width = 100
 
-# function 
-fn_args_layout = "Tall" # Possible values: "Compressed", "Tall", "Vertical"
+# function
+fn_params_layout = "Tall" # Possible values: "Compressed", "Tall", "Vertical"
 fn_single_line = true
 
 # imports
