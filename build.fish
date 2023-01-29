@@ -8,5 +8,5 @@
 # RUST_BACKTRACE=1 cargo run
 
 cargo clean
-cargo +nightly -Z sparse-registry update
+cargo +nightly update
 cargo build

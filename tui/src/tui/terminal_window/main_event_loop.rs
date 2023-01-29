@@ -19,7 +19,6 @@ use std::{fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
 use get_size::GetSize;
-use int_enum::IntEnum;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
@@ -295,7 +294,7 @@ where
 
             // Check to see if the window_size is large enough to render.
             let render_result: CommonResult<RenderPipeline> = if window_size
-                .is_too_small_to_display(MinSize::Col.int_value(), MinSize::Row.int_value())
+                .is_too_small_to_display(MinSize::Col as u8, MinSize::Row as u8)
             {
                 shared_global_data
                     .write()
@@ -328,21 +327,20 @@ where
                     // Print debug message w/ memory utilization, etc.
                     call_if_true!(DEBUG_TUI_MOD, {
                         {
-                            use int_enum::IntEnum;
                             let msg_1 = format!("🎨 MySubscriber::paint() ok ✅: \n window_size: {window_size:?}\n state: {state:?}");
                             let msg_2 = {
                                 format!(
                                     "🌍🏎️   SPEED: {:?} Cache utilization: #1 (ansi_text): {1:.2}%, #2 (strip_ansi_text): {2:.2}%",
                                     terminal_window_static_global_data::get_avg_response_time_micros(),
                                     shared_global_data.read().await.cache_ansi_text.len() as f32
-                                        / DefaultSize::GlobalDataCacheSize.int_value() as f32
+                                        / DefaultSize::GlobalDataCacheSize as usize as f32
                                         * 100_f32,
                                     shared_global_data
                                         .read()
                                         .await
                                         .cache_try_strip_ansi_text
                                         .len() as f32
-                                        / DefaultSize::GlobalDataCacheSize.int_value() as f32
+                                        / DefaultSize::GlobalDataCacheSize as usize as f32
                                         * 100_f32,
                                 )
                             };
@@ -370,8 +368,8 @@ fn render_window_size_too_small(window_size: Size) -> RenderPipeline {
     // Show warning message that window_size is too small.
     let display_msg = UnicodeString::from(format!(
         "Window size is too small. Minimum size is {} cols x {} rows",
-        MinSize::Col.int_value(),
-        MinSize::Row.int_value()
+        MinSize::Col as u8,
+        MinSize::Row as u8
     ));
     let trunc_display_msg = UnicodeString::from(display_msg.truncate_to_fit_size(window_size));
     let trunc_display_msg_len = ch!(trunc_display_msg.len());

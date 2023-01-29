@@ -18,7 +18,6 @@
 use std::fmt::Debug;
 
 use async_trait::async_trait;
-use int_enum::IntEnum;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
@@ -28,13 +27,13 @@ use super::*;
 
 /// Constants for the ids.
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ComponentId {
     Editor = 1,
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EditorStyleName {
     Default = 4,
 }
@@ -184,14 +183,14 @@ mod perform_layout {
                 {
                     box_start! (
                         in:                     surface,
-                        id:                     ComponentId::Editor.int_value(),
+                        id:                     ComponentId::Editor as u8,
                         dir:                    Direction::Vertical,
                         requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                        styles:                 [EditorStyleName::Default.int_value()]
+                        styles:                 [EditorStyleName::Default as u8]
                     );
                     render_component_in_current_box!(
                         in:                 surface,
-                        component_id:       ComponentId::Editor.int_value(),
+                        component_id:       ComponentId::Editor as u8,
                         from:               self.0.component_registry,
                         state:              state,
                         shared_store:       shared_store,
@@ -214,7 +213,7 @@ mod populate_component_registry {
         // Switch focus to the editor component if focus is not set.
         this.component_registry
             .has_focus
-            .set_id(ComponentId::Editor.int_value());
+            .set_id(ComponentId::Editor as u8);
         call_if_true!(DEBUG_TUI_MOD, {
             {
                 let msg = format!(
@@ -229,7 +228,7 @@ mod populate_component_registry {
 
     /// Insert editor component into registry if it's not already there.
     fn insert_editor_component(this: &mut AppWithLayout) {
-        let id = ComponentId::Editor.int_value();
+        let id = ComponentId::Editor as u8;
         let shared_editor_component = {
             fn on_buffer_change(
                 shared_store: &SharedStore<State, Action>,
@@ -291,7 +290,7 @@ mod stylesheet {
         throws_with_return!({
             stylesheet! {
               style! {
-                id: EditorStyleName::Default.int_value()
+                id: EditorStyleName::Default as u8
                 padding: 1
                 // These are ignored due to syntax highlighting.
                 // attrib: [bold]

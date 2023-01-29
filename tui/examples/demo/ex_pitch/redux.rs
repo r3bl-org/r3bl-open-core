@@ -73,8 +73,6 @@ pub const LINES_ARRAY: [&str; 12] = [
 ];
 
 mod reducer_impl {
-    use int_enum::IntEnum;
-
     use super::*;
     use crate::ex_pitch::ComponentId;
 
@@ -98,7 +96,7 @@ mod reducer_impl {
                 state.current_slide_index += 1;
                 state
                     .editor_buffers
-                    .entry(ComponentId::Editor.int_value())
+                    .entry(ComponentId::Editor as u8)
                     .and_modify(|it| {
                         it.set_lines(reducer_impl::get_slide_content(state.current_slide_index));
                     });
@@ -110,7 +108,7 @@ mod reducer_impl {
                 state.current_slide_index -= 1;
                 state
                     .editor_buffers
-                    .entry(ComponentId::Editor.int_value())
+                    .entry(ComponentId::Editor as u8)
                     .and_modify(|it| {
                         it.set_lines(reducer_impl::get_slide_content(state.current_slide_index));
                     });
@@ -143,7 +141,7 @@ mod reducer_impl {
         };
 
         let mut editor_buffers = HashMap::new();
-        editor_buffers.insert(ComponentId::Editor.int_value(), editor_buffer);
+        editor_buffers.insert(ComponentId::Editor as u8, editor_buffer);
 
         State {
             editor_buffers,

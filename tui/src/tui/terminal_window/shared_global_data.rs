@@ -48,8 +48,6 @@ pub struct GlobalData {
 }
 
 mod manage_cache {
-    use int_enum::IntEnum;
-
     use super::*;
 
     impl GlobalData {
@@ -63,7 +61,7 @@ mod manage_cache {
 
                     // Clean up the cache if it gets too big.
                     if self.cache_try_strip_ansi_text.len()
-                        > DefaultSize::GlobalDataCacheSize.int_value()
+                        > DefaultSize::GlobalDataCacheSize as usize
                     {
                         self.cache_try_strip_ansi_text.clear();
                     }
@@ -81,7 +79,7 @@ mod manage_cache {
                     self.cache_ansi_text.insert(key.into(), new_value.clone());
 
                     // Clean up the cache if it gets too big.
-                    if self.cache_ansi_text.len() > DefaultSize::GlobalDataCacheSize.int_value() {
+                    if self.cache_ansi_text.len() > DefaultSize::GlobalDataCacheSize as usize {
                         self.cache_ansi_text.clear();
                     }
 

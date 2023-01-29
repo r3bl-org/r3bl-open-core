@@ -18,7 +18,6 @@
 use std::{fmt::Debug,
           ops::{Deref, DerefMut}};
 
-use int_enum::IntEnum;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use strum_macros::AsRefStr;
@@ -149,14 +148,14 @@ pub mod global_constants {
     use super::*;
 
     #[repr(u8)]
-    #[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum MinSize {
         Col = 65,
         Row = 11,
     }
 
     #[repr(usize)]
-    #[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum DefaultSize {
         GlobalDataCacheSize = 1_000_000,
     }
