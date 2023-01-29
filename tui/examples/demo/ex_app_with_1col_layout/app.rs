@@ -18,7 +18,6 @@
 use std::{fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
-use int_enum::IntEnum;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
 use r3bl_tui::*;
@@ -28,7 +27,7 @@ use super::*;
 
 // Constants for the ids.
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Id {
     Container = 1,
     Col = 2,
@@ -145,7 +144,7 @@ mod perform_layout {
 
             // Layout ColumnRenderComponent and render it.
             throws!({
-                let col_id = Id::Col.int_value();
+                let col_id = Id::Col as u8;
                 box_start! (
                     in:                     surface,
                     id:                     col_id,
@@ -174,7 +173,7 @@ mod populate_component_registry {
     impl AppWithLayout {
         pub fn init_component_registry(&mut self) {
             // Construct Col.
-            let col_id = Id::Col.int_value();
+            let col_id = Id::Col as u8;
             if self.component_registry.does_not_contain(col_id) {
                 let _component = ColumnRenderComponent::new(col_id);
                 let shared_component_r1 = Arc::new(RwLock::new(_component));
@@ -208,11 +207,11 @@ mod stylesheet {
         throws_with_return!({
             stylesheet! {
               style! {
-                id: Id::Container.int_value()
+                id: Id::Container as u8
                 padding: 1
               },
               style! {
-                id: Id::Col.int_value()
+                id: Id::Col as u8
                 padding: 1
                 color_bg: TuiColor::Rgb { r: 55, g: 55, b: 100 }
               }

@@ -18,7 +18,6 @@
 use std::fmt::Debug;
 
 use async_trait::async_trait;
-use int_enum::IntEnum;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
@@ -28,7 +27,7 @@ use super::*;
 
 /// Constants for the ids.
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum ComponentId {
     Editor = 1,
     SimpleDialog = 2,
@@ -36,13 +35,13 @@ enum ComponentId {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EditorStyleName {
     Default = 4,
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DialogStyleName {
     Border = 5,
     Title = 6,
@@ -185,7 +184,7 @@ mod detect_modal_dialog_activation_from_input_event {
                 // Reset the dialog component prior to activating / showing it.
                 ComponentRegistry::reset_component(
                     &mut self.component_registry,
-                    ComponentId::SimpleDialog.int_value(),
+                    ComponentId::SimpleDialog as u8,
                 )
                 .await;
                 return match activate_simple_modal(self, args) {
@@ -214,7 +213,7 @@ mod detect_modal_dialog_activation_from_input_event {
                 // Reset the dialog component prior to activating / showing it.
                 ComponentRegistry::reset_component(
                     &mut self.component_registry,
-                    ComponentId::AutocompleteDialog.int_value(),
+                    ComponentId::AutocompleteDialog as u8,
                 )
                 .await;
                 return match activate_autocomplete_modal(self, args) {
@@ -241,9 +240,8 @@ mod detect_modal_dialog_activation_from_input_event {
                 // Initialize the dialog buffer with title & text.
                 let title = "Simple Modal Dialog Title";
                 let text = {
-                    if let Some(editor_buffer) = args
-                        .state
-                        .get_editor_buffer(ComponentId::Editor.int_value())
+                    if let Some(editor_buffer) =
+                        args.state.get_editor_buffer(ComponentId::Editor as u8)
                     {
                         editor_buffer.get_as_string()
                     } else {
@@ -255,14 +253,14 @@ mod detect_modal_dialog_activation_from_input_event {
                 // render.
                 this.component_registry
                     .has_focus
-                    .try_set_modal_id(ComponentId::SimpleDialog.int_value())?;
+                    .try_set_modal_id(ComponentId::SimpleDialog as u8)?;
 
                 // Change the state so that it will trigger a render. This will show the title &
                 // text on the next render.
                 spawn_dispatch_action!(
                     args.shared_store,
                     Action::SimpleDialogComponentInitializeFocused(
-                        ComponentId::SimpleDialog.int_value(),
+                        ComponentId::SimpleDialog as u8,
                         title.to_string(),
                         text.to_string()
                     )
@@ -286,9 +284,8 @@ mod detect_modal_dialog_activation_from_input_event {
                 // Initialize the dialog buffer with title & text.
                 let title = "Autocomplete Modal Dialog Title";
                 let text = {
-                    if let Some(editor_buffer) = args
-                        .state
-                        .get_editor_buffer(ComponentId::Editor.int_value())
+                    if let Some(editor_buffer) =
+                        args.state.get_editor_buffer(ComponentId::Editor as u8)
                     {
                         editor_buffer.get_as_string()
                     } else {
@@ -300,14 +297,14 @@ mod detect_modal_dialog_activation_from_input_event {
                 // render.
                 this.component_registry
                     .has_focus
-                    .try_set_modal_id(ComponentId::AutocompleteDialog.int_value())?;
+                    .try_set_modal_id(ComponentId::AutocompleteDialog as u8)?;
 
                 // Change the state so that it will trigger a render. This will show the title &
                 // text on the next render.
                 spawn_dispatch_action!(
                     args.shared_store,
                     Action::AutocompleteDialogComponentInitializeFocused(
-                        ComponentId::AutocompleteDialog.int_value(),
+                        ComponentId::AutocompleteDialog as u8,
                         title.to_string(),
                         text.to_string()
                     )
@@ -351,14 +348,14 @@ mod perform_layout {
                 {
                     box_start! (
                         in:                     surface,
-                        id:                     ComponentId::Editor.int_value(),
+                        id:                     ComponentId::Editor as u8,
                         dir:                    Direction::Vertical,
                         requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                        styles:                 [EditorStyleName::Default.int_value()]
+                        styles:                 [EditorStyleName::Default as u8]
                     );
                     render_component_in_current_box!(
                         in:                 surface,
-                        component_id:       ComponentId::Editor.int_value(),
+                        component_id:       ComponentId::Editor as u8,
                         from:               self.0.component_registry,
                         state:              state,
                         shared_store:       shared_store,
@@ -374,12 +371,12 @@ mod perform_layout {
                     .0
                     .component_registry
                     .has_focus
-                    .is_modal_id(ComponentId::SimpleDialog.int_value())
+                    .is_modal_id(ComponentId::SimpleDialog as u8)
                 {
                     render_component_in_given_box! {
                       in:                 surface,
                       box:                FlexBox::default(), /* This is not used as the modal breaks out of its box. */
-                      component_id:       ComponentId::SimpleDialog.int_value(),
+                      component_id:       ComponentId::SimpleDialog as u8,
                       from:               self.0.component_registry,
                       state:              state,
                       shared_store:       shared_store,
@@ -394,12 +391,12 @@ mod perform_layout {
                     .0
                     .component_registry
                     .has_focus
-                    .is_modal_id(ComponentId::AutocompleteDialog.int_value())
+                    .is_modal_id(ComponentId::AutocompleteDialog as u8)
                 {
                     render_component_in_given_box! {
                       in:                 surface,
                       box:                FlexBox::default(), /* This is not used as the modal breaks out of its box. */
-                      component_id:       ComponentId::AutocompleteDialog.int_value(),
+                      component_id:       ComponentId::AutocompleteDialog as u8,
                       from:               self.0.component_registry,
                       state:              state,
                       shared_store:       shared_store,
@@ -425,7 +422,7 @@ mod populate_component_registry {
         // Switch focus to the editor component if focus is not set.
         this.component_registry
             .has_focus
-            .set_id(ComponentId::Editor.int_value());
+            .set_id(ComponentId::Editor as u8);
         call_if_true!(DEBUG_TUI_MOD, {
             {
                 let msg = format!(
@@ -444,10 +441,10 @@ mod populate_component_registry {
 
         let dialog_options = DialogEngineConfigOptions {
             mode: DialogEngineMode::ModalAutocomplete,
-            maybe_style_border: get_style! { @from_result: result_stylesheet , DialogStyleName::Border.int_value() },
-            maybe_style_title: get_style! { @from_result: result_stylesheet , DialogStyleName::Title.int_value() },
-            maybe_style_editor: get_style! { @from_result: result_stylesheet , DialogStyleName::Editor.int_value() },
-            maybe_style_results_panel: get_style! { @from_result: result_stylesheet , DialogStyleName::ResultsPanel.int_value() },
+            maybe_style_border: get_style! { @from_result: result_stylesheet , DialogStyleName::Border as u8 },
+            maybe_style_title: get_style! { @from_result: result_stylesheet , DialogStyleName::Title as u8 },
+            maybe_style_editor: get_style! { @from_result: result_stylesheet , DialogStyleName::Editor as u8 },
+            maybe_style_results_panel: get_style! { @from_result: result_stylesheet , DialogStyleName::ResultsPanel as u8 },
             ..Default::default()
         };
 
@@ -458,7 +455,7 @@ mod populate_component_registry {
 
         let shared_dialog_component = {
             let it = DialogComponent::new_shared(
-                ComponentId::AutocompleteDialog.int_value(),
+                ComponentId::AutocompleteDialog as u8,
                 dialog_options,
                 editor_options,
                 on_dialog_press_handler,
@@ -474,7 +471,7 @@ mod populate_component_registry {
                         spawn_dispatch_action!(
                             shared_store,
                             Action::AutocompleteDialogComponentInitializeFocused(
-                                ComponentId::AutocompleteDialog.int_value(),
+                                ComponentId::AutocompleteDialog as u8,
                                 "Yes".to_string(),
                                 text
                             )
@@ -484,7 +481,7 @@ mod populate_component_registry {
                         spawn_dispatch_action!(
                             shared_store,
                             Action::AutocompleteDialogComponentInitializeFocused(
-                                ComponentId::AutocompleteDialog.int_value(),
+                                ComponentId::AutocompleteDialog as u8,
                                 "No".to_string(),
                                 "".to_string()
                             )
@@ -500,7 +497,7 @@ mod populate_component_registry {
                 spawn_dispatch_action!(
                     shared_store,
                     Action::AutocompleteDialogComponentUpdateContent(
-                        ComponentId::AutocompleteDialog.int_value(),
+                        ComponentId::AutocompleteDialog as u8,
                         editor_buffer
                     )
                 );
@@ -510,7 +507,7 @@ mod populate_component_registry {
         };
 
         this.component_registry.put(
-            ComponentId::AutocompleteDialog.int_value(),
+            ComponentId::AutocompleteDialog as u8,
             shared_dialog_component,
         );
 
@@ -529,10 +526,10 @@ mod populate_component_registry {
 
         let dialog_options = DialogEngineConfigOptions {
             mode: DialogEngineMode::ModalSimple,
-            maybe_style_border: get_style! { @from_result: result_stylesheet , DialogStyleName::Border.int_value() },
-            maybe_style_title: get_style! { @from_result: result_stylesheet , DialogStyleName::Title.int_value() },
-            maybe_style_editor: get_style! { @from_result: result_stylesheet , DialogStyleName::Editor.int_value() },
-            maybe_style_results_panel: get_style! { @from_result: result_stylesheet , DialogStyleName::ResultsPanel.int_value() },
+            maybe_style_border: get_style! { @from_result: result_stylesheet , DialogStyleName::Border as u8 },
+            maybe_style_title: get_style! { @from_result: result_stylesheet , DialogStyleName::Title as u8 },
+            maybe_style_editor: get_style! { @from_result: result_stylesheet , DialogStyleName::Editor as u8 },
+            maybe_style_results_panel: get_style! { @from_result: result_stylesheet , DialogStyleName::ResultsPanel as u8 },
             ..Default::default()
         };
 
@@ -543,7 +540,7 @@ mod populate_component_registry {
 
         let shared_dialog_component = {
             let it = DialogComponent::new_shared(
-                ComponentId::SimpleDialog.int_value(),
+                ComponentId::SimpleDialog as u8,
                 dialog_options,
                 editor_options,
                 on_dialog_press_handler,
@@ -559,7 +556,7 @@ mod populate_component_registry {
                         spawn_dispatch_action!(
                             shared_store,
                             Action::SimpleDialogComponentInitializeFocused(
-                                ComponentId::SimpleDialog.int_value(),
+                                ComponentId::SimpleDialog as u8,
                                 "Yes".to_string(),
                                 text
                             )
@@ -569,7 +566,7 @@ mod populate_component_registry {
                         spawn_dispatch_action!(
                             shared_store,
                             Action::SimpleDialogComponentInitializeFocused(
-                                ComponentId::SimpleDialog.int_value(),
+                                ComponentId::SimpleDialog as u8,
                                 "No".to_string(),
                                 "".to_string()
                             )
@@ -585,7 +582,7 @@ mod populate_component_registry {
                 spawn_dispatch_action!(
                     shared_store,
                     Action::SimpleDialogComponentUpdateContent(
-                        ComponentId::SimpleDialog.int_value(),
+                        ComponentId::SimpleDialog as u8,
                         editor_buffer
                     )
                 );
@@ -594,10 +591,8 @@ mod populate_component_registry {
             it
         };
 
-        this.component_registry.put(
-            ComponentId::SimpleDialog.int_value(),
-            shared_dialog_component,
-        );
+        this.component_registry
+            .put(ComponentId::SimpleDialog as u8, shared_dialog_component);
 
         call_if_true!(DEBUG_TUI_MOD, {
             let msg = format!(
@@ -610,7 +605,7 @@ mod populate_component_registry {
 
     /// Insert editor component into registry if it's not already there.
     fn insert_editor_component(this: &mut AppWithLayout) {
-        let id = ComponentId::Editor.int_value();
+        let id = ComponentId::Editor as u8;
         let shared_editor_component = {
             fn on_buffer_change(
                 shared_store: &SharedStore<State, Action>,
@@ -672,33 +667,33 @@ mod stylesheet {
         throws_with_return!({
             stylesheet! {
               style! {
-                id: EditorStyleName::Default.int_value()
+                id: EditorStyleName::Default as u8
                 padding: 1
                 // These are ignored due to syntax highlighting.
                 // attrib: [bold]
                 // color_fg: TuiColor::Blue
               },
               style! {
-                id: DialogStyleName::Title.int_value()
+                id: DialogStyleName::Title as u8
                 lolcat: true
                 // These are ignored due to lolcat: true.
                 // attrib: [bold]
                 // color_fg: TuiColor::Yellow
               },
               style! {
-                id: DialogStyleName::Border.int_value()
+                id: DialogStyleName::Border as u8
                 lolcat: true
                 // These are ignored due to lolcat: true.
                 // attrib: [dim]
                 // color_fg: TuiColor::Green
               },
               style! {
-                id: DialogStyleName::Editor.int_value()
+                id: DialogStyleName::Editor as u8
                 attrib: [bold]
                 color_fg: TuiColor::Magenta
               },
               style! {
-                id: DialogStyleName::ResultsPanel.int_value()
+                id: DialogStyleName::ResultsPanel as u8
                 // attrib: [bold]
                 color_fg: TuiColor::Blue
               }

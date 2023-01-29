@@ -18,7 +18,6 @@
 use std::{fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
-use int_enum::IntEnum;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
 use r3bl_tui::*;
@@ -28,7 +27,7 @@ use super::*;
 
 // Constants for the ids.
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, IntEnum)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Id {
     Container = 1,
     Col1 = 2,
@@ -155,24 +154,24 @@ mod perform_layout {
                 // Container.
                 box_start!(
                     in: surface,
-                    id: Id::Container.int_value(),
+                    id: Id::Container as u8,
                     dir: Direction::Horizontal,
                     requested_size_percent: requested_size_percent!(width: 100, height: 100),
-                    styles:                 [Id::Container.int_value()],
+                    styles:                 [Id::Container as u8],
                 );
 
                 // Col1.
                 {
                     box_start!(
                       in:                     surface,
-                      id:                     Id::Col1.int_value(),
+                      id:                     Id::Col1 as u8,
                       dir:                    Direction::Vertical,
                       requested_size_percent: requested_size_percent!(width: 50, height: 100),
-                      styles:                 [Id::Col1.int_value()],
+                      styles:                 [Id::Col1 as u8],
                     );
                     render_component_in_current_box!(
                         in:                 surface,
-                        component_id:       Id::Col1.int_value(),
+                        component_id:       Id::Col1 as u8,
                         from:               self.0.component_registry,
                         state:              state,
                         shared_store:       shared_store,
@@ -186,14 +185,14 @@ mod perform_layout {
                 {
                     box_start!(
                       in:                     surface,
-                      id:                     Id::Col2.int_value(),
+                      id:                     Id::Col2 as u8,
                       dir:                    Direction::Vertical,
                       requested_size_percent: requested_size_percent!(width: 50, height: 100),
-                      styles:                 [Id::Col2.int_value()],
+                      styles:                 [Id::Col2 as u8],
                     );
                     render_component_in_current_box!(
                         in:                 surface,
-                        component_id:       Id::Col2.int_value(),
+                        component_id:       Id::Col2 as u8,
                         from:               self.0.component_registry,
                         state:              state,
                         shared_store:       shared_store,
@@ -255,11 +254,11 @@ mod handle_focus {
                 if special_key == SpecialKey::Left {
                     self.component_registry
                         .has_focus
-                        .set_id(Id::Col1.int_value())
+                        .set_id(Id::Col1 as u8)
                 } else {
                     self.component_registry
                         .has_focus
-                        .set_id(Id::Col2.int_value())
+                        .set_id(Id::Col2 as u8)
                 }
             } else {
                 log_error("No focus id has been set, and it should be set!".to_string());
@@ -274,7 +273,7 @@ mod populate_component_registry {
     impl AppWithLayout {
         pub fn init_component_registry(&mut self) {
             // Construct COL_1_ID.
-            let col1_id = Id::Col1.int_value();
+            let col1_id = Id::Col1 as u8;
             if self.component_registry.does_not_contain(col1_id) {
                 let component = ColumnRenderComponent::new(col1_id);
                 let shared_component = Arc::new(RwLock::new(component));
@@ -282,7 +281,7 @@ mod populate_component_registry {
             }
 
             // Construct COL_2_ID.
-            let col2_id = Id::Col2.int_value();
+            let col2_id = Id::Col2 as u8;
             if self.component_registry.does_not_contain(col2_id) {
                 let component = ColumnRenderComponent::new(col2_id);
                 let shared_component = Arc::new(RwLock::new(component));
@@ -316,16 +315,16 @@ mod stylesheet {
         throws_with_return!({
             stylesheet! {
               style! {
-                id: Id::Container.int_value()
+                id: Id::Container as u8
                 padding: 1
               },
               style! {
-                id: Id::Col1.int_value()
+                id: Id::Col1 as u8
                 padding: 1
                 color_bg: TuiColor::Rgb { r: 55, g: 55, b: 100 }
               },
               style! {
-                id: Id::Col2.int_value()
+                id: Id::Col2 as u8
                 padding: 1
                 color_bg: TuiColor::Rgb { r: 55, g: 55, b: 248 }
               }

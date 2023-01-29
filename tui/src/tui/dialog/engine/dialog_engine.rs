@@ -93,8 +93,6 @@ pub struct DialogEngineConfigOptions {
 }
 
 mod dialog_engine_config_options_impl {
-    use int_enum::IntEnum;
-
     use super::*;
 
     impl Default for DialogEngineConfigOptions {
@@ -102,7 +100,7 @@ mod dialog_engine_config_options_impl {
             Self {
                 mode: DialogEngineMode::ModalSimple,
                 result_panel_display_row_count: ch!(
-                    DisplayConstants::DefaultResultsPanelRowCount.int_value()
+                    DisplayConstants::DefaultResultsPanelRowCount as u16
                 ),
                 maybe_style_border: None,
                 maybe_style_editor: None,
