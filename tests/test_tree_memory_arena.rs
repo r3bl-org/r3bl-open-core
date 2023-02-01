@@ -17,11 +17,13 @@
 
 //! Integration tests for the `tree_memory_arena` module.
 
-use std::{sync::Arc,
+use std::{collections::VecDeque,
+          sync::Arc,
           thread::{self, JoinHandle}};
 
 /// Rust book: https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory
-use r3bl_rs_utils::tree_memory_arena::{Arena, MTArena, ResultUidList};
+use r3bl_rs_utils::{tree_memory_arena::{Arena, MTArena, ResultUidList},
+                    TraversalKind};
 use r3bl_rs_utils_core::{style_primary, style_prompt};
 
 #[test]
@@ -92,59 +94,66 @@ fn test_can_walk_tree_and_delete_nodes_from_tree() {
     //   |    +- gc2
     //   +- child2
 
-    let root = arena.add_new_node("root".to_string(), None);
-    let child1 = arena.add_new_node("child1".to_string(), root.into());
-    let gc_1_id = arena.add_new_node("gc1".to_string(), child1.into());
-    let gc_2_id = arena.add_new_node("gc2".to_string(), child1.into());
-    let child_2_id = arena.add_new_node("child2".to_string(), root.into());
+    let root_id = arena.add_new_node("root".to_string(), None);
+    let child1_id = arena.add_new_node("child1".to_string(), root_id.into());
+    let gc1_id = arena.add_new_node("gc1".to_string(), child1_id.into());
+    let gc2_id = arena.add_new_node("gc2".to_string(), child1_id.into());
+    let child2_id = arena.add_new_node("child2".to_string(), root_id.into());
     println!("{}, {arena:#?}", style_primary("arena"));
 
     // Test that the data is correct for each node.
-    assert_node_data_is_eq(&arena, root, "root");
-    assert_node_data_is_eq(&arena, child1, "child1");
-    assert_node_data_is_eq(&arena, gc_1_id, "gc1");
-    assert_node_data_is_eq(&arena, gc_2_id, "gc2");
-    assert_node_data_is_eq(&arena, child_2_id, "child2");
+    assert_node_data_is_eq(&arena, root_id, "root");
+    assert_node_data_is_eq(&arena, child1_id, "child1");
+    assert_node_data_is_eq(&arena, gc1_id, "gc1");
+    assert_node_data_is_eq(&arena, gc2_id, "gc2");
+    assert_node_data_is_eq(&arena, child2_id, "child2");
 
-    assert_eq!(arena.get_children_of(root).unwrap().len(), 2);
-    assert!(arena.get_parent_of(root).is_none());
+    assert_eq!(arena.get_children_of(root_id).unwrap().len(), 2);
+    assert!(arena.get_parent_of(root_id).is_none());
 
-    assert_eq!(arena.get_children_of(child1).unwrap().len(), 2);
-    assert_eq!(arena.get_parent_of(child1).unwrap(), root);
+    assert_eq!(arena.get_children_of(child1_id).unwrap().len(), 2);
+    assert_eq!(arena.get_parent_of(child1_id).unwrap(), root_id);
 
-    // Test that tree walking works correctly for nodes.
-    assert_eq!(arena.tree_walk_dfs(root).unwrap().len(), 5);
+    // Test that tree walking works correctly for nodes - DFS.
+    {
+        assert_eq!(
+            arena.tree_walk_dfs(root_id).unwrap(),
+            VecDeque::from([root_id, child1_id, gc1_id, gc2_id, child2_id])
+        );
 
-    let child1_and_descendants = arena.tree_walk_dfs(child1).unwrap();
-    assert_eq!(child1_and_descendants.len(), 3);
-    assert!(child1_and_descendants.contains(&child1));
-    assert!(child1_and_descendants.contains(&gc_1_id));
-    assert!(child1_and_descendants.contains(&gc_2_id));
+        let child1_and_descendants = arena.tree_walk_dfs(child1_id).unwrap();
+        assert_eq!(child1_and_descendants, vec![child1_id, gc1_id, gc2_id]);
+    }
 
-    assert_eq!(arena.tree_walk_dfs(child_2_id).unwrap().len(), 1);
-    assert!(arena
-        .tree_walk_dfs(child_2_id)
-        .unwrap()
-        .contains(&child_2_id));
+    // Test that tree walking works correctly for nodes - BFS.
+    {
+        assert_eq!(
+            arena.tree_walk_bfs(root_id).unwrap(),
+            VecDeque::from([root_id, child1_id, child2_id, gc1_id, gc2_id])
+        );
+
+        let child1_and_descendants = arena.tree_walk_bfs(child1_id).unwrap();
+        assert_eq!(child1_and_descendants, vec![child1_id, gc1_id, gc2_id]);
+    }
 
     // Test that node deletion works correctly.
     {
         println!(
             "{} {:?}",
             style_primary("root -before- ==>"),
-            arena.tree_walk_dfs(root).unwrap()
+            arena.tree_walk_dfs(root_id).unwrap()
         );
-        let deletion_list = arena.delete_node(child1);
+        let deletion_list = arena.delete_node(child1_id);
         assert_eq!(deletion_list.as_ref().unwrap().len(), 3);
-        assert!(deletion_list.as_ref().unwrap().contains(&gc_1_id));
-        assert!(deletion_list.as_ref().unwrap().contains(&gc_2_id));
-        assert!(deletion_list.as_ref().unwrap().contains(&child1));
+        assert!(deletion_list.as_ref().unwrap().contains(&gc1_id));
+        assert!(deletion_list.as_ref().unwrap().contains(&gc2_id));
+        assert!(deletion_list.as_ref().unwrap().contains(&child1_id));
         println!(
             "{} {:?}",
             style_prompt("root -after- <=="),
-            arena.tree_walk_dfs(root).unwrap()
+            arena.tree_walk_dfs(root_id).unwrap()
         );
-        assert_eq!(dbg!(arena.tree_walk_dfs(root).unwrap()).len(), 2);
+        assert_eq!(dbg!(arena.tree_walk_dfs(root_id).unwrap()).len(), 2);
     }
 
     // Helper functions.
@@ -211,9 +220,9 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
         let arena_arc = arena.get_arena_arc();
         let thread = thread::spawn(move || {
             let mut arena_write = arena_arc.write().unwrap();
-            let parent: Option<Vec<usize>> =
+            let parent: Option<VecDeque<usize>> =
                 arena_write.filter_all_nodes_by(&move |_id, payload| payload == "foo");
-            let parent_id = *parent.unwrap().first().unwrap();
+            let parent_id = *parent.unwrap().front().unwrap();
             let child = arena_write.add_new_node("bar".to_string(), parent_id.into());
             vec![parent_id, child]
         });
@@ -226,9 +235,9 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
         let arena_arc = arena.get_arena_arc();
         let thread = thread::spawn(move || {
             let mut arena_write = arena_arc.write().unwrap();
-            let parent: Option<Vec<usize>> =
+            let parent: Option<VecDeque<usize>> =
                 arena_write.filter_all_nodes_by(&move |_id, payload| payload == "foo");
-            let parent_id = *parent.unwrap().first().unwrap();
+            let parent_id = *parent.unwrap().front().unwrap();
             let child = arena_write.add_new_node("baz".to_string(), parent_id.into());
             vec![parent_id, child]
         });
@@ -260,7 +269,7 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
         // Walk tree w/ a new thread using arc to lambda.
         {
             let thread_handle: JoinHandle<ResultUidList> =
-                arena.tree_walk_parallel(0, fn_arc.clone());
+                arena.tree_walk_parallel(0, fn_arc.clone(), TraversalKind::BreadthFirst);
 
             let result_node_list = thread_handle.join().unwrap();
             println!("{result_node_list:#?}");
@@ -268,7 +277,8 @@ fn test_mt_arena_insert_and_walk_in_parallel() {
 
         // Walk tree w/ a new thread using arc to lambda.
         {
-            let thread_handle: JoinHandle<ResultUidList> = arena.tree_walk_parallel(1, fn_arc);
+            let thread_handle: JoinHandle<ResultUidList> =
+                arena.tree_walk_parallel(1, fn_arc, TraversalKind::DepthFirst);
 
             let result_node_list = thread_handle.join().unwrap();
             println!("{result_node_list:#?}");
