@@ -39,7 +39,7 @@ use crate::utils::ReadGuarded;
 /// use std::{sync::Arc,
 ///           thread::{self, JoinHandle}};
 ///
-/// use r3bl_rs_utils::tree_memory_arena::{Arena, HasId, MTArena, ResultUidList};
+/// use r3bl_rs_utils::tree_memory_arena::{Arena, HasId, MTArena, ResultUidList, TraversalKind};
 /// use r3bl_rs_utils_core::{style_primary, style_prompt};
 ///
 /// type ThreadResult = Vec<usize>;
@@ -76,16 +76,16 @@ use crate::utils::ReadGuarded;
 ///
 ///   // Walk tree w/ a new thread using arc to lambda.
 ///   {
-///     let thread_handle: JoinHandle<ResultUidList> = arena.tree_walk_parallel(0, fn_arc.clone());
-///
+///     let thread_handle: JoinHandle<ResultUidList> = arena.tree_walk_parallel(
+///       0, fn_arc.clone(), TraversalKind::BreadthFirst);
 ///     let result_node_list = thread_handle.join().unwrap();
 ///     println!("{:#?}", result_node_list);
 ///   }
 ///
 ///   // Walk tree w/ a new thread using arc to lambda.
 ///   {
-///     let thread_handle: JoinHandle<ResultUidList> = arena.tree_walk_parallel(1, fn_arc.clone());
-///
+///     let thread_handle: JoinHandle<ResultUidList> = arena.tree_walk_parallel(
+///       1, fn_arc.clone(), TraversalKind::DepthFirst);
 ///     let result_node_list = thread_handle.join().unwrap();
 ///     println!("{:#?}", result_node_list);
 ///   }
@@ -122,13 +122,17 @@ where
         &self,
         node_id: usize,
         walker_fn: Arc<WalkerFn<T>>,
+        traversal_kind: super::TraversalKind,
     ) -> JoinHandle<ResultUidList> {
         let arena_arc = self.get_arena_arc();
         let walker_fn_arc = walker_fn;
 
         spawn(move || {
             let read_guard: ReadGuarded<'_, Arena<T>> = arena_arc.read().unwrap();
-            let return_value = read_guard.tree_walk_dfs(node_id);
+            let return_value = match traversal_kind {
+                TraversalKind::DepthFirst => read_guard.tree_walk_dfs(node_id),
+                TraversalKind::BreadthFirst => read_guard.tree_walk_bfs(node_id),
+            };
 
             // While walking the tree, in a separate thread, call the `walker_fn` for each
             // node.
@@ -145,6 +149,12 @@ where
             return_value
         })
     }
+}
+
+#[derive(Debug)]
+pub enum TraversalKind {
+    DepthFirst,
+    BreadthFirst,
 }
 
 impl<T> Default for MTArena<T>

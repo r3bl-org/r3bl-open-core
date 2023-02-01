@@ -38,7 +38,8 @@
     "minhdo.tokyo-darker-night",
     "enkia.tokyo-night",
     "bierner.emojisense",
-    "lorenzopirro.rust-flash-snippets"
+    "lorenzopirro.rust-flash-snippets",
+    "nicholashsiang.vscode-opened-editors"
   ],
   // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
   "unwantedRecommendations": []

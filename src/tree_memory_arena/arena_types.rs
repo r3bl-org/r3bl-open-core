@@ -17,7 +17,7 @@
 
 //! Type aliases to improve code readability.
 
-use std::{collections::HashMap,
+use std::{collections::{HashMap, VecDeque},
           sync::{Arc, RwLock, Weak}};
 
 use super::{Arena, Node};
@@ -41,7 +41,7 @@ pub type NodeRef<T> = Arc<RwLock<Node<T>>>;
 pub type WeakNodeRef<T> = Weak<RwLock<Node<T>>>;
 pub type ArenaMap<T> = HashMap<usize, NodeRef<T>>;
 
-pub type ResultUidList = Option<Vec<usize>>;
+pub type ResultUidList = Option<VecDeque<usize>>;
 
 // Filter lambda signature.
 pub type FilterFn<T> = dyn Fn(usize, T) -> bool + Send + Sync;

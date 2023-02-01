@@ -17,7 +17,7 @@
 
 //! [`Arena`] is defined here.
 
-use std::{collections::HashMap,
+use std::{collections::{HashMap, VecDeque},
           fmt::Debug,
           sync::{atomic::AtomicUsize, Arc, RwLock}};
 
@@ -36,8 +36,8 @@ where
     T: Debug + Clone + Send + Sync,
 {
     pub id: usize,
-    pub parent: Option<usize>,
-    pub children: Vec<usize>,
+    pub parent_id: Option<usize>,
+    pub children_ids: VecDeque<usize>,
     pub payload: T,
 }
 
@@ -131,7 +131,7 @@ where
                 .iter()
                 .filter(|(id, node_ref)| filter_fn(**id, node_ref.read().unwrap().payload.clone()))
                 .map(|(id, _node_ref)| *id)
-                .collect::<Vec<usize>>();
+                .collect::<VecDeque<usize>>();
             match filtered_map.len() {
                 0 => None,
                 _ => Some(filtered_map),
@@ -151,10 +151,10 @@ where
 
         let result =
             if let Ok(node_to_lookup /* ReadGuarded<'_, Node<T>> */) = node_to_lookup.read() {
-                if node_to_lookup.children.is_empty() {
+                if node_to_lookup.children_ids.is_empty() {
                     return None;
                 }
-                Some(node_to_lookup.children.clone())
+                Some(node_to_lookup.children_ids.clone())
             } else {
                 None
             };
@@ -172,7 +172,7 @@ where
 
         let result =
             if let Ok(node_to_lookup /* ReadGuarded<'_, Node<T>> */) = node_to_lookup.read() {
-                node_to_lookup.parent
+                node_to_lookup.parent_id
             } else {
                 None
             };
@@ -207,7 +207,9 @@ where
             if let Some(parent_node_arc) = parent_node_arc_opt {
                 if let Ok(mut parent_node /* WriteGuarded<'_, Node<T>> */) = parent_node_arc.write()
                 {
-                    parent_node.children.retain(|child_id| *child_id != node_id);
+                    parent_node
+                        .children_ids
+                        .retain(|child_id| *child_id != node_id);
                 }
             }
         };
@@ -236,23 +238,58 @@ where
         if !self.node_exists(node_id) {
             return None;
         }
-        
-        let mut collected_nodes: Vec<usize> = vec![];
-        let mut stack: Vec<usize> = vec![node_id.get_id()];
 
-        while let Some(node_id) = stack.pop() {
+        let mut stack: VecDeque<usize> = VecDeque::from([node_id.get_id()]);
+
+        let mut it: VecDeque<usize> = VecDeque::new();
+
+        while let Some(node_id) = stack.pop_back() {
             // Question mark operator works below, since it returns a `Option` to `while let ...`.
             // Basically skip to the next item in the `stack` if `node_id` can't be found.
             let node_ref = self.get_node_arc(node_id)?;
             unwrap_arc_read_lock_and_call(&node_ref, &mut |node| {
-                collected_nodes.push(node.get_id());
-                stack.extend(node.children.iter().cloned());
+                it.push_back(node.get_id());
+                // Note that the children ordering has to be flipped! You want to perform the
+                // traversal from RIGHT -> LEFT (not LEFT -> RIGHT).
+                // PTAL: <https://developerlife.com/assets/algo-ts-2-images/depth-first-search.svg>
+                for child_id in node.children_ids.iter().rev() {
+                    stack.push_back(*child_id);
+                }
             });
         }
 
-        match collected_nodes.len() {
+        match it.len() {
             0 => None,
-            _ => Some(collected_nodes),
+            _ => Some(it),
+        }
+    }
+
+    /// - [BFS graph walking](https://developerlife.com/2018/08/16/algorithms-in-kotlin-5/)
+    /// - [BFS tree walking](https://stephenweiss.dev/algorithms-depth-first-search-dfs#handling-non-binary-trees)
+    pub fn tree_walk_bfs(&self, node_id: usize) -> ResultUidList {
+        if !self.node_exists(node_id) {
+            return None;
+        }
+
+        let mut queue: VecDeque<usize> = VecDeque::from([node_id.get_id()]);
+
+        let mut it: VecDeque<usize> = VecDeque::new();
+
+        while let Some(node_id) = queue.pop_front() {
+            // Question mark operator works below, since it returns a `Option` to `while let ...`.
+            // Basically skip to the next item in the `stack` if `node_id` can't be found.
+            let node_ref = self.get_node_arc(node_id)?;
+            unwrap_arc_read_lock_and_call(&node_ref, &mut |node| {
+                it.push_back(node.get_id());
+                for child_id in node.children_ids.iter() {
+                    queue.push_back(*child_id);
+                }
+            });
+        }
+
+        match it.len() {
+            0 => None,
+            _ => Some(it),
         }
     }
 
@@ -285,12 +322,12 @@ where
     }
 
     /// Note `data` is cloned to avoid `data` being moved. If `parent_id` can't be found, it panics.
-    pub fn add_new_node(&mut self, data: T, parent_id_opt: Option<usize>) -> usize {
-        let parent_id_arg_provided = parent_id_opt.is_some();
+    pub fn add_new_node(&mut self, payload: T, maybe_parent_id: Option<usize>) -> usize {
+        let parent_id_arg_provided = maybe_parent_id.is_some();
 
         // Check to see if `parent_id` exists.
         if parent_id_arg_provided {
-            let parent_id = parent_id_opt.unwrap();
+            let parent_id = maybe_parent_id.unwrap();
             if !self.node_exists(parent_id) {
                 panic!("Parent node doesn't exist.");
             }
@@ -298,26 +335,29 @@ where
 
         let new_node_id = self.generate_uid();
 
+        // Create a new node from payload & add it to the arena.
         with_mut(&mut self.map.write().unwrap(), &mut |map| {
             let value = Arc::new(RwLock::new(Node {
                 id: new_node_id,
-                parent: if parent_id_arg_provided {
-                    let parent_id = parent_id_opt.unwrap();
+                parent_id: if parent_id_arg_provided {
+                    let parent_id = maybe_parent_id.unwrap();
                     Some(parent_id.get_id())
                 } else {
                     None
                 },
-                children: vec![],
-                payload: data.clone(),
+                children_ids: VecDeque::new(),
+                payload: payload.clone(),
             }));
             map.insert(new_node_id, value);
         });
 
-        if let Some(parent_id) = parent_id_opt {
-            let parent_node_arc_opt = self.get_node_arc(parent_id);
-            call_if_some(&parent_node_arc_opt, &|parent_node_arc| {
+        // Deal w/ adding this newly created node to the parent's children list.
+        if let Some(parent_id) = maybe_parent_id {
+            let maybe_parent_node_arc = self.get_node_arc(parent_id);
+            call_if_some(&maybe_parent_node_arc, &|parent_node_arc| {
                 unwrap_arc_write_lock_and_call(parent_node_arc, &mut |parent_node| {
-                    parent_node.children.push(new_node_id);
+                    // Preserve the natural order of insertion.
+                    parent_node.children_ids.push_back(new_node_id);
                 });
             });
         }
