@@ -26,9 +26,10 @@ use crate::utils::{call_if_some,
                    unwrap_arc_read_lock_and_call,
                    unwrap_arc_write_lock_and_call,
                    with_mut};
-/// This struct represents a node in a tree. It may have a parent. It can hold
-/// multiple children. And it has a payload. It also has an id that uniquely
-/// identifies it. An [`Arena`] or [`super::MTArena`] is used to hold nodes.
+
+/// This struct represents a node in a tree. It may have a parent. It can hold multiple children.
+/// And it has a payload. It also has an id that uniquely identifies it. An [`Arena`] or
+/// [`super::MTArena`] is used to hold nodes.
 #[derive(Debug)]
 pub struct Node<T>
 where
@@ -50,15 +51,14 @@ where
     fn get_id(&self) -> usize { self.id.get_id() }
 }
 
-/// Data structure to store & manipulate a (non-binary) tree of data in memory.
-/// It can be used as the basis to implement a plethora of different data
-/// structures. The non-binary tree is just one example of what can be built
-/// using the underlying code.
+/// Data structure to store & manipulate a (non-binary) tree of data in memory. It can be used as
+/// the basis to implement a plethora of different data structures. The non-binary tree is just one
+/// example of what can be built using the underlying code.
 ///
 /// 1. [Wikipedia definition of memory
 ///    arena](https://en.wikipedia.org/wiki/Region-based_memory_management)
-/// 2. You can learn more about how this library was built from this
-/// [developerlife.com    article](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
+/// 2. You can learn more about how this library was built from this [developerlife.com
+///    article](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
 ///
 /// # Examples
 ///
@@ -230,19 +230,19 @@ where
         deletion_list.into()
     }
 
-    /// DFS graph walking: <https://developerlife.com/2018/08/16/algorithms-in-kotlin-5/>
-    /// DFS tree walking: <https://stephenweiss.dev/algorithms-depth-first-search-dfs#handling-non-binary-trees>
+    /// - [DFS graph walking](https://developerlife.com/2018/08/16/algorithms-in-kotlin-5/)
+    /// - [DFS tree walking](https://stephenweiss.dev/algorithms-depth-first-search-dfs#handling-non-binary-trees)
     pub fn tree_walk_dfs(&self, node_id: usize) -> ResultUidList {
         if !self.node_exists(node_id) {
             return None;
         }
+        
         let mut collected_nodes: Vec<usize> = vec![];
         let mut stack: Vec<usize> = vec![node_id.get_id()];
 
         while let Some(node_id) = stack.pop() {
-            // Question mark operator works below, since it returns a `Option` to `while let
-            // ...`. Basically skip to the next item in the `stack` if `node_id` can't
-            // be found.
+            // Question mark operator works below, since it returns a `Option` to `while let ...`.
+            // Basically skip to the next item in the `stack` if `node_id` can't be found.
             let node_ref = self.get_node_arc(node_id)?;
             unwrap_arc_read_lock_and_call(&node_ref, &mut |node| {
                 collected_nodes.push(node.get_id());
@@ -256,8 +256,8 @@ where
         }
     }
 
-    /// If `node_id` can't be found, returns `None`.
-    /// More info on `Option.map()`: <https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=d5a54a042fea085ef8c9122b7ea47c6a>
+    /// If `node_id` can't be found, returns `None`. More info on
+    /// [`Option.map()`](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=d5a54a042fea085ef8c9122b7ea47c6a)
     pub fn get_node_arc_weak(&self, node_id: usize) -> Option<WeakNodeRef<T>> {
         if !self.node_exists(node_id) {
             return None;
@@ -270,8 +270,8 @@ where
         }
     }
 
-    /// If `node_id` can't be found, returns `None`.
-    /// More info on `Option.map()`: <https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=d5a54a042fea085ef8c9122b7ea47c6a>
+    /// If `node_id` can't be found, returns `None`. More info on
+    /// [`Option.map()`](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=d5a54a042fea085ef8c9122b7ea47c6a)
     pub fn get_node_arc(&self, node_id: usize) -> Option<NodeRef<T>> {
         if !self.node_exists(node_id) {
             return None;
@@ -284,8 +284,7 @@ where
         }
     }
 
-    /// Note `data` is cloned to avoid `data` being moved.
-    /// If `parent_id` can't be found, it panics.
+    /// Note `data` is cloned to avoid `data` being moved. If `parent_id` can't be found, it panics.
     pub fn add_new_node(&mut self, data: T, parent_id_opt: Option<usize>) -> usize {
         let parent_id_arg_provided = parent_id_opt.is_some();
 
