@@ -11,7 +11,8 @@ the crates in the project.
 Starting at the root folder of the project, eg `~/github/r3bl_rs_utils/`, the following steps are
 applied to each crate (`core`, `macro`, `redux`, `tui`, and "public" / self):
 
-1. Update the version in `Cargo.toml`.
+1. Update the version in `Cargo.toml`. Then update all the remaining `Cargo.toml` in the other
+   crates so that `./build.fish` runs.
 2. Run the script `./upgrade-deps.fish` in the `~/github/r3bl_rs_utils/` folder. This will update
    all the dependencies in all the crates.
 3. Make a git commit eg `vX.Y.Z-$crate` where `$crate` is the name of the crate, and `vX.Y.Z` is the
@@ -33,7 +34,7 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 
 | Crate  | Version | Status                                       |
 | ------ | ------- | -------------------------------------------- |
-| core   | 0.8.4   | https://crates.io/crates/r3bl_rs_utils_core  |
+| core   | 0.9.0   | https://crates.io/crates/r3bl_rs_utils_core  |
 | macro  | 0.8.4   | https://crates.io/crates/r3bl_rs_utils_macro |
 | redux  | 0.1.4   | https://crates.io/crates/r3bl_rs_utils_redux |
 | tui    | 0.2.0   | https://crates.io/crates/r3bl_rs_utils_tui   |
