@@ -32,10 +32,10 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 
 ## Current release status as of Dec 10 2022
 
-| Crate  | Version | Status                                       |
-| ------ | ------- | -------------------------------------------- |
-| core   | 0.9.0   | https://crates.io/crates/r3bl_rs_utils_core  |
-| macro  | 0.8.4   | https://crates.io/crates/r3bl_rs_utils_macro |
-| redux  | 0.1.4   | https://crates.io/crates/r3bl_rs_utils_redux |
-| tui    | 0.2.0   | https://crates.io/crates/r3bl_rs_utils_tui   |
-| public | 0.9.3   | https://crates.io/crates/r3bl_rs_utils       |
+| Crate  | Version      | Status                                       |
+| ------ | ------------ | -------------------------------------------- |
+| core   | 0.9.0-core   | https://crates.io/crates/r3bl_rs_utils_core  |
+| macro  | 0.9.0-macro  | https://crates.io/crates/r3bl_rs_utils_macro |
+| redux  | 0.1.4-redux  | https://crates.io/crates/r3bl_rs_utils_redux |
+| tui    | 0.2.0-tui    | https://crates.io/crates/r3bl_rs_utils_tui   |
+| public | 0.9.3-public | https://crates.io/crates/r3bl_rs_utils       |
