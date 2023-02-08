@@ -437,8 +437,9 @@
 //!
 //! # Redux for state management
 //!
-//! If you use Redux for state management, then you will create a [r3bl_redux::Store] that is passed
-//! into the [TerminalWindow]. Here's an example of this.
+//! If you use Redux for state management, then you will create a [crate::redux] [crate::Store] that
+//! is passed into the [TerminalWindow]. For more detailed information on Redux, please read the
+//! [docs for the `r3bl_redux` create](https://docs.rs/r3bl_redux/latest/r3bl_redux/).
 //!
 //! ```ignore
 //! use crossterm::event::*;
@@ -473,9 +474,60 @@
 //! }
 //!
 //! async fn create_store() -> Store<AppWithLayoutState, AppWithLayoutAction> {
-//!   let mut store: Store<AppWithLayoutState, AppWithLayoutAction> = Store::default();
-//!   store.add_reducer(AppReducer::new()).await;
-//!   store
+//!     let mut store: Store<AppWithLayoutState, AppWithLayoutAction> = Store::default();
+//!     store.add_reducer(MyReducer::default()).await;
+//!     store
+//!   }
+//!
+//!   /// Action enum.
+//!   #[derive(Debug, PartialEq, Eq, Clone)]
+//!   pub enum Action {
+//!     Add(i32, i32),
+//!     AddPop(i32),
+//!     Clear,
+//!     MiddlewareCreateClearAction,
+//!     Noop,
+//!   }
+//!
+//!   impl Default for Action {
+//!     fn default() -> Self {
+//!       Action::Noop
+//!     }
+//!   }
+//!
+//!   /// State.
+//!   #[derive(Clone, Default, PartialEq, Debug)]
+//!   pub struct State {
+//!     pub stack: Vec<i32>,
+//!   }
+//!
+//!   /// Reducer function (pure).
+//!   #[derive(Default)]
+//!   struct MyReducer;
+//!
+//!   #[async_trait]
+//!   impl AsyncReducer<State, Action> for MyReducer {
+//!     async fn run(
+//!       &self,
+//!       action: &Action,
+//!       state: &mut State,
+//!     ) {
+//!       match action {
+//!         Action::Add(a, b) => {
+//!           let sum = a + b;
+//!           state.stack = vec![sum];
+//!         }
+//!         Action::AddPop(a) => {
+//!           let sum = a + state.stack[0];
+//!           state.stack = vec![sum];
+//!         }
+//!         Action::Clear => State {
+//!           state.stack.clear();
+//!         },
+//!         _ => {}
+//!       }
+//!     }
+//!   }
 //! }
 //! ```
 //!
