@@ -9,6 +9,8 @@
 
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "owldarkertheme.owldarker-theme",
+    "Compulim.vscode-clock",
     "hoovercj.vscode-settings-cycler",
     "github.vscode-pull-request-github",
     "nowsci.glassit-linux",
