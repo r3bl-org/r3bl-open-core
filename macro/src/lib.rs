@@ -108,7 +108,6 @@ mod fn_wrapper;
 mod make_style;
 mod manager_of_things;
 mod utils;
-
 use fn_wrapper::{make_safe_async, make_shareable};
 use proc_macro::TokenStream;
 
@@ -117,9 +116,11 @@ pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
     builder::derive_proc_macro_impl(input)
 }
 
-/// Creates a new [r3bl_rs_utils_core::Style] declaratively. If `id` isn't supplied, then
-/// [u8::MAX](u8::MAX) is used. This represents the "style does not have an assigned id" case.
-/// Computed styles don't have an id and are set to [u8::MAX](u8::MAX) as well.
+/// Creates a new
+/// [Style](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/tui_core/styles/style/struct.Style.html)
+/// declaratively. If `id` isn't supplied, then [u8::MAX](u8::MAX) is used. This represents the
+/// "style does not have an assigned id" case. Computed styles don't have an id and are set to
+/// [u8::MAX](u8::MAX) as well.
 ///
 /// Here's a usage example.
 ///

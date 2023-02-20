@@ -3,4 +3,4 @@ features: <https://github.com/orgs/r3bl-org/projects/1/views/1>
 backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
 
 md_parser:
-  ☐ move `md_parser` from `rust_scratch/nom` to `r3bl_rs_utils`
+  ✔ move `md_parser` from `rust_scratch/nom` to `r3bl_rs_utils` @done(23-02-20 11:26)

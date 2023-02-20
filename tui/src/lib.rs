@@ -437,9 +437,10 @@
 //!
 //! # Redux for state management
 //!
-//! If you use Redux for state management, then you will create a [crate::redux] [crate::Store] that
-//! is passed into the [TerminalWindow]. For more detailed information on Redux, please read the
-//! [docs for the `r3bl_redux` create](https://docs.rs/r3bl_redux/latest/r3bl_redux/).
+//! If you use Redux for state management, then you will create a redux
+//! [Store](r3bl_redux::redux::store::async_store::Store) that is passed into the [TerminalWindow]. For
+//! more detailed information on Redux, please read the
+//! [docs](https://docs.rs/r3bl_redux/latest/r3bl_redux/) for the `r3bl_redux` crate.
 //!
 //! ```ignore
 //! use crossterm::event::*;
@@ -528,7 +529,6 @@
 //!       }
 //!     }
 //!   }
-//! }
 //! ```
 //!
 //! ## How does the editor component work?
