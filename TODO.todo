@@ -2,5 +2,11 @@ open: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+-
 features: <https://github.com/orgs/r3bl-org/projects/1/views/1>
 backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
 
-md_parser:
-  ✔ move `md_parser` from `rust_scratch/nom` to `r3bl_rs_utils` @done(23-02-20 11:26)
+fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
+  ☐ in the `md_parser` mod add ability to transform `Document` into styled_text
+  ☐ provide a way to declare a theme / stylesheet to be used to format Markdown content
+  ☐ update editor component options to either use `md_parser` or syntect
+
+fix lolcat (https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue++project%3Ar3bl-org%2F1+lolcat+):
+  ☐ replace existing lolcat w/ a new one that generates `styled_text` instead of ANSI string
+  ☐ remove ANSI parser & all support for ANSI from the TUI engine
