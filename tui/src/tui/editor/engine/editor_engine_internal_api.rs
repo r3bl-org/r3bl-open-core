@@ -828,17 +828,7 @@ mod content_mut {
 
                     let col_index = caret_adj.col_index;
                     let split_result = line_content.split_at_display_col(col_index);
-                    if let Some((
-                        NewUnicodeStringResult {
-                            new_unicode_string: left,
-                            ..
-                        },
-                        NewUnicodeStringResult {
-                            new_unicode_string: right,
-                            ..
-                        },
-                    )) = split_result
-                    {
+                    if let Some((left, right)) = split_result {
                         let row_index = ch!(@to_usize caret_adj.row_index);
                         let viewport_height = editor_engine.viewport_height();
 
@@ -885,10 +875,7 @@ mod content_mut {
                 engine: &mut EditorEngine,
             ) -> Option<()> {
                 let cur_line = content_get::line_at_caret_to_string(buffer, engine)?;
-                let NewUnicodeStringResult {
-                    new_unicode_string: new_line,
-                    ..
-                } = cur_line.delete_char_at_display_col(
+                let new_line = cur_line.delete_char_at_display_col(
                     buffer.get_caret(CaretKind::ScrollAdjusted).col_index,
                 )?;
 
@@ -900,6 +887,7 @@ mod content_mut {
                         let _ = replace(&mut lines[row_idx], new_line);
                     },
                 );
+
                 None
             }
 
@@ -960,10 +948,7 @@ mod content_mut {
                 delete_at_this_display_col: ChUnit,
             ) -> Option<()> {
                 let cur_line = content_get::line_at_caret_to_string(buffer, engine)?;
-                let NewUnicodeStringResult {
-                    new_unicode_string: new_line,
-                    ..
-                } = cur_line.delete_char_at_display_col(delete_at_this_display_col)?;
+                let new_line = cur_line.delete_char_at_display_col(delete_at_this_display_col)?;
 
                 let viewport_width = engine.viewport_width();
                 validate_editor_buffer_change::apply_change(
@@ -1043,10 +1028,8 @@ mod content_mut {
         let row_index = ch!(@to_usize caret_adj.row_index);
         let line = editor_buffer.get_lines().get(row_index)?;
 
-        let NewUnicodeStringResult {
-            new_unicode_string: new_line,
-            unicode_width: char_display_width,
-        } = line.insert_char_at_display_col(ch!(caret_adj.col_index), chunk)?;
+        let (new_line, char_display_width) =
+            line.insert_char_at_display_col(ch!(caret_adj.col_index), chunk)?;
 
         let viewport_width = editor_engine.viewport_width();
 

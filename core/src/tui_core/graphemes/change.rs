@@ -18,41 +18,35 @@
 use crate::*;
 
 impl UnicodeString {
-    /// Returns a new [String]. Does not modify [self.string](UnicodeString::string).
-    pub fn merge_with(&self, other: UnicodeString) -> Option<String> {
-        let mut new_string: String = self.string.clone();
-        new_string.push_str(&other.string);
-        Some(new_string)
-    }
-
-    /// Returns a new ([NewUnicodeStringResult]) tuple. Does not modify
+    /// Returns a new ([UnicodeString], [ChUnit]) tuple. Does not modify
     /// [self.string](UnicodeString::string).
     pub fn insert_char_at_display_col(
         &self,
         display_col: ChUnit,
         chunk: &str,
-    ) -> Option<NewUnicodeStringResult> {
+    ) -> Option<(
+        /* new string */ UnicodeString,
+        /* display width of chunk */ ChUnit,
+    )> {
         let maybe_logical_index = self.logical_index_at_display_col_index(display_col);
         match maybe_logical_index {
             // Insert somewhere inside bounds of self.string.
             Some(logical_index) => {
-                // Convert the character into a grapheme cluster.
-                let character_g_c_s = GraphemeClusterSegment::from(chunk);
-                let character_display_width: ChUnit = character_g_c_s.unicode_width;
+                // Convert the chunk into a grapheme cluster.
+                let chunk_g_c_s = GraphemeClusterSegment::from(chunk);
+                let chunk_display_width: ChUnit = chunk_g_c_s.unicode_width;
 
                 // Insert self grapheme cluster to self.vec_segment.
                 let mut vec_segment_clone = self.vec_segment.clone();
-                vec_segment_clone.insert(logical_index, character_g_c_s);
+                vec_segment_clone.insert(logical_index, chunk_g_c_s);
 
-                // Generate a new string from self.vec_segment and return it and the unicode width of the
-                // character.
+                // Generate a new string from self.vec_segment and return it and the unicode width
+                // of the character.
                 let new_string = make_new_string_from(vec_segment_clone);
 
-                // In the caller - update the caret position based on the unicode width of the character.
-                Some(NewUnicodeStringResult::new(
-                    new_string,
-                    character_display_width,
-                ))
+                // In the caller - update the caret position based on the unicode width of the
+                // character.
+                Some((UnicodeString::from(new_string), chunk_display_width))
             }
             // Add to end of self.string.
             None => {
@@ -61,13 +55,11 @@ impl UnicodeString {
                 new_string.push_str(chunk);
 
                 // Get the unicode width of the character.
-                let character_display_width = UnicodeString::str_display_width(chunk);
+                let chunk_display_width = UnicodeString::str_display_width(chunk);
 
-                // In the caller - update the caret position based on the unicode width of the character.
-                Some(NewUnicodeStringResult::new(
-                    new_string,
-                    ch!(character_display_width),
-                ))
+                // In the caller - update the caret position based on the unicode width of the
+                // character.
+                Some((UnicodeString::from(new_string), ch!(chunk_display_width)))
             }
         }
     }
@@ -78,7 +70,7 @@ impl UnicodeString {
     pub fn split_at_display_col(
         &self,
         display_col: ChUnit,
-    ) -> Option<(NewUnicodeStringResult, NewUnicodeStringResult)> {
+    ) -> Option<(UnicodeString, UnicodeString)> {
         let split_logical_index = self.logical_index_at_display_col_index(display_col)?;
         let max_logical_index = self.len();
 
@@ -103,10 +95,7 @@ impl UnicodeString {
         }
 
         if *str_right_unicode_width > 0 || *str_left_unicode_width > 0 {
-            Some((
-                NewUnicodeStringResult::new(str_left, str_left_unicode_width),
-                NewUnicodeStringResult::new(str_right, str_right_unicode_width),
-            ))
+            Some((str_left.into(), str_right.into()))
         } else {
             None
         }
@@ -114,13 +103,10 @@ impl UnicodeString {
 
     /// Returns a new ([NewUnicodeStringResult]) tuple. Does not modify
     /// [self.string](UnicodeString::string).
-    pub fn delete_char_at_display_col(
-        &self,
-        display_col: ChUnit,
-    ) -> Option<NewUnicodeStringResult> {
+    pub fn delete_char_at_display_col(&self, display_col: ChUnit) -> Option<UnicodeString> {
         // There is only one segment present.
         if self.len() == 1 {
-            return Some(NewUnicodeStringResult::default());
+            return Some(UnicodeString::default());
         }
 
         // There are more than 1 segments present.i
@@ -151,11 +137,8 @@ impl UnicodeString {
         str_left.push_str(&str_right);
         str_left_unicode_width += str_right_unicode_width;
 
-        if *str_left_unicode_width > 0 {
-            Some(NewUnicodeStringResult::new(
-                str_left,
-                str_left_unicode_width,
-            ))
+        if str_left_unicode_width > ch!(0) {
+            Some(str_left.into())
         } else {
             None
         }

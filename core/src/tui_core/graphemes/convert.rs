@@ -21,19 +21,19 @@ use crate::*;
 
 // Convert to UnicodeString
 impl From<&str> for UnicodeString {
-    fn from(s: &str) -> Self { make_unicode_string_from(s) }
+    fn from(s: &str) -> Self { UnicodeString::new(s) }
 }
 
 impl From<String> for UnicodeString {
-    fn from(s: String) -> Self { make_unicode_string_from(&s) }
+    fn from(s: String) -> Self { UnicodeString::new(&s) }
 }
 
 impl From<Cow<'_, str>> for UnicodeString {
-    fn from(s: Cow<'_, str>) -> Self { make_unicode_string_from(&s) }
+    fn from(s: Cow<'_, str>) -> Self { UnicodeString::new(&s) }
 }
 
 impl From<&String> for UnicodeString {
-    fn from(s: &String) -> Self { make_unicode_string_from(s) }
+    fn from(s: &String) -> Self { UnicodeString::new(s) }
 }
 
 // Convert to String
@@ -47,11 +47,11 @@ pub trait UnicodeStringExt {
 }
 
 impl UnicodeStringExt for Cow<'_, str> {
-    fn unicode_string(&self) -> UnicodeString { make_unicode_string_from(self) }
+    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
 }
 
 impl UnicodeStringExt for &str {
-    fn unicode_string(&self) -> UnicodeString { make_unicode_string_from(self) }
+    fn unicode_string(&self) -> UnicodeString { UnicodeString::new(self) }
 }
 
 impl UnicodeStringExt for String {

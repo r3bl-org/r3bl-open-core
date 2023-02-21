@@ -221,4 +221,65 @@ mod tests {
         assert_eq2! {u_s.truncate_start_by_n_col(05.into()), " 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
         assert_eq2! {u_s.truncate_start_by_n_col(06.into()), "📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
     }
+
+    #[allow(clippy::zero_prefixed_literal)]
+    #[test]
+    fn test_unicode_string2_insert_at_display_col() {
+        let test_string: String = TEST_STRING.to_string();
+        let u_s = UnicodeString::from(&test_string);
+        assert_eq!(u_s.display_width, ch!(25));
+
+        // Insert "😃" at display col 1, just after `H`.
+        let Some((new_unicode_string, display_width_of_inserted_chunk)) =
+             u_s.insert_char_at_display_col(1.into(), "😃") else {
+                 panic!("Failed to insert char");
+             };
+
+        assert_eq2! {display_width_of_inserted_chunk, ch!(2)};
+        assert_eq2! {new_unicode_string.truncate_start_by_n_col(00.into()), "H😃i 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
+        assert_eq2! {new_unicode_string.truncate_start_by_n_col(01.into()), "😃i 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
+    }
+
+    #[allow(clippy::zero_prefixed_literal)]
+    #[test]
+    fn test_unicode_string2_delete_at_display_col() {
+        let test_string: String = TEST_STRING.to_string();
+        let u_s = UnicodeString::from(&test_string);
+        assert_eq!(u_s.display_width, ch!(25));
+
+        // Delete "i" at display col 1, just after `H`.
+        let Some(new_unicode_string) =
+             u_s.delete_char_at_display_col(1.into()) else {
+                 panic!("Failed to delete char");
+             };
+
+        assert_eq2! {new_unicode_string.display_width, ch!(24)};
+        assert_eq2! {new_unicode_string.truncate_start_by_n_col(00.into()), "H 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
+        assert_eq2! {new_unicode_string.truncate_start_by_n_col(01.into()), " 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
+    }
+
+    #[allow(clippy::zero_prefixed_literal)]
+    #[test]
+    fn test_unicode_string2_split_at_display_col() {
+        let test_string: String = TEST_STRING.to_string();
+        let u_s = UnicodeString::from(&test_string);
+        assert_eq!(u_s.display_width, ch!(25));
+
+        // Split at display col 4.
+        let Some((
+            lhs_u_s, rhs_u_s
+        )) = u_s.split_at_display_col(4.into()) else {
+            panic!("Failed to split unicode string");
+        };
+
+        assert_eq2! {lhs_u_s.display_width, ch!(3)};
+        assert_eq2! {rhs_u_s.display_width, ch!(22)};
+
+        assert_eq2! {lhs_u_s.truncate_start_by_n_col(00.into()), "Hi "};
+        assert_eq2! {rhs_u_s.truncate_start_by_n_col(00.into()), "😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
+
+        let acc = vec![lhs_u_s, rhs_u_s];
+        assert_eq2! {acc[0].string, "Hi "};
+        assert_eq2! {acc[1].string, "😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
+    }
 }

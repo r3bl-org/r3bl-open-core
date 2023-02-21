@@ -43,24 +43,3 @@ mod unicode_string_segment_slice_result_impl {
         }
     }
 }
-
-/// We need a [String] (since we're returning a new [String] as a result of this [UnicodeString]
-/// mutation).
-#[derive(Debug, Default, PartialEq, Eq)]
-pub struct NewUnicodeStringResult {
-    pub new_unicode_string: UnicodeString,
-    pub unicode_width: ChUnit,
-}
-
-mod new_unicode_string_result_impl {
-    use super::*;
-
-    impl NewUnicodeStringResult {
-        pub fn new(new_string: String, unicode_width: ChUnit) -> Self {
-            Self {
-                new_unicode_string: new_string.into(),
-                unicode_width,
-            }
-        }
-    }
-}

@@ -158,11 +158,13 @@ impl EditorEngine {
                     // Load the syntax highlighting theme & create a highlighter.
                     let mut my_highlight_lines =
                         HighlightLines::new(my_syntax, &editor_engine.theme);
-                    if let Ok(vec_styled_str) =
+
+                    // BM: ▌SYNTECT▐ highlight a single line
+                    if let Ok(syntect_highlighted_line) =
                         my_highlight_lines.highlight_line(&line.string, &editor_engine.syntax_set)
                     {
                         EditorEngine::render_line_with_syntax_highlight(
-                            vec_styled_str,
+                            syntect_highlighted_line,
                             editor_buffer,
                             max_display_col_count,
                             render_ops,
@@ -194,7 +196,7 @@ impl EditorEngine {
     }
 
     fn render_line_with_syntax_highlight(
-        vec_styled_str: Vec<(syntect::highlighting::Style, &str)>,
+        syntect_highlighted_line: Vec<(syntect::highlighting::Style, &str)>,
         editor_buffer: &&EditorBuffer,
         max_display_col_count: ChUnit,
         render_ops: &mut RenderOps,
@@ -202,11 +204,10 @@ impl EditorEngine {
     ) {
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
 
+        // BM: ▌RENDER▐ life of styled texts is short
         let list: List<(Style, UnicodeString)> =
-            styled_text_conversion::from_syntect_to_tui(vec_styled_str);
-
+            styled_text_conversion::from_syntect_to_tui(syntect_highlighted_line);
         let styled_texts: StyledTexts = list.clip(scroll_offset_col, max_display_col_count);
-
         styled_texts.render_into(render_ops);
     }
 
