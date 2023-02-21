@@ -1,7 +1,11 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-redux-no-clone:
+
+md_parser:
+  ✔ move `md_parser` from `rust_scratch/nom` to `r3bl_rs_utils` @done(23-02-20 11:26)
+
+  redux-no-clone:
   ✔ landed w/ huge performance boost <https://github.com/r3bl-org/r3bl_rs_utils/issues/70> @done(23-01-15 12:27)
 
 auto completion provider design:
