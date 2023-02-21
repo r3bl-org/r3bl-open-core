@@ -128,6 +128,7 @@ mod impl_styled_texts {
 
         pub fn display_width(&self) -> ChUnit { self.get_plain_text().display_width }
 
+        // BM: ▌END▐ StyledTexts generates RenderOps
         pub fn render_into(&self, render_ops: &mut RenderOps) {
             for styled_text in self.iter() {
                 let style = styled_text.style;

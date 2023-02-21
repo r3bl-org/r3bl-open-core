@@ -35,9 +35,9 @@ use crate::*;
 type SyntectStyle = syntect::highlighting::Style;
 
 pub fn from_syntect_to_tui(
-    vec_styled_str: Vec<(SyntectStyle, &str)>,
+    syntect_highlighted_line: Vec<(SyntectStyle, &str)>,
 ) -> List<(Style, UnicodeString)> {
-    let mut it: List<(Style, UnicodeString)> = vec_styled_str.into();
+    let mut it: List<(Style, UnicodeString)> = syntect_highlighted_line.into();
 
     // Remove the background color from each style in the theme.
     it.iter_mut().for_each(|(style, _)| style.remove_bg_color());
@@ -107,6 +107,7 @@ impl List<(Style, UnicodeString)> {
         line.clip(scroll_offset_col_index, max_display_col_count)
     }
 
+    // BM: ▌START▐ clip() is the entry point
     /// Clip the text (in one line) in this range: [ `start_col` .. `end_col` ]. Each line is
     /// represented as a [List] of ([Style], [UnicodeString])`s.
     pub fn clip(
