@@ -19,7 +19,7 @@
 mod syntect {
     use r3bl_rs_utils_core::{assert_eq2, color};
 
-    use crate::{syntax_highlighting::test_common::shared::*, *};
+    use crate::*;
 
     /// Use a [std::io::Cursor] as a fake [std::fs::File]:
     /// <https://stackoverflow.com/a/41069910/2085356>
@@ -35,7 +35,7 @@ mod syntect {
         use syntect::{easy::*, highlighting::*, parsing::*, util::*};
 
         // Generate MD content.
-        let md_content = get_md_file_no_frontmatter();
+        let md_content = include_str!("test_assets/valid-content.md");
 
         // Load these once at the start of your program.
         let syntax_set = SyntaxSet::load_defaults_newlines();
