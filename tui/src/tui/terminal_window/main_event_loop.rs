@@ -293,18 +293,17 @@ where
             };
 
             // Check to see if the window_size is large enough to render.
-            let render_result: CommonResult<RenderPipeline> = if window_size
-                .is_too_small_to_display(MinSize::Col as u8, MinSize::Row as u8)
-            {
-                shared_global_data
-                    .write()
-                    .await
-                    .maybe_saved_offscreen_buffer = None;
-                Ok(render_window_size_too_small(window_size))
-            } else {
-                // Call app_render.
-                shared_app.write().await.app_render(global_scope_args).await
-            };
+            let render_result: CommonResult<RenderPipeline> =
+                if window_size.is_too_small_to_display(MinSize::Col as u8, MinSize::Row as u8) {
+                    shared_global_data
+                        .write()
+                        .await
+                        .maybe_saved_offscreen_buffer = None;
+                    Ok(render_window_size_too_small(window_size))
+                } else {
+                    // Call app_render.
+                    shared_app.write().await.app_render(global_scope_args).await
+                };
 
             match render_result {
                 Err(error) => {

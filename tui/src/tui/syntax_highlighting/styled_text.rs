@@ -54,11 +54,12 @@ mod styled_text_impl {
 /// Macro to make building [StyledText] easy.
 ///
 /// Here's an example.
-/// ```ignore
-/// let st = styled_text! {
-///   "Hello".to_string(),
-///   maybe_style1.unwrap()
-/// };
+/// ```rust
+/// use r3bl_rs_utils_core::*;
+/// use r3bl_tui::*;
+///
+/// let style = Style::default();
+/// let st = styled_text!("Hello", style);
 /// ```
 #[macro_export]
 macro_rules! styled_text {
@@ -142,15 +143,18 @@ mod impl_styled_texts {
 /// Macro to make building [`StyledTexts`] easy.
 ///
 /// Here's an example.
-/// ```ignore
+/// ```rust
+/// use r3bl_rs_utils_core::*;
+/// use r3bl_tui::*;
+///
 /// let mut st_vec = styled_texts! {
 ///   styled_text! {
-///     "Hello".to_string(),
-///     maybe_style1.unwrap()
+///     "Hello",
+///     Style::default()
 ///   },
 ///   styled_text! {
-///     "World".to_string(),
-///     maybe_style2.unwrap()
+///     "World",
+///     Style::default()
 ///   }
 /// };
 /// ```
