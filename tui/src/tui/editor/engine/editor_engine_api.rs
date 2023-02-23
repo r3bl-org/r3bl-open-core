@@ -228,7 +228,7 @@ impl EditorEngine {
         ));
 
         render_ops.push(RenderOp::PaintTextWithAttributes(
-            truncated_line,
+            truncated_line.into(),
             editor_engine.current_box.get_computed_style(),
         ));
     }

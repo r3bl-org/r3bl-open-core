@@ -105,6 +105,7 @@ impl List<(Style, UnicodeString)> {
     ) -> String {
         let line = UnicodeString::from(self.get_plain_text());
         line.clip(scroll_offset_col_index, max_display_col_count)
+            .into()
     }
 
     // BM: ▌START▐ clip() is the entry point

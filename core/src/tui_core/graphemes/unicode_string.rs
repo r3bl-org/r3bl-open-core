@@ -48,13 +48,9 @@ mod grapheme_cluster_segment_impl {
         /// [UnicodeString] is modified.
         pub fn new(chunk: &str) -> GraphemeClusterSegment {
             let my_string: String = chunk.to_string();
-            let unicode_string: UnicodeString = my_string.into();
-            let result = unicode_string[0].clone();
-
-            GraphemeClusterSegment {
-                string: result.string,
-                ..result
-            }
+            let unicode_string = UnicodeString::from(my_string);
+            let result = unicode_string.vec_segment.get(0).unwrap().clone();
+            result
         }
     }
 
@@ -90,7 +86,7 @@ mod unicode_string_impl {
             for (grapheme_cluster_index, (byte_offset, grapheme_cluster_str)) in
                 this.grapheme_indices(true).enumerate()
             {
-                let unicode_width = ch!(grapheme_cluster_str.width());
+                let unicode_width = ch!(UnicodeString::str_display_width(grapheme_cluster_str));
                 my_unicode_string_segments.push(GraphemeClusterSegment {
                     string: grapheme_cluster_str.into(),
                     byte_offset,
