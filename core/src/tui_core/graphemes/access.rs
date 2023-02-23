@@ -166,11 +166,48 @@ impl UnicodeString {
     }
 
     /// Clip the content [scroll_offset.col .. max cols].
-    pub fn clip(&self, scroll_offset_col_index: ChUnit, max_display_col_count: ChUnit) -> String {
-        let truncated_line = self.truncate_start_by_n_col(scroll_offset_col_index);
-        let truncated_line = UnicodeString::from(truncated_line);
-        let truncated_line = truncated_line.truncate_end_to_fit_width(max_display_col_count);
-        truncated_line.into()
+    pub fn clip(&self, scroll_offset_col_index: ChUnit, max_display_col_count: ChUnit) -> &str {
+        let string_start_byte_index = {
+            let mut it = 0;
+            let mut skip_col_count = scroll_offset_col_index;
+            for segment in self.iter() {
+                // Skip scroll_offset_col_index columns.
+                if skip_col_count != ch!(0) {
+                    // Skip segment.unicode_width.
+                    skip_col_count -= segment.unicode_width;
+                    it += segment.byte_size;
+                } else {
+                    // We are done skipping.
+                    break;
+                }
+            }
+            it
+        };
+
+        let string_end_byte_index = {
+            let mut it = 0;
+            let mut avail_col_count = max_display_col_count;
+            let mut skip_col_count = scroll_offset_col_index;
+            for segment in self.iter() {
+                // Skip scroll_offset_col_index columns (again).
+                if skip_col_count != ch!(0) {
+                    // Skip segment.unicode_width.
+                    skip_col_count -= segment.unicode_width;
+                    it += segment.byte_size;
+                }
+                // Clip max_display_col_count columns.
+                else {
+                    if avail_col_count < segment.unicode_width {
+                        break;
+                    }
+                    it += segment.byte_size;
+                    avail_col_count -= segment.unicode_width;
+                }
+            }
+            it
+        };
+
+        &self.string[string_start_byte_index..string_end_byte_index]
     }
 
     /// If `self.string` is shorter than `max_display_col_count` then a padding string is returned
