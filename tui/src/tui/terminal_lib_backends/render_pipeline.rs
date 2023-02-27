@@ -68,65 +68,77 @@ use crate::{tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED, *};
 /// - <https://doc.rust-lang.org/std/collections/struct.HashMap.html#examples>
 #[macro_export]
 macro_rules! render_pipeline {
-  // No args. Returns a new
-  () => {
-    RenderPipeline::default()
-  };
+    // No args. Returns a new
+    () => {
+        RenderPipeline::default()
+    };
 
-  // @new: Create a new pipeline & return it. If any RenderOp ($arg_render_op)* are passed, then add it
-  // to new pipeline.
-  (
-    @new
-    $arg_z_order: expr
-    => $(                   /* Start a repetition. */
-      $arg_render_op: expr  /* Expression. */
-    )                       /* End repetition. */
-    ,                       /* Comma separated. */
-    *                       /* Zero or more times. */
-    $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
-  ) => {
-    /* Enclose the expansion in a block so that we can use multiple statements. */
-    {
-      let mut render_ops = RenderOps::default();
-      /* Start a repetition. */
-      $(
+    // @new: Create a new pipeline & return it. If any RenderOp ($arg_render_op)* are passed, then add it
+    // to new pipeline.
+    (
+        @new
+        $arg_z_order: expr
+        => $(                   /* Start a repetition. */
+        $arg_render_op: expr  /* Expression. */
+        )                       /* End repetition. */
+        ,                       /* Comma separated. */
+        *                       /* Zero or more times. */
+        $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+    ) => {
+        /* Enclose the expansion in a block so that we can use multiple statements. */
+        {
+        let mut render_ops = RenderOps::default();
+        /* Start a repetition. */
+        $(
+            /* Each repeat will contain the following statement, with $arg_render_op replaced. */
+            render_ops.push($arg_render_op);
+        )*
+        let mut render_pipeline = RenderPipeline::default();
+        render_pipeline.push($arg_z_order, render_ops);
+        render_pipeline
+        }
+    };
+
+    // @push_into: Add a bunch of RenderOp $arg_render_op+ to the existing $arg_pipeline & return nothing.
+    (
+        @push_into
+        $arg_pipeline: ident
+        at $arg_z_order: expr
+        => $($arg_render_op: expr),+
+    ) => {
+        let mut render_ops = RenderOps::default();
+        $(
         /* Each repeat will contain the following statement, with $arg_render_op replaced. */
         render_ops.push($arg_render_op);
-      )*
-      let mut render_pipeline = RenderPipeline::default();
-      render_pipeline.push($arg_z_order, render_ops);
-      render_pipeline
-    }
-  };
+        )*
+        $arg_pipeline.push($arg_z_order, render_ops);
+    };
 
-  // @push_into: Add a bunch of RenderOp $arg_render_op+ to the existing $arg_pipeline & return nothing.
-  (
-    @push_into
-    $arg_pipeline: ident
-    at $arg_z_order: expr
-    => $($arg_render_op: expr),+
-  ) => {
-    let mut render_ops = RenderOps::default();
-    $(
-      /* Each repeat will contain the following statement, with $arg_render_op replaced. */
-      render_ops.push($arg_render_op);
-    )*
-    $arg_pipeline.push($arg_z_order, render_ops);
-  };
+    // @join_and_drop: Add $arg_other_pipeline+ (a bunch of other RenderPipelines) to the new
+    // pipeline, drop them, and return it.
+    (
+        @join_and_drop
+        $($arg_other_pipeline: expr),+
+    ) => {{
+        let mut pipeline = render_pipeline!();
+        $(
+        /* Each repeat will contain the following statement, with $arg_other_pipeline replaced. */
+        pipeline.join_into($arg_other_pipeline);
+        )*
+        pipeline
+    }};
 
-  // @join_and_drop: Add $arg_other_pipeline+ (a bunch of other RenderPipelines) to the new
-  // pipeline, drop them, and return it.
-  (
-    @join_and_drop
-    $($arg_other_pipeline: expr),+
-  ) => {{
-    let mut pipeline = render_pipeline!();
-    $(
-      /* Each repeat will contain the following statement, with $arg_other_pipeline replaced. */
-      pipeline.join_into($arg_other_pipeline);
-    )*
-    pipeline
-  }};
+    // @push_styled_texts_into: Add a bunch of RenderOp $arg_render_op+ to the existing $arg_pipeline & return nothing.
+    (
+        @push_styled_texts_into
+        $arg_pipeline: ident
+        at $arg_z_order: expr
+        => $arg_styled_texts: expr
+      ) => {
+        let mut render_ops = RenderOps::default();
+        $arg_styled_texts.render_into(&mut render_ops);
+        $arg_pipeline.push($arg_z_order, render_ops);
+      };
 }
 
 /// See [render_pipeline!] for the documentation. Also consider using it instead of this struct

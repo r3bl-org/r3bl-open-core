@@ -184,7 +184,7 @@ mod perform_layout {
                     box_start! (
                         in:                     surface,
                         id:                     ComponentId::Editor as u8,
-                        dir:                    Direction::Vertical,
+                        dir:                    LayoutDirection::Vertical,
                         requested_size_percent: requested_size_percent!(width: 100, height: 100),
                         styles:                 [EditorStyleName::Default as u8]
                     );

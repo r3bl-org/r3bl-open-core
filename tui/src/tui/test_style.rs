@@ -34,13 +34,20 @@ mod tests {
         let style = Style::from(st_style);
         assert_eq2!(
             style.color_fg.unwrap(),
-            TuiColor::Rgb {
-                r: 255,
-                g: 255,
-                b: 255
-            }
+            TuiColor::Rgb(RgbValue {
+                red: 255,
+                green: 255,
+                blue: 255
+            })
         );
-        assert_eq2!(style.color_bg.unwrap(), TuiColor::Rgb { r: 0, g: 0, b: 0 });
+        assert_eq2!(
+            style.color_bg.unwrap(),
+            TuiColor::Rgb(RgbValue {
+                red: 0,
+                green: 0,
+                blue: 0
+            })
+        );
         assert_eq2!(style.bold, true);
         assert_eq2!(style.underline, true);
     }
@@ -133,7 +140,7 @@ mod tests {
         let style_bold_green_fg = style! {
           id: 1 // "bold_green_fg"
           attrib: [bold]
-          color_fg: TuiColor::Green
+          color_fg: TuiColor::Basic(ANSIBasicColor::Green)
         };
 
         let style_dim = style! {
@@ -143,7 +150,7 @@ mod tests {
 
         let style_yellow_bg = style! {
           id: 3 // "yellow_bg"
-          color_bg: TuiColor::Yellow
+          color_bg: TuiColor::Basic(ANSIBasicColor::Yellow)
         };
 
         let style_padding = style! {
@@ -153,7 +160,7 @@ mod tests {
 
         let style_red_fg = style! {
           id: 5 // "red_fg"
-          color_fg: TuiColor::Red
+          color_fg: TuiColor::Basic(ANSIBasicColor::Red)
         };
 
         let style_padding_another = style! {
@@ -183,8 +190,14 @@ mod tests {
         );
 
         assert_eq2!(my_style.padding.unwrap(), ch!(3));
-        assert_eq2!(my_style.color_bg.unwrap(), TuiColor::Yellow);
-        assert_eq2!(my_style.color_fg.unwrap(), TuiColor::Red);
+        assert_eq2!(
+            my_style.color_bg.unwrap(),
+            TuiColor::Basic(ANSIBasicColor::Yellow)
+        );
+        assert_eq2!(
+            my_style.color_fg.unwrap(),
+            TuiColor::Basic(ANSIBasicColor::Red)
+        );
         assert!(my_style.bold);
         assert!(my_style.dim);
         assert!(my_style.computed);
@@ -245,19 +258,19 @@ mod tests {
           style! {
                 id: id_2 /* using a variable instead of string literal */
                 padding: 1
-                color_bg: TuiColor::Rgb { r: 55, g: 55, b: 248 }
+                color_bg: TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })
           },
           make_a_style(3),
           vec![
             style! {
               id: 4
               padding: 1
-              color_bg: TuiColor::Rgb { r: 55, g: 55, b: 248 }
+              color_bg: TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })
             },
             style! {
               id: 5
               padding: 1
-              color_bg: TuiColor::Rgb { r: 85, g: 85, b: 255 }
+              color_bg: TuiColor::Rgb (RgbValue{ red: 85, green: 85, blue: 255 })
             },
           ],
           make_a_style(6)

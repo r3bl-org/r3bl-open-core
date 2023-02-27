@@ -21,7 +21,7 @@ use async_trait::async_trait;
 use get_size::GetSize;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::style;
+use r3bl_rs_utils_macro::*;
 use tokio::sync::RwLock;
 
 use crate::*;
@@ -77,7 +77,7 @@ impl TerminalWindow {
         loop {
             // Try and get the next event if available (asynchronously).
             let maybe_input_event = async_event_stream.try_to_get_input_event().await;
-            terminal_window_static_global_data::set_start_ts();
+            telemetry_global_static::set_start_ts();
 
             // Process the input_event.
             let input_event = match maybe_input_event {
@@ -309,7 +309,7 @@ where
                 Err(error) => {
                     RenderOp::default().flush();
 
-                    terminal_window_static_global_data::set_end_ts();
+                    telemetry_global_static::set_end_ts();
 
                     call_if_true!(DEBUG_TUI_MOD, {
                         let msg = format!("MySubscriber::render() error ❌: {error}");
@@ -321,7 +321,7 @@ where
                         .paint(FlushKind::ClearBeforeFlush, shared_global_data)
                         .await;
 
-                    terminal_window_static_global_data::set_end_ts();
+                    telemetry_global_static::set_end_ts();
 
                     // Print debug message w/ memory utilization, etc.
                     call_if_true!(DEBUG_TUI_MOD, {
@@ -329,18 +329,8 @@ where
                             let msg_1 = format!("🎨 MySubscriber::paint() ok ✅: \n window_size: {window_size:?}\n state: {state:?}");
                             let msg_2 = {
                                 format!(
-                                    "🌍🏎️   SPEED: {:?} Cache utilization: #1 (ansi_text): {1:.2}%, #2 (strip_ansi_text): {2:.2}%",
-                                    terminal_window_static_global_data::get_avg_response_time_micros(),
-                                    shared_global_data.read().await.cache_ansi_text.len() as f32
-                                        / DefaultSize::GlobalDataCacheSize as usize as f32
-                                        * 100_f32,
-                                    shared_global_data
-                                        .read()
-                                        .await
-                                        .cache_try_strip_ansi_text
-                                        .len() as f32
-                                        / DefaultSize::GlobalDataCacheSize as usize as f32
-                                        * 100_f32,
+                                    "🌍⏳ SPEED: {:?}",
+                                    telemetry_global_static::get_avg_response_time_micros(),
                                 )
                             };
 
@@ -376,12 +366,32 @@ fn render_window_size_too_small(window_size: Size) -> RenderPipeline {
     let row_pos = window_size.row_count / 2;
     let col_pos = (window_size.col_count - trunc_display_msg_len) / 2;
 
-    render_pipeline!(@new ZOrder::Normal =>
-      RenderOp::ResetColor,
-      RenderOp::MoveCursorPositionAbs(position! {col_index: col_pos, row_index: row_pos}),
-      RenderOp::SetFgColor(TuiColor::DarkRed),
-      RenderOp::PaintTextWithAttributes(
-        lolcat_each_char_in_unicode_string(&trunc_display_msg, None),
-        Some(style! {attrib: [bold]}))
-    )
+    let mut pipeline = render_pipeline!();
+
+    let style_bold = style!(attrib: [bold]);
+
+    render_pipeline! {
+        @push_into pipeline
+        at ZOrder::Normal
+        =>
+            RenderOp::ResetColor,
+            RenderOp::MoveCursorPositionAbs(position! {col_index: col_pos, row_index: row_pos})
+    }
+
+    render_pipeline! {
+        @push_styled_texts_into pipeline
+        at ZOrder::Normal
+        =>
+            ColorWheel::new(vec![
+                ColorWheelConfig::RgbRandom(ColorWheelSpeed::Fast),
+                ColorWheelConfig::Ansi256(Ansi256GradientIndex::DarkRedToDarkMagenta, ColorWheelSpeed::Medium),
+            ])
+                .colorize_into_styled_texts(
+                    &trunc_display_msg,
+                    GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength,
+                    TextColorizationPolicy::ColorEachCharacter(Some(style_bold)),
+                )
+    }
+
+    pipeline
 }

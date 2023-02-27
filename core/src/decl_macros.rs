@@ -399,7 +399,7 @@ macro_rules! assert_eq2 {
         assert_eq!(
             $left,
             $right,
-            "\n😮 {}\nleft-expr : {}\nright-expr: {}",
+            "\n😮 {}\nleft : `{}`\nright: `{}`\nline :",
             $crate::style_prompt("Houston, we have a problem..."),
             $crate::style_error(stringify!($left)),
             $crate::style_error(stringify!($right))

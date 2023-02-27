@@ -45,12 +45,6 @@ paste = "1.0.11"
 unicode-width = "0.1.10"
 unicode-segmentation = "1.10.1"
 
-# Strip ANSI escapes.
-strip-ansi-escapes = "0.1.1"
-
-# ANSI parsing.
-ansi-parser = "0.8.0"
-
 # For lolcat.
 rand = "0.8.5"
 is-terminal = "0.4.3"
@@ -68,3 +62,6 @@ time = "0.3.17"
 
 # Syntax highlighting.
 syntect = "5.0.0"
+
+# nom parser combinator.
+nom = "7.1.3"

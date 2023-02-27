@@ -18,15 +18,12 @@
 // Attach sources.
 pub mod pattern_matcher;
 pub mod r3bl_syntect_theme;
-pub mod styled_text;
 pub mod styled_text_conversion;
 
 // Re-export
 pub use pattern_matcher::*;
 pub use r3bl_syntect_theme::*;
-pub use styled_text::*;
 pub use styled_text_conversion::*;
 
 // Tests.
 mod test_r3bl_syntect_theme;
-mod test_styled_text;

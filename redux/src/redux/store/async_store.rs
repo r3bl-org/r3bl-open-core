@@ -70,8 +70,6 @@ where
     }
 }
 
-// FUTURE: make history implementation more comprehensive (eg: max history size) & add tests.
-
 // Handle subscriber, middleware, reducer management.
 impl<S, A> Store<S, A>
 where

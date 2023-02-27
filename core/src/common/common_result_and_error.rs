@@ -80,6 +80,8 @@ pub enum CommonErrorType {
     InvalidValue,
     DoesNotApply,
     IndexOutOfBounds,
+    InvalidRgbColor,
+    InvalidHexColorFormat,
 }
 
 /// Implement [`Error`] trait.

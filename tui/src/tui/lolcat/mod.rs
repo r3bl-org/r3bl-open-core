@@ -15,5 +15,12 @@
  *   limitations under the License.
  */
 
-// Attach.
-pub mod launcher;
+// Attach source files.
+pub(self) mod color_utils;
+pub mod lolcat_api;
+pub(self) mod lolcat_impl;
+
+// Re-export.
+pub use color_utils::*;
+pub use lolcat_api::*;
+pub use lolcat_impl::*;

@@ -23,7 +23,7 @@ use super::*;
 
 #[derive(Debug, Clone, Default)]
 pub struct ColumnRenderComponent {
-    pub lolcat: Lolcat,
+    pub color_wheel: ColorWheel,
     pub id: FlexBoxId,
 }
 
@@ -31,7 +31,13 @@ impl ColumnRenderComponent {
     pub fn new(id: FlexBoxId) -> Self {
         Self {
             id,
-            ..Default::default()
+            color_wheel: ColorWheel::new(vec![
+                ColorWheelConfig::RgbRandom(ColorWheelSpeed::Fast),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::LightGreenToLightBlue,
+                    ColorWheelSpeed::Fast,
+                ),
+            ]),
         }
     }
 }
@@ -158,11 +164,17 @@ impl Component<State, Action> for ColumnRenderComponent {
                     RenderOp::ResetColor,
                     RenderOp::MoveCursorPositionRelTo(box_origin_pos, position!(col_index: col, row_index: row)),
                     RenderOp::ApplyColors(current_box.get_computed_style()),
-                    RenderOp::PaintTextWithAttributes(
-                      colorize_using_lolcat! (&mut self.lolcat,"{}",line_1_trunc),
-                      current_box.get_computed_style(),
-                    ),
                 };
+                render_ops! {
+                    @render_styled_texts_into render_ops
+                    =>
+                    self.color_wheel.colorize_into_styled_texts(
+                        &UnicodeString::from(line_1_trunc),
+                        GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                        TextColorizationPolicy::ColorEachCharacter(current_box.get_computed_style()),
+                    )
+                }
+                render_ops += RenderOp::ResetColor;
             }
 
             // Line 2.
@@ -173,11 +185,17 @@ impl Component<State, Action> for ColumnRenderComponent {
                   =>
                     RenderOp::MoveCursorPositionRelTo(box_origin_pos, position!(col_index: col, row_index: row)),
                     RenderOp::ApplyColors(current_box.get_computed_style()),
-                    RenderOp::PaintTextWithAttributes(
-                      colorize_using_lolcat! (&mut self.lolcat,"{}",line_2_trunc),
-                      current_box.get_computed_style(),
-                    ),
                 };
+                render_ops! {
+                    @render_styled_texts_into render_ops
+                    =>
+                    self.color_wheel.colorize_into_styled_texts(
+                        &UnicodeString::from(line_2_trunc),
+                        GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                        TextColorizationPolicy::ColorEachCharacter(current_box.get_computed_style()),
+                    )
+                }
+                render_ops += RenderOp::ResetColor;
             }
 
             // Paint is_focused.

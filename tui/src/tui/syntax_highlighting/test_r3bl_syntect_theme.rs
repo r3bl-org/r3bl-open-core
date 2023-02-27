@@ -49,7 +49,7 @@ mod syntect {
         let mut vec_styled_texts = vec![];
 
         for line in /* LinesWithEndings enables use of newlines mode. */
-            LinesWithEndings::from(&md_content)
+            LinesWithEndings::from(md_content)
         {
             let vec_styled_str: Vec<(Style, &str)> =
                 highlight_lines.highlight_line(line, &syntax_set).unwrap();

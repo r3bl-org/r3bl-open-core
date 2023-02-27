@@ -64,8 +64,6 @@ mod tests {
         pub stack: Vec<i32>,
     }
 
-    // FUTURE: Write integration tests for history.
-
     /// ```text
     /// ╭──────────────────────────────────────────────────────╮
     /// │ Main test runner.                                    │

@@ -220,7 +220,7 @@ mod cli_args {
     /// item (which is the path to the executable).
     pub trait ArgsToStrings {
         fn filter_and_convert_to_strings(&self) -> Vec<String>;
-        fn as_str<'a>(my_vec: &'a Vec<String>) -> Vec<&'a str>;
+        fn as_str(my_vec: &[String]) -> Vec<&str>;
     }
 
     impl ArgsToStrings for std::env::Args {
@@ -232,10 +232,10 @@ mod cli_args {
             list
         }
 
-        fn as_str<'a>(my_vec: &'a Vec<String>) -> Vec<&'a str> { List::from(my_vec).items }
+        fn as_str(my_vec: &[String]) -> Vec<&str> { List::from(my_vec).items }
     }
 
-    impl<'a> From<&'a Vec<String>> for List<&'a str> {
+    impl<'a> From<&'a [String]> for List<&'a str> {
         /// The [From] trait is implemented for [List] instead of [Vec].
         /// 1. [List] is defined in this crate.
         /// 2. [Vec] is not.
@@ -245,7 +245,7 @@ mod cli_args {
         ///
         /// More info on converting [`Vec<String>`] to [Vec<&str>]:
         /// <https://users.rust-lang.org/t/is-this-the-best-way-to-go-from-vec-string-to-vec-str/37838>
-        fn from(my_vec: &'a Vec<String>) -> Self {
+        fn from(my_vec: &'a [String]) -> Self {
             let items = my_vec.iter().map(String::as_str).collect::<Vec<&str>>();
             List { items }
         }

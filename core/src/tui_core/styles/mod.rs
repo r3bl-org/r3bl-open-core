@@ -19,8 +19,10 @@
 pub mod style;
 pub mod stylesheet;
 pub mod tui_color;
+pub mod hex_color_parser;
 
 // Re-export.
 pub use style::*;
 pub use stylesheet::*;
 pub use tui_color::*;
+pub use hex_color_parser::*;

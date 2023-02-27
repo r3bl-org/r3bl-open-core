@@ -87,6 +87,28 @@ macro_rules! render_ops {
       )*
     }
   };
+
+  // @render_into: If any ($arg_render_op)* are passed, then add to it.
+  (
+    @render_styled_texts_into
+    $arg_render_ops: expr
+    =>
+    $(                       /* Start a repetition. */
+      $arg_styled_texts: expr/* Expression. */
+    )                        /* End repetition. */
+    ,                        /* Comma separated. */
+    *                        /* Zero or more times. */
+    $(,)*                    /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+  ) => {
+    /* Enclose the expansion in a block so that we can use multiple statements. */
+    {
+      /* Start a repetition. */
+      $(
+        /* Each repeat will contain the following statement, with $arg_render_op replaced. */
+        $arg_styled_texts.render_into(&mut $arg_render_ops);
+      )*
+    }
+  };
 }
 
 /// For ease of use, please use the [render_ops!] macro.
@@ -136,6 +158,8 @@ pub struct RenderOpsLocalData {
 }
 
 pub mod render_ops_impl {
+    use std::ops::AddAssign;
+
     use super::*;
 
     impl RenderOps {
@@ -181,6 +205,10 @@ pub mod render_ops_impl {
 
     impl DerefMut for RenderOps {
         fn deref_mut(&mut self) -> &mut Self::Target { &mut self.list }
+    }
+
+    impl AddAssign<RenderOp> for RenderOps {
+        fn add_assign(&mut self, rhs: RenderOp) { self.list.push(rhs); }
     }
 
     impl Debug for RenderOps {

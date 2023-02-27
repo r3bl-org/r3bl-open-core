@@ -353,10 +353,6 @@ pub enum PixelChar {
         content: GraphemeClusterSegment,
         maybe_style: Option<Style>,
     },
-    /// ANSI text that just holds a string (which is derived from [ANSITextSegment] -> [String]).
-    AnsiText {
-        content: String,
-    },
 }
 
 const EMPTY_CHAR: char = '╳';
@@ -379,15 +375,14 @@ mod pixel_char_impl {
             }
 
             let width = 16;
-            let msg = match self {
+
+            let it = match self {
                 PixelChar::Void => {
                     format!(" V {VOID_CHAR:░^width$}")
                 }
-
                 PixelChar::Spacer => {
                     format!(" S {EMPTY_CHAR:░^width$}")
                 }
-
                 PixelChar::PlainText {
                     content: character,
                     maybe_style,
@@ -401,22 +396,9 @@ mod pixel_char_impl {
                     let trunc_output = truncate(&output, width);
                     format!(" {} {trunc_output: ^width$}", style_primary("P"))
                 }
-
-                PixelChar::AnsiText {
-                    content: content_ref,
-                } => {
-                    let output = match ANSIText::try_strip_ansi(content_ref) {
-                        // Strip ANSI text for formatting.
-                        Some(plain_text) => format!("'{plain_text}'"),
-                        // Nothing to strip.
-                        None => format!("'{content_ref}'"),
-                    };
-                    let trunc_output = truncate(&output, width);
-                    format!(" {} {trunc_output: ^width$}", style_prompt("A"))
-                }
             };
-
-            msg
+            
+            it
         }
     }
 }

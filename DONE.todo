@@ -1,6 +1,32 @@
 ┏━━━━━━━━━━━━━━━┓
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+fix lolcat (https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue++project%3Ar3bl-org%2F1+lolcat+):
+  ✔ add `color_wheel` mod to `core` crate @done(23-02-26 10:42)
+  ✔ remove `lolcat` mod from `core` crate & update docs & check FIXME:s @done(23-02-26 10:42)
+  ✔ add gradient and colorization policies to `color_wheel` @done(23-02-26 17:37)
+  ✔ use a different crate to generate gradients & use multiple gradient stops @done(23-02-26 21:47)
+  ✔ move `color_wheel` out of `r3bl_rs_utils_core` crate & into `tui` crate (it needs `RenderOp`) @done(23-02-27 11:43)
+  ✔ make `color_wheel` generate `styled_text` instead of ANSI string @done(23-02-27 14:27)
+  ✔ replace use of ansi text w/ styled_text @done(23-02-28 21:38)
+    ✔ remove `color_wheel_impl.rs::lolcat_unicode()` @done(23-02-28 11:51)
+    ✔ remove `color_wheel_impl.rs::lolcat_str()` @done(23-02-28 16:34)
+    ✔ remove `color_wheel_impl.rs::lolcat_from_style()` @done(23-02-28 21:37)
+    ✔ remove `color_wheel_impl.rs::colorize_into_ansi_string()` @done(23-02-28 21:37)
+  ✔ remove ANSI parser & all support for ANSI from the TUI engine (delete `tui_core/ansi/ansi_text.rs`) @done(23-03-02 13:03)
+    ✔ remove the needless cache of ANSI text! @done(23-03-02 13:03)
+  ✔ try and get cat.rs to generate stylet texts instead of ANSI & implement the color wheel iter on it @done(23-03-02 15:56)
+  ✔ add `TextColorizationPolicy::ColorEachCharacter` arg that allows bold, italic, other text attributes (& styles?) @done(23-03-03 10:34)
+  ✔ organize `TuiColor` basic colors into an enum variant @done(23-03-03 14:08)
+  ✔ ANSI 256 color support @done(23-03-03 17:53)
+    ✔ add support for ANSI 256 colors from: <https://www.figma.com/file/K8EUf9CvzEw0IPlUcQVRnt/256-colors-lolcat> @done(23-03-03 17:53)
+    ✔ add to demo in `ex_app_no_layout/app.rs` @done(23-03-03 17:53)
+  ✔ color wheel selection based on terminal capabilities @done(23-03-04 17:05)
+    ✔ on macOS make the default color palette to be ANSI 256 colors & Rgb colors for all other platforms @done(23-03-04 17:05)
+    ✔ provide global override @done(23-03-04 17:05)
+  ✔ integrate lolcat into color wheel @done(23-03-05 10:17)
+  ✔ add animation to the no layout example @done(23-03-05 10:17)
+  ✔ test w/ overriding color wheel to truecolor, ansi 256, grayscale, etc @done(23-03-05 15:49)
 
 md_parser:
   ✔ move `md_parser` from `rust_scratch/nom` to `r3bl_rs_utils` @done(23-02-20 11:26)

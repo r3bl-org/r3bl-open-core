@@ -15,15 +15,53 @@
  *   limitations under the License.
  */
 
-use get_size::GetSize;
+use std::borrow::Cow;
+
+use get_size::*;
+use r3bl_rs_utils_core::*;
 use serde::*;
 
 use crate::*;
+
+pub fn colorize_to_styled_texts(lolcat: &mut Lolcat, input: &UnicodeString) -> StyledTexts {
+    lolcat.colorize_to_styled_texts(input)
+}
+
+pub fn lolcat_each_char_in_unicode_string(
+    unicode_string: &UnicodeString,
+    lolcat: Option<&mut Lolcat>,
+) -> StyledTexts {
+    let mut saved_orig_speed = None;
+
+    let mut my_lolcat: Cow<Lolcat> = match lolcat {
+        Some(lolcat_arg) => {
+            saved_orig_speed = Some(lolcat_arg.color_wheel_control.color_change_speed);
+            lolcat_arg.color_wheel_control.color_change_speed = ColorChangeSpeed::Rapid;
+            Cow::Borrowed(lolcat_arg)
+        }
+        None => {
+            let lolcat_temp = LolcatBuilder::new()
+                .set_color_change_speed(ColorChangeSpeed::Rapid)
+                .build();
+            Cow::Owned(lolcat_temp)
+        }
+    };
+
+    let it = my_lolcat.to_mut().colorize_to_styled_texts(unicode_string);
+
+    // Restore saved_orig_speed if it was set.
+    if let Some(orig_speed) = saved_orig_speed {
+        my_lolcat.to_mut().color_wheel_control.color_change_speed = orig_speed;
+    }
+
+    it
+}
 
 /// A builder struct for the [Lolcat] struct. Example usage:
 ///
 /// ```rust
 /// use r3bl_rs_utils_core::*;
+/// use r3bl_tui::*;
 ///
 /// let mut lolcat = LolcatBuilder::new()
 ///   .set_color_change_speed(ColorChangeSpeed::Rapid)
@@ -32,9 +70,9 @@ use crate::*;
 ///   .build();
 ///
 /// let content = "Hello, world!";
-/// let colored_content = colorize_using_lolcat!(
-///   &mut lolcat, "{}", content
-/// );
+/// let unicode_string = UnicodeString::from(content);
+/// let lolcat_mut = &mut lolcat;
+/// let st = lolcat_mut.colorize_to_styled_texts(&unicode_string);
 ///
 /// lolcat.next_color();
 /// ```
@@ -47,14 +85,20 @@ use crate::*;
 ///   same generated colors over and over again.
 /// - If you want to change where the color wheel "begins", you have to change the speed, seed, and
 ///   delta of this [Lolcat] instance.
-#[derive(Clone, Copy, Serialize, Deserialize, PartialEq, GetSize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, GetSize)]
 pub struct LolcatBuilder {
-    /// Rate at which the color changes when [format_str](Lolcat::format_str) is called.
-    color_change_speed: ColorChangeSpeed,
+    /// Rate at which the color changes when
+    /// [colorize_to_styled_texts](Lolcat::colorize_to_styled_texts) is called.
+    pub color_change_speed: ColorChangeSpeed,
     /// Initial color of the wheel.
-    seed: f64,
+    pub seed: f64,
     /// Delta that should be applied to the seed for it to change colors.
-    seed_delta: f64,
+    pub seed_delta: f64,
+    /// - `true` means the background is colorized, and the foreground is computed for contrast. The
+    ///   primary effect here is that the background of the generated colors is what is being
+    ///   lolcat'd.
+    /// - `false` means that only the foreground color is cycled, background is left alone.
+    pub background_mode: bool,
 }
 
 impl Default for LolcatBuilder {
@@ -63,12 +107,18 @@ impl Default for LolcatBuilder {
             color_change_speed: ColorChangeSpeed::Slow,
             seed: 1.0,
             seed_delta: 1.0,
+            background_mode: false, /* color only the foreground */
         }
     }
 }
 
 impl LolcatBuilder {
     pub fn new() -> Self { Self::default() }
+
+    pub fn set_background_mode(mut self, background_mode: bool) -> Self {
+        self.background_mode = background_mode;
+        self
+    }
 
     pub fn set_color_change_speed(mut self, color_change_speed: ColorChangeSpeed) -> Self {
         self.color_change_speed = color_change_speed;
@@ -93,6 +143,7 @@ impl LolcatBuilder {
 
         new_lolcat.color_wheel_control.color_change_speed = self.color_change_speed;
         new_lolcat.color_wheel_control.seed = self.seed;
+        new_lolcat.color_wheel_control.background_mode = self.background_mode;
 
         new_lolcat
     }

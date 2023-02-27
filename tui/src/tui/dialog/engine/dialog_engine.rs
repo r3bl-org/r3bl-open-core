@@ -28,23 +28,22 @@ use crate::*;
 /// [DialogBuffer] struct, which lives in the [r3bl_redux::Store]. The store provides the underlying
 /// document or buffer struct that holds the actual document.
 ///
-/// In order to change the document, you can use the
-/// [apply_event](DialogEngine::apply_event) method which takes [InputEvent] and tries to
-/// execute it against this buffer.
+/// In order to change the document, you can use the [apply_event](DialogEngine::apply_event) method
+/// which takes [InputEvent] and tries to execute it against this buffer.
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct DialogEngine {
     pub dialog_options: DialogEngineConfigOptions,
     pub editor_engine: EditorEngine,
-    /// This [Lolcat] is used to render the dialog box. It is created when
+    /// This [ColorWheel] is used to render the dialog box. It is created when
     /// [new()](DialogEngine::new) is called.
     /// - The colors it cycles through are "stable" meaning that once constructed via the
-    ///   [builder](LolcatBuilder) (which sets the speed, seed, and delta that determine where the
+    ///   [ColorWheel::new()](ColorWheel::new) (which sets the options that determine where the
     ///   color wheel starts when it is used). For eg, between repeated calls to
-    ///   [render_engine](DialogEngine::render_engine) which uses the same [Lolcat] instance, the
-    ///   generated colors will be the same.
-    /// - If you want to change where the color wheel "begins", you have to change the speed, seed,
-    ///   and delta of this [Lolcat] instance.
-    pub lolcat: Lolcat,
+    ///   [render_engine](DialogEngine::render_engine) which uses the same [ColorWheel] instance,
+    ///   the generated colors will be the same.
+    /// - If you want to change where the color wheel "begins", you have to change
+    ///   [ColorWheelConfig] options used to create this instance.
+    pub color_wheel: ColorWheel,
     /// This is evaluated and saved when [render_engine](DialogEngine::render_engine) is called.
     /// The dialog box is rendered outside of any layout [FlexBox] or [Surface], so it just paints
     /// itself to the screen on top of everything else.
@@ -66,9 +65,37 @@ mod dialog_engine_impl {
             dialog_options: DialogEngineConfigOptions,
             editor_options: EditorEngineConfigOptions,
         ) -> Self {
+            // The col_count has to be large enough to fit the terminal width so that the gradient
+            // doesn't flicker. If for some reason the terminal width is not available, then we
+            // default to 250.
+            let Size {
+                col_count,
+                row_count: _,
+            } = lookup_size().unwrap_or(size!(col_count: 200, row_count: 0));
+
             Self {
                 dialog_options,
                 editor_engine: EditorEngine::new(editor_options),
+                color_wheel: ColorWheel::new(vec![
+                    // Truecolor gradient.
+                    ColorWheelConfig::Rgb(
+                        vec![
+                            "#00ffff".into(), /* cyan  */
+                            "#ff00ff".into(), /* magenta */
+                            "#0000ff".into(), /* blue */
+                            "#00ff00".into(), /* green */
+                            "#ffff00".into(), /* yellow */
+                            "#ff0000".into(), /* red */
+                        ],
+                        ColorWheelSpeed::Fast,
+                        ch!(@to_usize col_count + 50),
+                    ),
+                    // Ansi256 gradient.
+                    ColorWheelConfig::Ansi256(
+                        Ansi256GradientIndex::LightGreenToLightBlue,
+                        ColorWheelSpeed::Medium,
+                    ),
+                ]),
                 ..Default::default()
             }
         }

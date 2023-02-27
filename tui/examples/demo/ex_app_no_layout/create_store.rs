@@ -32,9 +32,8 @@ pub async fn create_store() -> Store<State, Action> {
 #[non_exhaustive]
 #[allow(dead_code)]
 pub enum Action {
-    Startup,
-    AddPop(i32),
-    SubPop(i32),
+    Add,
+    Sub,
     Clear,
     #[default]
     Noop,
@@ -45,18 +44,14 @@ impl Display for Action {
 }
 
 /// State.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct State {
-    pub stack: Vec<i32>,
-}
-
-impl Default for State {
-    fn default() -> Self { Self { stack: vec![0] } }
+    pub counter: isize,
 }
 
 impl Display for State {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "State {{ stack: {:?} }}", self.stack)
+        write!(f, "State {{ counter: {:?} }}", self.counter)
     }
 }
 
@@ -68,27 +63,15 @@ pub struct AppReducer;
 impl AsyncReducer<State, Action> for AppReducer {
     async fn run(&self, action: &Action, state: &mut State) {
         match action {
-            Action::AddPop(arg) => {
-                if state.stack.is_empty() {
-                    state.stack.push(*arg)
-                } else {
-                    let top = state.stack.pop().unwrap();
-                    let sum = top + arg;
-                    state.stack.push(sum);
-                }
+            Action::Add => {
+                state.counter += 1;
             }
 
-            Action::SubPop(arg) => {
-                if state.stack.is_empty() {
-                    state.stack.push(*arg)
-                } else {
-                    let top = state.stack.pop().unwrap();
-                    let sum = top - arg;
-                    state.stack.push(sum);
-                }
+            Action::Sub => {
+                state.counter -= 1;
             }
 
-            Action::Clear => state.stack = vec![],
+            Action::Clear => state.counter = 0,
 
             _ => {}
         }

@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2023 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,18 +15,14 @@
  *   limitations under the License.
  */
 
-// Attach source files.
-pub mod builder;
-/// This file is called `cat.rs` since `lolcat` is the name of the module and naming it `lolcat.rs`
-/// causes a clippy warning.
-pub mod cat;
-pub mod color_utils;
-pub mod control;
-pub mod lolcat_api;
+// Attach.
+pub mod ansi_256_color_gradients;
+pub mod color_wheel_impl;
+pub mod detect_color_support;
+pub mod styled_text;
 
 // Re-export.
-pub use builder::*;
-pub use cat::*;
-pub use color_utils::*;
-pub use control::*;
-pub use lolcat_api::*;
+pub use ansi_256_color_gradients::*;
+pub use color_wheel_impl::*;
+pub use detect_color_support::*;
+pub use styled_text::*;

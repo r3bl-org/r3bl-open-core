@@ -26,4 +26,4 @@ end
 # RUST_BACKTRACE=1 cargo watch -x "expand --test $argv" -c -q
 
 # The following gets rid of warnings BUT will recompile everything all the time.
-RUST_BACKTRACE=1 RUSTFLAGS=-Awarnings cargo watch -x "expand --test $argv" -c -q
+RUST_BACKTRACE=1 RUSTFLAGS=-Awarnings cargo watch -x "expand --test $argv" -c -q -d 10
