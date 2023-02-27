@@ -52,7 +52,7 @@ mod tests {
         throws!({
             surface.box_start(FlexBoxProps {
                 id: 0,
-                dir: Direction::Horizontal,
+                dir: LayoutDirection::Horizontal,
                 requested_size_percent: requested_size_percent!(width:100, height:100),
                 maybe_styles: None,
             })?;
@@ -69,7 +69,7 @@ mod tests {
             throws!({
                 let layout_item = surface.stack_of_boxes.first().unwrap();
                 assert_eq2!(layout_item.id, 0);
-                assert_eq2!(layout_item.dir, Direction::Horizontal);
+                assert_eq2!(layout_item.dir, LayoutDirection::Horizontal);
                 assert_eq2!(
                     layout_item.origin_pos,
                     position!(col_index: 0, row_index: 0)
@@ -95,7 +95,7 @@ mod tests {
             box_start! {
               in:                     surface,
               id:                     1,
-              dir:                    Direction::Vertical,
+              dir:                    LayoutDirection::Vertical,
               requested_size_percent: requested_size_percent!(width:50, height:100),
               styles:                 [1]
             }
@@ -107,7 +107,7 @@ mod tests {
             throws!({
                 let layout_item = surface.stack_of_boxes.last().unwrap();
                 assert_eq2!(layout_item.id, 1);
-                assert_eq2!(layout_item.dir, Direction::Vertical);
+                assert_eq2!(layout_item.dir, LayoutDirection::Vertical);
 
                 assert_eq2!(layout_item.origin_pos, position!(col_index:0, row_index:0));
                 assert_eq2!(layout_item.bounds_size, size!(col_count:250, row_count:500));
@@ -141,7 +141,7 @@ mod tests {
             surface.box_start(FlexBoxProps {
                 maybe_styles: get_styles! { @from: surface.stylesheet, [2] },
                 id: 2,
-                dir: Direction::Vertical,
+                dir: LayoutDirection::Vertical,
                 requested_size_percent: requested_size_percent!(width:50, height:100),
             })?;
             make_right_col_assertions(surface)?;
@@ -152,7 +152,7 @@ mod tests {
             throws!({
                 let current_box = surface.stack_of_boxes.last().unwrap();
                 assert_eq2!(current_box.id, 2);
-                assert_eq2!(current_box.dir, Direction::Vertical);
+                assert_eq2!(current_box.dir, LayoutDirection::Vertical);
 
                 assert_eq2!(
                     current_box.origin_pos,
@@ -190,15 +190,15 @@ mod tests {
                 id: 1
                 attrib: [dim, bold]
                 padding: 2
-                color_fg: TuiColor::Rgb { r: 255, g: 255, b: 0 } /* Yellow. */
-                color_bg: TuiColor::Rgb { r: 128, g: 128, b: 128 } /* Grey. */
+                color_fg: TuiColor::Rgb (RgbValue{ red: 255, green: 255, blue: 0 }) /* Yellow. */
+                color_bg: TuiColor::Rgb (RgbValue{ red: 128, green: 128, blue: 128 }) /* Grey. */
               },
               style! {
                 id: 2
                 attrib: [underline, strikethrough]
                 padding: 3
-                color_fg: TuiColor::Rgb { r: 0, g: 0, b: 0 } /* Black. */
-                color_bg: TuiColor::Rgb { r: 255, g: 255, b: 255 } /* White. */
+                color_fg: TuiColor::Rgb (RgbValue{ red: 0, green: 0, blue: 0 }) /* Black. */
+                color_bg: TuiColor::Rgb (RgbValue{ red: 255, green: 255, blue: 255 }) /* White. */
               }
             }
         })

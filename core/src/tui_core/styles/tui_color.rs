@@ -20,6 +20,8 @@ use core::fmt::Debug;
 use get_size::GetSize;
 use serde::{Deserialize, Serialize};
 
+use crate::*;
+
 #[macro_export]
 macro_rules! color {
     (
@@ -27,11 +29,9 @@ macro_rules! color {
     $arg_g : expr,
     $arg_b : expr
   ) => {
-        r3bl_rs_utils_core::TuiColor::Rgb {
-            r: $arg_r,
-            g: $arg_g,
-            b: $arg_b,
-        }
+        r3bl_rs_utils_core::TuiColor::Rgb(r3bl_rs_utils_core::RgbValue::from_u8(
+            $arg_r, $arg_g, $arg_b,
+        ))
     };
     (
     $arg_value : expr
@@ -45,49 +45,49 @@ macro_rules! color {
         r3bl_rs_utils_core::TuiColor::Black
     };
     (@dark_grey) => {
-        r3bl_rs_utils_core::TuiColor::DarkGrey
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkGrey)
     };
     (@red) => {
-        r3bl_rs_utils_core::TuiColor::Red
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Red)
     };
     (@dark_red) => {
-        r3bl_rs_utils_core::TuiColor::DarkRed
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkRed)
     };
     (@green) => {
-        r3bl_rs_utils_core::TuiColor::Green
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Green)
     };
     (@dark_green) => {
-        r3bl_rs_utils_core::TuiColor::DarkGreen
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkGreen)
     };
     (@yellow) => {
-        r3bl_rs_utils_core::TuiColor::Yellow
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Yellow)
     };
     (@dark_yellow) => {
-        r3bl_rs_utils_core::TuiColor::DarkYellow
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkYellow)
     };
     (@blue) => {
-        r3bl_rs_utils_core::TuiColor::Blue
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Blue)
     };
     (@dark_blue) => {
-        r3bl_rs_utils_core::TuiColor::DarkBlue
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkBlue)
     };
     (@magenta) => {
-        r3bl_rs_utils_core::TuiColor::Magenta
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Magenta)
     };
     (@dark_magenta) => {
-        r3bl_rs_utils_core::TuiColor::DarkMagenta
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkMagenta)
     };
     (@cyan) => {
-        r3bl_rs_utils_core::TuiColor::Cyan
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Cyan)
     };
     (@dark_cyan) => {
-        r3bl_rs_utils_core::TuiColor::DarkCyan
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkCyan)
     };
     (@white) => {
-        r3bl_rs_utils_core::TuiColor::White
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::White)
     };
     (@grey) => {
-        r3bl_rs_utils_core::TuiColor::Grey
+        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Grey)
     };
 }
 
@@ -97,6 +97,24 @@ macro_rules! color {
 pub enum TuiColor {
     /// Resets the terminal color.
     Reset,
+    /// ANSI 16 basic colors.
+    Basic(ANSIBasicColor),
+    /// An RGB color. See [RGB color model](https://en.wikipedia.org/wiki/RGB_color_model) for more
+    /// info.
+    ///
+    /// Most UNIX terminals and Windows 10 supported only. See [Platform-specific
+    /// notes](enum.Color.html#platform-specific-notes) for more info.
+    Rgb(RgbValue),
+    /// An ANSI color. See [256 colors - cheat sheet](https://jonasjacek.github.io/colors/) for more
+    /// info.
+    ///
+    /// Most UNIX terminals and Windows 10 supported only. See [Platform-specific
+    /// notes](enum.Color.html#platform-specific-notes) for more info.
+    Ansi(u8),
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Copy, Hash, GetSize)]
+pub enum ANSIBasicColor {
     /// Black color.
     Black,
     /// Dark grey color.
@@ -129,45 +147,254 @@ pub enum TuiColor {
     White,
     /// Grey color.
     Grey,
-    /// An RGB color. See [RGB color model](https://en.wikipedia.org/wiki/RGB_color_model) for more
-    /// info.
-    ///
-    /// Most UNIX terminals and Windows 10 supported only. See [Platform-specific
-    /// notes](enum.Color.html#platform-specific-notes) for more info.
-    Rgb { r: u8, g: u8, b: u8 },
-    /// An ANSI color. See [256 colors - cheat sheet](https://jonasjacek.github.io/colors/) for more
-    /// info.
-    ///
-    /// Most UNIX terminals and Windows 10 supported only. See [Platform-specific
-    /// notes](enum.Color.html#platform-specific-notes) for more info.
-    AnsiValue(u8),
 }
 
-mod helpers {
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, GetSize, Copy, Debug)]
+pub struct RgbValue {
+    pub red: u8,
+    pub green: u8,
+    pub blue: u8,
+}
+
+impl Default for RgbValue {
+    fn default() -> Self { Self::from_u8(255, 255, 255) }
+}
+
+mod rgb_values_impl {
+    use super::*;
+
+    impl RgbValue {
+        pub fn from_u8(red: u8, green: u8, blue: u8) -> Self { Self { red, green, blue } }
+
+        pub fn from_f32(red: f32, green: f32, blue: f32) -> Self {
+            Self {
+                red: (red * 255.0) as u8,
+                green: (green * 255.0) as u8,
+                blue: (blue * 255.0) as u8,
+            }
+        }
+
+        pub fn try_from_hex_color(input: &str) -> CommonResult<RgbValue> {
+            match parse_hex_color(input) {
+                Ok((_, color)) => Ok(color),
+                Err(_) => {
+                    CommonError::new_err_with_only_type(CommonErrorType::InvalidHexColorFormat)
+                }
+            }
+        }
+
+        pub fn try_from_tui_color(color: TuiColor) -> CommonResult<Self> {
+            match color {
+                // RGB values.
+                TuiColor::Rgb(it) => Ok(it),
+
+                // ANSI Basic 16.
+                TuiColor::Basic(basic_color) => {
+                    match basic_color {
+                        // ANSI values.
+                        ANSIBasicColor::Black => Ok(RgbValue {
+                            red: 0,
+                            green: 0,
+                            blue: 0,
+                        }),
+                        ANSIBasicColor::White => Ok(RgbValue {
+                            red: 255,
+                            green: 255,
+                            blue: 255,
+                        }),
+                        ANSIBasicColor::Grey => Ok(RgbValue {
+                            red: 128,
+                            green: 128,
+                            blue: 128,
+                        }),
+                        ANSIBasicColor::Red => Ok(RgbValue {
+                            red: 255,
+                            green: 0,
+                            blue: 0,
+                        }),
+                        ANSIBasicColor::Green => Ok(RgbValue {
+                            red: 0,
+                            green: 255,
+                            blue: 0,
+                        }),
+                        ANSIBasicColor::Blue => Ok(RgbValue {
+                            red: 0,
+                            green: 0,
+                            blue: 255,
+                        }),
+                        ANSIBasicColor::Yellow => Ok(RgbValue {
+                            red: 255,
+                            green: 255,
+                            blue: 0,
+                        }),
+                        ANSIBasicColor::Cyan => Ok(RgbValue {
+                            red: 0,
+                            green: 255,
+                            blue: 255,
+                        }),
+                        ANSIBasicColor::Magenta => Ok(RgbValue {
+                            red: 255,
+                            green: 0,
+                            blue: 255,
+                        }),
+                        ANSIBasicColor::DarkGrey => Ok(RgbValue {
+                            red: 64,
+                            green: 64,
+                            blue: 64,
+                        }),
+                        ANSIBasicColor::DarkRed => Ok(RgbValue {
+                            red: 128,
+                            green: 0,
+                            blue: 0,
+                        }),
+                        ANSIBasicColor::DarkGreen => Ok(RgbValue {
+                            red: 0,
+                            green: 128,
+                            blue: 0,
+                        }),
+                        ANSIBasicColor::DarkBlue => Ok(RgbValue {
+                            red: 0,
+                            green: 0,
+                            blue: 128,
+                        }),
+                        ANSIBasicColor::DarkYellow => Ok(RgbValue {
+                            red: 128,
+                            green: 128,
+                            blue: 0,
+                        }),
+                        ANSIBasicColor::DarkMagenta => Ok(RgbValue {
+                            red: 128,
+                            green: 0,
+                            blue: 128,
+                        }),
+                        ANSIBasicColor::DarkCyan => Ok(RgbValue {
+                            red: 0,
+                            green: 128,
+                            blue: 128,
+                        }),
+                    }
+                }
+
+                _ => CommonError::new_err_with_only_type(CommonErrorType::InvalidRgbColor),
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_rgb_value {
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        let value = RgbValue::from_u8(1, 2, 3);
+        assert_eq!((value.red, value.green, value.blue), (1, 2, 3));
+    }
+
+    #[test]
+    fn test_try_from_hex_color() {
+        // Valid.
+        {
+            let hex_color = "#ff0000";
+            let value = RgbValue::try_from_hex_color(hex_color).unwrap();
+            assert_eq!((value.red, value.green, value.blue), (255, 0, 0));
+        }
+
+        // Invalid.
+        {
+            let hex_color = "#ff000";
+            let value = RgbValue::try_from_hex_color(hex_color);
+            assert!(value.is_err());
+        }
+    }
+
+    #[test]
+    fn test_try_from_tui_color() {
+        assert_eq!(
+            RgbValue::try_from_tui_color(TuiColor::Rgb(RgbValue::from_u8(1, 2, 3))).unwrap(),
+            RgbValue {
+                red: 1,
+                green: 2,
+                blue: 3
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Black)).unwrap(),
+            RgbValue {
+                red: 0,
+                green: 0,
+                blue: 0
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::White)).unwrap(),
+            RgbValue {
+                red: 255,
+                green: 255,
+                blue: 255
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Grey)).unwrap(),
+            RgbValue {
+                red: 128,
+                green: 128,
+                blue: 128
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Red)).unwrap(),
+            RgbValue {
+                red: 255,
+                green: 0,
+                blue: 0
+            }
+        );
+
+        assert_eq!(
+            RgbValue::try_from_tui_color(TuiColor::Basic(ANSIBasicColor::Green)).unwrap(),
+            RgbValue {
+                red: 0,
+                green: 255,
+                blue: 0
+            }
+        );
+    }
+}
+
+mod debug_helpers {
     use super::*;
 
     impl Debug for TuiColor {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
-                TuiColor::Rgb { r, g, b } => f.write_fmt(format_args!("{r},{g},{b}")),
-                TuiColor::AnsiValue(value) => f.write_fmt(format_args!("ansi_value({value})")),
+                TuiColor::Rgb(RgbValue { red, green, blue }) => {
+                    f.write_fmt(format_args!("{red},{green},{blue}"))
+                }
+                TuiColor::Ansi(value) => f.write_fmt(format_args!("ansi_value({value})")),
                 TuiColor::Reset => f.write_fmt(format_args!("reset")),
-                TuiColor::Black => f.write_fmt(format_args!("black")),
-                TuiColor::DarkGrey => f.write_fmt(format_args!("dark_grey")),
-                TuiColor::Red => f.write_fmt(format_args!("red")),
-                TuiColor::DarkRed => f.write_fmt(format_args!("dark_red")),
-                TuiColor::Green => f.write_fmt(format_args!("green")),
-                TuiColor::DarkGreen => f.write_fmt(format_args!("dark_green")),
-                TuiColor::Yellow => f.write_fmt(format_args!("yellow")),
-                TuiColor::DarkYellow => f.write_fmt(format_args!("dark_yellow")),
-                TuiColor::Blue => f.write_fmt(format_args!("blue")),
-                TuiColor::DarkBlue => f.write_fmt(format_args!("dark_blue")),
-                TuiColor::Magenta => f.write_fmt(format_args!("magenta")),
-                TuiColor::DarkMagenta => f.write_fmt(format_args!("dark_magenta")),
-                TuiColor::Cyan => f.write_fmt(format_args!("cyan")),
-                TuiColor::DarkCyan => f.write_fmt(format_args!("dark_cyan")),
-                TuiColor::White => f.write_fmt(format_args!("white")),
-                TuiColor::Grey => f.write_fmt(format_args!("grey")),
+                TuiColor::Basic(basic_color) => match basic_color {
+                    ANSIBasicColor::Black => f.write_fmt(format_args!("black")),
+                    ANSIBasicColor::DarkGrey => f.write_fmt(format_args!("dark_grey")),
+                    ANSIBasicColor::Red => f.write_fmt(format_args!("red")),
+                    ANSIBasicColor::DarkRed => f.write_fmt(format_args!("dark_red")),
+                    ANSIBasicColor::Green => f.write_fmt(format_args!("green")),
+                    ANSIBasicColor::DarkGreen => f.write_fmt(format_args!("dark_green")),
+                    ANSIBasicColor::Yellow => f.write_fmt(format_args!("yellow")),
+                    ANSIBasicColor::DarkYellow => f.write_fmt(format_args!("dark_yellow")),
+                    ANSIBasicColor::Blue => f.write_fmt(format_args!("blue")),
+                    ANSIBasicColor::DarkBlue => f.write_fmt(format_args!("dark_blue")),
+                    ANSIBasicColor::Magenta => f.write_fmt(format_args!("magenta")),
+                    ANSIBasicColor::DarkMagenta => f.write_fmt(format_args!("dark_magenta")),
+                    ANSIBasicColor::Cyan => f.write_fmt(format_args!("cyan")),
+                    ANSIBasicColor::DarkCyan => f.write_fmt(format_args!("dark_cyan")),
+                    ANSIBasicColor::White => f.write_fmt(format_args!("white")),
+                    ANSIBasicColor::Grey => f.write_fmt(format_args!("grey")),
+                },
             }
         }
     }

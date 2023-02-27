@@ -215,42 +215,8 @@ mod render_op_impl_crossterm_impl {
         ) {
             use perform_paint::*;
 
-            // Are ANSI codes present?
-            let it = shared_global_data
-                .write()
-                .await
-                .get_from_cache_try_strip_ansi_text(text_arg);
-            let content_type = {
-                if it.is_some() {
-                    ContentType::ANSIText
-                } else {
-                    ContentType::PlainText
-                }
-            };
-
             // Gen log_msg.
-            let log_msg = Cow::from(match content_type {
-                ContentType::PlainText => {
-                    format!("\"{text_arg}\"")
-                }
-                ContentType::ANSIText => {
-                    call_if_true!(DEBUG_TUI_SHOW_PIPELINE_EXPANDED, {
-                        let it = shared_global_data
-                            .write()
-                            .await
-                            .get_from_cache_try_strip_ansi_text(text_arg);
-
-                        let msg = format!(
-                            "ANSI {:?}, len: {:?}, plain: {:?}",
-                            text_arg,
-                            text_arg.len(),
-                            it
-                        );
-                        log_debug(msg);
-                    });
-                    format!("ANSI detected, size: {} bytes", text_arg.len())
-                }
-            });
+            let log_msg = Cow::from(format!("\"{text_arg}\""));
 
             let text: Cow<'_, str> = Cow::from(text_arg);
 
@@ -259,7 +225,6 @@ mod render_op_impl_crossterm_impl {
                 log_msg,
                 maybe_style,
                 shared_global_data,
-                content_type,
             };
 
             let mut needs_reset = false;
@@ -300,19 +265,12 @@ mod render_op_impl_crossterm_impl {
 mod perform_paint {
     use super::*;
 
-    #[derive(Debug, Clone, Copy)]
-    pub enum ContentType {
-        ANSIText,
-        PlainText,
-    }
-
     #[derive(Debug)]
     pub struct PaintArgs<'a> {
         pub text: Cow<'a, str>,
         pub log_msg: Cow<'a, str>,
         pub maybe_style: &'a Option<Style>,
         pub shared_global_data: &'a SharedGlobalData,
-        pub content_type: ContentType,
     }
 
     /// Use [Style] to set crossterm [Attributes] ([docs](
@@ -352,7 +310,6 @@ mod perform_paint {
             text,
             log_msg,
             shared_global_data,
-            content_type,
             ..
         } = paint_args;
 
@@ -370,15 +327,7 @@ mod perform_paint {
         };
 
         // Update cursor position after paint.
-        let display_width = match content_type {
-            ContentType::ANSIText => {
-                let ansi_text = text.ansi_text();
-                let ansi_text_segments = ansi_text.filter_segments_by_display_width(None);
-                let unicode_width = ansi_text_segments.display_width;
-                ch!(unicode_width)
-            }
-            ContentType::PlainText => unicode_string.display_width,
-        };
+        let display_width = unicode_string.display_width;
 
         cursor_position_copy.col_index += display_width;
         sanitize_and_save_abs_position(cursor_position_copy, shared_global_data, local_data).await;

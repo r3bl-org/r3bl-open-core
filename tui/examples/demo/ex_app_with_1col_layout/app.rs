@@ -148,7 +148,7 @@ mod perform_layout {
                 box_start! (
                     in:                     surface,
                     id:                     col_id,
-                    dir:                    Direction::Vertical,
+                    dir:                    LayoutDirection::Vertical,
                     requested_size_percent: requested_size_percent!(width: 100, height: 100),
                     styles:                 [col_id]
                 );
@@ -213,7 +213,7 @@ mod stylesheet {
               style! {
                 id: Id::Col as u8
                 padding: 1
-                color_bg: TuiColor::Rgb { r: 55, g: 55, b: 100 }
+                color_bg: TuiColor::Rgb (RgbValue { red: 55, green: 55, blue: 100 })
               }
             }
         })

@@ -11,7 +11,11 @@
 # cargo watch -x check -x 'test -q --color always' -c -q
 
 # rm -rf target
-RUST_BACKTRACE=0 cargo watch -x check -x 'test -q --color always -- --test-threads 4' -c -q
+
+# https://github.com/watchexec/cargo-watch
+# By default, the workspace directories of your project and all local dependencies are watched,
+# in this case w/ a delay of 10 seconds.
+RUST_BACKTRACE=0 cargo watch --exec check --exec 'test --quiet --color always -- --test-threads 4' --clear --quiet --delay 10
 
 # cargo test -q --color always
 # cargo test --package rust_book --bin rust_book --all-features -- data_structures::tree::test_node --exact --nocapture

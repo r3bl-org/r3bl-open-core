@@ -154,6 +154,14 @@ mod addition {
             *self = sum;
         }
     }
+
+    impl AddAssign<&Option<Style>> for Style {
+        fn add_assign(&mut self, rhs: &Option<Style>) {
+            if let Some(rhs) = rhs {
+                *self += rhs;
+            }
+        }
+    }
 }
 
 mod style_helpers {
@@ -360,11 +368,7 @@ mod convert_syntect_highlighting_style {
 
     impl From<SyntectColor> for TuiColor {
         fn from(st_color: SyntectColor) -> Self {
-            TuiColor::Rgb {
-                r: st_color.r,
-                g: st_color.g,
-                b: st_color.b,
-            }
+            TuiColor::Rgb(RgbValue::from_u8(st_color.r, st_color.g, st_color.b))
         }
     }
 }

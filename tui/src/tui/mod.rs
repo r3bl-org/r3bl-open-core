@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2023 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +36,7 @@ pub const DEBUG_TUI_SHOW_PIPELINE_EXPANDED: bool = false;
 pub const DEBUG_TUI_SHOW_TERMINAL_BACKEND: bool = false;
 
 // Attach sources.
+pub mod color_wheel;
 pub mod dialog;
 pub mod editor;
 pub mod layout;
@@ -45,8 +46,10 @@ pub mod rsx;
 pub mod syntax_highlighting;
 pub mod terminal_lib_backends;
 pub mod terminal_window;
+pub mod lolcat;
 
 // Re-export.
+pub use color_wheel::*;
 pub use dialog::*;
 pub use editor::*;
 pub use layout::*;
@@ -56,6 +59,7 @@ pub use rsx::*;
 pub use syntax_highlighting::*;
 pub use terminal_lib_backends::*;
 pub use terminal_window::*;
+pub use lolcat::*;
 
 // Tests.
 mod test_make_style_macro;

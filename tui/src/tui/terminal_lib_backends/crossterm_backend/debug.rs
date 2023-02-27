@@ -24,23 +24,11 @@ use crate::*;
 pub struct CrosstermDebugFormatRenderOp;
 
 fn format_print_text(op_name: &str, text: &String, maybe_style: &Option<Style>) -> String {
-    match ANSIText::try_strip_ansi(text) {
-        Some(plain_text) => {
-            // Successfully stripped ANSI escape codes.
-            match maybe_style {
-                Some(style) => format!("{op_name}(\"{plain_text}\", {style:?})"),
-                None => format!("{op_name}(\"{plain_text}\", None)"),
-            }
+    match maybe_style {
+        Some(style) => {
+            format!("{op_name}({} bytes, {style:?})", text.len())
         }
-        None => {
-            // Couldn't strip ANSI, so just print the text.
-            match maybe_style {
-                Some(style) => {
-                    format!("{op_name}({} bytes, {style:?})", text.len())
-                }
-                None => format!("{op_name}({} bytes, None)", text.len()),
-            }
-        }
+        None => format!("{op_name}({} bytes, None)", text.len()),
     }
 }
 

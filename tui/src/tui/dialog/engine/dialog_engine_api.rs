@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{borrow::Cow, fmt::Debug};
+use std::fmt::Debug;
 
 use r3bl_rs_utils_core::*;
 
@@ -499,29 +499,53 @@ mod internal_impl {
 
         let row_pos =
             position!(col_index: origin_pos.col_index + 1, row_index: origin_pos.row_index + 1);
-        let unicode_string = UnicodeString::from(title);
-        let mut text_content = Cow::Borrowed(unicode_string.truncate_to_fit_size(size! {
-          col_count: bounds_size.col_count - 2, row_count: bounds_size.row_count
-        }));
 
-        // Apply lolcat override (if enabled) to the fg_color of text_content.
-        apply_lolcat_from_style(
-            &dialog_engine.dialog_options.maybe_style_title,
-            &mut dialog_engine.lolcat,
-            &mut text_content,
-        );
+        let title_us = UnicodeString::from(title);
+        let text_content = title_us.truncate_to_fit_size(size! {
+          col_count: bounds_size.col_count - 2, row_count: bounds_size.row_count
+        });
 
         ops.push(RenderOp::ResetColor);
         ops.push(RenderOp::MoveCursorPositionAbs(row_pos));
         ops.push(RenderOp::ApplyColors(
             dialog_engine.dialog_options.maybe_style_title,
         ));
-        ops.push(RenderOp::PaintTextWithAttributes(
-            text_content.into(),
-            dialog_engine.dialog_options.maybe_style_title,
-        ));
+
+        // Apply lolcat override (if enabled) to the fg_color of text_content.
+        lolcat_from_style(
+            &mut ops,
+            &mut dialog_engine.color_wheel,
+            &dialog_engine.dialog_options.maybe_style_title,
+            text_content,
+        );
 
         ops
+    }
+
+    /// Only Colorizes text in-place if [Style]'s `lolcat` field is true. Otherwise leaves `text`
+    /// alone.
+    fn lolcat_from_style(
+        ops: &mut RenderOps,
+        color_wheel: &mut ColorWheel,
+        maybe_style: &Option<Style>,
+        text: &str,
+    ) {
+        // If lolcat is enabled, then colorize the text.
+        if let Some(style) = maybe_style {
+            if style.lolcat {
+                color_wheel
+                    .colorize_into_styled_texts(
+                        &UnicodeString::from(text),
+                        GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                        TextColorizationPolicy::ColorEachCharacter(*maybe_style),
+                    )
+                    .render_into(ops);
+                return;
+            }
+        }
+
+        // Otherwise, just paint the text as-is.
+        ops.push(RenderOp::PaintTextWithAttributes(text.into(), *maybe_style));
     }
 
     pub fn render_border(
@@ -546,66 +570,59 @@ mod internal_impl {
             match (is_first_line, is_last_line) {
                 // First line.
                 (true, false) => {
-                    let mut text_content = Cow::Owned(format!(
+                    let text_content = format!(
                         "{}{}{}",
                         BorderGlyphCharacter::TopLeft.as_ref(),
                         BorderGlyphCharacter::Horizontal
                             .as_ref()
                             .repeat(ch!(@to_usize bounds_size.col_count - 2)),
                         BorderGlyphCharacter::TopRight.as_ref()
-                    ));
-                    // Apply lolcat override (if enabled) to the fg_color of text_content.
-                    apply_lolcat_from_style(
-                        &maybe_style,
-                        &mut dialog_engine.lolcat,
-                        &mut text_content,
                     );
 
-                    ops.push(RenderOp::PaintTextWithAttributes(
-                        text_content.into(),
-                        maybe_style,
-                    ));
+                    // Apply lolcat override (if enabled) to the fg_color of text_content.
+                    lolcat_from_style(
+                        &mut ops,
+                        &mut dialog_engine.color_wheel,
+                        &maybe_style,
+                        &text_content,
+                    );
                 }
+
                 // Middle line.
                 (false, false) => {
-                    let mut text_content = Cow::Owned(format!(
+                    let text_content = format!(
                         "{}{}{}",
                         BorderGlyphCharacter::Vertical.as_ref(),
                         inner_spaces,
                         BorderGlyphCharacter::Vertical.as_ref()
-                    ));
-                    // Apply lolcat override (if enabled) to the fg_color of text_content.
-                    apply_lolcat_from_style(
-                        &maybe_style,
-                        &mut dialog_engine.lolcat,
-                        &mut text_content,
                     );
-                    ops.push(RenderOp::PaintTextWithAttributes(
-                        text_content.into(),
-                        maybe_style,
-                    ));
+                    // Apply lolcat override (if enabled) to the fg_color of text_content.
+                    lolcat_from_style(
+                        &mut ops,
+                        &mut dialog_engine.color_wheel,
+                        &maybe_style,
+                        &text_content,
+                    );
                 }
+
                 // Last line.
                 (false, true) => {
                     // Paint bottom border.
-                    let mut text_content = Cow::Owned(format!(
+                    let text_content = format!(
                         "{}{}{}",
                         BorderGlyphCharacter::BottomLeft.as_ref(),
                         BorderGlyphCharacter::Horizontal
                             .as_ref()
                             .repeat(ch!(@to_usize bounds_size.col_count - 2)),
                         BorderGlyphCharacter::BottomRight.as_ref(),
-                    ));
-                    // Apply lolcat override (if enabled) to the fg_color of text_content.
-                    apply_lolcat_from_style(
-                        &maybe_style,
-                        &mut dialog_engine.lolcat,
-                        &mut text_content,
                     );
-                    ops.push(RenderOp::PaintTextWithAttributes(
-                        text_content.into(),
-                        maybe_style,
-                    ));
+                    // Apply lolcat override (if enabled) to the fg_color of text_content.
+                    lolcat_from_style(
+                        &mut ops,
+                        &mut dialog_engine.color_wheel,
+                        &maybe_style,
+                        &text_content,
+                    );
                 }
                 _ => {}
             };
@@ -618,12 +635,13 @@ mod internal_impl {
                         .as_ref()
                         .repeat(ch!(@to_usize bounds_size.col_count - 2))
                         .to_string();
-                    let mut text_content = Cow::Owned(format!(
+
+                    let text_content = format!(
                         "{}{}{}",
                         BorderGlyphCharacter::LineUpDownRight.as_ref(),
                         inner_line,
                         BorderGlyphCharacter::LineUpDownLeft.as_ref()
-                    ));
+                    );
 
                     let col_start_index = ch!(0);
                     let row_start_index =
@@ -636,16 +654,14 @@ mod internal_impl {
                         *origin_pos,
                         rel_insertion_pos,
                     ));
+
                     // Apply lolcat override (if enabled) to the fg_color of text_content.
-                    apply_lolcat_from_style(
+                    lolcat_from_style(
+                        &mut ops,
+                        &mut dialog_engine.color_wheel,
                         &maybe_style,
-                        &mut dialog_engine.lolcat,
-                        &mut text_content,
+                        &text_content,
                     );
-                    ops.push(RenderOp::PaintTextWithAttributes(
-                        text_content.into(),
-                        maybe_style,
-                    ));
                 }
             }
         }

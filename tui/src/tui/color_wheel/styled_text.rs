@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2023 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +14,161 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+
+use std::ops::{Add, AddAssign, Deref, DerefMut};
+
+use r3bl_rs_utils_core::*;
+
+use crate::*;
+
+/// Use [styled_text!] macro for easier construction.
+#[derive(Debug, Clone, Default)]
+pub struct StyledText {
+    plain_text: UnicodeString,
+    style: Style,
+}
+
+mod styled_text_impl {
+    use super::*;
+
+    impl StyledText {
+        pub fn new(text: String, style: Style) -> Self {
+            StyledText {
+                plain_text: UnicodeString::from(text),
+                style,
+            }
+        }
+
+        pub fn get_plain_text(&self) -> &UnicodeString { &self.plain_text }
+
+        pub fn get_style(&self) -> &Style { &self.style }
+    }
+}
+
+/// Macro to make building [StyledText] easy.
+///
+/// Here's an example.
+/// ```rust
+/// use r3bl_rs_utils_core::*;
+/// use r3bl_tui::*;
+///
+/// let style = Style::default();
+/// let st = styled_text!("Hello", style);
+/// ```
+#[macro_export]
+macro_rules! styled_text {
+    () => {
+        StyledText::new(String::new(), Style::default())
+    };
+    ($text_arg: expr) => {
+        StyledText::new($text_arg.to_string(), Style::default())
+    };
+    ($text_arg: expr, $style_arg: expr) => {
+        StyledText::new($text_arg.to_string(), $style_arg)
+    };
+}
+
+/// Use [styled_texts!] macro for easier construction.
+#[derive(Default, Debug, Clone)]
+pub struct StyledTexts {
+    styled_texts: List<StyledText>,
+}
+
+mod impl_styled_texts {
+    use super::*;
+
+    impl Add<StyledText> for StyledTexts {
+        type Output = StyledTexts;
+        fn add(mut self, other: StyledText) -> Self::Output {
+            self.push(other);
+            self
+        }
+    }
+
+    impl AddAssign<StyledText> for StyledTexts {
+        fn add_assign(&mut self, other: StyledText) { self.push(other); }
+    }
+
+    impl Deref for StyledTexts {
+        type Target = Vec<StyledText>;
+        fn deref(&self) -> &Self::Target { &self.styled_texts }
+    }
+
+    impl DerefMut for StyledTexts {
+        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.styled_texts }
+    }
+
+    impl StyledTexts {
+        pub fn pretty_print(&self) -> String {
+            let mut it = vec![];
+            for (index, item) in self.iter().enumerate() {
+                let string = format!(
+                    "{index}: [{}, {}]",
+                    item.get_style(),
+                    item.get_plain_text().string
+                );
+                it.push(string);
+            }
+            it.join("\n")
+        }
+
+        pub fn get_plain_text(&self) -> UnicodeString {
+            let mut it = UnicodeString::default();
+            for styled_text in self.iter() {
+                it = it + &styled_text.plain_text;
+            }
+            it
+        }
+
+        pub fn display_width(&self) -> ChUnit { self.get_plain_text().display_width }
+
+        // BM: ▌END▐ StyledTexts generates RenderOps
+        pub fn render_into(&self, render_ops: &mut RenderOps) {
+            for styled_text in self.iter() {
+                let style = styled_text.style;
+                let text = styled_text.plain_text.clone();
+                render_ops.push(RenderOp::ApplyColors(style.into()));
+                render_ops.push(RenderOp::PaintTextWithAttributes(text.string, style.into()));
+                render_ops.push(RenderOp::ResetColor);
+            }
+        }
+    }
+}
+
+/// Macro to make building [`StyledTexts`] easy.
+///
+/// Here's an example.
+/// ```rust
+/// use r3bl_rs_utils_core::*;
+/// use r3bl_tui::*;
+///
+/// let mut st_vec = styled_texts! {
+///   styled_text! {
+///     "Hello",
+///     Style::default()
+///   },
+///   styled_text! {
+///     "World",
+///     Style::default()
+///   }
+/// };
+/// ```
+#[macro_export]
+macro_rules! styled_texts {
+    (
+        $($styled_text_arg : expr),*
+        $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+    ) =>
+    {
+        {
+            let mut styled_texts: StyledTexts = Default::default();
+            $(
+                styled_texts += $styled_text_arg;
+            )*
+            styled_texts
+        }
+    };
+}
 
 #[cfg(test)]
 mod tests {
@@ -34,14 +189,14 @@ mod tests {
             pub fn get_s1() -> Style {
                 style! {
                   id: 1
-                  color_bg: TuiColor::Rgb { r: 1, g: 1, b: 1 }
+                  color_bg: TuiColor::Rgb (RgbValue{ red: 1, green: 1, blue: 1 })
                 }
             }
 
             pub fn get_s2() -> Style {
                 style! {
                   id: 2
-                  color_bg: TuiColor::Rgb { r: 2, g: 2, b: 2 }
+                  color_bg: TuiColor::Rgb(RgbValue{ red: 2, green: 2, blue: 2 })
                 }
             }
 
@@ -441,19 +596,19 @@ mod tests {
             );
             assert_eq2!(
                 styled_texts[0].get_style().color_fg.unwrap(),
-                TuiColor::Rgb {
-                    r: 255,
-                    g: 255,
-                    b: 255
-                }
+                TuiColor::Rgb(RgbValue {
+                    red: 255,
+                    green: 255,
+                    blue: 255
+                })
             );
             assert_eq2!(
                 styled_texts[0].get_style().color_bg.unwrap(),
-                TuiColor::Rgb {
-                    r: 255,
-                    g: 255,
-                    b: 255
-                }
+                TuiColor::Rgb(RgbValue {
+                    red: 255,
+                    green: 255,
+                    blue: 255
+                })
             );
         }
 
@@ -465,11 +620,19 @@ mod tests {
             );
             assert_eq2!(
                 styled_texts[1].get_style().color_fg.unwrap(),
-                TuiColor::Rgb { r: 0, g: 0, b: 0 }
+                TuiColor::Rgb(RgbValue {
+                    red: 0,
+                    green: 0,
+                    blue: 0
+                })
             );
             assert_eq2!(
                 styled_texts[1].get_style().color_bg.unwrap(),
-                TuiColor::Rgb { r: 0, g: 0, b: 0 }
+                TuiColor::Rgb(RgbValue {
+                    red: 0,
+                    green: 0,
+                    blue: 0
+                })
             );
             assert_eq2!(styled_texts[1].get_style().bold, true);
         }
@@ -482,15 +645,19 @@ mod tests {
             );
             assert_eq2!(
                 styled_texts[2].get_style().color_fg.unwrap(),
-                TuiColor::Rgb {
-                    r: 255,
-                    g: 255,
-                    b: 255
-                }
+                TuiColor::Rgb(RgbValue {
+                    red: 255,
+                    green: 255,
+                    blue: 255
+                })
             );
             assert_eq2!(
                 styled_texts[2].get_style().color_bg.unwrap(),
-                TuiColor::Rgb { r: 0, g: 0, b: 0 }
+                TuiColor::Rgb(RgbValue {
+                    red: 0,
+                    green: 0,
+                    blue: 0
+                })
             );
             assert_eq2!(styled_texts[2].get_style().bold, true);
             assert_eq2!(styled_texts[2].get_style().underline, true);
@@ -560,12 +727,12 @@ mod tests {
                   style! {
                     id: 1
                     padding: 1
-                    color_bg: TuiColor::Rgb { r: 55, g: 55, b: 100 }
+                    color_bg: TuiColor::Rgb(RgbValue{ red: 55, green: 55, blue: 100 })
                   },
                   style! {
                     id: 2
                     padding: 1
-                    color_bg: TuiColor::Rgb { r: 55, g: 55, b: 248 }
+                    color_bg: TuiColor::Rgb(RgbValue{ red: 55, green: 55, blue: 248 })
                   }
                 }
             })

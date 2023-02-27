@@ -690,10 +690,11 @@
 //!
 //! # Lolcat support
 //!
-//! An implementation of [r3bl_rs_utils_core::lolcat::cat] w/ a color wheel is provided.
+//! An implementation of lolcat color wheel is provided. Here's an example.
 //!
-//! ```ignore
+//! ```rust
 //! use r3bl_rs_utils_core::*;
+//! use r3bl_tui::*;
 //!
 //! let mut lolcat = LolcatBuilder::new()
 //!   .set_color_change_speed(ColorChangeSpeed::Rapid)
@@ -702,21 +703,21 @@
 //!   .build();
 //!
 //! let content = "Hello, world!";
-//! let colored_content = colorize_using_lolcat!(
-//!   &mut lolcat, "{}", content
-//! );
+//! let unicode_string = UnicodeString::from(content);
+//! let lolcat_mut = &mut lolcat;
+//! let st = lolcat_mut.colorize_to_styled_texts(&unicode_string);
 //!
 //! lolcat.next_color();
 //! ```
 //!
-//! This [r3bl_rs_utils_core::lolcat::Lolcat] that is returned by `build()` is safe to re-use.
+//! This [crate::lolcat::Lolcat] that is returned by `build()` is safe to re-use.
 //! - The colors it cycles through are "stable" meaning that once constructed via the
-//!   [builder](r3bl_rs_utils_core::lolcat::LolcatBuilder) (which sets the speed, seed, and delta
+//!   [builder](crate::lolcat::LolcatBuilder) (which sets the speed, seed, and delta
 //!   that determine where the color wheel starts when it is used). For eg, when used in a dialog
 //!   box component that re-uses the instance, repeated calls to the `render()` function of this
 //!   component will produce the same generated colors over and over again.
 //! - If you want to change where the color wheel "begins", you have to change the speed, seed, and
-//!   delta of this [r3bl_rs_utils_core::lolcat::Lolcat] instance.
+//!   delta of this [crate::lolcat::Lolcat] instance.
 
 // Attach.
 pub mod tui;

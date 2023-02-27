@@ -19,16 +19,16 @@ use crate::ColorWheelControl;
 
 pub struct ColorUtils;
 
-/* cSpell:disable */
 impl ColorUtils {
+    /// More info on luminance:
+    /// - <https://stackoverflow.com/a/49092130/2085356>
+    /// - <https://stackoverflow.com/a/3118280/2085356>
     pub fn calc_fg_color(bg: (u8, u8, u8)) -> (u8, u8, u8) {
-        // Currently, it only computes the foreground color based on some threshold
-        // on grayscale value.
-        // FUTURE: Add a better algorithm for computing foreground color.
-        if ColorUtils::convert_grayscale(bg) > 0xA0_u8 {
-            (0u8, 0u8, 0u8)
+        let luminance = 0.2126 * (bg.0 as f32) + 0.7152 * (bg.1 as f32) + 0.0722 * (bg.2 as f32);
+        if luminance < 140.0 {
+            (255, 255, 255)
         } else {
-            (0xffu8, 0xffu8, 0xffu8)
+            (0, 0, 0)
         }
     }
 

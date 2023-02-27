@@ -349,7 +349,7 @@ mod perform_layout {
                     box_start! (
                         in:                     surface,
                         id:                     ComponentId::Editor as u8,
-                        dir:                    Direction::Vertical,
+                        dir:                    LayoutDirection::Vertical,
                         requested_size_percent: requested_size_percent!(width: 100, height: 100),
                         styles:                 [EditorStyleName::Default as u8]
                     );
@@ -690,12 +690,12 @@ mod stylesheet {
               style! {
                 id: DialogStyleName::Editor as u8
                 attrib: [bold]
-                color_fg: TuiColor::Magenta
+                color_fg: TuiColor::Basic(ANSIBasicColor::Magenta)
               },
               style! {
                 id: DialogStyleName::ResultsPanel as u8
                 // attrib: [bold]
-                color_fg: TuiColor::Blue
+                color_fg: TuiColor::Basic(ANSIBasicColor::Blue)
               }
             }
         })

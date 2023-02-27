@@ -56,7 +56,7 @@ pub trait PerformPositioningAndSizing {
 #[derive(Clone, Debug, Default)]
 pub struct FlexBoxProps {
     pub id: FlexBoxId,
-    pub dir: Direction,
+    pub dir: LayoutDirection,
     pub requested_size_percent: RequestedSizePercent,
     pub maybe_styles: Option<Vec<Style>>,
 }

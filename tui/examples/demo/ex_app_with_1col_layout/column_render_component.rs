@@ -23,7 +23,7 @@ use super::*;
 
 #[derive(Debug, Clone, Default)]
 pub struct ColumnRenderComponent {
-    pub lolcat: Lolcat,
+    pub color_wheel: ColorWheel,
     pub id: FlexBoxId,
 }
 
@@ -31,7 +31,13 @@ impl ColumnRenderComponent {
     pub fn new(id: FlexBoxId) -> Self {
         Self {
             id,
-            ..Default::default()
+            color_wheel: ColorWheel::new(vec![
+                ColorWheelConfig::RgbRandom(ColorWheelSpeed::Fast),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::LightGreenToLightBlue,
+                    ColorWheelSpeed::Fast,
+                ),
+            ]),
         }
     }
 }
@@ -163,8 +169,6 @@ impl Component<State, Action> for ColumnRenderComponent {
             {
                 let line_2_us = UnicodeString::from(line_2);
                 let line_2_us_trunc = line_2_us.truncate_to_fit_size(box_bounds_size);
-                let line_2_postfix_padding = UnicodeString::from(line_2_us_trunc)
-                    .try_get_postfix_padding_for(' ', box_bounds_size.col_count);
                 render_ops! {
                   @add_to render_ops
                   =>
@@ -173,17 +177,19 @@ impl Component<State, Action> for ColumnRenderComponent {
                       content_cursor_pos.add_row_with_bounds(ch!(1), box_bounds_size.row_count)
                     ),
                     RenderOp::ApplyColors(current_box.get_computed_style()),
-                    RenderOp::PaintTextWithAttributes(
-                      colorize_using_lolcat! (&mut self.lolcat,"{}",line_2_us_trunc),
-                      current_box.get_computed_style(),
-                    ),
-                    RenderOp::ResetColor,
-                    if let Some(line_2_postfix_padding) = line_2_postfix_padding {
-                      RenderOp::PaintTextWithAttributes(line_2_postfix_padding, None)
-                    } else {
-                      RenderOp::Noop
-                    }
                 };
+
+                render_ops! {
+                    @render_styled_texts_into render_ops
+                    =>
+                    self.color_wheel.colorize_into_styled_texts(
+                        &UnicodeString::from(line_2_us_trunc),
+                        GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                        TextColorizationPolicy::ColorEachCharacter(current_box.get_computed_style()),
+                    )
+                }
+
+                render_ops += RenderOp::ResetColor;
             }
 
             // Paint is_focused.

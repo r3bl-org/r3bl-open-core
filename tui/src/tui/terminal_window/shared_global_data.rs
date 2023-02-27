@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{collections::HashMap, fmt::Debug};
+use std::fmt::Debug;
 
 use r3bl_rs_utils_core::*;
 
@@ -28,66 +28,10 @@ use crate::*;
 /// These are global state values for the entire application:
 /// - The `window_size` holds the [Size] of the terminal window.
 /// - The `maybe_saved_offscreen_buffer` holds the last rendered [OffscreenBuffer].
-/// - The `cache_ansi_text` holds a cache of [ANSIText] objects. You can use
-///   [get_from_ansi_text_cache](GlobalData::get_from_cache_ansi_text) method to access this.
-/// - The `cache_try_strip_ansi_text` holds a cache of [ANSIText::try_strip_ansi] results. You can
-///   use [get_from_cache_try_strip_ansi_text](GlobalData::get_from_cache_try_strip_ansi_text)
-///   method to access this.
 #[derive(Clone, Default)]
 pub struct GlobalData {
     pub window_size: Size,
-
     pub maybe_saved_offscreen_buffer: Option<OffscreenBuffer>,
-
-    pub cache_ansi_text: HashMap<String, ANSIText>,
-
-    pub cache_try_strip_ansi_text: HashMap<String, Option<String>>,
-
-    // FUTURE: 🐵 use global_user_data (contains key: String, value: HashMap<String, String>).
-    pub global_user_data: HashMap<String, HashMap<String, String>>,
-}
-
-mod manage_cache {
-    use super::*;
-
-    impl GlobalData {
-        pub fn get_from_cache_try_strip_ansi_text(&mut self, key: &str) -> Option<String> {
-            match self.cache_try_strip_ansi_text.get(key) {
-                Some(existing_value) => existing_value.clone(),
-                None => {
-                    let new_value = ANSIText::try_strip_ansi(key);
-                    self.cache_try_strip_ansi_text
-                        .insert(key.into(), new_value.clone());
-
-                    // Clean up the cache if it gets too big.
-                    if self.cache_try_strip_ansi_text.len()
-                        > DefaultSize::GlobalDataCacheSize as usize
-                    {
-                        self.cache_try_strip_ansi_text.clear();
-                    }
-
-                    new_value
-                }
-            }
-        }
-
-        pub fn get_from_cache_ansi_text(&mut self, key: &str) -> ANSIText {
-            match self.cache_ansi_text.get(key) {
-                Some(existing_value) => existing_value.clone(),
-                None => {
-                    let new_value = ANSIText::new(key);
-                    self.cache_ansi_text.insert(key.into(), new_value.clone());
-
-                    // Clean up the cache if it gets too big.
-                    if self.cache_ansi_text.len() > DefaultSize::GlobalDataCacheSize as usize {
-                        self.cache_ansi_text.clear();
-                    }
-
-                    new_value
-                }
-            }
-        }
-    }
 }
 
 mod global_data_impl {
@@ -106,7 +50,6 @@ mod global_data_impl {
                     true => offscreen_buffer.pretty_print(),
                 },
             });
-            vec_lines.push(format!("{0:?}", self.global_user_data));
             write!(f, "\nGlobalData\n  - {}", vec_lines.join("\n  - "))
         }
     }

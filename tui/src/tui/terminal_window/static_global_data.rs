@@ -15,17 +15,24 @@
  *   limitations under the License.
  */
 
-/// This is a global data structure that is meant to handle (fast) runtime analytics for the entire
-/// application.
-/// - It is a static unsafe global.
-/// - It is also atomic.
-/// - This is **not** wrapped in an [Arc](std::sync::Arc) and [Mutex](std::sync::Mutex).
-pub mod terminal_window_static_global_data {
-    use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicI64, Ordering};
 
-    use chrono::Utc;
+use chrono::Utc;
 
-    pub const NOT_SET_VALUE: i64 = -1;
+use crate::ColorSupport;
+const NOT_SET_VALUE: i64 = -1;
+
+/// This module contains static global data that is meant to be used by the entire application. It
+/// also provides functions to manipulate this data.
+///
+/// ### Color support
+/// The app can override the color support detection heuristics by providing a [ColorSupport] value.
+/// It is not always possible to accurately detect the color support of the terminal. So this gives
+/// the app a way to set it to whatever the user wants (for example).
+pub mod telemetry_global_static {
+    use super::*;
+
+    // Time related.
 
     /// Time unit is microseconds.
     pub static mut START_TS_MICROS: AtomicI64 = AtomicI64::new(NOT_SET_VALUE);
@@ -89,5 +96,56 @@ pub mod terminal_window_static_global_data {
             let fps = 1_000_000 / avg_response_time_micros;
             format!("{avg_response_time_micros} μs, {fps} fps")
         }
+    }
+}
+
+/// This module contains static global data that is meant to be used by the entire application. It
+/// also provides functions to manipulate this data.
+///
+/// ### Runtime analytics
+/// This is a global data structure that is meant to handle (fast) runtime analytics for the entire
+/// application.
+/// - It is a static unsafe global.
+/// - It is also atomic.
+/// - This is **not** wrapped in an [Arc](std::sync::Arc) and [Mutex](std::sync::Mutex).
+pub mod color_support_global_static {
+    use super::*;
+
+    // ColorSupport related.
+
+    /// Global [ColorSupport] override.
+    pub static mut COLOR_SUPPORT_OVERRIDE: AtomicI64 = AtomicI64::new(NOT_SET_VALUE);
+
+    /// Get the saved [ColorSupport] from the static mutable variable [COLOR_SUPPORT_OVERRIDE].
+    pub fn get_color_support_override() -> Option<ColorSupport> {
+        let color_support_override = unsafe { COLOR_SUPPORT_OVERRIDE.load(Ordering::SeqCst) };
+        if color_support_override == NOT_SET_VALUE {
+            None
+        } else {
+            match color_support_override {
+                0 => Some(ColorSupport::Grayscale),
+                1 => Some(ColorSupport::Ansi256),
+                2 => Some(ColorSupport::Truecolor),
+                _ => None,
+            }
+        }
+    }
+
+    pub fn clear_color_support_override() {
+        unsafe {
+            COLOR_SUPPORT_OVERRIDE.store(NOT_SET_VALUE, Ordering::SeqCst);
+        };
+    }
+
+    /// Save the [ColorSupport] to the static mutable variable [COLOR_SUPPORT_OVERRIDE].
+    pub fn set_color_support_override(color_support: ColorSupport) {
+        let color_support_override = match color_support {
+            ColorSupport::Grayscale => 0,
+            ColorSupport::Ansi256 => 1,
+            ColorSupport::Truecolor => 2,
+        };
+        unsafe {
+            COLOR_SUPPORT_OVERRIDE.store(color_support_override, Ordering::SeqCst);
+        };
     }
 }

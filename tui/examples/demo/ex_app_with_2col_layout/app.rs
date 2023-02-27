@@ -155,7 +155,7 @@ mod perform_layout {
                 box_start!(
                     in: surface,
                     id: Id::Container as u8,
-                    dir: Direction::Horizontal,
+                    dir: LayoutDirection::Horizontal,
                     requested_size_percent: requested_size_percent!(width: 100, height: 100),
                     styles:                 [Id::Container as u8],
                 );
@@ -165,7 +165,7 @@ mod perform_layout {
                     box_start!(
                       in:                     surface,
                       id:                     Id::Col1 as u8,
-                      dir:                    Direction::Vertical,
+                      dir:                    LayoutDirection::Vertical,
                       requested_size_percent: requested_size_percent!(width: 50, height: 100),
                       styles:                 [Id::Col1 as u8],
                     );
@@ -186,7 +186,7 @@ mod perform_layout {
                     box_start!(
                       in:                     surface,
                       id:                     Id::Col2 as u8,
-                      dir:                    Direction::Vertical,
+                      dir:                    LayoutDirection::Vertical,
                       requested_size_percent: requested_size_percent!(width: 50, height: 100),
                       styles:                 [Id::Col2 as u8],
                     );
@@ -317,12 +317,12 @@ mod stylesheet {
               style! {
                 id: Id::Col1 as u8
                 padding: 1
-                color_bg: TuiColor::Rgb { r: 55, g: 55, b: 100 }
+                color_bg: TuiColor::Rgb (RgbValue { red: 55, green: 55, blue: 100 })
               },
               style! {
                 id: Id::Col2 as u8
                 padding: 1
-                color_bg: TuiColor::Rgb { r: 55, g: 55, b: 248 }
+                color_bg: TuiColor::Rgb (RgbValue { red: 55, green: 55, blue: 248 })
               }
             }
         })

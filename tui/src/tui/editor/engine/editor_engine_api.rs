@@ -297,7 +297,7 @@ impl EditorEngine {
             RenderOp::MoveCursorPositionRelTo(
               editor_engine.current_box.style_adjusted_origin_pos, position! { col_index: 0 , row_index: 0 }),
             RenderOp::ApplyColors(style! {
-              color_fg: TuiColor::Red
+              color_fg: TuiColor::Basic(ANSIBasicColor::Red)
             }.into()),
             RenderOp::PaintTextWithAttributes("No content added".into(), None),
             RenderOp::ResetColor

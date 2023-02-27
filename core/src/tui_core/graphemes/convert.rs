@@ -32,6 +32,10 @@ impl From<Cow<'_, str>> for UnicodeString {
     fn from(s: Cow<'_, str>) -> Self { UnicodeString::new(&s) }
 }
 
+impl From<&mut Cow<'_, str>> for UnicodeString {
+    fn from(s: &mut Cow<'_, str>) -> Self { UnicodeString::new(s) }
+}
+
 impl From<&String> for UnicodeString {
     fn from(s: &String) -> Self { UnicodeString::new(s) }
 }

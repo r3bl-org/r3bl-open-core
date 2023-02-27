@@ -8,6 +8,12 @@ fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
   ☐ provide a way to declare a theme / stylesheet to be used to format Markdown content
   ☐ update editor component options to either use `md_parser` or `syntect`
 
-fix lolcat (https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue++project%3Ar3bl-org%2F1+lolcat+):
-  ☐ replace existing lolcat w/ a new one that generates `styled_text` instead of ANSI string
-  ☐ remove ANSI parser & all support for ANSI from the TUI engine
+fix performance problem:
+  ☐ scroll left / right slow in type ahead completion dialog
+
+release new version:
+  ☐ update `CHANGELOG.md`
+  ☐ update `README.md`
+  ☐ update `lib.rs`
+  ☐ cut new releases
+  ☐ publish to crates.io

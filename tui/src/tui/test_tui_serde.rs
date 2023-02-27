@@ -23,7 +23,7 @@ mod tests {
 
     #[test]
     fn test_serde_tui_color_simple() {
-        let color: TuiColor = TuiColor::Red;
+        let color: TuiColor = TuiColor::Basic(ANSIBasicColor::Red);
         let ser_str = serde_json::to_string(&color).unwrap();
         let og_color: TuiColor = serde_json::from_str(&ser_str).unwrap();
         assert_eq2!(color, og_color);
@@ -31,7 +31,11 @@ mod tests {
 
     #[test]
     fn test_serde_tui_color_rgb() {
-        let color = TuiColor::Rgb { r: 0, g: 0, b: 0 };
+        let color = TuiColor::Rgb(RgbValue {
+            red: 0,
+            green: 0,
+            blue: 0,
+        });
         let ser_str = serde_json::to_string(&color).unwrap();
         let og_color: TuiColor = serde_json::from_str(&ser_str).unwrap();
         assert_eq2!(color, og_color);

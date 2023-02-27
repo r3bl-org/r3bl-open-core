@@ -25,7 +25,7 @@ use crate::*;
 /// Direction of the layout of the box.
 #[non_exhaustive]
 #[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
-pub enum Direction {
+pub enum LayoutDirection {
     #[default]
     Horizontal,
     Vertical,
@@ -40,7 +40,7 @@ pub type FlexBoxId = u8;
 #[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct FlexBox {
     pub id: FlexBoxId,
-    pub dir: Direction,
+    pub dir: LayoutDirection,
     pub origin_pos: Position,
     pub bounds_size: Size,
     pub style_adjusted_origin_pos: Position,
