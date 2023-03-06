@@ -17,3 +17,4 @@ release new version:
   ☐ update `lib.rs`
   ☐ cut new releases
   ☐ publish to crates.io
+  ☐ make reddit post w/ videos

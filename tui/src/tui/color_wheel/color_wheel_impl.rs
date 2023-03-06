@@ -192,9 +192,9 @@ impl ColorWheel {
     ///
     /// ## Arguments
     /// 1. `configs`: A list of color wheel configs. The order of the configs is not important.
-    ///    However, at the very least, one Truecolor config & one ANSI 256 config should be provided.
-    ///    The fallback is always grayscale. See
-    ///    [get_config_based_on_color_support](ColorWheelConfig::get_config_based_on_color_support),
+    ///    However, at the very least, one Truecolor config & one ANSI 256 config should be
+    ///    provided. The fallback is always grayscale. See
+    ///    [get_config_based_on_color_support](ColorWheelConfig::narrow_config_based_on_color_support),
     ///    [env_allows_color](ColorSupport::env_allows_color) for more info.
     pub fn new(configs: Vec<ColorWheelConfig>) -> Self {
         Self {
@@ -479,7 +479,7 @@ impl ColorWheel {
                 return;
             }
         }
-        
+
         // Not a lolcat so reset the index and direction.
         self.index = ch!(0);
         self.index_direction = ColorWheelDirection::Forward;
