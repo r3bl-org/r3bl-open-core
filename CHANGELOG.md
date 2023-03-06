@@ -2,6 +2,7 @@
 
 - [r3bl_tui](#r3bl_tui)
   - [Unreleased](#unreleased)
+  - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils_core:](#r3bl_rs_utils_core)
   - [Unreleased](#unreleased)
@@ -17,6 +18,13 @@
 ### Unreleased
 <a id="markdown-unreleased" name="unreleased"></a>
 
+
+### v0.3.2 (2023-03-06)
+<a id="markdown-v0.3.2-2023-03-06" name="v0.3.2-2023-03-06"></a>
+
+
+- Fixed:
+  - Bug when trying to render an app that's taller than the offscreen buffer / terminal height
 
 ### v0.3.1 (2023-03-06)
 <a id="markdown-v0.3.1-2023-03-06" name="v0.3.1-2023-03-06"></a>
