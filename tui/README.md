@@ -138,7 +138,7 @@ Here are some framework highlights:
 
 Here's a video of the demo in action:
 
-https://user-images.githubusercontent.com/2966499/206881196-37cf1220-8c1b-460e-a2cb-7e06d22d6a02.mp4
+https://user-images.githubusercontent.com/2966499/223200857-33c346fe-ed66-4216-8fb5-2f8c602d5b7c.mp4
 
 1. You can run `cargo run --example demo` in the `tui/examples` folder to see a demo of the library
    in action and play with it. The examples cover the entire surface area of the TUI API. You can
@@ -433,8 +433,8 @@ terminal emulator has to do put the `PixelChar`s on the screen.
 
 
 If you use Redux for state management, then you will create a [crate::redux] [crate::Store] that is
-passed into the [TerminalWindow]. For more detailed information on Redux, please read the [docs for
-the `r3bl_redux` create](https://docs.rs/r3bl_redux/latest/r3bl_redux/).
+passed into the [TerminalWindow]. For more detailed information on Redux, please read the
+[docs for the `r3bl_redux` create](https://docs.rs/r3bl_redux/latest/r3bl_redux/).
 
 Here's an example of this.
 
