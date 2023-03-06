@@ -41,9 +41,8 @@ Type a number to run corresponding example:
   1. 📏 App w/ no layout
   2. 📐 App w/ 1 column responsive layout
   3. 📐 App w/ 2 column responsive layout
-  4. 🦜 lolcat
-  5. 🐒 Text editor, syntax highlighting, modal dialog, and emoji
-  6. ⚾ Why R3BL? Why TUI?
+  4. 🐒 Text editor, syntax highlighting, modal dialog, and emoji
+  5. ⚾ Why R3BL? Why TUI?
 
 or type Ctrl+C / Ctrl+D / 'x' to exit";
 
