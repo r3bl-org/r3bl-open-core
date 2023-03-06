@@ -177,12 +177,20 @@ pub async fn print_plain_text(
         log_debug(msg);
     });
 
-    // Get the line at `row_index`.
-    let mut line_copy = my_offscreen_buffer
-        .buffer
-        .get(display_row_index)
-        .unwrap()
-        .clone();
+    // Try to get the line at `row_index`.
+    let mut line_copy = {
+        if my_offscreen_buffer.buffer.get(display_row_index).is_none() {
+            // Clip vertically.
+            CommonError::new_err_with_only_type(CommonErrorType::DisplaySizeTooSmall)
+        } else {
+            let line_copy = my_offscreen_buffer
+                .buffer
+                .get(display_row_index)
+                .unwrap()
+                .clone();
+            Ok(line_copy)
+        }
+    }?;
 
     // Insert clipped `text_ref_us` into `line` at `insertion_col_index`. Ok to use
     // `line_copy[insertion_col_index]` syntax because we know that row and col indices are valid.
