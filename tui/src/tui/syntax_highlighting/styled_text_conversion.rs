@@ -108,7 +108,7 @@ impl List<(Style, UnicodeString)> {
             .into()
     }
 
-    // BM: ▌START▐ clip() is the entry point
+    // BM: ▌3. START▐ clip() is the entry point
     /// Clip the text (in one line) in this range: [ `start_col` .. `end_col` ]. Each line is
     /// represented as a [List] of ([Style], [UnicodeString])`s.
     pub fn clip(

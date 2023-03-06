@@ -67,7 +67,7 @@ pub mod no_rustfmt_block {
         )(input)
     }
 
-    // TODO: make the requirement for `[` and `]` optional. Update tests.
+    // REFACTOR: make the requirement for `[` and `]` optional. Update tests.
 
     /// Parse input: `@tags: [tag1, tag2, tag3]\n` or `tags: ["tag1", "tag2", "tag3"]\n`.
     pub fn parse_tags(input: &str) -> IResult<&str, Vec<&str>> {
