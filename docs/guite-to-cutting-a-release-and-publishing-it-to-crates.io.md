@@ -30,7 +30,7 @@ are applied to each crate (`core`, `macro`, `redux`, `tui`, and self):
 
 Finally, push the git commit and tag to the remote repo: `git push ; git push --tags`.
 
-## Current release status as of Feb 7 2022
+## Current release status as of Mar 6 2022
 
 | Crate  | Version       | Status                                       |
 | ------ | ------------- | -------------------------------------------- |
