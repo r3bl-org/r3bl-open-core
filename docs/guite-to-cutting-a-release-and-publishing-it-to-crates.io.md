@@ -34,8 +34,8 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 
 | Crate  | Version       | Status                                       |
 | ------ | ------------- | -------------------------------------------- |
-| core   | v0.9.0-core   | https://crates.io/crates/r3bl_rs_utils_core  |
-| macro  | v0.9.0-macro  | https://crates.io/crates/r3bl_rs_utils_macro |
-| redux  | v0.2.0-redux  | https://crates.io/crates/r3bl_rs_utils_redux |
-| tui    | v0.3.0-tui    | https://crates.io/crates/r3bl_rs_utils_tui   |
-| public | v0.9.4-public | https://crates.io/crates/r3bl_rs_utils       |
+| core   | v0.9.1-core   | https://crates.io/crates/r3bl_rs_utils_core  |
+| macro  | v0.9.1-macro  | https://crates.io/crates/r3bl_rs_utils_macro |
+| redux  | v0.2.1-redux  | https://crates.io/crates/r3bl_rs_utils_redux |
+| tui    | v0.3.1-tui    | https://crates.io/crates/r3bl_rs_utils_tui   |
+| public | v0.9.5-public | https://crates.io/crates/r3bl_rs_utils       |
