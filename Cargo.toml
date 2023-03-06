@@ -5,7 +5,7 @@ description = "Async Redux library, TUI framework, and useful types"
 keywords = ["tui", "color", "terminal", "redux", "non-binary-tree"]
 categories = ["command-line-interface", "command-line-utilities", "algorithms", "data-structures"]
 # When you change this, make sure to update `README.md` as well.
-version = "0.9.4"
+version = "0.9.5"
 edition = "2021"
 readme = "README.md" # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/
@@ -26,40 +26,40 @@ path = "src/lib.rs"
 [dependencies]
 
 # r3bl_rs_utils
-r3bl_rs_utils_core = { version = "0.9.0", path = "core" }
-r3bl_rs_utils_macro = { version = "0.9.0", path = "macro" }
-r3bl_tui = { version = "0.3.0", path = "tui" }
-r3bl_redux = { version = "0.2.0", path = "redux" }
+r3bl_rs_utils_core = { version = "0.9.1", path = "core" }
+r3bl_rs_utils_macro = { version = "0.9.1", path = "macro" }
+r3bl_tui = { version = "0.3.1", path = "tui" }
+r3bl_redux = { version = "0.2.1", path = "redux" }
 
 # Logging
 log = "0.4.17"
-simplelog = "0.12.0"
+simplelog = "0.12.1"
 
 # Time
 chrono = "0.4.23"
-time = "0.3.17"
+time = "0.3.20"
 
 # Misc
 rand = "0.8.5"
 
 # Terminal
 ansi_term = "0.12.1"
-is-terminal = "0.4.3"
+is-terminal = "0.4.4"
 
 # Async
-tokio = { version = "1.25.0", features = ["full"] }
-async-trait = "0.1.64"
+tokio = { version = "1.26.0", features = ["full"] }
+async-trait = "0.1.66"
 futures = "0.3.26"
 
 # Crossterm & EventStream support.
-crossterm = { version = "0.25.0", features = ["event-stream"] }
+crossterm = { version = "0.26.1", features = ["event-stream"] }
 futures-util = "0.3.26"
 
 # Bitflags.
 bitflags = "1.3.2"
 
 # lazy_static replacement.
-once_cell = "1.17.0"
+once_cell = "1.17.1"
 
 # https://github.com/serde-rs/serde.
 serde = { version = "1.0", features = ["derive"] }
@@ -75,5 +75,5 @@ members = ["macro", "core", "redux", "tui"]
 # For examples.
 # http://xion.io/post/code/rust-examples.html
 [dev-dependencies]
-reedline = "0.13.0"
+reedline = "0.16.0"
 textwrap = "0.16.0"
