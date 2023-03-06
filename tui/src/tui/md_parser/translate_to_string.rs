@@ -17,7 +17,7 @@
 
 use crate::*;
 
-pub fn translate(doc: Document) -> String {
+pub fn translate_to_string(doc: Document) -> String {
     let mut acc = vec![];
     for block in doc {
         match block {

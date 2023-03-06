@@ -40,11 +40,11 @@
 
 // External use.
 pub mod parser;
-pub mod translator;
+pub mod translate_to_string;
 pub mod types;
 
 pub use parser::*;
-pub use translator::*;
+pub use translate_to_string::*;
 pub use types::*;
 
 // Internal use.

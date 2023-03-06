@@ -16,14 +16,18 @@
  */
 
 // Attach sources.
+pub mod md_parser_highlighting;
 pub mod pattern_matcher;
 pub mod r3bl_syntect_theme;
 pub mod styled_text_conversion;
+pub mod md_parser_highlighting;
 
 // Re-export
+pub use md_parser_highlighting::*;
 pub use pattern_matcher::*;
 pub use r3bl_syntect_theme::*;
 pub use styled_text_conversion::*;
+pub use md_parser_highlighting::*;
 
 // Tests.
 mod test_r3bl_syntect_theme;
