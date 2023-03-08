@@ -106,19 +106,25 @@ pub mod constants {
     pub const LEFT_IMG: &str = "![";
     pub const RIGHT_IMG: &str = "]";
     pub const NEW_LINE: &str = "\n";
-    pub const CODE_BLOCK: &str = "```";
+    pub const CODE_BLOCK_START_PARTIAL: &str = "```";
+    pub const CODE_BLOCK_END: &str = "```\n";
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CodeBlock<'a> {
     pub language: &'a str,
-    pub text: &'a str,
+    pub code_block_lines: Vec<&'a str>,
 }
 
 mod code_block_impl {
     use super::*;
 
-    impl<'a> From<(&'a str, &'a str)> for CodeBlock<'a> {
-        fn from((language, text): (&'a str, &'a str)) -> Self { CodeBlock { language, text } }
+    impl<'a> CodeBlock<'a> {
+        pub fn new(language: &'a str, code_block_lines: Vec<&'a str>) -> Self {
+            CodeBlock {
+                language,
+                code_block_lines,
+            }
+        }
     }
 }

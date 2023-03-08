@@ -397,7 +397,7 @@ mod pixel_char_impl {
                     format!(" {} {trunc_output: ^width$}", style_primary("P"))
                 }
             };
-            
+
             it
         }
     }

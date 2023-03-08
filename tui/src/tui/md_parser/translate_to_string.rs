@@ -73,8 +73,12 @@ fn translate_ordered_list(lines: Vec<Fragments>) -> String {
 }
 
 fn translate_codeblock(code_block: &CodeBlock) -> String {
-    let CodeBlock { language, text } = code_block;
-    format!("<pre><code class=\"lang-{language}\">{text}</code></pre>")
+    let CodeBlock {
+        language,
+        code_block_lines: text,
+    } = code_block;
+    let text = text.join("\n");
+    format!("<pre><code class=\"lang-{language}\">\n{text}\n</code></pre>")
 }
 
 fn translate_line(text: Fragments) -> String {
@@ -103,16 +107,18 @@ fn translate_text(text: Fragments) -> String {
 
 #[cfg(test)]
 mod tests {
+    use r3bl_rs_utils_core::assert_eq2;
+
     use super::*;
 
     #[test]
     fn test_translate_bold() {
-        assert_eq!(translate_bold("bold af"), String::from("<b>bold af</b>"));
+        assert_eq2!(translate_bold("bold af"), String::from("<b>bold af</b>"));
     }
 
     #[test]
     fn test_translate_italic() {
-        assert_eq!(
+        assert_eq2!(
             translate_italic("italic af"),
             String::from("<i>italic af</i>")
         );
@@ -120,7 +126,7 @@ mod tests {
 
     #[test]
     fn test_translate_inline_code() {
-        assert_eq!(
+        assert_eq2!(
             translate_inline_code("code af"),
             String::from("<code>code af</code>")
         );
@@ -128,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_translate_link() {
-        assert_eq!(
+        assert_eq2!(
             translate_link("click me!", "https://github.com"),
             String::from("<a href=\"https://github.com\">click me!</a>")
         );
@@ -136,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_translate_image() {
-        assert_eq!(
+        assert_eq2!(
             translate_image("alt text", "https://github.com"),
             String::from("<img src=\"https://github.com\" alt=\"alt text\" />")
         );
@@ -153,14 +159,14 @@ mod tests {
             Fragment::Image(("tag", "https://link.com")),
             Fragment::Plain(". the end!"),
         ]);
-        assert_eq!(x, String::from("Foobar is a Python library for dealing with word pluralization.<b>bold</b><i>italic</i><code>code</code><a href=\"https://link.com\">tag</a><img src=\"https://link.com\" alt=\"tag\" />. the end!"));
+        assert_eq2!(x, String::from("Foobar is a Python library for dealing with word pluralization.<b>bold</b><i>italic</i><code>code</code><a href=\"https://link.com\">tag</a><img src=\"https://link.com\" alt=\"tag\" />. the end!"));
         let x = translate_text(vec![]);
-        assert_eq!(x, String::from(""));
+        assert_eq2!(x, String::from(""));
     }
 
     #[test]
     fn test_translate_header() {
-        assert_eq!(
+        assert_eq2!(
             translate_header(&Level::Heading1, vec![Fragment::Plain("Foobar")]),
             String::from("<h1>Foobar</h1>")
         );
@@ -168,7 +174,7 @@ mod tests {
 
     #[test]
     fn test_translate_list_elements() {
-        assert_eq!(
+        assert_eq2!(
             translate_list_elements(vec![
                 vec![Fragment::Plain("Foobar")],
                 vec![Fragment::Plain("Foobar")],
@@ -181,7 +187,7 @@ mod tests {
 
     #[test]
     fn test_translate_unordered_list() {
-        assert_eq!(
+        assert_eq2!(
             translate_unordered_list(vec![
                 vec![Fragment::Plain("Foobar")],
                 vec![Fragment::Plain("Foobar")],
@@ -194,7 +200,7 @@ mod tests {
 
     #[test]
     fn test_translate_ordered_list() {
-        assert_eq!(
+        assert_eq2!(
             translate_ordered_list(vec![
                 vec![Fragment::Plain("Foobar")],
                 vec![Fragment::Plain("Foobar")],
@@ -207,35 +213,23 @@ mod tests {
 
     #[test]
     fn test_translate_codeblock() {
-        assert_eq!(
-            translate_codeblock(&CodeBlock::from(("python", raw_strings::CODE_BLOCK))),
-            String::from(raw_strings::CODE_BLOCK_HTML)
-        );
-    }
-
-    #[rustfmt::skip]
-    mod raw_strings {
-        pub const CODE_BLOCK: &str =
-r#"
-import foobar
-
-foobar.pluralize(\'word\') # returns \'words\'
-foobar.pluralize(\'goose\') # returns \'geese\'
-foobar.singularize(\'phenomena\') # returns \'phenomenon\'
-"#;
-        pub const CODE_BLOCK_HTML: &str =
-r#"<pre><code class="lang-python">
-import foobar
-
-foobar.pluralize(\'word\') # returns \'words\'
-foobar.pluralize(\'goose\') # returns \'geese\'
-foobar.singularize(\'phenomena\') # returns \'phenomenon\'
-</code></pre>"#;
+        let lhs = translate_codeblock(&CodeBlock::new(
+            "python",
+            vec![
+                "import foobar",
+                "",
+                "foobar.pluralize('word') # returns 'words'",
+                "foobar.pluralize('goose') # returns 'geese'",
+                "foobar.singularize('phenomena') # returns 'phenomenon'",
+            ],
+        ));
+        let rhs = String::from(test_data::CODE_BLOCK_HTML);
+        assert_eq2!(lhs, rhs);
     }
 
     #[test]
     fn test_translate_line() {
-        assert_eq!(
+        assert_eq2!(
             translate_line(vec![
                 Fragment::Plain("Foobar"),
                 Fragment::Bold("Foobar"),
@@ -245,4 +239,17 @@ foobar.singularize(\'phenomena\') # returns \'phenomenon\'
             String::from("<p>Foobar<b>Foobar</b><i>Foobar</i><code>Foobar</code></p>")
         );
     }
+}
+
+#[rustfmt::skip]
+#[cfg(test)]
+mod test_data {
+    pub const CODE_BLOCK_HTML: &str =
+r#"<pre><code class="lang-python">
+import foobar
+
+foobar.pluralize('word') # returns 'words'
+foobar.pluralize('goose') # returns 'geese'
+foobar.singularize('phenomena') # returns 'phenomenon'
+</code></pre>"#;
 }

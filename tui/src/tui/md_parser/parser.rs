@@ -49,39 +49,50 @@ pub fn parse_markdown(input: &str) -> IResult<&str, Document> {
 
 #[cfg(test)]
 mod tests {
+    use r3bl_rs_utils_core::*;
+
     use super::*;
 
+    // AI: 0. make this test more robust (look for lists, and other missing block types)
     #[test]
     fn test_parse_markdown() {
         let it = parse_markdown(raw_strings::MARKDOWN_INPUT);
-        assert_eq!(
-            it,
-            Ok((
-                "",
+        let rhs = vec![
+            Block::Title("Something"),
+            Block::Tags(vec!["tag1", "tag2", "tag3"]),
+            Block::Heading((Level::Heading1, vec![Fragment::Plain("Foobar")])),
+            Block::Text(vec![]), // Empty line.
+            Block::Text(vec![Fragment::Plain(
+                "Foobar is a Python library for dealing with word pluralization.",
+            )]),
+            Block::Text(vec![]), // Empty line.
+            Block::CodeBlock(CodeBlock::new("bash", vec!["pip install foobar"])),
+            Block::CodeBlock(CodeBlock::new("fish", vec![])),
+            Block::CodeBlock(CodeBlock::new("python", vec![""])),
+            Block::Heading((Level::Heading2, vec![Fragment::Plain("Installation")])),
+            Block::Text(vec![]), // Empty line.
+            Block::Text(vec![
+                Fragment::Plain("Use the package manager "),
+                Fragment::Link(("pip", "https://pip.pypa.io/en/stable/")),
+                Fragment::Plain(" to install foobar."),
+            ]),
+            Block::CodeBlock(CodeBlock::new(
+                "python",
                 vec![
-                    Block::Title("Something"),
-                    Block::Tags(vec!["tag1", "tag2", "tag3"]),
-                    Block::Heading((Level::Heading1, vec![Fragment::Plain("Foobar")])),
-                    Block::Text(vec![]),
-                    Block::Text(vec![Fragment::Plain(
-                        "Foobar is a Python library for dealing with word pluralization."
-                    )]),
-                    Block::Text(vec![]),
-                    Block::CodeBlock(CodeBlock::from(("bash", "pip install foobar\n"))),
-                    Block::Text(vec![]),
-                    Block::Heading((Level::Heading2, vec![Fragment::Plain("Installation")])),
-                    Block::Text(vec![]),
-                    Block::Text(vec![
-                        Fragment::Plain("Use the package manager "),
-                        Fragment::Link(("pip", "https://pip.pypa.io/en/stable/")),
-                        Fragment::Plain(" to install foobar."),
-                    ]),
-                    Block::CodeBlock(CodeBlock::from(("python", raw_strings::CODE_BLOCK))),
-                ]
-            ))
-        )
+                    "import foobar",
+                    "",
+                    "foobar.pluralize('word') # returns 'words'",
+                    "foobar.pluralize('goose') # returns 'geese'",
+                    "foobar.singularize('phenomena') # returns 'phenomenon'",
+                ],
+            )),
+            Block::Text(vec![Fragment::Plain("end")]),
+        ];
+        dbg!(&it);
+        assert_eq2!(it, Ok(("", rhs)));
     }
 
+    // AI: 0. move this into a file
     #[rustfmt::skip]
     mod raw_strings {
         /// Valid Markdown content.
@@ -95,6 +106,11 @@ Foobar is a Python library for dealing with word pluralization.
 ```bash
 pip install foobar
 ```
+```fish
+```
+```python
+
+```
 ## Installation
 
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install foobar.
@@ -104,15 +120,8 @@ import foobar
 foobar.pluralize('word') # returns 'words'
 foobar.pluralize('goose') # returns 'geese'
 foobar.singularize('phenomena') # returns 'phenomenon'
-```"#;
-
-        /// Code block content.
-        pub const CODE_BLOCK: &str =
-r#"import foobar
-
-foobar.pluralize('word') # returns 'words'
-foobar.pluralize('goose') # returns 'geese'
-foobar.singularize('phenomena') # returns 'phenomenon'
+```
+end
 "#;
     }
 }
