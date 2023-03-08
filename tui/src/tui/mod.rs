@@ -40,26 +40,26 @@ pub mod color_wheel;
 pub mod dialog;
 pub mod editor;
 pub mod layout;
+pub mod lolcat;
 pub mod md_parser;
 pub mod misc_types;
 pub mod rsx;
 pub mod syntax_highlighting;
 pub mod terminal_lib_backends;
 pub mod terminal_window;
-pub mod lolcat;
 
 // Re-export.
 pub use color_wheel::*;
 pub use dialog::*;
 pub use editor::*;
 pub use layout::*;
+pub use lolcat::*;
 pub use md_parser::*;
 pub use misc_types::*;
 pub use rsx::*;
 pub use syntax_highlighting::*;
 pub use terminal_lib_backends::*;
 pub use terminal_window::*;
-pub use lolcat::*;
 
 // Tests.
 mod test_make_style_macro;

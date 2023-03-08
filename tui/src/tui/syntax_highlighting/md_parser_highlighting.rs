@@ -32,6 +32,8 @@ pub mod syn_hi_md_editor_content {
 }
 
 pub mod translate_to_style_us_tuple {
+    use super::*;
+
     pub fn translate(document: Document) -> Vec<List<(Style, String)>> {
         // AI: 3. iterate over document block (which represents a line) & convert to &[(Style,String)]
         // AI: 2. special handling of Document::Block(CodeBlock) since they may contain multiple lines
@@ -42,19 +44,75 @@ pub mod translate_to_style_us_tuple {
 pub mod code_block_to_line {
     use super::*;
 
+    #[derive(Debug, PartialEq)]
     pub struct CodeBlockLine<'a> {
         pub language: &'a str,
-        pub content: &'a CodeBlockLineContent<'a>,
+        pub content: CodeBlockLineContent<'a>,
     }
 
-    enum CodeBlockLineContent<'a> {
+    #[derive(Debug, PartialEq)]
+    pub enum CodeBlockLineContent<'a> {
         Text(&'a str),
-        Newline,
+        EmptyLine,
+        StartTag,
+        EndTag,
     }
 
-    pub fn convert_from_code_block_into_lines(input: &CodeBlock) -> Vec<&CodeBlockLine> {
-        // AI: 1. iterate over code_block.text.split("\n") & convert to CodeBlockLine
-        todo!()
+    /// At a minimum, a [CodeBlock] will be 2 lines of text.
+    /// 1. The first line will be the language of the code block, eg: "```rust"
+    /// 2. The second line will be the end of the code block, eg: "```" Then there may be some
+    /// number of lines of text in the middle. These lines are stored in the [text](CodeBlock.text)
+    /// field.
+    pub fn convert_from_code_block_into_lines<'input>(
+        input: &'input CodeBlock,
+    ) -> Vec<CodeBlockLine<'input>> {
+        let lang = input.language;
+        let lines = &input.code_block_lines;
+
+        let mut acc = Vec::with_capacity(lines.len() + 2);
+        acc.push(CodeBlockLine {
+            language: lang,
+            content: CodeBlockLineContent::StartTag,
+        });
+        for line in lines {
+            acc.push(CodeBlockLine {
+                language: lang,
+                content: CodeBlockLineContent::Text(line),
+            });
+        }
+        acc.push(CodeBlockLine {
+            language: lang,
+            content: CodeBlockLineContent::EndTag,
+        });
+
+        acc
+    }
+
+    // AI: 0. make this test more robust
+    #[test]
+    fn test_convert_from_code_block_into_lines() {
+        let input = CodeBlock {
+            language: "rust",
+            code_block_lines: vec![""],
+        };
+        let expected = vec![
+            CodeBlockLine {
+                language: "rust",
+                content: CodeBlockLineContent::StartTag,
+            },
+            CodeBlockLine {
+                language: "rust",
+                content: CodeBlockLineContent::Text(""),
+            },
+            CodeBlockLine {
+                language: "rust",
+                content: CodeBlockLineContent::EndTag,
+            },
+        ];
+        let output = convert_from_code_block_into_lines(&input);
+        dbg!(&output);
+        dbg!(&expected);
+        assert_eq2!(output, expected);
     }
 }
 

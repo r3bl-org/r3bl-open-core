@@ -108,10 +108,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
             // For each pixel char in the line.
             for (pixel_char_index, pixel_char) in line.iter().enumerate() {
-                let (pixel_char_str, pixel_char_style): (
-                    &str,
-                    Option<Style>,
-                ) = match pixel_char {
+                let (pixel_char_str, pixel_char_style): (&str, Option<Style>) = match pixel_char {
                     PixelChar::Void => continue,
                     PixelChar::Spacer => (SPACER, None),
                     PixelChar::PlainText {
