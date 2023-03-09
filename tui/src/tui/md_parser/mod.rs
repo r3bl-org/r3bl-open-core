@@ -30,28 +30,23 @@
 //! 2. The types [types] that are used to represent the Markdown document model [Document], [Block],
 //!    [Fragment] and all the other intermediate types & enums required for parsing.
 //! 3. All the parsers related to parsing metadata specific for R3BL applications which are not
-//!    standard Markdown can be found in [parser_impl_metadata].
+//!    standard Markdown can be found in [parser_metadata].
 //! 4. All the parsers that are related to parsing the main "blocks" of Markdown, such as order
-//!    lists, unordered lists, code blocks, text blocks, heading blocks, can be found
-//!    [parser_impl_block].
+//!    lists, unordered lists, code blocks, text blocks, heading blocks, can be found [block].
 //! 5. All the parsers that are related to parsing a single line of Markdown text, such as links,
-//!    bold, italic, etc. can be found
-//!    [parser_impl_element].
+//!    bold, italic, etc. can be found [parser_element].
 
 // External use.
+pub mod block;
 pub mod parser;
+pub mod parser_element;
+pub mod parser_metadata;
 pub mod translate_to_string;
 pub mod types;
 
+pub use block::*;
 pub use parser::*;
+pub use parser_element::*;
+pub use parser_metadata::*;
 pub use translate_to_string::*;
 pub use types::*;
-
-// Internal use.
-pub mod parser_impl_block;
-pub mod parser_impl_element;
-pub mod parser_impl_metadata;
-
-pub use parser_impl_block::*;
-pub use parser_impl_element::*;
-pub use parser_impl_metadata::*;

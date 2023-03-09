@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2023 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,17 +15,19 @@
  *   limitations under the License.
  */
 
-// Attach sources.
-pub mod md_parser_syn_hi;
-pub mod pattern_matcher;
-pub mod r3bl_syntect_theme;
-pub mod styled_text_conversion;
+// Attach.
+pub mod parse_block_code;
+pub mod parse_block_heading;
+pub mod parse_block_markdown_text_until_eol;
+pub mod parse_block_ordered_list;
+pub mod parse_block_unordered_list;
 
-// Re-export
-pub use md_parser_syn_hi::*;
-pub use pattern_matcher::*;
-pub use r3bl_syntect_theme::*;
-pub use styled_text_conversion::*;
+// Re-export.
+pub use parse_block_code::*;
+pub use parse_block_heading::*;
+pub use parse_block_markdown_text_until_eol::*;
+pub use parse_block_ordered_list::*;
+pub use parse_block_unordered_list::*;
 
 // Tests.
-mod test_r3bl_syntect_theme;
+pub mod test_data;

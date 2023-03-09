@@ -37,7 +37,7 @@ pub enum Block<'a> {
     OrderedList(Lines<'a>),
     UnorderedList(Lines<'a>),
     Text(Fragments<'a>),
-    CodeBlock(CodeBlock<'a>),
+    CodeBlock(Vec<CodeBlockLine<'a>>),
     Title(&'a str),
     Tags(Vec<&'a str>),
 }
@@ -53,6 +53,7 @@ pub enum Fragment<'a> {
     BoldItalic(&'a str),
     Italic(&'a str),
     Plain(&'a str),
+    Checkbox(bool),
 }
 
 #[repr(u8)]
@@ -88,7 +89,6 @@ pub mod constants {
     pub const COMMA: &str = ",";
     pub const QUOTE: &str = "\"";
     pub const HEADING_CHAR: char = '#';
-    pub const UNKNOWN_LANGUAGE: &str = "__UNKNOWN_LANGUAGE__";
     pub const SPACE: &str = " ";
     pub const PERIOD: &str = ".";
     pub const UNORDERED_LIST: &str = "-";
@@ -110,21 +110,18 @@ pub mod constants {
     pub const CODE_BLOCK_END: &str = "```\n";
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct CodeBlock<'a> {
-    pub language: &'a str,
-    pub code_block_lines: Vec<&'a str>,
+/// [CodeBlock] has no line breaks which the [editor] needs to display it. This struct is used
+/// after conversion to hold the line breaks.
+#[derive(Debug, PartialEq, Clone)]
+pub struct CodeBlockLine<'a> {
+    pub language: Option<&'a str>,
+    pub content: CodeBlockLineContent<'a>,
 }
 
-mod code_block_impl {
-    use super::*;
-
-    impl<'a> CodeBlock<'a> {
-        pub fn new(language: &'a str, code_block_lines: Vec<&'a str>) -> Self {
-            CodeBlock {
-                language,
-                code_block_lines,
-            }
-        }
-    }
+#[derive(Debug, PartialEq, Clone)]
+pub enum CodeBlockLineContent<'a> {
+    Text(&'a str),
+    EmptyLine,
+    StartTag,
+    EndTag,
 }
