@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::*;
+use crate::{constants::CODE_BLOCK_START_PARTIAL, *};
 
 pub fn translate_to_string(doc: Document) -> String {
     let mut acc = vec![];
@@ -24,7 +24,7 @@ pub fn translate_to_string(doc: Document) -> String {
             Block::Heading((level, line)) => acc.push(translate_header(&level, line.to_vec())),
             Block::UnorderedList(lines) => acc.push(translate_unordered_list(lines.to_vec())),
             Block::OrderedList(lines) => acc.push(translate_ordered_list(lines.to_vec())),
-            Block::CodeBlock(code_block) => acc.push(translate_codeblock(&code_block)),
+            Block::CodeBlock(code_block) => acc.push(translate_codeblock_lines(&code_block)),
             Block::Text(line) => acc.push(translate_line(line.to_vec())),
             _ => {}
         }
@@ -72,13 +72,27 @@ fn translate_ordered_list(lines: Vec<Fragments>) -> String {
     format!("<ol>{}</ol>", translate_list_elements(lines.to_vec()))
 }
 
-fn translate_codeblock(code_block: &CodeBlock) -> String {
-    let CodeBlock {
-        language,
-        code_block_lines: text,
-    } = code_block;
-    let text = text.join("\n");
-    format!("<pre><code class=\"lang-{language}\">\n{text}\n</code></pre>")
+fn translate_codeblock_lines(code_block_lines: &Vec<CodeBlockLine>) -> String {
+    let lang = {
+        if let Some(lang) = code_block_lines.get(0) {
+            lang.language
+        } else {
+            None
+        }
+    };
+
+    let mut acc = vec![];
+    code_block_lines.iter().for_each(|line| match line.content {
+        CodeBlockLineContent::Text(text) => acc.push(text),
+        CodeBlockLineContent::EmptyLine => acc.push(""),
+        _ => {}
+    });
+    let text = acc.join("\n");
+
+    match lang {
+        Some(language) => format!("<pre><code class=\"lang-{language}\">\n{text}\n</code></pre>"),
+        None => format!("<pre><code>\n{text}\n</code></pre>"),
+    }
 }
 
 fn translate_line(text: Fragments) -> String {
@@ -99,6 +113,10 @@ fn translate_text(text: Fragments) -> String {
             Fragment::InlineCode(code) => translate_inline_code(code),
             Fragment::Link((text, url)) => translate_link(text, url),
             Fragment::Image((text, url)) => translate_image(text, url),
+            Fragment::Checkbox(flag) => match flag {
+                true => "[x]".to_string(),
+                false => "[ ]".to_string(),
+            },
             Fragment::Plain(text) => text.to_string(),
         })
         .collect::<Vec<String>>()
@@ -213,8 +231,8 @@ mod tests {
 
     #[test]
     fn test_translate_codeblock() {
-        let lhs = translate_codeblock(&CodeBlock::new(
-            "python",
+        let it = convert_into_code_block_lines(
+            Some("python"),
             vec![
                 "import foobar",
                 "",
@@ -222,8 +240,9 @@ mod tests {
                 "foobar.pluralize('goose') # returns 'geese'",
                 "foobar.singularize('phenomena') # returns 'phenomenon'",
             ],
-        ));
-        let rhs = String::from(test_data::CODE_BLOCK_HTML);
+        );
+        let lhs = translate_codeblock_lines(&it);
+        let rhs = String::from(raw_strings::CODE_BLOCK_HTML);
         assert_eq2!(lhs, rhs);
     }
 
@@ -243,7 +262,7 @@ mod tests {
 
 #[rustfmt::skip]
 #[cfg(test)]
-mod test_data {
+mod raw_strings {
     pub const CODE_BLOCK_HTML: &str =
 r#"<pre><code class="lang-python">
 import foobar

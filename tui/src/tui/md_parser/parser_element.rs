@@ -15,100 +15,120 @@
  *   limitations under the License.
  */
 
-// This module exists so that rustfmt can skip the formatting of the parser code.
+use constants::*;
+use nom::{branch::*,
+          bytes::complete::*,
+          character::complete::*,
+          combinator::*,
+          multi::*,
+          sequence::*,
+          IResult};
+
+use crate::*;
+
 #[rustfmt::skip]
-pub mod no_rustfmt_block {
-    use crate::*;
-    use constants::*;
-    use nom::{
-        branch::*, bytes::complete::*, character::complete::*, combinator::*, multi::*,
-        sequence::*, IResult,
-    };
-
-    pub fn parse_element_bold_italic(input: &str) -> IResult<&str, &str> {
-        alt((
-            delimited(/* start */ tag(BITALIC_1), /* output */ is_not(BITALIC_1), /* end */ tag(BITALIC_1)),
-            delimited(/* start */ tag(BITALIC_2), /* output */ is_not(BITALIC_2), /* end */ tag(BITALIC_2)),
-        ))(input)
-    }
-
-    pub fn parse_element_bold(input: &str) -> IResult<&str, &str> {
-        alt((
-            delimited(/* start */ tag(BOLD_1), /* output */ is_not(BOLD_1), /* end */ tag(BOLD_1)),
-            delimited(/* start */ tag(BOLD_2), /* output */ is_not(BOLD_2), /* end */ tag(BOLD_2)),
-        ))(input)
-    }
-
-    pub fn parse_element_italic(input: &str) -> IResult<&str, &str> {
-        alt((
-            delimited(/* start */ tag(ITALIC_1), /* output */ is_not(ITALIC_1), /* end */ tag(ITALIC_1)),
-            delimited(/* start */ tag(ITALIC_2), /* output */ is_not(ITALIC_2), /* end */ tag(ITALIC_2)),
-        ))(input)
-    }
-
-    pub fn parse_element_code(input: &str) -> IResult<&str, &str> {
-        delimited(/* start */ tag(BACKTICK), /* output */ is_not(BACKTICK), /* end */ tag(BACKTICK))(input)
-    }
-
-    pub fn parse_element_link(input: &str) -> IResult<&str, (&str, &str)> {
-        pair(
-            delimited(/* start */ tag(LEFT_BRACKET), /* output */ is_not(RIGHT_BRACKET), /* end */ tag(RIGHT_BRACKET)),
-            delimited(/* start */ tag(LEFT_PAREN), /* output */ is_not(RIGHT_PAREN), /* end */ tag(RIGHT_PAREN)),
-        )(input)
-    }
-
-    pub fn parse_element_image(input: &str) -> IResult<&str, (&str, &str)> {
-        pair(
-            delimited(/* start */ tag(LEFT_IMG), /* output */ is_not(RIGHT_IMG), /* end */ tag(RIGHT_IMG)),
-            delimited(/* start */ tag(LEFT_PAREN), /* output */ is_not(RIGHT_PAREN), /* end */ tag(RIGHT_PAREN)),
-        )(input)
-    }
-
-    /// There must be at least one match. We want to match many things that are not any of our
-    /// special tags, but since we have no tools available to match and consume in the negative case
-    /// (without regex) we need to match against our (start) tags, then consume one char; we repeat
-    /// this until we run into one of our special characters (start tags) then we return this slice.
-    pub fn parse_element_plaintext(input: &str) -> IResult<&str, &str> {
-        recognize(
-            many1(
-                preceded(
-                    /* prefix - discarded */
-                    not(
-                        /* starts with special characters */
-                        alt((
-                            tag(BITALIC_1),
-                            tag(BITALIC_2),
-                            tag(BOLD_1),
-                            tag(BOLD_2),
-                            tag(ITALIC_1),
-                            tag(ITALIC_2),
-                            tag(BACKTICK),
-                            tag(LEFT_BRACKET),
-                            tag(LEFT_IMG),
-                            tag(NEW_LINE),
-                        ))
-                    ),
-                    /* output - keep char */
-                    anychar,
-                )
-            )
-        )(input)
-    }
-
-    /// Parse a single chunk of markdown text [Fragment] in a single line.
-    pub fn parse_element_markdown_inline(input: &str) -> IResult<&str, Fragment> {
-        alt((
-            map(parse_element_italic,       Fragment::Italic),
-            map(parse_element_bold,         Fragment::Bold),
-            map(parse_element_bold_italic,  Fragment::BoldItalic),
-            map(parse_element_code,         Fragment::InlineCode),
-            map(parse_element_image,        Fragment::Image),
-            map(parse_element_link,         Fragment::Link),
-            map(parse_element_plaintext,    Fragment::Plain),
-        ))(input)
-    }
+pub fn parse_element_bold_italic(input: &str) -> IResult<&str, &str> {
+    alt((
+        delimited(/* start */ tag(BITALIC_1), /* output */ is_not(BITALIC_1), /* end */ tag(BITALIC_1)),
+        delimited(/* start */ tag(BITALIC_2), /* output */ is_not(BITALIC_2), /* end */ tag(BITALIC_2)),
+    ))(input)
 }
-pub use no_rustfmt_block::*;
+
+#[rustfmt::skip]
+pub fn parse_element_bold(input: &str) -> IResult<&str, &str> {
+    alt((
+        delimited(/* start */ tag(BOLD_1), /* output */ is_not(BOLD_1), /* end */ tag(BOLD_1)),
+        delimited(/* start */ tag(BOLD_2), /* output */ is_not(BOLD_2), /* end */ tag(BOLD_2)),
+    ))(input)
+}
+
+#[rustfmt::skip]
+pub fn parse_element_italic(input: &str) -> IResult<&str, &str> {
+    alt((
+        delimited(/* start */ tag(ITALIC_1), /* output */ is_not(ITALIC_1), /* end */ tag(ITALIC_1)),
+        delimited(/* start */ tag(ITALIC_2), /* output */ is_not(ITALIC_2), /* end */ tag(ITALIC_2)),
+    ))(input)
+}
+
+#[rustfmt::skip]
+pub fn parse_element_code(input: &str) -> IResult<&str, &str> {
+    delimited(/* start */ tag(BACKTICK), /* output */ is_not(BACKTICK), /* end */ tag(BACKTICK))(input)
+}
+
+#[rustfmt::skip]
+pub fn parse_element_link(input: &str) -> IResult<&str, (&str, &str)> {
+    pair(
+        delimited(/* start */ tag(LEFT_BRACKET), /* output */ is_not(RIGHT_BRACKET), /* end */ tag(RIGHT_BRACKET)),
+        delimited(/* start */ tag(LEFT_PAREN), /* output */ is_not(RIGHT_PAREN), /* end */ tag(RIGHT_PAREN)),
+    )(input)
+}
+
+#[rustfmt::skip]
+pub fn parse_element_checkbox(input: &str) -> IResult<&str, bool> {
+    delimited(
+        /* start */ tag(LEFT_BRACKET),
+        /* output */ alt((
+            map(tag("x"), |_| true),
+            map(tag(" "), |_| false),
+        )),
+        /* end */ tag(RIGHT_BRACKET),
+    )(input)
+}
+
+#[rustfmt::skip]
+pub fn parse_element_image(input: &str) -> IResult<&str, (&str, &str)> {
+    pair(
+        delimited(/* start */ tag(LEFT_IMG), /* output */ is_not(RIGHT_IMG), /* end */ tag(RIGHT_IMG)),
+        delimited(/* start */ tag(LEFT_PAREN), /* output */ is_not(RIGHT_PAREN), /* end */ tag(RIGHT_PAREN)),
+    )(input)
+}
+
+/// There must be at least one match. We want to match many things that are not any of our
+/// special tags, but since we have no tools available to match and consume in the negative case
+/// (without regex) we need to match against our (start) tags, then consume one char; we repeat
+/// this until we run into one of our special characters (start tags) then we return this slice.
+#[rustfmt::skip]
+pub fn parse_element_plaintext(input: &str) -> IResult<&str, &str> {
+    recognize(
+        many1(
+            preceded(
+                /* prefix - discarded */
+                not(
+                    /* starts with special characters */
+                    alt((
+                        tag(BITALIC_1),
+                        tag(BITALIC_2),
+                        tag(BOLD_1),
+                        tag(BOLD_2),
+                        tag(ITALIC_1),
+                        tag(ITALIC_2),
+                        tag(BACKTICK),
+                        tag(LEFT_BRACKET),
+                        tag(LEFT_IMG),
+                        tag(NEW_LINE),
+                    ))
+                ),
+                /* output - keep char */
+                anychar,
+            )
+        )
+    )(input)
+}
+
+/// Parse a single chunk of markdown text [Fragment] in a single line.
+#[rustfmt::skip]
+pub fn parse_element_markdown_inline(input: &str) -> IResult<&str, Fragment> {
+    alt((
+        map(parse_element_italic,       Fragment::Italic),
+        map(parse_element_bold,         Fragment::Bold),
+        map(parse_element_bold_italic,  Fragment::BoldItalic),
+        map(parse_element_code,         Fragment::InlineCode),
+        map(parse_element_image,        Fragment::Image),
+        map(parse_element_link,         Fragment::Link),
+        map(parse_element_checkbox,     Fragment::Checkbox),
+        map(parse_element_plaintext,    Fragment::Plain),
+    ))(input)
+}
 
 #[cfg(test)]
 mod tests {
@@ -116,7 +136,6 @@ mod tests {
               Err as NomErr};
 
     use super::*;
-    use crate::*;
 
     #[test]
     fn test_parse_element_italic() {
