@@ -19,13 +19,13 @@
 pub mod md_parser_syn_hi;
 pub mod pattern_matcher;
 pub mod r3bl_syntect_theme;
-pub mod styled_text_conversion;
+pub mod syntect_to_styled_text_conversion;
 
 // Re-export
 pub use md_parser_syn_hi::*;
 pub use pattern_matcher::*;
 pub use r3bl_syntect_theme::*;
-pub use styled_text_conversion::*;
+pub use syntect_to_styled_text_conversion::*;
 
 // Tests.
 mod test_r3bl_syntect_theme;

@@ -208,7 +208,7 @@ impl EditorEngine {
 
         // BM: ▌2. RENDER▐ render single line; life of styled texts is short
         let list: List<(Style, UnicodeString)> =
-            styled_text_conversion::from_syntect_to_tui(syntect_highlighted_line);
+            syntect_to_styled_text_conversion::from_syntect_to_tui(syntect_highlighted_line);
         let styled_texts: StyledTexts = list.clip(scroll_offset_col, max_display_col_count);
         styled_texts.render_into(render_ops);
     }

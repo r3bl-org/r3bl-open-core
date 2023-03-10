@@ -110,8 +110,6 @@ pub mod constants {
     pub const CODE_BLOCK_END: &str = "```\n";
 }
 
-/// [CodeBlock] has no line breaks which the [editor] needs to display it. This struct is used
-/// after conversion to hold the line breaks.
 #[derive(Debug, PartialEq, Clone)]
 pub struct CodeBlockLine<'a> {
     pub language: Option<&'a str>,
