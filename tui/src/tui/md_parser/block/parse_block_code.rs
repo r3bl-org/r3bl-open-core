@@ -51,7 +51,7 @@ fn parse_code_block_lang_to_eol(input: &str) -> IResult<&str, Option<&str>> {
                     /* ends with (discarded) */ tag(NEW_LINE),
                 ),
             ),
-            |lang| Some(lang),
+            Some,
         ),
         // Or - Fail to parse language, use unknown language instead.
         map(
@@ -90,11 +90,11 @@ pub fn split_by_newline(input: &str) -> Vec<&str> {
     acc
 }
 
-/// At a minimum, a [CodeBlock] will be 2 lines of text.
+/// At a minimum, a [CodeBlockLine] will be 2 lines of text.
 /// 1. The first line will be the language of the code block, eg: "```rust\n" or "```\n".
 /// 2. The second line will be the end of the code block, eg: "```\n" Then there may be some
 ///    number of lines of text in the middle. These lines are stored in the
-///    [text](CodeBlock.text) field.
+///    [content](CodeBlockLine.content) field.
 pub fn convert_into_code_block_lines<'input>(
     lang: Option<&'input str>,
     lines: Vec<&'input str>,

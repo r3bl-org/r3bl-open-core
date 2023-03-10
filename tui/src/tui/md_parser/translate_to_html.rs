@@ -15,9 +15,9 @@
  *   limitations under the License.
  */
 
-use crate::{constants::CODE_BLOCK_START_PARTIAL, *};
+use crate::*;
 
-pub fn translate_to_string(doc: Document) -> String {
+pub fn translate_to_html(doc: Document) -> String {
     let mut acc = vec![];
     for block in doc {
         match block {
@@ -72,7 +72,7 @@ fn translate_ordered_list(lines: Vec<Fragments>) -> String {
     format!("<ol>{}</ol>", translate_list_elements(lines.to_vec()))
 }
 
-fn translate_codeblock_lines(code_block_lines: &Vec<CodeBlockLine>) -> String {
+fn translate_codeblock_lines(code_block_lines: &[CodeBlockLine]) -> String {
     let lang = {
         if let Some(lang) = code_block_lines.get(0) {
             lang.language

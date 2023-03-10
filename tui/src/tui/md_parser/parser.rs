@@ -49,6 +49,7 @@ pub fn parse_markdown(input: &str) -> IResult<&str, Document> {
 
 #[cfg(test)]
 mod tests {
+    use ansi_term::Color::*;
     use r3bl_rs_utils_core::*;
 
     use super::*;
@@ -105,11 +106,12 @@ mod tests {
         ];
 
         // Print last 2 items.
-        {
-            vec_block
-                .iter()
-                .skip(vec_block.len() - 2)
-                .for_each(|x| println!("→ {:?}", x))
+        for block in vec_block.iter().skip(vec_block.len() - 2) {
+            println!(
+                "{0} {1}",
+                Purple.bold().paint("█ → "),
+                Green.paint(format!("{:?}", block))
+            );
         }
 
         assert_eq2!(remainder, "");

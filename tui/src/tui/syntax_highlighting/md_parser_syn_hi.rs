@@ -25,26 +25,39 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-/// This module is responsible for converting a `&Vec<UnicodeString>` into a `Vec<List<(Style,
-/// String>)>>`. This is the main function that the [editor] uses this in order to display the
-/// markdown to the user.
+/// This module is responsible for converting:
+/// - from a &[Vec] of [US] which comes from the [editor],
+/// - into a [Vec] of [StyleUSFragmentLine], which the [editor] will clip & render.
+///
+/// This is the main function that the [editor] uses this in order to display the markdown to the
+/// user.
 pub mod syn_hi_md_editor_content {
     use super::*;
 
-    // IDEA: this is the "main" function for syn hi editor content
-    pub fn highlight(editor_text: &Vec<UnicodeString>) -> Vec<List<(Style, String)>> {
-        // AI: 2. parse markdown into Document
-        todo!()
+    // AI: 0. this is the main entry point for the editor to use this module.
+    pub fn highlight(editor_text: &Vec<US>) -> CommonResult<Vec<StyleUSFragmentLine>> {
+        // Convert the editor text into a string.
+        let mut acc = Vec::<&str>::new();
+        for line in editor_text {
+            acc.push(line.string.as_str());
+            acc.push("\n");
+        }
+        let editor_text_string = acc.join("\n");
+
+        // Try and parse the string into a Document.
+        match parse_markdown(&editor_text_string) {
+            Ok((_, document)) => Ok(translate_to_style_us_tuple::translate(document)),
+            Err(_) => CommonError::new_err_with_only_type(CommonErrorType::ParsingError),
+        }
     }
 }
 
-/// This module is responsible for converting a [Document] into a list of tuples of [Style] and
-/// [String].
+/// This module is responsible for converting a [Document] into a [Vec] of [StyleUSFragmentLine].
 pub mod translate_to_style_us_tuple {
     use super::*;
 
-    pub fn translate(document: Document) -> Vec<List<(Style, String)>> {
-        // AI: 1. iterate over document block (which represents a line) & convert to &[(Style,String)]
+    pub fn translate(document: Document) -> Vec<StyleUSFragmentLine> {
+        // AI: 1. iterate over document block (which represents a line) & convert to &[(Style,US)]
         todo!()
     }
 }

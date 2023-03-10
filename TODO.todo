@@ -5,7 +5,9 @@ backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissu
 fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
   ☐ `md_parser_syn_hi.rs`:
     ☐ fn `syn_hi_md_editor_content::highlight`: `&Vec<US>` -(1)-> `Document` -(2)-> `Vec<List<(Style, US)>>`
+    ✔ rewrite `md_parser` @done(23-03-10 17:36)
     ✔ fn `convert_from_code_block_into_lines`: `<CodeBlock>` -> `Vec<CodeBlockLine>` @done(23-03-09 15:58)
+    ✔ refactor names in `syntax_highlighting` module @done(23-03-10 17:36)
     ☐ fn `translate_to_style_us_tuple::translate`: `(Document)` -> `Vec<List<(Style, US)>>`
     ☐ build a theme to convert parts of a `Document` to `Style`
   ☐ `editor_engine_api.rs`: update `render_line_with_syntax_highlight()` based on `syntect` / `md_parser` choice

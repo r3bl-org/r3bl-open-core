@@ -24,20 +24,31 @@
 //! - tui styled texts are styled unicode strings,
 //! - while syntect styled texts are styled plain text strings.
 //!
-//! This requires the conversion code to:
-//! 1. Convert the syntect `Vec<SyntectStyle, &str>` into a `List<Style, UnicodeString>`.
-//! 2. Then convert that into a `StyledText`.
+//! This requires the conversion code to perform the following steps:
+//! 1. Convert the syntect [SyntectStyleStrFragmentLine] into a [StyleUSFragmentLine].
+//! 2. Then convert [StyleUSFragmentLine] into a [StyledTexts].
 
 use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-type SyntectStyle = syntect::highlighting::Style;
+pub type SyntectStyle = syntect::highlighting::Style;
+/// Fragments are chunks of a text that have an associated style. There are usually multiple
+/// fragments in a line of text.
+pub type SyntectStyleStrFragment<'a> = (SyntectStyle, &'a str);
+/// A line of text is made up of multiple [SyntectStyleStrFragment]s.
+pub type SyntectStyleStrFragmentLine<'a> = Vec<SyntectStyleStrFragment<'a>>;
+
+/// Fragments are chunks of a text that have an associated style. There are usually multiple
+/// fragments in a line of text.
+pub type StyleUSFragment = (Style, US);
+/// A line of text is made up of multiple [StyleUSFragment]s.
+pub type StyleUSFragmentLine = List<StyleUSFragment>;
 
 pub fn from_syntect_to_tui(
-    syntect_highlighted_line: Vec<(SyntectStyle, &str)>,
-) -> List<(Style, UnicodeString)> {
-    let mut it: List<(Style, UnicodeString)> = syntect_highlighted_line.into();
+    syntect_highlighted_line: SyntectStyleStrFragmentLine,
+) -> StyleUSFragmentLine {
+    let mut it = StyleUSFragmentLine::from(syntect_highlighted_line);
 
     // Remove the background color from each style in the theme.
     it.iter_mut().for_each(|(style, _)| style.remove_bg_color());
@@ -45,31 +56,31 @@ pub fn from_syntect_to_tui(
     it
 }
 
-impl From<Vec<(SyntectStyle, &str)>> for StyledTexts {
-    fn from(value: Vec<(SyntectStyle, &str)>) -> Self { (&value).into() }
+impl From<SyntectStyleStrFragmentLine<'_>> for StyledTexts {
+    fn from(value: SyntectStyleStrFragmentLine) -> Self { StyledTexts::from(&value) }
 }
 
-impl From<&Vec<(SyntectStyle, &str)>> for StyledTexts {
-    fn from(styles: &Vec<(SyntectStyle, &str)>) -> Self {
+impl From<&SyntectStyleStrFragmentLine<'_>> for StyledTexts {
+    fn from(styles: &SyntectStyleStrFragmentLine) -> Self {
         let mut styled_texts = StyledTexts::default();
         for (style, text) in styles {
-            let my_style: Style = (*style).into();
+            let my_style = Style::from(*style);
             styled_texts.push(StyledText::new(text.to_string(), my_style));
         }
         styled_texts
     }
 }
 
-impl From<Vec<(SyntectStyle, &str)>> for List<(Style, UnicodeString)> {
-    fn from(value: Vec<(SyntectStyle, &str)>) -> Self {
+impl From<SyntectStyleStrFragmentLine<'_>> for StyleUSFragmentLine {
+    fn from(value: SyntectStyleStrFragmentLine) -> Self {
         pub fn from_vec_styled_str(
-            vec_styled_str: &Vec<(SyntectStyle, &str)>,
-        ) -> List<(Style, UnicodeString)> {
-            let mut it: List<(Style, UnicodeString)> = Default::default();
+            vec_styled_str: &SyntectStyleStrFragmentLine,
+        ) -> StyleUSFragmentLine {
+            let mut it: StyleUSFragmentLine = Default::default();
 
             for (style, text) in vec_styled_str {
-                let my_style: Style = (*style).into();
-                let unicode_string: UnicodeString = (*text).into();
+                let my_style = Style::from(*style);
+                let unicode_string = US::from(*text);
                 it.push((my_style, unicode_string));
             }
 
@@ -80,7 +91,7 @@ impl From<Vec<(SyntectStyle, &str)>> for List<(Style, UnicodeString)> {
     }
 }
 
-impl List<(Style, UnicodeString)> {
+impl StyleUSFragmentLine {
     pub fn display_width(&self) -> ChUnit {
         let mut size = ch!(0);
         for (_, item) in self.iter() {
@@ -103,14 +114,13 @@ impl List<(Style, UnicodeString)> {
         scroll_offset_col_index: ChUnit,
         max_display_col_count: ChUnit,
     ) -> String {
-        let line = UnicodeString::from(self.get_plain_text());
-        line.clip(scroll_offset_col_index, max_display_col_count)
-            .into()
+        let line = US::from(self.get_plain_text());
+        String::from(line.clip(scroll_offset_col_index, max_display_col_count))
     }
 
     // BM: ▌3. START▐ clip() is the entry point
     /// Clip the text (in one line) in this range: [ `start_col` .. `end_col` ]. Each line is
-    /// represented as a [List] of ([Style], [UnicodeString])`s.
+    /// represented as a [List] of ([Style], [US])`s.
     pub fn clip(
         &self,
         scroll_offset_col_index: ChUnit,
@@ -123,7 +133,7 @@ impl List<(Style, UnicodeString)> {
         let plain_text_pattern: &str =
             &self.get_plain_text_clipped(scroll_offset_col_index, max_display_col_count);
         let mut matcher =
-            { PatternMatcherStateMachine::new(plain_text_pattern, scroll_offset_col_index.into()) };
+            PatternMatcherStateMachine::new(plain_text_pattern, Some(scroll_offset_col_index));
 
         // Main loop over each `styled_text_segment` in the `List` (the list represents a single
         // line of text).
@@ -159,7 +169,7 @@ impl List<(Style, UnicodeString)> {
             }
 
             if !clipped_text_fragment.is_empty() {
-                list.push((*style, clipped_text_fragment.into()));
+                list.push((*style, US::from(clipped_text_fragment)));
             }
         }
 
@@ -167,8 +177,8 @@ impl List<(Style, UnicodeString)> {
     }
 }
 
-impl From<List<(Style, UnicodeString)>> for StyledTexts {
-    fn from(styles: List<(Style, UnicodeString)>) -> Self {
+impl From<StyleUSFragmentLine> for StyledTexts {
+    fn from(styles: StyleUSFragmentLine) -> Self {
         let mut styled_texts = StyledTexts::default();
         for (style, text) in styles.iter() {
             let my_style: Style = *style;
