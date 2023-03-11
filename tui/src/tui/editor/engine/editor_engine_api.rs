@@ -121,7 +121,7 @@ impl EditorEngine {
 
         let mut num_rows_rendered = ch!(0);
 
-        // IDEA: `&Vec<US>` (1)-> `Document` (2)-> `Vec<List<(Style, US)>>` -> call syn_hi_editor_content::highlight(..)
+        // BM: ▌5. ALT▐ `&Vec<US>` (1)-> `Document` (2)-> `Vec<List<(Style, US)>>` -> call syn_hi_editor_content::highlight(..)
 
         // Paint each line in the buffer (skipping the scroll_offset.row).
         // https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip

@@ -20,28 +20,29 @@ use nom::{bytes::complete::*, combinator::*, sequence::*, IResult};
 use super::*;
 use crate::*;
 
-/// This matches the heading tag and text until EOL. Outputs a tuple of [Level] and [Line].
+/// This matches the heading tag and text until EOL. Outputs a tuple of [HeadingLevel] and [Line].
 #[rustfmt::skip]
-pub fn parse_block_heading(input: &str) -> IResult<&str, (Level, Fragments)> {
+pub fn parse_block_heading(input: &str) -> IResult<&str, HeadingData> {
     parse(input)
 }
 
 #[rustfmt::skip]
-fn parse(input: &str) -> IResult<&str, (Level, Fragments)> {
-    tuple(
+fn parse(input: &str) -> IResult<&str, HeadingData> {
+    let (input, (level, fragments)) = tuple(
         (parse_heading_tag, parse_block_markdown_text_until_eol)
-    )(input)
+    )(input)?;
+    Ok((input, HeadingData{level, content: fragments}))
 }
 
 /// Matches one or more `#` chars, consumes it, and outputs [Level].
 #[rustfmt::skip]
-fn parse_heading_tag(input: &str) -> IResult<&str, Level> {
+fn parse_heading_tag(input: &str) -> IResult<&str, HeadingLevel> {
     map(
         terminated(
             /* output `#`+ */ take_while1(|it| it == constants::HEADING_CHAR),
             /* ends with (discarded) */ tag(constants::SPACE),
         ),
-        |it: &str| Level::from(it.len()),
+        |it: &str| HeadingLevel::from(it.len()),
     )(input)
 }
 
@@ -78,15 +79,48 @@ mod tests {
     fn test_parse_header() {
         assert_eq!(
             parse_block_heading("# h1\n"),
-            Ok(("", (1.into(), vec![Fragment::Plain("h1")])))
+            Ok((
+                "",
+                HeadingData {
+                    level: 1.into(),
+                    content: vec![Fragment::Plain("h1")]
+                }
+            ))
         );
         assert_eq!(
             parse_block_heading("## h2\n"),
-            Ok(("", (2.into(), vec![Fragment::Plain("h2")])))
+            Ok((
+                "",
+                HeadingData {
+                    level: 2.into(),
+                    content: vec![Fragment::Plain("h2")]
+                }
+            ))
         );
         assert_eq!(
             parse_block_heading("###  h3\n"),
-            Ok(("", (3.into(), vec![Fragment::Plain(" h3")])))
+            Ok((
+                "",
+                HeadingData {
+                    level: 3.into(),
+                    content: vec![Fragment::Plain(" h3")]
+                }
+            ))
+        );
+        assert_eq!(
+            parse_block_heading("### h3 *foo* **bar**\n"),
+            Ok((
+                "",
+                HeadingData {
+                    level: 3.into(),
+                    content: vec![
+                        Fragment::Plain("h3 "),
+                        Fragment::Italic("foo"),
+                        Fragment::Plain(" "),
+                        Fragment::Bold("bar"),
+                    ]
+                }
+            ))
         );
         assert_eq!(
             parse_block_heading("###h3"),
@@ -116,7 +150,16 @@ mod tests {
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(parse_block_heading("# \n"), Ok(("", (1.into(), vec![]))));
+        assert_eq!(
+            parse_block_heading("# \n"),
+            Ok((
+                "",
+                HeadingData {
+                    level: 1.into(),
+                    content: vec![]
+                }
+            ))
+        );
         assert_eq!(
             parse_block_heading("# test"),
             Err(NomErr::Error(Error {

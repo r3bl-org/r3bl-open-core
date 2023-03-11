@@ -29,11 +29,17 @@ pub type Line<'a> = Vec<Fragment<'a>>;
 /// Alias for Vec<[Line]>.
 pub type Lines<'a> = Vec<Line<'a>>;
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct HeadingData<'a> {
+    pub level: HeadingLevel,
+    pub content: Fragments<'a>,
+}
+
 /// These are blocks of Markdown. Blocks are the top-level elements of a Markdown document. A
 /// Markdown document once parsed is turned into a [Vec] of these.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Block<'a> {
-    Heading((Level, Fragments<'a>)),
+    Heading(HeadingData<'a>),
     OrderedList(Lines<'a>),
     UnorderedList(Lines<'a>),
     Text(Fragments<'a>),
@@ -58,7 +64,7 @@ pub enum Fragment<'a> {
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Level {
+pub enum HeadingLevel {
     Heading1 = 1,
     Heading2,
     Heading3,
@@ -67,16 +73,20 @@ pub enum Level {
     Heading6,
 }
 
-impl From<usize> for Level {
+impl From<HeadingLevel> for usize {
+    fn from(level: HeadingLevel) -> Self { (level as u8).into() }
+}
+
+impl From<usize> for HeadingLevel {
     fn from(size: usize) -> Self {
         match size {
-            1 => Level::Heading1,
-            2 => Level::Heading2,
-            3 => Level::Heading3,
-            4 => Level::Heading4,
-            5 => Level::Heading5,
-            6 => Level::Heading6,
-            _ => Level::Heading6,
+            1 => HeadingLevel::Heading1,
+            2 => HeadingLevel::Heading2,
+            3 => HeadingLevel::Heading3,
+            4 => HeadingLevel::Heading4,
+            5 => HeadingLevel::Heading5,
+            6 => HeadingLevel::Heading6,
+            _ => HeadingLevel::Heading6,
         }
     }
 }
@@ -108,6 +118,8 @@ pub mod constants {
     pub const NEW_LINE: &str = "\n";
     pub const CODE_BLOCK_START_PARTIAL: &str = "```";
     pub const CODE_BLOCK_END: &str = "```\n";
+    pub const CHECKED: &str = "[x]";
+    pub const UNCHECKED: &str = "[ ]";
 }
 
 #[derive(Debug, PartialEq, Clone)]

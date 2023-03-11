@@ -27,7 +27,7 @@ use crate::*;
 ///
 /// Each item in this [Document] corresponds to a block of Markdown [Block], which can be one of the
 /// following variants:
-/// 1. heading (which contains a [Level] & [Fragments]),
+/// 1. heading (which contains a [HeadingLevel] & [Fragments]),
 /// 2. ordered & unordered list (which itself contains a [Vec] of [Fragments],
 /// 3. code block (which contains string slices of the language & code),
 /// 4. line (which contains a [Fragments]).
@@ -61,7 +61,10 @@ mod tests {
         let expected_vec = vec![
             Block::Title("Something"),
             Block::Tags(vec!["tag1", "tag2", "tag3"]),
-            Block::Heading((Level::Heading1, vec![Fragment::Plain("Foobar")])),
+            Block::Heading(HeadingData {
+                level: HeadingLevel::Heading1,
+                content: vec![Fragment::Plain("Foobar")],
+            }),
             Block::Text(vec![]), // Empty line.
             Block::Text(vec![Fragment::Plain(
                 "Foobar is a Python library for dealing with word pluralization.",
@@ -73,7 +76,10 @@ mod tests {
             )),
             Block::CodeBlock(convert_into_code_block_lines(Some("fish"), vec![])),
             Block::CodeBlock(convert_into_code_block_lines(Some("python"), vec![""])),
-            Block::Heading((Level::Heading2, vec![Fragment::Plain("Installation")])),
+            Block::Heading(HeadingData {
+                level: HeadingLevel::Heading2,
+                content: vec![Fragment::Plain("Installation")],
+            }),
             Block::Text(vec![]), // Empty line.
             Block::Text(vec![
                 Fragment::Plain("Use the package manager "),
