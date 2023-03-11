@@ -65,14 +65,10 @@ pub fn parse_element_link(input: &str) -> IResult<&str, (&str, &str)> {
 
 #[rustfmt::skip]
 pub fn parse_element_checkbox(input: &str) -> IResult<&str, bool> {
-    delimited(
-        /* start */ tag(LEFT_BRACKET),
-        /* output */ alt((
-            map(tag("x"), |_| true),
-            map(tag(" "), |_| false),
-        )),
-        /* end */ tag(RIGHT_BRACKET),
-    )(input)
+    alt((
+        map(tag(CHECKED), |_| true),
+        map(tag(UNCHECKED), |_| false),
+    ))(input)
 }
 
 #[rustfmt::skip]

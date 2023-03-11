@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::ops::{Add, AddAssign, Deref, DerefMut};
+use std::ops::{Add, AddAssign};
 
 use r3bl_rs_utils_core::*;
 
@@ -24,8 +24,8 @@ use crate::*;
 /// Use [styled_text!] macro for easier construction.
 #[derive(Debug, Clone, Default)]
 pub struct StyledText {
-    plain_text: UnicodeString,
-    style: Style,
+    pub style: Style,
+    pub plain_text: UnicodeString,
 }
 
 mod styled_text_impl {
@@ -69,10 +69,7 @@ macro_rules! styled_text {
 }
 
 /// Use [styled_texts!] macro for easier construction.
-#[derive(Default, Debug, Clone)]
-pub struct StyledTexts {
-    styled_texts: List<StyledText>,
-}
+pub type StyledTexts = List<StyledText>;
 
 mod impl_styled_texts {
     use super::*;
@@ -87,15 +84,6 @@ mod impl_styled_texts {
 
     impl AddAssign<StyledText> for StyledTexts {
         fn add_assign(&mut self, other: StyledText) { self.push(other); }
-    }
-
-    impl Deref for StyledTexts {
-        type Target = Vec<StyledText>;
-        fn deref(&self) -> &Self::Target { &self.styled_texts }
-    }
-
-    impl DerefMut for StyledTexts {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.styled_texts }
     }
 
     impl StyledTexts {
@@ -207,9 +195,9 @@ mod tests {
             /// ```
             pub fn get_list() -> List<(Style, UnicodeString)> {
                 let mut it = List::default();
-                it.push((get_s1(), UnicodeString::from("first")));
-                it.push((get_s1(), UnicodeString::from(" ")));
-                it.push((get_s2(), UnicodeString::from("second")));
+                it.items.push((get_s1(), UnicodeString::from("first")));
+                it.items.push((get_s1(), UnicodeString::from(" ")));
+                it.items.push((get_s2(), UnicodeString::from("second")));
                 it
             }
         }

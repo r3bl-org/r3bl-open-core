@@ -21,7 +21,10 @@ pub fn translate_to_html(doc: Document) -> String {
     let mut acc = vec![];
     for block in doc {
         match block {
-            Block::Heading((level, line)) => acc.push(translate_header(&level, line.to_vec())),
+            Block::Heading(HeadingData {
+                level,
+                content: line,
+            }) => acc.push(translate_header(&level, line.to_vec())),
             Block::UnorderedList(lines) => acc.push(translate_unordered_list(lines.to_vec())),
             Block::OrderedList(lines) => acc.push(translate_ordered_list(lines.to_vec())),
             Block::CodeBlock(code_block) => acc.push(translate_codeblock_lines(&code_block)),
@@ -54,7 +57,7 @@ fn translate_list_elements(lines: Vec<Fragments>) -> String {
         .join("")
 }
 
-fn translate_header(heading_level: &Level, text: Fragments) -> String {
+fn translate_header(heading_level: &HeadingLevel, text: Fragments) -> String {
     let heading_level_number = (*heading_level) as u8;
     format!(
         "<h{}>{}</h{}>",
@@ -185,7 +188,7 @@ mod tests {
     #[test]
     fn test_translate_header() {
         assert_eq2!(
-            translate_header(&Level::Heading1, vec![Fragment::Plain("Foobar")]),
+            translate_header(&HeadingLevel::Heading1, vec![Fragment::Plain("Foobar")]),
             String::from("<h1>Foobar</h1>")
         );
     }
