@@ -26,9 +26,6 @@ use tokio::sync::RwLock;
 
 use crate::*;
 
-/// Controls whether input events are process by spawning a new task or by blocking the current task.
-const SPAWN_PROCESS_INPUT: bool = true;
-
 pub struct TerminalWindow;
 
 impl TerminalWindow {
@@ -103,14 +100,14 @@ impl TerminalWindow {
                     .await?;
             }
 
-            // Pass the input_event to the app for processing.
-            let propagation_result_from_app = TerminalWindow::process_input_event(
-                &shared_global_data,
-                &shared_store,
-                &shared_app,
-                &input_event,
-            )
-            .await?;
+            let propagation_result_from_app =
+                TerminalWindow::spawn_task_to_process_input_event_and_wait_for_it_to_finish(
+                    &shared_global_data,
+                    &shared_store,
+                    &shared_app,
+                    &input_event,
+                )
+                .await?;
 
             // If event not consumed by app, propagate to the default input handler.
             match propagation_result_from_app {
@@ -135,7 +132,14 @@ impl TerminalWindow {
         Ok(())
     }
 
-    async fn process_input_event<S, A>(
+    /// This function is used to spawn a tokio task to process an input event. Even though a tokio
+    /// task is spawned, it is awaited immediately after spawning. The task that calls this function
+    /// is waiting until the spawned task completes.
+    ///
+    /// 1. Spawn a task to process the `input_event` (pass it to the app for processing).
+    /// 2. Then await it to get the result.
+    /// 3. Return that result from this function.
+    async fn spawn_task_to_process_input_event_and_wait_for_it_to_finish<S, A>(
         shared_global_data: &SharedGlobalData,
         shared_store: &SharedStore<S, A>,
         shared_app: &SharedApp<S, A>,
@@ -145,52 +149,31 @@ impl TerminalWindow {
         S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
         A: Debug + Default + Clone + Sync + Send + 'static,
     {
-        let propagation_result_from_app = match SPAWN_PROCESS_INPUT {
-            true => {
-                // Tokio spawn.
-                let propagation_result_from_app = {
-                    let shared_global_data_clone = shared_global_data.clone();
-                    let shared_store_clone = shared_store.clone();
-                    let shared_app_clone = shared_app.clone();
-                    let input_event_clone = input_event.clone();
-                    let join_handle = tokio::spawn(async move {
-                        AppManager::route_input_to_app(
-                            &shared_global_data_clone,
-                            &shared_store_clone,
-                            &shared_app_clone,
-                            &input_event_clone,
-                        )
-                        .await
-                    });
-                    join_handle.await??
-                };
-                call_if_true!(DEBUG_TUI_MOD, {
-                    let msg = format!(
-                        "main_event_loop -> 🚥 SPAWN propagation_result_from_app: {propagation_result_from_app:?}"
-                    );
-                    log_info(msg);
-                });
-                propagation_result_from_app
-            }
-            false => {
-                // Blocking call.
-                let propagation_result_from_app = AppManager::route_input_to_app(
-                    shared_global_data,
-                    shared_store,
-                    shared_app,
-                    input_event,
-                )
-                .await?;
-                call_if_true!(DEBUG_TUI_MOD, {
-                    let msg = format!(
-                        "main_event_loop -> 🚥 NO_SPAWN propagation_result_from_app: {propagation_result_from_app:?}"
-                    );
-                    log_info(msg);
-                });
-                propagation_result_from_app
-            }
-        };
-        Ok(propagation_result_from_app)
+        // This must be created outside the async block below (to which it is passed).
+        let captured_args_for_spawned_task = (
+            shared_global_data.clone(),
+            shared_store.clone(),
+            shared_app.clone(),
+            input_event.clone(),
+        );
+
+        // Why spawn a task and then immediately await it? If a task is not spawned to run
+        // `route_input_to_app`, then it causes all kinds of rendering problems when running certain
+        // apps (for example the editor demo).
+        #[allow(clippy::redundant_async_block)]
+        let future_result = tokio::spawn(async move {
+            AppManager::route_input_to_app(&captured_args_for_spawned_task).await
+        })
+        .await??;
+
+        call_if_true!(DEBUG_TUI_MOD, {
+            let msg = format!(
+                "main_event_loop -> 🚥 SPAWN propagation_result_from_app: {future_result:?}"
+            );
+            log_info(msg);
+        });
+
+        Ok(future_result)
     }
 }
 
@@ -246,10 +229,12 @@ where
 
     /// Pass the event to the `shared_app` for further processing.
     pub async fn route_input_to_app(
-        shared_global_data: &SharedGlobalData,
-        shared_store: &SharedStore<S, A>,
-        shared_app: &SharedApp<S, A>,
-        input_event: &InputEvent,
+        (shared_global_data, shared_store, shared_app, input_event): &(
+            SharedGlobalData,
+            SharedStore<S, A>,
+            SharedApp<S, A>,
+            InputEvent,
+        ),
     ) -> CommonResult<EventPropagation> {
         throws_with_return!({
             // Create global scope args.
