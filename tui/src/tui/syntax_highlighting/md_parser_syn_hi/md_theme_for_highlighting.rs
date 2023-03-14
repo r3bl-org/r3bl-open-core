@@ -131,8 +131,64 @@ impl From<StyledTexts> for StyleUSFragmentLine {
 mod test_generate_style_us_fragment_lines_from_document {
     use super::*;
 
+    fn generate_doc<'a>() -> Document<'a> {
+        vec![
+            Block::Title("Something"),
+            Block::Tags(vec!["tag1", "tag2", "tag3"]),
+            Block::Heading(HeadingData {
+                level: HeadingLevel::Heading1,
+                content: vec![Fragment::Plain("Foobar")],
+            }),
+            Block::Text(vec![]), // Empty line.
+            Block::Text(vec![Fragment::Plain(
+                "Foobar is a Python library for dealing with word pluralization.",
+            )]),
+            Block::Text(vec![]), // Empty line.
+            Block::CodeBlock(convert_into_code_block_lines(
+                Some("bash"),
+                vec!["pip install foobar"],
+            )),
+            Block::CodeBlock(convert_into_code_block_lines(Some("fish"), vec![])),
+            Block::CodeBlock(convert_into_code_block_lines(Some("python"), vec![""])),
+            Block::Heading(HeadingData {
+                level: HeadingLevel::Heading2,
+                content: vec![Fragment::Plain("Installation")],
+            }),
+            Block::Text(vec![]), // Empty line.
+            Block::Text(vec![
+                Fragment::Plain("Use the package manager "),
+                Fragment::Link(("pip", "https://pip.pypa.io/en/stable/")),
+                Fragment::Plain(" to install foobar."),
+            ]),
+            Block::CodeBlock(convert_into_code_block_lines(
+                Some("python"),
+                vec![
+                    "import foobar",
+                    "",
+                    "foobar.pluralize('word') # returns 'words'",
+                    "foobar.pluralize('goose') # returns 'geese'",
+                    "foobar.singularize('phenomena') # returns 'phenomenon'",
+                ],
+            )),
+            Block::UnorderedList(vec![
+                vec![Fragment::Plain("ul1")],
+                vec![Fragment::Plain("ul2")],
+            ]),
+            Block::OrderedList(vec![
+                vec![Fragment::Plain("ol1")],
+                vec![Fragment::Plain("ol2")],
+            ]),
+            Block::UnorderedList(vec![
+                vec![Fragment::Checkbox(false), Fragment::Plain(" todo")],
+                vec![Fragment::Checkbox(true), Fragment::Plain(" done")],
+            ]),
+            Block::Text(vec![Fragment::Plain("end")]),
+        ]
+    }
+
     #[test]
     fn test_generate_style_us_fragment_lines_from_document() {
         // AI: write tests
+        let document: Document = generate_doc();
     }
 }
