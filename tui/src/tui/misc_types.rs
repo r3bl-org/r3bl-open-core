@@ -203,6 +203,14 @@ pub mod list_of {
         pub items: Vec<T>,
     }
 
+    impl<T> From<List<T>> for Vec<T> {
+        fn from(list: List<T>) -> Self { list.items }
+    }
+
+    impl<T> From<Vec<T>> for List<T> {
+        fn from(items: Vec<T>) -> Self { Self { items } }
+    }
+
     impl<T> Deref for List<T> {
         type Target = Vec<T>;
         fn deref(&self) -> &Self::Target { &self.items }

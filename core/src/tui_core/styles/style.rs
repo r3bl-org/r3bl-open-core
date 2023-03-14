@@ -148,6 +148,13 @@ mod addition {
         new_style
     }
 
+    impl AddAssign<Style> for Style {
+        fn add_assign(&mut self, rhs: Style) {
+            let sum = add_styles(*self, rhs);
+            *self = sum;
+        }
+    }
+
     impl AddAssign<&Style> for Style {
         fn add_assign(&mut self, rhs: &Style) {
             let sum = add_styles(*self, *rhs);
