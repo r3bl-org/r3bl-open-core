@@ -365,18 +365,18 @@ impl ColorWheel {
 
         // Early return if lolcat.
         if let ColorWheelConfig::Lolcat(_) = &my_config {
-            if let GradientKind::Lolcat(lolcat) = &mut self.gradient_kind {
+            return if let GradientKind::Lolcat(lolcat) = &mut self.gradient_kind {
                 let new_color = ColorUtils::get_color_tuple(&lolcat.color_wheel_control);
                 lolcat.color_wheel_control.seed +=
                     f64::from(lolcat.color_wheel_control.color_change_speed);
-                return Some(TuiColor::Rgb(RgbValue::from_u8(
+                Some(TuiColor::Rgb(RgbValue::from_u8(
                     new_color.0,
                     new_color.1,
                     new_color.2,
-                )));
+                )))
             } else {
-                return None;
-            }
+                None
+            };
         }
 
         // Determine if the index should be changed (depending on the speed).
@@ -433,7 +433,7 @@ impl ColorWheel {
 
         // Actually change the index if it should be changed.
         if should_change_index {
-            match self.index_direction {
+            return match self.index_direction {
                 ColorWheelDirection::Forward => {
                     self.index += 1;
 
@@ -447,7 +447,7 @@ impl ColorWheel {
 
                     // Return the color for the correct index.
                     let color = gradient.get(ch!(@to_usize self.index))?;
-                    return Some(*color);
+                    Some(*color)
                 }
                 ColorWheelDirection::Reverse => {
                     self.index -= 1;
@@ -460,9 +460,9 @@ impl ColorWheel {
 
                     // Return the color for the correct index.
                     let color = gradient.get(ch!(@to_usize self.index))?;
-                    return Some(*color);
+                    Some(*color)
                 }
-            }
+            };
         }
 
         // Return the color for the correct index.

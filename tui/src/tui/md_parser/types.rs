@@ -24,10 +24,12 @@ pub type Blocks<'a> = Vec<Block<'a>>;
 /// This roughly corresponds to a single line of text. Each line is made up of one or more
 /// [Fragment].
 pub type Fragments<'a> = Vec<Fragment<'a>>;
+
 /// Alias for [Fragments].
-pub type Line<'a> = Vec<Fragment<'a>>;
-/// Alias for Vec<[Line]>.
-pub type Lines<'a> = Vec<Line<'a>>;
+pub type FragmentsInOneLine<'a> = Vec<Fragment<'a>>;
+
+/// Alias for [Vec] of [FragmentsInOneLine].
+pub type Lines<'a> = Vec<FragmentsInOneLine<'a>>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HeadingData<'a> {
