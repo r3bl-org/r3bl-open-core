@@ -20,7 +20,7 @@ use nom::{bytes::complete::*, multi::*, sequence::*, IResult};
 
 use crate::{md_parser::parser_element::parse_element_markdown_inline, *};
 
-/// Parse a single line of markdown text [Line].
+/// Parse a single line of markdown text [FragmentsInOneLine].
 #[rustfmt::skip]
 pub fn parse_block_markdown_text_until_eol(input: &str) -> IResult<&str, Fragments> {
     parse(input)

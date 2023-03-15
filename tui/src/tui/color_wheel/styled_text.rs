@@ -60,9 +60,11 @@ macro_rules! styled_text {
     () => {
         StyledText::new(String::new(), Style::default())
     };
+
     ($text_arg: expr) => {
         StyledText::new($text_arg.to_string(), Style::default())
     };
+
     ($text_arg: expr, $style_arg: expr) => {
         StyledText::new($text_arg.to_string(), $style_arg)
     };
@@ -194,11 +196,11 @@ mod tests {
             /// <span style="s2">second</span>
             /// ```
             pub fn get_list() -> List<(Style, UnicodeString)> {
-                let mut it = List::default();
-                it.items.push((get_s1(), UnicodeString::from("first")));
-                it.items.push((get_s1(), UnicodeString::from(" ")));
-                it.items.push((get_s2(), UnicodeString::from("second")));
-                it
+                list! {
+                    (get_s1(), UnicodeString::from("first")),
+                    (get_s1(), UnicodeString::from(" ")),
+                    (get_s2(), UnicodeString::from("second"))
+                }
             }
         }
 
@@ -419,14 +421,14 @@ mod tests {
             use helpers::*;
 
             fn get_list() -> List<(Style, UnicodeString)> {
-                let mut list = List::default();
-                list.push((
-                    get_s1(),
-                    UnicodeString::from(
-                        "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234",
-                    ),
-                ));
-                list
+                list! {
+                    (
+                        get_s1(),
+                        UnicodeString::from(
+                            "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234",
+                        ),
+                    )
+                }
             }
 
             let scroll_offset_col_index = ch!(1);
@@ -473,14 +475,14 @@ mod tests {
             use helpers::*;
 
             fn get_list() -> List<(Style, UnicodeString)> {
-                let mut list = List::default();
-                list.push((
-                    get_s1(),
-                    UnicodeString::from(
-                        "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 0123456",
-                    ),
-                ));
-                list
+                list! {
+                    (
+                        get_s1(),
+                        UnicodeString::from(
+                            "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 0123456",
+                        ),
+                    )
+                }
             }
 
             let scroll_offset_col_index = ch!(1);

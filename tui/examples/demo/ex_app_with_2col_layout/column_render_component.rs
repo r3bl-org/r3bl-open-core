@@ -59,6 +59,7 @@ macro_rules! fire {
             log_info(msg)
         });
     };
+
     (@sub_pop => $arg_event_consumed: ident, $arg_shared_store: ident, $arg_action: expr) => {
         spawn_and_consume_event!($arg_event_consumed, $arg_shared_store, $arg_action);
         call_if_true!(DEBUG_TUI_MOD, {

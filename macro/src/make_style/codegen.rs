@@ -36,6 +36,7 @@ pub(crate) fn code_gen(
     let has_attrib_reverse = attrib_vec.contains(&Attrib::Reverse);
     let has_attrib_hidden = attrib_vec.contains(&Attrib::Hidden);
     let has_attrib_strikethrough = attrib_vec.contains(&Attrib::Strikethrough);
+    let has_attrib_italic = attrib_vec.contains(&Attrib::Italic);
 
     let maybe_padding_expr = match padding {
         Some(padding_int) => {
@@ -78,6 +79,7 @@ pub(crate) fn code_gen(
       Style {
         id: #id,
         bold: #has_attrib_bold,
+        italic: #has_attrib_italic,
         dim: #has_attrib_dim,
         underline: #has_attrib_underline,
         reverse: #has_attrib_reverse,

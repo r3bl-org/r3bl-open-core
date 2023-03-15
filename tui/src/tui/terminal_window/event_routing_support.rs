@@ -45,10 +45,10 @@ pub enum EventPropagation {
 #[macro_export]
 macro_rules! spawn_and_consume_event {
     (
-    $arg_event_consumed_bool: ident,
-    $arg_shared_store:        ident,
-    $arg_action:              expr
-  ) => {
+        $arg_event_consumed_bool: ident,
+        $arg_shared_store:        ident,
+        $arg_action:              expr
+      ) => {
         $arg_event_consumed_bool = true;
         r3bl_redux::spawn_dispatch_action!($arg_shared_store, $arg_action);
     };

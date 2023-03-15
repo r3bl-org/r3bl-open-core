@@ -18,9 +18,9 @@
 #[macro_export]
 macro_rules! box_end {
     (
-    in:                     $arg_surface : expr                 // Eg: in: surface,
-    $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
-  ) => {
+        in: $arg_surface : expr // Eg: in: surface,
+        $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+    ) => {
         $arg_surface.box_end()?;
     };
 }
@@ -28,21 +28,21 @@ macro_rules! box_end {
 /// When calling this, make sure to make a corresponding call to [box_end!].
 #[macro_export]
 macro_rules! box_start {
-  (
-    in:                     $arg_surface : expr,                // Eg: in: surface,
-    id:                     $arg_id : expr,                     // Eg: 0,
-    dir:                    $arg_dir : expr,                    // Eg: Direction::Horizontal,
-    requested_size_percent: $arg_requested_size_percent : expr, // Eg: (50, 100).try_into()?,
-    styles:                 [$($args:tt)*]                      // Eg: [ "style1" , "style2" ]
-    $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
-  ) => {
-    $arg_surface.box_start(box_props! {
-      id:                     $arg_id,
-      dir:                    $arg_dir,
-      requested_size_percent: $arg_requested_size_percent,
-      maybe_styles:           get_styles! { @from: $arg_surface.stylesheet, [$($args)*] }
-    })?
-  };
+    (
+        in:                     $arg_surface : expr,                // Eg: in: surface,
+        id:                     $arg_id : expr,                     // Eg: 0,
+        dir:                    $arg_dir : expr,                    // Eg: Direction::Horizontal,
+        requested_size_percent: $arg_requested_size_percent : expr, // Eg: (50, 100).try_into()?,
+        styles:                 [$($args:tt)*]                      // Eg: [ "style1" , "style2" ]
+        $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+    ) => {
+        $arg_surface.box_start(box_props! {
+            id:                     $arg_id,
+            dir:                    $arg_dir,
+            requested_size_percent: $arg_requested_size_percent,
+            maybe_styles:           get_styles! { @from: $arg_surface.stylesheet, [$($args)*] }
+        })?
+    };
 }
 
 #[macro_export]
@@ -63,6 +63,7 @@ macro_rules! box_props {
       maybe_styles: $arg_styles,
     }
   };
+
   (
     id:                     $arg_id : expr,                     // Eg: 0,
     dir:                    $arg_dir : expr,                    // Eg: Direction::Horizontal,
@@ -77,6 +78,7 @@ macro_rules! box_props {
       maybe_styles: Some(vec![$($args)*]),
     }
   };
+  
   (
     id:                     $arg_id : expr,                     // Eg:0,
     dir:                    $arg_dir : expr,                    // Eg: Direction::Horizontal,

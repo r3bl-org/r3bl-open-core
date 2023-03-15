@@ -105,8 +105,8 @@ impl Debug for RequestedSizePercent {
 #[macro_export]
 macro_rules! percent {
     (
-    $arg_val: expr
-  ) => {
+        $arg_val: expr
+    ) => {
         Percent::try_from($arg_val)
     };
 }
@@ -114,9 +114,9 @@ macro_rules! percent {
 #[macro_export]
 macro_rules! requested_size_percent {
     (
-    width:  $arg_width: expr,
-    height: $arg_height: expr
-  ) => {
+        width:  $arg_width: expr,
+        height: $arg_height: expr
+    ) => {
         RequestedSizePercent {
             width_pc: percent!($arg_width)?,
             height_pc: percent!($arg_height)?,

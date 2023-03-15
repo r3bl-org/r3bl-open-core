@@ -54,13 +54,13 @@ pub enum Block<'a> {
 /// not include other Markdown blocks (like code blocks, lists, headings, etc).
 #[derive(Clone, Debug, PartialEq)]
 pub enum Fragment<'a> {
+    Plain(&'a str),
+    Bold(&'a str),
+    Italic(&'a str),
+    BoldItalic(&'a str),
+    InlineCode(&'a str),
     Link((&'a str, &'a str)),
     Image((&'a str, &'a str)),
-    InlineCode(&'a str),
-    Bold(&'a str),
-    BoldItalic(&'a str),
-    Italic(&'a str),
-    Plain(&'a str),
     Checkbox(bool),
 }
 

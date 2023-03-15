@@ -196,6 +196,23 @@ pub use global_constants::*;
 
 pub mod list_of {
     use super::*;
+
+    #[macro_export]
+    macro_rules! list {
+        (
+            $($item: expr),*
+            $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+        ) => {
+            {
+                let mut it = List::default();
+                $(
+                    it.items.push($item);
+                )*
+                it
+            }
+        };
+    }
+
     /// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for [List] of
     /// `T`. Where `T` is any number of types in the tui crate.
     #[derive(Debug, Clone, Default)]

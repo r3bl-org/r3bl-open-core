@@ -106,6 +106,7 @@ mod macros {
                 return None;
             }
         };
+
         ($arg_buffer: expr, @Nothing) => {
             if $arg_buffer.is_empty() {
                 return;
@@ -120,6 +121,7 @@ mod macros {
                 return None;
             }
         };
+        
         ($arg_engine: expr, @Nothing) => {
             if let EditorLineMode::SingleLine = $arg_engine.config_options.multiline_mode {
                 return;

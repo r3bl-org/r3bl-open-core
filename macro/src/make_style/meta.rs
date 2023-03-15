@@ -26,6 +26,7 @@ pub(crate) enum Attrib {
     Reverse,
     Hidden,
     Strikethrough,
+    Italic,
 }
 
 /// Docs: https://docs.rs/syn/1.0.98/syn/parse/struct.ParseBuffer.html

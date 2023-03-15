@@ -78,22 +78,24 @@ impl LayoutError {
 /// block that returns a `CommonResult<T>`.
 #[macro_export]
 macro_rules! unwrap_or_err {
-  ($option:expr, $err_type:expr) => {
-    match $option {
-      Some(value) => value,
-      None => return LayoutError::new_err($err_type),
-    }
-  };
-  ($option:expr, $err_type:expr, $msg:expr) => {
-    match $option {
-      Some(value) => value,
-      None => return LayoutError::new_err_with_msg($err_type, $msg.to_string()),
-    }
-  };
-  ($option:expr, $err_type:expr, $msg:expr, $($arg:tt)*) => {
-    match $option {
-      Some(value) => value,
-      None => return LayoutError::new_err_with_msg($err_type, format!($msg, $($arg)*)),
-    }
-  };
+    ($option:expr, $err_type:expr) => {
+        match $option {
+            Some(value) => value,
+            None => return LayoutError::new_err($err_type),
+        }
+    };
+
+    ($option:expr, $err_type:expr, $msg:expr) => {
+        match $option {
+            Some(value) => value,
+            None => return LayoutError::new_err_with_msg($err_type, $msg.to_string()),
+        }
+    };
+
+    ($option:expr, $err_type:expr, $msg:expr, $($arg:tt)*) => {
+        match $option {
+            Some(value) => value,
+            None => return LayoutError::new_err_with_msg($err_type, format!($msg, $($arg)*)),
+        }
+    };
 }

@@ -76,6 +76,20 @@ impl Fragment<'_> {
                 maybe_current_box_computed_style.unwrap_or_default(),
                 US::from(*plain_text),
             ),
+            Fragment::Bold(bold_text) => (
+                maybe_current_box_computed_style.unwrap_or_default()
+                    + style! {
+                        attrib: [bold]
+                    },
+                US::from(*bold_text),
+            ),
+            Fragment::Italic(italic_text) => (
+                maybe_current_box_computed_style.unwrap_or_default()
+                    + style! {
+                        attrib: [italic]
+                    },
+                US::from(*italic_text),
+            ),
             _ => todo!(), // AI: 0. impl rest of this match
         };
         todo!()

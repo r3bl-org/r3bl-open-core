@@ -231,9 +231,9 @@ pub mod debug_formatter {
 #[macro_export]
 macro_rules! position {
     (
-    col_index: $arg_col:expr,
-    row_index: $arg_row:expr
-  ) => {
+        col_index: $arg_col:expr,
+        row_index: $arg_row:expr
+    ) => {
         Position {
             col_index: $arg_col.into(),
             row_index: $arg_row.into(),
