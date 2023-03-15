@@ -27,7 +27,7 @@ use crate::{constants::*, *};
 /// ## Arguments
 /// - `editor_text` - The text that the user has typed into the editor.
 /// - `current_box_computed_style` - The computed style of the box that the editor is in.
-// AI: 0. this is the main entry point for the editor to use this module.
+// AI: ∞. this is the main entry point for the editor to use this module.
 pub fn try_parse_and_highlight(
     editor_text: &Vec<US>,
     maybe_current_box_computed_style: &Option<Style>,
