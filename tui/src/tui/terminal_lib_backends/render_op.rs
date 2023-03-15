@@ -263,8 +263,8 @@ pub enum RenderOp {
     /// Translate [Style] into fg and bg colors for crossterm.
     ApplyColors(Option<Style>),
 
-    /// Translate [Style] into attributes [static@STYLE_TO_ATTRIBUTE_MAP] for crossterm (bold,
-    /// underline, strikethrough, etc).
+    /// Translate [Style] into attributes for crossterm (bold, italic, underline, strikethrough,
+    /// etc).
     ///
     /// 1. If the [String] argument is plain text (no ANSI sequences) then it will be clipped
     ///    available width of the terminal screen).

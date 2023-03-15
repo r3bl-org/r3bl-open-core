@@ -66,6 +66,7 @@ impl Parse for StyleMetadata {
 pub(crate) mod custom_keywords {
     syn::custom_keyword!(id);
     syn::custom_keyword!(bold);
+    syn::custom_keyword!(italic);
     syn::custom_keyword!(attrib);
     syn::custom_keyword!(dim);
     syn::custom_keyword!(underline);
@@ -81,29 +82,35 @@ pub(crate) mod custom_keywords {
 // Parse id (optional).
 fn parse_optional_id(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
     let lookahead = input.lookahead1();
+
     if lookahead.peek(custom_keywords::id) {
         input.parse::<custom_keywords::id>()?;
         input.parse::<Token![:]>()?;
         let id = input.parse::<Expr>()?;
         metadata.id = id;
     }
+
     call_if_true!(DEBUG_MAKE_STYLE_MOD, println!("🚀 id: {:?}", metadata.id));
+    
     Ok(())
 }
 
 // Parse lolcat (optional).
 fn parse_optional_lolcat(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
     let lookahead = input.lookahead1();
+
     if lookahead.peek(custom_keywords::lolcat) {
         input.parse::<custom_keywords::lolcat>()?;
         input.parse::<Token![:]>()?;
         let lolcat = input.parse::<LitBool>()?;
         metadata.lolcat = Some(lolcat);
     }
+
     call_if_true!(
         DEBUG_MAKE_STYLE_MOD,
         println!("🚀 lolcat: {:?}", metadata.lolcat)
     );
+
     Ok(())
 }
 
@@ -128,6 +135,7 @@ fn parse_optional_attrib(input: &ParseStream, metadata: &mut StyleMetadata) -> R
                 } = segments.first().unwrap();
                 match ident.as_str().as_ref() {
                     "bold" => metadata.attrib_vec.push(Attrib::Bold),
+                    "italic" => metadata.attrib_vec.push(Attrib::Italic),
                     "dim" => metadata.attrib_vec.push(Attrib::Dim),
                     "underline" => metadata.attrib_vec.push(Attrib::Underline),
                     "reverse" => metadata.attrib_vec.push(Attrib::Reverse),
@@ -149,6 +157,7 @@ fn parse_optional_attrib(input: &ParseStream, metadata: &mut StyleMetadata) -> R
 // Parse padding (optional).
 fn parse_optional_padding(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
     let lookahead = input.lookahead1();
+
     if lookahead.peek(custom_keywords::padding) {
         input.parse::<custom_keywords::padding>()?;
         input.parse::<Token![:]>()?;
@@ -164,12 +173,14 @@ fn parse_optional_padding(input: &ParseStream, metadata: &mut StyleMetadata) -> 
             println!("🚀 padding: {:?}", &metadata.padding)
         );
     }
+
     Ok(())
 }
 
 // Parse color_fg (optional).
 fn parse_optional_color_fg(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
     let lookahead = input.lookahead1();
+
     if lookahead.peek(custom_keywords::color_fg) {
         input.parse::<custom_keywords::color_fg>()?;
         input.parse::<Token![:]>()?;
@@ -187,6 +198,7 @@ fn parse_optional_color_fg(input: &ParseStream, metadata: &mut StyleMetadata) ->
 // Parse color_bg (optional).
 fn parse_optional_color_bg(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
     let lookahead = input.lookahead1();
+
     if lookahead.peek(custom_keywords::color_bg) {
         input.parse::<custom_keywords::color_bg>()?;
         input.parse::<Token![:]>()?;

@@ -57,6 +57,7 @@ macro_rules! keypress {
             key: Key::Character($arg_char),
         }
     };
+
     (@char $arg_modifiers : expr, $arg_char : expr) => {
         KeyPress::WithModifiers {
             mask: $arg_modifiers,
@@ -70,6 +71,7 @@ macro_rules! keypress {
             key: Key::SpecialKey($arg_special),
         }
     };
+
     (@special $arg_modifiers : expr, $arg_special : expr) => {
         KeyPress::WithModifiers {
             mask: $arg_modifiers,
@@ -83,6 +85,7 @@ macro_rules! keypress {
             key: Key::FunctionKey($arg_function),
         }
     };
+
     (@fn $arg_modifiers : expr, $arg_function : expr) => {
         KeyPress::WithModifiers {
             mask: $arg_modifiers,
@@ -314,9 +317,9 @@ pub mod convert_key_event {
     #[macro_export]
     macro_rules! keyevent {
         (
-      code: $arg_key_code: expr,
-      modifiers: $arg_key_modifiers: expr
-    ) => {
+            code: $arg_key_code: expr,
+            modifiers: $arg_key_modifiers: expr
+        ) => {
             KeyEvent::new($arg_key_code, $arg_key_modifiers)
         };
     }

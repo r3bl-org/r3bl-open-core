@@ -146,14 +146,14 @@ mod component_registry_impl {
 #[macro_export]
 macro_rules! call_handle_event {
     (
-    component_registry: $component_registry : expr,
-    shared_component:   $shared_component: expr,
-    input_event:        $input_event: expr,
-    state:              $state: expr,
-    shared_store:       $shared_store: expr,
-    shared_global_data:     $shared_global_data: expr,
-    window_size:        $window_size: expr
-  ) => {{
+        component_registry: $component_registry : expr,
+        shared_component:   $shared_component: expr,
+        input_event:        $input_event: expr,
+        state:              $state: expr,
+        shared_store:       $shared_store: expr,
+        shared_global_data:     $shared_global_data: expr,
+        window_size:        $window_size: expr
+      ) => {{
         let result_event_propagation = $shared_component
             .write()
             .await

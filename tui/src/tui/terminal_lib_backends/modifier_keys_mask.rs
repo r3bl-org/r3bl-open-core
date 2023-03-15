@@ -20,12 +20,12 @@ use crossterm::event::*;
 use serde::{Deserialize, Serialize};
 
 bitflags! {
-  #[derive(Serialize, Deserialize)]
-  pub struct ModifierKeysMask: u8 {
-    const SHIFT = 0b0000_0001;
-    const CTRL  = 0b0000_0010;
-    const ALT   = 0b0000_0100;
-  }
+    #[derive(Serialize, Deserialize)]
+    pub struct ModifierKeysMask: u8 {
+        const SHIFT = 0b0000_0001;
+        const CTRL  = 0b0000_0010;
+        const ALT   = 0b0000_0100;
+    }
 }
 
 pub fn convert_key_modifiers(modifiers: &KeyModifiers) -> Option<ModifierKeysMask> {
@@ -40,9 +40,10 @@ pub fn convert_key_modifiers(modifiers: &KeyModifiers) -> Option<ModifierKeysMas
 
 impl From<KeyModifiers> for ModifierKeysMask {
     /// Difference in meaning between `intersects` and `contains`:
-    /// - `intersects` -> means that the given bit shows up in your variable, but it might contain other
-    ///   bits.
+    /// - `intersects` -> means that the given bit shows up in your variable, but it might contain
+    ///   other bits.
     /// - `contains` -> means that your variable ONLY contains these bits.
+    /// - Docs: <https://docs.rs/bitflags/latest/bitflags/index.html>
     fn from(other: KeyModifiers) -> Self {
         // Start w/ empty my_modifiers.
         let mut my_modifiers: ModifierKeysMask = ModifierKeysMask::empty(); // 0b0000_0000
@@ -59,5 +60,33 @@ impl From<KeyModifiers> for ModifierKeysMask {
         }
 
         my_modifiers
+    }
+}
+
+#[cfg(test)]
+mod test_bitflags {
+    use bitflags::bitflags;
+
+    #[test]
+    fn bitflags_test() {
+        bitflags! {
+            struct TestFlags: u8 {
+                const SHIFT = 0b0000_0001;
+                const CTRL  = 0b0000_0010;
+                const ALT   = 0b0000_0100;
+            }
+        }
+
+        let mut my_flags: TestFlags = TestFlags::empty(); // 0b0000_0000
+        my_flags.insert(TestFlags::SHIFT); // my_flags = 0b0000_0001;
+        my_flags.insert(TestFlags::CTRL); // my_flags = 0b0000_0011;
+
+        assert!(my_flags.contains(TestFlags::SHIFT));
+        assert!(my_flags.contains(TestFlags::CTRL));
+        assert!(!my_flags.contains(TestFlags::ALT));
+
+        assert!(my_flags.intersects(TestFlags::SHIFT));
+        assert!(my_flags.intersects(TestFlags::CTRL));
+        assert!(!my_flags.intersects(TestFlags::ALT));
     }
 }

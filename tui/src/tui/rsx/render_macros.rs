@@ -20,14 +20,14 @@
 #[macro_export]
 macro_rules! render_component_in_current_box {
     (
-    in:           $arg_surface          : expr, // Eg: in: surface
-    component_id: $arg_component_id     : expr, // Eg: "component1"
-    from:         $arg_registry         : expr, // Eg: from: registry
-    state:        $arg_state            : expr, // Eg: state
-    shared_store: $arg_shared_store     : expr, // Eg: shared_store
-    shared_global_data: $arg_shared_global_data : expr, // Eg: shared_global_data
-    window_size:  $arg_window_size      : expr  // Eg: window_size
-  ) => {
+        in:           $arg_surface          : expr, // Eg: in: surface
+        component_id: $arg_component_id     : expr, // Eg: "component1"
+        from:         $arg_registry         : expr, // Eg: from: registry
+        state:        $arg_state            : expr, // Eg: state
+        shared_store: $arg_shared_store     : expr, // Eg: shared_store
+        shared_global_data: $arg_shared_global_data : expr, // Eg: shared_global_data
+        window_size:  $arg_window_size      : expr  // Eg: window_size
+      ) => {
         let maybe_component_ref =
             ComponentRegistry::get_component_ref_by_id(&mut $arg_registry, $arg_component_id);
 
@@ -60,15 +60,15 @@ macro_rules! render_component_in_current_box {
 #[macro_export]
 macro_rules! render_component_in_given_box {
     (
-    in:           $arg_surface          : expr, // Eg: in: surface
-    box:          $arg_box              : expr, // Eg: box: FlexBox::default()
-    component_id: $arg_component_id     : expr, // Eg: "component1"
-    from:         $arg_registry         : expr, // Eg: from: registry
-    state:        $arg_state            : expr, // Eg: state
-    shared_store: $arg_shared_store     : expr, // Eg: shared_store
-    shared_global_data: $arg_shared_global_data : expr, // Eg: shared_global_data
-    window_size:  $arg_window_size      : expr  // Eg: window_size
-  ) => {{
+        in:           $arg_surface          : expr, // Eg: in: surface
+        box:          $arg_box              : expr, // Eg: box: FlexBox::default()
+        component_id: $arg_component_id     : expr, // Eg: "component1"
+        from:         $arg_registry         : expr, // Eg: from: registry
+        state:        $arg_state            : expr, // Eg: state
+        shared_store: $arg_shared_store     : expr, // Eg: shared_store
+        shared_global_data: $arg_shared_global_data : expr, // Eg: shared_global_data
+        window_size:  $arg_window_size      : expr  // Eg: window_size
+     ) => {{
         let maybe_component_ref =
             ComponentRegistry::get_component_ref_by_id(&mut $arg_registry, $arg_component_id);
 

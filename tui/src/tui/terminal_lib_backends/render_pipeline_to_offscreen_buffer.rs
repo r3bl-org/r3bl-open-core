@@ -366,7 +366,7 @@ mod tests {
             let text = "hello12345😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
-                style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+                style! { attrib: [dim, bold, italic] color_fg: color!(@cyan) color_bg: color!(@cyan) },
             );
             my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
             my_offscreen_buffer.my_fg_color = Some(color!(@green));
@@ -390,7 +390,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("h"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -399,7 +399,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("o"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -408,7 +408,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("1"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -417,7 +417,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("5"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );

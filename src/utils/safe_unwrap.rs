@@ -33,9 +33,11 @@ macro_rules! unwrap {
     (mutex from $arc_mutex: expr) => {
         $arc_mutex.lock().unwrap()
     };
+
     (r_lock from $arc_rw_lock: expr) => {
         $arc_rw_lock.read().unwrap()
     };
+
     (w_lock from $arc_rw_lock: expr) => {
         $arc_rw_lock.write().unwrap()
     };

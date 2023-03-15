@@ -16,7 +16,6 @@
  */
 
 use std::{borrow::Cow,
-          collections::HashMap,
           io::{stderr, stdout, Write}};
 
 use async_trait::async_trait;
@@ -25,7 +24,6 @@ use crossterm::{cursor::*,
                 queue,
                 style::{Attribute, *},
                 terminal::{self, *}};
-use once_cell::sync::Lazy;
 use r3bl_rs_utils_core::*;
 
 use crate::*;
@@ -233,25 +231,24 @@ mod render_op_impl_crossterm_impl {
             paint_style_and_text(&mut paint_args, &mut needs_reset, local_data).await;
         }
 
-        pub fn apply_colors(style: &Option<Style>) {
-            if style.is_some() {
-                // Use Style to set crossterm Colors.
-                // Docs: https://docs.rs/crossterm/latest/crossterm/style/index.html#colors
-                let mut style = (*style).unwrap();
-                let mask = style.get_bitflags();
-                if mask.contains(StyleFlag::COLOR_BG_SET) {
-                    let color_bg = style.color_bg.unwrap();
+        /// Use [crossterm::style::Color] to set crossterm Colors.
+        /// Docs: <https://docs.rs/crossterm/latest/crossterm/style/index.html#colors>
+        pub fn apply_colors(maybe_style: &Option<Style>) {
+            if let Some(style) = maybe_style {
+                // Handle background color.
+                if let Some(tui_color_bg) = style.color_bg {
                     let color_bg: crossterm::style::Color =
-                        color_converter::to_crossterm_color(color_bg);
+                        color_converter::to_crossterm_color(tui_color_bg);
                     exec_render_op!(
                         queue!(stdout(), SetBackgroundColor(color_bg)),
                         format!("ApplyColors -> SetBgColor({color_bg:?})")
                     )
                 }
-                if mask.contains(StyleFlag::COLOR_FG_SET) {
-                    let color_fg = style.color_fg.unwrap();
+
+                // Handle foreground color.
+                if let Some(tui_color_fg) = style.color_fg {
                     let color_fg: crossterm::style::Color =
-                        color_converter::to_crossterm_color(color_fg);
+                        color_converter::to_crossterm_color(tui_color_fg);
                     exec_render_op!(
                         queue!(stdout(), SetForegroundColor(color_fg)),
                         format!("ApplyColors -> SetFgColor({color_fg:?})")
@@ -273,6 +270,32 @@ mod perform_paint {
         pub shared_global_data: &'a SharedGlobalData,
     }
 
+    fn style_to_attribute(&style: &Style) -> Vec<Attribute> {
+        let mut it = vec![];
+        if style.bold {
+            it.push(Attribute::Bold);
+        }
+        if style.italic {
+            it.push(Attribute::Italic);
+        }
+        if style.dim {
+            it.push(Attribute::Dim);
+        }
+        if style.underline {
+            it.push(Attribute::Underlined);
+        }
+        if style.reverse {
+            it.push(Attribute::Reverse);
+        }
+        if style.hidden {
+            it.push(Attribute::Hidden);
+        }
+        if style.strikethrough {
+            it.push(Attribute::Fraktur);
+        }
+        it
+    }
+
     /// Use [Style] to set crossterm [Attributes] ([docs](
     /// https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes)).
     pub async fn paint_style_and_text<'a>(
@@ -283,15 +306,13 @@ mod perform_paint {
         let PaintArgs { maybe_style, .. } = paint_args;
 
         if let Some(style) = maybe_style {
-            let mask = style.clone().get_bitflags();
-            STYLE_TO_ATTRIBUTE_MAP.iter().for_each(|(flag, attr)| {
-                if mask.contains(*flag) {
-                    exec_render_op!(
-                        queue!(stdout(), SetAttribute(*attr)),
-                        format!("PaintWithAttributes -> SetAttribute({attr:?})")
-                    );
-                    *needs_reset = true;
-                }
+            let attrib_vec = style_to_attribute(style);
+            attrib_vec.iter().for_each(|attr| {
+                exec_render_op!(
+                    queue!(stdout(), SetAttribute(*attr)),
+                    format!("PaintWithAttributes -> SetAttribute({attr:?})")
+                );
+                *needs_reset = true;
             });
         }
 
@@ -334,17 +355,6 @@ mod perform_paint {
     }
 }
 
-pub static STYLE_TO_ATTRIBUTE_MAP: Lazy<HashMap<StyleFlag, Attribute>> = Lazy::new(|| {
-    let mut map = HashMap::new();
-    map.insert(StyleFlag::BOLD_SET, Attribute::Bold);
-    map.insert(StyleFlag::DIM_SET, Attribute::Dim);
-    map.insert(StyleFlag::UNDERLINE_SET, Attribute::Underlined);
-    map.insert(StyleFlag::REVERSE_SET, Attribute::Reverse);
-    map.insert(StyleFlag::HIDDEN_SET, Attribute::Hidden);
-    map.insert(StyleFlag::STRIKETHROUGH_SET, Attribute::Fraktur);
-    map
-});
-
 /// Given a crossterm command, this will run it and [log_error] or [log_info] the [Result] that is
 /// returned.
 ///
@@ -352,9 +362,9 @@ pub static STYLE_TO_ATTRIBUTE_MAP: Lazy<HashMap<StyleFlag, Attribute>> = Lazy::n
 #[macro_export]
 macro_rules! exec_render_op {
     (
-    $arg_cmd: expr,
-    $arg_log_msg: expr
-  ) => {{
+        $arg_cmd: expr,
+        $arg_log_msg: expr
+    ) => {{
         // Generate a new function that returns [CommonResult]. This needs to be called. The only
         // purpose of this generated method is to handle errors that may result from calling log! macro
         // when there are issues accessing the log file for whatever reason.

@@ -15,7 +15,15 @@
  *   limitations under the License.
  */
 
-//! <https://docs.rs/bitmask/latest/bitmask/macro.bitmask.html>
+//! The reason the tests are in this separate file and not inside of `style.rs` is because the
+//! [r3bl_rs_utils_macro::style!] macro is in a different crate than the [r3bl_rs_utils_core::Style]
+//! struct.
+//!
+//! In order to use this macro, the test has to be in a different crate (aka `r3bl_tui` craete) than
+//! both:
+//!
+//! 1. the [r3bl_rs_utils_core::Style] struct (`r3bl_rs_utils_core` crate)
+//! 2. the [r3bl_rs_utils_macro::style!] macro (`r3bl_rs_utils_macro` crate).
 
 #[cfg(test)]
 mod tests {
@@ -53,89 +61,6 @@ mod tests {
     }
 
     #[test]
-    fn test_bitflags() {
-        with_mut! {
-          StyleFlag::empty(),
-          as mask1,
-          run {
-            mask1.insert(StyleFlag::UNDERLINE_SET);
-            mask1.insert(StyleFlag::DIM_SET);
-            assert!(mask1.contains(StyleFlag::UNDERLINE_SET));
-            assert!(mask1.contains(StyleFlag::DIM_SET));
-            assert!(!mask1.contains(StyleFlag::COLOR_FG_SET));
-            assert!(!mask1.contains(StyleFlag::COLOR_BG_SET));
-            assert!(!mask1.contains(StyleFlag::BOLD_SET));
-            assert!(!mask1.contains(StyleFlag::PADDING_SET));
-          }
-        };
-
-        with_mut! {
-          StyleFlag::BOLD_SET | StyleFlag::DIM_SET,
-          as mask2,
-          run {
-            assert!(mask2.contains(StyleFlag::BOLD_SET));
-            assert!(mask2.contains(StyleFlag::DIM_SET));
-            assert!(!mask2.contains(StyleFlag::UNDERLINE_SET));
-            assert!(!mask2.contains(StyleFlag::COLOR_FG_SET));
-            assert!(!mask2.contains(StyleFlag::COLOR_BG_SET));
-            assert!(!mask2.contains(StyleFlag::PADDING_SET));
-          }
-        }
-
-        assert!(!mask1.contains(mask2));
-    }
-
-    #[test]
-    fn test_all_fields_in_style() {
-        let mut style = Style {
-            id: 1,
-            bold: true,
-            dim: true,
-            underline: true,
-            reverse: true,
-            hidden: true,
-            strikethrough: true,
-            color_fg: color!(@red).into(),
-            color_bg: color!(0, 0, 0).into(),
-            padding: Some(ch!(10)),
-            ..Style::default()
-        };
-
-        assert!(!style.computed);
-        assert_eq2!(style.id, 1);
-        assert!(style.bold);
-        assert!(style.dim);
-        assert!(style.underline);
-        assert!(style.reverse);
-        assert!(style.hidden);
-        assert!(style.strikethrough);
-        assert_eq2!(style.color_fg, color!(@red).into());
-        assert_eq2!(style.color_bg, color!(0, 0, 0).into());
-        assert_eq2!(style.padding, Some(ch!(10)));
-
-        let mask = style.get_bitflags();
-        assert!(!mask.contains(StyleFlag::COMPUTED_SET));
-        assert!(mask.contains(StyleFlag::BOLD_SET));
-        assert!(mask.contains(StyleFlag::DIM_SET));
-        assert!(mask.contains(StyleFlag::UNDERLINE_SET));
-        assert!(mask.contains(StyleFlag::REVERSE_SET));
-        assert!(mask.contains(StyleFlag::HIDDEN_SET));
-        assert!(mask.contains(StyleFlag::STRIKETHROUGH_SET));
-        assert!(mask.contains(StyleFlag::COLOR_FG_SET));
-        assert!(mask.contains(StyleFlag::COLOR_BG_SET));
-        assert!(mask.contains(StyleFlag::PADDING_SET));
-    }
-
-    #[test]
-    fn test_style() {
-        let mut style = make_a_style(1);
-        let bitflags = style.get_bitflags();
-        assert!(bitflags.contains(StyleFlag::BOLD_SET));
-        assert!(bitflags.contains(StyleFlag::DIM_SET));
-        assert!(!bitflags.contains(StyleFlag::UNDERLINE_SET));
-    }
-
-    #[test]
     fn test_cascade_style() {
         let style_bold_green_fg = style! {
           id: 1 // "bold_green_fg"
@@ -168,7 +93,7 @@ mod tests {
           padding: 1
         };
 
-        let mut my_style = style_bold_green_fg
+        let my_style = style_bold_green_fg
             + style_dim
             + style_yellow_bg
             + style_padding
@@ -176,18 +101,6 @@ mod tests {
             + style_padding_another;
 
         debug!(my_style);
-
-        assert_eq2!(
-            my_style.get_bitflags().contains(
-                StyleFlag::COLOR_FG_SET
-                    | StyleFlag::COLOR_BG_SET
-                    | StyleFlag::BOLD_SET
-                    | StyleFlag::DIM_SET
-                    | StyleFlag::PADDING_SET
-                    | StyleFlag::COMPUTED_SET
-            ),
-            true
-        );
 
         assert_eq2!(my_style.padding.unwrap(), ch!(3));
         assert_eq2!(

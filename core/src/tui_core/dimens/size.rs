@@ -113,9 +113,9 @@ pub mod math_ops {
 #[macro_export]
 macro_rules! size {
     (
-    col_count: $arg_col:expr,
-    row_count: $arg_row:expr
-  ) => {
+        col_count: $arg_col:expr,
+        row_count: $arg_row:expr
+    ) => {
         Size {
             col_count: $arg_col.into(),
             row_count: $arg_row.into(),

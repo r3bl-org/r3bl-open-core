@@ -20,7 +20,8 @@ use nom::{bytes::complete::*, combinator::*, sequence::*, IResult};
 use super::*;
 use crate::*;
 
-/// This matches the heading tag and text until EOL. Outputs a tuple of [HeadingLevel] and [Line].
+/// This matches the heading tag and text until EOL. Outputs a tuple of [HeadingLevel] and
+/// [FragmentsInOneLine].
 #[rustfmt::skip]
 pub fn parse_block_heading(input: &str) -> IResult<&str, HeadingData> {
     parse(input)

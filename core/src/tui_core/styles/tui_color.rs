@@ -25,69 +25,85 @@ use crate::*;
 #[macro_export]
 macro_rules! color {
     (
-    $arg_r : expr,
-    $arg_g : expr,
-    $arg_b : expr
-  ) => {
-        r3bl_rs_utils_core::TuiColor::Rgb(r3bl_rs_utils_core::RgbValue::from_u8(
-            $arg_r, $arg_g, $arg_b,
-        ))
+        $arg_r : expr,
+        $arg_g : expr,
+        $arg_b : expr
+    ) => {
+        $crate::TuiColor::Rgb($crate::RgbValue::from_u8($arg_r, $arg_g, $arg_b))
     };
+
     (
-    $arg_value : expr
-  ) => {
-        r3bl_rs_utils_core::TuiColor::AnsiValue($arg_value)
+        $arg_value : expr
+    ) => {
+        $crate::TuiColor::AnsiValue($arg_value)
     };
+
     (@reset) => {
-        r3bl_rs_utils_core::TuiColor::Reset
+        $crate::TuiColor::Reset
     };
+
     (@black) => {
-        r3bl_rs_utils_core::TuiColor::Black
+        $crate::TuiColor::Black
     };
+
     (@dark_grey) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkGrey)
+        $crate::TuiColor::Basic(ANSIBasicColor::DarkGrey)
     };
+
     (@red) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Red)
+        $crate::TuiColor::Basic(ANSIBasicColor::Red)
     };
+
     (@dark_red) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkRed)
+        $crate::TuiColor::Basic(ANSIBasicColor::DarkRed)
     };
+
     (@green) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Green)
+        $crate::TuiColor::Basic(ANSIBasicColor::Green)
     };
+
     (@dark_green) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkGreen)
+        $crate::TuiColor::Basic(ANSIBasicColor::DarkGreen)
     };
+
     (@yellow) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Yellow)
+        $crate::TuiColor::Basic(ANSIBasicColor::Yellow)
     };
+
     (@dark_yellow) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkYellow)
+        $crate::TuiColor::Basic(ANSIBasicColor::DarkYellow)
     };
+
     (@blue) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Blue)
+        $crate::TuiColor::Basic(ANSIBasicColor::Blue)
     };
+
     (@dark_blue) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkBlue)
+        $crate::TuiColor::Basic(ANSIBasicColor::DarkBlue)
     };
+
     (@magenta) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Magenta)
+        $crate::TuiColor::Basic(ANSIBasicColor::Magenta)
     };
+
     (@dark_magenta) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkMagenta)
+        $crate::TuiColor::Basic(ANSIBasicColor::DarkMagenta)
     };
+
     (@cyan) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Cyan)
+        $crate::TuiColor::Basic(ANSIBasicColor::Cyan)
     };
+
     (@dark_cyan) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::DarkCyan)
+        $crate::TuiColor::Basic(ANSIBasicColor::DarkCyan)
     };
+
     (@white) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::White)
+        $crate::TuiColor::Basic(ANSIBasicColor::White)
     };
+
     (@grey) => {
-        r3bl_rs_utils_core::TuiColor::Basic(ANSIBasicColor::Grey)
+        $crate::TuiColor::Basic(ANSIBasicColor::Grey)
     };
 }
 

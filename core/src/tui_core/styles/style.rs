@@ -19,7 +19,6 @@ use core::fmt::Debug;
 use std::{fmt::{Display, Formatter},
           ops::{Add, AddAssign}};
 
-use bitflags::bitflags;
 use get_size::GetSize;
 use serde::{Deserialize, Serialize};
 
@@ -63,6 +62,7 @@ use crate::*;
 pub struct Style {
     pub id: u8,
     pub bold: bool,
+    pub italic: bool,
     pub dim: bool,
     pub underline: bool,
     pub reverse: bool,
@@ -77,7 +77,6 @@ pub struct Style {
     ///
     /// [`FlexBox` docs](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/tui/layout/flex_box/struct.FlexBox.html).
     pub padding: Option<ChUnit>,
-    pub cached_bitflags: Option<StyleFlag>,
     pub lolcat: bool,
 }
 
@@ -102,32 +101,34 @@ mod addition {
 
         // other (if set) overrides new_style.
         fn apply_style_flag(new_style: &mut Style, other: &Style) {
-            let other_mask = other.clone().get_bitflags();
-            if other_mask.contains(StyleFlag::COLOR_FG_SET) {
+            if other.color_fg.is_some() {
                 new_style.color_fg = other.color_fg;
             }
-            if other_mask.contains(StyleFlag::COLOR_BG_SET) {
+            if other.color_bg.is_some() {
                 new_style.color_bg = other.color_bg;
             }
-            if other_mask.contains(StyleFlag::BOLD_SET) {
+            if other.bold {
                 new_style.bold = other.bold;
             }
-            if other_mask.contains(StyleFlag::DIM_SET) {
+            if other.italic {
+                new_style.italic = other.italic;
+            }
+            if other.dim {
                 new_style.dim = other.dim;
             }
-            if other_mask.contains(StyleFlag::UNDERLINE_SET) {
+            if other.underline {
                 new_style.underline = other.underline;
             }
-            if other_mask.contains(StyleFlag::PADDING_SET) {
+            if other.padding.is_some() {
                 new_style.padding = other.padding;
             }
-            if other_mask.contains(StyleFlag::REVERSE_SET) {
+            if other.reverse {
                 new_style.reverse = other.reverse;
             }
-            if other_mask.contains(StyleFlag::HIDDEN_SET) {
+            if other.hidden {
                 new_style.hidden = other.hidden;
             }
-            if other_mask.contains(StyleFlag::STRIKETHROUGH_SET) {
+            if other.strikethrough {
                 new_style.strikethrough = other.strikethrough;
             }
         }
@@ -140,10 +141,6 @@ mod addition {
         } else {
             new_style.padding = None;
         }
-
-        // Recalculate the bitflags.
-        new_style.reset_bitflags();
-        new_style.get_bitflags();
 
         new_style
     }
@@ -187,6 +184,10 @@ mod style_helpers {
 
             if self.bold {
                 msg_vec.push("bld".to_string())
+            }
+
+            if self.italic {
+                msg_vec.push("itl".to_string())
             }
 
             if self.dim {
@@ -241,6 +242,10 @@ mod style_helpers {
                 msg_vec.push("bold".to_string())
             }
 
+            if self.italic {
+                msg_vec.push("italic".to_string())
+            }
+
             if self.dim {
                 msg_vec.push("dim".to_string())
             }
@@ -273,84 +278,11 @@ mod style_helpers {
     }
 }
 
-// Style bitflags
-bitflags! {
-  /// Bitflags for [Style].
-  /// https://docs.rs/bitflags/0.8.2/bitflags/macro.bitflags.html
-  #[derive(Serialize, Deserialize, GetSize)]
-  pub struct StyleFlag: u8 {
-    const COLOR_FG_SET        = 0b0000_0001;
-    const COLOR_BG_SET        = 0b0000_0010;
-    const BOLD_SET            = 0b0000_0100;
-    const DIM_SET             = 0b0000_1000;
-    const UNDERLINE_SET       = 0b0001_0000;
-    const PADDING_SET         = 0b0010_0000;
-    const COMPUTED_SET        = 0b0100_0000;
-    const REVERSE_SET         = 0b1000_0000;
-    const HIDDEN_SET          = 0b1000_0001;
-
-    const STRIKETHROUGH_SET   = 0b1000_0010;
-  }
-}
-
 mod style_impl {
     use super::*;
 
     impl Style {
-        pub fn remove_bg_color(&mut self) {
-            self.color_bg = None;
-            self.reset_bitflags();
-            self.get_bitflags();
-        }
-
-        /// The `StyleFlag` is lazily computed and cached after the first time it is evaluated. A `Style`
-        /// can be built simply or by using the [crate::style] proc macro and the expectation is that once
-        /// built, the style won't be modified.
-        pub fn get_bitflags(&mut self) -> StyleFlag {
-            unwrap_option_or_compute_if_none! {
-              self.cached_bitflags,
-              || self.compute_bitflags()
-            }
-        }
-
-        pub fn reset_bitflags(&mut self) { self.cached_bitflags = None; }
-
-        fn compute_bitflags(&self) -> StyleFlag {
-            let mut it = StyleFlag::empty();
-
-            if self.color_fg.is_some() {
-                it.insert(StyleFlag::COLOR_FG_SET);
-            }
-            if self.color_bg.is_some() {
-                it.insert(StyleFlag::COLOR_BG_SET);
-            }
-            if self.bold {
-                it.insert(StyleFlag::BOLD_SET);
-            }
-            if self.dim {
-                it.insert(StyleFlag::DIM_SET);
-            }
-            if self.underline {
-                it.insert(StyleFlag::UNDERLINE_SET);
-            }
-            if self.padding.is_some() {
-                it.insert(StyleFlag::PADDING_SET);
-            }
-            if self.computed {
-                it.insert(StyleFlag::COMPUTED_SET);
-            }
-            if self.reverse {
-                it.insert(StyleFlag::REVERSE_SET);
-            }
-            if self.hidden {
-                it.insert(StyleFlag::HIDDEN_SET);
-            }
-            if self.strikethrough {
-                it.insert(StyleFlag::STRIKETHROUGH_SET);
-            }
-
-            it
-        }
+        pub fn remove_bg_color(&mut self) { self.color_bg = None; }
     }
 }
 
@@ -367,6 +299,7 @@ mod convert_syntect_highlighting_style {
                 color_fg: Some(st_style.foreground.into()),
                 color_bg: Some(st_style.background.into()),
                 bold: st_style.font_style.contains(SyntectFontStyle::BOLD),
+                italic: st_style.font_style.contains(SyntectFontStyle::ITALIC),
                 underline: st_style.font_style.contains(SyntectFontStyle::UNDERLINE),
                 ..Default::default()
             }
@@ -377,5 +310,61 @@ mod convert_syntect_highlighting_style {
         fn from(st_color: SyntectColor) -> Self {
             TuiColor::Rgb(RgbValue::from_u8(st_color.r, st_color.g, st_color.b))
         }
+    }
+}
+
+#[cfg(test)]
+mod test_style {
+    use super::*;
+
+    #[test]
+    fn test_all_fields_in_style() {
+        let style = Style {
+            id: 1,
+            bold: true,
+            dim: true,
+            underline: true,
+            reverse: true,
+            hidden: true,
+            strikethrough: true,
+            color_fg: color!(@red).into(),
+            color_bg: color!(0, 0, 0).into(),
+            padding: Some(ch!(10)),
+            ..Style::default()
+        };
+
+        assert!(!style.computed);
+        assert_eq2!(style.id, 1);
+        assert!(style.bold);
+        assert!(style.dim);
+        assert!(style.underline);
+        assert!(style.reverse);
+        assert!(style.hidden);
+        assert!(style.strikethrough);
+        assert_eq2!(style.color_fg, color!(@red).into());
+        assert_eq2!(style.color_bg, color!(0, 0, 0).into());
+        assert_eq2!(style.padding, Some(ch!(10)));
+    }
+
+    #[test]
+    fn test_style() {
+        let style = Style {
+            id: 1,
+            color_fg: color!(0, 0, 0).into(),
+            color_bg: color!(0, 0, 0).into(),
+            bold: true,
+            dim: true,
+            italic: true,
+            ..Style::default()
+        };
+
+        dbg!(&style);
+
+        assert!(style.bold);
+        assert!(style.dim);
+        assert!(style.italic);
+        assert!(!style.underline);
+        assert!(!style.strikethrough);
+        assert!(!style.reverse);
     }
 }
