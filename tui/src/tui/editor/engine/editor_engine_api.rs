@@ -207,7 +207,7 @@ impl EditorEngine {
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
 
         // BM: ▌2. RENDER▐ render single line; life of styled texts is short
-        let list: List<StyleUSFragment> =
+        let list: List<StyleUSSpan> =
             syntect_to_styled_text_conversion::from_syntect_to_tui(syntect_highlighted_line);
         let styled_texts: StyledTexts = list.clip(scroll_offset_col, max_display_col_count);
         styled_texts.render_into(render_ops);

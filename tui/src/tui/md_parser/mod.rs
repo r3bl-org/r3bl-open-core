@@ -16,7 +16,7 @@
  */
 
 //! The main entry point (function) for this Markdown parsing module is [parser#parse_markdown]. It
-//! takes a string slice and returns a vector of [Block]s.
+//! takes a string slice and returns a vector of [MdBlockElement]s.
 //!
 //! This module contains a fully functional Markdown parser. This parser supports standard Markdown
 //! syntax as well as some extensions that are added to make it work w/ R3BL products.
@@ -27,8 +27,9 @@
 //!    The tests are provided alongside the code itself. And you can follow along to see how other
 //!    smaller parsers are used to build up this big one that parses the whole of the Markdown
 //!    document.
-//! 2. The types [types] that are used to represent the Markdown document model [Document], [Block],
-//!    [Fragment] and all the other intermediate types & enums required for parsing.
+//! 2. The types [types] that are used to represent the Markdown document model [MdDocument],
+//!    [MdBlockElement], [MdLineFragment] and all the other intermediate types & enums required for
+//!    parsing.
 //! 3. All the parsers related to parsing metadata specific for R3BL applications which are not
 //!    standard Markdown can be found in [parser_metadata].
 //! 4. All the parsers that are related to parsing the main "blocks" of Markdown, such as order

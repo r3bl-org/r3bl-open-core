@@ -22,7 +22,7 @@ use super::*;
 use crate::*;
 
 #[rustfmt::skip]
-pub fn parse_block_ordered_list(input: &str) -> IResult<&str, Vec<Fragments>> {
+pub fn parse_block_ordered_list(input: &str) -> IResult<&str, Vec<MdLineFragments>> {
     many1(
         parse_ordered_list_element
     )(input)
@@ -41,7 +41,7 @@ fn parse_ordered_list_tag(input: &str) -> IResult<&str, &str> {
 }
 
 #[rustfmt::skip]
-fn parse_ordered_list_element(input: &str) -> IResult<&str, Fragments> {
+fn parse_ordered_list_element(input: &str) -> IResult<&str, MdLineFragments> {
     preceded(
         /* prefix (discarded) */ parse_ordered_list_tag,
         /* output */ parse_block_markdown_text_until_eol,
@@ -98,13 +98,13 @@ mod tests {
     fn test_parse_ordered_list_element() {
         assert_eq!(
             parse_ordered_list_element("1. this is an element\n"),
-            Ok(("", vec![Fragment::Plain("this is an element")]))
+            Ok(("", vec![MdLineFragment::Plain("this is an element")]))
         );
         assert_eq!(
             parse_ordered_list_element(raw_strings::ORDERED_LIST_ELEMENT),
             Ok((
                 "1. here is another\n",
-                vec![Fragment::Plain("this is an element")]
+                vec![MdLineFragment::Plain("this is an element")]
             ))
         );
         assert_eq!(
@@ -149,7 +149,7 @@ mod tests {
     fn test_parse_ordered_list() {
         assert_eq!(
             parse_block_ordered_list("1. this is an element\n"),
-            Ok(("", vec![vec![Fragment::Plain("this is an element")]]))
+            Ok(("", vec![vec![MdLineFragment::Plain("this is an element")]]))
         );
         assert_eq!(
             parse_block_ordered_list("1. test"),
@@ -163,8 +163,8 @@ mod tests {
             Ok((
                 "",
                 vec![
-                    vec!(Fragment::Plain("this is an element")),
-                    vec![Fragment::Plain("here is another")]
+                    vec!(MdLineFragment::Plain("this is an element")),
+                    vec![MdLineFragment::Plain("here is another")]
                 ]
             ))
         );

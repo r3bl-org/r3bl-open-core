@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-//! This module is responsible for converting all the [Fragment] into plain text w/out any
+//! This module is responsible for converting all the [MdLineFragment] into plain text w/out any
 //! formatting.
 
 use crate::{constants::*, *};
@@ -25,7 +25,7 @@ pub trait ConvertToPlainText {
     fn to_plain_text(&self) -> US;
 }
 
-impl ConvertToPlainText for Fragments<'_> {
+impl ConvertToPlainText for MdLineFragments<'_> {
     fn to_plain_text(&self) -> US {
         let mut it: String = String::new();
         for fragment in self {
@@ -46,21 +46,21 @@ impl ConvertToPlainText for HeadingLevel {
     }
 }
 
-impl ConvertToPlainText for Fragment<'_> {
+impl ConvertToPlainText for MdLineFragment<'_> {
     fn to_plain_text(&self) -> US {
         let it: String = match self {
-            Fragment::Plain(text) => text.to_string(),
-            Fragment::Link((text, url)) => {
+            MdLineFragment::Plain(text) => text.to_string(),
+            MdLineFragment::Link((text, url)) => {
                 format!("{LEFT_BRACKET}{text}{RIGHT_BRACKET}{LEFT_PAREN}{url}{RIGHT_PAREN}")
             }
-            Fragment::Image((alt_text, url)) => {
+            MdLineFragment::Image((alt_text, url)) => {
                 format!("{LEFT_IMG}{alt_text}{RIGHT_IMG}{LEFT_PAREN}{url}{RIGHT_PAREN}")
             }
-            Fragment::Bold(text) => format!("{BOLD_1}{text}{BOLD_1}"),
-            Fragment::Italic(text) => format!("{ITALIC_1}{text}{ITALIC_1}"),
-            Fragment::BoldItalic(text) => format!("{BITALIC_1}{text}{BITALIC_1}"),
-            Fragment::InlineCode(text) => format!("{BACKTICK}{text}{BACKTICK}"),
-            Fragment::Checkbox(is_checked) => {
+            MdLineFragment::Bold(text) => format!("{BOLD_1}{text}{BOLD_1}"),
+            MdLineFragment::Italic(text) => format!("{ITALIC_1}{text}{ITALIC_1}"),
+            MdLineFragment::BoldItalic(text) => format!("{BITALIC_1}{text}{BITALIC_1}"),
+            MdLineFragment::InlineCode(text) => format!("{BACKTICK}{text}{BACKTICK}"),
+            MdLineFragment::Checkbox(is_checked) => {
                 (if *is_checked { CHECKED } else { UNCHECKED }).to_string()
             }
         };
@@ -77,39 +77,48 @@ mod to_plain_text_tests {
     #[test]
     fn test_fragment_to_plain_text() {
         assert_eq2!(
-            Fragment::Plain(" Hello World ").to_plain_text().string,
+            MdLineFragment::Plain(" Hello World ")
+                .to_plain_text()
+                .string,
             " Hello World "
         );
         assert_eq2!(
-            Fragment::Link(("r3bl.com", "https://r3bl.com"))
+            MdLineFragment::Link(("r3bl.com", "https://r3bl.com"))
                 .to_plain_text()
                 .string,
             "[r3bl.com](https://r3bl.com)"
         );
         assert_eq2!(
-            Fragment::Image(("some image text", "https://r3bl.com"))
+            MdLineFragment::Image(("some image text", "https://r3bl.com"))
                 .to_plain_text()
                 .string,
             "![some image text](https://r3bl.com)"
         );
         assert_eq2!(
-            Fragment::Bold("Hello World").to_plain_text().string,
+            MdLineFragment::Bold("Hello World").to_plain_text().string,
             "**Hello World**"
         );
         assert_eq2!(
-            Fragment::Italic("Hello World").to_plain_text().string,
+            MdLineFragment::Italic("Hello World").to_plain_text().string,
             "*Hello World*"
         );
         assert_eq2!(
-            Fragment::BoldItalic("Hello World").to_plain_text().string,
+            MdLineFragment::BoldItalic("Hello World")
+                .to_plain_text()
+                .string,
             "***Hello World***"
         );
         assert_eq2!(
-            Fragment::InlineCode("Hello World").to_plain_text().string,
+            MdLineFragment::InlineCode("Hello World")
+                .to_plain_text()
+                .string,
             "`Hello World`"
         );
-        assert_eq2!(Fragment::Checkbox(true).to_plain_text().string, "[x]");
-        assert_eq2!(Fragment::Checkbox(false).to_plain_text().string, "[ ]");
+        assert_eq2!(MdLineFragment::Checkbox(true).to_plain_text().string, "[x]");
+        assert_eq2!(
+            MdLineFragment::Checkbox(false).to_plain_text().string,
+            "[ ]"
+        );
     }
 
     #[test]

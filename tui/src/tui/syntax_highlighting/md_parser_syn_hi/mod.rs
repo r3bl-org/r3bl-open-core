@@ -16,10 +16,11 @@
  */
 
 //! This module holds the integration or glue code that ties together:
-//! 1. [crate::md_parser] - Responsible for parsing markdown into a [crate::Document] data structure.
-//! 2. [crate::syntax_highlighting] - Responsible for converting a [crate::Document] into a list of tuples of
-//!    [r3bl_rs_utils_core::Style] and [String].
-//! 3. [crate::editor] - Responsible for displaying the [crate::Document] to the user.
+//! 1. [crate::md_parser] - Responsible for parsing markdown into a [crate::MdDocument] data
+//!    structure.
+//! 2. [crate::syntax_highlighting] - Responsible for converting a [crate::MdDocument] into a list
+//!    of tuples of [r3bl_rs_utils_core::Style] and [String].
+//! 3. [crate::editor] - Responsible for displaying the [crate::MdDocument] to the user.
 
 // Attach.
 pub mod convert_to_plain_text;
