@@ -4,11 +4,11 @@ backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissu
 
 fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
   ☐ `md_parser_syn_hi.rs`:
-    ☐ fn `try_parse_and_highlight`: `&Vec<US>` -(1)-> `Document` -(2)-> `StyleUSFragmentLines`
+    ☐ fn `try_parse_and_highlight`: `&Vec<US>` -(1)-> `Document` -(2)-> `StyleUSSpanLines`
     ✔ rewrite `md_parser` @done(23-03-10 17:36)
     ✔ fn `convert_from_code_block_into_lines`: `<CodeBlock>` -> `Vec<CodeBlockLine>` @done(23-03-09 15:58)
     ✔ refactor names in `syntax_highlighting` module @done(23-03-10 17:36)
-    ☐ `From`: `Document` -> `CommonResult<StyleUSFragmentLines>`
+    ☐ `From`: `Document` -> `CommonResult<StyleUSSpanLines>`
     ☐ build a theme to convert parts of a `Document` to `Style`
   ☐ `editor_engine_api.rs`: update `render_line_with_syntax_highlight()` based on `syntect` / `md_parser` choice
   ☐ update editor component options to either use `md_parser` or `syntect`

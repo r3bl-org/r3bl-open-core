@@ -23,6 +23,20 @@ use r3bl_rs_utils_macro::style;
 use crate::*;
 
 impl StyleUSSpanLines {
+    pub fn pretty_print(&self) -> String {
+        let mut it = vec![];
+
+        for line in &self.items {
+            for fragment in &line.items {
+                let StyleUSSpan(style, us) = fragment;
+                let line_text = format!("fragment[ {:?} , {:?} ]", us.string, style);
+                it.push(line_text);
+            }
+        }
+
+        it.join("\n")
+    }
+
     pub fn from_document(
         document: &MdDocument,
         maybe_current_box_computed_style: &Option<Style>,
@@ -35,9 +49,7 @@ impl StyleUSSpanLines {
         }
         lines
     }
-}
 
-impl StyleUSSpanLines {
     /// Each [MdBlockElement] needs to be translated into a line. The [MdBlockElement::CodeBlock] is
     /// the only block that needs to be translated into multiple lines. This is why the return type
     /// is a [StyleUSSpanLines] (and not a single line).
@@ -60,11 +72,11 @@ impl StyleUSSpanLines {
                     maybe_current_box_computed_style,
                 ))
             }
-            MdBlockElement::UnorderedList(_) => todo!(), // AI: ul -> StyleUSFragmentLines
-            MdBlockElement::OrderedList(_) => todo!(),   // AI: ol -> StyleUSFragmentLines
-            MdBlockElement::CodeBlock(_) => todo!(),     // AI: cb -> StyleUSFragmentLines
-            MdBlockElement::Title(_) => todo!(),         // AI: md -> StyleUSFragmentLine
-            MdBlockElement::Tags(_) => todo!(),          // AI: md -> StyleUSFragmentLine
+            MdBlockElement::UnorderedList(_) => todo!(), // AI: 0.2. from_block(): ul -> StyleUSSpanLines
+            MdBlockElement::OrderedList(_) => todo!(), // AI: 0.2. from_block(): ol -> StyleUSSpanLines
+            MdBlockElement::CodeBlock(_) => todo!(), // AI: 0.2. from_block(): cb -> StyleUSSpanLines
+            MdBlockElement::Title(_) => todo!(),     // AI: 0.2. from_block(): md -> StyleUSSpanLine
+            MdBlockElement::Tags(_) => todo!(),      // AI: 0.2. from_block(): md -> StyleUSSpanLine
         }
 
         lines
@@ -72,6 +84,8 @@ impl StyleUSSpanLines {
 }
 
 impl StyleUSSpan {
+    /// Each [MdLineFragment] needs to be translated into a [StyleUSSpan]. These are then rolled up
+    /// into using [StyleUSSpanLine::from_block](StyleUSSpanLine::from_block).
     pub fn from_fragment(
         fragment: &MdLineFragment,
         maybe_current_box_computed_style: &Option<Style>,
@@ -95,7 +109,11 @@ impl StyleUSSpan {
                     },
                 US::from(*italic_text),
             ),
-            _ => todo!(), // AI: 0. impl rest of this match
+            MdLineFragment::BoldItalic(_) => todo!(), // AI: 0.1. from_fragment(): bold-italic
+            MdLineFragment::InlineCode(_) => todo!(), // AI: 0.1. from_fragment(): inline-code
+            MdLineFragment::Link(_) => todo!(),       // AI: 0.1. from_fragment(): Link
+            MdLineFragment::Image(_) => todo!(),      // AI: 0.1. from_fragment(): Image
+            MdLineFragment::Checkbox(_) => todo!(),   // AI: 0.1. from_fragment(): Checkbox
         }
     }
 }
@@ -173,57 +191,139 @@ impl From<StyledTexts> for StyleUSSpanLine {
 }
 
 #[cfg(test)]
-mod test_generate_style_us_fragment_lines_from_document {
+mod test_generate_style_us_span_lines {
     use r3bl_rs_utils_macro::style;
 
     use super::*;
 
-    // AI: 0. test that each type of Block is converted by StyleUSFragmentLines::from_block correctly
+    /// Test each [MdLineFragment] variant is converted by
+    /// [StyleUSSpan::from_fragment](StyleUSSpan::from_fragment).
+    mod from_fragment {
+        use super::*;
 
-    #[test]
-    fn test_generate_style_us_fragment_lines_from_heading() {
-        let heading_block = MdBlockElement::Heading(HeadingData {
-            level: HeadingLevel::Heading1,
-            content: vec![MdLineFragment::Plain("Foobar")],
-        });
-        let maybe_style = Some(style! {
-            color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-        });
+        // AI: 0.1. TEST from_fragment [ ] BoldItalic(&'a str),
+        // AI: 0.1. TEST from_fragment [ ] InlineCode(&'a str),
+        // AI: 0.1. TEST from_fragment [ ] Link((&'a str, &'a str)),
+        // AI: 0.1. TEST from_fragment [ ] Image((&'a str, &'a str)),
+        // AI: 0.1. TEST from_fragment [ ] Checkbox(bool),
 
-        let lines = StyleUSSpanLines::from_block(&heading_block, &maybe_style);
-        for line in &lines.items {
-            for fragment in &line.items {
-                let StyleUSSpan(style, us) = fragment;
-                println!("fragment[ {:?} , {:?} ]", us.string, style);
-            }
+        #[test]
+        fn plain() {
+            let fragment = MdLineFragment::Plain("Foobar");
+            let maybe_style = Some(style! {
+                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+            });
+            assert_eq2!(
+                StyleUSSpan::from_fragment(&fragment, &maybe_style),
+                StyleUSSpan(maybe_style.unwrap_or_default(), US::from("Foobar"))
+            );
         }
 
-        // There should just be 1 line.
-        assert_eq2!(lines.items.len(), 1);
-        let first_line = &lines.items[0];
-        let fragments_in_line = &first_line.items;
-
-        // There should be 7 fragments in the line.
-        assert_eq2!(fragments_in_line.len(), 7);
-
-        // First fragment is the heading level `# ` in dim w/ Red bg color, and no fg color.
-        assert_eq2!(fragments_in_line[0].0.dim, true);
-        assert_eq2!(
-            fragments_in_line[0].0.color_bg.unwrap(),
-            TuiColor::Basic(ANSIBasicColor::Red)
-        );
-        assert_eq2!(fragments_in_line[0].0.color_fg.is_some(), false);
-        assert_eq2!(fragments_in_line[0].1.string, "# ");
-
-        // The remainder of the fragments are the heading text which are colorized with a color
-        // wheel.
-        for fragment in &fragments_in_line[1..=6] {
-            assert_eq2!(fragment.0.dim, false);
+        #[test]
+        fn bold() {
+            let fragment = MdLineFragment::Bold("Foobar");
+            let maybe_style = Some(style! {
+                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+            });
             assert_eq2!(
-                fragment.0.color_bg.unwrap(),
+                StyleUSSpan::from_fragment(&fragment, &maybe_style),
+                StyleUSSpan(
+                    maybe_style.unwrap_or_default()
+                        + style! {
+                            attrib: [bold]
+                        },
+                    US::from("Foobar")
+                )
+            );
+        }
+
+        #[test]
+        fn italic() {
+            let fragment = MdLineFragment::Italic("Foobar");
+            let maybe_style = Some(style! {
+                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+            });
+            assert_eq2!(
+                StyleUSSpan::from_fragment(&fragment, &maybe_style),
+                StyleUSSpan(
+                    maybe_style.unwrap_or_default()
+                        + style! {
+                            attrib: [italic]
+                        },
+                    US::from("Foobar")
+                )
+            );
+        }
+    }
+
+    /// Test each variant of [MdBlockElement] is converted by
+    /// [StyleUSSpanLines::from_block](StyleUSSpanLines::from_block).
+    mod from_block {
+        use super::*;
+
+        // AI: 0.2. TEST from_block [ ] OrderedList(Lines<'a>),
+        // AI: 0.2. TEST from_block [ ] UnorderedList(Lines<'a>),
+        // AI: 0.2. TEST from_block [ ] CodeBlock(Vec<CodeBlockLine<'a>>),
+        // AI: 0.2. TEST from_block [ ] Title(&'a str),
+        // AI: 0.2. TEST from_block [ ] Tags(Vec<&'a str>),
+
+        #[test]
+        fn text() {
+            let text_block = MdBlockElement::Text(vec![MdLineFragment::Plain("Foobar")]);
+            let maybe_style = Some(style! {
+                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+            });
+
+            let lines = StyleUSSpanLines::from_block(&text_block, &maybe_style);
+            // println!("{}", lines.pretty_print());
+
+            let line_0 = &lines.items[0];
+            let fragment_0_in_line_0 = &line_0.items[0];
+            let StyleUSSpan(style, text) = fragment_0_in_line_0;
+            assert_eq2!(text.string, "Foobar");
+            assert_eq2!(style, &maybe_style.unwrap());
+        }
+
+        #[test]
+        fn heading() {
+            let heading_block = MdBlockElement::Heading(HeadingData {
+                level: HeadingLevel::Heading1,
+                content: vec![MdLineFragment::Plain("Foobar")],
+            });
+            let maybe_style = Some(style! {
+                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+            });
+
+            let lines = StyleUSSpanLines::from_block(&heading_block, &maybe_style);
+            // println!("{}", lines.pretty_print());
+
+            // There should just be 1 line.
+            assert_eq2!(lines.items.len(), 1);
+            let first_line = &lines.items[0];
+            let fragments_in_line = &first_line.items;
+
+            // There should be 7 fragments in the line.
+            assert_eq2!(fragments_in_line.len(), 7);
+
+            // First fragment is the heading level `# ` in dim w/ Red bg color, and no fg color.
+            assert_eq2!(fragments_in_line[0].0.dim, true);
+            assert_eq2!(
+                fragments_in_line[0].0.color_bg.unwrap(),
                 TuiColor::Basic(ANSIBasicColor::Red)
             );
-            assert_eq2!(fragment.0.color_fg.is_some(), true);
+            assert_eq2!(fragments_in_line[0].0.color_fg.is_some(), false);
+            assert_eq2!(fragments_in_line[0].1.string, "# ");
+
+            // The remainder of the fragments are the heading text which are colorized with a color
+            // wheel.
+            for fragment in &fragments_in_line[1..=6] {
+                assert_eq2!(fragment.0.dim, false);
+                assert_eq2!(
+                    fragment.0.color_bg.unwrap(),
+                    TuiColor::Basic(ANSIBasicColor::Red)
+                );
+                assert_eq2!(fragment.0.color_fg.is_some(), true);
+            }
         }
     }
 
