@@ -195,11 +195,11 @@ mod tests {
             /// <span style="s1"> </span>
             /// <span style="s2">second</span>
             /// ```
-            pub fn get_list() -> List<(Style, UnicodeString)> {
+            pub fn get_list() -> List<StyleUSFragment> {
                 list! {
-                    (get_s1(), UnicodeString::from("first")),
-                    (get_s1(), UnicodeString::from(" ")),
-                    (get_s2(), UnicodeString::from("second"))
+                    StyleUSFragment(get_s1(), UnicodeString::from("first")),
+                    StyleUSFragment(get_s1(), UnicodeString::from(" ")),
+                    StyleUSFragment(get_s2(), UnicodeString::from("second"))
                 }
             }
         }
@@ -420,9 +420,9 @@ mod tests {
         fn list_2() {
             use helpers::*;
 
-            fn get_list() -> List<(Style, UnicodeString)> {
+            fn get_list() -> List<StyleUSFragment> {
                 list! {
-                    (
+                    StyleUSFragment(
                         get_s1(),
                         UnicodeString::from(
                             "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234",
@@ -474,9 +474,9 @@ mod tests {
         fn list_3() {
             use helpers::*;
 
-            fn get_list() -> List<(Style, UnicodeString)> {
+            fn get_list() -> List<StyleUSFragment> {
                 list! {
-                    (
+                    StyleUSFragment(
                         get_s1(),
                         UnicodeString::from(
                             "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 0123456",
