@@ -17,16 +17,17 @@
 
 /// This corresponds to a single Markdown document, which is produced after a successful parse
 /// operation [crate::parse_markdown].
-pub type Document<'a> = Vec<Block<'a>>;
-/// Alias for [Document].
-pub type Blocks<'a> = Vec<Block<'a>>;
+pub type MdDocument<'a> = Vec<MdBlockElement<'a>>;
+
+/// Alias for [MdDocument].
+pub type Blocks<'a> = Vec<MdBlockElement<'a>>;
 
 /// This roughly corresponds to a single line of text. Each line is made up of one or more
-/// [Fragment].
-pub type Fragments<'a> = Vec<Fragment<'a>>;
+/// [MdLineFragment].
+pub type MdLineFragments<'a> = Vec<MdLineFragment<'a>>;
 
-/// Alias for [Fragments].
-pub type FragmentsInOneLine<'a> = Vec<Fragment<'a>>;
+/// Alias for [MdLineFragments].
+pub type FragmentsInOneLine<'a> = Vec<MdLineFragment<'a>>;
 
 /// Alias for [Vec] of [FragmentsInOneLine].
 pub type Lines<'a> = Vec<FragmentsInOneLine<'a>>;
@@ -34,26 +35,26 @@ pub type Lines<'a> = Vec<FragmentsInOneLine<'a>>;
 #[derive(Clone, Debug, PartialEq)]
 pub struct HeadingData<'a> {
     pub level: HeadingLevel,
-    pub content: Fragments<'a>,
+    pub content: MdLineFragments<'a>,
 }
 
 /// These are blocks of Markdown. Blocks are the top-level elements of a Markdown document. A
 /// Markdown document once parsed is turned into a [Vec] of these.
 #[derive(Clone, Debug, PartialEq)]
-pub enum Block<'a> {
+pub enum MdBlockElement<'a> {
     Heading(HeadingData<'a>),
     OrderedList(Lines<'a>),
     UnorderedList(Lines<'a>),
-    Text(Fragments<'a>),
+    Text(MdLineFragments<'a>),
     CodeBlock(Vec<CodeBlockLine<'a>>),
     Title(&'a str),
     Tags(Vec<&'a str>),
 }
 
-/// These are things that show up in a single line of Markdown text [Fragments]. They do
+/// These are things that show up in a single line of Markdown text [MdLineFragments]. They do
 /// not include other Markdown blocks (like code blocks, lists, headings, etc).
 #[derive(Clone, Debug, PartialEq)]
-pub enum Fragment<'a> {
+pub enum MdLineFragment<'a> {
     Plain(&'a str),
     Bold(&'a str),
     Italic(&'a str),

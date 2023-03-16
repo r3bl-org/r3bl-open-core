@@ -22,12 +22,12 @@ use crate::{md_parser::parser_element::parse_element_markdown_inline, *};
 
 /// Parse a single line of markdown text [FragmentsInOneLine].
 #[rustfmt::skip]
-pub fn parse_block_markdown_text_until_eol(input: &str) -> IResult<&str, Fragments> {
+pub fn parse_block_markdown_text_until_eol(input: &str) -> IResult<&str, MdLineFragments> {
     parse(input)
 }
 
 #[rustfmt::skip]
-fn parse(input: &str) -> IResult<&str, Fragments> {
+fn parse(input: &str) -> IResult<&str, MdLineFragments> {
     terminated(
         /* output */ many0(parse_element_markdown_inline),
         /* ends with (discarded) */ tag(NEW_LINE),
@@ -46,7 +46,7 @@ mod test {
         assert_eq!(parse_block_markdown_text_until_eol("\n"), Ok(("", vec![])));
         assert_eq!(
             parse_block_markdown_text_until_eol("here is some plaintext\n"),
-            Ok(("", vec![Fragment::Plain("here is some plaintext")]))
+            Ok(("", vec![MdLineFragment::Plain("here is some plaintext")]))
         );
         assert_eq!(
             parse_block_markdown_text_until_eol(
@@ -55,8 +55,8 @@ mod test {
             Ok((
                 "",
                 vec![
-                    Fragment::Plain("here is some plaintext "),
-                    Fragment::Italic("but what if we italicize?"),
+                    MdLineFragment::Plain("here is some plaintext "),
+                    MdLineFragment::Italic("but what if we italicize?"),
                 ]
             ))
         );
@@ -65,12 +65,12 @@ mod test {
         Ok(
             ("",
             vec![
-                Fragment::Plain("here is some plaintext "),
-                Fragment::Italic("but what if we italicize?"),
-                Fragment::Plain(" I guess it doesn't "),
-                Fragment::Bold("matter"),
-                Fragment::Plain(" in my "),
-                Fragment::InlineCode("code"),
+                MdLineFragment::Plain("here is some plaintext "),
+                MdLineFragment::Italic("but what if we italicize?"),
+                MdLineFragment::Plain(" I guess it doesn't "),
+                MdLineFragment::Bold("matter"),
+                MdLineFragment::Plain(" in my "),
+                MdLineFragment::InlineCode("code"),
             ])
         )
     );
@@ -81,8 +81,8 @@ mod test {
             Ok((
                 "",
                 vec![
-                    Fragment::Plain("here is some plaintext "),
-                    Fragment::Italic("but what if we italicize?"),
+                    MdLineFragment::Plain("here is some plaintext "),
+                    MdLineFragment::Italic("but what if we italicize?"),
                 ]
             ))
         );

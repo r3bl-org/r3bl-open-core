@@ -111,18 +111,18 @@ pub fn parse_element_plaintext(input: &str) -> IResult<&str, &str> {
     )(input)
 }
 
-/// Parse a single chunk of markdown text [Fragment] in a single line.
+/// Parse a single chunk of markdown text [MdLineFragment] in a single line.
 #[rustfmt::skip]
-pub fn parse_element_markdown_inline(input: &str) -> IResult<&str, Fragment> {
+pub fn parse_element_markdown_inline(input: &str) -> IResult<&str, MdLineFragment> {
     alt((
-        map(parse_element_italic,       Fragment::Italic),
-        map(parse_element_bold,         Fragment::Bold),
-        map(parse_element_bold_italic,  Fragment::BoldItalic),
-        map(parse_element_code,         Fragment::InlineCode),
-        map(parse_element_image,        Fragment::Image),
-        map(parse_element_link,         Fragment::Link),
-        map(parse_element_checkbox,     Fragment::Checkbox),
-        map(parse_element_plaintext,    Fragment::Plain),
+        map(parse_element_italic,       MdLineFragment::Italic),
+        map(parse_element_bold,         MdLineFragment::Bold),
+        map(parse_element_bold_italic,  MdLineFragment::BoldItalic),
+        map(parse_element_code,         MdLineFragment::InlineCode),
+        map(parse_element_image,        MdLineFragment::Image),
+        map(parse_element_link,         MdLineFragment::Link),
+        map(parse_element_checkbox,     MdLineFragment::Checkbox),
+        map(parse_element_plaintext,    MdLineFragment::Plain),
     ))(input)
 }
 
@@ -503,40 +503,43 @@ mod tests {
     fn test_parse_element_markdown_inline() {
         assert_eq!(
             parse_element_markdown_inline("*here is italic*"),
-            Ok(("", Fragment::Italic("here is italic")))
+            Ok(("", MdLineFragment::Italic("here is italic")))
         );
         assert_eq!(
             parse_element_markdown_inline("**here is bold**"),
-            Ok(("", Fragment::Bold("here is bold")))
+            Ok(("", MdLineFragment::Bold("here is bold")))
         );
         assert_eq!(
             parse_element_markdown_inline("`here is code`"),
-            Ok(("", Fragment::InlineCode("here is code")))
+            Ok(("", MdLineFragment::InlineCode("here is code")))
         );
         assert_eq!(
             parse_element_markdown_inline("[title](https://www.example.com)"),
-            Ok(("", (Fragment::Link(("title", "https://www.example.com")))))
+            Ok((
+                "",
+                (MdLineFragment::Link(("title", "https://www.example.com")))
+            ))
         );
         assert_eq!(
             parse_element_markdown_inline("![alt text](image.jpg)"),
-            Ok(("", (Fragment::Image(("alt text", "image.jpg")))))
+            Ok(("", (MdLineFragment::Image(("alt text", "image.jpg")))))
         );
         assert_eq!(
             parse_element_markdown_inline("here is plaintext!"),
-            Ok(("", Fragment::Plain("here is plaintext!")))
+            Ok(("", MdLineFragment::Plain("here is plaintext!")))
         );
         assert_eq!(
             parse_element_markdown_inline("here is some plaintext *but what if we italicize?"),
             Ok((
                 "*but what if we italicize?",
-                Fragment::Plain("here is some plaintext ")
+                MdLineFragment::Plain("here is some plaintext ")
             ))
         );
         assert_eq!(
             parse_element_markdown_inline("here is some plaintext \n*but what if we italicize?"),
             Ok((
                 "\n*but what if we italicize?",
-                Fragment::Plain("here is some plaintext ")
+                MdLineFragment::Plain("here is some plaintext ")
             ))
         );
         assert_eq!(

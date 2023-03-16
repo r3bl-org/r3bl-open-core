@@ -17,18 +17,22 @@
 
 use crate::*;
 
-pub fn translate_to_html(doc: Document) -> String {
+pub fn translate_to_html(doc: MdDocument) -> String {
     let mut acc = vec![];
     for block in doc {
         match block {
-            Block::Heading(HeadingData {
+            MdBlockElement::Heading(HeadingData {
                 level,
                 content: line,
             }) => acc.push(translate_header(&level, line.to_vec())),
-            Block::UnorderedList(lines) => acc.push(translate_unordered_list(lines.to_vec())),
-            Block::OrderedList(lines) => acc.push(translate_ordered_list(lines.to_vec())),
-            Block::CodeBlock(code_block) => acc.push(translate_codeblock_lines(&code_block)),
-            Block::Text(line) => acc.push(translate_line(line.to_vec())),
+            MdBlockElement::UnorderedList(lines) => {
+                acc.push(translate_unordered_list(lines.to_vec()))
+            }
+            MdBlockElement::OrderedList(lines) => acc.push(translate_ordered_list(lines.to_vec())),
+            MdBlockElement::CodeBlock(code_block) => {
+                acc.push(translate_codeblock_lines(&code_block))
+            }
+            MdBlockElement::Text(line) => acc.push(translate_line(line.to_vec())),
             _ => {}
         }
     }
@@ -49,7 +53,7 @@ fn translate_image(link_text: &str, url: &str) -> String {
     format!("<img src=\"{url}\" alt=\"{link_text}\" />")
 }
 
-fn translate_list_elements(lines: Vec<Fragments>) -> String {
+fn translate_list_elements(lines: Vec<MdLineFragments>) -> String {
     lines
         .iter()
         .map(|line| format!("<li>{}</li>", translate_text(line.to_vec())))
@@ -57,7 +61,7 @@ fn translate_list_elements(lines: Vec<Fragments>) -> String {
         .join("")
 }
 
-fn translate_header(heading_level: &HeadingLevel, text: Fragments) -> String {
+fn translate_header(heading_level: &HeadingLevel, text: MdLineFragments) -> String {
     let heading_level_number = (*heading_level) as u8;
     format!(
         "<h{}>{}</h{}>",
@@ -67,11 +71,11 @@ fn translate_header(heading_level: &HeadingLevel, text: Fragments) -> String {
     )
 }
 
-fn translate_unordered_list(lines: Vec<Fragments>) -> String {
+fn translate_unordered_list(lines: Vec<MdLineFragments>) -> String {
     format!("<ul>{}</ul>", translate_list_elements(lines.to_vec()))
 }
 
-fn translate_ordered_list(lines: Vec<Fragments>) -> String {
+fn translate_ordered_list(lines: Vec<MdLineFragments>) -> String {
     format!("<ol>{}</ol>", translate_list_elements(lines.to_vec()))
 }
 
@@ -98,7 +102,7 @@ fn translate_codeblock_lines(code_block_lines: &[CodeBlockLine]) -> String {
     }
 }
 
-fn translate_line(text: Fragments) -> String {
+fn translate_line(text: MdLineFragments) -> String {
     let line = translate_text(text);
     if !line.is_empty() {
         format!("<p>{line}</p>")
@@ -107,20 +111,20 @@ fn translate_line(text: Fragments) -> String {
     }
 }
 
-fn translate_text(text: Fragments) -> String {
+fn translate_text(text: MdLineFragments) -> String {
     text.iter()
         .map(|part| match part {
-            Fragment::Bold(text) => translate_bold(text),
-            Fragment::Italic(text) => translate_italic(text),
-            Fragment::BoldItalic(text) => translate_italic(&translate_bold(text)),
-            Fragment::InlineCode(code) => translate_inline_code(code),
-            Fragment::Link((text, url)) => translate_link(text, url),
-            Fragment::Image((text, url)) => translate_image(text, url),
-            Fragment::Checkbox(flag) => match flag {
+            MdLineFragment::Bold(text) => translate_bold(text),
+            MdLineFragment::Italic(text) => translate_italic(text),
+            MdLineFragment::BoldItalic(text) => translate_italic(&translate_bold(text)),
+            MdLineFragment::InlineCode(code) => translate_inline_code(code),
+            MdLineFragment::Link((text, url)) => translate_link(text, url),
+            MdLineFragment::Image((text, url)) => translate_image(text, url),
+            MdLineFragment::Checkbox(flag) => match flag {
                 true => "[x]".to_string(),
                 false => "[ ]".to_string(),
             },
-            Fragment::Plain(text) => text.to_string(),
+            MdLineFragment::Plain(text) => text.to_string(),
         })
         .collect::<Vec<String>>()
         .join("")
@@ -172,13 +176,15 @@ mod tests {
     #[test]
     fn test_translate_text() {
         let x = translate_text(vec![
-            Fragment::Plain("Foobar is a Python library for dealing with word pluralization."),
-            Fragment::Bold("bold"),
-            Fragment::Italic("italic"),
-            Fragment::InlineCode("code"),
-            Fragment::Link(("tag", "https://link.com")),
-            Fragment::Image(("tag", "https://link.com")),
-            Fragment::Plain(". the end!"),
+            MdLineFragment::Plain(
+                "Foobar is a Python library for dealing with word pluralization.",
+            ),
+            MdLineFragment::Bold("bold"),
+            MdLineFragment::Italic("italic"),
+            MdLineFragment::InlineCode("code"),
+            MdLineFragment::Link(("tag", "https://link.com")),
+            MdLineFragment::Image(("tag", "https://link.com")),
+            MdLineFragment::Plain(". the end!"),
         ]);
         assert_eq2!(x, String::from("Foobar is a Python library for dealing with word pluralization.<b>bold</b><i>italic</i><code>code</code><a href=\"https://link.com\">tag</a><img src=\"https://link.com\" alt=\"tag\" />. the end!"));
         let x = translate_text(vec![]);
@@ -188,7 +194,10 @@ mod tests {
     #[test]
     fn test_translate_header() {
         assert_eq2!(
-            translate_header(&HeadingLevel::Heading1, vec![Fragment::Plain("Foobar")]),
+            translate_header(
+                &HeadingLevel::Heading1,
+                vec![MdLineFragment::Plain("Foobar")]
+            ),
             String::from("<h1>Foobar</h1>")
         );
     }
@@ -197,10 +206,10 @@ mod tests {
     fn test_translate_list_elements() {
         assert_eq2!(
             translate_list_elements(vec![
-                vec![Fragment::Plain("Foobar")],
-                vec![Fragment::Plain("Foobar")],
-                vec![Fragment::Plain("Foobar")],
-                vec![Fragment::Plain("Foobar")],
+                vec![MdLineFragment::Plain("Foobar")],
+                vec![MdLineFragment::Plain("Foobar")],
+                vec![MdLineFragment::Plain("Foobar")],
+                vec![MdLineFragment::Plain("Foobar")],
             ]),
             String::from("<li>Foobar</li><li>Foobar</li><li>Foobar</li><li>Foobar</li>")
         );
@@ -210,10 +219,10 @@ mod tests {
     fn test_translate_unordered_list() {
         assert_eq2!(
             translate_unordered_list(vec![
-                vec![Fragment::Plain("Foobar")],
-                vec![Fragment::Plain("Foobar")],
-                vec![Fragment::Plain("Foobar")],
-                vec![Fragment::Plain("Foobar")],
+                vec![MdLineFragment::Plain("Foobar")],
+                vec![MdLineFragment::Plain("Foobar")],
+                vec![MdLineFragment::Plain("Foobar")],
+                vec![MdLineFragment::Plain("Foobar")],
             ]),
             String::from("<ul><li>Foobar</li><li>Foobar</li><li>Foobar</li><li>Foobar</li></ul>")
         );
@@ -223,10 +232,10 @@ mod tests {
     fn test_translate_ordered_list() {
         assert_eq2!(
             translate_ordered_list(vec![
-                vec![Fragment::Plain("Foobar")],
-                vec![Fragment::Plain("Foobar")],
-                vec![Fragment::Plain("Foobar")],
-                vec![Fragment::Plain("Foobar")],
+                vec![MdLineFragment::Plain("Foobar")],
+                vec![MdLineFragment::Plain("Foobar")],
+                vec![MdLineFragment::Plain("Foobar")],
+                vec![MdLineFragment::Plain("Foobar")],
             ]),
             String::from("<ol><li>Foobar</li><li>Foobar</li><li>Foobar</li><li>Foobar</li></ol>")
         );
@@ -253,10 +262,10 @@ mod tests {
     fn test_translate_line() {
         assert_eq2!(
             translate_line(vec![
-                Fragment::Plain("Foobar"),
-                Fragment::Bold("Foobar"),
-                Fragment::Italic("Foobar"),
-                Fragment::InlineCode("Foobar"),
+                MdLineFragment::Plain("Foobar"),
+                MdLineFragment::Bold("Foobar"),
+                MdLineFragment::Italic("Foobar"),
+                MdLineFragment::InlineCode("Foobar"),
             ]),
             String::from("<p>Foobar<b>Foobar</b><i>Foobar</i><code>Foobar</code></p>")
         );

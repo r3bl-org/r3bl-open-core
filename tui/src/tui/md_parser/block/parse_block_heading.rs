@@ -84,7 +84,7 @@ mod tests {
                 "",
                 HeadingData {
                     level: 1.into(),
-                    content: vec![Fragment::Plain("h1")]
+                    content: vec![MdLineFragment::Plain("h1")]
                 }
             ))
         );
@@ -94,7 +94,7 @@ mod tests {
                 "",
                 HeadingData {
                     level: 2.into(),
-                    content: vec![Fragment::Plain("h2")]
+                    content: vec![MdLineFragment::Plain("h2")]
                 }
             ))
         );
@@ -104,7 +104,7 @@ mod tests {
                 "",
                 HeadingData {
                     level: 3.into(),
-                    content: vec![Fragment::Plain(" h3")]
+                    content: vec![MdLineFragment::Plain(" h3")]
                 }
             ))
         );
@@ -115,10 +115,10 @@ mod tests {
                 HeadingData {
                     level: 3.into(),
                     content: vec![
-                        Fragment::Plain("h3 "),
-                        Fragment::Italic("foo"),
-                        Fragment::Plain(" "),
-                        Fragment::Bold("bar"),
+                        MdLineFragment::Plain("h3 "),
+                        MdLineFragment::Italic("foo"),
+                        MdLineFragment::Plain(" "),
+                        MdLineFragment::Bold("bar"),
                     ]
                 }
             ))

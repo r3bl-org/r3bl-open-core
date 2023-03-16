@@ -20,29 +20,29 @@ use nom::{branch::*, combinator::*, multi::*, IResult};
 use crate::*;
 
 /// This is the main parser entry point. It takes a string slice and if it can be parsed, returns a
-/// [Document] that represents the parsed Markdown.
+/// [MdDocument] that represents the parsed Markdown.
 ///
-/// 1. [Fragments] roughly corresponds to a line of parsed text.
-/// 2. [Document] contains all the blocks that are parsed from a Markdown string slice.
+/// 1. [MdLineFragments] roughly corresponds to a line of parsed text.
+/// 2. [MdDocument] contains all the blocks that are parsed from a Markdown string slice.
 ///
-/// Each item in this [Document] corresponds to a block of Markdown [Block], which can be one of the
-/// following variants:
-/// 1. heading (which contains a [HeadingLevel] & [Fragments]),
-/// 2. ordered & unordered list (which itself contains a [Vec] of [Fragments],
+/// Each item in this [MdDocument] corresponds to a block of Markdown [MdBlockElement], which can be
+/// one of the following variants:
+/// 1. heading (which contains a [HeadingLevel] & [MdLineFragments]),
+/// 2. ordered & unordered list (which itself contains a [Vec] of [MdLineFragments],
 /// 3. code block (which contains string slices of the language & code),
-/// 4. line (which contains a [Fragments]).
+/// 4. line (which contains a [MdLineFragments]).
 #[rustfmt::skip]
-pub fn parse_markdown(input: &str) -> IResult<&str, Document> {
+pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
     many0(
         /* Each of these parsers end up scanning until EOL. */
         alt((
-            map(parse_title,                         Block::Title),
-            map(parse_tags,                          Block::Tags),
-            map(parse_block_heading,                 Block::Heading),
-            map(parse_block_unordered_list,          Block::UnorderedList),
-            map(parse_block_ordered_list,            Block::OrderedList),
-            map(parse_block_code,                    Block::CodeBlock),
-            map(parse_block_markdown_text_until_eol, Block::Text),
+            map(parse_title,                         MdBlockElement::Title),
+            map(parse_tags,                          MdBlockElement::Tags),
+            map(parse_block_heading,                 MdBlockElement::Heading),
+            map(parse_block_unordered_list,          MdBlockElement::UnorderedList),
+            map(parse_block_ordered_list,            MdBlockElement::OrderedList),
+            map(parse_block_code,                    MdBlockElement::CodeBlock),
+            map(parse_block_markdown_text_until_eol, MdBlockElement::Text),
         )),
     )(input)
 }
@@ -59,34 +59,34 @@ mod tests {
         let (remainder, vec_block) =
             parse_markdown(include_str!("test_assets/valid_md_input.md")).unwrap();
         let expected_vec = vec![
-            Block::Title("Something"),
-            Block::Tags(vec!["tag1", "tag2", "tag3"]),
-            Block::Heading(HeadingData {
+            MdBlockElement::Title("Something"),
+            MdBlockElement::Tags(vec!["tag1", "tag2", "tag3"]),
+            MdBlockElement::Heading(HeadingData {
                 level: HeadingLevel::Heading1,
-                content: vec![Fragment::Plain("Foobar")],
+                content: vec![MdLineFragment::Plain("Foobar")],
             }),
-            Block::Text(vec![]), // Empty line.
-            Block::Text(vec![Fragment::Plain(
+            MdBlockElement::Text(vec![]), // Empty line.
+            MdBlockElement::Text(vec![MdLineFragment::Plain(
                 "Foobar is a Python library for dealing with word pluralization.",
             )]),
-            Block::Text(vec![]), // Empty line.
-            Block::CodeBlock(convert_into_code_block_lines(
+            MdBlockElement::Text(vec![]), // Empty line.
+            MdBlockElement::CodeBlock(convert_into_code_block_lines(
                 Some("bash"),
                 vec!["pip install foobar"],
             )),
-            Block::CodeBlock(convert_into_code_block_lines(Some("fish"), vec![])),
-            Block::CodeBlock(convert_into_code_block_lines(Some("python"), vec![""])),
-            Block::Heading(HeadingData {
+            MdBlockElement::CodeBlock(convert_into_code_block_lines(Some("fish"), vec![])),
+            MdBlockElement::CodeBlock(convert_into_code_block_lines(Some("python"), vec![""])),
+            MdBlockElement::Heading(HeadingData {
                 level: HeadingLevel::Heading2,
-                content: vec![Fragment::Plain("Installation")],
+                content: vec![MdLineFragment::Plain("Installation")],
             }),
-            Block::Text(vec![]), // Empty line.
-            Block::Text(vec![
-                Fragment::Plain("Use the package manager "),
-                Fragment::Link(("pip", "https://pip.pypa.io/en/stable/")),
-                Fragment::Plain(" to install foobar."),
+            MdBlockElement::Text(vec![]), // Empty line.
+            MdBlockElement::Text(vec![
+                MdLineFragment::Plain("Use the package manager "),
+                MdLineFragment::Link(("pip", "https://pip.pypa.io/en/stable/")),
+                MdLineFragment::Plain(" to install foobar."),
             ]),
-            Block::CodeBlock(convert_into_code_block_lines(
+            MdBlockElement::CodeBlock(convert_into_code_block_lines(
                 Some("python"),
                 vec![
                     "import foobar",
@@ -96,19 +96,25 @@ mod tests {
                     "foobar.singularize('phenomena') # returns 'phenomenon'",
                 ],
             )),
-            Block::UnorderedList(vec![
-                vec![Fragment::Plain("ul1")],
-                vec![Fragment::Plain("ul2")],
+            MdBlockElement::UnorderedList(vec![
+                vec![MdLineFragment::Plain("ul1")],
+                vec![MdLineFragment::Plain("ul2")],
             ]),
-            Block::OrderedList(vec![
-                vec![Fragment::Plain("ol1")],
-                vec![Fragment::Plain("ol2")],
+            MdBlockElement::OrderedList(vec![
+                vec![MdLineFragment::Plain("ol1")],
+                vec![MdLineFragment::Plain("ol2")],
             ]),
-            Block::UnorderedList(vec![
-                vec![Fragment::Checkbox(false), Fragment::Plain(" todo")],
-                vec![Fragment::Checkbox(true), Fragment::Plain(" done")],
+            MdBlockElement::UnorderedList(vec![
+                vec![
+                    MdLineFragment::Checkbox(false),
+                    MdLineFragment::Plain(" todo"),
+                ],
+                vec![
+                    MdLineFragment::Checkbox(true),
+                    MdLineFragment::Plain(" done"),
+                ],
             ]),
-            Block::Text(vec![Fragment::Plain("end")]),
+            MdBlockElement::Text(vec![MdLineFragment::Plain("end")]),
         ];
 
         // Print last 2 items.
