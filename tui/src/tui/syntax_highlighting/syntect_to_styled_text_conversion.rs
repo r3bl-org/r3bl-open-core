@@ -33,17 +33,22 @@ use r3bl_rs_utils_core::*;
 use crate::*;
 
 pub type SyntectStyle = syntect::highlighting::Style;
+
 /// Fragments are chunks of a text that have an associated style. There are usually multiple
 /// fragments in a line of text.
 pub type SyntectStyleStrFragment<'a> = (SyntectStyle, &'a str);
+
 /// A line of text is made up of multiple [SyntectStyleStrFragment]s.
 pub type SyntectStyleStrFragmentLine<'a> = Vec<SyntectStyleStrFragment<'a>>;
 
 /// Fragments are chunks of a text that have an associated style. There are usually multiple
 /// fragments in a line of text.
-pub type StyleUSFragment = (Style, US);
+#[derive(Debug, Clone, Default)]
+pub struct StyleUSFragment(pub Style, pub US);
+
 /// A line of text is made up of multiple [StyleUSFragment]s.
 pub type StyleUSFragmentLine = List<StyleUSFragment>;
+
 /// A document is made up of multiple [StyleUSFragmentLine]s.
 pub type StyleUSFragmentLines = List<StyleUSFragmentLine>;
 
@@ -53,7 +58,8 @@ pub fn from_syntect_to_tui(
     let mut it = StyleUSFragmentLine::from(syntect_highlighted_line);
 
     // Remove the background color from each style in the theme.
-    it.iter_mut().for_each(|(style, _)| style.remove_bg_color());
+    it.iter_mut()
+        .for_each(|StyleUSFragment(style, _)| style.remove_bg_color());
 
     it
 }
@@ -86,7 +92,7 @@ mod syntect_support {
                 for (style, text) in vec_styled_str {
                     let my_style = Style::from(*style);
                     let unicode_string = US::from(*text);
-                    it.push((my_style, unicode_string));
+                    it.push(StyleUSFragment(my_style, unicode_string));
                 }
 
                 it
@@ -103,7 +109,7 @@ mod style_us_support {
     impl StyleUSFragmentLine {
         pub fn display_width(&self) -> ChUnit {
             let mut size = ch!(0);
-            for (_, item) in self.iter() {
+            for StyleUSFragment(_, item) in self.iter() {
                 size += item.display_width;
             }
             size
@@ -111,7 +117,7 @@ mod style_us_support {
 
         pub fn get_plain_text(&self) -> String {
             let mut plain_text = String::new();
-            for (_, item) in self.iter() {
+            for StyleUSFragment(_, item) in self.iter() {
                 plain_text.push_str(&item.string);
             }
             plain_text
@@ -136,7 +142,7 @@ mod style_us_support {
             max_display_col_count: ChUnit,
         ) -> StyledTexts {
             // Populated and returned at the end.
-            let mut list = List::default();
+            let mut list: List<StyleUSFragment> = List::default();
 
             // Clip w/out syntax highlighting & store this as a pattern to match against.
             let plain_text_pattern: &str =
@@ -147,7 +153,7 @@ mod style_us_support {
             // Main loop over each `styled_text_segment` in the `List` (the list represents a single
             // line of text).
             for span in self.iter() {
-                let (style, formatted_text_unicode_string) = span;
+                let StyleUSFragment(style, formatted_text_unicode_string) = span;
 
                 let mut clipped_text_fragment = String::new();
 
@@ -178,7 +184,7 @@ mod style_us_support {
                 }
 
                 if !clipped_text_fragment.is_empty() {
-                    list.push((*style, US::from(clipped_text_fragment)));
+                    list.push(StyleUSFragment(*style, US::from(clipped_text_fragment)));
                 }
             }
 
@@ -189,7 +195,7 @@ mod style_us_support {
     impl From<StyleUSFragmentLine> for StyledTexts {
         fn from(styles: StyleUSFragmentLine) -> Self {
             let mut styled_texts = StyledTexts::default();
-            for (style, text) in styles.iter() {
+            for StyleUSFragment(style, text) in styles.iter() {
                 let my_style: Style = *style;
                 styled_texts.push(StyledText::new(text.string.clone(), my_style));
             }

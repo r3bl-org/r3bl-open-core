@@ -135,7 +135,7 @@ impl StyleUSFragmentLine {
                         attrib: [dim]
                     }
             };
-            (my_style, heading_level)
+            StyleUSFragment(my_style, heading_level)
         };
 
         let heading_text_style_us_fragment: StyleUSFragmentLine = {
@@ -162,7 +162,7 @@ impl From<StyledTexts> for StyleUSFragmentLine {
         for styled_text in styled_texts.items.into_iter() {
             let style = styled_text.style;
             let us = styled_text.plain_text;
-            it.items.push((style, us));
+            it.items.push(StyleUSFragment(style, us));
         }
         it
     }
@@ -189,7 +189,7 @@ mod test_generate_style_us_fragment_lines_from_document {
         let lines = StyleUSFragmentLines::from_block(&heading_block, &maybe_style);
         for line in &lines.items {
             for fragment in &line.items {
-                let (style, us) = fragment;
+                let StyleUSFragment(style, us) = fragment;
                 println!("fragment[ {:?} , {:?} ]", us.string, style);
             }
         }
