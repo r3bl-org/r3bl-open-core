@@ -60,9 +60,27 @@ pub enum MdLineFragment<'a> {
     Italic(&'a str),
     BoldItalic(&'a str),
     InlineCode(&'a str),
-    Link((&'a str, &'a str)),
-    Image((&'a str, &'a str)),
+    Link(HyperlinkData<'a>),
+    Image(HyperlinkData<'a>),
     Checkbox(bool),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct HyperlinkData<'a> {
+    pub text: &'a str,
+    pub url: &'a str,
+}
+
+mod hyperlink_data_impl {
+    use super::*;
+
+    impl<'a> HyperlinkData<'a> {
+        pub fn new(text: &'a str, url: &'a str) -> Self { Self { text, url } }
+    }
+
+    impl<'a> From<(&'a str, &'a str)> for HyperlinkData<'a> {
+        fn from((text, url): (&'a str, &'a str)) -> Self { Self { text, url } }
+    }
 }
 
 #[repr(u8)]
@@ -114,15 +132,17 @@ pub mod constants {
     pub const BACKTICK: &str = "`";
     pub const LEFT_BRACKET: &str = "[";
     pub const RIGHT_BRACKET: &str = "]";
-    pub const LEFT_PAREN: &str = "(";
-    pub const RIGHT_PAREN: &str = ")";
-    pub const LEFT_IMG: &str = "![";
-    pub const RIGHT_IMG: &str = "]";
+    pub const LEFT_PARENTHESIS: &str = "(";
+    pub const RIGHT_PARENTHESIS: &str = ")";
+    pub const LEFT_IMAGE: &str = "![";
+    pub const RIGHT_IMAGE: &str = "]";
     pub const NEW_LINE: &str = "\n";
     pub const CODE_BLOCK_START_PARTIAL: &str = "```";
     pub const CODE_BLOCK_END: &str = "```\n";
     pub const CHECKED: &str = "[x]";
     pub const UNCHECKED: &str = "[ ]";
+    pub const CHECKED_OUTPUT: &str = "[≡]";
+    pub const UNCHECKED_OUTPUT: &str = "[ ]";
 }
 
 #[derive(Debug, PartialEq, Clone)]

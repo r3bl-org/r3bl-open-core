@@ -204,9 +204,9 @@ mod tests {
             /// ```
             pub fn get_list() -> List<StyleUSSpan> {
                 list! {
-                    StyleUSSpan(get_s1(), UnicodeString::from("first")),
-                    StyleUSSpan(get_s1(), UnicodeString::from(" ")),
-                    StyleUSSpan(get_s2(), UnicodeString::from("second"))
+                    StyleUSSpan::new(get_s1(), UnicodeString::from("first")),
+                    StyleUSSpan::new(get_s1(), UnicodeString::from(" ")),
+                    StyleUSSpan::new(get_s2(), UnicodeString::from("second"))
                 }
             }
         }
@@ -429,7 +429,7 @@ mod tests {
 
             fn get_list() -> List<StyleUSSpan> {
                 list! {
-                    StyleUSSpan(
+                    StyleUSSpan::new(
                         get_s1(),
                         UnicodeString::from(
                             "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234",
@@ -483,7 +483,7 @@ mod tests {
 
             fn get_list() -> List<StyleUSSpan> {
                 list! {
-                    StyleUSSpan(
+                    StyleUSSpan::new(
                         get_s1(),
                         UnicodeString::from(
                             "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 0123456",

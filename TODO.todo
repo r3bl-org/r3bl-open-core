@@ -13,6 +13,13 @@ fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
   ☐ `editor_engine_api.rs`: update `render_line_with_syntax_highlight()` based on `syntect` / `md_parser` choice
   ☐ update editor component options to either use `md_parser` or `syntect`
 
+crate upgrades:
+  ☐ consider using https://docs.rs/concolor-query/0.3.3/concolor_query/fn.clicolor.html
+    - eg: https://docs.rs/anstream/latest/src/anstream/auto.rs.html
+    - instead of custom implementation of `ColorSupport::detect()`
+  ☐ syn 2.0
+    - https://github.com/dtolnay/syn/releases/tag/2.0.0
+
 fix performance problem:
   ☐ scroll left / right slow in type ahead completion dialog
 
@@ -23,3 +30,14 @@ release new version:
   ☐ cut new releases
   ☐ publish to crates.io
   ☐ make reddit post w/ videos
+
+continue building r3bl_cmdr:
+  r3bl_rs_utils:
+    ☐ flush out core editor component features (copy, paste, select, etc)
+    ☐ analytics measurement
+  r3bl_cmdr:
+    ☐ notes editor
+    ☐ github issues
+    ☐ analytics measurement
+    ☐ dashboard for weather etc
+    ☐ alpha release

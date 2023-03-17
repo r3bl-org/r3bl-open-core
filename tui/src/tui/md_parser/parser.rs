@@ -83,7 +83,10 @@ mod tests {
             MdBlockElement::Text(vec![]), // Empty line.
             MdBlockElement::Text(vec![
                 MdLineFragment::Plain("Use the package manager "),
-                MdLineFragment::Link(("pip", "https://pip.pypa.io/en/stable/")),
+                MdLineFragment::Link(HyperlinkData::from((
+                    "pip",
+                    "https://pip.pypa.io/en/stable/",
+                ))),
                 MdLineFragment::Plain(" to install foobar."),
             ]),
             MdBlockElement::CodeBlock(convert_into_code_block_lines(

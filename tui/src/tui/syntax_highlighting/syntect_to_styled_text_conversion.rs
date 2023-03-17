@@ -46,7 +46,7 @@ pub fn from_syntect_to_tui(syntect_highlighted_line: SyntectStyleStrSpanLine) ->
 
     // Remove the background color from each style in the theme.
     it.iter_mut()
-        .for_each(|StyleUSSpan(style, _)| style.remove_bg_color());
+        .for_each(|StyleUSSpan { style, text: _ }| style.remove_bg_color());
 
     it
 }
@@ -79,7 +79,7 @@ mod syntect_support {
                 for (style, text) in vec_styled_str {
                     let my_style = Style::from(*style);
                     let unicode_string = US::from(*text);
-                    it.push(StyleUSSpan(my_style, unicode_string));
+                    it.push(StyleUSSpan::new(my_style, unicode_string));
                 }
 
                 it
