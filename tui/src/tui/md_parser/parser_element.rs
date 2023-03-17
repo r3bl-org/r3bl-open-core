@@ -56,11 +56,12 @@ pub fn parse_element_code(input: &str) -> IResult<&str, &str> {
 }
 
 #[rustfmt::skip]
-pub fn parse_element_link(input: &str) -> IResult<&str, (&str, &str)> {
-    pair(
+pub fn parse_element_link(input: &str) -> IResult<&str, HyperlinkData> {
+    let (input, output) = pair(
         delimited(/* start */ tag(LEFT_BRACKET), /* output */ is_not(RIGHT_BRACKET), /* end */ tag(RIGHT_BRACKET)),
-        delimited(/* start */ tag(LEFT_PAREN), /* output */ is_not(RIGHT_PAREN), /* end */ tag(RIGHT_PAREN)),
-    )(input)
+        delimited(/* start */ tag(LEFT_PARENTHESIS), /* output */ is_not(RIGHT_PARENTHESIS), /* end */ tag(RIGHT_PARENTHESIS)),
+    )(input)?;
+    Ok((input, HyperlinkData::from(output)))
 }
 
 #[rustfmt::skip]
@@ -72,11 +73,12 @@ pub fn parse_element_checkbox(input: &str) -> IResult<&str, bool> {
 }
 
 #[rustfmt::skip]
-pub fn parse_element_image(input: &str) -> IResult<&str, (&str, &str)> {
-    pair(
-        delimited(/* start */ tag(LEFT_IMG), /* output */ is_not(RIGHT_IMG), /* end */ tag(RIGHT_IMG)),
-        delimited(/* start */ tag(LEFT_PAREN), /* output */ is_not(RIGHT_PAREN), /* end */ tag(RIGHT_PAREN)),
-    )(input)
+pub fn parse_element_image(input: &str) -> IResult<&str, HyperlinkData> {
+    let (input, output) =pair(
+        delimited(/* start */ tag(LEFT_IMAGE), /* output */ is_not(RIGHT_IMAGE), /* end */ tag(RIGHT_IMAGE)),
+        delimited(/* start */ tag(LEFT_PARENTHESIS), /* output */ is_not(RIGHT_PARENTHESIS), /* end */ tag(RIGHT_PARENTHESIS)),
+    )(input)?;
+    Ok((input, HyperlinkData::from(output)))
 }
 
 /// There must be at least one match. We want to match many things that are not any of our
@@ -100,7 +102,7 @@ pub fn parse_element_plaintext(input: &str) -> IResult<&str, &str> {
                         tag(ITALIC_2),
                         tag(BACKTICK),
                         tag(LEFT_BRACKET),
-                        tag(LEFT_IMG),
+                        tag(LEFT_IMAGE),
                         tag(NEW_LINE),
                     ))
                 ),
@@ -367,7 +369,7 @@ mod tests {
     fn test_parse_element_link() {
         assert_eq!(
             parse_element_link("[title](https://www.example.com)"),
-            Ok(("", ("title", "https://www.example.com")))
+            Ok(("", HyperlinkData::new("title", "https://www.example.com")))
         );
         assert_eq!(
             parse_element_code(""),
@@ -382,7 +384,7 @@ mod tests {
     fn test_parse_element_image() {
         assert_eq!(
             parse_element_image("![alt text](image.jpg)"),
-            Ok(("", ("alt text", "image.jpg")))
+            Ok(("", HyperlinkData::new("alt text", "image.jpg")))
         );
         assert_eq!(
             parse_element_code(""),
@@ -517,12 +519,15 @@ mod tests {
             parse_element_markdown_inline("[title](https://www.example.com)"),
             Ok((
                 "",
-                (MdLineFragment::Link(("title", "https://www.example.com")))
+                (MdLineFragment::Link(HyperlinkData::new("title", "https://www.example.com")))
             ))
         );
         assert_eq!(
             parse_element_markdown_inline("![alt text](image.jpg)"),
-            Ok(("", (MdLineFragment::Image(("alt text", "image.jpg")))))
+            Ok((
+                "",
+                (MdLineFragment::Image(HyperlinkData::new("alt text", "image.jpg")))
+            ))
         );
         assert_eq!(
             parse_element_markdown_inline("here is plaintext!"),

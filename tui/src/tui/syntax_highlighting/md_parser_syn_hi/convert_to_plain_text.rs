@@ -50,11 +50,18 @@ impl ConvertToPlainText for MdLineFragment<'_> {
     fn to_plain_text(&self) -> US {
         let it: String = match self {
             MdLineFragment::Plain(text) => text.to_string(),
-            MdLineFragment::Link((text, url)) => {
-                format!("{LEFT_BRACKET}{text}{RIGHT_BRACKET}{LEFT_PAREN}{url}{RIGHT_PAREN}")
+            MdLineFragment::Link(HyperlinkData { text, url }) => {
+                format!(
+                    "{LEFT_BRACKET}{text}{RIGHT_BRACKET}{LEFT_PARENTHESIS}{url}{RIGHT_PARENTHESIS}"
+                )
             }
-            MdLineFragment::Image((alt_text, url)) => {
-                format!("{LEFT_IMG}{alt_text}{RIGHT_IMG}{LEFT_PAREN}{url}{RIGHT_PAREN}")
+            MdLineFragment::Image(HyperlinkData {
+                text: alt_text,
+                url,
+            }) => {
+                format!(
+                    "{LEFT_IMAGE}{alt_text}{RIGHT_IMAGE}{LEFT_PARENTHESIS}{url}{RIGHT_PARENTHESIS}"
+                )
             }
             MdLineFragment::Bold(text) => format!("{BOLD_1}{text}{BOLD_1}"),
             MdLineFragment::Italic(text) => format!("{ITALIC_1}{text}{ITALIC_1}"),
@@ -83,13 +90,13 @@ mod to_plain_text_tests {
             " Hello World "
         );
         assert_eq2!(
-            MdLineFragment::Link(("r3bl.com", "https://r3bl.com"))
+            MdLineFragment::Link(HyperlinkData::new("r3bl.com", "https://r3bl.com"))
                 .to_plain_text()
                 .string,
             "[r3bl.com](https://r3bl.com)"
         );
         assert_eq2!(
-            MdLineFragment::Image(("some image text", "https://r3bl.com"))
+            MdLineFragment::Image(HyperlinkData::new("some image text", "https://r3bl.com"))
                 .to_plain_text()
                 .string,
             "![some image text](https://r3bl.com)"

@@ -199,6 +199,15 @@ mod rgb_values_impl {
             }
         }
 
+        pub fn from_hex(input: &str) -> RgbValue {
+            match parse_hex_color(input) {
+                Ok((_, color)) => color,
+                Err(_) => {
+                    panic!("Invalid hex color format: {}", input)
+                }
+            }
+        }
+
         pub fn try_from_tui_color(color: TuiColor) -> CommonResult<Self> {
             match color {
                 // RGB values.

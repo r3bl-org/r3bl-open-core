@@ -43,7 +43,11 @@ impl ColorSupport {
 
     pub fn clear_color_support_override() { clear_color_support_override(); }
 
-    pub fn env_allows_color() -> ColorSupport {
+    /// This function is used to determine the color support of the current terminal. Some
+    /// heuristics are used to determine what the highest color support can be. Once determined this
+    /// value is cached in a global static variable. If you want to override this value please use
+    /// [set_color_support_override] and [clear_color_support_override].
+    pub fn detect() -> ColorSupport {
         // Override is set.
         if let Some(color_support) = get_color_support_override() {
             return color_support;
@@ -97,7 +101,7 @@ impl ColorSupport {
 
 #[test]
 fn test_color_support() {
-    let color_support = ColorSupport::env_allows_color();
+    let color_support = ColorSupport::detect();
     println!("Color support: {:?}", color_support);
 }
 
@@ -109,7 +113,7 @@ fn test_override() {
     set_color_support_override(ColorSupport::Ansi256);
 
     // Test the override.
-    let color_support = ColorSupport::env_allows_color();
+    let color_support = ColorSupport::detect();
     println!("Color support: {:?}", color_support);
 
     assert_eq2!(matches!(color_support, ColorSupport::Ansi256), true);

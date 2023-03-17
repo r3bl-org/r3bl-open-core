@@ -59,7 +59,7 @@ impl ColorWheelConfig {
 
     // Narrow down the given configs into a single one based on color_support (and global override)
     pub fn narrow_config_based_on_color_support(configs: &[ColorWheelConfig]) -> ColorWheelConfig {
-        let color_support = ColorSupport::env_allows_color();
+        let color_support = ColorSupport::detect();
         match color_support {
             // 1. If truecolor is supported, try and find a truecolor config.
             // 2. If not found, then look for an ANSI 256 config.
@@ -195,7 +195,7 @@ impl ColorWheel {
     ///    However, at the very least, one Truecolor config & one ANSI 256 config should be
     ///    provided. The fallback is always grayscale. See
     ///    [get_config_based_on_color_support](ColorWheelConfig::narrow_config_based_on_color_support),
-    ///    [env_allows_color](ColorSupport::env_allows_color) for more info.
+    ///    [detect](ColorSupport::detect) for more info.
     pub fn new(configs: Vec<ColorWheelConfig>) -> Self {
         Self {
             configs,

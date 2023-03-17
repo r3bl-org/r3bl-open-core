@@ -118,8 +118,8 @@ fn translate_text(text: MdLineFragments) -> String {
             MdLineFragment::Italic(text) => translate_italic(text),
             MdLineFragment::BoldItalic(text) => translate_italic(&translate_bold(text)),
             MdLineFragment::InlineCode(code) => translate_inline_code(code),
-            MdLineFragment::Link((text, url)) => translate_link(text, url),
-            MdLineFragment::Image((text, url)) => translate_image(text, url),
+            MdLineFragment::Link(HyperlinkData{text, url}) => translate_link(text, url),
+            MdLineFragment::Image(HyperlinkData{text, url}) => translate_image(text, url),
             MdLineFragment::Checkbox(flag) => match flag {
                 true => "[x]".to_string(),
                 false => "[ ]".to_string(),
@@ -182,8 +182,8 @@ mod tests {
             MdLineFragment::Bold("bold"),
             MdLineFragment::Italic("italic"),
             MdLineFragment::InlineCode("code"),
-            MdLineFragment::Link(("tag", "https://link.com")),
-            MdLineFragment::Image(("tag", "https://link.com")),
+            MdLineFragment::Link(HyperlinkData::new("tag", "https://link.com")),
+            MdLineFragment::Image(HyperlinkData::new("tag", "https://link.com")),
             MdLineFragment::Plain(". the end!"),
         ]);
         assert_eq2!(x, String::from("Foobar is a Python library for dealing with word pluralization.<b>bold</b><i>italic</i><code>code</code><a href=\"https://link.com\">tag</a><img src=\"https://link.com\" alt=\"tag\" />. the end!"));

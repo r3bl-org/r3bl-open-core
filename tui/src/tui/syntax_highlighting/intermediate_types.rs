@@ -37,7 +37,22 @@ use crate::*;
 /// Spans are chunks of a text that have an associated style. There are usually multiple spans in a
 /// line of text.
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct StyleUSSpan(pub Style, pub US);
+pub struct StyleUSSpan {
+    pub style: Style,
+    pub text: US,
+}
+
+mod style_us_span_impl {
+    use super::*;
+
+    impl StyleUSSpan {
+        pub fn new(style: Style, text: US) -> Self { Self { style, text } }
+    }
+
+    impl From<(&Style, &US)> for StyleUSSpan {
+        fn from((style, text): (&Style, &US)) -> Self { Self::new(*style, text.clone()) }
+    }
+}
 
 /// A line of text is made up of multiple [StyleUSSpan]s.
 pub type StyleUSSpanLine = List<StyleUSSpan>;
@@ -66,7 +81,10 @@ impl StyleUSSpanLine {
         // Main loop over each `styled_text_segment` in the `List` (the list represents a single
         // line of text).
         for span in self.iter() {
-            let StyleUSSpan(style, formatted_text_unicode_string) = span;
+            let StyleUSSpan {
+                style,
+                text: formatted_text_unicode_string,
+            } = span;
 
             let mut clipped_text_fragment = String::new();
 
@@ -97,7 +115,7 @@ impl StyleUSSpanLine {
             }
 
             if !clipped_text_fragment.is_empty() {
-                list.push(StyleUSSpan(*style, US::from(clipped_text_fragment)));
+                list.push(StyleUSSpan::new(*style, US::from(clipped_text_fragment)));
             }
         }
 
@@ -106,7 +124,11 @@ impl StyleUSSpanLine {
 
     pub fn display_width(&self) -> ChUnit {
         let mut size = ch!(0);
-        for StyleUSSpan(_, item) in self.iter() {
+        for StyleUSSpan {
+            style: _,
+            text: item,
+        } in self.iter()
+        {
             size += item.display_width;
         }
         size
@@ -114,7 +136,11 @@ impl StyleUSSpanLine {
 
     pub fn get_plain_text(&self) -> String {
         let mut plain_text = String::new();
-        for StyleUSSpan(_, item) in self.iter() {
+        for StyleUSSpan {
+            style: _,
+            text: item,
+        } in self.iter()
+        {
             plain_text.push_str(&item.string);
         }
         plain_text
@@ -134,7 +160,7 @@ impl StyleUSSpanLine {
 impl From<StyleUSSpanLine> for StyledTexts {
     fn from(styles: StyleUSSpanLine) -> Self {
         let mut styled_texts = StyledTexts::default();
-        for StyleUSSpan(style, text) in styles.iter() {
+        for StyleUSSpan { style, text } in styles.iter() {
             styled_texts.push(StyledText::new(text.string.clone(), *style));
         }
         styled_texts
