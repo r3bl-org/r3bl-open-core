@@ -41,7 +41,6 @@ pub type SyntectStyleStrSpan<'a> = (SyntectStyle, &'a str);
 /// A line of text is made up of multiple [SyntectStyleStrSpan]s.
 pub type SyntectStyleStrSpanLine<'a> = Vec<SyntectStyleStrSpan<'a>>;
 
-
 pub fn from_syntect_to_tui(syntect_highlighted_line: SyntectStyleStrSpanLine) -> StyleUSSpanLine {
     let mut it = StyleUSSpanLine::from(syntect_highlighted_line);
 
@@ -60,10 +59,10 @@ mod syntect_support {
     }
 
     impl From<&SyntectStyleStrSpanLine<'_>> for StyledTexts {
-        fn from(styles: &SyntectStyleStrSpanLine) -> Self {
+        fn from(syntect_styles: &SyntectStyleStrSpanLine) -> Self {
             let mut styled_texts = StyledTexts::default();
-            for (style, text) in styles {
-                let my_style = Style::from(*style);
+            for (syntect_style, text) in syntect_styles {
+                let my_style = Style::from(*syntect_style);
                 styled_texts.push(StyledText::new(text.to_string(), my_style));
             }
             styled_texts
@@ -90,4 +89,3 @@ mod syntect_support {
         }
     }
 }
-

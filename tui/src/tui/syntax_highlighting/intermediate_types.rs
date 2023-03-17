@@ -135,8 +135,7 @@ impl From<StyleUSSpanLine> for StyledTexts {
     fn from(styles: StyleUSSpanLine) -> Self {
         let mut styled_texts = StyledTexts::default();
         for StyleUSSpan(style, text) in styles.iter() {
-            let my_style: Style = *style;
-            styled_texts.push(StyledText::new(text.string.clone(), my_style));
+            styled_texts.push(StyledText::new(text.string.clone(), *style));
         }
         styled_texts
     }

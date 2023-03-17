@@ -616,7 +616,7 @@ impl ColorWheel {
                     // Loop: Colorize each (next) character w/ (next) color.
                     acc += styled_text!(
                         next_character,
-                        inner::gen_style_fg_color_for(maybe_style, self.next_color())
+                        inner::gen_style_fg_color_for(maybe_style, self.next_color()),
                     );
                 }
             }
@@ -874,7 +874,7 @@ mod tests_color_wheel_rgb {
         assert_eq2!(styled_texts.len(), 3);
 
         // [0]: "HELLO", color_fg: Rgb(0, 0, 0)
-        assert_eq2!(styled_texts[0].get_plain_text().string, "HELLO");
+        assert_eq2!(styled_texts[0].get_text().string, "HELLO");
         assert_eq2!(
             styled_texts[0].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
@@ -883,11 +883,11 @@ mod tests_color_wheel_rgb {
         assert_eq2!(styled_texts[0].get_style().bold, false);
 
         // [1]: " ", color_fg: None
-        assert_eq2!(styled_texts[1].get_plain_text().string, " ");
+        assert_eq2!(styled_texts[1].get_text().string, " ");
         assert_eq2!(styled_texts[1].get_style().color_fg, None);
 
         // [2]: "WORLD", color_fg: Rgb(0, 0, 0)
-        assert_eq2!(styled_texts[2].get_plain_text().string, "WORLD");
+        assert_eq2!(styled_texts[2].get_text().string, "WORLD");
         assert_eq2!(
             styled_texts[2].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
@@ -914,7 +914,7 @@ mod tests_color_wheel_rgb {
         assert_eq2!(styled_texts.len(), 5);
 
         // [0]: "H", color_fg: Rgb(0, 0, 0)
-        assert_eq2!(styled_texts[0].get_plain_text().string, "H");
+        assert_eq2!(styled_texts[0].get_text().string, "H");
         assert_eq2!(
             styled_texts[0].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
@@ -923,28 +923,28 @@ mod tests_color_wheel_rgb {
         assert_eq2!(styled_texts[0].get_style().bold, true);
 
         // [1]: "E", color_fg: Rgb(0, 0, 0)
-        assert_eq2!(styled_texts[1].get_plain_text().string, "E");
+        assert_eq2!(styled_texts[1].get_text().string, "E");
         assert_eq2!(
             styled_texts[1].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
         );
 
         // [2]: "L", color_fg: Rgb(63,63,63)
-        assert_eq2!(styled_texts[2].get_plain_text().string, "L");
+        assert_eq2!(styled_texts[2].get_text().string, "L");
         assert_eq2!(
             styled_texts[2].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(63, 63, 63)))
         );
 
         // [3]: "L", color_fg: Rgb(63,63,63)
-        assert_eq2!(styled_texts[3].get_plain_text().string, "L");
+        assert_eq2!(styled_texts[3].get_text().string, "L");
         assert_eq2!(
             styled_texts[3].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(63, 63, 63)))
         );
 
         // [4]: "O", color_fg: Rgb(127,127,127)
-        assert_eq2!(styled_texts[4].get_plain_text().string, "O");
+        assert_eq2!(styled_texts[4].get_text().string, "O");
         assert_eq2!(
             styled_texts[4].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(127, 127, 127)))

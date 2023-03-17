@@ -182,9 +182,9 @@ impl From<StyledTexts> for StyleUSSpanLine {
         let mut it = StyleUSSpanLine::default();
         // More info on `into_iter`: <https://users.rust-lang.org/t/move-value-from-an-iterator/46172>
         for styled_text in styled_texts.items.into_iter() {
-            let style = styled_text.style;
-            let us = styled_text.plain_text;
-            it.items.push(StyleUSSpan(style, us));
+            let style = styled_text.get_style();
+            let us = styled_text.get_text();
+            it.items.push(StyleUSSpan(*style, us.clone()));
         }
         it
     }

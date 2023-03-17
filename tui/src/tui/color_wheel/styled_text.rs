@@ -23,25 +23,19 @@ use crate::*;
 
 /// Use [styled_text!] macro for easier construction.
 #[derive(Debug, Clone, Default)]
-pub struct StyledText {
-    pub style: Style,
-    pub plain_text: UnicodeString,
-}
+pub struct StyledText(pub Style, pub UnicodeString);
 
 mod styled_text_impl {
     use super::*;
 
     impl StyledText {
         pub fn new(text: String, style: Style) -> Self {
-            StyledText {
-                plain_text: UnicodeString::from(text),
-                style,
-            }
+            StyledText(style, UnicodeString::from(text))
         }
 
-        pub fn get_plain_text(&self) -> &UnicodeString { &self.plain_text }
+        pub fn get_text(&self) -> &UnicodeString { &self.1 }
 
-        pub fn get_style(&self) -> &Style { &self.style }
+        pub fn get_style(&self) -> &Style { &self.0 }
     }
 }
 
@@ -57,15 +51,25 @@ mod styled_text_impl {
 /// ```
 #[macro_export]
 macro_rules! styled_text {
+    // No arguments.
     () => {
-        StyledText::new(String::new(), Style::default())
+        StyledText::new(Style::default(), String::new())
     };
 
-    ($text_arg: expr) => {
-        StyledText::new($text_arg.to_string(), Style::default())
+    // Text only.
+    (
+        $text_arg: expr
+        $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+    ) => {
+        StyledText::new(Style::default(), $text_arg.to_string())
     };
 
-    ($text_arg: expr, $style_arg: expr) => {
+    // Text first, then style.
+    (
+        $text_arg: expr,
+        $style_arg: expr
+        $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
+    ) => {
         StyledText::new($text_arg.to_string(), $style_arg)
     };
 }
@@ -95,7 +99,7 @@ mod impl_styled_texts {
                 let string = format!(
                     "{index}: [{}, {}]",
                     item.get_style(),
-                    item.get_plain_text().string
+                    item.get_text().string
                 );
                 it.push(string);
             }
@@ -105,7 +109,7 @@ mod impl_styled_texts {
         pub fn get_plain_text(&self) -> UnicodeString {
             let mut it = UnicodeString::default();
             for styled_text in self.iter() {
-                it = it + &styled_text.plain_text;
+                it = it + styled_text.get_text();
             }
             it
         }
@@ -115,10 +119,13 @@ mod impl_styled_texts {
         // BM: ▌4. END▐ StyledTexts generates RenderOps
         pub fn render_into(&self, render_ops: &mut RenderOps) {
             for styled_text in self.iter() {
-                let style = styled_text.style;
-                let text = styled_text.plain_text.clone();
-                render_ops.push(RenderOp::ApplyColors(style.into()));
-                render_ops.push(RenderOp::PaintTextWithAttributes(text.string, style.into()));
+                let style = styled_text.get_style();
+                let text = styled_text.get_text();
+                render_ops.push(RenderOp::ApplyColors(Some(*style)));
+                render_ops.push(RenderOp::PaintTextWithAttributes(
+                    text.string.clone(),
+                    Some(*style),
+                ));
                 render_ops.push(RenderOp::ResetColor);
             }
         }
@@ -581,7 +588,7 @@ mod tests {
         // item 1.
         {
             assert_eq2!(
-                styled_texts[0].get_plain_text(),
+                styled_texts[0].get_text(),
                 &UnicodeString::from("st_color_1")
             );
             assert_eq2!(
@@ -605,7 +612,7 @@ mod tests {
         // item 2.
         {
             assert_eq2!(
-                styled_texts[1].get_plain_text(),
+                styled_texts[1].get_text(),
                 &UnicodeString::from("st_color_2")
             );
             assert_eq2!(
@@ -630,7 +637,7 @@ mod tests {
         // item 3.
         {
             assert_eq2!(
-                styled_texts[2].get_plain_text(),
+                styled_texts[2].get_text(),
                 &UnicodeString::from("st_color_1 and 2")
             );
             assert_eq2!(
@@ -699,14 +706,14 @@ mod tests {
                 let maybe_style2 = stylesheet.find_style_by_id(2);
 
                 styled_texts! {
-                  styled_text! {
-                    "Hello".to_string(),
-                    maybe_style1.unwrap()
-                  },
-                  styled_text! {
-                    "World".to_string(),
-                    maybe_style2.unwrap()
-                  }
+                    styled_text! {
+                        "Hello",
+                        maybe_style1.unwrap()
+                    },
+                    styled_text! {
+                        "World",
+                        maybe_style2.unwrap()
+                    }
                 }
             })
         }
