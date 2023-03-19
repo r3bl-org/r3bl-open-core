@@ -159,10 +159,10 @@ impl StyleUSSpanLine {
 
 impl From<StyleUSSpanLine> for StyledTexts {
     fn from(styles: StyleUSSpanLine) -> Self {
-        let mut styled_texts = StyledTexts::default();
+        let mut acc = StyledTexts::default();
         for StyleUSSpan { style, text } in styles.iter() {
-            styled_texts.push(StyledText::new(text.string.clone(), *style));
+            acc += styled_text!(@style: *style, @text: text.string.clone());
         }
-        styled_texts
+        acc
     }
 }

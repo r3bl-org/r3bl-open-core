@@ -411,12 +411,12 @@ mod status_bar {
     /// Shows helpful messages at the bottom row of the screen.
     pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {
         let styled_texts = styled_texts! {
-          styled_text! { "Hints:",        style!(attrib: [dim])       },
-          styled_text! { " x : Exit ⛔ ",  style!(attrib: [bold])      },
-          styled_text! { " … ",           style!(attrib: [dim])       },
-          styled_text! { " ↑ / + : inc ", style!(attrib: [underline]) },
-          styled_text! { " … ",           style!(attrib: [dim])       },
-          styled_text! { " ↓ / - : dec ", style!(attrib: [underline]) }
+            styled_text!{ @style: style!(attrib: [dim])       , @text: "Hints:"},
+            styled_text!{ @style: style!(attrib: [bold])      , @text: " x : Exit ⛔ "},
+            styled_text!{ @style: style!(attrib: [dim])       , @text: " … "},
+            styled_text!{ @style: style!(attrib: [underline]) , @text: " ↑ / + : inc "},
+            styled_text!{ @style: style!(attrib: [dim])       , @text: " … "},
+            styled_text!{ @style: style!(attrib: [underline]) , @text: " ↓ / - : dec "},
         };
 
         let display_width = styled_texts.display_width();

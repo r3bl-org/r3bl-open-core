@@ -57,7 +57,8 @@ impl Lolcat {
     /// This function does not respect [ColorSupport] (it will always colorize to truecolor
     /// regardless of terminal limitations). Use [ColorWheel] if you want to respect [ColorSupport].
     pub fn colorize_to_styled_texts(&mut self, input: &UnicodeString) -> StyledTexts {
-        let mut styled_texts = StyledTexts::default();
+        let mut acc = StyledTexts::default();
+
         for segment in &input.vec_segment {
             let new_color = ColorUtils::get_color_tuple(&self.color_wheel_control);
             let derived_from_new_color = ColorUtils::calc_fg_color(new_color);
@@ -73,11 +74,15 @@ impl Lolcat {
                 )
             };
 
-            styled_texts += styled_text!(segment.string.clone(), style);
+            acc += styled_text!(
+                @style: style,
+                @text: segment.string.clone(),
+            );
 
             self.color_wheel_control.seed += f64::from(self.color_wheel_control.color_change_speed);
         }
-        styled_texts
+
+        acc
     }
 
     pub fn next_color(&mut self) { self.color_wheel_control.seed += self.seed_delta; }

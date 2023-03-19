@@ -708,17 +708,17 @@ mod status_bar {
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: &Size) {
         let styled_texts = styled_texts! {
-            styled_text! { "Hints: ",             style!(attrib: [bold, dim]) },
-            styled_text! { "Ctrl + x",            style!(attrib: [dim, underline]) },
-            styled_text! { " : Exit 🖖",          style!(attrib: [bold]) },
-            styled_text! { " … ",                 style!(attrib: [dim]) },
-            styled_text! { "Ctrl + l",            style!(attrib: [dim, underline]) },
-            styled_text! { " : Simple 📣",        style!(attrib: [bold]) },
-            styled_text! { " … ",                 style!(attrib: [dim]) },
-            styled_text! { "Ctrl + k",            style!(attrib: [dim, underline]) },
-            styled_text! { " : Autocomplete 🤖",  style!(attrib: [bold]) },
-            styled_text! { " … ",                 style!(attrib: [dim]) },
-            styled_text! { "Type content 🌊",     style!(attrib: [underline]) },
+            styled_text! { @style: style!(attrib: [bold, dim]) ,      @text: "Hints: "},
+            styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + x"},
+            styled_text! { @style: style!(attrib: [bold]) ,           @text: " : Exit 🖖"},
+            styled_text! { @style: style!(attrib: [dim]) ,            @text: " … "},
+            styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + l"},
+            styled_text! { @style: style!(attrib: [bold]) ,           @text: " : Simple 📣"},
+            styled_text! { @style: style!(attrib: [dim]) ,            @text: " … "},
+            styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + k"},
+            styled_text! { @style: style!(attrib: [bold]) ,           @text: " : Autocomplete 🤖"},
+            styled_text! { @style: style!(attrib: [dim]) ,            @text: " … "},
+            styled_text! { @style: style!(attrib: [underline]) ,      @text: "Type content 🌊"},
         };
 
         let display_width = styled_texts.display_width();
