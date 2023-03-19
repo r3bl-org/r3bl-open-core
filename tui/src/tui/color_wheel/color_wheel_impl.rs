@@ -726,7 +726,7 @@ mod tests_color_wheel_rgb {
         {
             ColorSupport::set_color_support_override(ColorSupport::Ansi256);
             let config = ColorWheelConfig::narrow_config_based_on_color_support(configs);
-            assert_eq!(
+            assert_eq2!(
                 config,
                 ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::MediumGreenToMediumBlue,
@@ -740,7 +740,7 @@ mod tests_color_wheel_rgb {
         {
             ColorSupport::set_color_support_override(ColorSupport::Truecolor);
             let config = ColorWheelConfig::narrow_config_based_on_color_support(configs);
-            assert_eq!(
+            assert_eq2!(
                 config,
                 ColorWheelConfig::Rgb(
                     Vec::from(DEFAULT_GRADIENT_STOPS.map(String::from)),
@@ -755,7 +755,7 @@ mod tests_color_wheel_rgb {
         {
             ColorSupport::set_color_support_override(ColorSupport::Grayscale);
             let config = ColorWheelConfig::narrow_config_based_on_color_support(configs);
-            assert_eq!(
+            assert_eq2!(
                 config,
                 ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::GrayscaleMediumGrayToWhite,

@@ -66,10 +66,12 @@ impl ConvertToPlainText for MdLineFragment<'_> {
             MdLineFragment::Bold(text) => format!("{BOLD_1}{text}{BOLD_1}"),
             MdLineFragment::Italic(text) => format!("{ITALIC_1}{text}{ITALIC_1}"),
             MdLineFragment::BoldItalic(text) => format!("{BITALIC_1}{text}{BITALIC_1}"),
-            MdLineFragment::InlineCode(text) => format!("{BACKTICK}{text}{BACKTICK}"),
+            MdLineFragment::InlineCode(text) => format!("{BACK_TICK}{text}{BACK_TICK}"),
             MdLineFragment::Checkbox(is_checked) => {
                 (if *is_checked { CHECKED } else { UNCHECKED }).to_string()
             }
+            MdLineFragment::OrderedListItemNumber(number) => format!("{number}{PERIOD}{SPACE}"),
+            MdLineFragment::UnorderedListItem => format!("{UNORDERED_LIST}{PERIOD}{SPACE}"),
         };
         US::from(it)
     }

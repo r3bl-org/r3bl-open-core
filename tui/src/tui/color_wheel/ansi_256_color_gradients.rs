@@ -81,6 +81,8 @@ pub fn get_gradient_array_for(ansi_256_gradient_index: Ansi256GradientIndex) -> 
 
 #[cfg(test)]
 mod ansi_256_gradients_test {
+    use r3bl_rs_utils_core::assert_eq2;
+
     use super::*;
 
     #[test]
@@ -96,7 +98,7 @@ mod ansi_256_gradients_test {
             println!("ansi_256_gradient: {:?}", ansi_256_gradient.0);
         });
 
-        assert_eq!(
+        assert_eq2!(
             ANSI_256_GRADIENTS[0].0,
             get_gradient_array_for(Ansi256GradientIndex::GrayscaleMediumGrayToWhite)
         );

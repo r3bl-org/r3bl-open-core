@@ -15,13 +15,16 @@
  *   limitations under the License.
  */
 
+//! These are the colors use to highlight the MD document. These are all sensitive to [ColorSupport]
+//! constraints. You can find ANSI colors [here](https://www.ditig.com/256-colors-cheat-sheet).
+
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
 
 use crate::*;
 
-/// These are the colors use to highlight the MD document. These are all sensitive to [ColorSupport]
-/// constraints. You can find ANSI colors [here](https://www.ditig.com/256-colors-cheat-sheet).
+/// This style is for the foreground text of the entire document. This is the default style. It is
+/// overridden by other styles like bold, italic, etc. below.
 pub fn get_foreground_style() -> Style {
     style! {
         color_fg: match ColorSupport::detect() {
@@ -32,6 +35,16 @@ pub fn get_foreground_style() -> Style {
     }
 }
 
+/// This style is for things like `[`, `]`, `*`, "`", etc. They are dimmed so that they don't
+/// distract from the main content they are wrapping like a link or inline code block, etc.
+pub fn get_foreground_dim_style() -> Style {
+    get_foreground_style()
+        + style! {
+            attrib: [dim]
+        }
+}
+
+/// This is just for the bold content, not the enclosing `**`.
 pub fn get_bold_style() -> Style {
     style! {
         attrib: [bold]
@@ -43,6 +56,7 @@ pub fn get_bold_style() -> Style {
     }
 }
 
+/// This is just for the bold content, not the enclosing `*`.
 pub fn get_italic_style() -> Style {
     style! {
         attrib: [italic]
@@ -54,6 +68,7 @@ pub fn get_italic_style() -> Style {
     }
 }
 
+/// This is just for the bold content, not the enclosing `***`.
 pub fn get_bold_italic_style() -> Style {
     style! {
         attrib: [bold, italic]
@@ -65,9 +80,9 @@ pub fn get_bold_italic_style() -> Style {
     }
 }
 
+/// This is just for the bold content, not the enclosing "`".
 pub fn get_inline_code_style() -> Style {
     style! {
-        attrib: [bold]
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Magenta),
             ColorSupport::Ansi256 => TuiColor::Ansi(165), // Magenta2.
@@ -76,13 +91,7 @@ pub fn get_inline_code_style() -> Style {
     }
 }
 
-pub fn get_link_base_style() -> Style {
-    get_foreground_style()
-        + style! {
-            attrib: [dim]
-        }
-}
-
+/// This is just for the link text not the enclosing `[` and `]`.
 pub fn get_link_text_style() -> Style {
     style! {
         color_fg: match ColorSupport::detect() {
@@ -93,6 +102,7 @@ pub fn get_link_text_style() -> Style {
     }
 }
 
+/// This is just for the link url not the enclosing `(` and `)`.
 pub fn get_link_url_style() -> Style {
     style! {
         attrib: [underline]
@@ -104,6 +114,7 @@ pub fn get_link_url_style() -> Style {
     }
 }
 
+/// This is for the entire checkbox span (checked).
 pub fn get_checkbox_checked_style() -> Style {
     style! {
         attrib: [bold, dim]
@@ -115,6 +126,7 @@ pub fn get_checkbox_checked_style() -> Style {
     }
 }
 
+/// This is for the entire checkbox span (unchecked).
 pub fn get_checkbox_unchecked_style() -> Style {
     style! {
         attrib: [bold]
@@ -126,17 +138,18 @@ pub fn get_checkbox_unchecked_style() -> Style {
     }
 }
 
-pub fn get_list_content_style() -> Style {
-    style! {
-        color_fg: match ColorSupport::detect() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
-            ColorSupport::Ansi256 => TuiColor::Ansi(87), // DarkSlateGray2. There is no equivalent.
-            ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ad83da")), // Very soft violet.
+/// This is for the bullet or numbered bullet of a list item, not the content.
+pub fn get_list_bullet_style() -> Style {
+    pub fn get_list_content_style() -> Style {
+        style! {
+            color_fg: match ColorSupport::detect() {
+                ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
+                ColorSupport::Ansi256 => TuiColor::Ansi(87), // DarkSlateGray2. There is no equivalent.
+                ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ad83da")), // Very soft violet.
+            }
         }
     }
-}
 
-pub fn get_list_bullet_style() -> Style {
     get_list_content_style()
         + style! {
             attrib: [dim]

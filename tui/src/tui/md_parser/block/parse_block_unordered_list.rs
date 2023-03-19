@@ -39,49 +39,53 @@ fn parse_unordered_list_tag(input: &str) -> IResult<&str, &str> {
 
 #[rustfmt::skip]
 fn parse_unordered_list_element(input: &str) -> IResult<&str, MdLineFragments> {
-    preceded(
+    let (input, output) = preceded(
         /* prefix (discarded) */ parse_unordered_list_tag,
         /* output */ parse_block_markdown_text_until_eol,
-    )(input)
+    )(input)?;
+    let mut it = vec![MdLineFragment::UnorderedListItem];
+    it.extend(output);
+    Ok((input, it))
 }
 
 #[cfg(test)]
 mod tests {
     use nom::{error::{Error, ErrorKind},
               Err as NomErr};
+    use r3bl_rs_utils_core::*;
 
     use super::*;
     use crate::test_data::raw_strings;
 
     #[test]
     fn test_parse_unordered_list_tag() {
-        assert_eq!(parse_unordered_list_tag("- "), Ok(("", "-")));
-        assert_eq!(
+        assert_eq2!(parse_unordered_list_tag("- "), Ok(("", "-")));
+        assert_eq2!(
             parse_unordered_list_tag("- and some more"),
             Ok(("and some more", "-"))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_unordered_list_tag("-"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_unordered_list_tag("-and some more"),
             Err(NomErr::Error(Error {
                 input: "and some more",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_unordered_list_tag("--"),
             Err(NomErr::Error(Error {
                 input: "-",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_unordered_list_tag(""),
             Err(NomErr::Error(Error {
                 input: "",
@@ -92,40 +96,52 @@ mod tests {
 
     #[test]
     fn test_parse_unordered_list_element() {
-        assert_eq!(
+        assert_eq2!(
             parse_unordered_list_element("- this is an element\n"),
-            Ok(("", vec![MdLineFragment::Plain("this is an element")]))
+            Ok((
+                "",
+                vec![
+                    MdLineFragment::UnorderedListItem,
+                    MdLineFragment::Plain("this is an element")
+                ]
+            ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_unordered_list_element(raw_strings::UNORDERED_LIST_ELEMENT),
             Ok((
                 "- this is another element\n",
-                vec![MdLineFragment::Plain("this is an element")]
+                vec![
+                    MdLineFragment::UnorderedListItem,
+                    MdLineFragment::Plain("this is an element")
+                ]
             ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_unordered_list_element(""),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(parse_unordered_list_element("- \n"), Ok(("", vec![])));
-        assert_eq!(
+        assert_eq2!(
+            parse_unordered_list_element("- \n"),
+            Ok(("", vec![MdLineFragment::UnorderedListItem,]))
+        );
+        assert_eq2!(
             parse_unordered_list_element("- "),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_unordered_list_element("- test"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_unordered_list_element("-"),
             Err(NomErr::Error(Error {
                 input: "",
@@ -136,24 +152,38 @@ mod tests {
 
     #[test]
     fn test_parse_unordered_list() {
-        assert_eq!(
+        assert_eq2!(
             parse_block_unordered_list("- this is an element"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+
+        assert_eq2!(
             parse_block_unordered_list("- this is an element\n"),
-            Ok(("", vec![vec![MdLineFragment::Plain("this is an element")]]))
+            Ok((
+                "",
+                vec![vec![
+                    MdLineFragment::UnorderedListItem,
+                    MdLineFragment::Plain("this is an element")
+                ]]
+            ))
         );
-        assert_eq!(
+
+        assert_eq2!(
             parse_block_unordered_list(raw_strings::UNORDERED_LIST_ELEMENT),
             Ok((
                 "",
                 vec![
-                    vec![MdLineFragment::Plain("this is an element")],
-                    vec![MdLineFragment::Plain("this is another element")]
+                    vec![
+                        MdLineFragment::UnorderedListItem,
+                        MdLineFragment::Plain("this is an element")
+                    ],
+                    vec![
+                        MdLineFragment::UnorderedListItem,
+                        MdLineFragment::Plain("this is another element")
+                    ]
                 ]
             ))
         );

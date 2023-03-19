@@ -187,7 +187,7 @@ mod tests {
         fn list_1_range_2_5() {
             use helpers::*;
 
-            assert_eq!(get_list().len(), 3);
+            assert_eq2!(get_list().len(), 3);
 
             let scroll_offset_col_index = ch!(2);
             let max_display_col_count = ch!(5);
@@ -237,7 +237,7 @@ mod tests {
         fn list_1_range_0_3() {
             use helpers::*;
 
-            assert_eq!(get_list().len(), 3);
+            assert_eq2!(get_list().len(), 3);
 
             let scroll_offset_col_index = ch!(0);
             let max_display_col_count = ch!(3);
@@ -291,7 +291,7 @@ mod tests {
         fn list_1_range_0_5() {
             use helpers::*;
 
-            assert_eq!(get_list().len(), 3);
+            assert_eq2!(get_list().len(), 3);
 
             let scroll_offset_col_index = ch!(0);
             let max_display_col_count = ch!(5);
@@ -345,7 +345,7 @@ mod tests {
         fn list_1_range_2_8() {
             use helpers::*;
 
-            assert_eq!(get_list().len(), 3);
+            assert_eq2!(get_list().len(), 3);
 
             let scroll_offset_col_index = ch!(2);
             let max_display_col_count = ch!(8);

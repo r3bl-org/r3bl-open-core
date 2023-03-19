@@ -27,10 +27,10 @@ use crate::*;
 /// No language:             "```\npip install foobar\n```\n"
 /// No language, no line:    "```\n```\n"
 /// No language, multi line: "```\npip install foobar\npip install foobar\n```\n"
-pub fn parse_block_code(input: &str) -> IResult<&str, Vec<CodeBlockLine>> { parse(input) }
+pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine>> { parse(input) }
 
 #[rustfmt::skip]
-fn parse(input: &str) -> IResult<&str, Vec<CodeBlockLine>> {
+fn parse(input: &str) -> IResult<&str, List<CodeBlockLine>> {
     let (input, (lang, code)) = tuple(
         (parse_code_block_lang_to_eol, parse_code_block_body_to_code_block_end_to_eol)
     )(input)?;
@@ -98,23 +98,25 @@ pub fn split_by_newline(input: &str) -> Vec<&str> {
 pub fn convert_into_code_block_lines<'input>(
     lang: Option<&'input str>,
     lines: Vec<&'input str>,
-) -> Vec<CodeBlockLine<'input>> {
-    let mut acc = Vec::with_capacity(lines.len() + 2);
+) -> List<CodeBlockLine<'input>> {
+    let mut acc = List::with_capacity(lines.len() + 2);
 
-    acc.push(CodeBlockLine {
+    acc += CodeBlockLine {
         language: lang,
         content: CodeBlockLineContent::StartTag,
-    });
+    };
+
     for line in lines {
-        acc.push(CodeBlockLine {
+        acc += CodeBlockLine {
             language: lang,
             content: CodeBlockLineContent::Text(line),
-        });
+        };
     }
-    acc.push(CodeBlockLine {
+
+    acc += CodeBlockLine {
         language: lang,
         content: CodeBlockLineContent::EndTag,
-    });
+    };
 
     acc
 }
@@ -132,7 +134,7 @@ mod tests {
         {
             let language = Some("rust");
             let lines = vec![];
-            let expected = vec![
+            let expected = list![
                 CodeBlockLine {
                     language: Some("rust"),
                     content: CodeBlockLineContent::StartTag,
@@ -150,7 +152,7 @@ mod tests {
         {
             let language = Some("rust");
             let lines = vec![""];
-            let expected = vec![
+            let expected = list![
                 CodeBlockLine {
                     language: Some("rust"),
                     content: CodeBlockLineContent::StartTag,
@@ -172,7 +174,7 @@ mod tests {
         {
             let language = Some("rust");
             let lines = vec!["let x = 1;"];
-            let expected = vec![
+            let expected = list![
                 CodeBlockLine {
                     language: Some("rust"),
                     content: CodeBlockLineContent::StartTag,
@@ -194,7 +196,7 @@ mod tests {
         {
             let language = Some("rust");
             let lines = vec!["let x = 1;", "let y = 2;"];
-            let expected = vec![
+            let expected = list![
                 CodeBlockLine {
                     language: Some("rust"),
                     content: CodeBlockLineContent::StartTag,
