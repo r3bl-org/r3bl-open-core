@@ -42,12 +42,10 @@ pub mod block;
 pub mod parser;
 pub mod parser_element;
 pub mod parser_metadata;
-pub mod translate_to_html;
 pub mod types;
 
 pub use block::*;
 pub use parser::*;
 pub use parser_element::*;
 pub use parser_metadata::*;
-pub use translate_to_html::*;
 pub use types::*;

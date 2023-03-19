@@ -36,7 +36,7 @@ use crate::*;
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple spans in a
 /// line of text.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Default, Clone, PartialEq, Eq, Debug)]
 pub struct StyleUSSpan {
     pub style: Style,
     pub text: US,
@@ -61,6 +61,14 @@ pub type StyleUSSpanLine = List<StyleUSSpan>;
 pub type StyleUSSpanLines = List<StyleUSSpanLine>;
 
 impl StyleUSSpanLine {
+    /// This applies the given style to every single item in the list. It has the highest
+    /// specificity.
+    pub fn add_style(&mut self, style: Style) {
+        for StyleUSSpan { style: s, text: _ } in self.iter_mut() {
+            *s += style;
+        }
+    }
+
     // BM: ▌3. START▐ clip() is the entry point
     /// Clip the text (in one line) in this range: [ `start_col` .. `end_col` ]. Each line is
     /// represented as a [List] of ([Style], [US])`s.

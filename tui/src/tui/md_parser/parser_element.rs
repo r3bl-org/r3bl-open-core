@@ -52,7 +52,7 @@ pub fn parse_element_italic(input: &str) -> IResult<&str, &str> {
 
 #[rustfmt::skip]
 pub fn parse_element_code(input: &str) -> IResult<&str, &str> {
-    delimited(/* start */ tag(BACKTICK), /* output */ is_not(BACKTICK), /* end */ tag(BACKTICK))(input)
+    delimited(/* start */ tag(BACK_TICK), /* output */ is_not(BACK_TICK), /* end */ tag(BACK_TICK))(input)
 }
 
 #[rustfmt::skip]
@@ -100,7 +100,7 @@ pub fn parse_element_plaintext(input: &str) -> IResult<&str, &str> {
                         tag(BOLD_2),
                         tag(ITALIC_1),
                         tag(ITALIC_2),
-                        tag(BACKTICK),
+                        tag(BACK_TICK),
                         tag(LEFT_BRACKET),
                         tag(LEFT_IMAGE),
                         tag(NEW_LINE),
@@ -132,22 +132,23 @@ pub fn parse_element_markdown_inline(input: &str) -> IResult<&str, MdLineFragmen
 mod tests {
     use nom::{error::{Error, ErrorKind},
               Err as NomErr};
+    use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
 
     #[test]
     fn test_parse_element_italic() {
-        assert_eq!(
+        assert_eq2!(
             parse_element_italic("*here is italic*"),
             Ok(("", "here is italic"))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_italic("_here is italic_"),
             Ok(("", "here is italic"))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_italic("*here is italic"),
             Err(NomErr::Error(Error {
                 input: "*here is italic",
@@ -155,7 +156,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_italic("here is italic*"),
             Err(NomErr::Error(Error {
                 input: "here is italic*",
@@ -163,7 +164,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_italic("here is italic"),
             Err(NomErr::Error(Error {
                 input: "here is italic",
@@ -171,7 +172,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_italic("*"),
             Err(NomErr::Error(Error {
                 input: "*",
@@ -179,7 +180,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_italic("**"),
             Err(NomErr::Error(Error {
                 input: "**",
@@ -187,7 +188,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_italic(""),
             Err(NomErr::Error(Error {
                 input: "",
@@ -195,7 +196,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_italic("**we are doing bold**"),
             Err(NomErr::Error(Error {
                 input: "**we are doing bold**",
@@ -206,12 +207,12 @@ mod tests {
 
     #[test]
     fn test_parse_element_bold_italic() {
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold_italic("***here is bitalic***"),
             Ok(("", "here is bitalic"))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold("***here is bitalic"),
             Err(NomErr::Error(Error {
                 input: "***here is bitalic",
@@ -219,7 +220,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold("here is bitalic***"),
             Err(NomErr::Error(Error {
                 input: "here is bitalic***",
@@ -227,12 +228,12 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold_italic("___here is bitalic___"),
             Ok(("", "here is bitalic"))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold_italic("___here is bitalic"),
             Err(NomErr::Error(Error {
                 input: "",
@@ -240,7 +241,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold_italic("here is bitalic___"),
             Err(NomErr::Error(Error {
                 input: "here is bitalic___",
@@ -251,17 +252,17 @@ mod tests {
 
     #[test]
     fn test_parse_element_bold() {
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold("**here is bold**"),
             Ok(("", "here is bold"))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold("__here is bold__"),
             Ok(("", "here is bold"))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold("**here is bold"),
             Err(NomErr::Error(Error {
                 input: "**here is bold",
@@ -269,7 +270,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold("here is bold**"),
             Err(NomErr::Error(Error {
                 input: "here is bold**",
@@ -277,7 +278,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold("here is bold"),
             Err(NomErr::Error(Error {
                 input: "here is bold",
@@ -285,7 +286,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold("****"),
             Err(NomErr::Error(Error {
                 input: "****",
@@ -293,7 +294,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold("**"),
             Err(NomErr::Error(Error {
                 input: "**",
@@ -301,7 +302,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold("*"),
             Err(NomErr::Error(Error {
                 input: "*",
@@ -309,7 +310,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold(""),
             Err(NomErr::Error(Error {
                 input: "",
@@ -317,7 +318,7 @@ mod tests {
             }))
         );
 
-        assert_eq!(
+        assert_eq2!(
             parse_element_bold("*this is italic*"),
             Err(NomErr::Error(Error {
                 input: "*this is italic*",
@@ -328,35 +329,35 @@ mod tests {
 
     #[test]
     fn test_parse_element_code() {
-        assert_eq!(
+        assert_eq2!(
             parse_element_code("`here is code"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_code("here is code`"),
             Err(NomErr::Error(Error {
                 input: "here is code`",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_code("``"),
             Err(NomErr::Error(Error {
                 input: "`",
                 code: ErrorKind::IsNot
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_code("`"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::IsNot
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_code(""),
             Err(NomErr::Error(Error {
                 input: "",
@@ -367,11 +368,11 @@ mod tests {
 
     #[test]
     fn test_parse_element_link() {
-        assert_eq!(
+        assert_eq2!(
             parse_element_link("[title](https://www.example.com)"),
             Ok(("", HyperlinkData::new("title", "https://www.example.com")))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_code(""),
             Err(NomErr::Error(Error {
                 input: "",
@@ -382,11 +383,11 @@ mod tests {
 
     #[test]
     fn test_parse_element_image() {
-        assert_eq!(
+        assert_eq2!(
             parse_element_image("![alt text](image.jpg)"),
             Ok(("", HyperlinkData::new("alt text", "image.jpg")))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_code(""),
             Err(NomErr::Error(Error {
                 input: "",
@@ -397,102 +398,102 @@ mod tests {
 
     #[test]
     fn test_parse_element_plaintext() {
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("1234567890"),
             Ok(("", "1234567890"))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("oh my gosh!"),
             Ok(("", "oh my gosh!"))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("oh my gosh!["),
             Ok(("![", "oh my gosh"))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("oh my gosh!*"),
             Ok(("*", "oh my gosh!"))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("*bold baby bold*"),
             Err(NomErr::Error(Error {
                 input: "*bold baby bold*",
                 code: ErrorKind::Not
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("[link baby](and then somewhat)"),
             Err(NomErr::Error(Error {
                 input: "[link baby](and then somewhat)",
                 code: ErrorKind::Not
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("`codeblock for bums`"),
             Err(NomErr::Error(Error {
                 input: "`codeblock for bums`",
                 code: ErrorKind::Not
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("![ but wait theres more](jk)"),
             Err(NomErr::Error(Error {
                 input: "![ but wait theres more](jk)",
                 code: ErrorKind::Not
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("here is plaintext"),
             Ok(("", "here is plaintext"))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("here is plaintext!"),
             Ok(("", "here is plaintext!"))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("here is plaintext![image starting"),
             Ok(("![image starting", "here is plaintext"))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("here is plaintext\n"),
             Ok(("\n", "here is plaintext"))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("*here is italic*"),
             Err(NomErr::Error(Error {
                 input: "*here is italic*",
                 code: ErrorKind::Not
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("**here is bold**"),
             Err(NomErr::Error(Error {
                 input: "**here is bold**",
                 code: ErrorKind::Not
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("`here is code`"),
             Err(NomErr::Error(Error {
                 input: "`here is code`",
                 code: ErrorKind::Not
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("[title](https://www.example.com)"),
             Err(NomErr::Error(Error {
                 input: "[title](https://www.example.com)",
                 code: ErrorKind::Not
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext("![alt text](image.jpg)"),
             Err(NomErr::Error(Error {
                 input: "![alt text](image.jpg)",
                 code: ErrorKind::Not
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_plaintext(""),
             Err(NomErr::Error(Error {
                 input: "",
@@ -503,58 +504,58 @@ mod tests {
 
     #[test]
     fn test_parse_element_markdown_inline() {
-        assert_eq!(
+        assert_eq2!(
             parse_element_markdown_inline("*here is italic*"),
             Ok(("", MdLineFragment::Italic("here is italic")))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_markdown_inline("**here is bold**"),
             Ok(("", MdLineFragment::Bold("here is bold")))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_markdown_inline("`here is code`"),
             Ok(("", MdLineFragment::InlineCode("here is code")))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_markdown_inline("[title](https://www.example.com)"),
             Ok((
                 "",
                 (MdLineFragment::Link(HyperlinkData::new("title", "https://www.example.com")))
             ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_markdown_inline("![alt text](image.jpg)"),
             Ok((
                 "",
                 (MdLineFragment::Image(HyperlinkData::new("alt text", "image.jpg")))
             ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_markdown_inline("here is plaintext!"),
             Ok(("", MdLineFragment::Plain("here is plaintext!")))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_markdown_inline("here is some plaintext *but what if we italicize?"),
             Ok((
                 "*but what if we italicize?",
                 MdLineFragment::Plain("here is some plaintext ")
             ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_markdown_inline("here is some plaintext \n*but what if we italicize?"),
             Ok((
                 "\n*but what if we italicize?",
                 MdLineFragment::Plain("here is some plaintext ")
             ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_markdown_inline("\n"),
             Err(NomErr::Error(Error {
                 input: "\n",
                 code: ErrorKind::Not
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_element_markdown_inline(""),
             Err(NomErr::Error(Error {
                 input: "",

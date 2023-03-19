@@ -23,7 +23,7 @@ use std::{collections::VecDeque,
 
 /// Rust book: https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory
 use r3bl_rs_utils::{tree_memory_arena::{Arena, MTArena, ResultUidList},
-                    TraversalKind};
+                    TraversalKind, assert_eq2};
 use r3bl_rs_utils_core::{style_primary, style_prompt};
 
 #[test]
@@ -36,7 +36,7 @@ fn test_can_add_nodes_to_tree() {
     // Can insert a node - node_1.
     {
         let node_1_id = arena.add_new_node(node_1_value, None);
-        assert_eq!(node_1_id, 0);
+        assert_eq2!(node_1_id, 0);
     }
 
     // Can find node_1 by id.
@@ -46,8 +46,8 @@ fn test_can_add_nodes_to_tree() {
 
         let node_1_ref = dbg!(arena.get_node_arc(node_1_id).unwrap());
         let node_1_ref_weak = arena.get_node_arc_weak(node_1_id).unwrap();
-        assert_eq!(node_1_ref.read().unwrap().payload, node_1_value);
-        assert_eq!(
+        assert_eq2!(node_1_ref.read().unwrap().payload, node_1_value);
+        assert_eq2!(
             node_1_ref_weak.upgrade().unwrap().read().unwrap().payload,
             42
         );
@@ -65,8 +65,8 @@ fn test_can_add_nodes_to_tree() {
         let node_2_id = arena.add_new_node(node_2_value, node_1_id.into());
         let node_2_ref = dbg!(arena.get_node_arc(node_2_id).unwrap());
         let node_2_ref_weak = arena.get_node_arc_weak(node_2_id).unwrap();
-        assert_eq!(node_2_ref.read().unwrap().payload, node_2_value);
-        assert_eq!(
+        assert_eq2!(node_2_ref.read().unwrap().payload, node_2_value);
+        assert_eq2!(
             node_2_ref_weak.upgrade().unwrap().read().unwrap().payload,
             node_2_value
         );
@@ -79,8 +79,8 @@ fn test_can_add_nodes_to_tree() {
 
         let node_list = dbg!(arena.tree_walk_dfs(node_1_id).unwrap());
 
-        assert_eq!(node_list.len(), 2);
-        assert_eq!(node_list, vec![node_1_id, node_2_id]);
+        assert_eq2!(node_list.len(), 2);
+        assert_eq2!(node_list, vec![node_1_id, node_2_id]);
     }
 }
 
@@ -108,32 +108,32 @@ fn test_can_walk_tree_and_delete_nodes_from_tree() {
     assert_node_data_is_eq(&arena, gc2_id, "gc2");
     assert_node_data_is_eq(&arena, child2_id, "child2");
 
-    assert_eq!(arena.get_children_of(root_id).unwrap().len(), 2);
+    assert_eq2!(arena.get_children_of(root_id).unwrap().len(), 2);
     assert!(arena.get_parent_of(root_id).is_none());
 
-    assert_eq!(arena.get_children_of(child1_id).unwrap().len(), 2);
-    assert_eq!(arena.get_parent_of(child1_id).unwrap(), root_id);
+    assert_eq2!(arena.get_children_of(child1_id).unwrap().len(), 2);
+    assert_eq2!(arena.get_parent_of(child1_id).unwrap(), root_id);
 
     // Test that tree walking works correctly for nodes - DFS.
     {
-        assert_eq!(
+        assert_eq2!(
             arena.tree_walk_dfs(root_id).unwrap(),
             VecDeque::from([root_id, child1_id, gc1_id, gc2_id, child2_id])
         );
 
         let child1_and_descendants = arena.tree_walk_dfs(child1_id).unwrap();
-        assert_eq!(child1_and_descendants, vec![child1_id, gc1_id, gc2_id]);
+        assert_eq2!(child1_and_descendants, vec![child1_id, gc1_id, gc2_id]);
     }
 
     // Test that tree walking works correctly for nodes - BFS.
     {
-        assert_eq!(
+        assert_eq2!(
             arena.tree_walk_bfs(root_id).unwrap(),
             VecDeque::from([root_id, child1_id, child2_id, gc1_id, gc2_id])
         );
 
         let child1_and_descendants = arena.tree_walk_bfs(child1_id).unwrap();
-        assert_eq!(child1_and_descendants, vec![child1_id, gc1_id, gc2_id]);
+        assert_eq2!(child1_and_descendants, vec![child1_id, gc1_id, gc2_id]);
     }
 
     // Test that node deletion works correctly.
@@ -144,7 +144,7 @@ fn test_can_walk_tree_and_delete_nodes_from_tree() {
             arena.tree_walk_dfs(root_id).unwrap()
         );
         let deletion_list = arena.delete_node(child1_id);
-        assert_eq!(deletion_list.as_ref().unwrap().len(), 3);
+        assert_eq2!(deletion_list.as_ref().unwrap().len(), 3);
         assert!(deletion_list.as_ref().unwrap().contains(&gc1_id));
         assert!(deletion_list.as_ref().unwrap().contains(&gc2_id));
         assert!(deletion_list.as_ref().unwrap().contains(&child1_id));
@@ -153,13 +153,13 @@ fn test_can_walk_tree_and_delete_nodes_from_tree() {
             style_prompt("root -after- <=="),
             arena.tree_walk_dfs(root_id).unwrap()
         );
-        assert_eq!(dbg!(arena.tree_walk_dfs(root_id).unwrap()).len(), 2);
+        assert_eq2!(dbg!(arena.tree_walk_dfs(root_id).unwrap()).len(), 2);
     }
 
     // Helper functions.
     fn assert_node_data_is_eq(arena: &Arena<String>, node_id: usize, expected_name: &str) {
         let child_ref = arena.get_node_arc(node_id).unwrap();
-        assert_eq!(child_ref.read().unwrap().payload, expected_name.to_string());
+        assert_eq2!(child_ref.read().unwrap().payload, expected_name.to_string());
     }
 }
 
@@ -185,13 +185,13 @@ fn test_can_search_nodes_in_tree_with_filter_lambda() {
     {
         let filter_id = root;
         let result = arena.filter_all_nodes_by(&move |id, _node_ref| id == filter_id);
-        assert_eq!(result.as_ref().unwrap().len(), 1);
+        assert_eq2!(result.as_ref().unwrap().len(), 1);
     }
 
     // Search entire arena for node that contains payload "gc1".
     {
         let result = arena.filter_all_nodes_by(&move |_id, payload| payload == "gc1");
-        assert_eq!(result.as_ref().unwrap().len(), 1);
+        assert_eq2!(result.as_ref().unwrap().len(), 1);
     }
 }
 

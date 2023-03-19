@@ -29,7 +29,8 @@ pub fn parse_block_ordered_list(input: &str) -> IResult<&str, Vec<MdLineFragment
 }
 
 #[rustfmt::skip]
-fn parse_ordered_list_tag(input: &str) -> IResult<&str, &str> {
+fn parse_ordered_list_tag(input: &str) -> IResult<&str, usize> {
+    let (input, output) =
     terminated(
         /* output */
         terminated(
@@ -37,55 +38,64 @@ fn parse_ordered_list_tag(input: &str) -> IResult<&str, &str> {
             /* ends with (discarded) */ tag(PERIOD),
         ),
         /* ends with (discarded) */ tag(SPACE),
-    )(input)
+    )(input)?;
+    let number_output = output.parse::<usize>().unwrap();
+    Ok((input, number_output))
 }
 
 #[rustfmt::skip]
 fn parse_ordered_list_element(input: &str) -> IResult<&str, MdLineFragments> {
-    preceded(
+    let (input, (number, line)) = tuple((
         /* prefix (discarded) */ parse_ordered_list_tag,
         /* output */ parse_block_markdown_text_until_eol,
-    )(input)
+    ))(input)?;
+
+    // Insert line number before the line.
+    let mut it = vec![MdLineFragment::OrderedListItemNumber(number)];
+    it.extend(line);
+
+    Ok((input, it))
 }
 
 #[cfg(test)]
 mod tests {
     use nom::{error::{Error, ErrorKind},
               Err as NomErr};
+    use r3bl_rs_utils_core::*;
 
     use super::*;
     use crate::test_data::raw_strings;
 
     #[test]
     fn test_parse_ordered_list_tag() {
-        assert_eq!(parse_ordered_list_tag("1. "), Ok(("", "1")));
-        assert_eq!(parse_ordered_list_tag("1234567. "), Ok(("", "1234567")));
-        assert_eq!(
+        assert_eq2!(parse_ordered_list_tag("1. "), Ok(("", 1)));
+        assert_eq2!(parse_ordered_list_tag("1234567. "), Ok(("", 1234567)));
+        assert_eq2!(
             parse_ordered_list_tag("3. and some more"),
-            Ok(("and some more", "3"))
+            Ok(("and some more", 3))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_ordered_list_tag("1"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_ordered_list_tag("1.and some more"),
             Err(NomErr::Error(Error {
                 input: "and some more",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_ordered_list_tag("1111."),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_ordered_list_tag(""),
             Err(NomErr::Error(Error {
                 input: "",
@@ -96,47 +106,59 @@ mod tests {
 
     #[test]
     fn test_parse_ordered_list_element() {
-        assert_eq!(
+        assert_eq2!(
             parse_ordered_list_element("1. this is an element\n"),
-            Ok(("", vec![MdLineFragment::Plain("this is an element")]))
+            Ok((
+                "",
+                vec![
+                    MdLineFragment::OrderedListItemNumber(1),
+                    MdLineFragment::Plain("this is an element")
+                ]
+            ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_ordered_list_element(raw_strings::ORDERED_LIST_ELEMENT),
             Ok((
                 "1. here is another\n",
-                vec![MdLineFragment::Plain("this is an element")]
+                vec![
+                    MdLineFragment::OrderedListItemNumber(1),
+                    MdLineFragment::Plain("this is an element")
+                ]
             ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_ordered_list_element(""),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Digit
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_ordered_list_element(""),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Digit
             }))
         );
-        assert_eq!(parse_ordered_list_element("1. \n"), Ok(("", vec![])));
-        assert_eq!(
+        assert_eq2!(
+            parse_ordered_list_element("1. \n"),
+            Ok(("", vec![MdLineFragment::OrderedListItemNumber(1),]))
+        );
+        assert_eq2!(
             parse_ordered_list_element("1. test"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_ordered_list_element("1. "),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_ordered_list_element("1."),
             Err(NomErr::Error(Error {
                 input: "",
@@ -147,24 +169,36 @@ mod tests {
 
     #[test]
     fn test_parse_ordered_list() {
-        assert_eq!(
+        assert_eq2!(
             parse_block_ordered_list("1. this is an element\n"),
-            Ok(("", vec![vec![MdLineFragment::Plain("this is an element")]]))
+            Ok((
+                "",
+                vec![vec![
+                    MdLineFragment::OrderedListItemNumber(1),
+                    MdLineFragment::Plain("this is an element")
+                ]]
+            ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_block_ordered_list("1. test"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_block_ordered_list(raw_strings::ORDERED_LIST_ELEMENT),
             Ok((
                 "",
                 vec![
-                    vec!(MdLineFragment::Plain("this is an element")),
-                    vec![MdLineFragment::Plain("here is another")]
+                    vec![
+                        MdLineFragment::OrderedListItemNumber(1),
+                        MdLineFragment::Plain("this is an element")
+                    ],
+                    vec![
+                        MdLineFragment::OrderedListItemNumber(1),
+                        MdLineFragment::Plain("here is another")
+                    ],
                 ]
             ))
         );

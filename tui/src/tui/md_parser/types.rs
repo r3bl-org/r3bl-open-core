@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use crate::List;
+
 /// This corresponds to a single Markdown document, which is produced after a successful parse
 /// operation [crate::parse_markdown].
 pub type MdDocument<'a> = Vec<MdBlockElement<'a>>;
@@ -46,7 +48,7 @@ pub enum MdBlockElement<'a> {
     OrderedList(Lines<'a>),
     UnorderedList(Lines<'a>),
     Text(MdLineFragments<'a>),
-    CodeBlock(Vec<CodeBlockLine<'a>>),
+    CodeBlock(List<CodeBlockLine<'a>>),
     Title(&'a str),
     Tags(Vec<&'a str>),
 }
@@ -55,6 +57,8 @@ pub enum MdBlockElement<'a> {
 /// not include other Markdown blocks (like code blocks, lists, headings, etc).
 #[derive(Clone, Debug, PartialEq)]
 pub enum MdLineFragment<'a> {
+    UnorderedListItem,
+    OrderedListItemNumber(usize),
     Plain(&'a str),
     Bold(&'a str),
     Italic(&'a str),
@@ -129,7 +133,7 @@ pub mod constants {
     pub const BOLD_2: &str = "__";
     pub const ITALIC_1: &str = "*";
     pub const ITALIC_2: &str = "_";
-    pub const BACKTICK: &str = "`";
+    pub const BACK_TICK: &str = "`";
     pub const LEFT_BRACKET: &str = "[";
     pub const RIGHT_BRACKET: &str = "]";
     pub const LEFT_PARENTHESIS: &str = "(";
@@ -154,7 +158,6 @@ pub struct CodeBlockLine<'a> {
 #[derive(Debug, PartialEq, Clone)]
 pub enum CodeBlockLineContent<'a> {
     Text(&'a str),
-    EmptyLine,
     StartTag,
     EndTag,
 }

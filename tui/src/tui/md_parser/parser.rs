@@ -100,19 +100,33 @@ mod tests {
                 ],
             )),
             MdBlockElement::UnorderedList(vec![
-                vec![MdLineFragment::Plain("ul1")],
-                vec![MdLineFragment::Plain("ul2")],
+                vec![
+                    MdLineFragment::UnorderedListItem,
+                    MdLineFragment::Plain("ul1"),
+                ],
+                vec![
+                    MdLineFragment::UnorderedListItem,
+                    MdLineFragment::Plain("ul2"),
+                ],
             ]),
             MdBlockElement::OrderedList(vec![
-                vec![MdLineFragment::Plain("ol1")],
-                vec![MdLineFragment::Plain("ol2")],
+                vec![
+                    MdLineFragment::OrderedListItemNumber(1),
+                    MdLineFragment::Plain("ol1"),
+                ],
+                vec![
+                    MdLineFragment::OrderedListItemNumber(2),
+                    MdLineFragment::Plain("ol2"),
+                ],
             ]),
             MdBlockElement::UnorderedList(vec![
                 vec![
+                    MdLineFragment::UnorderedListItem,
                     MdLineFragment::Checkbox(false),
                     MdLineFragment::Plain(" todo"),
                 ],
                 vec![
+                    MdLineFragment::UnorderedListItem,
                     MdLineFragment::Checkbox(true),
                     MdLineFragment::Plain(" done"),
                 ],

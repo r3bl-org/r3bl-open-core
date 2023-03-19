@@ -20,6 +20,7 @@ mod tests {
     use std::sync::Arc;
 
     use async_trait::async_trait;
+    use r3bl_rs_utils_core::*;
     use tokio::{sync::RwLock, task::JoinHandle};
 
     use crate::{redux::{AsyncMiddleware,
@@ -136,7 +137,7 @@ mod tests {
             .dispatch_action(Action::Add(1, 2))
             .await;
 
-        assert_eq!(shared_vec.write().await.pop(), Some(3));
+        assert_eq2!(shared_vec.write().await.pop(), Some(3));
 
         shared_store
             .write()
@@ -144,7 +145,7 @@ mod tests {
             .dispatch_action(Action::AddPop(1))
             .await;
 
-        assert_eq!(shared_vec.write().await.pop(), Some(4));
+        assert_eq2!(shared_vec.write().await.pop(), Some(4));
 
         // Clean up the store's state.
         shared_store
@@ -154,7 +155,7 @@ mod tests {
             .await;
 
         let state = shared_store.read().await.get_state();
-        assert_eq!(state.stack.len(), 0);
+        assert_eq2!(state.stack.len(), 0);
     }
 
     /// ```text
@@ -184,7 +185,7 @@ mod tests {
             .dispatch_action(Action::MwExampleNoSpawn_Foo(1, 2))
             .await;
 
-        assert_eq!(shared_vec.write().await.pop(), Some(-1));
+        assert_eq2!(shared_vec.write().await.pop(), Some(-1));
 
         shared_store
             .write()
@@ -192,7 +193,7 @@ mod tests {
             .dispatch_action(Action::MwExampleNoSpawn_Bar(1))
             .await;
 
-        assert_eq!(shared_vec.write().await.pop(), Some(-2));
+        assert_eq2!(shared_vec.write().await.pop(), Some(-2));
 
         shared_store
             .write()
@@ -200,7 +201,7 @@ mod tests {
             .dispatch_action(Action::MwExampleNoSpawn_Baz)
             .await;
 
-        assert_eq!(shared_vec.write().await.pop(), Some(-3));
+        assert_eq2!(shared_vec.write().await.pop(), Some(-3));
     }
 
     async fn delay_for_spawned_mw_to_execute() {
@@ -245,12 +246,12 @@ mod tests {
         // .dispatch_action(Action::MwExampleSpawns_ModifySharedObject_ResetState)
         // .await;
 
-        assert_eq!(shared_vec.read().await.len(), 1);
-        assert_eq!(shared_vec.read().await.first().unwrap(), &-4);
+        assert_eq2!(shared_vec.read().await.len(), 1);
+        assert_eq2!(shared_vec.read().await.first().unwrap(), &-4);
 
         let state = shared_store.read().await.get_state();
         let stack = state.stack.first().unwrap();
-        assert_eq!(*stack, -100);
+        assert_eq2!(*stack, -100);
     }
 
     /// ```text

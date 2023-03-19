@@ -130,6 +130,7 @@ pub fn parse_tags(input: &str) -> IResult<&str, Vec<&str>> {
 
 #[cfg(test)]
 mod tests {
+    use r3bl_rs_utils_core::assert_eq2;
     use raw_strings::*;
 
     use super::*;
@@ -137,19 +138,19 @@ mod tests {
     #[test]
     fn test_parse_metadata_tags() {
         let output = parse_tags(TAG_STRING_1);
-        assert_eq!(output, Ok(("", vec!["tag 1", "tag 2", "tag3"])));
+        assert_eq2!(output, Ok(("", vec!["tag 1", "tag 2", "tag3"])));
 
         let output = parse_tags(TAG_STRING_2);
-        assert_eq!(output, Ok(("", vec!["tag 1", "tag 2", "tag 3"])));
+        assert_eq2!(output, Ok(("", vec!["tag 1", "tag 2", "tag 3"])));
     }
 
     #[test]
     fn test_parse_metadata_title() {
         let output = parse_title(raw_strings::TITLE_STRING_1);
-        assert_eq!(output, Ok(("", "Some title")));
+        assert_eq2!(output, Ok(("", "Some title")));
 
         let output = parse_title(raw_strings::TITLE_STRING_2);
-        assert_eq!(output, Ok(("", "Some title")));
+        assert_eq2!(output, Ok(("", "Some title")));
     }
 }
 

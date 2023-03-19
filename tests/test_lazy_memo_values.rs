@@ -19,7 +19,7 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
-use r3bl_rs_utils::{debug, utils::LazyMemoValues};
+use r3bl_rs_utils::{debug, utils::LazyMemoValues, assert_eq2};
 
 #[test]
 fn test_lazy() {
@@ -38,17 +38,17 @@ fn test_lazy() {
         a_variable + it
     });
 
-    assert_eq!(arc_atomic_count.load(SeqCst), 0);
-    assert_eq!(generate_value_fn.get_ref(&1), &13);
-    assert_eq!(arc_atomic_count.load(SeqCst), 1);
-    assert_eq!(generate_value_fn.get_ref(&1), &13); // Won't regenerate the value.
-    assert_eq!(arc_atomic_count.load(SeqCst), 1); // Doesn't change.
+    assert_eq2!(arc_atomic_count.load(SeqCst), 0);
+    assert_eq2!(generate_value_fn.get_ref(&1), &13);
+    assert_eq2!(arc_atomic_count.load(SeqCst), 1);
+    assert_eq2!(generate_value_fn.get_ref(&1), &13); // Won't regenerate the value.
+    assert_eq2!(arc_atomic_count.load(SeqCst), 1); // Doesn't change.
 
-    assert_eq!(generate_value_fn.get_ref(&2), &14);
-    assert_eq!(arc_atomic_count.load(SeqCst), 2);
-    assert_eq!(generate_value_fn.get_ref(&2), &14);
-    assert_eq!(generate_value_fn.get_copy(&2), 14);
+    assert_eq2!(generate_value_fn.get_ref(&2), &14);
+    assert_eq2!(arc_atomic_count.load(SeqCst), 2);
+    assert_eq2!(generate_value_fn.get_ref(&2), &14);
+    assert_eq2!(generate_value_fn.get_copy(&2), 14);
 
-    assert_eq!(a_variable, 12);
+    assert_eq2!(a_variable, 12);
     assert!(a_flag);
 }

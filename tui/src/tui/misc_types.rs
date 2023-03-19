@@ -204,7 +204,7 @@ pub mod list_of {
             $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
         ) => {
             {
-                let mut it = List::default();
+                let mut it = List::new();
                 $(
                     it.items.push($item);
                 )*
@@ -215,9 +215,19 @@ pub mod list_of {
 
     /// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for [List] of
     /// `T`. Where `T` is any number of types in the tui crate.
-    #[derive(Debug, Clone, Default)]
+    #[derive(Debug, Clone, Default, PartialEq)]
     pub struct List<T> {
         pub items: Vec<T>,
+    }
+
+    impl<T> List<T> {
+        pub fn with_capacity(size: usize) -> Self {
+            Self {
+                items: Vec::with_capacity(size),
+            }
+        }
+
+        pub fn new() -> Self { Self { items: Vec::new() } }
     }
 
     /// Add (other) item to list (self).

@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils::{LazyExecutor, LazyField};
+use r3bl_rs_utils::{LazyExecutor, LazyField, assert_eq2};
 
 #[test]
 fn test_lazy_field() {
@@ -30,10 +30,10 @@ fn test_lazy_field() {
     // First access will trigger the computation.
     let value = lazy_field.compute();
     assert!(lazy_field.has_computed);
-    assert_eq!(value, 1);
+    assert_eq2!(value, 1);
 
     // Subsequent accesses will not trigger the computation.
     let value = lazy_field.compute();
     assert!(lazy_field.has_computed);
-    assert_eq!(value, 1);
+    assert_eq2!(value, 1);
 }
