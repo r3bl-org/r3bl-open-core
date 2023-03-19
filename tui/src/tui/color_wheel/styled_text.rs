@@ -15,8 +15,6 @@
  *   limitations under the License.
  */
 
-use std::ops::{Add, AddAssign};
-
 use r3bl_rs_utils_core::*;
 
 use crate::*;
@@ -25,11 +23,14 @@ use crate::*;
 #[derive(Debug, Clone, Default)]
 pub struct StyledText(pub Style, pub UnicodeString);
 
+/// Use [styled_texts!] macro for easier construction.
+pub type StyledTexts = List<StyledText>;
+
 mod styled_text_impl {
     use super::*;
 
     impl StyledText {
-        pub fn new(text: String, style: Style) -> Self {
+        pub fn new(style: Style, text: String) -> Self {
             StyledText(style, UnicodeString::from(text))
         }
 
@@ -47,50 +48,21 @@ mod styled_text_impl {
 /// use r3bl_tui::*;
 ///
 /// let style = Style::default();
-/// let st = styled_text!("Hello", style);
+/// let st = styled_text!(@style: style, @text: "Hello World");
 /// ```
 #[macro_export]
 macro_rules! styled_text {
-    // No arguments.
-    () => {
-        StyledText::new(Style::default(), String::new())
-    };
-
-    // Text only.
     (
-        $text_arg: expr
+        @style: $style_arg: expr,
+        @text: $text_arg: expr
         $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
     ) => {
-        StyledText::new(Style::default(), $text_arg.to_string())
-    };
-
-    // Text first, then style.
-    (
-        $text_arg: expr,
-        $style_arg: expr
-        $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
-    ) => {
-        StyledText::new($text_arg.to_string(), $style_arg)
+        StyledText::new($style_arg, $text_arg.to_string())
     };
 }
 
-/// Use [styled_texts!] macro for easier construction.
-pub type StyledTexts = List<StyledText>;
-
 mod impl_styled_texts {
     use super::*;
-
-    impl Add<StyledText> for StyledTexts {
-        type Output = StyledTexts;
-        fn add(mut self, other: StyledText) -> Self::Output {
-            self.push(other);
-            self
-        }
-    }
-
-    impl AddAssign<StyledText> for StyledTexts {
-        fn add_assign(&mut self, other: StyledText) { self.push(other); }
-    }
 
     impl StyledTexts {
         pub fn pretty_print(&self) -> String {
@@ -141,12 +113,12 @@ mod impl_styled_texts {
 ///
 /// let mut st_vec = styled_texts! {
 ///   styled_text! {
-///     "Hello",
-///     Style::default()
+///     @style: Style::default(),
+///     @text: "Hello",
 ///   },
 ///   styled_text! {
-///     "World",
-///     Style::default()
+///     @style: Style::default(),
+///     @text: "World",
 ///   }
 /// };
 /// ```
@@ -707,12 +679,12 @@ mod tests {
 
                 styled_texts! {
                     styled_text! {
-                        "Hello",
-                        maybe_style1.unwrap()
+                        @style: maybe_style1.unwrap(),
+                        @text: "Hello",
                     },
                     styled_text! {
-                        "World",
-                        maybe_style2.unwrap()
+                        @style: maybe_style2.unwrap(),
+                        @text: "World",
                     }
                 }
             })

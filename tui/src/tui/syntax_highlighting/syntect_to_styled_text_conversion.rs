@@ -60,12 +60,12 @@ mod syntect_support {
 
     impl From<&SyntectStyleStrSpanLine<'_>> for StyledTexts {
         fn from(syntect_styles: &SyntectStyleStrSpanLine) -> Self {
-            let mut styled_texts = StyledTexts::default();
+            let mut acc = StyledTexts::default();
             for (syntect_style, text) in syntect_styles {
                 let my_style = Style::from(*syntect_style);
-                styled_texts.push(StyledText::new(text.to_string(), my_style));
+                acc += styled_text!(@style: my_style, @text: text.to_string());
             }
-            styled_texts
+            acc
         }
     }
 

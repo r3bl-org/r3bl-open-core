@@ -306,31 +306,31 @@ mod status_bar {
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: &Size, state: &State) {
-        let mut styled_texts = styled_texts! {
-            styled_text! { "Exit 👋 : ", style!(attrib: [dim, bold]) },
-            styled_text! { "Ctrl + x", style!(attrib: [dim, underline]) },
+        let mut it = styled_texts! {
+            styled_text! { @style:style!(attrib: [dim, bold]) ,      @text: "Exit 👋 : "},
+            styled_text! { @style:style!(attrib: [dim, underline]) , @text: "Ctrl + x"},
         };
 
         if state.current_slide_index < LINES_ARRAY.len() - 1 {
-            styled_texts += styled_text! { " ┊ ", style!(attrib: [dim, bold]) };
-            styled_texts += styled_text! { "Next 👉 : ", style!(attrib: [dim, bold]) };
-            styled_texts += styled_text! { "Ctrl + n", style!(attrib: [dim, underline]) };
+            it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: " ┊ "};
+            it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: "Next 👉 : "};
+            it += styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + n"};
         }
 
         if state.current_slide_index > 0 {
-            styled_texts += styled_text! { " ┊ ", style!(attrib: [dim, bold]) };
-            styled_texts += styled_text! { "Prev 👈 : ", style!(attrib: [dim, bold]) };
-            styled_texts += styled_text! { "Ctrl + p", style!(attrib: [dim, underline]) };
+            it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: " ┊ "};
+            it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: "Prev 👈 : "};
+            it += styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + p"};
         }
 
-        let display_width = styled_texts.display_width();
+        let display_width = it.display_width();
         let col_center: ChUnit = (size.col_count - display_width) / 2;
         let row_bottom: ChUnit = size.row_count - 1;
         let center: Position = position!(col_index: col_center, row_index: row_bottom);
 
         let mut render_ops = render_ops!();
         render_ops.push(RenderOp::MoveCursorPositionAbs(center));
-        styled_texts.render_into(&mut render_ops);
+        it.render_into(&mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }
 }

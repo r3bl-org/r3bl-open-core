@@ -582,23 +582,23 @@ impl ColorWheel {
                         let (fg_red, fg_green, fg_blue) =
                             ColorUtils::calc_fg_color((bg_red, bg_green, bg_blue));
                         acc += styled_text!(
-                            next_character,
-                            inner::gen_style_fg_bg_color_for(
+                            @style: inner::gen_style_fg_bg_color_for(
                                 maybe_style,
                                 Some(TuiColor::Rgb(RgbValue::from_u8(fg_red, fg_green, fg_blue))),
                                 Some(TuiColor::Rgb(RgbValue::from_u8(bg_red, bg_green, bg_blue))),
-                            )
+                            ),
+                            @text: next_character,
                         );
                     } else {
                         acc += styled_text!(
-                            next_character,
-                            inner::gen_style_fg_bg_color_for(maybe_style, None, None,)
+                            @style: inner::gen_style_fg_bg_color_for(maybe_style, None, None,),
+                            @text: next_character,
                         );
                     }
                 } else {
                     acc += styled_text!(
-                        next_character,
-                        inner::gen_style_fg_bg_color_for(maybe_style, None, None,)
+                        @style: inner::gen_style_fg_bg_color_for(maybe_style, None, None,),
+                        @text: next_character,
                     );
                 }
             }
@@ -615,8 +615,8 @@ impl ColorWheel {
                 {
                     // Loop: Colorize each (next) character w/ (next) color.
                     acc += styled_text!(
-                        next_character,
-                        inner::gen_style_fg_color_for(maybe_style, self.next_color()),
+                        @style: inner::gen_style_fg_color_for(maybe_style, self.next_color()),
+                        @text: next_character,
                     );
                 }
             }
@@ -626,11 +626,14 @@ impl ColorWheel {
                 while let Some(next_word) = peekable.next() {
                     // Loop: Colorize each (next) word w/ (next) color.
                     acc += styled_text!(
-                        next_word,
-                        inner::gen_style_fg_color_for(maybe_style, self.next_color())
+                        @style: inner::gen_style_fg_color_for(maybe_style, self.next_color()),
+                        @text: next_word,
                     );
                     if peekable.peek().is_some() {
-                        acc += styled_text!(SPACER, Style::default());
+                        acc += styled_text!(
+                            @style: Style::default(),
+                            @text: SPACER,
+                        );
                     }
                 }
             }

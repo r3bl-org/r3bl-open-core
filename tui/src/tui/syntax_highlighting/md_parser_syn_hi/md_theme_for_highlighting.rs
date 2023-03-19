@@ -95,8 +95,7 @@ impl StyleUSSpanLines {
             }
             // AI: 0.2. from_block(): ul -> StyleUSSpanLines
             MdBlockElement::UnorderedList(ul_lines) => {
-                let it = StyleUSSpanLines::from_ul(ul_lines, maybe_current_box_computed_style);
-                lines.items.extend(it.items)
+                lines += StyleUSSpanLines::from_ul(ul_lines, maybe_current_box_computed_style);
             }
             // AI: 0.2. from_block(): ol -> StyleUSSpanLines
             MdBlockElement::OrderedList(_) => todo!(),

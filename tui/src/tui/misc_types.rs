@@ -16,7 +16,7 @@
  */
 
 use std::{fmt::Debug,
-          ops::{Deref, DerefMut}};
+          ops::{AddAssign, Deref, DerefMut}};
 
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
@@ -218,6 +218,16 @@ pub mod list_of {
     #[derive(Debug, Clone, Default)]
     pub struct List<T> {
         pub items: Vec<T>,
+    }
+
+    /// Add (other) item to list (self).
+    impl<T> AddAssign<T> for List<T> {
+        fn add_assign(&mut self, other_item: T) { self.push(other_item); }
+    }
+
+    /// Add (other) list to list (self).
+    impl<T> AddAssign<List<T>> for List<T> {
+        fn add_assign(&mut self, other_list: List<T>) { self.extend(other_list.items); }
     }
 
     impl<T> From<List<T>> for Vec<T> {
