@@ -93,7 +93,7 @@ impl StyleUSSpanLines {
         let mut acc_lines_output = StyleUSSpanLines::default();
 
         // Process each line in ul_lines.
-        for input_line in input_ul_lines {
+        for input_line in input_ul_lines.iter() {
             let mut acc_line_output = StyleUSSpanLine::default();
 
             // Prefix: Eg: "- ". Clobber / override `prefix_span`'s style w/
@@ -101,7 +101,7 @@ impl StyleUSSpanLines {
             let prefix_text = format!("{UNORDERED_LIST}{SPACE}");
             with_mut! {
                 StyleUSSpanLine::from_fragments(
-                    &vec![MdLineFragment::Plain(&prefix_text)],
+                    &list![MdLineFragment::Plain(&prefix_text)],
                     maybe_current_box_computed_style,
                 ),
                 as prefix_span,
@@ -362,7 +362,7 @@ impl StyleUSSpanLine {
     ) -> Self {
         let mut acc = vec![];
 
-        for fragment in fragments_in_one_line {
+        for fragment in fragments_in_one_line.iter() {
             let vec_spans = StyleUSSpan::from_fragment(fragment, maybe_current_box_computed_style);
             acc.extend(vec_spans);
         }
@@ -774,14 +774,14 @@ mod test_generate_style_us_span_lines {
 
         #[test]
         fn test_block_ol() {
-            let ol_block = MdBlockElement::OrderedList(vec![
+            let ol_block = MdBlockElement::OrderedList(list![
                 // Line 0.
-                vec![
+                list![
                     MdLineFragment::OrderedListItemNumber(100),
                     MdLineFragment::Plain("Foo"),
                 ],
                 // Line 1.
-                vec![
+                list![
                     MdLineFragment::OrderedListItemNumber(200),
                     MdLineFragment::Plain("Bar"),
                 ],
@@ -829,9 +829,9 @@ mod test_generate_style_us_span_lines {
 
         #[test]
         fn test_block_ul() {
-            let ul_block = MdBlockElement::UnorderedList(vec![
-                vec![MdLineFragment::Plain("Foo")], // Line 0.
-                vec![MdLineFragment::Plain("Bar")], // Line 1.
+            let ul_block = MdBlockElement::UnorderedList(list![
+                list![MdLineFragment::Plain("Foo")], // Line 0.
+                list![MdLineFragment::Plain("Bar")], // Line 1.
             ]);
             let maybe_style = Some(style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
@@ -876,7 +876,7 @@ mod test_generate_style_us_span_lines {
 
         #[test]
         fn test_block_text() {
-            let text_block = MdBlockElement::Text(vec![MdLineFragment::Plain("Foobar")]);
+            let text_block = MdBlockElement::Text(list![MdLineFragment::Plain("Foobar")]);
             let maybe_style = Some(style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
@@ -898,7 +898,7 @@ mod test_generate_style_us_span_lines {
         fn test_block_heading() {
             let heading_block = MdBlockElement::Heading(HeadingData {
                 level: HeadingLevel::Heading1,
-                content: vec![MdLineFragment::Plain("Foobar")],
+                content: list![MdLineFragment::Plain("Foobar")],
             });
             let maybe_style = Some(style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
@@ -938,18 +938,18 @@ mod test_generate_style_us_span_lines {
     }
 
     fn generate_doc<'a>() -> MdDocument<'a> {
-        vec![
+        list![
             MdBlockElement::Title("Something"),
-            MdBlockElement::Tags(vec!["tag1", "tag2", "tag3"]),
+            MdBlockElement::Tags(list!["tag1", "tag2", "tag3"]),
             MdBlockElement::Heading(HeadingData {
                 level: HeadingLevel::Heading1,
-                content: vec![MdLineFragment::Plain("Foobar")],
+                content: list![MdLineFragment::Plain("Foobar")],
             }),
-            MdBlockElement::Text(vec![]), // Empty line.
-            MdBlockElement::Text(vec![MdLineFragment::Plain(
+            MdBlockElement::Text(list![]), // Empty line.
+            MdBlockElement::Text(list![MdLineFragment::Plain(
                 "Foobar is a Python library for dealing with word pluralization.",
             )]),
-            MdBlockElement::Text(vec![]), // Empty line.
+            MdBlockElement::Text(list![]), // Empty line.
             MdBlockElement::CodeBlock(convert_into_code_block_lines(
                 Some("bash"),
                 vec!["pip install foobar"],
@@ -958,10 +958,10 @@ mod test_generate_style_us_span_lines {
             MdBlockElement::CodeBlock(convert_into_code_block_lines(Some("python"), vec![""])),
             MdBlockElement::Heading(HeadingData {
                 level: HeadingLevel::Heading2,
-                content: vec![MdLineFragment::Plain("Installation")],
+                content: list![MdLineFragment::Plain("Installation")],
             }),
-            MdBlockElement::Text(vec![]), // Empty line.
-            MdBlockElement::Text(vec![
+            MdBlockElement::Text(list![]), // Empty line.
+            MdBlockElement::Text(list![
                 MdLineFragment::Plain("Use the package manager "),
                 MdLineFragment::Link(HyperlinkData::new("pip", "https://pip.pypa.io/en/stable/")),
                 MdLineFragment::Plain(" to install foobar."),
@@ -976,25 +976,25 @@ mod test_generate_style_us_span_lines {
                     "foobar.singularize('phenomena') # returns 'phenomenon'",
                 ],
             )),
-            MdBlockElement::UnorderedList(vec![
-                vec![MdLineFragment::Plain("ul1")],
-                vec![MdLineFragment::Plain("ul2")],
+            MdBlockElement::UnorderedList(list![
+                list![MdLineFragment::Plain("ul1")],
+                list![MdLineFragment::Plain("ul2")],
             ]),
-            MdBlockElement::OrderedList(vec![
-                vec![MdLineFragment::Plain("ol1")],
-                vec![MdLineFragment::Plain("ol2")],
+            MdBlockElement::OrderedList(list![
+                list![MdLineFragment::Plain("ol1")],
+                list![MdLineFragment::Plain("ol2")],
             ]),
-            MdBlockElement::UnorderedList(vec![
-                vec![
+            MdBlockElement::UnorderedList(list![
+                list![
                     MdLineFragment::Checkbox(false),
                     MdLineFragment::Plain(" todo"),
                 ],
-                vec![
+                list![
                     MdLineFragment::Checkbox(true),
                     MdLineFragment::Plain(" done"),
                 ],
             ]),
-            MdBlockElement::Text(vec![MdLineFragment::Plain("end")]),
+            MdBlockElement::Text(list![MdLineFragment::Plain("end")]),
         ]
     }
 }

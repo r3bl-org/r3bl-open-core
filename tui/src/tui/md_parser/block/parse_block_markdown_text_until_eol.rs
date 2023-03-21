@@ -28,10 +28,12 @@ pub fn parse_block_markdown_text_until_eol(input: &str) -> IResult<&str, MdLineF
 
 #[rustfmt::skip]
 fn parse(input: &str) -> IResult<&str, MdLineFragments> {
-    terminated(
+    let (input, output) = terminated(
         /* output */ many0(parse_element_markdown_inline),
         /* ends with (discarded) */ tag(NEW_LINE),
-    )(input)
+    )(input)?;
+    let it = List::from(output);
+    Ok((input, it))
 }
 
 #[cfg(test)]
@@ -44,10 +46,10 @@ mod test {
 
     #[test]
     fn test_parse_block_markdown_text() {
-        assert_eq2!(parse_block_markdown_text_until_eol("\n"), Ok(("", vec![])));
+        assert_eq2!(parse_block_markdown_text_until_eol("\n"), Ok(("", list![])));
         assert_eq2!(
             parse_block_markdown_text_until_eol("here is some plaintext\n"),
-            Ok(("", vec![MdLineFragment::Plain("here is some plaintext")]))
+            Ok(("", list![MdLineFragment::Plain("here is some plaintext")]))
         );
         assert_eq2!(
             parse_block_markdown_text_until_eol(
@@ -55,7 +57,7 @@ mod test {
             ),
             Ok((
                 "",
-                vec![
+                list![
                     MdLineFragment::Plain("here is some plaintext "),
                     MdLineFragment::Italic("but what if we italicize?"),
                 ]
@@ -65,7 +67,7 @@ mod test {
         parse_block_markdown_text_until_eol("here is some plaintext *but what if we italicize?* I guess it doesn't **matter** in my `code`\n"),
         Ok(
             ("",
-            vec![
+            list![
                 MdLineFragment::Plain("here is some plaintext "),
                 MdLineFragment::Italic("but what if we italicize?"),
                 MdLineFragment::Plain(" I guess it doesn't "),
@@ -81,7 +83,7 @@ mod test {
             ),
             Ok((
                 "",
-                vec![
+                list![
                     MdLineFragment::Plain("here is some plaintext "),
                     MdLineFragment::Italic("but what if we italicize?"),
                 ]

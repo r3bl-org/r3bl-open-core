@@ -23,12 +23,12 @@
 //! 2. md_parser_syn_hi, which is a custom R3BL highlighter for md_parser (custom R3BL Markdown
 //!    parser).
 //!
-//! In either case, the source comes from an [crate::editor] component which is a [Vec] of [US]
-//! (unicode strings).
-//!
-//! In either case, this intermediate type is [clipped](StyleUSSpanLine::clip) to the visible area
-//! of the editor component (scroll in viewport). And finally that is converted to a
-//! [crate::StyledTexts].
+//! In both cases:
+//! 1. The source document comes from an [crate::editor] component which is a [Vec] of [US] (unicode
+//!    strings).
+//! 2. This intermediate type is [clipped](StyleUSSpanLine::clip) to the visible area of the editor
+//!    component (based on scroll state in viewport). And finally that is converted to a
+//!    [crate::StyledTexts].
 
 use r3bl_rs_utils_core::*;
 

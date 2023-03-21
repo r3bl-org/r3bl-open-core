@@ -22,10 +22,12 @@ use super::*;
 use crate::*;
 
 #[rustfmt::skip]
-pub fn parse_block_unordered_list(input: &str) -> IResult<&str, Vec<MdLineFragments>> {
-    many1(
+pub fn parse_block_unordered_list(input: &str) -> IResult<&str, List<MdLineFragments>> {
+    let (input, output) = many1(
         parse_unordered_list_element
-    )(input)
+    )(input)?;
+    let it = List::from(output);
+    Ok((input, it))
 }
 
 /// Matches `- `. Outputs the `-` char.
@@ -43,8 +45,11 @@ fn parse_unordered_list_element(input: &str) -> IResult<&str, MdLineFragments> {
         /* prefix (discarded) */ parse_unordered_list_tag,
         /* output */ parse_block_markdown_text_until_eol,
     )(input)?;
-    let mut it = vec![MdLineFragment::UnorderedListItem];
-    it.extend(output);
+
+    // Insert bullet marker before the line.
+    let mut it = list![MdLineFragment::UnorderedListItem];
+    it += output;
+
     Ok((input, it))
 }
 
@@ -100,7 +105,7 @@ mod tests {
             parse_unordered_list_element("- this is an element\n"),
             Ok((
                 "",
-                vec![
+                list![
                     MdLineFragment::UnorderedListItem,
                     MdLineFragment::Plain("this is an element")
                 ]
@@ -110,7 +115,7 @@ mod tests {
             parse_unordered_list_element(raw_strings::UNORDERED_LIST_ELEMENT),
             Ok((
                 "- this is another element\n",
-                vec![
+                list![
                     MdLineFragment::UnorderedListItem,
                     MdLineFragment::Plain("this is an element")
                 ]
@@ -125,7 +130,7 @@ mod tests {
         );
         assert_eq2!(
             parse_unordered_list_element("- \n"),
-            Ok(("", vec![MdLineFragment::UnorderedListItem,]))
+            Ok(("", list![MdLineFragment::UnorderedListItem,]))
         );
         assert_eq2!(
             parse_unordered_list_element("- "),
@@ -164,7 +169,7 @@ mod tests {
             parse_block_unordered_list("- this is an element\n"),
             Ok((
                 "",
-                vec![vec![
+                list![list![
                     MdLineFragment::UnorderedListItem,
                     MdLineFragment::Plain("this is an element")
                 ]]
@@ -175,12 +180,12 @@ mod tests {
             parse_block_unordered_list(raw_strings::UNORDERED_LIST_ELEMENT),
             Ok((
                 "",
-                vec![
-                    vec![
+                list![
+                    list![
                         MdLineFragment::UnorderedListItem,
                         MdLineFragment::Plain("this is an element")
                     ],
-                    vec![
+                    list![
                         MdLineFragment::UnorderedListItem,
                         MdLineFragment::Plain("this is another element")
                     ]

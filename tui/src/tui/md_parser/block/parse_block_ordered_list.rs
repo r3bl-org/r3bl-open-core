@@ -22,10 +22,12 @@ use super::*;
 use crate::*;
 
 #[rustfmt::skip]
-pub fn parse_block_ordered_list(input: &str) -> IResult<&str, Vec<MdLineFragments>> {
-    many1(
+pub fn parse_block_ordered_list(input: &str) -> IResult<&str, List<MdLineFragments>> {
+    let (input, output) = many1(
         parse_ordered_list_element
-    )(input)
+    )(input)?;
+    let it = List::from(output);
+    Ok((input, it))
 }
 
 #[rustfmt::skip]
@@ -51,8 +53,8 @@ fn parse_ordered_list_element(input: &str) -> IResult<&str, MdLineFragments> {
     ))(input)?;
 
     // Insert line number before the line.
-    let mut it = vec![MdLineFragment::OrderedListItemNumber(number)];
-    it.extend(line);
+    let mut it = list![MdLineFragment::OrderedListItemNumber(number)];
+    it += line;
 
     Ok((input, it))
 }
@@ -110,7 +112,7 @@ mod tests {
             parse_ordered_list_element("1. this is an element\n"),
             Ok((
                 "",
-                vec![
+                list![
                     MdLineFragment::OrderedListItemNumber(1),
                     MdLineFragment::Plain("this is an element")
                 ]
@@ -120,7 +122,7 @@ mod tests {
             parse_ordered_list_element(raw_strings::ORDERED_LIST_ELEMENT),
             Ok((
                 "1. here is another\n",
-                vec![
+                list![
                     MdLineFragment::OrderedListItemNumber(1),
                     MdLineFragment::Plain("this is an element")
                 ]
@@ -142,7 +144,7 @@ mod tests {
         );
         assert_eq2!(
             parse_ordered_list_element("1. \n"),
-            Ok(("", vec![MdLineFragment::OrderedListItemNumber(1),]))
+            Ok(("", list![MdLineFragment::OrderedListItemNumber(1),]))
         );
         assert_eq2!(
             parse_ordered_list_element("1. test"),
@@ -173,7 +175,7 @@ mod tests {
             parse_block_ordered_list("1. this is an element\n"),
             Ok((
                 "",
-                vec![vec![
+                list![list![
                     MdLineFragment::OrderedListItemNumber(1),
                     MdLineFragment::Plain("this is an element")
                 ]]
@@ -190,12 +192,12 @@ mod tests {
             parse_block_ordered_list(raw_strings::ORDERED_LIST_ELEMENT),
             Ok((
                 "",
-                vec![
-                    vec![
+                list![
+                    list![
                         MdLineFragment::OrderedListItemNumber(1),
                         MdLineFragment::Plain("this is an element")
                     ],
-                    vec![
+                    list![
                         MdLineFragment::OrderedListItemNumber(1),
                         MdLineFragment::Plain("here is another")
                     ],
