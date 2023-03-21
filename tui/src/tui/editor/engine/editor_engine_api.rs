@@ -121,7 +121,7 @@ impl EditorEngine {
 
         let mut num_rows_rendered = ch!(0);
 
-        // BM: ▌5. ALT▐ `&Vec<US>` (1)-> `Document` (2)-> `Vec<List<(Style, US)>>` -> call syn_hi_editor_content::highlight(..)
+        // AA: ▌5. ALT▐ `&Vec<US>` (1)-> `Document` (2)-> `Vec<List<(Style, US)>>` -> call syn_hi_editor_content::highlight(..)
 
         // Paint each line in the buffer (skipping the scroll_offset.row).
         // https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip
@@ -161,7 +161,7 @@ impl EditorEngine {
                     let mut my_highlight_lines =
                         HighlightLines::new(my_syntax, &editor_engine.theme);
 
-                    // BM: ▌1. SYNTECT▐ highlight a single line
+                    // AB: ▌1. SYNTECT▐ highlight a single line
                     if let Ok(syntect_highlighted_line) =
                         my_highlight_lines.highlight_line(&line.string, &editor_engine.syntax_set)
                     {
@@ -206,7 +206,7 @@ impl EditorEngine {
     ) {
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
 
-        // BM: ▌2. RENDER▐ render single line; life of styled texts is short
+        // AB: ▌2. RENDER▐ render single line; life of styled texts is short
         let list: List<StyleUSSpan> =
             syntect_to_styled_text_conversion::from_syntect_to_tui(syntect_highlighted_line);
         let styled_texts: StyledTexts = list.clip(scroll_offset_col, max_display_col_count);

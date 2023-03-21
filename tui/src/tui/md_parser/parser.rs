@@ -39,6 +39,7 @@ pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
             map(parse_title,                         MdBlockElement::Title),
             map(parse_tags,                          MdBlockElement::Tags),
             map(parse_block_heading,                 MdBlockElement::Heading),
+            // AD: change semantics of ul, ol, so multiple lines are allowed.
             map(parse_block_unordered_list,          MdBlockElement::UnorderedList),
             map(parse_block_ordered_list,            MdBlockElement::OrderedList),
             map(parse_block_code,                    MdBlockElement::CodeBlock),
