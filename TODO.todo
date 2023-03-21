@@ -3,15 +3,16 @@ features: <https://github.com/orgs/r3bl-org/projects/1/views/1>
 backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
 
 fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
-  ☐ `md_parser_syn_hi.rs`:
-    ☐ fn `try_parse_and_highlight`: `&Vec<US>` -(1)-> `Document` -(2)-> `StyleUSSpanLines`
+  ✔ `md_parser_syn_hi.rs`: @done(23-03-22 20:34)
+    ✔ fn `try_parse_and_highlight`: `&Vec<US>` -(1)-> `Document` -(2)-> `StyleUSSpanLines` @done(23-03-22 20:34)
     ✔ rewrite `md_parser` @done(23-03-10 17:36)
     ✔ fn `convert_from_code_block_into_lines`: `<CodeBlock>` -> `Vec<CodeBlockLine>` @done(23-03-09 15:58)
     ✔ refactor names in `syntax_highlighting` module @done(23-03-10 17:36)
-    ☐ `From`: `Document` -> `CommonResult<StyleUSSpanLines>`
-    ☐ build a theme to convert parts of a `Document` to `Style`
+    ✔ `From`: `Document` -> `CommonResult<StyleUSSpanLines>` @done(23-03-22 20:32)
+    ✔ build a theme to convert parts of a `Document` to `Style` @done(23-03-22 20:32)
   ☐ `editor_engine_api.rs`: update `render_line_with_syntax_highlight()` based on `syntect` / `md_parser` choice
   ☐ update editor component options to either use `md_parser` or `syntect`
+  ☐ `from_block_codeblock()` - impl better syntax highlighting for code blocks using syntect
   ☐ should `md_parser` handle nested ol / ul blocks "intelligently" (not EOL delimited)?
 
 crate upgrades:
@@ -23,6 +24,9 @@ crate upgrades:
 
 fix performance problem:
   ☐ scroll left / right slow in type ahead completion dialog
+
+add todo parser (https://github.com/r3bl-org/r3bl_rs_utils/issues/96):
+  ☐ support for todo apps
 
 release new version:
   ☐ update `CHANGELOG.md`

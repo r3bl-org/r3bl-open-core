@@ -46,23 +46,148 @@ impl StyleUSSpanLines {
         lines
     }
 
-    // AA: impl this
+    /// Eg: "@title: Something"
+    pub fn from_title(text: &str, maybe_current_box_computed_style: &Option<Style>) -> Self {
+        let mut acc_line_output = StyleUSSpanLine::default();
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default()
+                + get_metadata_title_marker_style(),
+            US::from(TITLE),
+        );
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
+            US::from(format!("{COLON}{SPACE}")),
+        );
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default() + get_metadata_title_value_style(),
+            US::from(text),
+        );
+
+        let mut lines = StyleUSSpanLines::default();
+        lines += acc_line_output;
+        lines
+    }
+
+    /// Eg: "@tags: [tag1, tag2, tag3]"
+    pub fn from_tags(
+        tag_list: &List<&'_ str>,
+        maybe_current_box_computed_style: &Option<Style>,
+    ) -> Self {
+        let mut acc_line_output = StyleUSSpanLine::default();
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default() + get_metadata_tags_marker_style(),
+            US::from(TAGS),
+        );
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
+            US::from(format!("{COLON}{SPACE}")),
+        );
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
+            US::from(LEFT_BRACKET),
+        );
+        for (index, span) in tag_list.iter().enumerate() {
+            acc_line_output += StyleUSSpan::new(
+                maybe_current_box_computed_style.unwrap_or_default()
+                    + get_metadata_tags_values_style(),
+                US::from(*span),
+            );
+            // Not the last item in the iterator.
+            if index != (tag_list.len() - 1) {
+                acc_line_output += StyleUSSpan::new(
+                    maybe_current_box_computed_style.unwrap_or_default()
+                        + get_foreground_dim_style(),
+                    US::from(format!("{COMMA}{SPACE}")),
+                );
+            }
+        }
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
+            US::from(RIGHT_BRACKET),
+        );
+
+        let mut lines = StyleUSSpanLines::default();
+        lines += acc_line_output;
+        lines
+    }
+
+    /// Based on ColorSupport::detect() & language we have the following:
+    /// |               | Truecolor      | ANSI           |
+    /// |---------------|----------------|----------------|
+    /// | Language Some | syntect        | fallback       |
+    /// | Language None | fallback       | fallback       |
+    ///
+    /// Case 1: Fallback
+    /// 1st line         : ``` is (get_foreground_dim_style())
+    /// 2nd line ... end : ``` is (get_inline_code_style())
+    /// last line        : ``` is (get_foreground_dim_style())
+    ///
+    /// Case 2: Syntect
+    /// 1st line         : use syntect to highlight
+    /// 2nd line ... end : use syntect to highlight
+    /// last line        : use syntect to highlight
     pub fn from_block_codeblock(
         code_block_lines: &List<CodeBlockLine>,
         maybe_current_box_computed_style: &Option<Style>,
     ) -> Self {
-        // ColorSupport::detect()
-        //
-        // Case: ANSI color || Grayscale || language is None
-        // 1st line         : ``` is (get_foreground_dim_style())
-        // 2nd line ... end : ``` is (get_inline_code_style())
-        // last line        : ``` is (get_foreground_dim_style())
-        //
-        // Case 2. language is Some(lang)
-        // 1st line         : use syntect to highlight
-        // 2nd line ... end : use syntect to highlight
-        // last line        : use syntect to highlight
-        todo!()
+        // AC: impl syntect & use it below
+        fn use_syntect(
+            code_block_lines: &List<CodeBlockLine>,
+            maybe_current_box_computed_style: &Option<Style>,
+        ) -> StyleUSSpanLines {
+            todo!()
+        }
+
+        fn use_fallback(
+            code_block_lines: &List<CodeBlockLine>,
+            maybe_current_box_computed_style: &Option<Style>,
+        ) -> StyleUSSpanLines {
+            let mut acc_lines_output = StyleUSSpanLines::default();
+
+            // Process each line in code_block_lines.
+            for code_block_line in code_block_lines.iter() {
+                let mut acc_line_output = StyleUSSpanLine::default();
+
+                match code_block_line.content {
+                    CodeBlockLineContent::StartTag => {
+                        acc_line_output += StyleUSSpan::new(
+                            maybe_current_box_computed_style.unwrap_or_default()
+                                + get_foreground_dim_style(),
+                            US::from(CODE_BLOCK_START_PARTIAL),
+                        );
+                        if let Some(language) = code_block_line.language {
+                            acc_line_output += StyleUSSpan::new(
+                                maybe_current_box_computed_style.unwrap_or_default()
+                                    + get_code_block_lang_style(),
+                                US::from(language),
+                            );
+                        }
+                    }
+
+                    CodeBlockLineContent::EndTag => {
+                        acc_line_output += StyleUSSpan::new(
+                            maybe_current_box_computed_style.unwrap_or_default()
+                                + get_foreground_dim_style(),
+                            US::from(CODE_BLOCK_START_PARTIAL),
+                        );
+                    }
+
+                    CodeBlockLineContent::Text(content) => {
+                        acc_line_output += StyleUSSpan::new(
+                            maybe_current_box_computed_style.unwrap_or_default()
+                                + get_code_block_content_style(),
+                            US::from(content),
+                        );
+                    }
+                }
+
+                acc_lines_output += acc_line_output;
+            }
+
+            acc_lines_output
+        }
+
+        use_fallback(code_block_lines, maybe_current_box_computed_style)
     }
 
     pub fn from_block_ol(
@@ -153,17 +278,18 @@ impl StyleUSSpanLines {
                 lines +=
                     StyleUSSpanLines::from_block_ol(ol_lines, maybe_current_box_computed_style);
             }
-            // AA: from_block(): codeblock -> StyleUSSpanLines
             MdBlockElement::CodeBlock(code_block_lines) => {
                 lines += StyleUSSpanLines::from_block_codeblock(
                     code_block_lines,
                     maybe_current_box_computed_style,
                 );
             }
-            // AI: from_block(): title -> StyleUSSpanLine
-            MdBlockElement::Title(_) => todo!(),
-            // AI: from_block(): tags -> StyleUSSpanLine
-            MdBlockElement::Tags(_) => todo!(),
+            MdBlockElement::Title(title_text) => {
+                lines += StyleUSSpanLines::from_title(title_text, maybe_current_box_computed_style);
+            }
+            MdBlockElement::Tags(tag_list) => {
+                lines += StyleUSSpanLines::from_tags(tag_list, maybe_current_box_computed_style);
+            }
         }
 
         lines
@@ -767,10 +893,179 @@ mod test_generate_style_us_span_lines {
     mod from_block {
         use super::*;
 
-        // AI: TEST from_block [ ] title
-        // AI: TEST from_block [ ] tags
+        #[test]
+        fn test_block_metadata_tags() {
+            let tags = MdBlockElement::Tags(list!["tag1", "tag2", "tag3"]);
+            let maybe_style = Some(style! {
+                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+            });
+            let lines = StyleUSSpanLines::from_block(&tags, &maybe_style);
+            let line_0 = &lines.items[0];
+            // println!("{}", line_0.pretty_print());
+            assert_eq2!(
+                line_0.items[0],
+                StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_metadata_tags_marker_style(),
+                    US::from("@tags"),
+                )
+            );
+            assert_eq2!(
+                line_0.items[1],
+                StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
+                    US::from(": "),
+                )
+            );
+            assert_eq2!(
+                line_0.items[2],
+                StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
+                    US::from("["),
+                )
+            );
+            assert_eq2!(
+                line_0.items[3],
+                StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
+                    US::from("tag1"),
+                )
+            );
+            assert_eq2!(
+                line_0.items[4],
+                StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
+                    US::from(", "),
+                )
+            );
+            assert_eq2!(
+                line_0.items[5],
+                StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
+                    US::from("tag2"),
+                )
+            );
+            assert_eq2!(
+                line_0.items[6],
+                StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
+                    US::from(", "),
+                )
+            );
+            assert_eq2!(
+                line_0.items[7],
+                StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
+                    US::from("tag3"),
+                )
+            );
+            assert_eq2!(
+                line_0.items[8],
+                StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
+                    US::from("]"),
+                )
+            );
+        }
 
-        // AA: TEST from_block [ ] codeblock
+        #[test]
+        fn test_block_metadata_title() {
+            let title = MdBlockElement::Title("Something");
+            let maybe_style = Some(style! {
+                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+            });
+            let lines = StyleUSSpanLines::from_block(&title, &maybe_style);
+            // println!("{}", lines.pretty_print());
+
+            let line_0 = &lines.items[0];
+
+            let span_0 = &line_0.items[0];
+            assert_eq2!(
+                span_0,
+                &StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_metadata_title_marker_style(),
+                    US::from("@title"),
+                )
+            );
+
+            let span_1 = &line_0.items[1];
+            assert_eq2!(
+                span_1,
+                &StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
+                    US::from(": "),
+                )
+            );
+
+            let span_2 = &line_0.items[2];
+            assert_eq2!(
+                span_2,
+                &StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_metadata_title_value_style(),
+                    US::from("Something"),
+                )
+            );
+        }
+
+        #[test]
+        fn test_block_codeblock() {
+            let codeblock_block = MdBlockElement::CodeBlock(list!(
+                CodeBlockLine {
+                    language: Some("ts"),
+                    content: CodeBlockLineContent::StartTag
+                },
+                CodeBlockLine {
+                    language: Some("ts"),
+                    content: CodeBlockLineContent::Text("let a = 1;")
+                },
+                CodeBlockLine {
+                    language: Some("ts"),
+                    content: CodeBlockLineContent::EndTag
+                },
+            ));
+
+            let maybe_style = Some(style! {
+                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+            });
+
+            let lines = StyleUSSpanLines::from_block(&codeblock_block, &maybe_style);
+
+            let line_0 = &lines.items[0];
+            // println!("{}", line_0.pretty_print());
+            assert_eq2!(
+                line_0.items[0],
+                StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
+                    US::from("```"),
+                )
+            );
+            assert_eq2!(
+                line_0.items[1],
+                StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_code_block_lang_style(),
+                    US::from("ts"),
+                )
+            );
+
+            let line_1 = &lines.items[1];
+            // println!("{}", line_1.pretty_print());
+            assert_eq2!(
+                line_1.items[0],
+                StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_code_block_content_style(),
+                    US::from("let a = 1;"),
+                )
+            );
+
+            let line_2 = &lines.items[2];
+            // println!("{}", line_2.pretty_print());
+            assert_eq2!(
+                line_2.items[0],
+                StyleUSSpan::new(
+                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
+                    US::from("```"),
+                )
+            );
+        }
 
         #[test]
         fn test_block_ol() {

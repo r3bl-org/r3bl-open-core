@@ -155,3 +155,60 @@ pub fn get_list_bullet_style() -> Style {
             attrib: [dim]
         }
 }
+
+pub fn get_code_block_lang_style() -> Style {
+    get_inline_code_style()
+        + style! {
+            attrib: [italic]
+        }
+}
+
+pub fn get_code_block_content_style() -> Style { get_inline_code_style() }
+
+/// - Bg color: #4f86ed
+/// - Fg color: black
+pub fn get_metadata_title_marker_style() -> Style {
+    style! {
+        color_fg: TuiColor::Basic(ANSIBasicColor::Black)
+        color_bg: match ColorSupport::detect() {
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
+            ColorSupport::Ansi256 => TuiColor::Ansi(39), // DeepSkyBlue1.
+            ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4f86ed")), // Soft blue.
+        }
+    }
+}
+
+/// - Fg color: #4fcbd4
+pub fn get_metadata_title_value_style() -> Style {
+    style! {
+        color_fg: match ColorSupport::detect() {
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan),
+            ColorSupport::Ansi256 => TuiColor::Ansi(51), // Cyan1.
+            ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4fcbd4")), // Moderate cyan.
+        }
+    }
+}
+
+/// - Bg color: #ad83da
+/// - Fg color: black
+pub fn get_metadata_tags_marker_style() -> Style {
+    style! {
+        color_fg: TuiColor::Basic(ANSIBasicColor::Black)
+        color_bg: match ColorSupport::detect() {
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow), // There is no equivalent.
+            ColorSupport::Ansi256 => TuiColor::Ansi(133), // MediumOrchid3. There is no equivalent.
+            ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ad83da")), // Very soft violet.
+        }
+    }
+}
+
+/// - Fg color: #ce55b7
+pub fn get_metadata_tags_values_style() -> Style {
+    style! {
+        color_fg: match ColorSupport::detect() {
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow), // There is no equivalent.
+            ColorSupport::Ansi256 => TuiColor::Ansi(127), // Magenta3.
+            ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ce55b7")), // Moderate magenta.
+        }
+    }
+}
