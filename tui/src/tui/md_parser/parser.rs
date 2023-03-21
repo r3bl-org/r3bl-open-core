@@ -33,7 +33,7 @@ use crate::*;
 /// 4. line (which contains a [MdLineFragments]).
 #[rustfmt::skip]
 pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
-    many0(
+    let (input, output) = many0(
         /* Each of these parsers end up scanning until EOL. */
         alt((
             map(parse_title,                         MdBlockElement::Title),
@@ -44,7 +44,9 @@ pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
             map(parse_block_code,                    MdBlockElement::CodeBlock),
             map(parse_block_markdown_text_until_eol, MdBlockElement::Text),
         )),
-    )(input)
+    )(input)?;
+    let it = List::from(output);
+    Ok((input, it))
 }
 
 #[cfg(test)]
@@ -60,16 +62,16 @@ mod tests {
             parse_markdown(include_str!("test_assets/valid_md_input.md")).unwrap();
         let expected_vec = vec![
             MdBlockElement::Title("Something"),
-            MdBlockElement::Tags(vec!["tag1", "tag2", "tag3"]),
+            MdBlockElement::Tags(list!["tag1", "tag2", "tag3"]),
             MdBlockElement::Heading(HeadingData {
                 level: HeadingLevel::Heading1,
-                content: vec![MdLineFragment::Plain("Foobar")],
+                content: list![MdLineFragment::Plain("Foobar")],
             }),
-            MdBlockElement::Text(vec![]), // Empty line.
-            MdBlockElement::Text(vec![MdLineFragment::Plain(
+            MdBlockElement::Text(list![]), // Empty line.
+            MdBlockElement::Text(list![MdLineFragment::Plain(
                 "Foobar is a Python library for dealing with word pluralization.",
             )]),
-            MdBlockElement::Text(vec![]), // Empty line.
+            MdBlockElement::Text(list![]), // Empty line.
             MdBlockElement::CodeBlock(convert_into_code_block_lines(
                 Some("bash"),
                 vec!["pip install foobar"],
@@ -78,10 +80,10 @@ mod tests {
             MdBlockElement::CodeBlock(convert_into_code_block_lines(Some("python"), vec![""])),
             MdBlockElement::Heading(HeadingData {
                 level: HeadingLevel::Heading2,
-                content: vec![MdLineFragment::Plain("Installation")],
+                content: list![MdLineFragment::Plain("Installation")],
             }),
-            MdBlockElement::Text(vec![]), // Empty line.
-            MdBlockElement::Text(vec![
+            MdBlockElement::Text(list![]), // Empty line.
+            MdBlockElement::Text(list![
                 MdLineFragment::Plain("Use the package manager "),
                 MdLineFragment::Link(HyperlinkData::from((
                     "pip",
@@ -99,39 +101,39 @@ mod tests {
                     "foobar.singularize('phenomena') # returns 'phenomenon'",
                 ],
             )),
-            MdBlockElement::UnorderedList(vec![
-                vec![
+            MdBlockElement::UnorderedList(list![
+                list![
                     MdLineFragment::UnorderedListItem,
                     MdLineFragment::Plain("ul1"),
                 ],
-                vec![
+                list![
                     MdLineFragment::UnorderedListItem,
                     MdLineFragment::Plain("ul2"),
                 ],
             ]),
-            MdBlockElement::OrderedList(vec![
-                vec![
+            MdBlockElement::OrderedList(list![
+                list![
                     MdLineFragment::OrderedListItemNumber(1),
                     MdLineFragment::Plain("ol1"),
                 ],
-                vec![
+                list![
                     MdLineFragment::OrderedListItemNumber(2),
                     MdLineFragment::Plain("ol2"),
                 ],
             ]),
-            MdBlockElement::UnorderedList(vec![
-                vec![
+            MdBlockElement::UnorderedList(list![
+                list![
                     MdLineFragment::UnorderedListItem,
                     MdLineFragment::Checkbox(false),
                     MdLineFragment::Plain(" todo"),
                 ],
-                vec![
+                list![
                     MdLineFragment::UnorderedListItem,
                     MdLineFragment::Checkbox(true),
                     MdLineFragment::Plain(" done"),
                 ],
             ]),
-            MdBlockElement::Text(vec![MdLineFragment::Plain("end")]),
+            MdBlockElement::Text(list![MdLineFragment::Plain("end")]),
         ];
 
         // Print last 2 items.

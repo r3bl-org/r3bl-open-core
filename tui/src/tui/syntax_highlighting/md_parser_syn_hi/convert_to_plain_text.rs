@@ -28,7 +28,7 @@ pub trait ConvertToPlainText {
 impl ConvertToPlainText for MdLineFragments<'_> {
     fn to_plain_text(&self) -> US {
         let mut it: String = String::new();
-        for fragment in self {
+        for fragment in self.iter() {
             it.push_str(&fragment.to_plain_text().string);
         }
         US::from(it)

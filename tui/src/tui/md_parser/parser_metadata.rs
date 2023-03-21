@@ -74,7 +74,7 @@ pub fn parse_quoted(input: &str) -> IResult<&str, &str> {
 
 /// Parse input: `@tags: [tag1, tag2, tag3]\n` or `tags: ["tag1", "tag2", "tag3"]\n`.
 #[rustfmt::skip]
-pub fn parse_tags(input: &str) -> IResult<&str, Vec<&str>> {
+pub fn parse_tags(input: &str) -> IResult<&str, List<&str>> {
     let (input, output) = delimited(
         /* start */ tuple((tag(TAGS), tag(COLON), space0)),
         /* output */ is_not(NEW_LINE),
@@ -87,7 +87,9 @@ pub fn parse_tags(input: &str) -> IResult<&str, Vec<&str>> {
     // At this point, `output` can have something like: `tag1, tag2, tag3`.
     let (_, output) = parse_tag_list_comma_separated(output)?;
 
-    return Ok((input, output));
+    let it = List::from(output);
+
+    return Ok((input, it));
 
     /// Parse input: `[tag1, tag2, tag3]`.
     fn parse_tag_list_enclosed_in_brackets(input: &str) -> IResult<&str, &str> {
@@ -138,10 +140,10 @@ mod tests {
     #[test]
     fn test_parse_metadata_tags() {
         let output = parse_tags(TAG_STRING_1);
-        assert_eq2!(output, Ok(("", vec!["tag 1", "tag 2", "tag3"])));
+        assert_eq2!(output, Ok(("", list!["tag 1", "tag 2", "tag3"])));
 
         let output = parse_tags(TAG_STRING_2);
-        assert_eq2!(output, Ok(("", vec!["tag 1", "tag 2", "tag 3"])));
+        assert_eq2!(output, Ok(("", list!["tag 1", "tag 2", "tag 3"])));
     }
 
     #[test]

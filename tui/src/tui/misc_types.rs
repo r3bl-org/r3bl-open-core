@@ -204,6 +204,7 @@ pub mod list_of {
             $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
         ) => {
             {
+                #[allow(unused_mut)]
                 let mut it = List::new();
                 $(
                     it.items.push($item);
@@ -238,6 +239,11 @@ pub mod list_of {
     /// Add (other) list to list (self).
     impl<T> AddAssign<List<T>> for List<T> {
         fn add_assign(&mut self, other_list: List<T>) { self.extend(other_list.items); }
+    }
+
+    /// Add (other) vec to list (self).
+    impl<T> AddAssign<Vec<T>> for List<T> {
+        fn add_assign(&mut self, other_vec: Vec<T>) { self.extend(other_vec); }
     }
 
     impl<T> From<List<T>> for Vec<T> {

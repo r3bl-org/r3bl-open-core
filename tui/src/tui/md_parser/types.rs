@@ -19,20 +19,20 @@ use crate::List;
 
 /// This corresponds to a single Markdown document, which is produced after a successful parse
 /// operation [crate::parse_markdown].
-pub type MdDocument<'a> = Vec<MdBlockElement<'a>>;
+pub type MdDocument<'a> = List<MdBlockElement<'a>>;
 
 /// Alias for [MdDocument].
-pub type Blocks<'a> = Vec<MdBlockElement<'a>>;
+pub type Blocks<'a> = MdDocument<'a>;
 
 /// This roughly corresponds to a single line of text. Each line is made up of one or more
 /// [MdLineFragment].
-pub type MdLineFragments<'a> = Vec<MdLineFragment<'a>>;
+pub type MdLineFragments<'a> = List<MdLineFragment<'a>>;
 
 /// Alias for [MdLineFragments].
-pub type FragmentsInOneLine<'a> = Vec<MdLineFragment<'a>>;
+pub type FragmentsInOneLine<'a> = MdLineFragments<'a>;
 
-/// Alias for [Vec] of [FragmentsInOneLine].
-pub type Lines<'a> = Vec<FragmentsInOneLine<'a>>;
+/// Alias for [List] of [FragmentsInOneLine].
+pub type Lines<'a> = List<FragmentsInOneLine<'a>>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HeadingData<'a> {
@@ -50,7 +50,7 @@ pub enum MdBlockElement<'a> {
     Text(MdLineFragments<'a>),
     CodeBlock(List<CodeBlockLine<'a>>),
     Title(&'a str),
-    Tags(Vec<&'a str>),
+    Tags(List<&'a str>),
 }
 
 /// These are things that show up in a single line of Markdown text [MdLineFragments]. They do
@@ -154,6 +154,9 @@ pub struct CodeBlockLine<'a> {
     pub language: Option<&'a str>,
     pub content: CodeBlockLineContent<'a>,
 }
+
+/// Alias for [List] of [CodeBlockLine].
+pub type CodeBlockLines<'a> = List<CodeBlockLine<'a>>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum CodeBlockLineContent<'a> {
