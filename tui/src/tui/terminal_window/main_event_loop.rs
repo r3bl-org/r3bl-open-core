@@ -160,7 +160,6 @@ impl TerminalWindow {
         // Why spawn a task and then immediately await it? If a task is not spawned to run
         // `route_input_to_app`, then it causes all kinds of rendering problems when running certain
         // apps (for example the editor demo).
-        #[allow(clippy::redundant_async_block)]
         let future_result = tokio::spawn(async move {
             AppManager::route_input_to_app(&captured_args_for_spawned_task).await
         })
