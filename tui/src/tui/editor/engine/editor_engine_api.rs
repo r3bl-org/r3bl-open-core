@@ -122,6 +122,23 @@ impl EditorEngine {
         let mut num_rows_rendered = ch!(0);
 
         // AA: ▌5. ALT▐ `&Vec<US>` (1)-> `Document` (2)-> `Vec<List<(Style, US)>>` -> call syn_hi_editor_content::highlight(..)
+        //
+        //    Try convert Vec<US> to MdDocument
+        //    Step 1: Get the lines from the buffer using editor_buffer.get_lines()
+        //    Step 2: Convert the lines into a List<StyleUSSpanLine> using try_parse_and_highlight()
+        //            If this fails then take the path of no syntax highlighting
+        //            If this passes then take the path of syntax highlighting
+        //
+        //    Path of syntax highlighting
+        //    Step 1: Iterate the List<StyleUSSpanLine>
+        //            from: ch!(@to_usize editor_buffer.get_scroll_offset().row_index)
+        //            to: ch!(@to_usize max_display_row_count)
+        //    Step 2: For each, call StyleUSSpanLine::clip() which returns a StyledTexts
+        //    Step 3: Render the StyledTexts into render_ops
+        //
+        //    Path of no syntax highlighting
+        //    - This already done below, just refactor it into a separate function
+        //
 
         // Paint each line in the buffer (skipping the scroll_offset.row).
         // https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip

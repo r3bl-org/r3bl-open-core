@@ -17,13 +17,12 @@
 
 use r3bl_rs_utils_core::*;
 
-use super::*;
-use crate::{constants::*, *};
+use crate::*;
 
 /// This is the main function that the [editor] uses this in order to display the markdown to the
 /// user.It is responsible for converting:
 /// - from a &[Vec] of [US] which comes from the [editor],
-/// - into a [StyleUSFragmentLines], which the [editor] will clip & render.
+/// - into a [StyleUSSpanLines], which the [editor] will clip & render.
 /// ## Arguments
 /// - `editor_text` - The text that the user has typed into the editor.
 /// - `current_box_computed_style` - The computed style of the box that the editor is in.
@@ -31,7 +30,7 @@ use crate::{constants::*, *};
 pub fn try_parse_and_highlight(
     editor_text: &Vec<US>,
     maybe_current_box_computed_style: &Option<Style>,
-) -> CommonResult<StyleUSFragmentLines> {
+) -> CommonResult<StyleUSSpanLines> {
     // Convert the editor text into a string.
     let editor_text_to_string = {
         let mut acc = Vec::<&str>::new();
@@ -44,7 +43,7 @@ pub fn try_parse_and_highlight(
 
     // Try and parse `editor_text_to_string` into a `Document`.
     match parse_markdown(&editor_text_to_string) {
-        Ok((_, document)) => Ok(StyleUSFragmentLines::from_document(
+        Ok((_, document)) => Ok(StyleUSSpanLines::from_document(
             &document,
             maybe_current_box_computed_style,
         )),

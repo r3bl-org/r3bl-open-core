@@ -35,6 +35,7 @@ release new version:
   ☐ cut new releases
   ☐ publish to crates.io
   ☐ make reddit post w/ videos
+  ☐ announce it on this week in rust (https://github.com/rust-lang/this-week-in-rust/pulls)
 
 continue building r3bl_cmdr:
   r3bl_rs_utils:
