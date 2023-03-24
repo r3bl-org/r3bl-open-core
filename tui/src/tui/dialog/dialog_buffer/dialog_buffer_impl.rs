@@ -18,6 +18,7 @@
 use std::fmt::{Debug, Formatter, Result};
 
 use get_size::GetSize;
+use r3bl_rs_utils_core::{ch, ChUnit};
 use serde::*;
 
 use crate::*;
@@ -34,44 +35,38 @@ pub struct DialogBuffer {
     pub maybe_results: Option<Vec<String>>,
 }
 
-mod dialog_buffer_impl {
-    use r3bl_rs_utils_core::{ch, ChUnit};
-
-    use super::*;
-
-    impl DialogBuffer {
-        pub fn get_results_count(&self) -> ChUnit {
-            if let Some(ref it) = self.maybe_results {
-                ch!(it.len())
-            } else {
-                ch!(0)
-            }
+impl DialogBuffer {
+    pub fn get_results_count(&self) -> ChUnit {
+        if let Some(ref it) = self.maybe_results {
+            ch!(it.len())
+        } else {
+            ch!(0)
         }
     }
+}
 
-    impl DialogBuffer {
-        pub fn new_empty() -> Self {
-            DialogBuffer {
-                editor_buffer: EditorBuffer::new_empty(DEFAULT_SYN_HI_FILE_EXT.to_string()),
-                title: Default::default(),
-                maybe_results: None,
-            }
+impl DialogBuffer {
+    pub fn new_empty() -> Self {
+        DialogBuffer {
+            editor_buffer: EditorBuffer::new_empty(DEFAULT_SYN_HI_FILE_EXT.to_string()),
+            title: Default::default(),
+            maybe_results: None,
         }
     }
+}
 
-    impl Debug for DialogBuffer {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            let maybe_results: &dyn Debug = format_option!(&self.maybe_results);
-            write! { f,
-              "\nDialogBuffer [      \n\
-              ├ title: {}            \n\
-              ├ maybe_results: {:?}  \n\
-              └ editor_buffer: {}  \n\
-              ]",
-              self.title,
-              maybe_results,
-              self.editor_buffer.get_as_string()
-            }
+impl Debug for DialogBuffer {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let maybe_results: &dyn Debug = format_option!(&self.maybe_results);
+        write! { f,
+          "\nDialogBuffer [      \n\
+          ├ title: {}            \n\
+          ├ maybe_results: {:?}  \n\
+          └ editor_buffer: {}  \n\
+          ]",
+          self.title,
+          maybe_results,
+          self.editor_buffer.get_as_string()
         }
     }
 }

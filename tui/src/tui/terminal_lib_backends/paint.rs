@@ -146,7 +146,7 @@ pub async fn sanitize_and_save_abs_position(
     }
 }
 
-pub mod exports {
+pub mod paint_exports {
     use super::*;
 
     #[async_trait]
@@ -160,4 +160,4 @@ pub mod exports {
         );
     }
 }
-pub use exports::*;
+pub use paint_exports::*;

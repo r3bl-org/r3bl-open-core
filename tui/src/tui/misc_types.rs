@@ -117,13 +117,13 @@ pub mod args {
 }
 pub use args::*;
 
-pub mod type_aliases {
+pub mod misc_type_aliases {
     use super::*;
 
     pub type ScrollOffset = Position;
     pub type US = UnicodeString;
 }
-pub use type_aliases::*;
+pub use misc_type_aliases::*;
 
 pub mod pretty_print_option {
     use super::*;

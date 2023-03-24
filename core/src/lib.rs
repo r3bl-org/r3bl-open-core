@@ -124,7 +124,7 @@ pub mod utils;
 
 // Re-export.
 pub use async_safe_share_mutate::*;
-pub use color_text::{styles::*, *};
+pub use color_text::{color_text_default_styles::*, *};
 pub use common::*;
 pub use decl_macros::*;
 pub use tui_core::*;

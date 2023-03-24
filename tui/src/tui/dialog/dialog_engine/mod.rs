@@ -16,9 +16,9 @@
  */
 
 // Attach.
-pub mod dialog_component;
-pub mod dialog_event;
+pub mod dialog_engine_api;
+pub mod dialog_engine_impl;
 
 // Re-export.
-pub use dialog_component::*;
-pub use dialog_event::*;
+pub use dialog_engine_api::*;
+pub use dialog_engine_impl::*;

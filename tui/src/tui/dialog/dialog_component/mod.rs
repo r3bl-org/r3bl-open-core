@@ -16,9 +16,9 @@
  */
 
 // Attach.
-pub mod editor_component;
-pub mod editor_event;
+pub mod dialog_component_impl;
+pub mod dialog_event;
 
 // Re-export.
-pub use editor_component::*;
-pub use editor_event::*;
+pub use dialog_component_impl::*;
+pub use dialog_event::*;

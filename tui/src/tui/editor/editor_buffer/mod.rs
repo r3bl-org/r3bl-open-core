@@ -16,7 +16,7 @@
  */
 
 // Attach.
-pub mod editor_buffer;
+pub mod editor_buffer_impl;
 
 // Re-export.
-pub use editor_buffer::*;
+pub use editor_buffer_impl::*;

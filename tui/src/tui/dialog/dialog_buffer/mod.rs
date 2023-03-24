@@ -16,11 +16,7 @@
  */
 
 // Attach.
-pub mod editor_engine;
-pub mod editor_engine_api;
-pub mod editor_engine_internal_api;
+pub mod dialog_buffer_impl;
 
 // Re-export.
-pub use editor_engine::*;
-pub use editor_engine_api::*;
-pub use editor_engine_internal_api::*;
+pub use dialog_buffer_impl::*;

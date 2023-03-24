@@ -158,7 +158,7 @@ impl Position {
     }
 }
 
-pub mod math_ops {
+pub mod position_math_ops {
     use super::*;
 
     impl AddAssign<ChUnit> for Position {
@@ -218,7 +218,7 @@ pub mod convert_position_to_other_type {
     }
 }
 
-pub mod debug_formatter {
+pub mod position_debug_formatter {
     use super::*;
 
     impl Debug for Position {
