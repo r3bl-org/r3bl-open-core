@@ -163,6 +163,7 @@ impl EditorEngine {
         }
     }
 
+    // AA: refactor this
     fn render_single_line(
         render_ops: &mut RenderOps,
         row_index: usize,
@@ -177,46 +178,25 @@ impl EditorEngine {
             position! { col_index: 0 , row_index: ch!(@to_usize row_index) },
         ));
 
-        // Try and load syntax highlighting for the current line.
-        let maybe_my_syntax = {
-            if !syntax_highlight_enabled {
-                None
-            } else {
-                let syntax_set = &editor_engine.syntax_set;
-                let file_extension = editor_buffer.get_file_extension();
-                let it = syntax_set.find_syntax_by_extension(file_extension);
-                it
+        match syntect_helpers::try_get_syntect_highlighted_line(
+            syntax_highlight_enabled,
+            editor_engine,
+            editor_buffer,
+            &line.string,
+        ) {
+            // If enabled, and we have a SyntaxReference then try and highlight the line.
+            Some(syntect_highlighted_line) => {
+                render_line_helpers::render_line_with_syntax_highlight(
+                    syntect_highlighted_line,
+                    editor_buffer,
+                    max_display_col_count,
+                    render_ops,
+                    editor_engine,
+                );
             }
-        };
-
-        match (syntax_highlight_enabled, maybe_my_syntax) {
-            (true, Some(my_syntax)) => {
-                // Load the syntax highlighting theme & create a highlighter.
-                let mut my_highlight_lines = HighlightLines::new(my_syntax, &editor_engine.theme);
-
-                // AB: ▌1. SYNTECT▐ highlight a single line
-                if let Ok(syntect_highlighted_line) =
-                    my_highlight_lines.highlight_line(&line.string, &editor_engine.syntax_set)
-                {
-                    EditorEngine::render_line_with_syntax_highlight(
-                        syntect_highlighted_line,
-                        editor_buffer,
-                        max_display_col_count,
-                        render_ops,
-                        editor_engine,
-                    );
-                } else {
-                    EditorEngine::render_line_no_syntax_highlight(
-                        line,
-                        editor_buffer,
-                        max_display_col_count,
-                        render_ops,
-                        editor_engine,
-                    );
-                }
-            }
-            _ => {
-                EditorEngine::render_line_no_syntax_highlight(
+            // Otherwise, fallback.
+            None => {
+                render_line_helpers::render_line_no_syntax_highlight(
                     line,
                     editor_buffer,
                     max_display_col_count,
@@ -227,44 +207,6 @@ impl EditorEngine {
         }
 
         render_ops.push(RenderOp::ResetColor);
-    }
-
-    fn render_line_with_syntax_highlight(
-        syntect_highlighted_line: Vec<(syntect::highlighting::Style, &str)>,
-        editor_buffer: &&EditorBuffer,
-        max_display_col_count: ChUnit,
-        render_ops: &mut RenderOps,
-        _editor_engine: &&mut EditorEngine,
-    ) {
-        let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
-
-        // AB: ▌2. RENDER▐ render single line; life of styled texts is short
-        let list: List<StyleUSSpan> =
-            syntect_to_styled_text_conversion::from_syntect_to_tui(syntect_highlighted_line);
-        let styled_texts: StyledTexts = list.clip(scroll_offset_col, max_display_col_count);
-        styled_texts.render_into(render_ops);
-    }
-
-    fn render_line_no_syntax_highlight(
-        line: &UnicodeString,
-        editor_buffer: &&EditorBuffer,
-        max_display_col_count: ChUnit,
-        render_ops: &mut RenderOps,
-        editor_engine: &&mut EditorEngine,
-    ) {
-        let scroll_offset_col_index = editor_buffer.get_scroll_offset().col_index;
-
-        // Clip the content [scroll_offset.col .. max cols].
-        let truncated_line = line.clip(scroll_offset_col_index, max_display_col_count);
-
-        render_ops.push(RenderOp::ApplyColors(
-            editor_engine.current_box.get_computed_style(),
-        ));
-
-        render_ops.push(RenderOp::PaintTextWithAttributes(
-            truncated_line.into(),
-            editor_engine.current_box.get_computed_style(),
-        ));
     }
 
     /// Implement caret painting using two different strategies represented by [CaretPaintStyle].
@@ -364,4 +306,102 @@ where
 {
     Applied(T),
     NotApplied,
+}
+
+mod render_line_helpers {
+    use super::*;
+
+    pub fn render_line_with_syntax_highlight(
+        syntect_highlighted_line: Vec<(syntect::highlighting::Style, &str)>,
+        editor_buffer: &&EditorBuffer,
+        max_display_col_count: ChUnit,
+        render_ops: &mut RenderOps,
+        _editor_engine: &&mut EditorEngine,
+    ) {
+        let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
+
+        // AB: ▌2. RENDER▐ render single line; life of styled texts is short
+        let list: List<StyleUSSpan> =
+            syntect_to_styled_text_conversion::from_syntect_to_tui(syntect_highlighted_line);
+        let styled_texts: StyledTexts = list.clip(scroll_offset_col, max_display_col_count);
+        styled_texts.render_into(render_ops);
+    }
+
+    pub fn render_line_no_syntax_highlight(
+        line: &UnicodeString,
+        editor_buffer: &&EditorBuffer,
+        max_display_col_count: ChUnit,
+        render_ops: &mut RenderOps,
+        editor_engine: &&mut EditorEngine,
+    ) {
+        let scroll_offset_col_index = editor_buffer.get_scroll_offset().col_index;
+
+        // Clip the content [scroll_offset.col .. max cols].
+        let truncated_line = line.clip(scroll_offset_col_index, max_display_col_count);
+
+        render_ops.push(RenderOp::ApplyColors(
+            editor_engine.current_box.get_computed_style(),
+        ));
+
+        render_ops.push(RenderOp::PaintTextWithAttributes(
+            truncated_line.into(),
+            editor_engine.current_box.get_computed_style(),
+        ));
+    }
+}
+
+mod syntect_helpers {
+    use syntect::parsing::{SyntaxReference, SyntaxSet};
+
+    use super::*;
+
+    pub fn try_get_syntax_ref_from<'a>(
+        editor_engine: &'a &mut EditorEngine,
+        editor_buffer: &'a &EditorBuffer,
+    ) -> Option<&'a syntect::parsing::SyntaxReference> {
+        let syntax_set = syntect_helpers::get_syntax_set(editor_engine);
+        let file_extension = editor_buffer.get_file_extension();
+        syntect_helpers::try_get_syntax_ref(syntax_set, file_extension)
+    }
+
+    pub fn try_get_syntect_highlighted_line<'a>(
+        syntax_highlight_enabled: bool,
+        editor_engine: &'a &mut EditorEngine,
+        editor_buffer: &&EditorBuffer,
+        line: &'a str,
+    ) -> Option<Vec<(syntect::highlighting::Style, &'a str)>> {
+        if !syntax_highlight_enabled {
+            return None;
+        }
+
+        // Try and load syntax highlighting for the current line.
+        let maybe_my_syntax_ref = try_get_syntax_ref_from(editor_engine, editor_buffer);
+
+        if let Some(my_syntax_ref) = maybe_my_syntax_ref {
+            let mut my_line_highlighter = HighlightLines::new(my_syntax_ref, &editor_engine.theme);
+
+            // Try and highlight the current line.
+            let maybe_syntect_highlighted_line =
+                my_line_highlighter.highlight_line(line, &editor_engine.syntax_set);
+
+            if let Ok(syntect_highlighted_line) = maybe_syntect_highlighted_line {
+                return Some(syntect_highlighted_line);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_syntax_set<'a>(engine: &'a &mut EditorEngine) -> &'a SyntaxSet {
+        let editor_engine = engine;
+        &editor_engine.syntax_set
+    }
+
+    pub fn try_get_syntax_ref<'a>(
+        syntax_set: &'a SyntaxSet,
+        file_extension: &str,
+    ) -> Option<&'a SyntaxReference> {
+        let it = syntax_set.find_syntax_by_extension(file_extension);
+        it
+    }
 }
