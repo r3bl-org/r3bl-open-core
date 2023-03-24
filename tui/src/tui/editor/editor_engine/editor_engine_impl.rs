@@ -43,32 +43,26 @@ pub struct EditorEngine {
     pub theme: Theme,
 }
 
-mod editor_engine_impl {
-    use super::*;
+impl Default for EditorEngine {
+    fn default() -> Self { EditorEngine::new(Default::default()) }
+}
 
-    impl Default for EditorEngine {
-        fn default() -> Self { EditorEngine::new(Default::default()) }
+impl EditorEngine {
+    /// Syntax highlighting support - [SyntaxSet] and [Theme] are a very expensive objects to
+    /// create, so re-use them.
+    pub fn new(config_options: EditorEngineConfigOptions) -> Self {
+        Self {
+            current_box: Default::default(),
+            config_options,
+            syntax_set: SyntaxSet::load_defaults_newlines(),
+            theme: try_load_r3bl_theme().unwrap_or_else(|_| load_default_theme()),
+        }
     }
 
-    impl EditorEngine {
-        /// Syntax highlighting support - [SyntaxSet] and [Theme] are a very expensive objects to
-        /// create, so re-use them.
-        pub fn new(config_options: EditorEngineConfigOptions) -> Self {
-            Self {
-                current_box: Default::default(),
-                config_options,
-                syntax_set: SyntaxSet::load_defaults_newlines(),
-                theme: try_load_r3bl_theme().unwrap_or_else(|_| load_default_theme()),
-            }
-        }
+    pub fn viewport_width(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.col_count }
 
-        pub fn viewport_width(&self) -> ChUnit {
-            self.current_box.style_adjusted_bounds_size.col_count
-        }
-
-        pub fn viewport_height(&self) -> ChUnit {
-            self.current_box.style_adjusted_bounds_size.row_count
-        }
+    pub fn viewport_height(&self) -> ChUnit {
+        self.current_box.style_adjusted_bounds_size.row_count
     }
 }
 

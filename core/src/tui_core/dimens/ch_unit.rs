@@ -141,7 +141,7 @@ impl Deref for ChUnit {
     fn deref(&self) -> &Self::Target { &self.value }
 }
 
-pub mod math_ops {
+pub mod ch_unit_math_ops {
     use super::*;
 
     impl std::ops::Add for ChUnit {

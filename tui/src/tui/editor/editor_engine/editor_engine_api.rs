@@ -119,8 +119,6 @@ impl EditorEngine {
             SyntaxHighlightConfig::Enable(_)
         );
 
-        let mut num_rows_rendered = ch!(0);
-
         // AA: ▌5. ALT▐ `&Vec<US>` (1)-> `Document` (2)-> `Vec<List<(Style, US)>>` -> call syn_hi_editor_content::highlight(..)
         //
         //    Try convert Vec<US> to MdDocument
@@ -148,58 +146,66 @@ impl EditorEngine {
             .skip(ch!(@to_usize editor_buffer.get_scroll_offset().row_index))
             .enumerate()
         {
-            num_rows_rendered += 1;
-
             // Clip the content to max rows.
             if ch!(row_index) > max_display_row_count {
                 break;
             }
 
-            render_ops.push(RenderOp::MoveCursorPositionRelTo(
-                editor_engine.current_box.style_adjusted_origin_pos,
-                position! { col_index: 0 , row_index: ch!(@to_usize row_index) },
-            ));
+            Self::render_single_line(
+                render_ops,
+                row_index,
+                editor_engine,
+                syntax_highlight_enabled,
+                editor_buffer,
+                line,
+                max_display_col_count,
+            );
+        }
+    }
 
-            // Try and load syntax highlighting for the current line.
-            let maybe_my_syntax = {
-                if !syntax_highlight_enabled {
-                    None
+    fn render_single_line(
+        render_ops: &mut RenderOps,
+        row_index: usize,
+        editor_engine: &&mut EditorEngine,
+        syntax_highlight_enabled: bool,
+        editor_buffer: &&EditorBuffer,
+        line: &UnicodeString,
+        max_display_col_count: ChUnit,
+    ) {
+        render_ops.push(RenderOp::MoveCursorPositionRelTo(
+            editor_engine.current_box.style_adjusted_origin_pos,
+            position! { col_index: 0 , row_index: ch!(@to_usize row_index) },
+        ));
+
+        // Try and load syntax highlighting for the current line.
+        let maybe_my_syntax = {
+            if !syntax_highlight_enabled {
+                None
+            } else {
+                let syntax_set = &editor_engine.syntax_set;
+                let file_extension = editor_buffer.get_file_extension();
+                let it = syntax_set.find_syntax_by_extension(file_extension);
+                it
+            }
+        };
+
+        match (syntax_highlight_enabled, maybe_my_syntax) {
+            (true, Some(my_syntax)) => {
+                // Load the syntax highlighting theme & create a highlighter.
+                let mut my_highlight_lines = HighlightLines::new(my_syntax, &editor_engine.theme);
+
+                // AB: ▌1. SYNTECT▐ highlight a single line
+                if let Ok(syntect_highlighted_line) =
+                    my_highlight_lines.highlight_line(&line.string, &editor_engine.syntax_set)
+                {
+                    EditorEngine::render_line_with_syntax_highlight(
+                        syntect_highlighted_line,
+                        editor_buffer,
+                        max_display_col_count,
+                        render_ops,
+                        editor_engine,
+                    );
                 } else {
-                    let syntax_set = &editor_engine.syntax_set;
-                    let file_extension = editor_buffer.get_file_extension();
-                    let it = syntax_set.find_syntax_by_extension(file_extension);
-                    it
-                }
-            };
-
-            match (syntax_highlight_enabled, maybe_my_syntax) {
-                (true, Some(my_syntax)) => {
-                    // Load the syntax highlighting theme & create a highlighter.
-                    let mut my_highlight_lines =
-                        HighlightLines::new(my_syntax, &editor_engine.theme);
-
-                    // AB: ▌1. SYNTECT▐ highlight a single line
-                    if let Ok(syntect_highlighted_line) =
-                        my_highlight_lines.highlight_line(&line.string, &editor_engine.syntax_set)
-                    {
-                        EditorEngine::render_line_with_syntax_highlight(
-                            syntect_highlighted_line,
-                            editor_buffer,
-                            max_display_col_count,
-                            render_ops,
-                            editor_engine,
-                        );
-                    } else {
-                        EditorEngine::render_line_no_syntax_highlight(
-                            line,
-                            editor_buffer,
-                            max_display_col_count,
-                            render_ops,
-                            editor_engine,
-                        );
-                    }
-                }
-                _ => {
                     EditorEngine::render_line_no_syntax_highlight(
                         line,
                         editor_buffer,
@@ -209,9 +215,18 @@ impl EditorEngine {
                     );
                 }
             }
-
-            render_ops.push(RenderOp::ResetColor);
+            _ => {
+                EditorEngine::render_line_no_syntax_highlight(
+                    line,
+                    editor_buffer,
+                    max_display_col_count,
+                    render_ops,
+                    editor_engine,
+                );
+            }
         }
+
+        render_ops.push(RenderOp::ResetColor);
     }
 
     fn render_line_with_syntax_highlight(
@@ -343,7 +358,6 @@ impl EditorEngine {
         pipeline
     }
 }
-
 pub enum EditorEngineApplyResponse<T>
 where
     T: Debug,

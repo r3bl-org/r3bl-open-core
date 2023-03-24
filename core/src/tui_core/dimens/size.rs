@@ -79,7 +79,7 @@ impl Size {
     }
 }
 
-pub mod debug_formatter {
+pub mod size_debug_formatter {
     use super::*;
 
     impl Display for Size {
@@ -95,7 +95,7 @@ pub mod debug_formatter {
     }
 }
 
-pub mod math_ops {
+pub mod size_math_ops {
     use super::*;
 
     impl SubAssign<ChUnit> for Size {

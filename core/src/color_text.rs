@@ -44,7 +44,7 @@ pub fn eprint_header(msg: &str) {
     print_header!(error msg);
 }
 
-pub mod styles {
+pub mod color_text_default_styles {
     use ansi_term::{ANSIGenericString,
                     Colour::{Blue, Green, Red},
                     Style};

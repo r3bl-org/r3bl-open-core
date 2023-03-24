@@ -16,14 +16,14 @@
  */
 
 // Attach sources.
-pub mod buffer;
-pub mod component;
-pub mod engine;
+pub mod dialog_buffer;
+pub mod dialog_component;
+pub mod dialog_engine;
 
 // Re-export.
-pub use buffer::*;
-pub use component::*;
-pub use engine::*;
+pub use dialog_buffer::*;
+pub use dialog_component::*;
+pub use dialog_engine::*;
 
 // Tests.
 pub mod test_dialog;

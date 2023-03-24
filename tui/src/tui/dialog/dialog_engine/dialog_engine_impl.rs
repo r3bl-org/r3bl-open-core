@@ -57,54 +57,50 @@ pub struct DialogEngine {
     pub scroll_offset_row_index: ChUnit,
 }
 
-mod dialog_engine_impl {
-    use super::*;
+impl DialogEngine {
+    pub fn new(
+        dialog_options: DialogEngineConfigOptions,
+        editor_options: EditorEngineConfigOptions,
+    ) -> Self {
+        // The col_count has to be large enough to fit the terminal width so that the gradient
+        // doesn't flicker. If for some reason the terminal width is not available, then we
+        // default to 250.
+        let Size {
+            col_count,
+            row_count: _,
+        } = lookup_size().unwrap_or(size!(col_count: 200, row_count: 0));
 
-    impl DialogEngine {
-        pub fn new(
-            dialog_options: DialogEngineConfigOptions,
-            editor_options: EditorEngineConfigOptions,
-        ) -> Self {
-            // The col_count has to be large enough to fit the terminal width so that the gradient
-            // doesn't flicker. If for some reason the terminal width is not available, then we
-            // default to 250.
-            let Size {
-                col_count,
-                row_count: _,
-            } = lookup_size().unwrap_or(size!(col_count: 200, row_count: 0));
-
-            Self {
-                dialog_options,
-                editor_engine: EditorEngine::new(editor_options),
-                color_wheel: ColorWheel::new(vec![
-                    // Truecolor gradient.
-                    ColorWheelConfig::Rgb(
-                        vec![
-                            "#00ffff".into(), /* cyan  */
-                            "#ff00ff".into(), /* magenta */
-                            "#0000ff".into(), /* blue */
-                            "#00ff00".into(), /* green */
-                            "#ffff00".into(), /* yellow */
-                            "#ff0000".into(), /* red */
-                        ],
-                        ColorWheelSpeed::Fast,
-                        ch!(@to_usize col_count + 50),
-                    ),
-                    // Ansi256 gradient.
-                    ColorWheelConfig::Ansi256(
-                        Ansi256GradientIndex::LightGreenToLightBlue,
-                        ColorWheelSpeed::Medium,
-                    ),
-                ]),
-                ..Default::default()
-            }
+        Self {
+            dialog_options,
+            editor_engine: EditorEngine::new(editor_options),
+            color_wheel: ColorWheel::new(vec![
+                // Truecolor gradient.
+                ColorWheelConfig::Rgb(
+                    vec![
+                        "#00ffff".into(), /* cyan  */
+                        "#ff00ff".into(), /* magenta */
+                        "#0000ff".into(), /* blue */
+                        "#00ff00".into(), /* green */
+                        "#ffff00".into(), /* yellow */
+                        "#ff0000".into(), /* red */
+                    ],
+                    ColorWheelSpeed::Fast,
+                    ch!(@to_usize col_count + 50),
+                ),
+                // Ansi256 gradient.
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::LightGreenToLightBlue,
+                    ColorWheelSpeed::Medium,
+                ),
+            ]),
+            ..Default::default()
         }
+    }
 
-        /// Clean up any state in the engine, eg: selected_row_index or scroll_offset_row_index.
-        pub fn reset(&mut self) {
-            self.selected_row_index = ch!(0);
-            self.scroll_offset_row_index = ch!(0);
-        }
+    /// Clean up any state in the engine, eg: selected_row_index or scroll_offset_row_index.
+    pub fn reset(&mut self) {
+        self.selected_row_index = ch!(0);
+        self.scroll_offset_row_index = ch!(0);
     }
 }
 
