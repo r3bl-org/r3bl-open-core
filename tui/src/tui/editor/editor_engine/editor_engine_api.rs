@@ -24,6 +24,15 @@ use syntect::easy::HighlightLines;
 use super::*;
 use crate::*;
 
+#[allow(dead_code)]
+enum SynHiPath {
+    R3BL,
+    Syntect,
+}
+
+/// Choose which path to use to render content to the screen using syntax highlighting.
+const SYN_HI_PATH: SynHiPath = SynHiPath::Syntect;
+
 impl EditorEngine {
     /// Event based interface for the editor. This converts the [InputEvent] into an [EditorEvent]
     /// and then executes it. Returns a new [EditorBuffer] if the operation was applied otherwise
@@ -119,94 +128,33 @@ impl EditorEngine {
             SyntaxHighlightConfig::Enable(_)
         );
 
-        // AA: ▌5. ALT▐ `&Vec<US>` (1)-> `Document` (2)-> `Vec<List<(Style, US)>>` -> call syn_hi_editor_content::highlight(..)
-        //
-        //    Try convert Vec<US> to MdDocument
-        //    Step 1: Get the lines from the buffer using editor_buffer.get_lines()
-        //    Step 2: Convert the lines into a List<StyleUSSpanLine> using try_parse_and_highlight()
-        //            If this fails then take the path of no syntax highlighting
-        //            If this passes then take the path of syntax highlighting
-        //
-        //    Path of syntax highlighting
-        //    Step 1: Iterate the List<StyleUSSpanLine>
-        //            from: ch!(@to_usize editor_buffer.get_scroll_offset().row_index)
-        //            to: ch!(@to_usize max_display_row_count)
-        //    Step 2: For each, call StyleUSSpanLine::clip() which returns a StyledTexts
-        //    Step 3: Render the StyledTexts into render_ops
-        //
-        //    Path of no syntax highlighting
-        //    - This already done below, just refactor it into a separate function
-        //
-
-        // Paint each line in the buffer (skipping the scroll_offset.row).
-        // https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip
-        for (row_index, line) in editor_buffer
-            .get_lines()
-            .iter()
-            .skip(ch!(@to_usize editor_buffer.get_scroll_offset().row_index))
-            .enumerate()
-        {
-            // Clip the content to max rows.
-            if ch!(row_index) > max_display_row_count {
-                break;
-            }
-
-            Self::render_single_line(
-                render_ops,
-                row_index,
-                editor_engine,
-                syntax_highlight_enabled,
+        if !syntax_highlight_enabled {
+            no_syn_hi_path::render_content(
                 editor_buffer,
-                line,
+                max_display_row_count,
+                render_ops,
+                editor_engine,
                 max_display_col_count,
             );
-        }
-    }
-
-    // AA: refactor this
-    fn render_single_line(
-        render_ops: &mut RenderOps,
-        row_index: usize,
-        editor_engine: &&mut EditorEngine,
-        syntax_highlight_enabled: bool,
-        editor_buffer: &&EditorBuffer,
-        line: &UnicodeString,
-        max_display_col_count: ChUnit,
-    ) {
-        render_ops.push(RenderOp::MoveCursorPositionRelTo(
-            editor_engine.current_box.style_adjusted_origin_pos,
-            position! { col_index: 0 , row_index: ch!(@to_usize row_index) },
-        ));
-
-        match syntect_helpers::try_get_syntect_highlighted_line(
-            syntax_highlight_enabled,
-            editor_engine,
-            editor_buffer,
-            &line.string,
-        ) {
-            // If enabled, and we have a SyntaxReference then try and highlight the line.
-            Some(syntect_highlighted_line) => {
-                render_line_helpers::render_line_with_syntax_highlight(
-                    syntect_highlighted_line,
-                    editor_buffer,
-                    max_display_col_count,
-                    render_ops,
-                    editor_engine,
-                );
-            }
-            // Otherwise, fallback.
-            None => {
-                render_line_helpers::render_line_no_syntax_highlight(
-                    line,
-                    editor_buffer,
-                    max_display_col_count,
-                    render_ops,
-                    editor_engine,
-                );
-            }
+            return;
         }
 
-        render_ops.push(RenderOp::ResetColor);
+        match SYN_HI_PATH {
+            SynHiPath::R3BL => r3bl_path::render_content(
+                editor_buffer,
+                max_display_row_count,
+                render_ops,
+                editor_engine,
+                max_display_col_count,
+            ),
+            SynHiPath::Syntect => syntect_path::render_content(
+                editor_buffer,
+                max_display_row_count,
+                render_ops,
+                editor_engine,
+                max_display_col_count,
+            ),
+        }
     }
 
     /// Implement caret painting using two different strategies represented by [CaretPaintStyle].
@@ -300,6 +248,7 @@ impl EditorEngine {
         pipeline
     }
 }
+
 pub enum EditorEngineApplyResponse<T>
 where
     T: Debug,
@@ -308,25 +257,104 @@ where
     NotApplied,
 }
 
-mod render_line_helpers {
+mod r3bl_path {
     use super::*;
 
-    pub fn render_line_with_syntax_highlight(
-        syntect_highlighted_line: Vec<(syntect::highlighting::Style, &str)>,
+    // AA: ▌5. ALT▐ `&Vec<US>` (1)-> `Document` (2)-> `Vec<List<(Style, US)>>` -> call syn_hi_editor_content::highlight(..)
+    /// Try convert Vec<US> to MdDocument:
+    /// Step 1: Get the lines from the buffer using editor_buffer.get_lines()
+    /// Step 2: Convert the lines into a List<StyleUSSpanLine> using try_parse_and_highlight()
+    ///         If this fails then take the path of no syntax highlighting
+    ///         If this passes then take the path of syntax highlighting
+    ///
+    /// Path of syntax highlighting
+    /// Step 1: Iterate the List<StyleUSSpanLine>
+    ///         from: ch!(@to_usize editor_buffer.get_scroll_offset().row_index)
+    ///         to: ch!(@to_usize max_display_row_count)
+    /// Step 2: For each, call StyleUSSpanLine::clip() which returns a StyledTexts
+    /// Step 3: Render the StyledTexts into render_ops
+    ///
+    /// Path of no syntax highlighting
+    /// - This already done below, just refactor it into a separate function
+    pub fn render_content(
         editor_buffer: &&EditorBuffer,
-        max_display_col_count: ChUnit,
+        max_display_row_count: ChUnit,
         render_ops: &mut RenderOps,
-        _editor_engine: &&mut EditorEngine,
+        editor_engine: &&mut EditorEngine,
+        max_display_col_count: ChUnit,
     ) {
-        let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
+        // AA: impl r3bl path
+        match try_parse_and_highlight(
+            editor_buffer.get_lines(),
+            &editor_engine.current_box.get_computed_style(),
+        ) {
+            Ok(style_us_span_lines) => {
+                // AA: render w/ r3bl
+            }
+            Err(_) => {}
+        }
 
-        // AB: ▌2. RENDER▐ render single line; life of styled texts is short
-        let list: List<StyleUSSpan> =
-            syntect_to_styled_text_conversion::from_syntect_to_tui(syntect_highlighted_line);
-        let styled_texts: StyledTexts = list.clip(scroll_offset_col, max_display_col_count);
-        styled_texts.render_into(render_ops);
+        todo!()
+    }
+}
+
+mod no_syn_hi_path {
+    use super::*;
+
+    pub fn render_content(
+        editor_buffer: &&EditorBuffer,
+        max_display_row_count: ChUnit,
+        render_ops: &mut RenderOps,
+        editor_engine: &&mut EditorEngine,
+        max_display_col_count: ChUnit,
+    ) {
+        // Paint each line in the buffer (skipping the scroll_offset.row).
+        // https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip
+        for (row_index, line) in editor_buffer
+            .get_lines()
+            .iter()
+            .skip(ch!(@to_usize editor_buffer.get_scroll_offset().row_index))
+            .enumerate()
+        {
+            // Clip the content to max rows.
+            if ch!(row_index) > max_display_row_count {
+                break;
+            }
+
+            render_single_line(
+                render_ops,
+                row_index,
+                editor_engine,
+                editor_buffer,
+                line,
+                max_display_col_count,
+            );
+        }
     }
 
+    fn render_single_line(
+        render_ops: &mut RenderOps,
+        row_index: usize,
+        editor_engine: &&mut EditorEngine,
+        editor_buffer: &&EditorBuffer,
+        line: &UnicodeString,
+        max_display_col_count: ChUnit,
+    ) {
+        render_ops.push(RenderOp::MoveCursorPositionRelTo(
+            editor_engine.current_box.style_adjusted_origin_pos,
+            position! { col_index: 0 , row_index: ch!(@to_usize row_index) },
+        ));
+
+        no_syn_hi_path::render_line_no_syntax_highlight(
+            line,
+            editor_buffer,
+            max_display_col_count,
+            render_ops,
+            editor_engine,
+        );
+    }
+
+    /// This is used as a fallback by other render paths.
     pub fn render_line_no_syntax_highlight(
         line: &UnicodeString,
         editor_buffer: &&EditorBuffer,
@@ -347,61 +375,126 @@ mod render_line_helpers {
             truncated_line.into(),
             editor_engine.current_box.get_computed_style(),
         ));
+
+        render_ops.push(RenderOp::ResetColor);
     }
 }
 
-mod syntect_helpers {
-    use syntect::parsing::{SyntaxReference, SyntaxSet};
-
+mod syntect_path {
     use super::*;
 
-    pub fn try_get_syntax_ref_from<'a>(
+    pub fn render_content(
+        editor_buffer: &&EditorBuffer,
+        max_display_row_count: ChUnit,
+        render_ops: &mut RenderOps,
+        editor_engine: &&mut EditorEngine,
+        max_display_col_count: ChUnit,
+    ) {
+        // Paint each line in the buffer (skipping the scroll_offset.row).
+        // https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip
+        for (row_index, line) in editor_buffer
+            .get_lines()
+            .iter()
+            .skip(ch!(@to_usize editor_buffer.get_scroll_offset().row_index))
+            .enumerate()
+        {
+            // Clip the content to max rows.
+            if ch!(row_index) > max_display_row_count {
+                break;
+            }
+
+            render_single_line(
+                render_ops,
+                row_index,
+                editor_engine,
+                editor_buffer,
+                line,
+                max_display_col_count,
+            );
+        }
+    }
+
+    fn render_line_with_syntect(
+        syntect_highlighted_line: Vec<(syntect::highlighting::Style, &str)>,
+        editor_buffer: &&EditorBuffer,
+        max_display_col_count: ChUnit,
+        render_ops: &mut RenderOps,
+        _editor_engine: &&mut EditorEngine,
+    ) {
+        let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
+
+        // AB: ▌2. RENDER▐ render single line; life of styled texts is short
+        let list: List<StyleUSSpan> =
+            syntect_to_styled_text_conversion::from_syntect_to_tui(syntect_highlighted_line);
+
+        let styled_texts: StyledTexts = list.clip(scroll_offset_col, max_display_col_count);
+
+        styled_texts.render_into(render_ops);
+
+        render_ops.push(RenderOp::ResetColor);
+    }
+
+    fn try_get_syntax_ref_from<'a>(
         editor_engine: &'a &mut EditorEngine,
         editor_buffer: &'a &EditorBuffer,
     ) -> Option<&'a syntect::parsing::SyntaxReference> {
-        let syntax_set = syntect_helpers::get_syntax_set(editor_engine);
+        let syntax_set = &editor_engine.syntax_set;
         let file_extension = editor_buffer.get_file_extension();
-        syntect_helpers::try_get_syntax_ref(syntax_set, file_extension)
+        syntax_set.find_syntax_by_extension(file_extension)
     }
 
-    pub fn try_get_syntect_highlighted_line<'a>(
-        syntax_highlight_enabled: bool,
+    /// Try and load syntax highlighting for the current line. It might seem lossy to create a new
+    /// [HighlightLines] for each line, but if this struct is re-used then it will not be able to
+    /// highlight the lines correctly in the editor component. This struct is mutated when it is
+    /// used to highlight a line, so it must be re-created for each line.
+    fn try_get_syntect_highlighted_line<'a>(
         editor_engine: &'a &mut EditorEngine,
         editor_buffer: &&EditorBuffer,
         line: &'a str,
     ) -> Option<Vec<(syntect::highlighting::Style, &'a str)>> {
-        if !syntax_highlight_enabled {
-            return None;
-        }
+        let syntax_ref = try_get_syntax_ref_from(editor_engine, editor_buffer)?;
+        let mut highlighter = HighlightLines::new(syntax_ref, &editor_engine.theme);
+        highlighter
+            .highlight_line(line, &editor_engine.syntax_set)
+            .ok()
+    }
 
-        // Try and load syntax highlighting for the current line.
-        let maybe_my_syntax_ref = try_get_syntax_ref_from(editor_engine, editor_buffer);
+    fn render_single_line(
+        render_ops: &mut RenderOps,
+        row_index: usize,
+        editor_engine: &&mut EditorEngine,
+        editor_buffer: &&EditorBuffer,
+        line: &UnicodeString,
+        max_display_col_count: ChUnit,
+    ) {
+        render_ops.push(RenderOp::MoveCursorPositionRelTo(
+            editor_engine.current_box.style_adjusted_origin_pos,
+            position! { col_index: 0 , row_index: ch!(@to_usize row_index) },
+        ));
 
-        if let Some(my_syntax_ref) = maybe_my_syntax_ref {
-            let mut my_line_highlighter = HighlightLines::new(my_syntax_ref, &editor_engine.theme);
+        let it = try_get_syntect_highlighted_line(editor_engine, editor_buffer, &line.string);
 
-            // Try and highlight the current line.
-            let maybe_syntect_highlighted_line =
-                my_line_highlighter.highlight_line(line, &editor_engine.syntax_set);
-
-            if let Ok(syntect_highlighted_line) = maybe_syntect_highlighted_line {
-                return Some(syntect_highlighted_line);
+        match it {
+            // If enabled, and we have a SyntaxReference then try and highlight the line.
+            Some(syntect_highlighted_line) => {
+                render_line_with_syntect(
+                    syntect_highlighted_line,
+                    editor_buffer,
+                    max_display_col_count,
+                    render_ops,
+                    editor_engine,
+                );
+            }
+            // Otherwise, fallback.
+            None => {
+                no_syn_hi_path::render_line_no_syntax_highlight(
+                    line,
+                    editor_buffer,
+                    max_display_col_count,
+                    render_ops,
+                    editor_engine,
+                );
             }
         }
-
-        None
-    }
-
-    pub fn get_syntax_set<'a>(engine: &'a &mut EditorEngine) -> &'a SyntaxSet {
-        let editor_engine = engine;
-        &editor_engine.syntax_set
-    }
-
-    pub fn try_get_syntax_ref<'a>(
-        syntax_set: &'a SyntaxSet,
-        file_extension: &str,
-    ) -> Option<&'a SyntaxReference> {
-        let it = syntax_set.find_syntax_by_extension(file_extension);
-        it
     }
 }
