@@ -261,21 +261,12 @@ mod r3bl_path {
     use super::*;
 
     // AA: ▌5. ALT▐ `&Vec<US>` (1)-> `Document` (2)-> `Vec<List<(Style, US)>>` -> call syn_hi_editor_content::highlight(..)
-    /// Try convert Vec<US> to MdDocument:
-    /// Step 1: Get the lines from the buffer using editor_buffer.get_lines()
-    /// Step 2: Convert the lines into a List<StyleUSSpanLine> using try_parse_and_highlight()
-    ///         If this fails then take the path of no syntax highlighting
-    ///         If this passes then take the path of syntax highlighting
-    ///
-    /// Path of syntax highlighting
-    /// Step 1: Iterate the List<StyleUSSpanLine>
-    ///         from: ch!(@to_usize editor_buffer.get_scroll_offset().row_index)
-    ///         to: ch!(@to_usize max_display_row_count)
-    /// Step 2: For each, call StyleUSSpanLine::clip() which returns a StyledTexts
-    /// Step 3: Render the StyledTexts into render_ops
-    ///
-    /// Path of no syntax highlighting
-    /// - This already done below, just refactor it into a separate function
+    /// Try convert [Vec] of [US] to [MdDocument]:
+    /// - Step 1: Get the lines from the buffer using
+    ///           [editor_buffer.get_lines()](EditorBuffer::get_lines()).
+    /// - Step 2: Convert the lines into a [List] of [StyleUSSpanLine] using
+    ///           [try_parse_and_highlight()]. If this fails then take the path of no syntax
+    ///           highlighting else take the path of syntax highlighting.
     pub fn render_content(
         editor_buffer: &&EditorBuffer,
         max_display_row_count: ChUnit,
@@ -283,18 +274,48 @@ mod r3bl_path {
         editor_engine: &&mut EditorEngine,
         max_display_col_count: ChUnit,
     ) {
-        // AA: impl r3bl path
-        match try_parse_and_highlight(
+        // Try to parse the Vec<US> into an MDDocument & render it.
+        let result = try_render_content(
+            editor_buffer,
+            max_display_row_count,
+            render_ops,
+            editor_engine,
+            max_display_col_count,
+        );
+
+        // Fallback.
+        if result.is_err() {
+            no_syn_hi_path::render_content(
+                editor_buffer,
+                max_display_row_count,
+                render_ops,
+                editor_engine,
+                max_display_col_count,
+            );
+        };
+    }
+
+    /// Path of syntax highlighting:
+    /// - Step 1: Iterate the `List<StyleUSSpanLine>`
+    ///           from: `ch!(@to_usize editor_buffer.get_scroll_offset().row_index)`
+    ///           to: `ch!(@to_usize max_display_row_count)`
+    /// - Step 2: For each, call `StyleUSSpanLine::clip()` which returns a `StyledTexts`
+    /// - Step 3: Render the `StyledTexts` into `render_ops`
+    fn try_render_content(
+        editor_buffer: &&EditorBuffer,
+        max_display_row_count: ChUnit,
+        render_ops: &mut RenderOps,
+        editor_engine: &&mut EditorEngine,
+        max_display_col_count: ChUnit,
+    ) -> CommonResult<()> {
+        let style_us_span_lines = try_parse_and_highlight(
             editor_buffer.get_lines(),
             &editor_engine.current_box.get_computed_style(),
-        ) {
-            Ok(style_us_span_lines) => {
-                // AA: render w/ r3bl
-            }
-            Err(_) => {}
-        }
+        )?;
 
-        todo!()
+        // AA: impl this!
+
+        Ok(())
     }
 }
 
