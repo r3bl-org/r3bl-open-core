@@ -31,7 +31,7 @@ enum SynHiPath {
 }
 
 /// Choose which path to use to render content to the screen using syntax highlighting.
-const SYN_HI_PATH: SynHiPath = SynHiPath::Syntect;
+const SYN_HI_PATH: SynHiPath = SynHiPath::R3BL;
 
 impl EditorEngine {
     /// Event based interface for the editor. This converts the [InputEvent] into an [EditorEvent]
