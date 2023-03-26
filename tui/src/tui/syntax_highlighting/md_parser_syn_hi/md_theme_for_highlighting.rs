@@ -221,25 +221,9 @@ impl StyleUSSpanLines {
         for input_line in input_ul_lines.iter() {
             let mut acc_line_output = StyleUSSpanLine::default();
 
-            // Prefix: Eg: "- ". Clobber / override `prefix_span`'s style w/
-            // `get_list_bullet_style()`.
-            let prefix_text = format!("{UNORDERED_LIST}{SPACE}");
-            with_mut! {
-                StyleUSSpanLine::from_fragments(
-                    &list![MdLineFragment::Plain(&prefix_text)],
-                    maybe_current_box_computed_style,
-                ),
-                as prefix_span,
-                run {
-                    prefix_span.add_style(get_list_bullet_style());
-                }
-            }
-
-            // Suffix: Eg: "foo *bar* [baz](url)".
             let postfix_span_list =
                 StyleUSSpanLine::from_fragments(input_line, maybe_current_box_computed_style);
 
-            acc_line_output += prefix_span;
             acc_line_output += postfix_span_list;
 
             acc_lines_output += acc_line_output;
@@ -357,7 +341,7 @@ impl StyleUSSpan {
         match fragment {
             MdLineFragment::UnorderedListItem => vec![StyleUSSpan::new(
                 maybe_current_box_computed_style.unwrap_or_default() + get_list_bullet_style(),
-                US::from(format!("{UNORDERED_LIST}{PERIOD}{SPACE}")),
+                US::from(format!("{UNORDERED_LIST}{SPACE}")),
             )],
 
             MdLineFragment::OrderedListItemNumber(number) => vec![StyleUSSpan::new(
@@ -1068,23 +1052,13 @@ mod test_generate_style_us_span_lines {
         }
 
         #[test]
-        fn test_block_ol() {
-            let ol_block = MdBlockElement::OrderedList(list![
-                // Line 0.
-                list![
-                    MdLineFragment::OrderedListItemNumber(100),
-                    MdLineFragment::Plain("Foo"),
-                ],
-                // Line 1.
-                list![
-                    MdLineFragment::OrderedListItemNumber(200),
-                    MdLineFragment::Plain("Bar"),
-                ],
-            ]);
+        fn test_block_ol() -> CommonResult<()> {
             let maybe_style = Some(style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
-
+            let (_, doc) = parse_markdown("100. Foo\n200. Bar\n")?;
+            let ol_block = &doc[0];
+            println!("{:#?}", ol_block);
             let lines = StyleUSSpanLines::from_block(&ol_block, &maybe_style);
 
             let line_0 = &lines.items[0];
@@ -1120,22 +1094,31 @@ mod test_generate_style_us_span_lines {
                     US::from("Bar"),
                 )
             );
+
+            Ok(())
         }
 
         #[test]
-        fn test_block_ul() {
-            let ul_block = MdBlockElement::UnorderedList(list![
-                list![MdLineFragment::Plain("Foo")], // Line 0.
-                list![MdLineFragment::Plain("Bar")], // Line 1.
-            ]);
+        fn test_block_ul() -> CommonResult<()> {
             let maybe_style = Some(style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
-
-            let lines = StyleUSSpanLines::from_block(&ul_block, &maybe_style);
+            let (_, doc) = parse_markdown("- Foo\n- Bar\n")?;
+            let ul_block = &doc[0];
+            println!("{:#?}", ul_block);
+            let lines = StyleUSSpanLines::from_block(ul_block, &maybe_style);
 
             let line_0 = &lines.items[0];
-            // println!("{}", line_0.pretty_print());
+            println!(
+                "line_0:\n{}",
+                ansi_term::Color::Blue.paint(line_0.pretty_print())
+            );
+            let line_1 = &lines.items[1];
+            println!(
+                "line_1:\n{}",
+                ansi_term::Color::Yellow.paint(line_1.pretty_print())
+            );
+
             assert_eq2!(
                 line_0.items[0],
                 StyleUSSpan::new(
@@ -1151,8 +1134,6 @@ mod test_generate_style_us_span_lines {
                 )
             );
 
-            let line_1 = &lines.items[1];
-            // println!("{}", line_1.pretty_print());
             assert_eq2!(
                 line_1.items[0],
                 StyleUSSpan::new(
@@ -1167,6 +1148,8 @@ mod test_generate_style_us_span_lines {
                     US::from("Bar")
                 )
             );
+
+            Ok(())
         }
 
         #[test]
@@ -1230,66 +1213,5 @@ mod test_generate_style_us_span_lines {
                 assert_eq2!(span.style.color_fg.is_some(), true);
             }
         }
-    }
-
-    fn generate_doc<'a>() -> MdDocument<'a> {
-        list![
-            MdBlockElement::Title("Something"),
-            MdBlockElement::Tags(list!["tag1", "tag2", "tag3"]),
-            MdBlockElement::Heading(HeadingData {
-                level: HeadingLevel::Heading1,
-                content: list![MdLineFragment::Plain("Foobar")],
-            }),
-            MdBlockElement::Text(list![]), // Empty line.
-            MdBlockElement::Text(list![MdLineFragment::Plain(
-                "Foobar is a Python library for dealing with word pluralization.",
-            )]),
-            MdBlockElement::Text(list![]), // Empty line.
-            MdBlockElement::CodeBlock(convert_into_code_block_lines(
-                Some("bash"),
-                vec!["pip install foobar"],
-            )),
-            MdBlockElement::CodeBlock(convert_into_code_block_lines(Some("fish"), vec![])),
-            MdBlockElement::CodeBlock(convert_into_code_block_lines(Some("python"), vec![""])),
-            MdBlockElement::Heading(HeadingData {
-                level: HeadingLevel::Heading2,
-                content: list![MdLineFragment::Plain("Installation")],
-            }),
-            MdBlockElement::Text(list![]), // Empty line.
-            MdBlockElement::Text(list![
-                MdLineFragment::Plain("Use the package manager "),
-                MdLineFragment::Link(HyperlinkData::new("pip", "https://pip.pypa.io/en/stable/")),
-                MdLineFragment::Plain(" to install foobar."),
-            ]),
-            MdBlockElement::CodeBlock(convert_into_code_block_lines(
-                Some("python"),
-                vec![
-                    "import foobar",
-                    "",
-                    "foobar.pluralize('word') # returns 'words'",
-                    "foobar.pluralize('goose') # returns 'geese'",
-                    "foobar.singularize('phenomena') # returns 'phenomenon'",
-                ],
-            )),
-            MdBlockElement::UnorderedList(list![
-                list![MdLineFragment::Plain("ul1")],
-                list![MdLineFragment::Plain("ul2")],
-            ]),
-            MdBlockElement::OrderedList(list![
-                list![MdLineFragment::Plain("ol1")],
-                list![MdLineFragment::Plain("ol2")],
-            ]),
-            MdBlockElement::UnorderedList(list![
-                list![
-                    MdLineFragment::Checkbox(false),
-                    MdLineFragment::Plain(" todo"),
-                ],
-                list![
-                    MdLineFragment::Checkbox(true),
-                    MdLineFragment::Plain(" done"),
-                ],
-            ]),
-            MdBlockElement::Text(list![MdLineFragment::Plain("end")]),
-        ]
     }
 }
