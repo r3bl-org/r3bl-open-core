@@ -10,8 +10,10 @@ fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
     ✔ refactor names in `syntax_highlighting` module @done(23-03-10 17:36)
     ✔ `From`: `Document` -> `CommonResult<StyleUSSpanLines>` @done(23-03-22 20:32)
     ✔ build a theme to convert parts of a `Document` to `Style` @done(23-03-22 20:32)
-  ☐ `editor_engine_api.rs`: update `render_line_with_syntax_highlight()` based on `syntect` / `md_parser` choice
-  ☐ update editor component options to either use `md_parser` or `syntect`
+  ✔ `editor_engine_api.rs`: update `render_content()` using `syntect` & `md_parser` choice @done(23-03-26 09:20)
+  ☐ fix bugs in the md_parser
+  ☐ try different strategy w/ md_parser (parse a single line at a time no "\n")
+  ☐ fix syntect output for macOS (ANSI256) w/ https://github.com/rhysd/rgb2ansi256 in `from_syntect_to_tui()`
   ☐ `from_block_codeblock()` - impl better syntax highlighting for code blocks using syntect
   ☐ should `md_parser` handle nested ol / ul blocks "intelligently" (not EOL delimited)?
 
