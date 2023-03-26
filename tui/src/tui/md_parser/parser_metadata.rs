@@ -39,23 +39,17 @@ pub fn parse_title(input: &str) -> IResult<&str, &str> {
 
     /// Eg: `@title: "Something"\n`. The quotes are optional & EOL terminates input.
     fn parse_title_quoted(input: &str) -> IResult<&str, &str> {
-        map(
-            preceded(
-                /* start */ tuple((tag(TITLE), tag(COLON), space0)),
-                /* output */ parse_quoted,
-            ),
-            |it: &str| it.trim()
+        preceded(
+            /* start */ tuple((tag(TITLE), tag(COLON), space1)),
+            /* output */ parse_quoted,
         )(input)
     }
 
     /// Eg: `@title: "Something"\n`. The quotes are optional & EOL terminates input.
     fn parse_title_not_quoted(input: &str) -> IResult<&str, &str> {
-        map(
-            preceded(
-                /* start */ tuple((tag(TITLE), tag(COLON), space0)),
-                /* output */ is_not(NEW_LINE),
-            ),
-            |it: &str| it.trim()
+        preceded(
+            /* start */ tuple((tag(TITLE), tag(COLON), space1)),
+            /* output */ is_not(NEW_LINE),
         )(input)
     }
 
@@ -118,6 +112,7 @@ pub fn parse_tags(input: &str) -> IResult<&str, List<&str>> {
 
         // Try and strip any quotes from the output. Also trim whitespace.
         let mut output_trimmed_unquoted = vec![];
+        // AB: remove trim()
         for item in output.iter() {
             if let Ok((_, output)) = parse_quoted(item) {
                 output_trimmed_unquoted.push(output.trim())
@@ -160,7 +155,7 @@ mod tests {
         assert_eq2!(output, Ok(("", "Some title")));
 
         let output = parse_title(raw_strings::TITLE_STRING_2);
-        assert_eq2!(output, Ok(("", "Some title")));
+        assert_eq2!(output, Ok(("", "Some title  ")));
     }
 }
 

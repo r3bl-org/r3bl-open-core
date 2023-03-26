@@ -133,36 +133,51 @@ pub enum TuiColor {
 pub enum ANSIBasicColor {
     /// Black color.
     Black,
-    /// Dark grey color.
-    DarkGrey,
-    /// Light red color.
-    Red,
-    /// Dark red color.
-    DarkRed,
-    /// Light green color.
-    Green,
-    /// Dark green color.
-    DarkGreen,
-    /// Light yellow color.
-    Yellow,
-    /// Dark yellow color.
-    DarkYellow,
-    /// Light blue color.
-    Blue,
-    /// Dark blue color.
-    DarkBlue,
-    /// Light magenta color.
-    Magenta,
-    /// Dark magenta color.
-    DarkMagenta,
-    /// Light cyan color.
-    Cyan,
-    /// Dark cyan color.
-    DarkCyan,
+
     /// White color.
     White,
+
     /// Grey color.
     Grey,
+
+    /// Dark grey color.
+    DarkGrey,
+
+    /// Light red color.
+    Red,
+
+    /// Dark red color.
+    DarkRed,
+
+    /// Light green color.
+    Green,
+
+    /// Dark green color.
+    DarkGreen,
+
+    /// Light yellow color.
+    Yellow,
+
+    /// Dark yellow color.
+    DarkYellow,
+
+    /// Light blue color.
+    Blue,
+
+    /// Dark blue color.
+    DarkBlue,
+
+    /// Light magenta color.
+    Magenta,
+
+    /// Dark magenta color.
+    DarkMagenta,
+
+    /// Light cyan color.
+    Cyan,
+
+    /// Dark cyan color.
+    DarkCyan,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, GetSize, Copy, Debug)]
