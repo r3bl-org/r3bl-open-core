@@ -23,62 +23,39 @@ use nom::{branch::*,
           multi::*,
           sequence::*,
           IResult};
-use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-// AA: exp?
-pub fn try_parse_and_format_title_into_styled_us_span_line<'a>(
-    input: &'a str,
-    maybe_current_box_computed_style: &'a Option<Style>,
-) -> Option<StyleUSSpanLine> {
-    let (_, title_text) = parse_title_opt_eol(input).ok()?;
-    let it = StyleUSSpanLine::from_title(title_text, maybe_current_box_computed_style);
-    Some(it)
-}
-
-/// - Parse input: `@title: "Something"` or `@title: Something`.
+/// - Parse input: `@title: Something`.
 /// - There may or may not be a newline at the end.
-// 00: exp -> use this
 #[rustfmt::skip]
 pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
-    // 00: if there is a newline, consume it
-    // There may or may not be a newline at the end.
-    return alt((
-        parse_title_quoted,
-        parse_title_not_quoted
-    ))(input);
+    let (mut input, mut output) = preceded(
+        /* start */ tuple((tag(TITLE), tag(COLON), tag(SPACE))),
+        /* output */ alt((
+            is_not(NEW_LINE),
+            recognize(many1(anychar)),
+        )),
+    )(input)?;
 
-    /// Eg: `@title: Something`.
-    fn parse_title_not_quoted(input: &str) -> IResult<&str, &str> {
-        preceded(
-            /* start */ tuple((tag(TITLE), tag(COLON), space1)),
-            /* output */ alt((
-                is_not(NEW_LINE),
-                recognize(many1(anychar)),
-            )),
-        )(input)
+    // Special case: just a newline after the title prefix. Eg: `@title: \n..`.
+    if output.starts_with(NEW_LINE) {
+        input = &output[1..];
+        output = "";
     }
 
-    /// Eg: `@title: "Something"`.
-    fn parse_title_quoted(input: &str) -> IResult<&str, &str> {
-        preceded(
-            /* start */ tuple((tag(TITLE), tag(COLON), space1)),
-            /* output */ parse_quoted,
-        )(input)
+    // Can't nest titles.
+    if output.contains(format!("{TITLE}{COLON}{SPACE}").as_str()) {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            output,
+            nom::error::ErrorKind::Many1Count,
+        )));
     }
 
-    fn parse_quoted(input: &str) -> IResult<&str, &str> {
-        // Make sure there are no new lines in the output.
-        verify(
-            delimited(
-                /* start */ tag(QUOTE),
-                /* output */ is_not(QUOTE),
-                /* end */ tag(QUOTE),
-            ),
-            |it: &&str| !it.contains(NEW_LINE)
-        )(input)
-    }
+    // If there is a newline, consume it since there may or may not be a newline at the end.
+    let (input, _) = opt(tag(NEW_LINE))(input)?;
+
+    Ok((input, output))
 }
 
 #[cfg(test)]
@@ -90,7 +67,6 @@ mod test_parse_title_no_eol {
 
     #[test]
     fn test_not_quoted_no_eol() {
-        // AA: exp
         let input = "@title: Something";
         let (input, output) = parse_title_opt_eol(input).unwrap();
         println!(
@@ -104,22 +80,7 @@ mod test_parse_title_no_eol {
 
     #[test]
     fn test_not_quoted_with_eol() {
-        // AA: exp
         let input = "@title: Something\n";
-        let (input, output) = parse_title_opt_eol(input).unwrap();
-        println!(
-            "input: '{}', output: '{}'",
-            Black.on(Yellow).paint(input),
-            Black.on(Green).paint(output),
-        );
-        assert_eq2!(input, "\n");
-        assert_eq2!(output, "Something");
-    }
-
-    #[test]
-    fn test_quoted_no_eol() {
-        // AA: exp
-        let input = "@title: \"Something\"";
         let (input, output) = parse_title_opt_eol(input).unwrap();
         println!(
             "input: '{}', output: '{}'",
@@ -131,30 +92,41 @@ mod test_parse_title_no_eol {
     }
 
     #[test]
-    fn test_quoted_with_eol_1() {
-        // AA: exp
-        let input = "@title: \"Something\"\n";
-        let (input, output) = parse_title_opt_eol(input).unwrap();
+    fn test_no_quoted_no_eol_nested_title() {
+        let input = "@title: Something @title: Something";
+        let it = parse_title_opt_eol(input);
+        assert_eq2!(it.is_err(), true);
         println!(
-            "input: '{}', output: '{}'",
-            Black.on(Yellow).paint(input),
-            Black.on(Green).paint(output),
+            "err: '{}'",
+            Black.on(Yellow).paint(format!("{:?}", it.err().unwrap()))
         );
-        assert_eq2!(input, "\n");
-        assert_eq2!(output, "Something");
     }
 
     #[test]
-    fn test_quoted_with_eol_2() {
-        // AA: exp
-        let input = "@title: \"Something\n\"";
+    fn test_no_quoted_with_eol_title_with_postfix_content_1() {
+        let input = "@title: \nfoo\nbar";
+        println!("input: '{}'", Black.on(Cyan).paint(input),);
         let (input, output) = parse_title_opt_eol(input).unwrap();
         println!(
-            "input: '{}', output: '{}'",
+            "input: '{}'\noutput: '{}'",
             Black.on(Yellow).paint(input),
             Black.on(Green).paint(output),
         );
-        assert_eq2!(input, "\n\"");
-        assert_eq2!(output, "\"Something");
+        assert_eq2!(input, "foo\nbar");
+        assert_eq2!(output, "");
+    }
+
+    #[test]
+    fn test_no_quoted_with_eol_title_with_postfix_content_2() {
+        let input = "@title:  a\nfoo\nbar";
+        println!("input: '{}'", Black.on(Cyan).paint(input),);
+        let (input, output) = parse_title_opt_eol(input).unwrap();
+        println!(
+            "input: '{}'\noutput: '{}'",
+            Black.on(Yellow).paint(input),
+            Black.on(Green).paint(output),
+        );
+        assert_eq2!(input, "foo\nbar");
+        assert_eq2!(output, " a");
     }
 }
