@@ -28,17 +28,17 @@ use crate::*;
 /// - `current_box_computed_style` - The computed style of the box that the editor is in.
 // AA: this is the main entry point for the editor to use this module.
 pub fn try_parse_and_highlight(
-    editor_text: &Vec<US>,
+    editor_text_lines: &Vec<US>,
     maybe_current_box_computed_style: &Option<Style>,
 ) -> CommonResult<StyleUSSpanLines> {
     // Convert the editor text into a string.
     let editor_text_to_string = {
-        let mut acc = Vec::<&str>::new();
-        for line in editor_text {
-            acc.push(line.string.as_str());
-            acc.push("\n");
+        let mut line_to_str_acc = Vec::<&str>::new();
+        for line in editor_text_lines {
+            line_to_str_acc.push(line.string.as_str());
+            line_to_str_acc.push("\n");
         }
-        acc.join("\n")
+        line_to_str_acc.join("")
     };
 
     // Try and parse `editor_text_to_string` into a `Document`.
@@ -48,5 +48,26 @@ pub fn try_parse_and_highlight(
             maybe_current_box_computed_style,
         )),
         Err(_) => CommonError::new_err_with_only_type(CommonErrorType::ParsingError),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_try_parse_and_highlight() -> CommonResult<()> {
+        let editor_text_lines = vec![US::new("Hello"), US::new("World")];
+        let maybe_current_box_computed_style = None;
+        let result =
+            try_parse_and_highlight(&editor_text_lines, &maybe_current_box_computed_style)?;
+
+        println!("result: {}", result.pretty_print());
+
+        assert_eq2!(editor_text_lines.len(), result.len());
+        assert_eq2!(editor_text_lines[0], result[0][0].text);
+        assert_eq2!(editor_text_lines[1], result[1][0].text);
+
+        Ok(())
     }
 }
