@@ -179,12 +179,18 @@ pub fn get_metadata_title_marker_style() -> Style {
 }
 
 /// - Fg color: #4fcbd4
+/// - Bg color: #444444
 pub fn get_metadata_title_value_style() -> Style {
     style! {
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan),
             ColorSupport::Ansi256 => TuiColor::Ansi(51), // Cyan1.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4fcbd4")), // Moderate cyan.
+        }
+        color_bg: match ColorSupport::detect() {
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkGrey),
+            ColorSupport::Ansi256 => TuiColor::Ansi(238), // Grey27.
+            ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#444444")), // Very dark gray.
         }
     }
 }

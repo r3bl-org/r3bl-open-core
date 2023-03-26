@@ -36,7 +36,7 @@ pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
     let (input, output) = many0(
         /* Each of these parsers end up scanning until EOL. */
         alt((
-            map(parse_title,                         MdBlockElement::Title),
+            map(parse_title_opt_eol,                 MdBlockElement::Title),
             map(parse_tags,                          MdBlockElement::Tags),
             map(parse_block_heading,                 MdBlockElement::Heading),
             // AD: change semantics of ul, ol, so multiple lines are allowed.

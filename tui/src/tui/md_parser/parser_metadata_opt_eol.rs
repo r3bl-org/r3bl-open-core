@@ -27,6 +27,7 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
+// AA: exp?
 pub fn try_parse_and_format_title_into_styled_us_span_line<'a>(
     input: &'a str,
     maybe_current_box_computed_style: &'a Option<Style>,
@@ -36,11 +37,12 @@ pub fn try_parse_and_format_title_into_styled_us_span_line<'a>(
     Some(it)
 }
 
-// AA: exp
 /// - Parse input: `@title: "Something"` or `@title: Something`.
 /// - There may or may not be a newline at the end.
+// 00: exp -> use this
 #[rustfmt::skip]
 pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
+    // 00: if there is a newline, consume it
     // There may or may not be a newline at the end.
     return alt((
         parse_title_quoted,
