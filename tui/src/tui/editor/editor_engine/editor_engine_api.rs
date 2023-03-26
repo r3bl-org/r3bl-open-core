@@ -441,6 +441,7 @@ mod syntect_path {
         syntax_set.find_syntax_by_extension(file_extension)
     }
 
+    // AA: syntect usage
     /// Try and load syntax highlighting for the current line. It might seem lossy to create a new
     /// [HighlightLines] for each line, but if this struct is re-used then it will not be able to
     /// highlight the lines correctly in the editor component. This struct is mutated when it is
@@ -451,7 +452,8 @@ mod syntect_path {
         line: &'a str,
     ) -> Option<Vec<(syntect::highlighting::Style, &'a str)>> {
         let syntax_ref = try_get_syntax_ref_from(editor_engine, editor_buffer)?;
-        let mut highlighter = HighlightLines::new(syntax_ref, &editor_engine.theme);
+        let theme = &editor_engine.theme;
+        let mut highlighter = HighlightLines::new(syntax_ref, theme);
         highlighter
             .highlight_line(line, &editor_engine.syntax_set)
             .ok()
