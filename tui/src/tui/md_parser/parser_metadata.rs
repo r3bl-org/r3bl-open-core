@@ -59,15 +59,14 @@ pub fn parse_title(input: &str) -> IResult<&str, &str> {
         )(input)
     }
 
-}
-
-#[rustfmt::skip]
-pub fn parse_quoted(input: &str) -> IResult<&str, &str> {
-    delimited(
-        /* start */ tag(QUOTE),
-        /* output */ is_not(QUOTE),
-        /* end */ tag(QUOTE),
-    )(input)
+    fn parse_quoted(input: &str) -> IResult<&str, &str> {
+        // Make sure there are no new lines in the output.
+        delimited(
+            /* start */ tag(QUOTE),
+            /* output */ is_not(QUOTE),
+            /* end */ tag(QUOTE),
+        )(input)
+    }
 }
 
 // REFACTOR: make the requirement for `[` and `]` optional. Update tests.
@@ -127,6 +126,15 @@ pub fn parse_tags(input: &str) -> IResult<&str, List<&str>> {
             }
         }
         Ok((input, output_trimmed_unquoted))
+    }
+
+    fn parse_quoted(input: &str) -> IResult<&str, &str> {
+        // Make sure there are no new lines in the output.
+        delimited(
+            /* start */ tag(QUOTE),
+            /* output */ is_not(QUOTE),
+            /* end */ tag(QUOTE),
+        )(input)
     }
 }
 
