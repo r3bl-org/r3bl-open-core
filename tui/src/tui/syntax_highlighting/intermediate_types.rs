@@ -32,7 +32,7 @@
 
 use r3bl_rs_utils_core::*;
 
-use crate::*;
+use crate::{constants::*, *};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple spans in a
 /// line of text.
@@ -61,6 +61,67 @@ pub type StyleUSSpanLine = List<StyleUSSpan>;
 pub type StyleUSSpanLines = List<StyleUSSpanLine>;
 
 impl StyleUSSpanLine {
+    /// Eg: "@tags: [tag1, tag2, tag3]"
+    pub fn from_tags(
+        tag_list: &List<&'_ str>,
+        maybe_current_box_computed_style: &Option<Style>,
+    ) -> Self {
+        let mut acc_line_output = StyleUSSpanLine::default();
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default() + get_metadata_tags_marker_style(),
+            US::from(TAGS),
+        );
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
+            US::from(format!("{COLON}{SPACE}")),
+        );
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
+            US::from(LEFT_BRACKET),
+        );
+        for (index, span) in tag_list.iter().enumerate() {
+            acc_line_output += StyleUSSpan::new(
+                maybe_current_box_computed_style.unwrap_or_default()
+                    + get_metadata_tags_values_style(),
+                US::from(*span),
+            );
+            // Not the last item in the iterator.
+            if index != (tag_list.len() - 1) {
+                acc_line_output += StyleUSSpan::new(
+                    maybe_current_box_computed_style.unwrap_or_default()
+                        + get_foreground_dim_style(),
+                    US::from(format!("{COMMA}{SPACE}")),
+                );
+            }
+        }
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
+            US::from(RIGHT_BRACKET),
+        );
+
+        acc_line_output
+    }
+
+    /// Eg: "@title: Something"
+    pub fn from_title(text: &str, maybe_current_box_computed_style: &Option<Style>) -> Self {
+        let mut acc_line_output = StyleUSSpanLine::default();
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default()
+                + get_metadata_title_marker_style(),
+            US::from(TITLE),
+        );
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
+            US::from(format!("{COLON}{SPACE}")),
+        );
+        acc_line_output += StyleUSSpan::new(
+            maybe_current_box_computed_style.unwrap_or_default() + get_metadata_title_value_style(),
+            US::from(text),
+        );
+
+        acc_line_output
+    }
+
     /// This applies the given style to every single item in the list. It has the highest
     /// specificity.
     pub fn add_style(&mut self, style: Style) {

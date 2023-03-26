@@ -46,71 +46,6 @@ impl StyleUSSpanLines {
         lines
     }
 
-    /// Eg: "@title: Something"
-    pub fn from_title(text: &str, maybe_current_box_computed_style: &Option<Style>) -> Self {
-        let mut acc_line_output = StyleUSSpanLine::default();
-        acc_line_output += StyleUSSpan::new(
-            maybe_current_box_computed_style.unwrap_or_default()
-                + get_metadata_title_marker_style(),
-            US::from(TITLE),
-        );
-        acc_line_output += StyleUSSpan::new(
-            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
-            US::from(format!("{COLON}{SPACE}")),
-        );
-        acc_line_output += StyleUSSpan::new(
-            maybe_current_box_computed_style.unwrap_or_default() + get_metadata_title_value_style(),
-            US::from(text),
-        );
-
-        let mut lines = StyleUSSpanLines::default();
-        lines += acc_line_output;
-        lines
-    }
-
-    /// Eg: "@tags: [tag1, tag2, tag3]"
-    pub fn from_tags(
-        tag_list: &List<&'_ str>,
-        maybe_current_box_computed_style: &Option<Style>,
-    ) -> Self {
-        let mut acc_line_output = StyleUSSpanLine::default();
-        acc_line_output += StyleUSSpan::new(
-            maybe_current_box_computed_style.unwrap_or_default() + get_metadata_tags_marker_style(),
-            US::from(TAGS),
-        );
-        acc_line_output += StyleUSSpan::new(
-            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
-            US::from(format!("{COLON}{SPACE}")),
-        );
-        acc_line_output += StyleUSSpan::new(
-            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
-            US::from(LEFT_BRACKET),
-        );
-        for (index, span) in tag_list.iter().enumerate() {
-            acc_line_output += StyleUSSpan::new(
-                maybe_current_box_computed_style.unwrap_or_default()
-                    + get_metadata_tags_values_style(),
-                US::from(*span),
-            );
-            // Not the last item in the iterator.
-            if index != (tag_list.len() - 1) {
-                acc_line_output += StyleUSSpan::new(
-                    maybe_current_box_computed_style.unwrap_or_default()
-                        + get_foreground_dim_style(),
-                    US::from(format!("{COMMA}{SPACE}")),
-                );
-            }
-        }
-        acc_line_output += StyleUSSpan::new(
-            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
-            US::from(RIGHT_BRACKET),
-        );
-
-        let mut lines = StyleUSSpanLines::default();
-        lines += acc_line_output;
-        lines
-    }
-
     /// Based on ColorSupport::detect() & language we have the following:
     /// |               | Truecolor      | ANSI           |
     /// |---------------|----------------|----------------|
@@ -242,6 +177,12 @@ impl StyleUSSpanLines {
         let mut lines = StyleUSSpanLines::default();
 
         match block {
+            MdBlockElement::Title(title_text) => {
+                lines += StyleUSSpanLine::from_title(title_text, maybe_current_box_computed_style);
+            }
+            MdBlockElement::Tags(tag_list) => {
+                lines += StyleUSSpanLine::from_tags(tag_list, maybe_current_box_computed_style);
+            }
             MdBlockElement::Heading(heading_data) => {
                 lines.push(StyleUSSpanLine::from_heading_data(
                     heading_data,
@@ -267,12 +208,6 @@ impl StyleUSSpanLines {
                     code_block_lines,
                     maybe_current_box_computed_style,
                 );
-            }
-            MdBlockElement::Title(title_text) => {
-                lines += StyleUSSpanLines::from_title(title_text, maybe_current_box_computed_style);
-            }
-            MdBlockElement::Tags(tag_list) => {
-                lines += StyleUSSpanLines::from_tags(tag_list, maybe_current_box_computed_style);
             }
         }
 
