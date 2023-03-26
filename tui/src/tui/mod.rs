@@ -26,11 +26,17 @@
 ///    [r3bl_rs_utils_core::log_error] fails, then it will print the error to stderr.
 pub const DEBUG_TUI_MOD: bool = true;
 
+/// Enable or disable syntax highlighting debug logging.
+pub const DEBUG_TUI_SYN_HI: bool = false;
+
 /// Enable or disable compositor debug logging.
 pub const DEBUG_TUI_COMPOSITOR: bool = false;
+
 // Enable or disable debug logging for this `terminal_lib_backends` module.
 pub const DEBUG_TUI_SHOW_PIPELINE: bool = false;
+
 pub const DEBUG_TUI_SHOW_PIPELINE_EXPANDED: bool = false;
+
 /// Controls input event debugging [crate::EventStreamExt], and execution of render ops [crate::exec_render_op!] debugging
 /// output.
 pub const DEBUG_TUI_SHOW_TERMINAL_BACKEND: bool = false;
