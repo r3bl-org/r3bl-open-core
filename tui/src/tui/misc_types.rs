@@ -251,7 +251,7 @@ pub mod list_of {
     }
 
     impl<T> From<Vec<T>> for List<T> {
-        fn from(items: Vec<T>) -> Self { Self { items } }
+        fn from(other: Vec<T>) -> Self { Self { items: other } }
     }
 
     impl<T> Deref for List<T> {

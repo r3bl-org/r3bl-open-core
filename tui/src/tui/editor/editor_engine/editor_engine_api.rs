@@ -252,7 +252,6 @@ where
 mod r3bl_path {
     use super::*;
 
-    // AA: ▌5. ALT▐ `&Vec<US>` (1)-> `Document` (2)-> `Vec<List<(Style, US)>>` -> call syn_hi_editor_content::highlight(..)
     /// Try convert [Vec] of [US] to [MdDocument]:
     /// - Step 1: Get the lines from the buffer using
     ///           [editor_buffer.get_lines()](EditorBuffer::get_lines()).
@@ -305,7 +304,6 @@ mod r3bl_path {
             ));
         });
 
-        // AA: impl this!
         for (row_index, line) in lines
             .iter()
             .skip(ch!(@to_usize editor_buffer.get_scroll_offset().row_index))
@@ -427,7 +425,6 @@ mod syntect_path {
         render_ops: &mut RenderOps,
     ) {
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
-        // AB: ▌2. RENDER▐ render single line; life of styled texts is short
         let list: List<StyleUSSpan> =
             syntect_to_styled_text_conversion::from_syntect_to_tui(syntect_highlighted_line);
         let styled_texts: StyledTexts = list.clip(scroll_offset_col, max_display_col_count);
