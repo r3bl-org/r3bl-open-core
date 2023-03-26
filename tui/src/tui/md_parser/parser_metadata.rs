@@ -16,52 +16,9 @@
  */
 
 use constants::*;
-use nom::{branch::*,
-          bytes::complete::*,
-          character::complete::*,
-          combinator::*,
-          multi::*,
-          sequence::*,
-          IResult};
+use nom::{branch::*, bytes::complete::*, character::complete::*, multi::*, sequence::*, IResult};
 
 use crate::*;
-
-/// Parse input: `@title: "Something"\n` or `@title: Something\n`.
-#[rustfmt::skip]
-pub fn parse_title(input: &str) -> IResult<&str, &str> {
-    return terminated(
-        alt((
-            parse_title_quoted,
-            parse_title_not_quoted
-        )),
-        tag(NEW_LINE)
-    )(input);
-
-    /// Eg: `@title: "Something"\n`. The quotes are optional & EOL terminates input.
-    fn parse_title_quoted(input: &str) -> IResult<&str, &str> {
-        preceded(
-            /* start */ tuple((tag(TITLE), tag(COLON), space1)),
-            /* output */ parse_quoted,
-        )(input)
-    }
-
-    /// Eg: `@title: "Something"\n`. The quotes are optional & EOL terminates input.
-    fn parse_title_not_quoted(input: &str) -> IResult<&str, &str> {
-        preceded(
-            /* start */ tuple((tag(TITLE), tag(COLON), space1)),
-            /* output */ is_not(NEW_LINE),
-        )(input)
-    }
-
-    fn parse_quoted(input: &str) -> IResult<&str, &str> {
-        // Make sure there are no new lines in the output.
-        delimited(
-            /* start */ tag(QUOTE),
-            /* output */ is_not(QUOTE),
-            /* end */ tag(QUOTE),
-        )(input)
-    }
-}
 
 // REFACTOR: make the requirement for `[` and `]` optional. Update tests.
 
@@ -148,26 +105,11 @@ mod tests {
         let output = parse_tags(TAG_STRING_2);
         assert_eq2!(output, Ok(("", list!["tag 1", "tag 2", "tag 3"])));
     }
-
-    #[test]
-    fn test_parse_metadata_title() {
-        let output = parse_title(raw_strings::TITLE_STRING_1);
-        assert_eq2!(output, Ok(("", "Some title")));
-
-        let output = parse_title(raw_strings::TITLE_STRING_2);
-        assert_eq2!(output, Ok(("", "Some title  ")));
-    }
 }
 
 #[cfg(test)]
 #[rustfmt::skip]
 mod raw_strings {
-pub const TITLE_STRING_1: &str =
-r#"@title: Some title
-"#;
-pub const TITLE_STRING_2: &str =
-r#"@title: "Some title  "
-"#;
 pub const TAG_STRING_1: &str =
 r#"@tags: [tag 1 ,    tag 2, tag3]
 "#;
