@@ -22,8 +22,9 @@ use std::{collections::VecDeque,
           thread::{self, JoinHandle}};
 
 /// Rust book: https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory
-use r3bl_rs_utils::{tree_memory_arena::{Arena, MTArena, ResultUidList},
-                    TraversalKind, assert_eq2};
+use r3bl_rs_utils::{assert_eq2,
+                    tree_memory_arena::{Arena, MTArena, ResultUidList},
+                    TraversalKind};
 use r3bl_rs_utils_core::{style_primary, style_prompt};
 
 #[test]
@@ -50,6 +51,19 @@ fn test_can_add_nodes_to_tree() {
         assert_eq2!(
             node_1_ref_weak.upgrade().unwrap().read().unwrap().payload,
             42
+        );
+    }
+
+    // Mutate node_1.
+    {
+        let node_1_id = 0_usize;
+        {
+            let node_1_ref = dbg!(arena.get_node_arc(node_1_id).unwrap());
+            node_1_ref.write().unwrap().payload = 100;
+        }
+        assert_eq2!(
+            arena.get_node_arc(node_1_id).unwrap().read().unwrap().payload,
+            100
         );
     }
 
