@@ -26,6 +26,7 @@ use nom::{branch::*,
 
 use crate::*;
 
+// 00: rename file to `parser_metadata_title_opt_eol.rs`
 /// - Parse input: `@title: Something`.
 /// - There may or may not be a newline at the end.
 #[rustfmt::skip]
