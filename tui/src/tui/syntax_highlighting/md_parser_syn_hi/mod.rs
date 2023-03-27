@@ -24,14 +24,10 @@
 
 // Attach.
 pub mod convert_to_plain_text;
-pub mod gradient;
 pub mod md_parser_syn_hi_impl;
-pub mod md_theme_for_highlighting;
-pub mod md_theme_stylesheet;
+pub mod md_parser_stylesheet;
 
 // Re-export.
 pub use convert_to_plain_text::*;
-pub use gradient::*;
 pub use md_parser_syn_hi_impl::*;
-pub use md_theme_for_highlighting::*;
-pub use md_theme_stylesheet::*;
+pub use md_parser_stylesheet::*;

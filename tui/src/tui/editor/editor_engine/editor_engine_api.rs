@@ -441,7 +441,7 @@ mod syntect_path {
         syntax_set.find_syntax_by_extension(file_extension)
     }
 
-    // AA: syntect usage
+    // AC: eg of syntect usage
     /// Try and load syntax highlighting for the current line. It might seem lossy to create a new
     /// [HighlightLines] for each line, but if this struct is re-used then it will not be able to
     /// highlight the lines correctly in the editor component. This struct is mutated when it is
