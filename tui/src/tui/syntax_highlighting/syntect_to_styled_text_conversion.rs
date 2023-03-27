@@ -41,6 +41,7 @@ pub type SyntectStyleStrSpan<'a> = (SyntectStyle, &'a str);
 /// A line of text is made up of multiple [SyntectStyleStrSpan]s.
 pub type SyntectStyleStrSpanLine<'a> = Vec<SyntectStyleStrSpan<'a>>;
 
+// 00: convert RGB to ANSI color: https://github.com/rhysd/rgb2ansi256
 pub fn from_syntect_to_tui(syntect_highlighted_line: SyntectStyleStrSpanLine) -> StyleUSSpanLine {
     let mut it = StyleUSSpanLine::from(syntect_highlighted_line);
 
