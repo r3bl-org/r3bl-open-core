@@ -130,7 +130,7 @@ pub fn parse_tags_opt_eol(input: &str) -> IResult<&str, List<&str>> {
 
 #[cfg(test)]
 mod test_parse_tags_opt_eol {
-    use r3bl_rs_utils_core::*;
+    use pretty_assertions::assert_eq;
 
     use super::*;
 
@@ -139,34 +139,34 @@ mod test_parse_tags_opt_eol {
         // 00: impl this
         let input = "@tags: [tag1, tag2, tag3]";
         let (input, output) = super::parse_tags_opt_eol(input).unwrap();
-        assert_eq2!(input, "");
-        assert_eq2!(output, list!["tag1", "tag2", "tag3"]);
+        assert_eq!(input, "");
+        assert_eq!(output, list!["tag1", "tag2", "tag3"]);
     }
 
     #[test]
     fn test_not_quoted_no_eol_err_whitespace() {
         // First element mustn't have any space prefix.
-        assert_eq2!(
+        assert_eq!(
             parse_tags_opt_eol("@tags: [ tag1, tag2, tag3]").is_err(),
             true
         );
 
         // 2nd element onwards must have a single space prefix.
-        assert_eq2!(
+        assert_eq!(
             parse_tags_opt_eol("@tags: [tag1,tag2, tag3]").is_err(),
             true
         );
-        assert_eq2!(
+        assert_eq!(
             parse_tags_opt_eol("@tags: [tag1,  tag2,tag3]").is_err(),
             true
         );
-        assert_eq2!(
+        assert_eq!(
             parse_tags_opt_eol("@tags: [tag1, tag2,tag3]").is_err(),
             true
         );
 
         // It is ok to have more than 1 prefix space for 2nd element onwards.
-        assert_eq2!(
+        assert_eq!(
             parse_tags_opt_eol("@tags: [tag1, tag2,  tag3]").unwrap(),
             ("", list!["tag1", "tag2", " tag3"])
         );
@@ -177,8 +177,8 @@ mod test_parse_tags_opt_eol {
         // 00: impl this
         let input = "@tags: [tag1, tag2, tag3]\n";
         let (input, output) = super::parse_tags_opt_eol(input).unwrap();
-        assert_eq2!(input, "");
-        assert_eq2!(output, list!["tag1", "tag2", "tag3"]);
+        assert_eq!(input, "");
+        assert_eq!(output, list!["tag1", "tag2", "tag3"]);
     }
 }
 
@@ -263,10 +263,10 @@ mod tests {
     #[test]
     fn test_parse_metadata_tags() {
         let output = parse_tags(TAG_STRING_1);
-        assert_eq2!(output, Ok(("", list!["tag 1", "tag 2", "tag3"])));
+        assert_eq!(output, Ok(("", list!["tag 1", "tag 2", "tag3"])));
 
         let output = parse_tags(TAG_STRING_2);
-        assert_eq2!(output, Ok(("", list!["tag 1", "tag 2", "tag 3"])));
+        assert_eq!(output, Ok(("", list!["tag 1", "tag 2", "tag 3"])));
     }
 }
 

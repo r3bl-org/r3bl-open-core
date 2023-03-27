@@ -74,6 +74,8 @@ members = ["macro", "core", "redux", "tui"]
 
 # For examples.
 # http://xion.io/post/code/rust-examples.html
+
 [dev-dependencies]
 reedline = "0.16.0"
 textwrap = "0.16.0"
+pretty_assertions = "1.3.0"
