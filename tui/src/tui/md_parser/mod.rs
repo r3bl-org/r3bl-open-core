@@ -41,13 +41,13 @@
 pub mod block;
 pub mod parser;
 pub mod parser_element;
-pub mod parser_metadata;
-pub mod parser_metadata_opt_eol;
+pub mod parser_metadata_tags;
+pub mod parser_metadata_title;
 pub mod types;
 
 pub use block::*;
 pub use parser::*;
 pub use parser_element::*;
-pub use parser_metadata::*;
-pub use parser_metadata_opt_eol::*;
+pub use parser_metadata_tags::*;
+pub use parser_metadata_title::*;
 pub use types::*;

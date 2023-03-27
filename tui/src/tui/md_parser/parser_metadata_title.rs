@@ -26,7 +26,6 @@ use nom::{branch::*,
 
 use crate::*;
 
-// 00: rename file to `parser_metadata_title_opt_eol.rs`
 /// - Parse input: `@title: Something`.
 /// - There may or may not be a newline at the end.
 #[rustfmt::skip]
@@ -48,8 +47,8 @@ pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
     // Can't nest titles.
     if output.contains(format!("{TITLE}{COLON}{SPACE}").as_str()) {
         return Err(nom::Err::Error(nom::error::Error::new(
-            output,
-            nom::error::ErrorKind::Many1Count,
+            "Can't have more than one @title: expr.",
+            nom::error::ErrorKind::Fail,
         )));
     }
 

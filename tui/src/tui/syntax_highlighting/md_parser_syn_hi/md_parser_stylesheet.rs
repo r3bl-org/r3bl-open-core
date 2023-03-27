@@ -209,12 +209,94 @@ pub fn get_metadata_tags_marker_style() -> Style {
 }
 
 /// - Fg color: #ce55b7
+// 00: add bg color (similar to title value)
 pub fn get_metadata_tags_values_style() -> Style {
     style! {
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow), // There is no equivalent.
             ColorSupport::Ansi256 => TuiColor::Ansi(127), // Magenta3.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ce55b7")), // Moderate magenta.
+        }
+        color_bg: match ColorSupport::detect() {
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkGrey),
+            ColorSupport::Ansi256 => TuiColor::Ansi(236), // Grey19.
+            ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#303030")), // Very dark gray.
+        }
+    }
+}
+
+impl ColorWheel {
+    /// More info on gradients: <https://uigradients.com/>.
+    pub fn from_heading_data(heading_data: &HeadingData) -> Self {
+        match heading_data.level {
+            HeadingLevel::Heading1 => ColorWheel::new(vec![
+                ColorWheelConfig::Rgb(
+                    Vec::from([/* cyan */ "#12c2e9", /* purple */ "#c471ed"].map(String::from)),
+                    ColorWheelSpeed::Medium,
+                    20,
+                ),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::DarkRedToDarkMagenta,
+                    ColorWheelSpeed::Medium,
+                ),
+            ]),
+            HeadingLevel::Heading2 => ColorWheel::new(vec![
+                ColorWheelConfig::Rgb(
+                    Vec::from([/* purple */ "#c471ed", /* red */ "#f64f59"].map(String::from)),
+                    ColorWheelSpeed::Medium,
+                    20,
+                ),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::RedToBrightPink,
+                    ColorWheelSpeed::Medium,
+                ),
+            ]),
+            HeadingLevel::Heading3 => ColorWheel::new(vec![
+                ColorWheelConfig::Rgb(
+                    Vec::from([/* red */ "#b92b27", /* blue */ "#1565C0"].map(String::from)),
+                    ColorWheelSpeed::Medium,
+                    20,
+                ),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::OrangeToNeonPink,
+                    ColorWheelSpeed::Medium,
+                ),
+            ]),
+            HeadingLevel::Heading4 => ColorWheel::new(vec![
+                ColorWheelConfig::Rgb(
+                    Vec::from(
+                        [/* pink */ "#FF0099", /* dark purple */ "#493240"].map(String::from),
+                    ),
+                    ColorWheelSpeed::Medium,
+                    20,
+                ),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::LightYellowToWhite,
+                    ColorWheelSpeed::Medium,
+                ),
+            ]),
+            HeadingLevel::Heading5 => ColorWheel::new(vec![
+                ColorWheelConfig::Rgb(
+                    Vec::from([/* green */ "#00F260", /* blue */ "#0575E6"].map(String::from)),
+                    ColorWheelSpeed::Medium,
+                    20,
+                ),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::MediumGreenToMediumBlue,
+                    ColorWheelSpeed::Medium,
+                ),
+            ]),
+            HeadingLevel::Heading6 => ColorWheel::new(vec![
+                ColorWheelConfig::Rgb(
+                    Vec::from([/* red */ "#b21f1f", /* yellow */ "#fdbb2d"].map(String::from)),
+                    ColorWheelSpeed::Medium,
+                    20,
+                ),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::GreenToBlue,
+                    ColorWheelSpeed::Medium,
+                ),
+            ]),
         }
     }
 }
