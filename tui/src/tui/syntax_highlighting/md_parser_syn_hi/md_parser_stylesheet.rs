@@ -208,14 +208,14 @@ pub fn get_metadata_tags_marker_style() -> Style {
     }
 }
 
-/// - Fg color: #ce55b7
-// 00: add bg color (similar to title value)
+/// - Fg color: #e2a1e3
+/// - Bg color: #303030
 pub fn get_metadata_tags_values_style() -> Style {
     style! {
         color_fg: match ColorSupport::detect() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow), // There is no equivalent.
-            ColorSupport::Ansi256 => TuiColor::Ansi(127), // Magenta3.
-            ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ce55b7")), // Moderate magenta.
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
+            ColorSupport::Ansi256 => TuiColor::Ansi(45), // Turquoise2
+            ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#e2a1e3")), // Soft violet.
         }
         color_bg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkGrey),
@@ -227,6 +227,7 @@ pub fn get_metadata_tags_values_style() -> Style {
 
 impl ColorWheel {
     /// More info on gradients: <https://uigradients.com/>.
+    // 00: make gradients closer together (too far apart currently)
     pub fn from_heading_data(heading_data: &HeadingData) -> Self {
         match heading_data.level {
             HeadingLevel::Heading1 => ColorWheel::new(vec![
