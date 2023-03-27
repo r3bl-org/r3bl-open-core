@@ -38,12 +38,6 @@ pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
         )),
     )(input)?;
 
-    // Special case: just a newline after the title prefix. Eg: `@title: \n..`.
-    if output.starts_with(NEW_LINE) {
-        input = &output[1..];
-        output = "";
-    }
-
     // Can't nest titles.
     if output.contains(format!("{TITLE}{COLON}{SPACE}").as_str()) {
         return Err(nom::Err::Error(nom::error::Error::new(
@@ -52,7 +46,15 @@ pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
         )));
     }
 
-    // If there is a newline, consume it since there may or may not be a newline at the end.
+    // Special case: Early return when just a newline after the title prefix. Eg: `@title: \n..`.
+    if output.starts_with(NEW_LINE) {
+        input = &output[1..];
+        output = "";
+        return Ok((input, output));
+    }
+
+    // Normal case: iff there is a newline, consume it since there may or may not be a newline at
+    // the end.
     let (input, _) = opt(tag(NEW_LINE))(input)?;
 
     Ok((input, output))
@@ -61,7 +63,7 @@ pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
 #[cfg(test)]
 mod test_parse_title_no_eol {
     use ansi_term::Color::*;
-    use r3bl_rs_utils_core::*;
+    use pretty_assertions::assert_eq;
 
     use super::*;
 
@@ -74,8 +76,8 @@ mod test_parse_title_no_eol {
             Black.on(Yellow).paint(input),
             Black.on(Green).paint(output),
         );
-        assert_eq2!(input, "");
-        assert_eq2!(output, "Something");
+        assert_eq!(input, "");
+        assert_eq!(output, "Something");
     }
 
     #[test]
@@ -87,15 +89,15 @@ mod test_parse_title_no_eol {
             Black.on(Yellow).paint(input),
             Black.on(Green).paint(output),
         );
-        assert_eq2!(input, "");
-        assert_eq2!(output, "Something");
+        assert_eq!(input, "");
+        assert_eq!(output, "Something");
     }
 
     #[test]
     fn test_no_quoted_no_eol_nested_title() {
         let input = "@title: Something @title: Something";
         let it = parse_title_opt_eol(input);
-        assert_eq2!(it.is_err(), true);
+        assert_eq!(it.is_err(), true);
         println!(
             "err: '{}'",
             Black.on(Yellow).paint(format!("{:?}", it.err().unwrap()))
@@ -112,8 +114,8 @@ mod test_parse_title_no_eol {
             Black.on(Yellow).paint(input),
             Black.on(Green).paint(output),
         );
-        assert_eq2!(input, "foo\nbar");
-        assert_eq2!(output, "");
+        assert_eq!(input, "foo\nbar");
+        assert_eq!(output, "");
     }
 
     #[test]
@@ -126,7 +128,21 @@ mod test_parse_title_no_eol {
             Black.on(Yellow).paint(input),
             Black.on(Green).paint(output),
         );
-        assert_eq2!(input, "foo\nbar");
-        assert_eq2!(output, " a");
+        assert_eq!(input, "foo\nbar");
+        assert_eq!(output, " a");
+    }
+
+    #[test]
+    fn test_no_quoted_with_eol_title_with_postfix_content_3() {
+        let input = "@title: \n\n# heading1\n## heading2";
+        println!("❯ input: \n'{}'", Black.on(Cyan).paint(input),);
+        let (remainder, title) = parse_title_opt_eol(input).unwrap();
+        println!(
+            "❯ remainder: \n'{}'\n❯ title: \n'{}'",
+            Black.on(Yellow).paint(remainder),
+            Black.on(Green).paint(title),
+        );
+        assert_eq!(remainder, "\n# heading1\n## heading2");
+        assert_eq!(title, "");
     }
 }

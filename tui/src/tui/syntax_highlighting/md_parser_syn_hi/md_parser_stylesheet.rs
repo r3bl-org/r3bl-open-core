@@ -235,15 +235,16 @@ impl ColorWheel {
         match heading_data.level {
             HeadingLevel::Heading1 => ColorWheel::new(vec![
                 ColorWheelConfig::Rgb(
-                    Vec::from(["#24FE41", "#FDFC47"].map(String::from)),
+                    Vec::from(["#01fa22", "#00eef2"].map(String::from)),
                     SPEED,
                     STEPS,
                 ),
                 ColorWheelConfig::Ansi256(Ansi256GradientIndex::LightYellowToWhite, SPEED),
             ]),
+
             HeadingLevel::Heading2 => ColorWheel::new(vec![
                 ColorWheelConfig::Rgb(
-                    Vec::from(["#FDFC47", "#e52d27"].map(String::from)),
+                    Vec::from(["#fff200", "#de211b"].map(String::from)),
                     SPEED,
                     STEPS,
                 ),
@@ -261,6 +262,15 @@ impl ColorWheel {
 
             HeadingLevel::Heading4 => ColorWheel::new(vec![
                 ColorWheelConfig::Rgb(
+                    Vec::from(["#ff28a9", "#bd60eb"].map(String::from)),
+                    SPEED,
+                    STEPS,
+                ),
+                ColorWheelConfig::Ansi256(Ansi256GradientIndex::RedToBrightPink, SPEED),
+            ]),
+
+            HeadingLevel::Heading5 => ColorWheel::new(vec![
+                ColorWheelConfig::Rgb(
                     Vec::from(["#ff6a00", "#ee0979"].map(String::from)),
                     SPEED,
                     STEPS,
@@ -268,18 +278,9 @@ impl ColorWheel {
                 ColorWheelConfig::Ansi256(Ansi256GradientIndex::OrangeToNeonPink, SPEED),
             ]),
 
-            HeadingLevel::Heading5 => ColorWheel::new(vec![
-                ColorWheelConfig::Rgb(
-                    Vec::from(["#c471ed", "#FF0099"].map(String::from)),
-                    SPEED,
-                    STEPS,
-                ),
-                ColorWheelConfig::Ansi256(Ansi256GradientIndex::RedToBrightPink, SPEED),
-            ]),
-
             HeadingLevel::Heading6 => ColorWheel::new(vec![
                 ColorWheelConfig::Rgb(
-                    Vec::from(["#654ea3", "#12c2e9"].map(String::from)),
+                    Vec::from(["#8470ba", "#12c2e9"].map(String::from)),
                     SPEED,
                     STEPS,
                 ),
