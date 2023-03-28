@@ -3,8 +3,8 @@
 </p>
 
 # Context
-
 <a id="markdown-context" name="context"></a>
+
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
@@ -49,8 +49,8 @@ it.
      3. integrations w/ calendar, email, contacts APIs
 
 # r3bl_rs_utils
-
 <a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
+
 
 This crate is related to the first thing that's described above. It provides lots of useful
 functionality to help you build TUI (text user interface) apps, along w/ general niceties &
@@ -112,8 +112,8 @@ Table of contents:
 <hr/>
 
 ## tui and tui_core
-
 <a id="markdown-tui-and-tui_core" name="tui-and-tui_core"></a>
+
 
 For more information please read the README for the
 [r3bl_tui crate](https://docs.rs/r3bl_tui/latest/r3bl_tui/).
@@ -126,33 +126,33 @@ https://user-images.githubusercontent.com/2966499/223200857-33c346fe-ed66-4216-8
 
 
 ## redux
-
 <a id="markdown-redux" name="redux"></a>
+
 
 For more information please read the README for the
 [r3bl_redux crate](https://docs.rs/r3bl_redux/latest/r3bl_redux/).
 
 ## Macros
-
 <a id="markdown-macros" name="macros"></a>
 
-### Declarative
 
+### Declarative
 <a id="markdown-declarative" name="declarative"></a>
+
 
 For more information please read the README for the
 [r3bl_rs_utils_core crate](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/).
 
 ### Procedural
-
 <a id="markdown-procedural" name="procedural"></a>
+
 
 For more information please read the README for the
 [r3bl_rs_utils_macro crate](https://docs.rs/r3bl_rs_utils_macro/latest/r3bl_rs_utils_macro/).
 
 ## tree_memory_arena (non-binary tree data structure)
-
 <a id="markdown-tree_memory_arena-non-binary-tree-data-structure" name="tree_memory_arena-non-binary-tree-data-structure"></a>
+
 
 [`Arena`] and [`MTArena`] types are the implementation of a
 [non-binary tree](https://en.wikipedia.org/wiki/Binary_tree#Non-binary_trees) data structure that is
@@ -185,6 +185,7 @@ let mut arena = Arena::<usize>::new();
 let node_1_value = 42 as usize;
 let node_1_id = arena.add_new_node(node_1_value, None);
 
+// Access node.
 {
   assert!(arena.get_node_arc(&node_1_id).is_some());
   let node_1_ref = dbg!(arena.get_node_arc(&node_1_id).unwrap());
@@ -196,16 +197,31 @@ let node_1_id = arena.add_new_node(node_1_value, None);
   );
 }
 
+// Node does not exist.
 {
   let node_id_dne = 200 as usize;
   assert!(arena.get_node_arc(&node_id_dne).is_none());
 }
 
+// Walk tree.
 {
   let node_1_id = 0 as usize;
   let node_list = dbg!(arena.tree_walk_dfs(&node_1_id).unwrap());
   assert_eq!(node_list.len(), 1);
   assert_eq!(node_list, vec![0]);
+}
+
+// Mutate node.
+{
+  let node_1_id = 0_usize;
+  {
+    let node_1_ref = dbg!(arena.get_node_arc(node_1_id).unwrap());
+    node_1_ref.write().unwrap().payload = 100;
+  }
+  assert_eq2!(
+    arena.get_node_arc(node_1_id).unwrap().read().unwrap().payload,
+    100
+  );
 }
 ```
 
@@ -278,12 +294,12 @@ let arena = MTArena::<String>::new();
 > [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
 
 ## utils
-
 <a id="markdown-utils" name="utils"></a>
 
-### LazyField
 
+### LazyField
 <a id="markdown-lazyfield" name="lazyfield"></a>
+
 
 This combo of struct & trait object allows you to create a lazy field that is only evaluated when it
 is first accessed. You have to provide a trait implementation that computes the value of the field
@@ -317,8 +333,8 @@ fn test_lazy_field() {
 ```
 
 ### LazyMemoValues
-
 <a id="markdown-lazymemovalues" name="lazymemovalues"></a>
+
 
 This struct allows users to create a lazy hash map. A function must be provided that computes the
 values when they are first requested. These values are cached for the lifetime this struct. Here's
@@ -348,8 +364,8 @@ assert_eq!(arc_atomic_count.load(SeqCst), 1); // Doesn't change.
 ```
 
 ### tty
-
 <a id="markdown-tty" name="tty"></a>
+
 
 This module contains a set of functions to make it easier to work with terminals.
 
@@ -396,8 +412,8 @@ Here's a list of functions available in this module:
 - `is_stdin_piped()`
 
 ### safe_unwrap
-
 <a id="markdown-safe_unwrap" name="safe_unwrap"></a>
+
 
 Functions that make it easy to unwrap a value safely. These functions are provided to improve the
 ergonomics of using wrapped values in Rust. Examples of wrapped values are `<Arc<RwLock<T>>`, and
@@ -443,8 +459,8 @@ Here's a list of type aliases provided for better readability:
 - `WriteGuarded<T>`
 
 ### color_text
-
 <a id="markdown-color_text" name="color_text"></a>
+
 
 ANSI colorized text <https://github.com/ogham/rust-ansi-term> helper methods. Here's an example.
 
@@ -476,8 +492,8 @@ Here's a list of functions available in this module:
 - `style_error()`
 
 ## Notes
-
 <a id="markdown-notes" name="notes"></a>
+
 
 Here are some notes on using experimental / unstable features in Tokio.
 
@@ -497,8 +513,8 @@ rustflags = [
 ```
 
 ## Issues, comments, feedback, and PRs
-
 <a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
+
 
 Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
 And if you have any feature requests, feel free to add them there too 👍.
