@@ -47,6 +47,7 @@ pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
             map(parse_block_ordered_list,            MdBlockElement::OrderedList),
 
             // AB: change semantics of heading to _opt_eol
+            // 00: bug when typing "```rs\nfoo\n````" (extra backtick causes issues)
             map(parse_block_code,                    MdBlockElement::CodeBlock),
 
             // AB: change semantics of heading to _opt_eol

@@ -230,7 +230,6 @@ const STEPS: usize = 20;
 
 impl ColorWheel {
     /// More info on gradients: <https://uigradients.com/>.
-    // 00: make gradients closer together (too far apart currently), assume headings are ~ 40 chars
     pub fn from_heading_data(heading_data: &HeadingData) -> Self {
         match heading_data.level {
             HeadingLevel::Heading1 => ColorWheel::new(vec![
