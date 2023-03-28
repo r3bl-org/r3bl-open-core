@@ -11,9 +11,9 @@
   "recommendations": [
     "naumovs.color-highlight",
     "owldarkertheme.owldarker-theme",
-    "Compulim.vscode-clock",
     "hoovercj.vscode-settings-cycler",
     "github.vscode-pull-request-github",
+    "Compulim.vscode-clock",
     "nowsci.glassit-linux",
     "bungcip.better-toml",
     "streetsidesoftware.code-spell-checker",
@@ -32,7 +32,6 @@
     "pkief.material-icon-theme",
     "pkief.material-product-icons",
     "sdras.night-owl",
-    "esbenp.prettier-vscode",
     "dbankier.vscode-quick-select",
     "artdiniz.quitcontrol-vscode",
     "stkb.rewrap",
@@ -44,8 +43,11 @@
     "enkia.tokyo-night",
     "bierner.emojisense",
     "lorenzopirro.rust-flash-snippets",
-    "nicholashsiang.vscode-opened-editors"
+    "nicholashsiang.vscode-opened-editors",
+    "unifiedjs.vscode-remark",
   ],
   // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
-  "unwantedRecommendations": []
+  "unwantedRecommendations": [
+    "esbenp.prettier-vscode",
+  ]
 }
