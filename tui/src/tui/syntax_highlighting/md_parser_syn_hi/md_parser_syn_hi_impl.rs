@@ -498,7 +498,7 @@ impl StyleUSSpanLine {
         };
 
         let heading_text_span: StyleUSSpanLine = {
-            let heading_text = heading_data.content.to_plain_text();
+            let heading_text = UnicodeString::from(heading_data.text);
             let styled_texts = color_wheel.colorize_into_styled_texts(
                 &heading_text,
                 GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
@@ -1163,7 +1163,7 @@ mod test_generate_style_us_span_lines {
         fn test_block_heading() {
             let heading_block = MdBlockElement::Heading(HeadingData {
                 level: HeadingLevel::Heading1,
-                content: list![MdLineFragment::Plain("Foobar")],
+                text: "Foobar",
             });
             let maybe_style = Some(style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)

@@ -11,11 +11,16 @@ fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
     ✔ `From`: `Document` -> `CommonResult<StyleUSSpanLines>` @done(23-03-22 20:32)
     ✔ build a theme to convert parts of a `Document` to `Style` @done(23-03-22 20:32)
   ✔ `editor_engine_api.rs`: update `render_content()` using `syntect` & `md_parser` choice @done(23-03-26 09:20)
+  ☐ md_parser migrate strategy to `_opt_eol`
+    ✔ title, tags @done(23-03-28 10:53)
+    ✔ heading @done(23-03-28 19:09)
+    ☐ code block
+    ☐ ol / ul
+      ☐ should `md_parser` handle nested ol / ul blocks "intelligently" (not EOL delimited)?
   ☐ fix bugs in the md_parser
-  ☐ try different strategy w/ md_parser (parse a single line at a time no "\n")
+    ☐ "```rs\nfoo\n````" (extra backtick) not working
   ☐ fix syntect output for macOS (ANSI256) w/ https://github.com/rhysd/rgb2ansi256 in `from_syntect_to_tui()`
   ☐ `from_block_codeblock()` - impl better syntax highlighting for code blocks using syntect
-  ☐ should `md_parser` handle nested ol / ul blocks "intelligently" (not EOL delimited)?
 
 crate upgrades:
   ☐ consider using https://docs.rs/concolor-query/0.3.3/concolor_query/fn.clicolor.html
@@ -23,6 +28,8 @@ crate upgrades:
     - instead of custom implementation of `ColorSupport::detect()`
   ☐ syn 2.0
     - https://github.com/dtolnay/syn/releases/tag/2.0.0
+  ☐ tree sitter?
+    - https://github.com/MDeiml/tree-sitter-markdown
 
 fix performance problem:
   ☐ scroll left / right slow in type ahead completion dialog

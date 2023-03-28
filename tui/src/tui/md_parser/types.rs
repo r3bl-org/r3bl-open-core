@@ -37,7 +37,7 @@ pub type Lines<'a> = List<FragmentsInOneLine<'a>>;
 #[derive(Clone, Debug, PartialEq)]
 pub struct HeadingData<'a> {
     pub level: HeadingLevel,
-    pub content: MdLineFragments<'a>,
+    pub text: &'a str,
 }
 
 /// These are blocks of Markdown. Blocks are the top-level elements of a Markdown document. A

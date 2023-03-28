@@ -30,7 +30,8 @@ use crate::*;
 /// - There may or may not be a newline at the end.
 #[rustfmt::skip]
 pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
-    let (mut input, mut output) = preceded(
+    // 00: eg of _opt_eol
+    let (remainder, title_text) = preceded(
         /* start */ tuple((tag(TITLE), tag(COLON), tag(SPACE))),
         /* output */ alt((
             is_not(NEW_LINE),
@@ -39,7 +40,7 @@ pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
     )(input)?;
 
     // Can't nest titles.
-    if output.contains(format!("{TITLE}{COLON}{SPACE}").as_str()) {
+    if title_text.contains(format!("{TITLE}{COLON}{SPACE}").as_str()) {
         return Err(nom::Err::Error(nom::error::Error::new(
             "Can't have more than one @title: expr.",
             nom::error::ErrorKind::Fail,
@@ -47,17 +48,16 @@ pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
     }
 
     // Special case: Early return when just a newline after the title prefix. Eg: `@title: \n..`.
-    if output.starts_with(NEW_LINE) {
-        input = &output[1..];
-        output = "";
-        return Ok((input, output));
+    if title_text.starts_with(NEW_LINE) {
+        if let Some(stripped) = title_text.strip_prefix(NEW_LINE) {
+            return Ok((stripped, ""));
+        }
     }
 
-    // Normal case: iff there is a newline, consume it since there may or may not be a newline at
+    // Normal case: if there is a newline, consume it since there may or may not be a newline at
     // the end.
-    let (input, _) = opt(tag(NEW_LINE))(input)?;
-
-    Ok((input, output))
+    let (input, _) = opt(tag(NEW_LINE))(remainder)?;
+    Ok((input, title_text))
 }
 
 #[cfg(test)]
