@@ -34,23 +34,21 @@ use crate::*;
 #[rustfmt::skip]
 pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
     let (input, output) = many0(
-        // The ordering of these parsers matters.
+        // NOTE: The ordering of the parsers below matters.
         alt((
             map(parse_title_opt_eol,                 MdBlockElement::Title),
             map(parse_tags_opt_eol,                  MdBlockElement::Tags),
 
-            // AB: change semantics of heading to _opt_eol
-            map(parse_block_heading,                 MdBlockElement::Heading),
+            map(parse_block_heading_opt_eol,         MdBlockElement::Heading),
 
             // AD: change semantics of ul, ol, so multiple lines are allowed.
             map(parse_block_unordered_list,          MdBlockElement::UnorderedList),
             map(parse_block_ordered_list,            MdBlockElement::OrderedList),
 
+            // AA: bug when typing "```rs\nfoo\n````" (extra backtick causes issues)
             // AB: change semantics of heading to _opt_eol
-            // 00: bug when typing "```rs\nfoo\n````" (extra backtick causes issues)
             map(parse_block_code,                    MdBlockElement::CodeBlock),
 
-            // AB: change semantics of heading to _opt_eol
             map(parse_block_markdown_text_until_eol, MdBlockElement::Text),
         )),
     )(input)?;
@@ -74,7 +72,7 @@ mod tests {
             MdBlockElement::Tags(list!["tag1", "tag2", "tag3"]),
             MdBlockElement::Heading(HeadingData {
                 level: HeadingLevel::Heading1,
-                content: list![MdLineFragment::Plain("Foobar")],
+                text: "Foobar",
             }),
             MdBlockElement::Text(list![]), // Empty line.
             MdBlockElement::Text(list![MdLineFragment::Plain(
@@ -89,7 +87,7 @@ mod tests {
             MdBlockElement::CodeBlock(convert_into_code_block_lines(Some("python"), vec![""])),
             MdBlockElement::Heading(HeadingData {
                 level: HeadingLevel::Heading2,
-                content: list![MdLineFragment::Plain("Installation")],
+                text: "Installation",
             }),
             MdBlockElement::Text(list![]), // Empty line.
             MdBlockElement::Text(list![

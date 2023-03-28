@@ -30,6 +30,7 @@ use crate::*;
 /// - There may or may not be a newline at the end.
 #[rustfmt::skip]
 pub fn parse_tags_opt_eol(input: &str) -> IResult<&str, List<&str>> {
+    // 00: eg of _opt_eol
     let (input, output) = preceded(
         /* start */ tuple((tag(TAGS), tag(COLON), tag(SPACE))),
         /* output */ alt((

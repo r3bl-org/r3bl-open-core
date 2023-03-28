@@ -15,24 +15,50 @@
  *   limitations under the License.
  */
 
-use nom::{bytes::complete::*, combinator::*, sequence::*, IResult};
+use nom::{branch::alt,
+          bytes::complete::*,
+          character::complete::anychar,
+          combinator::*,
+          multi::many1,
+          sequence::*,
+          IResult};
 
-use super::*;
-use crate::*;
+use crate::{constants::NEW_LINE, *};
 
 /// This matches the heading tag and text until EOL. Outputs a tuple of [HeadingLevel] and
 /// [FragmentsInOneLine].
 #[rustfmt::skip]
-pub fn parse_block_heading(input: &str) -> IResult<&str, HeadingData> {
-    parse(input)
+pub fn parse_block_heading_opt_eol(input: &str) -> IResult<&str, HeadingData> {
+    let (remainder, output) = parse(input)?;
+
+    // 00: eg of _opt_eol
+
+    // Special case: Early return when just a newline after the heading prefix. Eg: `# \n..`.
+    if output.text.starts_with(NEW_LINE) {
+        if let Some(stripped) = output.text.strip_prefix(NEW_LINE) {
+            return Ok((stripped, HeadingData {
+                level: output.level,
+                text: "",
+            }));
+        }
+    }
+
+    // Normal case: if there is a newline, consume it since there may or may not be a newline at the
+    // end.
+    let (remainder, _) = opt(tag(NEW_LINE))(remainder)?;
+    Ok((remainder, output))
 }
 
 #[rustfmt::skip]
 fn parse(input: &str) -> IResult<&str, HeadingData> {
-    let (input, (level, fragments)) = tuple(
-        (parse_heading_tag, parse_block_markdown_text_until_eol)
-    )(input)?;
-    Ok((input, HeadingData{level, content: fragments}))
+    let (input, (level, text)) = tuple((
+        parse_heading_tag,
+        alt((
+            is_not(NEW_LINE),
+            recognize(many1(anychar)),
+        ))
+    ))(input)?;
+    Ok((input, HeadingData { level, text }))
 }
 
 /// Matches one or more `#` chars, consumes it, and outputs [Level].
@@ -51,24 +77,24 @@ fn parse_heading_tag(input: &str) -> IResult<&str, HeadingLevel> {
 mod tests {
     use nom::{error::{Error, ErrorKind},
               Err as NomErr};
-    use r3bl_rs_utils_core::assert_eq2;
+    use pretty_assertions::assert_eq;
 
     use super::*;
 
     #[test]
     fn test_parse_header_tag() {
-        assert_eq2!(parse_heading_tag("# "), Ok(("", 1.into())));
-        assert_eq2!(parse_heading_tag("### "), Ok(("", 3.into())));
-        assert_eq2!(parse_heading_tag("# h1"), Ok(("h1", 1.into())));
-        assert_eq2!(parse_heading_tag("# h1"), Ok(("h1", 1.into())));
-        assert_eq2!(
+        assert_eq!(parse_heading_tag("# "), Ok(("", 1.into())));
+        assert_eq!(parse_heading_tag("### "), Ok(("", 3.into())));
+        assert_eq!(parse_heading_tag("# h1"), Ok(("h1", 1.into())));
+        assert_eq!(parse_heading_tag("# h1"), Ok(("h1", 1.into())));
+        assert_eq!(
             parse_heading_tag(" "),
             Err(NomErr::Error(Error {
                 input: " ",
                 code: ErrorKind::TakeWhile1
             }))
         );
-        assert_eq2!(
+        assert_eq!(
             parse_heading_tag("#"),
             Err(NomErr::Error(Error {
                 input: "",
@@ -79,95 +105,101 @@ mod tests {
 
     #[test]
     fn test_parse_header() {
-        assert_eq2!(
-            parse_block_heading("# h1\n"),
+        assert_eq!(
+            parse_block_heading_opt_eol("# h1\n"),
             Ok((
                 "",
                 HeadingData {
                     level: 1.into(),
-                    content: list![MdLineFragment::Plain("h1")]
+                    text: "h1",
                 }
             ))
         );
-        assert_eq2!(
-            parse_block_heading("## h2\n"),
+        assert_eq!(
+            parse_block_heading_opt_eol("## h2\n"),
             Ok((
                 "",
                 HeadingData {
                     level: 2.into(),
-                    content: list![MdLineFragment::Plain("h2")]
+                    text: "h2",
                 }
             ))
         );
-        assert_eq2!(
-            parse_block_heading("###  h3\n"),
+        assert_eq!(
+            parse_block_heading_opt_eol("###  h3\n"),
             Ok((
                 "",
                 HeadingData {
                     level: 3.into(),
-                    content: list![MdLineFragment::Plain(" h3")]
+                    text: " h3",
                 }
             ))
         );
-        assert_eq2!(
-            parse_block_heading("### h3 *foo* **bar**\n"),
+        assert_eq!(
+            parse_block_heading_opt_eol("### h3 *foo* **bar**\n"),
             Ok((
                 "",
                 HeadingData {
                     level: 3.into(),
-                    content: list![
-                        MdLineFragment::Plain("h3 "),
-                        MdLineFragment::Italic("foo"),
-                        MdLineFragment::Plain(" "),
-                        MdLineFragment::Bold("bar"),
-                    ]
+                    text: "h3 *foo* **bar**",
                 }
             ))
         );
-        assert_eq2!(
-            parse_block_heading("###h3"),
+        assert_eq!(
+            parse_block_heading_opt_eol("###h3"),
             Err(NomErr::Error(Error {
                 input: "h3",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq2!(
-            parse_block_heading("###"),
+        assert_eq!(
+            parse_block_heading_opt_eol("###"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq2!(
-            parse_block_heading(""),
+        assert_eq!(
+            parse_block_heading_opt_eol(""),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::TakeWhile1
             }))
         );
-        assert_eq2!(
-            parse_block_heading("#"),
+        assert_eq!(
+            parse_block_heading_opt_eol("#"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq2!(
-            parse_block_heading("# \n"),
+    }
+
+    #[test]
+    fn test_parse_header_with_newline() {
+        assert_eq!(
+            parse_block_heading_opt_eol("# \n"),
             Ok((
                 "",
                 HeadingData {
                     level: 1.into(),
-                    content: list![]
+                    text: "",
                 }
             ))
         );
-        assert_eq2!(
-            parse_block_heading("# test"),
-            Err(NomErr::Error(Error {
-                input: "",
-                code: ErrorKind::Tag
-            }))
+    }
+
+    #[test]
+    fn test_parse_header_with_no_newline() {
+        assert_eq!(
+            parse_block_heading_opt_eol("# test"),
+            Ok((
+                "",
+                HeadingData {
+                    level: 1.into(),
+                    text: "test",
+                }
+            ))
         );
     }
 }

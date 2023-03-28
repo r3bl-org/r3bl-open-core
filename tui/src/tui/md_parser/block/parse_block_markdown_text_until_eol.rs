@@ -20,38 +20,67 @@ use nom::{bytes::complete::*, multi::*, sequence::*, IResult};
 
 use crate::{md_parser::parser_element::parse_element_markdown_inline, *};
 
-/// Parse a single line of markdown text [FragmentsInOneLine].
+/// Parse a single line of markdown text [FragmentsInOneLine] terminated by EOL.
 #[rustfmt::skip]
 pub fn parse_block_markdown_text_until_eol(input: &str) -> IResult<&str, MdLineFragments> {
-    parse(input)
+    parse_until_eol(input)
 }
 
 #[rustfmt::skip]
-fn parse(input: &str) -> IResult<&str, MdLineFragments> {
-    let (input, output) = terminated(
-        /* output */ many0(parse_element_markdown_inline),
-        /* ends with (discarded) */ tag(NEW_LINE),
-    )(input)?;
+fn parse_until_eol(input: &str) -> IResult<&str, MdLineFragments> {
+    let (input, output) =
+        terminated(
+            /* output */ many0(parse_element_markdown_inline),
+            /* ends with (discarded) */ tag(NEW_LINE),
+        )
+    (input)?;
+    let it = List::from(output);
+    Ok((input, it))
+}
+
+/// Parse a markdown text [FragmentsInOneLine] in the input (no EOL required).
+#[rustfmt::skip]
+pub fn parse_block_markdown_text_opt_eol(input: &str) -> IResult<&str, MdLineFragments> {
+    parse_opt_eol(input)
+}
+
+#[rustfmt::skip]
+fn parse_opt_eol(input: &str) -> IResult<&str, MdLineFragments> {
+    // 00: 🚀 make this _opt_eol
+    let (input, output) =
+        many0(parse_element_markdown_inline)
+    (input)?;
     let it = List::from(output);
     Ok((input, it))
 }
 
 #[cfg(test)]
 mod test {
-    use nom::{error::{Error, ErrorKind},
-              Err as NomErr};
-    use r3bl_rs_utils_core::assert_eq2;
+    use pretty_assertions::assert_eq;
 
     use super::*;
 
     #[test]
-    fn test_parse_block_markdown_text() {
-        assert_eq2!(parse_block_markdown_text_until_eol("\n"), Ok(("", list![])));
-        assert_eq2!(
+    fn test_parse_block_markdown_text_no_eol() {
+        assert_eq!(parse_block_markdown_text_opt_eol(""), Ok(("", list![])));
+
+        assert_eq!(
+            parse_block_markdown_text_opt_eol("here is some plaintext *but what if we italicize?"),
+            Ok((
+                "*but what if we italicize?",
+                list![MdLineFragment::Plain("here is some plaintext "),]
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_block_markdown_text_with_eol() {
+        assert_eq!(parse_block_markdown_text_until_eol("\n"), Ok(("", list![])));
+        assert_eq!(
             parse_block_markdown_text_until_eol("here is some plaintext\n"),
             Ok(("", list![MdLineFragment::Plain("here is some plaintext")]))
         );
-        assert_eq2!(
+        assert_eq!(
             parse_block_markdown_text_until_eol(
                 "here is some plaintext *but what if we italicize?*\n"
             ),
@@ -63,21 +92,21 @@ mod test {
                 ]
             ))
         );
-        assert_eq2!(
-        parse_block_markdown_text_until_eol("here is some plaintext *but what if we italicize?* I guess it doesn't **matter** in my `code`\n"),
-        Ok(
-            ("",
-            list![
-                MdLineFragment::Plain("here is some plaintext "),
-                MdLineFragment::Italic("but what if we italicize?"),
-                MdLineFragment::Plain(" I guess it doesn't "),
-                MdLineFragment::Bold("matter"),
-                MdLineFragment::Plain(" in my "),
-                MdLineFragment::InlineCode("code"),
-            ])
-        )
-    );
-        assert_eq2!(
+        assert_eq!(
+            parse_block_markdown_text_until_eol("here is some plaintext *but what if we italicize?* I guess it doesn't **matter** in my `code`\n"),
+            Ok(
+                ("",
+                list![
+                    MdLineFragment::Plain("here is some plaintext "),
+                    MdLineFragment::Italic("but what if we italicize?"),
+                    MdLineFragment::Plain(" I guess it doesn't "),
+                    MdLineFragment::Bold("matter"),
+                    MdLineFragment::Plain(" in my "),
+                    MdLineFragment::InlineCode("code"),
+                ])
+            )
+        );
+        assert_eq!(
             parse_block_markdown_text_until_eol(
                 "here is some plaintext *but what if we italicize?*\n"
             ),
@@ -88,15 +117,6 @@ mod test {
                     MdLineFragment::Italic("but what if we italicize?"),
                 ]
             ))
-        );
-        assert_eq2!(
-            parse_block_markdown_text_until_eol(
-                "here is some plaintext *but what if we italicize?"
-            ),
-            Err(NomErr::Error(Error {
-                input: "*but what if we italicize?",
-                code: ErrorKind::Tag
-            })) // Ok(("*but what if we italicize?", vec![MarkdownInline::Plaintext(String::from("here is some plaintext "))]))
         );
     }
 }
