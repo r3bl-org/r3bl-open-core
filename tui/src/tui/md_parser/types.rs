@@ -142,7 +142,7 @@ pub mod constants {
     pub const RIGHT_IMAGE: &str = "]";
     pub const NEW_LINE: &str = "\n";
     pub const CODE_BLOCK_START_PARTIAL: &str = "```";
-    pub const CODE_BLOCK_END: &str = "```\n";
+    pub const CODE_BLOCK_END: &str = "```";
     pub const CHECKED: &str = "[x]";
     pub const UNCHECKED: &str = "[ ]";
     pub const CHECKED_OUTPUT: &str = "[≡]";

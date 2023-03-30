@@ -27,15 +27,20 @@ use crate::*;
 /// No language:             "```\npip install foobar\n```\n"
 /// No language, no line:    "```\n```\n"
 /// No language, multi line: "```\npip install foobar\npip install foobar\n```\n"
-pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine>> { parse(input) }
-
 #[rustfmt::skip]
-fn parse(input: &str) -> IResult<&str, List<CodeBlockLine>> {
-    let (input, (lang, code)) = tuple(
-        (parse_code_block_lang_to_eol, parse_code_block_body_to_code_block_end_to_eol)
-    )(input)?;
+pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine>> {
+    let (remainder, (lang, code)) = tuple((
+        parse_code_block_lang_to_eol,
+        parse_code_block_body_to_code_block_end,
+    ))(input)?;
+
+    // Normal case: if there is a newline, consume it since there may or may not be a newline at the
+    // end.
+    let (remainder, _) = opt(tag(NEW_LINE))(remainder)?;
+
     let acc = split_by_newline(code);
-    return Ok((input, convert_into_code_block_lines(lang, acc)));
+
+    return Ok((remainder, convert_into_code_block_lines(lang, acc)));
 }
 
 #[rustfmt::skip]
@@ -62,11 +67,12 @@ fn parse_code_block_lang_to_eol(input: &str) -> IResult<&str, Option<&str>> {
 }
 
 #[rustfmt::skip]
-fn parse_code_block_body_to_code_block_end_to_eol(input: &str) -> IResult<&str, &str> {
-    terminated(
+fn parse_code_block_body_to_code_block_end(input: &str) -> IResult<&str, &str> {
+    let (remainder, output) = terminated(
         take_until(CODE_BLOCK_END),
         /* end (discard) */ tag(CODE_BLOCK_END),
-    )(input)
+    )(input)?;
+    Ok((remainder, output))
 }
 
 /// Split a string by newline. The idea is that a line is some text followed by a newline. An
@@ -123,10 +129,23 @@ pub fn convert_into_code_block_lines<'input>(
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::*;
+    use pretty_assertions::assert_eq;
 
     use super::*;
     use crate::test_data::raw_strings;
+
+    #[test]
+    fn test_parse_codeblock_trailing_extra() {
+        let input = "```bash\npip install foobar\n````";
+        let lang = "bash";
+        let code_lines = vec!["pip install foobar"];
+        let (remainder, code_block_lines) = parse_block_code(input).unwrap();
+        assert_eq!(remainder, "`");
+        assert_eq!(
+            code_block_lines,
+            convert_into_code_block_lines(Some(lang), code_lines)
+        );
+    }
 
     #[test]
     fn test_convert_from_code_block_into_lines() {
@@ -145,7 +164,7 @@ mod tests {
                 },
             ];
             let output = convert_into_code_block_lines(language, lines);
-            assert_eq2!(output, expected);
+            assert_eq!(output, expected);
         }
 
         // 1 empty line. "```rust\n\n```\n".
@@ -167,7 +186,7 @@ mod tests {
                 },
             ];
             let output = convert_into_code_block_lines(language, lines);
-            assert_eq2!(output, expected);
+            assert_eq!(output, expected);
         }
 
         // 1 line. "```rust\nlet x = 1;\n```\n".
@@ -189,7 +208,7 @@ mod tests {
                 },
             ];
             let output = convert_into_code_block_lines(language, lines);
-            assert_eq2!(output, expected);
+            assert_eq!(output, expected);
         }
 
         // 2 lines. "```rust\nlet x = 1;\nlet y = 2;\n```\n".
@@ -215,17 +234,17 @@ mod tests {
                 },
             ];
             let output = convert_into_code_block_lines(language, lines);
-            assert_eq2!(output, expected);
+            assert_eq!(output, expected);
         }
     }
 
     #[test]
     fn test_parse_codeblock_split_by_eol() {
-        assert_eq2!(split_by_newline("foobar\n"), vec!["foobar"]);
-        assert_eq2!(split_by_newline("\n"), vec![""]);
-        assert_eq2!(split_by_newline(""), Vec::<&str>::new());
-        assert_eq2!(split_by_newline("foo\nbar\n"), vec!["foo", "bar"]);
-        assert_eq2!(split_by_newline("\nfoo\nbar\n"), vec!["", "foo", "bar"]);
+        assert_eq!(split_by_newline("foobar\n"), vec!["foobar"]);
+        assert_eq!(split_by_newline("\n"), vec![""]);
+        assert_eq!(split_by_newline(""), Vec::<&str>::new());
+        assert_eq!(split_by_newline("foo\nbar\n"), vec!["foo", "bar"]);
+        assert_eq!(split_by_newline("\nfoo\nbar\n"), vec!["", "foo", "bar"]);
     }
 
     #[test]
@@ -237,8 +256,8 @@ mod tests {
             println!("{:#?}", (raw_strings::CODE_BLOCK_3_INPUT));
             let (remainder, code_block_lines) =
                 parse_block_code(raw_strings::CODE_BLOCK_3_INPUT).unwrap();
-            assert_eq2!(remainder, "");
-            assert_eq2!(
+            assert_eq!(remainder, "");
+            assert_eq!(
                 code_block_lines,
                 convert_into_code_block_lines(Some(lang), code_lines)
             );
@@ -250,8 +269,8 @@ mod tests {
             let code_lines = vec![];
             let (remainder, code_block_lines) =
                 parse_block_code(raw_strings::CODE_BLOCK_0_INPUT).unwrap();
-            assert_eq2!(remainder, "");
-            assert_eq2!(
+            assert_eq!(remainder, "");
+            assert_eq!(
                 code_block_lines,
                 convert_into_code_block_lines(Some(lang), code_lines)
             );
@@ -263,8 +282,8 @@ mod tests {
             let code_lines = vec![""];
             let (remainder, code_block_lines) =
                 parse_block_code(raw_strings::CODE_BLOCK_1_EMPTY_INPUT).unwrap();
-            assert_eq2!(remainder, "");
-            assert_eq2!(
+            assert_eq!(remainder, "");
+            assert_eq!(
                 code_block_lines,
                 convert_into_code_block_lines(Some(lang), code_lines)
             );
@@ -283,8 +302,8 @@ mod tests {
             ];
             let (remainder, code_block_lines) =
                 parse_block_code(raw_strings::CODE_BLOCK_2_INPUT).unwrap();
-            assert_eq2!(remainder, "");
-            assert_eq2!(
+            assert_eq!(remainder, "");
+            assert_eq!(
                 code_block_lines,
                 convert_into_code_block_lines(Some(lang), code_lines)
             );
@@ -297,8 +316,8 @@ mod tests {
         let code_lines = vec!["pip install foobar"];
         let (remainder, code_block_lines) =
             parse_block_code(raw_strings::CODE_BLOCK_1_INPUT).unwrap();
-        assert_eq2!(remainder, "");
-        assert_eq2!(
+        assert_eq!(remainder, "");
+        assert_eq!(
             code_block_lines,
             convert_into_code_block_lines(lang, code_lines)
         );

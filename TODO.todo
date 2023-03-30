@@ -11,16 +11,17 @@ fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
     ✔ `From`: `Document` -> `CommonResult<StyleUSSpanLines>` @done(23-03-22 20:32)
     ✔ build a theme to convert parts of a `Document` to `Style` @done(23-03-22 20:32)
   ✔ `editor_engine_api.rs`: update `render_content()` using `syntect` & `md_parser` choice @done(23-03-26 09:20)
-  ☐ md_parser migrate strategy to `_opt_eol`
+  ✔ md_parser migrate strategy to `_opt_eol` @done(23-03-29 17:45)
     ✔ title, tags @done(23-03-28 10:53)
     ✔ heading @done(23-03-28 19:09)
-    ☐ code block
-    ☐ ol / ul
-      ☐ should `md_parser` handle nested ol / ul blocks "intelligently" (not EOL delimited)?
-  ☐ fix bugs in the md_parser
-    ☐ "```rs\nfoo\n````" (extra backtick) not working
-  ☐ fix syntect output for macOS (ANSI256) w/ https://github.com/rhysd/rgb2ansi256 in `from_syntect_to_tui()`
+    ✔ code block @done(23-03-29 17:44)
+  ✔ fix bugs in the md_parser @done(23-03-29 17:44)
+    ✔ "```rs\nfoo\n````" (extra backtick) not working @done(23-03-29 17:44)
   ☐ `from_block_codeblock()` - impl better syntax highlighting for code blocks using syntect
+  ☐ ol / ul
+    ☐ migrate strategy to `_opt_eol`?
+    ☐ should `md_parser` handle nested ol / ul blocks "intelligently" (not EOL delimited)?
+  ☐ fix syntect output for macOS (ANSI256) w/ https://github.com/rhysd/rgb2ansi256 in `from_syntect_to_tui()`
 
 crate upgrades:
   ☐ consider using https://docs.rs/concolor-query/0.3.3/concolor_query/fn.clicolor.html
