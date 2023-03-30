@@ -17,11 +17,11 @@ fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
     ✔ code block @done(23-03-29 17:44)
   ✔ fix bugs in the md_parser @done(23-03-29 17:44)
     ✔ "```rs\nfoo\n````" (extra backtick) not working @done(23-03-29 17:44)
-  ☐ `from_block_codeblock()` - impl better syntax highlighting for code blocks using syntect
+  ✔ `from_block_codeblock()` - impl better syntax highlighting for code blocks using syntect @done(23-03-31 15:55)
+  ☐ fix syntect output for macOS (ANSI256) w/ https://github.com/rhysd/rgb2ansi256 in `from_syntect_to_tui()`
   ☐ ol / ul
     ☐ migrate strategy to `_opt_eol`?
     ☐ should `md_parser` handle nested ol / ul blocks "intelligently" (not EOL delimited)?
-  ☐ fix syntect output for macOS (ANSI256) w/ https://github.com/rhysd/rgb2ansi256 in `from_syntect_to_tui()`
 
 crate upgrades:
   ☐ consider using https://docs.rs/concolor-query/0.3.3/concolor_query/fn.clicolor.html

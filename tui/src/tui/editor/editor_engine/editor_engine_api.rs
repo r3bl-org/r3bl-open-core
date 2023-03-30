@@ -292,6 +292,7 @@ mod r3bl_path {
         let lines = try_parse_and_highlight(
             editor_buffer.get_lines(),
             &editor_engine.current_box.get_computed_style(),
+            Some((&editor_engine.syntax_set, &editor_engine.theme)),
         )?;
 
         call_if_true!(DEBUG_TUI_SYN_HI, {
@@ -432,16 +433,6 @@ mod syntect_path {
         render_ops.push(RenderOp::ResetColor);
     }
 
-    fn try_get_syntax_ref_from<'a>(
-        editor_engine: &'a &mut EditorEngine,
-        editor_buffer: &'a &EditorBuffer,
-    ) -> Option<&'a syntect::parsing::SyntaxReference> {
-        let syntax_set = &editor_engine.syntax_set;
-        let file_extension = editor_buffer.get_file_extension();
-        syntax_set.find_syntax_by_extension(file_extension)
-    }
-
-    // AC: eg of syntect usage
     /// Try and load syntax highlighting for the current line. It might seem lossy to create a new
     /// [HighlightLines] for each line, but if this struct is re-used then it will not be able to
     /// highlight the lines correctly in the editor component. This struct is mutated when it is
@@ -451,7 +442,10 @@ mod syntect_path {
         editor_buffer: &&EditorBuffer,
         line: &'a str,
     ) -> Option<Vec<(syntect::highlighting::Style, &'a str)>> {
-        let syntax_ref = try_get_syntax_ref_from(editor_engine, editor_buffer)?;
+        let syntax_ref = try_get_syntax_ref(
+            &editor_engine.syntax_set,
+            editor_buffer.get_file_extension(),
+        )?;
         let theme = &editor_engine.theme;
         let mut highlighter = HighlightLines::new(syntax_ref, theme);
         highlighter

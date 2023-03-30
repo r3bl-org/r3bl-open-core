@@ -30,7 +30,7 @@ use crate::*;
 /// - There may or may not be a newline at the end.
 #[rustfmt::skip]
 pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
-    // 00: eg of _opt_eol
+    // BM: eg of _opt_eol
     let (remainder, title_text) = preceded(
         /* start */ tuple((tag(TITLE), tag(COLON), tag(SPACE))),
         /* output */ alt((
