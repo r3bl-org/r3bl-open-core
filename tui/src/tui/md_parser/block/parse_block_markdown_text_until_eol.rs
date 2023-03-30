@@ -46,7 +46,6 @@ pub fn parse_block_markdown_text_opt_eol(input: &str) -> IResult<&str, MdLineFra
 
 #[rustfmt::skip]
 fn parse_opt_eol(input: &str) -> IResult<&str, MdLineFragments> {
-    // 00: 🚀 make this _opt_eol
     let (input, output) =
         many0(parse_element_markdown_inline)
     (input)?;

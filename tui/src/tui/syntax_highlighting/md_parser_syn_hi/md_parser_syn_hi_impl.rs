@@ -19,6 +19,7 @@
 
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
+use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 
 use crate::{constants::*, *};
 
@@ -32,6 +33,7 @@ use crate::{constants::*, *};
 pub fn try_parse_and_highlight(
     editor_text_lines: &Vec<US>,
     maybe_current_box_computed_style: &Option<Style>,
+    maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
 ) -> CommonResult<StyleUSSpanLines> {
     // Convert the editor text into a string.
     let editor_text_to_string = {
@@ -48,27 +50,47 @@ pub fn try_parse_and_highlight(
         Ok((_, document)) => Ok(StyleUSSpanLines::from_document(
             &document,
             maybe_current_box_computed_style,
+            maybe_syntect_tuple,
         )),
         Err(_) => CommonError::new_err_with_only_type(CommonErrorType::ParsingError),
     }
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_try_parse_and_highlight {
+    use pretty_assertions::assert_eq as pretty_assert_eq;
+
     use super::*;
 
     #[test]
-    fn test_try_parse_and_highlight() -> CommonResult<()> {
+    fn from_vec_us() -> CommonResult<()> {
         let editor_text_lines = vec![US::new("Hello"), US::new("World")];
-        let maybe_current_box_computed_style = None;
-        let result =
-            try_parse_and_highlight(&editor_text_lines, &maybe_current_box_computed_style)?;
+        let maybe_current_box_computed_style = Some(style! {
+            color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+        });
 
-        println!("result: {}", result.pretty_print());
+        let style_us_span_lines =
+            try_parse_and_highlight(&editor_text_lines, &maybe_current_box_computed_style, None)?;
 
-        assert_eq2!(editor_text_lines.len(), result.len());
-        assert_eq2!(editor_text_lines[0], result[0][0].text);
-        assert_eq2!(editor_text_lines[1], result[1][0].text);
+        println!(
+            "result: \n{}",
+            ansi_term::Color::Cyan.paint(style_us_span_lines.pretty_print())
+        );
+
+        pretty_assert_eq!(editor_text_lines.len(), style_us_span_lines.len());
+        let line_0 = &style_us_span_lines[0][0];
+        let line_1 = &style_us_span_lines[1][0];
+        pretty_assert_eq!(editor_text_lines[0], line_0.text);
+        pretty_assert_eq!(editor_text_lines[1], line_1.text);
+
+        pretty_assert_eq!(
+            line_0.style,
+            maybe_current_box_computed_style.unwrap() + get_foreground_style()
+        );
+        pretty_assert_eq!(
+            line_1.style,
+            maybe_current_box_computed_style.unwrap() + get_foreground_style()
+        );
 
         Ok(())
     }
@@ -88,93 +110,173 @@ impl StyleUSSpanLines {
     pub fn from_document(
         document: &MdDocument,
         maybe_current_box_computed_style: &Option<Style>,
+        maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         let mut lines = StyleUSSpanLines::default();
         for block in document.iter() {
-            let block_to_lines =
-                StyleUSSpanLines::from_block(block, maybe_current_box_computed_style);
+            let block_to_lines = StyleUSSpanLines::from_block(
+                block,
+                maybe_current_box_computed_style,
+                maybe_syntect_tuple,
+            );
             lines.items.extend(block_to_lines.items);
         }
         lines
     }
 
-    /// Based on ColorSupport::detect() & language we have the following:
+    /// Based on [ColorSupport::detect()](ColorSupport::detect()) & language we have the following:
+    /// ```text
     /// |               | Truecolor      | ANSI           |
     /// |---------------|----------------|----------------|
     /// | Language Some | syntect        | fallback       |
     /// | Language None | fallback       | fallback       |
+    /// ```
     ///
     /// Case 1: Fallback
-    /// 1st line         : ``` is (get_foreground_dim_style())
-    /// 2nd line ... end : ``` is (get_inline_code_style())
-    /// last line        : ``` is (get_foreground_dim_style())
+    /// - 1st line        : "```": `get_foreground_dim_style()`, lang: `get_code_block_lang_style()`
+    /// - 2nd line .. end : content: `get_inline_code_style()`
+    /// - last line       : "```": `get_foreground_dim_style()`
     ///
     /// Case 2: Syntect
-    /// 1st line         : use syntect to highlight
-    /// 2nd line ... end : use syntect to highlight
-    /// last line        : use syntect to highlight
+    /// - 1st line        : "```": `get_foreground_dim_style()`, lang: `get_code_block_lang_style()`
+    /// - 2nd line .. end : use syntect to highlight
+    /// - last line       : "```": `get_foreground_dim_style()`
     pub fn from_block_codeblock(
-        code_block_lines: &List<CodeBlockLine>,
+        code_block_lines: &CodeBlockLines,
         maybe_current_box_computed_style: &Option<Style>,
+        maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
-        // AC: impl syntect & use it below
-        // fn use_syntect(
-        //     code_block_lines: &List<CodeBlockLine>,
-        //     maybe_current_box_computed_style: &Option<Style>,
-        // ) -> StyleUSSpanLines {
-        //     todo!()
-        // }
+        mod inner {
+            use super::*;
 
-        fn use_fallback(
-            code_block_lines: &List<CodeBlockLine>,
-            maybe_current_box_computed_style: &Option<Style>,
-        ) -> StyleUSSpanLines {
-            let mut acc_lines_output = StyleUSSpanLines::default();
+            pub fn try_use_syntect(
+                code_block_lines: &CodeBlockLines,
+                maybe_current_box_computed_style: &Option<Style>,
+                maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
+            ) -> Option<StyleUSSpanLines> {
+                let mut acc_lines_output = StyleUSSpanLines::default();
 
-            // Process each line in code_block_lines.
-            for code_block_line in code_block_lines.iter() {
-                let mut acc_line_output = StyleUSSpanLine::default();
+                // Process each line in code_block_lines.
+                for code_block_line in code_block_lines.iter() {
+                    let mut acc_line_output = StyleUSSpanLine::default();
 
-                match code_block_line.content {
-                    CodeBlockLineContent::StartTag => {
-                        acc_line_output += StyleUSSpan::new(
-                            maybe_current_box_computed_style.unwrap_or_default()
-                                + get_foreground_dim_style(),
-                            US::from(CODE_BLOCK_START_PARTIAL),
-                        );
-                        if let Some(language) = code_block_line.language {
+                    let maybe_lang = if let Some(code_block_line) = code_block_lines.items.first() {
+                        code_block_line.language
+                    } else {
+                        None
+                    };
+                    let syntax_set = maybe_syntect_tuple?.0;
+                    let lang = maybe_lang?;
+                    let theme = maybe_syntect_tuple?.1;
+                    let syntax_ref = try_get_syntax_ref(syntax_set, lang)?;
+
+                    let mut highlighter = HighlightLines::new(syntax_ref, theme);
+
+                    match code_block_line.content {
+                        CodeBlockLineContent::Text(line_of_text) => {
+                            let syntect_highlighted_line: Vec<(
+                                syntect::highlighting::Style,
+                                &str,
+                            )> = highlighter.highlight_line(line_of_text, syntax_set).ok()?;
+
+                            let line_converted_to_tui: List<StyleUSSpan> =
+                                syntect_to_styled_text_conversion::from_syntect_to_tui(
+                                    syntect_highlighted_line,
+                                );
+
+                            acc_line_output += line_converted_to_tui;
+                        }
+
+                        // Same as fallback.
+                        CodeBlockLineContent::StartTag => {
                             acc_line_output += StyleUSSpan::new(
                                 maybe_current_box_computed_style.unwrap_or_default()
-                                    + get_code_block_lang_style(),
-                                US::from(language),
+                                    + get_foreground_dim_style(),
+                                US::from(CODE_BLOCK_START_PARTIAL),
+                            );
+                            if let Some(language) = code_block_line.language {
+                                acc_line_output += StyleUSSpan::new(
+                                    maybe_current_box_computed_style.unwrap_or_default()
+                                        + get_code_block_lang_style(),
+                                    US::from(language),
+                                );
+                            }
+                        }
+
+                        // Same as fallback.
+                        CodeBlockLineContent::EndTag => {
+                            acc_line_output += StyleUSSpan::new(
+                                maybe_current_box_computed_style.unwrap_or_default()
+                                    + get_foreground_dim_style(),
+                                US::from(CODE_BLOCK_START_PARTIAL),
                             );
                         }
                     }
 
-                    CodeBlockLineContent::EndTag => {
-                        acc_line_output += StyleUSSpan::new(
-                            maybe_current_box_computed_style.unwrap_or_default()
-                                + get_foreground_dim_style(),
-                            US::from(CODE_BLOCK_START_PARTIAL),
-                        );
-                    }
-
-                    CodeBlockLineContent::Text(content) => {
-                        acc_line_output += StyleUSSpan::new(
-                            maybe_current_box_computed_style.unwrap_or_default()
-                                + get_code_block_content_style(),
-                            US::from(content),
-                        );
-                    }
+                    acc_lines_output += acc_line_output;
                 }
 
-                acc_lines_output += acc_line_output;
+                Some(acc_lines_output)
             }
 
-            acc_lines_output
+            pub fn use_fallback(
+                code_block_lines: &CodeBlockLines,
+                maybe_current_box_computed_style: &Option<Style>,
+            ) -> StyleUSSpanLines {
+                let mut acc_lines_output = StyleUSSpanLines::default();
+
+                // Process each line in code_block_lines.
+                for code_block_line in code_block_lines.iter() {
+                    let mut acc_line_output = StyleUSSpanLine::default();
+
+                    match code_block_line.content {
+                        CodeBlockLineContent::StartTag => {
+                            acc_line_output += StyleUSSpan::new(
+                                maybe_current_box_computed_style.unwrap_or_default()
+                                    + get_foreground_dim_style(),
+                                US::from(CODE_BLOCK_START_PARTIAL),
+                            );
+                            if let Some(language) = code_block_line.language {
+                                acc_line_output += StyleUSSpan::new(
+                                    maybe_current_box_computed_style.unwrap_or_default()
+                                        + get_code_block_lang_style(),
+                                    US::from(language),
+                                );
+                            }
+                        }
+
+                        CodeBlockLineContent::EndTag => {
+                            acc_line_output += StyleUSSpan::new(
+                                maybe_current_box_computed_style.unwrap_or_default()
+                                    + get_foreground_dim_style(),
+                                US::from(CODE_BLOCK_START_PARTIAL),
+                            );
+                        }
+
+                        CodeBlockLineContent::Text(content) => {
+                            acc_line_output += StyleUSSpan::new(
+                                maybe_current_box_computed_style.unwrap_or_default()
+                                    + get_code_block_content_style(),
+                                US::from(content),
+                            );
+                        }
+                    }
+
+                    acc_lines_output += acc_line_output;
+                }
+
+                acc_lines_output
+            }
         }
 
-        use_fallback(code_block_lines, maybe_current_box_computed_style)
+        match inner::try_use_syntect(
+            code_block_lines,
+            maybe_current_box_computed_style,
+            maybe_syntect_tuple,
+        ) {
+            Some(syntect_output) => syntect_output,
+            _ => inner::use_fallback(code_block_lines, maybe_current_box_computed_style),
+        }
     }
 
     pub fn from_block_ol(
@@ -225,6 +327,7 @@ impl StyleUSSpanLines {
     pub fn from_block(
         block: &MdBlockElement,
         maybe_current_box_computed_style: &Option<Style>,
+        maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         let mut lines = StyleUSSpanLines::default();
 
@@ -259,6 +362,7 @@ impl StyleUSSpanLines {
                 lines += StyleUSSpanLines::from_block_codeblock(
                     code_block_lines,
                     maybe_current_box_computed_style,
+                    maybe_syntect_tuple,
                 );
             }
         }
@@ -528,7 +632,8 @@ impl From<StyledTexts> for StyleUSSpanLine {
 }
 
 #[cfg(test)]
-mod test_generate_style_us_span_lines {
+mod tests_style_us_span_lines_from {
+    use pretty_assertions::assert_eq as pretty_assert_eq;
     use r3bl_rs_utils_macro::style;
 
     use super::*;
@@ -546,9 +651,9 @@ mod test_generate_style_us_span_lines {
             });
             let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
 
-            assert_eq2!(actual.len(), 1);
+            pretty_assert_eq!(actual.len(), 1);
 
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual.get(0).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_checkbox_unchecked_style(),
@@ -567,9 +672,9 @@ mod test_generate_style_us_span_lines {
             });
             let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
 
-            assert_eq2!(actual.len(), 1);
+            pretty_assert_eq!(actual.len(), 1);
 
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual.get(0).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_checkbox_checked_style(),
@@ -591,10 +696,10 @@ mod test_generate_style_us_span_lines {
             });
             let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
 
-            assert_eq2!(actual.len(), 6);
+            pretty_assert_eq!(actual.len(), 6);
 
             // "!["
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual.get(0).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -621,10 +726,10 @@ mod test_generate_style_us_span_lines {
             });
             let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
 
-            assert_eq2!(actual.len(), 6);
+            pretty_assert_eq!(actual.len(), 6);
 
             // "["
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual.get(0).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -638,7 +743,7 @@ mod test_generate_style_us_span_lines {
             );
 
             // "Foobar"
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual.get(1).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -651,7 +756,7 @@ mod test_generate_style_us_span_lines {
             );
 
             // "]"
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual.get(2).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -665,7 +770,7 @@ mod test_generate_style_us_span_lines {
             );
 
             // "("
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual.get(3).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -679,7 +784,7 @@ mod test_generate_style_us_span_lines {
             );
 
             // "https://r3bl.com"
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual.get(4).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -693,7 +798,7 @@ mod test_generate_style_us_span_lines {
             );
 
             // ")"
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual.get(5).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -720,21 +825,21 @@ mod test_generate_style_us_span_lines {
 
             // println!("{}", List::from(actual.clone()).pretty_print());
 
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from("`"),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_inline_code_style(),
                     US::from("Foobar"),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual[2],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -754,21 +859,21 @@ mod test_generate_style_us_span_lines {
 
             // println!("{}", List::from(actual.clone()).pretty_print());
 
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from("*"),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_italic_style(),
                     US::from("Foobar"),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual[2],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -788,21 +893,21 @@ mod test_generate_style_us_span_lines {
 
             // println!("{}", List::from(actual.clone()).pretty_print());
 
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from("**"),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_bold_style(),
                     US::from("Foobar"),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual[2],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -822,21 +927,21 @@ mod test_generate_style_us_span_lines {
 
             // println!("{}", List::from(actual.clone()).pretty_print());
 
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from("***"),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_bold_italic_style(),
                     US::from("Foobar"),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 actual[2],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -844,6 +949,7 @@ mod test_generate_style_us_span_lines {
                 )
             );
         }
+
         #[test]
         fn test_plain() {
             let fragment = MdLineFragment::Plain("Foobar");
@@ -855,7 +961,7 @@ mod test_generate_style_us_span_lines {
                 maybe_style.unwrap_or_default() + get_foreground_style(),
                 US::from("Foobar"),
             )];
-            assert_eq2!(actual, expected);
+            pretty_assert_eq!(actual, expected);
         }
     }
 
@@ -870,66 +976,66 @@ mod test_generate_style_us_span_lines {
             let maybe_style = Some(style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
-            let lines = StyleUSSpanLines::from_block(&tags, &maybe_style);
+            let lines = StyleUSSpanLines::from_block(&tags, &maybe_style, None);
             let line_0 = &lines.items[0];
             // println!("{}", line_0.pretty_print());
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_tags_marker_style(),
                     US::from("@tags"),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from(": "),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[2],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from("["),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[3],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
                     US::from("tag1"),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[4],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from(", "),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[5],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
                     US::from("tag2"),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[6],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from(", "),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[7],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
                     US::from("tag3"),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[8],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -944,13 +1050,13 @@ mod test_generate_style_us_span_lines {
             let maybe_style = Some(style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
-            let lines = StyleUSSpanLines::from_block(&title, &maybe_style);
+            let lines = StyleUSSpanLines::from_block(&title, &maybe_style, None);
             // println!("{}", lines.pretty_print());
 
             let line_0 = &lines.items[0];
 
             let span_0 = &line_0.items[0];
-            assert_eq2!(
+            pretty_assert_eq!(
                 span_0,
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_title_marker_style(),
@@ -959,7 +1065,7 @@ mod test_generate_style_us_span_lines {
             );
 
             let span_1 = &line_0.items[1];
-            assert_eq2!(
+            pretty_assert_eq!(
                 span_1,
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -968,7 +1074,7 @@ mod test_generate_style_us_span_lines {
             );
 
             let span_2 = &line_0.items[2];
-            assert_eq2!(
+            pretty_assert_eq!(
                 span_2,
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_title_value_style(),
@@ -998,18 +1104,18 @@ mod test_generate_style_us_span_lines {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
 
-            let lines = StyleUSSpanLines::from_block(&codeblock_block, &maybe_style);
+            let lines = StyleUSSpanLines::from_block(&codeblock_block, &maybe_style, None);
 
             let line_0 = &lines.items[0];
             // println!("{}", line_0.pretty_print());
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from("```"),
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_code_block_lang_style(),
@@ -1019,7 +1125,7 @@ mod test_generate_style_us_span_lines {
 
             let line_1 = &lines.items[1];
             // println!("{}", line_1.pretty_print());
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_1.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_code_block_content_style(),
@@ -1029,7 +1135,7 @@ mod test_generate_style_us_span_lines {
 
             let line_2 = &lines.items[2];
             // println!("{}", line_2.pretty_print());
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_2.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -1046,18 +1152,18 @@ mod test_generate_style_us_span_lines {
             let (_, doc) = parse_markdown("100. Foo\n200. Bar\n")?;
             let ol_block = &doc[0];
             println!("{:#?}", ol_block);
-            let lines = StyleUSSpanLines::from_block(ol_block, &maybe_style);
+            let lines = StyleUSSpanLines::from_block(ol_block, &maybe_style, None);
 
             let line_0 = &lines.items[0];
             // println!("{}", line_0.pretty_print());
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_list_bullet_style(),
                     US::from("100. ")
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_style(),
@@ -1067,14 +1173,14 @@ mod test_generate_style_us_span_lines {
 
             let line_1 = &lines.items[1];
             // println!("{}", line_1.pretty_print());
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_1.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_list_bullet_style(),
                     US::from("200. ")
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_1.items[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_style(),
@@ -1093,7 +1199,7 @@ mod test_generate_style_us_span_lines {
             let (_, doc) = parse_markdown("- Foo\n- Bar\n")?;
             let ul_block = &doc[0];
             println!("{:#?}", ul_block);
-            let lines = StyleUSSpanLines::from_block(ul_block, &maybe_style);
+            let lines = StyleUSSpanLines::from_block(ul_block, &maybe_style, None);
 
             let line_0 = &lines.items[0];
             println!(
@@ -1106,14 +1212,14 @@ mod test_generate_style_us_span_lines {
                 ansi_term::Color::Yellow.paint(line_1.pretty_print())
             );
 
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_list_bullet_style(),
                     US::from("- ")
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_0.items[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_style(),
@@ -1121,14 +1227,14 @@ mod test_generate_style_us_span_lines {
                 )
             );
 
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_1.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_list_bullet_style(),
                     US::from("- ")
                 )
             );
-            assert_eq2!(
+            pretty_assert_eq!(
                 line_1.items[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_style(),
@@ -1146,14 +1252,14 @@ mod test_generate_style_us_span_lines {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
 
-            let lines = StyleUSSpanLines::from_block(&text_block, &maybe_style);
+            let lines = StyleUSSpanLines::from_block(&text_block, &maybe_style, None);
             // println!("{}", lines.pretty_print());
 
             let line_0 = &lines.items[0];
             let span_0_in_line_0 = &line_0.items[0];
             let StyleUSSpan { style, text } = span_0_in_line_0;
-            assert_eq2!(text.string, "Foobar");
-            assert_eq2!(
+            pretty_assert_eq!(text.string, "Foobar");
+            pretty_assert_eq!(
                 style,
                 &(maybe_style.unwrap_or_default() + get_foreground_style())
             );
@@ -1169,35 +1275,35 @@ mod test_generate_style_us_span_lines {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
 
-            let lines = StyleUSSpanLines::from_block(&heading_block, &maybe_style);
+            let lines = StyleUSSpanLines::from_block(&heading_block, &maybe_style, None);
             // println!("{}", lines.pretty_print());
 
             // There should just be 1 line.
-            assert_eq2!(lines.items.len(), 1);
+            pretty_assert_eq!(lines.items.len(), 1);
             let first_line = &lines.items[0];
             let spans_in_line = &first_line.items;
 
             // There should be 7 spans in the line.
-            assert_eq2!(spans_in_line.len(), 7);
+            pretty_assert_eq!(spans_in_line.len(), 7);
 
             // First span is the heading level `# ` in dim w/ Red bg color, and no fg color.
-            assert_eq2!(spans_in_line[0].style.dim, true);
-            assert_eq2!(
+            pretty_assert_eq!(spans_in_line[0].style.dim, true);
+            pretty_assert_eq!(
                 spans_in_line[0].style.color_bg.unwrap(),
                 TuiColor::Basic(ANSIBasicColor::Red)
             );
-            assert_eq2!(spans_in_line[0].style.color_fg.is_some(), false);
-            assert_eq2!(spans_in_line[0].text.string, "# ");
+            pretty_assert_eq!(spans_in_line[0].style.color_fg.is_some(), false);
+            pretty_assert_eq!(spans_in_line[0].text.string, "# ");
 
             // The remainder of the spans are the heading text which are colorized with a color
             // wheel.
             for span in &spans_in_line[1..=6] {
-                assert_eq2!(span.style.dim, false);
-                assert_eq2!(
+                pretty_assert_eq!(span.style.dim, false);
+                pretty_assert_eq!(
                     span.style.color_bg.unwrap(),
                     TuiColor::Basic(ANSIBasicColor::Red)
                 );
-                assert_eq2!(span.style.color_fg.is_some(), true);
+                pretty_assert_eq!(span.style.color_fg.is_some(), true);
             }
         }
     }

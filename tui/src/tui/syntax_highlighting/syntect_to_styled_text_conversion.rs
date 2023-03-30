@@ -29,6 +29,7 @@
 //! 2. Then convert [StyleUSSpanLine] into a [StyledTexts].
 
 use r3bl_rs_utils_core::*;
+use syntect::parsing::SyntaxSet;
 
 use crate::*;
 
@@ -41,7 +42,14 @@ pub type SyntectStyleStrSpan<'a> = (SyntectStyle, &'a str);
 /// A line of text is made up of multiple [SyntectStyleStrSpan]s.
 pub type SyntectStyleStrSpanLine<'a> = Vec<SyntectStyleStrSpan<'a>>;
 
-// 00: convert RGB to ANSI color: https://github.com/rhysd/rgb2ansi256
+pub fn try_get_syntax_ref<'a>(
+    syntax_set: &'a SyntaxSet,
+    file_extension: &'a str,
+) -> Option<&'a syntect::parsing::SyntaxReference> {
+    syntax_set.find_syntax_by_extension(file_extension)
+}
+
+// AA: convert RGB to ANSI color: https://github.com/rhysd/rgb2ansi256
 pub fn from_syntect_to_tui(syntect_highlighted_line: SyntectStyleStrSpanLine) -> StyleUSSpanLine {
     let mut it = StyleUSSpanLine::from(syntect_highlighted_line);
 
