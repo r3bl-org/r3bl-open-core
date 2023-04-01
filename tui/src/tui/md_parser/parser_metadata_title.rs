@@ -63,8 +63,7 @@ pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
 #[cfg(test)]
 mod test_parse_title_no_eol {
     use ansi_term::Color::*;
-    use pretty_assertions::assert_eq;
-
+    use r3bl_rs_utils_core::assert_eq2;
     use super::*;
 
     #[test]
@@ -76,8 +75,8 @@ mod test_parse_title_no_eol {
             Black.on(Yellow).paint(input),
             Black.on(Green).paint(output),
         );
-        assert_eq!(input, "");
-        assert_eq!(output, "Something");
+        assert_eq2!(input, "");
+        assert_eq2!(output, "Something");
     }
 
     #[test]
@@ -89,15 +88,15 @@ mod test_parse_title_no_eol {
             Black.on(Yellow).paint(input),
             Black.on(Green).paint(output),
         );
-        assert_eq!(input, "");
-        assert_eq!(output, "Something");
+        assert_eq2!(input, "");
+        assert_eq2!(output, "Something");
     }
 
     #[test]
     fn test_no_quoted_no_eol_nested_title() {
         let input = "@title: Something @title: Something";
         let it = parse_title_opt_eol(input);
-        assert_eq!(it.is_err(), true);
+        assert_eq2!(it.is_err(), true);
         println!(
             "err: '{}'",
             Black.on(Yellow).paint(format!("{:?}", it.err().unwrap()))
@@ -114,8 +113,8 @@ mod test_parse_title_no_eol {
             Black.on(Yellow).paint(input),
             Black.on(Green).paint(output),
         );
-        assert_eq!(input, "foo\nbar");
-        assert_eq!(output, "");
+        assert_eq2!(input, "foo\nbar");
+        assert_eq2!(output, "");
     }
 
     #[test]
@@ -128,8 +127,8 @@ mod test_parse_title_no_eol {
             Black.on(Yellow).paint(input),
             Black.on(Green).paint(output),
         );
-        assert_eq!(input, "foo\nbar");
-        assert_eq!(output, " a");
+        assert_eq2!(input, "foo\nbar");
+        assert_eq2!(output, " a");
     }
 
     #[test]
@@ -142,7 +141,7 @@ mod test_parse_title_no_eol {
             Black.on(Yellow).paint(remainder),
             Black.on(Green).paint(title),
         );
-        assert_eq!(remainder, "\n# heading1\n## heading2");
-        assert_eq!(title, "");
+        assert_eq2!(remainder, "\n# heading1\n## heading2");
+        assert_eq2!(title, "");
     }
 }

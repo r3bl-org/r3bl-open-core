@@ -40,6 +40,8 @@ pub async fn run_app() -> CommonResult<()> {
             keypress! { @char ModifierKeysMask::CTRL, 'x' },
         )];
 
+        ColorSupport::set_color_support_override(ColorSupport::Ansi256);
+
         // Create a window.
         TerminalWindow::main_event_loop(shared_app, store, exit_keys).await?
     });

@@ -17,7 +17,6 @@
 
 use std::str::FromStr;
 
-use ansi_colours::rgb_from_ansi256;
 use get_size::GetSize;
 use palette::{Gradient, LinSrgb};
 use r3bl_rs_utils_core::*;
@@ -339,7 +338,7 @@ impl ColorWheel {
             ColorWheelConfig::Ansi256(index, _) => {
                 let gradient: Vec<TuiColor> = get_gradient_array_for(*index)
                     .iter()
-                    .map(|color_u8| TuiColor::Ansi(*color_u8))
+                    .map(|color_u8| TuiColor::Ansi(AnsiValue::new(*color_u8)))
                     .collect();
 
                 self.gradient_length_kind = GradientLengthKind::ColorWheel(gradient.len());
@@ -568,7 +567,10 @@ impl ColorWheel {
                             green: bg_green,
                             blue: bg_blue,
                         }) => Some((bg_red, bg_green, bg_blue)),
-                        TuiColor::Ansi(ansi_value) => Some(rgb_from_ansi256(ansi_value)),
+                        TuiColor::Ansi(ansi_value) => {
+                            let rgb_value = RgbValue::from(ansi_value);
+                            Some((rgb_value.red, rgb_value.green, rgb_value.blue))
+                        }
                         TuiColor::Basic(basic_color) => {
                             match RgbValue::try_from_tui_color(TuiColor::Basic(basic_color)) {
                                 Ok(RgbValue { red, green, blue }) => Some((red, green, blue)),

@@ -45,7 +45,6 @@ pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
             map(parse_block_unordered_list,          MdBlockElement::UnorderedList),
             map(parse_block_ordered_list,            MdBlockElement::OrderedList),
 
-            // AB: change semantics of heading to _opt_eol
             map(parse_block_code,                    MdBlockElement::CodeBlock),
 
             map(parse_block_markdown_text_until_eol, MdBlockElement::Text),

@@ -77,24 +77,24 @@ fn parse_heading_tag(input: &str) -> IResult<&str, HeadingLevel> {
 mod tests {
     use nom::{error::{Error, ErrorKind},
               Err as NomErr};
-    use pretty_assertions::assert_eq;
+    use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
 
     #[test]
     fn test_parse_header_tag() {
-        assert_eq!(parse_heading_tag("# "), Ok(("", 1.into())));
-        assert_eq!(parse_heading_tag("### "), Ok(("", 3.into())));
-        assert_eq!(parse_heading_tag("# h1"), Ok(("h1", 1.into())));
-        assert_eq!(parse_heading_tag("# h1"), Ok(("h1", 1.into())));
-        assert_eq!(
+        assert_eq2!(parse_heading_tag("# "), Ok(("", 1.into())));
+        assert_eq2!(parse_heading_tag("### "), Ok(("", 3.into())));
+        assert_eq2!(parse_heading_tag("# h1"), Ok(("h1", 1.into())));
+        assert_eq2!(parse_heading_tag("# h1"), Ok(("h1", 1.into())));
+        assert_eq2!(
             parse_heading_tag(" "),
             Err(NomErr::Error(Error {
                 input: " ",
                 code: ErrorKind::TakeWhile1
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_heading_tag("#"),
             Err(NomErr::Error(Error {
                 input: "",
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_parse_header() {
-        assert_eq!(
+        assert_eq2!(
             parse_block_heading_opt_eol("# h1\n"),
             Ok((
                 "",
@@ -115,7 +115,7 @@ mod tests {
                 }
             ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_block_heading_opt_eol("## h2\n"),
             Ok((
                 "",
@@ -125,7 +125,7 @@ mod tests {
                 }
             ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_block_heading_opt_eol("###  h3\n"),
             Ok((
                 "",
@@ -135,7 +135,7 @@ mod tests {
                 }
             ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_block_heading_opt_eol("### h3 *foo* **bar**\n"),
             Ok((
                 "",
@@ -145,28 +145,28 @@ mod tests {
                 }
             ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_block_heading_opt_eol("###h3"),
             Err(NomErr::Error(Error {
                 input: "h3",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_block_heading_opt_eol("###"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_block_heading_opt_eol(""),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::TakeWhile1
             }))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_block_heading_opt_eol("#"),
             Err(NomErr::Error(Error {
                 input: "",
@@ -177,7 +177,7 @@ mod tests {
 
     #[test]
     fn test_parse_header_with_newline() {
-        assert_eq!(
+        assert_eq2!(
             parse_block_heading_opt_eol("# \n"),
             Ok((
                 "",
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn test_parse_header_with_no_newline() {
-        assert_eq!(
+        assert_eq2!(
             parse_block_heading_opt_eol("# test"),
             Ok((
                 "",

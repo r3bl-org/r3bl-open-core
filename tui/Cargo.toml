@@ -81,7 +81,12 @@ is-terminal = "0.4.4"
 # For examples.
 # http://xion.io/post/code/rust-examples.html
 
-[dev-dependencies]
+# For assert_eq2! macro.
 pretty_assertions = "1.3.0"
+
+# Determine terminal color capabilities.
+concolor-query = "0.3.3"
+
+[dev-dependencies]
 reedline = "0.16.0"
 textwrap = "0.16.0"
