@@ -29,7 +29,7 @@ pub fn get_foreground_style() -> Style {
     style! {
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::White),
-            ColorSupport::Ansi256 => TuiColor::Ansi(244), // Grey50.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(244)), // Grey50.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#c1b3d0")),
         }
     }
@@ -50,7 +50,7 @@ pub fn get_bold_style() -> Style {
         attrib: [bold]
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow),
-            ColorSupport::Ansi256 => TuiColor::Ansi(184), // Yellow3.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(226)), // Yellow1.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#dacd24")),
         }
     }
@@ -62,7 +62,7 @@ pub fn get_italic_style() -> Style {
         attrib: [italic]
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkYellow),
-            ColorSupport::Ansi256 => TuiColor::Ansi(166), // DarkOrange3.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(208)), // DarkOrange.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#a59e3a")),
         }
     }
@@ -74,7 +74,7 @@ pub fn get_bold_italic_style() -> Style {
         attrib: [bold, italic]
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow),
-            ColorSupport::Ansi256 => TuiColor::Ansi(184), // Yellow3.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(184)), // Yellow3.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#dacd24")),
         }
     }
@@ -85,7 +85,9 @@ pub fn get_inline_code_style() -> Style {
     style! {
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Magenta),
-            ColorSupport::Ansi256 => TuiColor::Ansi(165), // Magenta2.
+            // ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(126)), // MediumVioletRed.
+            // ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(177)), // Violet.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(169)), // HotPink2.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ce55b7")),
         }
     }
@@ -96,7 +98,7 @@ pub fn get_link_text_style() -> Style {
     style! {
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Blue),
-            ColorSupport::Ansi256 => TuiColor::Ansi(33), // DodgerBlue1.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(33)), // DodgerBlue1.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4f86ed")),
         }
     }
@@ -108,7 +110,7 @@ pub fn get_link_url_style() -> Style {
         attrib: [underline]
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Blue),
-            ColorSupport::Ansi256 => TuiColor::Ansi(39), // DeepSkyBlue1.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(39)), // DeepSkyBlue1.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#16adf3")),
         }
     }
@@ -120,7 +122,7 @@ pub fn get_checkbox_checked_style() -> Style {
         attrib: [bold, dim]
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkMagenta),
-            ColorSupport::Ansi256 => TuiColor::Ansi(91), // DarkMagenta.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(91)), // DarkMagenta.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#6f5170"))
         }
     }
@@ -132,7 +134,7 @@ pub fn get_checkbox_unchecked_style() -> Style {
         attrib: [bold]
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Green),
-            ColorSupport::Ansi256 => TuiColor::Ansi(41), // SpringGreen3.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(41)), // SpringGreen3.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#5aab82"))
         }
     }
@@ -144,7 +146,7 @@ pub fn get_list_bullet_style() -> Style {
         style! {
             color_fg: match ColorSupport::detect() {
                 ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
-                ColorSupport::Ansi256 => TuiColor::Ansi(87), // DarkSlateGray2. There is no equivalent.
+                ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(87)), // DarkSlateGray2. There is no equivalent.
                 ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ad83da")), // Very soft violet.
             }
         }
@@ -172,7 +174,7 @@ pub fn get_metadata_title_marker_style() -> Style {
         color_fg: TuiColor::Basic(ANSIBasicColor::Black)
         color_bg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
-            ColorSupport::Ansi256 => TuiColor::Ansi(39), // DeepSkyBlue1.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(39)), // DeepSkyBlue1.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4f86ed")), // Soft blue.
         }
     }
@@ -184,12 +186,12 @@ pub fn get_metadata_title_value_style() -> Style {
     style! {
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan),
-            ColorSupport::Ansi256 => TuiColor::Ansi(51), // Cyan1.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(51)), // Cyan1.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4fcbd4")), // Moderate cyan.
         }
         color_bg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkGrey),
-            ColorSupport::Ansi256 => TuiColor::Ansi(238), // Grey27.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(238)), // Grey27.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#444444")), // Very dark gray.
         }
     }
@@ -202,7 +204,7 @@ pub fn get_metadata_tags_marker_style() -> Style {
         color_fg: TuiColor::Basic(ANSIBasicColor::Black)
         color_bg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow), // There is no equivalent.
-            ColorSupport::Ansi256 => TuiColor::Ansi(133), // MediumOrchid3. There is no equivalent.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(133)), // MediumOrchid3. There is no equivalent.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ad83da")), // Very soft violet.
         }
     }
@@ -214,18 +216,19 @@ pub fn get_metadata_tags_values_style() -> Style {
     style! {
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
-            ColorSupport::Ansi256 => TuiColor::Ansi(45), // Turquoise2
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(45)), // Turquoise2
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#e2a1e3")), // Soft violet.
         }
         color_bg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkGrey),
-            ColorSupport::Ansi256 => TuiColor::Ansi(236), // Grey19.
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(236)), // Grey19.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#303030")), // Very dark gray.
         }
     }
 }
 
 const SPEED: ColorWheelSpeed = ColorWheelSpeed::Medium;
+const ANSI_SPEED: ColorWheelSpeed = ColorWheelSpeed::Slow;
 const STEPS: usize = 20;
 
 impl ColorWheel {
@@ -238,7 +241,7 @@ impl ColorWheel {
                     SPEED,
                     STEPS,
                 ),
-                ColorWheelConfig::Ansi256(Ansi256GradientIndex::LightYellowToWhite, SPEED),
+                ColorWheelConfig::Ansi256(Ansi256GradientIndex::LightYellowToWhite, ANSI_SPEED),
             ]),
 
             HeadingLevel::Heading2 => ColorWheel::new(vec![
@@ -247,7 +250,7 @@ impl ColorWheel {
                     SPEED,
                     STEPS,
                 ),
-                ColorWheelConfig::Ansi256(Ansi256GradientIndex::MediumGreenToMediumBlue, SPEED),
+                ColorWheelConfig::Ansi256(Ansi256GradientIndex::GreenToBlue, ANSI_SPEED),
             ]),
 
             HeadingLevel::Heading3 => ColorWheel::new(vec![
@@ -256,7 +259,7 @@ impl ColorWheel {
                     SPEED,
                     STEPS,
                 ),
-                ColorWheelConfig::Ansi256(Ansi256GradientIndex::DarkRedToDarkMagenta, SPEED),
+                ColorWheelConfig::Ansi256(Ansi256GradientIndex::OrangeToNeonPink, ANSI_SPEED),
             ]),
 
             HeadingLevel::Heading4 => ColorWheel::new(vec![
@@ -265,7 +268,10 @@ impl ColorWheel {
                     SPEED,
                     STEPS,
                 ),
-                ColorWheelConfig::Ansi256(Ansi256GradientIndex::RedToBrightPink, SPEED),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::LightOrangeToLightPurple,
+                    ANSI_SPEED,
+                ),
             ]),
 
             HeadingLevel::Heading5 => ColorWheel::new(vec![
@@ -274,7 +280,7 @@ impl ColorWheel {
                     SPEED,
                     STEPS,
                 ),
-                ColorWheelConfig::Ansi256(Ansi256GradientIndex::OrangeToNeonPink, SPEED),
+                ColorWheelConfig::Ansi256(Ansi256GradientIndex::RustToPurple, ANSI_SPEED),
             ]),
 
             HeadingLevel::Heading6 => ColorWheel::new(vec![
@@ -283,7 +289,10 @@ impl ColorWheel {
                     SPEED,
                     STEPS,
                 ),
-                ColorWheelConfig::Ansi256(Ansi256GradientIndex::GreenToBlue, ColorWheelSpeed::Fast),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::DarkOliveGreenToDarkLavender,
+                    ANSI_SPEED,
+                ),
             ]),
         }
     }

@@ -394,7 +394,7 @@ macro_rules! unwrap_option_or_compute_if_none {
 /// assertion fails. Useful for debugging tests, since cargo would just print out the left and right
 /// values *w/out* providing information on *what variables* were being compared.
 #[macro_export]
-macro_rules! assert_eq2 {
+macro_rules! assert_eq2_og {
     ($left:expr, $right:expr $(,)?) => {
         assert_eq!(
             $left,
@@ -404,5 +404,13 @@ macro_rules! assert_eq2 {
             $crate::style_error(stringify!($left)),
             $crate::style_error(stringify!($right))
         );
+    };
+}
+
+/// A wrapper for `pretty_assertions::assert_eq!` macro.
+#[macro_export]
+macro_rules! assert_eq2 {
+    ($($params:tt)*) => {
+        pretty_assertions::assert_eq!($($params)*)
     };
 }

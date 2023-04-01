@@ -125,7 +125,7 @@ pub fn parse_tags_opt_eol(input: &str) -> IResult<&str, List<&str>> {
 
 #[cfg(test)]
 mod test_parse_tags_opt_eol {
-    use pretty_assertions::assert_eq;
+    use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
 
@@ -133,36 +133,36 @@ mod test_parse_tags_opt_eol {
     fn test_not_quoted_no_eol() {
         let input = "@tags: [tag1, tag2, tag3]";
         let (input, output) = super::parse_tags_opt_eol(input).unwrap();
-        assert_eq!(input, "");
-        assert_eq!(output, list!["tag1", "tag2", "tag3"]);
+        assert_eq2!(input, "");
+        assert_eq2!(output, list!["tag1", "tag2", "tag3"]);
     }
 
     #[test]
     fn test_not_quoted_no_eol_err_whitespace() {
         // First element mustn't have any space prefix.
-        assert_eq!(
+        assert_eq2!(
             parse_tags_opt_eol("@tags: [ tag1, tag2, tag3]").is_err(),
-            true
+            true,
         );
 
         // 2nd element onwards must have a single space prefix.
-        assert_eq!(
+        assert_eq2!(
             parse_tags_opt_eol("@tags: [tag1,tag2, tag3]").is_err(),
-            true
+            true,
         );
-        assert_eq!(
+        assert_eq2!(
             parse_tags_opt_eol("@tags: [tag1,  tag2,tag3]").is_err(),
-            true
+            true,
         );
-        assert_eq!(
+        assert_eq2!(
             parse_tags_opt_eol("@tags: [tag1, tag2,tag3]").is_err(),
-            true
+            true,
         );
 
         // It is ok to have more than 1 prefix space for 2nd element onwards.
-        assert_eq!(
+        assert_eq2!(
             parse_tags_opt_eol("@tags: [tag1, tag2,  tag3]").unwrap(),
-            ("", list!["tag1", "tag2", " tag3"])
+            ("", list!["tag1", "tag2", " tag3"]),
         );
     }
 
@@ -172,44 +172,44 @@ mod test_parse_tags_opt_eol {
         {
             let input = "@tags: [tag1, tag2, tag3]\n";
             let (input, output) = parse_tags_opt_eol(input).unwrap();
-            assert_eq!(input, "");
-            assert_eq!(output, list!["tag1", "tag2", "tag3"]);
+            assert_eq2!(input, "");
+            assert_eq2!(output, list!["tag1", "tag2", "tag3"]);
         }
 
         // Invalid: opening `[` must be terminated w/ `]`.
         {
             let input = "@tags: [tag1, tag2, tag3\n]\n";
             let result = parse_tags_opt_eol(input);
-            assert_eq!(result.is_err(), true);
+            assert_eq2!(result.is_err(), true);
         }
     }
 
     #[test]
     fn test_not_quoted_with_eol_whitespace() {
         // First element mustn't have any space prefix.
-        assert_eq!(
+        assert_eq2!(
             parse_tags_opt_eol("@tags: [ tag1, tag2, tag3]\n").is_err(),
-            true
+            true,
         );
 
         // 2nd element onwards must have a single space prefix.
-        assert_eq!(
+        assert_eq2!(
             parse_tags_opt_eol("@tags: [tag1,tag2, tag3]\n").is_err(),
-            true
+            true,
         );
-        assert_eq!(
+        assert_eq2!(
             parse_tags_opt_eol("@tags: [tag1,  tag2,tag3]\n").is_err(),
-            true
+            true,
         );
-        assert_eq!(
+        assert_eq2!(
             parse_tags_opt_eol("@tags: [tag1, tag2,tag3]\n").is_err(),
-            true
+            true,
         );
 
         // It is ok to have more than 1 prefix space for 2nd element onwards.
-        assert_eq!(
+        assert_eq2!(
             parse_tags_opt_eol("@tags: [tag1, tag2,  tag3]\n").unwrap(),
-            ("", list!["tag1", "tag2", " tag3"])
+            ("", list!["tag1", "tag2", " tag3"]),
         );
     }
 }

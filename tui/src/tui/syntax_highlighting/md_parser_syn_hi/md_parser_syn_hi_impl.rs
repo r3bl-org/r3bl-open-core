@@ -58,8 +58,6 @@ pub fn try_parse_and_highlight(
 
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
-    use pretty_assertions::assert_eq as pretty_assert_eq;
-
     use super::*;
 
     #[test]
@@ -77,17 +75,17 @@ mod tests_try_parse_and_highlight {
             ansi_term::Color::Cyan.paint(style_us_span_lines.pretty_print())
         );
 
-        pretty_assert_eq!(editor_text_lines.len(), style_us_span_lines.len());
+        assert_eq2!(editor_text_lines.len(), style_us_span_lines.len());
         let line_0 = &style_us_span_lines[0][0];
         let line_1 = &style_us_span_lines[1][0];
-        pretty_assert_eq!(editor_text_lines[0], line_0.text);
-        pretty_assert_eq!(editor_text_lines[1], line_1.text);
+        assert_eq2!(editor_text_lines[0], line_0.text);
+        assert_eq2!(editor_text_lines[1], line_1.text);
 
-        pretty_assert_eq!(
+        assert_eq2!(
             line_0.style,
             maybe_current_box_computed_style.unwrap() + get_foreground_style()
         );
-        pretty_assert_eq!(
+        assert_eq2!(
             line_1.style,
             maybe_current_box_computed_style.unwrap() + get_foreground_style()
         );
@@ -633,7 +631,6 @@ impl From<StyledTexts> for StyleUSSpanLine {
 
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
-    use pretty_assertions::assert_eq as pretty_assert_eq;
     use r3bl_rs_utils_macro::style;
 
     use super::*;
@@ -651,9 +648,9 @@ mod tests_style_us_span_lines_from {
             });
             let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
 
-            pretty_assert_eq!(actual.len(), 1);
+            assert_eq2!(actual.len(), 1);
 
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual.get(0).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_checkbox_unchecked_style(),
@@ -672,9 +669,9 @@ mod tests_style_us_span_lines_from {
             });
             let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
 
-            pretty_assert_eq!(actual.len(), 1);
+            assert_eq2!(actual.len(), 1);
 
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual.get(0).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_checkbox_checked_style(),
@@ -696,10 +693,10 @@ mod tests_style_us_span_lines_from {
             });
             let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
 
-            pretty_assert_eq!(actual.len(), 6);
+            assert_eq2!(actual.len(), 6);
 
             // "!["
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual.get(0).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -726,10 +723,10 @@ mod tests_style_us_span_lines_from {
             });
             let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
 
-            pretty_assert_eq!(actual.len(), 6);
+            assert_eq2!(actual.len(), 6);
 
             // "["
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual.get(0).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -743,7 +740,7 @@ mod tests_style_us_span_lines_from {
             );
 
             // "Foobar"
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual.get(1).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -756,7 +753,7 @@ mod tests_style_us_span_lines_from {
             );
 
             // "]"
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual.get(2).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -770,7 +767,7 @@ mod tests_style_us_span_lines_from {
             );
 
             // "("
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual.get(3).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -784,7 +781,7 @@ mod tests_style_us_span_lines_from {
             );
 
             // "https://r3bl.com"
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual.get(4).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -798,7 +795,7 @@ mod tests_style_us_span_lines_from {
             );
 
             // ")"
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual.get(5).unwrap(),
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
@@ -825,21 +822,21 @@ mod tests_style_us_span_lines_from {
 
             // println!("{}", List::from(actual.clone()).pretty_print());
 
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from("`"),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_inline_code_style(),
                     US::from("Foobar"),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual[2],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -859,21 +856,21 @@ mod tests_style_us_span_lines_from {
 
             // println!("{}", List::from(actual.clone()).pretty_print());
 
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from("*"),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_italic_style(),
                     US::from("Foobar"),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual[2],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -893,21 +890,21 @@ mod tests_style_us_span_lines_from {
 
             // println!("{}", List::from(actual.clone()).pretty_print());
 
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from("**"),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_bold_style(),
                     US::from("Foobar"),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual[2],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -927,21 +924,21 @@ mod tests_style_us_span_lines_from {
 
             // println!("{}", List::from(actual.clone()).pretty_print());
 
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from("***"),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_bold_italic_style(),
                     US::from("Foobar"),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 actual[2],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -961,7 +958,7 @@ mod tests_style_us_span_lines_from {
                 maybe_style.unwrap_or_default() + get_foreground_style(),
                 US::from("Foobar"),
             )];
-            pretty_assert_eq!(actual, expected);
+            assert_eq2!(actual, expected);
         }
     }
 
@@ -979,63 +976,63 @@ mod tests_style_us_span_lines_from {
             let lines = StyleUSSpanLines::from_block(&tags, &maybe_style, None);
             let line_0 = &lines.items[0];
             // println!("{}", line_0.pretty_print());
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_tags_marker_style(),
                     US::from("@tags"),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from(": "),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[2],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from("["),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[3],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
                     US::from("tag1"),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[4],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from(", "),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[5],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
                     US::from("tag2"),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[6],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from(", "),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[7],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
                     US::from("tag3"),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[8],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -1056,7 +1053,7 @@ mod tests_style_us_span_lines_from {
             let line_0 = &lines.items[0];
 
             let span_0 = &line_0.items[0];
-            pretty_assert_eq!(
+            assert_eq2!(
                 span_0,
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_title_marker_style(),
@@ -1065,7 +1062,7 @@ mod tests_style_us_span_lines_from {
             );
 
             let span_1 = &line_0.items[1];
-            pretty_assert_eq!(
+            assert_eq2!(
                 span_1,
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -1074,7 +1071,7 @@ mod tests_style_us_span_lines_from {
             );
 
             let span_2 = &line_0.items[2];
-            pretty_assert_eq!(
+            assert_eq2!(
                 span_2,
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_title_value_style(),
@@ -1108,14 +1105,14 @@ mod tests_style_us_span_lines_from {
 
             let line_0 = &lines.items[0];
             // println!("{}", line_0.pretty_print());
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from("```"),
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_code_block_lang_style(),
@@ -1125,7 +1122,7 @@ mod tests_style_us_span_lines_from {
 
             let line_1 = &lines.items[1];
             // println!("{}", line_1.pretty_print());
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_1.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_code_block_content_style(),
@@ -1135,7 +1132,7 @@ mod tests_style_us_span_lines_from {
 
             let line_2 = &lines.items[2];
             // println!("{}", line_2.pretty_print());
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_2.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -1156,14 +1153,14 @@ mod tests_style_us_span_lines_from {
 
             let line_0 = &lines.items[0];
             // println!("{}", line_0.pretty_print());
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_list_bullet_style(),
                     US::from("100. ")
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_style(),
@@ -1173,14 +1170,14 @@ mod tests_style_us_span_lines_from {
 
             let line_1 = &lines.items[1];
             // println!("{}", line_1.pretty_print());
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_1.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_list_bullet_style(),
                     US::from("200. ")
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_1.items[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_style(),
@@ -1212,14 +1209,14 @@ mod tests_style_us_span_lines_from {
                 ansi_term::Color::Yellow.paint(line_1.pretty_print())
             );
 
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_list_bullet_style(),
                     US::from("- ")
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_0.items[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_style(),
@@ -1227,14 +1224,14 @@ mod tests_style_us_span_lines_from {
                 )
             );
 
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_1.items[0],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_list_bullet_style(),
                     US::from("- ")
                 )
             );
-            pretty_assert_eq!(
+            assert_eq2!(
                 line_1.items[1],
                 StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_style(),
@@ -1258,8 +1255,8 @@ mod tests_style_us_span_lines_from {
             let line_0 = &lines.items[0];
             let span_0_in_line_0 = &line_0.items[0];
             let StyleUSSpan { style, text } = span_0_in_line_0;
-            pretty_assert_eq!(text.string, "Foobar");
-            pretty_assert_eq!(
+            assert_eq2!(text.string, "Foobar");
+            assert_eq2!(
                 style,
                 &(maybe_style.unwrap_or_default() + get_foreground_style())
             );
@@ -1279,31 +1276,31 @@ mod tests_style_us_span_lines_from {
             // println!("{}", lines.pretty_print());
 
             // There should just be 1 line.
-            pretty_assert_eq!(lines.items.len(), 1);
+            assert_eq2!(lines.items.len(), 1);
             let first_line = &lines.items[0];
             let spans_in_line = &first_line.items;
 
             // There should be 7 spans in the line.
-            pretty_assert_eq!(spans_in_line.len(), 7);
+            assert_eq2!(spans_in_line.len(), 7);
 
             // First span is the heading level `# ` in dim w/ Red bg color, and no fg color.
-            pretty_assert_eq!(spans_in_line[0].style.dim, true);
-            pretty_assert_eq!(
+            assert_eq2!(spans_in_line[0].style.dim, true);
+            assert_eq2!(
                 spans_in_line[0].style.color_bg.unwrap(),
                 TuiColor::Basic(ANSIBasicColor::Red)
             );
-            pretty_assert_eq!(spans_in_line[0].style.color_fg.is_some(), false);
-            pretty_assert_eq!(spans_in_line[0].text.string, "# ");
+            assert_eq2!(spans_in_line[0].style.color_fg.is_some(), false);
+            assert_eq2!(spans_in_line[0].text.string, "# ");
 
             // The remainder of the spans are the heading text which are colorized with a color
             // wheel.
             for span in &spans_in_line[1..=6] {
-                pretty_assert_eq!(span.style.dim, false);
-                pretty_assert_eq!(
+                assert_eq2!(span.style.dim, false);
+                assert_eq2!(
                     span.style.color_bg.unwrap(),
                     TuiColor::Basic(ANSIBasicColor::Red)
                 );
-                pretty_assert_eq!(span.style.color_fg.is_some(), true);
+                assert_eq2!(span.style.color_fg.is_some(), true);
             }
         }
     }

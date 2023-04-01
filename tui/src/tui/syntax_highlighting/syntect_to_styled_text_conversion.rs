@@ -49,7 +49,6 @@ pub fn try_get_syntax_ref<'a>(
     syntax_set.find_syntax_by_extension(file_extension)
 }
 
-// AA: convert RGB to ANSI color: https://github.com/rhysd/rgb2ansi256
 pub fn from_syntect_to_tui(syntect_highlighted_line: SyntectStyleStrSpanLine) -> StyleUSSpanLine {
     let mut it = StyleUSSpanLine::from(syntect_highlighted_line);
 

@@ -18,10 +18,34 @@ fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
   ✔ fix bugs in the md_parser @done(23-03-29 17:44)
     ✔ "```rs\nfoo\n````" (extra backtick) not working @done(23-03-29 17:44)
   ✔ `from_block_codeblock()` - impl better syntax highlighting for code blocks using syntect @done(23-03-31 15:55)
-  ☐ fix syntect output for macOS (ANSI256) w/ https://github.com/rhysd/rgb2ansi256 in `from_syntect_to_tui()`
+  ✔ fix syntect output for macOS (ANSI256) @done(23-04-01 14:56)
+    ✔ `tui_color.rs`: `RGBValue` -> `ANSIValue(u8)` (just a `u8` atm) @done(23-03-31 20:36)
+    ✔ add tests @done(23-04-01 10:59)
+    ✔ CHOOSE: @done(23-04-01 14:09)
+      ✔ ❌ `from_syntect_to_tui()` -> use `ColorSupport::detect()` to determine if we should use `ANSIValue` or `RGBValue`? @done(23-04-01 14:09)
+      ✔ ✅ deal w/ this in RenderOps? @done(23-04-01 14:56)
+      ✔ convert color to grayscale @done(23-04-01 19:43)
+  ☐ bug fix for text input:
+    "@tags: [foo, bar\n\n```rs\nlet a=1;\n```\n\n*italic* **bold** [link](https://example.com)\n\n`inline code`"
+
+    - or -
+
+    "@tags: [foo, bar
+
+    ```rs
+    let a=1;
+    ```
+
+    *italic* **bold** [link](https://example.com)
+
+    `inline code`"
   ☐ ol / ul
     ☐ migrate strategy to `_opt_eol`?
     ☐ should `md_parser` handle nested ol / ul blocks "intelligently" (not EOL delimited)?
+  ☐ update changelog:
+    ☐ correct console color support at RenderOps level (ANSI256, Truecolor, Grayscale)
+    ☐ brand new markdown parser
+    ☐ brand new syntax highlighting (use syntect for code blocks)
 
 crate upgrades:
   ☐ consider using https://docs.rs/concolor-query/0.3.3/concolor_query/fn.clicolor.html

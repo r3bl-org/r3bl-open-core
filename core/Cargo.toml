@@ -63,5 +63,8 @@ syntect = "5.0.0"
 # nom parser combinator.
 nom = "7.1.3"
 
-[dev-dependencies]
+# ansi_colours convert between ansi and rgb.
+ansi_colours = "1.2.1"
+
+# for assert_eq! macro
 pretty_assertions = "1.3.0"

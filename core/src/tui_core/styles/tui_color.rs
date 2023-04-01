@@ -126,7 +126,7 @@ pub enum TuiColor {
     ///
     /// Most UNIX terminals and Windows 10 supported only. See [Platform-specific
     /// notes](enum.Color.html#platform-specific-notes) for more info.
-    Ansi(u8),
+    Ansi(AnsiValue),
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Copy, Hash, GetSize)]
@@ -187,8 +187,61 @@ pub struct RgbValue {
     pub blue: u8,
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, GetSize, Copy, Debug)]
+pub struct AnsiValue {
+    pub color: u8,
+}
+
+impl AnsiValue {
+    pub fn new(color: u8) -> Self { Self { color } }
+}
+
 impl Default for RgbValue {
     fn default() -> Self { Self::from_u8(255, 255, 255) }
+}
+
+mod convert_rgb_ansi_values {
+    use super::*;
+
+    impl From<RgbValue> for AnsiValue {
+        fn from(rgb_value: RgbValue) -> Self {
+            let red = rgb_value.red;
+            let green = rgb_value.green;
+            let blue = rgb_value.blue;
+            let ansi_color = ansi_colours::ansi256_from_rgb((red, green, blue));
+            Self::new(ansi_color)
+        }
+    }
+
+    impl From<AnsiValue> for RgbValue {
+        fn from(ansi_value: AnsiValue) -> Self {
+            let color = ansi_value.color;
+            let (red, green, blue) = ansi_colours::rgb_from_ansi256(color);
+            Self::from_u8(red, green, blue)
+        }
+    }
+
+    /// https://www.ditig.com/256-colors-cheat-sheet
+    /// ANSI: 57 BlueViolet
+    /// RGB: #5f00ff rgb(95,0,255)
+    #[cfg(test)]
+    mod test_conversions_between_ansi_and_rgb_values {
+        use super::*;
+
+        #[test]
+        fn test_ansi_to_rgb() {
+            let ansi = AnsiValue::new(57);
+            let rgb = RgbValue::from(ansi);
+            assert_eq2!(rgb, RgbValue::from_u8(95, 0, 255))
+        }
+
+        #[test]
+        fn test_rgb_to_ansi() {
+            let rgb = RgbValue::from_u8(95, 0, 255);
+            let ansi = AnsiValue::from(rgb);
+            assert_eq2!(ansi, AnsiValue::new(57))
+        }
+    }
 }
 
 mod rgb_values_impl {
@@ -415,7 +468,9 @@ mod debug_helpers {
                 TuiColor::Rgb(RgbValue { red, green, blue }) => {
                     f.write_fmt(format_args!("{red},{green},{blue}"))
                 }
-                TuiColor::Ansi(value) => f.write_fmt(format_args!("ansi_value({value})")),
+                TuiColor::Ansi(ansi_value) => {
+                    f.write_fmt(format_args!("ansi_value({})", ansi_value.color))
+                }
                 TuiColor::Reset => f.write_fmt(format_args!("reset")),
                 TuiColor::Basic(basic_color) => match basic_color {
                     ANSIBasicColor::Black => f.write_fmt(format_args!("black")),

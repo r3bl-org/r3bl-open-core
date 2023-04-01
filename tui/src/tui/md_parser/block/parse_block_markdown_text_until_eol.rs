@@ -55,15 +55,15 @@ fn parse_opt_eol(input: &str) -> IResult<&str, MdLineFragments> {
 
 #[cfg(test)]
 mod test {
-    use pretty_assertions::assert_eq;
+    use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
 
     #[test]
     fn test_parse_block_markdown_text_no_eol() {
-        assert_eq!(parse_block_markdown_text_opt_eol(""), Ok(("", list![])));
+        assert_eq2!(parse_block_markdown_text_opt_eol(""), Ok(("", list![])));
 
-        assert_eq!(
+        assert_eq2!(
             parse_block_markdown_text_opt_eol("here is some plaintext *but what if we italicize?"),
             Ok((
                 "*but what if we italicize?",
@@ -74,12 +74,12 @@ mod test {
 
     #[test]
     fn test_parse_block_markdown_text_with_eol() {
-        assert_eq!(parse_block_markdown_text_until_eol("\n"), Ok(("", list![])));
-        assert_eq!(
+        assert_eq2!(parse_block_markdown_text_until_eol("\n"), Ok(("", list![])));
+        assert_eq2!(
             parse_block_markdown_text_until_eol("here is some plaintext\n"),
             Ok(("", list![MdLineFragment::Plain("here is some plaintext")]))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_block_markdown_text_until_eol(
                 "here is some plaintext *but what if we italicize?*\n"
             ),
@@ -91,7 +91,7 @@ mod test {
                 ]
             ))
         );
-        assert_eq!(
+        assert_eq2!(
             parse_block_markdown_text_until_eol("here is some plaintext *but what if we italicize?* I guess it doesn't **matter** in my `code`\n"),
             Ok(
                 ("",
@@ -105,7 +105,7 @@ mod test {
                 ])
             )
         );
-        assert_eq!(
+        assert_eq2!(
             parse_block_markdown_text_until_eol(
                 "here is some plaintext *but what if we italicize?*\n"
             ),

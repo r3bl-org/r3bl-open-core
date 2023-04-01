@@ -36,7 +36,6 @@
     "artdiniz.quitcontrol-vscode",
     "stkb.rewrap",
     "rust-lang.rust-analyzer",
-    "alefragnani.separators",
     "wayou.vscode-todo-highlight",
     "fabiospampinato.vscode-todo-plus",
     "minhdo.tokyo-darker-night",
@@ -45,9 +44,10 @@
     "lorenzopirro.rust-flash-snippets",
     "nicholashsiang.vscode-opened-editors",
     "unifiedjs.vscode-remark",
+    "esbenp.prettier-vscode",
   ],
   // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
-    "esbenp.prettier-vscode",
+    "alefragnani.separators", // Suspect that this makes VSCode main thread unresponsive after running for a few hours.
   ]
 }

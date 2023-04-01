@@ -22,8 +22,6 @@
 //! - <https://github.com/termstandard/colors>
 //! - <https://unix.stackexchange.com/a/67540/302646>
 
-use std::env::{self, consts};
-
 use crate::color_support_global_static::{clear_color_support_override,
                                          get_color_support_override,
                                          set_color_support_override};
@@ -54,48 +52,13 @@ impl ColorSupport {
         }
 
         // Override is not set.
-        match consts::OS {
-            "macos" => {
-                // Check for the TERM environment variable.
-                if let Some(term_value) = env::var_os("TERM") {
-                    return match term_value.to_str() {
-                        Some("iterm") => ColorSupport::Truecolor,
-                        Some("xterm-truecolor") => ColorSupport::Truecolor,
-                        Some("tmux-truecolor") => ColorSupport::Truecolor,
-                        _ => ColorSupport::Ansi256,
-                    };
-                }
-
-                // Default to ANSI256.
-                ColorSupport::Ansi256
-            }
-            "linux" => {
-                // Check for the COLORTERM environment variable.
-                if let Some(colorterm_value) = env::var_os("COLORTERM") {
-                    return match colorterm_value.to_str() {
-                        Some("truecolor") => ColorSupport::Truecolor,
-                        Some("24bit") => ColorSupport::Truecolor,
-                        _ => ColorSupport::Ansi256,
-                    };
-                }
-
-                // Check for the TERM environment variable.
-                if let Some(term_value) = env::var_os("TERM") {
-                    return match term_value.to_str() {
-                        Some("linux-truecolor") => ColorSupport::Truecolor,
-                        Some("xterm-truecolor") => ColorSupport::Truecolor,
-                        Some("tmux-truecolor") => ColorSupport::Truecolor,
-                        Some("iterm") => ColorSupport::Truecolor,
-                        _ => ColorSupport::Ansi256,
-                    };
-                }
-
-                // Default to ANSI256.
-                ColorSupport::Ansi256
-            }
-            "windows" => ColorSupport::Truecolor,
-            _ => ColorSupport::Grayscale,
+        if concolor_query::truecolor() {
+            return ColorSupport::Truecolor;
         }
+        if concolor_query::term_supports_ansi_color() {
+            return ColorSupport::Ansi256;
+        }
+        ColorSupport::Grayscale
     }
 }
 

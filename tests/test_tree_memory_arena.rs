@@ -62,7 +62,12 @@ fn test_can_add_nodes_to_tree() {
             node_1_ref.write().unwrap().payload = 100;
         }
         assert_eq2!(
-            arena.get_node_arc(node_1_id).unwrap().read().unwrap().payload,
+            arena
+                .get_node_arc(node_1_id)
+                .unwrap()
+                .read()
+                .unwrap()
+                .payload,
             100
         );
     }
