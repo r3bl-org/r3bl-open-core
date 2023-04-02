@@ -73,7 +73,7 @@ mod syntect {
         {
             let line = &vec_styled_texts[0];
             assert_eq2!(line.len(), 4);
-            assert_eq2!(line.get_plain_text(), "# My Heading\n".into());
+            assert_eq2!(line.to_plain_text_us(), "# My Heading\n".into());
             let col1 = &line[0];
             assert_eq2!(col1.get_style().bold, true);
             let col3 = &line[2];
@@ -84,7 +84,7 @@ mod syntect {
         {
             let line = &vec_styled_texts[41];
             assert_eq2!(line.len(), 1);
-            assert_eq2!(line.get_plain_text(), "--- END ---\n".into());
+            assert_eq2!(line.to_plain_text_us(), "--- END ---\n".into());
             let col1 = &line[0];
             assert_eq2!(col1.get_style().color_fg.unwrap(), color!(193, 179, 208));
         }

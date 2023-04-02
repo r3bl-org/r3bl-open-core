@@ -132,7 +132,6 @@ mod tests {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
-    use crate::test_data::raw_strings;
 
     #[test]
     fn test_parse_codeblock_trailing_extra() {
@@ -253,9 +252,9 @@ mod tests {
         {
             let lang = "bash";
             let code_lines = vec!["pip install foobar"];
-            println!("{:#?}", (raw_strings::CODE_BLOCK_3_INPUT));
-            let (remainder, code_block_lines) =
-                parse_block_code(raw_strings::CODE_BLOCK_3_INPUT).unwrap();
+            let input = vec!["```bash", "pip install foobar", "```", ""].join("\n");
+            println!("{:#?}", &input);
+            let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
@@ -267,8 +266,8 @@ mod tests {
         {
             let lang = "bash";
             let code_lines = vec![];
-            let (remainder, code_block_lines) =
-                parse_block_code(raw_strings::CODE_BLOCK_0_INPUT).unwrap();
+            let input = vec!["```bash", "```", ""].join("\n");
+            let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
@@ -280,8 +279,8 @@ mod tests {
         {
             let lang = "bash";
             let code_lines = vec![""];
-            let (remainder, code_block_lines) =
-                parse_block_code(raw_strings::CODE_BLOCK_1_EMPTY_INPUT).unwrap();
+            let input = vec!["```bash", "", "```", ""].join("\n");
+            let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
@@ -300,8 +299,18 @@ mod tests {
                 "foobar.pluralize('goose') # returns 'geese'",
                 "foobar.singularize('phenomena') # returns 'phenomenon'",
             ];
-            let (remainder, code_block_lines) =
-                parse_block_code(raw_strings::CODE_BLOCK_2_INPUT).unwrap();
+            let input = vec![
+                "```python",
+                "import foobar",
+                "",
+                "foobar.pluralize('word') # returns 'words'",
+                "foobar.pluralize('goose') # returns 'geese'",
+                "foobar.singularize('phenomena') # returns 'phenomenon'",
+                "```",
+                "",
+            ]
+            .join("\n");
+            let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
@@ -314,8 +323,8 @@ mod tests {
     fn test_parse_codeblock_no_language() {
         let lang = None;
         let code_lines = vec!["pip install foobar"];
-        let (remainder, code_block_lines) =
-            parse_block_code(raw_strings::CODE_BLOCK_1_INPUT).unwrap();
+        let input = vec!["```", "pip install foobar", "```", ""].join("\n");
+        let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
         assert_eq2!(remainder, "");
         assert_eq2!(
             code_block_lines,

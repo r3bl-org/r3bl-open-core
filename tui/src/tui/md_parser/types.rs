@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::List;
+use crate::{BulletKind, List};
 
 /// This corresponds to a single Markdown document, which is produced after a successful parse
 /// operation [crate::parse_markdown].
@@ -40,25 +40,34 @@ pub struct HeadingData<'a> {
     pub text: &'a str,
 }
 
-/// These are blocks of Markdown. Blocks are the top-level elements of a Markdown document. A
-/// Markdown document once parsed is turned into a [Vec] of these.
+/// A Markdown document once parsed is turned into a [Vec] of "blocks". A block is the top-level
+/// element of a Markdown document and rougly represents a single line of text.
+/// - It is the intermediate representation (IR) of a single line of text.
+/// - There are some exceptions such as smart lists and code blocks which represent multple lines of
+///   text.
 #[derive(Clone, Debug, PartialEq)]
 pub enum MdBlockElement<'a> {
     Heading(HeadingData<'a>),
-    OrderedList(Lines<'a>),
-    UnorderedList(Lines<'a>),
+    SmartList((Lines<'a>, BulletKind, usize)),
     Text(MdLineFragments<'a>),
     CodeBlock(List<CodeBlockLine<'a>>),
     Title(&'a str),
     Tags(List<&'a str>),
 }
 
-/// These are things that show up in a single line of Markdown text [MdLineFragments]. They do
-/// not include other Markdown blocks (like code blocks, lists, headings, etc).
+/// These are things that show up in a single line of Markdown text [MdLineFragments]. They do not
+/// include other Markdown blocks (like code blocks, lists, headings, etc).
 #[derive(Clone, Debug, PartialEq)]
 pub enum MdLineFragment<'a> {
-    UnorderedListItem,
-    OrderedListItemNumber(usize),
+    UnorderedListBullet {
+        indent: usize,
+        is_first_line: bool,
+    },
+    OrderedListBullet {
+        indent: usize,
+        number: usize,
+        is_first_line: bool,
+    },
     Plain(&'a str),
     Bold(&'a str),
     Italic(&'a str),
@@ -125,8 +134,22 @@ pub mod constants {
     pub const QUOTE: &str = "\"";
     pub const HEADING_CHAR: char = '#';
     pub const SPACE: &str = " ";
+    pub const SPACE_CHAR: char = ' ';
     pub const PERIOD: &str = ".";
+    pub const LIST_PREFIX_BASE_WIDTH: usize = 2;
+
+    /// Only for output to terminal.
+    pub const LIST_SPACE_DISPLAY: &str = "─";
+
+    /// Only for output to terminal.
+    pub const LIST_SPACE_END_DISPLAY_FIRST_LINE: &str = "┤"; // "┼" or "|" or "┤"
+
+    /// Only for output to terminal.
+    pub const LIST_SPACE_END_DISPLAY_REST_LINE: &str = "│"; // "|";
+
     pub const UNORDERED_LIST: &str = "-";
+    pub const UNORDERED_LIST_PREFIX: &str = "- ";
+    pub const ORDERED_LIST_PARTIAL_PREFIX: &str = ". ";
     pub const BITALIC_1: &str = "***";
     pub const BITALIC_2: &str = "___";
     pub const BOLD_1: &str = "**";

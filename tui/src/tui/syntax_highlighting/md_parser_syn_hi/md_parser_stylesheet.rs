@@ -142,20 +142,12 @@ pub fn get_checkbox_unchecked_style() -> Style {
 
 /// This is for the bullet or numbered bullet of a list item, not the content.
 pub fn get_list_bullet_style() -> Style {
-    pub fn get_list_content_style() -> Style {
-        style! {
-            color_fg: match ColorSupport::detect() {
-                ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
-                ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(87)), // DarkSlateGray2. There is no equivalent.
-                ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ad83da")), // Very soft violet.
-            }
+    style! {
+        color_fg: match ColorSupport::detect() {
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow), // There is no equivalent.
+            _ => TuiColor::Rgb(RgbValue::from_hex("#f8f8a6")), // Pale yellow.
         }
     }
-
-    get_list_content_style()
-        + style! {
-            attrib: [dim]
-        }
 }
 
 pub fn get_code_block_lang_style() -> Style {
