@@ -62,7 +62,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_markdown() {
+    fn test_parse_markdown_valid() {
         let (remainder, vec_block) =
             parse_markdown(include_str!("test_assets/valid_md_input.md")).unwrap();
         let expected_vec = vec![
@@ -156,5 +156,13 @@ mod tests {
             .iter()
             .zip(expected_vec.iter())
             .for_each(|(lhs, rhs)| assert_eq2!(lhs, rhs));
+    }
+
+    #[test]
+    fn test_markdown_invalid() {
+        let input = "@tags: [foo, bar\n\n```rs\nlet a=1;\n```\n\n*italic* **bold** [link](https://example.com)\n\n`inline code`";
+        let (remainder, blocks) = parse_markdown(input).unwrap();
+        dbg!(&remainder);
+        dbg!(&blocks);
     }
 }

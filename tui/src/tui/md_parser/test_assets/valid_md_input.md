@@ -1,5 +1,5 @@
 @title: Something
-@tags: [tag1, tag2, tag3]
+@tags: tag1, tag2, tag3
 # Foobar
 
 Foobar is a Python library for dealing with word pluralization.

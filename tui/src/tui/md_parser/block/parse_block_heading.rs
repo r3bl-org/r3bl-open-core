@@ -31,8 +31,6 @@ use crate::{constants::NEW_LINE, *};
 pub fn parse_block_heading_opt_eol(input: &str) -> IResult<&str, HeadingData> {
     let (remainder, output) = parse(input)?;
 
-    // BM: eg of _opt_eol
-
     // Special case: Early return when just a newline after the heading prefix. Eg: `# \n..`.
     if output.text.starts_with(NEW_LINE) {
         if let Some(stripped) = output.text.strip_prefix(NEW_LINE) {

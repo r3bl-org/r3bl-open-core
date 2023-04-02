@@ -25,20 +25,8 @@ fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
       ✔ ❌ `from_syntect_to_tui()` -> use `ColorSupport::detect()` to determine if we should use `ANSIValue` or `RGBValue`? @done(23-04-01 14:09)
       ✔ ✅ deal w/ this in RenderOps? @done(23-04-01 14:56)
       ✔ convert color to grayscale @done(23-04-01 19:43)
-  ☐ bug fix for text input:
+  ✔ bug fix for text input: @done(23-04-02 08:35)
     "@tags: [foo, bar\n\n```rs\nlet a=1;\n```\n\n*italic* **bold** [link](https://example.com)\n\n`inline code`"
-
-    - or -
-
-    "@tags: [foo, bar
-
-    ```rs
-    let a=1;
-    ```
-
-    *italic* **bold** [link](https://example.com)
-
-    `inline code`"
   ☐ ol / ul
     ☐ migrate strategy to `_opt_eol`?
     ☐ should `md_parser` handle nested ol / ul blocks "intelligently" (not EOL delimited)?

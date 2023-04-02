@@ -968,77 +968,67 @@ mod tests_style_us_span_lines_from {
         use super::*;
 
         #[test]
-        fn test_block_metadata_tags() {
+        fn test_block_metadata_tags() -> Result<(), ()> {
             let tags = MdBlockElement::Tags(list!["tag1", "tag2", "tag3"]);
             let maybe_style = Some(style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
             let lines = StyleUSSpanLines::from_block(&tags, &maybe_style, None);
             let line_0 = &lines.items[0];
+            let mut iter = line_0.items.iter();
+
             // println!("{}", line_0.pretty_print());
             assert_eq2!(
-                line_0.items[0],
-                StyleUSSpan::new(
+                iter.next().ok_or(())?,
+                &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_tags_marker_style(),
                     US::from("@tags"),
                 )
             );
             assert_eq2!(
-                line_0.items[1],
-                StyleUSSpan::new(
+                iter.next().ok_or(())?,
+                &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from(": "),
                 )
             );
             assert_eq2!(
-                line_0.items[2],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from("["),
-                )
-            );
-            assert_eq2!(
-                line_0.items[3],
-                StyleUSSpan::new(
+                iter.next().ok_or(())?,
+                &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
                     US::from("tag1"),
                 )
             );
             assert_eq2!(
-                line_0.items[4],
-                StyleUSSpan::new(
+                iter.next().ok_or(())?,
+                &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from(", "),
                 )
             );
             assert_eq2!(
-                line_0.items[5],
-                StyleUSSpan::new(
+                iter.next().ok_or(())?,
+                &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
                     US::from("tag2"),
                 )
             );
             assert_eq2!(
-                line_0.items[6],
-                StyleUSSpan::new(
+                iter.next().ok_or(())?,
+                &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_foreground_dim_style(),
                     US::from(", "),
                 )
             );
             assert_eq2!(
-                line_0.items[7],
-                StyleUSSpan::new(
+                iter.next().ok_or(())?,
+                &StyleUSSpan::new(
                     maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
                     US::from("tag3"),
                 )
             );
-            assert_eq2!(
-                line_0.items[8],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from("]"),
-                )
-            );
+
+            Ok(())
         }
 
         #[test]
