@@ -70,7 +70,7 @@ impl EditorEngine {
 pub struct EditorEngineConfigOptions {
     pub multiline_mode: EditorLineMode,
     pub syntax_highlight: SyntaxHighlightConfig,
-    // REFACTOR: allow for this editor to be read-only (eg: for presentation demo example)
+    // AI: allow for this editor to be read-only (eg: for presentation demo example)
 }
 
 mod editor_engine_config_options_impl {

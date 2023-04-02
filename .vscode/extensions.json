@@ -45,6 +45,8 @@
     "nicholashsiang.vscode-opened-editors",
     "unifiedjs.vscode-remark",
     "esbenp.prettier-vscode",
+    "ccy.ayu-adaptive",
+    "siris01.ayu-green",
   ],
   // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
   "unwantedRecommendations": [

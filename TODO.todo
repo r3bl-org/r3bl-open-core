@@ -2,47 +2,26 @@ open: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+-
 features: <https://github.com/orgs/r3bl-org/projects/1/views/1>
 backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
 
-fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
-  ✔ `md_parser_syn_hi.rs`: @done(23-03-22 20:34)
-    ✔ fn `try_parse_and_highlight`: `&Vec<US>` -(1)-> `Document` -(2)-> `StyleUSSpanLines` @done(23-03-22 20:34)
-    ✔ rewrite `md_parser` @done(23-03-10 17:36)
-    ✔ fn `convert_from_code_block_into_lines`: `<CodeBlock>` -> `Vec<CodeBlockLine>` @done(23-03-09 15:58)
-    ✔ refactor names in `syntax_highlighting` module @done(23-03-10 17:36)
-    ✔ `From`: `Document` -> `CommonResult<StyleUSSpanLines>` @done(23-03-22 20:32)
-    ✔ build a theme to convert parts of a `Document` to `Style` @done(23-03-22 20:32)
-  ✔ `editor_engine_api.rs`: update `render_content()` using `syntect` & `md_parser` choice @done(23-03-26 09:20)
-  ✔ md_parser migrate strategy to `_opt_eol` @done(23-03-29 17:45)
-    ✔ title, tags @done(23-03-28 10:53)
-    ✔ heading @done(23-03-28 19:09)
-    ✔ code block @done(23-03-29 17:44)
-  ✔ fix bugs in the md_parser @done(23-03-29 17:44)
-    ✔ "```rs\nfoo\n````" (extra backtick) not working @done(23-03-29 17:44)
-  ✔ `from_block_codeblock()` - impl better syntax highlighting for code blocks using syntect @done(23-03-31 15:55)
-  ✔ fix syntect output for macOS (ANSI256) @done(23-04-01 14:56)
-    ✔ `tui_color.rs`: `RGBValue` -> `ANSIValue(u8)` (just a `u8` atm) @done(23-03-31 20:36)
-    ✔ add tests @done(23-04-01 10:59)
-    ✔ CHOOSE: @done(23-04-01 14:09)
-      ✔ ❌ `from_syntect_to_tui()` -> use `ColorSupport::detect()` to determine if we should use `ANSIValue` or `RGBValue`? @done(23-04-01 14:09)
-      ✔ ✅ deal w/ this in RenderOps? @done(23-04-01 14:56)
-      ✔ convert color to grayscale @done(23-04-01 19:43)
-  ✔ bug fix for text input: @done(23-04-02 08:35)
-    "@tags: [foo, bar\n\n```rs\nlet a=1;\n```\n\n*italic* **bold** [link](https://example.com)\n\n`inline code`"
-  ☐ ol / ul
-    ☐ migrate strategy to `_opt_eol`?
-    ☐ should `md_parser` handle nested ol / ul blocks "intelligently" (not EOL delimited)?
-  ☐ update changelog:
-    ☐ correct console color support at RenderOps level (ANSI256, Truecolor, Grayscale)
-    ☐ brand new markdown parser
-    ☐ brand new syntax highlighting (use syntect for code blocks)
+AI:
+  ☐ add other metadata tags to the MD parser (look at orgmode.org) like `author`, `date`
+  ☐ rename `tag` to `topic`?
+  ☐ fix checkboxes `[x]` `[ ]` (they should only be rendered inside of a smart list)
+  ☐ rename from `md_parser` to `notes_parser`?
+  ☐ editor architecture (general purpose editor component or specific to notes?)
 
-crate upgrades:
-  ☐ consider using https://docs.rs/concolor-query/0.3.3/concolor_query/fn.clicolor.html
-    - eg: https://docs.rs/anstream/latest/src/anstream/auto.rs.html
-    - instead of custom implementation of `ColorSupport::detect()`
-  ☐ syn 2.0
-    - https://github.com/dtolnay/syn/releases/tag/2.0.0
-  ☐ tree sitter?
-    - https://github.com/MDeiml/tree-sitter-markdown
+update changelog:
+  ☐ correct console color support at RenderOps level (ANSI256, Truecolor, Grayscale)
+  ☐ brand new markdown parser
+    - support for metadata tags
+    - support for smart lists
+  ☐ brand new syntax highlighting
+    - each heading level has different lolcat
+    - smart lists are colored differently (both ordered and unordered are different)
+    - using syntect for code blocks
+  ☐ add better support for console log output for debugging
+    - ConsoleLogInColor
+    - PrettyPrintDebug
+    - ConvertToPlainText
 
 fix performance problem:
   ☐ scroll left / right slow in type ahead completion dialog
@@ -54,7 +33,8 @@ release new version:
   ☐ update `CHANGELOG.md`
   ☐ update `README.md`
   ☐ update `lib.rs`
-  ☐ cut new releases
+  ☐ create new tag
+  ☐ create first [release](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
   ☐ publish to crates.io
   ☐ make reddit post w/ videos
   ☐ announce it on this week in rust (https://github.com/rust-lang/this-week-in-rust/pulls)
@@ -69,3 +49,13 @@ continue building r3bl_cmdr:
     ☐ analytics measurement
     ☐ dashboard for weather etc
     ☐ alpha release
+
+crate upgrades:
+  ✔ consider using https://docs.rs/concolor-query/0.3.3/concolor_query/fn.clicolor.html @done(23-04-02 13:18)
+    - eg: https://docs.rs/anstream/latest/src/anstream/auto.rs.html
+    - instead of custom implementation of `ColorSupport::detect()`
+  ☐ syn 2.0
+    - https://github.com/dtolnay/syn/releases/tag/2.0.0
+  ☐ tree sitter?
+    - https://github.com/MDeiml/tree-sitter-markdown
+

@@ -304,3 +304,60 @@ mod cli_args {
     }
 }
 pub use cli_args::*;
+
+mod pretty_print_traits {
+    use crate::US;
+
+    /// Marker trait to "remember" which types can be printed to the console w/ color.
+    pub trait ConsoleLogInColor {
+        fn console_log_fg(&self);
+        fn console_log_bg(&self);
+    }
+
+    fn console_log_fg(this: &str) {
+        let color = ansi_term::Color::Yellow;
+        if this.is_empty() {
+            println!("\n{}", color.paint("← empty →"));
+        } else {
+            println!("\n{}", color.paint(this));
+        }
+    }
+
+    fn console_log_bg(this: &str) {
+        let color = ansi_term::Color::Red.on(ansi_term::Color::White);
+        if this.is_empty() {
+            println!("\n{}", color.paint("← empty →"));
+        } else {
+            println!("\n{}", color.paint(this));
+        }
+    }
+
+    impl<T: PrettyPrintDebug> ConsoleLogInColor for T {
+        fn console_log_fg(&self) { console_log_fg(&self.pretty_print_debug()); }
+
+        fn console_log_bg(&self) { console_log_bg(&self.pretty_print_debug()); }
+    }
+
+    impl ConsoleLogInColor for &str {
+        fn console_log_fg(&self) { console_log_fg(self); }
+
+        fn console_log_bg(&self) { console_log_bg(self); }
+    }
+
+    impl ConsoleLogInColor for String {
+        fn console_log_fg(&self) { console_log_fg(self); }
+
+        fn console_log_bg(&self) { console_log_bg(self); }
+    }
+
+    /// Marker trait to "remember" which types support pretty printing for debugging.
+    pub trait PrettyPrintDebug {
+        fn pretty_print_debug(&self) -> String;
+    }
+
+    /// Marker trait to "remember" which types can be converted to plain text.
+    pub trait ConvertToPlainText {
+        fn to_plain_text_us(&self) -> US;
+    }
+}
+pub use pretty_print_traits::*;

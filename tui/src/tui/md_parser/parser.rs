@@ -41,9 +41,7 @@ pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
 
             map(parse_block_heading_opt_eol,         MdBlockElement::Heading),
 
-            // AD: change semantics of ul, ol, so multiple lines are allowed.
-            map(parse_block_unordered_list,          MdBlockElement::UnorderedList),
-            map(parse_block_ordered_list,            MdBlockElement::OrderedList),
+            map(parse_block_smart_list,              MdBlockElement::SmartList),
 
             map(parse_block_code,                    MdBlockElement::CodeBlock),
 
@@ -63,8 +61,42 @@ mod tests {
 
     #[test]
     fn test_parse_markdown_valid() {
-        let (remainder, vec_block) =
-            parse_markdown(include_str!("test_assets/valid_md_input.md")).unwrap();
+        let input = vec![
+            "@title: Something",
+            "@tags: tag1, tag2, tag3",
+            "# Foobar",
+            "",
+            "Foobar is a Python library for dealing with word pluralization.",
+            "",
+            "```bash",
+            "pip install foobar",
+            "```",
+            "```fish",
+            "```",
+            "```python",
+            "",
+            "```",
+            "## Installation",
+            "",
+            "Use the package manager [pip](https://pip.pypa.io/en/stable/) to install foobar.",
+            "```python",
+            "import foobar",
+            "",
+            "foobar.pluralize('word') # returns 'words'",
+            "foobar.pluralize('goose') # returns 'geese'",
+            "foobar.singularize('phenomena') # returns 'phenomenon'",
+            "```",
+            "- ul1",
+            "- ul2",
+            "1. ol1",
+            "2. ol2",
+            "- [ ] todo",
+            "- [x] done",
+            "end",
+            "",
+        ]
+        .join("\n");
+        let (remainder, vec_block) = parse_markdown(&input).unwrap();
         let expected_vec = vec![
             MdBlockElement::Title("Something"),
             MdBlockElement::Tags(list!["tag1", "tag2", "tag3"]),
@@ -106,43 +138,81 @@ mod tests {
                     "foobar.singularize('phenomena') # returns 'phenomenon'",
                 ],
             )),
-            MdBlockElement::UnorderedList(list![
-                list![
-                    MdLineFragment::UnorderedListItem,
+            MdBlockElement::SmartList((
+                list![list![
+                    MdLineFragment::UnorderedListBullet {
+                        indent: 0,
+                        is_first_line: true
+                    },
                     MdLineFragment::Plain("ul1"),
-                ],
-                list![
-                    MdLineFragment::UnorderedListItem,
+                ],],
+                BulletKind::Unordered,
+                0,
+            )),
+            MdBlockElement::SmartList((
+                list![list![
+                    MdLineFragment::UnorderedListBullet {
+                        indent: 0,
+                        is_first_line: true
+                    },
                     MdLineFragment::Plain("ul2"),
-                ],
-            ]),
-            MdBlockElement::OrderedList(list![
-                list![
-                    MdLineFragment::OrderedListItemNumber(1),
+                ],],
+                BulletKind::Unordered,
+                0,
+            )),
+            MdBlockElement::SmartList((
+                list![list![
+                    MdLineFragment::OrderedListBullet {
+                        indent: 0,
+                        number: 1,
+                        is_first_line: true
+                    },
                     MdLineFragment::Plain("ol1"),
-                ],
-                list![
-                    MdLineFragment::OrderedListItemNumber(2),
+                ],],
+                BulletKind::Ordered(1),
+                0,
+            )),
+            MdBlockElement::SmartList((
+                list![list![
+                    MdLineFragment::OrderedListBullet {
+                        indent: 0,
+                        number: 2,
+                        is_first_line: true
+                    },
                     MdLineFragment::Plain("ol2"),
-                ],
-            ]),
-            MdBlockElement::UnorderedList(list![
-                list![
-                    MdLineFragment::UnorderedListItem,
+                ],],
+                BulletKind::Ordered(2),
+                0,
+            )),
+            MdBlockElement::SmartList((
+                list![list![
+                    MdLineFragment::UnorderedListBullet {
+                        indent: 0,
+                        is_first_line: true
+                    },
                     MdLineFragment::Checkbox(false),
                     MdLineFragment::Plain(" todo"),
-                ],
-                list![
-                    MdLineFragment::UnorderedListItem,
+                ],],
+                BulletKind::Unordered,
+                0,
+            )),
+            MdBlockElement::SmartList((
+                list![list![
+                    MdLineFragment::UnorderedListBullet {
+                        indent: 0,
+                        is_first_line: true
+                    },
                     MdLineFragment::Checkbox(true),
                     MdLineFragment::Plain(" done"),
-                ],
-            ]),
+                ],],
+                BulletKind::Unordered,
+                0,
+            )),
             MdBlockElement::Text(list![MdLineFragment::Plain("end")]),
         ];
 
-        // Print last 2 items.
-        for block in vec_block.iter().skip(vec_block.len() - 2) {
+        // Print a few of the last items.
+        for block in vec_block.iter().skip(vec_block.len() - 7) {
             println!(
                 "{0} {1}",
                 Purple.bold().paint("█ → "),
@@ -160,9 +230,20 @@ mod tests {
 
     #[test]
     fn test_markdown_invalid() {
-        let input = "@tags: [foo, bar\n\n```rs\nlet a=1;\n```\n\n*italic* **bold** [link](https://example.com)\n\n`inline code`";
-        let (remainder, blocks) = parse_markdown(input).unwrap();
-        dbg!(&remainder);
-        dbg!(&blocks);
+        let input = vec![
+            "@tags: [foo, bar",
+            "",
+            "```rs",
+            "let a=1;",
+            "```",
+            "",
+            "*italic* **bold** [link](https://example.com)",
+            "",
+            "`inline code`",
+        ]
+        .join("\n");
+        let (remainder, blocks) = parse_markdown(&input).unwrap();
+        assert_eq2!(remainder, "`inline code`");
+        assert_eq2!(blocks.len(), 6);
     }
 }

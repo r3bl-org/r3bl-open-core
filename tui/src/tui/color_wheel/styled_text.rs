@@ -64,8 +64,8 @@ macro_rules! styled_text {
 mod impl_styled_texts {
     use super::*;
 
-    impl StyledTexts {
-        pub fn pretty_print(&self) -> String {
+    impl PrettyPrintDebug for StyledTexts {
+        fn pretty_print_debug(&self) -> String {
             let mut it = vec![];
             for (index, item) in self.iter().enumerate() {
                 let string = format!(
@@ -77,16 +77,20 @@ mod impl_styled_texts {
             }
             it.join("\n")
         }
+    }
 
-        pub fn get_plain_text(&self) -> UnicodeString {
+    impl ConvertToPlainText for StyledTexts {
+        fn to_plain_text_us(&self) -> UnicodeString {
             let mut it = UnicodeString::default();
             for styled_text in self.iter() {
                 it = it + styled_text.get_text();
             }
             it
         }
+    }
 
-        pub fn display_width(&self) -> ChUnit { self.get_plain_text().display_width }
+    impl StyledTexts {
+        pub fn display_width(&self) -> ChUnit { self.to_plain_text_us().display_width }
 
         pub fn render_into(&self, render_ops: &mut RenderOps) {
             for styled_text in self.iter() {
@@ -213,7 +217,7 @@ mod tests {
 
             // Equivalent no highlight version.
             {
-                let line = StyledTexts::from(get_list()).get_plain_text().string;
+                let line = StyledTexts::from(get_list()).to_plain_text_us().string;
                 let line = UnicodeString::from(line);
                 let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
                 let truncated_line = UnicodeString::from(truncated_line);
@@ -225,9 +229,9 @@ mod tests {
             // clip version.
             {
                 let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
-                // println!("{}", clipped.pretty_print());
+                // println!("{}", clipped.pretty_print_debug());
                 assert_eq2!(clipped.len(), 3);
-                let lhs = clipped.get_plain_text().string;
+                let lhs = clipped.to_plain_text_us().string;
                 assert_eq2!(lhs, expected_clipped_string);
             }
         }
@@ -264,7 +268,7 @@ mod tests {
             // Equivalent no highlight version.
             {
                 let line = StyledTexts::from(helpers::get_list())
-                    .get_plain_text()
+                    .to_plain_text_us()
                     .string;
                 let line = UnicodeString::from(line);
                 let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
@@ -278,9 +282,9 @@ mod tests {
             {
                 let clipped =
                     helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
-                // println!("{}", clipped.pretty_print());
+                // println!("{}", clipped.pretty_print_debug());
                 assert_eq2!(clipped.len(), 1);
-                let left = clipped.get_plain_text().string;
+                let left = clipped.to_plain_text_us().string;
                 let right = expected_clipped_string;
                 assert_eq2!(left, right);
             }
@@ -318,7 +322,7 @@ mod tests {
             // Equivalent no highlight version.
             {
                 let line = StyledTexts::from(helpers::get_list())
-                    .get_plain_text()
+                    .to_plain_text_us()
                     .string;
                 let line = UnicodeString::from(line);
                 let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
@@ -332,9 +336,9 @@ mod tests {
             {
                 let clipped =
                     helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
-                // println!("{}", clipped.pretty_print());
+                // println!("{}", clipped.pretty_print_debug());
                 assert_eq2!(clipped.len(), 1);
-                let lhs = clipped.get_plain_text().string;
+                let lhs = clipped.to_plain_text_us().string;
                 let rhs = expected_clipped_string;
                 assert_eq2!(lhs, rhs);
             }
@@ -372,7 +376,7 @@ mod tests {
             // Expected no highlight version.
             {
                 let line = StyledTexts::from(helpers::get_list())
-                    .get_plain_text()
+                    .to_plain_text_us()
                     .string;
                 let line = UnicodeString::from(line);
                 let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
@@ -386,9 +390,9 @@ mod tests {
             {
                 let clipped =
                     helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
-                // println!("{}", clipped.pretty_print());
+                // println!("{}", clipped.pretty_print_debug());
                 assert_eq2!(clipped.len(), 3);
-                let left = clipped.get_plain_text().string;
+                let left = clipped.to_plain_text_us().string;
                 let right = expected_clipped_string;
                 assert_eq2!(left, right);
             }
@@ -428,7 +432,7 @@ mod tests {
 
             // Expected no highlight version.
             {
-                let line = StyledTexts::from(get_list()).get_plain_text().string;
+                let line = StyledTexts::from(get_list()).to_plain_text_us().string;
                 let line = UnicodeString::from(line);
                 let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
                 let truncated_line = UnicodeString::from(truncated_line);
@@ -440,9 +444,9 @@ mod tests {
             // clip version.
             {
                 let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
-                // println!("{}", clipped.pretty_print());
+                // println!("{}", clipped.pretty_print_debug());
                 assert_eq2!(clipped.len(), 1);
-                let lhs = clipped.get_plain_text().string;
+                let lhs = clipped.to_plain_text_us().string;
                 let rhs = expected_clipped_string;
                 assert_eq2!(lhs, rhs);
             }
@@ -482,7 +486,7 @@ mod tests {
 
             // Expected no highlight version.
             {
-                let line = StyledTexts::from(get_list()).get_plain_text().string;
+                let line = StyledTexts::from(get_list()).to_plain_text_us().string;
                 let line = UnicodeString::from(line);
                 let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
                 let truncated_line = UnicodeString::from(truncated_line);
@@ -494,9 +498,9 @@ mod tests {
             // clip version.
             {
                 let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
-                // println!("{}", clipped.pretty_print());
+                // println!("{}", clipped.pretty_print_debug());
                 assert_eq2!(clipped.len(), 1);
-                let left = clipped.get_plain_text().string;
+                let left = clipped.to_plain_text_us().string;
                 let right = expected_clipped_string;
                 assert_eq2!(left, right);
             }

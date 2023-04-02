@@ -19,15 +19,10 @@
 pub mod parse_block_code;
 pub mod parse_block_heading;
 pub mod parse_block_markdown_text_until_eol;
-pub mod parse_block_ordered_list;
-pub mod parse_block_unordered_list;
+pub mod parse_block_smart_list;
 
 // Re-export.
 pub use parse_block_code::*;
 pub use parse_block_heading::*;
 pub use parse_block_markdown_text_until_eol::*;
-pub use parse_block_ordered_list::*;
-pub use parse_block_unordered_list::*;
-
-// Tests.
-pub mod test_data;
+pub use parse_block_smart_list::*;

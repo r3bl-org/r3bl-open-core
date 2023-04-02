@@ -23,11 +23,9 @@
 //! 3. [crate::editor] - Responsible for displaying the [crate::MdDocument] to the user.
 
 // Attach.
-pub mod convert_to_plain_text;
 pub mod md_parser_syn_hi_impl;
 pub mod md_parser_stylesheet;
 
 // Re-export.
-pub use convert_to_plain_text::*;
 pub use md_parser_syn_hi_impl::*;
 pub use md_parser_stylesheet::*;

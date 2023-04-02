@@ -301,7 +301,7 @@ mod r3bl_path {
                 ansi_term::Color::Cyan.paint(editor_buffer.get_lines().len().to_string()),
                 ansi_term::Color::Yellow.paint(lines.len().to_string()),
                 ansi_term::Color::Cyan.paint(editor_buffer.get_as_string()),
-                ansi_term::Color::Yellow.paint(lines.pretty_print()),
+                ansi_term::Color::Yellow.paint(lines.pretty_print_debug()),
             ));
         });
 

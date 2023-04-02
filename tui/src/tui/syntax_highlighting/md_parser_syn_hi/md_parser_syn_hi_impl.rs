@@ -72,7 +72,7 @@ mod tests_try_parse_and_highlight {
 
         println!(
             "result: \n{}",
-            ansi_term::Color::Cyan.paint(style_us_span_lines.pretty_print())
+            ansi_term::Color::Cyan.paint(style_us_span_lines.pretty_print_debug())
         );
 
         assert_eq2!(editor_text_lines.len(), style_us_span_lines.len());
@@ -94,17 +94,19 @@ mod tests_try_parse_and_highlight {
     }
 }
 
-impl StyleUSSpanLines {
-    pub fn pretty_print(&self) -> String {
+impl PrettyPrintDebug for StyleUSSpanLines {
+    fn pretty_print_debug(&self) -> String {
         let mut it = vec![];
 
         for line in &self.items {
-            it.push(line.pretty_print())
+            it.push(line.pretty_print_debug())
         }
 
         it.join("\n")
     }
+}
 
+impl StyleUSSpanLines {
     pub fn from_document(
         document: &MdDocument,
         maybe_current_box_computed_style: &Option<Style>,
@@ -277,28 +279,7 @@ impl StyleUSSpanLines {
         }
     }
 
-    pub fn from_block_ol(
-        input_ol_lines: &Lines,
-        maybe_current_box_computed_style: &Option<Style>,
-    ) -> Self {
-        let mut acc_lines_output = StyleUSSpanLines::default();
-
-        // Process each line in input_ol_lines.
-        for input_line in input_ol_lines.iter() {
-            let mut acc_line_output = StyleUSSpanLine::default();
-
-            let postfix_span_list =
-                StyleUSSpanLine::from_fragments(input_line, maybe_current_box_computed_style);
-
-            acc_line_output += postfix_span_list;
-
-            acc_lines_output += acc_line_output;
-        }
-
-        acc_lines_output
-    }
-
-    pub fn from_block_ul(
+    pub fn from_block_smart_list(
         input_ul_lines: &Lines,
         maybe_current_box_computed_style: &Option<Style>,
     ) -> Self {
@@ -348,13 +329,11 @@ impl StyleUSSpanLines {
                     maybe_current_box_computed_style,
                 ))
             }
-            MdBlockElement::UnorderedList(ul_lines) => {
-                lines +=
-                    StyleUSSpanLines::from_block_ul(ul_lines, maybe_current_box_computed_style);
-            }
-            MdBlockElement::OrderedList(ol_lines) => {
-                lines +=
-                    StyleUSSpanLines::from_block_ol(ol_lines, maybe_current_box_computed_style);
+            MdBlockElement::SmartList((list_lines, _bullet_kind, _indent)) => {
+                lines += StyleUSSpanLines::from_block_smart_list(
+                    list_lines,
+                    maybe_current_box_computed_style,
+                );
             }
             MdBlockElement::CodeBlock(code_block_lines) => {
                 lines += StyleUSSpanLines::from_block_codeblock(
@@ -428,15 +407,28 @@ impl StyleUSSpan {
         maybe_current_box_computed_style: &Option<Style>,
     ) -> Vec<Self> {
         match fragment {
-            MdLineFragment::UnorderedListItem => vec![StyleUSSpan::new(
-                maybe_current_box_computed_style.unwrap_or_default() + get_list_bullet_style(),
-                US::from(format!("{UNORDERED_LIST}{SPACE}")),
-            )],
+            MdLineFragment::OrderedListBullet {
+                indent,
+                number,
+                is_first_line,
+            } => {
+                let bullet = generate_ordered_list_item_bullet(indent, number, is_first_line);
+                vec![StyleUSSpan::new(
+                    maybe_current_box_computed_style.unwrap_or_default() + get_list_bullet_style(),
+                    US::from(bullet),
+                )]
+            }
 
-            MdLineFragment::OrderedListItemNumber(number) => vec![StyleUSSpan::new(
-                maybe_current_box_computed_style.unwrap_or_default() + get_list_bullet_style(),
-                US::from(format!("{number}{PERIOD}{SPACE}")),
-            )],
+            MdLineFragment::UnorderedListBullet {
+                indent,
+                is_first_line,
+            } => {
+                let bullet = generate_unordered_list_item_bullet(indent, is_first_line);
+                vec![StyleUSSpan::new(
+                    maybe_current_box_computed_style.unwrap_or_default() + get_list_bullet_style(),
+                    US::from(bullet),
+                )]
+            }
 
             MdLineFragment::Plain(plain_text) => vec![StyleUSSpan::new(
                 maybe_current_box_computed_style.unwrap_or_default() + get_foreground_style(),
@@ -544,8 +536,8 @@ impl StyleUSSpan {
     }
 }
 
-impl StyleUSSpanLine {
-    pub fn pretty_print(&self) -> String {
+impl PrettyPrintDebug for StyleUSSpanLine {
+    fn pretty_print_debug(&self) -> String {
         let mut it = vec![];
         for span in &self.items {
             let StyleUSSpan { style, text } = span;
@@ -554,7 +546,9 @@ impl StyleUSSpanLine {
         }
         it.join("\n")
     }
+}
 
+impl StyleUSSpanLine {
     pub fn from_fragments(
         fragments_in_one_line: &FragmentsInOneLine,
         maybe_current_box_computed_style: &Option<Style>,
@@ -589,7 +583,7 @@ impl StyleUSSpanLine {
         let mut line = StyleUSSpanLine::default();
 
         let heading_level_span: StyleUSSpan = {
-            let heading_level = heading_data.level.to_plain_text();
+            let heading_level = US::from(heading_data.level.pretty_print_debug());
             let my_style = {
                 maybe_current_box_computed_style.unwrap_or_default()
                     + style! {
@@ -658,7 +652,7 @@ mod tests_style_us_span_lines_from {
                 )
             );
 
-            // println!("{}", List::from(actual).pretty_print());
+            // println!("{}", List::from(actual)..pretty_print_debug());
         }
 
         #[test]
@@ -679,7 +673,7 @@ mod tests_style_us_span_lines_from {
                 )
             );
 
-            // println!("{}", List::from(actual).pretty_print());
+            // println!("{}", List::from(actual)..pretty_print_debug());
         }
 
         #[test]
@@ -808,7 +802,7 @@ mod tests_style_us_span_lines_from {
                 )
             );
 
-            // println!("{}", List::from(actual).pretty_print());
+            // println!("{}", List::from(actual)..pretty_print_debug());
         }
 
         #[test]
@@ -820,7 +814,7 @@ mod tests_style_us_span_lines_from {
 
             let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
 
-            // println!("{}", List::from(actual.clone()).pretty_print());
+            // println!("{}", List::from(actual.clone())..pretty_print_debug());
 
             assert_eq2!(
                 actual[0],
@@ -854,7 +848,7 @@ mod tests_style_us_span_lines_from {
 
             let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
 
-            // println!("{}", List::from(actual.clone()).pretty_print());
+            // println!("{}", List::from(actual.clone())..pretty_print_debug());
 
             assert_eq2!(
                 actual[0],
@@ -888,7 +882,7 @@ mod tests_style_us_span_lines_from {
 
             let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
 
-            // println!("{}", List::from(actual.clone()).pretty_print());
+            // println!("{}", List::from(actual.clone())..pretty_print_debug());
 
             assert_eq2!(
                 actual[0],
@@ -922,7 +916,7 @@ mod tests_style_us_span_lines_from {
 
             let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
 
-            // println!("{}", List::from(actual.clone()).pretty_print());
+            // println!("{}", List::from(actual.clone())..pretty_print_debug());
 
             assert_eq2!(
                 actual[0],
@@ -977,7 +971,7 @@ mod tests_style_us_span_lines_from {
             let line_0 = &lines.items[0];
             let mut iter = line_0.items.iter();
 
-            // println!("{}", line_0.pretty_print());
+            // println!("{}", line_0..pretty_print_debug());
             assert_eq2!(
                 iter.next().ok_or(())?,
                 &StyleUSSpan::new(
@@ -1038,7 +1032,7 @@ mod tests_style_us_span_lines_from {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
             let lines = StyleUSSpanLines::from_block(&title, &maybe_style, None);
-            // println!("{}", lines.pretty_print());
+            // println!("{}", lines..pretty_print_debug());
 
             let line_0 = &lines.items[0];
 
@@ -1094,7 +1088,7 @@ mod tests_style_us_span_lines_from {
             let lines = StyleUSSpanLines::from_block(&codeblock_block, &maybe_style, None);
 
             let line_0 = &lines.items[0];
-            // println!("{}", line_0.pretty_print());
+            // println!("{}", line_0..pretty_print_debug());
             assert_eq2!(
                 line_0.items[0],
                 StyleUSSpan::new(
@@ -1111,7 +1105,7 @@ mod tests_style_us_span_lines_from {
             );
 
             let line_1 = &lines.items[1];
-            // println!("{}", line_1.pretty_print());
+            // println!("{}", line_1..pretty_print_debug());
             assert_eq2!(
                 line_1.items[0],
                 StyleUSSpan::new(
@@ -1121,7 +1115,7 @@ mod tests_style_us_span_lines_from {
             );
 
             let line_2 = &lines.items[2];
-            // println!("{}", line_2.pretty_print());
+            // println!("{}", line_2..pretty_print_debug());
             assert_eq2!(
                 line_2.items[0],
                 StyleUSSpan::new(
@@ -1136,44 +1130,54 @@ mod tests_style_us_span_lines_from {
             let maybe_style = Some(style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
-            let (_, doc) = parse_markdown("100. Foo\n200. Bar\n")?;
-            let ol_block = &doc[0];
-            println!("{:#?}", ol_block);
-            let lines = StyleUSSpanLines::from_block(ol_block, &maybe_style, None);
+            let (remainder, doc) = parse_markdown("100. Foo\n200. Bar\n")?;
+            assert_eq2!(remainder, "");
 
-            let line_0 = &lines.items[0];
-            // println!("{}", line_0.pretty_print());
-            assert_eq2!(
-                line_0.items[0],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_list_bullet_style(),
-                    US::from("100. ")
-                )
-            );
-            assert_eq2!(
-                line_0.items[1],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_style(),
-                    US::from("Foo"),
-                )
-            );
+            let ol_block_1 = &doc[0];
+            {
+                // println!("{:#?}", ol_block_1);
+                let lines = StyleUSSpanLines::from_block(ol_block_1, &maybe_style, None);
 
-            let line_1 = &lines.items[1];
-            // println!("{}", line_1.pretty_print());
-            assert_eq2!(
-                line_1.items[0],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_list_bullet_style(),
-                    US::from("200. ")
-                )
-            );
-            assert_eq2!(
-                line_1.items[1],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_style(),
-                    US::from("Bar"),
-                )
-            );
+                let line_0 = &lines.items[0];
+                // println!("{}", line_0..pretty_print_debug());
+                assert_eq2!(
+                    line_0.items[0],
+                    StyleUSSpan::new(
+                        maybe_style.unwrap_or_default() + get_list_bullet_style(),
+                        US::from("100.│")
+                    )
+                );
+                assert_eq2!(
+                    line_0.items[1],
+                    StyleUSSpan::new(
+                        maybe_style.unwrap_or_default() + get_foreground_style(),
+                        US::from("Foo"),
+                    )
+                );
+            }
+
+            let ol_block_2 = &doc[1];
+            {
+                // println!("{:#?}", ol_block_2);
+                let lines = StyleUSSpanLines::from_block(ol_block_2, &maybe_style, None);
+
+                let line_0 = &lines.items[0];
+                // println!("{}", line_0..pretty_print_debug());
+                assert_eq2!(
+                    line_0.items[0],
+                    StyleUSSpan::new(
+                        maybe_style.unwrap_or_default() + get_list_bullet_style(),
+                        US::from("200.│")
+                    )
+                );
+                assert_eq2!(
+                    line_0.items[1],
+                    StyleUSSpan::new(
+                        maybe_style.unwrap_or_default() + get_foreground_style(),
+                        US::from("Bar"),
+                    )
+                );
+            }
 
             Ok(())
         }
@@ -1184,50 +1188,49 @@ mod tests_style_us_span_lines_from {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
             let (_, doc) = parse_markdown("- Foo\n- Bar\n")?;
-            let ul_block = &doc[0];
-            println!("{:#?}", ul_block);
-            let lines = StyleUSSpanLines::from_block(ul_block, &maybe_style, None);
+            println!("{}", ansi_term::Color::Cyan.paint(format!("{:#?}", doc)));
 
-            let line_0 = &lines.items[0];
-            println!(
-                "line_0:\n{}",
-                ansi_term::Color::Blue.paint(line_0.pretty_print())
-            );
-            let line_1 = &lines.items[1];
-            println!(
-                "line_1:\n{}",
-                ansi_term::Color::Yellow.paint(line_1.pretty_print())
-            );
+            // First smart list.
+            {
+                let ul_block_0 = &doc[0];
+                let lines = StyleUSSpanLines::from_block(ul_block_0, &maybe_style, None);
+                let line_0 = &lines.items[0];
+                assert_eq2!(
+                    line_0.items[0],
+                    StyleUSSpan::new(
+                        maybe_style.unwrap_or_default() + get_list_bullet_style(),
+                        US::from("─┤")
+                    )
+                );
+                assert_eq2!(
+                    line_0.items[1],
+                    StyleUSSpan::new(
+                        maybe_style.unwrap_or_default() + get_foreground_style(),
+                        US::from("Foo")
+                    )
+                );
+            }
 
-            assert_eq2!(
-                line_0.items[0],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_list_bullet_style(),
-                    US::from("- ")
-                )
-            );
-            assert_eq2!(
-                line_0.items[1],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_style(),
-                    US::from("Foo")
-                )
-            );
-
-            assert_eq2!(
-                line_1.items[0],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_list_bullet_style(),
-                    US::from("- ")
-                )
-            );
-            assert_eq2!(
-                line_1.items[1],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_style(),
-                    US::from("Bar")
-                )
-            );
+            // Second smart list.
+            {
+                let ul_block_1 = &doc[1];
+                let lines = StyleUSSpanLines::from_block(ul_block_1, &maybe_style, None);
+                let line_0 = &lines.items[0];
+                assert_eq2!(
+                    line_0.items[0],
+                    StyleUSSpan::new(
+                        maybe_style.unwrap_or_default() + get_list_bullet_style(),
+                        US::from("─┤")
+                    )
+                );
+                assert_eq2!(
+                    line_0.items[1],
+                    StyleUSSpan::new(
+                        maybe_style.unwrap_or_default() + get_foreground_style(),
+                        US::from("Bar")
+                    )
+                );
+            }
 
             Ok(())
         }
@@ -1240,7 +1243,7 @@ mod tests_style_us_span_lines_from {
             });
 
             let lines = StyleUSSpanLines::from_block(&text_block, &maybe_style, None);
-            // println!("{}", lines.pretty_print());
+            // println!("{}", lines..pretty_print_debug());
 
             let line_0 = &lines.items[0];
             let span_0_in_line_0 = &line_0.items[0];
@@ -1263,7 +1266,7 @@ mod tests_style_us_span_lines_from {
             });
 
             let lines = StyleUSSpanLines::from_block(&heading_block, &maybe_style, None);
-            // println!("{}", lines.pretty_print());
+            // println!("{}", lines..pretty_print_debug());
 
             // There should just be 1 line.
             assert_eq2!(lines.items.len(), 1);
