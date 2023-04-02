@@ -75,10 +75,6 @@ impl StyleUSSpanLine {
             maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
             US::from(format!("{COLON}{SPACE}")),
         );
-        acc_line_output += StyleUSSpan::new(
-            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
-            US::from(LEFT_BRACKET),
-        );
         for (index, span) in tag_list.iter().enumerate() {
             acc_line_output += StyleUSSpan::new(
                 maybe_current_box_computed_style.unwrap_or_default()
@@ -94,11 +90,7 @@ impl StyleUSSpanLine {
                 );
             }
         }
-        acc_line_output += StyleUSSpan::new(
-            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
-            US::from(RIGHT_BRACKET),
-        );
-
+        
         acc_line_output
     }
 

@@ -26,12 +26,11 @@ use nom::{branch::*,
 
 use crate::*;
 
-/// - Parse input: `@tags: [tag1, tag2, tag3]`.
+/// - Parse input: `@tags: tag1, tag2, tag3`.
 /// - There may or may not be a newline at the end.
 #[rustfmt::skip]
 pub fn parse_tags_opt_eol(input: &str) -> IResult<&str, List<&str>> {
-    // BM: eg of _opt_eol
-    let (input, output) = preceded(
+    let (remainder, tags_text) = preceded(
         /* start */ tuple((tag(TAGS), tag(COLON), tag(SPACE))),
         /* output */ alt((
             is_not(NEW_LINE),
@@ -39,29 +38,20 @@ pub fn parse_tags_opt_eol(input: &str) -> IResult<&str, List<&str>> {
         )),
     )(input)?;
 
-    // At this point, `output` can have something like: `[tag1, tag2, tag3]`.
-    let (_, output) = parse_tag_list_enclosed_in_brackets(output)?;
+    // Special case: Early return when just a newline after the tags prefix. Eg: `@tags: \n..`.
+    if tags_text.starts_with(NEW_LINE) {
+        if let Some(stripped) = tags_text.strip_prefix(NEW_LINE) {
+            return Ok((stripped, list![]));
+        }
+    }
 
     // At this point, `output` can have something like: `tag1, tag2, tag3`.
-    let (_, output) = parse_tag_list_comma_separated(output)?;
+    let (_, vec_tags_text) = parse_tag_list_comma_separated(tags_text)?;
 
     // If there is a newline, consume it since there may or may not be a newline at the end.
-    let (input, _) = opt(tag(NEW_LINE))(input)?;
+    let (remainder, _) = opt(tag(NEW_LINE))(remainder)?;
 
-    return Ok((input, List::from(output)));
-
-    /// Parse input: `[tag1, tag2, tag3]`.
-    fn parse_tag_list_enclosed_in_brackets(input: &str) -> IResult<&str, &str> {
-        let (input, output) = delimited(
-            /* start */ tag(LEFT_BRACKET),
-            /* output */ alt((
-                is_not(RIGHT_BRACKET),
-                is_not(LEFT_BRACKET)
-            )),
-            /* end */ tag(RIGHT_BRACKET),
-        )(input)?;
-        Ok((input, output))
-    }
+    return Ok((remainder, List::from(vec_tags_text)));
 
     /// Parse input: `tag1, tag2, tag3`.
     fn parse_tag_list_comma_separated(input: &str) -> IResult<&str, Vec<&str>> {
@@ -120,7 +110,6 @@ pub fn parse_tags_opt_eol(input: &str) -> IResult<&str, List<&str>> {
 
         Ok((input, trimmed_acc))
     }
-
 }
 
 #[cfg(test)]
@@ -131,7 +120,7 @@ mod test_parse_tags_opt_eol {
 
     #[test]
     fn test_not_quoted_no_eol() {
-        let input = "@tags: [tag1, tag2, tag3]";
+        let input = "@tags: tag1, tag2, tag3";
         let (input, output) = super::parse_tags_opt_eol(input).unwrap();
         assert_eq2!(input, "");
         assert_eq2!(output, list!["tag1", "tag2", "tag3"]);
@@ -141,27 +130,18 @@ mod test_parse_tags_opt_eol {
     fn test_not_quoted_no_eol_err_whitespace() {
         // First element mustn't have any space prefix.
         assert_eq2!(
-            parse_tags_opt_eol("@tags: [ tag1, tag2, tag3]").is_err(),
+            parse_tags_opt_eol("@tags:  tag1, tag2, tag3").is_err(),
             true,
         );
 
         // 2nd element onwards must have a single space prefix.
-        assert_eq2!(
-            parse_tags_opt_eol("@tags: [tag1,tag2, tag3]").is_err(),
-            true,
-        );
-        assert_eq2!(
-            parse_tags_opt_eol("@tags: [tag1,  tag2,tag3]").is_err(),
-            true,
-        );
-        assert_eq2!(
-            parse_tags_opt_eol("@tags: [tag1, tag2,tag3]").is_err(),
-            true,
-        );
+        assert_eq2!(parse_tags_opt_eol("@tags: tag1,tag2, tag3").is_err(), true,);
+        assert_eq2!(parse_tags_opt_eol("@tags: tag1,  tag2,tag3").is_err(), true,);
+        assert_eq2!(parse_tags_opt_eol("@tags: tag1, tag2,tag3").is_err(), true,);
 
         // It is ok to have more than 1 prefix space for 2nd element onwards.
         assert_eq2!(
-            parse_tags_opt_eol("@tags: [tag1, tag2,  tag3]").unwrap(),
+            parse_tags_opt_eol("@tags: tag1, tag2,  tag3").unwrap(),
             ("", list!["tag1", "tag2", " tag3"]),
         );
     }
@@ -170,17 +150,22 @@ mod test_parse_tags_opt_eol {
     fn test_not_quoted_with_eol() {
         // Valid.
         {
-            let input = "@tags: [tag1, tag2, tag3]\n";
+            let input = "@tags: tag1, tag2, tag3\n";
             let (input, output) = parse_tags_opt_eol(input).unwrap();
             assert_eq2!(input, "");
             assert_eq2!(output, list!["tag1", "tag2", "tag3"]);
         }
 
-        // Invalid: opening `[` must be terminated w/ `]`.
         {
-            let input = "@tags: [tag1, tag2, tag3\n]\n";
+            let input = "@tags: tag1, tag2, tag3\n]\n";
             let result = parse_tags_opt_eol(input);
-            assert_eq2!(result.is_err(), true);
+            assert_eq2!(result.is_err(), false);
+        }
+
+        {
+            let input = "@tags: tag1, tag2, tag3";
+            let result = parse_tags_opt_eol(input);
+            assert_eq2!(result.is_err(), false);
         }
     }
 
@@ -188,28 +173,36 @@ mod test_parse_tags_opt_eol {
     fn test_not_quoted_with_eol_whitespace() {
         // First element mustn't have any space prefix.
         assert_eq2!(
-            parse_tags_opt_eol("@tags: [ tag1, tag2, tag3]\n").is_err(),
+            parse_tags_opt_eol("@tags:  tag1, tag2, tag3\n").is_err(),
             true,
         );
 
         // 2nd element onwards must have a single space prefix.
         assert_eq2!(
-            parse_tags_opt_eol("@tags: [tag1,tag2, tag3]\n").is_err(),
+            parse_tags_opt_eol("@tags: tag1,tag2, tag3\n").is_err(),
             true,
         );
         assert_eq2!(
-            parse_tags_opt_eol("@tags: [tag1,  tag2,tag3]\n").is_err(),
+            parse_tags_opt_eol("@tags: tag1,  tag2,tag3\n").is_err(),
             true,
         );
         assert_eq2!(
-            parse_tags_opt_eol("@tags: [tag1, tag2,tag3]\n").is_err(),
+            parse_tags_opt_eol("@tags: tag1, tag2,tag3\n").is_err(),
             true,
         );
 
         // It is ok to have more than 1 prefix space for 2nd element onwards.
         assert_eq2!(
-            parse_tags_opt_eol("@tags: [tag1, tag2,  tag3]\n").unwrap(),
+            parse_tags_opt_eol("@tags: tag1, tag2,  tag3\n").unwrap(),
             ("", list!["tag1", "tag2", " tag3"]),
         );
+    }
+
+    #[test]
+    fn test_not_quoted_with_postfix_content_1() {
+        let input = "@tags: \nfoo\nbar";
+        let (input, output) = parse_tags_opt_eol(input).unwrap();
+        assert_eq2!(input, "foo\nbar");
+        assert_eq2!(output, list![]);
     }
 }

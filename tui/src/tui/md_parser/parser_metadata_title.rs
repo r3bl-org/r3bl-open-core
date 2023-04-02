@@ -30,7 +30,6 @@ use crate::*;
 /// - There may or may not be a newline at the end.
 #[rustfmt::skip]
 pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
-    // BM: eg of _opt_eol
     let (remainder, title_text) = preceded(
         /* start */ tuple((tag(TITLE), tag(COLON), tag(SPACE))),
         /* output */ alt((
@@ -39,7 +38,7 @@ pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
         )),
     )(input)?;
 
-    // Can't nest titles.
+    // Can't nest titles. Early return in this case.
     if title_text.contains(format!("{TITLE}{COLON}{SPACE}").as_str()) {
         return Err(nom::Err::Error(nom::error::Error::new(
             "Can't have more than one @title: expr.",
@@ -56,8 +55,8 @@ pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
 
     // Normal case: if there is a newline, consume it since there may or may not be a newline at
     // the end.
-    let (input, _) = opt(tag(NEW_LINE))(remainder)?;
-    Ok((input, title_text))
+    let (remainder, _) = opt(tag(NEW_LINE))(remainder)?;
+    Ok((remainder, title_text))
 }
 
 #[cfg(test)]
