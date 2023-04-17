@@ -3,11 +3,12 @@ features: <https://github.com/orgs/r3bl-org/projects/1/views/1>
 backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
 
 AI:
-  ☐ add other metadata tags to the MD parser (look at orgmode.org) like `author`, `date`
+  ✔ editor architecture (general purpose editor component or specific to notes?) @done(23-04-17 17:06)
+  ☐ fix checkboxes `[x]` `[ ]`
+    - select new color & glyph for `[x]`
+    - should they only be rendered inside of a smart list?
   ☐ rename `tag` to `topic`?
-  ☐ fix checkboxes `[x]` `[ ]` (they should only be rendered inside of a smart list)
-  ☐ rename from `md_parser` to `notes_parser`?
-  ☐ editor architecture (general purpose editor component or specific to notes?)
+  ☐ add other metadata tags to the MD parser (look at orgmode.org) like `author`, `date`
 
 update changelog:
   ☐ correct console color support at RenderOps level (ANSI256, Truecolor, Grayscale)

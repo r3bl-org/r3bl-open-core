@@ -135,7 +135,7 @@ mod reducer_impl {
 
     pub fn get_initial_state() -> State {
         let editor_buffer = {
-            let mut editor_buffer = EditorBuffer::new_empty(DEFAULT_SYN_HI_FILE_EXT.to_string());
+            let mut editor_buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
             editor_buffer.set_lines(reducer_impl::get_slide_content(0));
             editor_buffer
         };

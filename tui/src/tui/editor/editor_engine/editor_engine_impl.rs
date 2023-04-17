@@ -107,10 +107,10 @@ mod syntax_highlight_config_impl {
     use super::*;
 
     impl SyntaxHighlightConfig {
-        pub fn get_file_extension_for_new_empty_buffer(&self) -> String {
+        pub fn get_file_extension_for_new_empty_buffer(&self) -> Option<&str> {
             match self {
-                SyntaxHighlightConfig::Disable => DEFAULT_SYN_HI_FILE_EXT.to_string(),
-                SyntaxHighlightConfig::Enable(ref ext) => ext.clone(),
+                SyntaxHighlightConfig::Disable => None,
+                SyntaxHighlightConfig::Enable(ref ext) => Some(ext.as_str()),
             }
         }
     }
