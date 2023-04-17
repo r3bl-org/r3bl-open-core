@@ -141,7 +141,7 @@ pub struct EditorBuffer {
     /// This is used for syntax highlighting. It is a 2 character string, eg: `rs` or `md` that is
     /// used to lookup the syntax highlighting rules for the language in
     /// [find_syntax_by_extension[syntect::parsing::SyntaxSet::find_syntax_by_extension].
-    file_extension: String,
+    file_extension: Option<String>,
 }
 
 mod constructor {
@@ -149,7 +149,7 @@ mod constructor {
 
     impl EditorBuffer {
         /// Marker method to make it easy to search for where an empty instance is created.
-        pub fn new_empty(file_extension: String) -> Self {
+        pub fn new_empty(file_extension: Option<&str>) -> Self {
             // Potentially do any other initialization here.
             call_if_true!(DEBUG_TUI_MOD, {
                 let msg = format!(
@@ -163,7 +163,7 @@ mod constructor {
                 lines: vec![UnicodeString::default()],
                 caret: Position::default(),
                 scroll_offset: ScrollOffset::default(),
-                file_extension,
+                file_extension: file_extension.map(|s| s.to_string()),
             }
         }
     }
@@ -178,7 +178,12 @@ pub mod access_and_mutate {
     use super::*;
 
     impl EditorBuffer {
-        pub fn get_file_extension(&self) -> &str { &self.file_extension }
+        pub fn get_file_extension(&self) -> Option<&str> {
+            match self.file_extension {
+                Some(ref s) => Some(s.as_str()),
+                None => None,
+            }
+        }
 
         pub fn is_empty(&self) -> bool { self.lines.is_empty() }
 

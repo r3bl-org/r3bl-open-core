@@ -442,10 +442,8 @@ mod syntect_path {
         editor_buffer: &&EditorBuffer,
         line: &'a str,
     ) -> Option<Vec<(syntect::highlighting::Style, &'a str)>> {
-        let syntax_ref = try_get_syntax_ref(
-            &editor_engine.syntax_set,
-            editor_buffer.get_file_extension(),
-        )?;
+        let file_ext = editor_buffer.get_file_extension()?;
+        let syntax_ref = try_get_syntax_ref(&editor_engine.syntax_set, file_ext)?;
         let theme = &editor_engine.theme;
         let mut highlighter = HighlightLines::new(syntax_ref, theme);
         highlighter
