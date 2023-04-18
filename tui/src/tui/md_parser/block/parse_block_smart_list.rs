@@ -35,8 +35,23 @@ pub fn parse_block_smart_list(input: &str) -> IResult<&str, (Lines, BulletKind, 
     let mut output_lines: Lines = List::with_capacity(smart_list_ir.content_lines.len());
 
     for (index, line) in smart_list_ir.content_lines.iter().enumerate() {
-        // Parse the line as a markdown text.
-        let (_, fragments_in_line) = parse_block_markdown_text_opt_eol(line.content)?;
+        // Parse the line as a markdown text. Take special care of checkboxes if they show up at the
+        // start of the line.
+        let (_, fragments_in_line) = {
+            let parse_checkbox_policy = {
+                let checked = format!("{}{}", CHECKED, SPACE);
+                let unchecked = format!("{}{}", UNCHECKED, SPACE);
+                if line.content.starts_with(&checked) || line.content.starts_with(&unchecked) {
+                    CheckboxParsePolicy::ParseCheckbox
+                } else {
+                    CheckboxParsePolicy::IgnoreCheckbox
+                }
+            };
+            parse_block_markdown_text_opt_eol_with_checkbox_policy(
+                line.content,
+                parse_checkbox_policy,
+            )?
+        };
 
         // Mark is first line or not (to show or hide bullet).
         let is_first_line = index == 0;
@@ -68,6 +83,375 @@ pub fn parse_block_smart_list(input: &str) -> IResult<&str, (Lines, BulletKind, 
     }
 
     Ok((remainder, (output_lines, bullet_kind, indent)))
+}
+
+/// Tests things that are final output (and not at the IR level).
+#[cfg(test)]
+mod tests_parse_block_smart_list {
+    use r3bl_rs_utils_core::assert_eq2;
+
+    use super::*;
+
+    #[test]
+    fn test_parse_block_smart_list_with_checkbox() {
+        // Valid unchecked.
+        {
+            let input = vec!["- [ ] todo"].join("\n");
+            let result = parse_block_smart_list(&input);
+            let remainder = result.as_ref().unwrap().0;
+            let (lines, _bullet_kind, _indent) = result.unwrap().1;
+            let first_line = lines.first().unwrap();
+            assert_eq2!(remainder, "");
+            assert_eq2!(
+                first_line,
+                &list![
+                    MdLineFragment::UnorderedListBullet {
+                        indent: 0,
+                        is_first_line: true
+                    },
+                    MdLineFragment::Checkbox(false),
+                    MdLineFragment::Plain(" todo"),
+                ]
+            );
+        }
+
+        // Valid checked.
+        {
+            let input = vec!["- [x] done"].join("\n");
+            let result = parse_block_smart_list(&input);
+            let remainder = result.as_ref().unwrap().0;
+            let (lines, _bullet_kind, _indent) = result.unwrap().1;
+            let first_line = lines.first().unwrap();
+            assert_eq2!(remainder, "");
+            assert_eq2!(
+                first_line,
+                &list![
+                    MdLineFragment::UnorderedListBullet {
+                        indent: 0,
+                        is_first_line: true
+                    },
+                    MdLineFragment::Checkbox(true),
+                    MdLineFragment::Plain(" done"),
+                ]
+            );
+        }
+
+        // Invalid unchecked.
+        {
+            let input = vec!["- [ ]todo"].join("\n");
+            let result = parse_block_smart_list(&input);
+            let remainder = result.as_ref().unwrap().0;
+            let (lines, _bullet_kind, _indent) = result.unwrap().1;
+            let first_line = lines.first().unwrap();
+            assert_eq2!(remainder, "");
+            assert_eq2!(
+                first_line,
+                &list![
+                    MdLineFragment::UnorderedListBullet {
+                        indent: 0,
+                        is_first_line: true
+                    },
+                    MdLineFragment::Plain("[ ]"),
+                    MdLineFragment::Plain("todo"),
+                ]
+            );
+        }
+
+        // Invalid checked.
+        {
+            let input = vec!["- [x]done"].join("\n");
+            let result = parse_block_smart_list(&input);
+            let remainder = result.as_ref().unwrap().0;
+            let (lines, _bullet_kind, _indent) = result.unwrap().1;
+            let first_line = lines.first().unwrap();
+            assert_eq2!(remainder, "");
+            assert_eq2!(
+                first_line,
+                &list![
+                    MdLineFragment::UnorderedListBullet {
+                        indent: 0,
+                        is_first_line: true
+                    },
+                    MdLineFragment::Plain("[x]"),
+                    MdLineFragment::Plain("done"),
+                ]
+            );
+        }
+    }
+
+    #[test]
+    fn test_valid_ul_list_1() {
+        let input = "- foo\n  bar baz\n";
+        let expected = list! {
+            list![
+                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: true },
+                MdLineFragment::Plain("foo"),
+            ],
+            list![
+                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: false },
+                MdLineFragment::Plain("bar baz"),
+            ],
+        };
+        let result = parse_block_smart_list(input);
+        let remainder = result.as_ref().unwrap().0;
+        let (lines, _bullet_kind, _indent) = result.unwrap().1;
+        assert_eq2!(remainder, "");
+        assert_eq2!(lines, expected);
+    }
+
+    #[test]
+    fn test_valid_ul_list_2() {
+        let input = "- foo\n  bar baz\n- foo1\n  bar1 baz1\n";
+        let expected = list! {
+            list![
+                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: true },
+                MdLineFragment::Plain("foo"),
+            ],
+            list![
+                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: false },
+                MdLineFragment::Plain("bar baz"),
+            ],
+        };
+        let result = parse_block_smart_list(input);
+        let remainder = result.as_ref().unwrap().0;
+        let (lines, _bullet_kind, _indent) = result.unwrap().1;
+        assert_eq2!(remainder, "- foo1\n  bar1 baz1\n");
+        assert_eq2!(lines, expected);
+    }
+
+    #[test]
+    fn test_valid_ol_list_1() {
+        let input = "1. foo\n   bar baz\n";
+        let expected = list! {
+            list![
+                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: true },
+                MdLineFragment::Plain("foo"),
+            ],
+            list![
+                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: false },
+                MdLineFragment::Plain("bar baz"),
+            ],
+        };
+        let result = parse_block_smart_list(input);
+        let remainder = result.as_ref().unwrap().0;
+        let (lines, _bullet_kind, _indent) = result.unwrap().1;
+        assert_eq2!(remainder, "");
+        assert_eq2!(lines, expected);
+    }
+
+    #[test]
+    fn test_valid_ol_list_2() {
+        let input = "1. foo\n   bar baz\n1. foo\n   bar baz\n";
+        let expected = list! {
+            list![
+                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: true },
+                MdLineFragment::Plain("foo"),
+            ],
+            list![
+                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: false },
+                MdLineFragment::Plain("bar baz"),
+            ],
+        };
+        let result = parse_block_smart_list(input);
+        let remainder = result.as_ref().unwrap().0;
+        let (lines, _bullet_kind, _indent) = result.unwrap().1;
+        assert_eq2!(remainder, "1. foo\n   bar baz\n");
+        assert_eq2!(lines, expected);
+    }
+}
+
+/// Tests things that are final output (and not at the IR level).
+#[cfg(test)]
+mod tests_parse_smart_lists_in_markdown {
+    use r3bl_rs_utils_core::assert_eq2;
+
+    use super::*;
+
+    #[test]
+    fn test_parse_valid_md_ol_with_indent() {
+        let input = vec![
+            "start",
+            "1. ol1",
+            "  2. ol2",
+            "     ol2.1",
+            "    3. ol3",
+            "       ol3.1",
+            "       ol3.2",
+            "end",
+            "",
+        ]
+        .join("\n");
+
+        let expected_output = vec![
+            "start",
+            "[  ┊1.│ol1┊  ]",
+            "[  ┊  2.│ol2┊ → ┊    │ol2.1┊  ]",
+            "[  ┊    3.│ol3┊ → ┊      │ol3.1┊ → ┊      │ol3.2┊  ]",
+            "end",
+        ];
+
+        let result = parse_markdown(input.as_str());
+        let remainder = result.as_ref().unwrap().0;
+        let md_doc: MdDocument = result.unwrap().1;
+
+        // md_doc.console_log_fg();
+        // remainder.console_log_bg();
+
+        assert_eq2!(remainder, "");
+        md_doc
+            .items
+            .iter()
+            .zip(expected_output.iter())
+            .for_each(|(element, test_str)| {
+                let lhs = element.pretty_print_debug();
+                let rhs = test_str.to_string();
+                assert_eq2!(lhs, rhs);
+            });
+    }
+
+    #[test]
+    fn test_parse_valid_md_ul_with_indent() {
+        let input = vec![
+            "start",
+            "- ul1",
+            "  - ul2",
+            "    ul2.1",
+            "    - ul3",
+            "      ul3.1",
+            "      ul3.2",
+            "end",
+            "",
+        ]
+        .join("\n");
+
+        let expected_output = vec![
+            "start",
+            "[  ┊─┤ul1┊  ]",
+            "[  ┊───┤ul2┊ → ┊   │ul2.1┊  ]",
+            "[  ┊─────┤ul3┊ → ┊     │ul3.1┊ → ┊     │ul3.2┊  ]",
+            "end",
+        ];
+
+        let result = parse_markdown(input.as_str());
+        let remainder = result.as_ref().unwrap().0;
+        let md_doc: MdDocument = result.unwrap().1;
+
+        // md_doc.console_log_fg();
+        // remainder.console_log_bg();
+
+        assert_eq2!(remainder, "");
+        md_doc
+            .items
+            .iter()
+            .zip(expected_output.iter())
+            .for_each(|(element, test_str)| {
+                let lhs = element.pretty_print_debug();
+                let rhs = test_str.to_string();
+                assert_eq2!(lhs, rhs);
+            });
+    }
+
+    #[test]
+    fn test_parse_valid_md_multiline_no_indent() {
+        let input = vec![
+            "start",
+            "- ul1",
+            "- ul2",
+            "  ul2.1",
+            "  ",
+            "- ul3",
+            "  ul3.1",
+            "  ul3.2",
+            "1. ol1",
+            "2. ol2",
+            "   ol2.1",
+            "3. ol3",
+            "   ol3.1",
+            "   ol3.2",
+            "- [ ] todo",
+            "- [x] done",
+            "end",
+            "",
+        ]
+        .join("\n");
+
+        let expected_output = vec![
+            "start",
+            "[  ┊─┤ul1┊  ]",
+            "[  ┊─┤ul2┊ → ┊ │ul2.1┊  ]",
+            "  ",
+            "[  ┊─┤ul3┊ → ┊ │ul3.1┊ → ┊ │ul3.2┊  ]",
+            "[  ┊1.│ol1┊  ]",
+            "[  ┊2.│ol2┊ → ┊  │ol2.1┊  ]",
+            "[  ┊3.│ol3┊ → ┊  │ol3.1┊ → ┊  │ol3.2┊  ]",
+            "[  ┊─┤[ ] todo┊  ]",
+            "[  ┊─┤[x] done┊  ]",
+            "end",
+        ];
+
+        let result = parse_markdown(input.as_str());
+        let remainder = result.as_ref().unwrap().0;
+        let md_doc: MdDocument = result.unwrap().1;
+
+        md_doc.console_log_fg();
+        remainder.console_log_bg();
+
+        assert_eq2!(remainder, "");
+        md_doc
+            .items
+            .iter()
+            .zip(expected_output.iter())
+            .for_each(|(element, test_str)| {
+                let lhs = element.pretty_print_debug();
+                let rhs = test_str.to_string();
+                assert_eq2!(lhs, rhs);
+            });
+    }
+
+    #[test]
+    fn test_parse_valid_md_no_indent() {
+        let input = vec![
+            "start",
+            "- ul1",
+            "- ul2",
+            "1. ol1",
+            "2. ol2",
+            "- [ ] todo",
+            "- [x] done",
+            "end",
+            "",
+        ]
+        .join("\n");
+
+        let expected_output = vec![
+            "start",
+            "[  ┊─┤ul1┊  ]",
+            "[  ┊─┤ul2┊  ]",
+            "[  ┊1.│ol1┊  ]",
+            "[  ┊2.│ol2┊  ]",
+            "[  ┊─┤[ ] todo┊  ]",
+            "[  ┊─┤[x] done┊  ]",
+            "end",
+        ];
+
+        let result = parse_markdown(input.as_str());
+        let remainder = result.as_ref().unwrap().0;
+        let md_doc: MdDocument = result.unwrap().1;
+
+        // md_doc.console_log_fg();
+        // remainder.console_log_bg();
+
+        assert_eq2!(remainder, "");
+        md_doc
+            .items
+            .iter()
+            .zip(expected_output.iter())
+            .for_each(|(element, test_str)| {
+                let lhs = element.pretty_print_debug();
+                let rhs = test_str.to_string();
+                assert_eq2!(lhs, rhs);
+            });
+    }
 }
 
 /// Holds a single list item for a given indent level. This may contain multiple lines which are
@@ -314,287 +698,7 @@ pub fn parse_smart_list_content_lines<'a>(
 }
 
 #[cfg(test)]
-mod test_parse_smart_lists_in_markdown {
-    use r3bl_rs_utils_core::assert_eq2;
-
-    use super::*;
-
-    #[test]
-    fn test_parse_valid_md_ol_with_indent() {
-        let input = vec![
-            "start",
-            "1. ol1",
-            "  2. ol2",
-            "     ol2.1",
-            "    3. ol3",
-            "       ol3.1",
-            "       ol3.2",
-            "end",
-            "",
-        ]
-        .join("\n");
-
-        let expected_output = vec![
-            "start",
-            "[  ┊1.│ol1┊  ]",
-            "[  ┊  2.│ol2┊ → ┊    │ol2.1┊  ]",
-            "[  ┊    3.│ol3┊ → ┊      │ol3.1┊ → ┊      │ol3.2┊  ]",
-            "end",
-        ];
-
-        let result = parse_markdown(input.as_str());
-        let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument = result.unwrap().1;
-
-        // md_doc.console_log_fg();
-        // remainder.console_log_bg();
-
-        assert_eq2!(remainder, "");
-        md_doc
-            .items
-            .iter()
-            .zip(expected_output.iter())
-            .for_each(|(element, test_str)| {
-                let lhs = element.pretty_print_debug();
-                let rhs = test_str.to_string();
-                assert_eq2!(lhs, rhs);
-            });
-    }
-
-    #[test]
-    fn test_parse_valid_md_ul_with_indent() {
-        let input = vec![
-            "start",
-            "- ul1",
-            "  - ul2",
-            "    ul2.1",
-            "    - ul3",
-            "      ul3.1",
-            "      ul3.2",
-            "end",
-            "",
-        ]
-        .join("\n");
-
-        let expected_output = vec![
-            "start",
-            "[  ┊─┤ul1┊  ]",
-            "[  ┊───┤ul2┊ → ┊   │ul2.1┊  ]",
-            "[  ┊─────┤ul3┊ → ┊     │ul3.1┊ → ┊     │ul3.2┊  ]",
-            "end",
-        ];
-
-        let result = parse_markdown(input.as_str());
-        let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument = result.unwrap().1;
-
-        // md_doc.console_log_fg();
-        // remainder.console_log_bg();
-
-        assert_eq2!(remainder, "");
-        md_doc
-            .items
-            .iter()
-            .zip(expected_output.iter())
-            .for_each(|(element, test_str)| {
-                let lhs = element.pretty_print_debug();
-                let rhs = test_str.to_string();
-                assert_eq2!(lhs, rhs);
-            });
-    }
-
-    #[test]
-    fn test_parse_valid_md_multiline_no_indent() {
-        let input = vec![
-            "start",
-            "- ul1",
-            "- ul2",
-            "  ul2.1",
-            "  ",
-            "- ul3",
-            "  ul3.1",
-            "  ul3.2",
-            "1. ol1",
-            "2. ol2",
-            "   ol2.1",
-            "3. ol3",
-            "   ol3.1",
-            "   ol3.2",
-            "- [ ] todo",
-            "- [x] done",
-            "end",
-            "",
-        ]
-        .join("\n");
-
-        let expected_output = vec![
-            "start",
-            "[  ┊─┤ul1┊  ]",
-            "[  ┊─┤ul2┊ → ┊ │ul2.1┊  ]",
-            "  ",
-            "[  ┊─┤ul3┊ → ┊ │ul3.1┊ → ┊ │ul3.2┊  ]",
-            "[  ┊1.│ol1┊  ]",
-            "[  ┊2.│ol2┊ → ┊  │ol2.1┊  ]",
-            "[  ┊3.│ol3┊ → ┊  │ol3.1┊ → ┊  │ol3.2┊  ]",
-            "[  ┊─┤[ ] todo┊  ]",
-            "[  ┊─┤[x] done┊  ]",
-            "end",
-        ];
-
-        let result = parse_markdown(input.as_str());
-        let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument = result.unwrap().1;
-
-        // md_doc.console_log_fg();
-        // remainder.console_log_bg();
-
-        assert_eq2!(remainder, "");
-        md_doc
-            .items
-            .iter()
-            .zip(expected_output.iter())
-            .for_each(|(element, test_str)| {
-                let lhs = element.pretty_print_debug();
-                let rhs = test_str.to_string();
-                assert_eq2!(lhs, rhs);
-            });
-    }
-
-    #[test]
-    fn test_parse_valid_md_no_indent() {
-        let input = vec![
-            "start",
-            "- ul1",
-            "- ul2",
-            "1. ol1",
-            "2. ol2",
-            "- [ ] todo",
-            "- [x] done",
-            "end",
-            "",
-        ]
-        .join("\n");
-
-        let expected_output = vec![
-            "start",
-            "[  ┊─┤ul1┊  ]",
-            "[  ┊─┤ul2┊  ]",
-            "[  ┊1.│ol1┊  ]",
-            "[  ┊2.│ol2┊  ]",
-            "[  ┊─┤[ ] todo┊  ]",
-            "[  ┊─┤[x] done┊  ]",
-            "end",
-        ];
-
-        let result = parse_markdown(input.as_str());
-        let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument = result.unwrap().1;
-
-        // md_doc.console_log_fg();
-        // remainder.console_log_bg();
-
-        assert_eq2!(remainder, "");
-        md_doc
-            .items
-            .iter()
-            .zip(expected_output.iter())
-            .for_each(|(element, test_str)| {
-                let lhs = element.pretty_print_debug();
-                let rhs = test_str.to_string();
-                assert_eq2!(lhs, rhs);
-            });
-    }
-}
-
-#[cfg(test)]
-mod test_parse_block_smart_list {
-    use r3bl_rs_utils_core::assert_eq2;
-
-    use super::*;
-
-    #[test]
-    fn test_valid_ul_list_1() {
-        let input = "- foo\n  bar baz\n";
-        let expected = list! {
-            list![
-                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: true },
-                MdLineFragment::Plain("foo"),
-            ],
-            list![
-                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: false },
-                MdLineFragment::Plain("bar baz"),
-            ],
-        };
-        let result = parse_block_smart_list(input);
-        let remainder = result.as_ref().unwrap().0;
-        let (lines, _bullet_kind, _indent) = result.unwrap().1;
-        assert_eq2!(remainder, "");
-        assert_eq2!(lines, expected);
-    }
-
-    #[test]
-    fn test_valid_ul_list_2() {
-        let input = "- foo\n  bar baz\n- foo1\n  bar1 baz1\n";
-        let expected = list! {
-            list![
-                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: true },
-                MdLineFragment::Plain("foo"),
-            ],
-            list![
-                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: false },
-                MdLineFragment::Plain("bar baz"),
-            ],
-        };
-        let result = parse_block_smart_list(input);
-        let remainder = result.as_ref().unwrap().0;
-        let (lines, _bullet_kind, _indent) = result.unwrap().1;
-        assert_eq2!(remainder, "- foo1\n  bar1 baz1\n");
-        assert_eq2!(lines, expected);
-    }
-
-    #[test]
-    fn test_valid_ol_list_1() {
-        let input = "1. foo\n   bar baz\n";
-        let expected = list! {
-            list![
-                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: true },
-                MdLineFragment::Plain("foo"),
-            ],
-            list![
-                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: false },
-                MdLineFragment::Plain("bar baz"),
-            ],
-        };
-        let result = parse_block_smart_list(input);
-        let remainder = result.as_ref().unwrap().0;
-        let (lines, _bullet_kind, _indent) = result.unwrap().1;
-        assert_eq2!(remainder, "");
-        assert_eq2!(lines, expected);
-    }
-
-    #[test]
-    fn test_valid_ol_list_2() {
-        let input = "1. foo\n   bar baz\n1. foo\n   bar baz\n";
-        let expected = list! {
-            list![
-                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: true },
-                MdLineFragment::Plain("foo"),
-            ],
-            list![
-                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: false },
-                MdLineFragment::Plain("bar baz"),
-            ],
-        };
-        let result = parse_block_smart_list(input);
-        let remainder = result.as_ref().unwrap().0;
-        let (lines, _bullet_kind, _indent) = result.unwrap().1;
-        assert_eq2!(remainder, "1. foo\n   bar baz\n");
-        assert_eq2!(lines, expected);
-    }
-}
-
-#[cfg(test)]
-mod test_parse_list_item {
+mod tests_parse_list_item {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
@@ -695,7 +799,7 @@ mod test_parse_list_item {
 }
 
 #[cfg(test)]
-mod test_list_item_lines {
+mod tests_list_item_lines {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
@@ -809,7 +913,7 @@ mod test_list_item_lines {
 }
 
 #[cfg(test)]
-mod test_bullet_kinds {
+mod tests_bullet_kinds {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
@@ -833,7 +937,7 @@ mod test_bullet_kinds {
 }
 
 #[cfg(test)]
-mod test_parse_indents {
+mod tests_parse_indents {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
