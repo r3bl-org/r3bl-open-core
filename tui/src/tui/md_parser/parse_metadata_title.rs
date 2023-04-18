@@ -63,6 +63,7 @@ pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
 mod test_parse_title_no_eol {
     use ansi_term::Color::*;
     use r3bl_rs_utils_core::assert_eq2;
+
     use super::*;
 
     #[test]
