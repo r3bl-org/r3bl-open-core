@@ -4,11 +4,11 @@ backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissu
 
 AI:
   ✔ editor architecture (general purpose editor component or specific to notes?) @done(23-04-17 17:06)
-  ☐ fix checkboxes `[x]` `[ ]`
-    - select new color & glyph for `[x]`
-    - should they only be rendered inside of a smart list?
+  ✔ fix checkboxes `[x]` `[ ]` - select new color & glyph for `[x]` @done(23-04-18 10:21)
+  ☐ should checkboxes only be rendered inside of a smart list?
   ☐ rename `tag` to `topic`?
   ☐ add other metadata tags to the MD parser (look at orgmode.org) like `author`, `date`
+  ☐ editor config options - make editor read only
 
 update changelog:
   ☐ correct console color support at RenderOps level (ANSI256, Truecolor, Grayscale)

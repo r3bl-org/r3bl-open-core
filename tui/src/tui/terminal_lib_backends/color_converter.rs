@@ -97,8 +97,10 @@ pub fn to_crossterm_color(value: TuiColor) -> crossterm::style::Color {
             },
         },
 
+        // Keep it as is.
         TuiColor::Ansi(ansi_value) => crossterm::style::Color::AnsiValue(ansi_value.color),
 
+        // Downgrade the color if needed.
         TuiColor::Rgb(rgb_value) => {
             let RgbValue {
                 red: r,

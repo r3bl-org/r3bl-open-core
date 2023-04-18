@@ -122,8 +122,7 @@ pub fn get_checkbox_checked_style() -> Style {
         attrib: [bold, dim]
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkMagenta),
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(91)), // DarkMagenta.
-            ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#6f5170"))
+            _ => TuiColor::Rgb(RgbValue::from_hex("#14a45b")),
         }
     }
 }
@@ -134,8 +133,7 @@ pub fn get_checkbox_unchecked_style() -> Style {
         attrib: [bold]
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Green),
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(41)), // SpringGreen3.
-            ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#5aab82"))
+            _ => TuiColor::Rgb(RgbValue::from_hex("#e1ff2f"))
         }
     }
 }
