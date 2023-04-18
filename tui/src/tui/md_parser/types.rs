@@ -168,8 +168,8 @@ pub mod constants {
     pub const CODE_BLOCK_END: &str = "```";
     pub const CHECKED: &str = "[x]";
     pub const UNCHECKED: &str = "[ ]";
-    pub const CHECKED_OUTPUT: &str = "[≡]";
-    pub const UNCHECKED_OUTPUT: &str = "[ ]";
+    pub const CHECKED_OUTPUT: &str = "┊✔┊";
+    pub const UNCHECKED_OUTPUT: &str = "┊┈┊";
 }
 
 #[derive(Debug, PartialEq, Clone)]
