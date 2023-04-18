@@ -41,15 +41,15 @@
 pub mod block;
 pub mod convert_to_plain_text;
 pub mod parser;
-pub mod parser_element;
-pub mod parser_metadata_tags;
-pub mod parser_metadata_title;
+pub mod parse_element;
+pub mod parse_metadata_tags;
+pub mod parse_metadata_title;
 pub mod types;
 
 pub use block::*;
 pub use convert_to_plain_text::*;
 pub use parser::*;
-pub use parser_element::*;
-pub use parser_metadata_tags::*;
-pub use parser_metadata_title::*;
+pub use parse_element::*;
+pub use parse_metadata_tags::*;
+pub use parse_metadata_title::*;
 pub use types::*;
