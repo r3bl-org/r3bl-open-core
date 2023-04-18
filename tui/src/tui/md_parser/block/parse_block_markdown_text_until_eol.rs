@@ -28,27 +28,48 @@ pub fn parse_block_markdown_text_until_eol(input: &str) -> IResult<&str, MdLineF
 
 #[rustfmt::skip]
 fn parse_until_eol(input: &str) -> IResult<&str, MdLineFragments> {
-    let (input, output) =
-        terminated(
-            /* output */ many0(parse_element_markdown_inline),
-            /* ends with (discarded) */ tag(NEW_LINE),
-        )
-    (input)?;
+    let (input, output) = terminated(
+        /* output */
+        many0(
+            |it| parse_element_markdown_inline(it, CheckboxParsePolicy::IgnoreCheckbox)
+        ),
+        /* ends with (discarded) */ tag(NEW_LINE),
+    )(input)?;
     let it = List::from(output);
     Ok((input, it))
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum CheckboxParsePolicy {
+    IgnoreCheckbox,
+    ParseCheckbox,
+}
+
 /// Parse a markdown text [FragmentsInOneLine] in the input (no EOL required).
 #[rustfmt::skip]
-pub fn parse_block_markdown_text_opt_eol(input: &str) -> IResult<&str, MdLineFragments> {
-    parse_opt_eol(input)
+pub fn parse_block_markdown_text_opt_eol_with_checkbox_policy(
+    input: &str,
+    checkbox_policy: CheckboxParsePolicy,
+) -> IResult<&str, MdLineFragments> {
+    parse_opt_eol(input, checkbox_policy)
+}
+
+/// Parse a markdown text [FragmentsInOneLine] in the input (no EOL required).
+#[rustfmt::skip]
+pub fn parse_block_markdown_text_opt_eol(
+    input: &str,
+) -> IResult<&str, MdLineFragments> {
+    parse_opt_eol(input, CheckboxParsePolicy::IgnoreCheckbox)
 }
 
 #[rustfmt::skip]
-fn parse_opt_eol(input: &str) -> IResult<&str, MdLineFragments> {
-    let (input, output) =
-        many0(parse_element_markdown_inline)
-    (input)?;
+fn parse_opt_eol(
+    input: &str,
+    checkbox_policy: CheckboxParsePolicy,
+) -> IResult<&str, MdLineFragments> {
+    let (input, output) = many0(
+        |it| parse_element_markdown_inline(it, checkbox_policy)
+    )(input)?;
     let it = List::from(output);
     Ok((input, it))
 }

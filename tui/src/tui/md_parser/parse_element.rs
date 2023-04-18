@@ -15,6 +15,10 @@
  *   limitations under the License.
  */
 
+//! An element is a single markdown element. Eg: `**bold**`, `*italic*`, `[link](http://r3bl.com)`,
+//! etc. These can be found in every single line of text. These parsers extract each element into
+//! either a string slice or some other intermediate representation.
+
 use constants::*;
 use nom::{branch::*,
           bytes::complete::*,
@@ -64,8 +68,22 @@ pub fn parse_element_link(input: &str) -> IResult<&str, HyperlinkData> {
     Ok((input, HyperlinkData::from(output)))
 }
 
+/// Checkboxes are tricky since they begin with "[" which is also used for hyperlinks and images.
+/// So some extra hint is need from the code calling this parser to let it know whether to parse
+/// a checkbox into plain text, or into a boolean.
 #[rustfmt::skip]
-pub fn parse_element_checkbox(input: &str) -> IResult<&str, bool> {
+pub fn parse_element_checkbox_into_str(input: &str) -> IResult<&str, &str> {
+    alt((
+        recognize(tag(CHECKED)),
+        recognize(tag(UNCHECKED))
+    ))(input)
+}
+
+#[rustfmt::skip]
+/// Checkboxes are tricky since they begin with "[" which is also used for hyperlinks and images.
+/// So some extra hint is need from the code calling this parser to let it know whether to parse
+/// a checkbox into plain text, or into a boolean.
+pub fn parse_element_checkbox_into_bool(input: &str) -> IResult<&str, bool> {
     alt((
         map(tag(CHECKED), |_| true),
         map(tag(UNCHECKED), |_| false),
@@ -113,28 +131,70 @@ pub fn parse_element_plaintext(input: &str) -> IResult<&str, &str> {
     )(input)
 }
 
-/// Parse a single chunk of markdown text [MdLineFragment] in a single line.
+/// Parse a single chunk of markdown text (found in a single line of text) into a [MdLineFragment].
 #[rustfmt::skip]
-pub fn parse_element_markdown_inline(input: &str) -> IResult<&str, MdLineFragment> {
-    alt((
-        map(parse_element_italic,       MdLineFragment::Italic),
-        map(parse_element_bold,         MdLineFragment::Bold),
-        map(parse_element_bold_italic,  MdLineFragment::BoldItalic),
-        map(parse_element_code,         MdLineFragment::InlineCode),
-        map(parse_element_image,        MdLineFragment::Image),
-        map(parse_element_link,         MdLineFragment::Link),
-        map(parse_element_checkbox,     MdLineFragment::Checkbox),
-        map(parse_element_plaintext,    MdLineFragment::Plain),
-    ))(input)
+pub fn parse_element_markdown_inline(
+    input: &str,
+    checkbox_policy: CheckboxParsePolicy,
+) -> IResult<&str, MdLineFragment> {
+    match checkbox_policy {
+        CheckboxParsePolicy::IgnoreCheckbox => alt((
+            map(parse_element_italic, MdLineFragment::Italic),
+            map(parse_element_bold, MdLineFragment::Bold),
+            map(parse_element_bold_italic, MdLineFragment::BoldItalic),
+            map(parse_element_code, MdLineFragment::InlineCode),
+            map(parse_element_image, MdLineFragment::Image),
+            map(parse_element_link, MdLineFragment::Link),
+            map(parse_element_checkbox_into_str, MdLineFragment::Plain),
+            map(parse_element_plaintext, MdLineFragment::Plain),
+        ))(input),
+        CheckboxParsePolicy::ParseCheckbox => alt((
+            map(parse_element_italic, MdLineFragment::Italic),
+            map(parse_element_bold, MdLineFragment::Bold),
+            map(parse_element_bold_italic, MdLineFragment::BoldItalic),
+            map(parse_element_code, MdLineFragment::InlineCode),
+            map(parse_element_image, MdLineFragment::Image),
+            map(parse_element_link, MdLineFragment::Link),
+            map(parse_element_checkbox_into_bool, MdLineFragment::Checkbox),
+            map(parse_element_plaintext, MdLineFragment::Plain),
+        ))(input)
+
+    }
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_parse_element {
     use nom::{error::{Error, ErrorKind},
               Err as NomErr};
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
+
+    #[test]
+    fn test_parse_element_checkbox_into_str() {
+        assert_eq2!(
+            parse_element_checkbox_into_str("[x] here is a checkbox"),
+            Ok((" here is a checkbox", "[x]"))
+        );
+
+        assert_eq2!(
+            parse_element_checkbox_into_str("[ ] here is a checkbox"),
+            Ok((" here is a checkbox", "[ ]"))
+        );
+    }
+
+    #[test]
+    fn test_parse_element_checkbox_into_bool() {
+        assert_eq2!(
+            parse_element_checkbox_into_bool("[x] here is a checkbox"),
+            Ok((" here is a checkbox", true))
+        );
+
+        assert_eq2!(
+            parse_element_checkbox_into_bool("[ ] here is a checkbox"),
+            Ok((" here is a checkbox", false))
+        );
+    }
 
     #[test]
     fn test_parse_element_italic() {
@@ -505,62 +565,109 @@ mod tests {
     #[test]
     fn test_parse_element_markdown_inline() {
         assert_eq2!(
-            parse_element_markdown_inline("*here is italic*"),
+            parse_element_markdown_inline("*here is italic*", CheckboxParsePolicy::IgnoreCheckbox),
             Ok(("", MdLineFragment::Italic("here is italic")))
         );
         assert_eq2!(
-            parse_element_markdown_inline("**here is bold**"),
+            parse_element_markdown_inline("**here is bold**", CheckboxParsePolicy::IgnoreCheckbox),
             Ok(("", MdLineFragment::Bold("here is bold")))
         );
         assert_eq2!(
-            parse_element_markdown_inline("`here is code`"),
+            parse_element_markdown_inline("`here is code`", CheckboxParsePolicy::IgnoreCheckbox),
             Ok(("", MdLineFragment::InlineCode("here is code")))
         );
         assert_eq2!(
-            parse_element_markdown_inline("[title](https://www.example.com)"),
+            parse_element_markdown_inline(
+                "[title](https://www.example.com)",
+                CheckboxParsePolicy::IgnoreCheckbox
+            ),
             Ok((
                 "",
                 (MdLineFragment::Link(HyperlinkData::new("title", "https://www.example.com")))
             ))
         );
         assert_eq2!(
-            parse_element_markdown_inline("![alt text](image.jpg)"),
+            parse_element_markdown_inline(
+                "![alt text](image.jpg)",
+                CheckboxParsePolicy::IgnoreCheckbox
+            ),
             Ok((
                 "",
                 (MdLineFragment::Image(HyperlinkData::new("alt text", "image.jpg")))
             ))
         );
         assert_eq2!(
-            parse_element_markdown_inline("here is plaintext!"),
+            parse_element_markdown_inline(
+                "here is plaintext!",
+                CheckboxParsePolicy::IgnoreCheckbox
+            ),
             Ok(("", MdLineFragment::Plain("here is plaintext!")))
         );
         assert_eq2!(
-            parse_element_markdown_inline("here is some plaintext *but what if we italicize?"),
+            parse_element_markdown_inline(
+                "here is some plaintext *but what if we italicize?",
+                CheckboxParsePolicy::IgnoreCheckbox
+            ),
             Ok((
                 "*but what if we italicize?",
                 MdLineFragment::Plain("here is some plaintext ")
             ))
         );
         assert_eq2!(
-            parse_element_markdown_inline("here is some plaintext \n*but what if we italicize?"),
+            parse_element_markdown_inline(
+                "here is some plaintext \n*but what if we italicize?",
+                CheckboxParsePolicy::IgnoreCheckbox
+            ),
             Ok((
                 "\n*but what if we italicize?",
                 MdLineFragment::Plain("here is some plaintext ")
             ))
         );
         assert_eq2!(
-            parse_element_markdown_inline("\n"),
+            parse_element_markdown_inline("\n", CheckboxParsePolicy::IgnoreCheckbox),
             Err(NomErr::Error(Error {
                 input: "\n",
                 code: ErrorKind::Not
             }))
         );
         assert_eq2!(
-            parse_element_markdown_inline(""),
+            parse_element_markdown_inline("", CheckboxParsePolicy::IgnoreCheckbox),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Eof
             }))
+        );
+
+        // Deal with checkboxes: ignore them.
+        assert_eq2!(
+            parse_element_markdown_inline(
+                "[ ] this is a checkbox",
+                CheckboxParsePolicy::IgnoreCheckbox
+            ),
+            Ok((" this is a checkbox", MdLineFragment::Plain("[ ]")))
+        );
+        assert_eq2!(
+            parse_element_markdown_inline(
+                "[x] this is a checkbox",
+                CheckboxParsePolicy::IgnoreCheckbox
+            ),
+            Ok((" this is a checkbox", MdLineFragment::Plain("[x]")))
+        );
+
+        // Deal with checkboxes: parse them.
+        assert_eq2!(
+            parse_element_markdown_inline(
+                "[ ] this is a checkbox",
+                CheckboxParsePolicy::ParseCheckbox
+            ),
+            Ok((" this is a checkbox", MdLineFragment::Checkbox(false)))
+        );
+        assert_eq2!(
+            parse_element_markdown_inline(
+                "[x] this is a checkbox",
+                CheckboxParsePolicy::ParseCheckbox
+            ),
+            Ok((" this is a checkbox", MdLineFragment::Checkbox(true)))
         );
     }
 }

@@ -27,10 +27,14 @@ use crate::*;
 ///
 /// Each item in this [MdDocument] corresponds to a block of Markdown [MdBlockElement], which can be
 /// one of the following variants:
-/// 1. heading (which contains a [HeadingLevel] & [MdLineFragments]),
-/// 2. ordered & unordered list (which itself contains a [Vec] of [MdLineFragments],
-/// 3. code block (which contains string slices of the language & code),
-/// 4. line (which contains a [MdLineFragments]).
+/// 1. Metadata title. The parsers in [parse_metadata_title] file handle this.
+/// 2. Metadata tags. The parsers in [parse_metadata_tags] file handle this.
+/// 3. Heading (which contains a [HeadingLevel] & [MdLineFragments]).
+/// 4. Smart ordered & unordered list (which itself contains a [Vec] of [MdLineFragments]. The
+///    parsers in [mod@parse_block_smart_list] file handle this.
+/// 5. Code block (which contains string slices of the language & code). The parsers in
+///    [mod@parse_block_code] file handle this.
+/// 6. line (which contains a [MdLineFragments]). The parsers in [parse_element] file handle this.
 #[rustfmt::skip]
 pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
     let (input, output) = many0(
@@ -38,13 +42,9 @@ pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
         alt((
             map(parse_title_opt_eol,                 MdBlockElement::Title),
             map(parse_tags_opt_eol,                  MdBlockElement::Tags),
-
             map(parse_block_heading_opt_eol,         MdBlockElement::Heading),
-
             map(parse_block_smart_list,              MdBlockElement::SmartList),
-
             map(parse_block_code,                    MdBlockElement::CodeBlock),
-
             map(parse_block_markdown_text_until_eol, MdBlockElement::Text),
         )),
     )(input)?;

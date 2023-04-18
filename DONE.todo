@@ -40,6 +40,9 @@ parse_smart_lists_in_markdown:
   ✔ deprecate old ul ol parser code @done(23-04-16 19:00)
   ✔ make test data consistent @done(23-04-17 13:30)
   ✔ fix all clippy warnings @done(23-04-17 13:31)
+  ✔ editor architecture (general purpose editor component or specific to notes?) @done(23-04-17 17:06)
+  ✔ fix checkboxes `[x]` `[ ]` - select new color & glyph for `[x]` @done(23-04-18 10:21)
+  ✔ checkboxes should only be rendered inside of a smart list @done(23-04-18 15:51)
 
 fix lolcat (https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue++project%3Ar3bl-org%2F1+lolcat+):
   ✔ add `color_wheel` mod to `core` crate @done(23-02-26 10:42)

@@ -3,18 +3,20 @@ features: <https://github.com/orgs/r3bl-org/projects/1/views/1>
 backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
 
 AI:
-  ✔ editor architecture (general purpose editor component or specific to notes?) @done(23-04-17 17:06)
-  ✔ fix checkboxes `[x]` `[ ]` - select new color & glyph for `[x]` @done(23-04-18 10:21)
-  ☐ should checkboxes only be rendered inside of a smart list?
-  ☐ rename `tag` to `topic`?
   ☐ add other metadata tags to the MD parser (look at orgmode.org) like `author`, `date`
   ☐ editor config options - make editor read only
+  ☐ update editor example app to be preloaded w/ MD snippet for testing (not empty buffer)
+  ☐ make README for TUI better
+    - add getting started guide w/ video & clear instructions on running demo, and looking at egs
+    - add `sh` scripts in addition to `fish` scripts for people who don't have `fish`
+    - add project structure to contributor guide
+    - update links in all the README (to the stuff above)
 
 update changelog:
   ☐ correct console color support at RenderOps level (ANSI256, Truecolor, Grayscale)
   ☐ brand new markdown parser
     - support for metadata tags
-    - support for smart lists
+    - support for smart lists (with checkboxes for todos)
   ☐ brand new syntax highlighting
     - each heading level has different lolcat
     - smart lists are colored differently (both ordered and unordered are different)
@@ -23,12 +25,6 @@ update changelog:
     - ConsoleLogInColor
     - PrettyPrintDebug
     - ConvertToPlainText
-
-fix performance problem:
-  ☐ scroll left / right slow in type ahead completion dialog
-
-add todo parser (https://github.com/r3bl-org/r3bl_rs_utils/issues/96):
-  ☐ support for todo apps
 
 release new version:
   ☐ update `CHANGELOG.md`
@@ -39,6 +35,13 @@ release new version:
   ☐ publish to crates.io
   ☐ make reddit post w/ videos
   ☐ announce it on this week in rust (https://github.com/rust-lang/this-week-in-rust/pulls)
+
+fix performance problem:
+  ☐ scroll left / right slow in type ahead completion dialog
+
+add todo parser (https://github.com/r3bl-org/r3bl_rs_utils/issues/96):
+  ☐ support for todo apps
+
 
 continue building r3bl_cmdr:
   r3bl_rs_utils:
