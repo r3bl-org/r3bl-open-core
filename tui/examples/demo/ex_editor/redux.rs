@@ -74,6 +74,85 @@ pub struct Reducer;
 
 mod reducer_impl {
     use super::*;
+    use crate::ex_editor::ComponentId;
+
+    pub fn get_default_content() -> Vec<String> {
+        vec![
+"@title: untitled",
+"@tags: foo, bar, baz",
+"@authors: xyz, abc",
+"@date: 12-12-1234",
+"",
+"# This approach will not be easy. You are required to fly straight😀",
+"## Did he take those two new droids with him? They hit accelerator.😀 We will deal with your Rebel friends. Commence primary ignition.😀",
+"",
+"1. line 1 of 2",
+"2. line 2 of 2",
+"",
+"```ts",
+"let a=1;",
+"```",
+"",
+"`foo`",
+"",
+"*bar*",
+"**baz**",
+"",
+"```rs",
+"let a=1;",
+"```",
+"",
+"- [x] done",
+"- [ ] todo",
+"",
+"# Random writing from star wars text lorem ipsum generator",
+"",
+"1. A hyperlink [link](https://forcemipsum.com/)",
+"   inline code `code`",
+"    2. Did you hear that?",
+"       They've shut down the main reactor.",
+"       We'll be destroyed for sure.",
+"       This is madness!",
+"       We're doomed!",
+"",
+"## Random writing from star trek text lorem ipsum generator",
+"",
+"- Logic is the beginning of wisdom, not the end. ",
+"  A hyperlink [link](https://fungenerators.com/lorem-ipsum/startrek/)",
+"  I haven't faced death. I've cheated death. ",
+"  - I've tricked my way out of death and patted myself on the back for my ingenuity; ",
+"    I know nothing. It's not safe out here. ",
+"    - Madness has no purpose. Or reason. But it may have a goal.",
+"      Without them to strengthen us, we will weaken and die. ",
+"      You remove those obstacles.",
+"      - But one man can change the present!  Without freedom of choice there is no creativity. ",
+"        I object to intellect without discipline; I object to power without constructive purpose. ",
+"        - Live Long and Prosper. To Boldly Go Where No Man Has Gone Before",
+"          It’s a — far, far better thing I do than I have ever done before",
+"          - A far better resting place I go to than I have ever know",
+"            Something Spock was trying to tell me on my birthday",
+"",
+].iter().map(|s| s.to_string()).collect()
+    }
+
+    // 00: this is how init state is created
+    pub fn get_initial_state() -> State {
+        let editor_buffers = {
+            let editor_buffer = {
+                let mut editor_buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+                editor_buffer.set_lines(get_default_content());
+                editor_buffer
+            };
+            let mut it = HashMap::new();
+            it.insert(ComponentId::Editor as u8, editor_buffer);
+            it
+        };
+
+        State {
+            editor_buffers,
+            dialog_buffers: Default::default(),
+        }
+    }
 
     #[async_trait]
     impl AsyncReducer<State, Action> for Reducer {
@@ -208,7 +287,7 @@ mod reducer_impl {
     }
 }
 
-#[derive(Clone, PartialEq, Default)]
+#[derive(Clone, PartialEq)]
 pub struct State {
     pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
     pub dialog_buffers: HashMap<FlexBoxId, DialogBuffer>,
@@ -216,6 +295,10 @@ pub struct State {
 
 mod state_impl {
     use super::*;
+
+    impl Default for State {
+        fn default() -> Self { reducer_impl::get_initial_state() }
+    }
 
     impl HasEditorBuffers for State {
         fn get_editor_buffer(&self, id: FlexBoxId) -> Option<&EditorBuffer> {

@@ -1,8 +1,9 @@
 # Business model 💰
 
-- R3BL CMDR which is FOSS
-- R3BL BASE product is proprietary and closed source
-- Business model is similar to Slack, JetBrains, Atlassian, etc.
+- TUI engine is free and open source (FOSS)
+- R3BL CMDR product is closed source
+- R3BL BASE product is closed source & subscription based
+- Business model is similar to JetBrains
 
 ╭──────────────────────────────────────────────────────────────╮
 │ Rust is reliable, efficient, fast, cheap to host services ⚡ │

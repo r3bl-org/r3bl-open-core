@@ -28,7 +28,7 @@ use super::*;
 /// Constants for the ids.
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum ComponentId {
+pub enum ComponentId {
     Editor = 1,
     SimpleDialog = 2,
     AutocompleteDialog = 3,
