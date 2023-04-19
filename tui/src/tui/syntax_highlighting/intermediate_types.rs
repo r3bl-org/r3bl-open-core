@@ -62,14 +62,15 @@ pub type StyleUSSpanLines = List<StyleUSSpanLine>;
 
 impl StyleUSSpanLine {
     /// Eg: "@tags: [tag1, tag2, tag3]"
-    pub fn from_tags(
+    pub fn from_csvp(
+        key: &str,
         tag_list: &List<&'_ str>,
         maybe_current_box_computed_style: &Option<Style>,
     ) -> Self {
         let mut acc_line_output = StyleUSSpanLine::default();
         acc_line_output += StyleUSSpan::new(
             maybe_current_box_computed_style.unwrap_or_default() + get_metadata_tags_marker_style(),
-            US::from(TAGS),
+            US::from(key),
         );
         acc_line_output += StyleUSSpan::new(
             maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
@@ -90,17 +91,17 @@ impl StyleUSSpanLine {
                 );
             }
         }
-        
+
         acc_line_output
     }
 
     /// Eg: "@title: Something"
-    pub fn from_title(text: &str, maybe_current_box_computed_style: &Option<Style>) -> Self {
+    pub fn from_kvp(key: &str, text: &str, maybe_current_box_computed_style: &Option<Style>) -> Self {
         let mut acc_line_output = StyleUSSpanLine::default();
         acc_line_output += StyleUSSpan::new(
             maybe_current_box_computed_style.unwrap_or_default()
                 + get_metadata_title_marker_style(),
-            US::from(TITLE),
+            US::from(key),
         );
         acc_line_output += StyleUSSpan::new(
             maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),

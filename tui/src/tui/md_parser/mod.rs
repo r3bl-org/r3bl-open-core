@@ -31,7 +31,7 @@
 //!    [MdBlockElement], [MdLineFragment] and all the other intermediate types & enums required for
 //!    parsing.
 //! 3. All the parsers related to parsing metadata specific for R3BL applications which are not
-//!    standard Markdown can be found in [parse_metadata_tags] and [parse_metadata_title].
+//!    standard Markdown can be found in [parse_metadata_kv] and [parse_metadata_kcsv].
 //! 4. All the parsers that are related to parsing the main "blocks" of Markdown, such as order
 //!    lists, unordered lists, code blocks, text blocks, heading blocks, can be found [block].
 //! 5. All the parsers that are related to parsing a single line of Markdown text, such as links,
@@ -40,16 +40,16 @@
 // External use.
 pub mod block;
 pub mod convert_to_plain_text;
-pub mod parser;
 pub mod parse_element;
-pub mod parse_metadata_tags;
-pub mod parse_metadata_title;
+pub mod parse_metadata_kcsv;
+pub mod parse_metadata_kv;
+pub mod parser;
 pub mod types;
 
 pub use block::*;
 pub use convert_to_plain_text::*;
-pub use parser::*;
 pub use parse_element::*;
-pub use parse_metadata_tags::*;
-pub use parse_metadata_title::*;
+pub use parse_metadata_kcsv::*;
+pub use parse_metadata_kv::*;
+pub use parser::*;
 pub use types::*;

@@ -311,11 +311,18 @@ impl StyleUSSpanLines {
         let mut lines = StyleUSSpanLines::default();
 
         match block {
-            MdBlockElement::Title(title_text) => {
-                lines += StyleUSSpanLine::from_title(title_text, maybe_current_box_computed_style);
+            MdBlockElement::Title(title) => {
+                lines += StyleUSSpanLine::from_kvp(TITLE, title, maybe_current_box_computed_style);
             }
-            MdBlockElement::Tags(tag_list) => {
-                lines += StyleUSSpanLine::from_tags(tag_list, maybe_current_box_computed_style);
+            MdBlockElement::Date(date) => {
+                lines += StyleUSSpanLine::from_kvp(DATE, date, maybe_current_box_computed_style);
+            }
+            MdBlockElement::Tags(tags) => {
+                lines += StyleUSSpanLine::from_csvp(TAGS, tags, maybe_current_box_computed_style);
+            }
+            MdBlockElement::Authors(authors) => {
+                lines +=
+                    StyleUSSpanLine::from_csvp(AUTHORS, authors, maybe_current_box_computed_style);
             }
             MdBlockElement::Heading(heading_data) => {
                 lines.push(StyleUSSpanLine::from_heading_data(

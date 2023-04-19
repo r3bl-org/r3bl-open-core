@@ -29,9 +29,9 @@ use crate::*;
 /// - Parse input: `@tags: tag1, tag2, tag3`.
 /// - There may or may not be a newline at the end.
 #[rustfmt::skip]
-pub fn parse_tags_opt_eol(input: &str) -> IResult<&str, List<&str>> {
+pub fn parse_csv_opt_eol<'a>(tag_name: &'a str, input: &'a str) -> IResult<&'a str, List<&'a str>> {
     let (remainder, tags_text) = preceded(
-        /* start */ tuple((tag(TAGS), tag(COLON), tag(SPACE))),
+        /* start */ tuple((tag(tag_name), tag(COLON), tag(SPACE))),
         /* output */ alt((
             is_not(NEW_LINE),
             recognize(many1(anychar)),
@@ -121,7 +121,7 @@ mod test_parse_tags_opt_eol {
     #[test]
     fn test_not_quoted_no_eol() {
         let input = "@tags: tag1, tag2, tag3";
-        let (input, output) = super::parse_tags_opt_eol(input).unwrap();
+        let (input, output) = super::parse_csv_opt_eol(TAGS, input).unwrap();
         assert_eq2!(input, "");
         assert_eq2!(output, list!["tag1", "tag2", "tag3"]);
     }
@@ -130,18 +130,27 @@ mod test_parse_tags_opt_eol {
     fn test_not_quoted_no_eol_err_whitespace() {
         // First element mustn't have any space prefix.
         assert_eq2!(
-            parse_tags_opt_eol("@tags:  tag1, tag2, tag3").is_err(),
+            parse_csv_opt_eol(TAGS, "@tags:  tag1, tag2, tag3").is_err(),
             true,
         );
 
         // 2nd element onwards must have a single space prefix.
-        assert_eq2!(parse_tags_opt_eol("@tags: tag1,tag2, tag3").is_err(), true,);
-        assert_eq2!(parse_tags_opt_eol("@tags: tag1,  tag2,tag3").is_err(), true,);
-        assert_eq2!(parse_tags_opt_eol("@tags: tag1, tag2,tag3").is_err(), true,);
+        assert_eq2!(
+            parse_csv_opt_eol(TAGS, "@tags: tag1,tag2, tag3").is_err(),
+            true,
+        );
+        assert_eq2!(
+            parse_csv_opt_eol(TAGS, "@tags: tag1,  tag2,tag3").is_err(),
+            true,
+        );
+        assert_eq2!(
+            parse_csv_opt_eol(TAGS, "@tags: tag1, tag2,tag3").is_err(),
+            true,
+        );
 
         // It is ok to have more than 1 prefix space for 2nd element onwards.
         assert_eq2!(
-            parse_tags_opt_eol("@tags: tag1, tag2,  tag3").unwrap(),
+            parse_csv_opt_eol(TAGS, "@tags: tag1, tag2,  tag3").unwrap(),
             ("", list!["tag1", "tag2", " tag3"]),
         );
     }
@@ -151,20 +160,20 @@ mod test_parse_tags_opt_eol {
         // Valid.
         {
             let input = "@tags: tag1, tag2, tag3\n";
-            let (input, output) = parse_tags_opt_eol(input).unwrap();
+            let (input, output) = parse_csv_opt_eol(TAGS, input).unwrap();
             assert_eq2!(input, "");
             assert_eq2!(output, list!["tag1", "tag2", "tag3"]);
         }
 
         {
             let input = "@tags: tag1, tag2, tag3\n]\n";
-            let result = parse_tags_opt_eol(input);
+            let result = parse_csv_opt_eol(TAGS, input);
             assert_eq2!(result.is_err(), false);
         }
 
         {
             let input = "@tags: tag1, tag2, tag3";
-            let result = parse_tags_opt_eol(input);
+            let result = parse_csv_opt_eol(TAGS, input);
             assert_eq2!(result.is_err(), false);
         }
     }
@@ -173,27 +182,27 @@ mod test_parse_tags_opt_eol {
     fn test_not_quoted_with_eol_whitespace() {
         // First element mustn't have any space prefix.
         assert_eq2!(
-            parse_tags_opt_eol("@tags:  tag1, tag2, tag3\n").is_err(),
+            parse_csv_opt_eol(TAGS, "@tags:  tag1, tag2, tag3\n").is_err(),
             true,
         );
 
         // 2nd element onwards must have a single space prefix.
         assert_eq2!(
-            parse_tags_opt_eol("@tags: tag1,tag2, tag3\n").is_err(),
+            parse_csv_opt_eol(TAGS, "@tags: tag1,tag2, tag3\n").is_err(),
             true,
         );
         assert_eq2!(
-            parse_tags_opt_eol("@tags: tag1,  tag2,tag3\n").is_err(),
+            parse_csv_opt_eol(TAGS, "@tags: tag1,  tag2,tag3\n").is_err(),
             true,
         );
         assert_eq2!(
-            parse_tags_opt_eol("@tags: tag1, tag2,tag3\n").is_err(),
+            parse_csv_opt_eol(TAGS, "@tags: tag1, tag2,tag3\n").is_err(),
             true,
         );
 
         // It is ok to have more than 1 prefix space for 2nd element onwards.
         assert_eq2!(
-            parse_tags_opt_eol("@tags: tag1, tag2,  tag3\n").unwrap(),
+            parse_csv_opt_eol(TAGS, "@tags: tag1, tag2,  tag3\n").unwrap(),
             ("", list!["tag1", "tag2", " tag3"]),
         );
     }
@@ -201,7 +210,7 @@ mod test_parse_tags_opt_eol {
     #[test]
     fn test_not_quoted_with_postfix_content_1() {
         let input = "@tags: \nfoo\nbar";
-        let (input, output) = parse_tags_opt_eol(input).unwrap();
+        let (input, output) = parse_csv_opt_eol(TAGS, input).unwrap();
         assert_eq2!(input, "foo\nbar");
         assert_eq2!(output, list![]);
     }

@@ -62,8 +62,10 @@ impl<'a> PrettyPrintDebug for MdBlockElement<'a> {
                 };
                 format!("code block, line count: {line_count}, lang: {lang}")
             }
-            MdBlockElement::Title(title_text) => format!("title: {title_text}"),
-            MdBlockElement::Tags(list_tags) => format!("tags: {}", list_tags.join(", ")),
+            MdBlockElement::Title(title) => format!("title: {}", title),
+            MdBlockElement::Tags(tags) => format!("tags: {}", tags.join(", ")),
+            MdBlockElement::Date(date) => format!("title: {}", date),
+            MdBlockElement::Authors(authors) => format!("tags: {}", authors.join(", ")),
             MdBlockElement::SmartList((list_lines, _bullet_kind, _indent)) => format!(
                 "[  {}  ]",
                 list_lines
