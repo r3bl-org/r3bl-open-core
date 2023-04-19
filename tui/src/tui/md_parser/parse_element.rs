@@ -104,6 +104,7 @@ pub fn parse_element_image(input: &str) -> IResult<&str, HyperlinkData> {
 /// (without regex) we need to match against our (start) tags, then consume one char; we repeat
 /// this until we run into one of our special characters (start tags) then we return this slice.
 #[rustfmt::skip]
+// 00: FIXME this breaks if there's emoji in the line *anychar* errors out
 pub fn parse_element_plaintext(input: &str) -> IResult<&str, &str> {
     recognize(
         many1(

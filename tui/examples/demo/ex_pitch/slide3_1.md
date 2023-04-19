@@ -12,4 +12,4 @@ For a team of 50 developers, the amount of time spent searching
 for answers/solutions adds up to between 333-651 hours of
 time lost per week across the entire team.
 
-<https://survey.stackoverflow.co/2022/#integrated-development-environment>
+[survey](https://survey.stackoverflow.co/2022/#integrated-development-environment)

@@ -114,41 +114,53 @@ mod app_with_layout_impl_trait_app {
             });
 
             // Ctrl + n => next slide.
-            if let DialogEvent::ActivateModal = DialogEvent::should_activate_modal(
-                input_event,
-                KeyPress::WithModifiers {
-                    key: Key::Character('n'),
-                    mask: ModifierKeysMask::CTRL,
-                },
-            ) {
+            if input_event.matches_keypress(KeyPress::WithModifiers {
+                key: Key::Character('n'),
+                mask: ModifierKeysMask::CTRL,
+            }) {
                 // Spawn next slide action.
                 spawn_dispatch_action!(args.shared_store, Action::SlideControlNextSlide);
                 return Ok(EventPropagation::Consumed);
             };
 
             // Ctrl + p => previous slide.
-            if let DialogEvent::ActivateModal = DialogEvent::should_activate_modal(
-                input_event,
-                KeyPress::WithModifiers {
-                    key: Key::Character('p'),
-                    mask: ModifierKeysMask::CTRL,
-                },
-            ) {
+            if input_event.matches_keypress(KeyPress::WithModifiers {
+                key: Key::Character('p'),
+                mask: ModifierKeysMask::CTRL,
+            }) {
                 // Spawn previous slide action.
                 spawn_dispatch_action!(args.shared_store, Action::SlideControlPreviousSlide);
                 return Ok(EventPropagation::Consumed);
             };
 
-            // If modal not activated, route the input event to the focused component.
-            ComponentRegistry::route_event_to_focused_component(
-                &mut self.component_registry,
-                input_event,
-                state,
-                shared_store,
-                shared_global_data,
-                window_size,
-            )
-            .await
+            // 00: only allow up, down, left, right to be passed below
+            if input_event.matches_any_of_these_keypresses(&[
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Up),
+                },
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Down),
+                },
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Left),
+                },
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Right),
+                },
+            ]) {
+                // If modal not activated, route the input event to the focused component.
+                ComponentRegistry::route_event_to_focused_component(
+                    &mut self.component_registry,
+                    input_event,
+                    state,
+                    shared_store,
+                    shared_global_data,
+                    window_size,
+                )
+                .await
+            } else {
+                Ok(EventPropagation::Propagate)
+            }
         }
 
         fn init(&mut self) { populate_component_registry::init(self); }

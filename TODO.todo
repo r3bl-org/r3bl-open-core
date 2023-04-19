@@ -3,7 +3,9 @@ features: <https://github.com/orgs/r3bl-org/projects/1/views/1>
 backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
 
 AI:
-  ☐ update editor example app to be preloaded w/ MD snippet for testing (not empty buffer)
+  ✔ update editor example app to be preloaded w/ MD snippet for testing (not empty buffer) @done(23-04-19 15:28)
+  ✔ update pitch example app to be uneditable @done(23-04-19 15:28)
+  ☐ fix emoji breaking MD line parsing `parse_element::parse_element_plaintext()`
   ☐ editor config options - make editor read only
   ☐ make README for TUI better
     - add getting started guide w/ video & clear instructions on running demo, and looking at egs

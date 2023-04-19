@@ -46,6 +46,26 @@ mod helpers {
     use super::*;
 
     impl InputEvent {
+        pub fn matches_keypress(&self, other: KeyPress) -> bool {
+            if let InputEvent::Keyboard(this) = self {
+                if this == &other {
+                    return true;
+                }
+            }
+            false
+        }
+
+        pub fn matches_any_of_these_keypresses(&self, others: &[KeyPress]) -> bool {
+            for other in others {
+                if self.matches_keypress(*other) {
+                    return true;
+                }
+            }
+            false
+        }
+    }
+
+    impl InputEvent {
         /// Checks to see whether the `input_event` matches any of the `exit_keys`. Returns `true`
         /// if it does and `false` otherwise.
         pub fn matches(&self, exit_keys: &[InputEvent]) -> bool {

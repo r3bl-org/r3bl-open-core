@@ -8,5 +8,5 @@ Nazmul Idris
 We are committed to energy efficiency & sustainability
 with Rust 🌱
 
-All R3BL software is written w/ ❤️  in Rust 🦀 at
-Palo Alto 🗽
+All R3BL software is written w/ ❤️  in Rust 🦀 in
+California 🗽
