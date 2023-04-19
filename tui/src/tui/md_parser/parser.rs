@@ -17,7 +17,7 @@
 
 use nom::{branch::*, combinator::*, multi::*, IResult};
 
-use crate::*;
+use crate::{constants::*, tui::misc_types::list_of::List, *};
 
 /// This is the main parser entry point. It takes a string slice and if it can be parsed, returns a
 /// [MdDocument] that represents the parsed Markdown.
@@ -27,8 +27,8 @@ use crate::*;
 ///
 /// Each item in this [MdDocument] corresponds to a block of Markdown [MdBlockElement], which can be
 /// one of the following variants:
-/// 1. Metadata title. The parsers in [parse_metadata_title] file handle this.
-/// 2. Metadata tags. The parsers in [parse_metadata_tags] file handle this.
+/// 1. Metadata title. The parsers in [parse_metadata_kv] file handle this.
+/// 2. Metadata tags. The parsers in [parse_metadata_kcsv] file handle this.
 /// 3. Heading (which contains a [HeadingLevel] & [MdLineFragments]).
 /// 4. Smart ordered & unordered list (which itself contains a [Vec] of [MdLineFragments]. The
 ///    parsers in [mod@parse_block_smart_list] file handle this.
@@ -37,11 +37,37 @@ use crate::*;
 /// 6. line (which contains a [MdLineFragments]). The parsers in [parse_element] file handle this.
 #[rustfmt::skip]
 pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
+    // key: TAGS, value: CSV parser.
+    fn parse_tags_list(input: &str) -> IResult<&str, List<&str>>
+    {
+        parse_csv_opt_eol(TAGS, input)
+    }
+
+    // key: AUTHORS, value: CSV parser.
+    fn parse_authors_list(input: &str) -> IResult<&str, List<&str>>
+    {
+        parse_csv_opt_eol(AUTHORS, input)
+    }
+
+    // key: TITLE, value: KV parser.
+    fn parse_title_value(input: &str) -> IResult<&str, &str>
+    {
+        parse_kv_opt_eol(TITLE, input)
+    }
+
+    // key: DATE, value: KV parser.
+    fn parse_date_value(input: &str) -> IResult<&str, &str>
+    {
+        parse_kv_opt_eol(DATE, input)
+    }
+
     let (input, output) = many0(
         // NOTE: The ordering of the parsers below matters.
         alt((
-            map(parse_title_opt_eol,                 MdBlockElement::Title),
-            map(parse_tags_opt_eol,                  MdBlockElement::Tags),
+            map(parse_title_value,                   MdBlockElement::Title),
+            map(parse_tags_list,                     MdBlockElement::Tags),
+            map(parse_authors_list,                  MdBlockElement::Authors),
+            map(parse_date_value,                    MdBlockElement::Date),
             map(parse_block_heading_opt_eol,         MdBlockElement::Heading),
             map(parse_block_smart_list,              MdBlockElement::SmartList),
             map(parse_block_code,                    MdBlockElement::CodeBlock),

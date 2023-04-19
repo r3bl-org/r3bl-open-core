@@ -29,9 +29,9 @@ use crate::*;
 /// - Parse input: `@title: Something`.
 /// - There may or may not be a newline at the end.
 #[rustfmt::skip]
-pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
+pub fn parse_kv_opt_eol<'a>(tag_name: &'a str, input: &'a str) -> IResult<&'a str, &'a str> {
     let (remainder, title_text) = preceded(
-        /* start */ tuple((tag(TITLE), tag(COLON), tag(SPACE))),
+        /* start */ tuple((tag(tag_name), tag(COLON), tag(SPACE))),
         /* output */ alt((
             is_not(NEW_LINE),
             recognize(many1(anychar)),
@@ -53,8 +53,8 @@ pub fn parse_title_opt_eol(input: &str) -> IResult<&str, &str> {
         }
     }
 
-    // Normal case: if there is a newline, consume it since there may or may not be a newline at
-    // the end.
+    // Normal case: if there is a newline, consume it since there may or may not be a newline at the
+    // end.
     let (remainder, _) = opt(tag(NEW_LINE))(remainder)?;
     Ok((remainder, title_text))
 }
@@ -69,7 +69,7 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_not_quoted_no_eol() {
         let input = "@title: Something";
-        let (input, output) = parse_title_opt_eol(input).unwrap();
+        let (input, output) = parse_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{}', output: '{}'",
             Black.on(Yellow).paint(input),
@@ -82,7 +82,7 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_not_quoted_with_eol() {
         let input = "@title: Something\n";
-        let (input, output) = parse_title_opt_eol(input).unwrap();
+        let (input, output) = parse_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{}', output: '{}'",
             Black.on(Yellow).paint(input),
@@ -95,7 +95,7 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_no_quoted_no_eol_nested_title() {
         let input = "@title: Something @title: Something";
-        let it = parse_title_opt_eol(input);
+        let it = parse_kv_opt_eol(TITLE, input);
         assert_eq2!(it.is_err(), true);
         println!(
             "err: '{}'",
@@ -107,7 +107,7 @@ mod test_parse_title_no_eol {
     fn test_no_quoted_with_eol_title_with_postfix_content_1() {
         let input = "@title: \nfoo\nbar";
         println!("input: '{}'", Black.on(Cyan).paint(input),);
-        let (input, output) = parse_title_opt_eol(input).unwrap();
+        let (input, output) = parse_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{}'\noutput: '{}'",
             Black.on(Yellow).paint(input),
@@ -121,7 +121,7 @@ mod test_parse_title_no_eol {
     fn test_no_quoted_with_eol_title_with_postfix_content_2() {
         let input = "@title:  a\nfoo\nbar";
         println!("input: '{}'", Black.on(Cyan).paint(input),);
-        let (input, output) = parse_title_opt_eol(input).unwrap();
+        let (input, output) = parse_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{}'\noutput: '{}'",
             Black.on(Yellow).paint(input),
@@ -135,7 +135,7 @@ mod test_parse_title_no_eol {
     fn test_no_quoted_with_eol_title_with_postfix_content_3() {
         let input = "@title: \n\n# heading1\n## heading2";
         println!("❯ input: \n'{}'", Black.on(Cyan).paint(input),);
-        let (remainder, title) = parse_title_opt_eol(input).unwrap();
+        let (remainder, title) = parse_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "❯ remainder: \n'{}'\n❯ title: \n'{}'",
             Black.on(Yellow).paint(remainder),

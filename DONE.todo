@@ -44,6 +44,9 @@ parse_smart_lists_in_markdown:
   ✔ fix checkboxes `[x]` `[ ]` - select new color & glyph for `[x]` @done(23-04-18 10:21)
   ✔ checkboxes should only be rendered inside of a smart list @done(23-04-18 15:51)
 
+misc:
+  ✔ add other metadata tags to the MD parser (look at orgmode.org) like `authors`, `date` @done(23-04-19 11:58)
+
 fix lolcat (https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue++project%3Ar3bl-org%2F1+lolcat+):
   ✔ add `color_wheel` mod to `core` crate @done(23-02-26 10:42)
   ✔ remove `lolcat` mod from `core` crate & update docs & check FIXMEs @done(23-02-26 10:42)

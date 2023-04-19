@@ -52,7 +52,9 @@ pub enum MdBlockElement<'a> {
     Text(MdLineFragments<'a>),
     CodeBlock(List<CodeBlockLine<'a>>),
     Title(&'a str),
+    Date(&'a str),
     Tags(List<&'a str>),
+    Authors(List<&'a str>),
 }
 
 /// These are things that show up in a single line of Markdown text [MdLineFragments]. They do not
@@ -127,6 +129,8 @@ impl From<usize> for HeadingLevel {
 
 /// All the Markdown literals that are used to perform parsing.
 pub mod constants {
+    pub const AUTHORS: &str = "@authors";
+    pub const DATE: &str = "@date";
     pub const TITLE: &str = "@title";
     pub const TAGS: &str = "@tags";
     pub const COLON: &str = ":";

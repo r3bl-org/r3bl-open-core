@@ -3,9 +3,8 @@ features: <https://github.com/orgs/r3bl-org/projects/1/views/1>
 backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
 
 AI:
-  ☐ add other metadata tags to the MD parser (look at orgmode.org) like `author`, `date`
-  ☐ editor config options - make editor read only
   ☐ update editor example app to be preloaded w/ MD snippet for testing (not empty buffer)
+  ☐ editor config options - make editor read only
   ☐ make README for TUI better
     - add getting started guide w/ video & clear instructions on running demo, and looking at egs
     - add `sh` scripts in addition to `fish` scripts for people who don't have `fish`
