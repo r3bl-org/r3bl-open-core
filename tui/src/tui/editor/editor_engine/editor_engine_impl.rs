@@ -36,7 +36,7 @@ use crate::*;
 pub struct EditorEngine {
     /// Set by [render](EditorEngine::render_engine).
     pub current_box: PartialFlexBox,
-    pub config_options: EditorEngineConfigOptions,
+    pub config_options: EditorEngineConfig,
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
     pub syntax_set: SyntaxSet,
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
@@ -50,7 +50,7 @@ impl Default for EditorEngine {
 impl EditorEngine {
     /// Syntax highlighting support - [SyntaxSet] and [Theme] are a very expensive objects to
     /// create, so re-use them.
-    pub fn new(config_options: EditorEngineConfigOptions) -> Self {
+    pub fn new(config_options: EditorEngineConfig) -> Self {
         Self {
             current_box: Default::default(),
             config_options,
@@ -67,50 +67,56 @@ impl EditorEngine {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EditorEngineConfigOptions {
-    pub multiline_mode: EditorLineMode,
-    pub syntax_highlight: SyntaxHighlightConfig,
-    // AI: allow for this editor to be read-only (eg: for presentation demo example)
+pub struct EditorEngineConfig {
+    pub multiline_mode: LineMode,
+    pub syntax_highlight: SyntaxHighlightMode,
+    pub edit_mode: EditMode,
 }
 
 mod editor_engine_config_options_impl {
     use super::*;
 
-    impl Default for EditorEngineConfigOptions {
+    impl Default for EditorEngineConfig {
         fn default() -> Self {
             Self {
-                multiline_mode: EditorLineMode::MultiLine,
-                syntax_highlight: SyntaxHighlightConfig::Enable(
-                    DEFAULT_SYN_HI_FILE_EXT.to_string(),
-                ),
+                multiline_mode: LineMode::MultiLine,
+                syntax_highlight: SyntaxHighlightMode::Enable(DEFAULT_SYN_HI_FILE_EXT.to_string()),
+                edit_mode: EditMode::ReadWrite,
             }
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum EditorLineMode {
+pub enum EditMode {
+    ReadOnly,
+    ReadWrite,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LineMode {
     SingleLine,
     MultiLine,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum SyntaxHighlightConfig {
+pub enum SyntaxHighlightMode {
     Disable,
     /// This is only the default for buffers that are created by the component when not passed in
     /// via state. The String represents the `file_extension_for_new_empty_buffer` which is used as
-    /// the argument to `EditorBuffer::new_empty()` when creating a new editor buffer.
+    /// the argument to [EditorBuffer::new_empty()](EditorBuffer::new_empty()) when creating a new
+    /// editor buffer.
     Enable(String),
 }
 
 mod syntax_highlight_config_impl {
     use super::*;
 
-    impl SyntaxHighlightConfig {
+    impl SyntaxHighlightMode {
         pub fn get_file_extension_for_new_empty_buffer(&self) -> Option<&str> {
             match self {
-                SyntaxHighlightConfig::Disable => None,
-                SyntaxHighlightConfig::Enable(ref ext) => Some(ext.as_str()),
+                SyntaxHighlightMode::Disable => None,
+                SyntaxHighlightMode::Enable(ref ext) => Some(ext.as_str()),
             }
         }
     }

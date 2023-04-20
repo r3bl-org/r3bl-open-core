@@ -27,8 +27,8 @@ mod test_config_options {
         // multiline true.
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine: EditorEngine = EditorEngine {
-            config_options: EditorEngineConfigOptions {
-                multiline_mode: EditorLineMode::MultiLine,
+            config_options: EditorEngineConfig {
+                multiline_mode: LineMode::MultiLine,
                 ..Default::default()
             },
             ..mock_real_objects_for_editor::make_editor_engine()
@@ -84,8 +84,8 @@ mod test_config_options {
         // multiline false.
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine: EditorEngine = EditorEngine {
-            config_options: EditorEngineConfigOptions {
-                multiline_mode: EditorLineMode::SingleLine,
+            config_options: EditorEngineConfig {
+                multiline_mode: LineMode::SingleLine,
                 ..Default::default()
             },
             ..mock_real_objects_for_editor::make_editor_engine()

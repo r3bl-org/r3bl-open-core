@@ -133,33 +133,16 @@ mod app_with_layout_impl_trait_app {
                 return Ok(EventPropagation::Consumed);
             };
 
-            if input_event.matches_any_of_these_keypresses(&[
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Up),
-                },
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Down),
-                },
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Left),
-                },
-                KeyPress::Plain {
-                    key: Key::SpecialKey(SpecialKey::Right),
-                },
-            ]) {
-                // If modal not activated, route the input event to the focused component.
-                ComponentRegistry::route_event_to_focused_component(
-                    &mut self.component_registry,
-                    input_event,
-                    state,
-                    shared_store,
-                    shared_global_data,
-                    window_size,
-                )
-                .await
-            } else {
-                Ok(EventPropagation::Propagate)
-            }
+            // If modal not activated, route the input event to the focused component.
+            ComponentRegistry::route_event_to_focused_component(
+                &mut self.component_registry,
+                input_event,
+                state,
+                shared_store,
+                shared_global_data,
+                window_size,
+            )
+            .await
         }
 
         fn init(&mut self) { populate_component_registry::init(self); }
@@ -252,7 +235,11 @@ mod populate_component_registry {
                 );
             }
 
-            let config_options = EditorEngineConfigOptions::default();
+            let config_options = EditorEngineConfig {
+                edit_mode: EditMode::ReadOnly,
+                ..Default::default()
+            };
+
             EditorComponent::new_shared(id, config_options, on_buffer_change)
         };
 

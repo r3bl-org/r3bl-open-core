@@ -173,7 +173,7 @@ pub mod constructor {
         /// results in a Redux action being created and then dispatched to the given store.
         pub fn new(
             id: FlexBoxId,
-            config_options: EditorEngineConfigOptions,
+            config_options: EditorEngineConfig,
             on_buffer_change: OnEditorBufferChangeFn<S, A>,
         ) -> Self {
             Self {
@@ -185,7 +185,7 @@ pub mod constructor {
 
         pub fn new_shared(
             id: FlexBoxId,
-            config_options: EditorEngineConfigOptions,
+            config_options: EditorEngineConfig,
             on_buffer_change: OnEditorBufferChangeFn<S, A>,
         ) -> Arc<RwLock<Self>> {
             Arc::new(RwLock::new(EditorComponent::new(

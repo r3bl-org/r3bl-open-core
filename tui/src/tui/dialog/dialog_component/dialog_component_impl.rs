@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{fmt::Debug, sync::Arc};
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
 use r3bl_redux::*;
@@ -201,7 +200,7 @@ where
     pub fn new(
         id: FlexBoxId,
         dialog_options: DialogEngineConfigOptions,
-        editor_options: EditorEngineConfigOptions,
+        editor_options: EditorEngineConfig,
         on_dialog_press_handler: OnDialogPressFn<S, A>,
         on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, A>,
     ) -> Self {
@@ -216,7 +215,7 @@ where
     pub fn new_shared(
         id: FlexBoxId,
         dialog_options: DialogEngineConfigOptions,
-        editor_options: EditorEngineConfigOptions,
+        editor_options: EditorEngineConfig,
         on_dialog_press_handler: OnDialogPressFn<S, A>,
         on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, A>,
     ) -> Arc<RwLock<Self>> {

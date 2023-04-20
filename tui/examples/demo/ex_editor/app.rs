@@ -448,9 +448,10 @@ mod populate_component_registry {
             ..Default::default()
         };
 
-        let editor_options = EditorEngineConfigOptions {
-            multiline_mode: EditorLineMode::SingleLine,
-            syntax_highlight: SyntaxHighlightConfig::Disable,
+        let editor_options = EditorEngineConfig {
+            multiline_mode: LineMode::SingleLine,
+            syntax_highlight: SyntaxHighlightMode::Disable,
+            edit_mode: EditMode::ReadWrite,
         };
 
         let shared_dialog_component = {
@@ -533,9 +534,10 @@ mod populate_component_registry {
             ..Default::default()
         };
 
-        let editor_options = EditorEngineConfigOptions {
-            multiline_mode: EditorLineMode::SingleLine,
-            syntax_highlight: SyntaxHighlightConfig::Disable,
+        let editor_options = EditorEngineConfig {
+            multiline_mode: LineMode::SingleLine,
+            syntax_highlight: SyntaxHighlightMode::Disable,
+            edit_mode: EditMode::ReadWrite,
         };
 
         let shared_dialog_component = {
@@ -618,7 +620,7 @@ mod populate_component_registry {
                 );
             }
 
-            let config_options = EditorEngineConfigOptions::default();
+            let config_options = EditorEngineConfig::default();
             EditorComponent::new_shared(id, config_options, on_buffer_change)
         };
 

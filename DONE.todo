@@ -49,6 +49,7 @@ misc:
   ✔ update editor example app to be preloaded w/ MD snippet for testing (not empty buffer) @done(23-04-19 15:28)
   ✔ update pitch example app to be uneditable @done(23-04-19 15:28)
   ✔ fix emoji breaking MD line parsing `parse_element::parse_element_plaintext()` @done(23-04-19 18:33)
+  ✔ editor config options - make editor read only @done(23-04-20 13:37)
 
 fix lolcat (https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue++project%3Ar3bl-org%2F1+lolcat+):
   ✔ add `color_wheel` mod to `core` crate @done(23-02-26 10:42)
