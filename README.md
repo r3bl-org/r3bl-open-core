@@ -122,7 +122,7 @@ For more information please read the README for the
 
 Here's a video of the demo in action:
 
-https://user-images.githubusercontent.com/2966499/223200857-33c346fe-ed66-4216-8fb5-2f8c602d5b7c.mp4
+https://user-images.githubusercontent.com/2966499/233481838-b6da884f-f73d-4e1f-adef-94beb9761c46.mp4
 
 
 ## redux
