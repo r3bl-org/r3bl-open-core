@@ -60,6 +60,8 @@ ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 
 - [Text User Interface engine for Rust](#text-user-interface-engine-for-rust)
 - [Examples to get you started](#examples-to-get-you-started)
+  - [Video of the demo in action](#video-of-the-demo-in-action)
+  - [Run the demo locally](#run-the-demo-locally)
 - [How does layout, rendering, and event handling work in general?](#how-does-layout-rendering-and-event-handling-work-in-general)
 - [Life of an input event](#life-of-an-input-event)
 - [The window](#the-window)
@@ -108,30 +110,32 @@ built-in. No more blocking the main thread for user input, for async middleware,
 
 Here are some framework highlights:
 
-- An easy to use and approachable API that is inspired by React, JSX, CSS, and Redux. Lots of
-  components and things are provided for you so you don't have to build them from scratch. This is a
-  full featured component library including:
-  - Redux for state management (fully async, concurrent & parallel).
-  - CSS like declarative styling engine.
-  - CSS flexbox like declarative layout engine which is fully responsive. You can resize your
-    terminal window and everything will be laid out correctly.
-  - A terminal independent underlying rendering and painting engine (can use crossterm or termion or
-    whatever you want).
-  - Markdown text editor w/ syntax highlighting support, metadata (tags, title, author, date), smart
-    lists. This uses a custom Markdown parser and custom syntax highligther. Syntax highlighting for
-    code blocks is provided by the syntect crate.
-  - Modal dialog boxes. And autocompletion dialog boxes.
-  - Lolcat (color gradients) implementation w/ a rainbow color-wheel palette. All the color output
-    is sensitive to the capabilities of the terminal. Colors are gracefully downgraded from
-    truecolor, to ANSI256, to grayscale.
-  - Support for Unicode grapheme clusters in strings. You can safely use emojis, and other Unicode
-    characters in your TUI apps.
-  - Support for mouse events.
-- The entire TUI framework itself supports concurrency & parallelism (user input, rendering, etc.
-  are generally non blocking).
-- It is fast! There are no needless re-renders, or flickering. Animations and color changes are
-  smooth (check this out for yourself by running the examples). You can even build your TUI in
-  layers (like z-order in a browser's DOM).
+-   An easy to use and approachable API that is inspired by React, JSX, CSS, and Redux. Lots of
+    components and things are provided for you so you don't have to build them from scratch. This is a
+    full featured component library including:
+    -   Redux for state management (fully async, concurrent & parallel).
+    -   CSS like declarative styling engine.
+    -   CSS flexbox like declarative layout engine which is fully responsive. You can resize your
+        terminal window and everything will be laid out correctly.
+    -   A terminal independent underlying rendering and painting engine (can use crossterm or termion or
+        whatever you want).
+    -   Markdown text editor w/ syntax highlighting support, metadata (tags, title, author, date), smart
+        lists. This uses a custom Markdown parser and custom syntax highligther. Syntax highlighting for
+        code blocks is provided by the syntect crate.
+    -   Modal dialog boxes. And autocompletion dialog boxes.
+    -   Lolcat (color gradients) implementation w/ a rainbow color-wheel palette. All the color output
+        is sensitive to the capabilities of the terminal. Colors are gracefully downgraded from
+        truecolor, to ANSI256, to grayscale.
+    -   Support for Unicode grapheme clusters in strings. You can safely use emojis, and other Unicode
+        characters in your TUI apps.
+    -   Support for mouse events.
+-   The entire TUI framework itself supports concurrency & parallelism (user input, rendering, etc.
+    are generally non blocking).
+-   It is fast! There are no needless re-renders, or flickering. Animations and color changes are
+    smooth (check this out for yourself by running the examples). You can even build your TUI in
+    layers (like z-order in a browser's DOM).
+
+---
 
 ## Examples to get you started
 <a id="markdown-examples-to-get-you-started" name="examples-to-get-you-started"></a>
@@ -139,48 +143,41 @@ Here are some framework highlights:
 
 <!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
 
-Here's a video of the demo in action:
+### Video of the demo in action
+<a id="markdown-video-of-the-demo-in-action" name="video-of-the-demo-in-action"></a>
+
 
 https://user-images.githubusercontent.com/2966499/233481838-b6da884f-f73d-4e1f-adef-94beb9761c46.mp4
 
-1. Once you've cloned [the repo](https://github.com/r3bl-org/r3bl_rs_utils) to a folder on your
-   computer, you can run the examples you see in the video with the following commands:
-   ```sh
-   cd tui/examples
-   cargo run --release --example demo
-   ```
-   These examples cover the entire surface area of the TUI API. You can also take a look at the
-   tests in the source as well `tui/src/`. A lot of `fish` scripts are provided at the top level
-   directory of the repo which allow you to easily:
-   - run tests (`test.fish`)
-   - build the code (`build.fish`)
-   - run the logger to see log output (`log.fish`)
-   - run the examples (`run.fish`).
+### Run the demo locally
+<a id="markdown-run-the-demo-locally" name="run-the-demo-locally"></a>
 
-2. This document that you're reading is a good place to start to get a feel for the architecture of
-   the framework. You can get a mental model of how everything fits and what the TUI lifecycle is.
 
-3. Additionally the [r3bl_rs_utils_core](https://crates.io/crates/r3bl_rs_utils_core) has the
-   `tui_core` module which contains dependencies that are used by the `tui` module. They include:
-   1. Color support that is [terminal emulator
-      dependent](https://docs.rs/concolor-query/latest/concolor_query/#) ranging from truecolor, to
-      [ANSI256](https://www.ditig.com/256-colors-cheat-sheet), to grayscale.
-   2. Core dimensions and units that are used for positioning and sizing.
-   3. Grapheme cluster segment and unicode support (emoji support).
-   4. Lolcat support.
-   5. CSS like styling support.
+Once you've cloned [the repo](https://github.com/r3bl-org/r3bl_rs_utils) to a folder on your
+computer, you can run the examples you see in the video with the following commands:
 
-> Quite a few scripts are provided for your convenience in the root folder of the repo. They are all
-> `fish` script files. Here are a few worth mentioning here which are related to running the
-> example.
->
-> 1. `run-release.fish`: This will simply run the examples w/ the release build (so it will be
->    fast). You can watch the logs by running `log.fish`.
-> 2. `run.fish`: This will simply run the examples. You can watch the logs by running `log.fish`.
-> 3. `run-with-flamegraph-profiling.fish`: This will run the examples and generate a flamegraph at
->    the end so you can see profile the performance of the app.
-> 4. `run-with-crash-reporting.fish`: This will run the examples and generate a `crash_log.txt` file
->    (in the `tui` folder) in case the app crashes. This is useful for debugging.
+```sh
+cd tui/examples
+cargo run --release --example demo
+```
+
+These examples cover the entire surface area of the TUI API. You can also take a look at the
+tests in the source (`tui/src/`) as well. A lot of
+[`fish`](https://developerlife.com/2021/01/19/fish-scripting-manual/) scripts are provided at the
+top level directory of the repo which allow you to easily:
+
+-  `run-release.fish`: This will simply run the examples w/ the release build (so it will be fast).
+    You can watch the logs by running `log.fish`.
+-  `run.fish`: This will simply run the examples. You can watch the logs by running `log.fish`.
+-  `test.fish`: Run all the tests (in all crates in the Rust workspace).
+-  `build.fish`: build the code in all the crates in the Rust workspace.
+-  `log.fish`: Run the logger to see log output.
+-  `run-with-flamegraph-profiling.fish`: This will run the examples and generate a flamegraph at the
+    end so you can see profile the performance of the app.
+-  `run-with-crash-reporting.fish`: This will run the examples and generate a `crash_log.txt` file
+    (in the `tui` folder) in case the app crashes. This is useful for debugging.
+
+---
 
 ## How does layout, rendering, and event handling work in general?
 <a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>
