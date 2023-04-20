@@ -104,7 +104,6 @@ pub fn parse_element_image(input: &str) -> IResult<&str, HyperlinkData> {
 /// (without regex) we need to match against our (start) tags, then consume one char; we repeat
 /// this until we run into one of our special characters (start tags) then we return this slice.
 #[rustfmt::skip]
-// 00: FIXME this breaks if there's emoji in the line *anychar* errors out
 pub fn parse_element_plaintext(input: &str) -> IResult<&str, &str> {
     recognize(
         many1(
@@ -455,6 +454,15 @@ mod tests_parse_element {
                 code: ErrorKind::Tag
             }))
         );
+    }
+
+    #[test]
+    fn test_parse_element_plaintext_unicode() {
+        let result = parse_element_plaintext("- straight😃\n");
+        let remainder = result.as_ref().unwrap().0;
+        let output = result.as_ref().unwrap().1;
+        assert_eq2!(remainder, "\n");
+        assert_eq2!(output, "- straight😃");
     }
 
     #[test]

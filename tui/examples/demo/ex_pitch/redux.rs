@@ -133,7 +133,6 @@ mod reducer_impl {
         it
     }
 
-    // 00: this is how init state is created
     pub fn get_initial_state() -> State {
         let editor_buffer = {
             let mut editor_buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));

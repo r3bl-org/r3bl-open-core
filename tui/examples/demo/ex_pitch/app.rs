@@ -133,7 +133,6 @@ mod app_with_layout_impl_trait_app {
                 return Ok(EventPropagation::Consumed);
             };
 
-            // 00: only allow up, down, left, right to be passed below
             if input_event.matches_any_of_these_keypresses(&[
                 KeyPress::Plain {
                     key: Key::SpecialKey(SpecialKey::Up),
