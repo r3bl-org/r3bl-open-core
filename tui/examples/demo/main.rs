@@ -38,11 +38,11 @@ use reedline::*;
 const HELP_MSG: &str = "\
 Welcome to the R3BL TUI demo app.
 Type a number to run corresponding example:
-  1. 📏 App w/ no layout
-  2. 📐 App w/ 1 column responsive layout
-  3. 📐 App w/ 2 column responsive layout
-  4. 🐒 Text editor, syntax highlighting, modal dialog, and emoji
-  5. ⚾ Why R3BL? Why TUI?
+  0. 📏 App w/ no layout
+  1. 📐 App w/ 1 column responsive layout
+  2. 📐 App w/ 2 column responsive layout
+  3. 🐒 Markdown editor, syntax highlighting, modal dialog, and emoji
+  4. ⚾ Why R3BL? Why TUI?
 
 or type Ctrl+C / Ctrl+D / 'x' to exit";
 
@@ -66,11 +66,11 @@ async fn run_user_selected_example(selection: String) -> CommonResult<()> {
     throws!({
         if !selection.is_empty() {
             match selection.as_ref() {
-                "1" => throws!(ex_app_no_layout::launcher::run_app().await?),
-                "2" => throws!(ex_app_with_1col_layout::launcher::run_app().await?),
-                "3" => throws!(ex_app_with_2col_layout::launcher::run_app().await?),
-                "4" => throws!(ex_editor::launcher::run_app().await?),
-                "5" => throws!(ex_pitch::launcher::run_app().await?),
+                "0" => throws!(ex_app_no_layout::launcher::run_app().await?),
+                "1" => throws!(ex_app_with_1col_layout::launcher::run_app().await?),
+                "2" => throws!(ex_app_with_2col_layout::launcher::run_app().await?),
+                "3" => throws!(ex_editor::launcher::run_app().await?),
+                "4" => throws!(ex_pitch::launcher::run_app().await?),
                 _ => eprintln!("{}", style_error("Unknown selection 🤷")),
             }
         }

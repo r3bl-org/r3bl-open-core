@@ -60,7 +60,7 @@ pub struct DialogEngine {
 impl DialogEngine {
     pub fn new(
         dialog_options: DialogEngineConfigOptions,
-        editor_options: EditorEngineConfigOptions,
+        editor_options: EditorEngineConfig,
     ) -> Self {
         // The col_count has to be large enough to fit the terminal width so that the gradient
         // doesn't flicker. If for some reason the terminal width is not available, then we

@@ -45,6 +45,39 @@ impl EditorEngine {
             ..
         } = args;
 
+        let editor_config = &editor_engine.config_options;
+
+        if let EditMode::ReadOnly = editor_config.edit_mode {
+            if !input_event.matches_any_of_these_keypresses(&[
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Up),
+                },
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Down),
+                },
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Left),
+                },
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Right),
+                },
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::Home),
+                },
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::End),
+                },
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::PageUp),
+                },
+                KeyPress::Plain {
+                    key: Key::SpecialKey(SpecialKey::PageDown),
+                },
+            ]) {
+                return Ok(EditorEngineApplyResponse::NotApplied);
+            }
+        }
+
         if let Ok(editor_event) = EditorEvent::try_from(input_event) {
             let mut new_editor_buffer = editor_buffer.clone();
             EditorEvent::apply_editor_event(
@@ -116,7 +149,7 @@ impl EditorEngine {
 
         let syntax_highlight_enabled = matches!(
             editor_engine.config_options.syntax_highlight,
-            SyntaxHighlightConfig::Enable(_)
+            SyntaxHighlightMode::Enable(_)
         );
 
         if !syntax_highlight_enabled {
