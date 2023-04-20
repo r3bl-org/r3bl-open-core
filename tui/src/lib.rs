@@ -160,7 +160,7 @@
 //! # Examples to get you started
 //!
 //! Here's a video of the demo in action:
-//! <https://user-images.githubusercontent.com/2966499/223200857-33c346fe-ed66-4216-8fb5-2f8c602d5b7c.mp4>
+//! <https://user-images.githubusercontent.com/2966499/233481838-b6da884f-f73d-4e1f-adef-94beb9761c46.mp4>
 //!
 //! 1. You can run `cargo run --example demo` in the `tui/examples` folder to see a demo of the
 //!    library in action and play with it. The examples cover the entire surface area of the TUI

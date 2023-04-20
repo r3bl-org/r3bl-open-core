@@ -117,12 +117,15 @@ Here are some framework highlights:
     terminal window and everything will be laid out correctly.
   - A terminal independent underlying rendering and painting engine (can use crossterm or termion or
     whatever you want).
-  - Text editor w/ syntax highlighting support.
-  - Modal dialog boxes.
-  - Lolcat implementation w/ a rainbow color-wheel palette.
+  - Markdown text editor w/ syntax highlighting support, metadata (tags, title, author, date), smart
+    lists. This uses a custom Markdown parser and custom syntax highligther. Syntax highlighting for
+    code blocks is provided by the syntect crate.
+  - Modal dialog boxes. And autocompletion dialog boxes.
+  - Lolcat (color gradients) implementation w/ a rainbow color-wheel palette. All the color output
+    is sensitive to the capabilities of the terminal. Colors are gracefully downgraded from
+    truecolor, to ANSI256, to grayscale.
   - Support for Unicode grapheme clusters in strings. You can safely use emojis, and other Unicode
     characters in your TUI apps.
-  - Support for ANSI text.
   - Support for mouse events.
 - The entire TUI framework itself supports concurrency & parallelism (user input, rendering, etc.
   are generally non blocking).
@@ -138,18 +141,30 @@ Here are some framework highlights:
 
 Here's a video of the demo in action:
 
-https://user-images.githubusercontent.com/2966499/223200857-33c346fe-ed66-4216-8fb5-2f8c602d5b7c.mp4
+https://user-images.githubusercontent.com/2966499/233481838-b6da884f-f73d-4e1f-adef-94beb9761c46.mp4
 
-1. You can run `cargo run --example demo` in the `tui/examples` folder to see a demo of the library
-   in action and play with it. The examples cover the entire surface area of the TUI API. You can
-   also take a look at the tests in the source as well `tui/src/`.
+1. Once you've cloned [the repo](https://github.com/r3bl-org/r3bl_rs_utils) to a folder on your
+   computer, you can run the examples you see in the video with the following commands:
+   ```sh
+   cd tui/examples
+   cargo run --release --example demo
+   ```
+   These examples cover the entire surface area of the TUI API. You can also take a look at the
+   tests in the source as well `tui/src/`. A lot of `fish` scripts are provided at the top level
+   directory of the repo which allow you to easily:
+   - run tests (`test.fish`)
+   - build the code (`build.fish`)
+   - run the logger to see log output (`log.fish`)
+   - run the examples (`run.fish`).
 
-2. This document is a good place to start to get a feel for the architecture of the framework. You
-   can get a mental model of how everything fits and what the TUI lifecycle is.
+2. This document that you're reading is a good place to start to get a feel for the architecture of
+   the framework. You can get a mental model of how everything fits and what the TUI lifecycle is.
 
 3. Additionally the [r3bl_rs_utils_core](https://crates.io/crates/r3bl_rs_utils_core) has the
    `tui_core` module which contains dependencies that are used by the `tui` module. They include:
-   1. ANSI text support.
+   1. Color support that is [terminal emulator
+      dependent](https://docs.rs/concolor-query/latest/concolor_query/#) ranging from truecolor, to
+      [ANSI256](https://www.ditig.com/256-colors-cheat-sheet), to grayscale.
    2. Core dimensions and units that are used for positioning and sizing.
    3. Grapheme cluster segment and unicode support (emoji support).
    4. Lolcat support.
@@ -159,10 +174,12 @@ https://user-images.githubusercontent.com/2966499/223200857-33c346fe-ed66-4216-8
 > `fish` script files. Here are a few worth mentioning here which are related to running the
 > example.
 >
-> 1. `run.fish`: This will simply run the examples. You can watch the logs by running `log.fish`.
-> 2. `run-with-flamegraph-profiling.fish`: This will run the examples and generate a flamegraph at
+> 1. `run-release.fish`: This will simply run the examples w/ the release build (so it will be
+>    fast). You can watch the logs by running `log.fish`.
+> 2. `run.fish`: This will simply run the examples. You can watch the logs by running `log.fish`.
+> 3. `run-with-flamegraph-profiling.fish`: This will run the examples and generate a flamegraph at
 >    the end so you can see profile the performance of the app.
-> 3. `run-with-crash-reporting.fish`: This will run the examples and generate a `crash_log.txt` file
+> 4. `run-with-crash-reporting.fish`: This will run the examples and generate a `crash_log.txt` file
 >    (in the `tui` folder) in case the app crashes. This is useful for debugging.
 
 ## How does layout, rendering, and event handling work in general?

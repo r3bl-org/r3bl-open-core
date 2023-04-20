@@ -32,7 +32,7 @@ Once captured you can upload to the following sites:
   - Edit an the main [README.md](https://github.com/r3bl-org/r3bl_rs_utils#readme) file and drag and
     drop the MP4 file from your desktop to the editor. This will upload the video to github.com and
     generate a URL like this:
-    <https://user-images.githubusercontent.com/2966499/223200857-33c346fe-ed66-4216-8fb5-2f8c602d5b7c.mp4>.
+    <https://user-images.githubusercontent.com/2966499/233481838-b6da884f-f73d-4e1f-adef-94beb9761c46.mp4>.
     Make sure to commit the file.
   - More info on how to upload video: <https://stackoverflow.com/a/68269430/2085356>
 
@@ -43,7 +43,7 @@ Once captured you can upload to the following sites:
 
 - List of all videos
   - [v0.2.0](https://user-images.githubusercontent.com/2966499/206881196-37cf1220-8c1b-460e-a2cb-7e06d22d6a02.mp4)
-  - [v0.3.2](https://user-images.githubusercontent.com/2966499/223200857-33c346fe-ed66-4216-8fb5-2f8c602d5b7c.mp4)
+  - [v0.3.2](https://user-images.githubusercontent.com/2966499/233481838-b6da884f-f73d-4e1f-adef-94beb9761c46.mp4)
 
 ## README and lib.rs updates
 
