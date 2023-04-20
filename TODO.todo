@@ -2,31 +2,23 @@ open: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+-
 features: <https://github.com/orgs/r3bl-org/projects/1/views/1>
 backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
 
-AI:
-  ☐ make README for TUI better
-    - add getting started guide w/ video & clear instructions on running demo, and looking at egs
-    - add `sh` scripts in addition to `fish` scripts for people who don't have `fish`
-    - add project structure to contributor guide
-    - update links in all the README (to the stuff above)
-
-update changelog:
-  ☐ correct console color support at RenderOps level (ANSI256, Truecolor, Grayscale)
-  ☐ brand new markdown parser
+update changelog for r3bl_tui v0.3.3, r3bl_rs_utils_core v0.9.2:
+  ✔ correct console color support at RenderOps level (ANSI256, Truecolor, Grayscale) @done(23-04-20 15:40)
+  ✔ brand new markdown parser @done(23-04-20 15:47)
     - support for metadata tags
     - support for smart lists (with checkboxes for todos)
-  ☐ brand new syntax highlighting
+  ✔ brand new syntax highlighting @done(23-04-20 15:47)
     - each heading level has different lolcat
     - smart lists are colored differently (both ordered and unordered are different)
     - using syntect for code blocks
-  ☐ add better support for console log output for debugging
+  ✔ add better support for console log output for debugging @done(23-04-20 15:50)
     - ConsoleLogInColor
     - PrettyPrintDebug
-    - ConvertToPlainText
 
 release new version:
-  ☐ update `CHANGELOG.md`
-  ☐ update `README.md`
-  ☐ update `lib.rs`
+  ✔ update `CHANGELOG.md` @done(23-04-20 15:52)
+  ✔ update `README.md` @done(23-04-20 15:52)
+  ✔ update `lib.rs` @done(23-04-20 15:53)
   ☐ create new tag
   ☐ create first [release](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
   ☐ publish to crates.io

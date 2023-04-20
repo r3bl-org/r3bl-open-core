@@ -109,6 +109,14 @@ macro_rules! color {
 
 /// Please use the macro [color] to create a new [TuiColor] instances, instead of directly
 /// manipulating this struct.
+///
+/// A [TuiColor] can be `RgbValue`, `AnsiValue`, or `ANSIBasicColor`.
+/// - It is safe to use just `RgbValue` since the library will degrade gracefully to ANSI 256 or
+///   grayscale based on terminal emulator capabilities at runtime, which are provided by
+///   [`to_crossterm_color()`](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/terminal_lib_backends/color_converter/fn.to_crossterm_color.html)
+///   and
+///   [`ColorSupport`](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/color_wheel/detect_color_support/enum.ColorSupport.html).
+/// - If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not be downgraded.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Copy, Hash, GetSize)]
 pub enum TuiColor {
     /// Resets the terminal color.
