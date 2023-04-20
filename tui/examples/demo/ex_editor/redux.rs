@@ -135,7 +135,6 @@ mod reducer_impl {
 ].iter().map(|s| s.to_string()).collect()
     }
 
-    // 00: this is how init state is created
     pub fn get_initial_state() -> State {
         let editor_buffers = {
             let editor_buffer = {

@@ -17,7 +17,7 @@
 
 use constants::*;
 use nom::{branch::alt,
-          bytes::complete::{is_not, tag, take},
+          bytes::complete::{is_not, tag},
           character::complete::{anychar, digit1, space0},
           combinator::{map, opt, recognize, verify},
           multi::{many0, many1},
@@ -91,6 +91,29 @@ mod tests_parse_block_smart_list {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
+
+    #[test]
+    fn test_with_unicode() {
+        let input = "- straight 😃 foo bar baz\n";
+        let result = parse_block_smart_list(input);
+        let remainder = result.as_ref().unwrap().0;
+        let output = &result.as_ref().unwrap().1;
+        assert_eq2!(remainder, "");
+        assert_eq2!(
+            output,
+            &(
+                list![list![
+                    MdLineFragment::UnorderedListBullet {
+                        indent: 0,
+                        is_first_line: true
+                    },
+                    MdLineFragment::Plain("straight 😃 foo bar baz"),
+                ],],
+                BulletKind::Unordered,
+                0
+            )
+        );
+    }
 
     #[test]
     fn test_parse_block_smart_list_with_checkbox() {
@@ -619,12 +642,8 @@ pub fn parse_smart_list_content_lines<'a>(
     match input.find(NEW_LINE) {
         // Keep the first line. There may be more than 1 line.
         Some(first_line_end) => {
-            let (input, (first, _)) =
-
-            tuple((
-                take(first_line_end),
-                tag(NEW_LINE),
-            ))(input)?;
+            let first = &input[..first_line_end];
+            let input = &input[first_line_end+1..];
 
             // Match the rest of the lines.
             let (remainder, rest) = many0(
