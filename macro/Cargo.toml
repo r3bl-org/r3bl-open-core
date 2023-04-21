@@ -23,16 +23,16 @@ path = "src/lib.rs"
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-r3bl_rs_utils_core = { version = "0.9.1", path = "../core" }
+r3bl_rs_utils_core = { version = "0.9.2", path = "../core" }
 
 # https://github.com/dtolnay/proc-macro-workshop#debugging-tips
 syn = { version = "1.0.109", features = ["extra-traits", "full", "derive", "parsing"] }
-quote = "1.0.23"
-proc-macro2 = "1.0.51"
+quote = "1.0.26"
+proc-macro2 = "1.0.56"
 
 # Crossterm & EventStream support.
 crossterm = { version = "0.26.1", features = ["event-stream"] }
-futures-util = "0.3.26"
+futures-util = "0.3.28"
 paste = "1.0.12"
 
 # For assert_eq2! macro.
