@@ -2,26 +2,7 @@ open: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+-
 features: <https://github.com/orgs/r3bl-org/projects/1/views/1>
 backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
 
-update changelog for r3bl_tui v0.3.3, r3bl_rs_utils_core v0.9.2:
-  ✔ correct console color support at RenderOps level (ANSI256, Truecolor, Grayscale) @done(23-04-20 15:40)
-  ✔ brand new markdown parser @done(23-04-20 15:47)
-    - support for metadata tags
-    - support for smart lists (with checkboxes for todos)
-  ✔ brand new syntax highlighting @done(23-04-20 15:47)
-    - each heading level has different lolcat
-    - smart lists are colored differently (both ordered and unordered are different)
-    - using syntect for code blocks
-  ✔ add better support for console log output for debugging @done(23-04-20 15:50)
-    - ConsoleLogInColor
-    - PrettyPrintDebug
-
-release new version:
-  ✔ update `CHANGELOG.md` @done(23-04-20 15:52)
-  ✔ update `README.md` @done(23-04-20 15:52)
-  ✔ update `lib.rs` @done(23-04-20 15:53)
-  ☐ create new tag
-  ☐ create first [release](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
-  ☐ publish to crates.io
+publicise new release:
   ☐ make reddit post w/ videos
   ☐ announce it on this week in rust (https://github.com/rust-lang/this-week-in-rust/pulls)
 
