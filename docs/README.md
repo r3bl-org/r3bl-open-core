@@ -41,9 +41,10 @@ Once captured you can upload to the following sites:
   - Create a new video only post, upload the .MP4 file & add description in a comment below it.
   - Don't include "xbox" in any substring (eg: flexbox) of any text that is typed in the post title.
 
-- List of all videos
-  - [v0.2.0](https://user-images.githubusercontent.com/2966499/206881196-37cf1220-8c1b-460e-a2cb-7e06d22d6a02.mp4)
-  - [v0.3.2](https://user-images.githubusercontent.com/2966499/233481838-b6da884f-f73d-4e1f-adef-94beb9761c46.mp4)
+- List of all posts
+  - [v0.2.0](https://www.reddit.com/r/rust/comments/zifmsl/media_tui_framework_fans_ive_just_updated_the/)
+  - [v0.3.2](https://www.reddit.com/r/rust/comments/11kb72w/media_tui_engine_fans_r3bl_tui_v032_crate_has/)
+  - [v0.3.3](https://www.reddit.com/r/rust/comments/12uicn3/media_tui_framework_fans_ive_just_updated_the/)
 
 ## README and lib.rs updates
 
