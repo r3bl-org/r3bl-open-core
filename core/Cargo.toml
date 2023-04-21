@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_rs_utils_core"
-version = "0.9.1"
+version = "0.9.2"
 edition = "2021"
 description = """
 Helper crate for proc-macro library for reading attributes into structs when
@@ -22,12 +22,12 @@ path = "src/lib.rs"
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-tokio = { version = "1.26.0", features = ["full"] }
-async-trait = "0.1.66"
+tokio = { version = "1.27.0", features = ["full"] }
+async-trait = "0.1.68"
 ansi_term = "0.12.1"
 
 # HTTP Client.
-reqwest = { version = "0.11.14", features = ["json"] }
+reqwest = { version = "0.11.16", features = ["json"] }
 
 # https://github.com/serde-rs/serde.
 serde = { version = "1.0", features = ["derive"] }
@@ -35,7 +35,7 @@ serde_json = "1.0"
 
 # Crossterm & EventStream support.
 crossterm = { version = "0.26.1", features = ["event-stream"] }
-futures-util = "0.3.26"
+futures-util = "0.3.28"
 paste = "1.0.12"
 
 # Unicode, grapheme clusters.
@@ -44,7 +44,7 @@ unicode-segmentation = "1.10.1"
 
 # For lolcat.
 rand = "0.8.5"
-is-terminal = "0.4.4"
+is-terminal = "0.4.7"
 
 # get-size.
 get-size = { version = "^0.1", features = ["derive"] }
@@ -54,7 +54,7 @@ log = "0.4.17"
 simplelog = "0.12.1"
 
 # Time
-chrono = "0.4.23"
+chrono = "0.4.24"
 time = "0.3.20"
 
 # Syntax highlighting.
