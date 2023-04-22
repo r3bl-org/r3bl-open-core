@@ -31,6 +31,7 @@ mod ex_app_with_1col_layout;
 mod ex_app_with_2col_layout;
 mod ex_editor;
 mod ex_pitch;
+mod ex_rc;
 
 // Use things from sources.
 use reedline::*;
@@ -43,6 +44,7 @@ Type a number to run corresponding example:
   2. 📐 App w/ 2 column responsive layout
   3. 🐒 Markdown editor, syntax highlighting, modal dialog, and emoji
   4. ⚾ Why R3BL? Why TUI?
+  5. 📔 R3BL CMDR prototype
 
 or type Ctrl+C / Ctrl+D / 'x' to exit";
 
@@ -71,6 +73,7 @@ async fn run_user_selected_example(selection: String) -> CommonResult<()> {
                 "2" => throws!(ex_app_with_2col_layout::launcher::run_app().await?),
                 "3" => throws!(ex_editor::launcher::run_app().await?),
                 "4" => throws!(ex_pitch::launcher::run_app().await?),
+                "5" => throws!(ex_rc::launcher::run_app().await?),
                 _ => eprintln!("{}", style_error("Unknown selection 🤷")),
             }
         }
