@@ -1,4 +1,4 @@
-# Context is challenging in a remote world 🌐
+# Context is challenging in a remote & async world 🌐
 
 There isn't a cohesive environment in which developers can
 capture context around a problem they are solving ... for

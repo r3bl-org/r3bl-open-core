@@ -4,7 +4,7 @@
 
 
              ╭────────────────────────────────────╮
-             │  enhance developer:                │
+             │  mission to enhance developer:     │
              │  ❯ 🚀 productivity                 │
              │  ❯ 🌍 efficiency                   │
              │  ❯ 📖 knowledge capture & sharing  │
