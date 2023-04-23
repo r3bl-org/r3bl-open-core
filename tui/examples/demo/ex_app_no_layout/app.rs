@@ -53,7 +53,6 @@ macro_rules! fire {
 }
 
 mod handle_animation {
-
     use super::*;
 
     const ANIMATION_START_DELAY_SEC: u64 = 1;
@@ -376,12 +375,18 @@ mod app_no_layout_impl_trait_app {
                 25,
             )]);
 
-            self.lolcat_fg = ColorWheel::new(vec![ColorWheelConfig::Lolcat(
-                LolcatBuilder::new()
-                    .set_color_change_speed(ColorChangeSpeed::Rapid)
-                    .set_seed(0.5)
-                    .set_seed_delta(1.0),
-            )]);
+            self.lolcat_fg = ColorWheel::new(vec![
+                ColorWheelConfig::Lolcat(
+                    LolcatBuilder::new()
+                        .set_color_change_speed(ColorChangeSpeed::Rapid)
+                        .set_seed(0.5)
+                        .set_seed_delta(1.0),
+                ),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::LightOrangeToLightPurple,
+                    ColorWheelSpeed::Slow,
+                ),
+            ]);
 
             self.lolcat_bg = ColorWheel::new(vec![
                 ColorWheelConfig::Lolcat(
