@@ -15,13 +15,16 @@
  *   limitations under the License.
  */
 
-use std::fmt::Debug;
+use std::{fmt::Debug,
+          sync::atomic::{AtomicBool, Ordering}};
 
 use async_trait::async_trait;
+use chrono::{DateTime, Local};
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
 use r3bl_tui::*;
+use tokio::{task::JoinHandle, time, time::Duration};
 
 use super::*;
 
@@ -41,6 +44,53 @@ pub enum EditorStyleName {
 /// Async trait object that implements the [App] trait.
 pub struct AppWithLayout {
     pub component_registry: ComponentRegistry<State, Action>,
+    pub lolcat_bg: ColorWheel,
+    pub animation_task_handle: Option<JoinHandle<()>>,
+    pub animation_started: AtomicBool,
+}
+
+mod handle_animation {
+    use super::*;
+
+    const ANIMATION_START_DELAY_MSEC: u64 = 500;
+    const ANIMATION_INTERVAL_MSEC: u64 = 16; // 60 FPS.
+
+    impl AppWithLayout {
+        pub fn handle_animation(&mut self, shared_store: &SharedStore<State, Action>) {
+            let is_animation_started = self.animation_started.load(Ordering::SeqCst);
+            if is_animation_started {
+                return;
+            }
+
+            let my_store_copy = shared_store.clone();
+
+            // Save the handle so it can be aborted later.
+            self.animation_task_handle = Some(tokio::spawn(async move {
+                // Give the app some time to actually render to offscreen buffer.
+                time::sleep(Duration::from_millis(ANIMATION_START_DELAY_MSEC)).await;
+
+                loop {
+                    // Wire into the timing telemetry.
+                    telemetry_global_static::set_start_ts();
+
+                    // Dispatch the action.
+                    my_store_copy
+                        .write()
+                        .await
+                        .dispatch_action(Action::Noop)
+                        .await;
+
+                    // Wire into the timing telemetry.
+                    telemetry_global_static::set_end_ts();
+
+                    // Wait for the next interval.
+                    time::sleep(Duration::from_millis(ANIMATION_INTERVAL_MSEC)).await;
+                }
+            }));
+
+            self.animation_started.store(true, Ordering::SeqCst);
+        }
+    }
 }
 
 mod app_with_layout_impl_trait_app {
@@ -89,7 +139,15 @@ mod app_with_layout_impl_trait_app {
                 };
 
                 // Render status bar.
-                status_bar::render_status_bar(&mut surface.render_pipeline, window_size, state);
+                status_bar::render_status_bar(
+                    self,
+                    &mut surface.render_pipeline,
+                    window_size,
+                    state,
+                );
+
+                // Handle animation.
+                self.handle_animation(shared_store);
 
                 // Return RenderOps pipeline (which will actually be painted elsewhere).
                 surface.render_pipeline
@@ -133,6 +191,16 @@ mod app_with_layout_impl_trait_app {
                 return Ok(EventPropagation::Consumed);
             };
 
+            // x => Cancel animation & don't consume the event.
+            if input_event.matches_keypress(KeyPress::WithModifiers {
+                key: Key::Character('x'),
+                mask: ModifierKeysMask::CTRL,
+            }) {
+                if let Some(handle) = &self.animation_task_handle {
+                    handle.abort();
+                }
+            };
+
             // If modal not activated, route the input event to the focused component.
             ComponentRegistry::route_event_to_focused_component(
                 &mut self.component_registry,
@@ -145,7 +213,23 @@ mod app_with_layout_impl_trait_app {
             .await
         }
 
-        fn init(&mut self) { populate_component_registry::init(self); }
+        fn init(&mut self) {
+            self.lolcat_bg = ColorWheel::new(vec![
+                ColorWheelConfig::Lolcat(
+                    LolcatBuilder::new()
+                        .set_background_mode(true)
+                        .set_color_change_speed(ColorChangeSpeed::Slow)
+                        .set_seed(0.5)
+                        .set_seed_delta(0.05),
+                ),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::BackgroundDarkGreenToDarkBlue,
+                    ColorWheelSpeed::Slow,
+                ),
+            ]);
+
+            populate_component_registry::init(self);
+        }
 
         fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
             &mut self.component_registry
@@ -268,6 +352,9 @@ mod pretty_print {
 
             Self {
                 component_registry: Default::default(),
+                lolcat_bg: Default::default(),
+                animation_task_handle: None,
+                animation_started: Default::default(),
             }
         }
     }
@@ -303,11 +390,32 @@ mod status_bar {
     use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
-    pub fn render_status_bar(pipeline: &mut RenderPipeline, size: &Size, state: &State) {
-        let mut it = styled_texts! {
-            styled_text! { @style:style!(attrib: [dim, bold]) ,      @text: "Exit 👋 : "},
-            styled_text! { @style:style!(attrib: [dim, underline]) , @text: "Ctrl + x"},
+    pub fn render_status_bar(
+        this: &mut AppWithLayout,
+        pipeline: &mut RenderPipeline,
+        size: &Size,
+        state: &State,
+    ) {
+        let mut it = styled_texts!();
+
+        let lolcat_st = {
+            let date_time: DateTime<Local> = Local::now();
+            let time_str = date_time.format("%H:%M:%S").to_string();
+            let time_us = UnicodeString::from(format!(" 🦜 {} ", time_str));
+            let style = style! {
+                color_fg: TuiColor::Basic(ANSIBasicColor::Black)
+            };
+            this.lolcat_bg.colorize_into_styled_texts(
+                &time_us,
+                GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                TextColorizationPolicy::ColorEachCharacter(Some(style)),
+            )
         };
+
+        it += lolcat_st;
+
+        it += styled_text! { @style:style!(attrib: [dim, bold]) ,      @text: " Exit 👋 : "};
+        it += styled_text! { @style:style!(attrib: [dim, underline]) , @text: "Ctrl + x"};
 
         if state.current_slide_index < LINES_ARRAY.len() - 1 {
             it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: " ┊ "};
