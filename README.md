@@ -115,8 +115,9 @@ Table of contents:
 <a id="markdown-tui-and-tui_core" name="tui-and-tui_core"></a>
 
 
-For more information please read the README for the
-[r3bl_tui crate](https://docs.rs/r3bl_tui/latest/r3bl_tui/).
+For more information please read the
+[README](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/tui/README.md#r3bl_tui-crate) for the [r3bl_tui
+crate](https://docs.rs/r3bl_tui/latest/r3bl_tui/).
 
 <!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
 
@@ -129,8 +130,9 @@ https://user-images.githubusercontent.com/2966499/233481838-b6da884f-f73d-4e1f-a
 <a id="markdown-redux" name="redux"></a>
 
 
-For more information please read the README for the
-[r3bl_redux crate](https://docs.rs/r3bl_redux/latest/r3bl_redux/).
+For more information please read the
+[README](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/redux/README.md#r3bl_redux) for the [r3bl_redux
+crate](https://docs.rs/r3bl_redux/latest/r3bl_redux/).
 
 ## Macros
 <a id="markdown-macros" name="macros"></a>
@@ -140,14 +142,16 @@ For more information please read the README for the
 <a id="markdown-declarative" name="declarative"></a>
 
 
-For more information please read the README for the
+For more information please read the
+[README](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/core/README.md#r3bl_rs_utils_core) for the
 [r3bl_rs_utils_core crate](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/).
 
 ### Procedural
 <a id="markdown-procedural" name="procedural"></a>
 
 
-For more information please read the README for the
+For more information please read the
+[README](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/macro/README.md#r3bl_rs_utils_macro) for the
 [r3bl_rs_utils_macro crate](https://docs.rs/r3bl_rs_utils_macro/latest/r3bl_rs_utils_macro/).
 
 ## tree_memory_arena (non-binary tree data structure)
