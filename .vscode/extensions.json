@@ -1,55 +1,60 @@
 {
   // See https://go.microsoft.com/fwlink/?LinkId=827846 to learn about workspace recommendations.
   // Extension identifier format: ${publisher}.${name}. Example: vscode.csharp
-
-  // This extension is recommended when you open this workspace. You have to clone it from github
-  // and install it manually as it isn't available in the marketplace. It is a fork of the one in
-  // the marketplace w/ bug fixes, since the original author doesn't seem to be maintaining it.
-  // https://github.com/nazmulidris/copyrighter
-
+  //
+  // Copyrighter: The extension `nazmulidris.copyrighter` is recommended when you open this
+  // workspace.
+  // - You have to clone it from github and install it manually as it isn't available in the
+  //   marketplace.
+  // - It is a fork of the one in the marketplace w/ bug fixes, since the original author doesn't
+  //   seem to be maintaining it.
+  // - Clone this repo https://github.com/nazmulidris/copyrighter locally and then run
+  //   `deploy_locally.fish` to install the extension.
+  //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
-    "naumovs.color-highlight",
-    "owldarkertheme.owldarker-theme",
-    "hoovercj.vscode-settings-cycler",
-    "github.vscode-pull-request-github",
+    "nazmulidris.copyrighter", // Copyrighter (see comment above).
+    "github.copilot", // Github Copilot.
+    "huntertran.auto-markdown-toc", // Auto Markdown TOC.
+    "ccy.ayu-adaptive", // Ayu Adaptive theme.
+    "naumovs.color-highlight", // Color Highlight.
+    "perkovec.emoji", // Emoji.
+    "nicholashsiang.vscode-opened-editors", // Opened Editors.
+    "dbankier.vscode-quick-select", // Quick and Simple Text Selection.
+    "unifiedjs.vscode-remark", // remark.
+    "stkb.rewrap", // Rewrap.
+    "lorenzopirro.rust-flash-snippets", // Rust Flash Snippets.
+    "rust-lang.rust-analyzer", // Rust Analyzer.
+    "hoovercj.vscode-settings-cycler", // Settings Cycler.
+    "wayou.vscode-todo-highlight", // Todo Highlight.
+    "fabiospampinato.vscode-todo-plus", // Todo+.
+  ],
+  // List of extensions that should not be recommended for users of this workspace.
+  "unwantedRecommendations": [
+    "esbenp.prettier-vscode", // prettier.
+    "github.vscode-pull-request-github", // Github Pull Requests and Issues.
+    "alefragnani.separators", // Suspect that this makes VSCode main thread unresponsive after running for a few hours.
+    "bierner.emojisense",
+    "owldarkertheme.owldarker-theme", // Owl Darker theme.
     "Compulim.vscode-clock",
     "nowsci.glassit-linux",
     "bungcip.better-toml",
     "streetsidesoftware.code-spell-checker",
     "vadimcn.vscode-lldb",
     "serayuzgur.crates",
-    "perkovec.emoji",
     "donjayamanne.githistory",
     "bmalehorn.vscode-fish",
     "github.github-vscode-theme",
-    "github.copilot",
     "mishkinf.goto-next-previous-member",
     "rsbondi.highlight-words",
     "arzg.intellij-theme",
     "satokaz.vscode-markdown-header-coloring",
-    "huntertran.auto-markdown-toc",
     "pkief.material-icon-theme",
     "pkief.material-product-icons",
     "sdras.night-owl",
-    "dbankier.vscode-quick-select",
     "artdiniz.quitcontrol-vscode",
-    "stkb.rewrap",
-    "rust-lang.rust-analyzer",
-    "wayou.vscode-todo-highlight",
-    "fabiospampinato.vscode-todo-plus",
     "minhdo.tokyo-darker-night",
     "enkia.tokyo-night",
-    "bierner.emojisense",
-    "lorenzopirro.rust-flash-snippets",
-    "nicholashsiang.vscode-opened-editors",
-    "unifiedjs.vscode-remark",
-    "esbenp.prettier-vscode",
-    "ccy.ayu-adaptive",
     "siris01.ayu-green",
-  ],
-  // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
-  "unwantedRecommendations": [
-    "alefragnani.separators", // Suspect that this makes VSCode main thread unresponsive after running for a few hours.
   ]
 }
