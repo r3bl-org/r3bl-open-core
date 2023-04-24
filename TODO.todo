@@ -4,8 +4,7 @@ backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissu
 
 minor fixes:
   ✔ add animation to status bar for `ex_rc` demo @done(23-04-23 17:03)
-  ☐ make animation general purpose (since it's already used in 2 places)
-  ☐ add animation to the `ex_pitch` demo
+  ✔ make animation general purpose (since it's already used in 2 places) @done(23-04-23 20:48)
   ☐ bold and italic should dim the `**` and `*` characters
 
 fix performance problem:
