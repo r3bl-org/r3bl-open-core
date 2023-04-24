@@ -14,19 +14,23 @@ update changelog for r3bl_tui v0.3.3, r3bl_rs_utils_core v0.9.2:
   ✔ add better support for console log output for debugging @done(23-04-20 15:50)
     - ConsoleLogInColor
     - PrettyPrintDebug
-    publicise new release:
-      ✔ make reddit post w/ videos @done(23-04-21 14:05)
-      ✔ announce it on this week in rust (https://github.com/rust-lang/this-week-in-rust/pulls) @done(23-04-21 13:43)
-        - [tui v0.3.3](https://github.com/rust-lang/this-week-in-rust/pull/4297)
-        - [rust proc macro tutorial](https://github.com/rust-lang/this-week-in-rust/pull/4298)
-    release new version:
-      ✔ update `CHANGELOG.md` @done(23-04-20 15:52)
-      ✔ update `README.md` @done(23-04-20 15:52)
-      ✔ update `lib.rs` @done(23-04-20 15:53)
-      ✔ create new tag @done(23-04-20 19:35)
-      ✔ publish to crates.io @done(23-04-20 19:35)
+  publicise new release:
+    ✔ make reddit post w/ videos @done(23-04-21 14:05)
+    ✔ announce it on this week in rust (https://github.com/rust-lang/this-week-in-rust/pulls) @done(23-04-21 13:43)
+      - [tui v0.3.3](https://github.com/rust-lang/this-week-in-rust/pull/4297)
+      - [rust proc macro tutorial](https://github.com/rust-lang/this-week-in-rust/pull/4298)
+  release new version:
+    ✔ update `CHANGELOG.md` @done(23-04-20 15:52)
+    ✔ update `README.md` @done(23-04-20 15:52)
+    ✔ update `lib.rs` @done(23-04-20 15:53)
+    ✔ create new tag @done(23-04-20 19:35)
+    ✔ publish to crates.io @done(23-04-20 19:35)
+  minor fixes:
+    ✔ add animation to status bar for `ex_rc` demo @done(23-04-23 17:03)
+    ✔ make animation general purpose (since it's already used in 2 places) @done(23-04-23 20:48)
+    ✔ bold and italic should dim the `**` and `*` characters @done(23-04-24 12:35)
 
-      fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
+fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
   ✔ `md_parser_syn_hi.rs`: @done(23-03-22 20:34)
     ✔ fn `try_parse_and_highlight`: `&Vec<US>` -(1)-> `Document` -(2)-> `StyleUSSpanLines` @done(23-03-22 20:34)
     ✔ rewrite `md_parser` @done(23-03-10 17:36)

@@ -41,6 +41,7 @@ pub fn get_foreground_dim_style() -> Style {
     get_foreground_style()
         + style! {
             attrib: [dim]
+            color_fg: TuiColor::Rgb(RgbValue::from_hex("#5f5f5f"))
         }
 }
 
