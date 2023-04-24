@@ -15,8 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{fmt::Debug,
-          sync::atomic::{AtomicBool, Ordering}};
+use std::fmt::Debug;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
@@ -45,52 +44,32 @@ pub enum EditorStyleName {
 pub struct AppWithLayout {
     pub component_registry: ComponentRegistry<State, Action>,
     pub lolcat_bg: ColorWheel,
-    pub animation_task_handle: Option<JoinHandle<()>>,
-    pub animation_started: AtomicBool,
+    pub animator: Animator,
 }
 
-mod handle_animation {
-    use super::*;
-
+pub fn start_animator_task_fn(shared_store: &SharedStore<State, Action>) -> JoinHandle<()> {
     const ANIMATION_START_DELAY_MSEC: u64 = 500;
     const ANIMATION_INTERVAL_MSEC: u64 = 16; // 60 FPS.
 
-    impl AppWithLayout {
-        pub fn handle_animation(&mut self, shared_store: &SharedStore<State, Action>) {
-            let is_animation_started = self.animation_started.load(Ordering::SeqCst);
-            if is_animation_started {
-                return;
-            }
+    let copy = shared_store.clone();
+    tokio::spawn(async move {
+        // Give the app some time to actually render to offscreen buffer.
+        time::sleep(Duration::from_millis(ANIMATION_START_DELAY_MSEC)).await;
 
-            let my_store_copy = shared_store.clone();
+        loop {
+            // Wire into the timing telemetry.
+            telemetry_global_static::set_start_ts();
 
-            // Save the handle so it can be aborted later.
-            self.animation_task_handle = Some(tokio::spawn(async move {
-                // Give the app some time to actually render to offscreen buffer.
-                time::sleep(Duration::from_millis(ANIMATION_START_DELAY_MSEC)).await;
+            // Dispatch the action.
+            copy.write().await.dispatch_action(Action::Noop).await;
 
-                loop {
-                    // Wire into the timing telemetry.
-                    telemetry_global_static::set_start_ts();
+            // Wire into the timing telemetry.
+            telemetry_global_static::set_end_ts();
 
-                    // Dispatch the action.
-                    my_store_copy
-                        .write()
-                        .await
-                        .dispatch_action(Action::Noop)
-                        .await;
-
-                    // Wire into the timing telemetry.
-                    telemetry_global_static::set_end_ts();
-
-                    // Wait for the next interval.
-                    time::sleep(Duration::from_millis(ANIMATION_INTERVAL_MSEC)).await;
-                }
-            }));
-
-            self.animation_started.store(true, Ordering::SeqCst);
+            // Wait for the next interval.
+            time::sleep(Duration::from_millis(ANIMATION_INTERVAL_MSEC)).await;
         }
-    }
+    })
 }
 
 mod app_with_layout_impl_trait_app {
@@ -147,7 +126,7 @@ mod app_with_layout_impl_trait_app {
                 );
 
                 // Handle animation.
-                self.handle_animation(shared_store);
+                self.animator.start(shared_store, start_animator_task_fn);
 
                 // Return RenderOps pipeline (which will actually be painted elsewhere).
                 surface.render_pipeline
@@ -196,9 +175,7 @@ mod app_with_layout_impl_trait_app {
                 key: Key::Character('x'),
                 mask: ModifierKeysMask::CTRL,
             }) {
-                if let Some(handle) = &self.animation_task_handle {
-                    handle.abort();
-                }
+                self.animator.stop();
             };
 
             // If modal not activated, route the input event to the focused component.
@@ -345,7 +322,7 @@ mod pretty_print {
             call_if_true!(DEBUG_TUI_MOD, {
                 let msg = format!(
                     "🪙 {}",
-                    "construct ex_pitch::AppWithLayout { ComponentRegistry }"
+                    "construct ex_rc::AppWithLayout { ComponentRegistry }"
                 );
                 log_debug(msg);
             });
@@ -353,8 +330,7 @@ mod pretty_print {
             Self {
                 component_registry: Default::default(),
                 lolcat_bg: Default::default(),
-                animation_task_handle: None,
-                animation_started: Default::default(),
+                animator: Default::default(),
             }
         }
     }

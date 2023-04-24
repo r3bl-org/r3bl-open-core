@@ -15,8 +15,6 @@
  *   limitations under the License.
  */
 
-use std::sync::atomic::{AtomicBool, Ordering};
-
 use async_trait::async_trait;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
@@ -35,8 +33,7 @@ pub struct AppNoLayout {
     pub lolcat_fg: ColorWheel,
     pub lolcat_bg: ColorWheel,
     pub component_registry: ComponentRegistry<State, Action>,
-    pub animation_started: AtomicBool,
-    pub animation_task_handle: Option<JoinHandle<()>>,
+    pub animator: Animator,
 }
 
 macro_rules! fire {
@@ -52,48 +49,28 @@ macro_rules! fire {
     };
 }
 
-mod handle_animation {
-    use super::*;
+pub fn start_animator_task_fn(shared_store: &SharedStore<State, Action>) -> JoinHandle<()> {
+    const ANIMATION_START_DELAY_MSEC: u64 = 500;
+    const ANIMATION_INTERVAL_MSEC: u64 = 500;
+    let copy = shared_store.clone();
+    tokio::spawn(async move {
+        // Give the app some time to actually render to offscreen buffer.
+        time::sleep(Duration::from_millis(ANIMATION_START_DELAY_MSEC)).await;
 
-    const ANIMATION_START_DELAY_SEC: u64 = 1;
-    const ANIMATION_INTERVAL_SEC: u64 = 1;
+        loop {
+            // Wire into the timing telemetry.
+            telemetry_global_static::set_start_ts();
 
-    impl AppNoLayout {
-        pub fn handle_animation(&mut self, shared_store: &SharedStore<State, Action>) {
-            let is_animation_started = self.animation_started.load(Ordering::SeqCst);
-            if is_animation_started {
-                return;
-            }
+            // Dispatch the action.
+            copy.write().await.dispatch_action(Action::Add).await;
 
-            let my_store_copy = shared_store.clone();
+            // Wire into the timing telemetry.
+            telemetry_global_static::set_end_ts();
 
-            // Save the handle so it can be aborted later.
-            self.animation_task_handle = Some(tokio::spawn(async move {
-                // Give the app some time to actually render to offscreen buffer.
-                time::sleep(Duration::from_secs(ANIMATION_START_DELAY_SEC)).await;
-
-                loop {
-                    // Wire into the timing telemetry.
-                    telemetry_global_static::set_start_ts();
-
-                    // Dispatch the action.
-                    my_store_copy
-                        .write()
-                        .await
-                        .dispatch_action(Action::Add)
-                        .await;
-
-                    // Wire into the timing telemetry.
-                    telemetry_global_static::set_end_ts();
-
-                    // Wait for the next interval.
-                    time::sleep(Duration::from_secs(ANIMATION_INTERVAL_SEC)).await;
-                }
-            }));
-
-            self.animation_started.store(true, Ordering::SeqCst);
+            // Wait for the next interval.
+            time::sleep(Duration::from_millis(ANIMATION_INTERVAL_MSEC)).await;
         }
-    }
+    })
 }
 
 mod app_no_layout_impl_trait_app {
@@ -241,7 +218,7 @@ mod app_no_layout_impl_trait_app {
                 status_bar::create_status_bar_message(&mut pipeline, window_size);
 
                 // Handle animation.
-                self.handle_animation(shared_store);
+                self.animator.start(shared_store, start_animator_task_fn);
 
                 pipeline
             });
@@ -274,9 +251,7 @@ mod app_no_layout_impl_trait_app {
                             }
                             // Override default behavior of 'x' key.
                             'x' => {
-                                if let Some(handle) = &self.animation_task_handle {
-                                    handle.abort();
-                                }
+                                self.animator.stop();
                                 event_consumed = false;
                             }
                             _ => {}
