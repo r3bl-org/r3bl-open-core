@@ -170,7 +170,7 @@
 //! <a id="markdown-video-of-the-demo-in-action" name="video-of-the-demo-in-action"></a>
 //!
 //!
-//! https://user-images.githubusercontent.com/2966499/233481838-b6da884f-f73d-4e1f-adef-94beb9761c46.mp4
+//! ![video-gif](https://user-images.githubusercontent.com/2966499/233799311-210b887e-0aa6-470a-bcea-ee8e0e3eb019.gif)
 //!
 //! ### Run the demo locally
 //! <a id="markdown-run-the-demo-locally" name="run-the-demo-locally"></a>
