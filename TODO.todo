@@ -8,16 +8,16 @@ fix performance problem:
 add todo parser (https://github.com/r3bl-org/r3bl_rs_utils/issues/96):
   ☐ support for todo apps
 
-continue building r3bl_cmdr:
-  r3bl_rs_utils:
-    ☐ flush out core editor component features (copy, paste, select, etc)
-    ☐ analytics measurement
-  r3bl_cmdr:
-    ☐ notes editor
-    ☐ github issues
-    ☐ analytics measurement
-    ☐ dashboard for weather etc
-    ☐ alpha release
+editor component upgrades https://github.com/r3bl-org/r3bl_rs_utils/issues/86:
+  ☐ flush out core editor component features (copy, paste, select, etc)
+  ☐ analytics measurement
+
+r3bl_cmdr:
+  ☐ notes editor (just one file at a time)
+  ☐ file explorer (to quickly open files in a cwd)
+  ☐ analytics measurement
+  ☐ dashboard for weather (in status bar?)
+  ☐ alpha release
 
 crate upgrades:
   ☐ syn 2.0
