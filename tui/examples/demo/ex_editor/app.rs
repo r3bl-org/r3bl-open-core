@@ -166,8 +166,10 @@ mod detect_modal_dialog_activation_from_input_event {
         /// dialog.
         ///
         /// Note that this returns a [EventPropagation::Consumed] and not
-        /// [EventPropagation::ConsumedRender] because the [Action::SetDialogBufferTitleAndTextById]
-        /// is dispatched to the store & that will cause a rerender.
+        /// [EventPropagation::ConsumedRender] because both the following dispatched to the store &
+        /// that will cause a rerender:
+        /// 1. [Action::SimpleDialogComponentInitializeFocused].
+        /// 2. [Action::AutocompleteDialogComponentInitializeFocused].
         pub async fn try_input_event_activate_modal(
             &mut self,
             args: GlobalScopeArgs<'_, State, Action>,

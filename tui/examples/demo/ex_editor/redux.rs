@@ -196,12 +196,23 @@ mod reducer_impl {
             let dialog_buffer = {
                 let mut it = DialogBuffer::new_empty();
                 it.title = title.into();
-                it.editor_buffer.set_lines(vec![text.into()]);
+                let max_width = 100;
+                let line: String = {
+                    if text.is_empty() {
+                        "".to_string()
+                    } else if text.len() > max_width {
+                        text.split_at(max_width).0.to_string()
+                    } else {
+                        text.clone()
+                    }
+                };
+                it.editor_buffer.set_lines(vec![line]);
                 it
             };
             state.dialog_buffers.insert(*id, dialog_buffer);
         }
 
+        // This runs on every keystroke, so it should be fast.
         fn dialog_component_update_content(
             state: &mut State,
             id: &FlexBoxId,
@@ -239,8 +250,9 @@ mod reducer_impl {
                 })
                 .or_insert_with(
                     // This code path should never execute, since to update the buffer given an id,
-                    // it should have already existed in the first place (created by
-                    // SetDialogBufferTitleAndTextById action).
+                    // it should have already existed in the first place, which is created by:
+                    // 1. [Action::SimpleDialogComponentInitializeFocused].
+                    // 2. [Action::AutocompleteDialogComponentInitializeFocused].
                     || {
                         let mut it = DialogBuffer::new_empty();
                         it.editor_buffer = editor_buffer.clone();
@@ -266,8 +278,9 @@ mod reducer_impl {
                 .and_modify(|it| it.maybe_results = Some(results.to_vec()))
                 .or_insert_with(
                     // This code path should never execute, since to update the buffer given an id,
-                    // it should have already existed in the first place (created by
-                    // SetDialogBufferTitleAndTextById action).
+                    // it should have already existed in the first place, which is created by:
+                    // 1. [Action::SimpleDialogComponentInitializeFocused].
+                    // 2. [Action::AutocompleteDialogComponentInitializeFocused].
                     || {
                         let mut it = DialogBuffer::new_empty();
                         it.maybe_results = Some(results.to_vec());
