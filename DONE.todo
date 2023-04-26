@@ -2,6 +2,9 @@
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+fix performance problem (https://github.com/r3bl-org/r3bl_rs_utils/issues/95):
+  ✔ scroll left / right slow in type ahead completion dialog @done(23-04-25 18:31)
+
 update changelog for r3bl_tui v0.3.3, r3bl_rs_utils_core v0.9.2:
   ✔ correct console color support at RenderOps level (ANSI256, Truecolor, Grayscale) @done(23-04-20 15:40)
   ✔ brand new markdown parser @done(23-04-20 15:47)

@@ -2,9 +2,6 @@ open: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+-
 features: <https://github.com/orgs/r3bl-org/projects/1/views/1>
 backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
 
-fix performance problem:
-  ☐ scroll left / right slow in type ahead completion dialog
-
 add todo parser (https://github.com/r3bl-org/r3bl_rs_utils/issues/96):
   ☐ support for todo apps
 
