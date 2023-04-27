@@ -2,19 +2,22 @@ open: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+-
 features: <https://github.com/orgs/r3bl-org/projects/1/views/1>
 backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
 
-add todo parser (https://github.com/r3bl-org/r3bl_rs_utils/issues/96):
-  ☐ support for todo apps
-
-editor component upgrades https://github.com/r3bl-org/r3bl_rs_utils/issues/86:
+editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/86):
   ☐ flush out core editor component features (copy, paste, select, etc)
   ☐ analytics measurement
 
-r3bl_cmdr:
+r3bl_cmdr alpha (https://github.com/r3bl-org/r3bl_rs_utils/issues/101):
   ☐ notes editor (just one file at a time)
   ☐ file explorer (to quickly open files in a cwd)
   ☐ analytics measurement
   ☐ dashboard for weather (in status bar?)
   ☐ alpha release
+
+editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/50):
+  ☐ find, search/replace
+
+add todo parser (https://github.com/r3bl-org/r3bl_rs_utils/issues/96):
+☐ support for todo apps
 
 crate upgrades:
   ☐ syn 2.0
