@@ -123,7 +123,12 @@ crate](https://docs.rs/r3bl_tui/latest/r3bl_tui/).
 
 Here's a video of the demo in action:
 
-https://user-images.githubusercontent.com/2966499/233481838-b6da884f-f73d-4e1f-adef-94beb9761c46.mp4
+![video-gif](https://user-images.githubusercontent.com/2966499/233799311-210b887e-0aa6-470a-bcea-ee8e0e3eb019.gif)
+
+Here's a video of a prototype of [R3BL CMDR](https://github.com/r3bl-org/r3bl-cmdr) app built using
+this TUI engine.
+
+![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
 
 
 ## redux
