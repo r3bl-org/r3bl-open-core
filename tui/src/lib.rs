@@ -163,18 +163,20 @@
 //! ## Examples to get you started
 //! <a id="markdown-examples-to-get-you-started" name="examples-to-get-you-started"></a>
 //!
-//!
 //! <!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
 //!
 //! ### Video of the demo in action
 //! <a id="markdown-video-of-the-demo-in-action" name="video-of-the-demo-in-action"></a>
 //!
-//!
 //! ![video-gif](https://user-images.githubusercontent.com/2966499/233799311-210b887e-0aa6-470a-bcea-ee8e0e3eb019.gif)
+//!
+//! Here's a video of a prototype of [R3BL CMDR](https://github.com/r3bl-org/r3bl-cmdr) app built using
+//! this TUI engine.
+//!
+//! ![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
 //!
 //! ### Run the demo locally
 //! <a id="markdown-run-the-demo-locally" name="run-the-demo-locally"></a>
-//!
 //!
 //! Once you've cloned [the repo](https://github.com/r3bl-org/r3bl_rs_utils) to a folder on your
 //! computer, you can run the examples you see in the video with the following commands:
