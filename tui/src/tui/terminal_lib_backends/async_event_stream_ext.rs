@@ -28,7 +28,8 @@
 //!   }
 //! }
 //! ```
-//[! The following code blocks the thread that its running on.
+//!
+//! The following code blocks the thread that its running on.
 //!
 //! ```ignore
 //! async fn repl_blocking() -> CommonResult<()> {
@@ -46,9 +47,15 @@
 //! ```
 //!
 //! Docs:
+//! - <https://tokio.rs/tokio/tutorial/async>
+//! - <https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=7a43cdf047cc17047c3c8b3f137293f0>
 //! - <https://github.com/crossterm-rs/crossterm/wiki/Upgrade-from-0.13-to-0.14#115-event-polling>
 //! - <https://github.com/crossterm-rs/crossterm/wiki/Upgrade-from-0.13-to-0.14#111-new-event-api>
 //! - <https://github.com/crossterm-rs/crossterm/blob/master/examples/event-stream-tokio.rs>
+//! - <https://doc.rust-lang.org/std/future/trait.Future.html>
+//! - <https://doc.rust-lang.org/std/task/struct.Waker.html>
+//! - <https://docs.rs/polling/latest/polling/index.html>
+//! - <https://doc.rust-lang.org/std/pin/index.html>
 
 use async_trait::async_trait;
 use crossterm::event::*;
