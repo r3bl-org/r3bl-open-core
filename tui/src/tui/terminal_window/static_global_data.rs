@@ -99,6 +99,67 @@ pub mod telemetry_global_static {
     }
 }
 
+pub mod is_vscode_term_global_static {
+    use super::*;
+
+    pub static mut IS_VSCODE_TERM: AtomicI64 = AtomicI64::new(NOT_SET_VALUE);
+
+    fn detect_whether_is_vscode_term_from_env() -> VSCodeTerm {
+        let env_key = "TERM_PROGRAM";
+        let env_value = match std::env::var(env_key) {
+            Ok(value) => value == "vscode",
+            _ => false,
+        };
+        match env_value {
+            true => VSCodeTerm::Yes,
+            false => VSCodeTerm::No,
+        }
+    }
+
+    #[derive(Debug, Copy, Clone)]
+    pub enum VSCodeTerm {
+        Yes,
+        No,
+    }
+
+    impl From<i64> for VSCodeTerm {
+        fn from(value: i64) -> Self {
+            match value {
+                0 => VSCodeTerm::No,
+                1 => VSCodeTerm::Yes,
+                _ => VSCodeTerm::No,
+            }
+        }
+    }
+
+    impl From<VSCodeTerm> for i64 {
+        fn from(value: VSCodeTerm) -> Self {
+            match value {
+                VSCodeTerm::No => 0,
+                VSCodeTerm::Yes => 1,
+            }
+        }
+    }
+
+    pub fn get_is_vscode_term() -> VSCodeTerm {
+        let existing_value = unsafe { IS_VSCODE_TERM.load(Ordering::SeqCst) };
+
+        match existing_value == NOT_SET_VALUE {
+            // If not set, then calculate new value, save it, return it.
+            true => {
+                let vscode_term = detect_whether_is_vscode_term_from_env();
+                unsafe {
+                    IS_VSCODE_TERM.store(i64::from(vscode_term), Ordering::SeqCst);
+                }
+                vscode_term
+            }
+
+            // Return saved value.
+            false => VSCodeTerm::from(existing_value),
+        }
+    }
+}
+
 /// This module contains static global data that is meant to be used by the entire application. It
 /// also provides functions to manipulate this data.
 ///
@@ -110,8 +171,6 @@ pub mod telemetry_global_static {
 /// - This is **not** wrapped in an [Arc](std::sync::Arc) and [Mutex](std::sync::Mutex).
 pub mod color_support_global_static {
     use super::*;
-
-    // ColorSupport related.
 
     /// Global [ColorSupport] override.
     pub static mut COLOR_SUPPORT_OVERRIDE: AtomicI64 = AtomicI64::new(NOT_SET_VALUE);

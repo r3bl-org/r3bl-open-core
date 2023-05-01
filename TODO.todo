@@ -10,22 +10,18 @@ editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/86):
   ☐ implement cut
   ☐ implement paste
 
-r3bl_cmdr alpha (https://github.com/r3bl-org/r3bl_rs_utils/issues/101):
+docs update (https://github.com/r3bl-org/r3bl_rs_utils/issues/102):
+  ✔ clean up threading docs (in code) @done(23-05-01 15:01)
+  ☐ add more tui/README.md (and copy that into tui/lib.rs)
+    ☐ mental model for the entire thing (dependency injection, etc)
+    ☐ concurrency / parallelism / async / tokio - how all this works
+    ☐ deep dive of unicode handling
+    ☐ deep dive of custom parser & syntax highlighter
+    ☐ deep dive of color support & color wheel & lolcat
+
+r3bl_cmdr alpha (https://github.com/r3bl-org/r3bl-cmdr/issues/23):
   ☐ notes editor (just one file at a time)
   ☐ file explorer (to quickly open files in a cwd)
   ☐ analytics measurement
   ☐ dashboard for weather (in status bar w/ beep-boop animation on weather loading)
   ☐ alpha release
-
-editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/50):
-  ☐ find, search/replace
-
-add todo parser (https://github.com/r3bl-org/r3bl_rs_utils/issues/96):
-  ☐ support for todo apps
-
-crate upgrades:
-  ☐ syn 2.0
-    - https://github.com/dtolnay/syn/releases/tag/2.0.0
-  ☐ tree sitter?
-    - https://github.com/MDeiml/tree-sitter-markdown
-
