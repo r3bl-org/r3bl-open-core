@@ -29,6 +29,8 @@ pub static mut FILE_PATH: &str = "log.txt";
 static mut FILE_LOGGER_INIT_OK: bool = false;
 static FILE_LOGGER_INIT_FN: Once = Once::new();
 
+const ENABLE_MULTITHREADED_LOG_WRITING: bool = false;
+
 /// If you want to override the default log file path (stored in [FILE_PATH]), you can use this
 /// function. If the logger has already been initialized, then it will return a
 /// [CommonErrorType::InvalidState] error.
@@ -80,9 +82,16 @@ pub fn log_info(arg: String) {
             init_file_logger_once().unwrap_err()
         );
     } else {
-        std::thread::spawn(move || {
-            log::info!("{}", arg);
-        });
+        match ENABLE_MULTITHREADED_LOG_WRITING {
+            true => {
+                std::thread::spawn(move || {
+                    log::info!("{}", arg);
+                });
+            }
+            false => {
+                log::info!("{}", arg);
+            }
+        }
     }
 }
 
@@ -110,9 +119,16 @@ pub fn log_warn(arg: String) {
             init_file_logger_once().unwrap_err()
         );
     } else {
-        std::thread::spawn(move || {
-            log::warn!("{}", arg);
-        });
+        match ENABLE_MULTITHREADED_LOG_WRITING {
+            true => {
+                std::thread::spawn(move || {
+                    log::warn!("{}", arg);
+                });
+            }
+            false => {
+                log::warn!("{}", arg);
+            }
+        }
     }
 }
 
@@ -125,9 +141,16 @@ pub fn log_trace(arg: String) {
             init_file_logger_once().unwrap_err()
         );
     } else {
-        std::thread::spawn(move || {
-            log::trace!("{}", arg);
-        });
+        match ENABLE_MULTITHREADED_LOG_WRITING {
+            true => {
+                std::thread::spawn(move || {
+                    log::trace!("{}", arg);
+                });
+            }
+            false => {
+                log::trace!("{}", arg);
+            }
+        }
     }
 }
 
@@ -140,9 +163,16 @@ pub fn log_error(arg: String) {
             init_file_logger_once().unwrap_err()
         );
     } else {
-        std::thread::spawn(move || {
-            log::error!("{}", arg);
-        });
+        match ENABLE_MULTITHREADED_LOG_WRITING {
+            true => {
+                std::thread::spawn(move || {
+                    log::error!("{}", arg);
+                });
+            }
+            false => {
+                log::error!("{}", arg);
+            }
+        }
     }
 }
 

@@ -24,7 +24,8 @@ use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::*;
 use tokio::sync::RwLock;
 
-use crate::*;
+use crate::{is_vscode_term_global_static::{get_is_vscode_term, VSCodeTerm},
+            *};
 
 pub struct TerminalWindow;
 
@@ -100,14 +101,37 @@ impl TerminalWindow {
                     .await?;
             }
 
-            let propagation_result_from_app =
-                TerminalWindow::spawn_task_to_process_input_event_and_wait_for_it_to_finish(
-                    &shared_global_data,
-                    &shared_store,
-                    &shared_app,
-                    &input_event,
-                )
-                .await?;
+            // ## What?
+            // This flag controls whether each input event uses `tokio::spawn` to create and run a
+            // new task in which to have the app process the input event.
+            // - When set to `No` it does not spawn a new task since it is already running in one.
+            // - When set to `Yes` it will spawn a new task for an input event, and then await its
+            //   completion, before continuing on to the next input event.
+            //
+            // ## Why?
+            // The primary reason for having this flag is seeing visual artifacts when running the
+            // demo in a VSCode terminal on Linux when this is set to `No`. The performance of the
+            // app does not seem to be affected by this flag.
+            let propagation_result_from_app = match get_is_vscode_term() {
+                VSCodeTerm::No => {
+                    let args_for_app = (
+                        &shared_global_data,
+                        &shared_store,
+                        &shared_app,
+                        &input_event,
+                    );
+                    AppManager::route_input_to_app(args_for_app).await?
+                }
+                VSCodeTerm::Yes => {
+                    TerminalWindow::spawn_task_to_process_input_event_and_wait_for_it_to_finish(
+                        &shared_global_data,
+                        &shared_store,
+                        &shared_app,
+                        &input_event,
+                    )
+                    .await?
+                }
+            };
 
             // If event not consumed by app, propagate to the default input handler.
             match propagation_result_from_app {
@@ -162,7 +186,13 @@ impl TerminalWindow {
         // apps (for example the editor demo).
         #[allow(clippy::redundant_async_block)]
         let future_result = tokio::spawn(async move {
-            AppManager::route_input_to_app(&captured_args_for_spawned_task).await
+            AppManager::route_input_to_app((
+                &captured_args_for_spawned_task.0,
+                &captured_args_for_spawned_task.1,
+                &captured_args_for_spawned_task.2,
+                &captured_args_for_spawned_task.3,
+            ))
+            .await
         })
         .await??;
 
@@ -229,11 +259,11 @@ where
 
     /// Pass the event to the `shared_app` for further processing.
     pub async fn route_input_to_app(
-        (shared_global_data, shared_store, shared_app, input_event): &(
-            SharedGlobalData,
-            SharedStore<S, A>,
-            SharedApp<S, A>,
-            InputEvent,
+        (shared_global_data, shared_store, shared_app, input_event): (
+            &SharedGlobalData,
+            &SharedStore<S, A>,
+            &SharedApp<S, A>,
+            &InputEvent,
         ),
     ) -> CommonResult<EventPropagation> {
         throws_with_return!({
