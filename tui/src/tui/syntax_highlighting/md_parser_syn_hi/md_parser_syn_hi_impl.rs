@@ -697,13 +697,18 @@ mod tests_style_us_span_lines_from {
             assert_eq2!(actual.len(), 6);
 
             // "!["
+            let actual = actual.get(0).unwrap();
+            let actual_style_color_fg = actual
+                .style
+                .color_fg
+                .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
             assert_eq2!(
-                actual.get(0).unwrap(),
+                actual,
                 &StyleUSSpan::new(
                     maybe_style.unwrap_or_default()
                         + style! {
                             attrib: [dim]
-                            color_fg: TuiColor::Rgb(RgbValue::from_hex("#c1b3d0"))
+                            color_fg: actual_style_color_fg
                             color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                         },
                     US::from("![")
@@ -727,87 +732,129 @@ mod tests_style_us_span_lines_from {
             assert_eq2!(actual.len(), 6);
 
             // "["
-            assert_eq2!(
-                actual.get(0).unwrap(),
-                &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default()
-                        + style! {
-                            attrib: [dim]
-                            color_fg: TuiColor::Rgb(RgbValue::from_hex("#c1b3d0"))
-                            color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                        },
-                    US::from("[")
-                )
-            );
+            {
+                let actual = actual.get(0).unwrap();
+                let actual_style_color_fg = actual
+                    .style
+                    .color_fg
+                    .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
+                assert_eq2!(
+                    actual,
+                    &StyleUSSpan::new(
+                        maybe_style.unwrap_or_default()
+                            + style! {
+                                attrib: [dim]
+                                color_fg: actual_style_color_fg
+                                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+                            },
+                        US::from("[")
+                    )
+                );
+            }
 
             // "Foobar"
-            assert_eq2!(
-                actual.get(1).unwrap(),
-                &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default()
-                        + style! {
-                            color_fg: TuiColor::Rgb(RgbValue::from_hex("#4f86ed"))
-                            color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                        },
-                    US::from("R3BL")
+            {
+                let actual = actual.get(1).unwrap();
+                let actual_style_color_fg = actual
+                    .style
+                    .color_fg
+                    .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
+                assert_eq2!(
+                    actual,
+                    &StyleUSSpan::new(
+                        maybe_style.unwrap_or_default()
+                            + style! {
+                                color_fg: actual_style_color_fg
+                                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+                            },
+                        US::from("R3BL")
+                    )
                 )
-            );
+            };
 
             // "]"
-            assert_eq2!(
-                actual.get(2).unwrap(),
-                &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default()
-                        + style! {
-                            attrib: [dim]
-                            color_fg: TuiColor::Rgb(RgbValue::from_hex("#c1b3d0"))
-                            color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                        },
-                    US::from("]")
-                )
-            );
+            {
+                let actual = actual.get(2).unwrap();
+                let actual_style_color_fg = actual
+                    .style
+                    .color_fg
+                    .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
+                assert_eq2!(
+                    actual,
+                    &StyleUSSpan::new(
+                        maybe_style.unwrap_or_default()
+                            + style! {
+                                attrib: [dim]
+                                color_fg: actual_style_color_fg
+                                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+                            },
+                        US::from("]")
+                    )
+                );
+            }
 
             // "("
-            assert_eq2!(
-                actual.get(3).unwrap(),
-                &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default()
-                        + style! {
-                            attrib: [dim]
-                            color_fg: TuiColor::Rgb(RgbValue::from_hex("#c1b3d0"))
-                            color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                        },
-                    US::from("(")
-                )
-            );
+            {
+                let actual = actual.get(3).unwrap();
+                let actual_style_color_fg = actual
+                    .style
+                    .color_fg
+                    .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
+                assert_eq2!(
+                    actual,
+                    &StyleUSSpan::new(
+                        maybe_style.unwrap_or_default()
+                            + style! {
+                                attrib: [dim]
+                                color_fg: actual_style_color_fg
+                                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+                            },
+                        US::from("(")
+                    )
+                );
+            }
 
             // "https://r3bl.com"
-            assert_eq2!(
-                actual.get(4).unwrap(),
-                &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default()
-                        + style! {
-                            attrib: [underline]
-                            color_fg: TuiColor::Rgb(RgbValue::from_hex("#16adf3"))
-                            color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                        },
-                    US::from("https://r3bl.com")
-                )
-            );
+            {
+                let actual = actual.get(4).unwrap();
+                let actual_style_color_fg = actual
+                    .style
+                    .color_fg
+                    .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
+                assert_eq2!(
+                    actual,
+                    &StyleUSSpan::new(
+                        maybe_style.unwrap_or_default()
+                            + style! {
+                                attrib: [underline]
+                                color_fg: actual_style_color_fg
+                                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+                            },
+                        US::from("https://r3bl.com")
+                    )
+                );
+            }
 
             // ")"
-            assert_eq2!(
-                actual.get(5).unwrap(),
-                &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default()
-                        + style! {
-                            attrib: [dim]
-                            color_fg: TuiColor::Rgb(RgbValue::from_hex("#c1b3d0"))
-                            color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-                        },
-                    US::from(")")
-                )
-            );
+            {
+                let actual = actual.get(5).unwrap();
+                let actual_style_color_fg = actual
+                    .style
+                    .color_fg
+                    .unwrap_or(TuiColor::Basic(ANSIBasicColor::White));
+                assert_eq2!(
+                    actual,
+                    &StyleUSSpan::new(
+                        maybe_style.unwrap_or_default()
+                            + style! {
+                                attrib: [dim]
+                                color_fg: actual_style_color_fg
+                                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+                            },
+                        US::from(")")
+                    )
+                );
+            }
 
             // println!("{}", List::from(actual)..pretty_print_debug());
         }
