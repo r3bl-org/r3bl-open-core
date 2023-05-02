@@ -24,7 +24,9 @@ use syntect::easy::HighlightLines;
 use super::*;
 use crate::*;
 
-impl EditorEngine {
+pub struct EditorEngineApi;
+
+impl EditorEngineApi {
     /// Event based interface for the editor. This converts the [InputEvent] into an [EditorEvent]
     /// and then executes it. Returns a new [EditorBuffer] if the operation was applied otherwise
     /// returns [None].
@@ -120,11 +122,11 @@ impl EditorEngine {
             };
 
             if editor_buffer.is_empty() {
-                EditorEngine::render_empty_state(&render_args)
+                EditorEngineApi::render_empty_state(&render_args)
             } else {
                 let mut render_ops = render_ops!();
-                EditorEngine::render_content(&render_args, &mut render_ops);
-                EditorEngine::render_caret(&render_args, &mut render_ops);
+                EditorEngineApi::render_content(&render_args, &mut render_ops);
+                EditorEngineApi::render_caret(&render_args, &mut render_ops);
                 let mut render_pipeline = render_pipeline!();
                 render_pipeline.push(ZOrder::Normal, render_ops);
                 render_pipeline
@@ -164,7 +166,7 @@ impl EditorEngine {
         }
 
         // Render using syntect first.
-        syntect_path::render_content(
+        syn_hi_syntect_path::render_content(
             editor_buffer,
             max_display_row_count,
             render_ops,
@@ -173,7 +175,7 @@ impl EditorEngine {
         );
 
         // Any overrides can be applied here.
-        r3bl_path::render_content(
+        syn_hi_r3bl_path::render_content(
             editor_buffer,
             max_display_row_count,
             render_ops,
@@ -282,7 +284,7 @@ where
     NotApplied,
 }
 
-mod r3bl_path {
+mod syn_hi_r3bl_path {
     use super::*;
 
     /// Try convert [Vec] of [US] to [MdDocument]:
@@ -380,7 +382,7 @@ mod r3bl_path {
     }
 }
 
-mod syntect_path {
+mod syn_hi_syntect_path {
     use super::*;
 
     pub fn render_content(

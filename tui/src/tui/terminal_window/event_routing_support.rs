@@ -38,6 +38,7 @@ pub enum EventPropagation {
     ConsumedRender,
     Consumed,
     Propagate,
+    ExitMainEventLoop,
 }
 
 /// Helper macro that works w/ [EventPropagation]. This code block commonly appears in places where

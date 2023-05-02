@@ -12,7 +12,13 @@ editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/86):
 
 docs update (https://github.com/r3bl-org/r3bl_rs_utils/issues/102):
   ✔ clean up threading docs (in code) @done(23-05-01 15:01)
+  ✔ fix threading bug in main event loop @done(23-05-02 14:07)
   ☐ add more tui/README.md (and copy that into tui/lib.rs)
+    ☐ overview of the thing
+      - GUI meets TUI, text reliant but GUI feeling apps that run in a terminal,
+      - ASCII art is used gfor UI (eg: dialog boxes being drawn w/ ANSI chars)
+      - ANSI escape codes are generated for the entire UI and send to stdout
+      - Redux store, and app is constructed, then injected into main_event_loop() fn
     ☐ mental model for the entire thing (dependency injection, etc)
     ☐ concurrency / parallelism / async / tokio - how all this works
     ☐ deep dive of unicode handling

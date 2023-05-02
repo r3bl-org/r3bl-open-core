@@ -26,15 +26,17 @@ use crate::*;
 /// Stores the data for a single editor buffer. Please do not construct this struct directly and use
 /// [new_empty](EditorBuffer::new_empty) instead.
 ///
-/// 1. This struct is stored in the [r3bl_redux::Store].
+/// 1. This struct is stored in the [r3bl_redux::Store]'s [state](r3bl_redux::Store::state) field.
 /// 2. And it is paired w/ [EditorEngine] at runtime; which is responsible for rendering it to TUI,
 ///    and handling user input.
 ///
 /// # Modifying the buffer
 ///
-/// You have to supply an [EditorEvent] to the [EditorBuffer] to modify it via:
-/// 1. [apply_editor_event](EditorEvent::apply_editor_event)
-/// 2. [apply_editor_events](EditorEvent::apply_editor_events)
+/// [InputEvent] is coverted into an [EditorEvent] (by
+///     [EditorEngineApi]::[apply_event](EditorEngineApi::apply_event)), which is then used to
+///     modify the [EditorBuffer] via:
+/// 1. [EditorEvent::apply_editor_event](EditorEvent::apply_editor_event)
+/// 2. [EditorEvent::apply_editor_events](EditorEvent::apply_editor_events)
 ///
 /// In order for the commands to be executed, the functions in [EditorEngineInternalApi] are used.
 ///
@@ -241,10 +243,10 @@ pub mod access_and_mutate {
         /// 2. /* caret */ &mut Position,
         /// 3. /* scroll_offset */ &mut ScrollOffset,
         ///
-        /// Even though this struct is mutable by editor_ops.rs, this method is provided to mark when
-        /// mutable access is made to this struct. This makes it easy to determine what code mutates
-        /// this struct, since it is necessary to validate things after mutation quite a bit in
-        /// editor_ops.rs.
+        /// Even though this struct is mutable by editor_ops.rs, this method is provided to mark
+        /// when mutable access is made to this struct. This makes it easy to determine what code
+        /// mutates this struct, since it is necessary to validate things after mutation quite a bit
+        /// in editor_ops.rs.
         pub fn get_mut(
             &mut self,
         ) -> (

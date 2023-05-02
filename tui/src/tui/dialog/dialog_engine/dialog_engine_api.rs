@@ -162,7 +162,7 @@ impl DialogEngine {
 
         // If the editor engine applied the event, return the new editor buffer.
         if let EditorEngineApplyResponse::Applied(new_editor_buffer) =
-            EditorEngine::apply_event(editor_engine_args, input_event).await?
+            EditorEngineApi::apply_event(editor_engine_args, input_event).await?
         {
             return Ok(DialogEngineApplyResponse::UpdateEditorBuffer(
                 new_editor_buffer,
@@ -334,7 +334,7 @@ mod internal_impl {
             state: args.state,
         };
 
-        let mut pipeline = EditorEngine::render_engine(editor_engine_args, &flex_box).await?;
+        let mut pipeline = EditorEngineApi::render_engine(editor_engine_args, &flex_box).await?;
         pipeline.hoist(ZOrder::Normal, ZOrder::Glass);
 
         // Paint hint.

@@ -29,12 +29,12 @@ use crate::*;
 /// [EditorBuffer] struct, which lives in the [r3bl_redux::Store]. The store provides the underlying
 /// document or buffer struct that holds the actual document.
 ///
-/// In order to change the document, you can use the [apply_event](EditorEngine::apply_event) method
-/// which takes [InputEvent] and tries to convert it to an [EditorEvent] and then execute them
-/// against this buffer.
+/// In order to change the document, you can use the
+/// [EditorEngineApi::apply_event](EditorEngineApi::apply_event) method which takes [InputEvent] and
+/// tries to convert it to an [EditorEvent] and then execute them against this buffer.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EditorEngine {
-    /// Set by [render](EditorEngine::render_engine).
+    /// Set by [EditorEngineApi::render_engine](EditorEngineApi::render_engine).
     pub current_box: PartialFlexBox,
     pub config_options: EditorEngineConfig,
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
