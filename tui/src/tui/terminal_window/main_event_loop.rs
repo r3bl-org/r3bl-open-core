@@ -22,10 +22,9 @@ use get_size::GetSize;
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::*;
-use tokio::sync::RwLock;
+use tokio::sync::{mpsc, RwLock};
 
-use crate::{is_vscode_term_global_static::{get_is_vscode_term, VSCodeTerm},
-            *};
+use crate::*;
 
 pub struct TerminalWindow;
 
@@ -51,7 +50,7 @@ impl TerminalWindow {
         let shared_global_data: SharedGlobalData = Arc::new(RwLock::new(_global_data));
 
         // Start raw mode.
-        let my_raw_mode = RawMode::start(&shared_global_data).await;
+        RawMode::start(&shared_global_data).await;
 
         // Move the store into an Arc & RwLock.
         let shared_store: SharedStore<S, A> = Arc::new(RwLock::new(store));
@@ -71,139 +70,126 @@ impl TerminalWindow {
             .await
             .dump_to_log("main_event_loop -> Startup 🚀");
 
+        // mpsc channel to send exit signal to main loop.
+        let (exit_channel_sender, mut exit_channel_reciever) = mpsc::channel::<bool>(1);
+
         // Main event loop.
         loop {
-            // Try and get the next event if available (asynchronously).
-            let maybe_input_event = async_event_stream.try_to_get_input_event().await;
-            telemetry_global_static::set_start_ts();
-
-            // Process the input_event.
-            let input_event = match maybe_input_event {
-                Some(it) => it,
-                _ => continue,
-            };
-            call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("main_event_loop -> Tick: ⏰ {input_event}");
-                log_info(msg);
-            });
-
-            // Before any app gets to process the input_event, perform special handling in case it is a
-            // resize event. Even if TerminalWindow::process_input_event consumes the event, if the event
-            // is a resize event, then we still need to update the size of the terminal window. It also
-            // needs to be re-rendered.
-            if let InputEvent::Resize(new_size) = input_event {
-                shared_global_data.write().await.set_size(new_size);
-                shared_global_data
-                    .write()
-                    .await
-                    .maybe_saved_offscreen_buffer = None;
-                AppManager::render_app(&shared_store, &shared_app, &shared_global_data, None)
-                    .await?;
-            }
-
-            // ## What?
-            // This flag controls whether each input event uses `tokio::spawn` to create and run a
-            // new task in which to have the app process the input event.
-            // - When set to `No` it does not spawn a new task since it is already running in one.
-            // - When set to `Yes` it will spawn a new task for an input event, and then await its
-            //   completion, before continuing on to the next input event.
-            //
-            // ## Why?
-            // The primary reason for having this flag is seeing visual artifacts when running the
-            // demo in a VSCode terminal on Linux when this is set to `No`. The performance of the
-            // app does not seem to be affected by this flag.
-            let propagation_result_from_app = match get_is_vscode_term() {
-                VSCodeTerm::No => {
-                    let args_for_app = (
-                        &shared_global_data,
-                        &shared_store,
-                        &shared_app,
-                        &input_event,
-                    );
-                    AppManager::route_input_to_app(args_for_app).await?
-                }
-                VSCodeTerm::Yes => {
-                    TerminalWindow::spawn_task_to_process_input_event_and_wait_for_it_to_finish(
-                        &shared_global_data,
-                        &shared_store,
-                        &shared_app,
-                        &input_event,
-                    )
-                    .await?
-                }
-            };
-
-            // If event not consumed by app, propagate to the default input handler.
-            match propagation_result_from_app {
-                EventPropagation::Propagate => {
-                    if let Continuation::Exit =
-                        DefaultInputEventHandler::no_consume(input_event, &exit_keys).await
-                    {
+            tokio::select! {
+                // Handle exit channel.
+                result = exit_channel_reciever.recv() => {
+                    if result.is_some() {
+                        RawMode::end(&shared_global_data).await;
                         break;
-                    };
+                    }
                 }
-                EventPropagation::ConsumedRender => {
-                    AppManager::render_app(&shared_store, &shared_app, &shared_global_data, None)
-                        .await?;
-                }
-                EventPropagation::Consumed => {}
-            }
-        }
 
-        // End raw mode.
-        my_raw_mode.end(&shared_global_data).await;
+                // Handle input event.
+                maybe_input_event = async_event_stream.try_to_get_input_event() => {
+                    if let Some(input_event) = maybe_input_event {
+                        telemetry_global_static::set_start_ts();
+
+                        Self::handle_resize_event(&input_event, &shared_global_data, &shared_store, &shared_app).await;
+
+                        Self::spawn_task_to_process_input_event(
+                            shared_global_data.clone(),
+                            shared_store.clone(),
+                            shared_app.clone(),
+                            input_event.clone(),
+                            exit_keys.clone(),
+                            exit_channel_sender.clone(),
+                        );
+
+                    }
+                }
+            }
+        } // End loop.
 
         Ok(())
     }
 
-    /// This function is used to spawn a tokio task to process an input event. Even though a tokio
-    /// task is spawned, it is awaited immediately after spawning. The task that calls this function
-    /// is waiting until the spawned task completes.
-    ///
-    /// 1. Spawn a task to process the `input_event` (pass it to the app for processing).
-    /// 2. Then await it to get the result.
-    /// 3. Return that result from this function.
-    async fn spawn_task_to_process_input_event_and_wait_for_it_to_finish<S, A>(
+    /// Before any app gets to process the `input_event`, perform special handling in case it is a
+    /// resize event.
+    pub async fn handle_resize_event<S, A>(
+        input_event: &InputEvent,
         shared_global_data: &SharedGlobalData,
         shared_store: &SharedStore<S, A>,
         shared_app: &SharedApp<S, A>,
-        input_event: &InputEvent,
-    ) -> CommonResult<EventPropagation>
-    where
+    ) where
         S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
         A: Debug + Default + Clone + Sync + Send + 'static,
     {
-        // This must be created outside the async block below (to which it is passed).
-        let captured_args_for_spawned_task = (
-            shared_global_data.clone(),
-            shared_store.clone(),
-            shared_app.clone(),
-            input_event.clone(),
-        );
+        if let InputEvent::Resize(new_size) = input_event {
+            shared_global_data.write().await.set_size(*new_size);
+            shared_global_data
+                .write()
+                .await
+                .maybe_saved_offscreen_buffer = None;
+            let _ =
+                AppManager::render_app(shared_store, shared_app, shared_global_data, None).await;
+        }
+    }
 
-        // Why spawn a task and then immediately await it? If a task is not spawned to run
-        // `route_input_to_app`, then it causes all kinds of rendering problems when running certain
-        // apps (for example the editor demo).
-        #[allow(clippy::redundant_async_block)]
-        let future_result = tokio::spawn(async move {
-            AppManager::route_input_to_app((
-                &captured_args_for_spawned_task.0,
-                &captured_args_for_spawned_task.1,
-                &captured_args_for_spawned_task.2,
-                &captured_args_for_spawned_task.3,
-            ))
-            .await
-        })
-        .await??;
-
+    /// This function does not block the caller, since it [spawns](tokio::spawn) a task in parallel
+    /// to handle the `input_event` by passing it to the app.
+    pub fn spawn_task_to_process_input_event<S, A>(
+        shared_global_data: SharedGlobalData,
+        shared_store: SharedStore<S, A>,
+        shared_app: SharedApp<S, A>,
+        input_event: InputEvent,
+        exit_keys: Vec<InputEvent>,
+        exit_channel_sender: mpsc::Sender<bool>,
+    ) where
+        S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
+        A: Debug + Default + Clone + Sync + Send + 'static,
+    {
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!(
-                "main_event_loop -> 🚥 SPAWN propagation_result_from_app: {future_result:?}"
-            );
+            let msg = format!("main_event_loop -> Tick: ⏰ {input_event}");
             log_info(msg);
         });
 
-        Ok(future_result)
+        tokio::spawn(async move {
+            let result = AppManager::route_input_to_app(
+                shared_global_data.clone(),
+                shared_store.clone(),
+                shared_app.clone(),
+                input_event.clone(),
+            )
+            .await;
+
+            call_if_true!(DEBUG_TUI_MOD, {
+                let msg =
+                    format!("main_event_loop -> 🚥 SPAWN propagation_result_from_app: {result:?}");
+                log_info(msg);
+            });
+
+            if let Ok(event_propagation) = result {
+                match event_propagation {
+                    EventPropagation::Propagate => {
+                        let check_if_exit_keys_pressed =
+                            DefaultInputEventHandler::no_consume(input_event.clone(), &exit_keys);
+                        if let Continuation::Exit = check_if_exit_keys_pressed.await {
+                            // Exit keys were pressed.
+                            let _ = exit_channel_sender.send(true).await;
+                        };
+                    }
+                    EventPropagation::ConsumedRender => {
+                        let _ = AppManager::render_app(
+                            &shared_store,
+                            &shared_app,
+                            &shared_global_data,
+                            None,
+                        )
+                        .await;
+                    }
+                    EventPropagation::Consumed => {}
+                    EventPropagation::ExitMainEventLoop => {
+                        // Exit the main event loop.
+                        let _ = exit_channel_sender.send(true).await;
+                    }
+                }
+            }
+        });
     }
 }
 
@@ -259,20 +245,18 @@ where
 
     /// Pass the event to the `shared_app` for further processing.
     pub async fn route_input_to_app(
-        (shared_global_data, shared_store, shared_app, input_event): (
-            &SharedGlobalData,
-            &SharedStore<S, A>,
-            &SharedApp<S, A>,
-            &InputEvent,
-        ),
+        shared_global_data: SharedGlobalData,
+        shared_store: SharedStore<S, A>,
+        shared_app: SharedApp<S, A>,
+        input_event: InputEvent,
     ) -> CommonResult<EventPropagation> {
         throws_with_return!({
             // Create global scope args.
             let state = shared_store.read().await.get_state();
             let window_size = shared_global_data.read().await.get_size();
             let global_scope_args = GlobalScopeArgs {
-                shared_global_data,
-                shared_store,
+                shared_global_data: &shared_global_data,
+                shared_store: &shared_store,
                 state: &state,
                 window_size: &window_size,
             };
@@ -281,7 +265,7 @@ where
             shared_app
                 .write()
                 .await
-                .app_handle_event(global_scope_args, input_event)
+                .app_handle_event(global_scope_args, &input_event)
                 .await?
         });
     }

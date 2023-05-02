@@ -51,8 +51,8 @@ pub mod impl_component {
 
         fn get_id(&self) -> FlexBoxId { self.id }
 
-        /// This shim simply calls [apply_event](EditorEngine::apply_event) w/ all the
-        /// necessary arguments:
+        /// This shim simply calls [EditorEngineApi::apply_event](EditorEngineApi::apply_event) w/
+        /// all the necessary arguments:
         /// - Global scope: [SharedStore], [SharedGlobalData].
         /// - App scope: `S`, [ComponentRegistry<S, A>].
         /// - User input (from [main_event_loop]): [InputEvent].
@@ -98,7 +98,7 @@ pub mod impl_component {
                     editor_engine: &mut self.editor_engine,
                 };
 
-                match EditorEngine::apply_event(engine_args, input_event).await? {
+                match EditorEngineApi::apply_event(engine_args, input_event).await? {
                     EditorEngineApplyResponse::Applied(buffer) => {
                         if let Some(on_change_handler) = self.on_editor_buffer_change_handler {
                             on_change_handler(shared_store, self.get_id(), buffer);
@@ -113,8 +113,8 @@ pub mod impl_component {
             });
         }
 
-        /// This shim simply calls [render](EditorEngine::render_engine) w/ all the necessary
-        /// arguments:
+        /// This shim simply calls [EditorEngineApi::render_engine](EditorEngineApi::render_engine)
+        /// w/ all the necessary arguments:
         /// - Global scope: [SharedStore], [SharedGlobalData].
         /// - App scope: `S`, [ComponentRegistry<S, A>].
         /// - User input (from [main_event_loop]): [InputEvent].
@@ -155,7 +155,7 @@ pub mod impl_component {
                 self_id: self.id,
             };
 
-            EditorEngine::render_engine(render_args, current_box).await
+            EditorEngineApi::render_engine(render_args, current_box).await
         }
     }
 }
@@ -203,10 +203,10 @@ pub mod misc {
 
     pub type OnEditorBufferChangeFn<S, A> = fn(&SharedStore<S, A>, FlexBoxId, EditorBuffer);
 
-    /// This marker trait is meant to be implemented by whatever state struct is being used to store the
-    /// editor buffer for this re-usable editor component. It is used in the `where` clause of the
-    /// [EditorComponent] to ensure that the generic type `S` implements this trait, guaranteeing that
-    /// it holds a hash map of [EditorBuffer]s w/ key of `&str`.
+    /// This marker trait is meant to be implemented by whatever state struct is being used to store
+    /// the editor buffer for this re-usable editor component. It is used in the `where` clause of
+    /// the [EditorComponent] to ensure that the generic type `S` implements this trait,
+    /// guaranteeing that it holds a hash map of [EditorBuffer]s w/ key of [FlexBoxId].
     pub trait HasEditorBuffers {
         fn get_editor_buffer(&self, id: FlexBoxId) -> Option<&EditorBuffer>;
     }

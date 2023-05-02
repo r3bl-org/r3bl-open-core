@@ -15,6 +15,12 @@
  *   limitations under the License.
  */
 
+//! Note that, although read and write methods require a `&mut File`, because of the interfaces for
+//! `Read` and `Write`, the holder of a `&File` can still modify the file, either through methods
+//! that take `&File` or by retrieving the underlying OS object and modifying the file that way.
+//! Additionally, many operating systems allow concurrent modification of files by different
+//! processes. Avoid assuming that holding a `&File` means that the file will not change.
+
 use std::{fs::File, sync::Once};
 
 use chrono::Local;

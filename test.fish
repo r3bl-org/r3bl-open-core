@@ -8,6 +8,6 @@ set -l folders . core macro redux tui
 for folder in $folders
     pushd $folder
     echo (set_color brmagenta)"≡ Running tests in '$folder' .. ≡"(set_color normal)
-    cargo test -q
+    cargo test -q -- --test-threads=1
     popd
 end

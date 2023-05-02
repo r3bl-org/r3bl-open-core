@@ -19,10 +19,11 @@ use crate::*;
 
 /// To use this directly, you need to make sure to create an instance using [start](RawMode::start)
 /// which enables raw mode and then make sure to call [end](RawMode::end) when you are done.
+#[derive(Debug, Clone)]
 pub struct RawMode;
 
 impl RawMode {
-    pub async fn start(shared_global_data: &SharedGlobalData) -> Self {
+    pub async fn start(shared_global_data: &SharedGlobalData) {
         let mut skip_flush = false;
         RenderOps::route_paint_render_op_to_backend(
             &mut RenderOpsLocalData::default(),
@@ -31,10 +32,9 @@ impl RawMode {
             shared_global_data,
         )
         .await;
-        RawMode
     }
 
-    pub async fn end(&self, shared_global_data: &SharedGlobalData) {
+    pub async fn end(shared_global_data: &SharedGlobalData) {
         let mut skip_flush = false;
         RenderOps::route_paint_render_op_to_backend(
             &mut RenderOpsLocalData::default(),
