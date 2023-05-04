@@ -33,7 +33,7 @@ impl EditorEngineApi {
     pub async fn apply_event<S, A>(
         args: EditorEngineArgs<'_, S, A>,
         input_event: &InputEvent,
-    ) -> CommonResult<EditorEngineApplyResponse<EditorBuffer>>
+    ) -> CommonResult<EditorEngineApplyEventResult<EditorBuffer>>
     where
         S: Debug + Default + Clone + PartialEq + Sync + Send,
         A: Debug + Default + Clone + Sync + Send,
@@ -76,11 +76,12 @@ impl EditorEngineApi {
                     key: Key::SpecialKey(SpecialKey::PageDown),
                 },
             ]) {
-                return Ok(EditorEngineApplyResponse::NotApplied);
+                return Ok(EditorEngineApplyEventResult::NotApplied);
             }
         }
 
         if let Ok(editor_event) = EditorEvent::try_from(input_event) {
+            // AA: editor buffer gets cloned here
             let mut new_editor_buffer = editor_buffer.clone();
             EditorEvent::apply_editor_event(
                 editor_engine,
@@ -90,12 +91,13 @@ impl EditorEngineApi {
                 component_registry,
                 self_id,
             );
-            Ok(EditorEngineApplyResponse::Applied(new_editor_buffer))
+            Ok(EditorEngineApplyEventResult::Applied(new_editor_buffer))
         } else {
-            Ok(EditorEngineApplyResponse::NotApplied)
+            Ok(EditorEngineApplyEventResult::NotApplied)
         }
     }
 
+    // 00: add support for rendering vec_selection_per_line
     pub async fn render_engine<S, A>(
         args: EditorEngineArgs<'_, S, A>,
         current_box: &FlexBox,
@@ -276,7 +278,7 @@ impl EditorEngineApi {
     }
 }
 
-pub enum EditorEngineApplyResponse<T>
+pub enum EditorEngineApplyEventResult<T>
 where
     T: Debug,
 {

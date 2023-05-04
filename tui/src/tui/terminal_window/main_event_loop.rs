@@ -91,6 +91,7 @@ impl TerminalWindow {
 
                         Self::handle_resize_event(&input_event, &shared_global_data, &shared_store, &shared_app).await;
 
+                        // AB: this should probably not spawn (https://monroeclinton.com/pointing-devices-in-linux/)
                         Self::spawn_task_to_process_input_event(
                             shared_global_data.clone(),
                             shared_store.clone(),

@@ -39,6 +39,7 @@ pub enum EditorEvent {
     PageUp,
     MoveCaret(CaretDirection),
     Resize(Size),
+    // 00: add variant for selection
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -49,6 +50,7 @@ pub enum CaretDirection {
     Right,
 }
 
+// 00: add selection events (S+Left, S+Right, S+Up, S+Down, S+PageUp, S+PageDown, S+Home, S+End)
 impl TryFrom<&InputEvent> for EditorEvent {
     type Error = String;
 
@@ -109,6 +111,7 @@ impl TryFrom<&InputEvent> for EditorEvent {
 }
 
 impl EditorEvent {
+    // 00: impl selection editor events
     pub fn apply_editor_event<S, A>(
         editor_engine: &mut EditorEngine,
         editor_buffer: &mut EditorBuffer,

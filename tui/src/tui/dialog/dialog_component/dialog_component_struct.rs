@@ -18,14 +18,13 @@
 use std::{borrow::Cow, fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
-use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use tokio::sync::RwLock;
 
 use crate::*;
 
 /// This is a shim which allows the reusable [DialogEngine] to be used in the context of [Component]
-/// and [Store]. The main methods here simply pass thru all their arguments to the
+/// and [r3bl_redux::Store]. The main methods here simply pass thru all their arguments to the
 /// [DialogEngine].
 #[derive(Clone, Default)]
 pub struct DialogComponent<S, A>
@@ -53,7 +52,7 @@ where
 
     /// This shim simply calls [DialogEngineApi::render_engine](DialogEngineApi::render_engine) w/
     /// all the necessary arguments:
-    /// - Global scope: [SharedStore], [SharedGlobalData].
+    /// - Global scope: [r3bl_redux::SharedStore], [SharedGlobalData].
     /// - App scope: `S`, [ComponentRegistry<S, A>].
     /// - User input (from [main_event_loop]): [InputEvent].
     ///
@@ -104,13 +103,13 @@ where
 
     /// This shim simply calls [DialogEngineApi::apply_event](DialogEngineApi::apply_event) w/ all
     /// the necessary arguments:
-    /// - Global scope: [SharedStore], [SharedGlobalData].
+    /// - Global scope: [r3bl_redux::SharedStore], [SharedGlobalData].
     /// - App scope: `S`, [ComponentRegistry<S, A>].
     /// - User input (from [main_event_loop]): [InputEvent].
     ///
     /// Usually a component must have focus in order for the [App] to
-    /// [route_event_to_focused_component](ComponentRegistry::route_event_to_focused_component)
-    /// in the first place.
+    /// [route_event_to_focused_component](ComponentRegistry::route_event_to_focused_component) in
+    /// the first place.
     async fn handle_event(
         &mut self,
         args: ComponentScopeArgs<'_, S, A>,
@@ -228,26 +227,3 @@ where
         )))
     }
 }
-
-pub mod dialog_component_exports {
-    use super::*;
-
-    /// This marker trait is meant to be implemented by whatever state struct is being used to store the
-    /// dialog buffer for this re-usable editor component. It is used in the `where` clause of the
-    /// [DialogComponent] to ensure that the generic type `S` implements this trait, guaranteeing that
-    /// it holds a single [DialogBuffer].
-    pub trait HasDialogBuffers {
-        fn get_dialog_buffer(&self, id: FlexBoxId) -> Option<&DialogBuffer>;
-    }
-
-    #[derive(Debug)]
-    pub enum DialogChoice {
-        Yes(String),
-        No,
-    }
-
-    pub type OnDialogPressFn<S, A> = fn(DialogChoice, &SharedStore<S, A>);
-
-    pub type OnDialogEditorChangeFn<S, A> = fn(EditorBuffer, &SharedStore<S, A>);
-}
-pub use dialog_component_exports::*;

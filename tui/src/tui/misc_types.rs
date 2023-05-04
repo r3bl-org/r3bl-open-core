@@ -195,6 +195,9 @@ pub mod global_constants {
 pub use global_constants::*;
 
 pub mod list_of {
+    use get_size::GetSize;
+    use serde::{Deserialize, Serialize};
+
     use super::*;
 
     #[macro_export]
@@ -216,7 +219,7 @@ pub mod list_of {
 
     /// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for [List] of
     /// `T`. Where `T` is any number of types in the tui crate.
-    #[derive(Debug, Clone, Default, PartialEq)]
+    #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, GetSize)]
     pub struct List<T> {
         pub items: Vec<T>,
     }
@@ -374,3 +377,26 @@ mod editor_component_traits {
     }
 }
 pub use editor_component_traits::*;
+
+pub mod dialog_component_traits {
+    use super::*;
+
+    /// This marker trait is meant to be implemented by whatever state struct is being used to store the
+    /// dialog buffer for this re-usable editor component. It is used in the `where` clause of the
+    /// [DialogComponent] to ensure that the generic type `S` implements this trait, guaranteeing that
+    /// it holds a single [DialogBuffer].
+    pub trait HasDialogBuffers {
+        fn get_dialog_buffer(&self, id: FlexBoxId) -> Option<&DialogBuffer>;
+    }
+
+    #[derive(Debug)]
+    pub enum DialogChoice {
+        Yes(String),
+        No,
+    }
+
+    pub type OnDialogPressFn<S, A> = fn(DialogChoice, &SharedStore<S, A>);
+
+    pub type OnDialogEditorChangeFn<S, A> = fn(EditorBuffer, &SharedStore<S, A>);
+}
+pub use dialog_component_traits::*;

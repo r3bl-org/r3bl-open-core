@@ -75,7 +75,7 @@ where
     /// 1. This method might end up calling on an underlying engine function & pass the
     ///    `input_event` & state (from the redux store) to it.
     ///    - Engines tend to have a corresponding `apply_event` method which returns a new result or
-    ///      response type, eg: [DialogEngineApplyResponse] or [EditorEngineApplyResponse].
+    ///      response type, eg: [DialogEngineApplyResponse] or [EditorEngineApplyEventResult].
     /// 2. Then the response or result is used to run a callback function that was passed in when
     ///    the component was created (which will then end up dispatching an action to the redux
     ///    store).
