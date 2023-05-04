@@ -16,7 +16,7 @@
  */
 
 // Attach.
-pub mod animator_impl;
+pub mod animator_struct;
 
 // Re-export.
-pub use animator_impl::*;
+pub use animator_struct::*;

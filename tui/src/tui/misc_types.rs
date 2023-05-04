@@ -361,3 +361,16 @@ mod pretty_print_traits {
     }
 }
 pub use pretty_print_traits::*;
+
+mod editor_component_traits {
+    use super::*;
+
+    /// This marker trait is meant to be implemented by whatever state struct is being used to store
+    /// the editor buffer for this re-usable editor component. It is used in the `where` clause of
+    /// the [EditorComponent] to ensure that the generic type `S` implements this trait,
+    /// guaranteeing that it holds a hash map of [EditorBuffer]s w/ key of [FlexBoxId].
+    pub trait HasEditorBuffers {
+        fn get_editor_buffer(&self, id: FlexBoxId) -> Option<&EditorBuffer>;
+    }
+}
+pub use editor_component_traits::*;

@@ -16,7 +16,7 @@
  */
 
 // Attach.
-pub mod dialog_buffer_impl;
+pub mod dialog_buffer_struct;
 
 // Re-export.
-pub use dialog_buffer_impl::*;
+pub use dialog_buffer_struct::*;

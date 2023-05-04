@@ -3,6 +3,7 @@ features: <https://github.com/orgs/r3bl-org/projects/1/views/1>
 backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue+label%3Abacklog+>
 
 editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/86):
+  ✔ audit docs, source filenames, and symbol names; improve where needed @done(23-05-03 20:56)
   ☐ add selection support to editor buffer (array of line slice ranges)
   ☐ render selection (render all selections)
   ☐ mutate selection (shift + up/down/left/right)

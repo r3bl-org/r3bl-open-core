@@ -30,7 +30,9 @@ pub enum DialogEngineApplyResponse {
 }
 
 /// Things you can do with a [DialogEngine].
-impl DialogEngine {
+pub struct DialogEngineApi;
+
+impl DialogEngineApi {
     pub async fn render_engine<S, A>(
         args: DialogEngineArgs<'_, S, A>,
     ) -> CommonResult<RenderPipeline>
@@ -780,7 +782,7 @@ mod test_dialog_engine_api_render_engine {
             dialog_engine,
         };
 
-        let pipeline = dbg!(DialogEngine::render_engine(args).await.unwrap());
+        let pipeline = dbg!(DialogEngineApi::render_engine(args).await.unwrap());
         assert_eq2!(pipeline.len(), 1);
         let render_ops = pipeline.get(&ZOrder::Glass).unwrap();
         assert!(!render_ops.is_empty());
@@ -990,7 +992,7 @@ mod test_dialog_engine_api_apply_event {
         };
 
         let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Esc));
-        let response = dbg!(DialogEngine::apply_event(args, &input_event).await.unwrap());
+        let response = dbg!(DialogEngineApi::apply_event(args, &input_event).await.unwrap());
         assert!(matches!(
             response,
             DialogEngineApplyResponse::DialogChoice(DialogChoice::No)
@@ -1023,7 +1025,7 @@ mod test_dialog_engine_api_apply_event {
         };
 
         let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Enter));
-        let response = dbg!(DialogEngine::apply_event(args, &input_event).await.unwrap());
+        let response = dbg!(DialogEngineApi::apply_event(args, &input_event).await.unwrap());
         if let DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(value)) = &response {
             assert_eq2!(value, "");
         }
@@ -1059,7 +1061,7 @@ mod test_dialog_engine_api_apply_event {
         };
 
         let input_event = InputEvent::Keyboard(keypress!(@char 'a'));
-        let response = dbg!(DialogEngine::apply_event(args, &input_event).await.unwrap());
+        let response = dbg!(DialogEngineApi::apply_event(args, &input_event).await.unwrap());
         if let DialogEngineApplyResponse::UpdateEditorBuffer(editor_buffer) = &response {
             assert_eq2!(editor_buffer.get_as_string(), "a");
         }

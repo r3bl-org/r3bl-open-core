@@ -17,12 +17,12 @@
 
 // Attach.
 pub mod ansi_256_color_gradients;
-pub mod color_wheel_impl;
+pub mod color_wheel_struct;
 pub mod detect_color_support;
 pub mod styled_text;
 
 // Re-export.
 pub use ansi_256_color_gradients::*;
-pub use color_wheel_impl::*;
+pub use color_wheel_struct::*;
 pub use detect_color_support::*;
 pub use styled_text::*;
