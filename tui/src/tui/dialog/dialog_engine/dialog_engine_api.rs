@@ -163,7 +163,7 @@ impl DialogEngineApi {
         };
 
         // If the editor engine applied the event, return the new editor buffer.
-        if let EditorEngineApplyResponse::Applied(new_editor_buffer) =
+        if let EditorEngineApplyEventResult::Applied(new_editor_buffer) =
             EditorEngineApi::apply_event(editor_engine_args, input_event).await?
         {
             return Ok(DialogEngineApplyResponse::UpdateEditorBuffer(
@@ -992,7 +992,9 @@ mod test_dialog_engine_api_apply_event {
         };
 
         let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Esc));
-        let response = dbg!(DialogEngineApi::apply_event(args, &input_event).await.unwrap());
+        let response = dbg!(DialogEngineApi::apply_event(args, &input_event)
+            .await
+            .unwrap());
         assert!(matches!(
             response,
             DialogEngineApplyResponse::DialogChoice(DialogChoice::No)
@@ -1025,7 +1027,9 @@ mod test_dialog_engine_api_apply_event {
         };
 
         let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Enter));
-        let response = dbg!(DialogEngineApi::apply_event(args, &input_event).await.unwrap());
+        let response = dbg!(DialogEngineApi::apply_event(args, &input_event)
+            .await
+            .unwrap());
         if let DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(value)) = &response {
             assert_eq2!(value, "");
         }
@@ -1061,7 +1065,9 @@ mod test_dialog_engine_api_apply_event {
         };
 
         let input_event = InputEvent::Keyboard(keypress!(@char 'a'));
-        let response = dbg!(DialogEngineApi::apply_event(args, &input_event).await.unwrap());
+        let response = dbg!(DialogEngineApi::apply_event(args, &input_event)
+            .await
+            .unwrap());
         if let DialogEngineApplyResponse::UpdateEditorBuffer(editor_buffer) = &response {
             assert_eq2!(editor_buffer.get_as_string(), "a");
         }

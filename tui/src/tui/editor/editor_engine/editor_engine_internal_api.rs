@@ -26,6 +26,7 @@ use crate::*;
 /// Functions that implement the editor engine.
 pub struct EditorEngineInternalApi;
 
+// 00: impl selection functionality
 impl EditorEngineInternalApi {
     pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         caret_mut::up(buffer, engine)

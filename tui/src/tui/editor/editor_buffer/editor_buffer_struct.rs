@@ -144,6 +144,16 @@ pub struct EditorBuffer {
     /// used to lookup the syntax highlighting rules for the language in
     /// [find_syntax_by_extension[syntect::parsing::SyntaxSet::find_syntax_by_extension].
     file_extension: Option<String>,
+
+    // 00: add field to store selections made by the user (one range for one line)
+    vec_selection_per_line: List<SelectionInLine>,
+}
+
+#[derive(Default, Clone, PartialEq, Serialize, Deserialize, GetSize)]
+pub struct SelectionInLine {
+    pub row_index: ChUnit,
+    pub start_display_col_index: ChUnit,
+    pub end_display_col_index: ChUnit,
 }
 
 mod constructor {
@@ -166,6 +176,7 @@ mod constructor {
                 caret: Position::default(),
                 scroll_offset: ScrollOffset::default(),
                 file_extension: file_extension.map(|s| s.to_string()),
+                vec_selection_per_line: Default::default(),
             }
         }
     }

@@ -75,10 +75,13 @@ pub mod editor_component_impl {
                     ..
                 } = args;
 
-                let cow_editor_buffer: Cow<EditorBuffer> = {
-                    if let Some(buffer) = state.get_editor_buffer(self.get_id()) {
-                        Cow::Borrowed(buffer)
-                    } else {
+                let cow_buffer: Cow<EditorBuffer> = {
+                    // Either: get existing buffer ref from state.
+                    if let Some(existing_buffer_ref) = state.get_editor_buffer(self.get_id()) {
+                        Cow::Borrowed(existing_buffer_ref)
+                    }
+                    // Or: create a new owned buffer.
+                    else {
                         Cow::Owned(EditorBuffer::new_empty(
                             self.editor_engine
                                 .config_options
@@ -88,25 +91,31 @@ pub mod editor_component_impl {
                     }
                 };
 
-                // Try to apply the `input_event` to `editor_engine` to decide whether to fire action.
-                let engine_args = EditorEngineArgs {
-                    state,
-                    editor_buffer: &cow_editor_buffer,
-                    component_registry,
-                    shared_global_data,
-                    shared_store,
-                    self_id: self.id,
-                    editor_engine: &mut self.editor_engine,
-                };
+                // 00: editor component processes input event here
+                // Try to apply the `input_event` to `editor_engine` to decide whether to fire
+                // action.
+                let result = EditorEngineApi::apply_event(
+                    EditorEngineArgs {
+                        state,
+                        editor_buffer: &cow_buffer,
+                        component_registry,
+                        shared_global_data,
+                        shared_store,
+                        self_id: self.id,
+                        editor_engine: &mut self.editor_engine,
+                    },
+                    input_event,
+                )
+                .await?;
 
-                match EditorEngineApi::apply_event(engine_args, input_event).await? {
-                    EditorEngineApplyResponse::Applied(buffer) => {
+                match result {
+                    EditorEngineApplyEventResult::Applied(new_buffer) => {
                         if let Some(on_change_handler) = self.on_editor_buffer_change_handler {
-                            on_change_handler(shared_store, self.get_id(), buffer);
+                            on_change_handler(shared_store, self.get_id(), new_buffer);
                         }
                         EventPropagation::Consumed
                     }
-                    EditorEngineApplyResponse::NotApplied => {
+                    EditorEngineApplyEventResult::NotApplied => {
                         // Optional: handle any `input_event` not consumed by `editor_engine`.
                         EventPropagation::Propagate
                     }
