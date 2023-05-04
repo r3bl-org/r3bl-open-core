@@ -16,11 +16,11 @@
  */
 
 // Attach.
-pub mod editor_engine_impl;
+pub mod editor_engine_struct;
 pub mod editor_engine_api;
 pub mod editor_engine_internal_api;
 
 // Re-export.
-pub use editor_engine_impl::*;
+pub use editor_engine_struct::*;
 pub use editor_engine_api::*;
 pub use editor_engine_internal_api::*;

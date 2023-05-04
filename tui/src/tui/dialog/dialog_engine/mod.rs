@@ -17,8 +17,8 @@
 
 // Attach.
 pub mod dialog_engine_api;
-pub mod dialog_engine_impl;
+pub mod dialog_engine_struct;
 
 // Re-export.
 pub use dialog_engine_api::*;
-pub use dialog_engine_impl::*;
+pub use dialog_engine_struct::*;

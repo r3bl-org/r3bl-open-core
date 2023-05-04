@@ -51,8 +51,8 @@ where
 
     fn get_id(&self) -> FlexBoxId { self.id }
 
-    /// This shim simply calls [render](DialogEngine::render_engine) w/ all the necessary
-    /// arguments:
+    /// This shim simply calls [DialogEngineApi::render_engine](DialogEngineApi::render_engine) w/
+    /// all the necessary arguments:
     /// - Global scope: [SharedStore], [SharedGlobalData].
     /// - App scope: `S`, [ComponentRegistry<S, A>].
     /// - User input (from [main_event_loop]): [InputEvent].
@@ -99,11 +99,11 @@ where
             }
         };
 
-        DialogEngine::render_engine(dialog_engine_args).await
+        DialogEngineApi::render_engine(dialog_engine_args).await
     }
 
-    /// This shim simply calls [apply_event](DialogEngine::apply_event) w/ all the necessary
-    /// arguments:
+    /// This shim simply calls [DialogEngineApi::apply_event](DialogEngineApi::apply_event) w/ all
+    /// the necessary arguments:
     /// - Global scope: [SharedStore], [SharedGlobalData].
     /// - App scope: `S`, [ComponentRegistry<S, A>].
     /// - User input (from [main_event_loop]): [InputEvent].
@@ -144,7 +144,7 @@ where
             }
         };
 
-        match DialogEngine::apply_event(dialog_engine_args, input_event).await? {
+        match DialogEngineApi::apply_event(dialog_engine_args, input_event).await? {
             // Handler user's choice.
             DialogEngineApplyResponse::DialogChoice(dialog_choice) => {
                 component_registry.has_focus.reset_modal_id();

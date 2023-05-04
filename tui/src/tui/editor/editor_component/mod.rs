@@ -16,9 +16,9 @@
  */
 
 // Attach.
-pub mod editor_component_impl;
+pub mod editor_component_struct;
 pub mod editor_event;
 
 // Re-export.
-pub use editor_component_impl::*;
+pub use editor_component_struct::*;
 pub use editor_event::*;

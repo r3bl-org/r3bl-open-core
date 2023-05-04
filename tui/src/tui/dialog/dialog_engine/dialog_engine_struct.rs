@@ -28,8 +28,9 @@ use crate::*;
 /// [DialogBuffer] struct, which lives in the [r3bl_redux::Store]. The store provides the underlying
 /// document or buffer struct that holds the actual document.
 ///
-/// In order to change the document, you can use the [apply_event](DialogEngine::apply_event) method
-/// which takes [InputEvent] and tries to execute it against this buffer.
+/// In order to change the document, you can use the
+/// [DialogEngineApi::apply_event](DialogEngineApi::apply_event) method which takes [InputEvent] and
+/// tries to execute it against this buffer.
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct DialogEngine {
     pub dialog_options: DialogEngineConfigOptions,
@@ -39,14 +40,15 @@ pub struct DialogEngine {
     /// - The colors it cycles through are "stable" meaning that once constructed via the
     ///   [ColorWheel::new()](ColorWheel::new) (which sets the options that determine where the
     ///   color wheel starts when it is used). For eg, between repeated calls to
-    ///   [render_engine](DialogEngine::render_engine) which uses the same [ColorWheel] instance,
-    ///   the generated colors will be the same.
+    ///   [DialogEngineApi::render_engine](DialogEngineApi::render_engine) which uses the same
+    ///   [ColorWheel] instance, the generated colors will be the same.
     /// - If you want to change where the color wheel "begins", you have to change
     ///   [ColorWheelConfig] options used to create this instance.
     pub color_wheel: ColorWheel,
-    /// This is evaluated and saved when [render_engine](DialogEngine::render_engine) is called.
-    /// The dialog box is rendered outside of any layout [FlexBox] or [Surface], so it just paints
-    /// itself to the screen on top of everything else.
+    /// This is evaluated and saved when
+    /// [DialogEngineApi::render_engine](DialogEngineApi::render_engine) is called. The dialog box
+    /// is rendered outside of any layout [FlexBox] or [Surface], so it just paints itself to the
+    /// screen on top of everything else.
     pub maybe_flex_box: Option<(
         /* window size: */ Size,
         /* mode: */ DialogEngineMode,
@@ -63,8 +65,8 @@ impl DialogEngine {
         editor_options: EditorEngineConfig,
     ) -> Self {
         // The col_count has to be large enough to fit the terminal width so that the gradient
-        // doesn't flicker. If for some reason the terminal width is not available, then we
-        // default to 250.
+        // doesn't flicker. If for some reason the terminal width is not available, then we default
+        // to 250.
         let Size {
             col_count,
             row_count: _,
