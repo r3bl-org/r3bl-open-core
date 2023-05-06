@@ -111,7 +111,14 @@ impl TryFrom<&InputEvent> for EditorEvent {
 }
 
 impl EditorEvent {
-    // 00: impl selection editor events
+    // 00: add to selection move right
+    // 00: add to selection move left
+    // 00: add to selection move up
+    // 00: add to selection move down
+    // 00: add to selection move page up
+    // 00: add to selection move page down
+    // 00: add to selection move to end of line
+    // 00: add to selection move to start of line
     pub fn apply_editor_event<S, A>(
         editor_engine: &mut EditorEngine,
         editor_buffer: &mut EditorBuffer,

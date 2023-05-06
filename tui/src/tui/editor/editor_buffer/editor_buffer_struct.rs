@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Formatter, Result};
+use std::{collections::HashMap,
+          fmt::{Debug, Formatter, Result}};
 
 use get_size::GetSize;
 use r3bl_rs_utils_core::*;
@@ -145,13 +146,14 @@ pub struct EditorBuffer {
     /// [find_syntax_by_extension[syntect::parsing::SyntaxSet::find_syntax_by_extension].
     file_extension: Option<String>,
 
-    // 00: add field to store selections made by the user (one range for one line)
-    vec_selection_per_line: List<SelectionInLine>,
+    // 00: add field to store selection made by the user (one range for one line)
+    vec_selection_per_line: Option<HashMap<RowIndex, SelectedRangeInLine>>,
 }
 
+pub type RowIndex = ChUnit;
+
 #[derive(Default, Clone, PartialEq, Serialize, Deserialize, GetSize)]
-pub struct SelectionInLine {
-    pub row_index: ChUnit,
+pub struct SelectedRangeInLine {
     pub start_display_col_index: ChUnit,
     pub end_display_col_index: ChUnit,
 }
