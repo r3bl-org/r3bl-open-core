@@ -28,6 +28,32 @@ use crate::*;
 
 pub struct TerminalWindow;
 
+#[derive(Debug)]
+pub enum ParallelExecutionPolicy {
+    /// Run all tasks in parallel.
+    Parallel,
+    /// Run all tasks in sequence.
+    Serial,
+}
+
+/// This value should be set to [ParallelExecutionPolicy::Serial] unless you have a very good reason
+/// otherwise.
+///
+/// # Issues w/ parallel processing of input events
+/// The event loop runs as a task in a tokio executor (runtime). It processes input events
+/// asynchronously. So you can easily spawn parallel tasks to process each input event as it comes
+/// in. This will result in a state consistency issue which you can easily observe this if you set
+/// this value to [ParallelExecutionPolicy::Parallel] and introduce a delay in any event handling of
+/// a [Component]. In parallel, each task gets a copy of the [r3bl_redux::Store] and it gets a copy
+/// of the state and mutates it. If 2 tasks are running in parallel and they both mutate the same
+/// starting state, then this will result in an undefined state. Eg: you press the right arrow twice
+/// in an editor component (which has a huge delay). Then it will look like only one right arrow
+/// action was dispatched.
+///
+/// # Deep dive into how HID / pointing devices work in Linux
+/// <https://monroeclinton.com/pointing-devices-in-linux/>
+pub const PARALLEL_EXECUTION_POLICY: ParallelExecutionPolicy = ParallelExecutionPolicy::Serial;
+
 impl TerminalWindow {
     /// The where clause needs to match up w/ the trait bounds for [Store].
     ///
@@ -89,24 +115,105 @@ impl TerminalWindow {
                     if let Some(input_event) = maybe_input_event {
                         telemetry_global_static::set_start_ts();
 
+                        call_if_true!(DEBUG_TUI_MOD, {
+                            let msg = format!("main_event_loop -> Tick: ⏰ {input_event}");
+                            log_info(msg);
+                        });
+
                         Self::handle_resize_event(&input_event, &shared_global_data, &shared_store, &shared_app).await;
 
-                        // AB: this should probably not spawn (https://monroeclinton.com/pointing-devices-in-linux/)
-                        Self::spawn_task_to_process_input_event(
-                            shared_global_data.clone(),
-                            shared_store.clone(),
-                            shared_app.clone(),
-                            input_event.clone(),
-                            exit_keys.clone(),
-                            exit_channel_sender.clone(),
-                        );
-
+                        match PARALLEL_EXECUTION_POLICY {
+                            ParallelExecutionPolicy::Parallel => {
+                                let shared_global_data = shared_global_data.clone();
+                                let shared_store = shared_store.clone();
+                                let shared_app = shared_app.clone();
+                                let input_event = input_event.clone();
+                                let exit_keys = exit_keys.clone();
+                                let exit_channel_sender = exit_channel_sender.clone();
+                                tokio::spawn(async move {
+                                    // This function does not block the caller, since it
+                                    // [spawns](tokio::spawn) a task in parallel to handle the
+                                    // `input_event` by passing it to the app.
+                                    Self::actually_process_input_event(
+                                        shared_global_data,
+                                        shared_store,
+                                        shared_app,
+                                        input_event,
+                                        exit_keys,
+                                        exit_channel_sender,
+                                    ).await;
+                                });
+                            }
+                            ParallelExecutionPolicy::Serial => {
+                                Self::actually_process_input_event(
+                                    shared_global_data.clone(),
+                                    shared_store.clone(),
+                                    shared_app.clone(),
+                                    input_event.clone(),
+                                    exit_keys.clone(),
+                                    exit_channel_sender.clone(),
+                                ).await;
+                            }
+                        }
                     }
                 }
             }
         } // End loop.
 
         Ok(())
+    }
+
+    async fn actually_process_input_event<S, A>(
+        shared_global_data: SharedGlobalData,
+        shared_store: SharedStore<S, A>,
+        shared_app: SharedApp<S, A>,
+        input_event: InputEvent,
+        exit_keys: Vec<InputEvent>,
+        exit_channel_sender: mpsc::Sender<bool>,
+    ) where
+        S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
+        A: Debug + Default + Clone + Sync + Send + 'static,
+    {
+        let result = AppManager::route_input_to_app(
+            shared_global_data.clone(),
+            shared_store.clone(),
+            shared_app.clone(),
+            input_event.clone(),
+        )
+        .await;
+
+        call_if_true!(DEBUG_TUI_MOD, {
+            let msg =
+                format!("main_event_loop -> 🚥 SPAWN propagation_result_from_app: {result:?}");
+            log_info(msg);
+        });
+
+        if let Ok(event_propagation) = result {
+            match event_propagation {
+                EventPropagation::Propagate => {
+                    let check_if_exit_keys_pressed =
+                        DefaultInputEventHandler::no_consume(input_event.clone(), &exit_keys);
+                    if let Continuation::Exit = check_if_exit_keys_pressed.await {
+                        // Exit keys were pressed.
+                        let _ = exit_channel_sender.send(true).await;
+                    };
+                }
+                EventPropagation::ConsumedRender => {
+                    let _ = AppManager::render_app(
+                        &shared_store,
+                        &shared_app,
+                        &shared_global_data,
+                        None,
+                    )
+                    .await;
+                }
+                EventPropagation::Consumed => {}
+                EventPropagation::ExitMainEventLoop => {
+                    // Exit the main event loop.
+                    let _ = exit_channel_sender.send(true).await;
+                }
+            }
+        }
     }
 
     /// Before any app gets to process the `input_event`, perform special handling in case it is a
@@ -129,68 +236,6 @@ impl TerminalWindow {
             let _ =
                 AppManager::render_app(shared_store, shared_app, shared_global_data, None).await;
         }
-    }
-
-    /// This function does not block the caller, since it [spawns](tokio::spawn) a task in parallel
-    /// to handle the `input_event` by passing it to the app.
-    pub fn spawn_task_to_process_input_event<S, A>(
-        shared_global_data: SharedGlobalData,
-        shared_store: SharedStore<S, A>,
-        shared_app: SharedApp<S, A>,
-        input_event: InputEvent,
-        exit_keys: Vec<InputEvent>,
-        exit_channel_sender: mpsc::Sender<bool>,
-    ) where
-        S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
-        A: Debug + Default + Clone + Sync + Send + 'static,
-    {
-        call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!("main_event_loop -> Tick: ⏰ {input_event}");
-            log_info(msg);
-        });
-
-        tokio::spawn(async move {
-            let result = AppManager::route_input_to_app(
-                shared_global_data.clone(),
-                shared_store.clone(),
-                shared_app.clone(),
-                input_event.clone(),
-            )
-            .await;
-
-            call_if_true!(DEBUG_TUI_MOD, {
-                let msg =
-                    format!("main_event_loop -> 🚥 SPAWN propagation_result_from_app: {result:?}");
-                log_info(msg);
-            });
-
-            if let Ok(event_propagation) = result {
-                match event_propagation {
-                    EventPropagation::Propagate => {
-                        let check_if_exit_keys_pressed =
-                            DefaultInputEventHandler::no_consume(input_event.clone(), &exit_keys);
-                        if let Continuation::Exit = check_if_exit_keys_pressed.await {
-                            // Exit keys were pressed.
-                            let _ = exit_channel_sender.send(true).await;
-                        };
-                    }
-                    EventPropagation::ConsumedRender => {
-                        let _ = AppManager::render_app(
-                            &shared_store,
-                            &shared_app,
-                            &shared_global_data,
-                            None,
-                        )
-                        .await;
-                    }
-                    EventPropagation::Consumed => {}
-                    EventPropagation::ExitMainEventLoop => {
-                        // Exit the main event loop.
-                        let _ = exit_channel_sender.send(true).await;
-                    }
-                }
-            }
-        });
     }
 }
 
