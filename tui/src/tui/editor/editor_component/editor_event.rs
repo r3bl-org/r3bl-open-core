@@ -39,7 +39,19 @@ pub enum EditorEvent {
     PageUp,
     MoveCaret(CaretDirection),
     Resize(Size),
-    // 00: add variant for selection
+    Select(SelectionScope),
+}
+
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SelectionScope {
+    OneCharLeft,
+    OneCharRight,
+    OneLineUp,
+    OneLineDown,
+    PageUp,
+    PageDown,
+    Home,
+    End,
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -50,12 +62,26 @@ pub enum CaretDirection {
     Right,
 }
 
-// 00: add selection events (S+Left, S+Right, S+Up, S+Down, S+PageUp, S+PageDown, S+Home, S+End)
 impl TryFrom<&InputEvent> for EditorEvent {
     type Error = String;
 
     fn try_from(input_event: &InputEvent) -> Result<Self, Self::Error> {
         match input_event {
+            // Selection events.
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::SpecialKey(SpecialKey::Right),
+                mask: ModifierKeysMask::SHIFT,
+            }) => Ok(EditorEvent::Select(SelectionScope::OneCharRight)),
+
+            // 00: add selection events    S+Left
+            // 00: add selection events    S+Up
+            // 00: add selection events    S+Down
+            // 00: add selection events    S+PageUp
+            // 00: add selection events    S+PageDown
+            // 00: add selection events    S+Home
+            // 00: add selection events    S+End
+
+            // Other events.
             InputEvent::Keyboard(KeyPress::Plain {
                 key: Key::SpecialKey(SpecialKey::PageDown),
             }) => Ok(EditorEvent::PageDown),
@@ -111,14 +137,6 @@ impl TryFrom<&InputEvent> for EditorEvent {
 }
 
 impl EditorEvent {
-    // 00: add to selection move right
-    // 00: add to selection move left
-    // 00: add to selection move up
-    // 00: add to selection move down
-    // 00: add to selection move page up
-    // 00: add to selection move page down
-    // 00: add to selection move to end of line
-    // 00: add to selection move to start of line
     pub fn apply_editor_event<S, A>(
         editor_engine: &mut EditorEngine,
         editor_buffer: &mut EditorBuffer,
@@ -190,6 +208,28 @@ impl EditorEvent {
             EditorEvent::PageUp => {
                 EditorEngineInternalApi::page_up(editor_buffer, editor_engine);
             }
+            EditorEvent::Select(selection_scope) => match selection_scope {
+                SelectionScope::OneCharRight => {
+                    EditorEngineInternalApi::add_to_selection_move_right(
+                        editor_buffer,
+                        editor_engine,
+                    )
+                }
+                // 00: add to selection move left
+                SelectionScope::OneCharLeft => todo!(),
+                // 00: add to selection move up
+                SelectionScope::OneLineUp => todo!(),
+                // 00: add to selection move down
+                SelectionScope::OneLineDown => todo!(),
+                // 00: add to selection move page up
+                SelectionScope::PageUp => todo!(),
+                // 00: add to selection move page down
+                SelectionScope::PageDown => todo!(),
+                // 00: add to selection move to home (SOL)
+                SelectionScope::Home => todo!(),
+                // 00: add to selection move to end (EOL)
+                SelectionScope::End => todo!(),
+            },
         };
     }
 
