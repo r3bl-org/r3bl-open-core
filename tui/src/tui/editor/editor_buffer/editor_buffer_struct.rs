@@ -147,7 +147,7 @@ pub struct EditorBuffer {
     file_extension: Option<String>,
 
     // 00: add field to store selection made by the user (one range for one line)
-    vec_selection_per_line: Option<HashMap<RowIndex, SelectedRangeInLine>>,
+    maybe_selection: Option<HashMap<RowIndex, SelectedRangeInLine>>,
 }
 
 pub type RowIndex = ChUnit;
@@ -178,7 +178,7 @@ mod constructor {
                 caret: Position::default(),
                 scroll_offset: ScrollOffset::default(),
                 file_extension: file_extension.map(|s| s.to_string()),
-                vec_selection_per_line: Default::default(),
+                maybe_selection: Default::default(),
             }
         }
     }

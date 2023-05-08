@@ -26,7 +26,6 @@ use crate::*;
 /// Functions that implement the editor engine.
 pub struct EditorEngineInternalApi;
 
-// 00: impl selection functionality
 impl EditorEngineInternalApi {
     pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         caret_mut::up(buffer, engine)
@@ -94,6 +93,20 @@ impl EditorEngineInternalApi {
 
     pub fn backspace_at_caret(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
         content_mut::backspace_at_caret(buffer, engine)
+    }
+
+    // 00: impl selection functionality
+    pub fn add_to_selection_move_right(buffer: &mut EditorBuffer, engine: &mut EditorEngine) {
+        selection::add_to_selection_move_right(buffer, engine)
+    }
+}
+
+mod selection {
+    use super::*;
+
+    // 00: impl selection functionality
+    pub fn add_to_selection_move_right(buffer: &mut EditorBuffer, engine: &mut EditorEngine) {
+        log_debug("🚀🚀🚀🚀 add_to_selection_move_right".to_string());
     }
 }
 

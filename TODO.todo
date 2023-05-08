@@ -30,6 +30,7 @@ docs update (https://github.com/r3bl-org/r3bl_rs_utils/issues/102):
       - Redux store, and app is constructed, then injected into main_event_loop() fn
     ☐ mental model for the entire thing (dependency injection, etc)
       - where do things live? in state or app? both are passed into main_event_loop() in launcher
+        - Get content from https://github.com/r3bl-org/r3bl_rs_utils/issues/103
       - how do components work (use editor component as a case study)
     ☐ concurrency / parallelism / async / tokio - how all this works
       - async or parallel processing of input events
