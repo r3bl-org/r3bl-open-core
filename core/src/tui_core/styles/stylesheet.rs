@@ -57,7 +57,7 @@ macro_rules! get_styles {
             None
         }
     };
-    
+
     (
         @from: $arg_stylesheet : expr, // Eg: from: stylesheet,
         [$($args:tt)*]                // Eg: ["style1", "style2"]

@@ -6,6 +6,9 @@ editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/86):
   ✔ audit docs, source filenames, and symbol names; improve where needed @done(23-05-03 20:56)
   ☐ add selection support to editor buffer (array of line slice ranges)
     ☐ right
+      - `right_normal(.., select_mode)`
+      - `right_at_end(.., select_mode)`
+      - `EditorEngineApi::render_engine()`: render it
     ☐ left
     ☐ up
     ☐ down
@@ -13,8 +16,8 @@ editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/86):
     ☐ page down
     ☐ end of line
     ☐ start of line
-  ☐ render selection (render all selections)
-  ☐ cancel selection
+  ☐ render selection `EditorEngineApi::render_engine()`
+  ☐ cancel selection (eg: when user presses normal key)
   ☐ implement copy
   ☐ implement cut
   ☐ implement paste

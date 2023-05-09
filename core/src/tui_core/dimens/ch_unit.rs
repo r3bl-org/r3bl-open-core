@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{Display, Formatter},
+use std::{fmt::{Debug, Display, Formatter},
           ops::Deref};
 
 use get_size::GetSize;
@@ -33,18 +33,7 @@ pub type ChUnitPrimitiveType = u16;
 ///
 /// In order to create amounts of ch units, use the [ch!] macro.
 #[derive(
-    Copy,
-    Clone,
-    Default,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    GetSize,
-    Ord,
-    PartialOrd,
-    Eq,
-    Debug,
-    Hash,
+    Copy, Clone, Default, PartialEq, Serialize, Deserialize, GetSize, Ord, PartialOrd, Eq, Hash,
 )]
 pub struct ChUnit {
     pub value: ChUnitPrimitiveType,
@@ -129,6 +118,12 @@ macro_rules! ch {
         let u16_value: u16 = *ch_value_copy;
         u16_value
     }};
+}
+
+impl Debug for ChUnit {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.value)
+    }
 }
 
 impl Display for ChUnit {

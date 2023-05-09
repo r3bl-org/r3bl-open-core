@@ -91,7 +91,7 @@ fn parse_optional_id(input: &ParseStream, metadata: &mut StyleMetadata) -> Resul
     }
 
     call_if_true!(DEBUG_MAKE_STYLE_MOD, println!("🚀 id: {:?}", metadata.id));
-    
+
     Ok(())
 }
 

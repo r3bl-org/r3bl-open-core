@@ -19,7 +19,7 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
-use r3bl_rs_utils::{debug, utils::LazyMemoValues, assert_eq2};
+use r3bl_rs_utils::{assert_eq2, debug, utils::LazyMemoValues};
 
 #[test]
 fn test_lazy() {

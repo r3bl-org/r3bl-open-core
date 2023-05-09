@@ -35,8 +35,12 @@ impl EditorEngineInternalApi {
         caret_mut::left(buffer, engine)
     }
 
-    pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
-        caret_mut::right(buffer, engine)
+    pub fn right(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
+        caret_mut::right(buffer, engine, select_mode)
     }
 
     pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
@@ -96,17 +100,11 @@ impl EditorEngineInternalApi {
     }
 
     // 00: impl selection functionality
-    pub fn add_to_selection_move_right(buffer: &mut EditorBuffer, engine: &mut EditorEngine) {
-        selection::add_to_selection_move_right(buffer, engine)
-    }
-}
-
-mod selection {
-    use super::*;
-
-    // 00: impl selection functionality
-    pub fn add_to_selection_move_right(buffer: &mut EditorBuffer, engine: &mut EditorEngine) {
-        log_debug("🚀🚀🚀🚀 add_to_selection_move_right".to_string());
+    pub fn add_to_selection_move_right(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+    ) -> Option<()> {
+        caret_mut::right(buffer, engine, SelectMode::Enabled)
     }
 }
 
@@ -216,6 +214,12 @@ mod caret_get {
             buffer.get_caret(CaretKind::ScrollAdjusted).row_index == max_row_count
         }
     }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum SelectMode {
+    Enabled,
+    Disabled,
 }
 
 mod caret_mut {
@@ -336,11 +340,16 @@ mod caret_mut {
     /// 0 ▸abcab     │
     ///   └─────▴────┘
     ///   C0123456789
-    pub fn right(editor_buffer: &mut EditorBuffer, editor_engine: &mut EditorEngine) -> Option<()> {
+    pub fn right(
+        editor_buffer: &mut EditorBuffer,
+        editor_engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
         empty_check_early_return!(editor_buffer, @None);
 
         let line_is_empty =
             EditorEngineInternalApi::line_at_caret_is_empty(editor_buffer, editor_engine);
+
         let caret_col_loc_in_line = caret_get::find_col(EditorArgs {
             editor_buffer,
             editor_engine,
@@ -348,20 +357,20 @@ mod caret_mut {
 
         match caret_col_loc_in_line {
             CaretColLocationInLine::AtEnd => {
-                right_at_end(editor_buffer, editor_engine);
+                right_at_end(editor_buffer, editor_engine, select_mode);
             }
 
             CaretColLocationInLine::AtStart | CaretColLocationInLine::InMiddle => {
                 // Special case of empty line w/ caret at start.
                 if let CaretColLocationInLine::AtStart = caret_col_loc_in_line {
                     if line_is_empty {
-                        right_at_end(editor_buffer, editor_engine);
+                        right_at_end(editor_buffer, editor_engine, select_mode);
                         return None;
                     }
                 }
 
                 // Normal case.
-                right_normal(editor_buffer, editor_engine)?;
+                right_normal(editor_buffer, editor_engine, select_mode)?;
             }
         }
 
@@ -371,7 +380,14 @@ mod caret_mut {
         fn right_normal(
             editor_buffer: &mut EditorBuffer,
             editor_engine: &mut EditorEngine,
+            select_mode: SelectMode,
         ) -> Option<()> {
+            // This is only set if select_mode is enabled.
+            let maybe_caret_display_start_pos: Option<Position> = match select_mode {
+                SelectMode::Enabled => Some(editor_buffer.get_caret(CaretKind::ScrollAdjusted)),
+                _ => None,
+            };
+
             let UnicodeStringSegmentSliceResult {
                 unicode_width: unicode_width_at_caret,
                 ..
@@ -452,10 +468,49 @@ mod caret_mut {
                 }
             }
 
+            // This is only set if select_mode is enabled.
+            let maybe_caret_display_end_pos: Option<Position> = match select_mode {
+                SelectMode::Enabled => Some(editor_buffer.get_caret(CaretKind::ScrollAdjusted)),
+                _ => None,
+            };
+
+            if let SelectMode::Enabled = select_mode {
+                let start_caret_display_pos = maybe_caret_display_start_pos?;
+                let end_caret_display_pos = maybe_caret_display_end_pos?;
+                // TODO: mutate the editor_buffer.maybe_selection (add to editor_buffer_struct.rs)
+                log_debug(format!(
+                    "\n🚀🚀🚀 add selection right_normal: \n\tstart_caret_display_pos: {:?}, \n\t  end_caret_display_pos: {:?}",
+                    start_caret_display_pos, end_caret_display_pos
+                ));
+                EditorBufferApi::add_to_selection(
+                    editor_buffer,
+                    start_caret_display_pos,
+                    end_caret_display_pos,
+                );
+                log_debug(format!(
+                    "\n🚀🚀🚀 new selection: {:#?}",
+                    editor_buffer.get_mut_selection()
+                ));
+            }
+
             None
         }
 
-        fn right_at_end(editor_buffer: &mut EditorBuffer, editor_engine: &mut EditorEngine) {
+        fn right_at_end(
+            editor_buffer: &mut EditorBuffer,
+            editor_engine: &mut EditorEngine,
+            select_mode: SelectMode,
+        ) {
+            if let SelectMode::Enabled = select_mode {
+                // TODO: depending on select_mode mutate the editor_buffer.maybe_selection
+                let caret_col_index = editor_buffer.get_caret(CaretKind::ScrollAdjusted).col_index;
+                let caret_row_index = editor_buffer.get_caret(CaretKind::ScrollAdjusted).row_index;
+                log_debug(format!(
+                    "🚀🚀🚀 add selection right_at_end: r:{}, c:{}",
+                    caret_row_index, caret_col_index
+                ));
+            }
+
             if content_get::next_line_below_caret_exists(editor_buffer, editor_engine) {
                 // If there is a line below the caret, move the caret to the start of the next line.
                 let viewport_height = editor_engine.viewport_height();
@@ -1343,7 +1398,8 @@ mod scroll_editor_buffer {
         }
     }
 
-    /// This does not simply decrement the caret.col but mutates scroll_offset if scrolling is active.
+    /// This does not simply decrement the caret.col but mutates scroll_offset if scrolling is
+    /// active.
     ///
     /// This is meant to be called inside [validate::apply_change].
     pub fn dec_caret_col(caret: &mut Position, scroll_offset: &mut ScrollOffset, col_amt: ChUnit) {
