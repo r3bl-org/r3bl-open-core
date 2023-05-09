@@ -16,18 +16,18 @@
  */
 
 // Attach sources.
+pub mod intermediate_types;
 pub mod md_parser_syn_hi;
 pub mod pattern_matcher;
 pub mod r3bl_syntect_theme;
 pub mod syntect_to_styled_text_conversion;
-pub mod intermediate_types;
 
 // Re-export
+pub use intermediate_types::*;
 pub use md_parser_syn_hi::*;
 pub use pattern_matcher::*;
 pub use r3bl_syntect_theme::*;
 pub use syntect_to_styled_text_conversion::*;
-pub use intermediate_types::*;
 
 // Tests.
 mod test_r3bl_syntect_theme;

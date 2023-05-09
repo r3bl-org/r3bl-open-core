@@ -97,7 +97,7 @@ impl EditorEngineApi {
         }
     }
 
-    // 00: add support for rendering vec_selection_per_line
+    // TODO: add support for rendering vec_selection_per_line
     pub async fn render_engine<S, A>(
         args: EditorEngineArgs<'_, S, A>,
         current_box: &FlexBox,

@@ -96,7 +96,11 @@ impl StyleUSSpanLine {
     }
 
     /// Eg: "@title: Something"
-    pub fn from_kvp(key: &str, text: &str, maybe_current_box_computed_style: &Option<Style>) -> Self {
+    pub fn from_kvp(
+        key: &str,
+        text: &str,
+        maybe_current_box_computed_style: &Option<Style>,
+    ) -> Self {
         let mut acc_line_output = StyleUSSpanLine::default();
         acc_line_output += StyleUSSpan::new(
             maybe_current_box_computed_style.unwrap_or_default()

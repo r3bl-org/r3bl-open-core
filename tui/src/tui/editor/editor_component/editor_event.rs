@@ -173,9 +173,11 @@ impl EditorEvent {
                     CaretDirection::Left => {
                         EditorEngineInternalApi::left(editor_buffer, editor_engine)
                     }
-                    CaretDirection::Right => {
-                        EditorEngineInternalApi::right(editor_buffer, editor_engine)
-                    }
+                    CaretDirection::Right => EditorEngineInternalApi::right(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Disabled,
+                    ),
                     CaretDirection::Up => EditorEngineInternalApi::up(editor_buffer, editor_engine),
                     CaretDirection::Down => {
                         EditorEngineInternalApi::down(editor_buffer, editor_engine)
@@ -210,25 +212,40 @@ impl EditorEvent {
             }
             EditorEvent::Select(selection_scope) => match selection_scope {
                 SelectionScope::OneCharRight => {
-                    EditorEngineInternalApi::add_to_selection_move_right(
+                    EditorEngineInternalApi::right(
                         editor_buffer,
                         editor_engine,
-                    )
+                        SelectMode::Enabled,
+                    );
                 }
                 // 00: add to selection move left
-                SelectionScope::OneCharLeft => todo!(),
+                SelectionScope::OneCharLeft => {
+                    todo!();
+                }
                 // 00: add to selection move up
-                SelectionScope::OneLineUp => todo!(),
+                SelectionScope::OneLineUp => {
+                    todo!();
+                }
                 // 00: add to selection move down
-                SelectionScope::OneLineDown => todo!(),
+                SelectionScope::OneLineDown => {
+                    todo!();
+                }
                 // 00: add to selection move page up
-                SelectionScope::PageUp => todo!(),
+                SelectionScope::PageUp => {
+                    todo!();
+                }
                 // 00: add to selection move page down
-                SelectionScope::PageDown => todo!(),
+                SelectionScope::PageDown => {
+                    todo!();
+                }
                 // 00: add to selection move to home (SOL)
-                SelectionScope::Home => todo!(),
+                SelectionScope::Home => {
+                    todo!();
+                }
                 // 00: add to selection move to end (EOL)
-                SelectionScope::End => todo!(),
+                SelectionScope::End => {
+                    todo!();
+                }
             },
         };
     }

@@ -34,8 +34,8 @@ use crate::*;
 /// # Modifying the buffer
 ///
 /// [InputEvent] is coverted into an [EditorEvent] (by
-///     [EditorEngineApi]::[apply_event](EditorEngineApi::apply_event)), which is then used to
-///     modify the [EditorBuffer] via:
+/// [EditorEngineApi]::[apply_event](EditorEngineApi::apply_event)), which is then used to modify
+/// the [EditorBuffer] via:
 /// 1. [EditorEvent::apply_editor_event](EditorEvent::apply_editor_event)
 /// 2. [EditorEvent::apply_editor_events](EditorEvent::apply_editor_events)
 ///
@@ -61,102 +61,146 @@ use crate::*;
 ///    represents the position of the caret in the viewport.
 /// 2. [CaretKind::ScrollAdjusted] - this is the position of the caret (adjusted for scroll_offset)
 ///    and represents the position of the caret in the buffer (not the viewport).
+///
+/// # Fields
+///
+/// Please don't mutate these fields directly, they are not marked `pub` to guard from
+/// unintentional mutation. To mutate or access access it, use [get_mut](EditorBuffer::get_mut).
+///
+/// ## `lines`
+///
+/// A list of lines representing the document being edited.
+///
+/// ## `caret`
+///
+/// This is the "display" (or `display_col_index`) and not "logical" (or `logical_index`)
+/// position (both are defined in [tui_core::graphemes]). Please take a look at
+/// [tui_core::graphemes::UnicodeString], specifically the methods in
+/// [tui_core::graphemes::access] for more details on how the conversion between "display" and
+/// "logical" indices is done.
+///
+/// 1. It represents the current caret position (relative to the
+///    [style_adjusted_origin_pos](FlexBox::style_adjusted_origin_pos) of the enclosing [FlexBox]).
+/// 2. It works w/ [crate::RenderOp::MoveCursorPositionRelTo] as well.
+///
+/// > 💡 For the diagrams below, the caret is where `▴` and `▸` intersects.
+///
+/// Start of line:
+/// ```text
+/// R ┌──────────┐
+/// 0 ▸abcab     │
+///   └▴─────────┘
+///   C0123456789
+/// ```
+///
+/// Middle of line:
+/// ```text
+/// R ┌──────────┐
+/// 0 ▸abcab     │
+///   └───▴──────┘
+///   C0123456789
+/// ```
+///
+/// End of line:
+/// ```text
+/// R ┌──────────┐
+/// 0 ▸abcab     │
+///   └─────▴────┘
+///   C0123456789
+/// ```
+///
+/// ## `scroll_offset`
+///
+/// The col and row offset for scrolling if active. This is not marked pub in order to guard
+/// mutation. In order to access it, use [get_mut](EditorBuffer::get_mut).
+///
+/// ### Vertical scrolling and viewport
+///
+/// ```text
+///                    +0--------------------+
+///                    0                     |
+///                    |        above        | <- caret_row_adj
+///                    |                     |
+///                    +--- scroll_offset ---+
+///              ->    |         ↑           |      ↑
+///              |     |                     |      |
+///   caret.row  |     |      within vp      |  vp height
+///              |     |                     |      |
+///              ->    |         ↓           |      ↓
+///                    +--- scroll_offset ---+
+///                    |    + vp height      |
+///                    |                     |
+///                    |        below        | <- caret_row_adj
+///                    |                     |
+///                    +---------------------+
+/// ```
+///
+/// ### Horizontal scrolling and viewport
+///
+/// ```text
+///           <-   vp width   ->
+/// +0--------+----------------+---------->
+/// 0         |                |
+/// | left of |<-  within vp ->| right of
+/// |         |                |
+/// +---------+----------------+---------->
+///       scroll_offset    scroll_offset
+///                        + vp width
+/// ```
+///
+/// ## `file_extension`
+///
+/// This is used for syntax highlighting. It is a 2 character string, eg: `rs` or `md` that is
+/// used to lookup the syntax highlighting rules for the language in
+/// [find_syntax_by_extension[syntect::parsing::SyntaxSet::find_syntax_by_extension].
+///
+/// ## `maybe_selection`
+/// TODO: add docs here
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
-    /// A list of lines representing the document being edited.
     lines: Vec<UnicodeString>,
-
-    /// The current caret position (relative to the
-    /// [style_adjusted_origin_pos](FlexBox::style_adjusted_origin_pos) of the enclosing [FlexBox]).
-    ///
-    /// 1. This is the "display" and not "logical" position as defined in [UnicodeString].
-    /// 2. This works w/ [crate::RenderOp::MoveCursorPositionRelTo] as well.
-    /// 3. This is not marked pub in order to guard mutation. In order to access it, use
-    ///    [get_mut](EditorBuffer::get_mut).
-    ///
-    /// # Caret position
-    /// Caret : `▴`, `▸`
-    ///
-    /// Start of line:
-    /// ```text
-    /// R ┌──────────┐
-    /// 0 ▸abcab     │
-    ///   └▴─────────┘
-    ///   C0123456789
-    /// ```
-    ///
-    /// Middle of line:
-    /// ```text
-    /// R ┌──────────┐
-    /// 0 ▸abcab     │
-    ///   └───▴──────┘
-    ///   C0123456789
-    /// ```
-    ///
-    /// End of line:
-    /// ```text
-    /// R ┌──────────┐
-    /// 0 ▸abcab     │
-    ///   └─────▴────┘
-    ///   C0123456789
-    /// ```
-    caret: Position,
-
-    /// The col and row offset for scrolling if active.
-    /// 1. This is not marked pub in order to guard mutation. In order to access it, use
-    ///    [get_mut](EditorBuffer::get_mut).
-    ///
-    /// # Vertical scrolling and viewport
-    ///
-    /// ```text
-    ///                    +0--------------------+
-    ///                    0                     |
-    ///                    |        above        | <- caret_row_adj
-    ///                    |                     |
-    ///                    +--- scroll_offset ---+
-    ///              ->    |         ↑           |      ↑
-    ///              |     |                     |      |
-    ///   caret.row  |     |      within vp      |  vp height
-    ///              |     |                     |      |
-    ///              ->    |         ↓           |      ↓
-    ///                    +--- scroll_offset ---+
-    ///                    |    + vp height      |
-    ///                    |                     |
-    ///                    |        below        | <- caret_row_adj
-    ///                    |                     |
-    ///                    +---------------------+
-    /// ```
-    ///
-    /// # Horizontal scrolling and viewport
-    ///
-    /// ```text
-    ///           <-   vp width   ->
-    /// +0--------+----------------+---------->
-    /// 0         |                |
-    /// | left of |<-  within vp ->| right of
-    /// |         |                |
-    /// +---------+----------------+---------->
-    ///       scroll_offset    scroll_offset
-    ///                        + vp width
-    /// ```
+    caret_display_position: Position,
     scroll_offset: ScrollOffset,
-
-    /// This is used for syntax highlighting. It is a 2 character string, eg: `rs` or `md` that is
-    /// used to lookup the syntax highlighting rules for the language in
-    /// [find_syntax_by_extension[syntect::parsing::SyntaxSet::find_syntax_by_extension].
     file_extension: Option<String>,
-
     // 00: add field to store selection made by the user (one range for one line)
-    maybe_selection: Option<HashMap<RowIndex, SelectedRangeInLine>>,
+    maybe_selection: Option<SelectionMap>,
 }
 
-pub type RowIndex = ChUnit;
+mod selection {
+    use super::*;
 
-#[derive(Default, Clone, PartialEq, Serialize, Deserialize, GetSize)]
-pub struct SelectedRangeInLine {
-    pub start_display_col_index: ChUnit,
-    pub end_display_col_index: ChUnit,
+    pub type RowIndex = ChUnit;
+    pub type SelectionMap = HashMap<RowIndex, SelectedRangeInLine>;
+
+    #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize, GetSize)]
+    pub struct SelectedRangeInLine {
+        pub start_display_col_index: ChUnit,
+        pub end_display_col_index: ChUnit,
+    }
+
+    pub struct EditorBufferApi;
+    impl EditorBufferApi {
+        pub fn add_to_selection(editor_buffer: &mut EditorBuffer, start: Position, end: Position) {
+            if editor_buffer.has_selection() {
+                // TODO: Extend existing selection if possible.
+                todo!()
+            } else {
+                // Create a new selection.
+                let caret_row_index = editor_buffer.get_caret(CaretKind::ScrollAdjusted).row_index;
+                let mut selection: SelectionMap = HashMap::new();
+                selection.insert(
+                    caret_row_index,
+                    SelectedRangeInLine {
+                        start_display_col_index: start.col_index,
+                        end_display_col_index: end.col_index,
+                    },
+                );
+                editor_buffer.get_mut_selection().replace(selection);
+            }
+        }
+    }
 }
+pub use selection::*;
 
 mod constructor {
     use super::*;
@@ -175,7 +219,7 @@ mod constructor {
 
             Self {
                 lines: vec![UnicodeString::default()],
-                caret: Position::default(),
+                caret_display_position: Position::default(),
                 scroll_offset: ScrollOffset::default(),
                 file_extension: file_extension.map(|s| s.to_string()),
                 maybe_selection: Default::default(),
@@ -193,6 +237,8 @@ pub mod access_and_mutate {
     use super::*;
 
     impl EditorBuffer {
+        pub fn has_selection(&self) -> bool { self.maybe_selection.is_some() }
+
         pub fn get_file_extension(&self) -> Option<&str> {
             match self.file_extension {
                 Some(ref s) => Some(s.as_str()),
@@ -218,7 +264,7 @@ pub mod access_and_mutate {
             // Set lines.
             self.lines = lines.into_iter().map(UnicodeString::from).collect();
             // Reset caret.
-            self.caret = Position::default();
+            self.caret_display_position = Position::default();
             // Reset scroll_offset.
             self.scroll_offset = ScrollOffset::default();
         }
@@ -229,11 +275,11 @@ pub mod access_and_mutate {
         ///    scroll_offset.
         pub fn get_caret(&self, kind: CaretKind) -> Position {
             match kind {
-                CaretKind::Raw => self.caret,
+                CaretKind::Raw => self.caret_display_position,
                 CaretKind::ScrollAdjusted => {
                     position! {
-                      col_index: Self::calc_scroll_adj_caret_col(&self.caret, &self.scroll_offset),
-                      row_index: Self::calc_scroll_adj_caret_row(&self.caret, &self.scroll_offset)
+                      col_index: Self::calc_scroll_adj_caret_col(&self.caret_display_position, &self.scroll_offset),
+                      row_index: Self::calc_scroll_adj_caret_row(&self.caret_display_position, &self.scroll_offset)
                     }
                 }
             }
@@ -267,7 +313,15 @@ pub mod access_and_mutate {
             /* caret */ &mut Position,
             /* scroll_offset */ &mut ScrollOffset,
         ) {
-            (&mut self.lines, &mut self.caret, &mut self.scroll_offset)
+            (
+                &mut self.lines,
+                &mut self.caret_display_position,
+                &mut self.scroll_offset,
+            )
+        }
+
+        pub fn get_mut_selection(&mut self) -> &mut Option<SelectionMap> {
+            &mut self.maybe_selection
         }
     }
 }
@@ -283,7 +337,7 @@ mod debug_format_helpers {
               └ ext: {:?}, caret: {:?}]  \n \
               ]",
               self.lines.len(), self.lines.get_heap_size(),
-              self.file_extension, self.caret,
+              self.file_extension, self.caret_display_position,
             }
         }
     }

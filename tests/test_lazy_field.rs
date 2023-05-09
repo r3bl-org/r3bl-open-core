@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils::{LazyExecutor, LazyField, assert_eq2};
+use r3bl_rs_utils::{assert_eq2, LazyExecutor, LazyField};
 
 #[test]
 fn test_lazy_field() {
