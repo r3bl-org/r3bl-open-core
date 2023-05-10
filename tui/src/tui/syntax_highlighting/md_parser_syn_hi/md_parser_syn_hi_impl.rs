@@ -27,7 +27,8 @@ use crate::{constants::*, *};
 /// user.It is responsible for converting:
 /// - from a &[Vec] of [US] which comes from the [editor],
 /// - into a [StyleUSSpanLines], which the [editor] will clip & render.
-/// ## Arguments
+///
+/// # Arguments
 /// - `editor_text` - The text that the user has typed into the editor.
 /// - `current_box_computed_style` - The computed style of the box that the editor is in.
 pub fn try_parse_and_highlight(

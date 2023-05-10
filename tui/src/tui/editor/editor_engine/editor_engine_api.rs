@@ -27,9 +27,9 @@ use crate::*;
 pub struct EditorEngineApi;
 
 impl EditorEngineApi {
-    /// Event based interface for the editor. This converts the [InputEvent] into an [EditorEvent]
-    /// and then executes it. Returns a new [EditorBuffer] if the operation was applied otherwise
-    /// returns [None].
+    /// Event based interface for the editor. This converts the [InputEvent] into an
+    /// [EditorEvent] and then executes it. Returns a new [EditorBuffer] if the operation
+    /// was applied otherwise returns [None].
     pub async fn apply_event<S, A>(
         args: EditorEngineArgs<'_, S, A>,
         input_event: &InputEvent,
@@ -97,7 +97,6 @@ impl EditorEngineApi {
         }
     }
 
-    // TODO: add support for rendering vec_selection_per_line
     pub async fn render_engine<S, A>(
         args: EditorEngineArgs<'_, S, A>,
         current_box: &FlexBox,
@@ -127,8 +126,11 @@ impl EditorEngineApi {
                 EditorEngineApi::render_empty_state(&render_args)
             } else {
                 let mut render_ops = render_ops!();
+
                 EditorEngineApi::render_content(&render_args, &mut render_ops);
+                EditorEngineApi::render_selection(&render_args, &mut render_ops);
                 EditorEngineApi::render_caret(&render_args, &mut render_ops);
+
                 let mut render_pipeline = render_pipeline!();
                 render_pipeline.push(ZOrder::Normal, render_ops);
                 render_pipeline
@@ -188,8 +190,83 @@ impl EditorEngineApi {
         );
     }
 
-    /// Implement caret painting using two different strategies represented by
-    /// [CaretPaintStyle].
+    fn render_selection<S, A>(
+        render_args: &RenderArgs<'_, S, A>,
+        render_ops: &mut RenderOps,
+    ) where
+        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
+    {
+        let RenderArgs {
+            editor_buffer,
+            editor_engine,
+            ..
+        } = render_args;
+
+        // TODO: add support for rendering vec_selection_per_line (selection)
+        if let Some(selection) = editor_buffer.get_maybe_selection_map() {
+            for (row_index, range_of_display_col_indices) in selection {
+                let row_index = *row_index;
+                let lines = editor_buffer.get_lines();
+
+                if let Some(line) = lines.get(ch!(@to_usize *row_index)) {
+                    let scr_adj_start_col_index =
+                        range_of_display_col_indices.start_display_col_index;
+
+                    let scr_adj_end_col_index =
+                        range_of_display_col_indices.end_display_col_index;
+
+                    let selection_str_slice = {
+                        let it = line.clip_to_range(
+                            scr_adj_start_col_index,
+                            scr_adj_end_col_index,
+                        );
+
+                        // AI: remove debug
+                        log_debug(format!("\n🚀🚀🚀 \n\tselection_str_slice: {:?}", it));
+
+                        if it.is_empty() {
+                            continue;
+                        };
+                        it
+                    };
+
+                    let position = {
+                        let raw_row_index = {
+                            let row_scroll_offset =
+                                editor_buffer.get_scroll_offset().row_index;
+                            row_index - row_scroll_offset
+                        };
+
+                        let raw_col_index = {
+                            let col_scroll_offset =
+                                editor_buffer.get_scroll_offset().col_index;
+                            scr_adj_start_col_index - col_scroll_offset
+                        };
+
+                        let it =
+                            position!(col_index: raw_col_index, row_index: raw_row_index);
+                        it
+                    };
+
+                    render_ops.push(RenderOp::MoveCursorPositionRelTo(
+                        editor_engine.current_box.style_adjusted_origin_pos,
+                        position,
+                    ));
+
+                    render_ops.push(RenderOp::ApplyColors(Some(get_selection_style())));
+
+                    render_ops.push(RenderOp::PaintTextWithAttributes(
+                        selection_str_slice.to_string(),
+                        None,
+                    ));
+
+                    render_ops.push(RenderOp::ResetColor);
+                }
+            }
+        }
+    }
+
     fn render_caret<S, A>(render_args: &RenderArgs<'_, S, A>, render_ops: &mut RenderOps)
     where
         S: Debug + Default + Clone + PartialEq + Sync + Send,
@@ -201,6 +278,7 @@ impl EditorEngineApi {
             editor_engine,
             ..
         } = render_args;
+
         if component_registry
             .has_focus
             .does_id_have_focus(editor_engine.current_box.id)
@@ -492,7 +570,7 @@ mod syn_hi_syntect_path {
         editor_buffer: &&EditorBuffer,
         line: &'a str,
     ) -> Option<Vec<(syntect::highlighting::Style, &'a str)>> {
-        let file_ext = editor_buffer.get_file_extension()?;
+        let file_ext = editor_buffer.get_maybe_file_extension()?;
         let syntax_ref = try_get_syntax_ref(&editor_engine.syntax_set, file_ext)?;
         let theme = &editor_engine.theme;
         let mut highlighter = HighlightLines::new(syntax_ref, theme);
@@ -569,7 +647,8 @@ mod no_syn_hi_path {
         let scroll_offset_col_index = editor_buffer.get_scroll_offset().col_index;
 
         // Clip the content [scroll_offset.col .. max cols].
-        let truncated_line = line.clip(scroll_offset_col_index, max_display_col_count);
+        let truncated_line =
+            line.clip_to_width(scroll_offset_col_index, max_display_col_count);
 
         render_ops.push(RenderOp::ApplyColors(
             editor_engine.current_box.get_computed_style(),

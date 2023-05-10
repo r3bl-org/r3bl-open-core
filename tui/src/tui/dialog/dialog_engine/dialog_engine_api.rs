@@ -447,11 +447,11 @@ mod internal_impl {
 
                     let lhs_start_index = ch!(0);
                     let lhs_end_index = max_display_col_count - postfix_len - snip_len;
-                    let lhs = text.clip(lhs_start_index, lhs_end_index);
+                    let lhs = text.clip_to_width(lhs_start_index, lhs_end_index);
 
                     let rhs_start_index = text.display_width - postfix_len;
                     let rhs_end_index = text.display_width;
-                    let rhs = text.clip(rhs_start_index, rhs_end_index);
+                    let rhs = text.clip_to_width(rhs_start_index, rhs_end_index);
 
                     format!("{lhs}..{rhs}")
                 } else {

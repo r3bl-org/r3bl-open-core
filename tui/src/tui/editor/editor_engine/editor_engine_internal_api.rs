@@ -106,14 +106,6 @@ impl EditorEngineInternalApi {
     ) -> Option<()> {
         content_mut::backspace_at_caret(buffer, engine)
     }
-
-    // 00: impl selection functionality
-    pub fn add_to_selection_move_right(
-        buffer: &mut EditorBuffer,
-        engine: &mut EditorEngine,
-    ) -> Option<()> {
-        caret_mut::right(buffer, engine, SelectMode::Enabled)
-    }
 }
 
 /// Helper macros just for this module.
@@ -201,19 +193,23 @@ mod caret_get {
         }
     }
 
-    // R ┌──────────┐
-    // 0 ▸          │
-    //   └▴─────────┘
-    //   C0123456789
+    /// ```text
+    /// R ┌──────────┐
+    /// 0 ▸          │
+    ///   └▴─────────┘
+    ///   C0123456789
+    /// ```
     fn row_is_at_top_of_buffer(buffer: &EditorBuffer, _engine: &EditorEngine) -> bool {
         *buffer.get_caret(CaretKind::ScrollAdjusted).row_index == 0
     }
 
-    // R ┌──────────┐
-    // 0 │a         │
-    // 1 ▸a         │
-    //   └▴─────────┘
-    //   C0123456789
+    /// ```text
+    /// R ┌──────────┐
+    /// 0 │a         │
+    /// 1 ▸a         │
+    ///   └▴─────────┘
+    ///   C0123456789
+    /// ```
     fn row_is_at_bottom_of_buffer(buffer: &EditorBuffer, _engine: &EditorEngine) -> bool {
         if buffer.is_empty() || buffer.get_lines().len() == 1 {
             false // If there is only one line, then the caret is not at the bottom, its at the top.
@@ -354,6 +350,7 @@ mod caret_mut {
         None
     }
 
+    /// ```text
     /// Caret : ▴, ▸
     ///
     /// Start of line:
@@ -373,6 +370,7 @@ mod caret_mut {
     /// 0 ▸abcab     │
     ///   └─────▴────┘
     ///   C0123456789
+    /// ```
     pub fn right(
         editor_buffer: &mut EditorBuffer,
         editor_engine: &mut EditorEngine,
@@ -416,7 +414,7 @@ mod caret_mut {
             select_mode: SelectMode,
         ) -> Option<()> {
             // This is only set if select_mode is enabled.
-            let maybe_caret_display_start_pos: Option<Position> = match select_mode {
+            let maybe_caret_display_previous_pos: Option<Position> = match select_mode {
                 SelectMode::Enabled => {
                     Some(editor_buffer.get_caret(CaretKind::ScrollAdjusted))
                 }
@@ -505,46 +503,57 @@ mod caret_mut {
             }
 
             // This is only set if select_mode is enabled.
-            let maybe_caret_display_end_pos: Option<Position> = match select_mode {
+            let maybe_caret_display_current_pos: Option<Position> = match select_mode {
                 SelectMode::Enabled => {
                     Some(editor_buffer.get_caret(CaretKind::ScrollAdjusted))
                 }
                 _ => None,
             };
 
+            // This is only runs if select_mode is enabled.
             if let SelectMode::Enabled = select_mode {
-                let start_caret_display_pos = maybe_caret_display_start_pos?;
-                let end_caret_display_pos = maybe_caret_display_end_pos?;
-                // TODO: mutate the editor_buffer.maybe_selection (add to editor_buffer_struct.rs)
+                let previous_caret_display_pos = maybe_caret_display_previous_pos?;
+                let current_caret_display_pos = maybe_caret_display_current_pos?;
+
+                // AI: remove debug
                 log_debug(format!(
-                    "\n🚀🚀🚀 add selection right_normal: \n\tstart_caret_display_pos: {:?}, \n\t  end_caret_display_pos: {:?}",
-                    start_caret_display_pos, end_caret_display_pos
+                    "\n🚀🚀🚀 {0}: \n\t{1}: {2:?}, \n\t{3}: {4:?}",
+                    /* 0 */ "add selection right_normal",
+                    /* 1 */ "start_caret_display_pos",
+                    /* 2 */ previous_caret_display_pos,
+                    /* 3 */ "end_caret_display_pos",
+                    /* 4 */ current_caret_display_pos
                 ));
-                EditorBufferApi::add_to_selection(
+
+                EditorBufferApi::update_selection_based_on_caret_movement(
                     editor_buffer,
-                    start_caret_display_pos,
-                    end_caret_display_pos,
+                    previous_caret_display_pos,
+                    current_caret_display_pos,
                 );
+
+                // AI: remove debug
                 log_debug(format!(
                     "\n🚀🚀🚀 new selection: {:#?}",
-                    editor_buffer.get_mut_selection()
+                    editor_buffer.get_mut_maybe_selection_map()
                 ));
             }
 
             None
         }
 
+        // TODO: mutate the editor_buffer.maybe_selection (add to editor_buffer_struct.rs)
         fn right_at_end(
             editor_buffer: &mut EditorBuffer,
             editor_engine: &mut EditorEngine,
             select_mode: SelectMode,
         ) {
             if let SelectMode::Enabled = select_mode {
-                // TODO: depending on select_mode mutate the editor_buffer.maybe_selection
                 let caret_col_index =
                     editor_buffer.get_caret(CaretKind::ScrollAdjusted).col_index;
                 let caret_row_index =
                     editor_buffer.get_caret(CaretKind::ScrollAdjusted).row_index;
+
+                // AI: remove debug
                 log_debug(format!(
                     "🚀🚀🚀 add selection right_at_end: r:{}, c:{}",
                     caret_row_index, caret_col_index
@@ -1016,12 +1025,14 @@ mod content_mut {
         mod inner {
             use super::*;
 
-            // R ┌──────────┐
-            // 0 ▸abc       │
-            // 1 │ab        │
-            // 2 │a         │
-            //   └─▴────────┘
-            //   C0123456789
+            /// ```text
+            /// R ┌──────────┐
+            /// 0 ▸abc       │
+            /// 1 │ab        │
+            /// 2 │a         │
+            ///   └─▴────────┘
+            ///   C0123456789
+            /// ```
             pub fn delete_in_middle_of_line(
                 buffer: &mut EditorBuffer,
                 engine: &mut EditorEngine,
@@ -1044,12 +1055,14 @@ mod content_mut {
                 None
             }
 
-            // R ┌──────────┐
-            // 0 ▸abc       │
-            // 1 │ab        │
-            // 2 │a         │
-            //   └───▴──────┘
-            //   C0123456789
+            /// ```text
+            /// R ┌──────────┐
+            /// 0 ▸abc       │
+            /// 1 │ab        │
+            /// 2 │a         │
+            ///   └───▴──────┘
+            ///   C0123456789
+            /// ```
             pub fn delete_at_end_of_line(
                 buffer: &mut EditorBuffer,
                 engine: &mut EditorEngine,
@@ -1098,12 +1111,14 @@ mod content_mut {
         mod inner {
             use super::*;
 
-            // R ┌──────────┐
-            // 0 ▸abc       │
-            // 1 │ab        │
-            // 2 │a         │
-            //   └─▴────────┘
-            //   C0123456789
+            /// ```text
+            /// R ┌──────────┐
+            /// 0 ▸abc       │
+            /// 1 │ab        │
+            /// 2 │a         │
+            ///   └─▴────────┘
+            ///   C0123456789
+            /// ```
             pub fn backspace_in_middle_of_line(
                 buffer: &mut EditorBuffer,
                 engine: &mut EditorEngine,
@@ -1134,12 +1149,14 @@ mod content_mut {
                 None
             }
 
-            // R ┌──────────┐
-            // 0 │abc       │
-            // 1 ▸ab        │
-            // 2 │a         │
-            //   └▴─────────┘
-            //   C0123456789
+            /// ```text
+            /// R ┌──────────┐
+            /// 0 │abc       │
+            /// 1 ▸ab        │
+            /// 2 │a         │
+            ///   └▴─────────┘
+            ///   C0123456789
+            /// ```
             pub fn backspace_at_start_of_line(
                 buffer: &mut EditorBuffer,
                 engine: &mut EditorEngine,
