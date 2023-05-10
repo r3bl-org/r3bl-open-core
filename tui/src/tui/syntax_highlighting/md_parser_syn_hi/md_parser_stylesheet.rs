@@ -15,16 +15,27 @@
  *   limitations under the License.
  */
 
-//! These are the colors use to highlight the MD document. These are all sensitive to [ColorSupport]
-//! constraints. You can find ANSI colors [here](https://www.ditig.com/256-colors-cheat-sheet).
+//! These are the colors use to highlight the MD document. These are all sensitive to
+//! [ColorSupport] constraints. You can find ANSI colors
+//! [here](https://www.ditig.com/256-colors-cheat-sheet).
 
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
 
 use crate::*;
 
-/// This style is for the foreground text of the entire document. This is the default style. It is
-/// overridden by other styles like bold, italic, etc. below.
+/// This style is for any selected range in the document.
+pub fn get_selection_style() -> Style {
+    let color_fg = TuiColor::Rgb(RgbValue::from_hex("#dddddd"));
+    let color_bg = TuiColor::Rgb(RgbValue::from_hex("#ff00ff"));
+    style! {
+        color_fg: color_fg
+        color_bg: color_bg
+    }
+}
+
+/// This style is for the foreground text of the entire document. This is the default
+/// style. It is overridden by other styles like bold, italic, etc. below.
 pub fn get_foreground_style() -> Style {
     style! {
         color_fg: match ColorSupport::detect() {
@@ -35,8 +46,9 @@ pub fn get_foreground_style() -> Style {
     }
 }
 
-/// This style is for things like `[`, `]`, `*`, "`", etc. They are dimmed so that they don't
-/// distract from the main content they are wrapping like a link or inline code block, etc.
+/// This style is for things like `[`, `]`, `*`, "`", etc. They are dimmed so that they
+/// don't distract from the main content they are wrapping like a link or inline code
+/// block, etc.
 pub fn get_foreground_dim_style() -> Style {
     get_foreground_style()
         + style! {
@@ -86,8 +98,9 @@ pub fn get_inline_code_style() -> Style {
     style! {
         color_fg: match ColorSupport::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Magenta),
-            // ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(126)), // MediumVioletRed.
-            // ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(177)), // Violet.
+            // ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(126)), //
+            // MediumVioletRed. ColorSupport::Ansi256 =>
+            // TuiColor::Ansi(AnsiValue::new(177)), // Violet.
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(169)), // HotPink2.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ce55b7")),
         }

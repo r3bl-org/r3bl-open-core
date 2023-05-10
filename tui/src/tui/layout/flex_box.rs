@@ -31,12 +31,12 @@ pub enum LayoutDirection {
     Vertical,
 }
 
-/// This works w/ the [int-enum](https://crates.io/crates/int-enum) crate in order to allow for the
-/// definition of enums that are represented in memory as [u8]s.
+/// This works w/ the [int-enum](https://crates.io/crates/int-enum) crate in order to
+/// allow for the definition of enums that are represented in memory as [u8]s.
 pub type FlexBoxId = u8;
 
-/// A box is a rectangle with a position and size. The direction of the box
-/// determines how it's contained elements are positioned.
+/// A box is a rectangle with a position and size. The direction of the box determines how
+/// it's contained elements are positioned.
 #[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct FlexBox {
     pub id: FlexBoxId,
@@ -83,7 +83,8 @@ mod flex_box_impl {
     }
 }
 
-/// Holds a subset of the fields in [FlexBox] that are required by the editor and dialog engines.
+/// Holds a subset of the fields in [FlexBox] that are required by the editor and dialog
+/// engines.
 #[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PartialFlexBox {
     pub id: FlexBoxId,

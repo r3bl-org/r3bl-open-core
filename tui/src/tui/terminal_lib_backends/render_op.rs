@@ -260,17 +260,21 @@ pub enum RenderOp {
 
     ResetColor,
 
-    /// Translate [Style] into fg and bg colors for crossterm.
+    /// Translate [Style] into fg and bg colors for crossterm. Note that this does not
+    /// apply attributes (bold, italic, underline, strikethrough, etc). If you need to
+    /// apply attributes, use [RenderOp::PaintTextWithAttributes] instead.
     ApplyColors(Option<Style>),
 
-    /// Translate [Style] into attributes for crossterm (bold, italic, underline, strikethrough,
-    /// etc).
+    /// Translate [Style] into *only* attributes for crossterm (bold, italic, underline,
+    /// strikethrough, etc) and not colors. If you need to apply color, use
+    /// [RenderOp::ApplyColors] instead.
     ///
-    /// 1. If the [String] argument is plain text (no ANSI sequences) then it will be clipped
-    ///    available width of the terminal screen).
+    /// 1. If the [String] argument is plain text (no ANSI sequences) then it will be
+    ///    clipped available width of the terminal screen).
     ///
-    /// 2. If the [String] argument contains ANSI sequences then it will be printed as-is. You are
-    ///    responsible for handling clipping of the text to the bounds of the terminal screen.
+    /// 2. If the [String] argument contains ANSI sequences then it will be printed as-is.
+    ///    You are responsible for handling clipping of the text to the bounds of the
+    ///    terminal screen.
     PaintTextWithAttributes(String, Option<Style>),
 
     /// This is **not** meant for use directly by apps. It is to be used only by the

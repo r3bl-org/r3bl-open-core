@@ -186,6 +186,26 @@ mod tests {
             }
         }
 
+        /// ```text
+        /// BEFORE:
+        ///    ┌→s1
+        ///    │    ┌→s2
+        ///    │    │┌→s3
+        ///    ▒▒▒▒▒█▒▒▒▒▒▒
+        /// R ┌────────────┐
+        /// 0 │first second│
+        ///   └────────────┘
+        ///   C012345678901
+        ///
+        /// AFTER: Cut [ 2 .. 5 ].
+        ///      ┌→s1
+        ///      │  ┌→s2
+        ///      │  │┌→s3
+        /// R   ┌─────┐
+        /// 0 fi│rst s│econd
+        ///     └─────┘
+        ///     C01234 5678901
+        /// ```
         #[test]
         fn list_1_range_2_5() {
             use helpers::*;
@@ -195,25 +215,6 @@ mod tests {
             let scroll_offset_col_index = ch!(2);
             let max_display_col_count = ch!(5);
             let expected_clipped_string = "rst s";
-
-            // BEFORE:
-            //    ┌→s1
-            //    │    ┌→s2
-            //    │    │┌→s3
-            //    ▒▒▒▒▒█▒▒▒▒▒▒
-            // R ┌────────────┐
-            // 0 │first second│
-            //   └────────────┘
-            //   C012345678901
-            //
-            // AFTER: Cut [ 2 .. 5 ].
-            //      ┌→s1
-            //      │  ┌→s2
-            //      │  │┌→s3
-            // R   ┌─────┐
-            // 0 fi│rst s│econd
-            //     └─────┘
-            //     C01234 5678901
 
             // Equivalent no highlight version.
             {
@@ -238,6 +239,26 @@ mod tests {
             }
         }
 
+        /// ```text
+        /// BEFORE:
+        ///    ┌→s1
+        ///    │    ┌→s2
+        ///    │    │┌→s3
+        ///    ▒▒▒▒▒█▒▒▒▒▒▒
+        /// R ┌────────────┐
+        /// 0 │first second│
+        ///   └────────────┘
+        ///   C012345678901
+        ///
+        /// AFTER: Cut [ 0 .. 3 ].
+        ///    ┌→s1
+        ///    │     ┌→s2
+        ///    │     │┌→s3
+        /// R ┌───┐
+        /// 0 │fir│st second
+        ///   └───┘
+        ///   C012 345678901
+        /// ```
         #[test]
         fn list_1_range_0_3() {
             use helpers::*;
@@ -247,25 +268,6 @@ mod tests {
             let scroll_offset_col_index = ch!(0);
             let max_display_col_count = ch!(3);
             let expected_clipped_string = "fir";
-
-            // BEFORE:
-            //    ┌→s1
-            //    │    ┌→s2
-            //    │    │┌→s3
-            //    ▒▒▒▒▒█▒▒▒▒▒▒
-            // R ┌────────────┐
-            // 0 │first second│
-            //   └────────────┘
-            //   C012345678901
-            //
-            // AFTER: Cut [ 0 .. 3 ].
-            //    ┌→s1
-            //    │     ┌→s2
-            //    │     │┌→s3
-            // R ┌───┐
-            // 0 │fir│st second
-            //   └───┘
-            //   C012 345678901
 
             // Equivalent no highlight version.
             {
@@ -293,6 +295,26 @@ mod tests {
             }
         }
 
+        /// ```text
+        /// BEFORE:
+        ///    ┌→s1
+        ///    │    ┌→s2
+        ///    │    │┌→s3
+        ///    ▒▒▒▒▒█▒▒▒▒▒▒
+        /// R ┌────────────┐
+        /// 0 │first second│
+        ///   └────────────┘
+        ///   C012345678901
+        ///
+        /// AFTER: Cut [ 0 .. 5 ].
+        ///    ┌→s1
+        ///    │     ┌→s2
+        ///    │     │┌→s3
+        /// R ┌─────┐
+        /// 0 │first│ second
+        ///   └─────┘
+        ///   C01234 5678901
+        /// ```
         #[test]
         fn list_1_range_0_5() {
             use helpers::*;
@@ -302,25 +324,6 @@ mod tests {
             let scroll_offset_col_index = ch!(0);
             let max_display_col_count = ch!(5);
             let expected_clipped_string = "first";
-
-            // BEFORE:
-            //    ┌→s1
-            //    │    ┌→s2
-            //    │    │┌→s3
-            //    ▒▒▒▒▒█▒▒▒▒▒▒
-            // R ┌────────────┐
-            // 0 │first second│
-            //   └────────────┘
-            //   C012345678901
-            //
-            // AFTER: Cut [ 0 .. 5 ].
-            //    ┌→s1
-            //    │     ┌→s2
-            //    │     │┌→s3
-            // R ┌─────┐
-            // 0 │first│ second
-            //   └─────┘
-            //   C01234 5678901
 
             // Equivalent no highlight version.
             {
@@ -348,6 +351,26 @@ mod tests {
             }
         }
 
+        /// ```text
+        /// BEFORE:
+        ///    ┌→s1
+        ///    │    ┌→s2
+        ///    │    │┌→s3
+        ///    ▒▒▒▒▒█▒▒▒▒▒▒
+        /// R ┌────────────┐
+        /// 0 │first second│
+        ///   └────────────┘
+        ///   C012345678901
+        ///
+        /// AFTER: Cut [ 2 .. 8 ].
+        ///      ┌→s1
+        ///      │  ┌→s2
+        ///      │  │┌→s3
+        /// R   ┌────────┐
+        /// 0 fi│rst seco│nd
+        ///     └────────┘
+        ///     C01234567 8901
+        /// ```
         #[test]
         fn list_1_range_2_8() {
             use helpers::*;
@@ -357,25 +380,6 @@ mod tests {
             let scroll_offset_col_index = ch!(2);
             let max_display_col_count = ch!(8);
             let expected_clipped_string = "rst seco";
-
-            // BEFORE:
-            //    ┌→s1
-            //    │    ┌→s2
-            //    │    │┌→s3
-            //    ▒▒▒▒▒█▒▒▒▒▒▒
-            // R ┌────────────┐
-            // 0 │first second│
-            //   └────────────┘
-            //   C012345678901
-            //
-            // AFTER: Cut [ 2 .. 8 ].
-            //      ┌→s1
-            //      │  ┌→s2
-            //      │  │┌→s3
-            // R   ┌────────┐
-            // 0 fi│rst seco│nd
-            //     └────────┘
-            //     C01234567 8901
 
             // Expected no highlight version.
             {

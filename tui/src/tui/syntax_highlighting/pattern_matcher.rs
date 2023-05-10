@@ -175,16 +175,18 @@ mod tests {
         assert_eq2!(final_index, 12);
     }
 
+
+    /// ```text
+    ///       ┌→ match this
+    ///       │   ┌→ don't match this
+    ///    ▒▒▒████▒▒▒▒
+    /// R ┌───────────┐
+    /// 0 │abcabcdabcd│
+    ///   └───────────┘
+    ///   C01234567890
+    /// ```
     #[test]
     fn matches_occurrence_after_scroll_offset() {
-        //
-        //       ┌→ match this
-        //       │   ┌→ don't match this
-        //    ▒▒▒████▒▒▒▒
-        // R ┌───────────┐
-        // 0 │abcabcdabcd│
-        //   └───────────┘
-        //   C01234567890
 
         let my_line = "abcabcdabcd";
         let my_pattern = "abcd";
@@ -223,17 +225,17 @@ mod tests {
         assert_eq2!(final_index, 10);
     }
 
+    /// ```text
+    ///       ┌→ match this
+    ///       │   ┌→ don't match this
+    ///    ▒▒▒████▒▒▒▒
+    /// R ┌───────────┐
+    /// 0 │abcabcdabcd│
+    ///   └───────────┘
+    ///   C01234567890
+    /// ```
     #[test]
     fn matches_first_occurrence() {
-        //
-        //       ┌→ match this
-        //       │   ┌→ don't match this
-        //    ▒▒▒████▒▒▒▒
-        // R ┌───────────┐
-        // 0 │abcabcdabcd│
-        //   └───────────┘
-        //   C01234567890
-
         let my_line = "abcabcdabcd";
         let my_pattern = "abcd";
 

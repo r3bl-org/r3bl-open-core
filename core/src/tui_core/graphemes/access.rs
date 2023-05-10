@@ -20,8 +20,9 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 use crate::*;
 
 impl UnicodeString {
-    /// If any segment in `self.vec_segment` has a `display_col_offset` greater than 1 then this is
-    /// true. The semantic is that the string is displayed using more than 1 column of the terminal.
+    /// If any segment in `self.vec_segment` has a `display_col_offset` greater than 1
+    /// then this is true. The semantic is that the string is displayed using more than 1
+    /// column of the terminal.
     pub fn contains_wide_segments(&self) -> bool {
         let mut contains_wide_segments = false;
 
@@ -67,7 +68,8 @@ impl UnicodeString {
         &self.string[..string_end_byte_index]
     }
 
-    /// Removes segments from the start of the string so that `col_count` (width) is skipped.
+    /// Removes segments from the start of the string so that `col_count` (width) is
+    /// skipped.
     ///
     /// ```rust
     /// use r3bl_rs_utils_core::UnicodeString;
@@ -104,16 +106,17 @@ impl UnicodeString {
         &self.string[string_start_byte_index..]
     }
 
-    /// Returns a string slice from `self.string` w/ the segments removed from the end of the string
-    /// that don't fit in the given viewport width (which is 1 index). Note that the character at
-    /// `display_col_count` *index* is NOT included in the result; please see the example below.
+    /// Returns a string slice from `self.string` w/ the segments removed from the end of
+    /// the string that don't fit in the given viewport width (which is 1 based, and not 0
+    /// based). Note that the character at `display_col_count` *index* is NOT included in
+    /// the result; please see the example below.
     ///
     /// ```text
-    ///   ←─3─→ : size (width)
+    ///   ←─3─→ : size (or "width" or "col count" or "count", 1 based)
     /// R ┌───┐
     /// 0 │fir│st second
     ///   └───┘
-    ///   C012 345678901
+    ///   C012 345678901 : index (0 based)
     /// ```
     ///
     /// Example.
@@ -149,8 +152,8 @@ impl UnicodeString {
         &self.string[..string_end_byte_index]
     }
 
-    /// Returns a new [String] that is the result of padding `self.string` to fit the given width w/
-    /// the given spacer character.
+    /// Returns a new [String] that is the result of padding `self.string` to fit the
+    /// given width w/ the given spacer character.
     pub fn pad_end_with_spaces_to_fit_width(
         &self,
         spacer: &str,
@@ -165,15 +168,29 @@ impl UnicodeString {
         }
     }
 
-    /// Clip the content [scroll_offset.col .. max cols].
-    pub fn clip(
+    pub fn clip_to_range(
         &self,
-        scroll_offset_col_index: ChUnit,
-        max_display_col_count: ChUnit,
+        start_display_col_index: ChUnit,
+        end_display_col_index: ChUnit,
+    ) -> &str {
+        let max_display_col_count = end_display_col_index - start_display_col_index;
+        self.clip_to_width(start_display_col_index, max_display_col_count)
+    }
+
+    /// Clip the content starting from `start_col_index` and take as many columns as
+    /// possible until `max_display_col_count` is reached.
+    ///
+    /// # Arguments
+    /// - `start_display_col_index`: This an index value.
+    /// - `max_display_col_count`: The is not an index value, but a size or count value.
+    pub fn clip_to_width(
+        &self,
+        /* index */ start_display_col_index: ChUnit,
+        /* width */ max_display_col_count: ChUnit,
     ) -> &str {
         let string_start_byte_index = {
             let mut it = 0;
-            let mut skip_col_count = scroll_offset_col_index;
+            let mut skip_col_count = start_display_col_index;
             for segment in self.iter() {
                 // Skip scroll_offset_col_index columns.
                 if skip_col_count != ch!(0) {
@@ -191,7 +208,7 @@ impl UnicodeString {
         let string_end_byte_index = {
             let mut it = 0;
             let mut avail_col_count = max_display_col_count;
-            let mut skip_col_count = scroll_offset_col_index;
+            let mut skip_col_count = start_display_col_index;
             for segment in self.iter() {
                 // Skip scroll_offset_col_index columns (again).
                 if skip_col_count != ch!(0) {
@@ -214,15 +231,15 @@ impl UnicodeString {
         &self.string[string_start_byte_index..string_end_byte_index]
     }
 
-    /// If `self.string` is shorter than `max_display_col_count` then a padding string is returned
-    /// (that is comprised of the `pad_char` repeated).
+    /// If `self.string` is shorter than `max_display_col_count` then a padding string is
+    /// returned (that is comprised of the `pad_char` repeated).
     pub fn try_get_postfix_padding_for(
         &self,
         pad_char: char,
         max_display_col_count: ChUnit,
     ) -> Option<String> {
-        // Pad the line to the max cols w/ spaces. This removes any "ghost" carets that were painted in
-        // a previous render.
+        // Pad the line to the max cols w/ spaces. This removes any "ghost" carets that
+        // were painted in a previous render.
         let display_width = UnicodeString::from(&self.string).display_width;
         if display_width < max_display_col_count {
             let padding = max_display_col_count - display_width;
@@ -240,7 +257,8 @@ impl UnicodeString {
         self.get(logical_index)
     }
 
-    /// `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
+    /// `display_col` is the col index in the terminal where this grapheme cluster can be
+    /// displayed.
     pub fn at_display_col_index(
         &self,
         display_col: ChUnit,
@@ -257,7 +275,8 @@ impl UnicodeString {
 
     /// Convert a `display_col` to a `logical_index`.
     /// - `local_index` is the index of the grapheme cluster in the `vec_segment`.
-    /// - `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
+    /// - `display_col` is the col index in the terminal where this grapheme cluster can
+    ///   be displayed.
     pub fn logical_index_at_display_col_index(
         &self,
         display_col: ChUnit,
@@ -268,7 +287,8 @@ impl UnicodeString {
 
     /// Convert a `logical_index` to a `display_col`.
     /// - `local_index` is the index of the grapheme cluster in the `vec_segment`.
-    /// - `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
+    /// - `display_col` is the col index in the terminal where this grapheme cluster can
+    ///   be displayed.
     pub fn display_col_index_at_logical_index(
         &self,
         logical_index: usize,
@@ -277,8 +297,9 @@ impl UnicodeString {
             .map(|segment| segment.display_col_offset)
     }
 
-    /// Return the string and unicode width of the grapheme cluster segment at the given `display_col`.
-    /// If this `display_col` falls in the middle of a grapheme cluster, then return [None].
+    /// Return the string and unicode width of the grapheme cluster segment at the given
+    /// `display_col`. If this `display_col` falls in the middle of a grapheme cluster,
+    /// then return [None].
     pub fn get_string_at_display_col_index(
         &self,
         display_col: ChUnit,
@@ -296,8 +317,8 @@ impl UnicodeString {
         }
     }
 
-    /// If the given `display_col` falls in the middle of a grapheme cluster, then return the
-    /// [GraphemeClusterSegment] at that `display_col`. Otherwise return [None].
+    /// If the given `display_col` falls in the middle of a grapheme cluster, then return
+    /// the [GraphemeClusterSegment] at that `display_col`. Otherwise return [None].
     pub fn is_display_col_index_in_middle_of_grapheme_cluster(
         &self,
         display_col: ChUnit,

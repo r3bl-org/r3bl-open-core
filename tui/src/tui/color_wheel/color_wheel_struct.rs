@@ -191,7 +191,7 @@ impl ColorWheel {
     /// 2. When you use [colorize_into_styled_texts](ColorWheel::colorize_into_styled_texts) it will
     ///    also also call this method.
     ///
-    /// ## Arguments
+    /// # Arguments
     /// 1. `configs`: A list of color wheel configs. The order of the configs is not important.
     ///    However, at the very least, one Truecolor config & one ANSI 256 config should be
     ///    provided. The fallback is always grayscale. See
@@ -244,7 +244,7 @@ impl ColorWheel {
 
     /// Every time this method is called, it will generate the gradient & memoize it.
     ///
-    /// ## Arguments
+    /// # Arguments
     /// * `steps_override` - If `Some` then the number of steps will be overridden. If `None` then
     ///                      the number of steps will be determined by the `ColorWheelConfig`.
     ///

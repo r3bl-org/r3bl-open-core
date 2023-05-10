@@ -224,7 +224,7 @@ impl StyleUSSpanLine {
         max_display_col_count: ChUnit,
     ) -> String {
         let line = US::from(self.get_plain_text());
-        String::from(line.clip(scroll_offset_col_index, max_display_col_count))
+        String::from(line.clip_to_width(scroll_offset_col_index, max_display_col_count))
     }
 }
 
