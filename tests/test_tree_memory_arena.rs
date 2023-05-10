@@ -176,7 +176,11 @@ fn test_can_walk_tree_and_delete_nodes_from_tree() {
     }
 
     // Helper functions.
-    fn assert_node_data_is_eq(arena: &Arena<String>, node_id: usize, expected_name: &str) {
+    fn assert_node_data_is_eq(
+        arena: &Arena<String>,
+        node_id: usize,
+        expected_name: &str,
+    ) {
         let child_ref = arena.get_node_arc(node_id).unwrap();
         assert_eq2!(child_ref.read().unwrap().payload, expected_name.to_string());
     }

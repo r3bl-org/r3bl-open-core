@@ -87,7 +87,9 @@ pub fn gen_fn_input_args_expr_list(
     (arg_with_type_vec, arg_name_ident_vec)
 }
 
-pub fn get_fn_output_type_from(property_fn_type: &Type) -> Option<proc_macro2::TokenStream> {
+pub fn get_fn_output_type_from(
+    property_fn_type: &Type,
+) -> Option<proc_macro2::TokenStream> {
     if let Type::Path(type_path) = property_fn_type {
         if type_path.path.segments.first().is_some() {
             let path_segment = type_path.path.segments.first().unwrap();

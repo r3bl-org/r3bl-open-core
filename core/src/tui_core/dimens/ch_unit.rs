@@ -33,7 +33,17 @@ pub type ChUnitPrimitiveType = u16;
 ///
 /// In order to create amounts of ch units, use the [ch!] macro.
 #[derive(
-    Copy, Clone, Default, PartialEq, Serialize, Deserialize, GetSize, Ord, PartialOrd, Eq, Hash,
+    Copy,
+    Clone,
+    Default,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    GetSize,
+    Ord,
+    PartialOrd,
+    Eq,
+    Hash,
 )]
 pub struct ChUnit {
     pub value: ChUnitPrimitiveType,
@@ -127,7 +137,9 @@ impl Debug for ChUnit {
 }
 
 impl Display for ChUnit {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{}", self.value) }
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.value)
+    }
 }
 
 impl Deref for ChUnit {
@@ -142,7 +154,9 @@ pub mod ch_unit_math_ops {
     impl std::ops::Add for ChUnit {
         type Output = Self;
 
-        fn add(self, rhs: Self) -> Self::Output { ch!(add_unsigned!(self.value, rhs.value)) }
+        fn add(self, rhs: Self) -> Self::Output {
+            ch!(add_unsigned!(self.value, rhs.value))
+        }
     }
 
     impl std::ops::Add<u16> for ChUnit {
@@ -152,17 +166,23 @@ pub mod ch_unit_math_ops {
     }
 
     impl std::ops::AddAssign for ChUnit {
-        fn add_assign(&mut self, rhs: Self) { self.value = add_unsigned!(self.value, rhs.value); }
+        fn add_assign(&mut self, rhs: Self) {
+            self.value = add_unsigned!(self.value, rhs.value);
+        }
     }
 
     impl std::ops::AddAssign<u16> for ChUnit {
-        fn add_assign(&mut self, rhs: u16) { self.value = add_unsigned!(self.value, rhs); }
+        fn add_assign(&mut self, rhs: u16) {
+            self.value = add_unsigned!(self.value, rhs);
+        }
     }
 
     impl std::ops::Sub for ChUnit {
         type Output = Self;
 
-        fn sub(self, rhs: Self) -> Self::Output { ch!(sub_unsigned!(self.value, rhs.value)) }
+        fn sub(self, rhs: Self) -> Self::Output {
+            ch!(sub_unsigned!(self.value, rhs.value))
+        }
     }
 
     impl std::ops::Sub<u16> for ChUnit {
@@ -172,17 +192,23 @@ pub mod ch_unit_math_ops {
     }
 
     impl std::ops::SubAssign for ChUnit {
-        fn sub_assign(&mut self, rhs: Self) { self.value = sub_unsigned!(self.value, rhs.value); }
+        fn sub_assign(&mut self, rhs: Self) {
+            self.value = sub_unsigned!(self.value, rhs.value);
+        }
     }
 
     impl std::ops::SubAssign<u16> for ChUnit {
-        fn sub_assign(&mut self, rhs: u16) { self.value = sub_unsigned!(self.value, rhs); }
+        fn sub_assign(&mut self, rhs: u16) {
+            self.value = sub_unsigned!(self.value, rhs);
+        }
     }
 
     impl std::ops::Mul for ChUnit {
         type Output = Self;
 
-        fn mul(self, rhs: Self) -> Self::Output { ch!(mul_unsigned!(self.value, rhs.value)) }
+        fn mul(self, rhs: Self) -> Self::Output {
+            ch!(mul_unsigned!(self.value, rhs.value))
+        }
     }
 
     impl std::ops::Mul<u16> for ChUnit {

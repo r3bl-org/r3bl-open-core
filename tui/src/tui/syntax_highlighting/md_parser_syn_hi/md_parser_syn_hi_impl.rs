@@ -67,8 +67,11 @@ mod tests_try_parse_and_highlight {
             color_bg: TuiColor::Basic(ANSIBasicColor::Red)
         });
 
-        let style_us_span_lines =
-            try_parse_and_highlight(&editor_text_lines, &maybe_current_box_computed_style, None)?;
+        let style_us_span_lines = try_parse_and_highlight(
+            &editor_text_lines,
+            &maybe_current_box_computed_style,
+            None,
+        )?;
 
         println!(
             "result: \n{}",
@@ -160,11 +163,12 @@ impl StyleUSSpanLines {
                 for code_block_line in code_block_lines.iter() {
                     let mut acc_line_output = StyleUSSpanLine::default();
 
-                    let maybe_lang = if let Some(code_block_line) = code_block_lines.items.first() {
-                        code_block_line.language
-                    } else {
-                        None
-                    };
+                    let maybe_lang =
+                        if let Some(code_block_line) = code_block_lines.items.first() {
+                            code_block_line.language
+                        } else {
+                            None
+                        };
                     let syntax_set = maybe_syntect_tuple?.0;
                     let lang = maybe_lang?;
                     let theme = maybe_syntect_tuple?.1;
@@ -177,7 +181,9 @@ impl StyleUSSpanLines {
                             let syntect_highlighted_line: Vec<(
                                 syntect::highlighting::Style,
                                 &str,
-                            )> = highlighter.highlight_line(line_of_text, syntax_set).ok()?;
+                            )> = highlighter
+                                .highlight_line(line_of_text, syntax_set)
+                                .ok()?;
 
                             let line_converted_to_tui: List<StyleUSSpan> =
                                 syntect_to_styled_text_conversion::from_syntect_to_tui(
@@ -289,8 +295,10 @@ impl StyleUSSpanLines {
         for input_line in input_ul_lines.iter() {
             let mut acc_line_output = StyleUSSpanLine::default();
 
-            let postfix_span_list =
-                StyleUSSpanLine::from_fragments(input_line, maybe_current_box_computed_style);
+            let postfix_span_list = StyleUSSpanLine::from_fragments(
+                input_line,
+                maybe_current_box_computed_style,
+            );
 
             acc_line_output += postfix_span_list;
 
@@ -312,17 +320,32 @@ impl StyleUSSpanLines {
 
         match block {
             MdBlockElement::Title(title) => {
-                lines += StyleUSSpanLine::from_kvp(TITLE, title, maybe_current_box_computed_style);
+                lines += StyleUSSpanLine::from_kvp(
+                    TITLE,
+                    title,
+                    maybe_current_box_computed_style,
+                );
             }
             MdBlockElement::Date(date) => {
-                lines += StyleUSSpanLine::from_kvp(DATE, date, maybe_current_box_computed_style);
+                lines += StyleUSSpanLine::from_kvp(
+                    DATE,
+                    date,
+                    maybe_current_box_computed_style,
+                );
             }
             MdBlockElement::Tags(tags) => {
-                lines += StyleUSSpanLine::from_csvp(TAGS, tags, maybe_current_box_computed_style);
+                lines += StyleUSSpanLine::from_csvp(
+                    TAGS,
+                    tags,
+                    maybe_current_box_computed_style,
+                );
             }
             MdBlockElement::Authors(authors) => {
-                lines +=
-                    StyleUSSpanLine::from_csvp(AUTHORS, authors, maybe_current_box_computed_style);
+                lines += StyleUSSpanLine::from_csvp(
+                    AUTHORS,
+                    authors,
+                    maybe_current_box_computed_style,
+                );
             }
             MdBlockElement::Heading(heading_data) => {
                 lines.push(StyleUSSpanLine::from_heading_data(
@@ -369,8 +392,8 @@ impl StyleUSSpan {
         let link_text = link_data.text.to_string();
         let link_url = link_data.url.to_string();
 
-        let base_style =
-            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style();
+        let base_style = maybe_current_box_computed_style.unwrap_or_default()
+            + get_foreground_dim_style();
 
         let link_text_style =
             maybe_current_box_computed_style.unwrap_or_default() + get_link_text_style();
@@ -419,9 +442,11 @@ impl StyleUSSpan {
                 number,
                 is_first_line,
             } => {
-                let bullet = generate_ordered_list_item_bullet(indent, number, is_first_line);
+                let bullet =
+                    generate_ordered_list_item_bullet(indent, number, is_first_line);
                 vec![StyleUSSpan::new(
-                    maybe_current_box_computed_style.unwrap_or_default() + get_list_bullet_style(),
+                    maybe_current_box_computed_style.unwrap_or_default()
+                        + get_list_bullet_style(),
                     US::from(bullet),
                 )]
             }
@@ -432,13 +457,15 @@ impl StyleUSSpan {
             } => {
                 let bullet = generate_unordered_list_item_bullet(indent, is_first_line);
                 vec![StyleUSSpan::new(
-                    maybe_current_box_computed_style.unwrap_or_default() + get_list_bullet_style(),
+                    maybe_current_box_computed_style.unwrap_or_default()
+                        + get_list_bullet_style(),
                     US::from(bullet),
                 )]
             }
 
             MdLineFragment::Plain(plain_text) => vec![StyleUSSpan::new(
-                maybe_current_box_computed_style.unwrap_or_default() + get_foreground_style(),
+                maybe_current_box_computed_style.unwrap_or_default()
+                    + get_foreground_style(),
                 US::from(*plain_text),
             )],
 
@@ -450,7 +477,8 @@ impl StyleUSSpan {
                         US::from(BOLD_1),
                     ),
                     StyleUSSpan::new(
-                        maybe_current_box_computed_style.unwrap_or_default() + get_bold_style(),
+                        maybe_current_box_computed_style.unwrap_or_default()
+                            + get_bold_style(),
                         US::from(*bold_text),
                     ),
                     StyleUSSpan::new(
@@ -468,7 +496,8 @@ impl StyleUSSpan {
                     US::from(ITALIC_1),
                 ),
                 StyleUSSpan::new(
-                    maybe_current_box_computed_style.unwrap_or_default() + get_italic_style(),
+                    maybe_current_box_computed_style.unwrap_or_default()
+                        + get_italic_style(),
                     US::from(*italic_text),
                 ),
                 StyleUSSpan::new(
@@ -485,7 +514,8 @@ impl StyleUSSpan {
                     US::from(BITALIC_1),
                 ),
                 StyleUSSpan::new(
-                    maybe_current_box_computed_style.unwrap_or_default() + get_bold_italic_style(),
+                    maybe_current_box_computed_style.unwrap_or_default()
+                        + get_bold_italic_style(),
                     US::from(*bitalic_text),
                 ),
                 StyleUSSpan::new(
@@ -502,7 +532,8 @@ impl StyleUSSpan {
                     US::from(BACK_TICK),
                 ),
                 StyleUSSpan::new(
-                    maybe_current_box_computed_style.unwrap_or_default() + get_inline_code_style(),
+                    maybe_current_box_computed_style.unwrap_or_default()
+                        + get_inline_code_style(),
                     US::from(*inline_code_text),
                 ),
                 StyleUSSpan::new(
@@ -563,7 +594,8 @@ impl StyleUSSpanLine {
         let mut acc = vec![];
 
         for fragment in fragments_in_one_line.iter() {
-            let vec_spans = StyleUSSpan::from_fragment(fragment, maybe_current_box_computed_style);
+            let vec_spans =
+                StyleUSSpan::from_fragment(fragment, maybe_current_box_computed_style);
             acc.extend(vec_spans);
         }
 
@@ -605,7 +637,9 @@ impl StyleUSSpanLine {
             let styled_texts = color_wheel.colorize_into_styled_texts(
                 &heading_text,
                 GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-                TextColorizationPolicy::ColorEachCharacter(*maybe_current_box_computed_style),
+                TextColorizationPolicy::ColorEachCharacter(
+                    *maybe_current_box_computed_style,
+                ),
             );
             StyleUSSpanLine::from(styled_texts)
         };
@@ -1139,7 +1173,8 @@ mod tests_style_us_span_lines_from {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
 
-            let lines = StyleUSSpanLines::from_block(&codeblock_block, &maybe_style, None);
+            let lines =
+                StyleUSSpanLines::from_block(&codeblock_block, &maybe_style, None);
 
             let line_0 = &lines.items[0];
             // println!("{}", line_0..pretty_print_debug());

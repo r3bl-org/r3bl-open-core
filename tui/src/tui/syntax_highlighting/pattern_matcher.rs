@@ -141,8 +141,10 @@ mod tests {
             + UnicodeString::get_char_width('y');
         assert_eq2!(scroll_offset_col_index, ch!(8));
 
-        let mut pattern_matcher =
-            PatternMatcherStateMachine::new(my_pattern, ch!(scroll_offset_col_index).into());
+        let mut pattern_matcher = PatternMatcherStateMachine::new(
+            my_pattern,
+            ch!(scroll_offset_col_index).into(),
+        );
         let mut result = String::new();
 
         for (index, character) in my_line.chars().enumerate() {
@@ -187,7 +189,8 @@ mod tests {
         let my_line = "abcabcdabcd";
         let my_pattern = "abcd";
 
-        let mut pattern_matcher = PatternMatcherStateMachine::new(my_pattern, ch!(4).into());
+        let mut pattern_matcher =
+            PatternMatcherStateMachine::new(my_pattern, ch!(4).into());
 
         let mut result = String::new();
         let mut final_index = 0;

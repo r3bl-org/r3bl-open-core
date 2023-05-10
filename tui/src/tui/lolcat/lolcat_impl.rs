@@ -79,7 +79,8 @@ impl Lolcat {
                 @text: segment.string.clone(),
             );
 
-            self.color_wheel_control.seed += f64::from(self.color_wheel_control.color_change_speed);
+            self.color_wheel_control.seed +=
+                f64::from(self.color_wheel_control.color_change_speed);
         }
 
         acc

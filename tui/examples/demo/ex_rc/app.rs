@@ -47,7 +47,9 @@ pub struct AppWithLayout {
     pub animator: Animator,
 }
 
-pub fn start_animator_task_fn(shared_store: &SharedStore<State, Action>) -> JoinHandle<()> {
+pub fn start_animator_task_fn(
+    shared_store: &SharedStore<State, Action>,
+) -> JoinHandle<()> {
     const ANIMATION_START_DELAY_MSEC: u64 = 500;
     const ANIMATION_INTERVAL_MSEC: u64 = 16; // 60 FPS.
 
@@ -166,7 +168,10 @@ mod app_with_layout_impl_trait_app {
                 mask: ModifierKeysMask::CTRL,
             }) {
                 // Spawn previous slide action.
-                spawn_dispatch_action!(args.shared_store, Action::SlideControlPreviousSlide);
+                spawn_dispatch_action!(
+                    args.shared_store,
+                    Action::SlideControlPreviousSlide
+                );
                 return Ok(EventPropagation::Consumed);
             };
 

@@ -29,11 +29,15 @@ pub fn from_crossterm_color(value: crossterm::style::Color) -> TuiColor {
         crossterm::style::Color::Green => TuiColor::Basic(ANSIBasicColor::Green),
         crossterm::style::Color::DarkGreen => TuiColor::Basic(ANSIBasicColor::DarkGreen),
         crossterm::style::Color::Yellow => TuiColor::Basic(ANSIBasicColor::Yellow),
-        crossterm::style::Color::DarkYellow => TuiColor::Basic(ANSIBasicColor::DarkYellow),
+        crossterm::style::Color::DarkYellow => {
+            TuiColor::Basic(ANSIBasicColor::DarkYellow)
+        }
         crossterm::style::Color::Blue => TuiColor::Basic(ANSIBasicColor::Blue),
         crossterm::style::Color::DarkBlue => TuiColor::Basic(ANSIBasicColor::DarkBlue),
         crossterm::style::Color::Magenta => TuiColor::Basic(ANSIBasicColor::Magenta),
-        crossterm::style::Color::DarkMagenta => TuiColor::Basic(ANSIBasicColor::DarkMagenta),
+        crossterm::style::Color::DarkMagenta => {
+            TuiColor::Basic(ANSIBasicColor::DarkMagenta)
+        }
         crossterm::style::Color::Cyan => TuiColor::Basic(ANSIBasicColor::Cyan),
         crossterm::style::Color::DarkCyan => TuiColor::Basic(ANSIBasicColor::DarkCyan),
         crossterm::style::Color::White => TuiColor::Basic(ANSIBasicColor::White),
@@ -43,7 +47,9 @@ pub fn from_crossterm_color(value: crossterm::style::Color) -> TuiColor {
             green: g,
             blue: b,
         }),
-        crossterm::style::Color::AnsiValue(number) => TuiColor::Ansi(AnsiValue::new(number)),
+        crossterm::style::Color::AnsiValue(number) => {
+            TuiColor::Ansi(AnsiValue::new(number))
+        }
     }
 }
 
@@ -98,7 +104,9 @@ pub fn to_crossterm_color(value: TuiColor) -> crossterm::style::Color {
         },
 
         // Keep it as is.
-        TuiColor::Ansi(ansi_value) => crossterm::style::Color::AnsiValue(ansi_value.color),
+        TuiColor::Ansi(ansi_value) => {
+            crossterm::style::Color::AnsiValue(ansi_value.color)
+        }
 
         // Downgrade the color if needed.
         TuiColor::Rgb(rgb_value) => {

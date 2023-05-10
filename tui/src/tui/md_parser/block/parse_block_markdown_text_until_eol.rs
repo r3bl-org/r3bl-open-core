@@ -85,7 +85,9 @@ mod test {
         assert_eq2!(parse_block_markdown_text_opt_eol(""), Ok(("", list![])));
 
         assert_eq2!(
-            parse_block_markdown_text_opt_eol("here is some plaintext *but what if we italicize?"),
+            parse_block_markdown_text_opt_eol(
+                "here is some plaintext *but what if we italicize?"
+            ),
             Ok((
                 "*but what if we italicize?",
                 list![MdLineFragment::Plain("here is some plaintext "),]

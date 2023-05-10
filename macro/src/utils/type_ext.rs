@@ -119,7 +119,8 @@ impl TypeExtHasGenericArgs for syn::Type {
             let path = &type_path.path;
             let path_arguments = &path.segments.first().unwrap().arguments;
 
-            if let AngleBracketed(ref angle_bracketed_generic_arguments) = path_arguments {
+            if let AngleBracketed(ref angle_bracketed_generic_arguments) = path_arguments
+            {
                 return Ok(angle_bracketed_generic_arguments.args.clone());
             }
         }
@@ -132,7 +133,8 @@ impl TypeExtHasGenericArgs for syn::Type {
             Ok(generic_args) => {
                 let mut idents = Vec::new();
                 for generic_arg in generic_args {
-                    if let GenericArgument::Type(Type::Path(ref type_path)) = generic_arg {
+                    if let GenericArgument::Type(Type::Path(ref type_path)) = generic_arg
+                    {
                         let path = &type_path.path;
                         let ident = &path.segments.first().unwrap().ident;
                         idents.push(ident.clone());

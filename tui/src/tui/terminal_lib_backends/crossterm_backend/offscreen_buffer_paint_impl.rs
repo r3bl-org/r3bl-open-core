@@ -55,7 +55,11 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         });
     }
 
-    async fn paint_diff(&mut self, render_ops: RenderOps, shared_global_data: &SharedGlobalData) {
+    async fn paint_diff(
+        &mut self,
+        render_ops: RenderOps,
+        shared_global_data: &SharedGlobalData,
+    ) {
         let mut skip_flush = false;
 
         // Execute each RenderOp.
@@ -108,14 +112,15 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
             // For each pixel char in the line.
             for (pixel_char_index, pixel_char) in line.iter().enumerate() {
-                let (pixel_char_str, pixel_char_style): (&str, Option<Style>) = match pixel_char {
-                    PixelChar::Void => continue,
-                    PixelChar::Spacer => (SPACER, None),
-                    PixelChar::PlainText {
-                        content,
-                        maybe_style,
-                    } => (&content.string, *maybe_style),
-                };
+                let (pixel_char_str, pixel_char_style): (&str, Option<Style>) =
+                    match pixel_char {
+                        PixelChar::Void => continue,
+                        PixelChar::Spacer => (SPACER, None),
+                        PixelChar::PlainText {
+                            content,
+                            maybe_style,
+                        } => (&content.string, *maybe_style),
+                    };
 
                 let is_style_same_as_prev =
                     render_helpers::style_eq(&pixel_char_style, &context.prev_style);
@@ -179,9 +184,12 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
             it.push(RenderOp::ResetColor);
             match pixel_char {
                 PixelChar::Void => continue,
-                PixelChar::Spacer => it.push(
-                    RenderOp::CompositorNoClipTruncPaintTextWithAttributes(SPACER.into(), None),
-                ),
+                PixelChar::Spacer => {
+                    it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+                        SPACER.into(),
+                        None,
+                    ))
+                }
                 PixelChar::PlainText {
                     content,
                     maybe_style,
@@ -301,7 +309,8 @@ mod tests {
     /// Helper function to make an `OffscreenBuffer`.
     async fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
         let window_size = size! { col_count: 10, row_count: 2};
-        let mut my_offscreen_buffer = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut my_offscreen_buffer =
+            OffscreenBuffer::new_with_capacity_initialized(window_size);
         let shared_global_data = make_shared_global_data(Some(window_size));
         // Input:  R0 "hello1234😃"
         //            C0123456789
@@ -309,8 +318,9 @@ mod tests {
         //            C0123456789
         let text = "hello1234😃";
         // The style colors should be overwritten by fg_color and bg_color.
-        let maybe_style =
-            Some(style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) });
+        let maybe_style = Some(
+            style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+        );
         my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
         my_offscreen_buffer.my_fg_color = Some(color!(@green));
         my_offscreen_buffer.my_bg_color = Some(color!(@blue));
@@ -391,7 +401,10 @@ mod tests {
         );
         assert_eq2!(
             render_ops[7],
-            RenderOp::CompositorNoClipTruncPaintTextWithAttributes(SPACER.to_string(), None)
+            RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+                SPACER.to_string(),
+                None
+            )
         );
         assert_eq2!(
             render_ops[8],

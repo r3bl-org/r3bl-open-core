@@ -26,7 +26,10 @@ impl RenderPipeline {
     /// 2. This is the intermediate representation (IR) of a [RenderPipeline]. In order to turn
     ///    this IR into actual paint commands for the terminal, you must use the
     ///    [OffscreenBufferPaint] trait implementations.
-    pub async fn convert(&self, shared_global_data: &SharedGlobalData) -> OffscreenBuffer {
+    pub async fn convert(
+        &self,
+        shared_global_data: &SharedGlobalData,
+    ) -> OffscreenBuffer {
         let my_window_size = shared_global_data.read().await.window_size;
 
         let mut my_offscreen_buffer =
@@ -73,13 +76,21 @@ async fn process_render_op(
             my_offscreen_buffer.clear();
         }
         RenderOp::MoveCursorPositionAbs(new_abs_pos) => {
-            my_offscreen_buffer.my_pos =
-                sanitize_and_save_abs_position(*new_abs_pos, shared_global_data, local_data).await;
+            my_offscreen_buffer.my_pos = sanitize_and_save_abs_position(
+                *new_abs_pos,
+                shared_global_data,
+                local_data,
+            )
+            .await;
         }
         RenderOp::MoveCursorPositionRelTo(box_origin_pos_ref, content_rel_pos_ref) => {
             let new_abs_pos = *box_origin_pos_ref + *content_rel_pos_ref;
-            my_offscreen_buffer.my_pos =
-                sanitize_and_save_abs_position(new_abs_pos, shared_global_data, local_data).await;
+            my_offscreen_buffer.my_pos = sanitize_and_save_abs_position(
+                new_abs_pos,
+                shared_global_data,
+                local_data,
+            )
+            .await;
         }
         RenderOp::SetFgColor(fg_color_ref) => {
             my_offscreen_buffer.my_fg_color = Some(*fg_color_ref);
@@ -97,7 +108,10 @@ async fn process_render_op(
                 my_offscreen_buffer.my_bg_color = style_ref.color_bg;
             }
         }
-        RenderOp::CompositorNoClipTruncPaintTextWithAttributes(_arg_text_ref, _maybe_style_ref) => {
+        RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+            _arg_text_ref,
+            _maybe_style_ref,
+        ) => {
             // This is a no-op. This operation is executed by RenderOpImplCrossterm.
         }
         RenderOp::PaintTextWithAttributes(arg_text_ref, maybe_style_ref) => {
@@ -110,8 +124,12 @@ async fn process_render_op(
             )
             .await;
             if let Ok(new_pos) = result_new_pos {
-                my_offscreen_buffer.my_pos =
-                    sanitize_and_save_abs_position(new_pos, shared_global_data, local_data).await;
+                my_offscreen_buffer.my_pos = sanitize_and_save_abs_position(
+                    new_pos,
+                    shared_global_data,
+                    local_data,
+                )
+                .await;
             }
         }
     }
@@ -143,14 +161,15 @@ pub async fn print_plain_text(
     //    window
 
     // ✂️Clip `arg_text_ref` (if needed) and make `text`.
-    let mut text: UnicodeString = if let Some(max_display_col_count) = maybe_max_display_col_count {
-        let adj_max = max_display_col_count - (ch!(display_col_index));
-        let unicode_string = arg_text_ref.unicode_string();
-        let trunc_unicode_str = unicode_string.truncate_end_to_fit_width(adj_max);
-        trunc_unicode_str.unicode_string()
-    } else {
-        arg_text_ref.unicode_string()
-    };
+    let mut text: UnicodeString =
+        if let Some(max_display_col_count) = maybe_max_display_col_count {
+            let adj_max = max_display_col_count - (ch!(display_col_index));
+            let unicode_string = arg_text_ref.unicode_string();
+            let trunc_unicode_str = unicode_string.truncate_end_to_fit_width(adj_max);
+            trunc_unicode_str.unicode_string()
+        } else {
+            arg_text_ref.unicode_string()
+        };
 
     // ✂️Clip `text` (if needed) to the max display col count of the window.
     let window_max_display_col_count = my_offscreen_buffer.window_size.col_count;
@@ -244,7 +263,8 @@ pub async fn print_plain_text(
         // Set the `PixelChar` at `insertion_col_index`.
         if line_copy.get(insertion_col_index).is_some() {
             let pixel_char = {
-                let new_gc_segment = GraphemeClusterSegment::from(gc_segment.string.as_ref());
+                let new_gc_segment =
+                    GraphemeClusterSegment::from(gc_segment.string.as_ref());
                 match (&maybe_style, new_gc_segment.string.as_str()) {
                     (None, SPACER) => PixelChar::Spacer,
                     _ => PixelChar::PlainText {
@@ -277,7 +297,8 @@ pub async fn print_plain_text(
             let segment_display_width = ch!(@to_usize gc_segment.unicode_width);
             if segment_display_width > 1 {
                 // Deal w/ `gc_segment` display width that is > 1 => pad w/ Void.
-                let num_of_extra_display_cols_to_inject_void_into = segment_display_width - 1; // Safe subtract.
+                let num_of_extra_display_cols_to_inject_void_into =
+                    segment_display_width - 1; // Safe subtract.
                 for _ in 0..num_of_extra_display_cols_to_inject_void_into {
                     // Make sure insertion_col_index is safe to access.
                     if line_copy.get(insertion_col_index + 1).is_some() {
@@ -355,7 +376,8 @@ mod tests {
     #[tokio::test]
     async fn test_print_plain_text_render_path_reuse_buffer() {
         let window_size = size! { col_count: 10, row_count: 2};
-        let mut my_offscreen_buffer = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut my_offscreen_buffer =
+            OffscreenBuffer::new_with_capacity_initialized(window_size);
         let shared_global_data = make_shared_global_data(Some(window_size));
 
         // Input:  R0 "hello12345😃"

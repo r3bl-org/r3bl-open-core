@@ -139,8 +139,14 @@ mod tests {
                 Some("bash"),
                 vec!["pip install foobar"],
             )),
-            MdBlockElement::CodeBlock(convert_into_code_block_lines(Some("fish"), vec![])),
-            MdBlockElement::CodeBlock(convert_into_code_block_lines(Some("python"), vec![""])),
+            MdBlockElement::CodeBlock(convert_into_code_block_lines(
+                Some("fish"),
+                vec![],
+            )),
+            MdBlockElement::CodeBlock(convert_into_code_block_lines(
+                Some("python"),
+                vec![""],
+            )),
             MdBlockElement::Heading(HeadingData {
                 level: HeadingLevel::Heading2,
                 text: "Installation",

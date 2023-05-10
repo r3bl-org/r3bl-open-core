@@ -46,7 +46,8 @@ pub async fn paint(
             // Compare offscreen buffers & paint only the diff.
             match saved_offscreen_buffer.diff(&offscreen_buffer) {
                 OffscreenBufferDiffResult::NotComparable => {
-                    perform_full_paint(&offscreen_buffer, flush_kind, shared_global_data).await;
+                    perform_full_paint(&offscreen_buffer, flush_kind, shared_global_data)
+                        .await;
                 }
                 OffscreenBufferDiffResult::Comparable(ref diff_chunks) => {
                     perform_diff_paint(diff_chunks, shared_global_data).await;

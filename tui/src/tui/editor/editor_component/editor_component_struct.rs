@@ -77,7 +77,9 @@ pub mod editor_component_impl {
 
                 let cow_buffer: Cow<EditorBuffer> = {
                     // Either: get existing buffer ref from state.
-                    if let Some(existing_buffer_ref) = state.get_editor_buffer(self.get_id()) {
+                    if let Some(existing_buffer_ref) =
+                        state.get_editor_buffer(self.get_id())
+                    {
                         Cow::Borrowed(existing_buffer_ref)
                     }
                     // Or: create a new owned buffer.
@@ -110,7 +112,9 @@ pub mod editor_component_impl {
 
                 match result {
                     EditorEngineApplyEventResult::Applied(new_buffer) => {
-                        if let Some(on_change_handler) = self.on_editor_buffer_change_handler {
+                        if let Some(on_change_handler) =
+                            self.on_editor_buffer_change_handler
+                        {
                             on_change_handler(shared_store, self.get_id(), new_buffer);
                         }
                         EventPropagation::Consumed

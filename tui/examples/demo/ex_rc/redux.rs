@@ -89,7 +89,9 @@ mod reducer_impl {
                     .editor_buffers
                     .entry(ComponentId::Editor as u8)
                     .and_modify(|it| {
-                        it.set_lines(reducer_impl::get_slide_content(state.current_slide_index));
+                        it.set_lines(reducer_impl::get_slide_content(
+                            state.current_slide_index,
+                        ));
                     });
             }
         }
@@ -101,7 +103,9 @@ mod reducer_impl {
                     .editor_buffers
                     .entry(ComponentId::Editor as u8)
                     .and_modify(|it| {
-                        it.set_lines(reducer_impl::get_slide_content(state.current_slide_index));
+                        it.set_lines(reducer_impl::get_slide_content(
+                            state.current_slide_index,
+                        ));
                     });
             }
         }
@@ -126,7 +130,8 @@ mod reducer_impl {
 
     pub fn get_initial_state() -> State {
         let editor_buffer = {
-            let mut editor_buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+            let mut editor_buffer =
+                EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
             editor_buffer.set_lines(reducer_impl::get_slide_content(0));
             editor_buffer
         };

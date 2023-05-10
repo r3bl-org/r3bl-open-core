@@ -212,14 +212,15 @@ impl Parse for ManagerOfThingSyntaxInfo {
         let manager_type: Type = input.parse()?;
 
         // 👀 Manager Type generic args, eg: `<K,V>`.
-        let manager_type_generic_args = match manager_type.has_angle_bracketed_generic_args() {
-            true => Some(
-                manager_type
-                    .get_angle_bracketed_generic_args_result()
-                    .unwrap(),
-            ),
-            false => None,
-        };
+        let manager_type_generic_args =
+            match manager_type.has_angle_bracketed_generic_args() {
+                true => Some(
+                    manager_type
+                        .get_angle_bracketed_generic_args_result()
+                        .unwrap(),
+                ),
+                false => None,
+            };
         // debug!(manager_type_has_generic_args);
 
         // 👀 Optional where clause, eg: `where K: Send+Sync, V: Send+Sync`.

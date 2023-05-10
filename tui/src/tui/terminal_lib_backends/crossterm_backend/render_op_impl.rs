@@ -47,7 +47,8 @@ mod render_op_impl_crossterm_impl_trait_paint_render_op {
             match command_ref {
                 RenderOp::Noop => {}
                 RenderOp::EnterRawMode => {
-                    RenderOpImplCrossterm::raw_mode_enter(skip_flush, shared_global_data).await;
+                    RenderOpImplCrossterm::raw_mode_enter(skip_flush, shared_global_data)
+                        .await;
                 }
                 RenderOp::ExitRawMode => {
                     RenderOpImplCrossterm::raw_mode_exit(skip_flush);
@@ -70,7 +71,10 @@ mod render_op_impl_crossterm_impl_trait_paint_render_op {
                     .await;
                 }
                 RenderOp::ClearScreen => {
-                    exec_render_op!(queue!(stdout(), Clear(ClearType::All)), "ClearScreen")
+                    exec_render_op!(
+                        queue!(stdout(), Clear(ClearType::All)),
+                        "ClearScreen"
+                    )
                 }
                 RenderOp::SetFgColor(color) => {
                     RenderOpImplCrossterm::set_fg_color(color);
@@ -84,7 +88,10 @@ mod render_op_impl_crossterm_impl_trait_paint_render_op {
                 RenderOp::ApplyColors(style) => {
                     RenderOpImplCrossterm::apply_colors(style);
                 }
-                RenderOp::CompositorNoClipTruncPaintTextWithAttributes(text, maybe_style) => {
+                RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+                    text,
+                    maybe_style,
+                ) => {
                     RenderOpImplCrossterm::paint_text_with_attributes(
                         text,
                         maybe_style,
@@ -138,7 +145,8 @@ mod render_op_impl_crossterm_impl {
             local_data: &mut RenderOpsLocalData,
         ) {
             let new_abs_pos = *box_origin_pos + *content_rel_pos;
-            Self::move_cursor_position_abs(&new_abs_pos, shared_global_data, local_data).await;
+            Self::move_cursor_position_abs(&new_abs_pos, shared_global_data, local_data)
+                .await;
         }
 
         pub async fn move_cursor_position_abs(
@@ -149,7 +157,8 @@ mod render_op_impl_crossterm_impl {
             let Position {
                 col_index: col,
                 row_index: row,
-            } = sanitize_and_save_abs_position(*abs_pos, shared_global_data, local_data).await;
+            } = sanitize_and_save_abs_position(*abs_pos, shared_global_data, local_data)
+                .await;
             exec_render_op!(
                 queue!(stdout(), MoveTo(*col, *row)),
                 format!("MoveCursorPosition(col: {}, row: {})", *col, *row)
@@ -170,7 +179,10 @@ mod render_op_impl_crossterm_impl {
             *skip_flush = true;
         }
 
-        pub async fn raw_mode_enter(skip_flush: &mut bool, _shared_global_data: &SharedGlobalData) {
+        pub async fn raw_mode_enter(
+            skip_flush: &mut bool,
+            _shared_global_data: &SharedGlobalData,
+        ) {
             exec_render_op! {
               terminal::enable_raw_mode(),
               "EnterRawMode -> enable_raw_mode()"
@@ -198,7 +210,8 @@ mod render_op_impl_crossterm_impl {
         }
 
         pub fn set_bg_color(color: &TuiColor) {
-            let color: crossterm::style::Color = color_converter::to_crossterm_color(*color);
+            let color: crossterm::style::Color =
+                color_converter::to_crossterm_color(*color);
             exec_render_op!(
                 queue!(stdout(), SetBackgroundColor(color)),
                 format!("SetBgColor({color:?})")
@@ -326,7 +339,10 @@ mod perform_paint {
         }
     }
 
-    pub async fn paint_text<'a>(paint_args: &PaintArgs<'a>, local_data: &mut RenderOpsLocalData) {
+    pub async fn paint_text<'a>(
+        paint_args: &PaintArgs<'a>,
+        local_data: &mut RenderOpsLocalData,
+    ) {
         let PaintArgs {
             text,
             log_msg,
@@ -351,7 +367,12 @@ mod perform_paint {
         let display_width = unicode_string.display_width;
 
         cursor_position_copy.col_index += display_width;
-        sanitize_and_save_abs_position(cursor_position_copy, shared_global_data, local_data).await;
+        sanitize_and_save_abs_position(
+            cursor_position_copy,
+            shared_global_data,
+            local_data,
+        )
+        .await;
     }
 }
 

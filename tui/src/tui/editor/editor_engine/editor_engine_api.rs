@@ -136,8 +136,10 @@ impl EditorEngineApi {
         })
     }
 
-    fn render_content<S, A>(render_args: &RenderArgs<'_, S, A>, render_ops: &mut RenderOps)
-    where
+    fn render_content<S, A>(
+        render_args: &RenderArgs<'_, S, A>,
+        render_ops: &mut RenderOps,
+    ) where
         S: Debug + Default + Clone + PartialEq + Sync + Send,
         A: Debug + Default + Clone + Sync + Send,
     {
@@ -186,7 +188,8 @@ impl EditorEngineApi {
         );
     }
 
-    /// Implement caret painting using two different strategies represented by [CaretPaintStyle].
+    /// Implement caret painting using two different strategies represented by
+    /// [CaretPaintStyle].
     fn render_caret<S, A>(render_args: &RenderArgs<'_, S, A>, render_ops: &mut RenderOps)
     where
         S: Debug + Default + Clone + PartialEq + Sync + Send,
@@ -248,7 +251,9 @@ impl EditorEngineApi {
           at ZOrder::Normal
           =>
             RenderOp::MoveCursorPositionRelTo(
-              editor_engine.current_box.style_adjusted_origin_pos, position! { col_index: 0 , row_index: 0 }),
+              editor_engine.current_box.style_adjusted_origin_pos,
+              position! { col_index: 0 , row_index: 0 }
+            ),
             RenderOp::ApplyColors(style! {
               color_fg: TuiColor::Basic(ANSIBasicColor::Red)
             }.into()),
@@ -268,7 +273,9 @@ impl EditorEngineApi {
                 RenderOp::MoveCursorPositionRelTo(
                   editor_engine.current_box.style_adjusted_origin_pos,
                   content_cursor_pos.add_row_with_bounds(
-                    ch!(1), editor_engine.current_box.style_adjusted_bounds_size.row_count)),
+                    ch!(1),
+                    editor_engine.current_box.style_adjusted_bounds_size.row_count)
+                ),
                 RenderOp::PaintTextWithAttributes("👀".into(), None),
                 RenderOp::ResetColor
             };
@@ -293,8 +300,8 @@ mod syn_hi_r3bl_path {
     /// - Step 1: Get the lines from the buffer using
     ///           [editor_buffer.get_lines()](EditorBuffer::get_lines()).
     /// - Step 2: Convert the lines into a [List] of [StyleUSSpanLine] using
-    ///           [try_parse_and_highlight()]. If this fails then take the path of no syntax
-    ///           highlighting else take the path of syntax highlighting.
+    ///           [try_parse_and_highlight()]. If this fails then take the path of no
+    ///           syntax highlighting else take the path of syntax highlighting.
     pub fn render_content(
         editor_buffer: &&EditorBuffer,
         max_display_row_count: ChUnit,
@@ -314,9 +321,9 @@ mod syn_hi_r3bl_path {
     }
 
     /// Path of syntax highlighting:
-    /// - Step 1: Iterate the `List<StyleUSSpanLine>`
-    ///           from: `ch!(@to_usize editor_buffer.get_scroll_offset().row_index)`
-    ///           to: `ch!(@to_usize max_display_row_count)`
+    /// - Step 1: Iterate the `List<StyleUSSpanLine>` from: `ch!(@to_usize
+    ///           editor_buffer.get_scroll_offset().row_index)` to: `ch!(@to_usize
+    ///           max_display_row_count)`
     /// - Step 2: For each, call `StyleUSSpanLine::clip()` which returns a `StyledTexts`
     /// - Step 3: Render the `StyledTexts` into `render_ops`
     fn try_render_content(
@@ -378,7 +385,8 @@ mod syn_hi_r3bl_path {
             position! { col_index: 0 , row_index: ch!(@to_usize row_index) },
         ));
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
-        let styled_texts: StyledTexts = line.clip(scroll_offset_col, max_display_col_count);
+        let styled_texts: StyledTexts =
+            line.clip(scroll_offset_col, max_display_col_count);
         styled_texts.render_into(render_ops);
         render_ops.push(RenderOp::ResetColor);
     }
@@ -431,7 +439,8 @@ mod syn_hi_syntect_path {
             position! { col_index: 0 , row_index: ch!(@to_usize row_index) },
         ));
 
-        let it = try_get_syntect_highlighted_line(editor_engine, editor_buffer, &line.string);
+        let it =
+            try_get_syntect_highlighted_line(editor_engine, editor_buffer, &line.string);
 
         match it {
             // If enabled, and we have a SyntaxReference then try and highlight the line.
@@ -464,16 +473,20 @@ mod syn_hi_syntect_path {
     ) {
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
         let list: List<StyleUSSpan> =
-            syntect_to_styled_text_conversion::from_syntect_to_tui(syntect_highlighted_line);
-        let styled_texts: StyledTexts = list.clip(scroll_offset_col, max_display_col_count);
+            syntect_to_styled_text_conversion::from_syntect_to_tui(
+                syntect_highlighted_line,
+            );
+        let styled_texts: StyledTexts =
+            list.clip(scroll_offset_col, max_display_col_count);
         styled_texts.render_into(render_ops);
         render_ops.push(RenderOp::ResetColor);
     }
 
-    /// Try and load syntax highlighting for the current line. It might seem lossy to create a new
-    /// [HighlightLines] for each line, but if this struct is re-used then it will not be able to
-    /// highlight the lines correctly in the editor component. This struct is mutated when it is
-    /// used to highlight a line, so it must be re-created for each line.
+    /// Try and load syntax highlighting for the current line. It might seem lossy to
+    /// create a new [HighlightLines] for each line, but if this struct is re-used then it
+    /// will not be able to highlight the lines correctly in the editor component. This
+    /// struct is mutated when it is used to highlight a line, so it must be re-created
+    /// for each line.
     fn try_get_syntect_highlighted_line<'a>(
         editor_engine: &'a &mut EditorEngine,
         editor_buffer: &&EditorBuffer,

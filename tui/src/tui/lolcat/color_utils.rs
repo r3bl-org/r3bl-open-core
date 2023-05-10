@@ -24,7 +24,8 @@ impl ColorUtils {
     /// - <https://stackoverflow.com/a/49092130/2085356>
     /// - <https://stackoverflow.com/a/3118280/2085356>
     pub fn calc_fg_color(bg: (u8, u8, u8)) -> (u8, u8, u8) {
-        let luminance = 0.2126 * (bg.0 as f32) + 0.7152 * (bg.1 as f32) + 0.0722 * (bg.2 as f32);
+        let luminance =
+            0.2126 * (bg.0 as f32) + 0.7152 * (bg.1 as f32) + 0.0722 * (bg.2 as f32);
         if luminance < 140.0 {
             (255, 255, 255)
         } else {

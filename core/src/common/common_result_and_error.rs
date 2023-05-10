@@ -109,11 +109,17 @@ impl CommonError {
 
     /// Constructor that is compatible w/ [`CommonResult`].
     pub fn new_err_with_only_msg<T>(msg: &str) -> CommonResult<T> {
-        CommonError::from_err_type_and_msg(CommonErrorType::General, Some(msg.to_string()))
+        CommonError::from_err_type_and_msg(
+            CommonErrorType::General,
+            Some(msg.to_string()),
+        )
     }
 
     /// Private helper method.
-    fn from_err_type_and_msg<T>(err_type: CommonErrorType, msg: Option<String>) -> CommonResult<T> {
+    fn from_err_type_and_msg<T>(
+        err_type: CommonErrorType,
+        msg: Option<String>,
+    ) -> CommonResult<T> {
         Self::from_err(CommonError {
             err_type,
             err_msg: msg,

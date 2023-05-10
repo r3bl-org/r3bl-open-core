@@ -35,7 +35,9 @@ impl Deref for Percent {
 }
 
 impl fmt::Display for Percent {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{}%", self.value) }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}%", self.value)
+    }
 }
 
 impl Debug for Percent {

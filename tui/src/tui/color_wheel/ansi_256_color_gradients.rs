@@ -75,7 +75,9 @@ pub static ANSI_256_GRADIENTS: [ANSIColorArray; 15] = [
     ANSIColorArray(&[22, 23, 24, 25, 26, 27]),
 ];
 
-pub fn get_gradient_array_for(ansi_256_gradient_index: Ansi256GradientIndex) -> &'static [u8] {
+pub fn get_gradient_array_for(
+    ansi_256_gradient_index: Ansi256GradientIndex,
+) -> &'static [u8] {
     ANSI_256_GRADIENTS[ansi_256_gradient_index as usize].0
 }
 

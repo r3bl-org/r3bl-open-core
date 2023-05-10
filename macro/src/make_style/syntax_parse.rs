@@ -96,7 +96,10 @@ fn parse_optional_id(input: &ParseStream, metadata: &mut StyleMetadata) -> Resul
 }
 
 // Parse lolcat (optional).
-fn parse_optional_lolcat(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
+fn parse_optional_lolcat(
+    input: &ParseStream,
+    metadata: &mut StyleMetadata,
+) -> Result<()> {
     let lookahead = input.lookahead1();
 
     if lookahead.peek(custom_keywords::lolcat) {
@@ -115,7 +118,10 @@ fn parse_optional_lolcat(input: &ParseStream, metadata: &mut StyleMetadata) -> R
 }
 
 // Parse attrib (optional).
-fn parse_optional_attrib(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
+fn parse_optional_attrib(
+    input: &ParseStream,
+    metadata: &mut StyleMetadata,
+) -> Result<()> {
     let lookahead = input.lookahead1();
     if lookahead.peek(custom_keywords::attrib) {
         input.parse::<custom_keywords::attrib>()?;
@@ -155,7 +161,10 @@ fn parse_optional_attrib(input: &ParseStream, metadata: &mut StyleMetadata) -> R
 }
 
 // Parse padding (optional).
-fn parse_optional_padding(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
+fn parse_optional_padding(
+    input: &ParseStream,
+    metadata: &mut StyleMetadata,
+) -> Result<()> {
     let lookahead = input.lookahead1();
 
     if lookahead.peek(custom_keywords::padding) {
@@ -178,7 +187,10 @@ fn parse_optional_padding(input: &ParseStream, metadata: &mut StyleMetadata) -> 
 }
 
 // Parse color_fg (optional).
-fn parse_optional_color_fg(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
+fn parse_optional_color_fg(
+    input: &ParseStream,
+    metadata: &mut StyleMetadata,
+) -> Result<()> {
     let lookahead = input.lookahead1();
 
     if lookahead.peek(custom_keywords::color_fg) {
@@ -196,7 +208,10 @@ fn parse_optional_color_fg(input: &ParseStream, metadata: &mut StyleMetadata) ->
 }
 
 // Parse color_bg (optional).
-fn parse_optional_color_bg(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
+fn parse_optional_color_bg(
+    input: &ParseStream,
+    metadata: &mut StyleMetadata,
+) -> Result<()> {
     let lookahead = input.lookahead1();
 
     if lookahead.peek(custom_keywords::color_bg) {

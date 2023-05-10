@@ -60,7 +60,10 @@ impl LayoutError {
         Err(LayoutError::new(err_type, None))
     }
 
-    pub fn new_err_with_msg<T>(err_type: LayoutErrorType, msg: String) -> CommonResult<T> {
+    pub fn new_err_with_msg<T>(
+        err_type: LayoutErrorType,
+        msg: String,
+    ) -> CommonResult<T> {
         Err(LayoutError::new(err_type, Some(msg)))
     }
 

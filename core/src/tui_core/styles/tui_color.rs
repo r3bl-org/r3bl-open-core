@@ -269,9 +269,9 @@ mod rgb_values_impl {
         pub fn try_from_hex_color(input: &str) -> CommonResult<RgbValue> {
             match parse_hex_color(input) {
                 Ok((_, color)) => Ok(color),
-                Err(_) => {
-                    CommonError::new_err_with_only_type(CommonErrorType::InvalidHexColorFormat)
-                }
+                Err(_) => CommonError::new_err_with_only_type(
+                    CommonErrorType::InvalidHexColorFormat,
+                ),
             }
         }
 
@@ -376,7 +376,9 @@ mod rgb_values_impl {
                     }
                 }
 
-                _ => CommonError::new_err_with_only_type(CommonErrorType::InvalidRgbColor),
+                _ => {
+                    CommonError::new_err_with_only_type(CommonErrorType::InvalidRgbColor)
+                }
             }
         }
     }
@@ -412,7 +414,8 @@ mod test_rgb_value {
     #[test]
     fn test_try_from_tui_color() {
         assert_eq!(
-            RgbValue::try_from_tui_color(TuiColor::Rgb(RgbValue::from_u8(1, 2, 3))).unwrap(),
+            RgbValue::try_from_tui_color(TuiColor::Rgb(RgbValue::from_u8(1, 2, 3)))
+                .unwrap(),
             RgbValue {
                 red: 1,
                 green: 2,
@@ -488,11 +491,15 @@ mod debug_helpers {
                     ANSIBasicColor::Green => f.write_fmt(format_args!("green")),
                     ANSIBasicColor::DarkGreen => f.write_fmt(format_args!("dark_green")),
                     ANSIBasicColor::Yellow => f.write_fmt(format_args!("yellow")),
-                    ANSIBasicColor::DarkYellow => f.write_fmt(format_args!("dark_yellow")),
+                    ANSIBasicColor::DarkYellow => {
+                        f.write_fmt(format_args!("dark_yellow"))
+                    }
                     ANSIBasicColor::Blue => f.write_fmt(format_args!("blue")),
                     ANSIBasicColor::DarkBlue => f.write_fmt(format_args!("dark_blue")),
                     ANSIBasicColor::Magenta => f.write_fmt(format_args!("magenta")),
-                    ANSIBasicColor::DarkMagenta => f.write_fmt(format_args!("dark_magenta")),
+                    ANSIBasicColor::DarkMagenta => {
+                        f.write_fmt(format_args!("dark_magenta"))
+                    }
                     ANSIBasicColor::Cyan => f.write_fmt(format_args!("cyan")),
                     ANSIBasicColor::DarkCyan => f.write_fmt(format_args!("dark_cyan")),
                     ANSIBasicColor::White => f.write_fmt(format_args!("white")),

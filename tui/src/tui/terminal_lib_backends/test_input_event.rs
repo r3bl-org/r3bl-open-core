@@ -134,7 +134,8 @@ mod tests {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::NONE
             };
-            let maybe_non_modifier_keys = convert_key_event::copy_code_from_key_event(&key_event);
+            let maybe_non_modifier_keys =
+                convert_key_event::copy_code_from_key_event(&key_event);
             assert_eq2!(maybe_non_modifier_keys.unwrap(), Key::Character('x'));
         }
         // "Ctrl + x"
@@ -143,7 +144,8 @@ mod tests {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::CONTROL
             };
-            let maybe_non_modifier_keys = convert_key_event::copy_code_from_key_event(&key_event);
+            let maybe_non_modifier_keys =
+                convert_key_event::copy_code_from_key_event(&key_event);
             assert_eq2!(maybe_non_modifier_keys.unwrap(), Key::Character('x'));
         }
         // "Ctrl + Shift + x"
@@ -152,7 +154,8 @@ mod tests {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT
             };
-            let maybe_non_modifier_keys = convert_key_event::copy_code_from_key_event(&key_event);
+            let maybe_non_modifier_keys =
+                convert_key_event::copy_code_from_key_event(&key_event);
             assert_eq2!(maybe_non_modifier_keys.unwrap(), Key::Character('x'));
         }
         // "Ctrl + Shift + Alt + x"
@@ -161,7 +164,8 @@ mod tests {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT | KeyModifiers::ALT
             };
-            let maybe_non_modifier_keys = convert_key_event::copy_code_from_key_event(&key_event);
+            let maybe_non_modifier_keys =
+                convert_key_event::copy_code_from_key_event(&key_event);
             assert_eq2!(maybe_non_modifier_keys.unwrap(), Key::Character('x'));
         }
     }

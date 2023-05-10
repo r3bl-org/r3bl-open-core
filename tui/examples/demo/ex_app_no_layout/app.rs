@@ -49,7 +49,9 @@ macro_rules! fire {
     };
 }
 
-pub fn start_animator_task_fn(shared_store: &SharedStore<State, Action>) -> JoinHandle<()> {
+pub fn start_animator_task_fn(
+    shared_store: &SharedStore<State, Action>,
+) -> JoinHandle<()> {
     const ANIMATION_START_DELAY_MSEC: u64 = 500;
     const ANIMATION_INTERVAL_MSEC: u64 = 500;
     let copy = shared_store.clone();
@@ -90,13 +92,16 @@ mod app_no_layout_impl_trait_app {
                     ..
                 } = args;
 
-                let sample_line_of_text = format!("{state}, gradient: [index: X, len: Y]",);
+                let sample_line_of_text =
+                    format!("{state}, gradient: [index: X, len: Y]",);
                 let content_size_col: ChUnit = sample_line_of_text.len().into();
                 let window_size: Size = shared_global_data.read().await.get_size();
 
                 let col: ChUnit = (window_size.col_count - content_size_col) / 2;
-                let mut row: ChUnit =
-                    (window_size.row_count - ch!(2) - ch!(self.color_wheel_ansi_vec.len())) / 2;
+                let mut row: ChUnit = (window_size.row_count
+                    - ch!(2)
+                    - ch!(self.color_wheel_ansi_vec.len()))
+                    / 2;
 
                 let mut pipeline = render_pipeline!();
 
@@ -108,7 +113,8 @@ mod app_no_layout_impl_trait_app {
 
                     // Render using color_wheel_ansi_vec.
                     for color_wheel_index in 0..self.color_wheel_ansi_vec.len() {
-                        let color_wheel = &mut self.color_wheel_ansi_vec[color_wheel_index];
+                        let color_wheel =
+                            &mut self.color_wheel_ansi_vec[color_wheel_index];
 
                         let unicode_string = {
                             let index = color_wheel.get_index();
@@ -178,7 +184,9 @@ mod app_no_layout_impl_trait_app {
                         ));
 
                         let unicode_string = {
-                            UnicodeString::from(format!("{state}, gradient: [index: _, len: _]"))
+                            UnicodeString::from(format!(
+                                "{state}, gradient: [index: _, len: _]"
+                            ))
                         };
 
                         let st = self.lolcat_fg.colorize_into_styled_texts(
@@ -199,7 +207,9 @@ mod app_no_layout_impl_trait_app {
                         ));
 
                         let unicode_string = {
-                            UnicodeString::from(format!("{state}, gradient: [index: _, len: _]"))
+                            UnicodeString::from(format!(
+                                "{state}, gradient: [index: _, len: _]"
+                            ))
                         };
 
                         let st = self.lolcat_bg.colorize_into_styled_texts(
@@ -233,7 +243,9 @@ mod app_no_layout_impl_trait_app {
                 let GlobalScopeArgs { shared_store, .. } = args;
 
                 call_if_true!(DEBUG, {
-                    let msg = format!("⛵ AppNoLayout::handle_event -> input_event: {input_event}");
+                    let msg = format!(
+                        "⛵ AppNoLayout::handle_event -> input_event: {input_event}"
+                    );
                     log_info(msg)
                 });
 

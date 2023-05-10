@@ -36,7 +36,8 @@ pub fn derive_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::Tok
         ..
     }: DeriveInput = parse_macro_input!(input);
 
-    let required_trait_bounds: Vec<&str> = vec!["std::default::Default", "std::fmt::Debug"];
+    let required_trait_bounds: Vec<&str> =
+        vec!["std::default::Default", "std::fmt::Debug"];
 
     // Only generate code for struct.
     if data.is_struct() {
@@ -204,7 +205,9 @@ fn transform_named_fields_to_props_with_defaults_ts(
 
 /// Given named fields, generate props for the <Foo>Builder struct block.
 /// Returns [proc_macro2::TokenStream] (not [proc_macro::TokenStream]).
-fn transform_named_fields_to_props_ts(data_struct: &DataStruct) -> proc_macro2::TokenStream {
+fn transform_named_fields_to_props_ts(
+    data_struct: &DataStruct,
+) -> proc_macro2::TokenStream {
     transform_named_fields_into_ts(data_struct, &|named_field| {
         let field_ident = named_field.ident.as_ref().unwrap();
         let field_ty = &named_field.ty;
@@ -216,7 +219,9 @@ fn transform_named_fields_to_props_ts(data_struct: &DataStruct) -> proc_macro2::
 
 /// Given named fields, generate functions for the <Foo>Builder impl block.
 /// Returns [proc_macro2::TokenStream] (not [proc_macro::TokenStream]).
-fn transform_named_fields_into_setter_fns_ts(data_struct: &DataStruct) -> proc_macro2::TokenStream {
+fn transform_named_fields_into_setter_fns_ts(
+    data_struct: &DataStruct,
+) -> proc_macro2::TokenStream {
     transform_named_fields_into_ts(data_struct, &|named_field| {
         let field_ident = named_field.ident.as_ref().unwrap();
         let fn_name_ident = field_ident.create_from_string("set_{}");

@@ -41,7 +41,10 @@ pub trait SafeToShare<T> {
 /// [Async trait docs](https://github.com/dtolnay/async-trait).
 #[async_trait::async_trait]
 pub trait SafeToMutate<T> {
-    async fn with_ref_get_value_w_lock<'a>(my_arc: &'a _Arc<_RwLock<T>>) -> _WriteG<'a, T>;
-    async fn with_ref_get_value_r_lock<'a>(my_arc: &'a _Arc<_RwLock<T>>) -> _ReadG<'a, T>;
+    async fn with_ref_get_value_w_lock<'a>(
+        my_arc: &'a _Arc<_RwLock<T>>,
+    ) -> _WriteG<'a, T>;
+    async fn with_ref_get_value_r_lock<'a>(my_arc: &'a _Arc<_RwLock<T>>)
+        -> _ReadG<'a, T>;
     async fn with_ref_set_value(my_arc: &_Arc<_RwLock<T>>, value: T);
 }

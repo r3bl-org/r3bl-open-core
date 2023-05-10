@@ -49,7 +49,9 @@ pub mod color_text_default_styles {
                     Colour::{Blue, Green, Red},
                     Style};
 
-    pub fn style_primary(text: &str) -> ANSIGenericString<str> { Green.bold().paint(text) }
+    pub fn style_primary(text: &str) -> ANSIGenericString<str> {
+        Green.bold().paint(text)
+    }
 
     pub fn style_prompt(text: &str) -> ANSIGenericString<str> { Blue.bold().paint(text) }
 
@@ -59,7 +61,9 @@ pub mod color_text_default_styles {
         Style::new().underline().paint(text)
     }
 
-    pub fn style_dim(text: &str) -> ANSIGenericString<str> { Style::new().dimmed().paint(text) }
+    pub fn style_dim(text: &str) -> ANSIGenericString<str> {
+        Style::new().dimmed().paint(text)
+    }
 
     pub fn style_dim_underline(text: &str) -> ANSIGenericString<str> {
         Style::new().dimmed().underline().paint(text)

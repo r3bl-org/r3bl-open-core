@@ -58,22 +58,29 @@ impl DialogEngineApi {
                         args.window_size,
                         args.dialog_engine.maybe_surface_bounds,
                     )?;
-                    args.dialog_engine
-                        .maybe_flex_box
-                        .replace((*args.window_size, mode, it));
+                    args.dialog_engine.maybe_flex_box.replace((
+                        *args.window_size,
+                        mode,
+                        it,
+                    ));
                     it
                 }
             }
         };
 
-        let (origin_pos, bounds_size) = overlay_flex_box.get_style_adjusted_position_and_size();
+        let (origin_pos, bounds_size) =
+            overlay_flex_box.get_style_adjusted_position_and_size();
 
         let pipeline = {
             let mut it = render_pipeline!();
 
             it.push(
                 ZOrder::Glass,
-                internal_impl::render_border(&origin_pos, &bounds_size, args.dialog_engine),
+                internal_impl::render_border(
+                    &origin_pos,
+                    &bounds_size,
+                    args.dialog_engine,
+                ),
             );
 
             it.push(
@@ -137,9 +144,11 @@ impl DialogEngineApi {
         } = args;
 
         // Was a dialog choice made?
-        if let Some(choice) =
-            internal_impl::try_handle_dialog_choice(input_event, dialog_buffer, dialog_engine)
-        {
+        if let Some(choice) = internal_impl::try_handle_dialog_choice(
+            input_event,
+            dialog_buffer,
+            dialog_engine,
+        ) {
             dialog_engine.reset();
             return Ok(DialogEngineApplyResponse::DialogChoice(choice));
         }
@@ -245,8 +254,9 @@ mod internal_impl {
                 let simple_dialog_size = {
                     // Calc dialog bounds size based on window size.
                     let col_count = {
-                        let percent =
-                            percent!(DisplayConstants::DialogComponentBorderWidthPercent as u16)?;
+                        let percent = percent!(
+                            DisplayConstants::DialogComponentBorderWidthPercent as u16
+                        )?;
                         percent.calc_percentage(surface_size.col_count)
                     };
                     let row_count = ch!(DisplayConstants::SimpleModalRowCount as u16);
@@ -257,8 +267,10 @@ mod internal_impl {
 
                 let origin_pos = {
                     // Calc origin position based on window size & dialog size.
-                    let origin_col = surface_size.col_count / 2 - simple_dialog_size.col_count / 2;
-                    let origin_row = surface_size.row_count / 2 - simple_dialog_size.row_count / 2;
+                    let origin_col =
+                        surface_size.col_count / 2 - simple_dialog_size.col_count / 2;
+                    let origin_row =
+                        surface_size.row_count / 2 - simple_dialog_size.row_count / 2;
                     let mut it = position!(col_index: origin_col, row_index: origin_row);
                     it += surface_origin_pos;
                     it
@@ -273,8 +285,9 @@ mod internal_impl {
                         + ch!(DisplayConstants::EmptyLine as u16)
                         + dialog_options.result_panel_display_row_count;
                     let col_count = {
-                        let percent =
-                            percent!(DisplayConstants::DialogComponentBorderWidthPercent as u16)?;
+                        let percent = percent!(
+                            DisplayConstants::DialogComponentBorderWidthPercent as u16
+                        )?;
                         percent.calc_percentage(surface_size.col_count)
                     };
                     let size = size!(col_count: col_count, row_count: row_count);
@@ -284,10 +297,10 @@ mod internal_impl {
 
                 let origin_pos = {
                     // Calc origin position based on window size & dialog size.
-                    let origin_col =
-                        surface_size.col_count / 2 - autocomplete_dialog_size.col_count / 2;
-                    let origin_row =
-                        surface_size.row_count / 2 - autocomplete_dialog_size.row_count / 2;
+                    let origin_col = surface_size.col_count / 2
+                        - autocomplete_dialog_size.col_count / 2;
+                    let origin_row = surface_size.row_count / 2
+                        - autocomplete_dialog_size.row_count / 2;
                     let mut it = position!(col_index: origin_col, row_index: origin_row);
                     it += surface_origin_pos;
                     it
@@ -336,7 +349,8 @@ mod internal_impl {
             state: args.state,
         };
 
-        let mut pipeline = EditorEngineApi::render_engine(editor_engine_args, &flex_box).await?;
+        let mut pipeline =
+            EditorEngineApi::render_engine(editor_engine_args, &flex_box).await?;
         pipeline.hoist(ZOrder::Normal, ZOrder::Glass);
 
         // Paint hint.
@@ -384,7 +398,13 @@ mod internal_impl {
         if let Some(dialog_buffer) = state.get_dialog_buffer(self_id) {
             if let Some(results) = dialog_buffer.maybe_results.as_ref() {
                 if !results.is_empty() {
-                    paint_results(&mut it, origin_pos, bounds_size, results, dialog_engine);
+                    paint_results(
+                        &mut it,
+                        origin_pos,
+                        bounds_size,
+                        results,
+                        dialog_engine,
+                    );
                 };
             }
         };
@@ -399,7 +419,8 @@ mod internal_impl {
             dialog_engine: &mut DialogEngine,
         ) {
             let col_start_index = ch!(1);
-            let row_start_index = ch!(DisplayConstants::SimpleModalRowCount as u16) - ch!(1);
+            let row_start_index =
+                ch!(DisplayConstants::SimpleModalRowCount as u16) - ch!(1);
 
             let mut rel_insertion_pos =
                 position!(col_index: col_start_index, row_index: row_start_index);
@@ -454,20 +475,22 @@ mod internal_impl {
                 match selected_row_index.eq(&row_index) {
                     // This is the selected row.
                     true => {
-                        let my_selected_style =
-                            match dialog_engine.dialog_options.maybe_style_results_panel {
-                                // Update existing style.
-                                Some(style) => Style {
-                                    underline: true,
-                                    ..style
-                                },
-                                // No existing style, so create a new style w/ only underline.
-                                _ => Style {
-                                    underline: true,
-                                    ..Default::default()
-                                },
-                            }
-                            .into();
+                        let my_selected_style = match dialog_engine
+                            .dialog_options
+                            .maybe_style_results_panel
+                        {
+                            // Update existing style.
+                            Some(style) => Style {
+                                underline: true,
+                                ..style
+                            },
+                            // No existing style, so create a new style w/ only underline.
+                            _ => Style {
+                                underline: true,
+                                ..Default::default()
+                            },
+                        }
+                        .into();
                         // Paint the text for the row.
                         ops.push(RenderOp::ApplyColors(my_selected_style));
                         ops.push(RenderOp::PaintTextWithAttributes(
@@ -499,8 +522,7 @@ mod internal_impl {
     ) -> RenderOps {
         let mut ops = render_ops!();
 
-        let row_pos =
-            position!(col_index: origin_pos.col_index + 1, row_index: origin_pos.row_index + 1);
+        let row_pos = position!(col_index: origin_pos.col_index + 1, row_index: origin_pos.row_index + 1);
 
         let title_us = UnicodeString::from(title);
         let text_content = title_us.truncate_to_fit_size(size! {
@@ -738,7 +760,8 @@ mod internal_impl {
             }
 
             if dialog_engine.selected_row_index
-                >= dialog_engine.scroll_offset_row_index + results_panel_viewport_height_row_count
+                >= dialog_engine.scroll_offset_row_index
+                    + results_panel_viewport_height_row_count
             {
                 dialog_engine.scroll_offset_row_index += 1;
             }
@@ -1030,7 +1053,9 @@ mod test_dialog_engine_api_apply_event {
         let response = dbg!(DialogEngineApi::apply_event(args, &input_event)
             .await
             .unwrap());
-        if let DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(value)) = &response {
+        if let DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(value)) =
+            &response
+        {
             assert_eq2!(value, "");
         }
         assert!(matches!(

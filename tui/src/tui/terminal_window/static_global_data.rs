@@ -79,7 +79,8 @@ pub mod telemetry_global_static {
             } else {
                 let new_avg_response_time = (saved_avg_response_time + elapsed_ms) / 2;
                 unsafe {
-                    AVG_RESPONSE_TIME_MICROS.store(new_avg_response_time, Ordering::SeqCst);
+                    AVG_RESPONSE_TIME_MICROS
+                        .store(new_avg_response_time, Ordering::SeqCst);
                 };
             }
         }
@@ -89,7 +90,8 @@ pub mod telemetry_global_static {
     /// [AVG_RESPONSE_TIME_MICROS]. In order for this to return [Some] value, you must have already
     /// called [set_end_ts].
     pub fn get_avg_response_time_micros() -> String {
-        let avg_response_time_micros = unsafe { AVG_RESPONSE_TIME_MICROS.load(Ordering::SeqCst) };
+        let avg_response_time_micros =
+            unsafe { AVG_RESPONSE_TIME_MICROS.load(Ordering::SeqCst) };
         if avg_response_time_micros == NOT_SET_VALUE {
             "Not set.".to_string()
         } else {
@@ -177,7 +179,8 @@ pub mod color_support_global_static {
 
     /// Get the saved [ColorSupport] from the static mutable variable [COLOR_SUPPORT_OVERRIDE].
     pub fn get_color_support_override() -> Option<ColorSupport> {
-        let color_support_override = unsafe { COLOR_SUPPORT_OVERRIDE.load(Ordering::SeqCst) };
+        let color_support_override =
+            unsafe { COLOR_SUPPORT_OVERRIDE.load(Ordering::SeqCst) };
         if color_support_override == NOT_SET_VALUE {
             None
         } else {
