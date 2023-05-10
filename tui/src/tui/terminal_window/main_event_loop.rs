@@ -52,7 +52,8 @@ pub enum ParallelExecutionPolicy {
 ///
 /// # Deep dive into how HID / pointing devices work in Linux
 /// <https://monroeclinton.com/pointing-devices-in-linux/>
-pub const PARALLEL_EXECUTION_POLICY: ParallelExecutionPolicy = ParallelExecutionPolicy::Serial;
+pub const PARALLEL_EXECUTION_POLICY: ParallelExecutionPolicy =
+    ParallelExecutionPolicy::Serial;
 
 impl TerminalWindow {
     /// The where clause needs to match up w/ the trait bounds for [Store].
@@ -82,14 +83,16 @@ impl TerminalWindow {
         let shared_store: SharedStore<S, A> = Arc::new(RwLock::new(store));
 
         // Create a subscriber (AppManager) & attach it to the store.
-        let _subscriber = AppManager::new_box(&shared_app, &shared_store, &shared_global_data);
+        let _subscriber =
+            AppManager::new_box(&shared_app, &shared_store, &shared_global_data);
         shared_store.write().await.add_subscriber(_subscriber).await;
 
         // Create a new event stream (async).
         let mut async_event_stream = AsyncEventStream::default();
 
         // Perform first render.
-        AppManager::render_app(&shared_store, &shared_app, &shared_global_data, None).await?;
+        AppManager::render_app(&shared_store, &shared_app, &shared_global_data, None)
+            .await?;
 
         shared_global_data
             .read()
@@ -183,16 +186,19 @@ impl TerminalWindow {
         .await;
 
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg =
-                format!("main_event_loop -> 🚥 SPAWN propagation_result_from_app: {result:?}");
+            let msg = format!(
+                "main_event_loop -> 🚥 SPAWN propagation_result_from_app: {result:?}"
+            );
             log_info(msg);
         });
 
         if let Ok(event_propagation) = result {
             match event_propagation {
                 EventPropagation::Propagate => {
-                    let check_if_exit_keys_pressed =
-                        DefaultInputEventHandler::no_consume(input_event.clone(), &exit_keys);
+                    let check_if_exit_keys_pressed = DefaultInputEventHandler::no_consume(
+                        input_event.clone(),
+                        &exit_keys,
+                    );
                     if let Continuation::Exit = check_if_exit_keys_pressed.await {
                         // Exit keys were pressed.
                         let _ = exit_channel_sender.send(true).await;
@@ -233,8 +239,13 @@ impl TerminalWindow {
                 .write()
                 .await
                 .maybe_saved_offscreen_buffer = None;
-            let _ =
-                AppManager::render_app(shared_store, shared_app, shared_global_data, None).await;
+            let _ = AppManager::render_app(
+                shared_store,
+                shared_app,
+                shared_global_data,
+                None,
+            )
+            .await;
         }
     }
 }
@@ -338,17 +349,18 @@ where
             };
 
             // Check to see if the window_size is large enough to render.
-            let render_result: CommonResult<RenderPipeline> =
-                if window_size.is_too_small_to_display(MinSize::Col as u8, MinSize::Row as u8) {
-                    shared_global_data
-                        .write()
-                        .await
-                        .maybe_saved_offscreen_buffer = None;
-                    Ok(render_window_size_too_small(window_size))
-                } else {
-                    // Call app_render.
-                    shared_app.write().await.app_render(global_scope_args).await
-                };
+            let render_result: CommonResult<RenderPipeline> = if window_size
+                .is_too_small_to_display(MinSize::Col as u8, MinSize::Row as u8)
+            {
+                shared_global_data
+                    .write()
+                    .await
+                    .maybe_saved_offscreen_buffer = None;
+                Ok(render_window_size_too_small(window_size))
+            } else {
+                // Call app_render.
+                shared_app.write().await.app_render(global_scope_args).await
+            };
 
             match render_result {
                 Err(error) => {
@@ -375,12 +387,15 @@ where
                             let msg_2 = {
                                 format!(
                                     "🌍⏳ SPEED: {:?}",
-                                    telemetry_global_static::get_avg_response_time_micros(),
+                                    telemetry_global_static::get_avg_response_time_micros(
+                                    ),
                                 )
                             };
 
-                            if let Some(ref offscreen_buffer) =
-                                &shared_global_data.read().await.maybe_saved_offscreen_buffer
+                            if let Some(ref offscreen_buffer) = &shared_global_data
+                                .read()
+                                .await
+                                .maybe_saved_offscreen_buffer
                             {
                                 let msg_3 = format!(
                                     "offscreen_buffer: {0:.2}kb",
@@ -405,7 +420,8 @@ fn render_window_size_too_small(window_size: Size) -> RenderPipeline {
         MinSize::Col as u8,
         MinSize::Row as u8
     ));
-    let trunc_display_msg = UnicodeString::from(display_msg.truncate_to_fit_size(window_size));
+    let trunc_display_msg =
+        UnicodeString::from(display_msg.truncate_to_fit_size(window_size));
     let trunc_display_msg_len = ch!(trunc_display_msg.len());
 
     let row_pos = window_size.row_count / 2;

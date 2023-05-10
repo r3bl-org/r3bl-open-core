@@ -118,6 +118,8 @@ where
     }
 }
 
-pub type AsyncMiddlewareSpawnsTraitObject<S, A> = dyn AsyncMiddlewareSpawns<S, A> + Send + Sync;
-pub type AsyncMiddlewareSpawnsItem<S, A> = Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>;
+pub type AsyncMiddlewareSpawnsTraitObject<S, A> =
+    dyn AsyncMiddlewareSpawns<S, A> + Send + Sync;
+pub type AsyncMiddlewareSpawnsItem<S, A> =
+    Box<dyn AsyncMiddlewareSpawns<S, A> + Send + Sync>;
 pub type AsyncMiddlewareSpawnsVec<S, A> = Vec<AsyncMiddlewareSpawnsItem<S, A>>;

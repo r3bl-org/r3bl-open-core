@@ -197,7 +197,9 @@ mod detect_modal_dialog_activation_from_input_event {
                             err_msg: msg,
                         }) = err.downcast_ref::<CommonError>()
                         {
-                            log_error(format!("📣 Error activating simple modal: {msg:?}"));
+                            log_error(format!(
+                                "📣 Error activating simple modal: {msg:?}"
+                            ));
                         }
                         EventPropagation::Propagate
                     }
@@ -226,7 +228,9 @@ mod detect_modal_dialog_activation_from_input_event {
                             err_msg: msg,
                         }) = err.downcast_ref::<CommonError>()
                         {
-                            log_error(format!("📣 Error activating autocomplete modal: {msg:?}"));
+                            log_error(format!(
+                                "📣 Error activating autocomplete modal: {msg:?}"
+                            ));
                         }
                         EventPropagation::Propagate
                     }

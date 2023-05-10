@@ -50,9 +50,13 @@ mod component_registry_impl {
             self.components.insert(id, component);
         }
 
-        pub fn does_not_contain(&self, id: FlexBoxId) -> bool { !self.components.contains_key(&id) }
+        pub fn does_not_contain(&self, id: FlexBoxId) -> bool {
+            !self.components.contains_key(&id)
+        }
 
-        pub fn contains(&self, id: FlexBoxId) -> bool { self.components.contains_key(&id) }
+        pub fn contains(&self, id: FlexBoxId) -> bool {
+            self.components.contains_key(&id)
+        }
 
         pub fn get(&self, id: FlexBoxId) -> Option<&SharedComponent<S, A>> {
             self.components.get(&id)

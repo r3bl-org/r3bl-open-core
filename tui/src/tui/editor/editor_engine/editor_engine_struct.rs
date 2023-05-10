@@ -62,7 +62,9 @@ impl EditorEngine {
         }
     }
 
-    pub fn viewport_width(&self) -> ChUnit { self.current_box.style_adjusted_bounds_size.col_count }
+    pub fn viewport_width(&self) -> ChUnit {
+        self.current_box.style_adjusted_bounds_size.col_count
+    }
 
     pub fn viewport_height(&self) -> ChUnit {
         self.current_box.style_adjusted_bounds_size.row_count
@@ -83,7 +85,9 @@ mod editor_engine_config_options_impl {
         fn default() -> Self {
             Self {
                 multiline_mode: LineMode::MultiLine,
-                syntax_highlight: SyntaxHighlightMode::Enable(DEFAULT_SYN_HI_FILE_EXT.to_string()),
+                syntax_highlight: SyntaxHighlightMode::Enable(
+                    DEFAULT_SYN_HI_FILE_EXT.to_string(),
+                ),
                 edit_mode: EditMode::ReadWrite,
             }
         }

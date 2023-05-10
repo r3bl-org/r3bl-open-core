@@ -137,7 +137,8 @@ pub fn generate_ordered_list_item_bullet(
 ) -> String {
     if *is_first_line {
         let padding_for_indent = SPACE.repeat(*indent);
-        let first_line_bullet = format!("{number}{PERIOD}{LIST_SPACE_END_DISPLAY_REST_LINE}");
+        let first_line_bullet =
+            format!("{number}{PERIOD}{LIST_SPACE_END_DISPLAY_REST_LINE}");
         format!("{padding_for_indent}{first_line_bullet}")
     } else {
         let padding_for_indent = SPACE.repeat(*indent);
@@ -150,7 +151,10 @@ pub fn generate_ordered_list_item_bullet(
     }
 }
 
-pub fn generate_unordered_list_item_bullet(indent: &usize, is_first_line: &bool) -> String {
+pub fn generate_unordered_list_item_bullet(
+    indent: &usize,
+    is_first_line: &bool,
+) -> String {
     if *is_first_line {
         let padding_for_indent = LIST_SPACE_DISPLAY.repeat(*indent);
         let first_line_bullet = format!(
@@ -183,8 +187,11 @@ mod to_plain_text_tests {
             "[r3bl.com](https://r3bl.com)"
         );
         assert_eq2!(
-            MdLineFragment::Image(HyperlinkData::new("some image text", "https://r3bl.com"))
-                .pretty_print_debug(),
+            MdLineFragment::Image(HyperlinkData::new(
+                "some image text",
+                "https://r3bl.com"
+            ))
+            .pretty_print_debug(),
             "![some image text](https://r3bl.com)"
         );
         assert_eq2!(

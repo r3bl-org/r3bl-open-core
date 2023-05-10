@@ -245,7 +245,9 @@ pub fn init_file_logger_once() -> CommonResult<()> {
             builder.set_time_offset(utc_offset);
         }
 
-        builder.set_time_format_custom(format_description!("[hour repr:12]:[minute] [period]"));
+        builder.set_time_format_custom(format_description!(
+            "[hour repr:12]:[minute] [period]"
+        ));
 
         builder.build()
     }

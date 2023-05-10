@@ -57,7 +57,9 @@ impl ColorWheelConfig {
     }
 
     // Narrow down the given configs into a single one based on color_support (and global override)
-    pub fn narrow_config_based_on_color_support(configs: &[ColorWheelConfig]) -> ColorWheelConfig {
+    pub fn narrow_config_based_on_color_support(
+        configs: &[ColorWheelConfig],
+    ) -> ColorWheelConfig {
         let color_support = ColorSupport::detect();
         match color_support {
             // 1. If truecolor is supported, try and find a truecolor config.
@@ -253,8 +255,12 @@ impl ColorWheel {
     ///
     /// ## Errors
     /// If the RGB color is invalid, then this method will panic.
-    pub fn generate_color_wheel(&mut self, maybe_steps_override: Option<usize>) -> &GradientKind {
-        let my_config = ColorWheelConfig::narrow_config_based_on_color_support(&self.configs);
+    pub fn generate_color_wheel(
+        &mut self,
+        maybe_steps_override: Option<usize>,
+    ) -> &GradientKind {
+        let my_config =
+            ColorWheelConfig::narrow_config_based_on_color_support(&self.configs);
 
         let steps = match maybe_steps_override {
             // 1. Try use steps from `steps_override`.
@@ -295,11 +301,16 @@ impl ColorWheel {
                 let new_gradient: Vec<TuiColor> = Gradient::new(acc)
                     .take(steps)
                     .map(|color| {
-                        TuiColor::Rgb(RgbValue::from_f32(color.red, color.green, color.blue))
+                        TuiColor::Rgb(RgbValue::from_f32(
+                            color.red,
+                            color.green,
+                            color.blue,
+                        ))
                     })
                     .collect();
 
-                self.gradient_length_kind = GradientLengthKind::ColorWheel(new_gradient.len());
+                self.gradient_length_kind =
+                    GradientLengthKind::ColorWheel(new_gradient.len());
                 self.gradient_kind = GradientKind::ColorWheel(new_gradient);
                 self.index = ch!(0);
             }
@@ -326,11 +337,16 @@ impl ColorWheel {
                 let new_gradient: Vec<TuiColor> = gradient
                     .take(steps)
                     .map(|color| {
-                        TuiColor::Rgb(RgbValue::from_f32(color.red, color.green, color.blue))
+                        TuiColor::Rgb(RgbValue::from_f32(
+                            color.red,
+                            color.green,
+                            color.blue,
+                        ))
                     })
                     .collect();
 
-                self.gradient_length_kind = GradientLengthKind::ColorWheel(new_gradient.len());
+                self.gradient_length_kind =
+                    GradientLengthKind::ColorWheel(new_gradient.len());
                 self.gradient_kind = GradientKind::ColorWheel(new_gradient);
                 self.index = ch!(0);
             }
@@ -341,7 +357,8 @@ impl ColorWheel {
                     .map(|color_u8| TuiColor::Ansi(AnsiValue::new(*color_u8)))
                     .collect();
 
-                self.gradient_length_kind = GradientLengthKind::ColorWheel(gradient.len());
+                self.gradient_length_kind =
+                    GradientLengthKind::ColorWheel(gradient.len());
                 self.gradient_kind = GradientKind::ColorWheel(gradient);
                 self.index = ch!(0);
             }
@@ -360,7 +377,8 @@ impl ColorWheel {
         }
 
         // Get the gradient.
-        let my_config = ColorWheelConfig::narrow_config_based_on_color_support(&self.configs);
+        let my_config =
+            ColorWheelConfig::narrow_config_based_on_color_support(&self.configs);
 
         // Early return if lolcat.
         if let ColorWheelConfig::Lolcat(_) = &my_config {
@@ -452,7 +470,8 @@ impl ColorWheel {
                     self.index -= 1;
 
                     // Hit the start of the gradient, so reverse the direction.
-                    if self.index == ch!(0) && self.index_direction == ColorWheelDirection::Reverse
+                    if self.index == ch!(0)
+                        && self.index_direction == ColorWheelDirection::Reverse
                     {
                         self.index_direction = ColorWheelDirection::Forward;
                     }
@@ -572,8 +591,12 @@ impl ColorWheel {
                             Some((rgb_value.red, rgb_value.green, rgb_value.blue))
                         }
                         TuiColor::Basic(basic_color) => {
-                            match RgbValue::try_from_tui_color(TuiColor::Basic(basic_color)) {
-                                Ok(RgbValue { red, green, blue }) => Some((red, green, blue)),
+                            match RgbValue::try_from_tui_color(TuiColor::Basic(
+                                basic_color,
+                            )) {
+                                Ok(RgbValue { red, green, blue }) => {
+                                    Some((red, green, blue))
+                                }
                                 Err(_) => None,
                             }
                         }

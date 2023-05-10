@@ -270,7 +270,9 @@ pub mod convert_key_event {
       }
     };
 
-        fn process_only_key_event_kind_press(key_event: KeyEvent) -> Result<KeyPress, ()> {
+        fn process_only_key_event_kind_press(
+            key_event: KeyEvent,
+        ) -> Result<KeyPress, ()> {
             match key_event {
         // If character keys, then ignore SHIFT or NONE modifiers.
         KeyEvent {
@@ -301,7 +303,9 @@ pub mod convert_key_event {
             Ok(keypress! { @char character })
         }
 
-        fn generate_non_character_key_without_modifiers(key: Key) -> Result<KeyPress, ()> {
+        fn generate_non_character_key_without_modifiers(
+            key: Key,
+        ) -> Result<KeyPress, ()> {
             Ok(KeyPress::Plain { key })
         }
 
@@ -365,32 +369,38 @@ pub mod convert_key_event {
             KC::F(fn_key) => match_fn_key(fn_key),
             KC::Char(character) => Key::Character(character).into(),
             // New "enhanced" keys since crossterm 0.25.0
-            KC::CapsLock => {
-                Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::CapsLock)).into()
-            }
-            KC::ScrollLock => {
-                Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::ScrollLock))
-                    .into()
-            }
-            KC::NumLock => {
-                Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::NumLock)).into()
-            }
-            KC::PrintScreen => {
-                Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::PrintScreen))
-                    .into()
-            }
+            KC::CapsLock => Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(
+                SpecialKeyExt::CapsLock,
+            ))
+            .into(),
+            KC::ScrollLock => Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(
+                SpecialKeyExt::ScrollLock,
+            ))
+            .into(),
+            KC::NumLock => Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(
+                SpecialKeyExt::NumLock,
+            ))
+            .into(),
+            KC::PrintScreen => Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(
+                SpecialKeyExt::PrintScreen,
+            ))
+            .into(),
             KC::Pause => {
-                Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::Pause)).into()
+                Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::Pause))
+                    .into()
             }
             KC::Menu => {
-                Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::Menu)).into()
-            }
-            KC::KeypadBegin => {
-                Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::KeypadBegin))
+                Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(SpecialKeyExt::Menu))
                     .into()
             }
+            KC::KeypadBegin => Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(
+                SpecialKeyExt::KeypadBegin,
+            ))
+            .into(),
             KC::Media(media_key) => match_enhanced_media_key(media_key),
-            KC::Modifier(modifier_key_code) => match_enhanced_modifier_key_code(modifier_key_code),
+            KC::Modifier(modifier_key_code) => {
+                match_enhanced_modifier_key_code(modifier_key_code)
+            }
         }
     }
 
@@ -401,67 +411,81 @@ pub mod convert_key_event {
             KC::Play => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Play)),
             KC::Pause => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Pause)),
             KC::Stop => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Stop)),
-            KC::PlayPause => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::PlayPause)),
-            KC::Reverse => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Reverse)),
+            KC::PlayPause => {
+                Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::PlayPause))
+            }
+            KC::Reverse => {
+                Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Reverse))
+            }
             KC::FastForward => {
                 Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::FastForward))
             }
-            KC::Rewind => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Rewind)),
-            KC::TrackNext => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::TrackNext)),
+            KC::Rewind => {
+                Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Rewind))
+            }
+            KC::TrackNext => {
+                Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::TrackNext))
+            }
             KC::TrackPrevious => {
                 Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::TrackPrevious))
             }
-            KC::Record => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Record)),
+            KC::Record => {
+                Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::Record))
+            }
             KC::LowerVolume => {
                 Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::LowerVolume))
             }
             KC::RaiseVolume => {
                 Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::RaiseVolume))
             }
-            KC::MuteVolume => Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::MuteVolume)),
+            KC::MuteVolume => {
+                Key::KittyKeyboardProtocol(Enhanced::MediaKey(MediaKey::MuteVolume))
+            }
         })
     }
 
-    fn match_enhanced_modifier_key_code(modifier_key_code: ModifierKeyCode) -> Option<Key> {
+    fn match_enhanced_modifier_key_code(
+        modifier_key_code: ModifierKeyCode,
+    ) -> Option<Key> {
         // Make the code easier to read below using this alias.
         type KC = ModifierKeyCode;
         Some(match modifier_key_code {
-            KC::LeftShift => {
-                Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftShift))
-            }
-            KC::LeftControl => {
-                Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftControl))
-            }
-            KC::LeftAlt => {
-                Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftAlt))
-            }
-            KC::LeftSuper => {
-                Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftSuper))
-            }
-            KC::LeftHyper => {
-                Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftHyper))
-            }
-            KC::LeftMeta => {
-                Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::LeftMeta))
-            }
-            KC::RightShift => {
-                Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightShift))
-            }
-            KC::RightControl => {
-                Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightControl))
-            }
-            KC::RightAlt => {
-                Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightAlt))
-            }
-            KC::RightSuper => {
-                Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightSuper))
-            }
-            KC::RightHyper => {
-                Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightHyper))
-            }
-            KC::RightMeta => {
-                Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(ModifierKeyEnum::RightMeta))
-            }
+            KC::LeftShift => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
+                ModifierKeyEnum::LeftShift,
+            )),
+            KC::LeftControl => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
+                ModifierKeyEnum::LeftControl,
+            )),
+            KC::LeftAlt => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
+                ModifierKeyEnum::LeftAlt,
+            )),
+            KC::LeftSuper => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
+                ModifierKeyEnum::LeftSuper,
+            )),
+            KC::LeftHyper => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
+                ModifierKeyEnum::LeftHyper,
+            )),
+            KC::LeftMeta => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
+                ModifierKeyEnum::LeftMeta,
+            )),
+            KC::RightShift => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
+                ModifierKeyEnum::RightShift,
+            )),
+            KC::RightControl => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
+                ModifierKeyEnum::RightControl,
+            )),
+            KC::RightAlt => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
+                ModifierKeyEnum::RightAlt,
+            )),
+            KC::RightSuper => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
+                ModifierKeyEnum::RightSuper,
+            )),
+            KC::RightHyper => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
+                ModifierKeyEnum::RightHyper,
+            )),
+            KC::RightMeta => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
+                ModifierKeyEnum::RightMeta,
+            )),
             KC::IsoLevel3Shift => Key::KittyKeyboardProtocol(Enhanced::ModifierKeyEnum(
                 ModifierKeyEnum::IsoLevel3Shift,
             )),

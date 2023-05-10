@@ -178,5 +178,7 @@ impl TryAdd<Style> for Stylesheet {
 }
 
 impl TryAdd<Vec<Style>> for Stylesheet {
-    fn try_add(&mut self, other: Vec<Style>) -> CommonResult<()> { self.add_styles(other) }
+    fn try_add(&mut self, other: Vec<Style>) -> CommonResult<()> {
+        self.add_styles(other)
+    }
 }

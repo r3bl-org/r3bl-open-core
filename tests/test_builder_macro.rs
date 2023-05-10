@@ -68,7 +68,8 @@ mod test2 {
 
     #[test]
     fn test_proc_macro_no_where_clause() {
-        let my_pt: Point<i32, i32> = PointBuilder::new().set_x(1_i32).set_y(2_i32).build();
+        let my_pt: Point<i32, i32> =
+            PointBuilder::new().set_x(1_i32).set_y(2_i32).build();
 
         assert_eq!(my_pt.x, 1);
         assert_eq!(my_pt.y, 2);
@@ -90,7 +91,8 @@ mod test3 {
 
     #[test]
     fn test_proc_macro_generics() {
-        let my_pt: Point<i32, i32> = PointBuilder::new().set_x(1_i32).set_y(2_i32).build();
+        let my_pt: Point<i32, i32> =
+            PointBuilder::new().set_x(1_i32).set_y(2_i32).build();
         assert_eq!(my_pt.x, 1);
         assert_eq!(my_pt.y, 2);
     }

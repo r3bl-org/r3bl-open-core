@@ -166,7 +166,11 @@ impl UnicodeString {
     }
 
     /// Clip the content [scroll_offset.col .. max cols].
-    pub fn clip(&self, scroll_offset_col_index: ChUnit, max_display_col_count: ChUnit) -> &str {
+    pub fn clip(
+        &self,
+        scroll_offset_col_index: ChUnit,
+        max_display_col_count: ChUnit,
+    ) -> &str {
         let string_start_byte_index = {
             let mut it = 0;
             let mut skip_col_count = scroll_offset_col_index;
@@ -229,24 +233,35 @@ impl UnicodeString {
     }
 
     /// `local_index` is the index of the grapheme cluster in the `vec_segment`.
-    pub fn at_logical_index(&self, logical_index: usize) -> Option<&GraphemeClusterSegment> {
+    pub fn at_logical_index(
+        &self,
+        logical_index: usize,
+    ) -> Option<&GraphemeClusterSegment> {
         self.get(logical_index)
     }
 
     /// `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
-    pub fn at_display_col_index(&self, display_col: ChUnit) -> Option<&GraphemeClusterSegment> {
+    pub fn at_display_col_index(
+        &self,
+        display_col: ChUnit,
+    ) -> Option<&GraphemeClusterSegment> {
         self.iter().find(|&grapheme_cluster_segment| {
-            let segment_display_col_start: ChUnit = grapheme_cluster_segment.display_col_offset;
+            let segment_display_col_start: ChUnit =
+                grapheme_cluster_segment.display_col_offset;
             let segment_display_col_end: ChUnit =
                 segment_display_col_start + grapheme_cluster_segment.unicode_width;
-            display_col >= segment_display_col_start && display_col < segment_display_col_end
+            display_col >= segment_display_col_start
+                && display_col < segment_display_col_end
         })
     }
 
     /// Convert a `display_col` to a `logical_index`.
     /// - `local_index` is the index of the grapheme cluster in the `vec_segment`.
     /// - `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
-    pub fn logical_index_at_display_col_index(&self, display_col: ChUnit) -> Option<usize> {
+    pub fn logical_index_at_display_col_index(
+        &self,
+        display_col: ChUnit,
+    ) -> Option<usize> {
         self.at_display_col_index(display_col)
             .map(|segment| segment.logical_index)
     }
@@ -254,7 +269,10 @@ impl UnicodeString {
     /// Convert a `logical_index` to a `display_col`.
     /// - `local_index` is the index of the grapheme cluster in the `vec_segment`.
     /// - `display_col` is the col index in the terminal where this grapheme cluster can be displayed.
-    pub fn display_col_index_at_logical_index(&self, logical_index: usize) -> Option<ChUnit> {
+    pub fn display_col_index_at_logical_index(
+        &self,
+        logical_index: usize,
+    ) -> Option<ChUnit> {
         self.at_logical_index(logical_index)
             .map(|segment| segment.display_col_offset)
     }
@@ -299,7 +317,8 @@ impl UnicodeString {
     ) -> Option<UnicodeStringSegmentSliceResult> {
         let segment_at_col = self.at_display_col_index(display_col)?;
         if segment_at_col.logical_index < self.len() - 1 {
-            let segment_right_of_col = self.at_logical_index(segment_at_col.logical_index + 1)?;
+            let segment_right_of_col =
+                self.at_logical_index(segment_at_col.logical_index + 1)?;
             Some(UnicodeStringSegmentSliceResult::new(
                 &segment_right_of_col.string,
                 segment_right_of_col.unicode_width,
@@ -316,7 +335,8 @@ impl UnicodeString {
     ) -> Option<UnicodeStringSegmentSliceResult> {
         let segment_at_col = self.at_display_col_index(display_col)?;
         if segment_at_col.logical_index > 0 {
-            let segment_left_of_col = self.at_logical_index(segment_at_col.logical_index - 1)?;
+            let segment_left_of_col =
+                self.at_logical_index(segment_at_col.logical_index - 1)?;
             Some(UnicodeStringSegmentSliceResult::new(
                 &segment_left_of_col.string,
                 segment_left_of_col.unicode_width,

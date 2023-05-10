@@ -36,7 +36,10 @@ mod dialog_event_impl {
     impl DialogEvent {
         /// The `modal_keypress` is used to determine whether the [InputEvent] should be converted to
         /// [DialogEvent::ActivateModal].
-        pub fn should_activate_modal(input_event: &InputEvent, modal_keypress: KeyPress) -> Self {
+        pub fn should_activate_modal(
+            input_event: &InputEvent,
+            modal_keypress: KeyPress,
+        ) -> Self {
             if let InputEvent::Keyboard(keypress) = input_event {
                 if keypress == &modal_keypress {
                     return Self::ActivateModal;
@@ -99,7 +102,8 @@ mod test_dialog_event {
     fn dialog_event_handles_modal_keypress() {
         let modal_keypress = keypress!(@char ModifierKeysMask::CTRL, 'l');
         let input_event = InputEvent::Keyboard(modal_keypress);
-        let dialog_event = DialogEvent::should_activate_modal(&input_event, modal_keypress);
+        let dialog_event =
+            DialogEvent::should_activate_modal(&input_event, modal_keypress);
         assert_eq2!(dialog_event, DialogEvent::ActivateModal);
     }
 }

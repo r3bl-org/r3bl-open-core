@@ -28,8 +28,10 @@ macro_rules! render_component_in_current_box {
         shared_global_data: $arg_shared_global_data : expr, // Eg: shared_global_data
         window_size:  $arg_window_size      : expr  // Eg: window_size
       ) => {
-        let maybe_component_ref =
-            ComponentRegistry::get_component_ref_by_id(&mut $arg_registry, $arg_component_id);
+        let maybe_component_ref = ComponentRegistry::get_component_ref_by_id(
+            &mut $arg_registry,
+            $arg_component_id,
+        );
 
         if let Some(component_ref) = maybe_component_ref {
             let surface_bounds = SurfaceBounds::from(&*($arg_surface));
@@ -69,8 +71,10 @@ macro_rules! render_component_in_given_box {
         shared_global_data: $arg_shared_global_data : expr, // Eg: shared_global_data
         window_size:  $arg_window_size      : expr  // Eg: window_size
      ) => {{
-        let maybe_component_ref =
-            ComponentRegistry::get_component_ref_by_id(&mut $arg_registry, $arg_component_id);
+        let maybe_component_ref = ComponentRegistry::get_component_ref_by_id(
+            &mut $arg_registry,
+            $arg_component_id,
+        );
 
         if let Some(component_ref) = maybe_component_ref {
             let surface_bounds = SurfaceBounds::from(&*($arg_surface));

@@ -53,7 +53,10 @@ impl UnicodeString {
     }
 
     /// Returns a new [UnicodeString] option. Does not modify [self.string](UnicodeString::string).
-    pub fn delete_char_at_display_col(&self, display_col: ChUnit) -> Option<UnicodeString> {
+    pub fn delete_char_at_display_col(
+        &self,
+        display_col: ChUnit,
+    ) -> Option<UnicodeString> {
         // There is no segment present (Deref trait makes `len()` apply to `vec_segment`).
         if self.len() == 0 {
             return None;

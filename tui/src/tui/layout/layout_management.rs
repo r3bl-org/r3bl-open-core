@@ -35,8 +35,10 @@ pub trait LayoutManagement {
 /// Methods that actually perform the layout and positioning.
 pub trait PerformPositioningAndSizing {
     /// Update `box_cursor_pos`. This needs to be called before adding a new [FlexBox].
-    fn update_insertion_pos_for_next_box(&mut self, allocated_size: Size)
-        -> CommonResult<Position>;
+    fn update_insertion_pos_for_next_box(
+        &mut self,
+        allocated_size: Size,
+    ) -> CommonResult<Position>;
 
     /// Get the [FlexBox] at the "top" of the `stack`.
     fn current_box(&mut self) -> CommonResult<&mut FlexBox>;

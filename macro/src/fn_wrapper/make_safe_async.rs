@@ -51,7 +51,8 @@ pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenSt
         quote! {}
     };
 
-    let opt_where_clause = make_opt_where_clause_from_generic_args(wrapper_name_type_generic_args);
+    let opt_where_clause =
+        make_opt_where_clause_from_generic_args(wrapper_name_type_generic_args);
 
     quote! {
       // Type aliases to make the code more readable.

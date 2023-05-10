@@ -1578,7 +1578,8 @@ mod test_editor_ops {
         let shared_global_data =
             mock_real_objects_for_editor::make_shared_global_data(window_size.into());
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
-        let mut engine = mock_real_objects_for_editor::make_editor_engine_with_bounds(window_size);
+        let mut engine =
+            mock_real_objects_for_editor::make_editor_engine_with_bounds(window_size);
 
         let long_line = "# Did he take those two new droids with him? They hit accelerator.🙏🏽😀░ We will deal with your Rebel friends. Commence primary ignition.🙏🏽😀░";
         buffer.set_lines(vec![long_line.to_string()]);
@@ -1820,7 +1821,11 @@ pub mod assert {
         );
     }
 
-    pub fn str_is_at_caret(editor_buffer: &EditorBuffer, engine: &EditorEngine, expected: &str) {
+    pub fn str_is_at_caret(
+        editor_buffer: &EditorBuffer,
+        engine: &EditorEngine,
+        expected: &str,
+    ) {
         match EditorEngineInternalApi::string_at_caret(editor_buffer, engine) {
             Some(UnicodeStringSegmentSliceResult {
                 unicode_string_seg: s,
@@ -1830,7 +1835,11 @@ pub mod assert {
         }
     }
 
-    pub fn line_at_caret(editor_buffer: &EditorBuffer, engine: &EditorEngine, expected: &str) {
+    pub fn line_at_caret(
+        editor_buffer: &EditorBuffer,
+        engine: &EditorEngine,
+        expected: &str,
+    ) {
         assert_eq2!(
             EditorEngineInternalApi::line_at_caret_to_string(editor_buffer, engine)
                 .unwrap()

@@ -41,7 +41,9 @@ pub fn parse_block_smart_list(input: &str) -> IResult<&str, (Lines, BulletKind, 
             let parse_checkbox_policy = {
                 let checked = format!("{}{}", CHECKED, SPACE);
                 let unchecked = format!("{}{}", UNCHECKED, SPACE);
-                if line.content.starts_with(&checked) || line.content.starts_with(&unchecked) {
+                if line.content.starts_with(&checked)
+                    || line.content.starts_with(&unchecked)
+                {
                     CheckboxParsePolicy::ParseCheckbox
                 } else {
                     CheckboxParsePolicy::IgnoreCheckbox
@@ -321,15 +323,13 @@ mod tests_parse_smart_lists_in_markdown {
         // remainder.console_log_bg();
 
         assert_eq2!(remainder, "");
-        md_doc
-            .items
-            .iter()
-            .zip(expected_output.iter())
-            .for_each(|(element, test_str)| {
+        md_doc.items.iter().zip(expected_output.iter()).for_each(
+            |(element, test_str)| {
                 let lhs = element.pretty_print_debug();
                 let rhs = test_str.to_string();
                 assert_eq2!(lhs, rhs);
-            });
+            },
+        );
     }
 
     #[test]
@@ -363,15 +363,13 @@ mod tests_parse_smart_lists_in_markdown {
         // remainder.console_log_bg();
 
         assert_eq2!(remainder, "");
-        md_doc
-            .items
-            .iter()
-            .zip(expected_output.iter())
-            .for_each(|(element, test_str)| {
+        md_doc.items.iter().zip(expected_output.iter()).for_each(
+            |(element, test_str)| {
                 let lhs = element.pretty_print_debug();
                 let rhs = test_str.to_string();
                 assert_eq2!(lhs, rhs);
-            });
+            },
+        );
     }
 
     #[test]
@@ -420,15 +418,13 @@ mod tests_parse_smart_lists_in_markdown {
         remainder.console_log_bg();
 
         assert_eq2!(remainder, "");
-        md_doc
-            .items
-            .iter()
-            .zip(expected_output.iter())
-            .for_each(|(element, test_str)| {
+        md_doc.items.iter().zip(expected_output.iter()).for_each(
+            |(element, test_str)| {
                 let lhs = element.pretty_print_debug();
                 let rhs = test_str.to_string();
                 assert_eq2!(lhs, rhs);
-            });
+            },
+        );
     }
 
     #[test]
@@ -465,15 +461,13 @@ mod tests_parse_smart_lists_in_markdown {
         // remainder.console_log_bg();
 
         assert_eq2!(remainder, "");
-        md_doc
-            .items
-            .iter()
-            .zip(expected_output.iter())
-            .for_each(|(element, test_str)| {
+        md_doc.items.iter().zip(expected_output.iter()).for_each(
+            |(element, test_str)| {
                 let lhs = element.pretty_print_debug();
                 let rhs = test_str.to_string();
                 assert_eq2!(lhs, rhs);
-            });
+            },
+        );
     }
 }
 

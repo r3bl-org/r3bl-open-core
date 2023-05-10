@@ -23,7 +23,11 @@ use crate::*;
 
 pub struct CrosstermDebugFormatRenderOp;
 
-fn format_print_text(op_name: &str, text: &String, maybe_style: &Option<Style>) -> String {
+fn format_print_text(
+    op_name: &str,
+    text: &String,
+    maybe_style: &Option<Style>,
+) -> String {
     match maybe_style {
         Some(style) => {
             format!("{op_name}({} bytes, {style:?})", text.len())
@@ -41,9 +45,12 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
                 RenderOp::Noop => "Noop".into(),
                 RenderOp::EnterRawMode => "EnterRawMode".into(),
                 RenderOp::ExitRawMode => "ExitRawMode".into(),
-                RenderOp::MoveCursorPositionAbs(pos) => format!("MoveCursorPositionAbs({pos:?})"),
+                RenderOp::MoveCursorPositionAbs(pos) =>
+                    format!("MoveCursorPositionAbs({pos:?})"),
                 RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) =>
-                    format!("MoveCursorPositionRelTo({box_origin_pos:?}, {content_rel_pos:?})"),
+                    format!(
+                    "MoveCursorPositionRelTo({box_origin_pos:?}, {content_rel_pos:?})"
+                ),
                 RenderOp::ClearScreen => "ClearScreen".into(),
                 RenderOp::SetFgColor(fg_color) => format!("SetFgColor({fg_color:?})"),
                 RenderOp::SetBgColor(bg_color) => format!("SetBgColor({bg_color:?})"),
@@ -52,7 +59,10 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
                     Some(style) => format!("ApplyColors({style:?})"),
                     None => "ApplyColors(None)".into(),
                 },
-                RenderOp::CompositorNoClipTruncPaintTextWithAttributes(text, maybe_style) => {
+                RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+                    text,
+                    maybe_style,
+                ) => {
                     format_print_text("Compositor..PrintText...", text, maybe_style)
                 }
                 RenderOp::PaintTextWithAttributes(text, maybe_style) => {

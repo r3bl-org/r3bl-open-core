@@ -91,7 +91,8 @@ mod tests {
     fn test_keypress() -> Result<(), ()> {
         // "x"
         {
-            let key_event = keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::NONE);
+            let key_event =
+                keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::NONE);
             let keypress: KeyPress = key_event.try_into()?;
             assert_eq2!(
                 keypress,
@@ -103,7 +104,8 @@ mod tests {
 
         // "Ctrl + x"
         {
-            let key_event = keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::CONTROL);
+            let key_event =
+                keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::CONTROL);
             let converted_keypress: KeyPress = key_event.try_into()?;
             assert_eq2!(
                 converted_keypress,

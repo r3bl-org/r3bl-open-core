@@ -69,11 +69,13 @@ impl StyleUSSpanLine {
     ) -> Self {
         let mut acc_line_output = StyleUSSpanLine::default();
         acc_line_output += StyleUSSpan::new(
-            maybe_current_box_computed_style.unwrap_or_default() + get_metadata_tags_marker_style(),
+            maybe_current_box_computed_style.unwrap_or_default()
+                + get_metadata_tags_marker_style(),
             US::from(key),
         );
         acc_line_output += StyleUSSpan::new(
-            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
+            maybe_current_box_computed_style.unwrap_or_default()
+                + get_foreground_dim_style(),
             US::from(format!("{COLON}{SPACE}")),
         );
         for (index, span) in tag_list.iter().enumerate() {
@@ -108,11 +110,13 @@ impl StyleUSSpanLine {
             US::from(key),
         );
         acc_line_output += StyleUSSpan::new(
-            maybe_current_box_computed_style.unwrap_or_default() + get_foreground_dim_style(),
+            maybe_current_box_computed_style.unwrap_or_default()
+                + get_foreground_dim_style(),
             US::from(format!("{COLON}{SPACE}")),
         );
         acc_line_output += StyleUSSpan::new(
-            maybe_current_box_computed_style.unwrap_or_default() + get_metadata_title_value_style(),
+            maybe_current_box_computed_style.unwrap_or_default()
+                + get_metadata_title_value_style(),
             US::from(text),
         );
 
@@ -140,8 +144,10 @@ impl StyleUSSpanLine {
         // Clip w/out syntax highlighting & store this as a pattern to match against.
         let plain_text_pattern: &str =
             &self.get_plain_text_clipped(scroll_offset_col_index, max_display_col_count);
-        let mut matcher =
-            PatternMatcherStateMachine::new(plain_text_pattern, Some(scroll_offset_col_index));
+        let mut matcher = PatternMatcherStateMachine::new(
+            plain_text_pattern,
+            Some(scroll_offset_col_index),
+        );
 
         // Main loop over each `styled_text_segment` in the `List` (the list represents a single
         // line of text).

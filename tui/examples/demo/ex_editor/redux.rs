@@ -138,7 +138,8 @@ mod reducer_impl {
     pub fn get_initial_state() -> State {
         let editor_buffers = {
             let editor_buffer = {
-                let mut editor_buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+                let mut editor_buffer =
+                    EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
                 editor_buffer.set_lines(get_default_content());
                 editor_buffer
             };
@@ -222,7 +223,8 @@ mod reducer_impl {
             let results_have_changed: Option<Vec<String>> = {
                 match state.dialog_buffers.get_mut(id) {
                     Some(dialog_buffer)
-                        if dialog_buffer.editor_buffer.get_lines() != editor_buffer.get_lines() =>
+                        if dialog_buffer.editor_buffer.get_lines()
+                            != editor_buffer.get_lines() =>
                     {
                         Some({
                             let editor_buffer_str = editor_buffer.get_as_string();
@@ -271,7 +273,11 @@ mod reducer_impl {
             }
         }
 
-        fn dialog_component_set_results(state: &mut State, id: &FlexBoxId, results: &[String]) {
+        fn dialog_component_set_results(
+            state: &mut State,
+            id: &FlexBoxId,
+            results: &[String],
+        ) {
             state
                 .dialog_buffers
                 .entry(*id)

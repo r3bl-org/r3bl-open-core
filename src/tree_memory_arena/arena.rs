@@ -21,7 +21,12 @@ use std::{collections::{HashMap, VecDeque},
           fmt::Debug,
           sync::{atomic::AtomicUsize, Arc, RwLock}};
 
-use super::{arena_types::HasId, ArenaMap, FilterFn, NodeRef, ResultUidList, WeakNodeRef};
+use super::{arena_types::HasId,
+            ArenaMap,
+            FilterFn,
+            NodeRef,
+            ResultUidList,
+            WeakNodeRef};
 use crate::utils::{call_if_some,
                    unwrap_arc_read_lock_and_call,
                    unwrap_arc_write_lock_and_call,
@@ -129,7 +134,9 @@ where
         if let Ok(map /* ReadGuarded<'_, ArenaMap<T>> */) = self.map.read() {
             let filtered_map = map
                 .iter()
-                .filter(|(id, node_ref)| filter_fn(**id, node_ref.read().unwrap().payload.clone()))
+                .filter(|(id, node_ref)| {
+                    filter_fn(**id, node_ref.read().unwrap().payload.clone())
+                })
                 .map(|(id, _node_ref)| *id)
                 .collect::<VecDeque<usize>>();
             match filtered_map.len() {
@@ -149,15 +156,16 @@ where
 
         let node_to_lookup = self.get_node_arc(node_id)?;
 
-        let result =
-            if let Ok(node_to_lookup /* ReadGuarded<'_, Node<T>> */) = node_to_lookup.read() {
-                if node_to_lookup.children_ids.is_empty() {
-                    return None;
-                }
-                Some(node_to_lookup.children_ids.clone())
-            } else {
-                None
-            };
+        let result = if let Ok(node_to_lookup /* ReadGuarded<'_, Node<T>> */) =
+            node_to_lookup.read()
+        {
+            if node_to_lookup.children_ids.is_empty() {
+                return None;
+            }
+            Some(node_to_lookup.children_ids.clone())
+        } else {
+            None
+        };
 
         result
     }
@@ -170,12 +178,13 @@ where
 
         let node_to_lookup = self.get_node_arc(node_id)?;
 
-        let result =
-            if let Ok(node_to_lookup /* ReadGuarded<'_, Node<T>> */) = node_to_lookup.read() {
-                node_to_lookup.parent_id
-            } else {
-                None
-            };
+        let result = if let Ok(node_to_lookup /* ReadGuarded<'_, Node<T>> */) =
+            node_to_lookup.read()
+        {
+            node_to_lookup.parent_id
+        } else {
+            None
+        };
 
         result
     }
@@ -205,7 +214,8 @@ where
         let remove_node_id_from_parent = |parent_id: usize| {
             let parent_node_arc_opt = self.get_node_arc(parent_id);
             if let Some(parent_node_arc) = parent_node_arc_opt {
-                if let Ok(mut parent_node /* WriteGuarded<'_, Node<T>> */) = parent_node_arc.write()
+                if let Ok(mut parent_node /* WriteGuarded<'_, Node<T>> */) =
+                    parent_node_arc.write()
                 {
                     parent_node
                         .children_ids

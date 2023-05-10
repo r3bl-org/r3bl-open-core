@@ -149,13 +149,15 @@ impl EditorEvent {
         A: Debug + Default + Clone + Sync + Send,
     {
         match editor_event {
-            EditorEvent::InsertChar(character) => EditorEngineInternalApi::insert_str_at_caret(
-                EditorArgsMut {
-                    editor_buffer,
-                    editor_engine,
-                },
-                &String::from(character),
-            ),
+            EditorEvent::InsertChar(character) => {
+                EditorEngineInternalApi::insert_str_at_caret(
+                    EditorArgsMut {
+                        editor_buffer,
+                        editor_engine,
+                    },
+                    &String::from(character),
+                )
+            }
             EditorEvent::InsertNewLine => {
                 EditorEngineInternalApi::insert_new_line_at_caret(EditorArgsMut {
                     editor_buffer,
@@ -178,19 +180,23 @@ impl EditorEvent {
                         editor_engine,
                         SelectMode::Disabled,
                     ),
-                    CaretDirection::Up => EditorEngineInternalApi::up(editor_buffer, editor_engine),
+                    CaretDirection::Up => {
+                        EditorEngineInternalApi::up(editor_buffer, editor_engine)
+                    }
                     CaretDirection::Down => {
                         EditorEngineInternalApi::down(editor_buffer, editor_engine)
                     }
                 };
             }
-            EditorEvent::InsertString(chunk) => EditorEngineInternalApi::insert_str_at_caret(
-                EditorArgsMut {
-                    editor_buffer,
-                    editor_engine,
-                },
-                &chunk,
-            ),
+            EditorEvent::InsertString(chunk) => {
+                EditorEngineInternalApi::insert_str_at_caret(
+                    EditorArgsMut {
+                        editor_buffer,
+                        editor_engine,
+                    },
+                    &chunk,
+                )
+            }
             EditorEvent::Resize(_) => {
                 // Check to see whether scroll is valid.
                 EditorEngineInternalApi::validate_scroll(EditorArgsMut {

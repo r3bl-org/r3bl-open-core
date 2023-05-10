@@ -23,7 +23,10 @@ use serde::*;
 
 use crate::*;
 
-pub fn colorize_to_styled_texts(lolcat: &mut Lolcat, input: &UnicodeString) -> StyledTexts {
+pub fn colorize_to_styled_texts(
+    lolcat: &mut Lolcat,
+    input: &UnicodeString,
+) -> StyledTexts {
     lolcat.colorize_to_styled_texts(input)
 }
 
@@ -120,7 +123,10 @@ impl LolcatBuilder {
         self
     }
 
-    pub fn set_color_change_speed(mut self, color_change_speed: ColorChangeSpeed) -> Self {
+    pub fn set_color_change_speed(
+        mut self,
+        color_change_speed: ColorChangeSpeed,
+    ) -> Self {
         self.color_change_speed = color_change_speed;
         self
     }

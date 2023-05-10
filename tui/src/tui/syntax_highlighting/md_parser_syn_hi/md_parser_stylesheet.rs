@@ -232,7 +232,10 @@ impl ColorWheel {
                     SPEED,
                     STEPS,
                 ),
-                ColorWheelConfig::Ansi256(Ansi256GradientIndex::LightYellowToWhite, ANSI_SPEED),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::LightYellowToWhite,
+                    ANSI_SPEED,
+                ),
             ]),
 
             HeadingLevel::Heading2 => ColorWheel::new(vec![
@@ -250,7 +253,10 @@ impl ColorWheel {
                     SPEED,
                     STEPS,
                 ),
-                ColorWheelConfig::Ansi256(Ansi256GradientIndex::OrangeToNeonPink, ANSI_SPEED),
+                ColorWheelConfig::Ansi256(
+                    Ansi256GradientIndex::OrangeToNeonPink,
+                    ANSI_SPEED,
+                ),
             ]),
 
             HeadingLevel::Heading4 => ColorWheel::new(vec![

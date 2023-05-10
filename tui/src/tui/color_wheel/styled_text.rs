@@ -219,7 +219,8 @@ mod tests {
             {
                 let line = StyledTexts::from(get_list()).to_plain_text_us().string;
                 let line = UnicodeString::from(line);
-                let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+                let truncated_line =
+                    line.truncate_start_by_n_col(scroll_offset_col_index);
                 let truncated_line = UnicodeString::from(truncated_line);
                 let truncated_line =
                     truncated_line.truncate_end_to_fit_width(max_display_col_count);
@@ -228,7 +229,8 @@ mod tests {
 
             // clip version.
             {
-                let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
+                let clipped =
+                    get_list().clip(scroll_offset_col_index, max_display_col_count);
                 // println!("{}", clipped.pretty_print_debug());
                 assert_eq2!(clipped.len(), 3);
                 let lhs = clipped.to_plain_text_us().string;
@@ -271,7 +273,8 @@ mod tests {
                     .to_plain_text_us()
                     .string;
                 let line = UnicodeString::from(line);
-                let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+                let truncated_line =
+                    line.truncate_start_by_n_col(scroll_offset_col_index);
                 let truncated_line = UnicodeString::from(truncated_line);
                 let truncated_line =
                     truncated_line.truncate_end_to_fit_width(max_display_col_count);
@@ -280,8 +283,8 @@ mod tests {
 
             // clip version.
             {
-                let clipped =
-                    helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
+                let clipped = helpers::get_list()
+                    .clip(scroll_offset_col_index, max_display_col_count);
                 // println!("{}", clipped.pretty_print_debug());
                 assert_eq2!(clipped.len(), 1);
                 let left = clipped.to_plain_text_us().string;
@@ -325,7 +328,8 @@ mod tests {
                     .to_plain_text_us()
                     .string;
                 let line = UnicodeString::from(line);
-                let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+                let truncated_line =
+                    line.truncate_start_by_n_col(scroll_offset_col_index);
                 let truncated_line = UnicodeString::from(truncated_line);
                 let truncated_line =
                     truncated_line.truncate_end_to_fit_width(max_display_col_count);
@@ -334,8 +338,8 @@ mod tests {
 
             // clip version.
             {
-                let clipped =
-                    helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
+                let clipped = helpers::get_list()
+                    .clip(scroll_offset_col_index, max_display_col_count);
                 // println!("{}", clipped.pretty_print_debug());
                 assert_eq2!(clipped.len(), 1);
                 let lhs = clipped.to_plain_text_us().string;
@@ -379,7 +383,8 @@ mod tests {
                     .to_plain_text_us()
                     .string;
                 let line = UnicodeString::from(line);
-                let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+                let truncated_line =
+                    line.truncate_start_by_n_col(scroll_offset_col_index);
                 let truncated_line = UnicodeString::from(truncated_line);
                 let truncated_line =
                     truncated_line.truncate_end_to_fit_width(max_display_col_count);
@@ -388,8 +393,8 @@ mod tests {
 
             // clip version.
             {
-                let clipped =
-                    helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
+                let clipped = helpers::get_list()
+                    .clip(scroll_offset_col_index, max_display_col_count);
                 // println!("{}", clipped.pretty_print_debug());
                 assert_eq2!(clipped.len(), 3);
                 let left = clipped.to_plain_text_us().string;
@@ -434,7 +439,8 @@ mod tests {
             {
                 let line = StyledTexts::from(get_list()).to_plain_text_us().string;
                 let line = UnicodeString::from(line);
-                let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+                let truncated_line =
+                    line.truncate_start_by_n_col(scroll_offset_col_index);
                 let truncated_line = UnicodeString::from(truncated_line);
                 let truncated_line =
                     truncated_line.truncate_end_to_fit_width(max_display_col_count);
@@ -443,7 +449,8 @@ mod tests {
 
             // clip version.
             {
-                let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
+                let clipped =
+                    get_list().clip(scroll_offset_col_index, max_display_col_count);
                 // println!("{}", clipped.pretty_print_debug());
                 assert_eq2!(clipped.len(), 1);
                 let lhs = clipped.to_plain_text_us().string;
@@ -488,7 +495,8 @@ mod tests {
             {
                 let line = StyledTexts::from(get_list()).to_plain_text_us().string;
                 let line = UnicodeString::from(line);
-                let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+                let truncated_line =
+                    line.truncate_start_by_n_col(scroll_offset_col_index);
                 let truncated_line = UnicodeString::from(truncated_line);
                 let truncated_line =
                     truncated_line.truncate_end_to_fit_width(max_display_col_count);
@@ -497,7 +505,8 @@ mod tests {
 
             // clip version.
             {
-                let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
+                let clipped =
+                    get_list().clip(scroll_offset_col_index, max_display_col_count);
                 // println!("{}", clipped.pretty_print_debug());
                 assert_eq2!(clipped.len(), 1);
                 let left = clipped.to_plain_text_us().string;

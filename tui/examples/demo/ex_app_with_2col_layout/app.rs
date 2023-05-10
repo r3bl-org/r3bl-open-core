@@ -212,7 +212,10 @@ mod handle_focus {
     use super::*;
 
     impl AppWithLayout {
-        pub fn handle_focus_switch(&mut self, input_event: &InputEvent) -> Continuation<String> {
+        pub fn handle_focus_switch(
+            &mut self,
+            input_event: &InputEvent,
+        ) -> Continuation<String> {
             let mut event_consumed = false;
 
             // Handle Left, Right to switch focus between columns.

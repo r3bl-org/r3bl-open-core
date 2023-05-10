@@ -76,7 +76,10 @@ macro_rules! surface {
 }
 
 impl LayoutManagement for Surface {
-    fn surface_start(&mut self, SurfaceProps { pos, size }: SurfaceProps) -> CommonResult<()> {
+    fn surface_start(
+        &mut self,
+        SurfaceProps { pos, size }: SurfaceProps,
+    ) -> CommonResult<()> {
         throws!({
             // Expect stack to be empty!
             if !self.no_boxes_added() {

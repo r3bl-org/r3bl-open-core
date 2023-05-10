@@ -41,8 +41,10 @@ where
     /// change it then it should be done in the [App::app_handle_event] method.
     ///
     /// More than likely a bunch of other [Component::render]s will perform the actual rendering.
-    async fn app_render(&mut self, args: GlobalScopeArgs<'_, S, A>)
-        -> CommonResult<RenderPipeline>;
+    async fn app_render(
+        &mut self,
+        args: GlobalScopeArgs<'_, S, A>,
+    ) -> CommonResult<RenderPipeline>;
 
     /// At a high level:
     /// - Use the `input_event` to dispatch an action to the store if needed.

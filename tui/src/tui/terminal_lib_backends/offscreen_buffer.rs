@@ -136,7 +136,8 @@ mod offscreen_buffer_impl {
                     lines.push({
                         let row_index_text = format!("row_index: {row_index}");
                         let row_index_text = style_error(&row_index_text).to_string();
-                        let row_text = format!("{}\n{}", row_index_text, row.pretty_print());
+                        let row_text =
+                            format!("{}\n{}", row_index_text, row.pretty_print());
                         row_text
                     });
                 }
@@ -215,7 +216,8 @@ mod pixel_char_line_impl {
 
                 let index_txt = format!("{col_index:03}");
                 let pixel_char_txt = pixel_char.pretty_print();
-                let index_msg = format!("{}{}", style_dim_underline(&index_txt), pixel_char_txt);
+                let index_msg =
+                    format!("{}{}", style_dim_underline(&index_txt), pixel_char_txt);
                 it.push(index_msg);
 
                 // Add \n every MAX_CHARS_PER_LINE characters.
@@ -271,7 +273,10 @@ mod pixel_char_line_impl {
                     NextItemDoesNotContinueRange,
                 }
 
-                pub fn peek_does_next_item_continues_range(values: &[usize], index: usize) -> Peek {
+                pub fn peek_does_next_item_continues_range(
+                    values: &[usize],
+                    index: usize,
+                ) -> Peek {
                     if values.get(index + 1).is_none() {
                         return Peek::NextItemDoesNotContinueRange;
                     }
@@ -287,7 +292,9 @@ mod pixel_char_line_impl {
                     Exists,
                 }
 
-                pub fn does_current_range_exist(current_range: &Vec<usize>) -> CurrentRange {
+                pub fn does_current_range_exist(
+                    current_range: &Vec<usize>,
+                ) -> CurrentRange {
                     match current_range.is_empty() {
                         true => CurrentRange::DoesNotExist,
                         false => CurrentRange::Exists,
@@ -389,7 +396,9 @@ mod pixel_char_impl {
                 } => {
                     let output = match maybe_style {
                         // Content + style.
-                        Some(style) => format!("'{}'→{}", character.string, style.pretty_print()),
+                        Some(style) => {
+                            format!("'{}'→{}", character.string, style.pretty_print())
+                        }
                         // Content, no style.
                         _ => format!("'{}'", character.string),
                     };
@@ -416,7 +425,11 @@ pub trait OffscreenBufferPaint {
         shared_global_data: &SharedGlobalData,
     );
 
-    async fn paint_diff(&mut self, render_ops: RenderOps, shared_global_data: &SharedGlobalData);
+    async fn paint_diff(
+        &mut self,
+        render_ops: RenderOps,
+        shared_global_data: &SharedGlobalData,
+    );
 }
 
 #[cfg(test)]
@@ -428,7 +441,8 @@ mod tests {
     #[test]
     fn test_offscreen_buffer_construction() {
         let window_size = size! { col_count: 10, row_count: 2};
-        let my_offscreen_buffer = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let my_offscreen_buffer =
+            OffscreenBuffer::new_with_capacity_initialized(window_size);
         assert_eq2!(my_offscreen_buffer.buffer.len(), 2);
         assert_eq2!(my_offscreen_buffer.buffer[0].len(), 10);
         assert_eq2!(my_offscreen_buffer.buffer[1].len(), 10);
@@ -443,7 +457,8 @@ mod tests {
     #[test]
     fn test_offscreen_buffer_re_init() {
         let window_size = size! { col_count: 10, row_count: 2};
-        let mut my_offscreen_buffer = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut my_offscreen_buffer =
+            OffscreenBuffer::new_with_capacity_initialized(window_size);
         my_offscreen_buffer.buffer[0][0] = PixelChar::PlainText {
             content: GraphemeClusterSegment::from("a"),
             maybe_style: Some(style! {color_bg: color!(@green) }),

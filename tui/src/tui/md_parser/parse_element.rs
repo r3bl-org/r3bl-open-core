@@ -574,15 +574,24 @@ mod tests_parse_element {
     #[test]
     fn test_parse_element_markdown_inline() {
         assert_eq2!(
-            parse_element_markdown_inline("*here is italic*", CheckboxParsePolicy::IgnoreCheckbox),
+            parse_element_markdown_inline(
+                "*here is italic*",
+                CheckboxParsePolicy::IgnoreCheckbox
+            ),
             Ok(("", MdLineFragment::Italic("here is italic")))
         );
         assert_eq2!(
-            parse_element_markdown_inline("**here is bold**", CheckboxParsePolicy::IgnoreCheckbox),
+            parse_element_markdown_inline(
+                "**here is bold**",
+                CheckboxParsePolicy::IgnoreCheckbox
+            ),
             Ok(("", MdLineFragment::Bold("here is bold")))
         );
         assert_eq2!(
-            parse_element_markdown_inline("`here is code`", CheckboxParsePolicy::IgnoreCheckbox),
+            parse_element_markdown_inline(
+                "`here is code`",
+                CheckboxParsePolicy::IgnoreCheckbox
+            ),
             Ok(("", MdLineFragment::InlineCode("here is code")))
         );
         assert_eq2!(
@@ -592,7 +601,10 @@ mod tests_parse_element {
             ),
             Ok((
                 "",
-                (MdLineFragment::Link(HyperlinkData::new("title", "https://www.example.com")))
+                (MdLineFragment::Link(HyperlinkData::new(
+                    "title",
+                    "https://www.example.com"
+                )))
             ))
         );
         assert_eq2!(

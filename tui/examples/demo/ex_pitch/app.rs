@@ -89,7 +89,11 @@ mod app_with_layout_impl_trait_app {
                 };
 
                 // Render status bar.
-                status_bar::render_status_bar(&mut surface.render_pipeline, window_size, state);
+                status_bar::render_status_bar(
+                    &mut surface.render_pipeline,
+                    window_size,
+                    state,
+                );
 
                 // Return RenderOps pipeline (which will actually be painted elsewhere).
                 surface.render_pipeline
@@ -129,7 +133,10 @@ mod app_with_layout_impl_trait_app {
                 mask: ModifierKeysMask::CTRL,
             }) {
                 // Spawn previous slide action.
-                spawn_dispatch_action!(args.shared_store, Action::SlideControlPreviousSlide);
+                spawn_dispatch_action!(
+                    args.shared_store,
+                    Action::SlideControlPreviousSlide
+                );
                 return Ok(EventPropagation::Consumed);
             };
 

@@ -213,7 +213,11 @@ mod render_pipeline_impl {
             Some(vec_render_op)
         }
 
-        pub async fn paint(&self, flush_kind: FlushKind, shared_global_data: &SharedGlobalData) {
+        pub async fn paint(
+            &self,
+            flush_kind: FlushKind,
+            shared_global_data: &SharedGlobalData,
+        ) {
             paint(self, flush_kind, shared_global_data).await;
             // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
         }
@@ -288,7 +292,9 @@ mod z_order_impl {
 
     impl ZOrder {
         /// Contains the priority that is used to paint the different groups of [RenderOp] items.
-        pub fn get_render_order() -> [ZOrder; 3] { [ZOrder::Normal, ZOrder::High, ZOrder::Glass] }
+        pub fn get_render_order() -> [ZOrder; 3] {
+            [ZOrder::Normal, ZOrder::High, ZOrder::Glass]
+        }
     }
 
     impl Default for ZOrder {

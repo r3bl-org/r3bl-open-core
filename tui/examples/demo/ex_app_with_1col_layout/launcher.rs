@@ -36,7 +36,8 @@ pub async fn run_app() -> CommonResult<()> {
         let shared_app = AppWithLayout::new_shared();
 
         // Exit if these keys are pressed.
-        let exit_keys: Vec<InputEvent> = vec![InputEvent::Keyboard(keypress! { @char 'x' })];
+        let exit_keys: Vec<InputEvent> =
+            vec![InputEvent::Keyboard(keypress! { @char 'x' })];
 
         // Create a window.
         TerminalWindow::main_event_loop(shared_app, store, exit_keys).await?

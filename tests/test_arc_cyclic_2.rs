@@ -72,7 +72,9 @@ fn test_new() {
         A: Send + Sync + 'static,
     {
         /// Constructor.
-        pub fn from(fn_mut: impl Fn(S, A) -> S + Sync + Send + 'static) -> _Arc<_RwLock<Self>> {
+        pub fn from(
+            fn_mut: impl Fn(S, A) -> S + Sync + Send + 'static,
+        ) -> _Arc<_RwLock<Self>> {
             _Arc::new_cyclic(|weak_me_ref| {
                 _RwLock::new(FnWrapper {
                     weak_me: weak_me_ref.clone(),
