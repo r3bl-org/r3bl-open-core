@@ -73,13 +73,17 @@ impl TryFrom<&InputEvent> for EditorEvent {
                 mask: ModifierKeysMask::SHIFT,
             }) => Ok(EditorEvent::Select(SelectionScope::OneCharRight)),
 
-            // 00: add selection events    S+Left
-            // 00: add selection events    S+Up
-            // 00: add selection events    S+Down
-            // 00: add selection events    S+PageUp
-            // 00: add selection events    S+PageDown
-            // 00: add selection events    S+Home
-            // 00: add selection events    S+End
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::SpecialKey(SpecialKey::Left),
+                mask: ModifierKeysMask::SHIFT,
+            }) => Ok(EditorEvent::Select(SelectionScope::OneCharLeft)),
+
+            // TODO: add selection events    S+Up
+            // TODO: add selection events    S+Down
+            // TODO: add selection events    S+PageUp
+            // TODO: add selection events    S+PageDown
+            // TODO: add selection events    S+Home
+            // TODO: add selection events    S+End
 
             // Other events.
             InputEvent::Keyboard(KeyPress::Plain {
@@ -172,9 +176,11 @@ impl EditorEvent {
             }
             EditorEvent::MoveCaret(direction) => {
                 match direction {
-                    CaretDirection::Left => {
-                        EditorEngineInternalApi::left(editor_buffer, editor_engine)
-                    }
+                    CaretDirection::Left => EditorEngineInternalApi::left(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Disabled,
+                    ),
                     CaretDirection::Right => EditorEngineInternalApi::right(
                         editor_buffer,
                         editor_engine,
@@ -224,31 +230,34 @@ impl EditorEvent {
                         SelectMode::Enabled,
                     );
                 }
-                // 00: add to selection move left
                 SelectionScope::OneCharLeft => {
-                    todo!();
+                    EditorEngineInternalApi::left(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Enabled,
+                    );
                 }
-                // 00: add to selection move up
+                // TODO: add to selection move up
                 SelectionScope::OneLineUp => {
                     todo!();
                 }
-                // 00: add to selection move down
+                // TODO: add to selection move down
                 SelectionScope::OneLineDown => {
                     todo!();
                 }
-                // 00: add to selection move page up
+                // TODO: add to selection move page up
                 SelectionScope::PageUp => {
                     todo!();
                 }
-                // 00: add to selection move page down
+                // TODO: add to selection move page down
                 SelectionScope::PageDown => {
                     todo!();
                 }
-                // 00: add to selection move to home (SOL)
+                // TODO: add to selection move to home (SOL)
                 SelectionScope::Home => {
                     todo!();
                 }
-                // 00: add to selection move to end (EOL)
+                // TODO: add to selection move to end (EOL)
                 SelectionScope::End => {
                     todo!();
                 }

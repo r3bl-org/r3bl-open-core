@@ -31,8 +31,12 @@ impl EditorEngineInternalApi {
         caret_mut::up(buffer, engine)
     }
 
-    pub fn left(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
-        caret_mut::left(buffer, engine)
+    pub fn left(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
+        caret_mut::left(buffer, engine, select_mode)
     }
 
     pub fn right(
@@ -226,6 +230,56 @@ pub enum SelectMode {
     Disabled,
 }
 
+impl SelectMode {
+    pub fn get_caret_display_position(
+        &self,
+        editor_buffer: &EditorBuffer,
+    ) -> Option<Position> {
+        match self {
+            SelectMode::Enabled => {
+                Some(editor_buffer.get_caret(CaretKind::ScrollAdjusted))
+            }
+            _ => None,
+        }
+    }
+
+    pub fn update_selection_based_on_caret_movement(
+        &self,
+        editor_buffer: &mut EditorBuffer,
+        maybe_caret_display_previous_pos: Option<Position>,
+        maybe_caret_display_current_pos: Option<Position>,
+    ) -> Option<()> {
+        if let SelectMode::Enabled = self {
+            let previous_caret_display_pos = maybe_caret_display_previous_pos?;
+            let current_caret_display_pos = maybe_caret_display_current_pos?;
+
+            // DBG: remove
+            log_debug(format!(
+                "\n🚀🚀🚀 {0}: \n\t{1}: {2:?}, \n\t{3}: {4:?}",
+                /* 0 */ "update selection",
+                /* 1 */ "start_caret_display_pos",
+                /* 2 */ previous_caret_display_pos,
+                /* 3 */ "end_caret_display_pos",
+                /* 4 */ current_caret_display_pos
+            ));
+
+            EditorBufferApi::update_selection_based_on_caret_movement(
+                editor_buffer,
+                previous_caret_display_pos,
+                current_caret_display_pos,
+            );
+
+            // DBG: remove
+            log_debug(format!(
+                "\n🚀🚀🚀 new selection: {:#?}",
+                editor_buffer.get_mut_maybe_selection_map()
+            ));
+        }
+
+        None
+    }
+}
+
 mod caret_mut {
     use super::*;
 
@@ -405,6 +459,8 @@ mod caret_mut {
             }
         }
 
+        return None;
+
         /// 1. Check for wide unicode character to the right of the caret.
         /// 2. [validate::apply_change] checks for wide unicode character at the start of the
         ///    viewport.
@@ -414,12 +470,8 @@ mod caret_mut {
             select_mode: SelectMode,
         ) -> Option<()> {
             // This is only set if select_mode is enabled.
-            let maybe_caret_display_previous_pos: Option<Position> = match select_mode {
-                SelectMode::Enabled => {
-                    Some(editor_buffer.get_caret(CaretKind::ScrollAdjusted))
-                }
-                _ => None,
-            };
+            let maybe_caret_display_previous_pos =
+                select_mode.get_caret_display_position(editor_buffer);
 
             let UnicodeStringSegmentSliceResult {
                 unicode_width: unicode_width_at_caret,
@@ -503,42 +555,15 @@ mod caret_mut {
             }
 
             // This is only set if select_mode is enabled.
-            let maybe_caret_display_current_pos: Option<Position> = match select_mode {
-                SelectMode::Enabled => {
-                    Some(editor_buffer.get_caret(CaretKind::ScrollAdjusted))
-                }
-                _ => None,
-            };
+            let maybe_caret_display_current_pos =
+                select_mode.get_caret_display_position(editor_buffer);
 
             // This is only runs if select_mode is enabled.
-            if let SelectMode::Enabled = select_mode {
-                let previous_caret_display_pos = maybe_caret_display_previous_pos?;
-                let current_caret_display_pos = maybe_caret_display_current_pos?;
-
-                // AI: remove debug
-                log_debug(format!(
-                    "\n🚀🚀🚀 {0}: \n\t{1}: {2:?}, \n\t{3}: {4:?}",
-                    /* 0 */ "add selection right_normal",
-                    /* 1 */ "start_caret_display_pos",
-                    /* 2 */ previous_caret_display_pos,
-                    /* 3 */ "end_caret_display_pos",
-                    /* 4 */ current_caret_display_pos
-                ));
-
-                EditorBufferApi::update_selection_based_on_caret_movement(
-                    editor_buffer,
-                    previous_caret_display_pos,
-                    current_caret_display_pos,
-                );
-
-                // AI: remove debug
-                log_debug(format!(
-                    "\n🚀🚀🚀 new selection: {:#?}",
-                    editor_buffer.get_mut_maybe_selection_map()
-                ));
-            }
-
-            None
+            select_mode.update_selection_based_on_caret_movement(
+                editor_buffer,
+                maybe_caret_display_previous_pos,
+                maybe_caret_display_current_pos,
+            )
         }
 
         // TODO: mutate the editor_buffer.maybe_selection (add to editor_buffer_struct.rs)
@@ -546,19 +571,10 @@ mod caret_mut {
             editor_buffer: &mut EditorBuffer,
             editor_engine: &mut EditorEngine,
             select_mode: SelectMode,
-        ) {
-            if let SelectMode::Enabled = select_mode {
-                let caret_col_index =
-                    editor_buffer.get_caret(CaretKind::ScrollAdjusted).col_index;
-                let caret_row_index =
-                    editor_buffer.get_caret(CaretKind::ScrollAdjusted).row_index;
-
-                // AI: remove debug
-                log_debug(format!(
-                    "🚀🚀🚀 add selection right_at_end: r:{}, c:{}",
-                    caret_row_index, caret_col_index
-                ));
-            }
+        ) -> Option<()> {
+            // This is only set if select_mode is enabled.
+            let maybe_caret_display_previous_pos =
+                select_mode.get_caret_display_position(editor_buffer);
 
             if content_get::next_line_below_caret_exists(editor_buffer, editor_engine) {
                 // If there is a line below the caret, move the caret to the start of the next line.
@@ -576,16 +592,30 @@ mod caret_mut {
                     },
                 );
             }
-        }
 
-        None
+            // This is only set if select_mode is enabled.
+            let maybe_caret_display_current_pos =
+                select_mode.get_caret_display_position(editor_buffer);
+
+            // This is only runs if select_mode is enabled.
+            select_mode.update_selection_based_on_caret_movement(
+                editor_buffer,
+                maybe_caret_display_previous_pos,
+                maybe_caret_display_current_pos,
+            )
+        }
     }
 
     pub fn left(
         editor_buffer: &mut EditorBuffer,
         editor_engine: &mut EditorEngine,
+        select_mode: SelectMode,
     ) -> Option<()> {
         empty_check_early_return!(editor_buffer, @None);
+
+        // This is only set if select_mode is enabled.
+        let maybe_caret_display_previous_pos =
+            select_mode.get_caret_display_position(editor_buffer);
 
         match caret_get::find_col(EditorArgs {
             editor_buffer,
@@ -639,7 +669,17 @@ mod caret_mut {
                 );
             }
         }
-        None
+
+        // This is only set if select_mode is enabled.
+        let maybe_caret_display_current_pos =
+            select_mode.get_caret_display_position(editor_buffer);
+
+        // This is only runs if select_mode is enabled.
+        select_mode.update_selection_based_on_caret_movement(
+            editor_buffer,
+            maybe_caret_display_previous_pos,
+            maybe_caret_display_current_pos,
+        )
     }
 
     pub fn page_up(

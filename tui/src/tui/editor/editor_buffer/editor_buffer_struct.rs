@@ -76,7 +76,7 @@ use crate::*;
 ///
 /// A list of lines representing the document being edited.
 ///
-/// ## `caret`
+/// ## `caret_display_position`
 ///
 /// This is the "display" (or `display_col_index`) and not "logical" (or `logical_index`)
 /// position (both are defined in [tui_core::graphemes]). Please take a look at
@@ -539,13 +539,35 @@ mod debug_format_helpers {
 
     impl Debug for EditorBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            write! { f,
-              "\nEditorBuffer [          \n \
-              ├ lines: {}, size: {},     \n \
-              └ ext: {:?}, caret: {:?}]  \n \
-              ]",
-              self.lines.len(), self.lines.get_heap_size(),
-              self.maybe_file_extension, self.caret_display_position,
+            let selection_map_str = match self.maybe_selection_map.as_ref() {
+                Some(selection_map) => selection_map
+                    .iter()
+                    .map(|(row_index, selected_range)| {
+                        format!(
+                            "✂️ ┆row: {0} => start: {1}, end: {2}┆",
+                            /* 0 */ row_index,
+                            /* 1 */ selected_range.start_display_col_index,
+                            /* 2 */ selected_range.end_display_col_index
+                        )
+                    })
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                None => "None".to_string(),
+            };
+
+            write! {
+                f,
+                "\nEditorBuffer [                                  \n \
+                ├ lines: {0}, size: {1},                           \n \
+                ├ selection_map: {4},                              \n \
+                └ ext: {2:?}, caret: {3:?}, scroll_offset: {5:?}   \n \
+                ]",
+                /* 0 */ self.lines.len(),
+                /* 1 */ self.lines.get_heap_size(),
+                /* 2 */ self.maybe_file_extension,
+                /* 3 */ self.caret_display_position,
+                /* 4 */ selection_map_str,
+                /* 5 */ self.scroll_offset
             }
         }
     }

@@ -222,7 +222,7 @@ impl EditorEngineApi {
                             scr_adj_end_col_index,
                         );
 
-                        // AI: remove debug
+                        // DBG: remove
                         log_debug(format!("\n🚀🚀🚀 \n\tselection_str_slice: {:?}", it));
 
                         if it.is_empty() {
