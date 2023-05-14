@@ -93,9 +93,9 @@ pub mod editor_component_impl {
                     }
                 };
 
-                // 00: editor component processes input event here
-                // Try to apply the `input_event` to `editor_engine` to decide whether to fire
-                // action.
+                // BM: editor component processes input event here
+                // Try to apply the `input_event` to `editor_engine` to decide whether to
+                // fire action.
                 let result = EditorEngineApi::apply_event(
                     EditorEngineArgs {
                         state,

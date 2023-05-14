@@ -295,7 +295,7 @@ mod reducer_impl {
                 );
         }
 
-        // AA: editor buffer is actually inserted into the state here
+        // REVIEW: editor buffer is actually inserted into the state here
         fn editor_component_update_content(
             state: &mut State,
             id: &FlexBoxId,

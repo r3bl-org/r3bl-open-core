@@ -168,8 +168,7 @@ pub struct EditorBuffer {
     caret_display_position: Position,
     scroll_offset: ScrollOffset,
     maybe_file_extension: Option<String>,
-    // 00: add field to store selection made by the user (one range for one line)
-    maybe_selection_map: Option<SelectionMap>,
+    selection_map: SelectionMap,
 }
 
 mod selection {
@@ -202,63 +201,97 @@ mod selection {
             caret_previous: Position,
             caret_current: Position,
         ) {
-            // Genenerate diffs based on caret movement.
-            let maybe_diffs = if caret_previous.row_index == caret_current.row_index {
-                generate_diffs_from_single_line_caret_movement(
-                    &editor_buffer.maybe_selection_map,
+            let movement_in_single_line =
+                caret_previous.row_index == caret_current.row_index;
+
+            let maybe_diffs = match movement_in_single_line {
+                true => generate_diffs_from_single_line_caret_movement(
+                    &editor_buffer.selection_map,
                     caret_previous.row_index, // Same as caret_current.row_index.
-                    caret_previous,
-                    caret_current,
-                )
-            } else {
-                generate_diffs_from_multiline_caret_movement()
+                    caret_previous.col_index,
+                    caret_current.col_index,
+                ),
+                false => generate_diffs_from_multiline_caret_movement(),
             };
 
+            let Some(diffs) = maybe_diffs else { return };
+
+            // DBG: remove
+            log_debug(format!("\n📦📦📦 diffs: \n{}", format!("{:#?}", diffs)));
+
             // Apply diffs to create new selection, or modify or remove existing selection.
-            if let Some(diffs) = maybe_diffs {
-                Self::apply_diffs_to_change_selection(diffs, editor_buffer)
-            }
+            Self::apply_diffs_to_change_selection(diffs, editor_buffer);
         }
 
         fn apply_diffs_to_change_selection(
             diffs: SelectionChanges,
             editor_buffer: &mut EditorBuffer,
-        ) {
+        ) -> Option<()> {
             match diffs {
                 // Handle left, right, home, end.
                 SelectionChanges::SingleLine(diff) => {
                     match diff {
-                        SingleLineDiff::NewSelection(row_index, selection) => {
-                            let mut selection_map = HashMap::new();
-                            selection_map.insert(row_index, selection);
+                        // DONE: NewSelection
+                        SingleLineDiff::NewSelection { row_index, range } => {
                             editor_buffer
-                                .get_mut_maybe_selection_map()
-                                .replace(selection_map);
+                                .get_selection_map_mut()
+                                .insert(row_index, range);
                         }
 
-                        SingleLineDiff::RemoveSelection(row_index) => {
-                            if let Some(selection_map) =
-                                editor_buffer.get_mut_maybe_selection_map().as_mut()
-                            {
-                                if selection_map.get(&row_index).is_some() {
-                                    selection_map.remove(&row_index);
-                                }
+                        // DONE: RemoveSelection
+                        SingleLineDiff::RemoveSelection { row_index } => {
+                            editor_buffer.get_selection_map_mut().remove(&row_index);
+                        }
+
+                        // DONE: ExtendToRight
+                        SingleLineDiff::ExtendToRight {
+                            row_index,
+                            display_column_count,
+                        } => {
+                            let selection_map = editor_buffer.get_selection_map_mut();
+                            if let Some(range) = selection_map.get(&row_index) {
+                                selection_map.insert(row_index, {
+                                    let mut new_range = *range;
+                                    new_range.end_display_col_index +=
+                                        display_column_count;
+                                    new_range
+                                });
                             }
                         }
 
-                        // TODO: implement the rest
-                        SingleLineDiff::ExtendToRight(_) => todo!(),
-                        SingleLineDiff::ShrinkFromRight(_) => todo!(),
-                        SingleLineDiff::ExtendToLeft(_) => todo!(),
-                        SingleLineDiff::ShrinkFromLeft(_) => todo!(),
+                        // TODO: gen diff ShrinkFromRight
+                        SingleLineDiff::ShrinkFromRight {
+                            row_index,
+                            display_column_count,
+                        } => {
+                            todo!();
+                        }
+
+                        // TODO: gen diff ExtendToLeft
+                        SingleLineDiff::ExtendToLeft {
+                            row_index,
+                            display_column_count: count,
+                        } => {
+                            todo!();
+                        }
+
+                        // TODO: gen diff ShrinkFromLeft
+                        SingleLineDiff::ShrinkFromLeft {
+                            row_index,
+                            display_column_count: count,
+                        } => {
+                            todo!();
+                        }
                     }
                 }
                 // Handle up, down, page up, page down.
-                // TODO: implement multiline support
+                // TODO: figure out diff MultiLine support
                 SelectionChanges::MultiLine(_) => {
                     todo!();
                 }
             }
+
+            None
         }
     }
 }
@@ -269,76 +302,93 @@ mod diff {
 
     #[derive(Debug, Clone, Copy)]
     pub enum SelectionChanges {
+        // DONE: SingleLine
         SingleLine(SingleLineDiff),
-        // TODO: figure this out
+        // TODO: figure out MultiLine
         MultiLine(MultilineDiff),
     }
 
     #[derive(Debug, Clone, Copy)]
     pub enum SingleLineDiff {
-        NewSelection(RowIndex, SelectedRangeInLine),
-        RemoveSelection(RowIndex),
-        ExtendToRight(ChUnit),
-        ShrinkFromRight(ChUnit),
-        ExtendToLeft(ChUnit),
-        ShrinkFromLeft(ChUnit),
+        NewSelection {
+            row_index: RowIndex,
+            range: SelectedRangeInLine,
+        },
+        RemoveSelection {
+            row_index: RowIndex,
+        },
+        ExtendToRight {
+            row_index: RowIndex,
+            display_column_count: ChUnit,
+        },
+        ShrinkFromRight {
+            row_index: RowIndex,
+            display_column_count: ChUnit,
+        },
+        ExtendToLeft {
+            row_index: RowIndex,
+            display_column_count: ChUnit,
+        },
+        ShrinkFromLeft {
+            row_index: RowIndex,
+            display_column_count: ChUnit,
+        },
     }
 
     #[derive(Debug, Clone, Copy)]
     pub enum MultilineDiff {}
 
     pub fn generate_diffs_from_single_line_caret_movement(
-        maybe_existing_selection_map: &Option<SelectionMap>,
+        selection_map: &SelectionMap,
         row_index: ChUnit,
-        caret_previous: Position,
-        caret_current: Position,
+        caret_previous_display_col_index: ChUnit,
+        caret_current_display_col_index: ChUnit,
     ) -> Option<SelectionChanges> {
-        let maybe_existing_selection_for_row = maybe_existing_selection_map
-            .as_ref()
-            .and_then(|selection_map| selection_map.get(&row_index));
-
-        match maybe_existing_selection_for_row {
+        match selection_map.get(&row_index) {
+            // Could not find a range for row index, so create and add a new one.
             None => create_new_selection_for_single_line(
-                caret_previous,
-                caret_current,
+                caret_previous_display_col_index,
+                caret_current_display_col_index,
                 row_index,
             ),
-            Some(existing_selection) => {
-                extend_or_shrink_existing_selection_for_single_line(
-                    existing_selection,
-                    caret_previous,
-                    caret_current,
-                    row_index,
-                )
-            }
+            // Found a range for row index, so modify it.
+            Some(range) => extend_or_shrink_existing_selection_for_single_line(
+                range,
+                caret_previous_display_col_index,
+                caret_current_display_col_index,
+                row_index,
+            ),
         }
     }
 
     fn create_new_selection_for_single_line(
-        caret_previous: Position,
-        caret_current: Position,
+        caret_previous_display_col_index: ChUnit,
+        caret_current_display_col_index: ChUnit,
         row_index: ChUnit,
     ) -> Option<SelectionChanges> {
-        match (caret_previous.col_index, caret_current.col_index) {
+        match (
+            caret_previous_display_col_index,
+            caret_current_display_col_index,
+        ) {
             // Caret moved right.
             (previous, current) if current > previous => {
-                Some(SelectionChanges::SingleLine(SingleLineDiff::NewSelection(
+                Some(SelectionChanges::SingleLine(SingleLineDiff::NewSelection {
                     row_index,
-                    SelectedRangeInLine {
+                    range: SelectedRangeInLine {
                         start_display_col_index: previous,
                         end_display_col_index: current,
                     },
-                )))
+                }))
             }
             // Caret moved left.
             (previous, current) if current < previous => {
-                Some(SelectionChanges::SingleLine(SingleLineDiff::NewSelection(
+                Some(SelectionChanges::SingleLine(SingleLineDiff::NewSelection {
                     row_index,
-                    SelectedRangeInLine {
+                    range: SelectedRangeInLine {
                         start_display_col_index: current,
                         end_display_col_index: previous,
                     },
-                )))
+                }))
             }
             (_, _) => None,
         }
@@ -346,47 +396,58 @@ mod diff {
 
     fn extend_or_shrink_existing_selection_for_single_line(
         existing_selection: &SelectedRangeInLine,
-        caret_previous: Position,
-        caret_current: Position,
+        caret_previous_display_col_index: ChUnit,
+        caret_current_display_col_index: ChUnit,
         row_index: ChUnit,
     ) -> Option<SelectionChanges> {
         let SelectedRangeInLine {
-            start_display_col_index,
-            end_display_col_index,
+            start_display_col_index: range_start,
+            end_display_col_index: range_end,
         } = existing_selection;
 
-        // TODO: fill out all cases for detecting selection change in single line
-        match (caret_previous.col_index, caret_current.col_index) {
+        match (
+            caret_previous_display_col_index,
+            caret_current_display_col_index,
+        ) {
             // Carets overlap, so remove selection.
-            (previous, current) if current == previous => Some(
-                SelectionChanges::SingleLine(SingleLineDiff::RemoveSelection(row_index)),
-            ),
-
-            // Add to right by count (ie, going right).
-            (previous, current) if current > previous => {
-                let count = current - *end_display_col_index;
-                Some(SelectionChanges::SingleLine(SingleLineDiff::ExtendToRight(
-                    count,
-                )))
-            }
-
-            // FIXME: Remove from right by count (ie, going left).
-            (previous, current) if current < previous => {
-                let count = *end_display_col_index - current;
+            (previous, current) if current == previous => {
                 Some(SelectionChanges::SingleLine(
-                    SingleLineDiff::ShrinkFromRight(count),
+                    SingleLineDiff::RemoveSelection { row_index },
                 ))
             }
 
-            // TODO: Add to left by count (ie, going left).
-            (previous, current) if current < previous => {
-                let count = *start_display_col_index - current;
-                Some(SelectionChanges::SingleLine(SingleLineDiff::ExtendToLeft(
-                    count,
-                )))
+            // Add to right by count (ie, going right).
+            (previous, current) if current > previous => {
+                let count = current - *range_end;
+                Some(SelectionChanges::SingleLine(
+                    SingleLineDiff::ExtendToRight {
+                        row_index,
+                        display_column_count: count,
+                    },
+                ))
             }
 
-            // TODO: Remove from left by count (ie, going right).
+            // TODO: apply: Remove from right by count (ie, going left).
+            (previous, current) if current < previous => {
+                let count = *range_end - current;
+                Some(SelectionChanges::SingleLine(
+                    SingleLineDiff::ShrinkFromRight {
+                        row_index,
+                        display_column_count: count,
+                    },
+                ))
+            }
+
+            // TODO: apply: Add to left by count (ie, going left).
+            (previous, current) if current < previous => {
+                let count = *range_start - current;
+                Some(SelectionChanges::SingleLine(SingleLineDiff::ExtendToLeft {
+                    row_index,
+                    display_column_count: count,
+                }))
+            }
+
+            // TODO: apply: Remove from left by count (ie, going right).
             (_, _) => None,
         }
     }
@@ -418,7 +479,7 @@ mod constructor {
                 caret_display_position: Position::default(),
                 scroll_offset: ScrollOffset::default(),
                 maybe_file_extension: file_extension.map(|s| s.to_string()),
-                maybe_selection_map: Default::default(),
+                selection_map: Default::default(),
             }
         }
     }
@@ -433,12 +494,6 @@ pub mod access_and_mutate {
     use super::*;
 
     impl EditorBuffer {
-        pub fn has_selection_map(&self) -> bool { self.maybe_selection_map.is_some() }
-
-        pub fn get_maybe_selection_map(&self) -> &Option<SelectionMap> {
-            &self.maybe_selection_map
-        }
-
         pub fn has_file_extension(&self) -> bool { self.maybe_file_extension.is_some() }
 
         pub fn get_maybe_file_extension(&self) -> Option<&str> {
@@ -528,8 +583,10 @@ pub mod access_and_mutate {
             )
         }
 
-        pub fn get_mut_maybe_selection_map(&mut self) -> &mut Option<SelectionMap> {
-            &mut self.maybe_selection_map
+        pub fn get_selection_map(&self) -> &SelectionMap { &self.selection_map }
+
+        pub fn get_selection_map_mut(&mut self) -> &mut SelectionMap {
+            &mut self.selection_map
         }
     }
 }
@@ -539,21 +596,19 @@ mod debug_format_helpers {
 
     impl Debug for EditorBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            let selection_map_str = match self.maybe_selection_map.as_ref() {
-                Some(selection_map) => selection_map
-                    .iter()
-                    .map(|(row_index, selected_range)| {
-                        format!(
-                            "✂️ ┆row: {0} => start: {1}, end: {2}┆",
-                            /* 0 */ row_index,
-                            /* 1 */ selected_range.start_display_col_index,
-                            /* 2 */ selected_range.end_display_col_index
-                        )
-                    })
-                    .collect::<Vec<String>>()
-                    .join(", "),
-                None => "None".to_string(),
-            };
+            let selection_map_str = self
+                .selection_map
+                .iter()
+                .map(|(row_index, selected_range)| {
+                    format!(
+                        "✂️ ┆row: {0} => start: {1}, end: {2}┆",
+                        /* 0 */ row_index,
+                        /* 1 */ selected_range.start_display_col_index,
+                        /* 2 */ selected_range.end_display_col_index
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join(", ");
 
             write! {
                 f,
