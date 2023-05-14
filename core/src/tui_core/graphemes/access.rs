@@ -168,11 +168,13 @@ impl UnicodeString {
         }
     }
 
-    pub fn clip_to_range(
-        &self,
-        start_display_col_index: ChUnit,
-        end_display_col_index: ChUnit,
-    ) -> &str {
+    /// Uses [SelectionRange] to calculate width and simply calls
+    /// [clip_to_width](Self::clip_to_width).
+    pub fn clip_to_range(&self, range: SelectionRange) -> &str {
+        let SelectionRange {
+            start_display_col_index,
+            end_display_col_index,
+        } = range;
         let max_display_col_count = end_display_col_index - start_display_col_index;
         self.clip_to_width(start_display_col_index, max_display_col_count)
     }

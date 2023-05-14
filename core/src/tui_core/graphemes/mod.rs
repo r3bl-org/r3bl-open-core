@@ -154,6 +154,7 @@ pub mod access;
 pub mod change;
 pub mod combine;
 pub mod convert;
+pub mod range;
 pub mod result_types;
 pub mod unicode_string;
 
@@ -162,6 +163,7 @@ pub use access::*;
 pub use change::*;
 pub use combine::*;
 pub use convert::*;
+pub use range::*;
 pub use result_types::*;
 pub use unicode_string::*;
 

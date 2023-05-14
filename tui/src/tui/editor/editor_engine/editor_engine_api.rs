@@ -17,6 +17,7 @@
 
 use std::fmt::Debug;
 
+use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
 use syntect::easy::HighlightLines;
@@ -210,32 +211,37 @@ impl EditorEngineApi {
             let lines = editor_buffer.get_lines();
 
             if let Some(line) = lines.get(ch!(@to_usize *row_index)) {
-                let scr_adj_start_col_index =
-                    range_of_display_col_indices.start_display_col_index;
-
-                let scr_adj_end_col_index =
-                    range_of_display_col_indices.end_display_col_index;
-
-                let selection_str_slice = {
-                    let it = line
-                        .clip_to_range(scr_adj_start_col_index, scr_adj_end_col_index);
+                let selection = {
+                    let it = line.clip_to_range(*range_of_display_col_indices);
                     if it.is_empty() {
                         continue;
                     };
                     it
                 };
 
+                call_if_true!(
+                    DEBUG_TUI_COPY_PASTE,
+                    log_debug(format!(
+                        "\n🍉🍉🍉 selection_str_slice: \n\t{0}, range: {1}",
+                        /* 0 */ format!("{}", selection).black().on_white(),
+                        /* 1 */ range_of_display_col_indices,
+                    ))
+                );
+
                 let position = {
+                    // Convert scroll adjusted to raw.
                     let raw_row_index = {
                         let row_scroll_offset =
                             editor_buffer.get_scroll_offset().row_index;
                         row_index - row_scroll_offset
                     };
 
+                    // Convert scroll adjusted to raw.
                     let raw_col_index = {
                         let col_scroll_offset =
                             editor_buffer.get_scroll_offset().col_index;
-                        scr_adj_start_col_index - col_scroll_offset
+                        range_of_display_col_indices.start_display_col_index
+                            - col_scroll_offset
                     };
 
                     let it =
@@ -251,7 +257,7 @@ impl EditorEngineApi {
                 render_ops.push(RenderOp::ApplyColors(Some(get_selection_style())));
 
                 render_ops.push(RenderOp::PaintTextWithAttributes(
-                    selection_str_slice.to_string(),
+                    selection.to_string(),
                     None,
                 ));
 

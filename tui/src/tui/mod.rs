@@ -29,6 +29,10 @@ pub const DEBUG_TUI_MOD: bool = true;
 /// Enable or disable syntax highlighting debug logging.
 pub const DEBUG_TUI_SYN_HI: bool = false;
 
+/// Enable or disable select, copy, paste debug logging.
+// DBG: disable when done
+pub const DEBUG_TUI_COPY_PASTE: bool = true;
+
 /// Enable or disable compositor debug logging.
 pub const DEBUG_TUI_COMPOSITOR: bool = false;
 

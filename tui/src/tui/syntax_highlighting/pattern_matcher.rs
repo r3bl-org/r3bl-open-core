@@ -175,7 +175,6 @@ mod tests {
         assert_eq2!(final_index, 12);
     }
 
-
     /// ```text
     ///       ┌→ match this
     ///       │   ┌→ don't match this
@@ -187,7 +186,6 @@ mod tests {
     /// ```
     #[test]
     fn matches_occurrence_after_scroll_offset() {
-
         let my_line = "abcabcdabcd";
         let my_pattern = "abcd";
 

@@ -177,7 +177,10 @@ mod has_focus_tests {
         assert!(has_focus.is_empty());
         assert!(!has_focus.is_set());
 
-        let my_err_box = has_focus.try_set_modal_id(FlexBoxId::from(1)).err().unwrap();
+        let my_err_box = has_focus
+            .try_set_modal_id(FlexBoxId::from(1))
+            .err()
+            .unwrap();
         assert_eq2!(my_err_box.is::<CommonError>(), true);
 
         let my_err = my_err_box.downcast_ref::<CommonError>().unwrap();

@@ -174,15 +174,21 @@ mod populate_component_registry {
         pub fn init_component_registry(&mut self) {
             // Construct Col.
             let col_id = Id::Col as u8;
-            if self.component_registry.does_not_contain(FlexBoxId::from(col_id)) {
+            if self
+                .component_registry
+                .does_not_contain(FlexBoxId::from(col_id))
+            {
                 let _component = ColumnRenderComponent::new(FlexBoxId::from(col_id));
                 let shared_component_r1 = Arc::new(RwLock::new(_component));
-                self.component_registry.put(FlexBoxId::from(col_id), shared_component_r1);
+                self.component_registry
+                    .put(FlexBoxId::from(col_id), shared_component_r1);
             }
 
             // Init has focus.
             if self.component_registry.has_focus.get_id().is_none() {
-                self.component_registry.has_focus.set_id(FlexBoxId::from(col_id));
+                self.component_registry
+                    .has_focus
+                    .set_id(FlexBoxId::from(col_id));
             }
         }
     }

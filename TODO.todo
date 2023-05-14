@@ -12,12 +12,8 @@ editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/86):
       - [.] `EditorBufferApi::chaneg_selection(..)`: impl this
         - handle one line: left, right (add to / remove from selection)
         - handle multiline
-      - [ ] remove selection when "regular" key is pressed
+      - [.] remove selection when "regular" key is pressed
       - [ ] `right_at_end(.., select_mode)`: impl this
-      - [ ] optional type cleanup to disambiguate between `Index` and `Count`
-        - Add `Count` type: 1 based unit of measurement of "width" or "height", use this in codebase
-        - Add `Width`, `Height` as separate types
-        - Add `Index` type: 0 based index for slice range, use this in codebase
     ☐ left
     ☐ up
     ☐ down
@@ -30,6 +26,10 @@ editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/86):
   ☐ implement paste
   ☐ implement delete
   ☐ add tests
+  ☐ optional type cleanup to disambiguate between `Index` and `Count`
+    - Add `Count` type: 1 based unit of measurement of "width" or "height", use this in codebase
+    - Add `Width`, `Height` as separate types
+    - Add `Index` type: 0 based index for slice range, use this in codebase
 
 docs update (https://github.com/r3bl-org/r3bl_rs_utils/issues/102):
   ✔ clean up threading docs (in code) @done(23-05-01 15:01)
