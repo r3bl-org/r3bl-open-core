@@ -246,8 +246,9 @@ mod detect_modal_dialog_activation_from_input_event {
                 // Initialize the dialog buffer with title & text.
                 let title = "Simple Modal Dialog Title";
                 let text = {
-                    if let Some(editor_buffer) =
-                        args.state.get_editor_buffer(FlexBoxId::from(ComponentId::Editor as u8))
+                    if let Some(editor_buffer) = args
+                        .state
+                        .get_editor_buffer(FlexBoxId::from(ComponentId::Editor as u8))
                     {
                         editor_buffer.get_as_string()
                     } else {
@@ -290,8 +291,9 @@ mod detect_modal_dialog_activation_from_input_event {
                 // Initialize the dialog buffer with title & text.
                 let title = "Autocomplete Modal Dialog Title";
                 let text = {
-                    if let Some(editor_buffer) =
-                        args.state.get_editor_buffer(FlexBoxId::from(ComponentId::Editor as u8))
+                    if let Some(editor_buffer) = args
+                        .state
+                        .get_editor_buffer(FlexBoxId::from(ComponentId::Editor as u8))
                     {
                         editor_buffer.get_as_string()
                     } else {
@@ -303,7 +305,9 @@ mod detect_modal_dialog_activation_from_input_event {
                 // render.
                 this.component_registry
                     .has_focus
-                    .try_set_modal_id(FlexBoxId::from(ComponentId::AutocompleteDialog as u8))?;
+                    .try_set_modal_id(FlexBoxId::from(
+                        ComponentId::AutocompleteDialog as u8,
+                    ))?;
 
                 // Change the state so that it will trigger a render. This will show the title &
                 // text on the next render.
@@ -599,8 +603,10 @@ mod populate_component_registry {
             it
         };
 
-        this.component_registry
-            .put(FlexBoxId::from(ComponentId::SimpleDialog as u8), shared_dialog_component);
+        this.component_registry.put(
+            FlexBoxId::from(ComponentId::SimpleDialog as u8),
+            shared_dialog_component,
+        );
 
         call_if_true!(DEBUG_TUI_MOD, {
             let msg = format!(

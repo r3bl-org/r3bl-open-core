@@ -16,7 +16,9 @@
  */
 
 // Attach.
+pub mod editor_buffer_selection_support;
 pub mod editor_buffer_struct;
 
 // Re-export.
+pub use editor_buffer_selection_support::*;
 pub use editor_buffer_struct::*;

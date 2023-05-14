@@ -78,6 +78,8 @@ mod reducer_impl {
 
     pub fn get_default_content() -> Vec<String> {
         vec![
+"0         1         2         3         4         5         6",
+"0123456789012345678901234567890123456789012345678901234567890",
 "@title: untitled",
 "@tags: foo, bar, baz",
 "@authors: xyz, abc",

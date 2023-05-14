@@ -255,9 +255,13 @@ mod handle_focus {
         fn switch_focus(&mut self, special_key: SpecialKey) {
             if let Some(_id) = self.component_registry.has_focus.get_id() {
                 if special_key == SpecialKey::Left {
-                    self.component_registry.has_focus.set_id(FlexBoxId::from(Id::Col1 as u8))
+                    self.component_registry
+                        .has_focus
+                        .set_id(FlexBoxId::from(Id::Col1 as u8))
                 } else {
-                    self.component_registry.has_focus.set_id(FlexBoxId::from(Id::Col2 as u8))
+                    self.component_registry
+                        .has_focus
+                        .set_id(FlexBoxId::from(Id::Col2 as u8))
                 }
             } else {
                 log_error("No focus id has been set, and it should be set!".to_string());

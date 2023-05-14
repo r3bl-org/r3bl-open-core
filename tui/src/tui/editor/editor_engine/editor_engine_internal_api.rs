@@ -243,20 +243,33 @@ impl SelectMode {
         }
     }
 
+    /// # Arguments
+    /// - `editor_buffer` - The buffer to update. This holds the selection map.
+    /// - `maybe_previous_caret_display_pos` - The previous position of the caret. This
+    ///    maybe [None] if [SelectMode] is [SelectMode::Disabled].
+    /// - `maybe_current_caret_display_pos` - The current position of the caret. This
+    ///    maybe [None] if [SelectMode] is [SelectMode::Disabled].
     pub fn update_selection_based_on_caret_movement(
         &self,
         editor_buffer: &mut EditorBuffer,
-        previous_caret_display_pos: Position,
-        current_caret_display_pos: Position,
+        maybe_previous_caret_display_pos: Option<Position>,
+        maybe_current_caret_display_pos: Option<Position>,
     ) -> Option<()> {
-        if let SelectMode::Enabled = self {
-            EditorBufferApi::update_selection_based_on_caret_movement(
-                editor_buffer,
-                previous_caret_display_pos,
-                current_caret_display_pos,
-            );
-        }
+        match self {
+            SelectMode::Enabled => {
+                let previous = maybe_previous_caret_display_pos?;
+                let current = maybe_current_caret_display_pos?;
 
+                EditorBufferApi::update_selection_based_on_caret_movement(
+                    editor_buffer,
+                    previous,
+                    current,
+                )
+            }
+            SelectMode::Disabled => {
+                editor_buffer.clear_selection();
+            }
+        }
         None
     }
 }
@@ -542,8 +555,8 @@ mod caret_mut {
             // This is only runs if select_mode is enabled.
             select_mode.update_selection_based_on_caret_movement(
                 editor_buffer,
-                maybe_caret_display_previous_pos?,
-                maybe_caret_display_current_pos?,
+                maybe_caret_display_previous_pos,
+                maybe_caret_display_current_pos,
             )
         }
 
@@ -581,8 +594,8 @@ mod caret_mut {
             // This is only runs if select_mode is enabled.
             select_mode.update_selection_based_on_caret_movement(
                 editor_buffer,
-                maybe_caret_display_previous_pos?,
-                maybe_caret_display_current_pos?,
+                maybe_caret_display_previous_pos,
+                maybe_caret_display_current_pos,
             )
         }
     }
@@ -658,8 +671,8 @@ mod caret_mut {
         // This is only runs if select_mode is enabled.
         select_mode.update_selection_based_on_caret_movement(
             editor_buffer,
-            maybe_caret_display_previous_pos?,
-            maybe_caret_display_current_pos?,
+            maybe_caret_display_previous_pos,
+            maybe_caret_display_current_pos,
         )
     }
 
