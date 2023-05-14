@@ -54,7 +54,7 @@ mod test_config_options {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -71,7 +71,7 @@ mod test_config_options {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -109,7 +109,7 @@ mod test_config_options {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -126,7 +126,7 @@ mod test_config_options {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -170,7 +170,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -194,7 +194,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -219,7 +219,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(buffer.get_lines().len(), 2);
         assert_eq2!(
@@ -243,7 +243,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(buffer.get_lines().len(), 1);
         assert_eq2!(
@@ -278,7 +278,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -299,7 +299,7 @@ mod test_editor_ops {
             vec![EditorEvent::Backspace],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -319,7 +319,7 @@ mod test_editor_ops {
             vec![EditorEvent::Backspace],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -341,7 +341,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -353,7 +353,7 @@ mod test_editor_ops {
             vec![EditorEvent::Backspace],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(buffer.get_lines().len(), 1);
         assert_eq2!(
@@ -378,7 +378,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -392,7 +392,7 @@ mod test_editor_ops {
             EditorEvent::Backspace,
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert::line_at_caret(&buffer, &engine, "abcab");
     }
@@ -418,7 +418,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -437,7 +437,7 @@ mod test_editor_ops {
             vec![EditorEvent::MoveCaret(CaretDirection::Up)],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -466,7 +466,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -489,7 +489,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -508,7 +508,7 @@ mod test_editor_ops {
             vec![EditorEvent::MoveCaret(CaretDirection::Down)],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -541,7 +541,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -567,7 +567,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -581,7 +581,7 @@ mod test_editor_ops {
             vec![EditorEvent::MoveCaret(CaretDirection::Up)],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -595,7 +595,7 @@ mod test_editor_ops {
             vec![EditorEvent::MoveCaret(CaretDirection::Up)],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -613,7 +613,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -638,7 +638,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -659,7 +659,7 @@ mod test_editor_ops {
             vec![EditorEvent::MoveCaret(CaretDirection::Down)],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -695,7 +695,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('a')],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert::none_is_at_caret(&buffer, &engine);
         assert_eq2!(
@@ -716,7 +716,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertNewLine],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(buffer.get_lines().len(), 2);
         assert::none_is_at_caret(&buffer, &engine);
@@ -738,7 +738,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('a')],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
 
         // Move caret left.
@@ -754,7 +754,7 @@ mod test_editor_ops {
             vec![EditorEvent::MoveCaret(CaretDirection::Left)],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert::str_is_at_caret(&buffer, &engine, "a");
 
@@ -772,7 +772,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertNewLine],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(buffer.get_lines().len(), 3);
         assert::str_is_at_caret(&buffer, &engine, "a");
@@ -798,7 +798,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
 
         assert::none_is_at_caret(&buffer, &engine);
@@ -827,7 +827,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert::str_is_at_caret(&buffer, &engine, "b");
         assert_eq2!(
@@ -855,7 +855,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(buffer.get_lines().len(), 5);
         assert_eq2!(
@@ -881,7 +881,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('a')],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert::none_is_at_caret(&buffer, &engine);
 
@@ -900,7 +900,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert::str_is_at_caret(&buffer, &engine, "a");
 
@@ -916,7 +916,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('1')],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             EditorEngineInternalApi::line_at_caret_to_string(&buffer, &engine)
@@ -938,7 +938,7 @@ mod test_editor_ops {
             vec![EditorEvent::MoveCaret(CaretDirection::Left)],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert::str_is_at_caret(&buffer, &engine, "1");
 
@@ -954,7 +954,7 @@ mod test_editor_ops {
             vec![EditorEvent::MoveCaret(CaretDirection::Right)],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert::str_is_at_caret(&buffer, &engine, "a");
 
@@ -970,7 +970,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('2')],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert::str_is_at_caret(&buffer, &engine, "a");
         assert_eq2!(
@@ -995,7 +995,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert::none_is_at_caret(&buffer, &engine);
         assert_eq2!(
@@ -1019,7 +1019,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1045,7 +1045,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1065,7 +1065,7 @@ mod test_editor_ops {
             vec![EditorEvent::MoveCaret(CaretDirection::Right)],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1090,7 +1090,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1110,7 +1110,7 @@ mod test_editor_ops {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
-        // Move caret to col: 0, row: 0. Insert "a".
+        // Move caret to col: FlexBoxId::from(0), row: 0. Insert "a".
         // `this` should look like:
         // R ┌──────────┐
         // 0 ▸a░        │
@@ -1126,7 +1126,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('a')],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(*buffer.get_lines(), vec![UnicodeString::from("a")]);
         assert_eq2!(
@@ -1134,7 +1134,7 @@ mod test_editor_ops {
             position!(col_index: 1, row_index: 0)
         );
 
-        // Move caret to col: 0, row: 1. Insert "b".
+        // Move caret to col: FlexBoxId::from(0), row: 1. Insert "b".
         // `this` should look like:
         // R ┌──────────┐
         // 0 │a         │
@@ -1151,7 +1151,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('b')],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             *buffer.get_lines(),
@@ -1162,7 +1162,7 @@ mod test_editor_ops {
             position!(col_index: 1, row_index: 1)
         );
 
-        // Move caret to col: 0, row: 3. Insert "😀" (unicode width = 2).
+        // Move caret to col: FlexBoxId::from(0), row: 3. Insert "😀" (unicode width = 2).
         // `this` should look like:
         // R ┌──────────┐
         // 0 │a         │
@@ -1181,7 +1181,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             *buffer.get_lines(),
@@ -1212,7 +1212,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertChar('d')],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             *buffer.get_lines(),
@@ -1243,7 +1243,7 @@ mod test_editor_ops {
             vec![EditorEvent::InsertString("🙏🏽".into())],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             *buffer.get_lines(),
@@ -1280,7 +1280,7 @@ mod test_editor_ops {
             ],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1294,7 +1294,7 @@ mod test_editor_ops {
             vec![EditorEvent::End],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1320,7 +1320,7 @@ mod test_editor_ops {
                 ],
                 &mock_real_objects_for_editor::make_shared_global_data(None),
                 &mut mock_real_objects_for_editor::make_component_registry(),
-                0,
+                FlexBoxId::from(0),
             );
             count -= 1;
         }
@@ -1333,7 +1333,7 @@ mod test_editor_ops {
             vec![EditorEvent::PageUp],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1347,7 +1347,7 @@ mod test_editor_ops {
             vec![EditorEvent::PageUp],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1361,7 +1361,7 @@ mod test_editor_ops {
             vec![EditorEvent::PageUp],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1375,7 +1375,7 @@ mod test_editor_ops {
             vec![EditorEvent::PageDown],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
 
         assert_eq2!(
@@ -1390,7 +1390,7 @@ mod test_editor_ops {
             vec![EditorEvent::PageDown],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1404,7 +1404,7 @@ mod test_editor_ops {
             vec![EditorEvent::PageDown],
             &mock_real_objects_for_editor::make_shared_global_data(None),
             &mut mock_real_objects_for_editor::make_component_registry(),
-            0,
+            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1429,7 +1429,7 @@ mod test_editor_ops {
                 ],
                 &mock_real_objects_for_editor::make_shared_global_data(None),
                 &mut mock_real_objects_for_editor::make_component_registry(),
-                0,
+                FlexBoxId::from(0),
             );
         }
         assert_eq2!(buffer.len(), ch!(max_lines + 1)); /* One empty line after content */
@@ -1442,7 +1442,7 @@ mod test_editor_ops {
                 vec![EditorEvent::MoveCaret(CaretDirection::Up)],
                 &mock_real_objects_for_editor::make_shared_global_data(None),
                 &mut mock_real_objects_for_editor::make_component_registry(),
-                0,
+                FlexBoxId::from(0),
             );
         }
         assert_eq2!(
@@ -1466,7 +1466,7 @@ mod test_editor_ops {
                 vec![EditorEvent::MoveCaret(CaretDirection::Down)],
                 &mock_real_objects_for_editor::make_shared_global_data(None),
                 &mut mock_real_objects_for_editor::make_component_registry(),
-                0,
+                FlexBoxId::from(0),
             );
         }
         assert_eq2!(
@@ -1497,7 +1497,7 @@ mod test_editor_ops {
                 vec![EditorEvent::InsertString(format!("{count}"))],
                 &mock_real_objects_for_editor::make_shared_global_data(None),
                 &mut mock_real_objects_for_editor::make_component_registry(),
-                0,
+                FlexBoxId::from(0),
             );
         }
         assert_eq2!(buffer.len(), ch!(1));
@@ -1522,7 +1522,7 @@ mod test_editor_ops {
                 vec![EditorEvent::MoveCaret(CaretDirection::Left)],
                 &mock_real_objects_for_editor::make_shared_global_data(None),
                 &mut mock_real_objects_for_editor::make_component_registry(),
-                0,
+                FlexBoxId::from(0),
             );
         }
         assert_eq2!(
@@ -1546,7 +1546,7 @@ mod test_editor_ops {
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)],
                 &mock_real_objects_for_editor::make_shared_global_data(None),
                 &mut mock_real_objects_for_editor::make_component_registry(),
-                0,
+                FlexBoxId::from(0),
             );
         }
         assert_eq2!(
@@ -1613,7 +1613,7 @@ mod test_editor_ops {
                     vec![EditorEvent::MoveCaret(CaretDirection::Right)],
                     &shared_global_data,
                     &mut mock_real_objects_for_editor::make_component_registry(),
-                    0,
+                    FlexBoxId::from(0),
                 );
             }
             assert_eq2!(
@@ -1640,7 +1640,7 @@ mod test_editor_ops {
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)],
                 &shared_global_data,
                 &mut mock_real_objects_for_editor::make_component_registry(),
-                0,
+                FlexBoxId::from(0),
             );
             assert_eq2!(
                 buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1665,7 +1665,7 @@ mod test_editor_ops {
                     vec![EditorEvent::MoveCaret(CaretDirection::Right)],
                     &shared_global_data,
                     &mut mock_real_objects_for_editor::make_component_registry(),
-                    0,
+                    FlexBoxId::from(0),
                 );
             }
             assert_eq2!(
@@ -1697,7 +1697,7 @@ mod test_editor_ops {
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)],
                 &shared_global_data,
                 &mut mock_real_objects_for_editor::make_component_registry(),
-                0,
+                FlexBoxId::from(0),
             );
             assert_eq2!(
                 buffer.get_caret(CaretKind::Raw),
@@ -1729,7 +1729,7 @@ mod test_editor_ops {
                     vec![EditorEvent::MoveCaret(CaretDirection::Right)],
                     &shared_global_data,
                     &mut mock_real_objects_for_editor::make_component_registry(),
-                    0,
+                    FlexBoxId::from(0),
                 );
             }
             // Start of viewport.
@@ -1747,7 +1747,7 @@ mod test_editor_ops {
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)],
                 &shared_global_data,
                 &mut mock_real_objects_for_editor::make_component_registry(),
-                0,
+                FlexBoxId::from(0),
             );
             // Start of viewport.
             let result = buffer.get_lines()[0]

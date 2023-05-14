@@ -146,28 +146,28 @@ mod has_focus_tests {
         assert!(has_focus.is_empty());
         assert!(!has_focus.is_set());
 
-        has_focus.set_id(1);
+        has_focus.set_id(FlexBoxId::from(1));
         assert!(!has_focus.is_empty());
         assert!(has_focus.is_set());
-        assert_eq2!(has_focus.get_id(), Some(1));
-        assert!(has_focus.does_id_have_focus(1));
+        assert_eq2!(has_focus.get_id(), Some(FlexBoxId::from(1)));
+        assert!(has_focus.does_id_have_focus(FlexBoxId::from(1)));
         let current_box_1 = FlexBox {
-            id: 1,
+            id: FlexBoxId::from(1),
             ..Default::default()
         };
         assert!(has_focus.does_current_box_have_focus(&current_box_1));
 
-        has_focus.set_id(2);
+        has_focus.set_id(FlexBoxId::from(2));
         assert!(!has_focus.is_empty());
         assert!(has_focus.is_set());
-        assert_eq2!(has_focus.get_id(), Some(2));
-        assert!(has_focus.does_id_have_focus(2));
+        assert_eq2!(has_focus.get_id(), Some(FlexBoxId::from(2)));
+        assert!(has_focus.does_id_have_focus(FlexBoxId::from(2)));
         let current_box_2 = FlexBox {
-            id: 2,
+            id: FlexBoxId::from(2),
             ..Default::default()
         };
         assert!(has_focus.does_current_box_have_focus(&current_box_2));
-        assert!(!has_focus.does_id_have_focus(1));
+        assert!(!has_focus.does_id_have_focus(FlexBoxId::from(1)));
         assert!(!has_focus.does_current_box_have_focus(&current_box_1));
     }
 
@@ -177,7 +177,7 @@ mod has_focus_tests {
         assert!(has_focus.is_empty());
         assert!(!has_focus.is_set());
 
-        let my_err_box = has_focus.try_set_modal_id(1).err().unwrap();
+        let my_err_box = has_focus.try_set_modal_id(FlexBoxId::from(1)).err().unwrap();
         assert_eq2!(my_err_box.is::<CommonError>(), true);
 
         let my_err = my_err_box.downcast_ref::<CommonError>().unwrap();
@@ -188,7 +188,7 @@ mod has_focus_tests {
         );
 
         assert!(!has_focus.is_modal_set());
-        assert!(!has_focus.is_modal_id(1));
+        assert!(!has_focus.is_modal_id(FlexBoxId::from(1)));
         has_focus.reset_modal_id();
     }
 
@@ -198,25 +198,25 @@ mod has_focus_tests {
         assert!(has_focus.is_empty());
         assert!(!has_focus.is_set());
 
-        has_focus.set_id(1);
-        assert!(has_focus.try_set_modal_id(2).is_ok());
+        has_focus.set_id(FlexBoxId::from(1));
+        assert!(has_focus.try_set_modal_id(FlexBoxId::from(2)).is_ok());
 
         assert!(has_focus.is_modal_set());
-        assert!(has_focus.is_modal_id(2));
-        assert!(!has_focus.is_modal_id(1));
-        assert_eq2!(has_focus.get_id(), Some(2));
+        assert!(has_focus.is_modal_id(FlexBoxId::from(2)));
+        assert!(!has_focus.is_modal_id(FlexBoxId::from(1)));
+        assert_eq2!(has_focus.get_id(), Some(FlexBoxId::from(2)));
 
-        assert!(has_focus.try_set_modal_id(3).is_err());
+        assert!(has_focus.try_set_modal_id(FlexBoxId::from(3)).is_err());
         assert!(has_focus.is_modal_set());
-        assert!(has_focus.is_modal_id(2));
+        assert!(has_focus.is_modal_id(FlexBoxId::from(2)));
 
         has_focus.reset_modal_id();
         assert!(!has_focus.is_modal_set());
-        assert!(!has_focus.is_modal_id(1));
-        assert_eq2!(has_focus.get_id(), Some(1));
-        assert_eq2!(has_focus.does_id_have_focus(1), true);
+        assert!(!has_focus.is_modal_id(FlexBoxId::from(1)));
+        assert_eq2!(has_focus.get_id(), Some(FlexBoxId::from(1)));
+        assert_eq2!(has_focus.does_id_have_focus(FlexBoxId::from(1)), true);
         let current_box_1 = FlexBox {
-            id: 1,
+            id: FlexBoxId::from(1),
             ..Default::default()
         };
         assert!(has_focus.does_current_box_have_focus(&current_box_1));

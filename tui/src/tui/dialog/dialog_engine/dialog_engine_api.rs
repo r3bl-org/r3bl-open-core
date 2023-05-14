@@ -782,7 +782,7 @@ mod test_dialog_engine_api_render_engine {
 
     #[tokio::test]
     async fn render_engine() {
-        let self_id: FlexBoxId = 0;
+        let self_id: FlexBoxId = FlexBoxId::from(0);
         let window_size = &size!( col_count: 70, row_count: 15 );
         let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
@@ -827,7 +827,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
     fn make_flex_box_for_dialog_simple_display_size_too_small() {
         let surface = Surface::default();
         let window_size = Size::default();
-        let dialog_id: FlexBoxId = 0;
+        let dialog_id: FlexBoxId = FlexBoxId::from(0);
 
         // The window size is too small and will result in this error.
         // Err(
@@ -870,7 +870,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
     fn make_flex_box_for_dialog_autocomplete_display_size_too_small() {
         let surface = Surface::default();
         let window_size = Size::default();
-        let dialog_id: FlexBoxId = 0;
+        let dialog_id: FlexBoxId = FlexBoxId::from(0);
 
         // The window size is too small and will result in this error.
         // Err(
@@ -916,7 +916,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
             ..Default::default()
         };
         let window_size = size!( col_count: 70, row_count: 15 );
-        let self_id: FlexBoxId = 0;
+        let self_id: FlexBoxId = FlexBoxId::from(0);
 
         // The dialog box should be centered inside the surface.
         let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
@@ -954,7 +954,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
             ..Default::default()
         };
         let window_size = size!( col_count: 70, row_count: 15 );
-        let self_id: FlexBoxId = 0;
+        let self_id: FlexBoxId = FlexBoxId::from(0);
 
         // The dialog box should be centered inside the surface.
         let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
@@ -991,7 +991,7 @@ mod test_dialog_engine_api_apply_event {
 
     #[tokio::test]
     async fn apply_event_esc() {
-        let self_id: FlexBoxId = 0;
+        let self_id: FlexBoxId = FlexBoxId::from(0);
         let window_size = &size!( col_count: 70, row_count: 15 );
         let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
@@ -1026,7 +1026,7 @@ mod test_dialog_engine_api_apply_event {
 
     #[tokio::test]
     async fn apply_event_enter() {
-        let self_id: FlexBoxId = 0;
+        let self_id: FlexBoxId = FlexBoxId::from(0);
         let window_size = &size!( col_count: 70, row_count: 15 );
         let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
@@ -1066,7 +1066,7 @@ mod test_dialog_engine_api_apply_event {
 
     #[tokio::test]
     async fn apply_event_other_key() {
-        let self_id: FlexBoxId = 0;
+        let self_id: FlexBoxId = FlexBoxId::from(0);
         let window_size = &size!( col_count: 70, row_count: 15 );
         let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();

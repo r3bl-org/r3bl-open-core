@@ -186,7 +186,7 @@ mod detect_modal_dialog_activation_from_input_event {
                 // Reset the dialog component prior to activating / showing it.
                 ComponentRegistry::reset_component(
                     &mut self.component_registry,
-                    ComponentId::SimpleDialog as u8,
+                    FlexBoxId::from(ComponentId::SimpleDialog as u8),
                 )
                 .await;
                 return match activate_simple_modal(self, args) {
@@ -217,7 +217,7 @@ mod detect_modal_dialog_activation_from_input_event {
                 // Reset the dialog component prior to activating / showing it.
                 ComponentRegistry::reset_component(
                     &mut self.component_registry,
-                    ComponentId::AutocompleteDialog as u8,
+                    FlexBoxId::from(ComponentId::AutocompleteDialog as u8),
                 )
                 .await;
                 return match activate_autocomplete_modal(self, args) {
@@ -247,7 +247,7 @@ mod detect_modal_dialog_activation_from_input_event {
                 let title = "Simple Modal Dialog Title";
                 let text = {
                     if let Some(editor_buffer) =
-                        args.state.get_editor_buffer(ComponentId::Editor as u8)
+                        args.state.get_editor_buffer(FlexBoxId::from(ComponentId::Editor as u8))
                     {
                         editor_buffer.get_as_string()
                     } else {
@@ -259,14 +259,14 @@ mod detect_modal_dialog_activation_from_input_event {
                 // render.
                 this.component_registry
                     .has_focus
-                    .try_set_modal_id(ComponentId::SimpleDialog as u8)?;
+                    .try_set_modal_id(FlexBoxId::from(ComponentId::SimpleDialog as u8))?;
 
                 // Change the state so that it will trigger a render. This will show the title &
                 // text on the next render.
                 spawn_dispatch_action!(
                     args.shared_store,
                     Action::SimpleDialogComponentInitializeFocused(
-                        ComponentId::SimpleDialog as u8,
+                        FlexBoxId::from(ComponentId::SimpleDialog as u8),
                         title.to_string(),
                         text.to_string()
                     )
@@ -291,7 +291,7 @@ mod detect_modal_dialog_activation_from_input_event {
                 let title = "Autocomplete Modal Dialog Title";
                 let text = {
                     if let Some(editor_buffer) =
-                        args.state.get_editor_buffer(ComponentId::Editor as u8)
+                        args.state.get_editor_buffer(FlexBoxId::from(ComponentId::Editor as u8))
                     {
                         editor_buffer.get_as_string()
                     } else {
@@ -303,14 +303,14 @@ mod detect_modal_dialog_activation_from_input_event {
                 // render.
                 this.component_registry
                     .has_focus
-                    .try_set_modal_id(ComponentId::AutocompleteDialog as u8)?;
+                    .try_set_modal_id(FlexBoxId::from(ComponentId::AutocompleteDialog as u8))?;
 
                 // Change the state so that it will trigger a render. This will show the title &
                 // text on the next render.
                 spawn_dispatch_action!(
                     args.shared_store,
                     Action::AutocompleteDialogComponentInitializeFocused(
-                        ComponentId::AutocompleteDialog as u8,
+                        FlexBoxId::from(ComponentId::AutocompleteDialog as u8),
                         title.to_string(),
                         text.to_string()
                     )
@@ -354,14 +354,14 @@ mod perform_layout {
                 {
                     box_start! (
                         in:                     surface,
-                        id:                     ComponentId::Editor as u8,
+                        id:                     FlexBoxId::from(ComponentId::Editor as u8),
                         dir:                    LayoutDirection::Vertical,
                         requested_size_percent: requested_size_percent!(width: 100, height: 100),
                         styles:                 [EditorStyleName::Default as u8]
                     );
                     render_component_in_current_box!(
                         in:                 surface,
-                        component_id:       ComponentId::Editor as u8,
+                        component_id:       FlexBoxId::from(ComponentId::Editor as u8),
                         from:               self.0.component_registry,
                         state:              state,
                         shared_store:       shared_store,
@@ -377,12 +377,12 @@ mod perform_layout {
                     .0
                     .component_registry
                     .has_focus
-                    .is_modal_id(ComponentId::SimpleDialog as u8)
+                    .is_modal_id(FlexBoxId::from(ComponentId::SimpleDialog as u8))
                 {
                     render_component_in_given_box! {
                       in:                 surface,
                       box:                FlexBox::default(), /* This is not used as the modal breaks out of its box. */
-                      component_id:       ComponentId::SimpleDialog as u8,
+                      component_id:       FlexBoxId::from(ComponentId::SimpleDialog as u8),
                       from:               self.0.component_registry,
                       state:              state,
                       shared_store:       shared_store,
@@ -397,12 +397,12 @@ mod perform_layout {
                     .0
                     .component_registry
                     .has_focus
-                    .is_modal_id(ComponentId::AutocompleteDialog as u8)
+                    .is_modal_id(FlexBoxId::from(ComponentId::AutocompleteDialog as u8))
                 {
                     render_component_in_given_box! {
                       in:                 surface,
                       box:                FlexBox::default(), /* This is not used as the modal breaks out of its box. */
-                      component_id:       ComponentId::AutocompleteDialog as u8,
+                      component_id:       FlexBoxId::from(ComponentId::AutocompleteDialog as u8),
                       from:               self.0.component_registry,
                       state:              state,
                       shared_store:       shared_store,
@@ -428,7 +428,7 @@ mod populate_component_registry {
         // Switch focus to the editor component if focus is not set.
         this.component_registry
             .has_focus
-            .set_id(ComponentId::Editor as u8);
+            .set_id(FlexBoxId::from(ComponentId::Editor as u8));
         call_if_true!(DEBUG_TUI_MOD, {
             {
                 let msg = format!(
@@ -462,7 +462,7 @@ mod populate_component_registry {
 
         let shared_dialog_component = {
             let it = DialogComponent::new_shared(
-                ComponentId::AutocompleteDialog as u8,
+                FlexBoxId::from(ComponentId::AutocompleteDialog as u8),
                 dialog_options,
                 editor_options,
                 on_dialog_press_handler,
@@ -478,7 +478,7 @@ mod populate_component_registry {
                         spawn_dispatch_action!(
                             shared_store,
                             Action::AutocompleteDialogComponentInitializeFocused(
-                                ComponentId::AutocompleteDialog as u8,
+                                FlexBoxId::from(ComponentId::AutocompleteDialog as u8),
                                 "Yes".to_string(),
                                 text
                             )
@@ -488,7 +488,7 @@ mod populate_component_registry {
                         spawn_dispatch_action!(
                             shared_store,
                             Action::AutocompleteDialogComponentInitializeFocused(
-                                ComponentId::AutocompleteDialog as u8,
+                                FlexBoxId::from(ComponentId::AutocompleteDialog as u8),
                                 "No".to_string(),
                                 "".to_string()
                             )
@@ -504,7 +504,7 @@ mod populate_component_registry {
                 spawn_dispatch_action!(
                     shared_store,
                     Action::AutocompleteDialogComponentUpdateContent(
-                        ComponentId::AutocompleteDialog as u8,
+                        FlexBoxId::from(ComponentId::AutocompleteDialog as u8),
                         editor_buffer
                     )
                 );
@@ -514,7 +514,7 @@ mod populate_component_registry {
         };
 
         this.component_registry.put(
-            ComponentId::AutocompleteDialog as u8,
+            FlexBoxId::from(ComponentId::AutocompleteDialog as u8),
             shared_dialog_component,
         );
 
@@ -548,7 +548,7 @@ mod populate_component_registry {
 
         let shared_dialog_component = {
             let it = DialogComponent::new_shared(
-                ComponentId::SimpleDialog as u8,
+                FlexBoxId::from(ComponentId::SimpleDialog as u8),
                 dialog_options,
                 editor_options,
                 on_dialog_press_handler,
@@ -564,7 +564,7 @@ mod populate_component_registry {
                         spawn_dispatch_action!(
                             shared_store,
                             Action::SimpleDialogComponentInitializeFocused(
-                                ComponentId::SimpleDialog as u8,
+                                FlexBoxId::from(ComponentId::SimpleDialog as u8),
                                 "Yes".to_string(),
                                 text
                             )
@@ -574,7 +574,7 @@ mod populate_component_registry {
                         spawn_dispatch_action!(
                             shared_store,
                             Action::SimpleDialogComponentInitializeFocused(
-                                ComponentId::SimpleDialog as u8,
+                                FlexBoxId::from(ComponentId::SimpleDialog as u8),
                                 "No".to_string(),
                                 "".to_string()
                             )
@@ -590,7 +590,7 @@ mod populate_component_registry {
                 spawn_dispatch_action!(
                     shared_store,
                     Action::SimpleDialogComponentUpdateContent(
-                        ComponentId::SimpleDialog as u8,
+                        FlexBoxId::from(ComponentId::SimpleDialog as u8),
                         editor_buffer
                     )
                 );
@@ -600,7 +600,7 @@ mod populate_component_registry {
         };
 
         this.component_registry
-            .put(ComponentId::SimpleDialog as u8, shared_dialog_component);
+            .put(FlexBoxId::from(ComponentId::SimpleDialog as u8), shared_dialog_component);
 
         call_if_true!(DEBUG_TUI_MOD, {
             let msg = format!(
@@ -613,7 +613,7 @@ mod populate_component_registry {
 
     /// Insert editor component into registry if it's not already there.
     fn insert_editor_component(this: &mut AppWithLayout) {
-        let id = ComponentId::Editor as u8;
+        let id = FlexBoxId::from(ComponentId::Editor as u8);
         let shared_editor_component = {
             fn on_buffer_change(
                 shared_store: &SharedStore<State, Action>,

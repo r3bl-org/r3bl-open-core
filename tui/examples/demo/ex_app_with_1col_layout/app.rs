@@ -147,14 +147,14 @@ mod perform_layout {
                 let col_id = Id::Col as u8;
                 box_start! (
                     in:                     surface,
-                    id:                     col_id,
+                    id:                     FlexBoxId::from(col_id),
                     dir:                    LayoutDirection::Vertical,
                     requested_size_percent: requested_size_percent!(width: 100, height: 100),
                     styles:                 [col_id]
                 );
                 render_component_in_current_box!(
                     in:                 surface,
-                    component_id:       col_id,
+                    component_id:       FlexBoxId::from(col_id),
                     from:               self.0.component_registry,
                     state:              state,
                     shared_store:       shared_store,
@@ -174,15 +174,15 @@ mod populate_component_registry {
         pub fn init_component_registry(&mut self) {
             // Construct Col.
             let col_id = Id::Col as u8;
-            if self.component_registry.does_not_contain(col_id) {
-                let _component = ColumnRenderComponent::new(col_id);
+            if self.component_registry.does_not_contain(FlexBoxId::from(col_id)) {
+                let _component = ColumnRenderComponent::new(FlexBoxId::from(col_id));
                 let shared_component_r1 = Arc::new(RwLock::new(_component));
-                self.component_registry.put(col_id, shared_component_r1);
+                self.component_registry.put(FlexBoxId::from(col_id), shared_component_r1);
             }
 
             // Init has focus.
             if self.component_registry.has_focus.get_id().is_none() {
-                self.component_registry.has_focus.set_id(col_id);
+                self.component_registry.has_focus.set_id(FlexBoxId::from(col_id));
             }
         }
     }
