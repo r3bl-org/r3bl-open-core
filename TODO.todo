@@ -29,6 +29,7 @@ editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/86):
   ☐ implement cut
   ☐ implement paste
   ☐ implement delete
+  ☐ add tests
 
 docs update (https://github.com/r3bl-org/r3bl_rs_utils/issues/102):
   ✔ clean up threading docs (in code) @done(23-05-01 15:01)

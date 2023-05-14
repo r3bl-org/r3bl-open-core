@@ -81,7 +81,7 @@ impl EditorEngineApi {
         }
 
         if let Ok(editor_event) = EditorEvent::try_from(input_event) {
-            // AA: editor buffer gets cloned here
+            // REVIEW: editor buffer gets cloned here
             let mut new_editor_buffer = editor_buffer.clone();
             EditorEvent::apply_editor_event(
                 editor_engine,
@@ -190,6 +190,7 @@ impl EditorEngineApi {
         );
     }
 
+    // DONE: implement render_selection
     fn render_selection<S, A>(
         render_args: &RenderArgs<'_, S, A>,
         render_ops: &mut RenderOps,
@@ -203,66 +204,58 @@ impl EditorEngineApi {
             ..
         } = render_args;
 
-        // TODO: add support for rendering vec_selection_per_line (selection)
-        if let Some(selection) = editor_buffer.get_maybe_selection_map() {
-            for (row_index, range_of_display_col_indices) in selection {
-                let row_index = *row_index;
-                let lines = editor_buffer.get_lines();
+        for (row_index, range_of_display_col_indices) in editor_buffer.get_selection_map()
+        {
+            let row_index = *row_index;
+            let lines = editor_buffer.get_lines();
 
-                if let Some(line) = lines.get(ch!(@to_usize *row_index)) {
-                    let scr_adj_start_col_index =
-                        range_of_display_col_indices.start_display_col_index;
+            if let Some(line) = lines.get(ch!(@to_usize *row_index)) {
+                let scr_adj_start_col_index =
+                    range_of_display_col_indices.start_display_col_index;
 
-                    let scr_adj_end_col_index =
-                        range_of_display_col_indices.end_display_col_index;
+                let scr_adj_end_col_index =
+                    range_of_display_col_indices.end_display_col_index;
 
-                    let selection_str_slice = {
-                        let it = line.clip_to_range(
-                            scr_adj_start_col_index,
-                            scr_adj_end_col_index,
-                        );
+                let selection_str_slice = {
+                    let it = line
+                        .clip_to_range(scr_adj_start_col_index, scr_adj_end_col_index);
+                    if it.is_empty() {
+                        continue;
+                    };
+                    it
+                };
 
-                        // DBG: remove
-                        log_debug(format!("\n🚀🚀🚀 \n\tselection_str_slice: {:?}", it));
-
-                        if it.is_empty() {
-                            continue;
-                        };
-                        it
+                let position = {
+                    let raw_row_index = {
+                        let row_scroll_offset =
+                            editor_buffer.get_scroll_offset().row_index;
+                        row_index - row_scroll_offset
                     };
 
-                    let position = {
-                        let raw_row_index = {
-                            let row_scroll_offset =
-                                editor_buffer.get_scroll_offset().row_index;
-                            row_index - row_scroll_offset
-                        };
-
-                        let raw_col_index = {
-                            let col_scroll_offset =
-                                editor_buffer.get_scroll_offset().col_index;
-                            scr_adj_start_col_index - col_scroll_offset
-                        };
-
-                        let it =
-                            position!(col_index: raw_col_index, row_index: raw_row_index);
-                        it
+                    let raw_col_index = {
+                        let col_scroll_offset =
+                            editor_buffer.get_scroll_offset().col_index;
+                        scr_adj_start_col_index - col_scroll_offset
                     };
 
-                    render_ops.push(RenderOp::MoveCursorPositionRelTo(
-                        editor_engine.current_box.style_adjusted_origin_pos,
-                        position,
-                    ));
+                    let it =
+                        position!(col_index: raw_col_index, row_index: raw_row_index);
+                    it
+                };
 
-                    render_ops.push(RenderOp::ApplyColors(Some(get_selection_style())));
+                render_ops.push(RenderOp::MoveCursorPositionRelTo(
+                    editor_engine.current_box.style_adjusted_origin_pos,
+                    position,
+                ));
 
-                    render_ops.push(RenderOp::PaintTextWithAttributes(
-                        selection_str_slice.to_string(),
-                        None,
-                    ));
+                render_ops.push(RenderOp::ApplyColors(Some(get_selection_style())));
 
-                    render_ops.push(RenderOp::ResetColor);
-                }
+                render_ops.push(RenderOp::PaintTextWithAttributes(
+                    selection_str_slice.to_string(),
+                    None,
+                ));
+
+                render_ops.push(RenderOp::ResetColor);
             }
         }
     }
