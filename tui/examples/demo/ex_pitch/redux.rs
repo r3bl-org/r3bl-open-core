@@ -96,7 +96,7 @@ mod reducer_impl {
                 state.current_slide_index += 1;
                 state
                     .editor_buffers
-                    .entry(ComponentId::Editor as u8)
+                    .entry(FlexBoxId::from(ComponentId::Editor as u8))
                     .and_modify(|it| {
                         it.set_lines(reducer_impl::get_slide_content(
                             state.current_slide_index,
@@ -110,7 +110,7 @@ mod reducer_impl {
                 state.current_slide_index -= 1;
                 state
                     .editor_buffers
-                    .entry(ComponentId::Editor as u8)
+                    .entry(FlexBoxId::from(ComponentId::Editor as u8))
                     .and_modify(|it| {
                         it.set_lines(reducer_impl::get_slide_content(
                             state.current_slide_index,
@@ -146,7 +146,7 @@ mod reducer_impl {
         };
 
         let mut editor_buffers = HashMap::new();
-        editor_buffers.insert(ComponentId::Editor as u8, editor_buffer);
+        editor_buffers.insert(FlexBoxId::from(ComponentId::Editor as u8), editor_buffer);
 
         State {
             editor_buffers,

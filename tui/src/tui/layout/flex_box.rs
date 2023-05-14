@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 use r3bl_rs_utils_core::*;
 use serde::{Deserialize, Serialize};
@@ -33,7 +33,34 @@ pub enum LayoutDirection {
 
 /// This works w/ the [int-enum](https://crates.io/crates/int-enum) crate in order to
 /// allow for the definition of enums that are represented in memory as [u8]s.
-pub type FlexBoxId = u8;
+#[derive(Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+pub struct FlexBoxId(u8);
+
+mod flexboxid_impl {
+    use super::*;
+
+    impl From<u8> for FlexBoxId {
+        fn from(id: u8) -> Self { Self(id) }
+    }
+
+    impl FlexBoxId {
+        fn pretty_print(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "🔑┆id: {}┆", self.0)
+        }
+    }
+
+    impl Debug for FlexBoxId {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            self.pretty_print(f)
+        }
+    }
+
+    impl Display for FlexBoxId {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            self.pretty_print(f)
+        }
+    }
+}
 
 /// A box is a rectangle with a position and size. The direction of the box determines how
 /// it's contained elements are positioned.

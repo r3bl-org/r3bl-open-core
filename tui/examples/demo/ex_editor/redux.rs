@@ -136,7 +136,7 @@ mod reducer_impl {
     }
 
     pub fn get_initial_state() -> State {
-        let editor_buffers = {
+        let editor_buffers: HashMap<FlexBoxId, EditorBuffer> = {
             let editor_buffer = {
                 let mut editor_buffer =
                     EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
@@ -144,7 +144,7 @@ mod reducer_impl {
                 editor_buffer
             };
             let mut it = HashMap::new();
-            it.insert(ComponentId::Editor as u8, editor_buffer);
+            it.insert(FlexBoxId::from(ComponentId::Editor as u8), editor_buffer);
             it
         };
 

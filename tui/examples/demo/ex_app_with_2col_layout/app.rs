@@ -154,7 +154,7 @@ mod perform_layout {
                 // Container.
                 box_start!(
                     in: surface,
-                    id: Id::Container as u8,
+                    id: FlexBoxId::from(Id::Container as u8),
                     dir: LayoutDirection::Horizontal,
                     requested_size_percent: requested_size_percent!(width: 100, height: 100),
                     styles:                 [Id::Container as u8],
@@ -164,14 +164,14 @@ mod perform_layout {
                 {
                     box_start!(
                       in:                     surface,
-                      id:                     Id::Col1 as u8,
+                      id:                     FlexBoxId::from(Id::Col1 as u8),
                       dir:                    LayoutDirection::Vertical,
                       requested_size_percent: requested_size_percent!(width: 50, height: 100),
                       styles:                 [Id::Col1 as u8],
                     );
                     render_component_in_current_box!(
                         in:                 surface,
-                        component_id:       Id::Col1 as u8,
+                        component_id:       FlexBoxId::from(Id::Col1 as u8),
                         from:               self.0.component_registry,
                         state:              state,
                         shared_store:       shared_store,
@@ -185,14 +185,14 @@ mod perform_layout {
                 {
                     box_start!(
                       in:                     surface,
-                      id:                     Id::Col2 as u8,
+                      id:                     FlexBoxId::from(Id::Col2 as u8),
                       dir:                    LayoutDirection::Vertical,
                       requested_size_percent: requested_size_percent!(width: 50, height: 100),
                       styles:                 [Id::Col2 as u8],
                     );
                     render_component_in_current_box!(
                         in:                 surface,
-                        component_id:       Id::Col2 as u8,
+                        component_id:       FlexBoxId::from(Id::Col2 as u8),
                         from:               self.0.component_registry,
                         state:              state,
                         shared_store:       shared_store,
@@ -255,9 +255,9 @@ mod handle_focus {
         fn switch_focus(&mut self, special_key: SpecialKey) {
             if let Some(_id) = self.component_registry.has_focus.get_id() {
                 if special_key == SpecialKey::Left {
-                    self.component_registry.has_focus.set_id(Id::Col1 as u8)
+                    self.component_registry.has_focus.set_id(FlexBoxId::from(Id::Col1 as u8))
                 } else {
-                    self.component_registry.has_focus.set_id(Id::Col2 as u8)
+                    self.component_registry.has_focus.set_id(FlexBoxId::from(Id::Col2 as u8))
                 }
             } else {
                 log_error("No focus id has been set, and it should be set!".to_string());
@@ -272,7 +272,7 @@ mod populate_component_registry {
     impl AppWithLayout {
         pub fn init_component_registry(&mut self) {
             // Construct COL_1_ID.
-            let col1_id = Id::Col1 as u8;
+            let col1_id = FlexBoxId::from(Id::Col1 as u8);
             if self.component_registry.does_not_contain(col1_id) {
                 let component = ColumnRenderComponent::new(col1_id);
                 let shared_component = Arc::new(RwLock::new(component));
@@ -280,7 +280,7 @@ mod populate_component_registry {
             }
 
             // Construct COL_2_ID.
-            let col2_id = Id::Col2 as u8;
+            let col2_id = FlexBoxId::from(Id::Col2 as u8);
             if self.component_registry.does_not_contain(col2_id) {
                 let component = ColumnRenderComponent::new(col2_id);
                 let shared_component = Arc::new(RwLock::new(component));

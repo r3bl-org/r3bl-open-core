@@ -243,14 +243,14 @@ mod perform_layout {
                 {
                     box_start! (
                         in:                     surface,
-                        id:                     ComponentId::Editor as u8,
+                        id:                     FlexBoxId::from(ComponentId::Editor as u8),
                         dir:                    LayoutDirection::Vertical,
                         requested_size_percent: requested_size_percent!(width: 100, height: 100),
                         styles:                 [EditorStyleName::Default as u8]
                     );
                     render_component_in_current_box!(
                         in:                 surface,
-                        component_id:       ComponentId::Editor as u8,
+                        component_id:       FlexBoxId::from(ComponentId::Editor as u8),
                         from:               self.0.component_registry,
                         state:              state,
                         shared_store:       shared_store,
@@ -273,7 +273,7 @@ mod populate_component_registry {
         // Switch focus to the editor component if focus is not set.
         this.component_registry
             .has_focus
-            .set_id(ComponentId::Editor as u8);
+            .set_id(FlexBoxId::from(ComponentId::Editor as u8));
         call_if_true!(DEBUG_TUI_MOD, {
             {
                 let msg = format!(
@@ -288,7 +288,7 @@ mod populate_component_registry {
 
     /// Insert editor component into registry if it's not already there.
     fn insert_editor_component(this: &mut AppWithLayout) {
-        let id = ComponentId::Editor as u8;
+        let id = FlexBoxId::from(ComponentId::Editor as u8);
         let shared_editor_component = {
             fn on_buffer_change(
                 shared_store: &SharedStore<State, Action>,
