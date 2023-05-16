@@ -159,8 +159,12 @@ use crate::*;
 /// that is used to lookup the syntax highlighting rules for the language in
 /// [find_syntax_by_extension[syntect::parsing::SyntaxSet::find_syntax_by_extension].
 ///
-/// ## `maybe_selection`
-/// TODO: add docs here
+/// ## `selection_map`
+///
+/// The [SelectionMap] is used to keep track of the selections in the buffer. Each entry
+/// in the map represents a row of text in the buffer.
+/// - The row index is the key.
+/// - The value is the [SelectionRange].
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
 pub struct EditorBuffer {
     lines: Vec<UnicodeString>,
@@ -217,6 +221,14 @@ pub mod access_and_mutate {
         pub fn is_empty(&self) -> bool { self.lines.is_empty() }
 
         pub fn len(&self) -> ChUnit { ch!(self.lines.len()) }
+
+        pub fn get_line_display_width(&self, row_index: ChUnit) -> ChUnit {
+            if let Some(line) = self.lines.get(ch!(@to_usize row_index)) {
+                ch!(line.display_width)
+            } else {
+                ch!(0)
+            }
+        }
 
         pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.lines }
 
@@ -286,11 +298,13 @@ pub mod access_and_mutate {
             /* lines */ &mut Vec<UnicodeString>,
             /* caret */ &mut Position,
             /* scroll_offset */ &mut ScrollOffset,
+            /* selection_map */ &mut SelectionMap,
         ) {
             (
                 &mut self.lines,
                 &mut self.caret_display_position,
                 &mut self.scroll_offset,
+                &mut self.selection_map,
             )
         }
 
@@ -299,41 +313,14 @@ pub mod access_and_mutate {
         pub fn clear_selection(&mut self) { self.selection_map.clear(); }
 
         pub fn get_selection_map(&self) -> &SelectionMap { &self.selection_map }
-
-        pub fn get_selection_map_mut(&mut self) -> &mut SelectionMap {
-            &mut self.selection_map
-        }
     }
 }
 
 mod debug_format_helpers {
-    use crossterm::style::Stylize;
-
     use super::*;
 
     impl Debug for EditorBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            let selection_map_str = {
-                let it = self
-                    .selection_map
-                    .iter()
-                    .map(|(row_index, selected_range)| {
-                        format!(
-                            "✂️ ┆row: {0} => start: {1}, end: {2}┆",
-                            /* 0 */ row_index,
-                            /* 1 */ selected_range.start_display_col_index,
-                            /* 2 */ selected_range.end_display_col_index
-                        )
-                    })
-                    .collect::<Vec<String>>()
-                    .join(", ");
-                if it.is_empty() {
-                    "None".to_string().white().on_dark_grey()
-                } else {
-                    it.green().on_dark_grey()
-                }
-            };
-
             write! {
                 f,
                 "\nEditorBuffer [                                  \n \
@@ -345,7 +332,7 @@ mod debug_format_helpers {
                 /* 1 */ self.lines.get_heap_size(),
                 /* 2 */ self.maybe_file_extension,
                 /* 3 */ self.caret_display_position,
-                /* 4 */ selection_map_str,
+                /* 4 */ self.selection_map.to_formatted_string(),
                 /* 5 */ self.scroll_offset
             }
         }

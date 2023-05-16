@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{self, Debug},
+use std::{fmt::{self, Debug, Display},
           ops::{Add, AddAssign, Mul}};
 
 use get_size::GetSize;
@@ -221,10 +221,20 @@ pub mod convert_position_to_other_type {
 pub mod position_debug_formatter {
     use super::*;
 
+    fn fmt_position(position: &Position, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "[col:{}, row:{}]",
+            *position.col_index, *position.row_index
+        )
+    }
+
     impl Debug for Position {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "[col:{}, row:{}]", *self.col_index, *self.row_index)
-        }
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt_position(self, f) }
+    }
+
+    impl Display for Position {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt_position(self, f) }
     }
 }
 

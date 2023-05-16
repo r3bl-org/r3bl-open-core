@@ -16,6 +16,7 @@
  */
 
 use std::{fmt::{Debug, Display, Formatter},
+          iter::Step,
           ops::Deref};
 
 use get_size::GetSize;
@@ -146,6 +147,30 @@ impl Deref for ChUnit {
     type Target = ChUnitPrimitiveType;
 
     fn deref(&self) -> &Self::Target { &self.value }
+}
+
+pub mod ch_unit_iter {
+    use super::*;
+
+    impl Step for ChUnit {
+        fn steps_between(start: &Self, end: &Self) -> Option<usize> {
+            let start = **start;
+            let end = **end;
+            u16::steps_between(&start, &end)
+        }
+
+        fn forward_checked(start: Self, count: usize) -> Option<Self> {
+            let start = *start;
+            let result = u16::forward_checked(start, count);
+            result.map(|value| ch!(value))
+        }
+
+        fn backward_checked(start: Self, count: usize) -> Option<Self> {
+            let start = *start;
+            let result = u16::backward_checked(start, count);
+            result.map(|value| ch!(value))
+        }
+    }
 }
 
 pub mod ch_unit_math_ops {

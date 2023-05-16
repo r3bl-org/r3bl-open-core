@@ -13,21 +13,22 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
-    "nazmulidris.copyrighter", // Copyrighter (see comment above).
-    "github.copilot", // Github Copilot.
-    "huntertran.auto-markdown-toc", // Auto Markdown TOC.
-    "ccy.ayu-adaptive", // Ayu Adaptive theme.
-    "naumovs.color-highlight", // Color Highlight.
-    "perkovec.emoji", // Emoji.
-    "nicholashsiang.vscode-opened-editors", // Opened Editors.
-    "dbankier.vscode-quick-select", // Quick and Simple Text Selection.
-    "unifiedjs.vscode-remark", // remark.
-    "stkb.rewrap", // Rewrap.
-    "lorenzopirro.rust-flash-snippets", // Rust Flash Snippets.
-    "rust-lang.rust-analyzer", // Rust Analyzer.
-    "hoovercj.vscode-settings-cycler", // Settings Cycler.
-    "wayou.vscode-todo-highlight", // Todo Highlight.
-    "fabiospampinato.vscode-todo-plus", // Todo+.
+    "nazmulidris.copyrighter",
+    "github.copilot",
+    "huntertran.auto-markdown-toc",
+    "ccy.ayu-adaptive",
+    "naumovs.color-highlight",
+    "perkovec.emoji",
+    "nicholashsiang.vscode-opened-editors",
+    "dbankier.vscode-quick-select",
+    "unifiedjs.vscode-remark",
+    "stkb.rewrap",
+    "lorenzopirro.rust-flash-snippets",
+    "rust-lang.rust-analyzer",
+    "hoovercj.vscode-settings-cycler",
+    "wayou.vscode-todo-highlight",
+    "fabiospampinato.vscode-todo-plus",
+    "alefragnani.bookmarks"
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [

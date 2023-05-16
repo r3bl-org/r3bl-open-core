@@ -54,6 +54,8 @@ pub enum CaretLocationInRange {
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy, Debug)]
 pub enum CaretMovementDirection {
+    Up,
+    Down,
     Left,
     Right,
     Overlap,
@@ -88,7 +90,6 @@ mod tests_range {
     }
 }
 
-// TODO: add RangeApi to allow Range changes (add to end, remove from end, etc.)
 impl SelectionRange {
     pub fn caret_movement_direction(
         previous_caret_display_col_index: ChUnit,
