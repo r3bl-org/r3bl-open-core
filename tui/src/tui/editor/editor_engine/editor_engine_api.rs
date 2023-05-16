@@ -205,7 +205,8 @@ impl EditorEngineApi {
             ..
         } = render_args;
 
-        for (row_index, range_of_display_col_indices) in editor_buffer.get_selection_map()
+        for (row_index, range_of_display_col_indices) in
+            editor_buffer.get_selection_map().iter()
         {
             let row_index = *row_index;
             let lines = editor_buffer.get_lines();

@@ -243,39 +243,120 @@ impl SelectMode {
         }
     }
 
+    /// Manage the selection based on the movement of the caret:
+    /// - <kbd>Shift + Left</kbd>
+    /// - <kbd>Shift + Right</kbd>
+    /// - <kbd>Shift + Home</kbd>
+    /// - <kbd>Shift + End</kbd>
+    ///
     /// # Arguments
     /// - `editor_buffer` - The buffer to update. This holds the selection map.
-    /// - `maybe_previous_caret_display_pos` - The previous position of the caret. This
-    ///    maybe [None] if [SelectMode] is [SelectMode::Disabled].
-    /// - `maybe_current_caret_display_pos` - The current position of the caret. This
-    ///    maybe [None] if [SelectMode] is [SelectMode::Disabled].
-    pub fn update_selection_based_on_caret_movement(
+    /// - `maybe_previous_caret_display_pos` - The previous position of the caret.
+    ///    - This maybe [None] if [SelectMode] is [SelectMode::Disabled].
+    ///    - This has to be [Some] if [SelectMode::Enabled].
+    /// - `maybe_current_caret_display_pos` - The current position of the caret.
+    ///    - This maybe [None] if [SelectMode] is [SelectMode::Disabled].
+    ///    - This has to be [Some] if [SelectMode::Enabled].
+    pub fn handle_selection_single_line_caret_movement(
         &self,
         editor_buffer: &mut EditorBuffer,
-        maybe_previous_caret_display_pos: Option<Position>,
-        maybe_current_caret_display_pos: Option<Position>,
+        maybe_previous_caret_display_position: Option<Position>,
+        maybe_current_caret_display_position: Option<Position>,
     ) -> Option<()> {
         match self {
+            // Cancel the selection. We don't care about the caret positions (they maybe
+            // None or not).
+            SelectMode::Disabled => editor_buffer.clear_selection(),
+            // Create or update the selection w/ the caret positions (which can't be
+            // None).
             SelectMode::Enabled => {
-                let previous = maybe_previous_caret_display_pos?;
-                let current = maybe_current_caret_display_pos?;
+                let previous = maybe_previous_caret_display_position?;
+                let current = maybe_current_caret_display_position?;
 
-                EditorBufferApi::update_selection_based_on_caret_movement(
+                if previous.row_index != current.row_index {
+                    return None;
+                }
+
+                EditorBufferApi::handle_selection_single_line_caret_movement(
+                    editor_buffer,
+                    previous.row_index, // Same as `current.row_index`.
+                    previous.col_index,
+                    current.col_index,
+                )
+            }
+        };
+
+        None
+    }
+
+    // FIXME: add stuff for multi-line selection (up, down, page up, page down)
+    pub fn update_selection_based_on_caret_movement_in_multiple_lines(
+        &self,
+        editor_buffer: &mut EditorBuffer,
+        maybe_previous_caret_display_position: Option<Position>,
+        maybe_current_caret_display_position: Option<Position>,
+    ) -> Option<()> {
+        match self {
+            // Cancel the selection. We don't care about the caret positions (they maybe
+            // None or not).
+            SelectMode::Disabled => editor_buffer.clear_selection(),
+            // Create or update the selection w/ the caret positions (which can't be
+            // None).
+            SelectMode::Enabled => {
+                let previous = maybe_previous_caret_display_position?;
+                let current = maybe_current_caret_display_position?;
+
+                if previous.row_index == current.row_index {
+                    return None;
+                }
+
+                EditorBufferApi::handle_selection_multiline_caret_movement(
                     editor_buffer,
                     previous,
                     current,
                 )
             }
-            SelectMode::Disabled => {
-                editor_buffer.clear_selection();
-            }
-        }
+        };
+
         None
     }
 }
 
 mod caret_mut {
     use super::*;
+
+    pub fn down(
+        editor_buffer: &mut EditorBuffer,
+        editor_engine: &mut EditorEngine,
+    ) -> Option<()> {
+        empty_check_early_return!(editor_buffer, @None);
+        multiline_disabled_check_early_return!(editor_engine, @None);
+
+        if content_get::next_line_below_caret_exists(editor_buffer, editor_engine) {
+            // There is a line below the caret.
+            let viewport_height = editor_engine.viewport_height();
+            validate_editor_buffer_change::apply_change(
+                editor_buffer,
+                editor_engine,
+                |_, caret, scroll_offset| {
+                    scroll_editor_buffer::inc_caret_row(
+                        caret,
+                        scroll_offset,
+                        viewport_height,
+                    );
+                },
+            );
+            scroll_editor_buffer::clip_caret_to_content_width(EditorArgsMut {
+                editor_buffer,
+                editor_engine,
+            });
+        } else {
+            // Move to the end of the line.
+            caret_mut::to_end_of_line(editor_buffer, editor_engine);
+        }
+
+        None
+    }
 
     pub fn up(
         editor_buffer: &mut EditorBuffer,
@@ -315,39 +396,6 @@ mod caret_mut {
                     editor_engine,
                 });
             }
-        }
-
-        None
-    }
-
-    pub fn down(
-        editor_buffer: &mut EditorBuffer,
-        editor_engine: &mut EditorEngine,
-    ) -> Option<()> {
-        empty_check_early_return!(editor_buffer, @None);
-        multiline_disabled_check_early_return!(editor_engine, @None);
-
-        if content_get::next_line_below_caret_exists(editor_buffer, editor_engine) {
-            // There is a line below the caret.
-            let viewport_height = editor_engine.viewport_height();
-            validate_editor_buffer_change::apply_change(
-                editor_buffer,
-                editor_engine,
-                |_, caret, scroll_offset| {
-                    scroll_editor_buffer::inc_caret_row(
-                        caret,
-                        scroll_offset,
-                        viewport_height,
-                    );
-                },
-            );
-            scroll_editor_buffer::clip_caret_to_content_width(EditorArgsMut {
-                editor_buffer,
-                editor_engine,
-            });
-        } else {
-            // Move to the end of the line.
-            caret_mut::to_end_of_line(editor_buffer, editor_engine);
         }
 
         None
@@ -434,88 +482,114 @@ mod caret_mut {
             editor_engine,
         });
 
+        // This is only set if select_mode is enabled.
+        let maybe_previous_caret_display_position =
+            select_mode.get_caret_display_position(editor_buffer);
+
         match caret_col_loc_in_line {
-            CaretColLocationInLine::AtEnd => {
-                right_at_end(editor_buffer, editor_engine, select_mode);
+            // Special case of empty line w/ caret at start.
+            CaretColLocationInLine::AtStart if line_is_empty => {
+                inner::right_at_end(editor_buffer, editor_engine)
             }
-
             CaretColLocationInLine::AtStart | CaretColLocationInLine::InMiddle => {
-                // Special case of empty line w/ caret at start.
-                if let CaretColLocationInLine::AtStart = caret_col_loc_in_line {
-                    if line_is_empty {
-                        right_at_end(editor_buffer, editor_engine, select_mode);
-                        return None;
-                    }
-                }
-
-                // Normal case.
-                right_normal(editor_buffer, editor_engine, select_mode)?;
+                inner::right_normal(editor_buffer, editor_engine)
             }
-        }
+            CaretColLocationInLine::AtEnd => {
+                inner::right_at_end(editor_buffer, editor_engine)
+            }
+        };
+
+        // This is only set if select_mode is enabled.
+        let maybe_current_caret_display_position =
+            select_mode.get_caret_display_position(editor_buffer);
+
+        // This is only runs if select_mode is enabled.
+        select_mode.handle_selection_single_line_caret_movement(
+            editor_buffer,
+            maybe_previous_caret_display_position,
+            maybe_current_caret_display_position,
+        );
 
         return None;
 
-        /// 1. Check for wide unicode character to the right of the caret.
-        /// 2. [validate::apply_change] checks for wide unicode character at the start of the
-        ///    viewport.
-        fn right_normal(
-            editor_buffer: &mut EditorBuffer,
-            editor_engine: &mut EditorEngine,
-            select_mode: SelectMode,
-        ) -> Option<()> {
-            // This is only set if select_mode is enabled.
-            let maybe_caret_display_previous_pos =
-                select_mode.get_caret_display_position(editor_buffer);
+        mod inner {
+            use super::*;
 
-            let UnicodeStringSegmentSliceResult {
-                unicode_width: unicode_width_at_caret,
-                ..
-            } = content_get::string_at_caret(editor_buffer, editor_engine)?;
+            /// 1. Check for wide unicode character to the right of the caret.
+            /// 2. [validate::apply_change] checks for wide unicode character at the start of the
+            ///    viewport.
+            pub fn right_normal(
+                editor_buffer: &mut EditorBuffer,
+                editor_engine: &mut EditorEngine,
+            ) -> Option<()> {
+                let UnicodeStringSegmentSliceResult {
+                    unicode_width: unicode_width_at_caret,
+                    ..
+                } = content_get::string_at_caret(editor_buffer, editor_engine)?;
 
-            let max_display_width =
-                content_get::line_display_width_at_caret(editor_buffer, editor_engine);
+                let max_display_width = content_get::line_display_width_at_caret(
+                    editor_buffer,
+                    editor_engine,
+                );
 
-            let viewport_width = editor_engine.viewport_width();
+                let viewport_width = editor_engine.viewport_width();
 
-            let maybe_char_to_right_of_caret =
-                content_get::string_to_right_of_caret(editor_buffer, editor_engine);
+                let maybe_char_to_right_of_caret =
+                    content_get::string_to_right_of_caret(editor_buffer, editor_engine);
 
-            match maybe_char_to_right_of_caret {
-                Some(right_of_caret_seg_slice_result) => {
-                    let unicode_string_to_right_of_caret =
-                        right_of_caret_seg_slice_result.unicode_string_seg;
-                    if unicode_string_to_right_of_caret.contains_wide_segments() {
-                        let jump_by_col_width = unicode_string_to_right_of_caret
-                            .display_width
-                            + unicode_width_at_caret;
-                        let move_left = unicode_string_to_right_of_caret.display_width;
-                        validate_editor_buffer_change::apply_change(
-                            editor_buffer,
-                            editor_engine,
-                            |_, caret, scroll_offset| {
-                                scroll_editor_buffer::inc_caret_col(
-                                    caret,
-                                    scroll_offset,
-                                    jump_by_col_width,
-                                    max_display_width,
-                                    viewport_width,
-                                );
-                            },
-                        );
-                        if move_left > ch!(0) {
+                match maybe_char_to_right_of_caret {
+                    Some(right_of_caret_seg_slice_result) => {
+                        let unicode_string_to_right_of_caret =
+                            right_of_caret_seg_slice_result.unicode_string_seg;
+                        if unicode_string_to_right_of_caret.contains_wide_segments() {
+                            let jump_by_col_width = unicode_string_to_right_of_caret
+                                .display_width
+                                + unicode_width_at_caret;
+                            let move_left =
+                                unicode_string_to_right_of_caret.display_width;
                             validate_editor_buffer_change::apply_change(
                                 editor_buffer,
                                 editor_engine,
                                 |_, caret, scroll_offset| {
-                                    scroll_editor_buffer::dec_caret_col(
+                                    scroll_editor_buffer::inc_caret_col(
                                         caret,
                                         scroll_offset,
-                                        move_left,
-                                    )
+                                        jump_by_col_width,
+                                        max_display_width,
+                                        viewport_width,
+                                    );
+                                },
+                            );
+                            if move_left > ch!(0) {
+                                validate_editor_buffer_change::apply_change(
+                                    editor_buffer,
+                                    editor_engine,
+                                    |_, caret, scroll_offset| {
+                                        scroll_editor_buffer::dec_caret_col(
+                                            caret,
+                                            scroll_offset,
+                                            move_left,
+                                        )
+                                    },
+                                );
+                            }
+                        } else {
+                            validate_editor_buffer_change::apply_change(
+                                editor_buffer,
+                                editor_engine,
+                                |_, caret, scroll_offset| {
+                                    scroll_editor_buffer::inc_caret_col(
+                                        caret,
+                                        scroll_offset,
+                                        unicode_width_at_caret,
+                                        max_display_width,
+                                        viewport_width,
+                                    );
                                 },
                             );
                         }
-                    } else {
+                    }
+                    None => {
                         validate_editor_buffer_change::apply_change(
                             editor_buffer,
                             editor_engine,
@@ -531,72 +605,34 @@ mod caret_mut {
                         );
                     }
                 }
-                None => {
+
+                None
+            }
+
+            pub fn right_at_end(
+                editor_buffer: &mut EditorBuffer,
+                editor_engine: &mut EditorEngine,
+            ) -> Option<()> {
+                if content_get::next_line_below_caret_exists(editor_buffer, editor_engine)
+                {
+                    // If there is a line below the caret, move the caret to the start of the next line.
+                    let viewport_height = editor_engine.viewport_height();
                     validate_editor_buffer_change::apply_change(
                         editor_buffer,
                         editor_engine,
                         |_, caret, scroll_offset| {
-                            scroll_editor_buffer::inc_caret_col(
+                            scroll_editor_buffer::inc_caret_row(
                                 caret,
                                 scroll_offset,
-                                unicode_width_at_caret,
-                                max_display_width,
-                                viewport_width,
+                                viewport_height,
                             );
+                            scroll_editor_buffer::reset_caret_col(caret, scroll_offset);
                         },
                     );
                 }
+
+                None
             }
-
-            // This is only set if select_mode is enabled.
-            let maybe_caret_display_current_pos =
-                select_mode.get_caret_display_position(editor_buffer);
-
-            // This is only runs if select_mode is enabled.
-            select_mode.update_selection_based_on_caret_movement(
-                editor_buffer,
-                maybe_caret_display_previous_pos,
-                maybe_caret_display_current_pos,
-            )
-        }
-
-        // TODO: mutate the editor_buffer.maybe_selection (add to editor_buffer_struct.rs)
-        fn right_at_end(
-            editor_buffer: &mut EditorBuffer,
-            editor_engine: &mut EditorEngine,
-            select_mode: SelectMode,
-        ) -> Option<()> {
-            // This is only set if select_mode is enabled.
-            let maybe_caret_display_previous_pos =
-                select_mode.get_caret_display_position(editor_buffer);
-
-            if content_get::next_line_below_caret_exists(editor_buffer, editor_engine) {
-                // If there is a line below the caret, move the caret to the start of the next line.
-                let viewport_height = editor_engine.viewport_height();
-                validate_editor_buffer_change::apply_change(
-                    editor_buffer,
-                    editor_engine,
-                    |_, caret, scroll_offset| {
-                        scroll_editor_buffer::inc_caret_row(
-                            caret,
-                            scroll_offset,
-                            viewport_height,
-                        );
-                        scroll_editor_buffer::reset_caret_col(caret, scroll_offset);
-                    },
-                );
-            }
-
-            // This is only set if select_mode is enabled.
-            let maybe_caret_display_current_pos =
-                select_mode.get_caret_display_position(editor_buffer);
-
-            // This is only runs if select_mode is enabled.
-            select_mode.update_selection_based_on_caret_movement(
-                editor_buffer,
-                maybe_caret_display_previous_pos,
-                maybe_caret_display_current_pos,
-            )
         }
     }
 
@@ -608,7 +644,7 @@ mod caret_mut {
         empty_check_early_return!(editor_buffer, @None);
 
         // This is only set if select_mode is enabled.
-        let maybe_caret_display_previous_pos =
+        let maybe_previous_caret_display_position =
             select_mode.get_caret_display_position(editor_buffer);
 
         match caret_get::find_col(EditorArgs {
@@ -665,14 +701,14 @@ mod caret_mut {
         }
 
         // This is only set if select_mode is enabled.
-        let maybe_caret_display_current_pos =
+        let maybe_current_caret_display_position =
             select_mode.get_caret_display_position(editor_buffer);
 
         // This is only runs if select_mode is enabled.
-        select_mode.update_selection_based_on_caret_movement(
+        select_mode.handle_selection_single_line_caret_movement(
             editor_buffer,
-            maybe_caret_display_previous_pos,
-            maybe_caret_display_current_pos,
+            maybe_previous_caret_display_position,
+            maybe_current_caret_display_position,
         )
     }
 
@@ -1357,7 +1393,7 @@ pub mod validate_editor_buffer_change {
             /* EditorEngine::scroll_offset */ &mut ScrollOffset,
         ),
     ) -> Option<()> {
-        let (lines, caret, scroll_offset) = editor_buffer.get_mut();
+        let (lines, caret, scroll_offset, _) = editor_buffer.get_mut();
 
         // Run the mutator first.
         mutator(lines, caret, scroll_offset);
@@ -1418,7 +1454,7 @@ pub mod validate_editor_buffer_change {
         diff: ChUnit,
     ) -> Option<()> {
         let EditorArgsMut { editor_buffer, .. } = args;
-        let (_, caret, scroll_offset) = editor_buffer.get_mut();
+        let (_, caret, scroll_offset, _) = editor_buffer.get_mut();
         scroll_offset.col_index += diff;
         caret.col_index -= diff;
         None
@@ -1436,7 +1472,7 @@ pub mod validate_editor_buffer_change {
 
         let viewport_width = editor_engine.viewport_width();
 
-        let (lines, caret, scroll_offset) = editor_buffer.get_mut();
+        let (lines, caret, scroll_offset, _) = editor_buffer.get_mut();
         let row_idx = EditorBuffer::calc_scroll_adj_caret_row(caret, scroll_offset);
         let col_idx = ch!(EditorBuffer::calc_scroll_adj_caret_col(
             caret,
@@ -1823,7 +1859,7 @@ mod scroll_editor_buffer {
                     caret_row_adj > editor_buffer.len();
                 if is_caret_row_adj_overflows_buffer {
                     let diff = editor_buffer.len() - caret_row_adj;
-                    let (_, caret, _) = editor_buffer.get_mut();
+                    let (_, caret, _, _) = editor_buffer.get_mut();
                     caret.row_index -= diff;
                 }
             }
@@ -1835,7 +1871,7 @@ mod scroll_editor_buffer {
                     scroll_offset_row > editor_buffer.len();
                 if is_scroll_offset_row_overflows_buffer {
                     let diff = editor_buffer.len() - scroll_offset_row;
-                    let (_, _, scroll_offset) = editor_buffer.get_mut();
+                    let (_, _, scroll_offset, _) = editor_buffer.get_mut();
                     scroll_offset.row_index -= diff;
                 }
             }
@@ -1860,14 +1896,14 @@ mod scroll_editor_buffer {
                             // Caret is below viewport.
                             let row_diff =
                                 caret_row_adj - (scroll_offset_row + viewport_height);
-                            let (_, caret, scroll_offset) = editor_buffer.get_mut();
+                            let (_, caret, scroll_offset, _) = editor_buffer.get_mut();
                             scroll_offset.row_index += row_diff;
                             caret.row_index -= row_diff;
                         }
                         true => {
                             // Caret is above viewport.
                             let row_diff = scroll_offset_row - caret_row_adj;
-                            let (_, caret, scroll_offset) = editor_buffer.get_mut();
+                            let (_, caret, scroll_offset, _) = editor_buffer.get_mut();
                             scroll_offset.row_index -= row_diff;
                             caret.row_index += row_diff;
                         }
@@ -1914,7 +1950,7 @@ mod scroll_editor_buffer {
                 }
                 false => {
                     // Caret is outside viewport.
-                    let (_, caret, scroll_offset) = editor_buffer.get_mut();
+                    let (_, caret, scroll_offset, _) = editor_buffer.get_mut();
 
                     if caret_col_adj < scroll_offset_col {
                         // Caret is to the left of viewport.

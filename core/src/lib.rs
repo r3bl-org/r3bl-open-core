@@ -114,6 +114,8 @@
 //! more info on this
 //! [here](https://doc.rust-lang.org/book/ch07-04-bringing-paths-into-scope-with-the-use-keyword.html?highlight=module%20re-export#re-exporting-names-with-pub-use).
 
+#![feature(step_trait)]
+
 // Connect to source file.
 pub mod async_safe_share_mutate;
 pub mod color_text;
