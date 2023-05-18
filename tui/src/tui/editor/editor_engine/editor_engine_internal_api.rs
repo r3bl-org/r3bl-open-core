@@ -27,8 +27,12 @@ use crate::*;
 pub struct EditorEngineInternalApi;
 
 impl EditorEngineInternalApi {
-    pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
-        caret_mut::up(buffer, engine)
+    pub fn up(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
+        caret_mut::up(buffer, engine, select_mode)
     }
 
     pub fn left(
@@ -47,8 +51,12 @@ impl EditorEngineInternalApi {
         caret_mut::right(buffer, engine, select_mode)
     }
 
-    pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
-        caret_mut::down(buffer, engine)
+    pub fn down(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
+        caret_mut::down(buffer, engine, select_mode)
     }
 
     pub fn page_up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
@@ -306,15 +314,18 @@ impl SelectMode {
                 let previous = maybe_previous_caret_display_position?;
                 let current = maybe_current_caret_display_position?;
 
-                if previous.row_index == current.row_index {
-                    return None;
+                match previous.row_index.cmp(&current.row_index) {
+                    Ordering::Equal => EditorBufferApi::handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
+                        editor_buffer,
+                        previous,
+                        current,
+                    ),
+                    _ => EditorBufferApi::handle_selection_multiline_caret_movement(
+                        editor_buffer,
+                        previous,
+                        current,
+                    ),
                 }
-
-                EditorBufferApi::handle_selection_multiline_caret_movement(
-                    editor_buffer,
-                    previous,
-                    current,
-                )
             }
         };
 
@@ -328,9 +339,14 @@ mod caret_mut {
     pub fn down(
         editor_buffer: &mut EditorBuffer,
         editor_engine: &mut EditorEngine,
+        select_mode: SelectMode,
     ) -> Option<()> {
         empty_check_early_return!(editor_buffer, @None);
         multiline_disabled_check_early_return!(editor_engine, @None);
+
+        // This is only set if select_mode is enabled.
+        let maybe_previous_caret_display_position =
+            select_mode.get_caret_display_position(editor_buffer);
 
         if content_get::next_line_below_caret_exists(editor_buffer, editor_engine) {
             // There is a line below the caret.
@@ -355,15 +371,31 @@ mod caret_mut {
             caret_mut::to_end_of_line(editor_buffer, editor_engine);
         }
 
+        // This is only set if select_mode is enabled.
+        let maybe_current_caret_display_position =
+            select_mode.get_caret_display_position(editor_buffer);
+
+        // This is only runs if select_mode is enabled.
+        select_mode.update_selection_based_on_caret_movement_in_multiple_lines(
+            editor_buffer,
+            maybe_previous_caret_display_position,
+            maybe_current_caret_display_position,
+        );
+
         None
     }
 
     pub fn up(
         editor_buffer: &mut EditorBuffer,
         editor_engine: &mut EditorEngine,
+        select_mode: SelectMode,
     ) -> Option<()> {
         empty_check_early_return!(editor_buffer, @None);
         multiline_disabled_check_early_return!(editor_engine, @None);
+
+        // This is only set if select_mode is enabled.
+        let maybe_previous_caret_display_position =
+            select_mode.get_caret_display_position(editor_buffer);
 
         match caret_get::find_row(EditorArgs {
             editor_buffer,
@@ -397,6 +429,17 @@ mod caret_mut {
                 });
             }
         }
+
+        // This is only set if select_mode is enabled.
+        let maybe_current_caret_display_position =
+            select_mode.get_caret_display_position(editor_buffer);
+
+        // This is only runs if select_mode is enabled.
+        select_mode.update_selection_based_on_caret_movement_in_multiple_lines(
+            editor_buffer,
+            maybe_previous_caret_display_position,
+            maybe_current_caret_display_position,
+        );
 
         None
     }
@@ -709,7 +752,9 @@ mod caret_mut {
             editor_buffer,
             maybe_previous_caret_display_position,
             maybe_current_caret_display_position,
-        )
+        );
+
+        None
     }
 
     pub fn page_up(
