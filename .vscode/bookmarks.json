@@ -1,0 +1,39 @@
+{
+	"files": [
+		{
+			"path": "tui/src/tui/editor/editor_engine/editor_engine_internal_api.rs",
+			"bookmarks": [
+				{
+					"line": 335,
+					"column": 14,
+					"label": "test down"
+				},
+				{
+					"line": 384,
+					"column": 11,
+					"label": "test up"
+				}
+			]
+		},
+		{
+			"path": "tui/src/tui/editor/editor_buffer/editor_buffer_selection_support.rs",
+			"bookmarks": [
+				{
+					"line": 272,
+					"column": 11,
+					"label": "impl this"
+				},
+				{
+					"line": 314,
+					"column": 20,
+					"label": "page up,down"
+				},
+				{
+					"line": 365,
+					"column": 25,
+					"label": "up,down"
+				}
+			]
+		}
+	]
+}

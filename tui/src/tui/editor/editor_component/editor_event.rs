@@ -78,8 +78,16 @@ impl TryFrom<&InputEvent> for EditorEvent {
                 mask: ModifierKeysMask::SHIFT,
             }) => Ok(EditorEvent::Select(SelectionScope::OneCharLeft)),
 
-            // TODO: add selection events    S+Up
-            // TODO: add selection events    S+Down
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::SpecialKey(SpecialKey::Down),
+                mask: ModifierKeysMask::SHIFT,
+            }) => Ok(EditorEvent::Select(SelectionScope::OneLineDown)),
+
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::SpecialKey(SpecialKey::Up),
+                mask: ModifierKeysMask::SHIFT,
+            }) => Ok(EditorEvent::Select(SelectionScope::OneLineUp)),
+
             // TODO: add selection events    S+PageUp
             // TODO: add selection events    S+PageDown
             // TODO: add selection events    S+Home
@@ -186,12 +194,16 @@ impl EditorEvent {
                         editor_engine,
                         SelectMode::Disabled,
                     ),
-                    CaretDirection::Up => {
-                        EditorEngineInternalApi::up(editor_buffer, editor_engine)
-                    }
-                    CaretDirection::Down => {
-                        EditorEngineInternalApi::down(editor_buffer, editor_engine)
-                    }
+                    CaretDirection::Up => EditorEngineInternalApi::up(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Disabled,
+                    ),
+                    CaretDirection::Down => EditorEngineInternalApi::down(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Disabled,
+                    ),
                 };
             }
             EditorEvent::InsertString(chunk) => {
@@ -222,46 +234,54 @@ impl EditorEvent {
             EditorEvent::PageUp => {
                 EditorEngineInternalApi::page_up(editor_buffer, editor_engine);
             }
-            EditorEvent::Select(selection_scope) => match selection_scope {
-                SelectionScope::OneCharRight => {
-                    EditorEngineInternalApi::right(
-                        editor_buffer,
-                        editor_engine,
-                        SelectMode::Enabled,
-                    );
+            EditorEvent::Select(selection_scope) => {
+                match selection_scope {
+                    SelectionScope::OneCharRight => {
+                        EditorEngineInternalApi::right(
+                            editor_buffer,
+                            editor_engine,
+                            SelectMode::Enabled,
+                        );
+                    }
+                    SelectionScope::OneCharLeft => {
+                        EditorEngineInternalApi::left(
+                            editor_buffer,
+                            editor_engine,
+                            SelectMode::Enabled,
+                        );
+                    }
+                    SelectionScope::OneLineDown => {
+                        EditorEngineInternalApi::down(
+                            editor_buffer,
+                            editor_engine,
+                            SelectMode::Enabled,
+                        );
+                    }
+                    SelectionScope::OneLineUp => {
+                        EditorEngineInternalApi::up(
+                            editor_buffer,
+                            editor_engine,
+                            SelectMode::Enabled,
+                        );
+                    }
+                    // TODO: add to selection move page up
+                    SelectionScope::PageUp => {
+                        todo!();
+                    }
+                    // TODO: add to selection move page down
+                    SelectionScope::PageDown => {
+                        todo!();
+                    }
+                    // TODO: add to selection move to home (SOL)
+                    SelectionScope::Home => {
+                        todo!();
+                    }
+                    // TODO: add to selection move to end (EOL)
+                    SelectionScope::End => {
+                        todo!();
+                    }
                 }
-                SelectionScope::OneCharLeft => {
-                    EditorEngineInternalApi::left(
-                        editor_buffer,
-                        editor_engine,
-                        SelectMode::Enabled,
-                    );
-                }
-                // TODO: add to selection move up
-                SelectionScope::OneLineUp => {
-                    todo!();
-                }
-                // TODO: add to selection move down
-                SelectionScope::OneLineDown => {
-                    todo!();
-                }
-                // TODO: add to selection move page up
-                SelectionScope::PageUp => {
-                    todo!();
-                }
-                // TODO: add to selection move page down
-                SelectionScope::PageDown => {
-                    todo!();
-                }
-                // TODO: add to selection move to home (SOL)
-                SelectionScope::Home => {
-                    todo!();
-                }
-                // TODO: add to selection move to end (EOL)
-                SelectionScope::End => {
-                    todo!();
-                }
-            },
+            }
         };
     }
 

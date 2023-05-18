@@ -16,8 +16,9 @@ editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/86):
       - [.] `right_at_end(.., select_mode)`: impl this
     ✔ left @done(23-05-17 18:03)
     ☐ down
-      - [ ] handle empty line selection (range start = end)
+      - [.] handle empty line selection (range start = end)
     ☐ up
+      - [.] handle empty line selection (range start = end)
     ☐ page up
     ☐ page down
     ☐ end of line
