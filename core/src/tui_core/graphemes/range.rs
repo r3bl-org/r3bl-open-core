@@ -45,6 +45,12 @@ pub struct SelectionRange {
     pub end_display_col_index: ChUnit,
 }
 
+#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy)]
+pub enum SelectionRangeOp {
+    Insert { range: SelectionRange, row_index: ChUnit },
+    Remove { row_index: ChUnit },
+}
+
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy, Debug)]
 pub enum CaretLocationInRange {
     Overflow,
@@ -52,7 +58,8 @@ pub enum CaretLocationInRange {
     Contained,
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy, Debug)]
+/// Note this must derive [Eq]. More info [here](https://stackoverflow.com/a/68900245/2085356).
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, GetSize, Copy, Debug)]
 pub enum CaretMovementDirection {
     Up,
     Down,
@@ -92,6 +99,38 @@ mod tests_range {
 
 impl SelectionRange {
     pub fn caret_movement_direction(
+        previous_caret_display_position: Position,
+        current_caret_display_position: Position,
+    ) -> CaretMovementDirection {
+        let previous_caret_display_row_index = previous_caret_display_position.row_index;
+        let current_caret_display_row_index = current_caret_display_position.row_index;
+        let previous_caret_display_col_index = previous_caret_display_position.col_index;
+        let current_caret_display_col_index = current_caret_display_position.col_index;
+        if previous_caret_display_row_index == current_caret_display_row_index {
+            Self::caret_movement_direction_left_right(
+                previous_caret_display_col_index,
+                current_caret_display_col_index,
+            )
+        } else {
+            Self::caret_movement_direction_up_down(
+                previous_caret_display_row_index,
+                current_caret_display_row_index,
+            )
+        }
+    }
+
+    pub fn caret_movement_direction_up_down(
+        previous_caret_display_row_index: ChUnit,
+        current_caret_display_row_index: ChUnit,
+    ) -> CaretMovementDirection {
+        match current_caret_display_row_index.cmp(&previous_caret_display_row_index) {
+            cmp::Ordering::Greater => CaretMovementDirection::Down,
+            cmp::Ordering::Less => CaretMovementDirection::Up,
+            cmp::Ordering::Equal => CaretMovementDirection::Overlap,
+        }
+    }
+
+    pub fn caret_movement_direction_left_right(
         previous_caret_display_col_index: ChUnit,
         current_caret_display_col_index: ChUnit,
     ) -> CaretMovementDirection {

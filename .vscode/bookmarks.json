@@ -19,19 +19,74 @@
 			"path": "tui/src/tui/editor/editor_buffer/editor_buffer_selection_support.rs",
 			"bookmarks": [
 				{
+					"line": 46,
+					"column": 13,
+					"label": "SelectionMap methods"
+				},
+				{
+					"line": 59,
+					"column": 19,
+					"label": "✅: pass Direction to insert"
+				},
+				{
+					"line": 63,
+					"column": 17,
+					"label": "✅: pass Direction to remove"
+				},
+				{
 					"line": 272,
 					"column": 11,
 					"label": "impl this"
 				},
 				{
-					"line": 314,
-					"column": 20,
-					"label": "page up,down"
+					"line": 359,
+					"column": 8,
+					"label": "page up, down"
 				},
 				{
-					"line": 365,
-					"column": 25,
-					"label": "up,down"
+					"line": 414,
+					"column": 12,
+					"label": "🧨TODO: Up -> Down"
+				},
+				{
+					"line": 454,
+					"column": 12,
+					"label": "🧨TODO: Down -> Up"
+				},
+				{
+					"line": 556,
+					"column": 24,
+					"label": "🧨TODO: Down -> Up (last row)"
+				},
+				{
+					"line": 563,
+					"column": 24,
+					"label": "🧨FIXME: ???"
+				},
+				{
+					"line": 588,
+					"column": 30,
+					"label": "🧨TODO: Down -> Up (first row)"
+				}
+			]
+		},
+		{
+			"path": "tui/src/tui/editor/editor_buffer/editor_buffer_struct.rs",
+			"bookmarks": [
+				{
+					"line": 294,
+					"column": 19,
+					"label": "selection map change"
+				}
+			]
+		},
+		{
+			"path": "core/src/tui_core/graphemes/range.rs",
+			"bookmarks": [
+				{
+					"line": 93,
+					"column": 11,
+					"label": "calculate direction"
 				}
 			]
 		}
