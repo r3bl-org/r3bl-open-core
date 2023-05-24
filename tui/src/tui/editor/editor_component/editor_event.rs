@@ -17,6 +17,7 @@
 
 use std::fmt::Debug;
 
+use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::{Deserialize, Serialize};
 
@@ -54,7 +55,7 @@ pub enum SelectionScope {
     End,
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, GetSize)]
 pub enum CaretDirection {
     Up,
     Down,
