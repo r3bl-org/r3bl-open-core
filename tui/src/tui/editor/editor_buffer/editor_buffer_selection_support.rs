@@ -125,6 +125,10 @@ mod selection_map_impl {
         pub fn update_previous_direction(&mut self, direction: CaretMovementDirection) {
             self.maybe_previous_direction = Some(direction);
         }
+
+        pub fn remove_previous_direction(&mut self) {
+            self.maybe_previous_direction = None;
+        }
     }
 
     // Formatter for Debug and Display.
@@ -143,7 +147,7 @@ mod selection_map_impl {
 
             pub fn to_unformatted_string(&self) -> String {
                 let selection_map_str = {
-                    let it = self
+                    let mut vec_output = self
                         .map
                         .iter()
                         .map(|(row_index, selected_range)| {
@@ -154,13 +158,19 @@ mod selection_map_impl {
                                 /* 2 */ selected_range.end_display_col_index
                             )
                         })
-                        .collect::<Vec<String>>()
-                        .join(", ");
+                        .collect::<Vec<String>>();
 
-                    if it.is_empty() {
+                    vec_output.push(format!(
+                        "🧭 prev_dir: {:?}",
+                        self.maybe_previous_direction,
+                    ));
+
+                    let vec_output_str = vec_output.join(", ");
+
+                    if vec_output_str.is_empty() {
                         "None".to_string()
                     } else {
-                        it
+                        vec_output_str
                     }
                 };
                 selection_map_str
@@ -195,27 +205,28 @@ impl EditorBufferApi {
 
         // Get the range for the row index. If it doesn't exist, create one & return early.
         let range = {
-            let Some(range) = editor_buffer.get_selection_map().get(row_index)
-                else {
-                    let new_range = SelectionRange {
-                        start_display_col_index: cmp::min(previous, current),
-                        end_display_col_index: cmp::max(previous, current),
+            let Some(range) = editor_buffer.get_selection_map().get(row_index) else {
+                let new_range = SelectionRange {
+                    start_display_col_index: cmp::min(previous, current),
+                    end_display_col_index: cmp::max(previous, current),
                     };
 
                     let (_, _, _, selection_map) = editor_buffer.get_mut();
-                    selection_map.insert(
-                        row_index,
-                        new_range,
-                        SelectionRange::caret_movement_direction_left_right(previous, current)
-                    );
+                selection_map.insert(
+                    row_index,
+                    new_range,
+                    SelectionRange::caret_movement_direction_left_right(
+                        previous, current,
+                    ),
+                );
 
-                    call_if_true!(
-                        DEBUG_TUI_COPY_PASTE,
-                        log_debug(format!("\n🍕🍕🍕 new selection: \n\t{}", new_range))
-                    );
+                call_if_true!(
+                    DEBUG_TUI_COPY_PASTE,
+                    log_debug(format!("\n🍕🍕🍕 new selection: \n\t{}", new_range))
+                );
 
-                    return
-                };
+                return;
+            };
             *range // Copy & return it.
         };
 
@@ -374,16 +385,14 @@ impl EditorBufferApi {
         let previous = previous_caret_display_position;
 
         // Validate preconditions.
-        let caret_vertical_direction = {
-            match (current.row_index).cmp(&previous.row_index) {
-                cmp::Ordering::Equal => {
-                    // Invalid state: There must be >= 2 rows, otherwise early return.
-                    return;
-                }
-                cmp::Ordering::Greater => CaretMovementDirection::Down,
-                cmp::Ordering::Less => CaretMovementDirection::Up,
-            }
-        };
+        let caret_vertical_direction = SelectionRange::caret_movement_direction_up_down(
+            previous.row_index,
+            current.row_index,
+        );
+        if let CaretMovementDirection::Overlap = caret_vertical_direction {
+            // Invalid state: There must be >= 2 rows, otherwise early return.
+            return;
+        }
 
         // DBG: remove
         log_debug(format!(
@@ -431,7 +440,7 @@ impl EditorBufferApi {
                                 start_display_col_index: ch!(0),
                                 end_display_col_index: line_display_width + 1,
                             },
-                            SelectionRange::caret_movement_direction(previous, current),
+                                caret_vertical_direction,
                         );
                     } else {
                         selection_map.insert(
@@ -440,7 +449,7 @@ impl EditorBufferApi {
                                 start_display_col_index: ch!(0),
                                 end_display_col_index: ch!(0),
                             },
-                            SelectionRange::caret_movement_direction(previous, current),
+                                caret_vertical_direction,
                         );
                     }
                 }
