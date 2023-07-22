@@ -47,8 +47,13 @@ pub struct SelectionRange {
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy)]
 pub enum SelectionRangeOp {
-    Insert { range: SelectionRange, row_index: ChUnit },
-    Remove { row_index: ChUnit },
+    Insert {
+        range: SelectionRange,
+        row_index: ChUnit,
+    },
+    Remove {
+        row_index: ChUnit,
+    },
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy, Debug)]

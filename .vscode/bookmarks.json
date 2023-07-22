@@ -44,6 +44,11 @@
 					"label": "page up, down"
 				},
 				{
+					"line": 378,
+					"column": 21,
+					"label": "WORK ON THIS - selection up & down"
+				},
+				{
 					"line": 414,
 					"column": 12,
 					"label": "🧨TODO: Up -> Down"
