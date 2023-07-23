@@ -129,6 +129,26 @@ mod selection_map_impl {
         pub fn remove_previous_direction(&mut self) {
             self.maybe_previous_direction = None;
         }
+
+        // 00: implement helper locate fn for row_index for multiline selection
+        /// Locate the row_index in the map.
+        pub fn locate_row_index(
+            &self,
+            row_index_arg: ChUnit,
+        ) -> RowLocationInSelectionMap {
+            for (row_index, _range) in self.map.iter() {
+                if &row_index_arg == row_index {
+                    return RowLocationInSelectionMap::Contained;
+                }
+            }
+            RowLocationInSelectionMap::Overflow
+        }
+    }
+
+    #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy, Debug)]
+    pub enum RowLocationInSelectionMap {
+        Overflow,
+        Contained,
     }
 
     // Formatter for Debug and Display.
@@ -209,9 +229,9 @@ impl EditorBufferApi {
                 let new_range = SelectionRange {
                     start_display_col_index: cmp::min(previous, current),
                     end_display_col_index: cmp::max(previous, current),
-                    };
+                };
 
-                    let (_, _, _, selection_map) = editor_buffer.get_mut();
+                let (_, _, _, selection_map) = editor_buffer.get_mut();
                 selection_map.insert(
                     row_index,
                     new_range,
@@ -376,6 +396,7 @@ impl EditorBufferApi {
     4. First and last depends on the vertical direction. The ordering of the middle lines also
        depends on this vertical direction
     */
+    // 00: implement multiline selection changes (up/down, and later page up/page down)
     pub fn handle_selection_multiline_caret_movement(
         editor_buffer: &mut EditorBuffer,
         previous_caret_display_position: Position,
@@ -416,7 +437,7 @@ impl EditorBufferApi {
                 .on_dark_grey(),
         ));
 
-        // TODO: test that this works with Shift + PageUp, Shift + PageDown
+        // AA: test that this works with Shift + PageUp, Shift + PageDown
         // Handle middle rows ( >= 3 rows ) if any. Only happens w/ Shift + Page Down/Up.
         if let 2.. = current.row_index.abs_diff(*previous.row_index) {
             let mut from = ch!(cmp::min(previous.row_index, current.row_index));
@@ -440,7 +461,7 @@ impl EditorBufferApi {
                                 start_display_col_index: ch!(0),
                                 end_display_col_index: line_display_width + 1,
                             },
-                                caret_vertical_direction,
+                            caret_vertical_direction,
                         );
                     } else {
                         selection_map.insert(
@@ -449,7 +470,7 @@ impl EditorBufferApi {
                                 start_display_col_index: ch!(0),
                                 end_display_col_index: ch!(0),
                             },
-                                caret_vertical_direction,
+                            caret_vertical_direction,
                         );
                     }
                 }
@@ -468,6 +489,9 @@ impl EditorBufferApi {
                 ));
             }
         }
+
+        // 00: copy algorithm from handle_selection_single_line_caret_movement
+        
 
         // Handle first and last lines in the range.
         match caret_vertical_direction {
