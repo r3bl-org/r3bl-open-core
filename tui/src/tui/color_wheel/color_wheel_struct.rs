@@ -801,7 +801,9 @@ mod tests_color_wheel_rgb {
 
         // Call generate_color_wheel() with 10 steps.
         let gradient_kind = color_wheel.generate_color_wheel(None);
-        let GradientKind::ColorWheel(lhs) = gradient_kind else { panic!() };
+        let GradientKind::ColorWheel(lhs) = gradient_kind else {
+            panic!()
+        };
         let rhs = &vec![
             (0, 0, 0),
             (28, 28, 28),

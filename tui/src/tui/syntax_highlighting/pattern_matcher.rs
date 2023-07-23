@@ -65,7 +65,8 @@ impl<'a> PatternMatcherStateMachine<'a> {
             return CharacterMatchResult::Finished;
         }
 
-        let Some(current_pattern_char) = self.pattern.chars().nth(self.current_index) else {
+        let Some(current_pattern_char) = self.pattern.chars().nth(self.current_index)
+        else {
             // Gone past the end of the pattern.
             self.is_finished = true;
             return CharacterMatchResult::Finished;

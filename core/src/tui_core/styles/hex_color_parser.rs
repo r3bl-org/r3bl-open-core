@@ -89,7 +89,9 @@ mod tests {
 
         let result = dbg!(parse_hex_color(&input));
 
-        let Ok((remainder, color)) = result else { panic!(); };
+        let Ok((remainder, color)) = result else {
+            panic!();
+        };
         assert_eq!(remainder, "🔅");
         assert_eq!(color, RgbValue::from_u8(47, 20, 223));
     }

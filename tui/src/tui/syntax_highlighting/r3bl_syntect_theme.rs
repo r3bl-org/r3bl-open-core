@@ -31,11 +31,11 @@ pub fn try_load_r3bl_theme() -> std::io::Result<Theme> {
 
     // Load the theme from the BufReader.
     let Ok(theme) = ThemeSet::load_from_reader(&mut buf_reader) else {
-    return Err(std::io::Error::new(
-      std::io::ErrorKind::InvalidData,
-      "Failed to load theme",
-    ));
-  };
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Failed to load theme",
+        ));
+    };
 
     Ok(theme)
 }
