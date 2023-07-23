@@ -231,9 +231,10 @@ mod tests {
 
         // Insert "😃" at display col 1, just after `H`.
         let Some((new_unicode_string, display_width_of_inserted_chunk)) =
-             u_s.insert_char_at_display_col(1.into(), "😃") else {
-                 panic!("Failed to insert char");
-             };
+            u_s.insert_char_at_display_col(1.into(), "😃")
+        else {
+            panic!("Failed to insert char");
+        };
 
         assert_eq2! {display_width_of_inserted_chunk, ch!(2)};
         assert_eq2! {new_unicode_string.truncate_start_by_n_col(00.into()), "H😃i 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
@@ -248,10 +249,9 @@ mod tests {
         assert_eq!(u_s.display_width, ch!(25));
 
         // Delete "i" at display col 1, just after `H`.
-        let Some(new_unicode_string) =
-             u_s.delete_char_at_display_col(1.into()) else {
-                 panic!("Failed to delete char");
-             };
+        let Some(new_unicode_string) = u_s.delete_char_at_display_col(1.into()) else {
+            panic!("Failed to delete char");
+        };
 
         assert_eq2! {new_unicode_string.display_width, ch!(24)};
         assert_eq2! {new_unicode_string.truncate_start_by_n_col(00.into()), "H 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
@@ -266,9 +266,7 @@ mod tests {
         assert_eq!(u_s.display_width, ch!(25));
 
         // Split at display col 4.
-        let Some((
-            lhs_u_s, rhs_u_s
-        )) = u_s.split_at_display_col(4.into()) else {
+        let Some((lhs_u_s, rhs_u_s)) = u_s.split_at_display_col(4.into()) else {
             panic!("Failed to split unicode string");
         };
 

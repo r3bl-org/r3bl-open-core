@@ -93,12 +93,12 @@ mod tests_range {
             let end = ch!(4);
             SelectionRange::new(start, end)
         };
-        assert_eq2!(range.locate(ch!(0)), CaretLocationInRange::Underflow);
-        assert_eq2!(range.locate(ch!(1)), CaretLocationInRange::Contained);
-        assert_eq2!(range.locate(ch!(2)), CaretLocationInRange::Contained);
-        assert_eq2!(range.locate(ch!(3)), CaretLocationInRange::Contained);
-        assert_eq2!(range.locate(ch!(4)), CaretLocationInRange::Overflow);
-        assert_eq2!(range.locate(ch!(5)), CaretLocationInRange::Overflow);
+        assert_eq2!(range.locate_column(ch!(0)), CaretLocationInRange::Underflow);
+        assert_eq2!(range.locate_column(ch!(1)), CaretLocationInRange::Contained);
+        assert_eq2!(range.locate_column(ch!(2)), CaretLocationInRange::Contained);
+        assert_eq2!(range.locate_column(ch!(3)), CaretLocationInRange::Contained);
+        assert_eq2!(range.locate_column(ch!(4)), CaretLocationInRange::Overflow);
+        assert_eq2!(range.locate_column(ch!(5)), CaretLocationInRange::Overflow);
     }
 }
 
@@ -155,7 +155,7 @@ impl SelectionRange {
     ///   1 = start_display_col_index
     /// ```
     /// - [UnicodeString::clip_to_range](UnicodeString::clip_to_range): "ell"
-    pub fn locate(&self, caret_display_col_index: ChUnit) -> CaretLocationInRange {
+    pub fn locate_column(&self, caret_display_col_index: ChUnit) -> CaretLocationInRange {
         if caret_display_col_index < self.start_display_col_index {
             CaretLocationInRange::Underflow
         } else if caret_display_col_index >= self.end_display_col_index {
