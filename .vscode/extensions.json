@@ -28,7 +28,13 @@
     "hoovercj.vscode-settings-cycler",
     "wayou.vscode-todo-highlight",
     "fabiospampinato.vscode-todo-plus",
-    "alefragnani.bookmarks"
+    "alefragnani.bookmarks",
+    "s-nlf-fh.glassit",
+    "tamasfe.even-better-toml",
+    "github.vscode-pull-request-github",
+    "github.github-vscode-theme",
+    "swashata.beautiful-ui",
+    "catppuccin.catppuccin-vsc",
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
