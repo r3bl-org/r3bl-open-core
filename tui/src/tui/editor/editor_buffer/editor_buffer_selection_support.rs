@@ -245,7 +245,7 @@ impl EditorBufferApi {
         log_debug(format!(
             "\n📜📜📜 {0}\n\t{1}, {2}\n\t{3}\n\t{4}\n\t{5}\n\t{6}\n\t{7}",
             /* 0: heading */
-            "handle multiline caret movement #1"
+            "handle multiline caret movement"
                 .to_string()
                 .red()
                 .on_white(),
@@ -287,34 +287,52 @@ impl EditorBufferApi {
             caret_vertical_movement_direction,
             has_caret_movement_direction_changed,
         ) {
-            // Shift+Down.
+            // DirectionIsTheSame: No selection, then Shift+Down.
+            // DirectionHasChanged: No selection -> Shift+Down -> Shift+Up -> Shift+Down.
             (
                 /* previous_caret */ Overflow,
                 /* current_caret */ Overflow,
                 CaretMovementDirection::Down,
-                DirectionChangeResult::DirectionIsTheSame,
+                DirectionChangeResult::DirectionIsTheSame
+                | DirectionChangeResult::DirectionHasChanged,
             ) => multiline_select_helpers::start_select_down(
                 previous,
                 current,
                 editor_buffer,
                 caret_vertical_movement_direction,
             ),
-            // Shift+Up.
+            // DirectionIsTheSame: No selection, then Shift+Up.
+            // DirectionHasChanged: No selection -> Shift+Up -> Shift+Down -> Shift+Up.
             (
                 /* previous_caret */ Overflow,
                 /* current_caret */ Overflow,
                 CaretMovementDirection::Up,
-                DirectionChangeResult::DirectionIsTheSame,
+                DirectionChangeResult::DirectionIsTheSame
+                | DirectionChangeResult::DirectionHasChanged,
             ) => multiline_select_helpers::start_select_up(
                 previous,
                 current,
                 editor_buffer,
                 caret_vertical_movement_direction,
             ),
-            // Shift+Down, Shift+Down
+            // DirectionIsTheSame: Previous selection with Shift+Down, then Shift+Down.
+            // DirectionHasChanged: No selection -> Shift+Left/Right -> Shift+Down.
             (
                 /* previous_caret */ Contained,
                 /* current_caret */ Overflow,
+                CaretMovementDirection::Down,
+                DirectionChangeResult::DirectionIsTheSame
+                | DirectionChangeResult::DirectionHasChanged,
+            ) => multiline_select_helpers::continue_select_down(
+                previous,
+                current,
+                editor_buffer,
+                caret_vertical_movement_direction,
+            ),
+            // Position caret below empty line, Shift+Up, Shift+Up, Shift+Up, Shift+Down.
+            (
+                /* previous_caret */ Overflow,
+                /* current_caret */ Contained,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame,
             ) => multiline_select_helpers::continue_select_down(
@@ -323,10 +341,24 @@ impl EditorBufferApi {
                 editor_buffer,
                 caret_vertical_movement_direction,
             ),
-            // Shift+Up, Shift+Up
+            // DirectionIsTheSame: Previous selection with Shift+Up, then Shift+Up.
+            // DirectionHasChanged: // No selection -> Shift+Left/Right -> Shift+Up.
             (
                 /* previous_caret */ Contained,
                 /* current_caret */ Overflow,
+                CaretMovementDirection::Up,
+                DirectionChangeResult::DirectionIsTheSame
+                | DirectionChangeResult::DirectionHasChanged,
+            ) => multiline_select_helpers::continue_select_up(
+                previous,
+                current,
+                editor_buffer,
+                caret_vertical_movement_direction,
+            ),
+            // Position caret above empty line, Shift+Down, Shift+Down, Shift+Down, Shift+Up.
+            (
+                /* previous_caret */ Overflow,
+                /* current_caret */ Contained,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame,
             ) => multiline_select_helpers::continue_select_up(
@@ -335,186 +367,50 @@ impl EditorBufferApi {
                 editor_buffer,
                 caret_vertical_movement_direction,
             ),
-            // 00: WORK ON THIS copy algorithm from handle_selection_single_line_caret_movement
+            // DirectionHasChanged: Previous selection with Shift+Down, then Shift+Up.
+            // DirectionIsTheSame: Previous selection with Shift+Down, then Shift+Up, then Shift+Up.
+            (
+                /* previous_caret */ Contained,
+                /* current_caret */ Contained,
+                CaretMovementDirection::Up,
+                DirectionChangeResult::DirectionHasChanged
+                | DirectionChangeResult::DirectionIsTheSame,
+            ) => multiline_select_helpers::continue_direction_change_select_up(
+                previous,
+                current,
+                editor_buffer,
+                caret_vertical_movement_direction,
+            ),
+            // DirectionHasChanged: Previous selection with Shift+Up, then Shift+Up, then Shift+Down.
+            // DirectionIsTheSame: Previous selection with Shift+Up, then Shift+Down, then Shift+Down.
+            (
+                /* previous_caret */ Contained,
+                /* current_caret */ Contained,
+                CaretMovementDirection::Down,
+                DirectionChangeResult::DirectionHasChanged
+                | DirectionChangeResult::DirectionIsTheSame,
+            ) => multiline_select_helpers::continue_direction_change_select_down(
+                previous,
+                current,
+                editor_buffer,
+                caret_vertical_movement_direction,
+            ),
             // Catchall.
-            _ => todo!(),
+            _ => {
+                // DBG: remove
+                log_debug(format!(
+                    "\n📜📜📜⚾⚾⚾ {0}",
+                    /* 0: heading */
+                    "handle multiline caret movement Catchall"
+                        .to_string()
+                        .bold()
+                        .yellow()
+                        .on_dark_green(),
+                ));
+            }
         }
 
-        // 00: remove this block after the one above has been implemented.
-        /*
-        // Handle first and last lines in the range.
-        match caret_vertical_movement_direction {
-            // TODO: handle direction change from Up to Down
-            CaretMovementDirection::Down => {
-                let first = previous;
-                let last = current;
-
-                let first_row = match editor_buffer
-                    .get_selection_map()
-                    .get(first.row_index)
-                {
-                    // First row is in selection map.
-                    Some(_) => {
-                        let start = ch!(0);
-                        let end = editor_buffer.get_line_display_width(first.row_index);
-                        SelectionRange::new(start, end)
-                    }
-                    // First row is not in selection map.
-                    None => {
-                        let start = previous.col_index;
-                        let end = editor_buffer.get_line_display_width(first.row_index);
-                        SelectionRange::new(start, end)
-                    }
-                };
-
-                let last_row = {
-                    let start = ch!(0);
-                    let end = current.col_index;
-                    SelectionRange::new(start, end)
-                };
-
-                let (_, _, _, selection_map) = editor_buffer.get_mut();
-                selection_map.insert(
-                    first.row_index,
-                    first_row,
-                    SelectionRange::caret_movement_direction(previous, current),
-                );
-                selection_map.insert(
-                    last.row_index,
-                    last_row,
-                    SelectionRange::caret_movement_direction(previous, current),
-                );
-            }
-            // TODO: handle direction change from Down to Up
-
-            // DBG: remove
-            // previous: [col:2, row:2], current: [col:2, row:1],
-            // ✂️ ┆row: 0 => start: 2, end: 61┆, ✂️ ┆row: 2 => start: 0, end: 2┆, ✂️ ┆row: 1 => start: 0, end: 61┆, Up
-            CaretMovementDirection::Up => {
-                let first = current; // DBG: row: 1
-                let last = previous; // DBG: row: 2
-
-                let last_row_selection_range_op: SelectionRangeOp = match editor_buffer
-                    .get_selection_map()
-                    .get(last.row_index)
-                {
-                    // Last row in selection map.
-                    Some(_) => {
-                        // TODO: direction change from Down to Up -> drop last row in map
-                        let current_direction =
-                            SelectionRange::caret_movement_direction(previous, current);
-
-                        let direction_change_result = editor_buffer
-                            .get_selection_map()
-                            .has_caret_movement_direction_changed(current_direction);
-
-                        // DBG: remove
-                        log_debug(format!(
-                            "\n🌴🌴🌴 {0}\n\t{1}, {2}, {3}",
-                            /* 0 */
-                            "handle multiline caret movement"
-                                .to_string()
-                                .red()
-                                .on_white(),
-                            /* 1 */
-                            format!("current_direction: {:?}", current_direction)
-                                .cyan()
-                                .on_dark_grey(),
-                            /* 2 */
-                            format!(
-                                "previous_direction: {:?}",
-                                editor_buffer
-                                    .get_selection_map()
-                                    .maybe_previous_direction
-                            )
-                            .cyan()
-                            .on_dark_grey(),
-                            /* 3 */
-                            format!(
-                                "direction_change_result: {:?}",
-                                direction_change_result
-                            )
-                            .yellow()
-                            .on_dark_grey(),
-                        ));
-
-                        match direction_change_result {
-                            selection_map_impl::DirectionChangeResult::DirectionHasChanged => {
-                                SelectionRangeOp::Remove { row_index: last.row_index }
-                            }
-
-                        // BUG: if no direction change selection fills in last row if go
-                        // down, down, down, up, up (fails)
-                        // If the last_row is in selection_map, drop it
-                        selection_map_impl::DirectionChangeResult::DirectionIsTheSame => {
-                                let start = ch!(0);
-                                let end =
-                                    editor_buffer.get_line_display_width(last.row_index);
-                                SelectionRangeOp::Insert {
-                                    range: SelectionRange::new(start, end),
-                                    row_index: last.row_index
-                                }
-                            }
-                        }
-                    }
-                    // Last row not in selection map.
-                    None => {
-                        let start = ch!(0);
-                        let end = current.col_index;
-                        SelectionRangeOp::Insert {
-                            range: SelectionRange::new(start, end),
-                            row_index: last.row_index,
-                        }
-                    }
-                };
-
-                let first_row_selection_range_op: SelectionRangeOp =
-                    match editor_buffer.get_selection_map().get(first.row_index) {
-                        // first row in selection map.
-                        Some(_) => {
-                            let start = ch!(0);
-                            let end = current.col_index;
-                            SelectionRangeOp::Insert {
-                                range: SelectionRange::new(start, end),
-                                row_index: first.row_index,
-                            }
-                        }
-                        // first row not in selection map.
-                        None => {
-                            let start = current.col_index;
-                            let end =
-                                editor_buffer.get_line_display_width(first.row_index);
-                            SelectionRangeOp::Insert {
-                                range: SelectionRange::new(start, end),
-                                row_index: first.row_index,
-                            }
-                        }
-                    };
-
-                // Actually modify selection_map given the SelectionRangeOp for first &
-                // last row.
-                let (_, _, _, selection_map) = editor_buffer.get_mut();
-                let direction =
-                    SelectionRange::caret_movement_direction(previous, current);
-
-                let range_op_vec =
-                    vec![first_row_selection_range_op, last_row_selection_range_op];
-                for range_op in range_op_vec {
-                    match range_op {
-                        SelectionRangeOp::Insert { range, row_index } => {
-                            selection_map.insert(row_index, range, direction);
-                        }
-                        SelectionRangeOp::Remove { row_index } => {
-                            selection_map.remove(row_index, direction)
-                        }
-                    }
-                }
-            }
-            _ => {}
-        }
-        */
-
-        // AA: test that this works with Shift + PageUp, Shift + PageDown
+        // 00: WORK ON THIS (handle middle rows Shift + PageUp, Shift + PageDown)
         // Handle middle rows ( >= 3 rows ) if any. Only happens w/ Shift + Page Down/Up.
         if let 2.. = current.row_index.abs_diff(*previous.row_index) {
             let mut from = ch!(cmp::min(previous.row_index, current.row_index));
@@ -832,6 +728,90 @@ mod multiline_select_helpers {
                 new_last_row_range,
                 caret_vertical_movement_direction,
             );
+        }
+    }
+
+    /// Pre-existing selection, up, direction change:
+    /// - Drop the last row selection range.
+    /// - Modify first row selection range.
+    pub fn continue_direction_change_select_up(
+        previous: Position,
+        current: Position,
+        editor_buffer: &mut EditorBuffer,
+        caret_vertical_movement_direction: CaretMovementDirection,
+    ) {
+        let first = current;
+        let last = previous;
+
+        // Mutably borrow the selection map.
+        let (_, _, _, selection_map) = editor_buffer.get_mut();
+
+        // Drop the existing range (in selection map) for the last row.
+        if selection_map.get(last.row_index).is_some() {
+            selection_map.remove(last.row_index, caret_vertical_movement_direction);
+        }
+
+        // Change the existing range (in selection map) for the first row.
+        if let Some(first_row_range) = selection_map.get(first.row_index) {
+            let lhs = first_row_range.start_display_col_index;
+            let rhs = first.col_index;
+            match lhs.cmp(&rhs) {
+                cmp::Ordering::Equal => {
+                    selection_map
+                        .remove(first.row_index, caret_vertical_movement_direction);
+                }
+                cmp::Ordering::Less | cmp::Ordering::Greater => {
+                    selection_map.insert(
+                        first.row_index,
+                        SelectionRange {
+                            start_display_col_index: lhs.min(rhs),
+                            end_display_col_index: lhs.max(rhs),
+                        },
+                        caret_vertical_movement_direction,
+                    );
+                }
+            }
+        }
+    }
+
+    /// Pre-existing selection, up, direction change:
+    /// - Drop the first row selection range.
+    /// - Modify last row selection range.
+    pub fn continue_direction_change_select_down(
+        previous: Position,
+        current: Position,
+        editor_buffer: &mut EditorBuffer,
+        caret_vertical_movement_direction: CaretMovementDirection,
+    ) {
+        let first = previous;
+        let last = current;
+
+        // Mutably borrow the selection map.
+        let (_, _, _, selection_map) = editor_buffer.get_mut();
+
+        // Drop the existing range (in selection map) for the first row.
+        if selection_map.get(first.row_index).is_some() {
+            selection_map.remove(first.row_index, caret_vertical_movement_direction);
+        }
+
+        // Change the existing range (in selection map) for the last row.
+        if let Some(last_row_range) = selection_map.get(last.row_index) {
+            let lhs = last.col_index;
+            let rhs = last_row_range.end_display_col_index;
+            let row_index = last.row_index;
+            match lhs.cmp(&rhs) {
+                cmp::Ordering::Equal => {
+                    selection_map.remove(row_index, caret_vertical_movement_direction)
+                }
+                cmp::Ordering::Greater | cmp::Ordering::Less => selection_map.insert(
+                    row_index,
+                    SelectionRange {
+                        start_display_col_index: rhs.min(lhs),
+                        end_display_col_index: rhs.max(lhs),
+                    },
+                    caret_vertical_movement_direction,
+                ),
+            }
         }
     }
 }

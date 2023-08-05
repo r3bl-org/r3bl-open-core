@@ -34,6 +34,16 @@
 					"label": "calculate direction"
 				}
 			]
+		},
+		{
+			"path": "tui/src/tui/editor/editor_buffer/editor_buffer_selection_support.rs",
+			"bookmarks": [
+				{
+					"line": 926,
+					"column": 37,
+					"label": ""
+				}
+			]
 		}
 	]
 }

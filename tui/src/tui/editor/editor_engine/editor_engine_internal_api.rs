@@ -757,6 +757,7 @@ mod caret_mut {
         None
     }
 
+    // 00: WORK ON THIS (wire Shift+PageUp)
     pub fn page_up(
         editor_buffer: &mut EditorBuffer,
         editor_engine: &mut EditorEngine,
@@ -776,6 +777,7 @@ mod caret_mut {
         None
     }
 
+    // 00: WORK ON THIS (wire Shift+PageDown)
     pub fn page_down(
         editor_buffer: &mut EditorBuffer,
         editor_engine: &mut EditorEngine,

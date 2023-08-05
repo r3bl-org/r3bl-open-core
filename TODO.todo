@@ -6,19 +6,9 @@ editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/86):
   ✔ audit docs, source filenames, and symbol names; improve where needed @done(23-05-03 20:56)
   ☐ add selection support to editor buffer (array of line slice ranges)
     ✔ right @done(23-05-17 18:03)
-      - [✔️] `right_normal(.., select_mode)`: impl this
-      - [x] `EditorEngineApi::render_engine()`: render it before caret w/ selection bg color
-        - [x] `UnicodeString::clip_to_range(..)`: impl this
-      - [.] `EditorBufferApi::change_selection(..)`: impl this
-        - handle one line: left, right (add to / remove from selection)
-        - handle multiline
-      - [.] remove selection when "regular" key is pressed
-      - [.] `right_at_end(.., select_mode)`: impl this
     ✔ left @done(23-05-17 18:03)
-    ☐ down
-      - [.] handle empty line selection (range start = end)
-    ☐ up
-      - [.] handle empty line selection (range start = end)
+    ✔ down @done(23-08-06 11:35)
+    ✔ up @done(23-08-06 11:35)
     ☐ page up
     ☐ page down
     ☐ end of line
