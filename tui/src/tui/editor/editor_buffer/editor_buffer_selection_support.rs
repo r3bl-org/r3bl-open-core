@@ -20,7 +20,8 @@ use std::cmp;
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
 
-use self::selection_map_impl::{DirectionChangeResult, RowLocationInSelectionMap::*};
+use self::{multiline_select_helpers::validate_col_index_for_row,
+           selection_map_impl::{DirectionChangeResult, RowLocationInSelectionMap::*}};
 use crate::*;
 
 pub struct EditorBufferApi;
@@ -95,7 +96,7 @@ impl EditorBufferApi {
             ))
         );
 
-        // 00: for reference, algo for left, right selection
+        // AA: for reference, algo for left, right selection
         // Handle the movement of the caret and apply the appropriate changes to the range.
         match (
             range.locate_column(previous),
@@ -197,26 +198,9 @@ impl EditorBufferApi {
 
     // TODO: implement multiline caret movement & selection changes
     // DBG: turn these comments into docs
-    /*
-    Preconditions:
-    ---
-    1. Required: There has to be at least 2 rows
-    2. Optional: There may be 1 or more rows in the middle
-
-    Algorithm:
-    ---
-    1. Get the range for the row indices between the previous and current caret row_index
-    2. If the range spans multiple lines in the middle of the range, then simply add selections
-       for the entire length of those lines into selection_map
-    3. The first and last lines of the range may have partial selections, so we need to
-       calculate the start and end display col indices for those lines. The direction of caret
-       movement also factors into this. The start and end col caret index is used to determine
-       how much of the first line and last line should be selected.
-    4. First and last depends on the vertical direction. The ordering of the middle lines also
-       depends on this vertical direction
-    */
     // 00: implement multiline selection changes (up/down, and later page up/page down)
-    pub fn handle_selection_multiline_caret_movement(
+    /// Precondition: there has to be at least 2 rows.
+    fn handle_multiline(
         editor_buffer: &mut EditorBuffer,
         previous_caret_display_position: Position,
         current_caret_display_position: Position,
@@ -409,58 +393,69 @@ impl EditorBufferApi {
                 ));
             }
         }
+    }
 
-        // 00: WORK ON THIS (handle middle rows Shift + PageUp, Shift + PageDown)
-        // Handle middle rows ( >= 3 rows ) if any. Only happens w/ Shift + Page Down/Up.
-        if let 2.. = current.row_index.abs_diff(*previous.row_index) {
-            let mut from = ch!(cmp::min(previous.row_index, current.row_index));
-            let mut to = ch!(cmp::max(previous.row_index, current.row_index));
+    /// Precondition: there has to be at least 2 rows.
+    pub fn handle_selection_multiline_caret_movement(
+        editor_buffer: &mut EditorBuffer,
+        previous_caret_display_position: Position,
+        current_caret_display_position: Position,
+    ) {
+        let current = current_caret_display_position;
+        let previous = previous_caret_display_position;
 
-            // Skip the first and last lines in the range (middle rows).
-            from += 1;
-            to -= 1;
+        // Validate preconditions.
+        let caret_vertical_movement_direction =
+            SelectionRange::caret_movement_direction_up_down(
+                previous.row_index,
+                current.row_index,
+            );
+        if let CaretMovementDirection::Overlap = caret_vertical_movement_direction {
+            // Invalid state: There must be >= 2 rows, otherwise early return.
+            return;
+        }
 
-            let (lines, _, _, selection_map) = editor_buffer.get_mut();
-
-            for row_index in from..to {
-                let maybe_line = lines.get(ch!(@to_usize row_index));
-                if let Some(line) = maybe_line {
-                    // FIXME: handle empty line selection
-                    let line_display_width = line.display_width;
-                    if line_display_width > ch!(0) {
-                        selection_map.insert(
-                            row_index,
-                            SelectionRange {
-                                start_display_col_index: ch!(0),
-                                end_display_col_index: line_display_width + 1,
-                            },
-                            caret_vertical_movement_direction,
-                        );
-                    } else {
-                        selection_map.insert(
-                            row_index,
-                            SelectionRange {
-                                start_display_col_index: ch!(0),
-                                end_display_col_index: ch!(0),
-                            },
-                            caret_vertical_movement_direction,
-                        );
-                    }
+        // For the rows between previous and current caret, call
+        // handle_selection_single_line_caret_movement() on each row.
+        match caret_vertical_movement_direction {
+            CaretMovementDirection::Up => {
+                // 00: INCOMPLETE & PROBLEM FOUND IN PAGE_UP (goes past EOL)
+                for row_index in current.row_index..previous.row_index {
+                    Self::handle_multiline(
+                        editor_buffer,
+                        position!(col_index: current.col_index, row_index: row_index),
+                        position!(col_index: previous.col_index, row_index: row_index-1),
+                    );
                 }
-
-                // DBG: remove
-                log_debug(format!(
-                    "\n🌈🌈🌈process middle line:\n\t{0}, {1}",
-                    /* 0 */ row_index.to_string().magenta().on_white(),
-                    /* 1 */
-                    maybe_line
-                        .unwrap_or(&US::from("invalid line index"))
-                        .string
-                        .clone()
-                        .black()
-                        .on_white(),
-                ));
             }
+            CaretMovementDirection::Down => {
+                // 00: PROBLEM FOUND IN PAGE_DOWN (goes past EOL)
+                for row_index in previous.row_index..current.row_index {
+                    let previous_row_index = row_index;
+                    let current_row_index = row_index + 1;
+
+                    // Calculate previous col_index.
+                    let previous_col_index = validate_col_index_for_row(
+                        previous.col_index,
+                        previous_row_index,
+                        editor_buffer,
+                    );
+
+                    // Calculate current col_index.
+                    let current_col_index = validate_col_index_for_row(
+                        current.col_index,
+                        current_row_index,
+                        editor_buffer,
+                    );
+
+                    Self::handle_multiline(
+                        editor_buffer,
+                        position!(col_index: previous_col_index, row_index: previous_row_index),
+                        position!(col_index: current_col_index, row_index: current_row_index),
+                    );
+                }
+            }
+            _ => {}
         }
     }
 
@@ -570,6 +565,42 @@ impl EditorBufferApi {
 mod multiline_select_helpers {
     use super::*;
 
+    // AA: needed?
+    /// Make sure that the col_index is within the bounds of the line at the row_index.
+    pub fn validate_col_index_for_row(
+        col_index: ChUnit,
+        row_index: ChUnit,
+        editor_buffer: &EditorBuffer,
+    ) -> ChUnit {
+        let line_width = editor_buffer.get_line_display_width(row_index);
+        if line_width == ch!(0) {
+            return ch!(0);
+        }
+
+        if col_index > line_width {
+            line_width
+        } else {
+            col_index
+        }
+    }
+
+    // AA: needed?
+    /// Make sure that the col_index is within the bounds of the given line width.
+    pub fn validate_col_index_for_row_width(
+        col_index: ChUnit,
+        row_width: ChUnit,
+    ) -> ChUnit {
+        if row_width == ch!(0) {
+            return ch!(0);
+        }
+
+        if col_index > row_width {
+            row_width
+        } else {
+            col_index
+        }
+    }
+
     /// No existing selection, up, no direction change:
     /// - Add first row selection range.
     /// - Add last row selection range.
@@ -654,6 +685,7 @@ mod multiline_select_helpers {
         let last = current;
 
         let first_line_width = editor_buffer.get_line_display_width(first.row_index);
+        let last_line_width = editor_buffer.get_line_display_width(last.row_index);
 
         // Mutably borrow the selection map.
         let (_, _, _, selection_map) = editor_buffer.get_mut();
@@ -676,7 +708,8 @@ mod multiline_select_helpers {
         // Add the new last row range to selection map.
         let last_row_range = {
             let start_col = ch!(0);
-            let end_col = last.col_index;
+            let end_col =
+                validate_col_index_for_row_width(last.col_index, last_line_width);
             SelectionRange::new(start_col, end_col)
         };
         selection_map.insert(

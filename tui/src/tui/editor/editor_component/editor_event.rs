@@ -17,6 +17,7 @@
 
 use std::fmt::Debug;
 
+use crossterm::style::Stylize;
 use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::{Deserialize, Serialize};
@@ -67,6 +68,12 @@ impl TryFrom<&InputEvent> for EditorEvent {
     type Error = String;
 
     fn try_from(input_event: &InputEvent) -> Result<Self, Self::Error> {
+        // DBG: remove
+        log_debug(format!(
+            "\n#️⃣#️⃣#️⃣  EditorEvent::try_from: {}",
+            format!("{}", input_event).red().on_white()
+        ));
+
         match input_event {
             // Selection events.
             InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -89,10 +96,25 @@ impl TryFrom<&InputEvent> for EditorEvent {
                 mask: ModifierKeysMask::SHIFT,
             }) => Ok(EditorEvent::Select(SelectionScope::OneLineUp)),
 
-            // TODO: add selection events    S+PageUp
-            // TODO: add selection events    S+PageDown
-            // TODO: add selection events    S+Home
-            // TODO: add selection events    S+End
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::SpecialKey(SpecialKey::PageUp),
+                mask: ModifierKeysMask::SHIFT,
+            }) => Ok(EditorEvent::Select(SelectionScope::PageUp)),
+
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::SpecialKey(SpecialKey::PageDown),
+                mask: ModifierKeysMask::SHIFT,
+            }) => Ok(EditorEvent::Select(SelectionScope::PageDown)),
+
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::SpecialKey(SpecialKey::Home),
+                mask: ModifierKeysMask::SHIFT,
+            }) => Ok(EditorEvent::Select(SelectionScope::Home)),
+
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::SpecialKey(SpecialKey::End),
+                mask: ModifierKeysMask::SHIFT,
+            }) => Ok(EditorEvent::Select(SelectionScope::End)),
 
             // Other events.
             InputEvent::Keyboard(KeyPress::Plain {
@@ -224,65 +246,91 @@ impl EditorEvent {
                 });
             }
             EditorEvent::Home => {
-                EditorEngineInternalApi::home(editor_buffer, editor_engine);
+                EditorEngineInternalApi::home(
+                    editor_buffer,
+                    editor_engine,
+                    SelectMode::Disabled,
+                );
             }
             EditorEvent::End => {
-                EditorEngineInternalApi::end(editor_buffer, editor_engine);
+                EditorEngineInternalApi::end(
+                    editor_buffer,
+                    editor_engine,
+                    SelectMode::Disabled,
+                );
             }
             EditorEvent::PageDown => {
-                EditorEngineInternalApi::page_down(editor_buffer, editor_engine);
+                EditorEngineInternalApi::page_down(
+                    editor_buffer,
+                    editor_engine,
+                    SelectMode::Disabled,
+                );
             }
             EditorEvent::PageUp => {
-                EditorEngineInternalApi::page_up(editor_buffer, editor_engine);
+                EditorEngineInternalApi::page_up(
+                    editor_buffer,
+                    editor_engine,
+                    SelectMode::Disabled,
+                );
             }
-            EditorEvent::Select(selection_scope) => {
-                match selection_scope {
-                    SelectionScope::OneCharRight => {
-                        EditorEngineInternalApi::right(
-                            editor_buffer,
-                            editor_engine,
-                            SelectMode::Enabled,
-                        );
-                    }
-                    SelectionScope::OneCharLeft => {
-                        EditorEngineInternalApi::left(
-                            editor_buffer,
-                            editor_engine,
-                            SelectMode::Enabled,
-                        );
-                    }
-                    SelectionScope::OneLineDown => {
-                        EditorEngineInternalApi::down(
-                            editor_buffer,
-                            editor_engine,
-                            SelectMode::Enabled,
-                        );
-                    }
-                    SelectionScope::OneLineUp => {
-                        EditorEngineInternalApi::up(
-                            editor_buffer,
-                            editor_engine,
-                            SelectMode::Enabled,
-                        );
-                    }
-                    // TODO: add to selection move page up
-                    SelectionScope::PageUp => {
-                        todo!();
-                    }
-                    // TODO: add to selection move page down
-                    SelectionScope::PageDown => {
-                        todo!();
-                    }
-                    // TODO: add to selection move to home (SOL)
-                    SelectionScope::Home => {
-                        todo!();
-                    }
-                    // TODO: add to selection move to end (EOL)
-                    SelectionScope::End => {
-                        todo!();
-                    }
+            EditorEvent::Select(selection_scope) => match selection_scope {
+                SelectionScope::OneCharRight => {
+                    EditorEngineInternalApi::right(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Enabled,
+                    );
                 }
-            }
+                SelectionScope::OneCharLeft => {
+                    EditorEngineInternalApi::left(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Enabled,
+                    );
+                }
+                SelectionScope::OneLineDown => {
+                    EditorEngineInternalApi::down(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Enabled,
+                    );
+                }
+                SelectionScope::OneLineUp => {
+                    EditorEngineInternalApi::up(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Enabled,
+                    );
+                }
+                SelectionScope::PageUp => {
+                    EditorEngineInternalApi::page_up(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Enabled,
+                    );
+                }
+                SelectionScope::PageDown => {
+                    EditorEngineInternalApi::page_down(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Enabled,
+                    );
+                }
+                SelectionScope::Home => {
+                    EditorEngineInternalApi::home(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Enabled,
+                    );
+                }
+                SelectionScope::End => {
+                    EditorEngineInternalApi::end(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Enabled,
+                    );
+                }
+            },
         };
     }
 
