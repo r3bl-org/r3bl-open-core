@@ -1800,7 +1800,7 @@ mod scroll_editor_buffer {
     /// Clip desired_caret_adj_row (to the max buffer length) if it overflows past the bottom of the
     /// buffer.
     pub fn clip_caret_row_to_content_height(
-        buffer: &mut EditorBuffer,
+        buffer: &EditorBuffer,
         desired_caret_adj_row: &mut ChUnit,
     ) {
         // Clip desired_caret_adj_row if it overflows past the bottom of the buffer.

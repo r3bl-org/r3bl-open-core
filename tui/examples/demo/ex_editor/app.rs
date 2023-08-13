@@ -185,7 +185,7 @@ mod detect_modal_dialog_activation_from_input_event {
             ) {
                 // Reset the dialog component prior to activating / showing it.
                 ComponentRegistry::reset_component(
-                    &mut self.component_registry,
+                    &self.component_registry,
                     FlexBoxId::from(ComponentId::SimpleDialog as u8),
                 )
                 .await;
@@ -216,7 +216,7 @@ mod detect_modal_dialog_activation_from_input_event {
             ) {
                 // Reset the dialog component prior to activating / showing it.
                 ComponentRegistry::reset_component(
-                    &mut self.component_registry,
+                    &self.component_registry,
                     FlexBoxId::from(ComponentId::AutocompleteDialog as u8),
                 )
                 .await;

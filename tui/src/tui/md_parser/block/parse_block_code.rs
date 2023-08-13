@@ -252,7 +252,7 @@ mod tests {
         {
             let lang = "bash";
             let code_lines = vec!["pip install foobar"];
-            let input = vec!["```bash", "pip install foobar", "```", ""].join("\n");
+            let input = ["```bash", "pip install foobar", "```", ""].join("\n");
             println!("{:#?}", &input);
             let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
             assert_eq2!(remainder, "");
@@ -266,7 +266,7 @@ mod tests {
         {
             let lang = "bash";
             let code_lines = vec![];
-            let input = vec!["```bash", "```", ""].join("\n");
+            let input = ["```bash", "```", ""].join("\n");
             let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
             assert_eq2!(remainder, "");
             assert_eq2!(
@@ -279,7 +279,7 @@ mod tests {
         {
             let lang = "bash";
             let code_lines = vec![""];
-            let input = vec!["```bash", "", "```", ""].join("\n");
+            let input = ["```bash", "", "```", ""].join("\n");
             let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
             assert_eq2!(remainder, "");
             assert_eq2!(
@@ -299,7 +299,7 @@ mod tests {
                 "foobar.pluralize('goose') # returns 'geese'",
                 "foobar.singularize('phenomena') # returns 'phenomenon'",
             ];
-            let input = vec![
+            let input = [
                 "```python",
                 "import foobar",
                 "",
@@ -323,7 +323,7 @@ mod tests {
     fn test_parse_codeblock_no_language() {
         let lang = None;
         let code_lines = vec!["pip install foobar"];
-        let input = vec!["```", "pip install foobar", "```", ""].join("\n");
+        let input = ["```", "pip install foobar", "```", ""].join("\n");
         let (remainder, code_block_lines) = parse_block_code(&input).unwrap();
         assert_eq2!(remainder, "");
         assert_eq2!(

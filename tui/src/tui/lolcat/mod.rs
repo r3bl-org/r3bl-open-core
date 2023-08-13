@@ -16,9 +16,9 @@
  */
 
 // Attach source files.
-pub(self) mod color_utils;
+mod color_utils;
 pub mod lolcat_api;
-pub(self) mod lolcat_impl;
+mod lolcat_impl;
 
 // Re-export.
 pub use color_utils::*;

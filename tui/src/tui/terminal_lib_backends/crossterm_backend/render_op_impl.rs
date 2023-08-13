@@ -238,10 +238,10 @@ mod render_op_impl_crossterm_impl {
                 shared_global_data,
             };
 
-            let mut needs_reset = false;
+            let needs_reset = Cow::Owned(false);
 
             // Paint plain_text.
-            paint_style_and_text(&mut paint_args, &mut needs_reset, local_data).await;
+            paint_style_and_text(&mut paint_args, needs_reset, local_data).await;
         }
 
         /// Use [crossterm::style::Color] to set crossterm Colors.
@@ -313,7 +313,7 @@ mod perform_paint {
     /// https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes)).
     pub async fn paint_style_and_text<'a>(
         paint_args: &mut PaintArgs<'a>,
-        needs_reset: &mut bool,
+        mut needs_reset: Cow<'_, bool>,
         local_data: &mut RenderOpsLocalData,
     ) {
         let PaintArgs { maybe_style, .. } = paint_args;
@@ -325,7 +325,7 @@ mod perform_paint {
                     queue!(stdout(), SetAttribute(*attr)),
                     format!("PaintWithAttributes -> SetAttribute({attr:?})")
                 );
-                *needs_reset = true;
+                needs_reset = Cow::Owned(true);
             });
         }
 

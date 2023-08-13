@@ -16,7 +16,7 @@
  */
 
 /// This generates DEBUG messages when compiling (running cargo build).
-pub(self) const DEBUG_MAKE_STYLE_MOD: bool = false;
+const DEBUG_MAKE_STYLE_MOD: bool = false;
 
 // Attach sources.
 pub mod codegen;

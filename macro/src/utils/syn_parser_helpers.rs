@@ -29,7 +29,7 @@ pub fn transform_named_fields_into_ts(
             let props_ts_iter = fields
                 .named
                 .iter()
-                .map(|named_field| transform_named_field_fn(named_field));
+                .map(transform_named_field_fn);
 
             // Unwrap iterator into a [proc_macro2::TokenStream].
             quote! {
