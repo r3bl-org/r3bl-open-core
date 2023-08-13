@@ -212,7 +212,7 @@ pub mod selection_map_impl {
                 vec_output
                     .push(format!("🧭 prev_dir: {:?}", self.maybe_previous_direction,));
 
-                vec_output.join(", ")
+                vec_output.join("\n    ")
             }
         }
 

@@ -20,6 +20,7 @@ Table of contents:
      `// 00: WORK ON THIS`
    - Shift up and down are done
    - Shift page up and down are next
+   - When selection is made, scrolling does not work (something wrong w/ rendering selection)
    - Shift home and end are next after that
    - Then implement actions: copy, cut, delete, paste
    - Then merge this branch to main

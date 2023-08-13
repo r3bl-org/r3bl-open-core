@@ -59,20 +59,36 @@ impl EditorEngineInternalApi {
         caret_mut::down(buffer, engine, select_mode)
     }
 
-    pub fn page_up(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
-        caret_mut::page_up(buffer, engine)
+    pub fn page_up(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
+        caret_mut::page_up(buffer, engine, select_mode)
     }
 
-    pub fn page_down(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
-        caret_mut::page_down(buffer, engine)
+    pub fn page_down(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
+        caret_mut::page_down(buffer, engine, select_mode)
     }
 
-    pub fn home(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
-        caret_mut::to_start_of_line(buffer, engine)
+    pub fn home(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
+        caret_mut::to_start_of_line(buffer, engine, select_mode)
     }
 
-    pub fn end(buffer: &mut EditorBuffer, engine: &mut EditorEngine) -> Option<()> {
-        caret_mut::to_end_of_line(buffer, engine)
+    pub fn end(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
+        caret_mut::to_end_of_line(buffer, engine, select_mode)
     }
 
     pub fn validate_scroll(args: EditorArgsMut) {
@@ -336,55 +352,6 @@ impl SelectMode {
 mod caret_mut {
     use super::*;
 
-    pub fn down(
-        editor_buffer: &mut EditorBuffer,
-        editor_engine: &mut EditorEngine,
-        select_mode: SelectMode,
-    ) -> Option<()> {
-        empty_check_early_return!(editor_buffer, @None);
-        multiline_disabled_check_early_return!(editor_engine, @None);
-
-        // This is only set if select_mode is enabled.
-        let maybe_previous_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
-
-        if content_get::next_line_below_caret_exists(editor_buffer, editor_engine) {
-            // There is a line below the caret.
-            let viewport_height = editor_engine.viewport_height();
-            validate_editor_buffer_change::apply_change(
-                editor_buffer,
-                editor_engine,
-                |_, caret, scroll_offset| {
-                    scroll_editor_buffer::inc_caret_row(
-                        caret,
-                        scroll_offset,
-                        viewport_height,
-                    );
-                },
-            );
-            scroll_editor_buffer::clip_caret_to_content_width(EditorArgsMut {
-                editor_buffer,
-                editor_engine,
-            });
-        } else {
-            // Move to the end of the line.
-            caret_mut::to_end_of_line(editor_buffer, editor_engine);
-        }
-
-        // This is only set if select_mode is enabled.
-        let maybe_current_caret_display_position =
-            select_mode.get_caret_display_position(editor_buffer);
-
-        // This is only runs if select_mode is enabled.
-        select_mode.update_selection_based_on_caret_movement_in_multiple_lines(
-            editor_buffer,
-            maybe_previous_caret_display_position,
-            maybe_current_caret_display_position,
-        );
-
-        None
-    }
-
     pub fn up(
         editor_buffer: &mut EditorBuffer,
         editor_engine: &mut EditorEngine,
@@ -444,10 +411,139 @@ mod caret_mut {
         None
     }
 
+    // 00: WORK ON THIS (wire Shift+PageUp)
+    pub fn page_up(
+        editor_buffer: &mut EditorBuffer,
+        editor_engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
+        empty_check_early_return!(editor_buffer, @None);
+        multiline_disabled_check_early_return!(editor_engine, @None);
+
+        // This is only set if select_mode is enabled.
+        let maybe_previous_caret_display_position =
+            select_mode.get_caret_display_position(editor_buffer);
+
+        let viewport_height = editor_engine.viewport_height();
+        scroll_editor_buffer::change_caret_row_by(
+            EditorArgsMut {
+                editor_engine,
+                editor_buffer,
+            },
+            viewport_height,
+            CaretDirection::Up,
+        );
+
+        // 00: FIXME - page up caret col goes past end of line
+
+        // This is only set if select_mode is enabled.
+        let maybe_current_caret_display_position =
+            select_mode.get_caret_display_position(editor_buffer);
+
+        // This is only runs if select_mode is enabled.
+        select_mode.update_selection_based_on_caret_movement_in_multiple_lines(
+            editor_buffer,
+            maybe_previous_caret_display_position,
+            maybe_current_caret_display_position,
+        );
+
+        None
+    }
+
+    pub fn down(
+        editor_buffer: &mut EditorBuffer,
+        editor_engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
+        empty_check_early_return!(editor_buffer, @None);
+        multiline_disabled_check_early_return!(editor_engine, @None);
+
+        // This is only set if select_mode is enabled.
+        let maybe_previous_caret_display_position =
+            select_mode.get_caret_display_position(editor_buffer);
+
+        if content_get::next_line_below_caret_exists(editor_buffer, editor_engine) {
+            // There is a line below the caret.
+            let viewport_height = editor_engine.viewport_height();
+            validate_editor_buffer_change::apply_change(
+                editor_buffer,
+                editor_engine,
+                |_, caret, scroll_offset| {
+                    scroll_editor_buffer::inc_caret_row(
+                        caret,
+                        scroll_offset,
+                        viewport_height,
+                    );
+                },
+            );
+            scroll_editor_buffer::clip_caret_to_content_width(EditorArgsMut {
+                editor_buffer,
+                editor_engine,
+            });
+        } else {
+            // Move to the end of the line.
+            caret_mut::to_end_of_line(editor_buffer, editor_engine, select_mode);
+        }
+
+        // This is only set if select_mode is enabled.
+        let maybe_current_caret_display_position =
+            select_mode.get_caret_display_position(editor_buffer);
+
+        // This is only runs if select_mode is enabled.
+        select_mode.update_selection_based_on_caret_movement_in_multiple_lines(
+            editor_buffer,
+            maybe_previous_caret_display_position,
+            maybe_current_caret_display_position,
+        );
+
+        None
+    }
+
+    // 00: WORK ON THIS (wire Shift+PageDown)
+    pub fn page_down(
+        editor_buffer: &mut EditorBuffer,
+        editor_engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
+        empty_check_early_return!(editor_buffer, @None);
+        multiline_disabled_check_early_return!(editor_engine, @None);
+
+        // This is only set if select_mode is enabled.
+        let maybe_previous_caret_display_position =
+            select_mode.get_caret_display_position(editor_buffer);
+
+        let viewport_height = editor_engine.viewport_height();
+        scroll_editor_buffer::change_caret_row_by(
+            EditorArgsMut {
+                editor_engine,
+                editor_buffer,
+            },
+            viewport_height,
+            CaretDirection::Down,
+        );
+
+        // 00: FIXME - page down caret col goes past end of line
+
+        // This is only set if select_mode is enabled.
+        let maybe_current_caret_display_position =
+            select_mode.get_caret_display_position(editor_buffer);
+
+        // This is only runs if select_mode is enabled.
+        select_mode.update_selection_based_on_caret_movement_in_multiple_lines(
+            editor_buffer,
+            maybe_previous_caret_display_position,
+            maybe_current_caret_display_position,
+        );
+
+        None
+    }
+
     /// Convenience function for simply calling [reset_caret_col].
+    // 00: WORK ON THIS (wire Shift+Home)
     pub fn to_start_of_line(
         buffer: &mut EditorBuffer,
         engine: &mut EditorEngine,
+        select_mode: SelectMode,
     ) -> Option<()> {
         empty_check_early_return!(buffer, @None);
 
@@ -461,9 +557,11 @@ mod caret_mut {
         None
     }
 
+    // 00: WORK ON THIS (wire Shift+End)
     pub fn to_end_of_line(
         buffer: &mut EditorBuffer,
         engine: &mut EditorEngine,
+        select_mode: SelectMode,
     ) -> Option<()> {
         empty_check_early_return!(buffer, @None);
 
@@ -705,7 +803,7 @@ mod caret_mut {
                             scroll_editor_buffer::dec_caret_row(caret, scroll_offset);
                         },
                     );
-                    caret_mut::to_end_of_line(editor_buffer, editor_engine);
+                    caret_mut::to_end_of_line(editor_buffer, editor_engine, select_mode);
                 }
             }
             CaretColLocationInLine::AtEnd => {
@@ -754,46 +852,6 @@ mod caret_mut {
             maybe_current_caret_display_position,
         );
 
-        None
-    }
-
-    // 00: WORK ON THIS (wire Shift+PageUp)
-    pub fn page_up(
-        editor_buffer: &mut EditorBuffer,
-        editor_engine: &mut EditorEngine,
-    ) -> Option<()> {
-        empty_check_early_return!(editor_buffer, @None);
-        multiline_disabled_check_early_return!(editor_engine, @None);
-
-        let viewport_height = editor_engine.viewport_height();
-        scroll_editor_buffer::change_caret_row_by(
-            EditorArgsMut {
-                editor_engine,
-                editor_buffer,
-            },
-            viewport_height,
-            CaretDirection::Up,
-        );
-        None
-    }
-
-    // 00: WORK ON THIS (wire Shift+PageDown)
-    pub fn page_down(
-        editor_buffer: &mut EditorBuffer,
-        editor_engine: &mut EditorEngine,
-    ) -> Option<()> {
-        empty_check_early_return!(editor_buffer, @None);
-        multiline_disabled_check_early_return!(editor_engine, @None);
-
-        let viewport_height = editor_engine.viewport_height();
-        scroll_editor_buffer::change_caret_row_by(
-            EditorArgsMut {
-                editor_engine,
-                editor_buffer,
-            },
-            viewport_height,
-            CaretDirection::Down,
-        );
         None
     }
 }
@@ -1567,7 +1625,7 @@ mod scroll_editor_buffer {
             caret_adj_col >= line_content_display_width;
 
         if is_caret_col_overflow_content_width {
-            caret_mut::to_end_of_line(editor_buffer, editor_engine);
+            caret_mut::to_end_of_line(editor_buffer, editor_engine, SelectMode::Disabled);
         }
     }
 
