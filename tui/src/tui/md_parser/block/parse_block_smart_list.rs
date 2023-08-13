@@ -121,7 +121,7 @@ mod tests_parse_block_smart_list {
     fn test_parse_block_smart_list_with_checkbox() {
         // Valid unchecked.
         {
-            let input = vec!["- [ ] todo"].join("\n");
+            let input = ["- [ ] todo"].join("\n");
             let result = parse_block_smart_list(&input);
             let remainder = result.as_ref().unwrap().0;
             let (lines, _bullet_kind, _indent) = result.unwrap().1;
@@ -142,7 +142,7 @@ mod tests_parse_block_smart_list {
 
         // Valid checked.
         {
-            let input = vec!["- [x] done"].join("\n");
+            let input = ["- [x] done"].join("\n");
             let result = parse_block_smart_list(&input);
             let remainder = result.as_ref().unwrap().0;
             let (lines, _bullet_kind, _indent) = result.unwrap().1;
@@ -163,7 +163,7 @@ mod tests_parse_block_smart_list {
 
         // Invalid unchecked.
         {
-            let input = vec!["- [ ]todo"].join("\n");
+            let input = ["- [ ]todo"].join("\n");
             let result = parse_block_smart_list(&input);
             let remainder = result.as_ref().unwrap().0;
             let (lines, _bullet_kind, _indent) = result.unwrap().1;
@@ -184,7 +184,7 @@ mod tests_parse_block_smart_list {
 
         // Invalid checked.
         {
-            let input = vec!["- [x]done"].join("\n");
+            let input = ["- [x]done"].join("\n");
             let result = parse_block_smart_list(&input);
             let remainder = result.as_ref().unwrap().0;
             let (lines, _bullet_kind, _indent) = result.unwrap().1;
@@ -294,7 +294,7 @@ mod tests_parse_smart_lists_in_markdown {
 
     #[test]
     fn test_parse_valid_md_ol_with_indent() {
-        let input = vec![
+        let input = [
             "start",
             "1. ol1",
             "  2. ol2",
@@ -307,7 +307,7 @@ mod tests_parse_smart_lists_in_markdown {
         ]
         .join("\n");
 
-        let expected_output = vec![
+        let expected_output = [
             "start",
             "[  ┊1.│ol1┊  ]",
             "[  ┊  2.│ol2┊ → ┊    │ol2.1┊  ]",
@@ -334,7 +334,7 @@ mod tests_parse_smart_lists_in_markdown {
 
     #[test]
     fn test_parse_valid_md_ul_with_indent() {
-        let input = vec![
+        let input = [
             "start",
             "- ul1",
             "  - ul2",
@@ -347,7 +347,7 @@ mod tests_parse_smart_lists_in_markdown {
         ]
         .join("\n");
 
-        let expected_output = vec![
+        let expected_output = [
             "start",
             "[  ┊─┤ul1┊  ]",
             "[  ┊───┤ul2┊ → ┊   │ul2.1┊  ]",
@@ -396,7 +396,7 @@ mod tests_parse_smart_lists_in_markdown {
         ]
         .join("\n");
 
-        let expected_output = vec![
+        let expected_output = [
             "start",
             "[  ┊─┤ul1┊  ]",
             "[  ┊─┤ul2┊ → ┊ │ul2.1┊  ]",
@@ -429,7 +429,7 @@ mod tests_parse_smart_lists_in_markdown {
 
     #[test]
     fn test_parse_valid_md_no_indent() {
-        let input = vec![
+        let input = [
             "start",
             "- ul1",
             "- ul2",
@@ -442,16 +442,14 @@ mod tests_parse_smart_lists_in_markdown {
         ]
         .join("\n");
 
-        let expected_output = vec![
-            "start",
+        let expected_output = ["start",
             "[  ┊─┤ul1┊  ]",
             "[  ┊─┤ul2┊  ]",
             "[  ┊1.│ol1┊  ]",
             "[  ┊2.│ol2┊  ]",
             "[  ┊─┤[ ] todo┊  ]",
             "[  ┊─┤[x] done┊  ]",
-            "end",
-        ];
+            "end"];
 
         let result = parse_markdown(input.as_str());
         let remainder = result.as_ref().unwrap().0;

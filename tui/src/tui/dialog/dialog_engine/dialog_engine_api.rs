@@ -386,7 +386,7 @@ mod internal_impl {
     pub fn render_results_panel<S>(
         origin_pos: &Position,
         bounds_size: &Size,
-        dialog_engine: &mut DialogEngine,
+        dialog_engine: &DialogEngine,
         self_id: FlexBoxId,
         state: &S,
     ) -> CommonResult<RenderOps>
@@ -416,7 +416,7 @@ mod internal_impl {
             origin_pos: &Position,
             bounds_size: &Size,
             results: &[String],
-            dialog_engine: &mut DialogEngine,
+            dialog_engine: &DialogEngine,
         ) {
             let col_start_index = ch!(1);
             let row_start_index =
@@ -696,7 +696,7 @@ mod internal_impl {
     pub fn try_handle_dialog_choice(
         input_event: &InputEvent,
         dialog_buffer: &DialogBuffer,
-        dialog_engine: &mut DialogEngine,
+        dialog_engine: &DialogEngine,
     ) -> Option<DialogChoice> {
         match DialogEvent::from(input_event) {
             // Handle Enter.

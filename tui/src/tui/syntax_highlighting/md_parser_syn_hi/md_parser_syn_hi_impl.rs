@@ -64,13 +64,13 @@ mod tests_try_parse_and_highlight {
     #[test]
     fn from_vec_us() -> CommonResult<()> {
         let editor_text_lines = vec![US::new("Hello"), US::new("World")];
-        let maybe_current_box_computed_style = Some(style! {
+        let current_box_computed_style = style! {
             color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-        });
+        };
 
         let style_us_span_lines = try_parse_and_highlight(
             &editor_text_lines,
-            &maybe_current_box_computed_style,
+            &Some(current_box_computed_style),
             None,
         )?;
 
@@ -87,11 +87,11 @@ mod tests_try_parse_and_highlight {
 
         assert_eq2!(
             line_0.style,
-            maybe_current_box_computed_style.unwrap() + get_foreground_style()
+            current_box_computed_style + get_foreground_style()
         );
         assert_eq2!(
             line_1.style,
-            maybe_current_box_computed_style.unwrap() + get_foreground_style()
+            current_box_computed_style + get_foreground_style()
         );
 
         Ok(())
@@ -679,17 +679,17 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_checkbox_unchecked() {
             let fragment = MdLineFragment::Checkbox(false);
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
-            let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
+            };
+            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
             assert_eq2!(actual.len(), 1);
 
             assert_eq2!(
                 actual.get(0).unwrap(),
                 &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_checkbox_unchecked_style(),
+                    style + get_checkbox_unchecked_style(),
                     US::from(UNCHECKED_OUTPUT)
                 )
             );
@@ -700,17 +700,17 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_checkbox_checked() {
             let fragment = MdLineFragment::Checkbox(true);
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
-            let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
+            };
+            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
             assert_eq2!(actual.len(), 1);
 
             assert_eq2!(
                 actual.get(0).unwrap(),
                 &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_checkbox_checked_style(),
+                    style + get_checkbox_checked_style(),
                     US::from(CHECKED_OUTPUT)
                 )
             );
@@ -724,10 +724,10 @@ mod tests_style_us_span_lines_from {
                 text: "R3BL",
                 url: "https://r3bl.com",
             });
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
-            let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
+            };
+            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
             assert_eq2!(actual.len(), 6);
 
@@ -740,7 +740,7 @@ mod tests_style_us_span_lines_from {
             assert_eq2!(
                 actual,
                 &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default()
+                    style
                         + style! {
                             attrib: [dim]
                             color_fg: actual_style_color_fg
@@ -759,10 +759,10 @@ mod tests_style_us_span_lines_from {
                 text: "R3BL",
                 url: "https://r3bl.com",
             });
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
-            let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
+            };
+            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
             assert_eq2!(actual.len(), 6);
 
@@ -776,7 +776,7 @@ mod tests_style_us_span_lines_from {
                 assert_eq2!(
                     actual,
                     &StyleUSSpan::new(
-                        maybe_style.unwrap_or_default()
+                        style
                             + style! {
                                 attrib: [dim]
                                 color_fg: actual_style_color_fg
@@ -797,7 +797,7 @@ mod tests_style_us_span_lines_from {
                 assert_eq2!(
                     actual,
                     &StyleUSSpan::new(
-                        maybe_style.unwrap_or_default()
+                        style
                             + style! {
                                 color_fg: actual_style_color_fg
                                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
@@ -817,7 +817,7 @@ mod tests_style_us_span_lines_from {
                 assert_eq2!(
                     actual,
                     &StyleUSSpan::new(
-                        maybe_style.unwrap_or_default()
+                        style
                             + style! {
                                 attrib: [dim]
                                 color_fg: actual_style_color_fg
@@ -838,7 +838,7 @@ mod tests_style_us_span_lines_from {
                 assert_eq2!(
                     actual,
                     &StyleUSSpan::new(
-                        maybe_style.unwrap_or_default()
+                        style
                             + style! {
                                 attrib: [dim]
                                 color_fg: actual_style_color_fg
@@ -859,7 +859,7 @@ mod tests_style_us_span_lines_from {
                 assert_eq2!(
                     actual,
                     &StyleUSSpan::new(
-                        maybe_style.unwrap_or_default()
+                        style
                             + style! {
                                 attrib: [underline]
                                 color_fg: actual_style_color_fg
@@ -880,7 +880,7 @@ mod tests_style_us_span_lines_from {
                 assert_eq2!(
                     actual,
                     &StyleUSSpan::new(
-                        maybe_style.unwrap_or_default()
+                        style
                             + style! {
                                 attrib: [dim]
                                 color_fg: actual_style_color_fg
@@ -897,148 +897,112 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_inline_code() {
             let fragment = MdLineFragment::InlineCode("Foobar");
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
+            };
 
-            let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
+            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
             // println!("{}", List::from(actual.clone())..pretty_print_debug());
 
             assert_eq2!(
                 actual[0],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from("`"),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("`"),)
             );
             assert_eq2!(
                 actual[1],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_inline_code_style(),
-                    US::from("Foobar"),
-                )
+                StyleUSSpan::new(style + get_inline_code_style(), US::from("Foobar"),)
             );
             assert_eq2!(
                 actual[2],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from("`"),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("`"),)
             );
         }
 
         #[test]
         fn test_italic() {
             let fragment = MdLineFragment::Italic("Foobar");
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
+            };
 
-            let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
+            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
             // println!("{}", List::from(actual.clone())..pretty_print_debug());
 
             assert_eq2!(
                 actual[0],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from("*"),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("*"),)
             );
             assert_eq2!(
                 actual[1],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_italic_style(),
-                    US::from("Foobar"),
-                )
+                StyleUSSpan::new(style + get_italic_style(), US::from("Foobar"),)
             );
             assert_eq2!(
                 actual[2],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from("*"),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("*"),)
             );
         }
 
         #[test]
         fn test_bold() {
             let fragment = MdLineFragment::Bold("Foobar");
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
+            };
 
-            let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
+            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
             // println!("{}", List::from(actual.clone())..pretty_print_debug());
 
             assert_eq2!(
                 actual[0],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from("**"),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("**"),)
             );
             assert_eq2!(
                 actual[1],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_bold_style(),
-                    US::from("Foobar"),
-                )
+                StyleUSSpan::new(style + get_bold_style(), US::from("Foobar"),)
             );
             assert_eq2!(
                 actual[2],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from("**"),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("**"),)
             );
         }
 
         #[test]
         fn test_bold_italic() {
             let fragment = MdLineFragment::BoldItalic("Foobar");
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
+            };
 
-            let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
+            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
 
             // println!("{}", List::from(actual.clone())..pretty_print_debug());
 
             assert_eq2!(
                 actual[0],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from("***"),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("***"),)
             );
             assert_eq2!(
                 actual[1],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_bold_italic_style(),
-                    US::from("Foobar"),
-                )
+                StyleUSSpan::new(style + get_bold_italic_style(), US::from("Foobar"),)
             );
             assert_eq2!(
                 actual[2],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from("***"),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("***"),)
             );
         }
 
         #[test]
         fn test_plain() {
             let fragment = MdLineFragment::Plain("Foobar");
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
-            let actual = StyleUSSpan::from_fragment(&fragment, &maybe_style);
+            };
+            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
             let expected = vec![StyleUSSpan::new(
-                maybe_style.unwrap_or_default() + get_foreground_style(),
+                style + get_foreground_style(),
                 US::from("Foobar"),
             )];
             assert_eq2!(actual, expected);
@@ -1053,10 +1017,10 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_metadata_tags() -> Result<(), ()> {
             let tags = MdBlockElement::Tags(list!["tag1", "tag2", "tag3"]);
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
-            let lines = StyleUSSpanLines::from_block(&tags, &maybe_style, None);
+            };
+            let lines = StyleUSSpanLines::from_block(&tags, &Some(style), None);
             let line_0 = &lines.items[0];
             let mut iter = line_0.items.iter();
 
@@ -1064,49 +1028,40 @@ mod tests_style_us_span_lines_from {
             assert_eq2!(
                 iter.next().ok_or(())?,
                 &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_metadata_tags_marker_style(),
+                    style + get_metadata_tags_marker_style(),
                     US::from("@tags"),
                 )
             );
             assert_eq2!(
                 iter.next().ok_or(())?,
-                &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from(": "),
-                )
+                &StyleUSSpan::new(style + get_foreground_dim_style(), US::from(": "),)
             );
             assert_eq2!(
                 iter.next().ok_or(())?,
                 &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
+                    style + get_metadata_tags_values_style(),
                     US::from("tag1"),
                 )
             );
             assert_eq2!(
                 iter.next().ok_or(())?,
-                &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from(", "),
-                )
+                &StyleUSSpan::new(style + get_foreground_dim_style(), US::from(", "),)
             );
             assert_eq2!(
                 iter.next().ok_or(())?,
                 &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
+                    style + get_metadata_tags_values_style(),
                     US::from("tag2"),
                 )
             );
             assert_eq2!(
                 iter.next().ok_or(())?,
-                &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from(", "),
-                )
+                &StyleUSSpan::new(style + get_foreground_dim_style(), US::from(", "),)
             );
             assert_eq2!(
                 iter.next().ok_or(())?,
                 &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_metadata_tags_values_style(),
+                    style + get_metadata_tags_values_style(),
                     US::from("tag3"),
                 )
             );
@@ -1117,10 +1072,10 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_metadata_title() {
             let title = MdBlockElement::Title("Something");
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
-            let lines = StyleUSSpanLines::from_block(&title, &maybe_style, None);
+            };
+            let lines = StyleUSSpanLines::from_block(&title, &Some(style), None);
             // println!("{}", lines..pretty_print_debug());
 
             let line_0 = &lines.items[0];
@@ -1129,7 +1084,7 @@ mod tests_style_us_span_lines_from {
             assert_eq2!(
                 span_0,
                 &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_metadata_title_marker_style(),
+                    style + get_metadata_title_marker_style(),
                     US::from("@title"),
                 )
             );
@@ -1137,17 +1092,14 @@ mod tests_style_us_span_lines_from {
             let span_1 = &line_0.items[1];
             assert_eq2!(
                 span_1,
-                &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from(": "),
-                )
+                &StyleUSSpan::new(style + get_foreground_dim_style(), US::from(": "),)
             );
 
             let span_2 = &line_0.items[2];
             assert_eq2!(
                 span_2,
                 &StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_metadata_title_value_style(),
+                    style + get_metadata_title_value_style(),
                     US::from("Something"),
                 )
             );
@@ -1170,28 +1122,22 @@ mod tests_style_us_span_lines_from {
                 },
             ));
 
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
+            };
 
             let lines =
-                StyleUSSpanLines::from_block(&codeblock_block, &maybe_style, None);
+                StyleUSSpanLines::from_block(&codeblock_block, &Some(style), None);
 
             let line_0 = &lines.items[0];
             // println!("{}", line_0..pretty_print_debug());
             assert_eq2!(
                 line_0.items[0],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from("```"),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("```"),)
             );
             assert_eq2!(
                 line_0.items[1],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_code_block_lang_style(),
-                    US::from("ts"),
-                )
+                StyleUSSpan::new(style + get_code_block_lang_style(), US::from("ts"),)
             );
 
             let line_1 = &lines.items[1];
@@ -1199,7 +1145,7 @@ mod tests_style_us_span_lines_from {
             assert_eq2!(
                 line_1.items[0],
                 StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_code_block_content_style(),
+                    style + get_code_block_content_style(),
                     US::from("let a = 1;"),
                 )
             );
@@ -1208,64 +1154,49 @@ mod tests_style_us_span_lines_from {
             // println!("{}", line_2..pretty_print_debug());
             assert_eq2!(
                 line_2.items[0],
-                StyleUSSpan::new(
-                    maybe_style.unwrap_or_default() + get_foreground_dim_style(),
-                    US::from("```"),
-                )
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("```"),)
             );
         }
 
         #[test]
         fn test_block_ol() -> CommonResult<()> {
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
+            };
             let (remainder, doc) = parse_markdown("100. Foo\n200. Bar\n")?;
             assert_eq2!(remainder, "");
 
             let ol_block_1 = &doc[0];
             {
                 // println!("{:#?}", ol_block_1);
-                let lines = StyleUSSpanLines::from_block(ol_block_1, &maybe_style, None);
+                let lines = StyleUSSpanLines::from_block(ol_block_1, &Some(style), None);
 
                 let line_0 = &lines.items[0];
                 // println!("{}", line_0..pretty_print_debug());
                 assert_eq2!(
                     line_0.items[0],
-                    StyleUSSpan::new(
-                        maybe_style.unwrap_or_default() + get_list_bullet_style(),
-                        US::from("100.│")
-                    )
+                    StyleUSSpan::new(style + get_list_bullet_style(), US::from("100.│"))
                 );
                 assert_eq2!(
                     line_0.items[1],
-                    StyleUSSpan::new(
-                        maybe_style.unwrap_or_default() + get_foreground_style(),
-                        US::from("Foo"),
-                    )
+                    StyleUSSpan::new(style + get_foreground_style(), US::from("Foo"),)
                 );
             }
 
             let ol_block_2 = &doc[1];
             {
                 // println!("{:#?}", ol_block_2);
-                let lines = StyleUSSpanLines::from_block(ol_block_2, &maybe_style, None);
+                let lines = StyleUSSpanLines::from_block(ol_block_2, &Some(style), None);
 
                 let line_0 = &lines.items[0];
                 // println!("{}", line_0..pretty_print_debug());
                 assert_eq2!(
                     line_0.items[0],
-                    StyleUSSpan::new(
-                        maybe_style.unwrap_or_default() + get_list_bullet_style(),
-                        US::from("200.│")
-                    )
+                    StyleUSSpan::new(style + get_list_bullet_style(), US::from("200.│"))
                 );
                 assert_eq2!(
                     line_0.items[1],
-                    StyleUSSpan::new(
-                        maybe_style.unwrap_or_default() + get_foreground_style(),
-                        US::from("Bar"),
-                    )
+                    StyleUSSpan::new(style + get_foreground_style(), US::from("Bar"),)
                 );
             }
 
@@ -1274,51 +1205,39 @@ mod tests_style_us_span_lines_from {
 
         #[test]
         fn test_block_ul() -> CommonResult<()> {
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
+            };
             let (_, doc) = parse_markdown("- Foo\n- Bar\n")?;
             println!("{}", ansi_term::Color::Cyan.paint(format!("{:#?}", doc)));
 
             // First smart list.
             {
                 let ul_block_0 = &doc[0];
-                let lines = StyleUSSpanLines::from_block(ul_block_0, &maybe_style, None);
+                let lines = StyleUSSpanLines::from_block(ul_block_0, &Some(style), None);
                 let line_0 = &lines.items[0];
                 assert_eq2!(
                     line_0.items[0],
-                    StyleUSSpan::new(
-                        maybe_style.unwrap_or_default() + get_list_bullet_style(),
-                        US::from("─┤")
-                    )
+                    StyleUSSpan::new(style + get_list_bullet_style(), US::from("─┤"))
                 );
                 assert_eq2!(
                     line_0.items[1],
-                    StyleUSSpan::new(
-                        maybe_style.unwrap_or_default() + get_foreground_style(),
-                        US::from("Foo")
-                    )
+                    StyleUSSpan::new(style + get_foreground_style(), US::from("Foo"))
                 );
             }
 
             // Second smart list.
             {
                 let ul_block_1 = &doc[1];
-                let lines = StyleUSSpanLines::from_block(ul_block_1, &maybe_style, None);
+                let lines = StyleUSSpanLines::from_block(ul_block_1, &Some(style), None);
                 let line_0 = &lines.items[0];
                 assert_eq2!(
                     line_0.items[0],
-                    StyleUSSpan::new(
-                        maybe_style.unwrap_or_default() + get_list_bullet_style(),
-                        US::from("─┤")
-                    )
+                    StyleUSSpan::new(style + get_list_bullet_style(), US::from("─┤"))
                 );
                 assert_eq2!(
                     line_0.items[1],
-                    StyleUSSpan::new(
-                        maybe_style.unwrap_or_default() + get_foreground_style(),
-                        US::from("Bar")
-                    )
+                    StyleUSSpan::new(style + get_foreground_style(), US::from("Bar"))
                 );
             }
 
@@ -1328,21 +1247,18 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_text() {
             let text_block = MdBlockElement::Text(list![MdLineFragment::Plain("Foobar")]);
-            let maybe_style = Some(style! {
+            let style = style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            });
+            };
 
-            let lines = StyleUSSpanLines::from_block(&text_block, &maybe_style, None);
+            let lines = StyleUSSpanLines::from_block(&text_block, &Some(style), None);
             // println!("{}", lines..pretty_print_debug());
 
             let line_0 = &lines.items[0];
             let span_0_in_line_0 = &line_0.items[0];
             let StyleUSSpan { style, text } = span_0_in_line_0;
             assert_eq2!(text.string, "Foobar");
-            assert_eq2!(
-                style,
-                &(maybe_style.unwrap_or_default() + get_foreground_style())
-            );
+            assert_eq2!(style, &(*style + get_foreground_style()));
         }
 
         #[test]

@@ -165,7 +165,6 @@ mod control_wheel_control {
             }
             let spread: f64 = spread.parse().unwrap();
             let frequency: f64 = frequency.parse().unwrap();
-            let color_change = color_change;
 
             ColorWheelControl {
                 seed,

@@ -224,7 +224,7 @@ impl EditorEngineApi {
                     DEBUG_TUI_COPY_PASTE,
                     log_debug(format!(
                         "\n🍉🍉🍉 selection_str_slice: \n\t{0}, range: {1}",
-                        /* 0 */ format!("{}", selection).black().on_white(),
+                        /* 0 */ selection.to_string().black().on_white(),
                         /* 1 */ range_of_display_col_indices,
                     ))
                 );

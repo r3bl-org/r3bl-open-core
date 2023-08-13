@@ -45,7 +45,7 @@ const ENABLE_MULTITHREADED_LOG_WRITING: bool = false;
 /// info](https://doc.rust-lang.org/std/result/enum.Result.html#method.ok).
 pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
     unsafe {
-        return match FILE_LOGGER_INIT_OK {
+        match FILE_LOGGER_INIT_OK {
             true => CommonError::new(
                 CommonErrorType::InvalidState,
                 "Logger already initialized, can't set log file path",
@@ -54,7 +54,7 @@ pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
                 FILE_PATH = path;
                 Ok(path.to_string())
             }
-        };
+        }
     }
 }
 
@@ -66,7 +66,7 @@ pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
 /// info](https://doc.rust-lang.org/std/result/enum.Result.html#method.ok).
 pub fn try_to_set_log_level(level: LevelFilter) -> CommonResult<String> {
     unsafe {
-        return match FILE_LOGGER_INIT_OK {
+        match FILE_LOGGER_INIT_OK {
             true => CommonError::new(
                 CommonErrorType::InvalidState,
                 "Logger already initialized, can't set log level",
@@ -75,7 +75,7 @@ pub fn try_to_set_log_level(level: LevelFilter) -> CommonResult<String> {
                 LOG_LEVEL = level;
                 Ok(level.to_string())
             }
-        };
+        }
     }
 }
 

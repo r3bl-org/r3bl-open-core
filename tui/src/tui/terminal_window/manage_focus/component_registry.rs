@@ -73,7 +73,7 @@ mod component_registry_impl {
         A: Debug + Default + Clone + Sync + Send,
     {
         pub fn get_focused_component_ref(
-            this: &mut ComponentRegistry<S, A>,
+            this: &ComponentRegistry<S, A>,
         ) -> Option<SharedComponent<S, A>> {
             if let Some(ref id) = this.has_focus.get_id() {
                 ComponentRegistry::get_component_ref_by_id(this, *id)
@@ -83,7 +83,7 @@ mod component_registry_impl {
         }
 
         pub fn get_component_ref_by_id(
-            this: &mut ComponentRegistry<S, A>,
+            this: &ComponentRegistry<S, A>,
             id: FlexBoxId,
         ) -> Option<SharedComponent<S, A>> {
             if let Some(component) = this.get(id) {
@@ -92,13 +92,13 @@ mod component_registry_impl {
             None
         }
 
-        pub async fn reset_component(this: &mut ComponentRegistry<S, A>, id: FlexBoxId) {
+        pub async fn reset_component(this: &ComponentRegistry<S, A>, id: FlexBoxId) {
             if let Some(it) = ComponentRegistry::get_component_ref_by_id(this, id) {
                 it.write().await.reset();
             }
         }
 
-        pub async fn reset_focused_component(this: &mut ComponentRegistry<S, A>) {
+        pub async fn reset_focused_component(this: &ComponentRegistry<S, A>) {
             if let Some(it) = ComponentRegistry::get_focused_component_ref(this) {
                 it.write().await.reset();
             }
