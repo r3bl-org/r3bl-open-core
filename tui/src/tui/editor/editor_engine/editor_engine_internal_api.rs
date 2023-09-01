@@ -1509,6 +1509,12 @@ pub mod validate_editor_buffer_change {
             editor_buffer,
         });
 
+        // 00: CARET VALIDITY - STILL IN BOUNDS OF LINE?
+        adjust_caret_col_if_not_in_bounds_of_line(EditorArgsMut {
+            editor_engine,
+            editor_buffer,
+        });
+
         // Check scroll_offset validity.
         if let Some(diff) = is_scroll_offset_in_middle_of_grapheme_cluster(EditorArgs {
             editor_engine,
@@ -1524,6 +1530,36 @@ pub mod validate_editor_buffer_change {
         }
 
         None
+    }
+
+    fn adjust_caret_col_if_not_in_bounds_of_line(args: EditorArgsMut<'_>) -> Option<()> {
+        let EditorArgsMut { editor_buffer, .. } = args;
+
+        let caret = editor_buffer.get_caret(CaretKind::ScrollAdjusted);
+        let row_content_width =
+            content_get::line_display_width_at_row_index(editor_buffer, caret.row_index);
+
+        let (_, caret, _, _) = editor_buffer.get_mut();
+        caret.col_index =
+            validate_col_index_for_row_width(caret.col_index, row_content_width);
+
+        None
+    }
+
+    /// Make sure that the col_index is within the bounds of the given line width.
+    pub fn validate_col_index_for_row_width(
+        col_index: ChUnit,
+        row_width: ChUnit,
+    ) -> ChUnit {
+        if row_width == ch!(0) {
+            return ch!(0);
+        }
+
+        if col_index > row_width {
+            row_width
+        } else {
+            col_index
+        }
     }
 
     pub fn is_scroll_offset_in_middle_of_grapheme_cluster(
