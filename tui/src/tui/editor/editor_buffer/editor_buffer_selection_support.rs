@@ -20,8 +20,7 @@ use std::cmp;
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
 
-use self::{multiline_select_helpers::validate_col_index_for_row,
-           selection_map_impl::{DirectionChangeResult, RowLocationInSelectionMap::*}};
+use self::selection_map_impl::{DirectionChangeResult, RowLocationInSelectionMap::*};
 use crate::*;
 
 pub struct EditorBufferApi;
@@ -285,7 +284,6 @@ impl EditorBufferApi {
                 editor_buffer,
                 caret_vertical_movement_direction,
             ),
-            // DirectionIsTheSame: No selection, then Shift+Up.
             // DirectionHasChanged: No selection -> Shift+Up -> Shift+Down -> Shift+Up.
             (
                 /* previous_caret */ Overflow,
@@ -419,39 +417,25 @@ impl EditorBufferApi {
         // handle_selection_single_line_caret_movement() on each row.
         match caret_vertical_movement_direction {
             CaretMovementDirection::Up => {
-                // 00: INCOMPLETE & PROBLEM FOUND IN PAGE_UP (goes past EOL)
+                // 00: PAGE_UP DOES NOT HANDLE SELECT CORRECTLY FOR START OF LINE
                 for row_index in current.row_index..previous.row_index {
+                    let current_row_index = row_index;
+                    let previous_row_index = row_index + 1;
                     Self::handle_multiline(
                         editor_buffer,
-                        position!(col_index: current.col_index, row_index: row_index),
-                        position!(col_index: previous.col_index, row_index: row_index-1),
+                        position!(col_index: previous.col_index, row_index: previous_row_index),
+                        position!(col_index: current.col_index, row_index: current_row_index),
                     );
                 }
             }
             CaretMovementDirection::Down => {
-                // 00: PROBLEM FOUND IN PAGE_DOWN (goes past EOL)
                 for row_index in previous.row_index..current.row_index {
                     let previous_row_index = row_index;
                     let current_row_index = row_index + 1;
-
-                    // Calculate previous col_index.
-                    let previous_col_index = validate_col_index_for_row(
-                        previous.col_index,
-                        previous_row_index,
-                        editor_buffer,
-                    );
-
-                    // Calculate current col_index.
-                    let current_col_index = validate_col_index_for_row(
-                        current.col_index,
-                        current_row_index,
-                        editor_buffer,
-                    );
-
                     Self::handle_multiline(
                         editor_buffer,
-                        position!(col_index: previous_col_index, row_index: previous_row_index),
-                        position!(col_index: current_col_index, row_index: current_row_index),
+                        position!(col_index: previous.col_index, row_index: previous_row_index),
+                        position!(col_index: current.col_index, row_index: current_row_index),
                     );
                 }
             }
@@ -564,42 +548,7 @@ impl EditorBufferApi {
 
 mod multiline_select_helpers {
     use super::*;
-
-    // AA: needed?
-    /// Make sure that the col_index is within the bounds of the line at the row_index.
-    pub fn validate_col_index_for_row(
-        col_index: ChUnit,
-        row_index: ChUnit,
-        editor_buffer: &EditorBuffer,
-    ) -> ChUnit {
-        let line_width = editor_buffer.get_line_display_width(row_index);
-        if line_width == ch!(0) {
-            return ch!(0);
-        }
-
-        if col_index > line_width {
-            line_width
-        } else {
-            col_index
-        }
-    }
-
-    // AA: needed?
-    /// Make sure that the col_index is within the bounds of the given line width.
-    pub fn validate_col_index_for_row_width(
-        col_index: ChUnit,
-        row_width: ChUnit,
-    ) -> ChUnit {
-        if row_width == ch!(0) {
-            return ch!(0);
-        }
-
-        if col_index > row_width {
-            row_width
-        } else {
-            col_index
-        }
-    }
+    use crate::validate_editor_buffer_change::validate_col_index_for_row_width;
 
     /// No existing selection, up, no direction change:
     /// - Add first row selection range.
