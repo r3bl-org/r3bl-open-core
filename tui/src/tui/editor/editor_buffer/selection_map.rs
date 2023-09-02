@@ -153,7 +153,6 @@ pub mod selection_map_impl {
             self.maybe_previous_direction = None;
         }
 
-        // 00: implement helper locate fn for row_index for multiline selection
         /// Is there a selection range for the row_index of `row_index_arg` in the map?
         /// - The [map](Self::map) contains key value pairs of [RowIndex] and
         ///   [SelectionRange].

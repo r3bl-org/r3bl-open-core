@@ -68,11 +68,12 @@ impl TryFrom<&InputEvent> for EditorEvent {
     type Error = String;
 
     fn try_from(input_event: &InputEvent) -> Result<Self, Self::Error> {
-        // DBG: remove
-        log_debug(format!(
-            "\n#️⃣#️⃣#️⃣  EditorEvent::try_from: {}",
-            format!("{}", input_event).red().on_white()
-        ));
+        call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            log_debug(format!(
+                "\n#️⃣#️⃣#️⃣  EditorEvent::try_from: {}",
+                format!("{}", input_event).red().on_white()
+            ));
+        });
 
         match input_event {
             // Selection events.

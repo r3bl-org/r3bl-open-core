@@ -16,14 +16,15 @@ Table of contents:
 
 - In the `copypaste` branch, I've been working on editor component upgrades related to select, copy,
   paste, cut, support. Here's the [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/86).
-   - Resume work on this todo item (just search for the following or <kbd>Alt+T</kbd>):
-     `// 00: WORK ON THIS`
    - Shift up and down are done
-   - Shift page up and down are next
+   - Shift page up and down are done
+   - Resume work on this todo item (just search for the following or <kbd>Alt+T</kbd>): `// 00:`
    - When selection is made, scrolling does not work (something wrong w/ rendering selection)
    - Shift home and end are next after that
    - Then implement actions: copy, cut, delete, paste
-   - Then merge this branch to main
+   - Do an audit of dependencies and make sure they are all compatible licenses and use
+     the `r3bl_ansi_color` crate as well.
+   - Then merge this branch to main.
 - The [TODO.todo](TODO.todo) file has a list of things that need to be done and that are currently
   under way.
 - After these changes have landed, I would really like to have better documentation and then publish

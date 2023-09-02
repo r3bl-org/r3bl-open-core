@@ -116,7 +116,7 @@ impl Parse for SafeFnWrapperSyntaxInfo {
         // 👀 Fn Type, eg: `FnMut(A) -> Option(A) + Sync + Send + 'static`.
         let property_fn_type: Type = input.parse()?;
 
-        // Done parsing. Extract the manager name.
+        // Finished parsing. Extract the manager name.
         let wrapper_name_ident: Ident = if wrapper_name_type.has_ident() {
             wrapper_name_type.get_ident().unwrap()
         } else {

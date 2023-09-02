@@ -313,7 +313,6 @@ impl SelectMode {
         None
     }
 
-    // FIXME: add stuff for multi-line selection (up, down, page up, page down)
     pub fn update_selection_based_on_caret_movement_in_multiple_lines(
         &self,
         editor_buffer: &mut EditorBuffer,
@@ -411,7 +410,6 @@ mod caret_mut {
         None
     }
 
-    // 00: WORK ON THIS (wire Shift+PageUp)
     pub fn page_up(
         editor_buffer: &mut EditorBuffer,
         editor_engine: &mut EditorEngine,
@@ -433,8 +431,6 @@ mod caret_mut {
             viewport_height,
             CaretDirection::Up,
         );
-
-        // 00: FIXME - page up caret col goes past end of line
 
         // This is only set if select_mode is enabled.
         let maybe_current_caret_display_position =
@@ -499,7 +495,6 @@ mod caret_mut {
         None
     }
 
-    // 00: WORK ON THIS (wire Shift+PageDown)
     pub fn page_down(
         editor_buffer: &mut EditorBuffer,
         editor_engine: &mut EditorEngine,
@@ -521,8 +516,6 @@ mod caret_mut {
             viewport_height,
             CaretDirection::Down,
         );
-
-        // 00: FIXME - page down caret col goes past end of line
 
         // This is only set if select_mode is enabled.
         let maybe_current_caret_display_position =
@@ -1509,7 +1502,6 @@ pub mod validate_editor_buffer_change {
             editor_buffer,
         });
 
-        // 00: CARET VALIDITY - STILL IN BOUNDS OF LINE?
         adjust_caret_col_if_not_in_bounds_of_line(EditorArgsMut {
             editor_engine,
             editor_buffer,

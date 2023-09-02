@@ -95,7 +95,7 @@ impl EditorBufferApi {
             ))
         );
 
-        // AA: for reference, algo for left, right selection
+        // BM: for reference, algo for left, right selection
         // Handle the movement of the caret and apply the appropriate changes to the range.
         match (
             range.locate_column(previous),
@@ -195,11 +195,9 @@ impl EditorBufferApi {
         }
     }
 
-    // TODO: implement multiline caret movement & selection changes
-    // DBG: turn these comments into docs
     // 00: implement multiline selection changes (up/down, and later page up/page down)
     /// Precondition: there has to be at least 2 rows.
-    fn handle_multiline(
+    fn handle_two_lines(
         editor_buffer: &mut EditorBuffer,
         previous_caret_display_position: Position,
         current_caret_display_position: Position,
@@ -224,45 +222,46 @@ impl EditorBufferApi {
         let has_caret_movement_direction_changed = selection_map
             .has_caret_movement_direction_changed(caret_vertical_movement_direction);
 
-        // DBG: remove
-        log_debug(format!(
-            "\n📜📜📜 {0}\n\t{1}, {2}\n\t{3}\n\t{4}\n\t{5}\n\t{6}\n\t{7}",
-            /* 0: heading */
-            "handle multiline caret movement"
-                .to_string()
-                .red()
-                .on_white(),
-            /* 1: previous */
-            format!("👈 previous: {}", previous).cyan().on_dark_grey(),
-            /* 2: current */
-            format!("👉 current: {}", current).magenta().on_dark_grey(),
-            /* 3: selection_map */
-            format!("{:?}", editor_buffer.get_selection_map())
-                .magenta()
+        call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            log_debug(format!(
+                "\n📜📜📜 {0}\n\t{1}, {2}\n\t{3}\n\t{4}\n\t{5}\n\t{6}\n\t{7}",
+                /* 0: heading */
+                "handle multiline caret movement"
+                    .to_string()
+                    .red()
+                    .on_white(),
+                /* 1: previous */
+                format!("👈 previous: {}", previous).cyan().on_dark_grey(),
+                /* 2: current */
+                format!("👉 current: {}", current).magenta().on_dark_grey(),
+                /* 3: selection_map */
+                format!("{:?}", editor_buffer.get_selection_map())
+                    .magenta()
+                    .on_dark_grey(),
+                /* 4: locate_previous_row_index */
+                format!("locate_previous_row_index: {:?}", locate_previous_row_index)
+                    .cyan()
+                    .on_dark_grey(),
+                /* 5: locate_current_row_index, */
+                format!("locate_current_row_index: {:?}", locate_current_row_index,)
+                    .magenta()
+                    .on_dark_grey(),
+                /* 6: caret_vertical_movement_direction, */
+                format!(
+                    "caret_vertical_movement_direction: {:?}",
+                    caret_vertical_movement_direction,
+                )
+                .green()
                 .on_dark_grey(),
-            /* 4: locate_previous_row_index */
-            format!("locate_previous_row_index: {:?}", locate_previous_row_index)
-                .cyan()
+                /* 7: has_caret_movement_direction_changed, */
+                format!(
+                    "has_caret_movement_direction_changed: {:?}",
+                    has_caret_movement_direction_changed,
+                )
+                .yellow()
                 .on_dark_grey(),
-            /* 5: locate_current_row_index, */
-            format!("locate_current_row_index: {:?}", locate_current_row_index,)
-                .magenta()
-                .on_dark_grey(),
-            /* 6: caret_vertical_movement_direction, */
-            format!(
-                "caret_vertical_movement_direction: {:?}",
-                caret_vertical_movement_direction,
-            )
-            .green()
-            .on_dark_grey(),
-            /* 7: has_caret_movement_direction_changed, */
-            format!(
-                "has_caret_movement_direction_changed: {:?}",
-                has_caret_movement_direction_changed,
-            )
-            .yellow()
-            .on_dark_grey(),
-        ));
+            ));
+        });
 
         match (
             locate_previous_row_index,
@@ -379,16 +378,18 @@ impl EditorBufferApi {
             ),
             // Catchall.
             _ => {
-                // DBG: remove
-                log_debug(format!(
-                    "\n📜📜📜⚾⚾⚾ {0}",
-                    /* 0: heading */
-                    "handle multiline caret movement Catchall"
-                        .to_string()
-                        .bold()
-                        .yellow()
-                        .on_dark_green(),
-                ));
+                call_if_true!(
+                    DEBUG_TUI_COPY_PASTE,
+                    log_debug(format!(
+                        "\n📜📜📜⚾⚾⚾ {0}",
+                        /* 0: heading */
+                        "handle multiline caret movement Catchall"
+                            .to_string()
+                            .bold()
+                            .yellow()
+                            .on_dark_green(),
+                    ))
+                );
             }
         }
     }
@@ -416,23 +417,36 @@ impl EditorBufferApi {
         // For the rows between previous and current caret, call
         // handle_selection_single_line_caret_movement() on each row.
         match caret_vertical_movement_direction {
+            // ```text
+            // R ┌──────────┐
+            // 0 ▸C         │ ← Current caret
+            // 1 │P         │ ← Previous caret
+            //   └▴─────────┘
+            //   C0123456789
+            // ```
             CaretMovementDirection::Up => {
-                // 00: PAGE_UP DOES NOT HANDLE SELECT CORRECTLY FOR START OF LINE
                 for row_index in current.row_index..previous.row_index {
                     let current_row_index = row_index;
                     let previous_row_index = row_index + 1;
-                    Self::handle_multiline(
+                    Self::handle_two_lines(
                         editor_buffer,
                         position!(col_index: previous.col_index, row_index: previous_row_index),
                         position!(col_index: current.col_index, row_index: current_row_index),
                     );
                 }
             }
+            // ```text
+            // R ┌──────────┐
+            // 0 │P         │ ← Previous caret
+            // 1 ▸C         │ ← Current caret
+            //   └▴─────────┘
+            //   C0123456789
+            // ```
             CaretMovementDirection::Down => {
                 for row_index in previous.row_index..current.row_index {
                     let previous_row_index = row_index;
                     let current_row_index = row_index + 1;
-                    Self::handle_multiline(
+                    Self::handle_two_lines(
                         editor_buffer,
                         position!(col_index: previous.col_index, row_index: previous_row_index),
                         position!(col_index: current.col_index, row_index: current_row_index),
@@ -462,23 +476,24 @@ impl EditorBufferApi {
         let row_index = current.row_index; // Same as previous.row_index.
         let (lines, _, _, selection_map) = editor_buffer.get_mut();
 
-        // DBG: remove
-        log_debug(format!(
-            "\n📜🔼🔽 {0}\n\t{1}, {2}, {3}, {4}",
-            /* 0 */
-            "handle multiline caret movement"
-                .to_string()
-                .red()
-                .on_white(),
-            /* 1 */
-            format!("previous: {}", previous).cyan().on_dark_grey(),
-            /* 2 */
-            format!("current: {}", current).yellow().on_dark_grey(),
-            /* 3 */
-            format!("row_index: {}", row_index).green().on_dark_grey(),
-            /* 4 */
-            format!("{:?}", selection_map).magenta().on_dark_grey(),
-        ));
+        call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            log_debug(format!(
+                "\n📜🔼🔽 {0}\n\t{1}, {2}, {3}, {4}",
+                /* 0 */
+                "handle multiline caret movement hit top or bottom of document"
+                    .to_string()
+                    .red()
+                    .on_white(),
+                /* 1 */
+                format!("previous: {}", previous).cyan().on_dark_grey(),
+                /* 2 */
+                format!("current: {}", current).yellow().on_dark_grey(),
+                /* 3 */
+                format!("row_index: {}", row_index).green().on_dark_grey(),
+                /* 4 */
+                format!("{:?}", selection_map).magenta().on_dark_grey(),
+            ))
+        });
 
         match current.col_index.cmp(&previous.col_index) {
             cmp::Ordering::Less => {
@@ -677,33 +692,63 @@ mod multiline_select_helpers {
         editor_buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
+        // 00: FIX THIS TO HANDLE PAGE UP (CARET GOES PAST EOL), SIMILAR TO FIX FOR PAGE DOWN
+
         let first = current;
         let last = previous;
 
         let first_line_width = editor_buffer.get_line_display_width(first.row_index);
+        let last_line_width = editor_buffer.get_line_display_width(last.row_index);
 
         // Mutably borrow the selection map.
         let (_, _, _, selection_map) = editor_buffer.get_mut();
 
-        // Add the new first row range to selection map.
-        let first_row_range = {
-            let start_col = last.col_index; // Previous caret col_index.
-            let end_col = first_line_width; // EOL.
-            SelectionRange::new(start_col, end_col)
-        };
-        selection_map.insert(
-            first.row_index,
-            first_row_range,
-            caret_vertical_movement_direction,
-        );
+        // FIRST ROW.
+        if let Some(first_row_range) = selection_map.get(first.row_index) {
+            // Extend the existing range (in selection map) for the first row to end of line.
+            let updated_first_row_range = SelectionRange {
+                start_display_col_index: first_row_range.start_display_col_index,
+                end_display_col_index: first_line_width,
+            };
+            selection_map.insert(
+                first.row_index,
+                updated_first_row_range,
+                caret_vertical_movement_direction,
+            );
+        } else {
+            // Add the new first row range to selection map.
+            let new_first_row_range = {
+                let start_col = first.col_index;
+                let end_col = first_line_width;
+                SelectionRange::new(start_col, end_col)
+            };
+            selection_map.insert(
+                first.row_index,
+                new_first_row_range,
+                caret_vertical_movement_direction,
+            );
+        }
 
-        // Extend the existing range (in selection map) for the last row to start of line.
+        // LAST ROW.
         if let Some(last_row_range) = selection_map.get(last.row_index) {
+            // Extend the existing range (in selection map) for the last row to start of line.
             let start_col = ch!(0);
             let end_col = last_row_range.end_display_col_index;
-            let new_last_row_range = SelectionRange {
+            let updated_last_row_range = SelectionRange {
                 start_display_col_index: start_col,
                 end_display_col_index: end_col,
+            };
+            selection_map.insert(
+                last.row_index,
+                updated_last_row_range,
+                caret_vertical_movement_direction,
+            );
+        } else {
+            // Add the new last row range to selection map.
+            let new_last_row_range = {
+                let start_col = ch!(0);
+                let end_col = last.col_index;
+                SelectionRange::new(start_col, end_col)
             };
             selection_map.insert(
                 last.row_index,
