@@ -9,10 +9,11 @@ editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/86):
     ✔ left @done(23-05-17 18:03)
     ✔ down @done(23-08-06 11:35)
     ✔ up @done(23-08-06 11:35)
-    ☐ page up
-    ☐ page down
+    ✔ page up @done(23-09-01 18:56)
+    ✔ page down @done(23-09-01 18:56)
     ☐ end of line
     ☐ start of line
+    ✔ handle scrolling (rendering & selection) @done(23-09-03 20:26)
   ☐ implement copy
   ☐ implement cut
   ☐ implement paste

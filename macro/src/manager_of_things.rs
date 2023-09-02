@@ -251,7 +251,7 @@ impl Parse for ManagerOfThingSyntaxInfo {
         // 👀 Thing Type, eg: `std::collections::HashMap<K, V>`.
         let thing_type: Type = input.parse()?;
 
-        // Done parsing. Extract the manager name.
+        // Finished parsing. Extract the manager name.
         let manager_name_ident = if manager_type.has_ident() {
             manager_type.get_ident().unwrap()
         } else {

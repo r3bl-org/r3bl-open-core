@@ -45,15 +45,23 @@ pub struct SelectionRange {
     pub end_display_col_index: ChUnit,
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy)]
-pub enum SelectionRangeOp {
-    Insert {
-        range: SelectionRange,
-        row_index: ChUnit,
-    },
-    Remove {
-        row_index: ChUnit,
-    },
+#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy, Debug)]
+pub enum ScrollOffsetColLocationInRange {
+    Overflow,
+    Underflow,
+}
+
+impl SelectionRange {
+    pub fn locate_scroll_offset_col(
+        &self,
+        scroll_offset: Position,
+    ) -> ScrollOffsetColLocationInRange {
+        if self.start_display_col_index >= scroll_offset.col_index {
+            ScrollOffsetColLocationInRange::Underflow
+        } else {
+            ScrollOffsetColLocationInRange::Overflow
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy, Debug)]

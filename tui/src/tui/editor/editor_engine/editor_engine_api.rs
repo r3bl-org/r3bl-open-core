@@ -191,7 +191,7 @@ impl EditorEngineApi {
         );
     }
 
-    // DONE: implement render_selection
+    // BM: Render selection
     fn render_selection<S, A>(
         render_args: &RenderArgs<'_, S, A>,
         render_ops: &mut RenderOps,
@@ -211,36 +211,54 @@ impl EditorEngineApi {
             let row_index = *row_index;
             let lines = editor_buffer.get_lines();
 
+            let scroll_offset = editor_buffer.get_scroll_offset();
+
             if let Some(line) = lines.get(ch!(@to_usize *row_index)) {
-                let selection = {
-                    let it = line.clip_to_range(*range_of_display_col_indices);
-                    if it.is_empty() {
-                        continue;
-                    };
-                    it
+                // Take the scroll_offset into account when "slicing" the selection.
+                let selection = match range_of_display_col_indices
+                    .locate_scroll_offset_col(scroll_offset)
+                {
+                    ScrollOffsetColLocationInRange::Underflow => {
+                        let it = line.clip_to_range(*range_of_display_col_indices);
+                        if it.is_empty() {
+                            continue;
+                        };
+                        it
+                    }
+                    ScrollOffsetColLocationInRange::Overflow => {
+                        let scroll_offset_clipped_selection_range = SelectionRange {
+                            start_display_col_index: scroll_offset.col_index,
+                            ..*range_of_display_col_indices
+                        };
+                        let it =
+                            line.clip_to_range(scroll_offset_clipped_selection_range);
+                        if it.is_empty() {
+                            continue;
+                        };
+                        it
+                    }
                 };
 
                 call_if_true!(
                     DEBUG_TUI_COPY_PASTE,
                     log_debug(format!(
-                        "\n🍉🍉🍉 selection_str_slice: \n\t{0}, range: {1}",
+                        "\n🍉🍉🍉 selection_str_slice: \n\t{0}, \n\trange: {1}, \n\tscroll_offset: {2}",
                         /* 0 */ selection.to_string().black().on_white(),
                         /* 1 */ range_of_display_col_indices,
+                        /* 2 */ scroll_offset,
                     ))
                 );
 
                 let position = {
                     // Convert scroll adjusted to raw.
                     let raw_row_index = {
-                        let row_scroll_offset =
-                            editor_buffer.get_scroll_offset().row_index;
+                        let row_scroll_offset = scroll_offset.row_index;
                         row_index - row_scroll_offset
                     };
 
                     // Convert scroll adjusted to raw.
                     let raw_col_index = {
-                        let col_scroll_offset =
-                            editor_buffer.get_scroll_offset().col_index;
+                        let col_scroll_offset = scroll_offset.col_index;
                         range_of_display_col_indices.start_display_col_index
                             - col_scroll_offset
                     };
