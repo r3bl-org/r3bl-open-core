@@ -18,8 +18,8 @@ Table of contents:
   paste, cut, support. Here's the [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/86).
    - Shift up and down are done
    - Shift page up and down are done
-   - Resume work on this todo item (just search for the following or <kbd>Alt+T</kbd>): `// 00:`
    - When selection is made, scrolling does not work (something wrong w/ rendering selection)
+   - Resume work on this todo item (just search for the following or <kbd>Alt+T</kbd>): `// 00:`
    - Shift home and end are next after that
    - Then implement actions: copy, cut, delete, paste
    - Do an audit of dependencies and make sure they are all compatible licenses and use

@@ -563,7 +563,6 @@ impl EditorBufferApi {
 
 mod multiline_select_helpers {
     use super::*;
-    use crate::validate_editor_buffer_change::validate_col_index_for_row_width;
 
     /// No existing selection, up, no direction change:
     /// - Add first row selection range.
@@ -649,7 +648,6 @@ mod multiline_select_helpers {
         let last = current;
 
         let first_line_width = editor_buffer.get_line_display_width(first.row_index);
-        let last_line_width = editor_buffer.get_line_display_width(last.row_index);
 
         // Mutably borrow the selection map.
         let (_, _, _, selection_map) = editor_buffer.get_mut();
@@ -672,8 +670,7 @@ mod multiline_select_helpers {
         // Add the new last row range to selection map.
         let last_row_range = {
             let start_col = ch!(0);
-            let end_col =
-                validate_col_index_for_row_width(last.col_index, last_line_width);
+            let end_col = last.col_index;
             SelectionRange::new(start_col, end_col)
         };
         selection_map.insert(
@@ -692,13 +689,10 @@ mod multiline_select_helpers {
         editor_buffer: &mut EditorBuffer,
         caret_vertical_movement_direction: CaretMovementDirection,
     ) {
-        // 00: FIX THIS TO HANDLE PAGE UP (CARET GOES PAST EOL), SIMILAR TO FIX FOR PAGE DOWN
-
         let first = current;
         let last = previous;
 
         let first_line_width = editor_buffer.get_line_display_width(first.row_index);
-        let last_line_width = editor_buffer.get_line_display_width(last.row_index);
 
         // Mutably borrow the selection map.
         let (_, _, _, selection_map) = editor_buffer.get_mut();
