@@ -1472,6 +1472,8 @@ mod content_mut {
 
 /// This is marked as `pub` because `apply_change` is needed by `cargo doc`.
 pub mod validate_editor_buffer_change {
+    use crossterm::style::Stylize;
+
     use super::*;
 
     /// In addition to mutating the buffer, this function runs the following validations on the
@@ -1524,29 +1526,39 @@ pub mod validate_editor_buffer_change {
         None
     }
 
+    /// ```text
+    ///     0   4    9    1    2    2
+    ///                   4    0    5
+    ///    ┌────┴────┴────┴────┴────┴▾─→ col
+    ///  0 ┤
+    ///  1 ▸     TEXT-TEXT-TEXT-TEXT ░←── Caret is out of bounds of line.
+    ///  2 ┤         ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+    ///    ↓         │←    viewport   →│
+    ///    row
+    /// ```
     fn adjust_caret_col_if_not_in_bounds_of_line(args: EditorArgsMut<'_>) -> Option<()> {
         let EditorArgsMut { editor_buffer, .. } = args;
+        let scroll_offset = editor_buffer.get_scroll_offset();
 
-        let caret = editor_buffer.get_caret(CaretKind::ScrollAdjusted);
+        // Check right side of line. Clip scroll adjusted caret to max line width.
+        let caret = editor_buffer.get_caret(CaretKind::Raw);
         let row_content_width =
-            content_get::line_display_width_at_row_index(editor_buffer, caret.row_index);
+            content_get::line_display_width_at_row_index(editor_buffer, caret.row_index)
+                - scroll_offset.col_index;
 
         let (_, caret, _, _) = editor_buffer.get_mut();
-        caret.col_index =
+        let new_caret_col_index =
             validate_col_index_for_row_width(caret.col_index, row_content_width);
+        caret.col_index = new_caret_col_index;
 
         None
     }
 
     /// Make sure that the col_index is within the bounds of the given line width.
-    pub fn validate_col_index_for_row_width(
-        col_index: ChUnit,
-        row_width: ChUnit,
-    ) -> ChUnit {
+    fn validate_col_index_for_row_width(col_index: ChUnit, row_width: ChUnit) -> ChUnit {
         if row_width == ch!(0) {
             return ch!(0);
         }
-
         if col_index > row_width {
             row_width
         } else {
