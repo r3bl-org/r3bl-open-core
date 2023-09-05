@@ -27,10 +27,10 @@ use crate::{tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED, *};
 /// This macro is a convenience macro for creating a [RenderPipeline]. It works w/ [RenderOp] items.
 /// It allows them to be added in sequence, and then flushed at the end.
 /// 1. This pipeline is meant to hold a list of [RenderOp] items.
-/// 2. Once all the [RenderOp] items are added to the correct [ZOrder]s they can then be flushed at
-///    the end in order to [paint](RenderPipeline::paint) them to the screen.
-/// 3. [get_render_order()](ZOrder::get_render_order) contains the priority that is used to paint
-///    the different groups of [RenderOp] items.
+/// 2. Once all the [RenderOp] items are added to the correct [ZOrder]s they can then be
+///    flushed at the end in order to [paint](RenderPipeline::paint()) them to the screen.
+/// 3. [get_render_order()](ZOrder::get_render_order) contains the priority that is used
+///    to paint the different groups of [RenderOp] items.
 ///
 /// This adds given [RenderOp]s to a [RenderOps] and adds that the the pipeline, but does not flush
 /// anything. It will return a [RenderPipeline].

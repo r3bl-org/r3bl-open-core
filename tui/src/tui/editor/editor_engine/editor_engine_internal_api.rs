@@ -531,51 +531,80 @@ mod caret_mut {
         None
     }
 
-    /// Convenience function for simply calling [reset_caret_col].
-    // 00: WORK ON THIS (wire Shift+Home)
+    /// Depending on [SelectMode], this acts as a:
+    /// - Convenience function for simply calling [left] repeatedly.
+    /// - Convenience function for simply calling [scroll_editor_buffer::reset_caret_col].
     pub fn to_start_of_line(
-        buffer: &mut EditorBuffer,
-        engine: &mut EditorEngine,
+        editor_buffer: &mut EditorBuffer,
+        editor_engine: &mut EditorEngine,
         select_mode: SelectMode,
     ) -> Option<()> {
-        empty_check_early_return!(buffer, @None);
+        empty_check_early_return!(editor_buffer, @None);
 
-        validate_editor_buffer_change::apply_change(
-            buffer,
-            engine,
-            |_, caret, scroll_offset| {
-                scroll_editor_buffer::reset_caret_col(caret, scroll_offset);
-            },
-        );
+        match select_mode {
+            SelectMode::Enabled => {
+                let caret = editor_buffer.get_caret(CaretKind::ScrollAdjusted);
+                for _ in ch!(0)..caret.col_index {
+                    left(editor_buffer, editor_engine, select_mode);
+                }
+            }
+            SelectMode::Disabled => {
+                validate_editor_buffer_change::apply_change(
+                    editor_buffer,
+                    editor_engine,
+                    |_, caret, scroll_offset| {
+                        scroll_editor_buffer::reset_caret_col(caret, scroll_offset);
+                    },
+                );
+            }
+        }
+
         None
     }
 
-    // 00: WORK ON THIS (wire Shift+End)
+    /// Depending on [SelectMode], this acts as a:
+    /// - Convenience function for simply calling [right] repeatedly.
+    /// - Convenience function for simply calling [scroll_editor_buffer::set_caret_col].
     pub fn to_end_of_line(
-        buffer: &mut EditorBuffer,
-        engine: &mut EditorEngine,
+        editor_buffer: &mut EditorBuffer,
+        editor_engine: &mut EditorEngine,
         select_mode: SelectMode,
     ) -> Option<()> {
-        empty_check_early_return!(buffer, @None);
+        empty_check_early_return!(editor_buffer, @None);
 
-        let line_content_display_width = content_get::line_display_width_at_row_index(
-            buffer,
-            buffer.get_caret(CaretKind::ScrollAdjusted).row_index,
-        );
-        let viewport_width = engine.viewport_width();
-        validate_editor_buffer_change::apply_change(
-            buffer,
-            engine,
-            |_, caret, scroll_offset| {
-                scroll_editor_buffer::set_caret_col(
-                    caret,
-                    scroll_offset,
-                    viewport_width,
-                    line_content_display_width,
-                    line_content_display_width,
+        match select_mode {
+            SelectMode::Enabled => {
+                let caret = editor_buffer.get_caret(CaretKind::ScrollAdjusted);
+                let line_display_width = content_get::line_display_width_at_caret(
+                    editor_buffer,
+                    editor_engine,
                 );
-            },
-        );
+                for _ in caret.col_index..line_display_width {
+                    right(editor_buffer, editor_engine, select_mode);
+                }
+            }
+            SelectMode::Disabled => {
+                let line_content_display_width =
+                    content_get::line_display_width_at_row_index(
+                        editor_buffer,
+                        editor_buffer.get_caret(CaretKind::ScrollAdjusted).row_index,
+                    );
+                let viewport_width = editor_engine.viewport_width();
+                validate_editor_buffer_change::apply_change(
+                    editor_buffer,
+                    editor_engine,
+                    |_, caret, scroll_offset| {
+                        scroll_editor_buffer::set_caret_col(
+                            caret,
+                            scroll_offset,
+                            viewport_width,
+                            line_content_display_width,
+                            line_content_display_width,
+                        );
+                    },
+                );
+            }
+        }
 
         None
     }
@@ -1472,8 +1501,6 @@ mod content_mut {
 
 /// This is marked as `pub` because `apply_change` is needed by `cargo doc`.
 pub mod validate_editor_buffer_change {
-    use crossterm::style::Stylize;
-
     use super::*;
 
     /// In addition to mutating the buffer, this function runs the following validations on the
