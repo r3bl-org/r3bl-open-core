@@ -4,15 +4,15 @@ backlog: <https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissu
 
 editor component upgrades (https://github.com/r3bl-org/r3bl_rs_utils/issues/86):
   ✔ audit docs, source filenames, and symbol names; improve where needed @done(23-05-03 20:56)
-  ☐ add selection support to editor buffer (array of line slice ranges)
+  ✔ add selection support to editor buffer (array of line slice ranges) @done(23-09-04 20:47)
     ✔ right @done(23-05-17 18:03)
     ✔ left @done(23-05-17 18:03)
     ✔ down @done(23-08-06 11:35)
     ✔ up @done(23-08-06 11:35)
     ✔ page up @done(23-09-01 18:56)
     ✔ page down @done(23-09-01 18:56)
-    ☐ end of line
-    ☐ start of line
+    ✔ end of line @done(23-09-04 20:47)
+    ✔ start of line @done(23-09-04 20:47)
     ✔ handle scrolling (rendering & selection) @done(23-09-03 20:26)
   ☐ implement copy
   ☐ implement cut
