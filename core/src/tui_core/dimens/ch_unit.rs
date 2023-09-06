@@ -255,6 +255,10 @@ pub mod convert_to_number {
     impl From<ChUnit> for usize {
         fn from(arg: ChUnit) -> Self { arg.value as usize }
     }
+
+    impl From<ChUnit> for ChUnitPrimitiveType {
+        fn from(arg: ChUnit) -> Self { arg.value }
+    }
 }
 
 pub mod convert_from_number {
