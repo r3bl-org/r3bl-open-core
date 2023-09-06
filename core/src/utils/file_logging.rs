@@ -110,9 +110,16 @@ pub fn log_debug(arg: String) {
             init_file_logger_once().unwrap_err()
         );
     } else {
-        std::thread::spawn(move || {
-            log::debug!("{}", arg);
-        });
+        match ENABLE_MULTITHREADED_LOG_WRITING {
+            true => {
+                std::thread::spawn(move || {
+                    log::debug!("{}", arg);
+                });
+            }
+            false => {
+                log::debug!("{}", arg);
+            }
+        }
     }
 }
 
