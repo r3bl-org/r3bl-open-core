@@ -20,7 +20,6 @@
 use std::{error::Error,
           io::{stdin, stdout, Write}};
 
-use is_terminal::IsTerminal;
 use r3bl_rs_utils_core::{style_error, style_prompt};
 
 /// Return String not &str due to "struct lifetime"
@@ -55,17 +54,4 @@ pub fn print_prompt(prompt: &str) -> Result<(), Box<dyn Error>> {
 pub fn readline_with_prompt(prompt: &str) -> Result<String, Box<dyn Error>> {
     print_prompt(prompt)?;
     Ok(readline().1)
-}
-
-/// If you run `echo "test" | cargo run` the following will return true.
-pub fn is_stdin_piped() -> bool { !std::io::stdin().is_terminal() }
-
-/// If you run `cargo run | grep foo` the following will return true.
-pub fn is_stdout_piped() -> bool { !std::io::stdout().is_terminal() }
-
-/// If you run `cargo run` the following will return true.
-pub fn is_tty() -> bool {
-    std::io::stdin().is_terminal()
-        && std::io::stdout().is_terminal()
-        && std::io::stderr().is_terminal()
 }
