@@ -5,11 +5,11 @@
 # Contributing to r3bl_rs_utils crate
 <a id="markdown-contributing-to-r3bl_rs_utils-crate" name="contributing-to-r3bl_rs_utils-crate"></a>
 
-
 Table of contents
 
 <!-- TOC -->
 
+- [New to the entire codebase?](#new-to-the-entire-codebase)
 - [How are R3BL repos / crates organized?](#how-are-r3bl-repos--crates-organized)
 - [Feedback](#feedback)
 - [Code of conduct and code style guide](#code-of-conduct-and-code-style-guide)
@@ -26,8 +26,34 @@ Table of contents
 
 <!-- /TOC -->
 
+## New to the entire codebase?
+<a id="markdown-new-to-the-entire-codebase%3F" name="new-to-the-entire-codebase%3F"></a>
+
+Here's an onboarding guide to help you get started:
+- <https://github.com/r3bl-org/onboarding>
+
+If you are new to Rust and terminals, this is a godo place to begin!
+
 ## How are R3BL repos / crates organized?
 <a id="markdown-how-are-r3bl-repos-%2F-crates-organized%3F" name="how-are-r3bl-repos-%2F-crates-organized%3F"></a>
+<!-- TOC -->
+
+- [New to the entire codebase?](#new-to-the-entire-codebase)
+- [How are R3BL repos / crates organized?](#how-are-r3bl-repos--crates-organized)
+- [Feedback](#feedback)
+- [Code of conduct and code style guide](#code-of-conduct-and-code-style-guide)
+- [Good starting points](#good-starting-points)
+  - [🦜 New to terminals?](#%F0%9F%A6%9C-new-to-terminals)
+  - [🐒 New to R3BL codebase?](#-new-to-r3bl-codebase)
+    - [Redux background study](#redux-background-study)
+    - [TUI background study](#tui-background-study)
+    - [General background study](#general-background-study)
+- [Developing](#developing)
+  - [Set up](#set-up)
+  - [Code style](#code-style)
+  - [Best practices before submitting a PR](#best-practices-before-submitting-a-pr)
+
+<!-- /TOC --><a id="markdown-how-are-r3bl-repos-%2F-crates-organized%3F" name="how-are-r3bl-repos-%2F-crates-organized%3F"></a>
 
 
 | Repo                                | Description of crate                       | Notes           |
