@@ -6,13 +6,13 @@ keywords = ["color", "terminal", "ansi", "cli"]
 categories = ["command-line-interface", "command-line-utilities"]
 
 # When you change this, make sure to update `README.md` and `lib.rs` as well.
-version = "0.6.2"
+version = "0.6.3"
 
 edition = "2021"
 readme = "README.md" # This is not included in cargo docs.
 authors = ["Nazmul Idris <idris@developerlife.com>", "Andrew Ober <andrewo37>"]
-repository = "https://github.com/r3bl-org/r3bl_ansi_color"
-documentation = "https://docs.rs/r3bl_ansi_color/latest/r3bl_ansi_color/"
+repository = "https://github.com/r3bl-org/r3bl_rs_utils"
+documentation = "https://docs.rs/r3bl_ansi_color"
 homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
