@@ -124,6 +124,13 @@
 //!   1. `ls -la | rt -s multiple | xargs -0` - does not expect `stdout` to be piped out,
 //!      and prints help.
 //!
+//! > Due to the way in which unix pipes are implemented, it is not possible to pipe the
+//! > `stdout` of this command to anything else. Unix pipes are non blocking. So there is no
+//! > way to stop the pipe "mid way". This is why `rt` displays an error when the `stdout` is
+//! > piped out. It is not possible to pipe the `stdout` of `rt` to another command. Instead,
+//! > the `rt` binary simply takes a command that it will run after the user has made their
+//! > selection. Using the selected item(s) and applying them to this command.
+//!
 //! ### Docs
 //!
 //! - [clap docs](https://docs.rs/clap/latest/clap/_derive/_tutorial/index.html)
