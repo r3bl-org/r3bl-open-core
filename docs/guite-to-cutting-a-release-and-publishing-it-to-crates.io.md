@@ -91,10 +91,12 @@ git commit -m "v0.9.8-public"
 git tag -a v0.9.8-public -m "v0.9.8-public"
 
 # Don't forget to publish to crates.io
+cd ansi_color; cargo publish; cd ..
 cd core; cargo publish; cd ..
 cd macro; cargo publish; cd ..
 cd redux; cargo publish; cd ..
 cd tui; cargo publish; cd ..
+cd tuify; cargo publish; cd ..
 cargo publish
 
 # Finally, push the git commit and tag to the remote repo
