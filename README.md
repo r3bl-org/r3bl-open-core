@@ -32,28 +32,6 @@ it.
      parallel & concurrent via Tokio).
    - Even the thread running the main event loop doesn't block since it is async.
    - Using proc macros to create DSLs to implement CSS & JSX.
-
-<!-- TOC depthfrom:2 updateonsave:true orderedlist:false insertanchor:true -->
-
-- [ansi_color](#ansi_color)
-- [tuify](#tuify)
-- [tui and tui_core](#tui-and-tui_core)
-- [redux](#redux)
-- [Macros](#macros)
-  - [Declarative](#declarative)
-  - [Procedural](#procedural)
-- [tree_memory_arena non-binary tree data structure](#tree_memory_arena-non-binary-tree-data-structure)
-- [utils](#utils)
-  - [LazyField](#lazyfield)
-  - [LazyMemoValues](#lazymemovalues)
-  - [tty](#tty)
-  - [safe_unwrap](#safe_unwrap)
-  - [color_text](#color_text)
-- [Notes](#notes)
-- [Issues, comments, feedback, and PRs](#issues-comments-feedback-and-prs)
-
-<!-- /TOC -->
-
    - The idea here is not to rebuild tmux in Rust (separate processes mux'd onto a single terminal
      window). Rather it is to build a set of integrated "apps" (or "tasks") that run in the same
      process that renders to one terminal window.
@@ -111,6 +89,8 @@ Table of contents:
 
 <!-- TOC depthfrom:2 updateonsave:true orderedlist:false insertanchor:true -->
 
+- [ansi_color](#ansi_color)
+- [tuify](#tuify)
 - [tui and tui_core](#tui-and-tui_core)
 - [redux](#redux)
 - [Macros](#macros)
