@@ -29,7 +29,7 @@ This crate can be used in two ways:
 
 Here's a demo of the library target of this crate in action.
 
-https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/9af806a6-9d2a-48b3-9c02-22d8a05cbdc3
+https://user-images.githubusercontent.com/2966499/266870250-9af806a6-9d2a-48b3-9c02-22d8a05cbdc3.mp4
 
 The following example illustrates how you can use this as a library. The function that
 does the work of rendering the UI is called
@@ -126,6 +126,12 @@ simple program. Here is a list.
   1. `ls -la | rt -s multiple | xargs -0` - does not expect `stdout` to be piped out,
     and prints help.
 
+> Due to the way in which unix pipes are implemented, it is not possible to pipe the
+> `stdout` of this command to anything else. Unix pipes are non blocking. So there is no
+> way to stop the pipe "mid way". This is why `rt` displays an error when the `stdout` is
+> piped out. It is not possible to pipe the `stdout` of `rt` to another command. Instead,
+> the `rt` binary simply takes a command that it will run after the user has made their
+> selection. Using the selected item(s) and applying them to this command.
 
 ## Build, run, test tasks
 <a id="markdown-build%2C-run%2C-test-tasks" name="build%2C-run%2C-test-tasks"></a>
