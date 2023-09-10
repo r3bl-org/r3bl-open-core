@@ -168,7 +168,7 @@ written in Rust. You can see an example of this in the `examples` folder in the
 `main_interactive.rs` file. You can run it using `cargo run --example main_interactive`.
 Here's a demo of the library target of this crate in action.
 
-https://github-production-user-asset-6210df.s3.amazonaws.com/2966499/266504562-c6717052-780f-4ae0-8ecf-e57beca49929.mp4
+https://user-images.githubusercontent.com/2966499/266870250-9af806a6-9d2a-48b3-9c02-22d8a05cbdc3.mp4
 
 As a binary. This is useful if you want to use this crate as a command line tool. The
 binary target is called `rt`. Here's a demo of the binary target of this crate in action.
