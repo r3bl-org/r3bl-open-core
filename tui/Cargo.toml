@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_tui"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2021"
 description = "TUI library inspired by Redux, Redux, Flexbox, CSS, editor components, etc"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
@@ -22,9 +22,9 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl_rs_utils
-r3bl_rs_utils_core = { version = "0.9.2", path = "../core" }
-r3bl_rs_utils_macro = { version = "0.9.2", path = "../macro" }
-r3bl_redux = { version = "0.2.2", path = "../redux" }
+r3bl_rs_utils_core = { version = "0.9.3", path = "../core" }
+r3bl_rs_utils_macro = { version = "0.9.3", path = "../macro" }
+r3bl_redux = { version = "0.2.3", path = "../redux" }
 
 # Logging
 log = "0.4.17"
