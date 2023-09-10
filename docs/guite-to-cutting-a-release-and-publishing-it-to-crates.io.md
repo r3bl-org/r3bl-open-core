@@ -36,43 +36,59 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 ```sh
 cd ~/github/r3bl_rs_utils/
 
+cd ansi_color
+# Update cargo.toml version number manually, lets say to 0.6.2
+cd .. ; ./upgrade-deps.fish ; ./build.fish ; cd ansi_color
+git add -A
+git commit -m "v0.6.2-ansi_color"
+git tag -a v0.6.2-ansi_color -m "v0.6.2-ansi_color"
+cd ..
+
 cd core
-# Update cargo.toml version number manually, lets say to 0.9.2
+# Update cargo.toml version number manually, lets say to 0.9.3
 cd .. ; ./upgrade-deps.fish ; ./build.fish ; cd core
 git add -A
-git commit -m "v0.9.2-core"
-git tag -a v0.9.2-core -m "v0.9.2-core"
+git commit -m "v0.9.3-core"
+git tag -a v0.9.3-core -m "v0.9.3-core"
 cd ..
 
 cd macro
-# Update cargo.toml version number manually, lets say to 0.9.2
+# Update cargo.toml version number manually, lets say to 0.9.3
 cd .. ; ./upgrade-deps.fish ; ./build.fish ; cd macro
 git add -A
-git commit -m "v0.9.2-macro"
-git tag -a v0.9.2-macro -m "v0.9.2-macro"
+git commit -m "v0.9.3-macro"
+git tag -a v0.9.3-macro -m "v0.9.3-macro"
 cd ..
 
 cd redux
-# Update cargo.toml version number manually, lets say to 0.2.2
+# Update cargo.toml version number manually, lets say to 0.2.3
 cd .. ; ./upgrade-deps.fish ; ./build.fish ; cd redux
 git add -A
-git commit -m "v0.2.2-redux"
-git tag -a v0.2.2-redux -m "v0.2.2-redux"
+git commit -m "v0.2.3-redux"
+git tag -a v0.2.3-redux -m "v0.2.3-redux"
 cd ..
 
 cd tui
-# Update cargo.toml version number manually, lets say to 0.3.3
+# Update cargo.toml version number manually, lets say to 0.3.4
 cd .. ; ./upgrade-deps.fish ; ./build.fish ; cd tui
 git add -A
-git commit -m "v0.3.3-tui"
-git tag -a v0.3.3-tui -m "v0.3.3-tui"
+git commit -m "v0.3.4-tui"
+git tag -a v0.3.4-tui -m "v0.3.4-tui"
 cd ..
 
-# Update cargo.toml version number manually, lets say to 0.9.7
+cd tuify
+# Update cargo.toml version number manually, lets say to 0.1.1
+cd .. ; ./upgrade-deps.fish ; ./build.fish ; cd tuify
+git add -A
+git commit -m "v0.1.1-tuify"
+git tag -a v0.1.1-tuify -m "v0.1.1-tuify"
+cd ..
+
+# Update cargo.toml version number manually, lets say to 0.9.8
 ./upgrade-deps.fish ; ./build.fish
 git add -A
-git commit -m "v0.9.7-public"
-git tag -a v0.9.7-public -m "v0.9.7-public"
+git commit -m "v0.9.8-public"
+git tag -a v0.9.8-public -m "v0.9.8-public"
 
 # Don't forget to publish to crates.io
 cd core; cargo publish; cd ..
@@ -86,12 +102,14 @@ git tag -l --sort=-creatordate # Check the tags
 git push ; git push --tags
 ```
 
-## Current release status as of Apr 20 2022
+## Current release status as of Sep 10 2022
 
-| Crate  | Version       | Status                                       |
-| ------ | ------------- | -------------------------------------------- |
-| core   | v0.9.2-core   | https://crates.io/crates/r3bl_rs_utils_core  |
-| macro  | v0.9.2-macro  | https://crates.io/crates/r3bl_rs_utils_macro |
-| redux  | v0.2.2-redux  | https://crates.io/crates/r3bl_rs_utils_redux |
-| tui    | v0.3.3-tui    | https://crates.io/crates/r3bl_rs_utils_tui   |
-| public | v0.9.7-public | https://crates.io/crates/r3bl_rs_utils       |
+| Crate      | Version           | Status                                       |
+| ---------- | ----------------- | -------------------------------------------- |
+| ansi_color | v0.6.2-ansi_color | https://crates.io/crates/r3bl_ansi_color     |
+| core       | v0.9.3-core       | https://crates.io/crates/r3bl_rs_utils_core  |
+| macro      | v0.9.3-macro      | https://crates.io/crates/r3bl_rs_utils_macro |
+| redux      | v0.2.3-redux      | https://crates.io/crates/r3bl_redux          |
+| tui        | v0.3.4-tui        | https://crates.io/crates/r3bl_tui            |
+| tuify      | v0.1.1-tuify      | https://crates.io/crates/r3bl_tuify          |
+| public     | v0.9.8-public     | https://crates.io/crates/r3bl_rs_utils       |
