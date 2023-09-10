@@ -9,7 +9,7 @@ This is a lengthy and repetitive process. The following steps have to be applied
 the crates in the project.
 
 Starting at the root folder of the project, eg `~/github/r3bl_rs_utils/`, the following steps are
-applied to each crate (`core`, `macro`, `redux`, `tui`, and "public" / self):
+applied to each crate (`ansi_color`, `core`, `macro`, `redux`, `tui`, `tuify`, and "public" / self):
 
 1. Update the version in `Cargo.toml`.
 2. Run the script `./upgrade-deps.fish` in the `~/github/r3bl_rs_utils/` folder.
@@ -23,7 +23,7 @@ applied to each crate (`core`, `macro`, `redux`, `tui`, and "public" / self):
 
 Once this phase is complete, then it is time to perform a dry run and then publish to crates.io.
 Again starting at the root folder of the project, eg `~/github/r3bl_rs_utils/`, the following steps
-are applied to each crate (`core`, `macro`, `redux`, `tui`, and self):
+are applied to each crate (`ansi_color`, `core`, `macro`, `redux`, `tui`, `tuify`, and self):
 
 1. Run `cargo publish --dry-run` in the crate folder. This will perform a dry run of publishing the
    crate to crates.io.
