@@ -1,0 +1,66 @@
+# More info on just:
+# - https://github.com/casey/just#recipe-parameters
+# - https://just.systems/man/en/chapter_36.html
+# - https://just.systems/man/en/chapter_25.html
+# - https://just.systems/man/en/chapter_43.html
+
+all: clean build test clippy docs rustfmt
+
+log:
+  tail -f log.txt
+
+build:
+  cargo build
+
+clean:
+  cargo clean
+
+run:
+  cargo run --release --example main_interactive
+
+run-release:
+  cargo run --release --example main
+
+run-with-flamegraph-profiling:
+  cargo flamegraph --example main
+
+watch-run:
+  cargo watch -- cargo run --example main
+
+test:
+  cargo test
+
+watch-one-test test_name:
+  # More info on cargo test: https://doc.rust-lang.org/cargo/commands/cargo-test.html
+  # More info on cargo watch: https://github.com/watchexec/cargo-watch
+  cargo watch -x check -x 'test -- --test-threads=1 --nocapture {{test_name}}' -c -q
+
+watch-all-tests:
+  cargo watch --exec check --exec 'test --quiet --color always -- --test-threads 1' --clear --quiet --delay 1
+
+clippy:
+  cargo clippy --all-targets --all-features -- -D warnings
+
+watch-clippy:
+  cargo fix --allow-dirty --allow-staged
+  cargo fmt --all
+  cargo watch -x 'clippy --fix --allow-dirty --allow-staged' -c -q
+
+docs:
+  cargo doc --no-deps --all-features
+
+watch-macro-expansion-one-test test_name:
+  RUSTFLAGS=-Awarnings cargo watch -x "expand --test {{test_name}}" -c -q -d 1
+
+serve-docs:
+  npm i -g serve
+  serve target/doc
+
+upgrade-deps:
+  cargo outdated --workspace --verbose
+  cargo upgrade --to-lockfile --verbose
+  cargo update
+
+rustfmt:
+  cargo fmt --all
+
