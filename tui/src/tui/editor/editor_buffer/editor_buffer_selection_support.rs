@@ -195,7 +195,7 @@ impl EditorBufferApi {
         }
     }
 
-    // 00: implement multiline selection changes (up/down, and later page up/page down)
+    // BM: implement multiline selection changes (up/down, and later page up/page down)
     /// Precondition: there has to be at least 2 rows.
     fn handle_two_lines(
         editor_buffer: &mut EditorBuffer,
