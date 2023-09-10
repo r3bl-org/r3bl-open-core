@@ -33,7 +33,26 @@ it.
    - Even the thread running the main event loop doesn't block since it is async.
    - Using proc macros to create DSLs to implement CSS & JSX.
 
-2. 🌎 We are building apps to enhance developer productivity & workflows.
+<!-- TOC depthfrom:2 updateonsave:true orderedlist:false insertanchor:true -->
+
+- [ansi_color](#ansi_color)
+- [tuify](#tuify)
+- [tui and tui_core](#tui-and-tui_core)
+- [redux](#redux)
+- [Macros](#macros)
+  - [Declarative](#declarative)
+  - [Procedural](#procedural)
+- [tree_memory_arena non-binary tree data structure](#tree_memory_arena-non-binary-tree-data-structure)
+- [utils](#utils)
+  - [LazyField](#lazyfield)
+  - [LazyMemoValues](#lazymemovalues)
+  - [tty](#tty)
+  - [safe_unwrap](#safe_unwrap)
+  - [color_text](#color_text)
+- [Notes](#notes)
+- [Issues, comments, feedback, and PRs](#issues-comments-feedback-and-prs)
+
+<!-- /TOC -->
 
    - The idea here is not to rebuild tmux in Rust (separate processes mux'd onto a single terminal
      window). Rather it is to build a set of integrated "apps" (or "tasks") that run in the same
@@ -110,6 +129,55 @@ Table of contents:
 <!-- /TOC -->
 
 <hr/>
+
+## ansi_color
+<a id="markdown-ansi_color" name="ansi_color"></a>
+
+Rust crate to generate formatted ANSI 256 (8-bit) and truecolor (24-bit) color output to stdout. On
+macOS, the default Terminal.app does not support truecolor, so ANSI 256 colors are used instead.
+
+Here's a screenshot of running the `main` example on various operating systems:
+
+| ![Linux screenshot](ansi_color/docs/screenshot_linux.png) |
+|:--:|
+| *Running on Linux Tilix* |
+
+| ![Windows screenshot](ansi_color/docs/screenshot_windows.png) |
+|:--:|
+| *Running on Windows Terminal* |
+
+| ![macOS screenshot Terminal app](ansi_color/docs/screenshot_macos_terminal_app.png) |
+|:--:|
+| *Running on macOS Terminal app (note ANSI 256 runtime detection)* |
+
+| ![macOS screenshot iTerm app](ansi_color/docs/screenshot_macos_iterm_app.png) |
+|:--:|
+| *Running on macOS iTerm app (note Truecolor runtime detection)* |
+
+For more information please read the
+[README](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/ansi_color/README.md) for the
+[r3bl_ansi_color crate](https://docs.rs/r3bl_ansi_color/latest/r3bl_ansi_color/).
+
+## tuify
+<a id="markdown-tuify" name="tuify"></a>
+
+This crate can be used in two ways:
+
+As a library. This is useful if you want to add simple interactivity to your CLI app
+written in Rust. You can see an example of this in the `examples` folder in the
+`main_interactive.rs` file. You can run it using `cargo run --example main_interactive`.
+Here's a demo of the library target of this crate in action.
+
+https://github-production-user-asset-6210df.s3.amazonaws.com/2966499/266504562-c6717052-780f-4ae0-8ecf-e57beca49929.mp4
+
+As a binary. This is useful if you want to use this crate as a command line tool. The
+binary target is called `rt`. Here's a demo of the binary target of this crate in action.
+
+https://user-images.githubusercontent.com/2966499/266860855-dce05d87-327d-48f7-b063-45987177159c.mp4
+
+For more information please read the
+[README](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/tuify/README.md) for the
+[r3bl_tuify crate](https://docs.rs/r3bl_tuify/latest/r3bl_tuify/).
 
 ## tui and tui_core
 <a id="markdown-tui-and-tui_core" name="tui-and-tui_core"></a>
@@ -525,5 +593,6 @@ rustflags = [
 <a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
 
 
-Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
-And if you have any feature requests, feel free to add them there too 👍.
+- Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
+- And if you have any feature requests, feel free to add them there too 👍.
+- To contribute please check out [this page](https://github.com/r3bl-org/r3bl_rs_utils/contribute).
