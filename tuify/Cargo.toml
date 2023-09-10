@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_tuify"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Easily add lightweight TUI capabilities to any CLI apps using pipes"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
@@ -9,7 +9,7 @@ categories = ["command-line-interface", "command-line-utilities"]
 readme = "README.md" # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/
 authors = ["Nazmul Idris <idris@developerlife.com>"]
-repository = "https://github.com/r3bl-org/r3bl_rs_utils/tree/main/r3bl_tuify"
+repository = "https://github.com/r3bl-org/r3bl_rs_utils/tree/main/tuify"
 documentation = "https://docs.rs/r3bl_tuify"
 homepage = "https://r3bl.com"
 license = "Apache-2.0"
