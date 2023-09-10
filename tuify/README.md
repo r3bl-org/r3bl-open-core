@@ -29,7 +29,7 @@ This crate can be used in two ways:
 
 Here's a demo of the library target of this crate in action.
 
-https://github-production-user-asset-6210df.s3.amazonaws.com/2966499/266504562-c6717052-780f-4ae0-8ecf-e57beca49929.mp4
+https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/9af806a6-9d2a-48b3-9c02-22d8a05cbdc3
 
 The following example illustrates how you can use this as a library. The function that
 does the work of rendering the UI is called
