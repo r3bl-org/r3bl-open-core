@@ -15,15 +15,13 @@
  *   limitations under the License.
  */
 
-use clap::CommandFactory;
-use clap::Parser;
+use std::{io::{stdin, BufRead, Result},
+          process::Command};
+
+use clap::{CommandFactory, Parser};
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
 use r3bl_tuify::*;
-use std::{
-    io::{stdin, BufRead, Result},
-    process::Command,
-};
 use StdinIsPipedResult::*;
 use StdoutIsPipedResult::*;
 
@@ -68,19 +66,37 @@ fn main() -> Result<()> {
     let bin_name = CliArgs::command();
     let bin_name = bin_name.get_bin_name().unwrap_or("this command");
 
-    match (is_stdin_piped(), is_stdout_piped()) {
-        (StdinIsPiped, StdoutIsNotPiped) => {
-            show_tui(cli_args);
+    // macos has issues w/ stdin piped in.
+    // https://github.com/crossterm-rs/crossterm/issues/396
+    if cfg!(target_os = "macos") {
+        match (is_stdin_piped(), is_stdout_piped()) {
+            (StdinIsPiped, _) => {
+                show_error_stdin_pipe_does_not_work_on_macos();
+            }
+            (_, StdoutIsPiped) => {
+                show_error_do_not_pipe_stdout(bin_name);
+            }
+            (StdinIsNotPiped, StdoutIsNotPiped) => {
+                print_help()?;
+            }
         }
-        (StdinIsPiped, StdoutIsPiped) => {
-            show_error_do_not_pipe_stdout(bin_name);
-        }
-        (StdinIsNotPiped, StdoutIsPiped) => {
-            show_error_need_to_pipe_stdin(bin_name);
-            show_error_do_not_pipe_stdout(bin_name);
-        }
-        (StdinIsNotPiped, StdoutIsNotPiped) => {
-            show_error_need_to_pipe_stdin(bin_name);
+    }
+    // Linux works fine.
+    else {
+        match (is_stdin_piped(), is_stdout_piped()) {
+            (StdinIsPiped, StdoutIsNotPiped) => {
+                show_tui(cli_args);
+            }
+            (StdinIsPiped, StdoutIsPiped) => {
+                show_error_do_not_pipe_stdout(bin_name);
+            }
+            (StdinIsNotPiped, StdoutIsPiped) => {
+                show_error_need_to_pipe_stdin(bin_name);
+                show_error_do_not_pipe_stdout(bin_name);
+            }
+            (StdinIsNotPiped, StdoutIsNotPiped) => {
+                show_error_need_to_pipe_stdin(bin_name);
+            }
         }
     }
 
@@ -89,6 +105,14 @@ fn main() -> Result<()> {
     });
 
     Ok(())
+}
+
+fn show_error_stdin_pipe_does_not_work_on_macos() {
+    let msg = "Unfortunately at this time macOS `stdin` pipe does not work on macOS.\
+                     \nhttps://github.com/crossterm-rs/crossterm/issues/396"
+        .blue()
+        .to_string();
+    println!("{msg}");
 }
 
 fn show_error_need_to_pipe_stdin(bin_name: &str) {
@@ -124,7 +148,8 @@ fn show_tui(cli_args: CliArgs) {
     }
 
     // Get display size.
-    let max_width_col_count: usize = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
+    let max_width_col_count: usize =
+        get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
     let max_height_row_count: usize = cli_args.tui_height.unwrap_or(5);
 
     // Actually get input from the user.
@@ -150,7 +175,9 @@ fn show_tui(cli_args: CliArgs) {
     }
 }
 
-fn convert_user_input_into_vec_of_strings(user_input: Option<Vec<String>>) -> Vec<String> {
+fn convert_user_input_into_vec_of_strings(
+    user_input: Option<Vec<String>>,
+) -> Vec<String> {
     match user_input {
         Some(it) => it,
         None => vec![],
