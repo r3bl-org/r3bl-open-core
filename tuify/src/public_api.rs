@@ -15,11 +15,13 @@
  *   limitations under the License.
  */
 
-use crate::*;
+use std::io::stdout;
+
 use clap::ValueEnum;
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
-use std::io::stdout;
+
+use crate::*;
 
 /// This function does the work of rendering the TUI. It takes a list of items, and returns
 /// the selected item or items (depending on the selection mode). If the user does not
@@ -120,7 +122,8 @@ pub fn select_from_list(
                                 .to_string(),
                         );
                     });
-                    let selection_index: usize = ch!(@to_usize state.get_selected_index());
+                    let selection_index: usize =
+                        ch!(@to_usize state.get_selected_index());
                     let maybe_item: Option<&String> = state.items.get(selection_index);
                     match maybe_item {
                         Some(it) => EventLoopResult::ExitWithResult(vec![it.to_string()]),
@@ -142,6 +145,14 @@ pub fn select_from_list(
                         log_debug("Noop".yellow().to_string());
                     });
                     EventLoopResult::Continue
+                }
+
+                // Error.
+                KeyPress::Error => {
+                    call_if_true!(TRACE, {
+                        log_debug("Exit with error".red().to_string());
+                    });
+                    EventLoopResult::ExitWithError
                 }
             }
         },

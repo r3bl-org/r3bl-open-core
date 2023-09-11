@@ -14,9 +14,11 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use crate::*;
-use crossterm::{cursor::*, execute, terminal::*};
 use std::io::{Result, *};
+
+use crossterm::{cursor::*, execute, terminal::*};
+
+use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EventLoopResult {
@@ -24,6 +26,7 @@ pub enum EventLoopResult {
     ContinueAndRerender,
     ExitWithResult(Vec<String>),
     ExitWithoutResult,
+    ExitWithError,
 }
 
 // TODO: add performance using output buffer
@@ -35,13 +38,14 @@ pub fn enter_event_loop<W: Write, S>(
     execute!(function_component.get_write(), Hide)?;
     enable_raw_mode()?;
 
+    // Use to handle clean up.
     #[allow(unused_assignments)]
     let mut maybe_return_this: Option<EventLoopResult> = None;
 
     loop {
         function_component.render(state)?;
 
-        let key_event = read_key_press()?;
+        let key_event = read_key_press();
         match on_keypress(state, key_event) {
             EventLoopResult::ContinueAndRerender => {
                 // Continue the loop.
@@ -62,9 +66,15 @@ pub fn enter_event_loop<W: Write, S>(
                 function_component.clear_viewport(state)?;
                 break;
             }
+            EventLoopResult::ExitWithError => {
+                maybe_return_this = Some(EventLoopResult::ExitWithError);
+                function_component.clear_viewport(state)?;
+                break;
+            }
         }
     }
 
+    // Perform cleanup of raw mode, and show cursor.
     match maybe_return_this {
         Some(it) => {
             execute!(function_component.get_write(), Show)?;
