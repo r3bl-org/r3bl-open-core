@@ -15,9 +15,16 @@
  *   limitations under the License.
  */
 
-use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+
+
+use crossterm::event::{read,
+                       Event,
+                       KeyCode,
+                       KeyEvent,
+                       KeyEventKind,
+                       KeyEventState,
+                       KeyModifiers};
 use r3bl_rs_utils_core::*;
-use std::io::Result;
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum KeyPress {
@@ -27,9 +34,10 @@ pub enum KeyPress {
     Esc,
     #[default]
     Noop,
+    Error,
 }
 
-pub fn read_key_press() -> Result<KeyPress> {
+pub fn read_key_press() -> KeyPress {
     if cfg!(windows) {
         // Windows.
         read_key_press_windows()
@@ -39,22 +47,29 @@ pub fn read_key_press() -> Result<KeyPress> {
     }
 }
 
-fn read_key_press_unix() -> Result<KeyPress> {
-    let event = read()?;
-    log_debug(format!("event: {:?}", event).to_string());
-
-    match event {
-        crossterm::event::Event::Key(KeyEvent { code, .. }) => {
-            // Only trap the right code.
-            match code {
-                crossterm::event::KeyCode::Up => Ok(KeyPress::Up),
-                crossterm::event::KeyCode::Down => Ok(KeyPress::Down),
-                crossterm::event::KeyCode::Enter => Ok(KeyPress::Enter),
-                crossterm::event::KeyCode::Esc => Ok(KeyPress::Esc),
-                _ => Ok(KeyPress::Noop),
+fn read_key_press_unix() -> KeyPress {
+    let result_event = read();
+    match result_event {
+        Ok(event) => {
+            log_debug(format!("got event: {:?}", event).to_string());
+            match event {
+                crossterm::event::Event::Key(KeyEvent { code, .. }) => {
+                    // Only trap the right code.
+                    match code {
+                        crossterm::event::KeyCode::Up => KeyPress::Up,
+                        crossterm::event::KeyCode::Down => KeyPress::Down,
+                        crossterm::event::KeyCode::Enter => KeyPress::Enter,
+                        crossterm::event::KeyCode::Esc => KeyPress::Esc,
+                        _ => KeyPress::Noop,
+                    }
+                }
+                _ => KeyPress::Noop,
             }
         }
-        _ => Ok(KeyPress::Noop),
+        Err(err) => {
+            log_debug(format!("ERROR getting event: {:?}", err).to_string());
+            KeyPress::Error
+        }
     }
 }
 
@@ -62,44 +77,51 @@ fn read_key_press_unix() -> Result<KeyPress> {
 /// - Unix: [`KeyboardEnhancementFlags::REPORT_EVENT_TYPES`] has been enabled with
 ///   [`PushKeyboardEnhancementFlags`].
 /// - Windows: always.
-fn read_key_press_windows() -> Result<KeyPress> {
-    let event = read()?;
-    log_debug(format!("event: {:?}", event).to_string());
+fn read_key_press_windows() -> KeyPress {
+    let result_event = read();
+    match result_event {
+        Ok(event) => {
+            log_debug(format!("got event: {:?}", event).to_string());
+            match event {
+                // Enter.
+                Event::Key(KeyEvent {
+                    code: KeyCode::Enter,
+                    modifiers: KeyModifiers::NONE,
+                    kind: KeyEventKind::Press, // This is for Windows.
+                    state: KeyEventState::NONE,
+                }) => KeyPress::Enter,
 
-    match event {
-        // Enter.
-        Event::Key(KeyEvent {
-            code: KeyCode::Enter,
-            modifiers: KeyModifiers::NONE,
-            kind: KeyEventKind::Press, // This is for Windows.
-            state: KeyEventState::NONE,
-        }) => Ok(KeyPress::Enter),
+                // Down.
+                Event::Key(KeyEvent {
+                    code: KeyCode::Down,
+                    modifiers: KeyModifiers::NONE,
+                    kind: KeyEventKind::Press, // This is for Windows.
+                    state: KeyEventState::NONE,
+                }) => KeyPress::Down,
 
-        // Down.
-        Event::Key(KeyEvent {
-            code: KeyCode::Down,
-            modifiers: KeyModifiers::NONE,
-            kind: KeyEventKind::Press, // This is for Windows.
-            state: KeyEventState::NONE,
-        }) => Ok(KeyPress::Down),
+                // Up.
+                Event::Key(KeyEvent {
+                    code: KeyCode::Up,
+                    modifiers: KeyModifiers::NONE,
+                    kind: KeyEventKind::Press, // This is for Windows.
+                    state: KeyEventState::NONE,
+                }) => KeyPress::Up,
 
-        // Up.
-        Event::Key(KeyEvent {
-            code: KeyCode::Up,
-            modifiers: KeyModifiers::NONE,
-            kind: KeyEventKind::Press, // This is for Windows.
-            state: KeyEventState::NONE,
-        }) => Ok(KeyPress::Up),
+                // Esc.
+                Event::Key(KeyEvent {
+                    code: KeyCode::Esc,
+                    modifiers: KeyModifiers::NONE,
+                    kind: KeyEventKind::Press, // This is for Windows.
+                    state: KeyEventState::NONE,
+                }) => KeyPress::Esc,
 
-        // Esc.
-        Event::Key(KeyEvent {
-            code: KeyCode::Esc,
-            modifiers: KeyModifiers::NONE,
-            kind: KeyEventKind::Press, // This is for Windows.
-            state: KeyEventState::NONE,
-        }) => Ok(KeyPress::Esc),
-
-        // Catchall.
-        _ => Ok(KeyPress::Noop),
+                // Catchall.
+                _ => KeyPress::Noop,
+            }
+        }
+        Err(err) => {
+            log_debug(format!("ERROR getting event: {:?}", err).to_string());
+            KeyPress::Error
+        }
     }
 }
