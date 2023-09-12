@@ -6,7 +6,7 @@ keywords = ["color", "terminal", "ansi", "cli"]
 categories = ["command-line-interface", "command-line-utilities"]
 
 # When you change this, make sure to update `README.md` and `lib.rs` as well.
-version = "0.6.5"
+version = "0.6.6"
 
 edition = "2021"
 readme = "README.md" # This is not included in cargo docs.

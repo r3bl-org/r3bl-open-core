@@ -24,19 +24,19 @@ macOS, the default Terminal.app does not support truecolor, so ANSI 256 colors a
 
 Here's a screenshot of running the `main` example on various operating systems:
 
-| ![Linux screenshot](docs/screenshot_linux.png) |
+| ![Linux screenshot](../docs/screenshot_linux.png) |
 |:--:|
 | *Running on Linux Tilix* |
 
-| ![Windows screenshot](docs/screenshot_windows.png) |
+| ![Windows screenshot](../docs/screenshot_windows.png) |
 |:--:|
 | *Running on Windows Terminal* |
 
-| ![macOS screenshot Terminal app](docs/screenshot_macos_terminal_app.png) |
+| ![macOS screenshot Terminal app](../docs/screenshot_macos_terminal_app.png) |
 |:--:|
 | *Running on macOS Terminal app (note ANSI 256 runtime detection)* |
 
-| ![macOS screenshot iTerm app](docs/screenshot_macos_iterm_app.png) |
+| ![macOS screenshot iTerm app](../docs/screenshot_macos_iterm_app.png) |
 |:--:|
 | *Running on macOS iTerm app (note Truecolor runtime detection)* |
 
