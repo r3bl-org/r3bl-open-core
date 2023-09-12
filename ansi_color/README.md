@@ -87,30 +87,30 @@ crates `cargo-cache`, `cargo-watch`, `flamegraph`, and `nu` using these instruct
 ### Commands to run
 <a id="markdown-commands-to-run" name="commands-to-run"></a>
 
-The script to run is `run.nu`. Make sure to mark it executable. It works on Linux, macOS, and
-Windows. Please make sure that the [pre-requisites](#prerequisites) are installed.
+The script to run is `run.nu`. It works on Linux, macOS, and Windows. Please make sure
+that the [pre-requisites](#prerequisites) are installed.
 
-- Build: `./run.nu build`
-- Clean: `./run.nu clean`
-- Run examples: `./run.nu run`
-- Run examples with release flag: `./run.nu run-release`
-- Run examples with flamegraph profiling: `./run.nu run-flamegraph`
-- Run tests: `./run.nu test`
-- Run clippy: `./run.nu clippy`
-- Build docs: `./run.nu docs`
-- Serve docs: `./run.nu serve-docs`. This is only useful if you SSH into a remote machine via
+- Build: `nu run.nu build`
+- Clean: `nu run.nu clean`
+- Run examples: `nu run.nu run`
+- Run examples with release flag: `nu run.nu run-release`
+- Run examples with flamegraph profiling: `nu run.nu run-flamegraph`
+- Run tests: `nu run.nu test`
+- Run clippy: `nu run.nu clippy`
+- Build docs: `nu run.nu docs`
+- Serve docs: `nu run.nu serve-docs`. This is only useful if you SSH into a remote machine via
   VSCode (where you build and serve the docs) and want to view the docs in a browser on
   your local machine.
-- Upgrade deps: `./run.nu upgrade-deps`
-- Run rustfmt: `./run.nu rustfmt`
+- Upgrade deps: `nu run.nu upgrade-deps`
+- Run rustfmt: `nu run.nu rustfmt`
 
 The following commands will watch for changes in the source folder and re-run:
 
-- Watch run: `./run.nu watch-run`
-- Watch all test: `./run.nu watch-all-tests`
-- Watch one test: `./run.nu watch-one-test <test_name>`
-- Watch clippy: `./run.nu watch-clippy`
-- Watch macro expansion for one test: `./run.nu watch-macro-expansion-one-test <test_name>`
+- Watch run: `nu run.nu watch-run`
+- Watch all test: `nu run.nu watch-all-tests`
+- Watch one test: `nu run.nu watch-one-test <test_name>`
+- Watch clippy: `nu run.nu watch-clippy`
+- Watch macro expansion for one test: `nu run.nu watch-macro-expansion-one-test <test_name>`
 
 ## References
 <a id="markdown-references" name="references"></a>

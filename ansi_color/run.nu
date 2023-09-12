@@ -18,7 +18,7 @@ def main [...args: string] {
     let num_args = $args | length
 
     if $num_args == 0 {
-        print-help
+        print-help all
         return
     }
 
@@ -39,8 +39,7 @@ def main [...args: string] {
     } else if $command == "watch-one-test" {
         let num_args = $args | length
         if $num_args != 2 {
-            print $'🤔 Expected argument for the (ansi blue_bold)<testname>(ansi reset), but got (ansi red_bold)none(ansi reset).'
-            print-help
+            print-help watch-one-test
             return
         }
         let test_name = $args | get 1
@@ -56,8 +55,7 @@ def main [...args: string] {
     } else if $command == "watch-macro-expansion-one-test" {
         let num_args = $args | length
         if $num_args != 2 {
-            print $'🤔 Expected argument for the (ansi blue_bold)<testname>(ansi reset), but got (ansi red_bold)none(ansi reset).'
-            print-help
+            print-help watch-macro-expansion-one-test
             return
         }
         let test_name = $args | get 1
@@ -69,7 +67,7 @@ def main [...args: string] {
     } else if $command == "rustfmt" {
         rustfmt
     } else if $command == "help" {
-        print-help
+        print-help all
     } else if $command == "all" {
         all
     } else {
@@ -77,27 +75,39 @@ def main [...args: string] {
     }
 }
 
-# TODO: add argument print help for a specific command
-def print-help [] {
-    print $'Usage: (ansi blue_bold)./scripts.nu(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi yellow)[args](ansi reset)'
-    print $'(ansi green_bold)<command>(ansi reset) can be:'
-    print $'    (ansi green)all(ansi reset)'
-    print $'    (ansi green)build(ansi reset)'
-    print $'    (ansi green)clean(ansi reset)'
-    print $'    (ansi green)run(ansi reset)'
-    print $'    (ansi green)run-with-flamegraph-profiling(ansi reset)'
-    print $'    (ansi green)watch-run(ansi reset)'
-    print $'    (ansi green)test(ansi reset)'
-    print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
-    print $'    (ansi green)watch-all-tests(ansi reset)'
-    print $'    (ansi green)clippy(ansi reset)'
-    print $'    (ansi green)watch-clippy(ansi reset)'
-    print $'    (ansi green)docs(ansi reset)'
-    print $'    (ansi green)watch-macro-expansion-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
-    print $'    (ansi green)serve-docs(ansi reset)'
-    print $'    (ansi green)upgrade-deps(ansi reset)'
-    print $'    (ansi green)rustfmt(ansi reset)'
-    print $'    (ansi green)help(ansi reset)'
+# Prints help for the script.
+# - If "all" is passed in, prints help for all commands.
+# - Otherwise, prints help for the specified command.
+def print-help [command: string] {
+    if $command == "all" {
+        print $'Usage: (ansi blue_bold)run.nu(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi yellow)[args](ansi reset)'
+        print $'(ansi green_bold)<command>(ansi reset) can be:'
+        print $'    (ansi green)all(ansi reset)'
+        print $'    (ansi green)build(ansi reset)'
+        print $'    (ansi green)clean(ansi reset)'
+        print $'    (ansi green)run(ansi reset)'
+        print $'    (ansi green)run-with-flamegraph-profiling(ansi reset)'
+        print $'    (ansi green)watch-run(ansi reset)'
+        print $'    (ansi green)test(ansi reset)'
+        print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
+        print $'    (ansi green)watch-all-tests(ansi reset)'
+        print $'    (ansi green)clippy(ansi reset)'
+        print $'    (ansi green)watch-clippy(ansi reset)'
+        print $'    (ansi green)docs(ansi reset)'
+        print $'    (ansi green)watch-macro-expansion-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
+        print $'    (ansi green)serve-docs(ansi reset)'
+        print $'    (ansi green)upgrade-deps(ansi reset)'
+        print $'    (ansi green)rustfmt(ansi reset)'
+        print $'    (ansi green)help(ansi reset)'
+    } else if $command == "watch-one-test" {
+        print $'Usage: (ansi blue_bold)run.nu(ansi reset) (ansi green_bold)watch-one-test(ansi reset) (ansi yellow)<test-name>(ansi reset)'
+        print $'    (ansi green)<test-name>(ansi reset) is the name of the test to watch.'
+    } else if $command == "watch-macro-expansion-one-test" {
+        print $'Usage: (ansi blue_bold)run.nu(ansi reset) (ansi green_bold)watch-macro-expansion-one-test(ansi reset) (ansi yellow)<test-name>(ansi reset)'
+        print $'    (ansi green)<test-name>(ansi reset) is the name of the test to watch.'
+    } else {
+        print $'Unknown command: (ansi red_bold)($command)(ansi reset)'
+    }
 }
 
 def all [] {
