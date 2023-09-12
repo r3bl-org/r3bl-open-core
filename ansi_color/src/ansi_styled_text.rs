@@ -75,10 +75,15 @@ pub enum Style {
 }
 
 mod style_impl {
-    use crate::{
-        detect_color_support, Color, ColorSupport, RgbColor, SgrCode, Style, TransformColor,
-    };
     use std::fmt::{Display, Formatter, Result};
+
+    use crate::{detect_color_support,
+                Color,
+                ColorSupport,
+                RgbColor,
+                SgrCode,
+                Style,
+                TransformColor};
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum ColorKind {
@@ -138,8 +143,9 @@ mod style_impl {
 }
 
 mod display_trait_impl {
-    use crate::{AnsiStyledText, SgrCode};
     use std::fmt::{Display, Formatter, Result};
+
+    use crate::{AnsiStyledText, SgrCode};
 
     // https://doc.rust-lang.org/std/fmt/trait.Display.html
     impl Display for AnsiStyledText<'_> {
@@ -156,9 +162,10 @@ mod display_trait_impl {
 
     #[cfg(test)]
     mod tests {
-        use crate::*;
         use pretty_assertions::assert_eq;
         use serial_test::serial;
+
+        use crate::*;
 
         #[serial]
         #[test]

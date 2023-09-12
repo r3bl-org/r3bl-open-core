@@ -26,10 +26,7 @@ pub fn transform_named_fields_into_ts(
     match data_struct.fields {
         Named(ref fields) => {
             // Create iterator over named fields, holding generated props token streams.
-            let props_ts_iter = fields
-                .named
-                .iter()
-                .map(transform_named_field_fn);
+            let props_ts_iter = fields.named.iter().map(transform_named_field_fn);
 
             // Unwrap iterator into a [proc_macro2::TokenStream].
             quote! {

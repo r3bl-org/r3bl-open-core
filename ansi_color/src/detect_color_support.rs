@@ -15,9 +15,10 @@
  *   limitations under the License.
  */
 
+use std::{env,
+          sync::{Arc, Mutex}};
+
 use once_cell::sync::Lazy;
-use std::env;
-use std::sync::{Arc, Mutex};
 
 /// This is the main function that is used to determine whether color is supported. And if
 /// so what type of color is supported. If the value has been set using
@@ -25,7 +26,9 @@ use std::sync::{Arc, Mutex};
 /// will be determined by the examining the environment variables.
 pub fn detect_color_support() -> ColorSupport {
     match color_support_get() {
-        ColorSupport::NotSet => examine_env_vars_to_determine_color_support(Stream::Stdout),
+        ColorSupport::NotSet => {
+            examine_env_vars_to_determine_color_support(Stream::Stdout)
+        }
         ColorSupport::Ansi256 => ColorSupport::Ansi256,
         ColorSupport::Truecolor => ColorSupport::Truecolor,
         ColorSupport::NoColor => ColorSupport::NoColor,
@@ -73,7 +76,8 @@ static COLOR_SUPPORT_GLOBAL: Lazy<Arc<Mutex<ColorSupport>>> =
 fn examine_env_vars_to_determine_color_support(stream: Stream) -> ColorSupport {
     if env_no_color()
         || as_str(&env::var("TERM")) == Ok("dumb")
-        || !(is_a_tty(stream) || env::var("IGNORE_IS_TERMINAL").map_or(false, |v| v != "0"))
+        || !(is_a_tty(stream)
+            || env::var("IGNORE_IS_TERMINAL").map_or(false, |v| v != "0"))
     {
         return ColorSupport::NoColor;
     }
@@ -197,8 +201,9 @@ fn as_str<E>(option: &Result<String, E>) -> Result<&str, &E> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serial_test::serial;
+
+    use super::*;
 
     #[test]
     #[serial]

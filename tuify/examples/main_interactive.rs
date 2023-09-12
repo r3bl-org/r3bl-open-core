@@ -15,9 +15,10 @@
  *   limitations under the License.
  */
 
+use std::io::Result;
+
 use r3bl_rs_utils_core::*;
 use r3bl_tuify::*;
-use std::io::Result;
 
 fn main() -> Result<()> {
     call_if_true!(TRACE, {
@@ -27,13 +28,14 @@ fn main() -> Result<()> {
     });
 
     // Get display size.
-    let max_width_col_count: usize = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
+    let max_width_col_count: usize =
+        get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
     let max_height_row_count: usize = 5;
 
     let user_input = select_from_list(
         [
-            "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
-            "item 9", "item 10",
+            "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7",
+            "item 8", "item 9", "item 10",
         ]
         .iter()
         .map(|it| it.to_string())

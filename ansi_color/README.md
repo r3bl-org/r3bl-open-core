@@ -7,7 +7,7 @@
 - [How to use it?](#how-to-use-it)
 - [Build, run, test tasks](#build-run-test-tasks)
   - [Prerequisites](#prerequisites)
-  - [Just commands](#just-commands)
+  - [Commands to run](#commands-to-run)
 - [References](#references)
 - [Why make a new crate for this?](#why-make-a-new-crate-for-this)
 
@@ -74,48 +74,43 @@ better idea of how to use this crate.
 ### Prerequisites
 <a id="markdown-prerequisites" name="prerequisites"></a>
 
-🌠 In order for these to work you have to install the Rust toolchain and `just` and
-`cargo-watch`:
+🌠 In order for these to work you have to install the Rust toolchain and the following
+crates `cargo-cache`, `cargo-watch`, `flamegraph`, and `nu` using these instructions:
 
 1. Install the Rust toolchain using `rustup` by following the instructions
    [here](https://rustup.rs/).
+1. Install `cargo-cache` using `cargo install cargo-cache`.
 1. Install `cargo-watch` using `cargo install cargo-watch`.
 1. Install `flamegraph` using `cargo install flamegraph`.
-1. Install [`just`](https://just.systems/man/en/chapter_4.html) `just` on your system using
-   `cargo install just`. It is available for Linux, macOS, and Windows.
-   - If you want shell completions for `just` you can follow [these
-     instructions](https://github.com/casey/just#shell-completion-scripts).
-   - If you install `just` using `cargo install just` or `brew install just` you will
-     not get shell completions without doing one extra configuration step. So on Linux
-     it is best to use `sudo apt install -y just` if you want them.
+1. Install `nu` using `cargo install nu`.
 
-### Just commands
-<a id="markdown-just-commands" name="just-commands"></a>
+### Commands to run
+<a id="markdown-commands-to-run" name="commands-to-run"></a>
 
-> Note to run a just command named `all` on Windows, you have to use the following:
-> `just --shell powershell.exe --shell-arg -c all`
+The script to run is `run.nu`. Make sure to mark it executable. It works on Linux, macOS, and
+Windows. Please make sure that the [pre-requisites](#prerequisites) are installed.
 
-- Build: `just build`
-- Clean: `just clean`
-- Run examples: `just run`
-- Run examples with release flag: `just run-release`
-- Run examples with flamegraph profiling: `just run-flamegraph`
-- Run tests: `just test`
-- Run clippy: `just clippy`
-- Build docs: `just docs`
-- Serve docs: `just serve-docs`. This is only useful if you SSH into a remote machine via
+- Build: `./run.nu build`
+- Clean: `./run.nu clean`
+- Run examples: `./run.nu run`
+- Run examples with release flag: `./run.nu run-release`
+- Run examples with flamegraph profiling: `./run.nu run-flamegraph`
+- Run tests: `./run.nu test`
+- Run clippy: `./run.nu clippy`
+- Build docs: `./run.nu docs`
+- Serve docs: `./run.nu serve-docs`. This is only useful if you SSH into a remote machine via
   VSCode (where you build and serve the docs) and want to view the docs in a browser on
   your local machine.
-- Upgrade deps: `just upgrade-deps`
-- Run rustfmt: `just rustfmt`
+- Upgrade deps: `./run.nu upgrade-deps`
+- Run rustfmt: `./run.nu rustfmt`
 
 The following commands will watch for changes in the source folder and re-run:
 
-- Watch run: `just watch-run`
-- Watch all test: `just watch-all-tests`
-- Watch one test: `just watch-one-test <test_name>`
-- Watch clippy: `just watch-clippy`
-- Watch macro expansion for one test: `just watch-macro-expansion-one-test <test_name>`
+- Watch run: `./run.nu watch-run`
+- Watch all test: `./run.nu watch-all-tests`
+- Watch one test: `./run.nu watch-one-test <test_name>`
+- Watch clippy: `./run.nu watch-clippy`
+- Watch macro expansion for one test: `./run.nu watch-macro-expansion-one-test <test_name>`
 
 ## References
 <a id="markdown-references" name="references"></a>

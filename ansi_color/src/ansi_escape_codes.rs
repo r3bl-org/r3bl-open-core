@@ -39,8 +39,9 @@ pub enum SgrCode {
 }
 
 pub mod sgr_code_impl {
-    use crate::*;
     use std::fmt::{Display, Formatter, Result};
+
+    use crate::*;
 
     impl Display for SgrCode {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -81,8 +82,9 @@ pub mod sgr_code_impl {
 
 #[cfg(test)]
 mod tests {
-    use super::SgrCode;
     use pretty_assertions::assert_eq;
+
+    use super::SgrCode;
 
     #[test]
     fn bold() {

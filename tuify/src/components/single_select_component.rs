@@ -15,20 +15,20 @@
  *   limitations under the License.
  */
 
-use crate::*;
+use std::io::{Result, *};
+
 use crossterm::{cursor::*, queue, style::*, terminal::*};
 use r3bl_ansi_color::TransformColor;
 use r3bl_rs_utils_core::*;
-use std::io::{Result, *};
+
+use crate::*;
 
 pub struct SingleSelectComponent<W: Write> {
     pub write: W,
 }
 
 impl<W: Write> FunctionComponent<W, State> for SingleSelectComponent<W> {
-    fn get_write(&mut self) -> &mut W {
-        &mut self.write
-    }
+    fn get_write(&mut self) -> &mut W { &mut self.write }
 
     /// If there are more items than the max display height, then we only use max display
     /// height. Otherwise we can shrink the display height to the number of items.
@@ -75,8 +75,10 @@ impl<W: Write> FunctionComponent<W, State> for SingleSelectComponent<W> {
 
         // Print each line in viewport.
         for viewport_row_index in 0..*viewport_height {
-            let data_row_index: usize = (data_row_index_start + viewport_row_index).into();
-            let caret_row_scroll_adj = ch!(viewport_row_index) + state.scroll_offset_row_index;
+            let data_row_index: usize =
+                (data_row_index_start + viewport_row_index).into();
+            let caret_row_scroll_adj =
+                ch!(viewport_row_index) + state.scroll_offset_row_index;
             let is_selected = ch!(caret_row_scroll_adj) == state.get_selected_index();
 
             let row_prefix = {
