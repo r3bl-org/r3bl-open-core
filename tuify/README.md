@@ -85,7 +85,7 @@ fn main() -> Result<()> {
 
 Here's a demo of the binary target of this crate in action.
 
-https://user-images.githubusercontent.com/2966499/266860855-dce05d87-327d-48f7-b063-45987177159c.mp4
+https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/2b42db72-cd62-4ea2-80ae-ccc01008190c
 
 You can install the binary using `cargo install r3bl_tuify` (from crates.io). Or
 `cargo install --path .` from source. Once installed, you can `rt` is a command line
