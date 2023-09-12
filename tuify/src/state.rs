@@ -15,8 +15,9 @@
  *   limitations under the License.
  */
 
-use crate::*;
 use r3bl_rs_utils_core::*;
+
+use crate::*;
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 pub struct State {
@@ -31,7 +32,10 @@ pub struct State {
 
 impl State {
     pub fn get_selected_index(&self) -> ChUnit {
-        get_scroll_adjusted_row_index(self.raw_caret_row_index, self.scroll_offset_row_index)
+        get_scroll_adjusted_row_index(
+            self.raw_caret_row_index,
+            self.scroll_offset_row_index,
+        )
     }
 
     pub fn locate_cursor_in_viewport(&self) -> CaretVerticalViewportLocation {

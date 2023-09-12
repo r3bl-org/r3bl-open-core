@@ -76,19 +76,13 @@ pub struct RgbColor {
 }
 
 mod rgb_color_impl {
+    use super::{RgbColor, TransformColor};
     use crate::{convert_rgb_into_ansi256, Ansi256Color};
 
-    use super::RgbColor;
-    use super::TransformColor;
-
     impl TransformColor for RgbColor {
-        fn as_rgb(&self) -> RgbColor {
-            *self
-        }
+        fn as_rgb(&self) -> RgbColor { *self }
 
-        fn as_ansi256(&self) -> Ansi256Color {
-            convert_rgb_into_ansi256(*self)
-        }
+        fn as_ansi256(&self) -> Ansi256Color { convert_rgb_into_ansi256(*self) }
     }
 }
 
@@ -106,8 +100,6 @@ mod ansi_color_impl {
             ANSI_COLOR_PALETTE[index].into()
         }
 
-        fn as_ansi256(&self) -> Ansi256Color {
-            *self
-        }
+        fn as_ansi256(&self) -> Ansi256Color { *self }
     }
 }

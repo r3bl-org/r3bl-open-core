@@ -15,9 +15,10 @@
  *   limitations under the License.
  */
 
+use std::io::{Result, *};
+
 use crossterm::{cursor::*, queue, terminal::*};
 use r3bl_rs_utils_core::*;
-use std::io::{Result, *};
 
 pub trait FunctionComponent<W: Write, S> {
     fn get_write(&mut self) -> &mut W;

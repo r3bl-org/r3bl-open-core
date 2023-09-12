@@ -442,14 +442,16 @@ mod tests_parse_smart_lists_in_markdown {
         ]
         .join("\n");
 
-        let expected_output = ["start",
+        let expected_output = [
+            "start",
             "[  ┊─┤ul1┊  ]",
             "[  ┊─┤ul2┊  ]",
             "[  ┊1.│ol1┊  ]",
             "[  ┊2.│ol2┊  ]",
             "[  ┊─┤[ ] todo┊  ]",
             "[  ┊─┤[x] done┊  ]",
-            "end"];
+            "end",
+        ];
 
         let result = parse_markdown(input.as_str());
         let remainder = result.as_ref().unwrap().0;

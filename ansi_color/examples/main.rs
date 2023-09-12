@@ -21,7 +21,8 @@ fn main() {
     // Print a string w/ ANSI color codes.
     {
         AnsiStyledText {
-            text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
+            text:
+                "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
             style: &[
                 Style::Bold,
                 Style::Italic,
@@ -48,14 +49,16 @@ fn main() {
     // Set the color support override to ANSI 256 color mode.
     {
         color_support_override_set(ColorSupport::Ansi256);
-        let msg: String = format!("> Force ANSI 256 color mode ({:?})", detect_color_support());
+        let msg: String =
+            format!("> Force ANSI 256 color mode ({:?})", detect_color_support());
         print_text(&msg);
     }
 
     // Set the color support override to truecolor mode.
     {
         color_support_override_set(ColorSupport::Truecolor);
-        let msg: String = format!("> Force True color mode ({:?})", detect_color_support());
+        let msg: String =
+            format!("> Force True color mode ({:?})", detect_color_support());
         print_text(&msg);
     }
 

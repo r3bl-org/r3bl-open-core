@@ -15,8 +15,6 @@
  *   limitations under the License.
  */
 
-
-
 use crossterm::event::{read,
                        Event,
                        KeyCode,

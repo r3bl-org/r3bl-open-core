@@ -804,7 +804,8 @@ mod tests_color_wheel_rgb {
         let GradientKind::ColorWheel(lhs) = gradient_kind else {
             panic!()
         };
-        let rhs = &[(0, 0, 0),
+        let rhs = &[
+            (0, 0, 0),
             (28, 28, 28),
             (56, 56, 56),
             (85, 85, 85),
@@ -813,7 +814,8 @@ mod tests_color_wheel_rgb {
             (170, 170, 170),
             (198, 198, 198),
             (226, 226, 226),
-            (255, 255, 255)]
+            (255, 255, 255),
+        ]
         .iter()
         .map(|(r, g, b)| TuiColor::Rgb(RgbValue::from_u8(*r, *g, *b)))
         .collect::<Vec<_>>();

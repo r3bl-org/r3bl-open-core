@@ -262,7 +262,8 @@ mod tests {
 
     #[test]
     fn test_markdown_invalid() {
-        let input = ["@tags: [foo, bar",
+        let input = [
+            "@tags: [foo, bar",
             "",
             "```rs",
             "let a=1;",
@@ -270,7 +271,8 @@ mod tests {
             "",
             "*italic* **bold** [link](https://example.com)",
             "",
-            "`inline code`"]
+            "`inline code`",
+        ]
         .join("\n");
         let (remainder, blocks) = parse_markdown(&input).unwrap();
         assert_eq2!(remainder, "`inline code`");
