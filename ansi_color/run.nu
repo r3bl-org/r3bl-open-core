@@ -40,6 +40,8 @@ def main [...args: string] {
         let num_args = $args | length
         if $num_args != 2 {
             print-help watch-one-test
+            let user_input = (input "test-name: " )
+            print $'user_input: (ansi green_bold)($user_input)(ansi reset)'
             return
         }
         let test_name = $args | get 1
