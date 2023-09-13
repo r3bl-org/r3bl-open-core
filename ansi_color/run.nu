@@ -9,6 +9,9 @@
 #     - length: https://www.nushell.sh/commands/docs/length.html
 #     - ansi: https://www.nushell.sh/commands/docs/ansi.html
 #     - print: https://www.nushell.sh/commands/docs/print.html
+#     - input: https://www.nushell.sh/commands/docs/input.html
+#     - input list: https://www.nushell.sh/commands/docs/input_list.html
+#     - match: https://www.nushell.sh/commands/docs/match.html
 # - mental model
 #     - coming from bash: https://www.nushell.sh/book/coming_from_bash.html
 #     - thinking in nu: https://www.nushell.sh/book/thinking_in_nu.html
@@ -24,56 +27,71 @@ def main [...args: string] {
 
     let command = $args | get 0
 
-    if $command == "build" {
-        build
-    } else if $command == "clean" {
-        clean
-    } else if $command == "run" {
-        run
-    } else if $command == "run-with-flamegraph-profiling" {
-        run-with-flamegraph-profiling
-    } else if $command == "watch-run" {
-        watch-run
-    } else if $command == "test" {
-        test
-    } else if $command == "watch-one-test" {
-        let num_args = $args | length
-        if $num_args != 2 {
-            print-help watch-one-test
-            let user_input = (input "test-name: " )
-            print $'user_input: (ansi green_bold)($user_input)(ansi reset)'
-            return
-        }
+    match $command {
+        "watch-one-test" => {watch-one-test $args}
+        "watch-macro-expansion-one-test" => {watch-macro-expansion-one-test $args}
+        "all" => {all}
+        "build" => {build}
+        "clean" => {clean}
+        "run" => {run}
+        "run-with-flamegraph-profiling" => {run-with-flamegraph-profiling}
+        "watch-run" => {watch-run}
+        "test" => {test}
+        "watch-all-tests" => {watch-all-tests}
+        "clippy" => {clippy}
+        "watch-clippy" => {watch-clippy}
+        "docs" => {docs}
+        "serve-docs" => {serve-docs}
+        "upgrade-deps" => {upgrade-deps}
+        "rustfmt" => {rustfmt}
+        "help" => {print-help all}
+        _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
+    }
+}
+
+# Watch a single test. This expects the test name to be passed in as an argument.
+# If it isn't passed in, it will prompt the user for it.
+def watch-one-test [args: list<string>] {
+    let num_args = $args | length
+
+    let test_name = if $num_args == 2 {
         let test_name = $args | get 1
-        watch-one-test $test_name
-    } else if $command == "watch-all-tests" {
-        watch-all-tests
-    } else if $command == "clippy" {
-        clippy
-    } else if $command == "watch-clippy" {
-        watch-clippy
-    } else if $command == "docs" {
-        docs
-    } else if $command == "watch-macro-expansion-one-test" {
-        let num_args = $args | length
-        if $num_args != 2 {
-            print-help watch-macro-expansion-one-test
-            return
-        }
-        let test_name = $args | get 1
-        watch-macro-expansion-one-test $test_name
-    } else if $command == "serve-docs" {
-        serve-docs
-    } else if $command == "upgrade-deps" {
-        upgrade-deps
-    } else if $command == "rustfmt" {
-        rustfmt
-    } else if $command == "help" {
-        print-help all
-    } else if $command == "all" {
-        all
+        $test_name
     } else {
-        print $'Unknown command: (ansi red_bold)($command)(ansi reset)'
+        print-help watch-one-test
+        let user_input = (input "Enter the test-name: " )
+        $user_input
+    }
+
+    if $test_name != "" {
+        # More info on cargo test: https://doc.rust-lang.org/cargo/commands/cargo-test.html
+        # More info on cargo watch: https://github.com/watchexec/cargo-watch
+        let command_string = "test -- --test-threads=1 --nocapture " + $test_name
+        cargo watch -x check -x $command_string -c -q
+    } else {
+        print $'Can not run this command without (ansi red_bold)test_name(ansi reset)'
+    }
+}
+
+# Watch a single test. This expects the test name to be passed in as an argument.
+# If it isn't passed in, it will prompt the user for it.
+def watch-macro-expansion-one-test [args: list<string>] {
+    let num_args = $args | length
+
+    let test_name = if $num_args == 2 {
+        let test_name = $args | get 1
+        $test_name
+    } else {
+        print-help watch-macro-expansion-one-test
+        let user_input = (input "Enter the test-name: " )
+        $user_input
+    }
+
+    if $test_name != "" {
+        let command_string = "expand --test " + $test_name
+        cargo watch -x $command_string -c -q -d 1
+    } else {
+        print $'Can not run this command without (ansi red_bold)test_name(ansi reset)'
     }
 }
 
@@ -145,13 +163,6 @@ def test [] {
     cargo test
 }
 
-def watch-one-test [test_name: string] {
-    # More info on cargo test: https://doc.rust-lang.org/cargo/commands/cargo-test.html
-    # More info on cargo watch: https://github.com/watchexec/cargo-watch
-    let command_string = "test -- --test-threads=1 --nocapture " + $test_name
-    cargo watch -x check -x $command_string -c -q
-}
-
 def watch-all-tests [] {
     cargo watch --exec check --exec 'test --quiet --color always -- --test-threads 1' --clear --quiet --delay 1
 }
@@ -168,11 +179,6 @@ def watch-clippy [] {
 
 def docs [] {
     cargo doc --no-deps --all-features
-}
-
-def watch-macro-expansion-one-test [test_name: string] {
-    let command_string = "expand --test " + $test_name
-    cargo watch -x $command_string -c -q -d 1
 }
 
 def serve-docs [] {
