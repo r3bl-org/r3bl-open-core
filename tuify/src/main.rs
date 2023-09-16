@@ -18,7 +18,8 @@
 use std::{io::{stdin, BufRead, Result},
           process::Command};
 
-use clap::{Args, CommandFactory, Parser, Subcommand};
+#[allow(unused_imports)]
+use clap::{Args, CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum};
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
 use r3bl_tuify::*;
@@ -56,18 +57,23 @@ struct GlobalOpts {
     tui_width: Option<usize>,
 }
 
+// TODO: current usage: `cat Cargo.toml | rt select-from-list --selection-mode single --command-to-run-with-selection "echo %"`
+// TODO: how to prompt the user if `selection_mode` or `command_to_run_with_selection` is missing? all below should work.
+// TODO: `cat Cargo.toml | rt select-from-list --selection-mode single
+// TODO: `cat Cargo.toml | rt select-from-list --command-to-run-with-selection "echo %"`
+// TODO: `cat Cargo.toml | rt select-from-list
 #[derive(Debug, Subcommand)]
 enum CLICommand {
     /// Show TUI to allow you to select one or more options from a list, piped in via stdin 👉
     SelectFromList {
         /// Would you like to select one or more items?
         #[arg(value_name = "mode", long, short = 's')]
-        selection_mode: SelectionMode,
+        selection_mode: Option<SelectionMode>,
 
         /// Each selected item is passed to this command as `%` and executed in your shell.
         /// For eg: "echo %". Please wrap the command in quotes 💡
         #[arg(value_name = "command", long, short = 'c')]
-        command_to_run_with_selection: String,
+        command_to_run_with_each_selection: Option<String>,
     },
 }
 
@@ -84,19 +90,16 @@ fn main() -> Result<()> {
     let enable_logging = TRACE | cli_args.global_opts.enable_logging;
 
     call_if_true!(enable_logging, {
-        log_debug(format!("cli_args {:?}", cli_args));
-    });
-
-    call_if_true!(enable_logging, {
         try_to_set_log_level(log::LevelFilter::Trace).ok();
         log_debug("Start logging...".to_string());
         log_debug(format!("og_size: {:?}", get_size()?).to_string());
+        log_debug(format!("cli_args {:?}", cli_args));
     });
 
     match cli_args.command {
         CLICommand::SelectFromList {
             selection_mode,
-            command_to_run_with_selection,
+            command_to_run_with_each_selection: command_to_run_with_selection,
         } => {
             // macos has issues w/ stdin piped in.
             // https://github.com/crossterm-rs/crossterm/issues/396
@@ -178,8 +181,8 @@ fn show_error_do_not_pipe_stdout(bin_name: &str) {
 }
 
 fn show_tui(
-    selection_mode: SelectionMode,
-    command_to_run_with_selection: String,
+    maybe_selection_mode: Option<SelectionMode>,
+    maybe_command_to_run_with_selection: Option<String>,
     tui_height: Option<usize>,
     tui_width: Option<usize>,
     enable_logging: bool,
@@ -199,6 +202,49 @@ fn show_tui(
     let max_width_col_count: usize =
         tui_width.unwrap_or(get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into());
     let max_height_row_count: usize = tui_height.unwrap_or(5);
+
+    // TODO: cleanup
+    // Print help if `selection_mode` or `command_to_run_with_selection` is missing.
+    // if maybe_selection_mode.is_none() || maybe_command_to_run_with_selection.is_none() {
+    //     print_help_for("select-from-list").ok();
+    // }
+
+    let selection_mode = if let Some(selection_mode) = maybe_selection_mode {
+        selection_mode
+    } else {
+        let possible_values_for_selection_mode =
+            get_possible_values_for_subcommand_and_option(
+                "select-from-list",
+                "selection-mode",
+            );
+        print_help_for_subcommand_and_option("select-from-list", "selection-mode").ok();
+
+        let user_selection = select_from_list(
+            possible_values_for_selection_mode,
+            max_height_row_count,
+            max_width_col_count,
+            SelectionMode::Single,
+        );
+
+        let it = if let Some(user_selection) = user_selection {
+            if let Some(it) = user_selection.first() {
+                println!("selection-mode: {}", it);
+                SelectionMode::from_str(it, true).unwrap_or(SelectionMode::Single)
+            } else {
+                print_help_for("select-from-list").ok();
+                return;
+            }
+        } else {
+            print_help_for("select-from-list").ok();
+            return;
+        };
+
+        it
+    };
+
+    // 00: if `command_to_run_with_selection` is missing, prompt the user to type input using reedline. If user didn't select anything then exit w/ help.
+    let command_to_run_with_selection =
+        maybe_command_to_run_with_selection.unwrap_or_else(|| "echo %".to_string());
 
     // Actually get input from the user.
     let selected_items = {
@@ -253,5 +299,66 @@ fn execute_command(cmd_str: &str) {
 pub fn print_help() -> Result<()> {
     let mut cmd = AppArgs::command();
     cmd.print_help()?;
+
     Ok(())
+}
+
+fn print_help_for(subcommand: &str) -> Result<()> {
+    let app_args_binding = AppArgs::command();
+    if let Some(it) = app_args_binding.find_subcommand(subcommand) {
+        it.clone().print_help()?;
+    }
+
+    Ok(())
+}
+
+fn print_help_for_subcommand_and_option(subcommand: &str, option: &str) -> Result<()> {
+    let app_args_binding = AppArgs::command();
+    if let Some(it) = app_args_binding.find_subcommand(subcommand) {
+        for arg in it.get_arguments() {
+            if arg.get_long() == Some(option) {
+                let help = arg.get_help();
+                if let Some(help) = help {
+                    let output = format!("{}", help);
+                    println!("{}", output);
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn get_possible_values_for_subcommand_and_option(
+    subcommand: &str,
+    option: &str,
+) -> Vec<String> {
+    let app_args_binding = AppArgs::command();
+
+    if let Some(it) = app_args_binding.find_subcommand(subcommand) {
+        for arg in it.get_arguments() {
+            if arg.get_long() == Some(option) {
+                let possible_values = arg.get_possible_values();
+                let possible_values = possible_values
+                    .iter()
+                    .map(|it| it.get_name().to_string())
+                    .collect::<Vec<_>>();
+
+                call_if_true!(TRACE, {
+                    log_debug(
+                        format!(
+                            "{subcommand}, {option} - possible_values: {:?}",
+                            possible_values
+                        )
+                        .green()
+                        .to_string(),
+                    );
+                });
+
+                return possible_values;
+            }
+        }
+    }
+
+    vec![]
 }

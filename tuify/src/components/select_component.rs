@@ -73,6 +73,8 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
 
         let writer = self.get_write();
 
+        // 00: figure out how to print header
+
         // Print each line in viewport.
         for viewport_row_index in 0..*viewport_height {
             let data_row_index: usize =

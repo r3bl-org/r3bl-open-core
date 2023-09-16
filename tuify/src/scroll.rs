@@ -36,7 +36,10 @@
 //!                    +---------------------+
 //! ```
 
+use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
+
+use crate::TRACE;
 
 pub fn get_scroll_adjusted_row_index(
     raw_caret_row_index: ChUnit,
@@ -53,6 +56,13 @@ pub fn locate_cursor_in_viewport(
 ) -> CaretVerticalViewportLocation {
     let caret_row_scroll_adj = raw_caret_row_index + scroll_offset_row_index;
 
+    call_if_true!(TRACE, {
+        log_debug(format!(
+            "raw_caret_row_index: {}, scroll_offset_row_index: {}, caret_row_scroll_adj: {}, display_height: {}, items_size: {}",
+            raw_caret_row_index, scroll_offset_row_index, caret_row_scroll_adj, display_height, items_size
+        ).green().to_string());
+    });
+
     if caret_row_scroll_adj == ch!(0) {
         CaretVerticalViewportLocation::AtAbsoluteTop
     } else if caret_row_scroll_adj < scroll_offset_row_index {
@@ -62,7 +72,11 @@ pub fn locate_cursor_in_viewport(
     }
     // When comparing height or width or size to index, we need to subtract 1.
     else if caret_row_scroll_adj == (display_height - 1) {
-        CaretVerticalViewportLocation::AtBottomOfViewport
+        if caret_row_scroll_adj == (items_size - 1) {
+            CaretVerticalViewportLocation::AtAbsoluteBottom
+        } else {
+            CaretVerticalViewportLocation::AtBottomOfViewport
+        }
     }
     // When comparing height or width or size to index, we need to subtract 1.
     else if caret_row_scroll_adj > (display_height - 1) {
