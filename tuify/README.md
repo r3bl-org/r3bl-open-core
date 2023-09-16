@@ -185,6 +185,15 @@ The following commands will watch for changes in the source folder and re-run:
 ## References
 <a id="markdown-references" name="references"></a>
 
+CLI UX guidelines:
+- https://rust-cli-recommendations.sunshowers.io/handling-arguments.html
+- https://rust-cli-recommendations.sunshowers.io/configuration.html
+- https://rust-cli-recommendations.sunshowers.io/hierarchical-config.html
+- https://rust-cli-recommendations.sunshowers.io/hierarchical-config.html
+- https://docs.rs/clap/latest/clap/_derive/#overview
+- https://clig.dev/#foreword
+
+ANSI escape codes:
 - https://notes.burke.libbey.me/ansi-escape-codes/
 - https://en.wikipedia.org/wiki/ANSI_escape_code
 - https://www.asciitable.com/
