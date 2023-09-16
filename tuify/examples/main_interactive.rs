@@ -34,61 +34,130 @@ fn main() -> Result<()> {
     let max_height_row_count: usize = 5;
 
     // Single select.
-    println!(
-        "{}",
-        "Single select (move up and down, press enter or esc)"
-            .yellow()
-            .on_dark_blue()
-    );
-    let user_input = select_from_list(
-        [
-            "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7",
-            "item 8", "item 9", "item 10",
-        ]
-        .iter()
-        .map(|it| it.to_string())
-        .collect(),
-        max_height_row_count,
-        max_width_col_count,
-        SelectionMode::Single,
-    );
-
-    match &user_input {
-        Some(it) => {
-            println!("User selected: {:?}", it);
+    {
+        // 2 items & viewport height = 5.
+        println!(
+            "{}",
+            "Single select (move up and down, press enter or esc) - 2 items"
+                .yellow()
+                .on_dark_blue()
+        );
+        let user_input = select_from_list(
+            ["item 1 of 2", "item 2 of 2"]
+                .iter()
+                .map(|it| it.to_string())
+                .collect(),
+            max_height_row_count,
+            max_width_col_count,
+            SelectionMode::Single,
+        );
+        match &user_input {
+            Some(it) => {
+                println!("User selected: {:?}", it);
+            }
+            None => println!("User did not select anything"),
         }
-        None => println!("User did not select anything"),
+        call_if_true!(TRACE, {
+            log_debug(format!("user_input: {:?}", user_input).to_string());
+        });
+
+        // 10 items & viewport height = 5.
+        println!(
+            "{}",
+            "Single select (move up and down, press enter or esc) - 10 items"
+                .yellow()
+                .on_dark_blue()
+        );
+        let user_input = select_from_list(
+            [
+                "item 1 of 10",
+                "item 2 of 10",
+                "item 3 of 10",
+                "item 4 of 10",
+                "item 5 of 10",
+                "item 6 of 10",
+                "item 7 of 10",
+                "item 8 of 10",
+                "item 9 of 10",
+                "item 10 of 10",
+            ]
+            .iter()
+            .map(|it| it.to_string())
+            .collect(),
+            max_height_row_count,
+            max_width_col_count,
+            SelectionMode::Single,
+        );
+        match &user_input {
+            Some(it) => {
+                println!("User selected: {:?}", it);
+            }
+            None => println!("User did not select anything"),
+        }
+        call_if_true!(TRACE, {
+            log_debug(format!("user_input: {:?}", user_input).to_string());
+        });
     }
 
     // Multiple select.
-    println!(
-        "{}",
-        "Multiple select (move up and down, press space, then enter or esc)"
-            .yellow()
-            .on_dark_blue()
-    );
-    let user_input = select_from_list(
-        [
-            "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7",
-            "item 8", "item 9", "item 10",
-        ]
-        .iter()
-        .map(|it| it.to_string())
-        .collect(),
-        max_height_row_count,
-        max_width_col_count,
-        SelectionMode::Multiple,
-    );
-
-    match &user_input {
-        Some(it) => {
-            println!("User selected: {:?}", it);
+    {
+        // 2 items & viewport height = 5.
+        println!(
+            "{}",
+            "Multiple select (move up and down, press space, then enter or esc) - 2 items"
+                .yellow()
+                .on_dark_blue()
+        );
+        let user_input = select_from_list(
+            ["item 1 of 2", "item 2 of 2"]
+                .iter()
+                .map(|it| it.to_string())
+                .collect(),
+            max_height_row_count,
+            max_width_col_count,
+            SelectionMode::Multiple,
+        );
+        match &user_input {
+            Some(it) => {
+                println!("User selected: {:?}", it);
+            }
+            None => println!("User did not select anything"),
         }
-        None => println!("User did not select anything"),
+        call_if_true!(TRACE, {
+            log_debug(format!("user_input: {:?}", user_input).to_string());
+        });
+
+        // 10 items & viewport height = 5.
+        println!(
+            "{}",
+            "Multiple select (move up and down, press space, then enter or esc) - 10 items"
+                .yellow()
+                .on_dark_blue()
+        );
+        let user_input = select_from_list(
+            [
+                "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7",
+                "item 8", "item 9", "item 10",
+            ]
+            .iter()
+            .map(|it| it.to_string())
+            .collect(),
+            max_height_row_count,
+            max_width_col_count,
+            SelectionMode::Multiple,
+        );
+        match &user_input {
+            Some(it) => {
+                println!("User selected: {:?}", it);
+            }
+            None => println!("User did not select anything"),
+        }
+        call_if_true!(TRACE, {
+            log_debug(format!("user_input: {:?}", user_input).to_string());
+        });
     }
 
     call_if_true!(TRACE, {
-        log_debug(format!("user_input: {:?}", user_input).to_string());
         log_debug("Stop logging...".to_string());
     });
 

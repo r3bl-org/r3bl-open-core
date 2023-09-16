@@ -34,6 +34,13 @@ pub fn select_from_list(
     max_width_col_count: usize,
     selection_mode: SelectionMode,
 ) -> Option<Vec<String>> {
+    // There are fewer items than viewport height. So make viewport shorter.
+    let max_height_row_count = if items.len() <= max_height_row_count {
+        items.len()
+    } else {
+        max_height_row_count
+    };
+
     let mut state = State {
         max_display_height: max_height_row_count.into(),
         max_display_width: max_width_col_count.into(),
@@ -45,10 +52,22 @@ pub fn select_from_list(
 
     let mut function_component = SelectComponent { write: stdout() };
 
+    // 00: scroll up, down, handle enter and esc
     let user_input = enter_event_loop(
         &mut state,
         &mut function_component,
         |state, key_press| -> EventLoopResult {
+            call_if_true!(TRACE, {
+                log_debug(
+                    format!(
+                        "before keypress: locate_cursor_in_viewport(): {:?}",
+                        state.locate_cursor_in_viewport()
+                    )
+                    .magenta()
+                    .to_string(),
+                );
+            });
+
             match key_press {
                 // Down.
                 KeyPress::Down => {
