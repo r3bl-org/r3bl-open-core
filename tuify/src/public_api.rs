@@ -29,6 +29,7 @@ use crate::*;
 /// width of the display, and the selection mode (single select or multiple select).
 // TODO: pass styles for selected and unselected.
 pub fn select_from_list(
+    header: String,
     items: Vec<String>,
     max_height_row_count: usize,
     max_width_col_count: usize,
@@ -48,11 +49,11 @@ pub fn select_from_list(
         scroll_offset_row_index: ch!(0),
         items,
         selected_items: Vec::new(),
+        header,
     };
 
     let mut function_component = SelectComponent { write: stdout() };
 
-    // 00: scroll up, down, handle enter and esc
     let user_input = enter_event_loop(
         &mut state,
         &mut function_component,
