@@ -17,6 +17,7 @@
 
 use std::io::Result;
 
+use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
 use r3bl_tuify::*;
 
@@ -32,6 +33,13 @@ fn main() -> Result<()> {
         get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
     let max_height_row_count: usize = 5;
 
+    // Single select.
+    println!(
+        "{}",
+        "Single select (move up and down, press enter or esc)"
+            .yellow()
+            .on_dark_blue()
+    );
     let user_input = select_from_list(
         [
             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7",
@@ -42,7 +50,33 @@ fn main() -> Result<()> {
         .collect(),
         max_height_row_count,
         max_width_col_count,
-        // SelectionMode::Single,
+        SelectionMode::Single,
+    );
+
+    match &user_input {
+        Some(it) => {
+            println!("User selected: {:?}", it);
+        }
+        None => println!("User did not select anything"),
+    }
+
+    // Multiple select.
+    println!(
+        "{}",
+        "Multiple select (move up and down, press space, then enter or esc)"
+            .yellow()
+            .on_dark_blue()
+    );
+    let user_input = select_from_list(
+        [
+            "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7",
+            "item 8", "item 9", "item 10",
+        ]
+        .iter()
+        .map(|it| it.to_string())
+        .collect(),
+        max_height_row_count,
+        max_width_col_count,
         SelectionMode::Multiple,
     );
 
