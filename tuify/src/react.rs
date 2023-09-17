@@ -28,7 +28,8 @@ pub trait FunctionComponent<W: Write, S> {
     fn render(&mut self, state: &mut S) -> Result<()>;
 
     fn allocate_viewport_height_space(&mut self, state: &mut S) -> Result<()> {
-        let viewport_height = self.calculate_viewport_height(state);
+        let viewport_height =
+            /* not including the header */ self.calculate_viewport_height(state) + /* for header row */ 1;
 
         // Allocate space. This is required so that the commands to move the cursor up and
         // down shown below will work.

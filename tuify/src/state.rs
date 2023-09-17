@@ -21,6 +21,7 @@ use crate::*;
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 pub struct State {
+    /// Does not include the header row.
     pub max_display_height: ChUnit,
     pub max_display_width: ChUnit,
     /// This is not adjusted for
@@ -29,6 +30,7 @@ pub struct State {
     pub scroll_offset_row_index: ChUnit,
     pub items: Vec<String>,
     pub selected_items: Vec<String>,
+    pub header: String,
 }
 
 impl State {

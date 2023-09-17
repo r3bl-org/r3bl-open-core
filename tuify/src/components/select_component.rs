@@ -32,6 +32,7 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
 
     /// If there are more items than the max display height, then we only use max display
     /// height. Otherwise we can shrink the display height to the number of items.
+    /// This does NOT include the header.
     fn calculate_viewport_height(&self, state: &mut State) -> ChUnit {
         if state.items.len() > state.max_display_height.into() {
             state.max_display_height
@@ -47,8 +48,15 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
         // Setup the required data.
         let fg_color = r3bl_ansi_color::Color::Rgb(200, 200, 1).as_ansi256().index;
         let bg_color = r3bl_ansi_color::Color::Rgb(100, 60, 150).as_ansi256().index;
+        let header_fg_color = r3bl_ansi_color::Color::Rgb(250, 200, 200)
+            .as_ansi256()
+            .index;
+        let header_bg_color = r3bl_ansi_color::Color::Rgb(100, 160, 150)
+            .as_ansi256()
+            .index;
 
         let start_display_col_offset = 1;
+        let start_display_row_offset = 1;
 
         // If there are more items than the max display height, then we only use max
         // display height. Otherwise we can shrink the display height to the number of
@@ -73,7 +81,25 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
 
         let writer = self.get_write();
 
-        // 00: figure out how to print header
+        // Print header.
+        queue! {
+            writer,
+            // Bring the caret back to the start of line.
+            MoveToColumn(0),
+            // Reset the colors that may have been set by the previous command.
+            ResetColor,
+            // Set the colors for the text.
+            SetForegroundColor(Color::AnsiValue(header_fg_color)),
+            SetBackgroundColor(Color::AnsiValue(header_bg_color)),
+            // Clear the current line.
+            Clear(ClearType::CurrentLine),
+            // Print the text.
+            Print(format!("{}{}", " ".repeat(start_display_col_offset), state.header)),
+            // Move to next line.
+            MoveToNextLine(1),
+            // Reset the colors.
+            ResetColor,
+        }?;
 
         // Print each line in viewport.
         for viewport_row_index in 0..*viewport_height {
@@ -127,7 +153,7 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
         // Move the cursor back up.
         queue! {
             writer,
-            MoveToPreviousLine(*viewport_height),
+            MoveToPreviousLine(*viewport_height + 1),
         }?;
 
         writer.flush()?;

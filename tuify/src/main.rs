@@ -220,6 +220,7 @@ fn show_tui(
         print_help_for_subcommand_and_option("select-from-list", "selection-mode").ok();
 
         let user_selection = select_from_list(
+            "Choose selection-mode".to_string(),
             possible_values_for_selection_mode,
             max_height_row_count,
             max_width_col_count,
@@ -249,6 +250,7 @@ fn show_tui(
     // Actually get input from the user.
     let selected_items = {
         let it = select_from_list(
+            "Select one line".to_string(),
             lines,
             max_height_row_count,
             max_width_col_count,
