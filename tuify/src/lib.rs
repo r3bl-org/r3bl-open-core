@@ -125,7 +125,9 @@
 //! Here's a video of this in action.
 //!
 //! <!-- tuify-long-command -->
-//! <a href="https://asciinema.org/a/608509?autoplay=1" target="_blank"><img src="https://asciinema.org/a/608509.svg" /></a>
+//! <video width="800" controls>
+//!   <source src="https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/c9b49bfb-b811-460e-a844-fe260eaa860a" type="video/mp4"/>
+//! </video>
 //!
 //! What does this do?
 //!
@@ -167,7 +169,9 @@
 //!      pieces of information: the selection mode, and the command to run with each
 //!      selection. They didn't provide this up front when they ran the command.
 //!      <!-- tuify-interactive-happy-path -->
-//!      <a href="https://asciinema.org/a/608511?autoplay=1" target="_blank"><img src="https://asciinema.org/a/608511.svg" /></a>
+//!      <video width="800" controls>
+//!        <source src="https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/51de8867-513b-429f-aff2-63dd25d71c82" type="video/mp4"/>
+//!      </video>//!
 //!
 //!    - Another scenario is that the user does not provide the required information even when
 //!      prompted interactively. In this scenario, the program exits with an error and help
@@ -177,7 +181,9 @@
 //!      `command-to-run-with-each-selection` they want. Without this information the program
 //!      can't continue, so it exits and provides some help message.
 //!      <!-- tuify-interactive-unhappy-path -->
-//!      <a href="https://asciinema.org/a/608515?autoplay=1" target="_blank"><img src="https://asciinema.org/a/608515.svg" /></a>
+//!      <video width="800" controls>
+//!        <source src="https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/664d0367-90fd-4f0a-ad87-3f4745642ad0" type="video/mp4"/>
+//!      </video>
 //!
 //! 1. `--selection-mode` is *not* passed in the command line. So it only interactively
 //!    prompts the user for this piece of information. Similarly, if the user does not provide
@@ -186,7 +192,9 @@
 //!    cat TODO.todo | cargo run -- select-from-list --command-to-run-with-each-selection "echo %"
 //!    ```
 //!    <!-- tuify-interactive-selection-mode-not-provided -->
-//!    <a href="https://asciinema.org/a/608517?autoplay=1" target="_blank"><img src="https://asciinema.org/a/608517.svg" /></a>
+//!      <video width="800" controls>
+//!        <source src="https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/be65d9b2-575b-47c0-8291-110340bd2fe7" type="video/mp4"/>
+//!      </video>
 //!
 //! 1. `--command-to-run-with-each-selection` is *not* passed in the command line. So it only
 //!    interactively prompts the user for this piece of information. Similarly, if the user
@@ -195,8 +203,9 @@
 //!    cat TODO.todo | cargo run -- select-from-list --selection-mode single
 //!    ```
 //!    <!-- tuify-interactive-command-to-run-with-selection-not-provided -->
-//!    <a href="https://asciinema.org/a/608518?autoplay=1" target="_blank"><img src="https://asciinema.org/a/608518.svg" /></a>
-//!
+//!      <video width="800" controls>
+//!        <source src="https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/d8d7d419-c85e-4c10-bea5-345aa31a92a3" type="video/mp4"/>
+//!      </video>
 //!
 //! ### Paths
 //!
