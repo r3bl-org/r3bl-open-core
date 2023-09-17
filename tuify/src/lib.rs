@@ -124,7 +124,8 @@
 //!
 //! Here's a video of this in action.
 //!
-//! [![asciicast tuify-long-command](https://asciinema.org/a/1NeWeRSup6a0JiKsplfg3VO2c.svg)](https://asciinema.org/a/1NeWeRSup6a0JiKsplfg3VO2c?autoplay=1){:target="_blank"}
+//! <!-- tuify-long-command -->
+//! <a href="https://asciinema.org/a/608509?autoplay=1" target="_blank"><img src="https://asciinema.org/a/608509.svg" /></a>
 //!
 //! What does this do?
 //!
@@ -165,7 +166,8 @@
 //!      selection. This is the really interactive scenario, since the user has to provide 2
 //!      pieces of information: the selection mode, and the command to run with each
 //!      selection. They didn't provide this up front when they ran the command.
-//!      [![asciicast tuify-interactive-happy-path](https://asciinema.org/a/gMoDo6N4IK2MrOCo7ZCBw6sfd.svg)](https://asciinema.org/a/gMoDo6N4IK2MrOCo7ZCBw6sfd?autoplay=1){:target="_blank"}
+//!      <!-- tuify-interactive-happy-path -->
+//!      <a href="https://asciinema.org/a/608511?autoplay=1" target="_blank"><img src="https://asciinema.org/a/608511.svg" /></a>
 //!
 //!    - Another scenario is that the user does not provide the required information even when
 //!      prompted interactively. In this scenario, the program exits with an error and help
@@ -174,7 +176,8 @@
 //!      Here they don't provide what `selection-mode` they want. And they don't provide what
 //!      `command-to-run-with-each-selection` they want. Without this information the program
 //!      can't continue, so it exits and provides some help message.
-//!      [![asciicast tuify-interactive-unhappy-path](https://asciinema.org/a/AWirbkCSnDLuDZl5eeIkPXmFz.svg)](https://asciinema.org/a/AWirbkCSnDLuDZl5eeIkPXmFz?autoplay=1){:target="_blank"}
+//!      <!-- tuify-interactive-unhappy-path -->
+//!      <a href="https://asciinema.org/a/608515?autoplay=1" target="_blank"><img src="https://asciinema.org/a/608515.svg" /></a>
 //!
 //! 1. `--selection-mode` is *not* passed in the command line. So it only interactively
 //!    prompts the user for this piece of information. Similarly, if the user does not provide
@@ -182,7 +185,8 @@
 //!    ```shell
 //!    cat TODO.todo | cargo run -- select-from-list --command-to-run-with-each-selection "echo %"
 //!    ```
-//!    [![asciicast tuify-interactive-selection-mode-not-provided](https://asciinema.org/a/608517.svg)](https://asciinema.org/a/608517?autoplay=1){:target="_blank"}
+//!    <!-- tuify-interactive-selection-mode-not-provided -->
+//!    <a href="https://asciinema.org/a/608517?autoplay=1" target="_blank"><img src="https://asciinema.org/a/608517.svg" /></a>
 //!
 //! 1. `--command-to-run-with-each-selection` is *not* passed in the command line. So it only
 //!    interactively prompts the user for this piece of information. Similarly, if the user
@@ -190,7 +194,8 @@
 //!    ```shell
 //!    cat TODO.todo | cargo run -- select-from-list --selection-mode single
 //!    ```
-//!    [![asciicast tuify-interactive-command-to-run-with-selection-not-provided](https://asciinema.org/a/608518.svg)](https://asciinema.org/a/608518?autoplay=1){:target="_blank"}
+//!    <!-- tuify-interactive-command-to-run-with-selection-not-provided -->
+//!    <a href="https://asciinema.org/a/608518?autoplay=1" target="_blank"><img src="https://asciinema.org/a/608518.svg" /></a>
 //!
 //!
 //! ### Paths
