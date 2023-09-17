@@ -15,6 +15,6 @@
  *   limitations under the License.
  */
 
-pub mod single_select_component;
+pub mod select_component;
 
-pub use single_select_component::*;
+pub use select_component::*;
