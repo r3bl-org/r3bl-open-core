@@ -6,6 +6,7 @@
 - [What does it do?](#what-does-it-do)
 - [How to use it as a library?](#how-to-use-it-as-a-library)
 - [How to use it as a binary?](#how-to-use-it-as-a-binary)
+  - [Interactive user experience](#interactive-user-experience)
   - [Paths](#paths)
 - [Build, run, test tasks](#build-run-test-tasks)
   - [Prerequisites](#prerequisites)
@@ -104,6 +105,68 @@ Here are the command line arguments that it accepts:
 > Currently only single selection is implemented. An issue is open to add this
 > feature: <https://github.com/r3bl-org/r3bl_rs_utils/issues> if you would like to
 > [contribute](https://github.com/r3bl-org/r3bl_rs_utils/contribute).
+
+### Interactive user experience
+<a id="markdown-interactive-user-experience" name="interactive-user-experience"></a>
+
+Typically a CLI app is not interactive. You can pass commands, subcommands, options, and
+arguments to it, but if you get something wrong, then you get an error, and have to start
+all over again. This "conversation" style interface might require a lot of trial and error
+to get the desired result.
+
+The following is an example of using the binary.
+
+```shell
+cat TODO.todo | cargo run -- select-from-list \
+    --selection-mode single \
+    --command-to-run-with-each-selection "echo %"
+```
+
+// 00: add a video of this in action
+
+What does this do?
+
+1. `cat TODO.todo` - prints the contents of the `TODO.todo` file to `stdout`.
+1. `|` - pipes the output of the previous command to the next command, which is `rt` (ie,
+   the binary target of this crate).
+1. `cargo run --` - runs the `rt` debug binary in the target folder.
+1. `select-from-list` - runs the `rt` binary with the `select-from-list`
+   subcommand. This subcommand requires 2 arguments: `--selection-mode` and
+   `--command-to-run-with-each-selection`. Whew! This is getting long!
+1. `--selection-mode single` - sets the selection mode to `single`. This means that the
+    user can only select one item from the list. What list? The list that is piped in from
+    the previous command (ie, `cat TODO.todo`).
+1. `--command-to-run-with-each-selection "echo %"` - sets the command to run with each
+    selection. In this case, it is `echo %`. The `%` is a placeholder for the selected
+    item. So if the user selects `item 1`, then the command that will be run is `echo item
+    1`. The `echo` command simply prints the selected item to `stdout`.
+
+Now that is a lot to remember. It is helpful to use `clap` to provide nice command line help
+but that is still quite a few things that you have to get right in order for this command to
+work.
+
+It doesn't have to be this way. It is entirely possible for the binary to be interactive along with
+the use of `clap` to specify some of the subcommands, and arguments. It doesn't have to be an all
+or nothing approach. We can have the best of both worlds. The following videos illustrate
+what happens when:
+
+1. `--selection-mode` and `--command-to-run-with-each-selection` are *not* passed in the
+   command line.
+   ```shell
+   cat TODO.todo | cargo run -- select-from-list
+   ```
+
+1. `--selection-mode` is *not* passed in the command line.
+   ```shell
+   cat TODO.todo | cargo run -- select-from-list --command-to-run-with-each-selection "echo %"
+   ```
+
+1. `--command-to-run-with-each-selection` is *not* passed in the command line.
+    ```shell
+    cat TODO.todog | cargo run -- select-from-list --selection-mode single
+    ```
+
+// 00: add a video that illustrates the 3 interactive user experience outlined above
 
 ### Paths
 <a id="markdown-paths" name="paths"></a>
