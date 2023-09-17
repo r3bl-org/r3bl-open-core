@@ -114,7 +114,7 @@ arguments to it, but if you get something wrong, then you get an error, and have
 all over again. This "conversation" style interface might require a lot of trial and error
 to get the desired result.
 
-The following is an example of using the binary.
+The following is an example of using the binary with many subcommands, options, and arguments.
 
 ```shell
 cat TODO.todo | cargo run -- select-from-list \
@@ -122,7 +122,9 @@ cat TODO.todo | cargo run -- select-from-list \
     --command-to-run-with-each-selection "echo %"
 ```
 
-// 00: add a video of this in action
+Here's a video of this in action.
+
+[![asciicast tuify-long-command](https://asciinema.org/a/1NeWeRSup6a0JiKsplfg3VO2c.svg)](https://asciinema.org/a/1NeWeRSup6a0JiKsplfg3VO2c?autoplay=1)
 
 What does this do?
 
@@ -145,10 +147,10 @@ Now that is a lot to remember. It is helpful to use `clap` to provide nice comma
 but that is still quite a few things that you have to get right in order for this command to
 work.
 
-It doesn't have to be this way. It is entirely possible for the binary to be interactive along with
-the use of `clap` to specify some of the subcommands, and arguments. It doesn't have to be an all
-or nothing approach. We can have the best of both worlds. The following videos illustrate
-what happens when:
+It doesn't have to be this way. It is entirely possible for the binary to be interactive
+along with the use of `clap` to specify some of the subcommands, and arguments. It doesn't
+have to be an all or nothing approach. We can have the best of both worlds. The following
+videos illustrate what happens when:
 
 1. `--selection-mode` and `--command-to-run-with-each-selection` are *not* passed in the
    command line.
@@ -156,17 +158,39 @@ what happens when:
    cat TODO.todo | cargo run -- select-from-list
    ```
 
-1. `--selection-mode` is *not* passed in the command line.
+   Here are the 3 scenarios that can happen:
+
+   - The user first chooses `single` selection mode (using a list selection component),
+     and then types in `echo %` in the terminal, as the command to run with each
+     selection. This is the really interactive scenario, since the user has to provide 2
+     pieces of information: the selection mode, and the command to run with each
+     selection. They didn't provide this up front when they ran the command.
+     [![asciicast tuify-interactive-happy-path](https://asciinema.org/a/gMoDo6N4IK2MrOCo7ZCBw6sfd.svg)](https://asciinema.org/a/gMoDo6N4IK2MrOCo7ZCBw6sfd?autoplay=1)
+
+   - Another scenario is that the user does not provide the required information even when
+     prompted interactively. In this scenario, the program exits with an error and help
+     message.
+
+     Here they don't provide what `selection-mode` they want. And they don't provide what
+     `command-to-run-with-each-selection` they want. Without this information the program
+     can't continue, so it exits and provides some help message.
+     [![asciicast tuify-interactive-unhappy-path](https://asciinema.org/a/AWirbkCSnDLuDZl5eeIkPXmFz.svg)](https://asciinema.org/a/AWirbkCSnDLuDZl5eeIkPXmFz?autoplay=1)
+
+1. `--selection-mode` is *not* passed in the command line. So it only interactively
+   prompts the user for this piece of information. Similarly, if the user does not provide
+   this information, the app exits and provides a help message.
    ```shell
    cat TODO.todo | cargo run -- select-from-list --command-to-run-with-each-selection "echo %"
    ```
+   [![asciicast tuify-interactive-selection-mode-not-provided](https://asciinema.org/a/608517.svg)](https://asciinema.org/a/608517?autoplay=1)
 
-1. `--command-to-run-with-each-selection` is *not* passed in the command line.
-    ```shell
-    cat TODO.todog | cargo run -- select-from-list --selection-mode single
-    ```
-
-// 00: add a video that illustrates the 3 interactive user experience outlined above
+1. `--command-to-run-with-each-selection` is *not* passed in the command line. So it only
+   interactively prompts the user for this piece of information. Similarly, if the user
+   does not provide this information, the app exits and provides a help message.
+   ```shell
+   cat TODO.todo | cargo run -- select-from-list --selection-mode single
+   ```
+   [![asciicast tuify-interactive-command-to-run-with-selection-not-provided](https://asciinema.org/a/608518.svg)](https://asciinema.org/a/608518?autoplay=1)
 
 ### Paths
 <a id="markdown-paths" name="paths"></a>

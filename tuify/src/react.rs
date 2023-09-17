@@ -48,7 +48,9 @@ pub trait FunctionComponent<W: Write, S> {
     }
 
     fn clear_viewport(&mut self, state: &mut S) -> Result<()> {
-        let viewport_height = self.calculate_viewport_height(state);
+        let viewport_height =
+            /* not including the header */ self.calculate_viewport_height(state) + /* for header row */ 1;
+
         let writer = self.get_write();
 
         // Clear the viewport.
