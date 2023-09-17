@@ -33,6 +33,7 @@ pub enum KeyPress {
     #[default]
     Noop,
     Error,
+    Space,
 }
 
 pub fn read_key_press() -> KeyPress {
@@ -58,6 +59,7 @@ fn read_key_press_unix() -> KeyPress {
                         crossterm::event::KeyCode::Down => KeyPress::Down,
                         crossterm::event::KeyCode::Enter => KeyPress::Enter,
                         crossterm::event::KeyCode::Esc => KeyPress::Esc,
+                        crossterm::event::KeyCode::Char(' ') => KeyPress::Space,
                         _ => KeyPress::Noop,
                     }
                 }
@@ -112,6 +114,14 @@ fn read_key_press_windows() -> KeyPress {
                     kind: KeyEventKind::Press, // This is for Windows.
                     state: KeyEventState::NONE,
                 }) => KeyPress::Esc,
+
+                // Space.
+                Event::Key(KeyEvent {
+                    code: KeyCode::Char(' '),
+                    modifiers: KeyModifiers::NONE,
+                    kind: KeyEventKind::Press, // This is for Windows.
+                    state: KeyEventState::NONE,
+                }) => KeyPress::Space,
 
                 // Catchall.
                 _ => KeyPress::Noop,

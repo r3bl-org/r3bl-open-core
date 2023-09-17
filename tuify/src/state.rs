@@ -28,6 +28,7 @@ pub struct State {
     pub raw_caret_row_index: ChUnit,
     pub scroll_offset_row_index: ChUnit,
     pub items: Vec<String>,
+    pub selected_items: Vec<String>,
 }
 
 impl State {

@@ -42,7 +42,8 @@ fn main() -> Result<()> {
         .collect(),
         max_height_row_count,
         max_width_col_count,
-        SelectionMode::Single,
+        // SelectionMode::Single,
+        SelectionMode::Multiple,
     );
 
     match &user_input {
