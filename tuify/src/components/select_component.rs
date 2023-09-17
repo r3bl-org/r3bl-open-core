@@ -56,7 +56,6 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
             .index;
 
         let start_display_col_offset = 1;
-        let start_display_row_offset = 1;
 
         // If there are more items than the max display height, then we only use max
         // display height. Otherwise we can shrink the display height to the number of

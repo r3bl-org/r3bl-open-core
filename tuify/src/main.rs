@@ -23,6 +23,7 @@ use clap::{Args, CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum};
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
 use r3bl_tuify::*;
+use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 use StdinIsPipedResult::*;
 use StdoutIsPipedResult::*;
 
@@ -244,8 +245,34 @@ fn show_tui(
     };
 
     // 00: if `command_to_run_with_selection` is missing, prompt the user to type input using reedline. If user didn't select anything then exit w/ help.
-    let command_to_run_with_selection =
-        maybe_command_to_run_with_selection.unwrap_or_else(|| "echo %".to_string());
+    let command_to_run_with_selection = match maybe_command_to_run_with_selection {
+        Some(it) => it,
+        None => {
+            let mut line_editor = Reedline::create();
+            let prompt = DefaultPrompt {
+                left_prompt: DefaultPromptSegment::Basic(
+                    "Enter command to run w/ each selection `%`: ".to_string(),
+                ),
+                right_prompt: DefaultPromptSegment::Empty,
+            };
+
+            let sig = line_editor.read_line(&prompt);
+            match sig {
+                Ok(Signal::Success(buffer)) => {
+                    if buffer.is_empty() {
+                        print_help_for("select-from-list").ok();
+                        return;
+                    }
+                    println!("Command to run w/ each selection: {}", buffer);
+                    buffer
+                }
+                _ => {
+                    print_help_for("select-from-list").ok();
+                    return;
+                }
+            }
+        }
+    };
 
     // Actually get input from the user.
     let selected_items = {
