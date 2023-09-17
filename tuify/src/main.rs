@@ -58,11 +58,6 @@ struct GlobalOpts {
     tui_width: Option<usize>,
 }
 
-// TODO: current usage: `cat Cargo.toml | rt select-from-list --selection-mode single --command-to-run-with-selection "echo %"`
-// TODO: how to prompt the user if `selection_mode` or `command_to_run_with_selection` is missing? all below should work.
-// TODO: `cat Cargo.toml | rt select-from-list --selection-mode single
-// TODO: `cat Cargo.toml | rt select-from-list --command-to-run-with-selection "echo %"`
-// TODO: `cat Cargo.toml | rt select-from-list
 #[derive(Debug, Subcommand)]
 enum CLICommand {
     /// Show TUI to allow you to select one or more options from a list, piped in via stdin 👉
@@ -183,7 +178,7 @@ fn show_error_do_not_pipe_stdout(bin_name: &str) {
 
 fn show_tui(
     maybe_selection_mode: Option<SelectionMode>,
-    maybe_command_to_run_with_selection: Option<String>,
+    maybe_command_to_run_with_each_selection: Option<String>,
     tui_height: Option<usize>,
     tui_width: Option<usize>,
     enable_logging: bool,
@@ -204,12 +199,7 @@ fn show_tui(
         tui_width.unwrap_or(get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into());
     let max_height_row_count: usize = tui_height.unwrap_or(5);
 
-    // TODO: cleanup
-    // Print help if `selection_mode` or `command_to_run_with_selection` is missing.
-    // if maybe_selection_mode.is_none() || maybe_command_to_run_with_selection.is_none() {
-    //     print_help_for("select-from-list").ok();
-    // }
-
+    // Handle `selection-mode` is not passed in.
     let selection_mode = if let Some(selection_mode) = maybe_selection_mode {
         selection_mode
     } else {
@@ -244,35 +234,41 @@ fn show_tui(
         it
     };
 
-    // 00: if `command_to_run_with_selection` is missing, prompt the user to type input using reedline. If user didn't select anything then exit w/ help.
-    let command_to_run_with_selection = match maybe_command_to_run_with_selection {
-        Some(it) => it,
-        None => {
-            let mut line_editor = Reedline::create();
-            let prompt = DefaultPrompt {
-                left_prompt: DefaultPromptSegment::Basic(
-                    "Enter command to run w/ each selection `%`: ".to_string(),
-                ),
-                right_prompt: DefaultPromptSegment::Empty,
-            };
+    // Handle `command-to-run-with-each-selection` is not passed in.
+    let command_to_run_with_each_selection =
+        match maybe_command_to_run_with_each_selection {
+            Some(it) => it,
+            None => {
+                print_help_for_subcommand_and_option(
+                    "select-from-list",
+                    "command-to-run-with-each-selection",
+                )
+                .ok();
+                let mut line_editor = Reedline::create();
+                let prompt = DefaultPrompt {
+                    left_prompt: DefaultPromptSegment::Basic(
+                        "Enter command to run w/ each selection `%`: ".to_string(),
+                    ),
+                    right_prompt: DefaultPromptSegment::Empty,
+                };
 
-            let sig = line_editor.read_line(&prompt);
-            match sig {
-                Ok(Signal::Success(buffer)) => {
-                    if buffer.is_empty() {
+                let sig = line_editor.read_line(&prompt);
+                match sig {
+                    Ok(Signal::Success(buffer)) => {
+                        if buffer.is_empty() {
+                            print_help_for("select-from-list").ok();
+                            return;
+                        }
+                        println!("Command to run w/ each selection: {}", buffer);
+                        buffer
+                    }
+                    _ => {
                         print_help_for("select-from-list").ok();
                         return;
                     }
-                    println!("Command to run w/ each selection: {}", buffer);
-                    buffer
-                }
-                _ => {
-                    print_help_for("select-from-list").ok();
-                    return;
                 }
             }
-        }
-    };
+        };
 
     // Actually get input from the user.
     let selected_items = {
@@ -287,12 +283,16 @@ fn show_tui(
     };
 
     call_if_true!(enable_logging, {
-        log_debug(format!("selected_items: {:?}", selected_items));
+        log_debug(
+            format!("selected_items: {:?}", selected_items)
+                .cyan()
+                .to_string(),
+        );
     });
 
     for selected_item in selected_items {
-        let actual_command_to_run =
-            &command_to_run_with_selection.replace(SELECTED_ITEM_SYMBOL, &selected_item);
+        let actual_command_to_run = &command_to_run_with_each_selection
+            .replace(SELECTED_ITEM_SYMBOL, &selected_item);
         execute_command(actual_command_to_run);
     }
 }
@@ -306,22 +306,33 @@ fn convert_user_input_into_vec_of_strings(
     }
 }
 
+/// More info: <https://docs.rs/execute/latest/execute/#run-a-command-string-in-the-current-shell>
 fn execute_command(cmd_str: &str) {
     // This let binding is required to make the code below work.
-    let mut command = if cfg!(target_os = "windows") {
+    let mut command_binding = if cfg!(target_os = "windows") {
         Command::new("cmd")
     } else {
         Command::new("sh")
     };
 
     let command = if cfg!(target_os = "windows") {
-        command.arg("/C").arg(cmd_str)
+        command_binding.arg("/C").arg(cmd_str)
     } else {
-        command.arg("-c").arg(cmd_str)
+        command_binding.arg("-c").arg(cmd_str)
     };
 
     let output = command.output().expect("failed to execute process");
-    print!("{}", String::from_utf8_lossy(&output.stdout));
+
+    let result_output_str = String::from_utf8(output.stdout);
+
+    match result_output_str {
+        Ok(it) => {
+            print!("{}", it);
+        }
+        Err(e) => {
+            println!("Error: {}", e);
+        }
+    }
 }
 
 /// Programmatically prints out help.
