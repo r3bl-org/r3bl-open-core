@@ -23,11 +23,11 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-pub struct SingleSelectComponent<W: Write> {
+pub struct SelectComponent<W: Write> {
     pub write: W,
 }
 
-impl<W: Write> FunctionComponent<W, State> for SingleSelectComponent<W> {
+impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
     fn get_write(&mut self) -> &mut W { &mut self.write }
 
     /// If there are more items than the max display height, then we only use max display
@@ -92,6 +92,13 @@ impl<W: Write> FunctionComponent<W, State> for SingleSelectComponent<W> {
             };
 
             let data_item = &state.items[data_row_index];
+            // Invert colors for selected items.
+            let (fg_color, bg_color) = if state.selected_items.contains(data_item) {
+                (bg_color, fg_color)
+            } else {
+                (fg_color, bg_color)
+            };
+
             let data_item = format!("{row_prefix}{data_item}");
             let data_item = clip_string_to_width_with_ellipsis(data_item, viewport_width);
 

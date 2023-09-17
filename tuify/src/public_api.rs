@@ -32,8 +32,7 @@ pub fn select_from_list(
     items: Vec<String>,
     max_height_row_count: usize,
     max_width_col_count: usize,
-    // TODO: use this in the feature and unlock multiple selection.
-    _selection_mode: SelectionMode,
+    selection_mode: SelectionMode,
 ) -> Option<Vec<String>> {
     let mut state = State {
         max_display_height: max_height_row_count.into(),
@@ -41,9 +40,10 @@ pub fn select_from_list(
         raw_caret_row_index: ch!(0),
         scroll_offset_row_index: ch!(0),
         items,
+        selected_items: Vec::new(),
     };
 
-    let mut function_component = SingleSelectComponent { write: stdout() };
+    let mut function_component = SelectComponent { write: stdout() };
 
     let user_input = enter_event_loop(
         &mut state,
@@ -113,6 +113,22 @@ pub fn select_from_list(
                     EventLoopResult::Continue
                 }
 
+                // Enter on multi-select.
+                KeyPress::Enter if selection_mode == SelectionMode::Multiple => {
+                    call_if_true!(TRACE, {
+                        log_debug(
+                            format!("Enter: {:?}", state.selected_items)
+                                .green()
+                                .to_string(),
+                        );
+                    });
+                    if state.selected_items.is_empty() {
+                        EventLoopResult::ExitWithoutResult
+                    } else {
+                        EventLoopResult::ExitWithResult(state.selected_items.clone())
+                    }
+                }
+
                 // Enter.
                 KeyPress::Enter => {
                     call_if_true!(TRACE, {
@@ -139,8 +155,37 @@ pub fn select_from_list(
                     EventLoopResult::ExitWithoutResult
                 }
 
-                // Noop.
-                KeyPress::Noop => {
+                // Space on multi-select.
+                KeyPress::Space if selection_mode == SelectionMode::Multiple => {
+                    call_if_true!(TRACE, {
+                        log_debug(
+                            format!("Space: {}", state.get_selected_index())
+                                .green()
+                                .to_string(),
+                        );
+                    });
+                    let selection_index: usize =
+                        ch!(@to_usize state.get_selected_index());
+                    let maybe_item: Option<&String> = state.items.get(selection_index);
+                    let maybe_index: Option<usize> = state
+                        .selected_items
+                        .iter()
+                        .position(|x| Some(x) == maybe_item);
+                    match (maybe_item, maybe_index) {
+                        // No selected_item.
+                        (None, _) => (),
+                        // Item already in selected_items so remove it.
+                        (Some(_), Some(it)) => {
+                            state.selected_items.remove(it);
+                        }
+                        // Item not found in selected_items so add it.
+                        (Some(it), None) => state.selected_items.push(it.to_string()),
+                    };
+                    EventLoopResult::Continue
+                }
+
+                // Noop, default behavior on Space
+                KeyPress::Noop | KeyPress::Space => {
                     call_if_true!(TRACE, {
                         log_debug("Noop".yellow().to_string());
                     });

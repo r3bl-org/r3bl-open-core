@@ -27,6 +27,7 @@ pub enum EventLoopResult {
     ExitWithResult(Vec<String>),
     ExitWithoutResult,
     ExitWithError,
+    Select,
 }
 
 // TODO: add performance using output buffer
@@ -51,7 +52,7 @@ pub fn enter_event_loop<W: Write, S>(
                 // Continue the loop.
                 function_component.render(state)?;
             }
-            EventLoopResult::Continue => {
+            EventLoopResult::Continue | EventLoopResult::Select => {
                 // Noop. Simply continue the loop.
             }
             EventLoopResult::ExitWithResult(it) => {
