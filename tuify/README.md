@@ -58,6 +58,7 @@ fn main() -> Result<()> {
     let max_height_row_count: usize = 5;
 
     let user_input = select_from_list(
+        "Select an item".to_string(),
         [
             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
             "item 9", "item 10",
@@ -124,7 +125,7 @@ cat TODO.todo | cargo run -- select-from-list \
 
 Here's a video of this in action.
 
-[![asciicast tuify-long-command](https://asciinema.org/a/1NeWeRSup6a0JiKsplfg3VO2c.svg)](https://asciinema.org/a/1NeWeRSup6a0JiKsplfg3VO2c?autoplay=1)
+[![asciicast tuify-long-command](https://asciinema.org/a/1NeWeRSup6a0JiKsplfg3VO2c.svg)](https://asciinema.org/a/1NeWeRSup6a0JiKsplfg3VO2c?autoplay=1){:target="_blank"}
 
 What does this do?
 
@@ -165,7 +166,7 @@ videos illustrate what happens when:
      selection. This is the really interactive scenario, since the user has to provide 2
      pieces of information: the selection mode, and the command to run with each
      selection. They didn't provide this up front when they ran the command.
-     [![asciicast tuify-interactive-happy-path](https://asciinema.org/a/gMoDo6N4IK2MrOCo7ZCBw6sfd.svg)](https://asciinema.org/a/gMoDo6N4IK2MrOCo7ZCBw6sfd?autoplay=1)
+     [![asciicast tuify-interactive-happy-path](https://asciinema.org/a/gMoDo6N4IK2MrOCo7ZCBw6sfd.svg)](https://asciinema.org/a/gMoDo6N4IK2MrOCo7ZCBw6sfd?autoplay=1){:target="_blank"}
 
    - Another scenario is that the user does not provide the required information even when
      prompted interactively. In this scenario, the program exits with an error and help
@@ -174,7 +175,7 @@ videos illustrate what happens when:
      Here they don't provide what `selection-mode` they want. And they don't provide what
      `command-to-run-with-each-selection` they want. Without this information the program
      can't continue, so it exits and provides some help message.
-     [![asciicast tuify-interactive-unhappy-path](https://asciinema.org/a/AWirbkCSnDLuDZl5eeIkPXmFz.svg)](https://asciinema.org/a/AWirbkCSnDLuDZl5eeIkPXmFz?autoplay=1)
+     [![asciicast tuify-interactive-unhappy-path](https://asciinema.org/a/AWirbkCSnDLuDZl5eeIkPXmFz.svg)](https://asciinema.org/a/AWirbkCSnDLuDZl5eeIkPXmFz?autoplay=1){:target="_blank"}
 
 1. `--selection-mode` is *not* passed in the command line. So it only interactively
    prompts the user for this piece of information. Similarly, if the user does not provide
@@ -182,7 +183,7 @@ videos illustrate what happens when:
    ```shell
    cat TODO.todo | cargo run -- select-from-list --command-to-run-with-each-selection "echo %"
    ```
-   [![asciicast tuify-interactive-selection-mode-not-provided](https://asciinema.org/a/608517.svg)](https://asciinema.org/a/608517?autoplay=1)
+   [![asciicast tuify-interactive-selection-mode-not-provided](https://asciinema.org/a/608517.svg)](https://asciinema.org/a/608517?autoplay=1){:target="_blank"}
 
 1. `--command-to-run-with-each-selection` is *not* passed in the command line. So it only
    interactively prompts the user for this piece of information. Similarly, if the user
@@ -190,7 +191,7 @@ videos illustrate what happens when:
    ```shell
    cat TODO.todo | cargo run -- select-from-list --selection-mode single
    ```
-   [![asciicast tuify-interactive-command-to-run-with-selection-not-provided](https://asciinema.org/a/608518.svg)](https://asciinema.org/a/608518?autoplay=1)
+   [![asciicast tuify-interactive-command-to-run-with-selection-not-provided](https://asciinema.org/a/608518.svg)](https://asciinema.org/a/608518?autoplay=1){:target="_blank"}
 
 ### Paths
 <a id="markdown-paths" name="paths"></a>
