@@ -3,12 +3,18 @@
 </p>
 
 # Contributing to r3bl_rs_utils crate
-<a id="markdown-contributing-to-r3bl_rs_utils-crate" name="contributing-to-r3bl_rs_utils-crate"></a>
 
-Table of contents
+<a id="markdown-contributing-to-r3bl_rs_utils-crate" name="contributing-to-r3bl_rs_utils-crate"></a>
 
 <!-- TOC -->
 
+- [Getting Started](#getting-started)
+- [Discord server](#discord-server)
+- [How to Contribute](#how-to-contribute)
+  - [Bug Reports and Feature Requests](#bug-reports-and-feature-requests)
+  - [Documentation Improvements](#documentation-improvements)
+  - [Code Contributions](#code-contributions)
+- [License](#license)
 - [New to the entire codebase?](#new-to-the-entire-codebase)
 - [How are R3BL repos / crates organized?](#how-are-r3bl-repos--crates-organized)
 - [Feedback](#feedback)
@@ -26,75 +32,110 @@ Table of contents
 
 <!-- /TOC -->
 
+# Contributing to r3bl_rs_utils
+
+<a id="markdown-contributing-to-r3bl_rs_utils" name="contributing-to-r3bl_rs_utils"></a>
+
+Thank you for considering contributing to r3bl_rs_utils! We welcome contributions from everyone,
+regardless of your level of experience or expertise.
+
+## Getting Started
+
+<a id="markdown-getting-started" name="getting-started"></a>
+
+Before you start contributing, please take a moment to read the
+[Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct). We expect all contributors to
+abide by this code of conduct in all interactions related to the project.
+
+If you're new to the project, you may want to check out our [README](README.md) file for an overview
+of the project and its goals.
+
+## Discord server
+
+<a id="markdown-discord-server" name="discord-server"></a> You can also join our
+[Discord server](https://discord.gg/8QhApTwqgA) to chat with us and discuss ideas, potential
+contributions, and any questions you may have.
+
+## How to Contribute
+
+<a id="markdown-how-to-contribute" name="how-to-contribute"></a>
+
+We welcome contributions in the form of bug reports, feature requests, documentation improvements,
+and code contributions.
+
+Here are some guidelines to help you get started:
+
+### Bug Reports and Feature Requests
+
+<a id="markdown-bug-reports-and-feature-requests" name="bug-reports-and-feature-requests"></a>
+
+If you encounter a bug or have an idea for a new feature, please open an issue on our
+[GitHub repository](https://github.com/r3bl-org/r3bl_rs_utils/issues). Please provide as much detail
+as possible, including steps to reproduce the issue and any relevant error messages.
+
+### Documentation Improvements
+
+<a id="markdown-documentation-improvements" name="documentation-improvements"></a>
+
+If you notice any errors or omissions in our documentation, please open an issue on our
+[GitHub repository](https://github.com/r3bl-org/r3bl_rs_utils/issues) or submit a pull request with
+your proposed changes.
+
+### Code Contributions
+
+<a id="markdown-code-contributions" name="code-contributions"></a>
+
+If you're interested in contributing code to the project, please follow these steps:
+
+1. Fork the repository on GitHub.
+2. Clone your forked repository to your local machine.
+3. Create a new branch for your changes.
+4. Make your changes and commit them with a descriptive commit message.
+5. Push your changes to your forked repository.
+6. Submit a pull request to our repository.
+
+> 📹 Videos available on YouTube that explain the GitHub pull request workflow.
+>
+> - [GitHub Pull Requests Tutorial](https://www.youtube.com/watch?v=rgbCcBNZcdQ)
+> - [GitHub Pull Requests: How to Create a Pull Request](https://www.youtube.com/watch?v=For9VtrQx58)
+> - [GitHub Pull Requests: How to Review Code](https://www.youtube.com/watch?v=HW0RPaJqm4g)
+>
+> These videos provide step-by-step instructions on how to create a pull request, review code, and
+> merge changes into a repository. They also cover best practices and common pitfalls to avoid.
+
+Please make sure your code adheres to our coding standards and passes all tests before submitting a
+pull request. We also recommend that you open an issue to discuss your proposed changes before
+submitting a pull request.
+
+## License
+
+<a id="markdown-license" name="license"></a>
+
+r3bl_rs_utils is released under the [Apache 2.0](LICENSE).
+
 ## New to the entire codebase?
+
 <a id="markdown-new-to-the-entire-codebase%3F" name="new-to-the-entire-codebase%3F"></a>
 
 Here's an onboarding guide to help you get started:
+
 - <https://github.com/r3bl-org/onboarding>
 
-If you are new to Rust and terminals, this is a godo place to begin!
-
-## How are R3BL repos / crates organized?
-<a id="markdown-how-are-r3bl-repos-%2F-crates-organized%3F" name="how-are-r3bl-repos-%2F-crates-organized%3F"></a>
-<!-- TOC -->
-
-- [New to the entire codebase?](#new-to-the-entire-codebase)
-- [How are R3BL repos / crates organized?](#how-are-r3bl-repos--crates-organized)
-- [Feedback](#feedback)
-- [Code of conduct and code style guide](#code-of-conduct-and-code-style-guide)
-- [Good starting points](#good-starting-points)
-  - [🦜 New to terminals?](#%F0%9F%A6%9C-new-to-terminals)
-  - [🐒 New to R3BL codebase?](#-new-to-r3bl-codebase)
-    - [Redux background study](#redux-background-study)
-    - [TUI background study](#tui-background-study)
-    - [General background study](#general-background-study)
-- [Developing](#developing)
-  - [Set up](#set-up)
-  - [Code style](#code-style)
-  - [Best practices before submitting a PR](#best-practices-before-submitting-a-pr)
-
-<!-- /TOC --><a id="markdown-how-are-r3bl-repos-%2F-crates-organized%3F" name="how-are-r3bl-repos-%2F-crates-organized%3F"></a>
-
-
-| Repo                                | Description of crate                       | Notes           |
-| ----------------------------------- | ------------------------------------------ | --------------- |
-| [`r3bl-cmdr`][rc]                   | TUI app for end users                      |                 |
-| [`r3bl_rs_utils`][rs]               | Reusable library in service of `r3bl-cmdr` | 📍 You are here |
-| [`address-book-with-redux-tui`][ab] | Pedagogical example of Redux, and TUI      |                 |
-
-[rc]: https://github.com/r3bl-org/r3bl-cmdr/
-[rs]: https://github.com/r3bl-org/r3bl_rs_utils/
-[ab]: https://github.com/r3bl-org/address-book-with-redux-tui/
-
-> ⚙️ This library crate is in service of the apps being built in the
-> [r3bl-cmdr](https://github.com/r3bl-org/r3bl-cmdr/) crate / repo. However it can be used in any
-> other crate that needs support for building TUI apps.
-
-## Feedback
-<a id="markdown-feedback" name="feedback"></a>
-
-
-While the maintainers might currently prioritize working on features, we are open to ideas and
-contributions by people and projects interested in using `r3bl_rs_utils` or `r3bl-cmdr` for other
-projects. Please feel free to:
-
-1. Open an [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/new/choose).
-2. Chat with us on the [r3bl discord](https://discord.gg/pG4wjDnm) in the dedicated `#r3bl_rs_utils`
-   channel.
+If you are new to Rust and terminals, this is a good place to begin!
 
 ## Code of conduct and code style guide
-<a id="markdown-code-of-conduct-and-code-style-guide" name="code-of-conduct-and-code-style-guide"></a>
 
+<a id="markdown-code-of-conduct-and-code-style-guide" name="code-of-conduct-and-code-style-guide"></a>
 
 1. Please follow the [Rust Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct) all
    the way through!
-2. Also follow the guidelines provided in this [repo](https://github.com/r3bl-org/guidelines).
-   - [R3BL code of conduct](https://github.com/r3bl-org/guidelines/blob/main/CODE_OF_CONDUCT.md).
-   - [R3BL code style guide](https://github.com/r3bl-org/guidelines/blob/main/STYLE_GUIDE.md).
+2. [R3BL code style guide](https://github.com/r3bl-org/guidelines/blob/main/STYLE_GUIDE.md).
+
+> Also follow the guidelines provided in this [repo](https://github.com/r3bl-org/guidelines).
 
 ## Good starting points
-<a id="markdown-good-starting-points" name="good-starting-points"></a>
 
+<a id="markdown-good-starting-points" name="good-starting-points"></a>
 
 If you want to get started, check out the list of
 [issues](https://github.com/r3bl-org/r3bl-cmdr/issues) with the
@@ -114,8 +155,8 @@ important the related information is to using the R3BL codebase.
 | 🍌🍌🍌🍌 | Critical - deep understanding & hands on exercises |
 
 ### 🦜 New to terminals?
-<a id="markdown-%F0%9F%A6%9C-new-to-terminals%3F" name="%F0%9F%A6%9C-new-to-terminals%3F"></a>
 
+<a id="markdown-%F0%9F%A6%9C-new-to-terminals%3F" name="%F0%9F%A6%9C-new-to-terminals%3F"></a>
 
 1. 🍌🍌🍌🍌 A really good first step is taking a look at `crossterm` crate.
    - It is small and relatively straight forward to understand. This will give you good exposure to
@@ -128,12 +169,12 @@ important the related information is to using the R3BL codebase.
    w/ lots of background information on terminals, PTY, TTY, etc.
 
 ### 🐒 New to R3BL codebase?
+
 <a id="markdown-%F0%9F%90%92-new-to-r3bl-codebase%3F" name="%F0%9F%90%92-new-to-r3bl-codebase%3F"></a>
 
-
 #### Redux background study
-<a id="markdown-redux-background-study" name="redux-background-study"></a>
 
+<a id="markdown-redux-background-study" name="redux-background-study"></a>
 
 1. 🍌🍌🍌 A great starting point is the [redux](https://github.com/r3bl-org/r3bl_rs_utils#redux)
    section.
@@ -146,8 +187,8 @@ important the related information is to using the R3BL codebase.
      the code using `cargo run`, and make some changes and run it again.
 
 #### TUI background study
-<a id="markdown-tui-background-study" name="tui-background-study"></a>
 
+<a id="markdown-tui-background-study" name="tui-background-study"></a>
 
 1. 🍌🍌🍌🍌 A great starting point is this [tui](https://github.com/r3bl-org/r3bl_rs_utils#tui)
    section.
@@ -162,8 +203,8 @@ important the related information is to using the R3BL codebase.
      how to build TUIs.
 
 #### General background study
-<a id="markdown-general-background-study" name="general-background-study"></a>
 
+<a id="markdown-general-background-study" name="general-background-study"></a>
 
 Here are some resources to learn more about the project itself:
 
@@ -172,12 +213,12 @@ Here are some resources to learn more about the project itself:
 - [Related content on developerlife.com](https://developerlife.com/category/Rust/).
 
 ## Developing
+
 <a id="markdown-developing" name="developing"></a>
 
-
 ### Set up
-<a id="markdown-set-up" name="set-up"></a>
 
+<a id="markdown-set-up" name="set-up"></a>
 
 This is no different than other Rust projects.
 
@@ -189,15 +230,15 @@ cargo test
 ```
 
 ### Code style
-<a id="markdown-code-style" name="code-style"></a>
 
+<a id="markdown-code-style" name="code-style"></a>
 
 We follow the standard Rust formatting style and conventions suggested by
 [clippy](https://github.com/rust-lang/rust-clippy).
 
 ### Best practices before submitting a PR
-<a id="markdown-best-practices-before-submitting-a-pr" name="best-practices-before-submitting-a-pr"></a>
 
+<a id="markdown-best-practices-before-submitting-a-pr" name="best-practices-before-submitting-a-pr"></a>
 
 Before submitting a PR make sure to run:
 
