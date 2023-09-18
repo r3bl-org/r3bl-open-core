@@ -146,14 +146,17 @@ This crate can be used in two ways:
 As a library. This is useful if you want to add simple interactivity to your CLI app
 written in Rust. You can see an example of this in the `examples` folder in the
 `main_interactive.rs` file. You can run it using `cargo run --example main_interactive`.
+
 Here's a demo of the library target of this crate in action.
 
 https://user-images.githubusercontent.com/2966499/266870250-9af806a6-9d2a-48b3-9c02-22d8a05cbdc3.mp4
 
 As a binary. This is useful if you want to use this crate as a command line tool. The
-binary target is called `rt`. Here's a demo of the binary target of this crate in action.
+binary target is called `rt`.
 
-https://user-images.githubusercontent.com/2966499/266860855-dce05d87-327d-48f7-b063-45987177159c.mp4
+Here's a demo of the binary target of this crate in action.
+
+https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/2b42db72-cd62-4ea2-80ae-ccc01008190c
 
 For more information please read the
 [README](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/tuify/README.md) for the
