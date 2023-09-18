@@ -29,7 +29,9 @@
 //!
 //! Here's a demo of the library target of this crate in action.
 //!
-//! <https://github-production-user-asset-6210df.s3.amazonaws.com/2966499/266504562-c6717052-780f-4ae0-8ecf-e57beca49929.mp4>
+//! <video width="800" controls>
+//!   <source src="https://github-production-user-asset-6210df.s3.amazonaws.com/2966499/266504562-c6717052-780f-4ae0-8ecf-e57beca49929.mp4" type="video/mp4"/>
+//! </video>
 //!
 //! The following example illustrates how you can use this as a library. The function that
 //! does the work of rendering the UI is called
