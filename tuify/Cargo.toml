@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_tuify"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 description = "Easily add lightweight TUI capabilities to any CLI apps using pipes"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
