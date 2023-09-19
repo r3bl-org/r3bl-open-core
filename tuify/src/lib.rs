@@ -173,7 +173,7 @@
 //!      <!-- tuify-interactive-happy-path -->
 //!      <video width="100%" controls>
 //!        <source src="https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/51de8867-513b-429f-aff2-63dd25d71c82" type="video/mp4"/>
-//!      </video>//!
+//!      </video>
 //!
 //!    - Another scenario is that the user does not provide the required information even when
 //!      prompted interactively. In this scenario, the program exits with an error and help
