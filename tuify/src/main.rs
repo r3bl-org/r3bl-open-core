@@ -216,6 +216,7 @@ fn show_tui(
             max_height_row_count,
             max_width_col_count,
             SelectionMode::Single,
+            StyleSheet::default(),
         );
 
         let it = if let Some(user_selection) = user_selection {
@@ -278,6 +279,7 @@ fn show_tui(
             max_height_row_count,
             max_width_col_count,
             selection_mode,
+            StyleSheet::default(),
         );
         convert_user_input_into_vec_of_strings(it)
     };
