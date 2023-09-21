@@ -1,19 +1,19 @@
 /*
- *   Copyright (c) 2023 R3BL LLC
- *   All rights reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- */
+*   Copyright (c) 2023 R3BL LLC
+*   All rights reserved.
+*
+*   Licensed under the Apache License, Version 2.0 (the "License");
+*   you may not use this file except in compliance with the License.
+*   You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+*   Unless required by applicable law or agreed to in writing, software
+*   distributed under the License is distributed on an "AS IS" BASIS,
+*   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*   See the License for the specific language governing permissions and
+*   limitations under the License.
+*/
 
 use std::io::{Result, *};
 
@@ -25,6 +25,7 @@ use crate::*;
 
 pub struct SelectComponent<W: Write> {
     pub write: W,
+    pub style: StyleSheet,
 }
 
 impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
@@ -44,16 +45,11 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
     /// Allocate space and print the lines. The bring the cursor back to the start of the
     /// lines.
     fn render(&mut self, state: &mut State) -> Result<()> {
-        // TODO: use styles for selected and unselected
         // Setup the required data.
-        let fg_color = r3bl_ansi_color::Color::Rgb(200, 200, 1).as_ansi256().index;
-        let bg_color = r3bl_ansi_color::Color::Rgb(100, 60, 150).as_ansi256().index;
-        let header_fg_color = r3bl_ansi_color::Color::Rgb(250, 200, 200)
-            .as_ansi256()
-            .index;
-        let header_bg_color = r3bl_ansi_color::Color::Rgb(100, 160, 150)
-            .as_ansi256()
-            .index;
+        // Clone required here since `get_write` borrows self mutably.
+        let normal_style = self.style.normal_style;
+        let header_style = self.style.header_style;
+        let selected_style = self.style.selected_style;
 
         let start_display_col_offset = 1;
 
@@ -88,8 +84,16 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
             // Reset the colors that may have been set by the previous command.
             ResetColor,
             // Set the colors for the text.
-            SetForegroundColor(Color::AnsiValue(header_fg_color)),
-            SetBackgroundColor(Color::AnsiValue(header_bg_color)),
+            apply_style!(header_style => fg_color),
+            apply_style!(header_style => bg_color),
+            // Style the text.
+            apply_style!(header_style => bold),
+            apply_style!(header_style => italic),
+            apply_style!(header_style => dim),
+            apply_style!(header_style => underline),
+            apply_style!(header_style => reverse),
+            apply_style!(header_style => hidden),
+            apply_style!(header_style => strikethrough),
             // Clear the current line.
             Clear(ClearType::CurrentLine),
             // Print the text.
@@ -120,10 +124,10 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
 
             let data_item = &state.items[data_row_index];
             // Invert colors for selected items.
-            let (fg_color, bg_color) = if state.selected_items.contains(data_item) {
-                (bg_color, fg_color)
+            let data_style = if state.selected_items.contains(data_item) {
+                selected_style
             } else {
-                (fg_color, bg_color)
+                normal_style
             };
 
             let data_item = format!("{row_prefix}{data_item}");
@@ -136,8 +140,16 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                 // Reset the colors that may have been set by the previous command.
                 ResetColor,
                 // Set the colors for the text.
-                SetForegroundColor(Color::AnsiValue(fg_color)),
-                SetBackgroundColor(Color::AnsiValue(bg_color)),
+                apply_style!(data_style => bg_color),
+                apply_style!(data_style => bg_color),
+                // Style the text.
+                apply_style!(data_style => bold),
+                apply_style!(data_style => italic),
+                apply_style!(data_style => dim),
+                apply_style!(data_style => underline),
+                apply_style!(data_style => reverse),
+                apply_style!(data_style => hidden),
+                apply_style!(data_style => strikethrough),
                 // Clear the current line.
                 Clear(ClearType::CurrentLine),
                 // Print the text.
