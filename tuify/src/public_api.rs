@@ -34,6 +34,7 @@ pub fn select_from_list(
     max_height_row_count: usize,
     max_width_col_count: usize,
     selection_mode: SelectionMode,
+    style: StyleSheet,
 ) -> Option<Vec<String>> {
     // There are fewer items than viewport height. So make viewport shorter.
     let max_height_row_count = if items.len() <= max_height_row_count {
@@ -52,7 +53,10 @@ pub fn select_from_list(
         header,
     };
 
-    let mut function_component = SelectComponent { write: stdout() };
+    let mut function_component = SelectComponent {
+        write: stdout(),
+        style,
+    };
 
     let user_input = enter_event_loop(
         &mut state,

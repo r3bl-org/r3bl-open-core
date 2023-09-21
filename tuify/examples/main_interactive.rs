@@ -33,6 +33,8 @@ fn main() -> Result<()> {
         get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
     let max_height_row_count: usize = 5;
 
+    let style = StyleSheet::default();
+
     // Single select.
     {
         // 2 items & viewport height = 5.
@@ -51,6 +53,7 @@ fn main() -> Result<()> {
             max_height_row_count,
             max_width_col_count,
             SelectionMode::Single,
+            style,
         );
         match &user_input {
             Some(it) => {
@@ -89,6 +92,7 @@ fn main() -> Result<()> {
             max_height_row_count,
             max_width_col_count,
             SelectionMode::Single,
+            style,
         );
         match &user_input {
             Some(it) => {
@@ -119,6 +123,7 @@ fn main() -> Result<()> {
             max_height_row_count,
             max_width_col_count,
             SelectionMode::Multiple,
+            style,
         );
         match &user_input {
             Some(it) => {
@@ -149,6 +154,7 @@ fn main() -> Result<()> {
             max_height_row_count,
             max_width_col_count,
             SelectionMode::Multiple,
+            style,
         );
         match &user_input {
             Some(it) => {
