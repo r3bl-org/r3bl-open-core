@@ -27,7 +27,6 @@ use crate::*;
 /// the selected item or items (depending on the selection mode). If the user does not
 /// select anything, it returns `None`. The function also takes the maximum height and
 /// width of the display, and the selection mode (single select or multiple select).
-// TODO: pass styles for selected and unselected.
 pub fn select_from_list(
     header: String,
     items: Vec<String>,
@@ -58,178 +57,181 @@ pub fn select_from_list(
         style,
     };
 
-    let user_input = enter_event_loop(
-        &mut state,
-        &mut function_component,
-        |state, key_press| -> EventLoopResult {
-            call_if_true!(TRACE, {
-                log_debug(
-                    format!(
-                        "before keypress: locate_cursor_in_viewport(): {:?}",
-                        state.locate_cursor_in_viewport()
-                    )
-                    .magenta()
-                    .to_string(),
-                );
-            });
-
-            match key_press {
-                // Down.
-                KeyPress::Down => {
-                    call_if_true!(TRACE, {
-                        log_debug("Down".yellow().to_string());
-                    });
-                    match state.locate_cursor_in_viewport() {
-                        CaretVerticalViewportLocation::AtAbsoluteTop
-                        | CaretVerticalViewportLocation::AboveTopOfViewport
-                        | CaretVerticalViewportLocation::AtTopOfViewport
-                        | CaretVerticalViewportLocation::InMiddleOfViewport => {
-                            state.raw_caret_row_index += 1;
-                        }
-
-                        CaretVerticalViewportLocation::AtBottomOfViewport
-                        | CaretVerticalViewportLocation::BelowBottomOfViewport => {
-                            state.scroll_offset_row_index += 1;
-                        }
-
-                        CaretVerticalViewportLocation::AtAbsoluteBottom => {
-                            // Do nothing.
-                        }
-                    }
-                    call_if_true!(TRACE, {
-                        log_debug(
-                            format!("enter_event_loop()::state: {:?}", state)
-                                .blue()
-                                .to_string(),
-                        );
-                    });
-
-                    EventLoopResult::Continue
-                }
-
-                // Up.
-                KeyPress::Up => {
-                    call_if_true!(TRACE, {
-                        log_debug("Up".yellow().to_string());
-                    });
-
-                    match state.locate_cursor_in_viewport() {
-                        CaretVerticalViewportLocation::AtAbsoluteTop => {
-                            // Do nothing.
-                        }
-
-                        CaretVerticalViewportLocation::AboveTopOfViewport
-                        | CaretVerticalViewportLocation::AtTopOfViewport => {
-                            state.scroll_offset_row_index -= 1;
-                        }
-
-                        CaretVerticalViewportLocation::InMiddleOfViewport => {
-                            state.raw_caret_row_index -= 1;
-                        }
-
-                        CaretVerticalViewportLocation::AtBottomOfViewport
-                        | CaretVerticalViewportLocation::BelowBottomOfViewport
-                        | CaretVerticalViewportLocation::AtAbsoluteBottom => {
-                            state.raw_caret_row_index -= 1;
-                        }
-                    }
-
-                    EventLoopResult::Continue
-                }
-
-                // Enter on multi-select.
-                KeyPress::Enter if selection_mode == SelectionMode::Multiple => {
-                    call_if_true!(TRACE, {
-                        log_debug(
-                            format!("Enter: {:?}", state.selected_items)
-                                .green()
-                                .to_string(),
-                        );
-                    });
-                    if state.selected_items.is_empty() {
-                        EventLoopResult::ExitWithoutResult
-                    } else {
-                        EventLoopResult::ExitWithResult(state.selected_items.clone())
-                    }
-                }
-
-                // Enter.
-                KeyPress::Enter => {
-                    call_if_true!(TRACE, {
-                        log_debug(
-                            format!("Enter: {}", state.get_selected_index())
-                                .green()
-                                .to_string(),
-                        );
-                    });
-                    let selection_index: usize =
-                        ch!(@to_usize state.get_selected_index());
-                    let maybe_item: Option<&String> = state.items.get(selection_index);
-                    match maybe_item {
-                        Some(it) => EventLoopResult::ExitWithResult(vec![it.to_string()]),
-                        None => EventLoopResult::ExitWithoutResult,
-                    }
-                }
-
-                // Escape.
-                KeyPress::Esc => {
-                    call_if_true!(TRACE, {
-                        log_debug("Esc".red().to_string());
-                    });
-                    EventLoopResult::ExitWithoutResult
-                }
-
-                // Space on multi-select.
-                KeyPress::Space if selection_mode == SelectionMode::Multiple => {
-                    call_if_true!(TRACE, {
-                        log_debug(
-                            format!("Space: {}", state.get_selected_index())
-                                .green()
-                                .to_string(),
-                        );
-                    });
-                    let selection_index: usize =
-                        ch!(@to_usize state.get_selected_index());
-                    let maybe_item: Option<&String> = state.items.get(selection_index);
-                    let maybe_index: Option<usize> = state
-                        .selected_items
-                        .iter()
-                        .position(|x| Some(x) == maybe_item);
-                    match (maybe_item, maybe_index) {
-                        // No selected_item.
-                        (None, _) => (),
-                        // Item already in selected_items so remove it.
-                        (Some(_), Some(it)) => {
-                            state.selected_items.remove(it);
-                        }
-                        // Item not found in selected_items so add it.
-                        (Some(it), None) => state.selected_items.push(it.to_string()),
-                    };
-                    EventLoopResult::Continue
-                }
-
-                // Noop, default behavior on Space
-                KeyPress::Noop | KeyPress::Space => {
-                    call_if_true!(TRACE, {
-                        log_debug("Noop".yellow().to_string());
-                    });
-                    EventLoopResult::Continue
-                }
-
-                // Error.
-                KeyPress::Error => {
-                    call_if_true!(TRACE, {
-                        log_debug("Exit with error".red().to_string());
-                    });
-                    EventLoopResult::ExitWithError
-                }
-            }
-        },
-    );
+    let user_input =
+        enter_event_loop(&mut state, &mut function_component, |state, key_press| {
+            keypress_handler(state, key_press, selection_mode)
+        });
 
     match user_input {
         Ok(EventLoopResult::ExitWithResult(it)) => Some(it),
         _ => None,
+    }
+}
+
+fn keypress_handler(
+    state: &mut State,
+    key_press: KeyPress,
+    selection_mode: SelectionMode,
+) -> EventLoopResult {
+    call_if_true!(TRACE, {
+        log_debug(
+            format!(
+                "before keypress: locate_cursor_in_viewport(): {:?}",
+                state.locate_cursor_in_viewport()
+            )
+            .magenta()
+            .to_string(),
+        );
+    });
+
+    match key_press {
+        // Down.
+        KeyPress::Down => {
+            call_if_true!(TRACE, {
+                log_debug("Down".yellow().to_string());
+            });
+            match state.locate_cursor_in_viewport() {
+                CaretVerticalViewportLocation::AtAbsoluteTop
+                | CaretVerticalViewportLocation::AboveTopOfViewport
+                | CaretVerticalViewportLocation::AtTopOfViewport
+                | CaretVerticalViewportLocation::InMiddleOfViewport => {
+                    state.raw_caret_row_index += 1;
+                }
+
+                CaretVerticalViewportLocation::AtBottomOfViewport
+                | CaretVerticalViewportLocation::BelowBottomOfViewport => {
+                    state.scroll_offset_row_index += 1;
+                }
+
+                CaretVerticalViewportLocation::AtAbsoluteBottom => {
+                    // Do nothing.
+                }
+            }
+            call_if_true!(TRACE, {
+                log_debug(
+                    format!("enter_event_loop()::state: {:?}", state)
+                        .blue()
+                        .to_string(),
+                );
+            });
+
+            EventLoopResult::Continue
+        }
+
+        // Up.
+        KeyPress::Up => {
+            call_if_true!(TRACE, {
+                log_debug("Up".yellow().to_string());
+            });
+
+            match state.locate_cursor_in_viewport() {
+                CaretVerticalViewportLocation::AtAbsoluteTop => {
+                    // Do nothing.
+                }
+
+                CaretVerticalViewportLocation::AboveTopOfViewport
+                | CaretVerticalViewportLocation::AtTopOfViewport => {
+                    state.scroll_offset_row_index -= 1;
+                }
+
+                CaretVerticalViewportLocation::InMiddleOfViewport => {
+                    state.raw_caret_row_index -= 1;
+                }
+
+                CaretVerticalViewportLocation::AtBottomOfViewport
+                | CaretVerticalViewportLocation::BelowBottomOfViewport
+                | CaretVerticalViewportLocation::AtAbsoluteBottom => {
+                    state.raw_caret_row_index -= 1;
+                }
+            }
+
+            EventLoopResult::Continue
+        }
+
+        // Enter on multi-select.
+        KeyPress::Enter if selection_mode == SelectionMode::Multiple => {
+            call_if_true!(TRACE, {
+                log_debug(
+                    format!("Enter: {:?}", state.selected_items)
+                        .green()
+                        .to_string(),
+                );
+            });
+            if state.selected_items.is_empty() {
+                EventLoopResult::ExitWithoutResult
+            } else {
+                EventLoopResult::ExitWithResult(state.selected_items.clone())
+            }
+        }
+
+        // Enter.
+        KeyPress::Enter => {
+            call_if_true!(TRACE, {
+                log_debug(
+                    format!("Enter: {}", state.get_selected_index())
+                        .green()
+                        .to_string(),
+                );
+            });
+            let selection_index: usize = ch!(@to_usize state.get_selected_index());
+            let maybe_item: Option<&String> = state.items.get(selection_index);
+            match maybe_item {
+                Some(it) => EventLoopResult::ExitWithResult(vec![it.to_string()]),
+                None => EventLoopResult::ExitWithoutResult,
+            }
+        }
+
+        // Escape.
+        KeyPress::Esc => {
+            call_if_true!(TRACE, {
+                log_debug("Esc".red().to_string());
+            });
+            EventLoopResult::ExitWithoutResult
+        }
+
+        // Space on multi-select.
+        KeyPress::Space if selection_mode == SelectionMode::Multiple => {
+            call_if_true!(TRACE, {
+                log_debug(
+                    format!("Space: {}", state.get_selected_index())
+                        .green()
+                        .to_string(),
+                );
+            });
+            let selection_index: usize = ch!(@to_usize state.get_selected_index());
+            let maybe_item: Option<&String> = state.items.get(selection_index);
+            let maybe_index: Option<usize> = state
+                .selected_items
+                .iter()
+                .position(|x| Some(x) == maybe_item);
+            match (maybe_item, maybe_index) {
+                // No selected_item.
+                (None, _) => (),
+                // Item already in selected_items so remove it.
+                (Some(_), Some(it)) => {
+                    state.selected_items.remove(it);
+                }
+                // Item not found in selected_items so add it.
+                (Some(it), None) => state.selected_items.push(it.to_string()),
+            };
+            EventLoopResult::Continue
+        }
+
+        // Noop, default behavior on Space
+        KeyPress::Noop | KeyPress::Space => {
+            call_if_true!(TRACE, {
+                log_debug("Noop".yellow().to_string());
+            });
+            EventLoopResult::Continue
+        }
+
+        // Error.
+        KeyPress::Error => {
+            call_if_true!(TRACE, {
+                log_debug("Exit with error".red().to_string());
+            });
+            EventLoopResult::ExitWithError
+        }
     }
 }
 
