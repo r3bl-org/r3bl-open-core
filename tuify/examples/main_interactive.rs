@@ -17,9 +17,23 @@
 
 use std::io::Result;
 
-use crossterm::style::Stylize;
+use r3bl_ansi_color::{AnsiStyledText, Color as RColor, Style as RStyle};
 use r3bl_rs_utils_core::*;
 use r3bl_tuify::*;
+
+fn print_header(msg: &str) {
+    AnsiStyledText {
+        text: msg,
+        style: &[
+            RStyle::Bold,
+            RStyle::Italic,
+            RStyle::Underline,
+            RStyle::Foreground(RColor::Rgb(236, 230, 230)),
+            RStyle::Background(RColor::Rgb(10, 109, 33)),
+        ],
+    }
+    .println();
+}
 
 fn main() -> Result<()> {
     call_if_true!(TRACE, {
@@ -38,12 +52,8 @@ fn main() -> Result<()> {
     // Single select.
     {
         // 2 items & viewport height = 5.
-        println!(
-            "{}",
-            "Single select (move up and down, press enter or esc) - 2 items"
-                .yellow()
-                .on_dark_blue()
-        );
+        print_header("Single select (move up and down, press enter or esc) - 2 items");
+
         let user_input = select_from_list(
             "Single select".to_string(),
             ["item 1 of 2", "item 2 of 2"]
@@ -66,12 +76,8 @@ fn main() -> Result<()> {
         });
 
         // 10 items & viewport height = 5.
-        println!(
-            "{}",
-            "Single select (move up and down, press enter or esc) - 10 items"
-                .yellow()
-                .on_dark_blue()
-        );
+        print_header("Single select (move up and down, press enter or esc) - 10 items");
+
         let user_input = select_from_list(
             "Single select".to_string(),
             [
@@ -108,12 +114,8 @@ fn main() -> Result<()> {
     // Multiple select.
     {
         // 2 items & viewport height = 5.
-        println!(
-             "{}",
-             "Multiple select (move up and down, press space, then enter or esc) - 2 items"
-                 .yellow()
-                 .on_dark_blue()
-         );
+        print_header("Multiple select (move up and down, press space, then enter or esc) - 2 items");
+
         let user_input = select_from_list(
             "Multiple select".to_string(),
             ["item 1 of 2", "item 2 of 2"]
@@ -136,12 +138,8 @@ fn main() -> Result<()> {
         });
 
         // 10 items & viewport height = 5.
-        println!(
-             "{}",
-             "Multiple select (move up and down, press space, then enter or esc) - 10 items"
-                 .yellow()
-                 .on_dark_blue()
-         );
+        print_header("Multiple select (move up and down, press space, then enter or esc) - 10 items");
+
         let user_input = select_from_list(
             "Multiple select".to_string(),
             [

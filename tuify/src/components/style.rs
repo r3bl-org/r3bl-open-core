@@ -28,13 +28,13 @@ impl Default for StyleSheet {
     fn default() -> Self {
         let normal_style = Style::default();
         let selected_style = Style {
-            fg_color: normal_style.bg_color,
-            bg_color: normal_style.fg_color,
+            fg_color: Color::Rgb(250, 250, 250),
+            bg_color: Color::Rgb(39, 45, 239),
             ..Style::default()
         };
         let header_style = Style {
-            fg_color: Color::Rgb(250, 200, 200),
-            bg_color: Color::Rgb(100, 160, 150),
+            fg_color: Color::Rgb(50, 50, 50),
+            bg_color: Color::Rgb(150, 150, 150),
             bold: true,
             ..Style::default()
         };
