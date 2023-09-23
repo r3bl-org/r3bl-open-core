@@ -70,6 +70,7 @@
 //!         max_height_row_count,
 //!         max_width_col_count,
 //!         SelectionMode::Single,
+//!         StyleSheet::default(),
 //!     );
 //!
 //!     match &user_input {
@@ -88,7 +89,9 @@
 //!
 //! Here's a demo of the binary target of this crate in action.
 //!
-//! https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/2b42db72-cd62-4ea2-80ae-ccc01008190c
+//! <video width="100%" controls>
+//!   <source src="https://github-production-user-asset-6210df.s3.amazonaws.com/2966499/267427392-2b42db72-cd62-4ea2-80ae-ccc01008190c.mp4" type="video/mp4"/>
+//! </video>
 //!
 //! You can install the binary using `cargo install r3bl_tuify` (from crates.io). Or
 //! `cargo install --path .` from source. Once installed, you can `rt` is a command line
