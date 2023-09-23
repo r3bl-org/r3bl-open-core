@@ -49,7 +49,7 @@ macro_rules! apply_style {
         ))
     };
     ($style: expr => bold) => {
-        set_attribute($style.bold, Attribute::Italic, Attribute::NoItalic)
+        set_attribute($style.bold, Attribute::Bold, Attribute::NoBold)
     };
     ($style: expr => italic) => {
         set_attribute($style.italic, Attribute::Italic, Attribute::NoItalic)
@@ -81,12 +81,11 @@ macro_rules! apply_style {
 
 pub fn set_attribute(
     enable: bool,
-    attribute: Attribute,
-    no_attribute: Attribute,
+    enable_attribute: Attribute,
+    disable_attribute: Attribute,
 ) -> SetAttribute {
-    if enable {
-        SetAttribute(attribute)
-    } else {
-        SetAttribute(no_attribute)
+    match enable {
+        true => SetAttribute(enable_attribute),
+        false => SetAttribute(disable_attribute),
     }
 }
