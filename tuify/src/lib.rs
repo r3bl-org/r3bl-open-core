@@ -239,13 +239,68 @@
 //! > the `rt` binary simply takes a command that it will run after the user has made their
 //! > selection. Using the selected item(s) and applying them to this command.
 //!
-//! ### Docs
+//! ## Build, run, test tasks
 //!
-//! - [clap docs](https://docs.rs/clap/latest/clap/_derive/_tutorial/index.html)
-//! - [clap print help programmatically](https://github.com/clap-rs/clap/issues/672#issuecomment-1159332810)
-//! - [clap print help declaratively](https://docs.rs/clap/latest/clap/struct.Command.html#method.arg_required_else_help)
-//! - [clap cookbook git example](https://docs.rs/clap/latest/clap/_derive/_cookbook/git_derive/index.html)
-//! - [Pipe detection](https://developerlife.com/2022/03/02/rust-grep-cli-app/)
+//! ### Prerequisites
+//!
+//! 🌠 In order for these to work you have to install the Rust toolchain, `nu`, `cargo-watch`,
+//! `bat`, and `flamegraph` on your system. Here are the instructions:
+//!
+//! 1. Install the Rust toolchain using `rustup` by following the instructions
+//!    [here](https://rustup.rs/).
+//! 1. Install `cargo-watch` using `cargo install cargo-watch`.
+//! 1. Install `flamegraph` using `cargo install flamegraph`.
+//! 1. Install `bat` using `cargo install bat`.
+//! 1. Install [`nu`](https://crates.io/crates/nu) shell on your system using `cargo install
+//!    nu`. It is available for Linux, macOS, and Windows.
+//!
+//! ### Nu shell script to make, build, run, etc.
+//!
+//! | Command                                   | Description                                |
+//! | ----------------------------------------- | ------------------------------------------ |
+//! | `nu run.nu run`                           | Run examples                               |
+//! | `nu run.nu run-piped`                     | Run binary with piped input                |
+//! | `nu run.nu build`                         | Build                                      |
+//! | `nu run.nu clean`                         | Clean                                      |
+//! | `nu run.nu all`                           | All                                        |
+//! | `nu run.nu run-with-flamegraph-profiling` | Run examples with flamegraph profiling     |
+//! | `nu run.nu test`                          | Run tests                                  |
+//! | `nu run.nu clippy`                        | Run clippy                                 |
+//! | `nu run.nu docs`                          | Build docs                                 |
+//! | `nu run.nu serve-docs`                    | Serve docs over VSCode Remote SSH session. |
+//! | `nu run.nu upgrade-deps`                  | Upgrade deps                               |
+//! | `nu run.nu rustfmt`                       | Run rustfmt                                |
+//!
+//! The following commands will watch for changes in the source folder and re-run:
+//!
+//! | Command                                                | Description                        |
+//! | ------------------------------------------------------ | ---------------------------------- |
+//! | `nu run.nu watch-run`                                  | Watch run                          |
+//! | `nu run.nu watch-all-tests`                            | Watch all test                     |
+//! | `nu run.nu watch-one-test <test_name>`                 | Watch one test                     |
+//! | `nu run.nu watch-clippy`                               | Watch clippy                       |
+//! | `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
+//!
+//! ## References
+//!
+//! CLI UX guidelines:
+//!
+//! - <https://rust-cli-recommendations.sunshowers.io/handling-arguments.html>
+//! - <https://rust-cli-recommendations.sunshowers.io/configuration.html>
+//! - <https://rust-cli-recommendations.sunshowers.io/hierarchical-config.html>
+//! - <https://rust-cli-recommendations.sunshowers.io/hierarchical-config.html>
+//! - <https://docs.rs/clap/latest/clap/_derive/#overview>
+//! - <https://clig.dev/#foreword>
+//!
+//! ANSI escape codes:
+//!
+//! - <https://notes.burke.libbey.me/ansi-escape-codes/>
+//! - <https://en.wikipedia.org/wiki/ANSI_escape_code>
+//! - <https://www.asciitable.com/>
+//! - <https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg>
+//! - <https://www.ditig.com/256-colors-cheat-sheet>
+//! - <https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences>
+//! - <https://www.compuphase.com/cmetric.htm>
 
 // https://github.com/rust-lang/rust-clippy
 // https://rust-lang.github.io/rust-clippy/master/index.html

@@ -27,6 +27,9 @@ use crate::*;
 /// the selected item or items (depending on the selection mode). If the user does not
 /// select anything, it returns `None`. The function also takes the maximum height and
 /// width of the display, and the selection mode (single select or multiple select).
+///
+/// If the terminal is *fully* uninteractive, it returns `None`. This is useful so that it
+/// won't block `cargo test` or when run in non-interactive CI/CD environments.
 pub fn select_from_list(
     header: String,
     items: Vec<String>,
@@ -35,6 +38,11 @@ pub fn select_from_list(
     selection_mode: SelectionMode,
     style: StyleSheet,
 ) -> Option<Vec<String>> {
+    // Don't block tests.
+    if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+        return None;
+    }
+
     // There are fewer items than viewport height. So make viewport shorter.
     let max_height_row_count = if items.len() <= max_height_row_count {
         items.len()
