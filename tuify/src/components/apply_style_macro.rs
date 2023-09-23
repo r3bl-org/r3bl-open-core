@@ -16,17 +16,37 @@
  */
 
 use crossterm::style::*;
+use r3bl_ansi_color::{detect_color_support,
+                      Color as RColor,
+                      ColorSupport,
+                      TransformColor};
+
+pub fn get_crossterm_color_based_on_terminal_capabilities(color: RColor) -> Color {
+    let detect_color_support = detect_color_support();
+    match detect_color_support {
+        ColorSupport::Truecolor => {
+            let rgb_color = color.as_rgb();
+            Color::Rgb {
+                r: rgb_color.red,
+                g: rgb_color.green,
+                b: rgb_color.blue,
+            }
+        }
+        _ => Color::AnsiValue(color.as_ansi256().index),
+    }
+}
 
 #[macro_export]
 macro_rules! apply_style {
     ($style: expr => bg_color) => {
-        SetBackgroundColor(Color::AnsiValue($style.bg_color.as_ansi256().index))
-    };
-    ($style: expr => bg_color) => {
-        SetBackgroundColor(Color::AnsiValue($style.bg_color.as_ansi256().index))
+        SetBackgroundColor(get_crossterm_color_based_on_terminal_capabilities(
+            $style.bg_color,
+        ))
     };
     ($style: expr => fg_color) => {
-        SetForegroundColor(Color::AnsiValue($style.fg_color.as_ansi256().index))
+        SetForegroundColor(get_crossterm_color_based_on_terminal_capabilities(
+            $style.fg_color,
+        ))
     };
     ($style: expr => bold) => {
         set_attribute($style.bold, Attribute::Italic, Attribute::NoItalic)

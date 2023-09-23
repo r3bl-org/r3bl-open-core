@@ -18,7 +18,6 @@
 use std::io::{Result, *};
 
 use crossterm::{cursor::*, queue, style::*, terminal::*};
-use r3bl_ansi_color::TransformColor;
 use r3bl_rs_utils_core::*;
 
 use crate::*;
@@ -46,7 +45,6 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
     /// lines.
     fn render(&mut self, state: &mut State) -> Result<()> {
         // Setup the required data.
-        // Clone required here since `get_write` borrows self mutably.
         let normal_style = self.style.normal_style;
         let header_style = self.style.header_style;
         let selected_style = self.style.selected_style;
