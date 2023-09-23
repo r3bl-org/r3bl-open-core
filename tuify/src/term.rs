@@ -61,18 +61,36 @@ pub fn is_stdout_piped() -> StdoutIsPipedResult {
 }
 
 #[derive(Debug)]
-pub enum IsTTYResult {
-    IsTTY,
-    IsNotTTY,
+pub enum TTYResult {
+    IsInteractive,
+    IsNotInteractive,
 }
 
-/// If you run `cargo run` the following will return true.
-pub fn is_tty() -> IsTTYResult {
-    match std::io::stdin().is_terminal()
-        && std::io::stdout().is_terminal()
-        && std::io::stderr().is_terminal()
-    {
-        true => IsTTYResult::IsTTY,
-        false => IsTTYResult::IsNotTTY,
+/// Returns IsTTYResult::IsTTY if stdin, stdout, and stderr are *all* fully interactive.
+///
+/// There are situations where some can be interactive and others not, such as when piping
+/// is active.
+pub fn is_fully_interactive_terminal() -> TTYResult {
+    use crossterm::tty::IsTty;
+    let is_tty: bool = std::io::stdin().is_tty();
+    match is_tty {
+        true => TTYResult::IsInteractive,
+        false => TTYResult::IsNotInteractive,
+    }
+}
+
+/// Returns IsTTYResult::IsNotTTY if stdin, stdout, and stderr are *all* fully
+/// uninteractive. This happens when `cargo test` runs.
+///
+/// There are situations where some can be interactive and others not, such as when piping
+/// is active.
+pub fn is_fully_uninteractive_terminal() -> TTYResult {
+    use crossterm::tty::IsTty;
+    let stdin_is_tty: bool = std::io::stdin().is_tty();
+    let stdout_is_tty: bool = std::io::stdout().is_tty();
+    let stderr_is_tty: bool = std::io::stderr().is_tty();
+    match !stdin_is_tty && !stdout_is_tty && !stderr_is_tty {
+        true => TTYResult::IsNotInteractive,
+        false => TTYResult::IsInteractive,
     }
 }

@@ -30,22 +30,23 @@ def main [...args: string] {
     let command = $args | get 0
 
     match $command {
-        "watch-one-test" => {watch-one-test $args}
-        "watch-macro-expansion-one-test" => {watch-macro-expansion-one-test $args}
         "all" => {all}
         "build" => {build}
         "clean" => {clean}
         "run" => {run}
+        "run-piped" => {run-piped}
+        "test" => {test}
+        "docs" => {docs}
+        "clippy" => {clippy}
+        "rustfmt" => {rustfmt}
+        "watch-one-test" => {watch-one-test $args}
+        "watch-macro-expansion-one-test" => {watch-macro-expansion-one-test $args}
         "run-with-flamegraph-profiling" => {run-with-flamegraph-profiling}
         "watch-run" => {watch-run}
-        "test" => {test}
         "watch-all-tests" => {watch-all-tests}
-        "clippy" => {clippy}
         "watch-clippy" => {watch-clippy}
-        "docs" => {docs}
-        "serve-docs" => {serve-docs}
         "upgrade-deps" => {upgrade-deps}
-        "rustfmt" => {rustfmt}
+        "serve-docs" => {serve-docs}
         "help" => {print-help all}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
     }
@@ -150,15 +151,19 @@ def clean [] {
 }
 
 def run [] {
-    cargo run --example main
+    cargo run --example main_interactive
+}
+
+def run-piped [] {
+    bat Cargo.toml | cargo run -- select-from-list
 }
 
 def run-with-flamegraph [] {
-    cargo flamegraph --example main
+    cargo flamegraph --example main_interactive
 }
 
 def watch-run [] {
-    cargo watch -- cargo run --example main
+    cargo watch -- cargo run --example main_interactive
 }
 
 def test [] {

@@ -1,3 +1,5 @@
+# THIS IS DEPRECATED. PLEASE USE run.nu instead.
+
 # More info on just:
 # - https://github.com/casey/just#recipe-parameters
 # - https://just.systems/man/en/chapter_36.html
@@ -16,10 +18,10 @@ clean:
   cargo clean
 
 run:
-  cargo run --release --example main_interactive
+  cargo run --example main_interactive
 
 run-release:
-  cargo run --release --example main
+  cargo run --example main
 
 run-with-flamegraph-profiling:
   cargo flamegraph --example main
