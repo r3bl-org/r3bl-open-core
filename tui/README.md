@@ -174,6 +174,7 @@ top level directory of the repo which allow you to easily:
 -  `test.fish`: Run all the tests (in all crates in the Rust workspace).
 -  `build.fish`: build the code in all the crates in the Rust workspace.
 -  `log.fish`: Run the logger to see log output.
+-  `check-licenses.fish`: Use `cargo-deny` to audit all licenses used in the Rust workspace.
 -  `run-with-flamegraph-profiling.fish`: This will run the examples and generate a flamegraph at the
     end so you can see profile the performance of the app.
 -  `run-with-crash-reporting.fish`: This will run the examples and generate a `crash_log.txt` file
