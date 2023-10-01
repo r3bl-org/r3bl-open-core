@@ -209,22 +209,26 @@ impl Default for RgbValue {
 }
 
 mod convert_rgb_ansi_values {
+    use r3bl_ansi_color::TransformColor;
+
     use super::*;
 
     impl From<RgbValue> for AnsiValue {
         fn from(rgb_value: RgbValue) -> Self {
-            let red = rgb_value.red;
-            let green = rgb_value.green;
-            let blue = rgb_value.blue;
-            let ansi_color = ansi_colours::ansi256_from_rgb((red, green, blue));
+            let rgb_color = r3bl_ansi_color::RgbColor {
+                red: rgb_value.red,
+                green: rgb_value.green,
+                blue: rgb_value.blue,
+            };
+            let ansi_color = r3bl_ansi_color::convert_rgb_into_ansi256(rgb_color).index;
             Self::new(ansi_color)
         }
     }
 
     impl From<AnsiValue> for RgbValue {
         fn from(ansi_value: AnsiValue) -> Self {
-            let color = ansi_value.color;
-            let (red, green, blue) = ansi_colours::rgb_from_ansi256(color);
+            let rgb_color = r3bl_ansi_color::Ansi256Color{index : ansi_value.color}.as_rgb();
+            let (red, green, blue) = (rgb_color.red, rgb_color.green, rgb_color.blue);
             Self::from_u8(red, green, blue)
         }
     }
