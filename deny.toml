@@ -1,0 +1,10 @@
+[licenses]
+unlicensed = "deny"
+allow = ["MIT", "Apache-2.0"]
+copyleft = "deny"
+
+exceptions = [
+    { name = "unicode-ident", allow = ["Unicode-DFS-2016"] }, 
+    { name = "encoding_rs", allow = ["BSD-3-Clause"] },
+    { name = "is_ci" , allow = ["ISC"] }
+]
