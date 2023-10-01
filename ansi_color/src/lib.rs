@@ -163,7 +163,7 @@
 //! 1. <https://docs.rs/anstyle-query/latest/anstyle_query/fn.term_supports_ansi_color.html>
 //! 1. <https://crates.io/crates/anstyle-query>
 //! 1. <https://docs.rs/supports-color/2.0.0/supports_color/>
-//! 1. <https://crates.io/crates/r3bl_ansi_color>
+//! 1. <https://crates.io/crates/r3bl_ansi_color> (the source in `ansi_color` folder is this crate)
 //! 1. <https://crates.io/crates/colored>
 
 // https://github.com/rust-lang/rust-clippy
