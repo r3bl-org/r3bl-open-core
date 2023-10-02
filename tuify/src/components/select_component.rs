@@ -114,9 +114,9 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                 let padding_left = " ".repeat(start_display_col_offset);
                 let index = caret_row_scroll_adj + 1;
                 if is_selected {
-                    format!("{padding_left} > {index} ")
+                    format!("{padding_left} ◉ {index} ")
                 } else {
-                    format!("{padding_left}   {index} ")
+                    format!("{padding_left} ◯ {index} ")
                 }
             };
 
