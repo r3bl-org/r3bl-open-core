@@ -299,48 +299,6 @@ let my_string = "Hello World!";
 trace_log_no_err!(my_string);
 ```
 
-#### make_api_call_for!
-<a id="markdown-make_api_call_for!" name="make_api_call_for!"></a>
-
-
-This macro makes it easy to create simple HTTP GET requests using the `reqwest` crate. It generates
-an `async` function called `make_request()` that returns a `CommonResult<T>` where `T` is the type
-of the response body. Here's an example.
-
-```rust
-use std::{error::Error, fmt::Display};
-use r3bl_rs_utils::make_api_call_for;
-use serde::{Deserialize, Serialize};
-
-const ENDPOINT: &str = "https://api.namefake.com/english-united-states/female/";
-
-make_api_call_for! {
-  FakeContactData at ENDPOINT
-}
-#[derive(Serialize, Deserialize, Debug, Default)]
-
-pub struct FakeContactData {
-  pub name: String,
-  pub phone_h: String,
-  pub email_u: String,
-  pub email_d: String,
-  pub address: String,
-}
-
-let fake_data = fake_contact_data_api()
-            .await
-            .unwrap_or_else(|_| FakeContactData {
-              name: "Foo Bar".to_string(),
-              phone_h: "123-456-7890".to_string(),
-              email_u: "foo".to_string(),
-              email_d: "bar.com".to_string(),
-              ..FakeContactData::default()
-            });
-```
-
-You can find lots of
-[examples here](https://github.com/r3bl-org/address-book-with-redux-tui/blob/main/src/tui/middlewares).
-
 #### fire_and_forget!
 <a id="markdown-fire_and_forget!" name="fire_and_forget!"></a>
 
