@@ -224,32 +224,6 @@ macro_rules! debug {
   }};
 }
 
-/// Declarative macro to generate the API call functions. This adds the
-/// following:
-/// - `make_request()` async function to call the API.
-/// - `to_string()` function to stringify the struct to JSON.
-/// - impl `Display` trait to for the struct using `to_string()` above.
-#[macro_export]
-macro_rules! make_api_call_for {
-    ($IDENT:ident at $ENDPOINT:ident) => {
-        pub async fn make_request() -> Result<$IDENT, Box<dyn Error>> {
-            let res = reqwest::get($ENDPOINT).await?;
-            let res_text = res.text().await?;
-            let res_json: $IDENT = serde_json::from_str(&res_text)?;
-            Ok(res_json)
-        }
-
-        impl $IDENT {
-            pub fn to_string(&self) -> String { serde_json::to_string(&self).unwrap() }
-        }
-
-        impl Display for $IDENT {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}", self.to_string())
-            }
-        }
-    };
-}
 
 /// Runs the `$code` block after evaluating the `$eval` expression and assigning
 /// it to `$id`.
