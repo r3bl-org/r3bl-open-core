@@ -27,6 +27,13 @@ pub struct SelectComponent<W: Write> {
     pub style: StyleSheet,
 }
 
+const IS_FOCUSED: &str = " › ";
+const IS_NOT_FOCUSED: &str = "   ";
+const MULTI_SELECT_IS_SELECTED: &str = "✔";
+const MULTI_SELECT_IS_NOT_SELECTED: &str = "☐";
+const SINGLE_SELECT_IS_SELECTED: &str = "◉";
+const SINGLE_SELECT_IS_NOT_SELECTED: &str = "◌";
+
 impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
     fn get_write(&mut self) -> &mut W { &mut self.write }
 
@@ -108,24 +115,46 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                 (data_row_index_start + viewport_row_index).into();
             let caret_row_scroll_adj =
                 ch!(viewport_row_index) + state.scroll_offset_row_index;
-            let is_selected = ch!(caret_row_scroll_adj) == state.get_selected_index();
-
-            let row_prefix = {
-                let padding_left = " ".repeat(start_display_col_offset);
-                let index = caret_row_scroll_adj + 1;
-                if is_selected {
-                    format!("{padding_left} ◉ {index} ")
-                } else {
-                    format!("{padding_left} ◯ {index} ")
-                }
-            };
+            let is_focused = ch!(caret_row_scroll_adj) == state.get_focused_index();
 
             let data_item = &state.items[data_row_index];
+
             // Invert colors for selected items.
-            let data_style = if state.selected_items.contains(data_item) {
+            let is_selected = state.selected_items.contains(data_item);
+            let data_style = if is_selected {
                 selected_style
             } else {
                 normal_style
+            };
+
+            let row_prefix = match state.selection_mode {
+                SelectionMode::Single => {
+                    let padding_left = " ".repeat(start_display_col_offset);
+                    let index = caret_row_scroll_adj + 1;
+                    if is_focused {
+                        format!("{padding_left} {SINGLE_SELECT_IS_SELECTED} {index} ")
+                    } else {
+                        format!("{padding_left} {SINGLE_SELECT_IS_NOT_SELECTED} {index} ")
+                    }
+                }
+                SelectionMode::Multiple => {
+                    let padding_left = " ".repeat(start_display_col_offset);
+                    let index = caret_row_scroll_adj + 1;
+                    match (is_focused, is_selected) {
+                        (true, true) => {
+                            format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} {index} ")
+                        }
+                        (true, false) => format!(
+                            "{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} {index} "
+                        ),
+                        (false, true) => format!(
+                            "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} {index} "
+                        ),
+                        (false, false) => format!(
+                            "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} {index} "
+                        ),
+                    }
+                }
             };
 
             let data_item = format!("{row_prefix}{data_item}");
@@ -151,7 +180,7 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                 // Clear the current line.
                 Clear(ClearType::CurrentLine),
                 // Print the text.
-                Print(format!("{data_item}")),
+                Print(data_item.to_string()),
                 // Move to next line.
                 MoveToNextLine(1),
                 // Reset the colors.

@@ -58,6 +58,7 @@ pub fn select_from_list(
         items,
         selected_items: Vec::new(),
         header,
+        selection_mode,
     };
 
     let mut function_component = SelectComponent {
@@ -67,7 +68,7 @@ pub fn select_from_list(
 
     let user_input =
         enter_event_loop(&mut state, &mut function_component, |state, key_press| {
-            keypress_handler(state, key_press, selection_mode)
+            keypress_handler(state, key_press)
         });
 
     match user_input {
@@ -76,11 +77,7 @@ pub fn select_from_list(
     }
 }
 
-fn keypress_handler(
-    state: &mut State,
-    key_press: KeyPress,
-    selection_mode: SelectionMode,
-) -> EventLoopResult {
+fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
     call_if_true!(TRACE, {
         log_debug(
             format!(
@@ -91,6 +88,8 @@ fn keypress_handler(
             .to_string(),
         );
     });
+
+    let selection_mode = state.selection_mode;
 
     match key_press {
         // Down.
@@ -176,12 +175,12 @@ fn keypress_handler(
         KeyPress::Enter => {
             call_if_true!(TRACE, {
                 log_debug(
-                    format!("Enter: {}", state.get_selected_index())
+                    format!("Enter: {}", state.get_focused_index())
                         .green()
                         .to_string(),
                 );
             });
-            let selection_index: usize = ch!(@to_usize state.get_selected_index());
+            let selection_index: usize = ch!(@to_usize state.get_focused_index());
             let maybe_item: Option<&String> = state.items.get(selection_index);
             match maybe_item {
                 Some(it) => EventLoopResult::ExitWithResult(vec![it.to_string()]),
@@ -201,12 +200,12 @@ fn keypress_handler(
         KeyPress::Space if selection_mode == SelectionMode::Multiple => {
             call_if_true!(TRACE, {
                 log_debug(
-                    format!("Space: {}", state.get_selected_index())
+                    format!("Space: {}", state.get_focused_index())
                         .green()
                         .to_string(),
                 );
             });
-            let selection_index: usize = ch!(@to_usize state.get_selected_index());
+            let selection_index: usize = ch!(@to_usize state.get_focused_index());
             let maybe_item: Option<&String> = state.items.get(selection_index);
             let maybe_index: Option<usize> = state
                 .selected_items
@@ -243,9 +242,10 @@ fn keypress_handler(
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default, Hash)]
 pub enum SelectionMode {
     /// Select only one option from list.
+    #[default]
     Single,
     /// Select multiple options from list.
     Multiple,
