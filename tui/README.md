@@ -120,7 +120,7 @@ Here are some framework highlights:
     -   A terminal independent underlying rendering and painting engine (can use crossterm or termion or
         whatever you want).
     -   Markdown text editor w/ syntax highlighting support, metadata (tags, title, author, date), smart
-        lists. This uses a custom Markdown parser and custom syntax highligther. Syntax highlighting for
+        lists. This uses a custom Markdown parser and custom syntax highlighter. Syntax highlighting for
         code blocks is provided by the syntect crate.
     -   Modal dialog boxes. And autocompletion dialog boxes.
     -   Lolcat (color gradients) implementation w/ a rainbow color-wheel palette. All the color output

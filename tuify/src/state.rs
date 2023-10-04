@@ -31,10 +31,12 @@ pub struct State {
     pub items: Vec<String>,
     pub selected_items: Vec<String>,
     pub header: String,
+    pub selection_mode: SelectionMode,
 }
 
 impl State {
-    pub fn get_selected_index(&self) -> ChUnit {
+    /// This the row index that currently has keyboard focus.
+    pub fn get_focused_index(&self) -> ChUnit {
         get_scroll_adjusted_row_index(
             self.raw_caret_row_index,
             self.scroll_offset_row_index,
