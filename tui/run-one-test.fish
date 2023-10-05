@@ -1,3 +1,5 @@
+# THIS IS DEPRECATED. PLEASE USE run.nu instead.
+
 #!/usr/bin/env fish
 
 # Make sure 1 argument are passed, and if not then display helpful usage instructions.
