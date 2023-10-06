@@ -49,125 +49,169 @@ fn main() -> Result<()> {
 
     let style = StyleSheet::default();
 
-    // Single select.
-    {
-        // 2 items & viewport height = 5.
-        print_header("Single select (move up and down, press enter or esc) - 2 items");
-
-        let user_input = select_from_list(
-            "Single select".to_string(),
-            ["item 1 of 2", "item 2 of 2"]
-                .iter()
-                .map(|it| it.to_string())
-                .collect(),
-            max_height_row_count,
-            max_width_col_count,
-            SelectionMode::Single,
-            style,
-        );
-        match &user_input {
-            Some(it) => {
-                println!("User selected: {:?}", it);
-            }
-            None => println!("User did not select anything"),
-        }
-        call_if_true!(TRACE, {
-            log_debug(format!("user_input: {:?}", user_input).to_string());
-        });
-
-        // 10 items & viewport height = 5.
-        print_header("Single select (move up and down, press enter or esc) - 10 items");
-
-        let user_input = select_from_list(
-            "Single select".to_string(),
-            [
-                "item 1 of 10",
-                "item 2 of 10",
-                "item 3 of 10",
-                "item 4 of 10",
-                "item 5 of 10",
-                "item 6 of 10",
-                "item 7 of 10",
-                "item 8 of 10",
-                "item 9 of 10",
-                "item 10 of 10",
-            ]
-            .iter()
-            .map(|it| it.to_string())
-            .collect(),
-            max_height_row_count,
-            max_width_col_count,
-            SelectionMode::Single,
-            style,
-        );
-        match &user_input {
-            Some(it) => {
-                println!("User selected: {:?}", it);
-            }
-            None => println!("User did not select anything"),
-        }
-        call_if_true!(TRACE, {
-            log_debug(format!("user_input: {:?}", user_input).to_string());
-        });
-    }
-
     // Multiple select.
-    {
-        // 2 items & viewport height = 5.
-        print_header("Multiple select (move up and down, press space, then enter or esc) - 2 items");
+    multiple_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
+    multiple_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
 
-        let user_input = select_from_list(
-            "Multiple select".to_string(),
-            ["item 1 of 2", "item 2 of 2"]
-                .iter()
-                .map(|it| it.to_string())
-                .collect(),
-            max_height_row_count,
-            max_width_col_count,
-            SelectionMode::Multiple,
-            style,
-        );
-        match &user_input {
-            Some(it) => {
-                println!("User selected: {:?}", it);
-            }
-            None => println!("User did not select anything"),
-        }
-        call_if_true!(TRACE, {
-            log_debug(format!("user_input: {:?}", user_input).to_string());
-        });
-
-        // 10 items & viewport height = 5.
-        print_header("Multiple select (move up and down, press space, then enter or esc) - 10 items");
-
-        let user_input = select_from_list(
-            "Multiple select".to_string(),
-            [
-                "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7",
-                "item 8", "item 9", "item 10",
-            ]
-            .iter()
-            .map(|it| it.to_string())
-            .collect(),
-            max_height_row_count,
-            max_width_col_count,
-            SelectionMode::Multiple,
-            style,
-        );
-        match &user_input {
-            Some(it) => {
-                println!("User selected: {:?}", it);
-            }
-            None => println!("User did not select anything"),
-        }
-        call_if_true!(TRACE, {
-            log_debug(format!("user_input: {:?}", user_input).to_string());
-        });
-    }
+    // Single select.
+    single_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
+    single_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
 
     call_if_true!(TRACE, {
         log_debug("Stop logging...".to_string());
     });
 
     Ok(())
+}
+
+/// 13 items & viewport height = 5.
+fn multiple_select_13_items_vph_5(
+    max_height_row_count: usize,
+    max_width_col_count: usize,
+    style: StyleSheet,
+) {
+    print_header(
+        "Multiple select (move up and down, press space, then enter or esc) - 10 items",
+    );
+
+    let user_input = select_from_list(
+        "Multiple select".to_string(),
+        [
+            "item 1 of 12",
+            "item 2 of 12",
+            "item 3 of 12",
+            "item 4 of 12",
+            "item 5 of 12",
+            "item 6 of 12",
+            "item 7 of 12",
+            "item 8 of 12",
+            "item 9 of 12",
+            "item 10 of 12",
+            "item 11 of 12",
+            "item 12 of 12",
+            "item 13 of 12",
+        ]
+        .iter()
+        .map(|it| it.to_string())
+        .collect(),
+        max_height_row_count,
+        max_width_col_count,
+        SelectionMode::Multiple,
+        style,
+    );
+    match &user_input {
+        Some(it) => {
+            println!("User selected: {:?}", it);
+        }
+        None => println!("User did not select anything"),
+    }
+    call_if_true!(TRACE, {
+        log_debug(format!("user_input: {:?}", user_input).to_string());
+    });
+}
+
+/// 2 items & viewport height = 5.
+fn multiple_select_2_items_vph_5(
+    max_height_row_count: usize,
+    max_width_col_count: usize,
+    style: StyleSheet,
+) {
+    print_header(
+        "Multiple select (move up and down, press space, then enter or esc) - 2 items",
+    );
+
+    let user_input = select_from_list(
+        "Multiple select".to_string(),
+        ["item 1 of 2", "item 2 of 2"]
+            .iter()
+            .map(|it| it.to_string())
+            .collect(),
+        max_height_row_count,
+        max_width_col_count,
+        SelectionMode::Multiple,
+        style,
+    );
+    match &user_input {
+        Some(it) => {
+            println!("User selected: {:?}", it);
+        }
+        None => println!("User did not select anything"),
+    }
+    call_if_true!(TRACE, {
+        log_debug(format!("user_input: {:?}", user_input).to_string());
+    });
+}
+
+/// 13 items & viewport height = 5.
+fn single_select_13_items_vph_5(
+    max_height_row_count: usize,
+    max_width_col_count: usize,
+    style: StyleSheet,
+) {
+    print_header("Single select (move up and down, press enter or esc) - 10 items");
+
+    let user_input = select_from_list(
+        "Single select".to_string(),
+        [
+            "item 1 of 13",
+            "item 2 of 13",
+            "item 3 of 13",
+            "item 4 of 13",
+            "item 5 of 13",
+            "item 6 of 13",
+            "item 7 of 13",
+            "item 8 of 13",
+            "item 9 of 13",
+            "item 10 of 10",
+            "item 11 of 13",
+            "item 12 of 13",
+            "item 13 of 13",
+        ]
+        .iter()
+        .map(|it| it.to_string())
+        .collect(),
+        max_height_row_count,
+        max_width_col_count,
+        SelectionMode::Single,
+        style,
+    );
+    match &user_input {
+        Some(it) => {
+            println!("User selected: {:?}", it);
+        }
+        None => println!("User did not select anything"),
+    }
+    call_if_true!(TRACE, {
+        log_debug(format!("user_input: {:?}", user_input).to_string());
+    });
+}
+
+/// 2 items & viewport height = 5.
+fn single_select_2_items_vph_5(
+    max_height_row_count: usize,
+    max_width_col_count: usize,
+    style: StyleSheet,
+) {
+    print_header("Single select (move up and down, press enter or esc) - 2 items");
+
+    let user_input = select_from_list(
+        "Single select".to_string(),
+        ["item 1 of 2", "item 2 of 2"]
+            .iter()
+            .map(|it| it.to_string())
+            .collect(),
+        max_height_row_count,
+        max_width_col_count,
+        SelectionMode::Single,
+        style,
+    );
+    match &user_input {
+        Some(it) => {
+            println!("User selected: {:?}", it);
+        }
+        None => println!("User did not select anything"),
+    }
+    call_if_true!(TRACE, {
+        log_debug(format!("user_input: {:?}", user_input).to_string());
+    });
 }
