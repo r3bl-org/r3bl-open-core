@@ -1,8 +1,8 @@
 [package]
 name = "r3bl_tuify"
-version = "0.1.13"
+version = "0.1.14"
 edition = "2021"
-description = "Easily add lightweight TUI capabilities to any CLI apps using pipes"
+description = "Easily add lightweight TUI capabilities to any CLI apps"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["tui", "cli", "terminal", "color"]
 categories = ["command-line-interface", "command-line-utilities"]
@@ -35,3 +35,6 @@ is-terminal = "0.4.9"
 # More info: https://stackoverflow.com/a/76131914/2085356
 clap = { version = "4.4.2", features = ["derive", "wrap_help"] }
 reedline = "0.23.0"
+
+[dev-dependencies]
+pretty_assertions = "1.4.0"

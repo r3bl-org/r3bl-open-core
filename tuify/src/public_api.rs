@@ -81,7 +81,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
     call_if_true!(TRACE, {
         log_debug(
             format!(
-                "before keypress: locate_cursor_in_viewport(): {:?}",
+                "🔆🔆🔆 *before* keypress: locate_cursor_in_viewport(): {:?}",
                 state.locate_cursor_in_viewport()
             )
             .magenta()
@@ -91,13 +91,14 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
 
     let selection_mode = state.selection_mode;
 
-    match key_press {
+    let return_it = match key_press {
         // Down.
         KeyPress::Down => {
             call_if_true!(TRACE, {
-                log_debug("Down".yellow().to_string());
+                log_debug("Down".black().bold().on_green().to_string());
             });
-            match state.locate_cursor_in_viewport() {
+            let caret_location = state.locate_cursor_in_viewport();
+            match caret_location {
                 CaretVerticalViewportLocation::AtAbsoluteTop
                 | CaretVerticalViewportLocation::AboveTopOfViewport
                 | CaretVerticalViewportLocation::AtTopOfViewport
@@ -110,7 +111,8 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
                     state.scroll_offset_row_index += 1;
                 }
 
-                CaretVerticalViewportLocation::AtAbsoluteBottom => {
+                CaretVerticalViewportLocation::AtAbsoluteBottom
+                | CaretVerticalViewportLocation::NotFound => {
                     // Do nothing.
                 }
             }
@@ -128,11 +130,12 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
         // Up.
         KeyPress::Up => {
             call_if_true!(TRACE, {
-                log_debug("Up".yellow().to_string());
+                log_debug("Up".black().bold().on_green().to_string());
             });
 
             match state.locate_cursor_in_viewport() {
-                CaretVerticalViewportLocation::AtAbsoluteTop => {
+                CaretVerticalViewportLocation::NotFound
+                | CaretVerticalViewportLocation::AtAbsoluteTop => {
                     // Do nothing.
                 }
 
@@ -201,7 +204,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
             call_if_true!(TRACE, {
                 log_debug(
                     format!("Space: {}", state.get_focused_index())
-                        .green()
+                        .magenta()
                         .to_string(),
                 );
             });
@@ -239,10 +242,25 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
             });
             EventLoopResult::ExitWithError
         }
-    }
+    };
+
+    call_if_true!(TRACE, {
+        log_debug(
+            format!(
+                "👉 *after* keypress: locate_cursor_in_viewport(): {:?}",
+                state.locate_cursor_in_viewport()
+            )
+            .blue()
+            .to_string(),
+        );
+    });
+
+    return_it
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default, Hash)]
+#[derive(
+    Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default, Hash,
+)]
 pub enum SelectionMode {
     /// Select only one option from list.
     #[default]

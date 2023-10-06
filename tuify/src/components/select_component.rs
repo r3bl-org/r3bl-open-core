@@ -67,8 +67,8 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
         call_if_true!(TRACE, {
             log_debug(
                 format!(
-                    "render()::state: {:?}, display_height:{}",
-                    state.raw_caret_row_index, viewport_height
+                    "render()::state: \n\t[raw_caret_row_index: {}, scroll_offset_row_index: {}], \n\tdisplay_height:{}",
+                    state.raw_caret_row_index, state.scroll_offset_row_index, viewport_height
                 )
                 .blue()
                 .to_string(),
@@ -130,28 +130,26 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
             let row_prefix = match state.selection_mode {
                 SelectionMode::Single => {
                     let padding_left = " ".repeat(start_display_col_offset);
-                    let index = caret_row_scroll_adj + 1;
                     if is_focused {
-                        format!("{padding_left} {SINGLE_SELECT_IS_SELECTED} {index} ")
+                        format!("{padding_left} {SINGLE_SELECT_IS_SELECTED} ")
                     } else {
-                        format!("{padding_left} {SINGLE_SELECT_IS_NOT_SELECTED} {index} ")
+                        format!("{padding_left} {SINGLE_SELECT_IS_NOT_SELECTED} ")
                     }
                 }
                 SelectionMode::Multiple => {
                     let padding_left = " ".repeat(start_display_col_offset);
-                    let index = caret_row_scroll_adj + 1;
                     match (is_focused, is_selected) {
                         (true, true) => {
-                            format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} {index} ")
+                            format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
                         }
                         (true, false) => format!(
-                            "{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} {index} "
+                            "{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
                         ),
                         (false, true) => format!(
-                            "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} {index} "
+                            "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} "
                         ),
                         (false, false) => format!(
-                            "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} {index} "
+                            "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
                         ),
                     }
                 }
@@ -206,5 +204,82 @@ fn clip_string_to_width_with_ellipsis(line: String, viewport_width: ChUnit) -> S
         format!("{}...", &line[..width - 3])
     } else {
         line.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Result, Write};
+
+    use pretty_assertions::assert_eq;
+
+    use super::*;
+
+    struct StringWriter {
+        buffer: String,
+    }
+
+    impl StringWriter {
+        fn new() -> Self {
+            StringWriter {
+                buffer: String::new(),
+            }
+        }
+
+        fn get_buffer(&self) -> &str { &self.buffer }
+    }
+
+    impl Write for StringWriter {
+        fn write(&mut self, buf: &[u8]) -> Result<usize> {
+            let result = std::str::from_utf8(buf);
+            match result {
+                Ok(value) => {
+                    self.buffer.push_str(value);
+                    Ok(buf.len())
+                }
+                Err(_) => Ok(0),
+            }
+        }
+
+        fn flush(&mut self) -> Result<()> { Ok(()) }
+    }
+
+    #[test]
+    fn test_clip_string_to_width_with_ellipsis() {
+        let line = "This is a long line that needs to be clipped".to_string();
+        let clipped_line =
+            clip_string_to_width_with_ellipsis(line.clone(), ChUnit::new(20));
+        assert_eq!(clipped_line, "This is a long li...");
+
+        let short_line = "This is a short line".to_string();
+        let clipped_short_line =
+            clip_string_to_width_with_ellipsis(short_line.clone(), ChUnit::new(20));
+        assert_eq!(clipped_short_line, "This is a short line");
+    }
+
+    #[test]
+    fn test_select_component() {
+        let mut state = State {
+            items: vec![
+                "Item 1".to_string(),
+                "Item 2".to_string(),
+                "Item 3".to_string(),
+            ],
+            ..State::default()
+        };
+
+        state.scroll_offset_row_index = ch!(0);
+
+        let mut writer = StringWriter::new();
+
+        let mut component = SelectComponent {
+            write: &mut writer,
+            style: StyleSheet::default(),
+        };
+
+        component.render(&mut state).unwrap();
+
+        let expected_output = "\u{1b}[1F\u{1b}[1G\u{1b}[0m\u{1b}[38;2;50;50;50m\u{1b}[48;2;150;150;150m\u{1b}[1m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K \u{1b}[1E\u{1b}[0m\u{1b}[1F";
+        assert_eq!(writer.get_buffer(), expected_output);
     }
 }
