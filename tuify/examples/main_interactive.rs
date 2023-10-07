@@ -56,10 +56,8 @@ fn main() -> Result<()> {
     // Multiple select.
     let nodes_to_delete =
         multiple_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
-    // multiple_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
 
     // Single select.
-    // single_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
     let confirmation = single_select_2_items_vph_5(
         max_height_row_count,
         max_width_col_count,
@@ -75,6 +73,10 @@ fn main() -> Result<()> {
     } else {
         println!("Nothing to delete");
     }
+
+    // Other scenarios.
+    // multiple_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
+    // single_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
 
     call_if_true!(TRACE, {
         log_debug("Stop logging...".to_string());
