@@ -17,6 +17,7 @@
 
 use std::io::Result;
 
+use crossterm::style::Stylize;
 use r3bl_ansi_color::{AnsiStyledText, Color as RColor, Style as RStyle};
 use r3bl_rs_utils_core::*;
 use r3bl_tuify::*;
@@ -53,12 +54,27 @@ fn main() -> Result<()> {
     multiple_select_single_item();
 
     // Multiple select.
-    multiple_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
-    multiple_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
+    let nodes_to_delete =
+        multiple_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
+    // multiple_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
 
     // Single select.
-    single_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
-    single_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
+    // single_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
+    let confirmation = single_select_2_items_vph_5(
+        max_height_row_count,
+        max_width_col_count,
+        style,
+        nodes_to_delete.clone(),
+    );
+
+    if confirmation.is_some() {
+        nodes_to_delete.iter().for_each(|it| {
+            let msg = format!("Deleted node: ❎ '{}'", it.clone().red().bold());
+            println!("{}", msg.on_dark_grey());
+        });
+    } else {
+        println!("Nothing to delete");
+    }
 
     call_if_true!(TRACE, {
         log_debug("Stop logging...".to_string());
@@ -89,27 +105,29 @@ fn multiple_select_13_items_vph_5(
     max_height_row_count: usize,
     max_width_col_count: usize,
     style: StyleSheet,
-) {
+) -> Vec<String> {
     print_header(
-        "Multiple select (move up and down, press space, then enter or esc) - 10 items",
+        "Multiple select (move up and down, press space, then enter or esc) - 13 items",
     );
 
+    let mut return_it = vec![];
+
     let user_input = select_from_list(
-        "Multiple select".to_string(),
+        "Select one or more nodes that you want to delete".to_string(),
         [
-            "item 1 of 12",
-            "item 2 of 12",
-            "item 3 of 12",
-            "item 4 of 12",
-            "item 5 of 12",
-            "item 6 of 12",
-            "item 7 of 12",
-            "item 8 of 12",
-            "item 9 of 12",
-            "item 10 of 12",
-            "item 11 of 12",
-            "item 12 of 12",
-            "item 13 of 12",
+            "abstract_rabbit",
+            "bonnie_ant",
+            "rat_tatui",
+            "hummer_bird",
+            "dove_node",
+            "pigeon_alias",
+            "fast_turtle",
+            "buzzing_bee",
+            "radical_parrot",
+            "sleeping_tiger",
+            "crouching_dragon",
+            "running_raptor",
+            "flying_lizard",
         ]
         .iter()
         .map(|it| it.to_string())
@@ -122,14 +140,57 @@ fn multiple_select_13_items_vph_5(
     match &user_input {
         Some(it) => {
             println!("User selected: {:?}", it);
+            return_it = it.clone();
         }
         None => println!("User did not select anything"),
     }
     call_if_true!(TRACE, {
         log_debug(format!("user_input: {:?}", user_input).to_string());
     });
+
+    return_it
 }
 
+/// 2 items & viewport height = 5.
+fn single_select_2_items_vph_5(
+    max_height_row_count: usize,
+    max_width_col_count: usize,
+    style: StyleSheet,
+    nodes_to_delete: Vec<String>,
+) -> Option<()> {
+    print_header("Single select (move up and down, press enter or esc) - 2 items");
+
+    let header = format!(
+        "Would you like to delete these items: {:?}?",
+        nodes_to_delete
+    );
+    let user_input = select_from_list(
+        header,
+        ["YES", "NO"].iter().map(|it| it.to_string()).collect(),
+        max_height_row_count,
+        max_width_col_count,
+        SelectionMode::Single,
+        style,
+    );
+    match &user_input {
+        Some(it) => {
+            println!("User selected: {:?}", it);
+            if it.contains(&"YES".to_string()) {
+                return Some(());
+            } else {
+                return None;
+            }
+        }
+        None => println!("User did not select anything"),
+    }
+    call_if_true!(TRACE, {
+        log_debug(format!("user_input: {:?}", user_input).to_string());
+    });
+
+    None
+}
+
+#[allow(dead_code)]
 /// 2 items & viewport height = 5.
 fn multiple_select_2_items_vph_5(
     max_height_row_count: usize,
@@ -162,6 +223,7 @@ fn multiple_select_2_items_vph_5(
     });
 }
 
+#[allow(dead_code)]
 /// 13 items & viewport height = 5.
 fn single_select_13_items_vph_5(
     max_height_row_count: usize,
@@ -190,36 +252,6 @@ fn single_select_13_items_vph_5(
         .iter()
         .map(|it| it.to_string())
         .collect(),
-        max_height_row_count,
-        max_width_col_count,
-        SelectionMode::Single,
-        style,
-    );
-    match &user_input {
-        Some(it) => {
-            println!("User selected: {:?}", it);
-        }
-        None => println!("User did not select anything"),
-    }
-    call_if_true!(TRACE, {
-        log_debug(format!("user_input: {:?}", user_input).to_string());
-    });
-}
-
-/// 2 items & viewport height = 5.
-fn single_select_2_items_vph_5(
-    max_height_row_count: usize,
-    max_width_col_count: usize,
-    style: StyleSheet,
-) {
-    print_header("Single select (move up and down, press enter or esc) - 2 items");
-
-    let user_input = select_from_list(
-        "Single select".to_string(),
-        ["item 1 of 2", "item 2 of 2"]
-            .iter()
-            .map(|it| it.to_string())
-            .collect(),
         max_height_row_count,
         max_width_col_count,
         SelectionMode::Single,
