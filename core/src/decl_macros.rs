@@ -224,7 +224,6 @@ macro_rules! debug {
   }};
 }
 
-
 /// Runs the `$code` block after evaluating the `$eval` expression and assigning
 /// it to `$id`.
 ///
