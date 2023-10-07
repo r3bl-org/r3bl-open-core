@@ -86,6 +86,7 @@ r3bl_ansi_color = "0.6.7"
 
 # Terminal
 ansi_term = "0.12.1"
+clipboard = "0.5.0"
 
 [dev-dependencies]
 reedline = "0.16.0"
