@@ -16,6 +16,7 @@
  */
 
 // Attach.
+pub mod editor_buffer_clipboard_support;
 pub mod editor_buffer_selection_support;
 pub mod editor_buffer_struct;
 pub mod selection_map;
