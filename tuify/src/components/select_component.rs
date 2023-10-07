@@ -66,13 +66,13 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
 
         call_if_true!(TRACE, {
             log_debug(
-                format!(
-                    "render()::state: \n\t[raw_caret_row_index: {}, scroll_offset_row_index: {}], \n\tdisplay_height:{}",
-                    state.raw_caret_row_index, state.scroll_offset_row_index, viewport_height
-                )
-                .blue()
-                .to_string(),
-            );
+                 format!(
+                     "render()::state: \n\t[raw_caret_row_index: {}, scroll_offset_row_index: {}], \n\tdisplay_height:{}",
+                     state.raw_caret_row_index, state.scroll_offset_row_index, viewport_height
+                 )
+                 .blue()
+                 .to_string(),
+             );
         });
 
         self.allocate_viewport_height_space(state)?;
@@ -82,6 +82,9 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
         let writer = self.get_write();
 
         // Print header.
+        let header_text =
+            format!("{}{}", " ".repeat(start_display_col_offset), state.header);
+        let header_text = clip_string_to_width_with_ellipsis(header_text, viewport_width);
         queue! {
             writer,
             // Bring the caret back to the start of line.
@@ -102,7 +105,7 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
             // Clear the current line.
             Clear(ClearType::CurrentLine),
             // Print the text.
-            Print(format!("{}{}", " ".repeat(start_display_col_offset), state.header)),
+            Print(header_text),
             // Move to next line.
             MoveToNextLine(1),
             // Reset the colors.
@@ -139,19 +142,19 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                 SelectionMode::Multiple => {
                     let padding_left = " ".repeat(start_display_col_offset);
                     match (is_focused, is_selected) {
-                        (true, true) => {
-                            format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
-                        }
-                        (true, false) => format!(
-                            "{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
-                        ),
-                        (false, true) => format!(
-                            "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} "
-                        ),
-                        (false, false) => format!(
-                            "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
-                        ),
-                    }
+                         (true, true) => {
+                             format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
+                         }
+                         (true, false) => format!(
+                             "{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
+                         ),
+                         (false, true) => format!(
+                             "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} "
+                         ),
+                         (false, false) => format!(
+                             "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
+                         ),
+                     }
                 }
             };
 
