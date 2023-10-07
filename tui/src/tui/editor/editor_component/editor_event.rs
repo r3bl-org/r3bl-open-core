@@ -42,6 +42,7 @@ pub enum EditorEvent {
     MoveCaret(CaretDirection),
     Resize(Size),
     Select(SelectionScope),
+    Copy,
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -116,6 +117,12 @@ impl TryFrom<&InputEvent> for EditorEvent {
                 key: Key::SpecialKey(SpecialKey::End),
                 mask: ModifierKeysMask::SHIFT,
             }) => Ok(EditorEvent::Select(SelectionScope::End)),
+
+            //  Copying Events
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::Character('c'),
+                mask: ModifierKeysMask::CTRL,
+            }) => Ok(EditorEvent::Copy),
 
             // Other events.
             InputEvent::Keyboard(KeyPress::Plain {
@@ -332,6 +339,10 @@ impl EditorEvent {
                     );
                 }
             },
+
+            EditorEvent::Copy => {
+                EditorEngineInternalApi::copy_selection(editor_buffer);
+            }
         };
     }
 
