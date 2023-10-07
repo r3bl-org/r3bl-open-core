@@ -15,10 +15,20 @@
  *   limitations under the License.
  */
 
-use std::{env,
-          sync::{Arc, Mutex}};
+use std::{
+    env,
+    sync::atomic::{AtomicI8, Ordering},
+};
 
-use once_cell::sync::Lazy;
+/// Global variable which can be used to:
+/// 1. Override the color support.
+/// 2. Memoize the value of the color support result from running [color_support_get].
+///
+/// This is a global variable because it is used in multiple places in the codebase, and
+/// it is really dependent on the environment.
+static mut COLOR_SUPPORT_GLOBAL: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
+
+const NOT_SET_VALUE: i8 = -1;
 
 /// This is the main function that is used to determine whether color is supported. And if
 /// so what type of color is supported. If the value has been set using
@@ -45,9 +55,9 @@ pub fn detect_color_support() -> ColorSupport {
 /// attribute to annotate that test. Otherwise there will be flakiness in the test results
 /// (tests are run in parallel using many threads).
 pub fn color_support_override_set(value: ColorSupport) {
-    let it = COLOR_SUPPORT_GLOBAL.clone();
-    if let Ok(mut support_set) = it.lock() {
-        *support_set = value;
+    unsafe {
+        let value: i8 = ColorSupport::into(value);
+        COLOR_SUPPORT_GLOBAL.store(value, Ordering::SeqCst);
     };
 }
 
@@ -55,21 +65,9 @@ pub fn color_support_override_set(value: ColorSupport) {
 /// then that value will be returned. Otherwise, the value will be determined by the
 /// examining the environment variables.
 fn color_support_get() -> ColorSupport {
-    if let Ok(it) = COLOR_SUPPORT_GLOBAL.lock() {
-        *it
-    } else {
-        ColorSupport::NotSet
-    }
+    let color_support_global = unsafe { COLOR_SUPPORT_GLOBAL.load(Ordering::SeqCst) };
+    ColorSupport::from(color_support_global)
 }
-
-/// Global variable which can be used to:
-/// 1. Override the color support.
-/// 2. Memoize the value of the color support result from running [color_support_get].
-///
-/// This is a global variable because it is used in multiple places in the codebase, and
-/// it is really dependent on the environment.
-static COLOR_SUPPORT_GLOBAL: Lazy<Arc<Mutex<ColorSupport>>> =
-    Lazy::new(|| Arc::new(Mutex::new(ColorSupport::NotSet)));
 
 /// Determine whether color is supported heuristically. This is based on the environment
 /// variables.
