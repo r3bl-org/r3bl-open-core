@@ -237,7 +237,7 @@ pub mod access_and_mutate {
                 .iter()
                 .map(|l| l.string.clone())
                 .collect::<Vec<String>>()
-                .join("\n")
+                .join(", ")
         }
 
         pub fn set_lines(&mut self, lines: Vec<String>) {

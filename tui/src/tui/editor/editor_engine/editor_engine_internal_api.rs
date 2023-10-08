@@ -135,7 +135,7 @@ impl EditorEngineInternalApi {
         content_mut::backspace_at_caret(buffer, engine)
     }
 
-    pub fn copy_selection(buffer: &mut EditorBuffer) {
+    pub fn copy_selection(buffer: &EditorBuffer) {
         copy_to_clipboard::copy_selection(buffer)
     }
 }

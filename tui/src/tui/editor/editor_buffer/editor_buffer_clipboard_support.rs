@@ -17,55 +17,74 @@
 
 pub mod copy_to_clipboard {
     use clipboard::{self, ClipboardContext, ClipboardProvider};
-    use r3bl_rs_utils_core::{call_if_true, log_debug, ChUnit};
+    use crossterm::style::Stylize;
+    use r3bl_rs_utils_core::{call_if_true,
+                             ch,
+                             log_debug,
+                             ChUnit,
+                             CommonResult,
+                             UnicodeString};
 
     use crate::*;
-    pub fn copy_selection(buffer: &mut EditorBuffer) {
-        let text = buffer.get_as_string(); // Get the entire text from the file
-        let selection_map = buffer.get_selection_map(); // Get the selection map
+    pub fn copy_selection(buffer: &EditorBuffer) {
+        let lines: &Vec<UnicodeString> = buffer.get_lines();
+        let selection_map = buffer.get_selection_map();
 
-        // Initialize an empty string to store the copied text
-        let mut copied_text = String::new();
+        // Initialize an empty string to store the copied text.
+        let mut vec_str: Vec<&str> = vec![];
 
-        let map = selection_map.map.clone();
-        let mut row_indexes: Vec<u16> = map.keys().map(|k| u16::from(k.value)).collect();
-        row_indexes.sort(); // Sort the RowIndex for sequential input.
-        let row_indexes: Vec<ChUnit> = row_indexes
-            .iter()
-            .map(|&x| r3bl_rs_utils_core::ChUnit::from(x))
-            .collect();
+        // Sort the row indices so that the copied text is in the correct order.
+        let row_indices = {
+            let mut key_vec: Vec<ChUnit> = selection_map.map.keys().copied().collect();
+            key_vec.sort();
+            key_vec
+        };
 
-        for row_idx in row_indexes {
-            if let Some(selection_range) = map.get(&row_idx) {
-                let start_idx =
-                    u16::from(selection_range.start_display_col_index) as usize;
-                let end_idx = u16::from(selection_range.end_display_col_index) as usize;
-                let row_idx = u16::from(row_idx.value) as usize;
-
-                // Extract the selected text for the current row
-                let selected_text = text
-                    .lines()
-                    .nth(row_idx)
-                    .and_then(|line| line.get(start_idx..end_idx))
-                    .unwrap_or("");
-                copied_text.push_str(selected_text);
-                copied_text.push('\n');
+        // Iterate through the sorted row indices, and copy the selected text.
+        for row_index in row_indices {
+            if let Some(selection_range) = selection_map.map.get(&row_index) {
+                if let Some(line) = lines.get(ch!(@to_usize row_index)) {
+                    let selected_text = line.clip_to_range(*selection_range);
+                    vec_str.push(selected_text);
+                }
             }
         }
-        copy_to_clipboard(copied_text);
+
+        if let Err(error) = try_copy_to_clipboard(&vec_str) {
+            call_if_true!(DEBUG_TUI_COPY_PASTE, {
+                log_debug(
+                    format!(
+                        "\n📋📋📋 Failed to copy selected text to clipboard: {0}",
+                        /* 0 */
+                        format!("{error}").white(),
+                    )
+                    .on_dark_red()
+                    .to_string(),
+                )
+            });
+        }
     }
 
-    fn copy_to_clipboard(text_to_copy: String) {
-        // Create a clipboard context.
-        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-        // Copy the text to the clipboard.
-        ctx.set_contents(text_to_copy.to_owned()).unwrap();
-        call_if_true!(
-            DEBUG_TUI_COPY_PASTE,
-            log_debug(format!(
-                "\n🍕🍕🍕 Selected Text was copied: \n{}",
-                text_to_copy
-            ))
-        );
+    /// Wrap the call to the clipboard crate, so it returns a [CommonResult]. This is due
+    /// to the requirement to call `unwrap()` on the [ClipboardContext] object.
+    fn try_copy_to_clipboard(vec_str: &[&str]) -> CommonResult<()> {
+        let mut context: ClipboardContext = ClipboardProvider::new().unwrap();
+        let content = vec_str.join("\n");
+        context.set_contents(content.clone()).unwrap();
+
+        call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            log_debug(
+                format!(
+                    "\n📋📋📋 Selected Text was copied to clipboard: \n{0}",
+                    /* 0 */
+                    content.dark_red()
+                )
+                .black()
+                .on_green()
+                .to_string(),
+            )
+        });
+
+        Ok(())
     }
 }
