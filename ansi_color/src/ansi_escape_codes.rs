@@ -99,6 +99,60 @@ mod tests {
     }
 
     #[test]
+    fn dim() {
+        let sgr_code = SgrCode::Dim;
+        assert_eq!(sgr_code.to_string(), "\x1b[2m");
+    }
+
+    #[test]
+    fn italic() {
+        let sgr_code = SgrCode::Italic;
+        assert_eq!(sgr_code.to_string(), "\x1b[3m");
+    }
+
+    #[test]
+    fn underline() {
+        let sgr_code = SgrCode::Underline;
+        assert_eq!(sgr_code.to_string(), "\x1b[4m");
+    }
+
+    #[test]
+    fn slowblink() {
+        let sgr_code = SgrCode::SlowBlink;
+        assert_eq!(sgr_code.to_string(), "\x1b[5m");
+    }
+
+    #[test]
+    fn rapidblink() {
+        let sgr_code = SgrCode::RapidBlink;
+        assert_eq!(sgr_code.to_string(), "\x1b[6m");
+    }
+
+    #[test]
+    fn invert() {
+        let sgr_code = SgrCode::Invert;
+        assert_eq!(sgr_code.to_string(), "\x1b[7m");
+    }
+
+    #[test]
+    fn hidden() {
+        let sgr_code = SgrCode::Hidden;
+        assert_eq!(sgr_code.to_string(), "\x1b[8m");
+    }
+
+    #[test]
+    fn strikethrough() {
+        let sgr_code = SgrCode::Strikethrough;
+        assert_eq!(sgr_code.to_string(), "\x1b[9m");
+    }
+
+    #[test]
+    fn overline() {
+        let sgr_code = SgrCode::Overline;
+        assert_eq!(sgr_code.to_string(), "\x1b[53m");
+    }
+
+    #[test]
     fn fg_color_ansi256() {
         let sgr_code = SgrCode::ForegroundAnsi256(150);
         assert_eq!(sgr_code.to_string(), "\x1b[38;5;150m");
