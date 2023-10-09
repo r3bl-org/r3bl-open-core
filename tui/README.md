@@ -163,22 +163,44 @@ cd tui/examples
 cargo run --release --example demo
 ```
 
-These examples cover the entire surface area of the TUI API. You can also take a look at the
-tests in the source (`tui/src/`) as well. A lot of
-[`fish`](https://developerlife.com/2021/01/19/fish-scripting-manual/) scripts are provided at the
-top level directory of the repo which allow you to easily:
+These examples cover the entire surface area of the TUI API. You can also take a look at
+the tests in the source (`tui/src/`) as well. A single [`nu`
+shell](https://www.nushell.sh/) script `run.nu` at the top level directory of the repo
+allows you to easily build, run, test, and do so much more with the repo. This script is
+very powerful and can be run in a CI/CD environment w/ all the required arguments supplied
+or in interactive mode, where the user will be prompted for input.
 
--  `run-release.fish`: This will simply run the examples w/ the release build (so it will be fast).
-    You can watch the logs by running `log.fish`.
--  `run.fish`: This will simply run the examples. You can watch the logs by running `log.fish`.
--  `test.fish`: Run all the tests (in all crates in the Rust workspace).
--  `build.fish`: build the code in all the crates in the Rust workspace.
--  `log.fish`: Run the logger to see log output.
--  `check-licenses.fish`: Use `cargo-deny` to audit all licenses used in the Rust workspace.
--  `run-with-flamegraph-profiling.fish`: This will run the examples and generate a flamegraph at the
-    end so you can see profile the performance of the app.
--  `run-with-crash-reporting.fish`: This will run the examples and generate a `crash_log.txt` file
-    (in the `tui` folder) in case the app crashes. This is useful for debugging.
+> The `run.nu` script works on Linux, macOS, and Windows. On Linux and macOS, you can
+> simply run `./run.nu` instead of `nu run.nu`.
+
+- `nu run.nu help`: This will show you all the commands that you can pass to the `run.nu`
+  script.
+- `nu run.nu build-full`: This will build all the crates in the Rust workspace. And it
+  will install all the required pre-requisite tools needed to work with this crate (what
+  `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really
+  clean build.
+- `nu run.nu install-cargo-tools`: This will install all the required pre-requisite tools
+  needed to work with this crate (things like `cargo-deny`, `flamegraph` will all be
+  installed in one go).
+- `nu run.nu run-release`: This will simply run the examples w/ the release build (so it
+   will be fast). You can watch the logs by running `nu run.nu log`.
+- `nu run.nu run`: This will simply run the examples. You can watch the logs by running
+  `nu run.nu log`.
+- `nu run.nu test`: Run all the tests (in all crates in the Rust workspace).
+- `nu run.nu watch-one-test`: Run a single test and watch it in the given crate / folder.
+- `nu run.nu build`: build the code in all the crates in the Rust workspace.
+- `nu run.nu log`: Run the logger to see log output.
+- `nu run.nu check-licenses`: Use `cargo-deny` to audit all licenses used in the Rust
+  workspace.
+- `nu run.nu run-with-flamegraph-profiling`: This will run the examples and generate a
+   flamegraph at the end so you can see profile the performance of the app.
+- `nu run.nu run-with-crash-reporting`: This will run the examples and generate a
+   `crash_log.txt` file (in the `tui` folder) in case the app crashes. This is useful for
+   debugging.
+- `nu run.nu docs`: Generate docs for all the crates in the Rust workspace.
+- `nu run.nu clippy`: Run clippy on all the crates in the Rust workspace.
+- `nu run.nu rustfmt`: Run rustfmt on all the crates in the Rust workspace.
+- and more!
 
 ---
 

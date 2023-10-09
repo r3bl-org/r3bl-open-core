@@ -32,6 +32,7 @@
     "fabiospampinato.vscode-todo-plus", // Todo+.
     "github.vscode-pull-request-github", // Github Pull Requests and Issues.
     "streetsidesoftware.code-spell-checker", // Code Spell Checker.
+    "TheNuProjectContributors.vscode-nushell-lang", // Nushell.
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [

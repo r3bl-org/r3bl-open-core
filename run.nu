@@ -18,6 +18,8 @@
 #     - coming from bash: https://www.nushell.sh/book/coming_from_bash.html
 #     - thinking in nu: https://www.nushell.sh/book/thinking_in_nu.html
 
+let workspace_folders = ["core", "macro", "redux", "tui", "tuify", "ansi_color"]
+
 # Main entry point for the script.
 def main [...args: string] {
     let num_args = $args | length
@@ -31,28 +33,31 @@ def main [...args: string] {
 
     match $command {
         "build" => {build}
+        "build-full" => {build-full}
         "clean" => {clean}
+        "install-cargo-tools" => {install-cargo-tools}
         "run" => {run}
+        "run-release" => {run-release}
+        "run-with-flamegraph-profiling" => {run-with-flamegraph-profiling}
+        "run-with-crash-reporting" => {run-with-crash-reporting}
         "test" => {test}
+        "watch-one-test" => {watch-one-test $args}
+        "watch-all-tests" => {watch-all-tests}
+        "watch-macro-expand-one-test" => {watch-macro-expand-one-test $args}
         "docs" => {docs}
         "clippy" => {clippy}
+        "clippy-watch" => {clippy-watch}
         "rustfmt" => {rustfmt}
-        "watch-one-test" => {watch-one-test $args}
-        "run-with-flamegraph-profiling" => {run-with-flamegraph-profiling}
         "upgrade-deps" => {upgrade-deps}
         "serve-docs" => {serve-docs}
         "help" => {print-help all}
-        "run-release" => {run-release}
         "log" => {log}
-        "run-with-crash-reporting" => {run-with-crash-reporting}
         "check-licenses" => {check-licenses}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
     }
 }
 
-# Watch a single test. This expects the test name to be passed in as an argument.
-# If it isn't passed in, it will prompt the user for it.
-def watch-one-test [args: list<string>] {
+def watch-macro-expand-one-test [args: list<string>] {
     let num_args = $args | length
 
     let test_name = if $num_args == 2 {
@@ -67,11 +72,69 @@ def watch-one-test [args: list<string>] {
     if $test_name != "" {
         # More info on cargo test: https://doc.rust-lang.org/cargo/commands/cargo-test.html
         # More info on cargo watch: https://github.com/watchexec/cargo-watch
-        let command_string = "test -- --show-output --test-threads 4" + $test_name
-        cargo watch -x check -x $command_string -c -q --delay 10
+        let command_string = "expand --test " + $test_name
+        cargo watch -x $command_string -c -q -d 10
+        # cargo watch -x "expand --test $argv" -c -q -d 10
     } else {
         print $'Can not run this command without (ansi red_bold)test_name(ansi reset)'
     }
+}
+
+# Watch a single test. This expects the test name to be passed in as an argument.
+# If it isn't passed in, it will prompt the user for it.
+def watch-one-test [args: list<string>] {
+    let num_args = $args | length
+
+    let folder_name = ""
+    let test_name = ""
+
+    let folder_name = if $num_args > 1 {
+        let folder_name = $args | get 1
+        $folder_name
+    } else {
+        print-help watch-one-test
+        let user_input = (input "Enter the folder-name: " )
+        $user_input
+    }
+
+    let test_name = if $num_args > 2 {
+        let test_name = $args | get 2
+        $test_name
+    } else {
+        print-help watch-one-test
+        let user_input = (input "Enter the test-name: " )
+        $user_input
+    }
+
+
+
+    if $folder_name != "" {
+        cd $folder_name
+    }
+
+    # Debug.
+    # print $folder_name
+    # print $test_name
+    # pwd
+
+    if $test_name != "" {
+        # OG command:
+        # set -l prefix "cargo watch -x check -x 'test -- --test-threads=1 --nocapture"
+        # set -l middle "$argv'"
+        # set -l postfix "-c -q -d 5"
+        # set -l cmd "$prefix $middle $postfix"
+
+        # More info on cargo test: https://doc.rust-lang.org/cargo/commands/cargo-test.html
+        # More info on cargo watch: https://github.com/watchexec/cargo-watch
+        let command_string = "test -- --test-threads=1 --nocapture " + $test_name
+        cargo watch -x check -x $command_string -c -q -d 5
+    } else {
+        print $'Can not run this command without (ansi red_bold)test_name(ansi reset)'
+    }
+}
+
+def watch-all-tests [] {
+    RUST_BACKTRACE=0 cargo watch --exec check --exec 'test --quiet --color always -- --test-threads 4' --clear --quiet --delay 10
 }
 
 # Prints help for the script.
@@ -79,29 +142,54 @@ def watch-one-test [args: list<string>] {
 # - Otherwise, prints help for the specified command.
 def print-help [command: string] {
     if $command == "all" {
-        print $'Usage: (ansi blue_bold)run.nu(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi yellow)[args](ansi reset)'
+        print $'Usage: (ansi magenta_bold)run.nu(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi blue_bold)[args](ansi reset)'
         print $'(ansi green_bold)<command>(ansi reset) can be:'
+        print $'    (ansi green)install-cargo-tools(ansi reset)'
+        print $'    (ansi green)build-full(ansi reset)'
         print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
+        print $'    (ansi green)docs(ansi reset)'
         print $'    (ansi green)run(ansi reset)'
+        print $'    (ansi green)run-release(ansi reset)'
+        print $'    (ansi green)run-with-crash-reporting(ansi reset)'
         print $'    (ansi green)run-with-flamegraph-profiling(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
-        print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
+        print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
+        print $'    (ansi green)watch-all-tests(ansi reset)'
+        print $'    (ansi green)watch-macro-expand-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
         print $'    (ansi green)clippy(ansi reset)'
-        print $'    (ansi green)docs(ansi reset)'
+        print $'    (ansi green)clippy-watch(ansi reset)'
         print $'    (ansi green)serve-docs(ansi reset)'
         print $'    (ansi green)upgrade-deps(ansi reset)'
         print $'    (ansi green)rustfmt(ansi reset)'
         print $'    (ansi green)help(ansi reset)'
     } else if $command == "watch-one-test" {
-        print $'Usage: (ansi blue_bold)run.nu(ansi reset) (ansi green_bold)watch-one-test(ansi reset) (ansi yellow)<test-name>(ansi reset)'
-        print $'    (ansi green)<test-name>(ansi reset) is the name of the test to watch.'
+        print $'(ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
+        print $'    (ansi blue_bold)folder-name(ansi reset) (ansi yellow)eg: `tui`(ansi reset)'
+        print $'    (ansi blue_bold)test-name(ansi reset) (ansi yellow)eg: `test_with_unicode`(ansi reset)'
     } else {
         print $'Unknown command: (ansi red_bold)($command)(ansi reset)'
     }
 }
 
+def install-cargo-tools [] {
+    cargo install cargo-cache
+    cargo install cargo-watch
+    cargo install flamegraph
+    cargo install cargo-outdated
+    cargo install cargo-update
+    cargo install cargo-deny
+}
+
 def build [] {
+    cargo build
+}
+
+def build-full [] {
+    install-cargo-tools
+    cargo cache -r all
+    cargo clean
+    cargo +nightly update
     cargo build
 }
 
@@ -115,15 +203,21 @@ def run [] {
     cd ..
 }
 
-def run-with-flamegraph [] {
+def run-release [] {
     cd tui
-    cargo flamegraph --example demo
+    cargo run --release --example demo
     cd ..
 }
 
+def run-with-flamegraph-profiling [] {
+    cd tui
+    cargo flamegraph --example demo
+    cd ..
+    google-chrome tui/flamegraph.svg
+}
+
 def test [] {
-    let folders = ["core", "macro", "redux", "tui"]
-    for folder in ($folders) {
+    for folder in ($workspace_folders) {
         cd $folder
         print $'(ansi magenta)≡ Running tests in ($folder) .. ≡(ansi reset)'
         cargo test -q -- --test-threads=4
@@ -131,15 +225,24 @@ def test [] {
     }
 }
 
-def clippy [] {
+def clippy-watch [] {
     cargo fix --allow-dirty --allow-staged
     cargo fmt --all
     cargo watch -x 'clippy --fix --allow-dirty --allow-staged' -c -q
 }
 
+def clippy [] {
+    for folder in ($workspace_folders) {
+        cd $folder
+        print $'(ansi magenta)≡ Running cargo clippy in ($folder) .. ≡(ansi reset)'
+        cargo fix --allow-dirty --allow-staged
+        cargo fmt --all
+        cd ..
+    }
+}
+
 def docs [] {
-    let folders = ["core", "macro", "redux", "tui"]
-    for folder in $folders {
+    for folder in $workspace_folders {
         cd $folder
         print $'(ansi magenta)≡ Running cargo doc in ($folder) .. ≡(ansi reset)'
         cargo doc
@@ -153,8 +256,7 @@ def serve-docs [] {
 }
 
 def upgrade-deps [] {
-    let folders = ["core", "macro", "redux", "tui"]
-    for folder in $folders {
+    for folder in $workspace_folders {
         cd $folder
         print $'(ansi magenta)≡ Upgrading ($folder) .. ≡(ansi reset)'
         cargo outdated --workspace --verbose
@@ -165,8 +267,7 @@ def upgrade-deps [] {
 }
 
 def rustfmt [] {
-    let folders = ["core", "macro", "redux", "tui"]
-    for folder in $folders {
+    for folder in $workspace_folders {
         cd $folder
         print $'(ansi magenta)≡ Running cargo fmt --all in ($folder) .. ≡(ansi reset)'
         cargo fmt --all
@@ -174,16 +275,11 @@ def rustfmt [] {
     }
 }
 
-def run-release [] {
-    cd tui
-    cargo run --release --example demo
-    cd ..
-}
-
 def run-with-crash-reporting [] {
     cd tui
     cargo run --example demo out+err> | tee crash_log.txt
     cd ..
+    code -n tui/crash_log.txt
 }
 
 def log [] {
@@ -196,6 +292,5 @@ def log [] {
 }
 
 def check-licenses [] {
-    cargo install cargo-deny
     cargo deny check licenses
 }
