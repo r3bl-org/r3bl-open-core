@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-pub mod copy_to_clipboard {
+pub mod clipboard_context {
     use clipboard::{self, ClipboardContext, ClipboardProvider};
     use crossterm::style::Stylize;
     use r3bl_rs_utils_core::{call_if_true,
@@ -65,6 +65,42 @@ pub mod copy_to_clipboard {
         }
     }
 
+    pub fn paste_clipboard_text(args: EditorArgsMut<'_>) {
+        match try_paste_from_clipboard() {
+            Ok(clipboard_text) => {
+                call_if_true!(DEBUG_TUI_COPY_PASTE, {
+                    log_debug(
+                        format!(
+                            "\n📋📋📋 Text was pasted from clipboard: \n{0}",
+                            /* 0 */
+                            clipboard_text.clone().dark_red()
+                        )
+                        .black()
+                        .on_green()
+                        .to_string(),
+                    )
+                });
+                EditorEngineInternalApi::insert_str_at_caret(
+                    args,
+                    &clipboard_text.clone(),
+                );
+            }
+            Err(error) => {
+                call_if_true!(DEBUG_TUI_COPY_PASTE, {
+                    log_debug(
+                        format!(
+                            "\n📋📋📋 Failed to paste the text from clipboard: {0}",
+                            /* 0 */
+                            format!("{error}").white(),
+                        )
+                        .on_dark_red()
+                        .to_string(),
+                    )
+                });
+            }
+        }
+    }
+
     /// Wrap the call to the clipboard crate, so it returns a [CommonResult]. This is due
     /// to the requirement to call `unwrap()` on the [ClipboardContext] object.
     fn try_copy_to_clipboard(vec_str: &[&str]) -> CommonResult<()> {
@@ -86,5 +122,13 @@ pub mod copy_to_clipboard {
         });
 
         Ok(())
+    }
+
+    /// Wrap the call to the clipboard crate, so it returns a [CommonResult]. This is due
+    /// to the requirement to call `unwrap()` on the [ClipboardContext] object.
+    fn try_paste_from_clipboard() -> CommonResult<String> {
+        let mut context: ClipboardContext = ClipboardProvider::new().unwrap();
+        let content = context.get_contents().unwrap();
+        Ok(content)
     }
 }

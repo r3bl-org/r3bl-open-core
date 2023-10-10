@@ -43,6 +43,7 @@ pub enum EditorEvent {
     Resize(Size),
     Select(SelectionScope),
     Copy,
+    Paste,
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -118,11 +119,16 @@ impl TryFrom<&InputEvent> for EditorEvent {
                 mask: ModifierKeysMask::SHIFT,
             }) => Ok(EditorEvent::Select(SelectionScope::End)),
 
-            //  Copying Events
+            //  Clipboard events.
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::Character('c'),
                 mask: ModifierKeysMask::CTRL,
             }) => Ok(EditorEvent::Copy),
+
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::Character('v'),
+                mask: ModifierKeysMask::CTRL,
+            }) => Ok(EditorEvent::Paste),
 
             // Other events.
             InputEvent::Keyboard(KeyPress::Plain {
@@ -342,6 +348,12 @@ impl EditorEvent {
 
             EditorEvent::Copy => {
                 EditorEngineInternalApi::copy_selection(editor_buffer);
+            }
+            EditorEvent::Paste => {
+                EditorEngineInternalApi::paste_clipboard_text(EditorArgsMut {
+                    editor_buffer,
+                    editor_engine,
+                });
             }
         };
     }
