@@ -548,7 +548,7 @@ mod caret_mut {
         match select_mode {
             SelectMode::Enabled => {
                 let caret = editor_buffer.get_caret(CaretKind::ScrollAdjusted);
-                for _ in ch!(0)..caret.col_index {
+                for _ in 0..caret.col_index.value {
                     left(editor_buffer, editor_engine, select_mode);
                 }
             }
@@ -583,7 +583,7 @@ mod caret_mut {
                     editor_buffer,
                     editor_engine,
                 );
-                for _ in caret.col_index..line_display_width {
+                for _ in caret.col_index.value..line_display_width.value {
                     right(editor_buffer, editor_engine, select_mode);
                 }
             }
