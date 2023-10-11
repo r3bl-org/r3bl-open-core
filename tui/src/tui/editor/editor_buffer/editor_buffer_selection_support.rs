@@ -425,7 +425,7 @@ impl EditorBufferApi {
             //   C0123456789
             // ```
             CaretMovementDirection::Up => {
-                for row_index in current.row_index..previous.row_index {
+                for row_index in current.row_index.value..previous.row_index.value {
                     let current_row_index = row_index;
                     let previous_row_index = row_index + 1;
                     Self::handle_two_lines(
@@ -443,7 +443,7 @@ impl EditorBufferApi {
             //   C0123456789
             // ```
             CaretMovementDirection::Down => {
-                for row_index in previous.row_index..current.row_index {
+                for row_index in previous.row_index.value..current.row_index.value {
                     let previous_row_index = row_index;
                     let current_row_index = row_index + 1;
                     Self::handle_two_lines(
