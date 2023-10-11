@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_rs_utils_core"
-version = "0.9.3"
+version = "0.9.4"
 edition = "2021"
 description = """
 Helper crate for proc-macro library for reading attributes into structs when
@@ -22,40 +22,40 @@ path = "src/lib.rs"
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-tokio = { version = "1.27.0", features = ["full"] }
-async-trait = "0.1.68"
+tokio = { version = "1.33.0", features = ["full"] }
+async-trait = "0.1.73"
 ansi_term = "0.12.1"
 
 # https://github.com/serde-rs/serde.
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { version = "1.0.188", features = ["derive"] }
+serde_json = "1.0.107"
 
 # Crossterm & EventStream support.
-crossterm = { version = "0.26.1", features = ["event-stream"] }
+crossterm = { version = "0.27.0", features = ["event-stream"] }
 futures-util = "0.3.28"
-paste = "1.0.12"
+paste = "1.0.14"
 
 # Unicode, grapheme clusters.
-unicode-width = "0.1.10"
+unicode-width = "0.1.11"
 unicode-segmentation = "1.10.1"
 
 # For lolcat.
 rand = "0.8.5"
-is-terminal = "0.4.7"
+is-terminal = "0.4.9"
 
 # get-size.
-get-size = { version = "^0.1", features = ["derive"] }
+get-size = { version = "0.1.4", features = ["derive"] }
 
 # Logging
-log = "0.4.17"
+log = "0.4.20"
 simplelog = "0.12.1"
 
 # Time
-chrono = "0.4.24"
-time = "0.3.20"
+chrono = "0.4.31"
+time = "0.3.29"
 
 # Syntax highlighting.
-syntect = "5.0.0"
+syntect = "5.1.0"
 
 # nom parser combinator.
 nom = "7.1.3"
@@ -64,4 +64,4 @@ nom = "7.1.3"
 r3bl_ansi_color = "0.6.7"
 
 # for assert_eq! macro
-pretty_assertions = "1.3.0"
+pretty_assertions = "1.4.0"
