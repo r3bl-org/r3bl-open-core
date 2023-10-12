@@ -44,10 +44,6 @@
 //! of terminal color output limitations of each. For eg, it uses Windows API on Windows for
 //! keyboard input. And on macOS Terminal.app it restricts color output to a 256 color palette.
 //!
-//! > Currently only single selection is implemented. An issue is open to add this
-//! > feature: <https://github.com/r3bl-org/r3bl_rs_utils/issues> if you would like to
-//! > [contribute](https://github.com/r3bl-org/r3bl_rs_utils/contribute).
-//!
 //! ```rust
 //! use r3bl_rs_utils_core::*;
 //! use r3bl_tuify::*;
@@ -106,10 +102,6 @@
 //!   selected item.
 //! 1. `-t` or `--tui-height` - Optionally allows you to set the height of the TUI. The
 //!   default is 5.
-//!
-//! > Currently only single selection is implemented. An issue is open to add this
-//! > feature: <https://github.com/r3bl-org/r3bl_rs_utils/issues> if you would like to
-//! > [contribute](https://github.com/r3bl-org/r3bl_rs_utils/contribute).
 //!
 //! ### Interactive user experience
 //! <a id="markdown-interactive-user-experience" name="interactive-user-experience"></a>
