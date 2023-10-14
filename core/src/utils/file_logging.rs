@@ -24,8 +24,7 @@
 use std::{fs::File, sync::Once};
 
 use chrono::Local;
-use log::LevelFilter;
-use simplelog::*;
+use r3bl_simple_logger::*;
 use time::UtcOffset;
 
 use crate::*;
@@ -197,7 +196,6 @@ pub fn log_error(arg: String) {
 ///
 /// - Log
 ///   - [`CombinedLogger`], [`WriteLogger`], [`ConfigBuilder`]
-///   - <https://github.com/drakulix/simplelog.rs>
 /// - `format_description!`: <https://time-rs.github.io/book/api/format-description.html>
 pub fn init_file_logger_once() -> CommonResult<()> {
     unsafe {

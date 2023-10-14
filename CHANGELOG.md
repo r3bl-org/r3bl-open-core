@@ -4,7 +4,10 @@
 
 <!-- TOC -->
 
+- [r3bl_simple_logger](#r3bl_simple_logger)
+  - [v0.1.0 2023-10-14](#v010-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [Next release](#next-release)
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
@@ -15,10 +18,24 @@
 
 <!-- /TOC -->
 
+## `r3bl_simple_logger`
+<a id="markdown-r3bl_simple_logger" name="r3bl_simple_logger"></a>
+
+### v0.1.0 (2023-10-14)
+<a id="markdown-v0.1.0-2023-10-14" name="v0.1.0-2023-10-14"></a>
+
+- Added:
+  - First changelog entry. This crate is a fork of the
+    [`simplelog`](https://crates.io/crates/simplelog) repo w/ conditional compilation
+    (feature flags) removed. This crate was causing transitive dependency issues in
+    upstream repos that added `r3bl_tuify` as a dependency. Here's a link to the related
+    [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/160).
+
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
 ### Next release
+<a id="markdown-next-release" name="next-release"></a>
 
 - Fixed:
     - Main event loop was actually doing the wrong thing and blocking on the thread. Even though it

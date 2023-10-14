@@ -1,0 +1,23 @@
+[package]
+name = "r3bl_simple_logger"
+version = "0.1.0"
+edition = "2021"
+readme = "README.md"
+
+description = "Replacement for the simplelog crate, which is simpler and has clearer dependencies."
+# At most 5 keywords w/ no spaces, each has max length of 20 char.
+keywords = ["logging", "log", "filelog", "tui", "cli"]
+categories = ["command-line-interface", "command-line-utilities"]
+
+# Email address(es) has to be verified at https://crates.io/me/
+authors = ["Nazmul Idris <idris@developerlife.com>"]
+repository = "https://github.com/r3bl-org/r3bl_rs_utils/tree/main/simple_logger"
+documentation = "https://docs.rs/r3bl_simple_logger"
+homepage = "https://r3bl.com"
+license = "Apache-2.0"
+
+[dependencies]
+log = { version = "0.4.20", features = ["std"] }
+time = { version = "0.3.29", features = ["formatting", "macros"] }
+termcolor = "1.3.0"
+ansi_term = "0.12.1"

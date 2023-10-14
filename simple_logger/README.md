@@ -1,0 +1,1 @@
+This is a fork & rewrite of the https://github.com/drakulix/simplelog.rs repo.

@@ -3,7 +3,12 @@ name = "r3bl_rs_utils"
 description = "Async Redux library, TUI framework, and useful types"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["tui", "color", "terminal", "redux", "non-binary-tree"]
-categories = ["command-line-interface", "command-line-utilities", "algorithms", "data-structures"]
+categories = [
+  "command-line-interface",
+  "command-line-utilities",
+  "algorithms",
+  "data-structures",
+]
 # When you change this, make sure to update `README.md` as well.
 version = "0.9.8"
 edition = "2021"
@@ -24,16 +29,11 @@ path = "src/lib.rs"
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-
 # r3bl_rs_utils
-r3bl_rs_utils_core = { version = "0.9.3", path = "core" }
-r3bl_rs_utils_macro = { version = "0.9.3", path = "macro" }
-r3bl_tui = { version = "0.3.4", path = "tui" }
-r3bl_redux = { version = "0.2.3", path = "redux" }
-
-# Logging
-log = "0.4.17"
-simplelog = "0.12.1"
+r3bl_rs_utils_core = { path = "core" }
+r3bl_rs_utils_macro = { path = "macro" }
+r3bl_tui = { path = "tui" }
+r3bl_redux = { path = "redux" }
 
 # Time
 chrono = "0.4.24"
@@ -80,5 +80,12 @@ pretty_assertions = "1.3.0"
 
 # https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html#creating-the-second-package-in-the-workspace
 [workspace]
-members = ["ansi_color", "tuify", "macro", "core", "redux", "tui"]
-
+members = [
+  "ansi_color",
+  "simple_logger",
+  "core",
+  "tuify",
+  "macro",
+  "redux",
+  "tui",
+]

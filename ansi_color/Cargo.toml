@@ -9,7 +9,7 @@ categories = ["command-line-interface", "command-line-utilities"]
 version = "0.6.7"
 
 edition = "2021"
-readme = "README.md" # This is not included in cargo docs.
+readme = "README.md"                                                          # This is not included in cargo docs.
 authors = ["Nazmul Idris <idris@developerlife.com>"]
 repository = "https://github.com/r3bl-org/r3bl_rs_utils/tree/main/ansi_color"
 documentation = "https://docs.rs/r3bl_ansi_color"

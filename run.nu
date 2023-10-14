@@ -18,7 +18,9 @@
 #     - coming from bash: https://www.nushell.sh/book/coming_from_bash.html
 #     - thinking in nu: https://www.nushell.sh/book/thinking_in_nu.html
 
-let workspace_folders = ["core", "macro", "redux", "tui", "tuify", "ansi_color"]
+let workspace_folders = [
+    "core", "macro", "redux", "tui", "tuify", "ansi_color", "simple_logger"
+]
 
 # Main entry point for the script.
 def main [...args: string] {
@@ -173,6 +175,8 @@ def print-help [command: string] {
 }
 
 def install-cargo-tools [] {
+    cargo install bacon
+    cargo install cargo-workspaces
     cargo install cargo-cache
     cargo install cargo-watch
     cargo install flamegraph
@@ -260,8 +264,7 @@ def upgrade-deps [] {
         cd $folder
         print $'(ansi magenta)≡ Upgrading ($folder) .. ≡(ansi reset)'
         cargo outdated --workspace --verbose
-        cargo upgrade --to-lockfile --verbose
-        cargo update
+        cargo upgrade --verbose
         cd ..
     }
 }
