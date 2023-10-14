@@ -55,11 +55,15 @@ mod grapheme_cluster_segment_impl {
     }
 
     impl From<&str> for GraphemeClusterSegment {
-        fn from(s: &str) -> Self { GraphemeClusterSegment::new(s) }
+        fn from(s: &str) -> Self {
+            GraphemeClusterSegment::new(s)
+        }
     }
 
     impl From<String> for GraphemeClusterSegment {
-        fn from(s: String) -> Self { GraphemeClusterSegment::new(&s) }
+        fn from(s: String) -> Self {
+            GraphemeClusterSegment::new(&s)
+        }
     }
 }
 
@@ -126,10 +130,14 @@ mod unicode_string_impl {
     impl Deref for UnicodeString {
         type Target = Vec<GraphemeClusterSegment>;
 
-        fn deref(&self) -> &Self::Target { &self.vec_segment }
+        fn deref(&self) -> &Self::Target {
+            &self.vec_segment
+        }
     }
 
     impl DerefMut for UnicodeString {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.vec_segment }
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.vec_segment
+        }
     }
 }

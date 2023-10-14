@@ -6,7 +6,7 @@ description = "TUI library inspired by Redux, Redux, Flexbox, CSS, editor compon
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["tui", "editor", "terminal", "redux", "color"]
 categories = ["command-line-interface", "command-line-utilities"]
-readme = "README.md" # This is not included in cargo docs.
+readme = "README.md"                                              # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/
 authors = ["Nazmul Idris <idris@developerlife.com>"]
 repository = "https://github.com/r3bl-org/r3bl_rs_utils/tree/main/tui"
@@ -22,13 +22,10 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl_rs_utils
-r3bl_rs_utils_core = { version = "0.9.3", path = "../core" }
-r3bl_rs_utils_macro = { version = "0.9.3", path = "../macro" }
-r3bl_redux = { version = "0.2.3", path = "../redux" }
-
-# Logging
-log = "0.4.17"
-simplelog = "0.12.1"
+r3bl_rs_utils_core = { path = "../core" }
+r3bl_rs_utils_macro = { path = "../macro" }
+r3bl_redux = { path = "../redux" }
+log = { version = "0.4.20", features = ["std"] } # Logging.
 
 # Time
 chrono = "0.4.24"

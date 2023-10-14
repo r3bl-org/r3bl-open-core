@@ -21,15 +21,16 @@ name = "rt"
 path = "src/main.rs"
 
 [dependencies]
+# r3bl_rs_utils
+r3bl_ansi_color = { path = "../ansi_color" }
+r3bl_rs_utils_core = { path = "../core" }
+
 # Terminal output.
 crossterm = "0.27.0"
-r3bl_ansi_color = "0.6.7"
-r3bl_rs_utils_core = "0.9.4"
 
 # Logging.
-log = "0.4.20"
-simplelog = "0.12.1"
 is-terminal = "0.4.9"
+log = { version = "0.4.20", features = ["std"] }
 
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
