@@ -60,8 +60,8 @@ cd core
 # Update cargo.toml version number manually
 cargo build
 git add -A
-git commit -m "v0.9.3-core"
-git tag -a v0.9.3-core -m "v0.9.3-core"
+git commit -m "v0.9.5-core"
+git tag -a v0.9.5-core -m "v0.9.5-core"
 cd ..
 
 cd macro

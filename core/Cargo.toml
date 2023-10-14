@@ -1,10 +1,10 @@
 [package]
 name = "r3bl_rs_utils_core"
-version = "0.9.4"
+version = "0.9.5"
 edition = "2021"
 description = """
-Helper crate for proc-macro library for reading attributes into structs when
-implementing custom derives. Use https://crates.io/crates/r3bl_rs_utils in your code.
+Helper crate for r3bl_tui and r3bl_tuify implementing custom derives
+to use https://crates.io/crates/r3bl_rs_utils as a dependency.
 """
 # Email address(es) has to be verified at https://crates.io/me/
 authors = ["Nazmul Idris <idris@developerlife.com>"]
