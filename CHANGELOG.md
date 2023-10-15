@@ -61,7 +61,7 @@
 
 ## `r3bl_rs_utils_macro`
 
-### v0.9.4 (2023-10-14)
+### v0.9.5 (2023-10-14)
 
 - Updated:
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
