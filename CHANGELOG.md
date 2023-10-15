@@ -6,14 +6,14 @@
 
 - [r3bl_simple_logger](#r3bl_simple_logger)
   - [v0.1.0 2023-10-14](#v010-2023-10-14)
+- [r3bl_rs_utils_core](#r3bl_rs_utils_core)
+  - [v0.9.5 2023-10-14](#v095-2023-10-14)
+  - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [r3bl_tui](#r3bl_tui)
   - [Next release](#next-release)
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
-- [r3bl_rs_utils_core](#r3bl_rs_utils_core)
-  - [v0.9.5 2023-10-14](#v095-2023-10-14)
-  - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [More info on changelogs](#more-info-on-changelogs)
 
 <!-- /TOC -->
@@ -30,6 +30,42 @@
     (feature flags) removed. This crate was causing transitive dependency issues in
     upstream repos that added `r3bl_tuify` as a dependency. Here's a link to the related
     [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/160).
+
+## `r3bl_rs_utils_core`
+<a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
+
+
+### v0.9.5 (2023-10-14)
+<a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
+
+- Updated:
+  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
+    `r3bl_rs_utils` repo workspace as `simple_logger`).
+  - `TuiColor` has a few new variants. They can be `RgbValue`, `AnsiValue`, or `ANSIBasicColor`. It
+    is safe to use just `RgbValue` since the library will degrade gracefully to ANSI 256 or
+    grayscale based on terminal emulator capabilities at runtime (provided by `to_crossterm_color()`
+    and `ColorSupport`). If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not
+    be downgraded.
+
+
+### v0.9.1 (2023-03-06)
+<a id="markdown-v0.9.1-2023-03-06" name="v0.9.1-2023-03-06"></a>
+
+- Added:
+  - First changelog entry.
+  - Move lolcat into `tui_core` crate.
+- Removed:
+  - ANSI escape sequences are no longer used internally in any intermediate format used by the TUI
+    engine. It is reserved exclusively for output to stdout using (for now) crossterm. This opens
+    the door for future support for GUI app (not just terminal emulators).
+
+## `r3bl_rs_utils_macro`
+
+### v0.9.4 (2023-10-14)
+
+- Updated:
+  - Change dependency on all workspace crates to be locally resolved without going to
+    [crates.io](https://crates.io).
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
@@ -111,35 +147,6 @@
 - Changed:
   - The first demo example (`ex_app_no_layout`) now has support for animation. It automatically
     increments the state every second and the gradient color wheel is updated accordingly.
-
-## `r3bl_rs_utils_core`
-<a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
-
-
-### v0.9.5 (2023-10-14)
-<a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
-
-- Updated:
-  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
-    `r3bl_rs_utils` repo workspace as `simple_logger`).
-  - `TuiColor` has a few new variants. They can be `RgbValue`, `AnsiValue`, or `ANSIBasicColor`. It
-    is safe to use just `RgbValue` since the library will degrade gracefully to ANSI 256 or
-    grayscale based on terminal emulator capabilities at runtime (provided by `to_crossterm_color()`
-    and `ColorSupport`). If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not
-    be downgraded.
-
-
-### v0.9.1 (2023-03-06)
-<a id="markdown-v0.9.1-2023-03-06" name="v0.9.1-2023-03-06"></a>
-
-
-- Added:
-  - First changelog entry.
-  - Move lolcat into `tui_core` crate.
-- Removed:
-  - ANSI escape sequences are no longer used internally in any intermediate format used by the TUI
-    engine. It is reserved exclusively for output to stdout using (for now) crossterm. This opens
-    the door for future support for GUI app (not just terminal emulators).
 
 ## More info on changelogs
 <a id="markdown-more-info-on-changelogs" name="more-info-on-changelogs"></a>

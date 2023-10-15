@@ -3,8 +3,8 @@ name = "r3bl_rs_utils_core"
 version = "0.9.5"
 edition = "2021"
 description = """
-Helper crate for r3bl_tui and r3bl_tuify implementing custom derives
-to use https://crates.io/crates/r3bl_rs_utils as a dependency.
+Helper crate for r3bl_tui and r3bl_tuify crates.
+Used by workspace in https://crates.io/crates/r3bl_rs_utils.
 """
 # Email address(es) has to be verified at https://crates.io/me/
 authors = ["Nazmul Idris <idris@developerlife.com>"]

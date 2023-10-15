@@ -68,8 +68,8 @@ cd macro
 # Update cargo.toml version number manually
 cargo build
 git add -A
-git commit -m "v0.9.3-macro"
-git tag -a v0.9.3-macro -m "v0.9.3-macro"
+git commit -m "v0.9.4-macro"
+git tag -a v0.9.4-macro -m "v0.9.4-macro"
 cd ..
 
 cd redux

@@ -1,10 +1,10 @@
 [package]
 name = "r3bl_rs_utils_macro"
-version = "0.9.3"
+version = "0.9.4"
 edition = "2021"
 description = """
 Internal support for a proc-macro library for reading attributes into structs when
-implementing custom derives. Use https://crates.io/crates/r3bl_rs_utils in your code.
+implementing custom derives. Used by workspace in https://crates.io/crates/r3bl_rs_utils.
 """
 # Email address(es) has to be verified at https://crates.io/me/
 authors = ["Nazmul Idris <idris@developerlife.com>"]
@@ -26,7 +26,12 @@ path = "src/lib.rs"
 r3bl_rs_utils_core = { version = "0.9.3", path = "../core" }
 
 # https://github.com/dtolnay/proc-macro-workshop#debugging-tips
-syn = { version = "1.0.109", features = ["extra-traits", "full", "derive", "parsing"] }
+syn = { version = "1.0.109", features = [
+  "extra-traits",
+  "full",
+  "derive",
+  "parsing",
+] }
 quote = "1.0.26"
 proc-macro2 = "1.0.56"
 
