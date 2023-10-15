@@ -5,7 +5,7 @@ description = "Async Redux library, TUI framework, and useful types"
 keywords = ["tui", "color", "terminal", "redux", "non-binary-tree"]
 categories = [
   "command-line-interface",
-  "command-line-utilities",
+  "command-line-utiliti`es",
   "algorithms",
   "data-structures",
 ]

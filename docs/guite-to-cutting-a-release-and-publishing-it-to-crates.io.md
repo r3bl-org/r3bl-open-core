@@ -76,8 +76,8 @@ cd redux
 # Update cargo.toml version number manually
 cargo build
 git add -A
-git commit -m "v0.2.3-redux"
-git tag -a v0.2.3-redux -m "v0.2.3-redux"
+git commit -m "v0.2.4-redux"
+git tag -a v0.2.4-redux -m "v0.2.4-redux"
 cd ..
 
 cd tui
