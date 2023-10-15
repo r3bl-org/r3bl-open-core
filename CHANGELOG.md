@@ -97,9 +97,12 @@
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
-### Next release
+### v0.3.5 (2023-10-14)
 <a id="markdown-next-release" name="next-release"></a>
 
+- Added:
+  - Support for selecting text using keyboard.
+  - Support for copying text to clipboard using keyboard.
 - Fixed:
     - Main event loop was actually doing the wrong thing and blocking on the thread. Even though it
       accepted an input event asynchronously using `AsyncEventStream` (`EventStream` is provided by
