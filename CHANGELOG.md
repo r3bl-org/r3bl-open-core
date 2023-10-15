@@ -64,8 +64,8 @@
 ### v0.9.4 (2023-10-14)
 
 - Updated:
-  - Change dependency on all workspace crates to be locally resolved without going to
-    [crates.io](https://crates.io).
+  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
+    `r3bl_rs_utils` repo workspace as `simple_logger`).
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
