@@ -67,6 +67,15 @@
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
     `r3bl_rs_utils` repo workspace as `simple_logger`).
 
+## `r3bl_rs_utils_redux`
+
+### v0.2.4 (2023-10-14)
+
+- Updated:
+  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
+    `r3bl_rs_utils` repo workspace as `simple_logger`).
+
+
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 

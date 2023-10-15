@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_redux"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 description = "Redux library built using Tokio, concurrent & parallel"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
@@ -22,8 +22,8 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl_rs_utils
-r3bl_rs_utils_core = { path = "../core" }
-r3bl_rs_utils_macro = { path = "../macro" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.5" }
+r3bl_rs_utils_macro = { path = "../macro", version = "0.9.5" }
 
 # Time
 chrono = "0.4.24"
