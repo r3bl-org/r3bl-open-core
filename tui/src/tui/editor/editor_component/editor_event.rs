@@ -347,13 +347,18 @@ impl EditorEvent {
             },
 
             EditorEvent::Copy => {
-                EditorEngineInternalApi::copy_selection(editor_buffer);
-            }
-            EditorEvent::Paste => {
-                EditorEngineInternalApi::paste_clipboard_text(EditorArgsMut {
+                EditorEngineInternalApi::copy_editor_selection_to_clipboard(
                     editor_buffer,
-                    editor_engine,
-                });
+                );
+            }
+
+            EditorEvent::Paste => {
+                EditorEngineInternalApi::paste_clipboard_content_into_editor(
+                    EditorArgsMut {
+                        editor_buffer,
+                        editor_engine,
+                    },
+                )
             }
         };
     }
