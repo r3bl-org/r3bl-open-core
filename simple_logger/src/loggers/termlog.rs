@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2023 Nazmul Idris
+ *   Copyright (c) 2023 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,8 @@
 //! Module providing the TermLogger Implementation
 
 use log::{
-    set_boxed_logger, set_max_level, Level, LevelFilter, Log, Metadata, Record, SetLoggerError,
+    set_boxed_logger, set_max_level, Level, LevelFilter, Log, Metadata, Record,
+    SetLoggerError,
 };
 use std::io::{Error, Write};
 use std::sync::Mutex;
@@ -88,7 +89,7 @@ impl TermLogger {
     /// allows to create a new logger, that can be independently used, no matter whats globally set.
     ///
     /// no macros are provided for this case and you probably
-    /// dont want to use this function, but `init()`, if you dont want to build a `CombinedLogger`.
+    /// don't want to use this function, but `init()`, if you don't want to build a `CombinedLogger`.
     ///
     /// Takes the desired `Level` and `Config` as arguments. They cannot be changed later on.
     ///
@@ -149,7 +150,8 @@ impl TermLogger {
             write_level(record, term_lock, &self.config)?;
         }
 
-        if self.config.thread <= record.level() && self.config.thread != LevelFilter::Off {
+        if self.config.thread <= record.level() && self.config.thread != LevelFilter::Off
+        {
             match self.config.thread_log_mode {
                 ThreadLogMode::IDs => {
                     write_thread_id(term_lock, &self.config)?;
@@ -160,15 +162,19 @@ impl TermLogger {
             }
         }
 
-        if self.config.target <= record.level() && self.config.target != LevelFilter::Off {
+        if self.config.target <= record.level() && self.config.target != LevelFilter::Off
+        {
             write_target(record, term_lock, &self.config)?;
         }
 
-        if self.config.location <= record.level() && self.config.location != LevelFilter::Off {
+        if self.config.location <= record.level()
+            && self.config.location != LevelFilter::Off
+        {
             write_location(record, term_lock)?;
         }
 
-        if self.config.module <= record.level() && self.config.module != LevelFilter::Off {
+        if self.config.module <= record.level() && self.config.module != LevelFilter::Off
+        {
             write_module(record, term_lock)?;
         }
 

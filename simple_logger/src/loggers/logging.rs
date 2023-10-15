@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2023 Nazmul Idris
+ *   Copyright (c) 2023 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,7 +37,11 @@ pub fn termcolor_to_ansiterm(color: &Color) -> Option<ansi_term::Color> {
 }
 
 #[inline(always)]
-pub fn try_log<W>(config: &Config, record: &Record<'_>, write: &mut W) -> Result<(), Error>
+pub fn try_log<W>(
+    config: &Config,
+    record: &Record<'_>,
+    write: &mut W,
+) -> Result<(), Error>
 where
     W: Write + Sized,
 {
@@ -104,7 +108,11 @@ where
 }
 
 #[inline(always)]
-pub fn write_level<W>(record: &Record<'_>, write: &mut W, config: &Config) -> Result<(), Error>
+pub fn write_level<W>(
+    record: &Record<'_>,
+    write: &mut W,
+    config: &Config,
+) -> Result<(), Error>
 where
     W: Write + Sized,
 {
@@ -134,7 +142,11 @@ where
 }
 
 #[inline(always)]
-pub fn write_target<W>(record: &Record<'_>, write: &mut W, config: &Config) -> Result<(), Error>
+pub fn write_target<W>(
+    record: &Record<'_>,
+    write: &mut W,
+    config: &Config,
+) -> Result<(), Error>
 where
     W: Write + Sized,
 {

@@ -15,11 +15,27 @@
  *   limitations under the License.
  */
 
-//! Note that, although read and write methods require a `&mut File`, because of the interfaces for
-//! `Read` and `Write`, the holder of a `&File` can still modify the file, either through methods
-//! that take `&File` or by retrieving the underlying OS object and modifying the file that way.
-//! Additionally, many operating systems allow concurrent modification of files by different
-//! processes. Avoid assuming that holding a `&File` means that the file will not change.
+//! # How to log things, and simply use the logging facilities
+//!
+//! The simplest way to use this crate is to look at the [try_to_set_log_level] function
+//! as the main entry point. By default, logging is disabled even if you call all the
+//! functions in this module: [log_debug], [log_info], [log_trace], etc.
+//!
+//! Note that, although read and write methods require a `&mut File`, because of the
+//! interfaces for `Read` and `Write`, the holder of a `&File` can still modify the file,
+//! either through methods that take `&File` or by retrieving the underlying OS object and
+//! modifying the file that way. Additionally, many operating systems allow concurrent
+//! modification of files by different processes. Avoid assuming that holding a `&File`
+//! means that the file will not change.
+//!
+//! # How to change how logging is implemented under the hood
+//!
+//! Under the hood the [`simplelog`](https://crates.io/crates/simplelog) crate is forked
+//! and modified for use in the
+//! [r3bl_simple_logger](https://crates.io/crates/r3bl_simple_logger) crate. For people
+//! who want to work on changing the underlying behavior of the logging engine itself it
+//! is best to look in that crate and make changes there.
+//!
 
 use std::{fs::File, sync::Once};
 
@@ -36,27 +52,14 @@ static FILE_LOGGER_INIT_FN: Once = Once::new();
 
 const ENABLE_MULTITHREADED_LOG_WRITING: bool = false;
 
-/// If you want to override the default log file path (stored in [FILE_PATH]), you can use this
-/// function. If the logger has already been initialized, then it will return a
-/// [CommonErrorType::InvalidState] error.
+/// If you don't call this function w/ a value other than [LevelFilter::Off], then logging
+/// is **DISABLED** by **default**. It won't matter if you call any of the other logging
+/// functions in this module.
 ///
-/// If you would like to ignore the error just call `ok()` on the result that's returned. [More
-/// info](https://doc.rust-lang.org/std/result/enum.Result.html#method.ok).
-pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
-    unsafe {
-        match FILE_LOGGER_INIT_OK {
-            true => CommonError::new(
-                CommonErrorType::InvalidState,
-                "Logger already initialized, can't set log file path",
-            ),
-            false => {
-                FILE_PATH = path;
-                Ok(path.to_string())
-            }
-        }
-    }
-}
-
+/// It does not matter how many times you call this function, it will only set the log
+/// level once. If you want to change the default file that is used for logging take a
+/// look at [try_to_set_log_file_path].
+///
 /// If you want to override the default log level [LOG_LEVEL], you can use this function. If the
 /// logger has already been initialized, then it will return a [CommonErrorType::InvalidState]
 /// error. To disable logging simply set the log level to [LevelFilter::Off].
@@ -78,6 +81,31 @@ pub fn try_to_set_log_level(level: LevelFilter) -> CommonResult<String> {
     }
 }
 
+/// Please take a look at [try_to_set_log_level] to enable or disable logging.
+///
+/// If you want to override the default log file path (stored in [FILE_PATH]), you can use this
+/// function. If the logger has already been initialized, then it will return a
+/// [CommonErrorType::InvalidState] error.
+///
+/// If you would like to ignore the error just call `ok()` on the result that's returned. [More
+/// info](https://doc.rust-lang.org/std/result/enum.Result.html#method.ok).
+pub fn try_to_set_log_file_path(path: &'static str) -> CommonResult<String> {
+    unsafe {
+        match FILE_LOGGER_INIT_OK {
+            true => CommonError::new(
+                CommonErrorType::InvalidState,
+                "Logger already initialized, can't set log file path",
+            ),
+            false => {
+                FILE_PATH = path;
+                Ok(path.to_string())
+            }
+        }
+    }
+}
+
+/// Please take a look at [try_to_set_log_level] to enable or disable logging.
+///
 /// Log the message to the `INFO` log level using a file logger. There could be issues w/ accessing
 /// this file; if it fails this function will not propagate the log error.
 pub fn log_info(arg: String) {
@@ -100,6 +128,8 @@ pub fn log_info(arg: String) {
     }
 }
 
+/// Please take a look at [try_to_set_log_level] to enable or disable logging.
+///
 /// Log the message to the `DEBUG` log level using a file logger. There could be issues w/ accessing
 /// this file; if it fails this function will not propagate the log error.
 pub fn log_debug(arg: String) {
@@ -122,6 +152,8 @@ pub fn log_debug(arg: String) {
     }
 }
 
+/// Please take a look at [try_to_set_log_level] to enable or disable logging.
+///
 /// Log the message to the `WARN` log level using a file logger. There could be issues w/ accessing
 /// this file; if it fails this function will not propagate the log error.
 pub fn log_warn(arg: String) {
@@ -144,6 +176,8 @@ pub fn log_warn(arg: String) {
     }
 }
 
+/// Please take a look at [try_to_set_log_level] to enable or disable logging.
+///
 /// Log the message to the `TRACE` log level using a file logger. There could be issues w/ accessing
 /// this file; if it fails this function will not propagate the log error.
 pub fn log_trace(arg: String) {
@@ -166,6 +200,8 @@ pub fn log_trace(arg: String) {
     }
 }
 
+/// Please take a look at [try_to_set_log_level] to enable or disable logging.
+///
 /// Log the message to the `ERROR` log level using a file logger. There could be issues w/ accessing
 /// this file; if it fails this function will not propagate the log error.
 pub fn log_error(arg: String) {
@@ -197,7 +233,7 @@ pub fn log_error(arg: String) {
 /// - Log
 ///   - [`CombinedLogger`], [`WriteLogger`], [`ConfigBuilder`]
 /// - `format_description!`: <https://time-rs.github.io/book/api/format-description.html>
-pub fn init_file_logger_once() -> CommonResult<()> {
+fn init_file_logger_once() -> CommonResult<()> {
     unsafe {
         if LOG_LEVEL == LevelFilter::Off {
             FILE_LOGGER_INIT_OK = true;
