@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_tuify"
-version = "0.1.16"
+version = "0.1.17"
 edition = "2021"
 description = "Easily add lightweight TUI capabilities to any CLI apps"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
@@ -22,8 +22,8 @@ path = "src/main.rs"
 
 [dependencies]
 # r3bl_rs_utils
-r3bl_ansi_color = { path = "../ansi_color" }
-r3bl_rs_utils_core = { path = "../core" }
+r3bl_ansi_color = { path = "../ansi_color", version = "0.6.7" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.5" }
 
 # Terminal output.
 crossterm = "0.27.0"
