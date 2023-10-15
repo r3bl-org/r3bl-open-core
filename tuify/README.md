@@ -33,7 +33,9 @@ This crate can be used in two ways:
 
 Here's a demo of the library target of this crate in action.
 
-https://github-production-user-asset-6210df.s3.amazonaws.com/2966499/266504562-c6717052-780f-4ae0-8ecf-e57beca49929.mp4
+
+[![asciicast](https://asciinema.org/a/614462.svg)](https://asciinema.org/a/614462)
+
 
 The following example illustrates how you can use this as a library. The function that does the work
 of rendering the UI is called [`select_from_list`](crate::select_from_list). It takes a list of
