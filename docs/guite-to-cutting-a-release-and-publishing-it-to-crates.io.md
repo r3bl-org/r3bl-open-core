@@ -92,8 +92,8 @@ cd tui
 # Update cargo.toml version number manually
 cargo build
 git add -A
-git commit -m "v0.3.4-tui"
-git tag -a v0.3.4-tui -m "v0.3.4-tui"
+git commit -m "v0.3.5-tui"
+git tag -a v0.3.5-tui -m "v0.3.5-tui"
 cd ..
 
 # Update cargo.toml version number manually
