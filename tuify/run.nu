@@ -35,6 +35,7 @@ def main [...args: string] {
         "clean" => {clean}
         "run" => {run}
         "run-piped" => {run-piped}
+        "log" => {log}
         "test" => {test}
         "docs" => {docs}
         "clippy" => {clippy}
@@ -50,6 +51,15 @@ def main [...args: string] {
         "help" => {print-help all}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
     }
+}
+
+def log [] {
+    clear
+    if ('log.txt' | path exists) {
+        rm log.txt
+    }
+    touch log.txt
+    tail -f -s 5 log.txt
 }
 
 # Watch a single test. This expects the test name to be passed in as an argument.
@@ -109,6 +119,7 @@ def print-help [command: string] {
         print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)run(ansi reset)'
+        print $'    (ansi green)log(ansi reset)'
         print $'    (ansi green)run-with-flamegraph-profiling(ansi reset)'
         print $'    (ansi green)watch-run(ansi reset)'
         print $'    (ansi green)test(ansi reset)'

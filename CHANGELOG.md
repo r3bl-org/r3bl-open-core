@@ -5,12 +5,22 @@
 <!-- TOC -->
 
 - [r3bl_simple_logger](#r3bl_simple_logger)
+  - [Unreleased](#unreleased)
   - [v0.1.0 2023-10-14](#v010-2023-10-14)
+- [r3bl_ansi_color](#r3bl_ansi_color)
+  - [v0.6.7 2023-09-12](#v067-2023-09-12)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
+  - [Unreleased](#unreleased)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
+- [r3bl_tuify](#r3bl_tuify)
+  - [v0.1.17 2023-10-14](#v0117-2023-10-14)
+- [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
+  - [v0.9.5 2023-10-14](#v095-2023-10-14)
+- [r3bl_rs_utils_redux](#r3bl_rs_utils_redux)
+  - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
-  - [Next release](#next-release)
+  - [v0.3.5 2023-10-14](#v035-2023-10-14)
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
@@ -20,6 +30,13 @@
 
 ## `r3bl_simple_logger`
 <a id="markdown-r3bl_simple_logger" name="r3bl_simple_logger"></a>
+
+### Unreleased
+<a id="markdown-unreleased" name="unreleased"></a>
+
+- Added:
+  - Documentation for `r3bl_simple_logger` crate. And how to think about it vs. using log
+    facilities from the `r3bl_rs_utils_core` crate. Update docs there too.
 
 ### v0.1.0 (2023-10-14)
 <a id="markdown-v0.1.0-2023-10-14" name="v0.1.0-2023-10-14"></a>
@@ -32,8 +49,10 @@
     [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/160).
 
 ## `r3bl_ansi_color`
+<a id="markdown-r3bl_ansi_color" name="r3bl_ansi_color"></a>
 
 ### v0.6.7 (2023-09-12)
+<a id="markdown-v0.6.7-2023-09-12" name="v0.6.7-2023-09-12"></a>
 
 - Added:
   - Tests.
@@ -44,6 +63,13 @@
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
+
+### Unreleased
+<a id="markdown-unreleased" name="unreleased"></a>
+
+- Updated:
+  - Documentation for `r3bl_simple_logger` crate. And how to think about it vs. using log
+    facilities from the `r3bl_rs_utils_core` crate. Update docs there too.
 
 ### v0.9.5 (2023-10-14)
 <a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
@@ -70,24 +96,30 @@
     the door for future support for GUI app (not just terminal emulators).
 
 ## `r3bl_tuify`
+<a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
 ### v0.1.17 (2023-10-14)
+<a id="markdown-v0.1.17-2023-10-14" name="v0.1.17-2023-10-14"></a>
 
 - Updated:
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
     `r3bl_rs_utils` repo workspace as `simple_logger`).
 
 ## `r3bl_rs_utils_macro`
+<a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>
 
 ### v0.9.5 (2023-10-14)
+<a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
 
 - Updated:
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
     `r3bl_rs_utils` repo workspace as `simple_logger`).
 
 ## `r3bl_rs_utils_redux`
+<a id="markdown-r3bl_rs_utils_redux" name="r3bl_rs_utils_redux"></a>
 
 ### v0.2.4 (2023-10-14)
+<a id="markdown-v0.2.4-2023-10-14" name="v0.2.4-2023-10-14"></a>
 
 - Updated:
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
@@ -98,7 +130,7 @@
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
 ### v0.3.5 (2023-10-14)
-<a id="markdown-next-release" name="next-release"></a>
+<a id="markdown-v0.3.5-2023-10-14" name="v0.3.5-2023-10-14"></a>
 
 - Added:
   - Support for selecting text using keyboard.
