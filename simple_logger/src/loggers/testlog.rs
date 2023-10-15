@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2023 Nazmul Idris
+ *   Copyright (c) 2023 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,9 @@
 
 use super::logging::should_skip;
 use crate::{config::TimeFormat, Config, LevelPadding, SharedLogger};
-use log::{set_boxed_logger, set_max_level, LevelFilter, Log, Metadata, Record, SetLoggerError};
+use log::{
+    set_boxed_logger, set_max_level, LevelFilter, Log, Metadata, Record, SetLoggerError,
+};
 
 use std::thread;
 

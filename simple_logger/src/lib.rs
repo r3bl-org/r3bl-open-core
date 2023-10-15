@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2023 Nazmul Idris
+ *   Copyright (c) 2023 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,20 @@
  *   limitations under the License.
  */
 
+//! # How to log things, and simply use the logging facilities
+//!
+//! The simplest way to use this crate is to look at the
+//! [`r3bl_rs_utils_core::try_to_set_log_level`](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/utils/file_logging/fn.try_to_set_log_level.html)
+//! function in the `r3bl_rs_utils_core` crate as the main entry point. By default,
+//! logging is disabled even if you call all the functions in the `file_logger` module in
+//! that crate: `log_debug`, `log_info`, `log_trace`, etc.
+//!
+//! # How to change how logging is implemented under the hood
+//!
+//! Under the hood the [`simplelog`](https://crates.io/crates/simplelog) crate is forked
+//! and modified for use here. The following are details for people who want to work on
+//! changing the underlying behavior of the logging engine itself, and *not* for folks who
+//! just want to use this crate.
 //!
 //! `r3bl_simple_logger` provides a series of logging facilities, that can be easily combined.
 //!
@@ -27,9 +41,12 @@
 //! Only one Logger should be initialized of the start of your program
 //! through the `Logger::init(...)` method. For the actual calling syntax
 //! take a look at the documentation of the specific implementation(s) you wanna use.
-//!
 
-#![deny(missing_docs, rust_2018_idioms)]
+// https://github.com/rust-lang/rust-clippy
+// https://rust-lang.github.io/rust-clippy/master/index.html
+#![warn(clippy::all)]
+#![warn(clippy::unwrap_in_result)]
+#![warn(rust_2018_idioms)]
 
 mod config;
 mod loggers;
