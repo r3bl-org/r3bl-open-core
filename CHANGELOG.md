@@ -31,6 +31,16 @@
     upstream repos that added `r3bl_tuify` as a dependency. Here's a link to the related
     [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/160).
 
+## `r3bl_ansi_color`
+
+### v0.6.7 (2023-09-12)
+
+- Added:
+  - Tests.
+
+- Replace:
+  - `justfile` is now replaced with `nu` script `run.nu`.
+
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
@@ -58,6 +68,14 @@
   - ANSI escape sequences are no longer used internally in any intermediate format used by the TUI
     engine. It is reserved exclusively for output to stdout using (for now) crossterm. This opens
     the door for future support for GUI app (not just terminal emulators).
+
+## `r3bl_tuify`
+
+### v0.1.17 (2023-10-14)
+
+- Updated:
+  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
+    `r3bl_rs_utils` repo workspace as `simple_logger`).
 
 ## `r3bl_rs_utils_macro`
 

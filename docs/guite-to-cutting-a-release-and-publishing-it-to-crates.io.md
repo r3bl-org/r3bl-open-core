@@ -64,6 +64,14 @@ git commit -m "v0.9.5-core"
 git tag -a v0.9.5-core -m "v0.9.5-core"
 cd ..
 
+cd tuify
+# Update cargo.toml version number manually
+cargo build
+git add -A
+git commit -m "v0.1.17-tuify"
+git tag -a v0.1.17-tuify -m "v0.1.17-tuify"
+cd ..
+
 cd macro
 # Update cargo.toml version number manually
 cargo build
@@ -86,14 +94,6 @@ cargo build
 git add -A
 git commit -m "v0.3.4-tui"
 git tag -a v0.3.4-tui -m "v0.3.4-tui"
-cd ..
-
-cd tuify
-# Update cargo.toml version number manually
-cargo build
-git add -A
-git commit -m "v0.1.1-tuify"
-git tag -a v0.1.1-tuify -m "v0.1.1-tuify"
 cd ..
 
 # Update cargo.toml version number manually
