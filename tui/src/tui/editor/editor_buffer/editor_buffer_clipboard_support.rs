@@ -15,18 +15,16 @@
  *   limitations under the License.
  */
 
-pub mod clipboard_context {
-    use clipboard::{self, ClipboardContext, ClipboardProvider};
-    use crossterm::style::Stylize;
-    use r3bl_rs_utils_core::{call_if_true,
-                             ch,
-                             log_debug,
-                             ChUnit,
-                             CommonResult,
-                             UnicodeString};
+use crate::*;
+use clipboard::{self, ClipboardContext, ClipboardProvider};
+use crossterm::style::Stylize;
+use r3bl_rs_utils_core::{call_if_true, ch, log_debug, ChUnit, UnicodeString};
+use std::error::Error;
 
-    use crate::*;
-    pub fn copy_selection(buffer: &EditorBuffer) {
+pub mod clipboard_support {
+    use super::*;
+
+    pub fn copy(buffer: &EditorBuffer) {
         let lines: &Vec<UnicodeString> = buffer.get_lines();
         let selection_map = buffer.get_selection_map();
 
@@ -50,7 +48,7 @@ pub mod clipboard_context {
             }
         }
 
-        if let Err(error) = try_copy_to_clipboard(&vec_str) {
+        if let Err(error) = try_to_put_content_into_clipboard(&vec_str) {
             call_if_true!(DEBUG_TUI_COPY_PASTE, {
                 log_debug(
                     format!(
@@ -65,9 +63,14 @@ pub mod clipboard_context {
         }
     }
 
-    pub fn paste_clipboard_text(args: EditorArgsMut<'_>) {
-        match try_paste_from_clipboard() {
+    pub fn paste(args: EditorArgsMut<'_>) {
+        match try_to_get_content_from_clipboard() {
             Ok(clipboard_text) => {
+                EditorEngineInternalApi::insert_str_at_caret(
+                    args,
+                    clipboard_text.as_str(),
+                );
+
                 call_if_true!(DEBUG_TUI_COPY_PASTE, {
                     log_debug(
                         format!(
@@ -80,11 +83,8 @@ pub mod clipboard_context {
                         .to_string(),
                     )
                 });
-                EditorEngineInternalApi::insert_str_at_caret(
-                    args,
-                    &clipboard_text.clone(),
-                );
             }
+
             Err(error) => {
                 call_if_true!(DEBUG_TUI_COPY_PASTE, {
                     log_debug(
@@ -100,14 +100,19 @@ pub mod clipboard_context {
             }
         }
     }
+}
 
-    /// Wrap the call to the clipboard crate, so it returns a [CommonResult]. This is due
-    /// to the requirement to call `unwrap()` on the [ClipboardContext] object.
-    fn try_copy_to_clipboard(vec_str: &[&str]) -> CommonResult<()> {
-        let mut context: ClipboardContext = ClipboardProvider::new().unwrap();
+mod clipboard_helpers {
+    use super::*;
+
+    type ClipboardResult<T> = Result<T, Box<dyn Error>>;
+
+    /// Wrap the call to the clipboard crate, so it returns a [Result]. This is to avoid
+    /// calling `unwrap()` on the [ClipboardContext] object.
+    pub fn try_to_put_content_into_clipboard(vec_str: &[&str]) -> ClipboardResult<()> {
+        let mut context: ClipboardContext = ClipboardProvider::new()?;
         let content = vec_str.join("\n");
-        context.set_contents(content.clone()).unwrap();
-
+        context.set_contents(content.clone())?;
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
             log_debug(
                 format!(
@@ -120,15 +125,15 @@ pub mod clipboard_context {
                 .to_string(),
             )
         });
-
         Ok(())
     }
 
-    /// Wrap the call to the clipboard crate, so it returns a [CommonResult]. This is due
-    /// to the requirement to call `unwrap()` on the [ClipboardContext] object.
-    fn try_paste_from_clipboard() -> CommonResult<String> {
-        let mut context: ClipboardContext = ClipboardProvider::new().unwrap();
-        let content = context.get_contents().unwrap();
+    /// Wrap the call to the clipboard crate, so it returns a [Result]. This is to avoid
+    /// calling `unwrap()` on the [ClipboardContext] object.
+    pub fn try_to_get_content_from_clipboard() -> ClipboardResult<String> {
+        let mut context: ClipboardContext = ClipboardProvider::new()?;
+        let content = context.get_contents()?;
         Ok(content)
     }
 }
+use clipboard_helpers::*;

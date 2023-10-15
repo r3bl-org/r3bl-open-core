@@ -288,9 +288,11 @@ def run-with-crash-reporting [] {
 def log [] {
     clear
     cd tui
-    tail -f -s 5 log.txt
-    rm log.txt
+    if ('log.txt' | path exists) {
+        rm log.txt
+    }
     touch log.txt
+    tail -f -s 5 log.txt
     cd ..
 }
 
