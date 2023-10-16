@@ -23,6 +23,47 @@ use std::cmp::Ordering::Less;
 
 use crate::{Ansi256Color, RgbColor};
 
+/// This is copied from <https://github.com/main/r3bl_rs_utils/blob/grayscale/tui/src/tui/lolcat/color_utils.rs>
+pub mod color_utils {
+    pub fn linear_to_srgb(intensity: f64) -> f64 {
+        if intensity <= 0.003_130_8 {
+            12.92 * intensity
+        } else {
+            1.055 * intensity.powf(1.0 / 2.4) - 0.055
+        }
+    }
+
+    pub fn srgb_to_linear(intensity: f64) -> f64 {
+        if intensity < 0.04045 {
+            intensity / 12.92
+        } else {
+            ((intensity + 0.055) / 1.055).powf(2.4)
+        }
+    }
+
+    pub fn convert_grayscale(color: (u8, u8, u8)) -> (u8, u8, u8) {
+        // See https://en.wikipedia.org/wiki/Grayscale#Converting_color_to_grayscale
+        const SCALE: f64 = 256.0;
+
+        // Changing SRGB to Linear for gamma correction.
+        let red = srgb_to_linear(f64::from(color.0) / SCALE);
+        let green = srgb_to_linear(f64::from(color.1) / SCALE);
+        let blue = srgb_to_linear(f64::from(color.2) / SCALE);
+
+        // Converting to grayscale.
+        let gray_linear = red * 0.299 + green * 0.587 + blue * 0.114;
+
+        // Gamma correction.
+        let gray_srgb = linear_to_srgb(gray_linear);
+
+        (
+            (gray_srgb * SCALE) as u8,
+            (gray_srgb * SCALE) as u8,
+            (gray_srgb * SCALE) as u8,
+        )
+    }
+}
+
 pub fn convert_rgb_into_ansi256(rgb_color: RgbColor) -> Ansi256Color {
     let luminance_approximation: usize = calculate_luminance(rgb_color).into();
     let gray_ansi256_index: u8 = ANSI256_FROM_GRAY[luminance_approximation];
