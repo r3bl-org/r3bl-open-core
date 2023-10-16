@@ -32,6 +32,10 @@ pub trait TransformColor {
     /// Returns the index of a color in 256-color ANSI palette approximating the `self`
     /// color.
     fn as_ansi256(&self) -> Ansi256Color;
+
+    /// Returns the index of a color in 256-color ANSI palette approximating the `self`
+    /// color as grayscale.
+    fn as_grayscale(&self) -> Ansi256Color;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,6 +69,18 @@ mod color_impl {
                 Color::Ansi256(index) => Ansi256Color { index: *index },
             }
         }
+
+        fn as_grayscale(&self) -> Ansi256Color {
+            match self {
+                Color::Rgb(red, green, blue) => convert_rgb_into_ansi256(RgbColor {
+                    red: *red,
+                    green: *green,
+                    blue: *blue,
+                })
+                .as_grayscale(),
+                Color::Ansi256(index) => Ansi256Color { index: *index }.as_grayscale(),
+            }
+        }
     }
 }
 
@@ -80,9 +96,17 @@ mod rgb_color_impl {
     use crate::{convert_rgb_into_ansi256, Ansi256Color};
 
     impl TransformColor for RgbColor {
-        fn as_rgb(&self) -> RgbColor { *self }
+        fn as_rgb(&self) -> RgbColor {
+            *self
+        }
 
-        fn as_ansi256(&self) -> Ansi256Color { convert_rgb_into_ansi256(*self) }
+        fn as_ansi256(&self) -> Ansi256Color {
+            convert_rgb_into_ansi256(*self)
+        }
+
+        fn as_grayscale(&self) -> Ansi256Color {
+            convert_rgb_into_ansi256(*self).as_grayscale()
+        }
     }
 }
 
@@ -92,14 +116,27 @@ pub struct Ansi256Color {
 }
 
 mod ansi_color_impl {
-    use crate::{constants::ANSI_COLOR_PALETTE, Ansi256Color, RgbColor, TransformColor};
+    use crate::{
+        color_utils, constants::ANSI_COLOR_PALETTE, Ansi256Color, Color, RgbColor,
+        TransformColor,
+    };
 
     impl TransformColor for Ansi256Color {
+        fn as_grayscale(&self) -> Ansi256Color {
+            let index = self.index as usize;
+            let rgb = ANSI_COLOR_PALETTE[index];
+            let rgb = RgbColor::from(rgb);
+            let gray = color_utils::convert_grayscale((rgb.red, rgb.green, rgb.blue));
+            Color::Rgb(gray.0, gray.1, gray.2).as_ansi256()
+        }
+
         fn as_rgb(&self) -> RgbColor {
             let index = self.index as usize;
             ANSI_COLOR_PALETTE[index].into()
         }
 
-        fn as_ansi256(&self) -> Ansi256Color { *self }
+        fn as_ansi256(&self) -> Ansi256Color {
+            *self
+        }
     }
 }
