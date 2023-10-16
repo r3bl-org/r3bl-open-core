@@ -262,7 +262,7 @@ mod display_trait_impl {
                 ],
             };
 
-            // println!("{:?}", format!("{0}", eg_1));
+            println!("{:?}", format!("{0}", eg_1));
 
             assert_eq!(
                 format!("{0}", eg_1),
@@ -282,7 +282,7 @@ mod display_trait_impl {
 
             assert_eq!(
                 format!("{0}", eg_2),
-                "\u{1b}[1m\u{1b}[38;5;16m\u{1b}[48;5;16mWorld\u{1b}[0m".to_string()
+                "\u{1b}[1m\u{1b}[38;5;251m\u{1b}[48;5;16mWorld\u{1b}[0m".to_string()
             );
 
             Ok(())

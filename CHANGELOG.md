@@ -51,6 +51,13 @@
 ## `r3bl_ansi_color`
 <a id="markdown-r3bl_ansi_color" name="r3bl_ansi_color"></a>
 
+### Unreleased
+
+- Added:
+  - Support for Grayscale color output. This is in preparation of making the color support
+    work across all platforms (MacOS, Linux, Windows). And use this in the `r3bl_tui`
+    crate.
+
 ### v0.6.7 (2023-09-12)
 <a id="markdown-v0.6.7-2023-09-12" name="v0.6.7-2023-09-12"></a>
 
