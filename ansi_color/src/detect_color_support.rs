@@ -41,6 +41,7 @@ pub fn detect_color_support() -> ColorSupport {
         }
         ColorSupport::Ansi256 => ColorSupport::Ansi256,
         ColorSupport::Truecolor => ColorSupport::Truecolor,
+        ColorSupport::Grayscale => ColorSupport::Grayscale,
         ColorSupport::NoColor => ColorSupport::NoColor,
     }
 }
@@ -126,6 +127,7 @@ pub enum ColorSupport {
     Ansi256,
     Truecolor,
     NoColor,
+    Grayscale,
     NotSet,
 }
 
@@ -137,6 +139,7 @@ mod convert_between_color_and_i8 {
                 1 => super::ColorSupport::Ansi256,
                 2 => super::ColorSupport::Truecolor,
                 3 => super::ColorSupport::NoColor,
+                4 => super::ColorSupport::Grayscale,
                 _ => super::ColorSupport::NotSet,
             }
         }
@@ -148,6 +151,7 @@ mod convert_between_color_and_i8 {
                 super::ColorSupport::Ansi256 => 1,
                 super::ColorSupport::Truecolor => 2,
                 super::ColorSupport::NoColor => 3,
+                super::ColorSupport::Grayscale => 4,
                 _ => -1,
             }
         }
@@ -227,6 +231,13 @@ mod tests {
     #[test]
     #[serial]
     fn cycle_4() {
+        color_support_override_set(ColorSupport::Grayscale);
+        assert_eq!(color_support_get(), ColorSupport::Grayscale);
+    }
+
+    #[test]
+    #[serial]
+    fn cycle_5() {
         color_support_override_set(ColorSupport::NotSet);
         assert_eq!(color_support_get(), ColorSupport::NotSet);
     }

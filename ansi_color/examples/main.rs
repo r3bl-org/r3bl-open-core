@@ -62,6 +62,14 @@ fn main() {
         print_text(&msg);
     }
 
+    // Set the color support override to grayscale mode.
+    {
+        color_support_override_set(ColorSupport::Grayscale);
+        let msg: String =
+            format!("> Force Grayscale color mode ({:?})", detect_color_support());
+        print_text(&msg);
+    }
+
     // Use runtime detection to determine the color support.
     {
         color_support_override_set(ColorSupport::NotSet);
