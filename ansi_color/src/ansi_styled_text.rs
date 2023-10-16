@@ -236,5 +236,40 @@ mod display_trait_impl {
 
             Ok(())
         }
+
+        #[serial]
+        #[test]
+        fn test_formatted_string_creation_grayscale() -> Result<(), String> {
+            color_support_override_set(ColorSupport::Grayscale);
+            let eg_1 = AnsiStyledText {
+                text: "Hello",
+                style: &[
+                    Style::Bold,
+                    Style::Foreground(Color::Rgb(0, 0, 0)),
+                    Style::Background(Color::Rgb(1, 1, 1)),
+                ],
+            };
+
+            assert_eq!(
+                format!("{0}", eg_1),
+                "\x1b[1m\x1b[38;2;0;0;0m\x1b[48;2;1;1;1mHello\x1b[0m".to_string()
+            );
+
+            let eg_2 = AnsiStyledText {
+                text: "World",
+                style: &[
+                    Style::Bold,
+                    Style::Foreground(Color::Ansi256(150)),
+                    Style::Background(Color::Rgb(1, 1, 1)),
+                ],
+            };
+
+            assert_eq!(
+                format!("{0}", eg_2),
+                "\x1b[1m\x1b[38;2;175;215;135m\x1b[48;2;1;1;1mWorld\x1b[0m".to_string()
+            );
+
+            Ok(())
+        }
     }
 }
