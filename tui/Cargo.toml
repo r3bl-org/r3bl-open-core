@@ -79,7 +79,7 @@ pretty_assertions = "1.3.0"
 concolor-query = "0.3.3"
 
 # ANSI to RGB colors.
-r3bl_ansi_color = "0.6.7"
+r3bl_ansi_color = "0.6.8"
 
 # Terminal
 ansi_term = "0.12.1"

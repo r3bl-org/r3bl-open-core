@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicI64, Ordering};
 
 use chrono::Utc;
 
-use crate::ColorSupport;
+use r3bl_ansi_color::ColorSupport;
 const NOT_SET_VALUE: i64 = -1;
 
 /// This module contains static global data that is meant to be used by the entire application. It
@@ -205,6 +205,8 @@ pub mod color_support_global_static {
             ColorSupport::Grayscale => 0,
             ColorSupport::Ansi256 => 1,
             ColorSupport::Truecolor => 2,
+            ColorSupport::NoColor => todo!(),
+            ColorSupport::NotSet => todo!(),
         };
         unsafe {
             COLOR_SUPPORT_OVERRIDE.store(color_support_override, Ordering::SeqCst);

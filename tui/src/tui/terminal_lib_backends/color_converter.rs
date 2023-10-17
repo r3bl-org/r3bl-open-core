@@ -17,7 +17,7 @@
 
 use r3bl_rs_utils_core::*;
 
-use crate::ColorSupport;
+use r3bl_ansi_color::{ColorSupport, detect_color_support};
 
 pub fn from_crossterm_color(value: crossterm::style::Color) -> TuiColor {
     match value {
@@ -59,7 +59,7 @@ pub fn to_crossterm_color(value: TuiColor) -> crossterm::style::Color {
     match value {
         TuiColor::Reset => crossterm::style::Color::Reset,
 
-        TuiColor::Basic(basic_color) => match ColorSupport::detect() {
+        TuiColor::Basic(basic_color) => match detect_color_support() {
             // Convert to grayscale.
             // <https://www.ditig.com/256-colors-cheat-sheet>
             #[rustfmt::skip]
@@ -101,6 +101,8 @@ pub fn to_crossterm_color(value: TuiColor) -> crossterm::style::Color {
                 ANSIBasicColor::Cyan => crossterm::style::Color::Cyan,
                 ANSIBasicColor::DarkCyan => crossterm::style::Color::DarkCyan,
             },
+            ColorSupport::NoColor => todo!(),
+            ColorSupport::NotSet => todo!(),
         },
 
         // Keep it as is.
@@ -116,13 +118,15 @@ pub fn to_crossterm_color(value: TuiColor) -> crossterm::style::Color {
                 blue: b,
             } = rgb_value;
 
-            match ColorSupport::detect() {
+            match detect_color_support() {
                 ColorSupport::Grayscale => convert_rgb_to_grayscale(r, g, b),
                 ColorSupport::Ansi256 => {
                     let ansi_value = AnsiValue::from(rgb_value).color;
                     crossterm::style::Color::AnsiValue(ansi_value)
                 }
                 ColorSupport::Truecolor => crossterm::style::Color::Rgb { r, g, b },
+                ColorSupport::NoColor => todo!(),
+                ColorSupport::NotSet => todo!(),
             }
         }
     }
