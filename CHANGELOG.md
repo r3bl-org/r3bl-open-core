@@ -8,6 +8,7 @@
   - [Unreleased](#unreleased)
   - [v0.1.0 2023-10-14](#v010-2023-10-14)
 - [r3bl_ansi_color](#r3bl_ansi_color)
+  - [v0.6.8 2023-10-16](#v068-2023-10-16)
   - [v0.6.7 2023-09-12](#v067-2023-09-12)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
   - [Unreleased](#unreleased)
@@ -51,12 +52,17 @@
 ## `r3bl_ansi_color`
 <a id="markdown-r3bl_ansi_color" name="r3bl_ansi_color"></a>
 
-### Unreleased
+### v0.6.8 (2023-10-16)
+<a id="markdown-v0.6.8-2023-10-16" name="v0.6.8-2023-10-16"></a>
 
 - Added:
-  - Support for Grayscale color output. This is in preparation of making the color support
-    work across all platforms (MacOS, Linux, Windows). And use this in the `r3bl_tui`
-    crate.
+  - Support for `Grayscale` color output. This is in preparation of making the color
+    support work across all platforms (MacOS, Linux, Windows). And use this in the
+    `r3bl_tui` crate. Update tests to reflect this.
+
+- Removed:
+  - Dependency on `once-cell` removed by replacing `Arc<Mutex<_>>` with `unsafe` and
+    `AtomicI8`.
 
 ### v0.6.7 (2023-09-12)
 <a id="markdown-v0.6.7-2023-09-12" name="v0.6.7-2023-09-12"></a>
