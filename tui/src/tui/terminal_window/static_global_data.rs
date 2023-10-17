@@ -25,9 +25,10 @@ const NOT_SET_VALUE: i64 = -1;
 /// also provides functions to manipulate this data.
 ///
 /// ### Color support
-/// The app can override the color support detection heuristics by providing a [ColorSupport] value.
-/// It is not always possible to accurately detect the color support of the terminal. So this gives
-/// the app a way to set it to whatever the user wants (for example).
+/// The app can override the color support detection heuristics by providing a
+/// [r3bl_ansi_color::detect_color_support()] value. It is not always possible to accurately
+/// detect the color support of the terminal. So this gives the app a way to set it to
+/// whatever the user wants (for example).
 pub mod telemetry_global_static {
     use super::*;
 
