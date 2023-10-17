@@ -16,19 +16,26 @@
 
 //! ANSI colorized text <https://github.com/ogham/rust-ansi-term> helper methods.
 
-use ansi_term::Colour::Purple;
+use r3bl_ansi_color::{AnsiStyledText, Color, Style};
+
+fn purple(text: &str) -> AnsiStyledText {
+    AnsiStyledText {
+        text,
+        style: &[Style::Foreground(Color::Rgb(147, 112, 219))],
+    }
+}
 
 #[macro_export]
 macro_rules! print_header {
     (error $msg: expr) => {
         let hamburger = "☰";
         let msg = format!("{0} {1} {0}", hamburger, $msg);
-        eprintln!("{}", Purple.paint(&msg));
+        eprintln!("{}", purple(&msg));
     };
     (normal $msg: expr) => {
         let hamburger = "☰";
         let msg = format!("{0} {1} {0}", hamburger, $msg);
-        println!("{}", Purple.paint(&msg));
+        println!("{}", purple(&msg));
     };
 }
 
@@ -45,27 +52,47 @@ pub fn eprint_header(msg: &str) {
 }
 
 pub mod color_text_default_styles {
-    use ansi_term::{ANSIGenericString,
-                    Colour::{Blue, Green, Red},
-                    Style};
+    use super::*;
 
-    pub fn style_primary(text: &str) -> ANSIGenericString<str> {
-        Green.bold().paint(text)
+    pub fn style_primary(text: &str) -> AnsiStyledText {
+        AnsiStyledText {
+            text,
+            style: &[Style::Foreground(Color::Rgb(0, 255, 0))],
+        }
     }
 
-    pub fn style_prompt(text: &str) -> ANSIGenericString<str> { Blue.bold().paint(text) }
-
-    pub fn style_error(text: &str) -> ANSIGenericString<str> { Red.bold().paint(text) }
-
-    pub fn style_underline(text: &str) -> ANSIGenericString<str> {
-        Style::new().underline().paint(text)
+    pub fn style_prompt(text: &str) -> AnsiStyledText {
+        AnsiStyledText {
+            text,
+            style: &[Style::Foreground(Color::Rgb(0, 0, 255))],
+        }
     }
 
-    pub fn style_dim(text: &str) -> ANSIGenericString<str> {
-        Style::new().dimmed().paint(text)
+    pub fn style_error(text: &str) -> AnsiStyledText {
+        AnsiStyledText {
+            text,
+            style: &[Style::Foreground(Color::Rgb(255, 0, 0))],
+        }
     }
 
-    pub fn style_dim_underline(text: &str) -> ANSIGenericString<str> {
-        Style::new().dimmed().underline().paint(text)
+    pub fn style_underline(text: &str) -> AnsiStyledText {
+        AnsiStyledText {
+            text,
+            style: &[Style::Underline],
+        }
+    }
+
+    pub fn style_dim(text: &str) -> AnsiStyledText {
+        AnsiStyledText {
+            text,
+            style: &[Style::Dim],
+        }
+    }
+
+    pub fn style_dim_underline(text: &str) -> AnsiStyledText {
+        AnsiStyledText {
+            text,
+            style: &[Style::Dim, Style::Underline],
+        }
     }
 }

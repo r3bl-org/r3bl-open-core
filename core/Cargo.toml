@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_rs_utils_core"
-version = "0.9.5"
+version = "0.9.6"
 edition = "2021"
 description = """
 Helper crate for r3bl_tui and r3bl_tuify crates.
@@ -23,13 +23,12 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl_rs_utils
-r3bl_ansi_color = { path = "../ansi_color", version = "0.6.7" }       # Convert between ansi and rgb.
+r3bl_ansi_color = { path = "../ansi_color", version = "0.6.8" }       # Convert between ansi and rgb.
 r3bl_simple_logger = { path = "../simple_logger", version = "0.1.0" } # For logging.
 log = { version = "0.4.20", features = ["std"] }                      # For logging.
 
 tokio = { version = "1.33.0", features = ["full"] }
 async-trait = "0.1.73"
-ansi_term = "0.12.1"
 
 # https://github.com/serde-rs/serde.
 serde = { version = "1.0.189", features = ["derive"] }

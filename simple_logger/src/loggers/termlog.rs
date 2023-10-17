@@ -188,6 +188,7 @@ impl TermLogger {
         term_lock.flush()
     }
 
+    #[allow(clippy::unwrap_in_result)]
     fn try_log(&self, record: &Record<'_>) -> Result<(), Error> {
         if self.enabled(record.metadata()) {
             if should_skip(&self.config, record) {

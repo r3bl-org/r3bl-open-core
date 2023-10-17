@@ -77,9 +77,13 @@
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
 
-### Unreleased
+### v0.9.6 (2023-10-17)
 <a id="markdown-unreleased" name="unreleased"></a>
 
+- Removed:
+  - Dependency on `ansi_term` is dropped due to this security advisory
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. Flagged when running CI/CD
+    job on Ockam [repo](https://github.com/build-trust/ockam).
 - Updated:
   - Documentation for `r3bl_simple_logger` crate. And how to think about it vs. using log
     facilities from the `r3bl_rs_utils_core` crate. Update docs there too.
