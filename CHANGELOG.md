@@ -11,6 +11,7 @@
   - [v0.6.8 2023-10-16](#v068-2023-10-16)
   - [v0.6.7 2023-09-12](#v067-2023-09-12)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
+  - [v0.9.7 2023-10-17](#v097-2023-10-17)
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
@@ -76,12 +77,19 @@
 - Added:
   - Tests.
 
-- Replace:
+- Replaced:
   - `justfile` is now replaced with `nu` script `run.nu`.
 
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
+### v0.9.7 (2023-10-17)
+<a id="markdown-v0.9.7-2023-10-17" name="v0.9.7-2023-10-17"></a>
+
+- Updated:
+  - Dependency on `simple_logger` updated due to this security advisory
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. `simple_logger` itself had to
+    drop `ansi_term`.
 
 ### v0.9.6 (2023-10-17)
 <a id="markdown-v0.9.6-2023-10-17" name="v0.9.6-2023-10-17"></a>
@@ -90,6 +98,7 @@
   - Dependency on `ansi_term` is dropped due to this security advisory
     <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. Flagged when running CI/CD
     job on Ockam [repo](https://github.com/build-trust/ockam).
+
 - Updated:
   - Documentation for `r3bl_simple_logger` crate. And how to think about it vs. using log
     facilities from the `r3bl_rs_utils_core` crate. Update docs there too.

@@ -60,8 +60,8 @@ cd core
 # Update cargo.toml version number manually
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.9.6-core"
-git tag -a v0.9.6-core -m "v0.9.6-core"
+git commit -m "v0.9.7-core"
+git tag -a v0.9.7-core -m "v0.9.7-core"
 cd ..
 
 cd tuify
