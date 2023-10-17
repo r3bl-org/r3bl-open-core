@@ -16,11 +16,14 @@
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [r3bl_tuify](#r3bl_tuify)
+  - [v0.1.19 2023-10-17](#v0119-2023-10-17)
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
+  - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
 - [r3bl_rs_utils_redux](#r3bl_rs_utils_redux)
+  - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
   - [v0.3.5 2023-10-14](#v035-2023-10-14)
@@ -131,6 +134,7 @@
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
 ### v0.1.19 (2023-10-17)
+<a id="markdown-v0.1.19-2023-10-17" name="v0.1.19-2023-10-17"></a>
 
 - Updated:
   - Use the latest `r3bl_rs_utils_core` crate due to
@@ -156,6 +160,7 @@
 <a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>
 
 ### v0.9.6 (2023-10-17)
+<a id="markdown-v0.9.6-2023-10-17" name="v0.9.6-2023-10-17"></a>
 
 - Updated:
   - Update `r3bl_rs_utils_core` crate due to
@@ -172,6 +177,14 @@
 ## `r3bl_rs_utils_redux`
 <a id="markdown-r3bl_rs_utils_redux" name="r3bl_rs_utils_redux"></a>
 
+### v0.2.5 (2023-10-17)
+<a id="markdown-v0.2.5-2023-10-17" name="v0.2.5-2023-10-17"></a>
+
+- Updated:
+  - Dependency on `r3bl_rs_utils_core` & `r3bl_rs_utils_macro` crates due to
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
+    maintained anymore.
+
 ### v0.2.4 (2023-10-14)
 <a id="markdown-v0.2.4-2023-10-14" name="v0.2.4-2023-10-14"></a>
 
@@ -179,6 +192,10 @@
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
     `r3bl_rs_utils` repo workspace as `simple_logger`).
 
+- Removed:
+  - Dependency on `ansi_term` which is no longer maintained
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>.
+  - Needless dependencies on crates that are not used.
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
