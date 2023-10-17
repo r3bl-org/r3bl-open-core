@@ -130,6 +130,13 @@
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
+### v0.1.19 (2023-10-17)
+
+- Updated:
+  - Use the latest `r3bl_rs_utils_core` crate due to
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
+    maintained anymore.
+
 ### v0.1.18 (2023-10-17)
 <a id="markdown-v0.1.18-2023-10-17" name="v0.1.18-2023-10-17"></a>
 
