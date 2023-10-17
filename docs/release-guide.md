@@ -40,20 +40,20 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 ```sh
 cd ~/github/r3bl_rs_utils/
 
-cd simple_logger
-# Update cargo.toml version number manually
-cargo build; cargo test; cargo doc
-git add -A
-git commit -m "v0.1.0-simple_logger"
-git tag -a v0.1.0-simple_logger -m "v0.1.0-simple_logger"
-cd ..
-
 cd ansi_color
 # Update cargo.toml version number manually
 cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.6.8-ansi_color"
 git tag -a v0.6.8-ansi_color -m "v0.6.8-ansi_color"
+cd ..
+
+cd simple_logger
+# Update cargo.toml version number manually
+cargo build; cargo test; cargo doc
+git add -A
+git commit -m "v0.1.1-simple_logger"
+git tag -a v0.1.1-simple_logger -m "v0.1.1-simple_logger"
 cd ..
 
 cd core

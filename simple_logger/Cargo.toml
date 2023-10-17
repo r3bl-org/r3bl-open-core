@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_simple_logger"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 readme = "README.md"
 
@@ -20,4 +20,6 @@ license = "Apache-2.0"
 log = { version = "0.4.20", features = ["std"] }
 time = { version = "0.3.29", features = ["formatting", "macros"] }
 termcolor = "1.3.0"
-ansi_term = "0.12.1"
+
+# r3bl_rs_utils
+r3bl_ansi_color = { path = "../ansi_color/", version = "0.6.8" }
