@@ -42,7 +42,7 @@ cd ~/github/r3bl_rs_utils/
 
 cd simple_logger
 # Update cargo.toml version number manually
-cargo build
+cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.1.0-simple_logger"
 git tag -a v0.1.0-simple_logger -m "v0.1.0-simple_logger"
@@ -50,15 +50,15 @@ cd ..
 
 cd ansi_color
 # Update cargo.toml version number manually
-cargo build
+cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.6.7-ansi_color"
-git tag -a v0.6.7-ansi_color -m "v0.6.7-ansi_color"
+git commit -m "v0.6.8-ansi_color"
+git tag -a v0.6.8-ansi_color -m "v0.6.8-ansi_color"
 cd ..
 
 cd core
 # Update cargo.toml version number manually
-cargo build
+cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.9.5-core"
 git tag -a v0.9.5-core -m "v0.9.5-core"
@@ -66,7 +66,7 @@ cd ..
 
 cd tuify
 # Update cargo.toml version number manually
-cargo build
+cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.1.17-tuify"
 git tag -a v0.1.17-tuify -m "v0.1.17-tuify"
@@ -74,7 +74,7 @@ cd ..
 
 cd macro
 # Update cargo.toml version number manually
-cargo build
+cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.9.5-macro"
 git tag -a v0.9.5-macro -m "v0.9.5-macro"
@@ -82,7 +82,7 @@ cd ..
 
 cd redux
 # Update cargo.toml version number manually
-cargo build
+cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.2.4-redux"
 git tag -a v0.2.4-redux -m "v0.2.4-redux"
@@ -90,14 +90,14 @@ cd ..
 
 cd tui
 # Update cargo.toml version number manually
-cargo build
+cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.3.5-tui"
 git tag -a v0.3.5-tui -m "v0.3.5-tui"
 cd ..
 
 # Update cargo.toml version number manually
-cargo build
+cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.9.8-public"
 git tag -a v0.9.8-public -m "v0.9.8-public"
@@ -116,16 +116,3 @@ cargo publish
 git tag -l --sort=-creatordate # Check the tags
 git push ; git push --tags
 ```
-
-## Current release status as of Oct 12 2023
-
-| Crate         | Version              | Status                                       |
-| ------------- | -------------------- | -------------------------------------------- |
-| simple_logger | v0.1.0-simple_logger | https://crates.io/crates/r3bl_simple_logger  |
-| ansi_color    | v0.6.2-ansi_color    | https://crates.io/crates/r3bl_ansi_color     |
-| core          | v0.9.3-core          | https://crates.io/crates/r3bl_rs_utils_core  |
-| tuify         | v0.1.1-tuify         | https://crates.io/crates/r3bl_tuify          |
-| macro         | v0.9.3-macro         | https://crates.io/crates/r3bl_rs_utils_macro |
-| redux         | v0.2.3-redux         | https://crates.io/crates/r3bl_redux          |
-| tui           | v0.3.4-tui           | https://crates.io/crates/r3bl_tui            |
-| public        | v0.9.8-public        | https://crates.io/crates/r3bl_rs_utils       |
