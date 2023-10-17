@@ -438,10 +438,10 @@ mod syn_hi_r3bl_path {
         call_if_true!(DEBUG_TUI_SYN_HI, {
             log_debug(format!(
                 "\n🎯🎯🎯\neditor_buffer.lines.len(): {} vs md_document.lines.len(): {}\n{}\n{}🎯🎯🎯",
-                ansi_term::Color::Cyan.paint(editor_buffer.get_lines().len().to_string()),
-                ansi_term::Color::Yellow.paint(lines.len().to_string()),
-                ansi_term::Color::Cyan.paint(editor_buffer.get_as_string()),
-                ansi_term::Color::Yellow.paint(lines.pretty_print_debug()),
+                editor_buffer.get_lines().len().to_string().cyan(),
+                lines.len().to_string().yellow(),
+                editor_buffer.get_as_string().cyan(),
+                lines.pretty_print_debug().yellow(),
             ));
         });
 

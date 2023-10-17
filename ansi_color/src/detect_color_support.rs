@@ -124,10 +124,10 @@ pub enum Stream {
 /// The result of the color support check.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorSupport {
-    Ansi256,
     Truecolor,
-    NoColor,
+    Ansi256,
     Grayscale,
+    NoColor,
     NotSet,
 }
 

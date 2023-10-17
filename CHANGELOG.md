@@ -1,7 +1,6 @@
 # Changelog
 <a id="markdown-changelog" name="changelog"></a>
 
-
 <!-- TOC -->
 
 - [r3bl_simple_logger](#r3bl_simple_logger)
@@ -26,6 +25,7 @@
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [v0.3.6 2023-10-17](#v036-2023-10-17)
   - [v0.3.5 2023-10-14](#v035-2023-10-14)
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
@@ -199,6 +199,21 @@
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
+
+### v0.3.6 (2023-10-17)
+<a id="markdown-v0.3.6-2023-10-17" name="v0.3.6-2023-10-17"></a>
+
+- Changed:
+  - Switched to using `r3bl_ansi_color` to detect terminal color capabilities and color
+    output and conversions.
+  - Apply `#[serial]` on tests that mutate global variables to make those tests un-flaky.
+    This was already being done in `r3bl_ansi_color`, just bringing this over to the
+    `r3bl_tui` crate with this release.
+
+- Removed:
+  - Dependency on `ansi_term` which is no longer maintained
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>.
+  - Needless dependencies on crates that are not used.
 
 ### v0.3.5 (2023-10-14)
 <a id="markdown-v0.3.5-2023-10-14" name="v0.3.5-2023-10-14"></a>
