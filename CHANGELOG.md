@@ -30,6 +30,8 @@
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
+- [r3bl_rs_utils](#r3bl_rs_utils)
+  - [v0.9.9](#v099)
 - [More info on changelogs](#more-info-on-changelogs)
 
 <!-- /TOC -->
@@ -296,9 +298,21 @@
   - The first demo example (`ex_app_no_layout`) now has support for animation. It automatically
     increments the state every second and the gradient color wheel is updated accordingly.
 
+## `r3bl_rs_utils`
+<a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
+
+### v0.9.9
+<a id="markdown-v0.9.9" name="v0.9.9"></a>
+
+- Changes:
+  - Use latest dependencies on the `r3bl_rs_utils` repo. Lots of needless dependencies
+    have been dropped.
+  - Drop `ansi_term` dependency due to security advisory
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>.
+
+
 ## More info on changelogs
 <a id="markdown-more-info-on-changelogs" name="more-info-on-changelogs"></a>
-
 
 - https://keepachangelog.com/en/1.0.0/
 - https://co-pilot.dev/changelog

@@ -99,8 +99,8 @@ cd ..
 # Update cargo.toml version number manually
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.9.8-public"
-git tag -a v0.9.8-public -m "v0.9.8-public"
+git commit -m "v0.9.9-public"
+git tag -a v0.9.9-public -m "v0.9.9-public"
 
 # Don't forget to publish to crates.io
 cd simple_logger; cargo publish; cd ..

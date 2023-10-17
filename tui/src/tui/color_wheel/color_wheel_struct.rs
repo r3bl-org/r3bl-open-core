@@ -193,11 +193,11 @@ impl ColorWheel {
     ///    also also call this method.
     ///
     /// # Arguments
-    /// 1. `configs`: A list of color wheel configs. The order of the configs is not important.
-    ///    However, at the very least, one Truecolor config & one ANSI 256 config should be
-    ///    provided. The fallback is always grayscale. See
+    /// 1. `configs`: A list of color wheel configs. The order of the configs is not
+    ///    important. However, at the very least, one Truecolor config & one ANSI 256
+    ///    config should be provided. The fallback is always grayscale. See
     ///    [get_config_based_on_color_support](ColorWheelConfig::narrow_config_based_on_color_support),
-    ///    [detect](ColorSupport::detect) for more info.
+    ///    [r3bl_ansi_color::detect_color_support()] for more info.
     pub fn new(configs: Vec<ColorWheelConfig>) -> Self {
         Self {
             configs,
