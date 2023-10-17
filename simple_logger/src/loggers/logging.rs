@@ -18,20 +18,21 @@
 use crate::config::{TargetPadding, TimeFormat};
 use crate::{Config, LevelPadding, ThreadLogMode, ThreadPadding};
 use log::{LevelFilter, Record};
+use r3bl_ansi_color::{AnsiStyledText, Color as RSColor, Style};
 use std::io::{Error, Write};
 use std::thread;
 use termcolor::Color;
 
-pub fn termcolor_to_ansiterm(color: &Color) -> Option<ansi_term::Color> {
+pub fn termcolor_to_r3bl_ansi_color(color: &Color) -> Option<RSColor> {
     match color {
-        Color::Black => Some(ansi_term::Color::Black),
-        Color::Red => Some(ansi_term::Color::Red),
-        Color::Green => Some(ansi_term::Color::Green),
-        Color::Yellow => Some(ansi_term::Color::Yellow),
-        Color::Blue => Some(ansi_term::Color::Blue),
-        Color::Magenta => Some(ansi_term::Color::Purple),
-        Color::Cyan => Some(ansi_term::Color::Cyan),
-        Color::White => Some(ansi_term::Color::White),
+        Color::Black => Some(RSColor::Rgb(0, 0, 0)),
+        Color::Red => Some(RSColor::Rgb(255, 0, 0)),
+        Color::Green => Some(RSColor::Rgb(0, 255, 0)),
+        Color::Yellow => Some(RSColor::Rgb(255, 255, 0)),
+        Color::Blue => Some(RSColor::Rgb(0, 0, 255)),
+        Color::Magenta => Some(RSColor::Rgb(255, 0, 255)),
+        Color::Cyan => Some(RSColor::Rgb(0, 255, 255)),
+        Color::White => Some(RSColor::Rgb(255, 255, 255)),
         _ => None,
     }
 }
@@ -119,7 +120,7 @@ where
     let color = match &config.level_color[record.level() as usize] {
         Some(termcolor) => {
             if config.write_log_enable_colors {
-                termcolor_to_ansiterm(termcolor)
+                termcolor_to_r3bl_ansi_color(termcolor)
             } else {
                 None
             }
@@ -134,7 +135,13 @@ where
     };
 
     match color {
-        Some(c) => write!(write, "{} ", c.paint(level))?,
+        Some(c) => {
+            let styled_level_text = AnsiStyledText {
+                text: level.as_str(),
+                style: &[Style::Foreground(c)],
+            };
+            write!(write, "{} ", styled_level_text)?
+        }
         None => write!(write, "{} ", level)?,
     };
 

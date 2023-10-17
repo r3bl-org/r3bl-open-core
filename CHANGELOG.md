@@ -5,16 +5,17 @@
 <!-- TOC -->
 
 - [r3bl_simple_logger](#r3bl_simple_logger)
-  - [Unreleased](#unreleased)
+  - [v0.1.1 2023-10-17](#v011-2023-10-17)
   - [v0.1.0 2023-10-14](#v010-2023-10-14)
 - [r3bl_ansi_color](#r3bl_ansi_color)
   - [v0.6.8 2023-10-16](#v068-2023-10-16)
   - [v0.6.7 2023-09-12](#v067-2023-09-12)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
-  - [Unreleased](#unreleased)
+  - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [r3bl_tuify](#r3bl_tuify)
+  - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
@@ -32,8 +33,13 @@
 ## `r3bl_simple_logger`
 <a id="markdown-r3bl_simple_logger" name="r3bl_simple_logger"></a>
 
-### Unreleased
-<a id="markdown-unreleased" name="unreleased"></a>
+### v0.1.1 (2023-10-17)
+<a id="markdown-v0.1.1-2023-10-17" name="v0.1.1-2023-10-17"></a>
+
+- Replaced:
+  - Dependency on `ansi_term` is dropped due to this security advisory
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. Replaced with
+    `r3bl_ansi_color`.
 
 - Added:
   - Documentation for `r3bl_simple_logger` crate. And how to think about it vs. using log
@@ -78,7 +84,7 @@
 
 
 ### v0.9.6 (2023-10-17)
-<a id="markdown-unreleased" name="unreleased"></a>
+<a id="markdown-v0.9.6-2023-10-17" name="v0.9.6-2023-10-17"></a>
 
 - Removed:
   - Dependency on `ansi_term` is dropped due to this security advisory
@@ -116,6 +122,7 @@
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
 ### v0.1.18 (2023-10-17)
+<a id="markdown-v0.1.18-2023-10-17" name="v0.1.18-2023-10-17"></a>
 
 - Updated:
   - Use the latest `r3bl_rs_utils_core` crate due to
