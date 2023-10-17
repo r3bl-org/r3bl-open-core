@@ -19,6 +19,7 @@ use std::str::FromStr;
 
 use get_size::GetSize;
 use palette::{Gradient, LinSrgb};
+use r3bl_ansi_color::{detect_color_support, ColorSupport};
 use r3bl_rs_utils_core::*;
 use rand::Rng;
 use serde::*;
@@ -60,7 +61,7 @@ impl ColorWheelConfig {
     pub fn narrow_config_based_on_color_support(
         configs: &[ColorWheelConfig],
     ) -> ColorWheelConfig {
-        let color_support = ColorSupport::detect();
+        let color_support = detect_color_support();
         match color_support {
             // 1. If truecolor is supported, try and find a truecolor config.
             // 2. If not found, then look for an ANSI 256 config.
@@ -238,9 +239,13 @@ impl ColorWheel {
     /// This method will return the length of the gradient. This is
     /// [GradientLengthKind::NotCalculatedYet] if the gradient has not been computed & memoized yet
     /// via a call to [`generate_color_wheel`](ColorWheel::generate_color_wheel).
-    pub fn get_gradient_len(&self) -> GradientLengthKind { self.gradient_length_kind }
+    pub fn get_gradient_len(&self) -> GradientLengthKind {
+        self.gradient_length_kind
+    }
 
-    pub fn get_gradient_kind(&self) -> &GradientKind { &self.gradient_kind }
+    pub fn get_gradient_kind(&self) -> &GradientKind {
+        &self.gradient_kind
+    }
 
     /// Every time this method is called, it will generate the gradient & memoize it.
     ///
@@ -711,6 +716,9 @@ impl ColorWheel {
 
 #[cfg(test)]
 mod tests_color_wheel_rgb {
+    use r3bl_ansi_color::{color_support_override_set, ColorSupport};
+    use serial_test::serial;
+
     use super::*;
 
     mod test_helpers {
@@ -735,6 +743,7 @@ mod tests_color_wheel_rgb {
     /// single test.
     ///
     /// If these two are left as separate tests, then these tests will be flaky.
+    #[serial]
     #[test]
     fn test_things_that_change_global_color_support_override() {
         test_color_wheel_config_narrowing();
@@ -749,7 +758,7 @@ mod tests_color_wheel_rgb {
 
         // Set ColorSupport override to: Ansi 256.
         {
-            ColorSupport::set_color_support_override(ColorSupport::Ansi256);
+            color_support_override_set(ColorSupport::Ansi256);
             let config = ColorWheelConfig::narrow_config_based_on_color_support(configs);
             assert_eq2!(
                 config,
@@ -758,12 +767,12 @@ mod tests_color_wheel_rgb {
                     ColorWheelSpeed::Medium,
                 ),
             );
-            ColorSupport::clear_color_support_override();
+            color_support_override_set(ColorSupport::NotSet);
         }
 
         // Set ColorSupport override to: Truecolor.
         {
-            ColorSupport::set_color_support_override(ColorSupport::Truecolor);
+            color_support_override_set(ColorSupport::Truecolor);
             let config = ColorWheelConfig::narrow_config_based_on_color_support(configs);
             assert_eq2!(
                 config,
@@ -773,12 +782,12 @@ mod tests_color_wheel_rgb {
                     Defaults::Steps as usize,
                 ),
             );
-            ColorSupport::clear_color_support_override();
+            color_support_override_set(ColorSupport::NotSet);
         }
 
         // Set ColorSupport override to: Grayscale.
         {
-            ColorSupport::set_color_support_override(ColorSupport::Grayscale);
+            color_support_override_set(ColorSupport::Grayscale);
             let config = ColorWheelConfig::narrow_config_based_on_color_support(configs);
             assert_eq2!(
                 config,
@@ -787,12 +796,12 @@ mod tests_color_wheel_rgb {
                     ColorWheelSpeed::Medium,
                 ),
             );
-            ColorSupport::clear_color_support_override();
+            color_support_override_set(ColorSupport::NotSet);
         }
     }
 
     fn test_color_wheel_iterator() {
-        ColorSupport::set_color_support_override(ColorSupport::Truecolor);
+        color_support_override_set(ColorSupport::Truecolor);
 
         let color_wheel = &mut test_helpers::create_color_wheel_rgb();
 
@@ -887,12 +896,13 @@ mod tests_color_wheel_rgb {
             TuiColor::Rgb(RgbValue::from_u8(28, 28, 28))
         );
 
-        ColorSupport::clear_color_support_override();
+        color_support_override_set(ColorSupport::NotSet);
     }
 
     fn test_colorize_into_styled_texts_color_each_word() {
         let color_wheel_rgb = &mut test_helpers::create_color_wheel_rgb();
-        ColorSupport::set_color_support_override(ColorSupport::Truecolor);
+
+        color_support_override_set(ColorSupport::Truecolor);
 
         let unicode_string = UnicodeString::from("HELLO WORLD");
 
@@ -923,14 +933,15 @@ mod tests_color_wheel_rgb {
             Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
         );
 
-        ColorSupport::clear_color_support_override();
+        color_support_override_set(ColorSupport::NotSet);
     }
 
     fn test_colorize_to_styled_texts_color_each_character() {
         use r3bl_rs_utils_macro::style;
 
         let color_wheel_rgb = &mut test_helpers::create_color_wheel_rgb();
-        ColorSupport::set_color_support_override(ColorSupport::Truecolor);
+
+        color_support_override_set(ColorSupport::Truecolor);
 
         let unicode_string = UnicodeString::from("HELLO");
 
@@ -980,6 +991,6 @@ mod tests_color_wheel_rgb {
             Some(TuiColor::Rgb(RgbValue::from_u8(127, 127, 127)))
         );
 
-        ColorSupport::clear_color_support_override();
+        color_support_override_set(ColorSupport::NotSet);
     }
 }

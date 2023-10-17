@@ -15,8 +15,10 @@
  *   limitations under the License.
  */
 
-use std::{fmt::Debug,
-          ops::{AddAssign, Deref, DerefMut}};
+use std::{
+    fmt::Debug,
+    ops::{AddAssign, Deref, DerefMut},
+};
 
 use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
@@ -231,39 +233,55 @@ pub mod list_of {
             }
         }
 
-        pub fn new() -> Self { Self { items: Vec::new() } }
+        pub fn new() -> Self {
+            Self { items: Vec::new() }
+        }
     }
 
     /// Add (other) item to list (self).
     impl<T> AddAssign<T> for List<T> {
-        fn add_assign(&mut self, other_item: T) { self.push(other_item); }
+        fn add_assign(&mut self, other_item: T) {
+            self.push(other_item);
+        }
     }
 
     /// Add (other) list to list (self).
     impl<T> AddAssign<List<T>> for List<T> {
-        fn add_assign(&mut self, other_list: List<T>) { self.extend(other_list.items); }
+        fn add_assign(&mut self, other_list: List<T>) {
+            self.extend(other_list.items);
+        }
     }
 
     /// Add (other) vec to list (self).
     impl<T> AddAssign<Vec<T>> for List<T> {
-        fn add_assign(&mut self, other_vec: Vec<T>) { self.extend(other_vec); }
+        fn add_assign(&mut self, other_vec: Vec<T>) {
+            self.extend(other_vec);
+        }
     }
 
     impl<T> From<List<T>> for Vec<T> {
-        fn from(list: List<T>) -> Self { list.items }
+        fn from(list: List<T>) -> Self {
+            list.items
+        }
     }
 
     impl<T> From<Vec<T>> for List<T> {
-        fn from(other: Vec<T>) -> Self { Self { items: other } }
+        fn from(other: Vec<T>) -> Self {
+            Self { items: other }
+        }
     }
 
     impl<T> Deref for List<T> {
         type Target = Vec<T>;
-        fn deref(&self) -> &Self::Target { &self.items }
+        fn deref(&self) -> &Self::Target {
+            &self.items
+        }
     }
 
     impl<T> DerefMut for List<T> {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.items }
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.items
+        }
     }
 }
 pub use list_of::*;
@@ -287,7 +305,9 @@ mod cli_args {
             list
         }
 
-        fn as_str(my_vec: &[String]) -> Vec<&str> { List::from(my_vec).items }
+        fn as_str(my_vec: &[String]) -> Vec<&str> {
+            List::from(my_vec).items
+        }
     }
 
     impl<'a> From<&'a [String]> for List<&'a str> {
@@ -309,6 +329,8 @@ mod cli_args {
 pub use cli_args::*;
 
 mod pretty_print_traits {
+    use crossterm::style::Stylize;
+
     use crate::US;
 
     /// Marker trait to "remember" which types can be printed to the console w/ color.
@@ -318,39 +340,49 @@ mod pretty_print_traits {
     }
 
     fn console_log_fg(this: &str) {
-        let color = ansi_term::Color::Yellow;
         if this.is_empty() {
-            println!("\n{}", color.paint("← empty →"));
+            println!("\n{}", "← empty →".yellow());
         } else {
-            println!("\n{}", color.paint(this));
+            println!("\n{}", this.yellow());
         }
     }
 
     fn console_log_bg(this: &str) {
-        let color = ansi_term::Color::Red.on(ansi_term::Color::White);
         if this.is_empty() {
-            println!("\n{}", color.paint("← empty →"));
+            println!("\n{}", "← empty →".red().on_white());
         } else {
-            println!("\n{}", color.paint(this));
+            println!("\n{}", this.red().on_white());
         }
     }
 
     impl<T: PrettyPrintDebug> ConsoleLogInColor for T {
-        fn console_log_fg(&self) { console_log_fg(&self.pretty_print_debug()); }
+        fn console_log_fg(&self) {
+            console_log_fg(&self.pretty_print_debug());
+        }
 
-        fn console_log_bg(&self) { console_log_bg(&self.pretty_print_debug()); }
+        fn console_log_bg(&self) {
+            console_log_bg(&self.pretty_print_debug());
+        }
     }
 
     impl ConsoleLogInColor for &str {
-        fn console_log_fg(&self) { console_log_fg(self); }
+        fn console_log_fg(&self) {
+            console_log_fg(self);
+        }
 
-        fn console_log_bg(&self) { console_log_bg(self); }
+        fn console_log_bg(&self) {
+            console_log_bg(self);
+        }
     }
 
     impl ConsoleLogInColor for String {
-        fn console_log_fg(&self) { console_log_fg(self); }
+        fn console_log_fg(&self) {
+            console_log_fg(self);
+        }
 
-        fn console_log_bg(&self) { console_log_bg(self); }
+        fn console_log_bg(&self) {
+            console_log_bg(self);
+        }
     }
 
     /// Marker trait to "remember" which types support pretty printing for debugging.

@@ -59,6 +59,8 @@ pub fn try_parse_and_highlight(
 
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
+    use crossterm::style::Stylize;
+
     use super::*;
 
     #[test]
@@ -76,7 +78,7 @@ mod tests_try_parse_and_highlight {
 
         println!(
             "result: \n{}",
-            ansi_term::Color::Cyan.paint(style_us_span_lines.pretty_print_debug())
+            style_us_span_lines.pretty_print_debug().cyan()
         );
 
         assert_eq2!(editor_text_lines.len(), style_us_span_lines.len());
@@ -1012,6 +1014,8 @@ mod tests_style_us_span_lines_from {
     /// Test each variant of [MdBlockElement] is converted by
     /// [StyleUSSpanLines::from_block](StyleUSSpanLines::from_block).
     mod from_block {
+        use crossterm::style::Stylize;
+
         use super::*;
 
         #[test]
@@ -1209,7 +1213,7 @@ mod tests_style_us_span_lines_from {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
             let (_, doc) = parse_markdown("- Foo\n- Bar\n")?;
-            println!("{}", ansi_term::Color::Cyan.paint(format!("{:#?}", doc)));
+            println!("{}", format!("{:#?}", doc).cyan());
 
             // First smart list.
             {

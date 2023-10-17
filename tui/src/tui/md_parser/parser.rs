@@ -80,7 +80,7 @@ pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
 
 #[cfg(test)]
 mod tests {
-    use ansi_term::Color::*;
+    use crossterm::style::Stylize;
     use r3bl_rs_utils_core::*;
 
     use super::*;
@@ -247,8 +247,8 @@ mod tests {
         for block in vec_block.iter().skip(vec_block.len() - 7) {
             println!(
                 "{0} {1}",
-                Purple.bold().paint("█ → "),
-                Green.paint(format!("{:?}", block))
+                "█ → ".magenta().bold(),
+                format!("{:?}", block).green()
             );
         }
 
