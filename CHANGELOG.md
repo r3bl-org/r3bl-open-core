@@ -155,6 +155,13 @@
 ## `r3bl_rs_utils_macro`
 <a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>
 
+### v0.9.6 (2023-10-17)
+
+- Updated:
+  - Update `r3bl_rs_utils_core` crate due to
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
+    maintained anymore.
+
 ### v0.9.5 (2023-10-14)
 <a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
 
