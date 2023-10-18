@@ -15,8 +15,10 @@
  *   limitations under the License.
  */
 
-use std::{fmt::{self, Debug},
-          ops::{Deref, DerefMut}};
+use std::{
+    fmt::{self, Debug},
+    ops::{Deref, DerefMut},
+};
 
 use async_trait::async_trait;
 use get_size::GetSize;
@@ -69,11 +71,15 @@ mod offscreen_buffer_impl {
     impl Deref for OffscreenBuffer {
         type Target = PixelCharLines;
 
-        fn deref(&self) -> &Self::Target { &self.buffer }
+        fn deref(&self) -> &Self::Target {
+            &self.buffer
+        }
     }
 
     impl DerefMut for OffscreenBuffer {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.buffer }
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.buffer
+        }
     }
 
     impl Debug for OffscreenBuffer {
@@ -157,11 +163,15 @@ mod pixel_char_lines_impl {
 
     impl Deref for PixelCharLines {
         type Target = Vec<PixelCharLine>;
-        fn deref(&self) -> &Self::Target { &self.lines }
+        fn deref(&self) -> &Self::Target {
+            &self.lines
+        }
     }
 
     impl DerefMut for PixelCharLines {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.lines }
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.lines
+        }
     }
 
     impl PixelCharLines {
@@ -344,11 +354,15 @@ mod pixel_char_line_impl {
     }
     impl Deref for PixelCharLine {
         type Target = Vec<PixelChar>;
-        fn deref(&self) -> &Self::Target { &self.pixel_chars }
+        fn deref(&self) -> &Self::Target {
+            &self.pixel_chars
+        }
     }
 
     impl DerefMut for PixelCharLine {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.pixel_chars }
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.pixel_chars
+        }
     }
 }
 
@@ -369,7 +383,9 @@ mod pixel_char_impl {
     use super::*;
 
     impl Default for PixelChar {
-        fn default() -> Self { Self::Spacer }
+        fn default() -> Self {
+            Self::Spacer
+        }
     }
 
     impl PixelChar {

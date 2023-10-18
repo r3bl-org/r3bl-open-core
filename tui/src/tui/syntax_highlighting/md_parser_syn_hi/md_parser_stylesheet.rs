@@ -40,11 +40,10 @@ pub fn get_selection_style() -> Style {
 pub fn get_foreground_style() -> Style {
     style! {
         color_fg: match detect_color_support() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::White),
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(244)), // Grey50.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#c1b3d0")),
-            ColorSupport::NoColor => todo!(),
-            ColorSupport::NotSet => todo!(),
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(244)), // Grey50.
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::White),
+            _ => TuiColor::Basic(ANSIBasicColor::White),
         }
     }
 }
@@ -65,11 +64,10 @@ pub fn get_bold_style() -> Style {
     style! {
         attrib: [bold]
         color_fg: match detect_color_support() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow),
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(226)), // Yellow1.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#dacd24")),
-            ColorSupport::NoColor => todo!(),
-            ColorSupport::NotSet => todo!(),
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(226)), // Yellow1.
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow),
+            _ => TuiColor::Basic(ANSIBasicColor::Yellow),
         }
     }
 }
@@ -79,11 +77,10 @@ pub fn get_italic_style() -> Style {
     style! {
         attrib: [italic]
         color_fg: match detect_color_support() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkYellow),
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(208)), // DarkOrange.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#a59e3a")),
-            ColorSupport::NoColor => todo!(),
-            ColorSupport::NotSet => todo!(),
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(208)), // DarkOrange.
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkYellow),
+            _ => TuiColor::Basic(ANSIBasicColor::DarkYellow),
         }
     }
 }
@@ -93,11 +90,10 @@ pub fn get_bold_italic_style() -> Style {
     style! {
         attrib: [bold, italic]
         color_fg: match detect_color_support() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow),
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(184)), // Yellow3.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#dacd24")),
-            ColorSupport::NoColor => todo!(),
-            ColorSupport::NotSet => todo!(),
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(184)), // Yellow3.
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow),
+            _ => TuiColor::Basic(ANSIBasicColor::Yellow),
         }
     }
 }
@@ -105,15 +101,11 @@ pub fn get_bold_italic_style() -> Style {
 /// This is just for the bold content, not the enclosing "`".
 pub fn get_inline_code_style() -> Style {
     style! {
-        color_fg: match detect_color_support() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Magenta),
-            // ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(126)), //
-            // MediumVioletRed. ColorSupport::Ansi256 =>
-            // TuiColor::Ansi(AnsiValue::new(177)), // Violet.
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(169)), // HotPink2.
+        color_fg: match detect_color_support(){
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ce55b7")),
-            ColorSupport::NoColor => todo!(),
-            ColorSupport::NotSet => todo!(),
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Magenta),
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(169)), // HotPink2.
+            _ => TuiColor::Basic(ANSIBasicColor::Magenta),
         }
     }
 }
@@ -122,11 +114,10 @@ pub fn get_inline_code_style() -> Style {
 pub fn get_link_text_style() -> Style {
     style! {
         color_fg: match detect_color_support() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Blue),
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(33)), // DodgerBlue1.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4f86ed")),
-            ColorSupport::NoColor => todo!(),
-            ColorSupport::NotSet => todo!(),
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(33)), // DodgerBlue1.
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Blue),
+            _ => TuiColor::Basic(ANSIBasicColor::Blue),
         }
     }
 }
@@ -136,11 +127,10 @@ pub fn get_link_url_style() -> Style {
     style! {
         attrib: [underline]
         color_fg: match detect_color_support() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Blue),
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(39)), // DeepSkyBlue1.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#16adf3")),
-            ColorSupport::NoColor => todo!(),
-            ColorSupport::NotSet => todo!(),
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(39)), // DeepSkyBlue1.
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Blue),
+            _ => TuiColor::Basic(ANSIBasicColor::Blue),
         }
     }
 }
@@ -194,11 +184,10 @@ pub fn get_metadata_title_marker_style() -> Style {
     style! {
         color_fg: TuiColor::Basic(ANSIBasicColor::Black)
         color_bg: match detect_color_support() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(39)), // DeepSkyBlue1.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4f86ed")), // Soft blue.
-            ColorSupport::NoColor => todo!(),
-            ColorSupport::NotSet => todo!(),
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(39)), // DeepSkyBlue1.
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
+            _ => TuiColor::Basic(ANSIBasicColor::Cyan),
         }
     }
 }
@@ -208,18 +197,16 @@ pub fn get_metadata_title_marker_style() -> Style {
 pub fn get_metadata_title_value_style() -> Style {
     style! {
         color_fg: match detect_color_support() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan),
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(51)), // Cyan1.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4fcbd4")), // Moderate cyan.
-            ColorSupport::NoColor => todo!(),
-            ColorSupport::NotSet => todo!(),
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(51)), // Cyan1.
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan),
+            _ => TuiColor::Basic(ANSIBasicColor::Cyan),
         }
         color_bg: match detect_color_support() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkGrey),
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(238)), // Grey27.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#444444")), // Very dark gray.
-            ColorSupport::NoColor => todo!(),
-            ColorSupport::NotSet => todo!(),
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(238)), // Grey27.
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkGrey),
+            _ => TuiColor::Basic(ANSIBasicColor::DarkGrey),
         }
     }
 }
@@ -230,11 +217,10 @@ pub fn get_metadata_tags_marker_style() -> Style {
     style! {
         color_fg: TuiColor::Basic(ANSIBasicColor::Black)
         color_bg: match detect_color_support() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow), // There is no equivalent.
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(133)), // MediumOrchid3. There is no equivalent.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ad83da")), // Very soft violet.
-            ColorSupport::NoColor => todo!(),
-            ColorSupport::NotSet => todo!(),
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(133)), // MediumOrchid3. There is no equivalent.
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow), // There is no equivalent.
+            _ => TuiColor::Basic(ANSIBasicColor::Yellow),
         }
     }
 }
@@ -244,18 +230,16 @@ pub fn get_metadata_tags_marker_style() -> Style {
 pub fn get_metadata_tags_values_style() -> Style {
     style! {
         color_fg: match detect_color_support() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(45)), // Turquoise2
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#e2a1e3")), // Soft violet.
-            ColorSupport::NoColor => todo!(),
-            ColorSupport::NotSet => todo!(),
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(45)), // Turquoise2
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
+            _ => TuiColor::Basic(ANSIBasicColor::Cyan),
         }
         color_bg: match detect_color_support() {
-            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkGrey),
-            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(236)), // Grey19.
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#303030")), // Very dark gray.
-            ColorSupport::NoColor => todo!(),
-            ColorSupport::NotSet => todo!(),
+            ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(236)), // Grey19.
+            ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkGrey),
+            _ => TuiColor::Basic(ANSIBasicColor::DarkGrey),
         }
     }
 }

@@ -40,14 +40,6 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 ```sh
 cd ~/github/r3bl_rs_utils/
 
-cd simple_logger
-# Update cargo.toml version number manually
-cargo build; cargo test; cargo doc
-git add -A
-git commit -m "v0.1.0-simple_logger"
-git tag -a v0.1.0-simple_logger -m "v0.1.0-simple_logger"
-cd ..
-
 cd ansi_color
 # Update cargo.toml version number manually
 cargo build; cargo test; cargo doc
@@ -56,51 +48,59 @@ git commit -m "v0.6.8-ansi_color"
 git tag -a v0.6.8-ansi_color -m "v0.6.8-ansi_color"
 cd ..
 
+cd simple_logger
+# Update cargo.toml version number manually
+cargo build; cargo test; cargo doc
+git add -A
+git commit -m "v0.1.1-simple_logger"
+git tag -a v0.1.1-simple_logger -m "v0.1.1-simple_logger"
+cd ..
+
 cd core
 # Update cargo.toml version number manually
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.9.5-core"
-git tag -a v0.9.5-core -m "v0.9.5-core"
+git commit -m "v0.9.7-core"
+git tag -a v0.9.7-core -m "v0.9.7-core"
 cd ..
 
 cd tuify
 # Update cargo.toml version number manually
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.1.17-tuify"
-git tag -a v0.1.17-tuify -m "v0.1.17-tuify"
+git commit -m "v0.1.19-tuify"
+git tag -a v0.1.19-tuify -m "v0.1.19-tuify"
 cd ..
 
 cd macro
 # Update cargo.toml version number manually
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.9.5-macro"
-git tag -a v0.9.5-macro -m "v0.9.5-macro"
+git commit -m "v0.9.6-macro"
+git tag -a v0.9.6-macro -m "v0.9.6-macro"
 cd ..
 
 cd redux
 # Update cargo.toml version number manually
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.2.4-redux"
-git tag -a v0.2.4-redux -m "v0.2.4-redux"
+git commit -m "v0.2.5-redux"
+git tag -a v0.2.5-redux -m "v0.2.5-redux"
 cd ..
 
 cd tui
 # Update cargo.toml version number manually
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.3.5-tui"
-git tag -a v0.3.5-tui -m "v0.3.5-tui"
+git commit -m "v0.3.6-tui"
+git tag -a v0.3.6-tui -m "v0.3.6-tui"
 cd ..
 
 # Update cargo.toml version number manually
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.9.8-public"
-git tag -a v0.9.8-public -m "v0.9.8-public"
+git commit -m "v0.9.9-public"
+git tag -a v0.9.9-public -m "v0.9.9-public"
 
 # Don't forget to publish to crates.io
 cd simple_logger; cargo publish; cd ..

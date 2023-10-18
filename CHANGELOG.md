@@ -1,30 +1,37 @@
 # Changelog
 <a id="markdown-changelog" name="changelog"></a>
 
-
 <!-- TOC -->
 
 - [r3bl_simple_logger](#r3bl_simple_logger)
-  - [Unreleased](#unreleased)
+  - [v0.1.1 2023-10-17](#v011-2023-10-17)
   - [v0.1.0 2023-10-14](#v010-2023-10-14)
 - [r3bl_ansi_color](#r3bl_ansi_color)
   - [v0.6.8 2023-10-16](#v068-2023-10-16)
   - [v0.6.7 2023-09-12](#v067-2023-09-12)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
-  - [Unreleased](#unreleased)
+  - [v0.9.7 2023-10-17](#v097-2023-10-17)
+  - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [r3bl_tuify](#r3bl_tuify)
+  - [v0.1.19 2023-10-17](#v0119-2023-10-17)
+  - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
+  - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
 - [r3bl_rs_utils_redux](#r3bl_rs_utils_redux)
+  - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [v0.3.6 2023-10-17](#v036-2023-10-17)
   - [v0.3.5 2023-10-14](#v035-2023-10-14)
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
+- [r3bl_rs_utils](#r3bl_rs_utils)
+  - [v0.9.9](#v099)
 - [More info on changelogs](#more-info-on-changelogs)
 
 <!-- /TOC -->
@@ -32,8 +39,13 @@
 ## `r3bl_simple_logger`
 <a id="markdown-r3bl_simple_logger" name="r3bl_simple_logger"></a>
 
-### Unreleased
-<a id="markdown-unreleased" name="unreleased"></a>
+### v0.1.1 (2023-10-17)
+<a id="markdown-v0.1.1-2023-10-17" name="v0.1.1-2023-10-17"></a>
+
+- Replaced:
+  - Dependency on `ansi_term` is dropped due to this security advisory
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. Replaced with
+    `r3bl_ansi_color`.
 
 - Added:
   - Documentation for `r3bl_simple_logger` crate. And how to think about it vs. using log
@@ -70,15 +82,27 @@
 - Added:
   - Tests.
 
-- Replace:
+- Replaced:
   - `justfile` is now replaced with `nu` script `run.nu`.
 
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
+### v0.9.7 (2023-10-17)
+<a id="markdown-v0.9.7-2023-10-17" name="v0.9.7-2023-10-17"></a>
 
-### Unreleased
-<a id="markdown-unreleased" name="unreleased"></a>
+- Updated:
+  - Dependency on `simple_logger` updated due to this security advisory
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. `simple_logger` itself had to
+    drop `ansi_term`.
+
+### v0.9.6 (2023-10-17)
+<a id="markdown-v0.9.6-2023-10-17" name="v0.9.6-2023-10-17"></a>
+
+- Removed:
+  - Dependency on `ansi_term` is dropped due to this security advisory
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. Flagged when running CI/CD
+    job on Ockam [repo](https://github.com/build-trust/ockam).
 
 - Updated:
   - Documentation for `r3bl_simple_logger` crate. And how to think about it vs. using log
@@ -111,6 +135,22 @@
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
+### v0.1.19 (2023-10-17)
+<a id="markdown-v0.1.19-2023-10-17" name="v0.1.19-2023-10-17"></a>
+
+- Updated:
+  - Use the latest `r3bl_rs_utils_core` crate due to
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
+    maintained anymore.
+
+### v0.1.18 (2023-10-17)
+<a id="markdown-v0.1.18-2023-10-17" name="v0.1.18-2023-10-17"></a>
+
+- Updated:
+  - Use the latest `r3bl_rs_utils_core` crate due to
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
+    maintained anymore.
+
 ### v0.1.17 (2023-10-14)
 <a id="markdown-v0.1.17-2023-10-14" name="v0.1.17-2023-10-14"></a>
 
@@ -120,6 +160,14 @@
 
 ## `r3bl_rs_utils_macro`
 <a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>
+
+### v0.9.6 (2023-10-17)
+<a id="markdown-v0.9.6-2023-10-17" name="v0.9.6-2023-10-17"></a>
+
+- Updated:
+  - Update `r3bl_rs_utils_core` crate due to
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
+    maintained anymore.
 
 ### v0.9.5 (2023-10-14)
 <a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
@@ -131,6 +179,14 @@
 ## `r3bl_rs_utils_redux`
 <a id="markdown-r3bl_rs_utils_redux" name="r3bl_rs_utils_redux"></a>
 
+### v0.2.5 (2023-10-17)
+<a id="markdown-v0.2.5-2023-10-17" name="v0.2.5-2023-10-17"></a>
+
+- Updated:
+  - Dependency on `r3bl_rs_utils_core` & `r3bl_rs_utils_macro` crates due to
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
+    maintained anymore.
+
 ### v0.2.4 (2023-10-14)
 <a id="markdown-v0.2.4-2023-10-14" name="v0.2.4-2023-10-14"></a>
 
@@ -138,9 +194,28 @@
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
     `r3bl_rs_utils` repo workspace as `simple_logger`).
 
+- Removed:
+  - Dependency on `ansi_term` which is no longer maintained
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>.
+  - Needless dependencies on crates that are not used.
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
+
+### v0.3.6 (2023-10-17)
+<a id="markdown-v0.3.6-2023-10-17" name="v0.3.6-2023-10-17"></a>
+
+- Changed:
+  - Switched to using `r3bl_ansi_color` to detect terminal color capabilities and color
+    output and conversions.
+  - Apply `#[serial]` on tests that mutate global variables to make those tests un-flaky.
+    This was already being done in `r3bl_ansi_color`, just bringing this over to the
+    `r3bl_tui` crate with this release.
+
+- Removed:
+  - Dependency on `ansi_term` which is no longer maintained
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>.
+  - Needless dependencies on crates that are not used.
 
 ### v0.3.5 (2023-10-14)
 <a id="markdown-v0.3.5-2023-10-14" name="v0.3.5-2023-10-14"></a>
@@ -223,9 +298,21 @@
   - The first demo example (`ex_app_no_layout`) now has support for animation. It automatically
     increments the state every second and the gradient color wheel is updated accordingly.
 
+## `r3bl_rs_utils`
+<a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
+
+### v0.9.9
+<a id="markdown-v0.9.9" name="v0.9.9"></a>
+
+- Changes:
+  - Use latest dependencies on the `r3bl_rs_utils` repo. Lots of needless dependencies
+    have been dropped.
+  - Drop `ansi_term` dependency due to security advisory
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>.
+
+
 ## More info on changelogs
 <a id="markdown-more-info-on-changelogs" name="more-info-on-changelogs"></a>
-
 
 - https://keepachangelog.com/en/1.0.0/
 - https://co-pilot.dev/changelog

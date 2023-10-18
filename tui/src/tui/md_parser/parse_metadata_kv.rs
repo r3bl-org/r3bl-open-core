@@ -16,13 +16,10 @@
  */
 
 use constants::*;
-use nom::{branch::*,
-          bytes::complete::*,
-          character::complete::*,
-          combinator::*,
-          multi::*,
-          sequence::*,
-          IResult};
+use nom::{
+    branch::*, bytes::complete::*, character::complete::*, combinator::*, multi::*,
+    sequence::*, IResult,
+};
 
 use crate::*;
 
@@ -61,7 +58,7 @@ pub fn parse_kv_opt_eol<'a>(tag_name: &'a str, input: &'a str) -> IResult<&'a st
 
 #[cfg(test)]
 mod test_parse_title_no_eol {
-    use ansi_term::Color::*;
+    use crossterm::style::Stylize;
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
@@ -72,8 +69,8 @@ mod test_parse_title_no_eol {
         let (input, output) = parse_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{}', output: '{}'",
-            Black.on(Yellow).paint(input),
-            Black.on(Green).paint(output),
+            input.black().on_yellow(),
+            output.black().on_green(),
         );
         assert_eq2!(input, "");
         assert_eq2!(output, "Something");
@@ -85,8 +82,8 @@ mod test_parse_title_no_eol {
         let (input, output) = parse_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{}', output: '{}'",
-            Black.on(Yellow).paint(input),
-            Black.on(Green).paint(output),
+            input.black().on_yellow(),
+            output.black().on_green(),
         );
         assert_eq2!(input, "");
         assert_eq2!(output, "Something");
@@ -99,19 +96,19 @@ mod test_parse_title_no_eol {
         assert_eq2!(it.is_err(), true);
         println!(
             "err: '{}'",
-            Black.on(Yellow).paint(format!("{:?}", it.err().unwrap()))
+            format!("{:?}", it.err().unwrap()).black().on_yellow()
         );
     }
 
     #[test]
     fn test_no_quoted_with_eol_title_with_postfix_content_1() {
         let input = "@title: \nfoo\nbar";
-        println!("input: '{}'", Black.on(Cyan).paint(input),);
+        println!("input: '{}'", input.black().on_cyan());
         let (input, output) = parse_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{}'\noutput: '{}'",
-            Black.on(Yellow).paint(input),
-            Black.on(Green).paint(output),
+            input.black().on_yellow(),
+            output.black().on_green(),
         );
         assert_eq2!(input, "foo\nbar");
         assert_eq2!(output, "");
@@ -120,12 +117,12 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_no_quoted_with_eol_title_with_postfix_content_2() {
         let input = "@title:  a\nfoo\nbar";
-        println!("input: '{}'", Black.on(Cyan).paint(input),);
+        println!("input: '{}'", input.black().on_cyan());
         let (input, output) = parse_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{}'\noutput: '{}'",
-            Black.on(Yellow).paint(input),
-            Black.on(Green).paint(output),
+            input.black().on_yellow(),
+            output.black().on_green(),
         );
         assert_eq2!(input, "foo\nbar");
         assert_eq2!(output, " a");
@@ -134,12 +131,12 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_no_quoted_with_eol_title_with_postfix_content_3() {
         let input = "@title: \n\n# heading1\n## heading2";
-        println!("❯ input: \n'{}'", Black.on(Cyan).paint(input),);
+        println!("❯ input: \n'{}'", input.black().on_cyan());
         let (remainder, title) = parse_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "❯ remainder: \n'{}'\n❯ title: \n'{}'",
-            Black.on(Yellow).paint(remainder),
-            Black.on(Green).paint(title),
+            remainder.black().on_yellow(),
+            title.black().on_green(),
         );
         assert_eq2!(remainder, "\n# heading1\n## heading2");
         assert_eq2!(title, "");
