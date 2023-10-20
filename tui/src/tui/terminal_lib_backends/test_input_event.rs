@@ -96,9 +96,7 @@ mod tests {
             };
             let maybe_modifier_keys = convert_key_modifiers(&key_event.modifiers);
             assert!(maybe_modifier_keys.is_some());
-            assert!(maybe_modifier_keys
-                .unwrap()
-                .contains(ModifierKeysMask::CTRL));
+            assert!(maybe_modifier_keys.unwrap() == ModifierKeysMask::new().with_ctrl());
         }
         // "Ctrl + Shift + X"
         {
@@ -108,9 +106,10 @@ mod tests {
             };
             let maybe_modifier_keys = convert_key_modifiers(&key_event.modifiers);
             assert!(maybe_modifier_keys.is_some());
-            assert!(maybe_modifier_keys
-                .unwrap()
-                .contains(ModifierKeysMask::CTRL | ModifierKeysMask::SHIFT));
+            assert!(
+                maybe_modifier_keys.unwrap()
+                    == (ModifierKeysMask::new().with_ctrl().with_shift())
+            );
         }
         // "Ctrl + Shift + Alt + X"
         {
@@ -120,9 +119,10 @@ mod tests {
             };
             let maybe_modifier_keys = convert_key_modifiers(&key_event.modifiers);
             assert!(maybe_modifier_keys.is_some());
-            assert!(maybe_modifier_keys.unwrap().contains(
-                ModifierKeysMask::CTRL | ModifierKeysMask::SHIFT | ModifierKeysMask::ALT
-            ));
+            assert!(
+                maybe_modifier_keys.unwrap()
+                    == ModifierKeysMask::new().with_alt().with_ctrl().with_shift()
+            );
         }
     }
 

@@ -31,10 +31,13 @@ use crate::*;
 ///     key: Key::Character('a'),
 ///   };
 ///
-///   let alt_a = keypress!(@char ModifierKeysMask::ALT, 'a');
+///   let alt_a = keypress!(@char ModifierKeysMask::new().with_alt(), 'a');
 ///   let alt_a = KeyPress::WithModifiers {
 ///     key: Key::Character('a'),
-///     mask: ModifierKeysMask::ALT,
+///     mask: ModifierKeysMask {
+///         alt_key_state: KeyState::Pressed,
+///         ..Default::default()
+///     },
 ///   };
 ///
 ///   let enter = keypress!(@special SpecialKey::Enter);
@@ -42,10 +45,13 @@ use crate::*;
 ///     key: Key::SpecialKey(SpecialKey::Enter),
 ///   };
 ///
-///   let alt_enter = keypress!(@special ModifierKeysMask::ALT, SpecialKey::Enter);
+///   let alt_enter = keypress!(@special ModifierKeysMask::new().with_alt(), SpecialKey::Enter);
 ///   let alt_enter = KeyPress::WithModifiers {
 ///     key: Key::SpecialKey(SpecialKey::Enter),
-///     mask: ModifierKeysMask::ALT,
+///     mask: ModifierKeysMask {
+///         alt_key_state: KeyState::Pressed,
+///         ..Default::default()
+///     }
 ///   };
 /// }
 /// ```

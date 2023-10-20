@@ -186,7 +186,7 @@
 //! cargo run --release --example demo
 //! ```
 //!
-//! > [!NOTE] Linux users might need to install [libxcb](https://xcb.freedesktop.org/) in order to use
+//! > Linux users might need to install [libxcb](https://xcb.freedesktop.org/) in order to use
 //! > copy/paste commands on X11.
 //! > [More info](https://github.com/aweinstock314/rust-clipboard/issues/67).
 //! >

@@ -40,7 +40,7 @@ mod tests {
             );
             assert_eq2!(
                 converted_mouse_input.maybe_modifier_keys,
-                Some(ModifierKeysMask::SHIFT)
+                Some(ModifierKeysMask::new().with_shift())
             );
         }
         // Mouse moved.
@@ -133,7 +133,7 @@ mod tests {
             );
             assert_eq2!(
                 converted_mouse_input.maybe_modifier_keys,
-                Some(ModifierKeysMask::SHIFT)
+                Some(ModifierKeysMask::new().with_shift())
             );
         }
         // Mouse up.
@@ -195,7 +195,7 @@ mod tests {
             );
             assert_eq2!(
                 converted_mouse_input.maybe_modifier_keys,
-                Some(ModifierKeysMask::SHIFT | ModifierKeysMask::ALT)
+                Some(ModifierKeysMask::new().with_alt().with_shift())
             );
         }
     }

@@ -100,7 +100,7 @@ mod test_dialog_event {
 
     #[test]
     fn dialog_event_handles_modal_keypress() {
-        let modal_keypress = keypress!(@char ModifierKeysMask::CTRL, 'l');
+        let modal_keypress = keypress!(@char ModifierKeysMask::new().with_ctrl(), 'l');
         let input_event = InputEvent::Keyboard(modal_keypress);
         let dialog_event =
             DialogEvent::should_activate_modal(&input_event, modal_keypress);
