@@ -120,7 +120,7 @@ mod app_with_layout_impl_trait_app {
             // Ctrl + n => next slide.
             if input_event.matches_keypress(KeyPress::WithModifiers {
                 key: Key::Character('n'),
-                mask: ModifierKeysMask::CTRL,
+                mask: ModifierKeysMask::new().with_ctrl(),
             }) {
                 // Spawn next slide action.
                 spawn_dispatch_action!(args.shared_store, Action::SlideControlNextSlide);
@@ -130,7 +130,7 @@ mod app_with_layout_impl_trait_app {
             // Ctrl + p => previous slide.
             if input_event.matches_keypress(KeyPress::WithModifiers {
                 key: Key::Character('p'),
-                mask: ModifierKeysMask::CTRL,
+                mask: ModifierKeysMask::new().with_ctrl(),
             }) {
                 // Spawn previous slide action.
                 spawn_dispatch_action!(
@@ -152,7 +152,9 @@ mod app_with_layout_impl_trait_app {
             .await
         }
 
-        fn init(&mut self) { populate_component_registry::init(self); }
+        fn init(&mut self) {
+            populate_component_registry::init(self);
+        }
 
         fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
             &mut self.component_registry

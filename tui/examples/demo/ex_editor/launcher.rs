@@ -37,7 +37,7 @@ pub async fn run_app() -> CommonResult<()> {
 
         // Exit if these keys are pressed.
         let exit_keys: Vec<InputEvent> = vec![InputEvent::Keyboard(
-            keypress! { @char ModifierKeysMask::CTRL, 'x' },
+            keypress! { @char ModifierKeysMask::new().with_ctrl(), 'x' },
         )];
 
         // Create a window.

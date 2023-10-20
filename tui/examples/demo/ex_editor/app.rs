@@ -150,7 +150,9 @@ mod app_with_layout_impl_trait_app {
             .await
         }
 
-        fn init(&mut self) { populate_component_registry::init(self); }
+        fn init(&mut self) {
+            populate_component_registry::init(self);
+        }
 
         fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
             &mut self.component_registry
@@ -180,7 +182,7 @@ mod detect_modal_dialog_activation_from_input_event {
                 input_event,
                 KeyPress::WithModifiers {
                     key: Key::Character('l'),
-                    mask: ModifierKeysMask::CTRL,
+                    mask: ModifierKeysMask::new().with_ctrl(),
                 },
             ) {
                 // Reset the dialog component prior to activating / showing it.
@@ -211,7 +213,7 @@ mod detect_modal_dialog_activation_from_input_event {
                 input_event,
                 KeyPress::WithModifiers {
                     key: Key::Character('k'),
-                    mask: ModifierKeysMask::CTRL,
+                    mask: ModifierKeysMask::new().with_ctrl(),
                 },
             ) {
                 // Reset the dialog component prior to activating / showing it.

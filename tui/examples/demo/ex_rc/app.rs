@@ -155,7 +155,7 @@ mod app_with_layout_impl_trait_app {
             // Ctrl + n => next slide.
             if input_event.matches_keypress(KeyPress::WithModifiers {
                 key: Key::Character('n'),
-                mask: ModifierKeysMask::CTRL,
+                mask: ModifierKeysMask::new().with_ctrl(),
             }) {
                 // Spawn next slide action.
                 spawn_dispatch_action!(args.shared_store, Action::SlideControlNextSlide);
@@ -165,7 +165,7 @@ mod app_with_layout_impl_trait_app {
             // Ctrl + p => previous slide.
             if input_event.matches_keypress(KeyPress::WithModifiers {
                 key: Key::Character('p'),
-                mask: ModifierKeysMask::CTRL,
+                mask: ModifierKeysMask::new().with_ctrl(),
             }) {
                 // Spawn previous slide action.
                 spawn_dispatch_action!(
@@ -178,7 +178,7 @@ mod app_with_layout_impl_trait_app {
             // x => Cancel animation & don't consume the event.
             if input_event.matches_keypress(KeyPress::WithModifiers {
                 key: Key::Character('x'),
-                mask: ModifierKeysMask::CTRL,
+                mask: ModifierKeysMask::new().with_ctrl(),
             }) {
                 self.animator.stop();
             };
