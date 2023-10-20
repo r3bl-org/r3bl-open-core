@@ -186,6 +186,14 @@
 //! cargo run --release --example demo
 //! ```
 //!
+//! > [!NOTE] Linux users might need to install [libxcb](https://xcb.freedesktop.org/) in order to use
+//! > copy/paste commands on X11.
+//! > [More info](https://github.com/aweinstock314/rust-clipboard/issues/67).
+//! >
+//! > Instructions for installing `libxcb1-dev` package for Debian/Ubuntu. In some cases
+//! > `libxcb-shape0-dev` and `libxcb-xfixes0-dev` maybe required on top of `libxcb1-dev`.
+//! > [More info](https://github.com/orhun/kmon/issues/2#issuecomment-667108596).
+//!
 //! These examples cover the entire surface area of the TUI API. You can also take a look at
 //! the tests in the source (`tui/src/`) as well. A single [`nu`
 //! shell](https://www.nushell.sh/) script `run.nu` at the top level directory of the repo

@@ -3,8 +3,8 @@
 </p>
 
 # Context
-<a id="markdown-context" name="context"></a>
 
+<a id="markdown-context" name="context"></a>
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
@@ -49,8 +49,8 @@ it.
      3. integrations w/ calendar, email, contacts APIs
 
 # r3bl_tui crate
-<a id="markdown-r3bl_tui-crate" name="r3bl_tui-crate"></a>
 
+<a id="markdown-r3bl_tui-crate" name="r3bl_tui-crate"></a>
 
 This crate is related to the first thing that's described above. It provides lots of useful
 functionality to help you build TUI (text user interface) apps, along w/ general niceties &
@@ -88,8 +88,8 @@ ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 <!-- /TOC -->
 
 ## Text User Interface engine for Rust
-<a id="markdown-text-user-interface-engine-for-rust" name="text-user-interface-engine-for-rust"></a>
 
+<a id="markdown-text-user-interface-engine-for-rust" name="text-user-interface-engine-for-rust"></a>
 
 You can build fully async TUI (text user interface) apps with a modern API that brings the best of
 the web frontend development ideas to TUI apps written in Rust:
@@ -110,39 +110,41 @@ built-in. No more blocking the main thread for user input, for async middleware,
 
 Here are some framework highlights:
 
--   An easy to use and approachable API that is inspired by React, JSX, CSS, and Redux. Lots of
-    components and things are provided for you so you don't have to build them from scratch. This is a
-    full featured component library including:
-    -   Redux for state management (fully async, concurrent & parallel).
-    -   CSS like declarative styling engine.
-    -   CSS flexbox like declarative layout engine which is fully responsive. You can resize your
-        terminal window and everything will be laid out correctly.
-    -   A terminal independent underlying rendering and painting engine (can use crossterm or termion or
-        whatever you want).
-    -   Markdown text editor w/ syntax highlighting support, metadata (tags, title, author, date), smart
-        lists. This uses a custom Markdown parser and custom syntax highlighter. Syntax highlighting for
-        code blocks is provided by the syntect crate.
-    -   Modal dialog boxes. And autocompletion dialog boxes.
-    -   Lolcat (color gradients) implementation w/ a rainbow color-wheel palette. All the color output
-        is sensitive to the capabilities of the terminal. Colors are gracefully downgraded from
-        truecolor, to ANSI256, to grayscale.
-    -   Support for Unicode grapheme clusters in strings. You can safely use emojis, and other Unicode
-        characters in your TUI apps.
-    -   Support for mouse events.
--   The entire TUI framework itself supports concurrency & parallelism (user input, rendering, etc.
-    are generally non blocking).
--   It is fast! There are no needless re-renders, or flickering. Animations and color changes are
-    smooth (check this out for yourself by running the examples). You can even build your TUI in
-    layers (like z-order in a browser's DOM).
+- An easy to use and approachable API that is inspired by React, JSX, CSS, and Redux. Lots of
+  components and things are provided for you so you don't have to build them from scratch. This is a
+  full featured component library including:
+  - Redux for state management (fully async, concurrent & parallel).
+  - CSS like declarative styling engine.
+  - CSS flexbox like declarative layout engine which is fully responsive. You can resize your
+    terminal window and everything will be laid out correctly.
+  - A terminal independent underlying rendering and painting engine (can use crossterm or termion or
+    whatever you want).
+  - Markdown text editor w/ syntax highlighting support, metadata (tags, title, author, date), smart
+    lists. This uses a custom Markdown parser and custom syntax highlighter. Syntax highlighting for
+    code blocks is provided by the syntect crate.
+  - Modal dialog boxes. And autocompletion dialog boxes.
+  - Lolcat (color gradients) implementation w/ a rainbow color-wheel palette. All the color output
+    is sensitive to the capabilities of the terminal. Colors are gracefully downgraded from
+    truecolor, to ANSI256, to grayscale.
+  - Support for Unicode grapheme clusters in strings. You can safely use emojis, and other Unicode
+    characters in your TUI apps.
+  - Support for mouse events.
+- The entire TUI framework itself supports concurrency & parallelism (user input, rendering, etc.
+  are generally non blocking).
+- It is fast! There are no needless re-renders, or flickering. Animations and color changes are
+  smooth (check this out for yourself by running the examples). You can even build your TUI in
+  layers (like z-order in a browser's DOM).
 
 ---
 
 ## Examples to get you started
+
 <a id="markdown-examples-to-get-you-started" name="examples-to-get-you-started"></a>
 
 <!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
 
 ### Video of the demo in action
+
 <a id="markdown-video-of-the-demo-in-action" name="video-of-the-demo-in-action"></a>
 
 ![video-gif](https://user-images.githubusercontent.com/2966499/233799311-210b887e-0aa6-470a-bcea-ee8e0e3eb019.gif)
@@ -153,6 +155,7 @@ this TUI engine.
 ![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
 
 ### Run the demo locally
+
 <a id="markdown-run-the-demo-locally" name="run-the-demo-locally"></a>
 
 Once you've cloned [the repo](https://github.com/r3bl-org/r3bl_rs_utils) to a folder on your
@@ -163,48 +166,42 @@ cd tui/examples
 cargo run --release --example demo
 ```
 
-> [!NOTE]
-> [libxcb](https://xcb.freedesktop.org/) should be installed for using the copy/paste commands of X11
-[*](https://github.com/aweinstock314/rust-clipboard/issues/67).
-> 
-> e.g: Installing `libxcb1-dev` package for Debian/Ubuntu. In some cases `libxcb-shape0-dev` and 
-> `libxcb-xfixes0-dev` maybe required on top of `libxcb1-dev`
-> [*](https://github.com/orhun/kmon/issues/2#issuecomment-667108596).
+> [!NOTE] Linux users might need to install [libxcb](https://xcb.freedesktop.org/) in order to use
+> copy/paste commands on X11.
+> [More info](https://github.com/aweinstock314/rust-clipboard/issues/67).
+>
+> Instructions for installing `libxcb1-dev` package for Debian/Ubuntu. In some cases
+> `libxcb-shape0-dev` and `libxcb-xfixes0-dev` maybe required on top of `libxcb1-dev`.
+> [More info](https://github.com/orhun/kmon/issues/2#issuecomment-667108596).
 
-These examples cover the entire surface area of the TUI API. You can also take a look at
-the tests in the source (`tui/src/`) as well. A single [`nu`
-shell](https://www.nushell.sh/) script `run.nu` at the top level directory of the repo
-allows you to easily build, run, test, and do so much more with the repo. This script is
-very powerful and can be run in a CI/CD environment w/ all the required arguments supplied
-or in interactive mode, where the user will be prompted for input.
+These examples cover the entire surface area of the TUI API. You can also take a look at the tests
+in the source (`tui/src/`) as well. A single [`nu` shell](https://www.nushell.sh/) script `run.nu`
+at the top level directory of the repo allows you to easily build, run, test, and do so much more
+with the repo. This script is very powerful and can be run in a CI/CD environment w/ all the
+required arguments supplied or in interactive mode, where the user will be prompted for input.
 
-> The `run.nu` script works on Linux, macOS, and Windows. On Linux and macOS, you can
-> simply run `./run.nu` instead of `nu run.nu`.
+> The `run.nu` script works on Linux, macOS, and Windows. On Linux and macOS, you can simply run
+> `./run.nu` instead of `nu run.nu`.
 
-- `nu run.nu help`: This will show you all the commands that you can pass to the `run.nu`
-  script.
-- `nu run.nu build-full`: This will build all the crates in the Rust workspace. And it
-  will install all the required pre-requisite tools needed to work with this crate (what
-  `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really
-  clean build.
-- `nu run.nu install-cargo-tools`: This will install all the required pre-requisite tools
-  needed to work with this crate (things like `cargo-deny`, `flamegraph` will all be
-  installed in one go).
-- `nu run.nu run-release`: This will simply run the examples w/ the release build (so it
-   will be fast). You can watch the logs by running `nu run.nu log`.
+- `nu run.nu help`: This will show you all the commands that you can pass to the `run.nu` script.
+- `nu run.nu build-full`: This will build all the crates in the Rust workspace. And it will install
+  all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools`
+  does) and clear the cargo cache, cleaning, and then do a really clean build.
+- `nu run.nu install-cargo-tools`: This will install all the required pre-requisite tools needed to
+  work with this crate (things like `cargo-deny`, `flamegraph` will all be installed in one go).
+- `nu run.nu run-release`: This will simply run the examples w/ the release build (so it will be
+  fast). You can watch the logs by running `nu run.nu log`.
 - `nu run.nu run`: This will simply run the examples. You can watch the logs by running
   `nu run.nu log`.
 - `nu run.nu test`: Run all the tests (in all crates in the Rust workspace).
 - `nu run.nu watch-one-test`: Run a single test and watch it in the given crate / folder.
 - `nu run.nu build`: build the code in all the crates in the Rust workspace.
 - `nu run.nu log`: Run the logger to see log output.
-- `nu run.nu check-licenses`: Use `cargo-deny` to audit all licenses used in the Rust
-  workspace.
-- `nu run.nu run-with-flamegraph-profiling`: This will run the examples and generate a
-   flamegraph at the end so you can see profile the performance of the app.
-- `nu run.nu run-with-crash-reporting`: This will run the examples and generate a
-   `crash_log.txt` file (in the `tui` folder) in case the app crashes. This is useful for
-   debugging.
+- `nu run.nu check-licenses`: Use `cargo-deny` to audit all licenses used in the Rust workspace.
+- `nu run.nu run-with-flamegraph-profiling`: This will run the examples and generate a flamegraph at
+  the end so you can see profile the performance of the app.
+- `nu run.nu run-with-crash-reporting`: This will run the examples and generate a `crash_log.txt`
+  file (in the `tui` folder) in case the app crashes. This is useful for debugging.
 - `nu run.nu docs`: Generate docs for all the crates in the Rust workspace.
 - `nu run.nu clippy`: Run clippy on all the crates in the Rust workspace.
 - `nu run.nu rustfmt`: Run rustfmt on all the crates in the Rust workspace.
@@ -213,8 +210,8 @@ or in interactive mode, where the user will be prompted for input.
 ---
 
 ## How does layout, rendering, and event handling work in general?
-<a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>
 
+<a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>
 
 - The `App` trait impl is the main entry point for laying out the entire application. And this is
   where the `component_registry` lives and all the `Component`s are created and added to the
@@ -230,8 +227,8 @@ or in interactive mode, where the user will be prompted for input.
   trait when user input is detected from the keyboard or mouse.
 
 ## Life of an input event
-<a id="markdown-life-of-an-input-event" name="life-of-an-input-event"></a>
 
+<a id="markdown-life-of-an-input-event" name="life-of-an-input-event"></a>
 
 There is a clear separation of concerns in this module. To illustrate what goes where, and how
 things work let's look at an example that puts the main event loop front and center & deals w/ how
@@ -287,8 +284,8 @@ the following sections:
 ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
 
 ## The window
-<a id="markdown-the-window" name="the-window"></a>
 
+<a id="markdown-the-window" name="the-window"></a>
 
 The main building blocks of a TUI app are:
 
@@ -305,8 +302,8 @@ The main building blocks of a TUI app are:
     we have to deal with [FlexBox], [Component], and [crate::Style].
 
 ## Layout and styling
-<a id="markdown-layout-and-styling" name="layout-and-styling"></a>
 
+<a id="markdown-layout-and-styling" name="layout-and-styling"></a>
 
 Inside of your [App] if you want to use flexbox like layout and CSS like styling you can think of
 composing your code in the following way:
@@ -323,8 +320,8 @@ composing your code in the following way:
     dispatch actions to the store, and even have async middleware!
 
 ## Component, ComponentRegistry, focus management, and event routing
-<a id="markdown-component%2C-componentregistry%2C-focus-management%2C-and-event-routing" name="component%2C-componentregistry%2C-focus-management%2C-and-event-routing"></a>
 
+<a id="markdown-component%2C-componentregistry%2C-focus-management%2C-and-event-routing" name="component%2C-componentregistry%2C-focus-management%2C-and-event-routing"></a>
 
 Typically your [App] will look like this:
 
@@ -353,16 +350,16 @@ Another thing to keep in mind is that the [App] and [TerminalWindow] is persiste
 re-renders. The Redux store is also persistent between re-renders.
 
 ## Input event specificity
-<a id="markdown-input-event-specificity" name="input-event-specificity"></a>
 
+<a id="markdown-input-event-specificity" name="input-event-specificity"></a>
 
 [TerminalWindow] gives [Component] first dibs when it comes to handling input events. If it punts
 handling this event, it will be handled by the default input event handler. And if nothing there
 matches this event, then it is simply dropped.
 
 ## Rendering and painting
-<a id="markdown-rendering-and-painting" name="rendering-and-painting"></a>
 
+<a id="markdown-rendering-and-painting" name="rendering-and-painting"></a>
 
 The R3BL TUI engine uses a high performance compositor to render the UI to the terminal. This
 ensures that only "pixels" that have changed are painted to the terminal. This is done by creating a
@@ -371,8 +368,8 @@ row index position. There are only as many `PixelChar`s as there are rows and co
 screen. And the index maps directly to the position of the pixel in the terminal screen.
 
 ### Offscreen buffer
-<a id="markdown-offscreen-buffer" name="offscreen-buffer"></a>
 
+<a id="markdown-offscreen-buffer" name="offscreen-buffer"></a>
 
 Here is an example of what a single row of rendered output might look like in a row of the
 `OffscreenBuffer`. This diagram shows each `PixelChar` in `row_index: 1` of the `OffscreenBuffer`.
@@ -424,8 +421,8 @@ Each `PixelChar` can be one of 4 things:
    the rainbow effect. An example of this is the outline around a modal dialog box.
 
 ### Render pipeline
-<a id="markdown-render-pipeline" name="render-pipeline"></a>
 
+<a id="markdown-render-pipeline" name="render-pipeline"></a>
 
 The following diagram provides a high level overview of how apps (that contain components, which may
 contain components, and so on) are rendered to the terminal screen.
@@ -446,8 +443,8 @@ input event, and that produces a new state which then has to be rendered, they a
 painted into an `OffscreenBuffer`.
 
 ### First render
-<a id="markdown-first-render" name="first-render"></a>
 
+<a id="markdown-first-render" name="first-render"></a>
 
 The `paint.rs` file contains the `paint` function, which is the entry point for all rendering. Once
 the first render occurs, the `OffscreenBuffer` that is generated is saved to `GlobalSharedState`.
@@ -467,8 +464,8 @@ really simple making it very easy to swap out other terminal libraries such as `
 GUI backend, or some other custom output driver.
 
 ### Subsequent render
-<a id="markdown-subsequent-render" name="subsequent-render"></a>
 
+<a id="markdown-subsequent-render" name="subsequent-render"></a>
 
 Since the `OffscreenBuffer` is cached in `GlobalSharedState` a diff to be performed for subsequent
 renders. And only those diff chunks are painted to the screen. This ensures that there is no flicker
@@ -476,8 +473,8 @@ when the content of the screen changes. It also minimizes the amount of work tha
 terminal emulator has to do put the `PixelChar`s on the screen.
 
 ## Redux for state management
-<a id="markdown-redux-for-state-management" name="redux-for-state-management"></a>
 
+<a id="markdown-redux-for-state-management" name="redux-for-state-management"></a>
 
 If you use Redux for state management, then you will create a [crate::redux] [crate::Store] that is
 passed into the [TerminalWindow]. For more detailed information on Redux, please read the
@@ -575,8 +572,8 @@ impl AsyncReducer<State, Action> for MyReducer {
 ```
 
 ## How does the editor component work?
-<a id="markdown-how-does-the-editor-component-work%3F" name="how-does-the-editor-component-work%3F"></a>
 
+<a id="markdown-how-does-the-editor-component-work%3F" name="how-does-the-editor-component-work%3F"></a>
 
 The `EditorComponent` struct can hold data in its own memory, in addition to relying on the state.
 
@@ -612,8 +609,8 @@ Here are the connection points w/ the impl of `Component<S,A>` in `EditorCompone
     - Which will return a `RenderPipeline`.
 
 ### Painting the caret
-<a id="markdown-painting-the-caret" name="painting-the-caret"></a>
 
+<a id="markdown-painting-the-caret" name="painting-the-caret"></a>
 
 > Definitions
 >
@@ -649,8 +646,8 @@ constraints).
      cursor features that are provided by the actual global cursor (discussed above).
 
 ## How do modal dialog boxes work?
-<a id="markdown-how-do-modal-dialog-boxes-work%3F" name="how-do-modal-dialog-boxes-work%3F"></a>
 
+<a id="markdown-how-do-modal-dialog-boxes-work%3F" name="how-do-modal-dialog-boxes-work%3F"></a>
 
 A modal dialog box is different than a normal reusable component. This is because:
 
@@ -692,8 +689,8 @@ why:
     some portion of the component registry if one is not careful.
 
 ### Two callback functions
-<a id="markdown-two-callback-functions" name="two-callback-functions"></a>
 
+<a id="markdown-two-callback-functions" name="two-callback-functions"></a>
 
 When creating a new dialog box component, two callback functions are passed in:
 
@@ -703,8 +700,8 @@ When creating a new dialog box component, two callback functions are passed in:
    editor.
 
 ### How to use this dialog to make an HTTP request & pipe the results into a selection area?
-<a id="markdown-how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F" name="how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F"></a>
 
+<a id="markdown-how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F" name="how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F"></a>
 
 So far we have covered the use case for a simple modal dialog box. In order to provide
 auto-completion capabilities, via some kind of web service, there needs to be a slightly more
@@ -717,8 +714,8 @@ different on the screen. Instead of being in the middle of the screen, it starts
 screen. The callbacks are the same.
 
 ### How to make HTTP requests
-<a id="markdown-how-to-make-http-requests" name="how-to-make-http-requests"></a>
 
+<a id="markdown-how-to-make-http-requests" name="how-to-make-http-requests"></a>
 
 Instead of using the `reqwest` crate, we should use the `hyper` crate (which is part of Tokio) and
 drop support for `reqwest` in all our crates.
@@ -726,29 +723,29 @@ drop support for `reqwest` in all our crates.
 - https://blessed.rs/crates#section-networking-subsection-http-foundations
 
 ## Grapheme support
-<a id="markdown-grapheme-support" name="grapheme-support"></a>
 
+<a id="markdown-grapheme-support" name="grapheme-support"></a>
 
 Unicode is supported (to an extent). There are some caveats. The [crate::UnicodeStringExt] trait has
 lots of great information on this graphemes and what is supported and what is not.
 
 ## Lolcat support
-<a id="markdown-lolcat-support" name="lolcat-support"></a>
 
+<a id="markdown-lolcat-support" name="lolcat-support"></a>
 
 An implementation of [crate::lolcat::cat] w/ a color wheel is provided.
 
 ## Other crates that depend on this
-<a id="markdown-other-crates-that-depend-on-this" name="other-crates-that-depend-on-this"></a>
 
+<a id="markdown-other-crates-that-depend-on-this" name="other-crates-that-depend-on-this"></a>
 
 This crate is a dependency of the following crates:
 
 1. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crates (the "main" library)
 
 ## Issues, comments, feedback, and PRs
-<a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
 
+<a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
 
 Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
 And if you have any feature requests, feel free to add them there too 👍.
