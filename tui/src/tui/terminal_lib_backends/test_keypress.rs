@@ -36,10 +36,10 @@ mod tests {
         // With modifier.
         {
             let macro_syntax =
-                keypress! { @char ModifierKeysMask::SHIFT | ModifierKeysMask::CTRL, 'a' };
+                keypress! { @char ModifierKeysMask::new().with_shift().with_ctrl(), 'a' };
             let struct_syntax = KeyPress::WithModifiers {
                 key: Key::Character('a'),
-                mask: ModifierKeysMask::SHIFT | ModifierKeysMask::CTRL,
+                mask: ModifierKeysMask::new().with_shift().with_ctrl(),
             };
             assert_eq2!(macro_syntax, struct_syntax);
         }
@@ -57,10 +57,10 @@ mod tests {
         }
         // With modifier.
         {
-            let macro_syntax = keypress! { @special ModifierKeysMask::CTRL | ModifierKeysMask::ALT, SpecialKey::Left };
+            let macro_syntax = keypress! { @special ModifierKeysMask::new().with_alt().with_ctrl(), SpecialKey::Left };
             let struct_syntax = KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::Left),
-                mask: ModifierKeysMask::CTRL | ModifierKeysMask::ALT,
+                mask: ModifierKeysMask::new().with_alt().with_ctrl(),
             };
             assert_eq2!(macro_syntax, struct_syntax);
         }
@@ -78,10 +78,11 @@ mod tests {
         }
         // With modifier.
         {
-            let macro_syntax = keypress! { @fn ModifierKeysMask::SHIFT, FunctionKey::F1 };
+            let macro_syntax =
+                keypress! { @fn ModifierKeysMask::new().with_shift(), FunctionKey::F1 };
             let struct_syntax = KeyPress::WithModifiers {
                 key: Key::FunctionKey(FunctionKey::F1),
-                mask: ModifierKeysMask::SHIFT,
+                mask: ModifierKeysMask::new().with_shift(),
             };
             assert_eq2!(macro_syntax, struct_syntax);
         }
@@ -110,7 +111,7 @@ mod tests {
             assert_eq2!(
                 converted_keypress,
                 KeyPress::WithModifiers {
-                    mask: ModifierKeysMask::CTRL,
+                    mask: ModifierKeysMask::new().with_ctrl(),
                     key: Key::Character('x'),
                 }
             );
@@ -126,7 +127,7 @@ mod tests {
             assert_eq2!(
                 converted_keypress,
                 KeyPress::WithModifiers {
-                    mask: ModifierKeysMask::CTRL | ModifierKeysMask::ALT,
+                    mask: ModifierKeysMask::new().with_alt().with_ctrl(),
                     key: Key::Character('x'),
                 }
             );

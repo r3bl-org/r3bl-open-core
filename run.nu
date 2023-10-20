@@ -47,6 +47,8 @@ def main [...args: string] {
         "watch-all-tests" => {watch-all-tests}
         "watch-macro-expand-one-test" => {watch-macro-expand-one-test $args}
         "docs" => {docs}
+        "check" => {check}
+        "check-watch" => {check-watch}
         "clippy" => {clippy}
         "clippy-watch" => {clippy-watch}
         "rustfmt" => {rustfmt}
@@ -108,8 +110,6 @@ def watch-one-test [args: list<string>] {
         $user_input
     }
 
-
-
     if $folder_name != "" {
         cd $folder_name
     }
@@ -159,6 +159,8 @@ def print-help [command: string] {
         print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
         print $'    (ansi green)watch-all-tests(ansi reset)'
         print $'    (ansi green)watch-macro-expand-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
+        print $'    (ansi green)check(ansi reset)'
+        print $'    (ansi green)check-watch(ansi reset)'
         print $'    (ansi green)clippy(ansi reset)'
         print $'    (ansi green)clippy-watch(ansi reset)'
         print $'    (ansi green)serve-docs(ansi reset)'
@@ -224,15 +226,17 @@ def test [] {
     for folder in ($workspace_folders) {
         cd $folder
         print $'(ansi magenta)≡ Running tests in ($folder) .. ≡(ansi reset)'
-        cargo test -q -- --test-threads=4
+        cargo test -q -- --test-threads=20
         cd ..
     }
 }
 
-def clippy-watch [] {
-    cargo fix --allow-dirty --allow-staged
-    cargo fmt --all
-    cargo watch -x 'clippy --fix --allow-dirty --allow-staged' -c -q
+def check [] {
+    cargo check --workspace
+}
+
+def check-watch [] {
+    cargo watch -x 'check --workspace'
 }
 
 def clippy [] {
@@ -243,6 +247,12 @@ def clippy [] {
         cargo fmt --all
         cd ..
     }
+}
+
+def clippy-watch [] {
+    cargo fix --allow-dirty --allow-staged
+    cargo fmt --all
+    cargo watch -x 'clippy --fix --allow-dirty --allow-staged' -c -q
 }
 
 def docs [] {

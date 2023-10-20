@@ -81,53 +81,103 @@ impl TryFrom<&InputEvent> for EditorEvent {
             // Selection events.
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::Right),
-                mask: ModifierKeysMask::SHIFT,
+                mask:
+                    ModifierKeysMask {
+                        shift_key_state: KeyState::Pressed,
+                        ctrl_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
             }) => Ok(EditorEvent::Select(SelectionScope::OneCharRight)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::Left),
-                mask: ModifierKeysMask::SHIFT,
+                mask:
+                    ModifierKeysMask {
+                        shift_key_state: KeyState::Pressed,
+                        ctrl_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
             }) => Ok(EditorEvent::Select(SelectionScope::OneCharLeft)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::Down),
-                mask: ModifierKeysMask::SHIFT,
+                mask:
+                    ModifierKeysMask {
+                        shift_key_state: KeyState::Pressed,
+                        ctrl_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
             }) => Ok(EditorEvent::Select(SelectionScope::OneLineDown)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::Up),
-                mask: ModifierKeysMask::SHIFT,
+                mask:
+                    ModifierKeysMask {
+                        shift_key_state: KeyState::Pressed,
+                        ctrl_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
             }) => Ok(EditorEvent::Select(SelectionScope::OneLineUp)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::PageUp),
-                mask: ModifierKeysMask::SHIFT,
+                mask:
+                    ModifierKeysMask {
+                        shift_key_state: KeyState::Pressed,
+                        ctrl_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
             }) => Ok(EditorEvent::Select(SelectionScope::PageUp)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::PageDown),
-                mask: ModifierKeysMask::SHIFT,
+                mask:
+                    ModifierKeysMask {
+                        shift_key_state: KeyState::Pressed,
+                        ctrl_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
             }) => Ok(EditorEvent::Select(SelectionScope::PageDown)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::Home),
-                mask: ModifierKeysMask::SHIFT,
+                mask:
+                    ModifierKeysMask {
+                        shift_key_state: KeyState::Pressed,
+                        ctrl_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
             }) => Ok(EditorEvent::Select(SelectionScope::Home)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::End),
-                mask: ModifierKeysMask::SHIFT,
+                mask:
+                    ModifierKeysMask {
+                        shift_key_state: KeyState::Pressed,
+                        ctrl_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
             }) => Ok(EditorEvent::Select(SelectionScope::End)),
 
             //  Clipboard events.
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::Character('c'),
-                mask: ModifierKeysMask::CTRL,
+                mask:
+                    ModifierKeysMask {
+                        ctrl_key_state: KeyState::Pressed,
+                        shift_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
             }) => Ok(EditorEvent::Copy),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::Character('v'),
-                mask: ModifierKeysMask::CTRL,
+                mask:
+                    ModifierKeysMask {
+                        ctrl_key_state: KeyState::Pressed,
+                        shift_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
             }) => Ok(EditorEvent::Paste),
 
             // Other events.
@@ -180,6 +230,7 @@ impl TryFrom<&InputEvent> for EditorEvent {
             InputEvent::Keyboard(KeyPress::Plain {
                 key: Key::SpecialKey(SpecialKey::Right),
             }) => Ok(Self::MoveCaret(CaretDirection::Right)),
+
             _ => Err(format!("Invalid input event: {input_event:?}")),
         }
     }
