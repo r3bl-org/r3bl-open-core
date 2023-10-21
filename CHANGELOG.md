@@ -135,6 +135,11 @@
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
+### v0.1.20 (2023-10-21)
+
+- Updated:
+  - Bug fix: <https://github.com/r3bl-org/r3bl_rs_utils/issues/170>
+
 ### v0.1.19 (2023-10-17)
 <a id="markdown-v0.1.19-2023-10-17" name="v0.1.19-2023-10-17"></a>
 
