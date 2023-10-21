@@ -68,8 +68,8 @@ cd tuify
 # Update cargo.toml version number manually
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.1.19-tuify"
-git tag -a v0.1.19-tuify -m "v0.1.19-tuify"
+git commit -m "v0.1.20-tuify"
+git tag -a v0.1.20-tuify -m "v0.1.20-tuify"
 cd ..
 
 cd macro
