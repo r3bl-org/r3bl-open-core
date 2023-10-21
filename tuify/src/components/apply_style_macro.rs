@@ -16,13 +16,12 @@
  */
 
 use crossterm::style::*;
-use r3bl_ansi_color::{detect_color_support,
-                      Color as RColor,
-                      ColorSupport,
-                      TransformColor};
+use r3bl_ansi_color::{global_color_support, ColorSupport, TransformColor};
 
-pub fn get_crossterm_color_based_on_terminal_capabilities(color: RColor) -> Color {
-    let detect_color_support = detect_color_support();
+pub fn get_crossterm_color_based_on_terminal_capabilities(
+    color: r3bl_ansi_color::Color,
+) -> Color {
+    let detect_color_support = global_color_support::detect();
     match detect_color_support {
         ColorSupport::Truecolor => {
             let rgb_color = color.as_rgb();

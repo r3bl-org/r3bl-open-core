@@ -48,34 +48,40 @@ fn main() {
 
     // Set the color support override to ANSI 256 color mode.
     {
-        color_support_override_set(ColorSupport::Ansi256);
-        let msg: String =
-            format!("> Force ANSI 256 color mode ({:?})", detect_color_support());
+        global_color_support::set_override(ColorSupport::Ansi256);
+        let msg: String = format!(
+            "> Force ANSI 256 color mode ({:?})",
+            global_color_support::detect()
+        );
         print_text(&msg);
     }
 
     // Set the color support override to truecolor mode.
     {
-        color_support_override_set(ColorSupport::Truecolor);
-        let msg: String =
-            format!("> Force True color mode ({:?})", detect_color_support());
+        global_color_support::set_override(ColorSupport::Truecolor);
+        let msg: String = format!(
+            "> Force True color mode ({:?})",
+            global_color_support::detect()
+        );
         print_text(&msg);
     }
 
     // Set the color support override to grayscale mode.
     {
-        color_support_override_set(ColorSupport::Grayscale);
-        let msg: String =
-            format!("> Force Grayscale color mode ({:?})", detect_color_support());
+        global_color_support::set_override(ColorSupport::Grayscale);
+        let msg: String = format!(
+            "> Force Grayscale color mode ({:?})",
+            global_color_support::detect()
+        );
         print_text(&msg);
     }
 
     // Use runtime detection to determine the color support.
     {
-        color_support_override_set(ColorSupport::NotSet);
+        global_color_support::clear_override();
         let msg = format!(
             "> Runtime detection of color support ({:?})",
-            detect_color_support()
+            global_color_support::detect()
         );
         print_text(&msg);
     }

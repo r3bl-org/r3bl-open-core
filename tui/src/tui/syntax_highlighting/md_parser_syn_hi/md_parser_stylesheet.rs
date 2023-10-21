@@ -19,7 +19,7 @@
 //! [ColorSupport] constraints. You can find ANSI colors
 //! [here](https://www.ditig.com/256-colors-cheat-sheet).
 
-use r3bl_ansi_color::{detect_color_support, ColorSupport};
+use r3bl_ansi_color::{global_color_support, ColorSupport};
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
 
@@ -39,7 +39,7 @@ pub fn get_selection_style() -> Style {
 /// style. It is overridden by other styles like bold, italic, etc. below.
 pub fn get_foreground_style() -> Style {
     style! {
-        color_fg: match detect_color_support() {
+        color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#c1b3d0")),
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(244)), // Grey50.
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::White),
@@ -63,7 +63,7 @@ pub fn get_foreground_dim_style() -> Style {
 pub fn get_bold_style() -> Style {
     style! {
         attrib: [bold]
-        color_fg: match detect_color_support() {
+        color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#dacd24")),
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(226)), // Yellow1.
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow),
@@ -76,7 +76,7 @@ pub fn get_bold_style() -> Style {
 pub fn get_italic_style() -> Style {
     style! {
         attrib: [italic]
-        color_fg: match detect_color_support() {
+        color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#a59e3a")),
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(208)), // DarkOrange.
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkYellow),
@@ -89,7 +89,7 @@ pub fn get_italic_style() -> Style {
 pub fn get_bold_italic_style() -> Style {
     style! {
         attrib: [bold, italic]
-        color_fg: match detect_color_support() {
+        color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#dacd24")),
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(184)), // Yellow3.
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow),
@@ -101,7 +101,7 @@ pub fn get_bold_italic_style() -> Style {
 /// This is just for the bold content, not the enclosing "`".
 pub fn get_inline_code_style() -> Style {
     style! {
-        color_fg: match detect_color_support(){
+        color_fg: match global_color_support::detect(){
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ce55b7")),
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Magenta),
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(169)), // HotPink2.
@@ -113,7 +113,7 @@ pub fn get_inline_code_style() -> Style {
 /// This is just for the link text not the enclosing `[` and `]`.
 pub fn get_link_text_style() -> Style {
     style! {
-        color_fg: match detect_color_support() {
+        color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4f86ed")),
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(33)), // DodgerBlue1.
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Blue),
@@ -126,7 +126,7 @@ pub fn get_link_text_style() -> Style {
 pub fn get_link_url_style() -> Style {
     style! {
         attrib: [underline]
-        color_fg: match detect_color_support() {
+        color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#16adf3")),
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(39)), // DeepSkyBlue1.
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Blue),
@@ -139,7 +139,7 @@ pub fn get_link_url_style() -> Style {
 pub fn get_checkbox_checked_style() -> Style {
     style! {
         attrib: [bold, dim]
-        color_fg: match detect_color_support() {
+        color_fg: match global_color_support::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkMagenta),
             _ => TuiColor::Rgb(RgbValue::from_hex("#14a45b")),
         }
@@ -150,7 +150,7 @@ pub fn get_checkbox_checked_style() -> Style {
 pub fn get_checkbox_unchecked_style() -> Style {
     style! {
         attrib: [bold]
-        color_fg: match detect_color_support() {
+        color_fg: match global_color_support::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Green),
             _ => TuiColor::Rgb(RgbValue::from_hex("#e1ff2f"))
         }
@@ -160,7 +160,7 @@ pub fn get_checkbox_unchecked_style() -> Style {
 /// This is for the bullet or numbered bullet of a list item, not the content.
 pub fn get_list_bullet_style() -> Style {
     style! {
-        color_fg: match detect_color_support() {
+        color_fg: match global_color_support::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow), // There is no equivalent.
             _ => TuiColor::Rgb(RgbValue::from_hex("#f8f8a6")), // Pale yellow.
         }
@@ -183,7 +183,7 @@ pub fn get_code_block_content_style() -> Style {
 pub fn get_metadata_title_marker_style() -> Style {
     style! {
         color_fg: TuiColor::Basic(ANSIBasicColor::Black)
-        color_bg: match detect_color_support() {
+        color_bg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4f86ed")), // Soft blue.
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(39)), // DeepSkyBlue1.
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
@@ -196,13 +196,13 @@ pub fn get_metadata_title_marker_style() -> Style {
 /// - Bg color: #444444
 pub fn get_metadata_title_value_style() -> Style {
     style! {
-        color_fg: match detect_color_support() {
+        color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4fcbd4")), // Moderate cyan.
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(51)), // Cyan1.
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan),
             _ => TuiColor::Basic(ANSIBasicColor::Cyan),
         }
-        color_bg: match detect_color_support() {
+        color_bg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#444444")), // Very dark gray.
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(238)), // Grey27.
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkGrey),
@@ -216,7 +216,7 @@ pub fn get_metadata_title_value_style() -> Style {
 pub fn get_metadata_tags_marker_style() -> Style {
     style! {
         color_fg: TuiColor::Basic(ANSIBasicColor::Black)
-        color_bg: match detect_color_support() {
+        color_bg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ad83da")), // Very soft violet.
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(133)), // MediumOrchid3. There is no equivalent.
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow), // There is no equivalent.
@@ -229,13 +229,13 @@ pub fn get_metadata_tags_marker_style() -> Style {
 /// - Bg color: #303030
 pub fn get_metadata_tags_values_style() -> Style {
     style! {
-        color_fg: match detect_color_support() {
+        color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#e2a1e3")), // Soft violet.
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(45)), // Turquoise2
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Cyan), // There is no equivalent.
             _ => TuiColor::Basic(ANSIBasicColor::Cyan),
         }
-        color_bg: match detect_color_support() {
+        color_bg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#303030")), // Very dark gray.
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(236)), // Grey19.
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkGrey),
