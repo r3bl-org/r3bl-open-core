@@ -22,57 +22,66 @@ use std::{
 
 /// Global variable which can be used to:
 /// 1. Override the color support.
-/// 2. Memoize the value of the color support result from running [color_support_get].
+/// 2. Memoize the value of the color support result from running [global_color_support::detect].
 ///
 /// This is a global variable because it is used in multiple places in the codebase, and
 /// it is really dependent on the environment.
-static mut COLOR_SUPPORT_GLOBAL: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
+pub mod global_color_support {
+    use super::*;
 
-const NOT_SET_VALUE: i8 = -1;
+    static mut COLOR_SUPPORT_GLOBAL: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
+    const NOT_SET_VALUE: i8 = -1;
 
-/// This is the main function that is used to determine whether color is supported. And if
-/// so what type of color is supported. If the value has been set using
-/// [color_support_override_set], then that value will be returned. Otherwise, the value
-/// will be determined by the examining the environment variables.
-pub fn detect_color_support() -> ColorSupport {
-    match color_support_get() {
-        ColorSupport::NotSet => {
-            examine_env_vars_to_determine_color_support(Stream::Stdout)
+    /// This is the main function that is used to determine whether color is supported.
+    /// And if so what type of color is supported.
+    ///
+    /// - If the value has been set using [set_override], then that value will be
+    ///   returned.
+    /// - Otherwise, the value will be determined calling
+    ///   [examine_env_vars_to_determine_color_support].
+    pub fn detect() -> ColorSupport {
+        match try_get_override() {
+            Ok(it) => match it {
+                ColorSupport::Ansi256 => ColorSupport::Ansi256,
+                ColorSupport::Truecolor => ColorSupport::Truecolor,
+                ColorSupport::Grayscale => ColorSupport::Grayscale,
+                ColorSupport::NoColor => ColorSupport::NoColor,
+            },
+            Err(_) => examine_env_vars_to_determine_color_support(Stream::Stdout),
         }
-        ColorSupport::Ansi256 => ColorSupport::Ansi256,
-        ColorSupport::Truecolor => ColorSupport::Truecolor,
-        ColorSupport::Grayscale => ColorSupport::Grayscale,
-        ColorSupport::NoColor => ColorSupport::NoColor,
     }
-}
 
-/// Override the color support. Regardless of the value of the environment variables the
-/// value you set here will be used when you call [detect_color_support].
-///
-/// ## Testing support
-///
-/// The [serial_test](https://crates.io/crates/serial_test) crate is used to test this
-/// function. In any test in which this function is called, please use the `#[serial]`
-/// attribute to annotate that test. Otherwise there will be flakiness in the test results
-/// (tests are run in parallel using many threads).
-pub fn color_support_override_set(value: ColorSupport) {
-    unsafe {
-        let value: i8 = ColorSupport::into(value);
-        COLOR_SUPPORT_GLOBAL.store(value, Ordering::SeqCst);
-    };
-}
+    /// Override the color support. Regardless of the value of the environment variables
+    /// the value you set here will be used when you call [detect()].
+    ///
+    /// ## Testing support
+    ///
+    /// The [serial_test](https://crates.io/crates/serial_test) crate is used to test this
+    /// function. In any test in which this function is called, please use the `#[serial]`
+    /// attribute to annotate that test. Otherwise there will be flakiness in the test results
+    /// (tests are run in parallel using many threads).
+    pub fn set_override(value: ColorSupport) {
+        let it = i8::from(value);
+        unsafe { COLOR_SUPPORT_GLOBAL.store(it, Ordering::SeqCst) }
+    }
 
-/// Get the color support. If the value has been set using [color_support_override_set],
-/// then that value will be returned. Otherwise, the value will be determined by the
-/// examining the environment variables.
-fn color_support_get() -> ColorSupport {
-    let color_support_global = unsafe { COLOR_SUPPORT_GLOBAL.load(Ordering::SeqCst) };
-    ColorSupport::from(color_support_global)
+    pub fn clear_override() {
+        unsafe { COLOR_SUPPORT_GLOBAL.store(NOT_SET_VALUE, Ordering::SeqCst) };
+    }
+
+    /// Get the color support override value.
+    /// - If the value has been set using [global_color_support::set_override], then that
+    ///   value will be returned.
+    /// - Otherwise, an error will be returned.
+    pub fn try_get_override() -> Result<ColorSupport, ()> {
+        let it = unsafe { COLOR_SUPPORT_GLOBAL.load(Ordering::SeqCst) };
+        ColorSupport::try_from(it)
+    }
 }
 
 /// Determine whether color is supported heuristically. This is based on the environment
 /// variables.
-fn examine_env_vars_to_determine_color_support(stream: Stream) -> ColorSupport {
+pub fn examine_env_vars_to_determine_color_support(stream: Stream) -> ColorSupport {
     if env_no_color()
         || as_str(&env::var("TERM")) == Ok("dumb")
         || !(is_a_tty(stream)
@@ -128,31 +137,33 @@ pub enum ColorSupport {
     Ansi256,
     Grayscale,
     NoColor,
-    NotSet,
 }
 
 /// These trail implementations allow us to use `ColorSupport` and `i8` interchangeably.
 mod convert_between_color_and_i8 {
-    impl From<i8> for super::ColorSupport {
-        fn from(value: i8) -> Self {
+    impl TryFrom<i8> for super::ColorSupport {
+        type Error = ();
+
+        #[rustfmt::skip]
+        fn try_from(value: i8) -> Result<Self, Self::Error> {
             match value {
-                1 => super::ColorSupport::Ansi256,
-                2 => super::ColorSupport::Truecolor,
-                3 => super::ColorSupport::NoColor,
-                4 => super::ColorSupport::Grayscale,
-                _ => super::ColorSupport::NotSet,
+                1 => Ok(super::ColorSupport::Ansi256),
+                2 => Ok(super::ColorSupport::Truecolor),
+                3 => Ok(super::ColorSupport::NoColor),
+                4 => Ok(super::ColorSupport::Grayscale),
+                _ => Err(()),
             }
         }
     }
 
     impl From<super::ColorSupport> for i8 {
+        #[rustfmt::skip]
         fn from(value: super::ColorSupport) -> Self {
             match value {
-                super::ColorSupport::Ansi256 => 1,
+                super::ColorSupport::Ansi256   => 1,
                 super::ColorSupport::Truecolor => 2,
-                super::ColorSupport::NoColor => 3,
+                super::ColorSupport::NoColor   => 3,
                 super::ColorSupport::Grayscale => 4,
-                _ => -1,
             }
         }
     }
@@ -210,35 +221,47 @@ mod tests {
     #[test]
     #[serial]
     fn cycle_1() {
-        color_support_override_set(ColorSupport::Ansi256);
-        assert_eq!(color_support_get(), ColorSupport::Ansi256);
+        global_color_support::set_override(ColorSupport::Ansi256);
+        assert_eq!(
+            global_color_support::try_get_override(),
+            Ok(ColorSupport::Ansi256)
+        );
     }
 
     #[test]
     #[serial]
     fn cycle_2() {
-        color_support_override_set(ColorSupport::Truecolor);
-        assert_eq!(color_support_get(), ColorSupport::Truecolor);
+        global_color_support::set_override(ColorSupport::Truecolor);
+        assert_eq!(
+            global_color_support::try_get_override(),
+            Ok(ColorSupport::Truecolor)
+        );
     }
 
     #[test]
     #[serial]
     fn cycle_3() {
-        color_support_override_set(ColorSupport::NoColor);
-        assert_eq!(color_support_get(), ColorSupport::NoColor);
+        global_color_support::set_override(ColorSupport::NoColor);
+        assert_eq!(
+            global_color_support::try_get_override(),
+            Ok(ColorSupport::NoColor)
+        );
     }
 
     #[test]
     #[serial]
     fn cycle_4() {
-        color_support_override_set(ColorSupport::Grayscale);
-        assert_eq!(color_support_get(), ColorSupport::Grayscale);
+        global_color_support::set_override(ColorSupport::Grayscale);
+        assert_eq!(
+            global_color_support::try_get_override(),
+            Ok(ColorSupport::Grayscale)
+        );
     }
 
     #[test]
     #[serial]
     fn cycle_5() {
-        color_support_override_set(ColorSupport::NotSet);
-        assert_eq!(color_support_get(), ColorSupport::NotSet);
+        global_color_support::clear_override();
+        assert_eq!(global_color_support::try_get_override(), Err(()));
     }
 }

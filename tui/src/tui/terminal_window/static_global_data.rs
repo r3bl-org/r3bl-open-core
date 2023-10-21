@@ -21,14 +21,15 @@ use chrono::Utc;
 
 const NOT_SET_VALUE: i64 = -1;
 
-/// This module contains static global data that is meant to be used by the entire application. It
-/// also provides functions to manipulate this data.
+/// This module contains static global data that is meant to be used by the entire
+/// application. It also provides functions to manipulate this data.
 ///
 /// ### Color support
+///
 /// The app can override the color support detection heuristics by providing a
-/// [r3bl_ansi_color::detect_color_support()] value. It is not always possible to accurately
-/// detect the color support of the terminal. So this gives the app a way to set it to
-/// whatever the user wants (for example).
+/// [r3bl_ansi_color::global_color_support::detect] value. It is not always possible to
+/// accurately detect the color support of the terminal. So this gives the app a way to
+/// set it to whatever the user wants (for example).
 pub mod telemetry_global_static {
     use super::*;
 

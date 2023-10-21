@@ -78,7 +78,7 @@ mod style_impl {
     use std::fmt::{Display, Formatter, Result};
 
     use crate::{
-        detect_color_support, Color, ColorSupport, RgbColor, SgrCode, Style,
+        global_color_support, Color, ColorSupport, RgbColor, SgrCode, Style,
         TransformColor,
     };
 
@@ -89,7 +89,7 @@ mod style_impl {
     }
 
     fn fmt_color(color: Color, color_kind: ColorKind, f: &mut Formatter<'_>) -> Result {
-        match detect_color_support() {
+        match global_color_support::detect() {
             ColorSupport::Ansi256 => {
                 // ANSI 256 color mode.
                 let color = color.as_ansi256();
@@ -182,7 +182,7 @@ mod display_trait_impl {
         #[serial]
         #[test]
         fn test_formatted_string_creation_ansi256() -> Result<(), String> {
-            color_support_override_set(ColorSupport::Ansi256);
+            global_color_support::set_override(ColorSupport::Ansi256);
             let eg_1 = AnsiStyledText {
                 text: "Hello",
                 style: &[
@@ -217,7 +217,7 @@ mod display_trait_impl {
         #[serial]
         #[test]
         fn test_formatted_string_creation_truecolor() -> Result<(), String> {
-            color_support_override_set(ColorSupport::Truecolor);
+            global_color_support::set_override(ColorSupport::Truecolor);
             let eg_1 = AnsiStyledText {
                 text: "Hello",
                 style: &[
@@ -252,7 +252,7 @@ mod display_trait_impl {
         #[serial]
         #[test]
         fn test_formatted_string_creation_grayscale() -> Result<(), String> {
-            color_support_override_set(ColorSupport::Grayscale);
+            global_color_support::set_override(ColorSupport::Grayscale);
             let eg_1 = AnsiStyledText {
                 text: "Hello",
                 style: &[

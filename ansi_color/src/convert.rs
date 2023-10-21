@@ -41,6 +41,7 @@ pub mod color_utils {
         }
     }
 
+    /// More info: <https://goodcalculators.com/rgb-to-grayscale-conversion-calculator/>
     pub fn convert_grayscale(color: (u8, u8, u8)) -> (u8, u8, u8) {
         // See https://en.wikipedia.org/wiki/Grayscale#Converting_color_to_grayscale
         const SCALE: f64 = 256.0;
