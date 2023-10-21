@@ -49,6 +49,9 @@ fn main() -> Result<()> {
 
     let style = StyleSheet::default();
 
+    // Multiple select, single item.
+    multiple_select_single_item();
+
     // Multiple select.
     multiple_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
     multiple_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
@@ -62,6 +65,23 @@ fn main() -> Result<()> {
     });
 
     Ok(())
+}
+
+/// Multiple select, single item.
+fn multiple_select_single_item() {
+    let max_width_col_count: usize = r3bl_tuify::get_size()
+        .map(|it| it.col_count)
+        .unwrap_or(ch!(80))
+        .into();
+    let list = vec![format!("one element")];
+    r3bl_tuify::select_from_list(
+        "There is only one item to choose from".to_owned(),
+        list,
+        6, /* whatever*/
+        max_width_col_count,
+        r3bl_tuify::SelectionMode::Multiple,
+        r3bl_tuify::StyleSheet::default(),
+    );
 }
 
 /// 13 items & viewport height = 5.

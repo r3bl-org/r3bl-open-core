@@ -100,10 +100,12 @@ pub fn locate_cursor_in_viewport(
         ).green().to_string());
     });
 
-    if abs_row_index == ch!(0) {
-        CaretVerticalViewportLocation::AtAbsoluteTop
-    } else if abs_row_index == items_size - 1 {
+    // Note the ordering of the statements below matters.
+    if abs_row_index == items_size - 1 {
+        // AtAbsoluteBottom takes precedence over AtAbsoluteTop when there is only one item.
         CaretVerticalViewportLocation::AtAbsoluteBottom
+    } else if abs_row_index == ch!(0) {
+        CaretVerticalViewportLocation::AtAbsoluteTop
     } else if abs_row_index < scroll_offset_row_index {
         CaretVerticalViewportLocation::AboveTopOfViewport
     } else if abs_row_index == scroll_offset_row_index {
