@@ -10,7 +10,7 @@ categories = [
   "data-structures",
 ]
 # When you change this, make sure to update `README.md` as well.
-version = "0.9.9"
+version = "0.9.10"
 edition = "2021"
 readme = "README.md" # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/
@@ -30,10 +30,10 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl_rs_utils
-r3bl_rs_utils_core = { path = "core", version = "0.9.8" }
-r3bl_rs_utils_macro = { path = "macro", version = "0.9.6" }
-r3bl_redux = { path = "redux", version = "0.2.5" }
-r3bl_tui = { path = "tui", version = "0.3.6" }
+r3bl_rs_utils_core = { path = "core", version = "0.9.9" }
+r3bl_rs_utils_macro = { path = "macro", version = "0.9.7" }
+r3bl_redux = { path = "redux", version = "0.2.6" }
+r3bl_tui = { path = "tui", version = "0.3.7" }
 
 # Time
 chrono = "0.4.31"

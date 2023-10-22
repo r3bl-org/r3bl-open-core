@@ -115,8 +115,8 @@ cd ..
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.9.9-public"
-git tag -a v0.9.9-public -m "v0.9.9-public"
+git commit -m "v0.9.10-public"
+git tag -a v0.9.10-public -m "v0.9.10-public"
 cargo publish
 
 # Finally, push the git commit and tag to the remote repo
