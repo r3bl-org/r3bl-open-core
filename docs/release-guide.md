@@ -39,6 +39,7 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 
 ```sh
 cd ~/github/r3bl_rs_utils/
+rm Cargo.lock
 
 cd ansi_color
 # Update cargo.toml version number manually
@@ -55,8 +56,8 @@ cd simple_logger
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.1.2-simple_logger"
-git tag -a v0.1.2-simple_logger -m "v0.1.2-simple_logger"
+git commit -m "v0.1.3-simple_logger"
+git tag -a v0.1.3-simple_logger -m "v0.1.3-simple_logger"
 cargo publish
 cd ..
 
