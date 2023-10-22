@@ -42,10 +42,12 @@ cd ~/github/r3bl_rs_utils/
 
 cd ansi_color
 # Update cargo.toml version number manually
+# Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.6.8-ansi_color"
-git tag -a v0.6.8-ansi_color -m "v0.6.8-ansi_color"
+git commit -m "v0.6.9-ansi_color"
+git tag -a v0.6.9-ansi_color -m "v0.6.9-ansi_color"
+cargo publish
 cd ..
 
 cd simple_logger
