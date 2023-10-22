@@ -19,8 +19,10 @@
 pub mod ansi_256_color_gradients;
 pub mod color_wheel_struct;
 pub mod styled_text;
+pub mod truecolor_gradient;
 
 // Re-export.
 pub use ansi_256_color_gradients::*;
 pub use color_wheel_struct::*;
 pub use styled_text::*;
+pub use truecolor_gradient::*;

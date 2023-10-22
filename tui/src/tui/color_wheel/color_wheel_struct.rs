@@ -15,13 +15,9 @@
  *   limitations under the License.
  */
 
-use std::str::FromStr;
-
 use get_size::GetSize;
-use palette::{Gradient, LinSrgb};
 use r3bl_ansi_color::{global_color_support, ColorSupport};
 use r3bl_rs_utils_core::*;
-use rand::Rng;
 use serde::*;
 
 use crate::*;
@@ -293,27 +289,7 @@ impl ColorWheel {
 
             ColorWheelConfig::Rgb(stops, _, _) => {
                 // Generate new gradient.
-                let acc = {
-                    let mut it: Vec<LinSrgb> = vec![];
-                    for color in stops {
-                        let color = LinSrgb::from_str(color)
-                            .expect("Hex color is invalid")
-                            .into_format();
-                        it.push(color);
-                    }
-                    it
-                };
-                let new_gradient: Vec<TuiColor> = Gradient::new(acc)
-                    .take(steps)
-                    .map(|color| {
-                        TuiColor::Rgb(RgbValue::from_f32(
-                            color.red,
-                            color.green,
-                            color.blue,
-                        ))
-                    })
-                    .collect();
-
+                let new_gradient = generate_truecolor_gradient(stops, steps);
                 self.gradient_length_kind =
                     GradientLengthKind::ColorWheel(new_gradient.len());
                 self.gradient_kind = GradientKind::ColorWheel(new_gradient);
@@ -321,35 +297,8 @@ impl ColorWheel {
             }
 
             ColorWheelConfig::RgbRandom(_) => {
-                let mut rng = rand::thread_rng();
-                let gradient = Gradient::new(vec![
-                    LinSrgb::new(
-                        rng.gen_range(0.0..1.0),
-                        rng.gen_range(0.0..1.0),
-                        rng.gen_range(0.0..1.0),
-                    ),
-                    LinSrgb::new(
-                        rng.gen_range(0.0..1.0),
-                        rng.gen_range(0.0..1.0),
-                        rng.gen_range(0.0..1.0),
-                    ),
-                    LinSrgb::new(
-                        rng.gen_range(0.0..1.0),
-                        rng.gen_range(0.0..1.0),
-                        rng.gen_range(0.0..1.0),
-                    ),
-                ]);
-                let new_gradient: Vec<TuiColor> = gradient
-                    .take(steps)
-                    .map(|color| {
-                        TuiColor::Rgb(RgbValue::from_f32(
-                            color.red,
-                            color.green,
-                            color.blue,
-                        ))
-                    })
-                    .collect();
-
+                // Generate new random gradient.
+                let new_gradient = generate_random_truecolor_gradient(steps);
                 self.gradient_length_kind =
                     GradientLengthKind::ColorWheel(new_gradient.len());
                 self.gradient_kind = GradientKind::ColorWheel(new_gradient);
@@ -361,7 +310,6 @@ impl ColorWheel {
                     .iter()
                     .map(|color_u8| TuiColor::Ansi(AnsiValue::new(*color_u8)))
                     .collect();
-
                 self.gradient_length_kind =
                     GradientLengthKind::ColorWheel(gradient.len());
                 self.gradient_kind = GradientKind::ColorWheel(gradient);
