@@ -86,8 +86,8 @@ cd macro
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.9.6-macro"
-git tag -a v0.9.6-macro -m "v0.9.6-macro"
+git commit -m "v0.9.7-macro"
+git tag -a v0.9.7-macro -m "v0.9.7-macro"
 cargo publish
 cd ..
 
