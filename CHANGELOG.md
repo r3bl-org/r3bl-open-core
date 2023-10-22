@@ -103,6 +103,11 @@
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
+### v0.9.8 (2023-10-21)
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
 ### v0.9.7 (2023-10-17)
 <a id="markdown-v0.9.7-2023-10-17" name="v0.9.7-2023-10-17"></a>
 
