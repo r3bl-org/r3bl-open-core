@@ -41,6 +41,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils](#r3bl_rs_utils)
+  - [v0.9.10 2023-10-21](#v0910-2023-10-21)
   - [v0.9.9](#v099)
 - [More info on changelogs](#more-info-on-changelogs)
 
@@ -375,6 +376,12 @@
 
 ## `r3bl_rs_utils`
 <a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
+
+### v0.9.10 (2023-10-21)
+<a id="markdown-v0.9.10-2023-10-21" name="v0.9.10-2023-10-21"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
 
 ### v0.9.9
 <a id="markdown-v0.9.9" name="v0.9.9"></a>
