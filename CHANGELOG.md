@@ -7,6 +7,7 @@
   - [v0.1.1 2023-10-17](#v011-2023-10-17)
   - [v0.1.0 2023-10-14](#v010-2023-10-14)
 - [r3bl_ansi_color](#r3bl_ansi_color)
+  - [v0.6.9 2023-10-21](#v069-2023-10-21)
   - [v0.6.8 2023-10-16](#v068-2023-10-16)
   - [v0.6.7 2023-09-12](#v067-2023-09-12)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
@@ -65,6 +66,13 @@
 
 ## `r3bl_ansi_color`
 <a id="markdown-r3bl_ansi_color" name="r3bl_ansi_color"></a>
+
+
+### v0.6.9 (2023-10-21)
+<a id="markdown-v0.6.9-2023-10-21" name="v0.6.9-2023-10-21"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
 
 ### v0.6.8 (2023-10-16)
 <a id="markdown-v0.6.8-2023-10-16" name="v0.6.8-2023-10-16"></a>
