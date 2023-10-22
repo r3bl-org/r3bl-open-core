@@ -15,11 +15,13 @@
  *   limitations under the License.
  */
 
-use crate::*;
+use std::error::Error;
+
 use clipboard::{self, ClipboardContext, ClipboardProvider};
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::{call_if_true, ch, log_debug, ChUnit, UnicodeString};
-use std::error::Error;
+
+use crate::*;
 
 pub mod clipboard_support {
     use super::*;

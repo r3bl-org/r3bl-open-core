@@ -34,6 +34,7 @@ def main [...args: string] {
     let command = $args | get 0
 
     match $command {
+        "all" => {all}
         "build" => {build}
         "build-full" => {build-full}
         "clean" => {clean}
@@ -149,6 +150,7 @@ def print-help [command: string] {
         print $'    (ansi green)install-cargo-tools(ansi reset)'
         print $'    (ansi green)build-full(ansi reset)'
         print $'    (ansi green)build(ansi reset)'
+        print $'    (ansi green)all(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)docs(ansi reset)'
         print $'    (ansi green)run(ansi reset)'
@@ -185,6 +187,14 @@ def install-cargo-tools [] {
     cargo install cargo-outdated
     cargo install cargo-update
     cargo install cargo-deny
+}
+
+def all [] {
+    install-cargo-tools
+    build-full
+    test
+    clippy
+    docs
 }
 
 def build [] {

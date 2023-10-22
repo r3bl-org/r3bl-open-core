@@ -17,16 +17,20 @@
 
 //! Module providing the TermLogger Implementation
 
-use log::{
-    set_boxed_logger, set_max_level, Level, LevelFilter, Log, Metadata, Record,
-    SetLoggerError,
-};
-use std::io::{Error, Write};
-use std::sync::Mutex;
+use std::{io::{Error, Write},
+          sync::Mutex};
+
+use log::{set_boxed_logger,
+          set_max_level,
+          Level,
+          LevelFilter,
+          Log,
+          Metadata,
+          Record,
+          SetLoggerError};
 use termcolor::{BufferedStandardStream, ColorChoice};
 
 use super::logging::*;
-
 use crate::{Config, SharedLogger, ThreadLogMode};
 
 struct OutputStreams {
@@ -209,13 +213,9 @@ impl TermLogger {
 }
 
 impl Log for TermLogger {
-    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
-        metadata.level() <= self.level
-    }
+    fn enabled(&self, metadata: &Metadata<'_>) -> bool { metadata.level() <= self.level }
 
-    fn log(&self, record: &Record<'_>) {
-        let _ = self.try_log(record);
-    }
+    fn log(&self, record: &Record<'_>) { let _ = self.try_log(record); }
 
     fn flush(&self) {
         let mut streams = self.streams.lock().unwrap();
@@ -225,15 +225,9 @@ impl Log for TermLogger {
 }
 
 impl SharedLogger for TermLogger {
-    fn level(&self) -> LevelFilter {
-        self.level
-    }
+    fn level(&self) -> LevelFilter { self.level }
 
-    fn config(&self) -> Option<&Config> {
-        Some(&self.config)
-    }
+    fn config(&self) -> Option<&Config> { Some(&self.config) }
 
-    fn as_log(self: Box<Self>) -> Box<dyn Log> {
-        Box::new(*self)
-    }
+    fn as_log(self: Box<Self>) -> Box<dyn Log> { Box::new(*self) }
 }

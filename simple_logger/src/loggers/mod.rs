@@ -22,8 +22,8 @@ mod termlog;
 mod testlog;
 mod writelog;
 
-pub use self::comblog::CombinedLogger;
-pub use self::logger::SimpleLogger;
-pub use self::termlog::{TermLogger, TerminalMode};
-pub use self::testlog::TestLogger;
-pub use self::writelog::WriteLogger;
+pub use self::{comblog::CombinedLogger,
+               logger::SimpleLogger,
+               termlog::{TermLogger, TerminalMode},
+               testlog::TestLogger,
+               writelog::WriteLogger};

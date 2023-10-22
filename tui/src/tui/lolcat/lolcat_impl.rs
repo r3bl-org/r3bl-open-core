@@ -35,9 +35,7 @@ pub struct Lolcat {
 }
 
 impl Default for Lolcat {
-    fn default() -> Self {
-        LolcatBuilder::new().build()
-    }
+    fn default() -> Self { LolcatBuilder::new().build() }
 }
 
 impl Debug for Lolcat {
@@ -51,9 +49,7 @@ impl Debug for Lolcat {
         };
 
         /// More info: <https://stackoverflow.com/questions/63214346/how-to-truncate-f64-to-2-decimal-places>
-        fn pretty_print_f64(before: f64) -> f64 {
-            f64::trunc(before * 100.0) / 100.0
-        }
+        fn pretty_print_f64(before: f64) -> f64 { f64::trunc(before * 100.0) / 100.0 }
     }
 }
 
@@ -92,9 +88,7 @@ impl Lolcat {
         acc
     }
 
-    pub fn next_color(&mut self) {
-        self.color_wheel_control.seed += self.seed_delta;
-    }
+    pub fn next_color(&mut self) { self.color_wheel_control.seed += self.seed_delta; }
 }
 
 mod control_wheel_control {
@@ -135,9 +129,7 @@ mod control_wheel_control {
     }
 
     impl Default for ColorChangeSpeed {
-        fn default() -> Self {
-            Self::Rapid
-        }
+        fn default() -> Self { Self::Rapid }
     }
 
     impl Display for ColorChangeSpeed {
@@ -189,9 +181,7 @@ mod control_wheel_control {
     }
 
     impl Default for ColorWheelControl {
-        fn default() -> Self {
-            Self::new("0.0", "3.0", "0.1", ColorChangeSpeed::Slow)
-        }
+        fn default() -> Self { Self::new("0.0", "3.0", "0.1", ColorChangeSpeed::Slow) }
     }
 }
 pub use control_wheel_control::*;

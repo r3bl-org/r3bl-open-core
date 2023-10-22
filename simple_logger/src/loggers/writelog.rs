@@ -17,11 +17,18 @@
 
 //! Module providing the FileLogger Implementation
 
+use std::{io::Write, sync::Mutex};
+
+use log::{set_boxed_logger,
+          set_max_level,
+          LevelFilter,
+          Log,
+          Metadata,
+          Record,
+          SetLoggerError};
+
 use super::logging::try_log;
 use crate::{Config, SharedLogger};
-use log::{set_boxed_logger, set_max_level, LevelFilter, Log, Metadata, Record, SetLoggerError};
-use std::io::Write;
-use std::sync::Mutex;
 
 /// The WriteLogger struct. Provides a Logger implementation for structs implementing `Write`, e.g. File
 pub struct WriteLogger<W: Write + Send + 'static> {
@@ -45,7 +52,11 @@ impl<W: Write + Send + 'static> WriteLogger<W> {
     /// let _ = WriteLogger::init(LevelFilter::Info, Config::default(), File::create("my_rust_bin.log").unwrap());
     /// # }
     /// ```
-    pub fn init(log_level: LevelFilter, config: Config, writable: W) -> Result<(), SetLoggerError> {
+    pub fn init(
+        log_level: LevelFilter,
+        config: Config,
+        writable: W,
+    ) -> Result<(), SetLoggerError> {
         set_max_level(log_level);
         set_boxed_logger(WriteLogger::new(log_level, config, writable))
     }
@@ -67,7 +78,11 @@ impl<W: Write + Send + 'static> WriteLogger<W> {
     /// # }
     /// ```
     #[must_use]
-    pub fn new(log_level: LevelFilter, config: Config, writable: W) -> Box<WriteLogger<W>> {
+    pub fn new(
+        log_level: LevelFilter,
+        config: Config,
+        writable: W,
+    ) -> Box<WriteLogger<W>> {
         Box::new(WriteLogger {
             level: log_level,
             config,
@@ -77,9 +92,7 @@ impl<W: Write + Send + 'static> WriteLogger<W> {
 }
 
 impl<W: Write + Send + 'static> Log for WriteLogger<W> {
-    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
-        metadata.level() <= self.level
-    }
+    fn enabled(&self, metadata: &Metadata<'_>) -> bool { metadata.level() <= self.level }
 
     fn log(&self, record: &Record<'_>) {
         if self.enabled(record.metadata()) {
@@ -88,21 +101,13 @@ impl<W: Write + Send + 'static> Log for WriteLogger<W> {
         }
     }
 
-    fn flush(&self) {
-        let _ = self.writable.lock().unwrap().flush();
-    }
+    fn flush(&self) { let _ = self.writable.lock().unwrap().flush(); }
 }
 
 impl<W: Write + Send + 'static> SharedLogger for WriteLogger<W> {
-    fn level(&self) -> LevelFilter {
-        self.level
-    }
+    fn level(&self) -> LevelFilter { self.level }
 
-    fn config(&self) -> Option<&Config> {
-        Some(&self.config)
-    }
+    fn config(&self) -> Option<&Config> { Some(&self.config) }
 
-    fn as_log(self: Box<Self>) -> Box<dyn Log> {
-        Box::new(*self)
-    }
+    fn as_log(self: Box<Self>) -> Box<dyn Log> { Box::new(*self) }
 }

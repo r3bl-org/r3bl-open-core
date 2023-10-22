@@ -77,10 +77,13 @@ pub enum Style {
 mod style_impl {
     use std::fmt::{Display, Formatter, Result};
 
-    use crate::{
-        global_color_support, Color, ColorSupport, RgbColor, SgrCode, Style,
-        TransformColor,
-    };
+    use crate::{global_color_support,
+                Color,
+                ColorSupport,
+                RgbColor,
+                SgrCode,
+                Style,
+                TransformColor};
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum ColorKind {
