@@ -52,10 +52,12 @@ cd ..
 
 cd simple_logger
 # Update cargo.toml version number manually
+# Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.1.1-simple_logger"
-git tag -a v0.1.1-simple_logger -m "v0.1.1-simple_logger"
+git commit -m "v0.1.2-simple_logger"
+git tag -a v0.1.2-simple_logger -m "v0.1.2-simple_logger"
+cargo publish
 cd ..
 
 cd core

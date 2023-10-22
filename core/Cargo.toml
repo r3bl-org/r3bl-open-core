@@ -23,9 +23,9 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl_rs_utils
-r3bl_ansi_color = { path = "../ansi_color", version = "0.6.8" }       # Convert between ansi and rgb.
-r3bl_simple_logger = { path = "../simple_logger", version = "0.1.1" } # For logging.
-log = { version = "0.4.20", features = ["std"] }                      # For logging.
+r3bl_ansi_color = { version = "0.6.9" }          # Convert between ansi and rgb.
+r3bl_simple_logger = { version = "0.1.1" }       # For logging.
+log = { version = "0.4.20", features = ["std"] } # For logging.
 
 tokio = { version = "1.33.0", features = ["full"] }
 async-trait = "0.1.74"
