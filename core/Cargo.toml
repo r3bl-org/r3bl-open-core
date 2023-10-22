@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_rs_utils_core"
-version = "0.9.7"
+version = "0.9.8"
 edition = "2021"
 description = """
 Helper crate for r3bl_tui and r3bl_tuify crates.
