@@ -66,57 +66,57 @@ cd core
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.9.8-core"
-git tag -a v0.9.8-core -m "v0.9.8-core"
+git commit -m "v0.9.9-core"
+git tag -a v0.9.9-core -m "v0.9.9-core"
 cargo publish
 cd ..
 
 cd tuify
 # Update cargo.toml version number manually
+# Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.1.20-tuify"
 git tag -a v0.1.20-tuify -m "v0.1.20-tuify"
+cargo publish
 cd ..
 
 cd macro
 # Update cargo.toml version number manually
+# Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.9.6-macro"
 git tag -a v0.9.6-macro -m "v0.9.6-macro"
+cargo publish
 cd ..
 
 cd redux
 # Update cargo.toml version number manually
+# Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.2.5-redux"
 git tag -a v0.2.5-redux -m "v0.2.5-redux"
+cargo publish
 cd ..
 
 cd tui
 # Update cargo.toml version number manually
+# Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.3.6-tui"
 git tag -a v0.3.6-tui -m "v0.3.6-tui"
+cargo publish
 cd ..
 
 # Update cargo.toml version number manually
+# Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.9.9-public"
 git tag -a v0.9.9-public -m "v0.9.9-public"
-
-# Don't forget to publish to crates.io
-cd simple_logger; cargo publish; cd ..
-cd ansi_color; cargo publish; cd ..
-cd core; cargo publish; cd ..
-cd macro; cargo publish; cd ..
-cd redux; cargo publish; cd ..
-cd tui; cargo publish; cd ..
-cd tuify; cargo publish; cd ..
 cargo publish
 
 # Finally, push the git commit and tag to the remote repo
