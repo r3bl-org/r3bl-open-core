@@ -235,13 +235,9 @@ impl ColorWheel {
     /// This method will return the length of the gradient. This is
     /// [GradientLengthKind::NotCalculatedYet] if the gradient has not been computed & memoized yet
     /// via a call to [`generate_color_wheel`](ColorWheel::generate_color_wheel).
-    pub fn get_gradient_len(&self) -> GradientLengthKind {
-        self.gradient_length_kind
-    }
+    pub fn get_gradient_len(&self) -> GradientLengthKind { self.gradient_length_kind }
 
-    pub fn get_gradient_kind(&self) -> &GradientKind {
-        &self.gradient_kind
-    }
+    pub fn get_gradient_kind(&self) -> &GradientKind { &self.gradient_kind }
 
     /// Every time this method is called, it will generate the gradient & memoize it.
     ///
@@ -763,15 +759,15 @@ mod tests_color_wheel_rgb {
         };
         let rhs = &[
             (0, 0, 0),
-            (28, 28, 28),
-            (56, 56, 56),
-            (85, 85, 85),
-            (113, 113, 113),
-            (141, 141, 141),
-            (170, 170, 170),
-            (198, 198, 198),
-            (226, 226, 226),
-            (255, 255, 255),
+            (26, 26, 26),
+            (51, 51, 51),
+            (77, 77, 77),
+            (102, 102, 102),
+            (128, 128, 128),
+            (153, 153, 153),
+            (179, 179, 179),
+            (204, 204, 204),
+            (230, 230, 230),
         ]
         .iter()
         .map(|(r, g, b)| TuiColor::Rgb(RgbValue::from_u8(*r, *g, *b)))
@@ -792,22 +788,22 @@ mod tests_color_wheel_rgb {
         assert_eq2!(
             // 3rd call to next(), index is 1
             color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(28, 28, 28))
+            TuiColor::Rgb(RgbValue::from_u8(26, 26, 26))
         );
         assert_eq2!(
             // # 4th call to next(), index is 1
             color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(28, 28, 28))
+            TuiColor::Rgb(RgbValue::from_u8(26, 26, 26))
         );
         assert_eq2!(
             // # 5th call to next(), index is 2
             color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(56, 56, 56))
+            TuiColor::Rgb(RgbValue::from_u8(51, 51, 51))
         );
         assert_eq2!(
             // # 6th call to next(), index is 2
             color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(56, 56, 56))
+            TuiColor::Rgb(RgbValue::from_u8(51, 51, 51))
         );
 
         // Advance color wheel to index = 8.
@@ -818,13 +814,13 @@ mod tests_color_wheel_rgb {
         // Next call to next() which is the 20th call should return the end_color.
         assert_eq2!(
             color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(255, 255, 255))
+            TuiColor::Rgb(RgbValue::from_u8(230, 230, 230))
         );
 
         // Next call to next() should return the end_color - 1.
         assert_eq2!(
             color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(226, 226, 226))
+            TuiColor::Rgb(RgbValue::from_u8(204, 204, 204))
         );
 
         // Reverse color wheel to index = 0.
@@ -841,7 +837,7 @@ mod tests_color_wheel_rgb {
         // Next call to next() should advance the index again to 1.
         assert_eq2!(
             color_wheel.next_color().unwrap(),
-            TuiColor::Rgb(RgbValue::from_u8(28, 28, 28))
+            TuiColor::Rgb(RgbValue::from_u8(26, 26, 26))
         );
 
         global_color_support::clear_override()
@@ -918,25 +914,25 @@ mod tests_color_wheel_rgb {
             Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0)))
         );
 
-        // [2]: "L", color_fg: Rgb(63,63,63)
+        // [2]: "L", color_fg: Rgb(51, 51, 51)
         assert_eq2!(styled_texts[2].get_text().string, "L");
         assert_eq2!(
             styled_texts[2].get_style().color_fg,
-            Some(TuiColor::Rgb(RgbValue::from_u8(63, 63, 63)))
+            Some(TuiColor::Rgb(RgbValue::from_u8(51, 51, 51)))
         );
 
-        // [3]: "L", color_fg: Rgb(63,63,63)
+        // [3]: "L", color_fg: Rgb(51, 51, 51)
         assert_eq2!(styled_texts[3].get_text().string, "L");
         assert_eq2!(
             styled_texts[3].get_style().color_fg,
-            Some(TuiColor::Rgb(RgbValue::from_u8(63, 63, 63)))
+            Some(TuiColor::Rgb(RgbValue::from_u8(51, 51, 51)))
         );
 
-        // [4]: "O", color_fg: Rgb(127,127,127)
+        // [4]: "O", color_fg: Rgb(102,102,102)
         assert_eq2!(styled_texts[4].get_text().string, "O");
         assert_eq2!(
             styled_texts[4].get_style().color_fg,
-            Some(TuiColor::Rgb(RgbValue::from_u8(127, 127, 127)))
+            Some(TuiColor::Rgb(RgbValue::from_u8(102, 102, 102)))
         );
 
         global_color_support::clear_override()

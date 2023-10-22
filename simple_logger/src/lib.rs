@@ -51,15 +51,23 @@
 mod config;
 mod loggers;
 
-pub use self::config::{
-    format_description, Config, ConfigBuilder, FormatItem, LevelPadding, TargetPadding,
-    ThreadLogMode, ThreadPadding,
-};
-pub use self::loggers::TestLogger;
-pub use self::loggers::{CombinedLogger, SimpleLogger, WriteLogger};
-pub use self::loggers::{TermLogger, TerminalMode};
 pub use log::*;
 pub use termcolor::{Color, ColorChoice};
+
+pub use self::{config::{format_description,
+                        Config,
+                        ConfigBuilder,
+                        FormatItem,
+                        LevelPadding,
+                        TargetPadding,
+                        ThreadLogMode,
+                        ThreadPadding},
+               loggers::{CombinedLogger,
+                         SimpleLogger,
+                         TermLogger,
+                         TerminalMode,
+                         TestLogger,
+                         WriteLogger}};
 
 /// Trait to have a common interface to obtain the Level of Loggers
 ///
@@ -103,8 +111,7 @@ pub trait SharedLogger: Log {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::File;
-    use std::io::Read;
+    use std::{fs::File, io::Read};
 
     use log::*;
 

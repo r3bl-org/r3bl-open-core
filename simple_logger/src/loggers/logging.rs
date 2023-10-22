@@ -15,13 +15,18 @@
  *   limitations under the License.
  */
 
-use crate::config::{TargetPadding, TimeFormat};
-use crate::{Config, LevelPadding, ThreadLogMode, ThreadPadding};
+use std::{io::{Error, Write},
+          thread};
+
 use log::{LevelFilter, Record};
 use r3bl_ansi_color::{AnsiStyledText, Color as RSColor, Style};
-use std::io::{Error, Write};
-use std::thread;
 use termcolor::Color;
+
+use crate::{config::{TargetPadding, TimeFormat},
+            Config,
+            LevelPadding,
+            ThreadLogMode,
+            ThreadPadding};
 
 pub fn termcolor_to_r3bl_ansi_color(color: &Color) -> Option<RSColor> {
     match color {
@@ -89,8 +94,7 @@ pub fn write_time<W>(write: &mut W, config: &Config) -> Result<(), Error>
 where
     W: Write + Sized,
 {
-    use time::error::Format;
-    use time::format_description::well_known::*;
+    use time::{error::Format, format_description::well_known::*};
 
     let time = time::OffsetDateTime::now_utc().to_offset(config.time_offset);
     let res = match config.time_format {

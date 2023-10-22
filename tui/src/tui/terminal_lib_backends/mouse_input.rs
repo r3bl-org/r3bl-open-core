@@ -36,6 +36,8 @@ pub enum MouseInputKind {
     MouseDrag(Button),
     ScrollUp,
     ScrollDown,
+    ScrollLeft,
+    ScrollRight,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
@@ -69,6 +71,8 @@ impl From<MouseEventKind> for MouseInputKind {
             MouseEventKind::Drag(button) => MouseInputKind::MouseDrag(button.into()),
             MouseEventKind::ScrollUp => MouseInputKind::ScrollUp,
             MouseEventKind::ScrollDown => MouseInputKind::ScrollDown,
+            MouseEventKind::ScrollLeft => MouseInputKind::ScrollDown,
+            MouseEventKind::ScrollRight => MouseInputKind::ScrollRight,
         }
     }
 }

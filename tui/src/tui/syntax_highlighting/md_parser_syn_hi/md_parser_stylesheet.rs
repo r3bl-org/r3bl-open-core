@@ -174,9 +174,7 @@ pub fn get_code_block_lang_style() -> Style {
         }
 }
 
-pub fn get_code_block_content_style() -> Style {
-    get_inline_code_style()
-}
+pub fn get_code_block_content_style() -> Style { get_inline_code_style() }
 
 /// - Bg color: #4f86ed
 /// - Fg color: black

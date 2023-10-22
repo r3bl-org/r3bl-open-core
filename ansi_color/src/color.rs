@@ -96,13 +96,9 @@ mod rgb_color_impl {
     use crate::{convert_rgb_into_ansi256, Ansi256Color};
 
     impl TransformColor for RgbColor {
-        fn as_rgb(&self) -> RgbColor {
-            *self
-        }
+        fn as_rgb(&self) -> RgbColor { *self }
 
-        fn as_ansi256(&self) -> Ansi256Color {
-            convert_rgb_into_ansi256(*self)
-        }
+        fn as_ansi256(&self) -> Ansi256Color { convert_rgb_into_ansi256(*self) }
 
         fn as_grayscale(&self) -> Ansi256Color {
             convert_rgb_into_ansi256(*self).as_grayscale()
@@ -116,10 +112,12 @@ pub struct Ansi256Color {
 }
 
 mod ansi_color_impl {
-    use crate::{
-        color_utils, constants::ANSI_COLOR_PALETTE, Ansi256Color, Color, RgbColor,
-        TransformColor,
-    };
+    use crate::{color_utils,
+                constants::ANSI_COLOR_PALETTE,
+                Ansi256Color,
+                Color,
+                RgbColor,
+                TransformColor};
 
     impl TransformColor for Ansi256Color {
         fn as_grayscale(&self) -> Ansi256Color {
@@ -135,8 +133,6 @@ mod ansi_color_impl {
             ANSI_COLOR_PALETTE[index].into()
         }
 
-        fn as_ansi256(&self) -> Ansi256Color {
-            *self
-        }
+        fn as_ansi256(&self) -> Ansi256Color { *self }
     }
 }

@@ -15,10 +15,8 @@
  *   limitations under the License.
  */
 
-use std::{
-    env,
-    sync::atomic::{AtomicI8, Ordering},
-};
+use std::{env,
+          sync::atomic::{AtomicI8, Ordering}};
 
 /// Global variable which can be used to:
 /// 1. Override the color support.

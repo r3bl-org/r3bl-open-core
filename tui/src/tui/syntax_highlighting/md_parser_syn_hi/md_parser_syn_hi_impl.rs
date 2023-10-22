@@ -130,7 +130,8 @@ impl StyleUSSpanLines {
         lines
     }
 
-    /// Based on [global_color_support::detect] & language we have the following:
+    /// Based on [r3bl_ansi_color::global_color_support::detect] & language we have the
+    /// following:
     /// ```text
     /// |               | Truecolor      | ANSI           |
     /// |---------------|----------------|----------------|

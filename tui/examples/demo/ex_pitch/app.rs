@@ -152,9 +152,7 @@ mod app_with_layout_impl_trait_app {
             .await
         }
 
-        fn init(&mut self) {
-            populate_component_registry::init(self);
-        }
+        fn init(&mut self) { populate_component_registry::init(self); }
 
         fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
             &mut self.component_registry

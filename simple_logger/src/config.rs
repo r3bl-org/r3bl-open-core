@@ -15,10 +15,9 @@
  *   limitations under the License.
  */
 
-use log::Level;
-use log::LevelFilter;
-
 use std::borrow::Cow;
+
+use log::{Level, LevelFilter};
 use termcolor::Color;
 pub use time::{format_description::FormatItem, macros::format_description, UtcOffset};
 
@@ -122,9 +121,7 @@ pub struct ConfigBuilder(Config);
 
 impl ConfigBuilder {
     /// Create a new default ConfigBuilder
-    pub fn new() -> ConfigBuilder {
-        ConfigBuilder(Config::default())
-    }
+    pub fn new() -> ConfigBuilder { ConfigBuilder(Config::default()) }
 
     /// Set at which level and above (more verbose) the level itself shall be logged (default is Error)
     pub fn set_max_level(&mut self, level: LevelFilter) -> &mut ConfigBuilder {
@@ -312,15 +309,11 @@ impl ConfigBuilder {
     }
 
     /// Build new `Config`
-    pub fn build(&mut self) -> Config {
-        self.0.clone()
-    }
+    pub fn build(&mut self) -> Config { self.0.clone() }
 }
 
 impl Default for ConfigBuilder {
-    fn default() -> Self {
-        ConfigBuilder::new()
-    }
+    fn default() -> Self { ConfigBuilder::new() }
 }
 
 impl Default for Config {
