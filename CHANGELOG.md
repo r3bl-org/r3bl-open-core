@@ -15,6 +15,7 @@
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [r3bl_tuify](#r3bl_tuify)
+  - [v0.1.20 2023-10-21](#v0120-2023-10-21)
   - [v0.1.19 2023-10-17](#v0119-2023-10-17)
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
@@ -25,6 +26,7 @@
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [Next release](#next-release)
   - [v0.3.6 2023-10-17](#v036-2023-10-17)
   - [v0.3.5 2023-10-14](#v035-2023-10-14)
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
@@ -136,6 +138,7 @@
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
 ### v0.1.20 (2023-10-21)
+<a id="markdown-v0.1.20-2023-10-21" name="v0.1.20-2023-10-21"></a>
 
 - Updated:
   - Bug fix: <https://github.com/r3bl-org/r3bl_rs_utils/issues/170>
@@ -206,6 +209,13 @@
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
+
+### Next release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Changed:
+  - Drop support for `palette` crate. Use `colorgrad` instead. More info here:
+    <https://github.com/r3bl-org/r3bl_rs_utils/issues/162>
 
 ### v0.3.6 (2023-10-17)
 <a id="markdown-v0.3.6-2023-10-17" name="v0.3.6-2023-10-17"></a>
