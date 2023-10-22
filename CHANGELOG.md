@@ -34,7 +34,7 @@
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
-  - [Next release](#next-release)
+  - [v0.3.7 2023-10-21](#v037-2023-10-21)
   - [v0.3.6 2023-10-17](#v036-2023-10-17)
   - [v0.3.5 2023-10-14](#v035-2023-10-14)
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
@@ -267,12 +267,15 @@
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
-### Next release
-<a id="markdown-next-release" name="next-release"></a>
+### v0.3.7 (2023-10-21)
+<a id="markdown-v0.3.7-2023-10-21" name="v0.3.7-2023-10-21"></a>
 
 - Changed:
   - Drop support for `palette` crate. Use `colorgrad` instead. More info here:
     <https://github.com/r3bl-org/r3bl_rs_utils/issues/162>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
 
 ### v0.3.6 (2023-10-17)
 <a id="markdown-v0.3.6-2023-10-17" name="v0.3.6-2023-10-17"></a>
