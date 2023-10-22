@@ -42,6 +42,11 @@
 ## `r3bl_simple_logger`
 <a id="markdown-r3bl_simple_logger" name="r3bl_simple_logger"></a>
 
+### v0.1.2 (2023-10-21)
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
 ### v0.1.1 (2023-10-17)
 <a id="markdown-v0.1.1-2023-10-17" name="v0.1.1-2023-10-17"></a>
 
