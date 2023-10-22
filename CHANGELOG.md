@@ -30,6 +30,7 @@
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
 - [r3bl_rs_utils_redux](#r3bl_rs_utils_redux)
+  - [v0.2.6 2023-10-21](#v026-2023-10-21)
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
@@ -236,6 +237,12 @@
 
 ## `r3bl_rs_utils_redux`
 <a id="markdown-r3bl_rs_utils_redux" name="r3bl_rs_utils_redux"></a>
+
+### v0.2.6 (2023-10-21)
+<a id="markdown-v0.2.6-2023-10-21" name="v0.2.6-2023-10-21"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
 
 ### v0.2.5 (2023-10-17)
 <a id="markdown-v0.2.5-2023-10-17" name="v0.2.5-2023-10-17"></a>

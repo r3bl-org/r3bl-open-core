@@ -96,8 +96,8 @@ cd redux
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.2.5-redux"
-git tag -a v0.2.5-redux -m "v0.2.5-redux"
+git commit -m "v0.2.6-redux"
+git tag -a v0.2.6-redux -m "v0.2.6-redux"
 cargo publish
 cd ..
 
