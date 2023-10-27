@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_tui"
-version = "0.3.7"
+version = "0.3.8"
 edition = "2021"
 description = "TUI library inspired by Redux, Redux, Flexbox, CSS, editor components, etc"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
