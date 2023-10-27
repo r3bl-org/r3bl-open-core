@@ -265,7 +265,19 @@ impl EditorEvent {
                 });
             }
             EditorEvent::Delete => {
-                EditorEngineInternalApi::delete_at_caret(editor_buffer, editor_engine);
+                if editor_buffer.get_selection_map().is_empty() {
+                    // There is no selection and we want to delete a single character.
+                    EditorEngineInternalApi::delete_at_caret(
+                        editor_buffer,
+                        editor_engine,
+                    );
+                } else {
+                    // The text is selected and we want to delete the entire selected text.
+                    EditorEngineInternalApi::delete_selected(
+                        editor_buffer,
+                        editor_engine,
+                    );
+                }
             }
             EditorEvent::Backspace => {
                 EditorEngineInternalApi::backspace_at_caret(editor_buffer, editor_engine);

@@ -128,6 +128,13 @@ impl EditorEngineInternalApi {
         content_mut::delete_at_caret(buffer, engine)
     }
 
+    pub fn delete_selected(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+    ) -> Option<()> {
+        content_mut::delete_selected(buffer, engine)
+    }
+
     pub fn backspace_at_caret(
         buffer: &mut EditorBuffer,
         engine: &mut EditorEngine,
@@ -1400,6 +1407,60 @@ mod content_mut {
                 None
             }
         }
+    }
+
+    pub fn delete_selected(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+    ) -> Option<()> {
+        empty_check_early_return!(buffer, @None);
+        let mutref_buffer = &mut buffer.clone();
+        let lines: &Vec<UnicodeString> = buffer.get_lines();
+        let selection_map = buffer.get_selection_map();
+
+        let row_indices = {
+            let mut key_vec: Vec<ChUnit> = selection_map.map.keys().copied().collect();
+            key_vec.sort();
+            key_vec
+        };
+
+        // Iterate through the sorted row indices, and store the selected text.
+        for row_index in row_indices {
+            if let Some(selection_range) = selection_map.map.get(&row_index) {
+                if let Some(line) = lines.get(ch!(@to_usize row_index)) {
+                    let selected_text = line.clip_to_range(*selection_range);
+                    if line.string == selected_text {
+                        // Whole line is selected, hence deleted so delete entire line.
+                        continue;
+                    } else {
+                        let start = *selection_range.start_display_col_index;
+                        let end = *selection_range.end_display_col_index;
+                        let before_start_text = line.clip_to_width(ch!(0), ch!(start));
+                        let after_end_text =
+                            line.clip_to_width(ch!(end), ch!(line.string.len() as u16));
+                        let mut remaining_text = String::new();
+                        remaining_text.push_str(before_start_text);
+                        remaining_text.push_str(after_end_text);
+                        // remaining text contains the line that should exist and should be replaced with after deleting entire line.
+                        validate_editor_buffer_change::apply_change(
+                            mutref_buffer,
+                            engine,
+                            |lines, caret, scroll_offset| {
+                                let row_idx = EditorBuffer::calc_scroll_adj_caret_row(
+                                    caret,
+                                    scroll_offset,
+                                );
+                                let _ = replace(
+                                    &mut lines[row_idx],
+                                    UnicodeString::from(remaining_text),
+                                );
+                            },
+                        );
+                    }
+                }
+            }
+        }
+        None
     }
 
     fn insert_into_existing_line(
