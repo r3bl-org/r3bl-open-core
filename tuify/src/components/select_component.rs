@@ -215,6 +215,8 @@ mod tests {
     use std::io::{Result, Write};
 
     use pretty_assertions::assert_eq;
+    use r3bl_ansi_color::global_color_support::{clear_override, set_override};
+    use serial_test::serial;
 
     use super::*;
 
@@ -260,6 +262,7 @@ mod tests {
         assert_eq!(clipped_short_line, "This is a short line");
     }
 
+    #[serial]
     #[test]
     fn test_select_component() {
         let mut state = State {
@@ -286,11 +289,14 @@ mod tests {
             style: StyleSheet::default(),
         };
 
+        set_override(r3bl_ansi_color::ColorSupport::Truecolor);
         component.render(&mut state).unwrap();
 
         // println!("{:?}", writer.get_buffer());
 
         let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;2;50;50;50m\u{1b}[48;2;150;150;150m\u{1b}[1m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[48;2;100;60;150m\u{1b}[48;2;100;60;150m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◉ Item 1\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[48;2;100;60;150m\u{1b}[48;2;100;60;150m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 2\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[48;2;100;60;150m\u{1b}[48;2;100;60;150m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 3\u{1b}[1E\u{1b}[0m\u{1b}[4F";
         assert_eq!(writer.get_buffer(), expected_output);
+
+        clear_override();
     }
 }
