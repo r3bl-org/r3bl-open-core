@@ -17,7 +17,6 @@
 
 use std::error::Error;
 
-use clipboard::{self, ClipboardContext, ClipboardProvider};
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::{call_if_true, ch, log_debug, ChUnit, UnicodeString};
 
@@ -104,7 +103,9 @@ pub mod clipboard_support {
     }
 }
 
-mod clipboard_helpers {
+mod clipboard_provider {
+    use arboard::Clipboard;
+
     use super::*;
 
     type ClipboardResult<T> = Result<T, Box<dyn Error>>;
@@ -112,9 +113,11 @@ mod clipboard_helpers {
     /// Wrap the call to the clipboard crate, so it returns a [Result]. This is to avoid
     /// calling `unwrap()` on the [ClipboardContext] object.
     pub fn try_to_put_content_into_clipboard(vec_str: &[&str]) -> ClipboardResult<()> {
-        let mut context: ClipboardContext = ClipboardProvider::new()?;
         let content = vec_str.join("\n");
-        context.set_contents(content.clone())?;
+
+        let mut clipboard = Clipboard::new()?;
+        clipboard.set_text(content.clone())?;
+
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
             log_debug(
                 format!(
@@ -133,9 +136,10 @@ mod clipboard_helpers {
     /// Wrap the call to the clipboard crate, so it returns a [Result]. This is to avoid
     /// calling `unwrap()` on the [ClipboardContext] object.
     pub fn try_to_get_content_from_clipboard() -> ClipboardResult<String> {
-        let mut context: ClipboardContext = ClipboardProvider::new()?;
-        let content = context.get_contents()?;
+        let mut clipboard = Clipboard::new()?;
+        let content = clipboard.get_text()?;
+
         Ok(content)
     }
 }
-use clipboard_helpers::*;
+use clipboard_provider::*;
