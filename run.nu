@@ -57,7 +57,7 @@ def main [...args: string] {
         "serve-docs" => {serve-docs}
         "help" => {print-help all}
         "log" => {log}
-        "check-licenses" => {check-licenses}
+        "audit-deps" => {audit-deps}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
     }
 }
@@ -195,6 +195,7 @@ def all [] {
     test
     clippy
     docs
+    audit-deps
 }
 
 def build [] {
@@ -316,6 +317,7 @@ def log [] {
     cd ..
 }
 
-def check-licenses [] {
-    cargo deny check licenses
+# More info: https://github.com/EmbarkStudios/cargo-deny
+def audit-deps [] {
+    cargo deny check licenses advisories
 }
