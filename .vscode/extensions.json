@@ -13,6 +13,10 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "GitHub.github-vscode-theme", // Github Theme.
+    "vadimcn.vscode-lldb", // LLDB. Debugger.
+    "ms-vscode.cpptools", // C/C++. Debugger.
+    "Catppuccin.catppuccin-vsc", // Catppuccino Theme.
     "unifiedjs.vscode-mdx", // MDX.
     "ms-vscode.vscode-typescript-next", // Typescript Next.
     "mishkinf.goto-next-previous-member", // Go to Next/Previous Member.
