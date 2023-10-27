@@ -190,8 +190,8 @@ def install-cargo-tools [] {
 }
 
 def all [] {
-    install-cargo-tools
-    build-full
+    cargo install cargo-deny
+    cargo build
     test
     clippy
     docs
