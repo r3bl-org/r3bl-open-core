@@ -268,6 +268,12 @@
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
+### v0.3.8 (2023-10-27)
+
+- Changed:
+  - Drop `clipboard` crate due to it breaking `docs.rs`. Replace with `arboard`. More
+    info: <https://github.com/r3bl-org/r3bl_rs_utils/pull/179>
+
 ### v0.3.7 (2023-10-21)
 <a id="markdown-v0.3.7-2023-10-21" name="v0.3.7-2023-10-21"></a>
 
