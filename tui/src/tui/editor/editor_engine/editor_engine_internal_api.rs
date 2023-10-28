@@ -1038,6 +1038,8 @@ mod content_get {
 }
 
 mod content_mut {
+    use std::collections::HashMap;
+
     use super::*;
 
     pub fn insert_str_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
@@ -1414,52 +1416,75 @@ mod content_mut {
         engine: &mut EditorEngine,
     ) -> Option<()> {
         empty_check_early_return!(buffer, @None);
-        let mutref_buffer = &mut buffer.clone();
-        let lines: &Vec<UnicodeString> = buffer.get_lines();
-        let selection_map = buffer.get_selection_map();
+        if buffer.get_selection_map().is_empty() {
+            return None;
+        }
 
-        let row_indices = {
-            let mut key_vec: Vec<ChUnit> = selection_map.map.keys().copied().collect();
-            key_vec.sort();
-            key_vec
-        };
+        let my_selection_map = buffer.get_selection_map().clone();
 
-        // Iterate through the sorted row indices, and store the selected text.
+        let lines = buffer.get_lines();
+
+        let copied_selected_lines_map: HashMap<RowIndex, &str> =
+            my_selection_map.get_selected_lines(buffer);
+
+        let row_indices: Vec<ChUnit> = my_selection_map.get_indices();
+
+        let mut lines_to_remove = vec![];
+        let mut lines_to_replace = HashMap::new();
+
         for row_index in row_indices {
-            if let Some(selection_range) = selection_map.map.get(&row_index) {
-                if let Some(line) = lines.get(ch!(@to_usize row_index)) {
-                    let selected_text = line.clip_to_range(*selection_range);
-                    if line.string == selected_text {
-                        // Whole line is selected, hence deleted so delete entire line.
-                        continue;
-                    } else {
-                        let start = *selection_range.start_display_col_index;
-                        let end = *selection_range.end_display_col_index;
-                        let before_start_text = line.clip_to_width(ch!(0), ch!(start));
-                        let after_end_text =
-                            line.clip_to_width(ch!(end), ch!(line.string.len() as u16));
-                        let mut remaining_text = String::new();
-                        remaining_text.push_str(before_start_text);
-                        remaining_text.push_str(after_end_text);
-                        // remaining text contains the line that should exist and should be replaced with after deleting entire line.
-                        validate_editor_buffer_change::apply_change(
-                            mutref_buffer,
-                            engine,
-                            |lines, caret, scroll_offset| {
-                                let row_idx = EditorBuffer::calc_scroll_adj_caret_row(
-                                    caret,
-                                    scroll_offset,
-                                );
-                                let _ = replace(
-                                    &mut lines[row_idx],
-                                    UnicodeString::from(remaining_text),
-                                );
-                            },
-                        );
-                    }
+            // Remove entire line.
+            if copied_selected_lines_map[&row_index]
+                == lines[ch!(@to_usize row_index)].string.as_str()
+            {
+                lines_to_remove.push(row_index);
+            }
+            // Remove only selected portion of line.
+            else {
+                if let Some(selection_range) = my_selection_map.get(row_index) {
+                    let start_col_index = selection_range.start_display_col_index;
+                    let end_col_index = selection_range.end_display_col_index;
+                    let line = lines[ch!(@to_usize row_index)].clone();
+                    let keep_before_selected =
+                        line.clip_to_width(ch!(0), start_col_index);
+                    let keep_after_selected = line
+                        .clip_to_width(ch!(end_col_index), ch!(line.string.len() as u16));
+                    let mut remaining_text = String::new();
+                    remaining_text.push_str(keep_before_selected);
+                    remaining_text.push_str(keep_after_selected);
+                    lines_to_replace.insert(row_index, remaining_text);
                 }
             }
         }
+
+        validate_editor_buffer_change::apply_change(
+            buffer,
+            engine,
+            |lines, caret, _scroll_offset| {
+                // Replace lines, before removing them (to prevent indices from being invalidated).
+                for row_index in lines_to_replace.keys() {
+                    let _ = replace(
+                        &mut lines[ch!(@to_usize *row_index)],
+                        lines_to_replace[row_index].clone().into(),
+                    );
+                }
+
+                // Remove lines.
+                for row_index in lines_to_remove {
+                    lines.remove(ch!(@to_usize row_index));
+                }
+
+                // Restore caret position to start of selection range.
+                let maybe_new_position = my_selection_map.get_caret_at_start_of_range();
+                if let Some(new_position) = maybe_new_position {
+                    caret.row_index = new_position.row_index;
+                    caret.col_index = new_position.col_index;
+                }
+            },
+        );
+
+        buffer.clear_selection();
+
         None
     }
 
