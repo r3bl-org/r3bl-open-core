@@ -131,8 +131,9 @@ impl EditorEngineInternalApi {
     pub fn delete_selected(
         buffer: &mut EditorBuffer,
         engine: &mut EditorEngine,
+        with: DeleteSelectionWith,
     ) -> Option<()> {
-        content_mut::delete_selected(buffer, engine)
+        content_mut::delete_selected(buffer, engine, with)
     }
 
     pub fn backspace_at_caret(
@@ -1414,6 +1415,7 @@ mod content_mut {
     pub fn delete_selected(
         buffer: &mut EditorBuffer,
         engine: &mut EditorEngine,
+        with: DeleteSelectionWith,
     ) -> Option<()> {
         empty_check_early_return!(buffer, @None);
         if buffer.get_selection_map().is_empty() {
@@ -1475,7 +1477,8 @@ mod content_mut {
                 }
 
                 // Restore caret position to start of selection range.
-                let maybe_new_position = my_selection_map.get_caret_at_start_of_range();
+                let maybe_new_position =
+                    my_selection_map.get_caret_at_start_of_range(with);
                 if let Some(new_position) = maybe_new_position {
                     caret.row_index = new_position.row_index;
                     caret.col_index = new_position.col_index;
@@ -2253,3 +2256,10 @@ mod caret_location_enums {
     }
 }
 use caret_location_enums::*;
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy)]
+pub enum DeleteSelectionWith {
+    Backspace,
+    Delete,
+    AnyKey,
+}
