@@ -88,6 +88,7 @@ pub mod selection_map_impl {
     use crossterm::style::StyledContent;
 
     use super::*;
+    use crate::EditorBuffer;
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub enum DirectionChangeResult {
@@ -97,6 +98,48 @@ pub mod selection_map_impl {
 
     // Functionality.
     impl SelectionMap {
+        pub fn get_caret_at_start_of_range(&self) -> Option<Position> {
+            // Row is the first row in the map.
+            // Column is the last row of the range.
+            let indices = self.get_indices();
+            let first_row_index = indices.first()?;
+            let last_row_index = indices.last()?;
+            Some(position!(
+                col_index: self.map.get(last_row_index)?.start_display_col_index,
+                row_index: *first_row_index
+            ))
+        }
+
+        pub fn get_selected_lines<'a>(
+            &self,
+            buffer: &'a EditorBuffer,
+        ) -> HashMap<RowIndex, &'a str> {
+            let mut it = HashMap::new();
+
+            let lines = buffer.get_lines();
+            let row_indices = self.get_indices();
+
+            for row_index in row_indices {
+                if let Some(selection_range) = self.map.get(&row_index) {
+                    if let Some(line) = lines.get(ch!(@to_usize row_index)) {
+                        let selected_text = line.clip_to_range(*selection_range);
+                        it.insert(row_index, selected_text);
+                    }
+                }
+            }
+
+            it
+        }
+
+        pub fn get_indices(&self) -> Vec<RowIndex> {
+            let row_indices = {
+                let mut key_vec: Vec<ChUnit> = self.map.keys().copied().collect();
+                key_vec.sort();
+                key_vec
+            };
+            row_indices
+        }
+
         pub fn is_empty(&self) -> bool { self.map.is_empty() }
 
         pub fn clear(&mut self) {

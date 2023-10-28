@@ -18,7 +18,7 @@
 use std::error::Error;
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{call_if_true, ch, log_debug, ChUnit, UnicodeString};
+use r3bl_rs_utils_core::{call_if_true, ch, log_debug, UnicodeString};
 
 use crate::*;
 
@@ -33,11 +33,7 @@ pub mod clipboard_support {
         let mut vec_str: Vec<&str> = vec![];
 
         // Sort the row indices so that the copied text is in the correct order.
-        let row_indices = {
-            let mut key_vec: Vec<ChUnit> = selection_map.map.keys().copied().collect();
-            key_vec.sort();
-            key_vec
-        };
+        let row_indices = selection_map.get_indices();
 
         // Iterate through the sorted row indices, and copy the selected text.
         for row_index in row_indices {
