@@ -33,7 +33,7 @@ use crate::*;
 ///
 /// # Modifying the buffer
 ///
-/// [InputEvent] is coverted into an [EditorEvent] (by
+/// [InputEvent] is converted into an [EditorEvent] (by
 /// [EditorEngineApi]::[apply_event](EditorEngineApi::apply_event)), which is then used to
 /// modify the [EditorBuffer] via:
 /// 1. [EditorEvent::apply_editor_event](EditorEvent::apply_editor_event)

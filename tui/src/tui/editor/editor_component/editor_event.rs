@@ -237,6 +237,22 @@ impl TryFrom<&InputEvent> for EditorEvent {
 }
 
 impl EditorEvent {
+    fn delete_text_if_selected(
+        editor_engine: &mut EditorEngine,
+        editor_buffer: &mut EditorBuffer,
+    ) {
+        if editor_buffer.get_selection_map().is_empty() {
+            return;
+        }
+
+        // The text is selected and we want to delete the entire selected text.
+        EditorEngineInternalApi::delete_selected(
+            editor_buffer,
+            editor_engine,
+            DeleteSelectionWith::AnyKey,
+        );
+    }
+
     pub fn apply_editor_event<S, A>(
         editor_engine: &mut EditorEngine,
         editor_buffer: &mut EditorBuffer,
@@ -250,6 +266,7 @@ impl EditorEvent {
     {
         match editor_event {
             EditorEvent::InsertChar(character) => {
+                Self::delete_text_if_selected(editor_engine, editor_buffer);
                 EditorEngineInternalApi::insert_str_at_caret(
                     EditorArgsMut {
                         editor_buffer,
@@ -258,12 +275,15 @@ impl EditorEvent {
                     &String::from(character),
                 )
             }
+
             EditorEvent::InsertNewLine => {
+                Self::delete_text_if_selected(editor_engine, editor_buffer);
                 EditorEngineInternalApi::insert_new_line_at_caret(EditorArgsMut {
                     editor_buffer,
                     editor_engine,
                 });
             }
+
             EditorEvent::Delete => {
                 if editor_buffer.get_selection_map().is_empty() {
                     // There is no selection and we want to delete a single character.
@@ -276,12 +296,28 @@ impl EditorEvent {
                     EditorEngineInternalApi::delete_selected(
                         editor_buffer,
                         editor_engine,
+                        DeleteSelectionWith::Delete,
                     );
                 }
             }
+
             EditorEvent::Backspace => {
-                EditorEngineInternalApi::backspace_at_caret(editor_buffer, editor_engine);
+                if editor_buffer.get_selection_map().is_empty() {
+                    // There is no selection and we want to backspace a single character.
+                    EditorEngineInternalApi::backspace_at_caret(
+                        editor_buffer,
+                        editor_engine,
+                    );
+                } else {
+                    // The text is selected and we want to delete the entire selected text.
+                    EditorEngineInternalApi::delete_selected(
+                        editor_buffer,
+                        editor_engine,
+                        DeleteSelectionWith::Backspace,
+                    );
+                }
             }
+
             EditorEvent::MoveCaret(direction) => {
                 match direction {
                     CaretDirection::Left => EditorEngineInternalApi::left(
@@ -306,7 +342,9 @@ impl EditorEvent {
                     ),
                 };
             }
+
             EditorEvent::InsertString(chunk) => {
+                Self::delete_text_if_selected(editor_engine, editor_buffer);
                 EditorEngineInternalApi::insert_str_at_caret(
                     EditorArgsMut {
                         editor_buffer,
@@ -315,6 +353,7 @@ impl EditorEvent {
                     &chunk,
                 )
             }
+
             EditorEvent::Resize(_) => {
                 // Check to see whether scroll is valid.
                 EditorEngineInternalApi::validate_scroll(EditorArgsMut {
@@ -322,6 +361,7 @@ impl EditorEvent {
                     editor_engine,
                 });
             }
+
             EditorEvent::Home => {
                 EditorEngineInternalApi::home(
                     editor_buffer,
@@ -329,6 +369,7 @@ impl EditorEvent {
                     SelectMode::Disabled,
                 );
             }
+
             EditorEvent::End => {
                 EditorEngineInternalApi::end(
                     editor_buffer,
@@ -336,6 +377,7 @@ impl EditorEvent {
                     SelectMode::Disabled,
                 );
             }
+
             EditorEvent::PageDown => {
                 EditorEngineInternalApi::page_down(
                     editor_buffer,
@@ -343,6 +385,7 @@ impl EditorEvent {
                     SelectMode::Disabled,
                 );
             }
+
             EditorEvent::PageUp => {
                 EditorEngineInternalApi::page_up(
                     editor_buffer,
@@ -350,6 +393,7 @@ impl EditorEvent {
                     SelectMode::Disabled,
                 );
             }
+
             EditorEvent::Select(selection_scope) => match selection_scope {
                 SelectionScope::OneCharRight => {
                     EditorEngineInternalApi::right(
@@ -416,6 +460,7 @@ impl EditorEvent {
             }
 
             EditorEvent::Paste => {
+                Self::delete_text_if_selected(editor_engine, editor_buffer);
                 EditorEngineInternalApi::paste_clipboard_content_into_editor(
                     EditorArgsMut {
                         editor_buffer,

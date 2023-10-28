@@ -88,7 +88,7 @@ pub mod selection_map_impl {
     use crossterm::style::StyledContent;
 
     use super::*;
-    use crate::EditorBuffer;
+    use crate::{DeleteSelectionWith, EditorBuffer};
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub enum DirectionChangeResult {
@@ -98,12 +98,15 @@ pub mod selection_map_impl {
 
     // Functionality.
     impl SelectionMap {
-        pub fn get_caret_at_start_of_range(&self) -> Option<Position> {
+        pub fn get_caret_at_start_of_range(
+            &self,
+            _with: DeleteSelectionWith, /* Makes no difference for now. */
+        ) -> Option<Position> {
             // Row is the first row in the map.
             // Column is the last row of the range.
             let indices = self.get_indices();
             let first_row_index = indices.first()?;
-            let last_row_index = indices.last()?;
+            let last_row_index = indices.first()?;
             Some(position!(
                 col_index: self.map.get(last_row_index)?.start_display_col_index,
                 row_index: *first_row_index

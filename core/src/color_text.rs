@@ -57,21 +57,21 @@ pub mod color_text_default_styles {
     pub fn style_primary(text: &str) -> AnsiStyledText {
         AnsiStyledText {
             text,
-            style: &[Style::Foreground(Color::Rgb(0, 255, 0))],
+            style: &[Style::Foreground(Color::Rgb(50, 200, 50))],
         }
     }
 
     pub fn style_prompt(text: &str) -> AnsiStyledText {
         AnsiStyledText {
             text,
-            style: &[Style::Foreground(Color::Rgb(0, 0, 255))],
+            style: &[Style::Foreground(Color::Rgb(100, 100, 200))],
         }
     }
 
     pub fn style_error(text: &str) -> AnsiStyledText {
         AnsiStyledText {
             text,
-            style: &[Style::Foreground(Color::Rgb(255, 0, 0))],
+            style: &[Style::Foreground(Color::Rgb(200, 0, 50))],
         }
     }
 
