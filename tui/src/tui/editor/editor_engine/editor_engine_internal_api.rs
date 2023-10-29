@@ -1426,36 +1426,48 @@ mod content_mut {
 
         let lines = buffer.get_lines();
 
-        let copied_selected_lines_map: HashMap<RowIndex, &str> =
-            my_selection_map.get_selected_lines(buffer);
+        let selected_row_indices: Vec<ChUnit> = my_selection_map.get_ordered_indices();
 
-        let row_indices: Vec<ChUnit> = my_selection_map.get_indices();
+        let mut vec_row_indices_to_remove = vec![];
+        let mut map_lines_to_replace = HashMap::new();
 
-        let mut lines_to_remove = vec![];
-        let mut lines_to_replace = HashMap::new();
+        for selected_row_index in selected_row_indices {
+            match my_selection_map.get(selected_row_index) {
+                Some(selection_range) => {
+                    let line_width = buffer.get_line_display_width(selected_row_index);
 
-        for row_index in row_indices {
-            // Remove entire line.
-            if copied_selected_lines_map[&row_index]
-                == lines[ch!(@to_usize row_index)].string.as_str()
-            {
-                lines_to_remove.push(row_index);
-            }
-            // Remove only selected portion of line.
-            else {
-                if let Some(selection_range) = my_selection_map.get(row_index) {
+                    // Remove entire line.
+                    if selection_range.start_display_col_index == ch!(0)
+                        && selection_range.end_display_col_index == line_width
+                    {
+                        vec_row_indices_to_remove.push(selected_row_index);
+                        continue;
+                    }
+
+                    // Skip if selection range is empty.
+                    if selection_range.start_display_col_index
+                        == selection_range.end_display_col_index
+                    {
+                        continue;
+                    }
+
+                    // Remove selection range (part of the line).
                     let start_col_index = selection_range.start_display_col_index;
                     let end_col_index = selection_range.end_display_col_index;
-                    let line = lines[ch!(@to_usize row_index)].clone();
+                    let line = lines[ch!(@to_usize selected_row_index)].clone();
+
                     let keep_before_selected =
                         line.clip_to_width(ch!(0), start_col_index);
-                    let keep_after_selected = line
-                        .clip_to_width(ch!(end_col_index), ch!(line.string.len() as u16));
+
+                    let keep_after_selected =
+                        line.clip_to_width(ch!(end_col_index), line_width);
+
                     let mut remaining_text = String::new();
                     remaining_text.push_str(keep_before_selected);
                     remaining_text.push_str(keep_after_selected);
-                    lines_to_replace.insert(row_index, remaining_text);
+                    map_lines_to_replace.insert(selected_row_index, remaining_text);
                 }
+                _ => (),
             }
         }
 
@@ -1464,15 +1476,16 @@ mod content_mut {
             engine,
             |lines, caret, _scroll_offset| {
                 // Replace lines, before removing them (to prevent indices from being invalidated).
-                for row_index in lines_to_replace.keys() {
+                for row_index in map_lines_to_replace.keys() {
                     let _ = replace(
                         &mut lines[ch!(@to_usize *row_index)],
-                        lines_to_replace[row_index].clone().into(),
+                        map_lines_to_replace[row_index].clone().into(),
                     );
                 }
 
-                // Remove lines.
-                for row_index in lines_to_remove {
+                // Remove lines in inverse order, in order to preserve the validity of indices.
+                vec_row_indices_to_remove.reverse();
+                for row_index in vec_row_indices_to_remove {
                     lines.remove(ch!(@to_usize row_index));
                 }
 

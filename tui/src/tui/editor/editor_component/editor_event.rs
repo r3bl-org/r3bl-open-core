@@ -44,6 +44,7 @@ pub enum EditorEvent {
     Select(SelectionScope),
     Copy,
     Paste,
+    Cut,
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -169,6 +170,16 @@ impl TryFrom<&InputEvent> for EditorEvent {
                         alt_key_state: KeyState::NotPressed,
                     },
             }) => Ok(EditorEvent::Copy),
+
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::Character('x'),
+                mask:
+                    ModifierKeysMask {
+                        ctrl_key_state: KeyState::Pressed,
+                        shift_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
+            }) => Ok(EditorEvent::Cut),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::Character('v'),
@@ -452,6 +463,13 @@ impl EditorEvent {
                     );
                 }
             },
+
+            EditorEvent::Cut => {
+                EditorEngineInternalApi::copy_editor_selection_to_clipboard(
+                    editor_buffer,
+                );
+                Self::delete_text_if_selected(editor_engine, editor_buffer);
+            }
 
             EditorEvent::Copy => {
                 EditorEngineInternalApi::copy_editor_selection_to_clipboard(

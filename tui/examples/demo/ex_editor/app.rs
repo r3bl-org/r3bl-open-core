@@ -723,7 +723,7 @@ mod status_bar {
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: &Size) {
         let styled_texts = styled_texts! {
             styled_text! { @style: style!(attrib: [bold, dim]) ,      @text: "Hints: "},
-            styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + x"},
+            styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + q"},
             styled_text! { @style: style!(attrib: [bold]) ,           @text: " : Exit 🖖"},
             styled_text! { @style: style!(attrib: [dim]) ,            @text: " … "},
             styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + l"},
