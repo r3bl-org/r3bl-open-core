@@ -43,6 +43,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils](#r3bl_rs_utils)
+  - [v0.9.14 2023-10-29](#v0914-2023-10-29)
   - [v0.9.13 2023-10-29](#v0913-2023-10-29)
   - [v0.9.12 2023-10-29](#v0912-2023-10-29)
   - [v0.9.11 2023-10-28](#v0911-2023-10-28)
@@ -404,6 +405,13 @@
 
 ## `r3bl_rs_utils`
 <a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
+
+### v0.9.14 (2023-10-29)
+<a id="markdown-v0.9.14-2023-10-29" name="v0.9.14-2023-10-29"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions (including `r3bl_tui` w/ latest copy, paste,
+    cut, delete support).
 
 ### v0.9.13 (2023-10-29)
 <a id="markdown-v0.9.13-2023-10-29" name="v0.9.13-2023-10-29"></a>
