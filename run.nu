@@ -150,6 +150,7 @@ def print-help [command: string] {
         print $'    (ansi green)install-cargo-tools(ansi reset)'
         print $'    (ansi green)build-full(ansi reset)'
         print $'    (ansi green)build(ansi reset)'
+        print $'    (ansi green)audit-deps(ansi reset)'
         print $'    (ansi green)all(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)docs(ansi reset)'
