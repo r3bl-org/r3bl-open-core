@@ -15,14 +15,10 @@
  *   limitations under the License.
  */
 
+use std::{error::Error, marker::PhantomData, time::Duration};
 
-use std::error::Error;
-use std::time::Duration;
-use std::marker::PhantomData;
 use common::*;
-use x11_clipboard_crate::Atoms;
-use x11_clipboard_crate::Clipboard as X11Clipboard;
-use x11_clipboard_crate::xcb::xproto::Atom;
+use x11_clipboard_crate::{Atom, Atoms, Clipboard as X11Clipboard};
 
 pub trait Selection {
     fn atom(atoms: &Atoms) -> Atom;
@@ -31,17 +27,13 @@ pub trait Selection {
 pub struct Primary;
 
 impl Selection for Primary {
-    fn atom(atoms: &Atoms) -> Atom {
-        atoms.primary
-    }
+    fn atom(atoms: &Atoms) -> Atom { atoms.primary }
 }
 
 pub struct Clipboard;
 
 impl Selection for Clipboard {
-    fn atom(atoms: &Atoms) -> Atom {
-        atoms.clipboard
-    }
+    fn atom(atoms: &Atoms) -> Atom { atoms.clipboard }
 }
 
 pub struct X11ClipboardContext<S = Clipboard>(X11Clipboard, PhantomData<S>)
