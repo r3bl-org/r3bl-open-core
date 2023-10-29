@@ -313,7 +313,7 @@ mod status_bar {
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: &Size, state: &State) {
         let mut it = styled_texts! {
             styled_text! { @style:style!(attrib: [dim, bold]) ,      @text: "Exit 👋 : "},
-            styled_text! { @style:style!(attrib: [dim, underline]) , @text: "Ctrl + x"},
+            styled_text! { @style:style!(attrib: [dim, underline]) , @text: "Ctrl + q"},
         };
 
         if state.current_slide_index < LINES_ARRAY.len() - 1 {

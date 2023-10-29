@@ -175,9 +175,9 @@ mod app_with_layout_impl_trait_app {
                 return Ok(EventPropagation::Consumed);
             };
 
-            // x => Cancel animation & don't consume the event.
+            // q => Cancel animation & don't consume the event.
             if input_event.matches_keypress(KeyPress::WithModifiers {
-                key: Key::Character('x'),
+                key: Key::Character('q'),
                 mask: ModifierKeysMask::new().with_ctrl(),
             }) {
                 self.animator.stop();
@@ -396,7 +396,7 @@ mod status_bar {
         it += lolcat_st;
 
         it += styled_text! { @style:style!(attrib: [dim, bold]) ,      @text: " Exit 👋 : "};
-        it += styled_text! { @style:style!(attrib: [dim, underline]) , @text: "Ctrl + x"};
+        it += styled_text! { @style:style!(attrib: [dim, underline]) , @text: "Ctrl + q"};
 
         if state.current_slide_index < LINES_ARRAY.len() - 1 {
             it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: " ┊ "};

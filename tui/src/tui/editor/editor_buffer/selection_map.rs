@@ -104,7 +104,7 @@ pub mod selection_map_impl {
         ) -> Option<Position> {
             // Row is the first row in the map.
             // Column is the last row of the range.
-            let indices = self.get_indices();
+            let indices = self.get_ordered_indices();
             let first_row_index = indices.first()?;
             let last_row_index = indices.first()?;
             Some(position!(
@@ -120,7 +120,7 @@ pub mod selection_map_impl {
             let mut it = HashMap::new();
 
             let lines = buffer.get_lines();
-            let row_indices = self.get_indices();
+            let row_indices = self.get_ordered_indices();
 
             for row_index in row_indices {
                 if let Some(selection_range) = self.map.get(&row_index) {
@@ -134,11 +134,11 @@ pub mod selection_map_impl {
             it
         }
 
-        pub fn get_indices(&self) -> Vec<RowIndex> {
+        pub fn get_ordered_indices(&self) -> Vec<RowIndex> {
             let row_indices = {
-                let mut key_vec: Vec<ChUnit> = self.map.keys().copied().collect();
-                key_vec.sort();
-                key_vec
+                let mut it: Vec<ChUnit> = self.map.keys().copied().collect();
+                it.sort();
+                it
             };
             row_indices
         }
@@ -237,18 +237,29 @@ pub mod selection_map_impl {
             }
 
             pub fn to_unformatted_string(&self) -> String {
-                let mut vec_output = self
-                    .map
-                    .iter()
-                    .map(|(row_index, selected_range)| {
-                        format!(
-                            "✂️ ┆row: {0} => start: {1}, end: {2}┆",
-                            /* 0 */ row_index,
-                            /* 1 */ selected_range.start_display_col_index,
-                            /* 2 */ selected_range.end_display_col_index
-                        )
-                    })
-                    .collect::<Vec<String>>();
+                let spacer = "\n    ";
+
+                let mut vec_output = {
+                    let mut it = vec![];
+                    let sorted_indices = self.get_ordered_indices();
+                    for (index, row_index) in sorted_indices.iter().enumerate() {
+                        if let Some(selected_range) = self.map.get(row_index) {
+                            let first_char = if index == 0 {
+                                format!("{spacer}✂️")
+                            } else {
+                                "✂️".to_string()
+                            };
+                            it.push(format!(
+                                "{0} ┆row: {1} => start: {2}, end: {3}┆",
+                                /* 0 */ first_char,
+                                /* 1 */ row_index,
+                                /* 2 */ selected_range.start_display_col_index,
+                                /* 3 */ selected_range.end_display_col_index
+                            ));
+                        }
+                    }
+                    it
+                };
 
                 if vec_output.is_empty() {
                     vec_output.push("✂️ ┆--empty--┆".to_string());
@@ -257,7 +268,7 @@ pub mod selection_map_impl {
                 vec_output
                     .push(format!("🧭 prev_dir: {:?}", self.maybe_previous_direction,));
 
-                vec_output.join("\n    ")
+                vec_output.join(spacer)
             }
         }
 
