@@ -34,6 +34,7 @@
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [v0.3.10 2023-10-29](#v0310-2023-10-29)
   - [v0.3.9 2023-10-29](#v039-2023-10-29)
   - [v0.3.7 2023-10-21](#v037-2023-10-21)
   - [v0.3.6 2023-10-17](#v036-2023-10-17)
@@ -271,6 +272,19 @@
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
+
+### v0.3.10 (2023-10-29)
+<a id="markdown-v0.3.10-2023-10-29" name="v0.3.10-2023-10-29"></a>
+
+- Changed:
+  - Replaced `arboard` crate with `copypasta-ext`.
+    - `arboard` was not working well on macOS and Windows.
+    - The `copypasta-ext` crate should fix the problem w/ dropping the clipboard contents
+      when an app using the editor component exits.
+  - Added deps are upgraded to their latest versions.
+  - Changed `cargo.deny` so that it now accepts `ISC` license.
+- Added:
+  - Support for select, copy, cut, paste, and delete have been added to the editor component.
 
 ### v0.3.9 (2023-10-29)
 <a id="markdown-v0.3.9-2023-10-29" name="v0.3.9-2023-10-29"></a>

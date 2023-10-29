@@ -128,20 +128,21 @@ pub mod clipboard_support {
     }
 }
 
+/// <https://docs.rs/copypasta-ext/latest/copypasta_ext/>
 mod clipboard_provider {
-    use arboard::Clipboard;
+    use copypasta_ext::{prelude::*, x11_fork::ClipboardContext};
 
     use super::*;
 
-    type ClipboardResult<T> = Result<T, Box<dyn Error>>;
+    type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 
     /// Wrap the call to the clipboard crate, so it returns a [Result]. This is to avoid
     /// calling `unwrap()` on the [ClipboardContext] object.
     pub fn try_to_put_content_into_clipboard(vec_str: &[&str]) -> ClipboardResult<()> {
         let content = vec_str.join("\n");
 
-        let mut clipboard = Clipboard::new()?;
-        clipboard.set_text(content.clone())?;
+        let mut ctx = ClipboardContext::new()?;
+        ctx.set_contents(content.clone())?;
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
             log_debug(
@@ -161,8 +162,8 @@ mod clipboard_provider {
     /// Wrap the call to the clipboard crate, so it returns a [Result]. This is to avoid
     /// calling `unwrap()` on the [ClipboardContext] object.
     pub fn try_to_get_content_from_clipboard() -> ClipboardResult<String> {
-        let mut clipboard = Clipboard::new()?;
-        let content = clipboard.get_text()?;
+        let mut ctx = ClipboardContext::new()?;
+        let content = ctx.get_contents()?;
 
         Ok(content)
     }
