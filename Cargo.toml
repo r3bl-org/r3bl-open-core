@@ -10,7 +10,7 @@ categories = [
   "data-structures",
 ]
 # When you change this, make sure to update `README.md` as well.
-version = "0.9.11"
+version = "0.9.12"
 edition = "2021"
 readme = "README.md" # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/
