@@ -34,6 +34,7 @@
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [v0.3.8 2023-10-29](#v038-2023-10-29)
   - [v0.3.7 2023-10-21](#v037-2023-10-21)
   - [v0.3.6 2023-10-17](#v036-2023-10-17)
   - [v0.3.5 2023-10-14](#v035-2023-10-14)
@@ -41,6 +42,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils](#r3bl_rs_utils)
+  - [v0.9.11 2023-10-28](#v0911-2023-10-28)
   - [v0.9.10 2023-10-21](#v0910-2023-10-21)
   - [v0.9.9](#v099)
 - [More info on changelogs](#more-info-on-changelogs)
@@ -268,15 +270,25 @@
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
+### v0.3.9 (2023-10-29)
+<a id="markdown-v0.3.8-2023-10-29" name="v0.3.8-2023-10-29"></a>
+
+- Changed:
+  - Dropped support for `clipboard` crate. Used `arboard` instead which is actively
+    maintained and supported by 1Password. New Github Actions have been added to ensure
+    that `cargo-deny` is used in order to check for crates going unmaintained (along w/
+    license audit checks). There are known issues w/ this crate on Wayland & Arch.
+    <https://github.com/r3bl-org/r3bl_rs_utils/commit/3ba4ff821373361bedcd0b7185a4b6ba15b745c8>
+
 ### v0.3.7 (2023-10-21)
 <a id="markdown-v0.3.7-2023-10-21" name="v0.3.7-2023-10-21"></a>
 
 - Changed:
-  - Drop support for `palette` crate. Use `colorgrad` instead. More info here:
+  - Dropped support for `palette` crate. Use `colorgrad` instead. More info here:
     <https://github.com/r3bl-org/r3bl_rs_utils/issues/162>
 
 - Updated:
-  - Upgrade all deps to their latest versions.
+  - Upgraded all deps to their latest versions.
 
 ### v0.3.6 (2023-10-17)
 <a id="markdown-v0.3.6-2023-10-17" name="v0.3.6-2023-10-17"></a>
@@ -376,6 +388,12 @@
 
 ## `r3bl_rs_utils`
 <a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
+
+### v0.9.11 (2023-10-28)
+<a id="markdown-v0.9.11-2023-10-28" name="v0.9.11-2023-10-28"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
 
 ### v0.9.10 (2023-10-21)
 <a id="markdown-v0.9.10-2023-10-21" name="v0.9.10-2023-10-21"></a>
