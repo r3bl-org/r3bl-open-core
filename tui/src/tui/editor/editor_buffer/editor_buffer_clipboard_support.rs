@@ -33,7 +33,7 @@ pub mod clipboard_support {
         let mut vec_str: Vec<&str> = vec![];
 
         // Sort the row indices so that the copied text is in the correct order.
-        let row_indices = selection_map.get_indices();
+        let row_indices = selection_map.get_ordered_indices();
 
         // Iterate through the sorted row indices, and copy the selected text.
         for row_index in row_indices {
@@ -63,10 +63,39 @@ pub mod clipboard_support {
     pub fn paste(args: EditorArgsMut<'_>) {
         match try_to_get_content_from_clipboard() {
             Ok(clipboard_text) => {
-                EditorEngineInternalApi::insert_str_at_caret(
-                    args,
-                    clipboard_text.as_str(),
-                );
+                // If the clipboard text does not contain a new line, then insert the text.
+                if !clipboard_text.contains(&"\n") {
+                    EditorEngineInternalApi::insert_str_at_caret(
+                        EditorArgsMut {
+                            editor_engine: args.editor_engine,
+                            editor_buffer: args.editor_buffer,
+                        },
+                        clipboard_text.as_str(),
+                    );
+                }
+                // If the clipboard text contains a new line, then insert the text line by line.
+                else {
+                    let lines = clipboard_text.split("\n");
+                    let line_count = lines.clone().count();
+                    for (line_index, line) in lines.enumerate() {
+                        EditorEngineInternalApi::insert_str_at_caret(
+                            EditorArgsMut {
+                                editor_engine: args.editor_engine,
+                                editor_buffer: args.editor_buffer,
+                            },
+                            line,
+                        );
+                        // This is not the last line, so insert a new line.
+                        if line_index < line_count - 1 {
+                            EditorEngineInternalApi::insert_new_line_at_caret(
+                                EditorArgsMut {
+                                    editor_engine: args.editor_engine,
+                                    editor_buffer: args.editor_buffer,
+                                },
+                            );
+                        }
+                    }
+                }
 
                 call_if_true!(DEBUG_TUI_COPY_PASTE, {
                     log_debug(
