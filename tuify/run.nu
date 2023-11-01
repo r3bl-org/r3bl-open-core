@@ -162,11 +162,11 @@ def clean [] {
 }
 
 def run [] {
-    cargo run --example main_interactive
+    cargo run --example main_interactive -q
 }
 
 def run-piped [] {
-    bat Cargo.toml | cargo run -- select-from-list
+    bat Cargo.toml | cargo run -q -- select-from-list
 }
 
 def run-with-flamegraph [] {

@@ -150,7 +150,7 @@ def clean [] {
 }
 
 def run [] {
-    cargo run --example main
+    cargo run --example main -q
 }
 
 def run-with-flamegraph [] {
