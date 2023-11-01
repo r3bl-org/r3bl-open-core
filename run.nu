@@ -216,13 +216,13 @@ def clean [] {
 
 def run [] {
     cd tui
-    cargo run --example demo
+    cargo run --example demo -q
     cd ..
 }
 
 def run-release [] {
     cd tui
-    cargo run --release --example demo
+    cargo run --release --example demo -q
     cd ..
 }
 
