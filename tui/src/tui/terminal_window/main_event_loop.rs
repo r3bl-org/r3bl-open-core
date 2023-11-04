@@ -100,13 +100,13 @@ impl TerminalWindow {
             .dump_to_log("main_event_loop -> Startup 🚀");
 
         // mpsc channel to send exit signal to main loop.
-        let (exit_channel_sender, mut exit_channel_reciever) = mpsc::channel::<bool>(1);
+        let (exit_channel_sender, mut exit_channel_receiver) = mpsc::channel::<bool>(1);
 
         // Main event loop.
         loop {
             tokio::select! {
                 // Handle exit channel.
-                result = exit_channel_reciever.recv() => {
+                result = exit_channel_receiver.recv() => {
                     if result.is_some() {
                         RawMode::end(&shared_global_data).await;
                         break;

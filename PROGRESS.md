@@ -14,24 +14,21 @@ Table of contents:
 
 # Context
 
-- In the `copypaste` branch, I've been working on editor component upgrades related to
-  select, copy, paste, cut, support. Here's the
-  [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/86).
-   - Done:
-      - Shift up and down are done
-      - Shift page up and down are done
-      - Shift home and end are done
-   - Resume work on this todo item (just search for the following or <kbd>Alt+T</kbd>):
-     `// 00:`:
-      - Then implement actions: copy, cut, delete, paste
-      - Do an audit of dependencies and make sure they are all compatible licenses and use
-      the `r3bl_ansi_color` crate as well.
-      - Then merge this branch to main.
-- The [TODO.todo](TODO.todo) file has a list of things that need to be done and that are
-  currently under way.
-- After these changes have landed, I would really like to have better documentation and
-  then publish a first version of `r3bl_cmdr` to crates.io, which I can use every day as
-  my MD editor of choice.
+- In the `copypaste` branch, I've been working on editor component upgrades related to select, copy,
+  paste, cut, support. Here's the [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/86).
+  - Done:
+    - Shift up and down are done
+    - Shift page up and down are done
+    - Shift home and end are done
+  - Resume work on this todo item (just search for the following or <kbd>Alt+T</kbd>): `00:`:
+    - Then implement actions: copy, cut, delete, paste
+    - Do an audit of dependencies and make sure they are all compatible licenses and use the
+      `r3bl_ansi_color` crate as well.
+    - Then merge this branch to main.
+- The [TODO.todo](TODO.todo) file has a list of things that need to be done and that are currently
+  under way.
+- After these changes have landed, I would really like to have better documentation and then publish
+  a first version of `r3bl_cmdr` to crates.io, which I can use every day as my MD editor of choice.
 
 # Why?
 

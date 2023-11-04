@@ -165,13 +165,346 @@ use crate::*;
 /// in the map represents a row of text in the buffer.
 /// - The row index is the key.
 /// - The value is the [SelectionRange].
-#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
+// 00: undo/redo
+#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Default)]
 pub struct EditorBuffer {
+    editor_content: EditorContent,
+    pub(crate) history: EditorBufferHistory,
+}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Default)]
+pub struct EditorContent {
     lines: Vec<UnicodeString>,
     caret_display_position: Position,
     scroll_offset: ScrollOffset,
     maybe_file_extension: Option<String>,
     selection_map: SelectionMap,
+}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
+pub struct EditorBufferHistory {
+    versions: Vec<EditorContent>,
+    current_index: isize,
+}
+
+impl Default for EditorBufferHistory {
+    fn default() -> Self {
+        Self {
+            versions: vec![],
+            current_index: -1,
+        }
+    }
+}
+
+pub mod history {
+    use super::*;
+
+    pub fn convert_isize_to_usize(index: isize) -> usize {
+        index.try_into().unwrap_or(index as usize)
+    }
+
+    pub fn push(editor_buffer: &mut EditorBuffer) {
+        let content_copy = editor_buffer.editor_content.clone();
+
+        // Delete the history from the current version index to the end.
+        if let Some(current_index) = editor_buffer.history.get_current_index() {
+            editor_buffer
+                .history
+                .versions
+                .truncate(convert_isize_to_usize(current_index + 1));
+        }
+
+        // Normal history insertion.
+        editor_buffer.history.push_content(content_copy);
+
+        if DEBUG_TUI_COPY_PASTE {
+            log_debug(format!(
+                "🍎🍎🍎 add_content_to_undo_stack editor_buffer: {:?}",
+                editor_buffer
+            ));
+        }
+    }
+
+    pub fn undo(editor_buffer: &mut EditorBuffer) {
+        if let Some(content) = editor_buffer.history.previous_content() {
+            editor_buffer.editor_content = content;
+        }
+
+        if DEBUG_TUI_COPY_PASTE {
+            log_debug(format!("🍎🍎🍎 undo editor_buffer: {:?}", editor_buffer));
+        }
+    }
+
+    pub fn redo(editor_buffer: &mut EditorBuffer) {
+        if let Some(content) = editor_buffer.history.next_content() {
+            editor_buffer.editor_content = content;
+        }
+
+        if DEBUG_TUI_COPY_PASTE {
+            log_debug(format!("🍎🍎🍎 redo editor_buffer: {:?}", editor_buffer));
+        }
+    }
+
+    impl EditorBufferHistory {
+        pub(crate) fn is_empty(&self) -> bool { self.versions.is_empty() }
+
+        fn get_last_index(&self) -> Option<ChUnit> {
+            if self.is_empty() {
+                None
+            } else {
+                Some(ch!(self.versions.len()) - 1)
+            }
+        }
+
+        fn get_current_index(&self) -> Option<isize> {
+            if self.is_empty() {
+                None
+            } else {
+                Some(self.current_index)
+            }
+        }
+
+        fn increment_index(&mut self) {
+            // Don't do anything if is empty.
+            match self.get_last_index() {
+                Some(max_index) => {
+                    // Make sure it doesn't go past the end.
+                    if self.current_index == ch!(@to_isize max_index) {
+                        return;
+                    }
+                    // Increment index.
+                    self.current_index += 1;
+                }
+                _ => (),
+            }
+        }
+
+        fn decrement_index(&mut self) {
+            // Don't do anything if is empty.
+            match self.get_current_index() {
+                Some(current_index) => {
+                    // Make sure it doesn't go past the start.
+                    if current_index == 0 {
+                        return;
+                    }
+                    // Decrement index.
+                    self.current_index -= 1;
+                }
+                _ => (),
+            }
+        }
+
+        fn push_content(&mut self, content: EditorContent) {
+            self.versions.push(content);
+            self.increment_index();
+        }
+
+        fn previous_content(&mut self) -> Option<EditorContent> {
+            if self.is_empty() {
+                None
+            } else {
+                // At start of history.
+                if self.current_index == -1 {
+                    return None;
+                }
+
+                // Decrement index.
+                self.decrement_index();
+
+                // Return item at index.
+                let it = self
+                    .versions
+                    .get(convert_isize_to_usize(self.current_index))
+                    .cloned();
+                it
+            }
+        }
+
+        fn next_content(&mut self) -> Option<EditorContent> {
+            if self.is_empty() {
+                None
+            } else {
+                // At end of versions.
+                if let Some(max_index) = self.get_last_index() {
+                    let max_index = ch!(@to_isize max_index);
+                    if self.current_index == max_index {
+                        return None;
+                    }
+                }
+
+                // Increment index.
+                self.increment_index();
+
+                // Return item at index.
+                self.versions
+                    .get(convert_isize_to_usize(self.current_index))
+                    .cloned()
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod history_tests {
+    use r3bl_rs_utils_core::UnicodeString;
+
+    use super::*;
+
+    #[test]
+    fn test_push_default() {
+        let mut editor_buffer = EditorBuffer::default();
+        let content = editor_buffer.editor_content.clone();
+
+        history::push(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 0);
+
+        let history_stack = editor_buffer.history.versions;
+        assert_eq2!(history_stack.len(), 1);
+        assert_eq2!(history_stack[0], content);
+    }
+
+    #[test]
+    fn test_push_with_contents() {
+        let mut editor_buffer = EditorBuffer::default();
+        editor_buffer.editor_content.lines = vec![UnicodeString::from("abc")];
+        history::push(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 0);
+
+        let history_stack = editor_buffer.history.versions;
+        assert_eq2!(history_stack.len(), 1);
+        assert_eq2!(history_stack[0].lines.len(), 1);
+        assert_eq2!(history_stack[0].lines[0].string, "abc");
+    }
+
+    #[test]
+    fn test_push_and_drop_future_redos() {
+        let mut editor_buffer = EditorBuffer::default();
+        editor_buffer.editor_content.lines = vec![UnicodeString::from("abc")];
+        history::push(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 0);
+
+        editor_buffer.editor_content.lines = vec![UnicodeString::from("def")];
+        history::push(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 1);
+
+        editor_buffer.editor_content.lines = vec![UnicodeString::from("ghi")];
+        history::push(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 2);
+
+        // Do two undos.
+        history::undo(&mut editor_buffer);
+        history::undo(&mut editor_buffer);
+
+        // Push new content. Should drop future redos.
+        editor_buffer.editor_content.lines = vec![UnicodeString::from("xyz")];
+        history::push(&mut editor_buffer);
+
+        let history = editor_buffer.history;
+        assert_eq2!(history.current_index, 1);
+
+        let history_stack = history.versions;
+        assert_eq2!(history_stack.len(), 2);
+        assert_eq2!(history_stack[0].lines.len(), 1);
+        assert_eq2!(history_stack[0].lines[0].string, "abc");
+        assert_eq2!(history_stack[1].lines.len(), 1);
+        assert_eq2!(history_stack[1].lines[0].string, "xyz");
+    }
+
+    #[test]
+    fn test_single_undo() {
+        let mut editor_buffer = EditorBuffer::default();
+        editor_buffer.editor_content.lines = vec![UnicodeString::from("abc")];
+        history::push(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 0);
+
+        // Undo.
+        history::undo(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 0);
+    }
+
+    #[test]
+    fn test_many_undo() {
+        let mut editor_buffer = EditorBuffer::default();
+        editor_buffer.editor_content.lines = vec![UnicodeString::from("abc")];
+        history::push(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 0);
+
+        editor_buffer.editor_content.lines = vec![UnicodeString::from("def")];
+        history::push(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 1);
+        let copy_of_editor_content = editor_buffer.editor_content.clone();
+
+        editor_buffer.editor_content.lines = vec![UnicodeString::from("ghi")];
+        history::push(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 2);
+
+        // Undo.
+        history::undo(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 1);
+        assert_eq2!(editor_buffer.editor_content, copy_of_editor_content);
+
+        let history_stack = editor_buffer.history.versions;
+        assert_eq2!(history_stack.len(), 3);
+        assert_eq2!(history_stack[0].lines.len(), 1);
+        assert_eq2!(history_stack[0].lines[0].string, "abc");
+        assert_eq2!(history_stack[1].lines.len(), 1);
+        assert_eq2!(history_stack[1].lines[0].string, "def");
+        assert_eq2!(history_stack[2].lines.len(), 1);
+        assert_eq2!(history_stack[2].lines[0].string, "ghi");
+    }
+
+    #[test]
+    fn test_multiple_undos() {
+        let mut editor_buffer = EditorBuffer::default();
+        editor_buffer.editor_content.lines = vec![UnicodeString::from("abc")];
+        history::push(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 0);
+
+        editor_buffer.editor_content.lines = vec![UnicodeString::from("def")];
+        history::push(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 1);
+
+        // Undo multiple times.
+        history::undo(&mut editor_buffer);
+        history::undo(&mut editor_buffer);
+        history::undo(&mut editor_buffer);
+
+        assert_eq2!(editor_buffer.history.current_index, 0);
+    }
+
+    #[test]
+    fn test_undo_and_multiple_redos() {
+        let mut editor_buffer = EditorBuffer::default();
+        editor_buffer.editor_content.lines = vec![UnicodeString::from("abc")];
+        history::push(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 0);
+
+        editor_buffer.editor_content.lines = vec![UnicodeString::from("def")];
+        history::push(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 1);
+        let snapshot_content = editor_buffer.editor_content.clone();
+
+        // Undo.
+        history::undo(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 0);
+
+        // Redo.
+        history::redo(&mut editor_buffer);
+        assert_eq2!(editor_buffer.history.current_index, 1);
+
+        // Current state.
+        assert_eq2!(editor_buffer.editor_content, snapshot_content);
+
+        // Redo.
+        history::redo(&mut editor_buffer);
+
+        let history_stack = editor_buffer.history.versions;
+        assert_eq2!(history_stack.len(), 2);
+        assert_eq2!(history_stack[0].lines.len(), 1);
+        assert_eq2!(history_stack[0].lines[0].string, "abc");
+        assert_eq2!(history_stack[1].lines.len(), 1);
+        assert_eq2!(history_stack[1].lines[0].string, "def");
+    }
 }
 
 mod constructor {
@@ -190,11 +523,12 @@ mod constructor {
             });
 
             Self {
-                lines: vec![UnicodeString::default()],
-                caret_display_position: Position::default(),
-                scroll_offset: ScrollOffset::default(),
-                maybe_file_extension: file_extension.map(|s| s.to_string()),
-                selection_map: Default::default(),
+                editor_content: EditorContent {
+                    lines: vec![UnicodeString::default()],
+                    maybe_file_extension: file_extension.map(|s| s.to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
             }
         }
     }
@@ -209,28 +543,30 @@ pub mod access_and_mutate {
     use super::*;
 
     impl EditorBuffer {
-        pub fn has_file_extension(&self) -> bool { self.maybe_file_extension.is_some() }
+        pub fn has_file_extension(&self) -> bool {
+            self.editor_content.maybe_file_extension.is_some()
+        }
 
         pub fn get_maybe_file_extension(&self) -> Option<&str> {
-            match self.maybe_file_extension {
+            match self.editor_content.maybe_file_extension {
                 Some(ref s) => Some(s.as_str()),
                 None => None,
             }
         }
 
-        pub fn is_empty(&self) -> bool { self.lines.is_empty() }
+        pub fn is_empty(&self) -> bool { self.editor_content.lines.is_empty() }
 
-        pub fn len(&self) -> ChUnit { ch!(self.lines.len()) }
+        pub fn len(&self) -> ChUnit { ch!(self.editor_content.lines.len()) }
 
         pub fn get_line_display_width(&self, row_index: ChUnit) -> ChUnit {
-            if let Some(line) = self.lines.get(ch!(@to_usize row_index)) {
+            if let Some(line) = self.editor_content.lines.get(ch!(@to_usize row_index)) {
                 ch!(line.display_width)
             } else {
                 ch!(0)
             }
         }
 
-        pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.lines }
+        pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.editor_content.lines }
 
         pub fn get_as_string(&self) -> String {
             self.get_lines()
@@ -242,11 +578,12 @@ pub mod access_and_mutate {
 
         pub fn set_lines(&mut self, lines: Vec<String>) {
             // Set lines.
-            self.lines = lines.into_iter().map(UnicodeString::from).collect();
+            self.editor_content.lines =
+                lines.into_iter().map(UnicodeString::from).collect();
             // Reset caret.
-            self.caret_display_position = Position::default();
+            self.editor_content.caret_display_position = Position::default();
             // Reset scroll_offset.
-            self.scroll_offset = ScrollOffset::default();
+            self.editor_content.scroll_offset = ScrollOffset::default();
         }
 
         /// Returns the current caret position in two variants:
@@ -255,11 +592,11 @@ pub mod access_and_mutate {
         ///    scroll_offset.
         pub fn get_caret(&self, kind: CaretKind) -> Position {
             match kind {
-                CaretKind::Raw => self.caret_display_position,
+                CaretKind::Raw => self.editor_content.caret_display_position,
                 CaretKind::ScrollAdjusted => {
                     position! {
-                      col_index: Self::calc_scroll_adj_caret_col(&self.caret_display_position, &self.scroll_offset),
-                      row_index: Self::calc_scroll_adj_caret_row(&self.caret_display_position, &self.scroll_offset)
+                      col_index: Self::calc_scroll_adj_caret_col(&self.editor_content.caret_display_position, &self.editor_content.scroll_offset),
+                      row_index: Self::calc_scroll_adj_caret_row(&self.editor_content.caret_display_position, &self.editor_content.scroll_offset)
                     }
                 }
             }
@@ -281,7 +618,9 @@ pub mod access_and_mutate {
             ch!(@to_usize caret.col_index + scroll_offset.col_index)
         }
 
-        pub fn get_scroll_offset(&self) -> ScrollOffset { self.scroll_offset }
+        pub fn get_scroll_offset(&self) -> ScrollOffset {
+            self.editor_content.scroll_offset
+        }
 
         /// Returns:
         /// 1. /* lines */ &mut `Vec<UnicodeString>`,
@@ -301,22 +640,26 @@ pub mod access_and_mutate {
             /* selection_map */ &mut SelectionMap,
         ) {
             (
-                &mut self.lines,
-                &mut self.caret_display_position,
-                &mut self.scroll_offset,
-                &mut self.selection_map,
+                &mut self.editor_content.lines,
+                &mut self.editor_content.caret_display_position,
+                &mut self.editor_content.scroll_offset,
+                &mut self.editor_content.selection_map,
             )
         }
 
-        pub fn has_selection(&self) -> bool { !self.selection_map.is_empty() }
+        pub fn has_selection(&self) -> bool {
+            !self.editor_content.selection_map.is_empty()
+        }
 
-        pub fn clear_selection(&mut self) { self.selection_map.clear(); }
+        pub fn clear_selection(&mut self) { self.editor_content.selection_map.clear(); }
 
-        pub fn get_selection_map(&self) -> &SelectionMap { &self.selection_map }
+        pub fn get_selection_map(&self) -> &SelectionMap {
+            &self.editor_content.selection_map
+        }
     }
 }
 
-mod debug_format_helpers {
+pub mod debug_format_helpers {
     use super::*;
 
     impl Debug for EditorBuffer {
@@ -324,16 +667,45 @@ mod debug_format_helpers {
             write! {
                 f,
                 "\nEditorBuffer [                                  \n \
-                ├ lines: {0}, size: {1}                            \n \
-                ├ selection_map: {4}                               \n \
-                └ ext: {2:?}, caret: {3:?}, scroll_offset: {5:?}   \n \
+                ├ content: {0:?}                                     \n \
+                └ history: {1:?}                                     \n \
                 ]",
+                /* 0 */ self.editor_content,
+                /* 1 */ self.history,
+            }
+        }
+    }
+
+    impl Debug for EditorContent {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            write! {
+                f,
+                "\n\tEditorContent [                                  \n \
+                \t├ lines: {0}, size: {1}                            \n \
+                \t├ selection_map: {4}                               \n \
+                \t└ ext: {2:?}, caret: {3:?}, scroll_offset: {5:?}   \n \
+                \t]",
                 /* 0 */ self.lines.len(),
                 /* 1 */ self.lines.get_heap_size(),
                 /* 2 */ self.maybe_file_extension,
                 /* 3 */ self.caret_display_position,
                 /* 4 */ self.selection_map.to_formatted_string(),
-                /* 5 */ self.scroll_offset
+                /* 5 */ self.scroll_offset,
+            }
+        }
+    }
+
+    impl Debug for EditorBufferHistory {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            write! {
+                f,
+                "\n\tEditorBufferHistory [                           \n \
+                \t├ stack: {0}, size: {1}                            \n \
+                \t└ index: {2}                                       \n \
+                \t]",
+                /* 0 */ self.versions.len(),
+                /* 1 */ self.versions.get_heap_size(),
+                /* 2 */ self.current_index
             }
         }
     }
