@@ -45,6 +45,8 @@ pub enum EditorEvent {
     Copy,
     Paste,
     Cut,
+    Undo,
+    Redo,
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -73,12 +75,33 @@ impl TryFrom<&InputEvent> for EditorEvent {
     fn try_from(input_event: &InputEvent) -> Result<Self, Self::Error> {
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
             log_debug(format!(
-                "\n#️⃣#️⃣#️⃣  EditorEvent::try_from: {}",
+                "\n🐥🐥🐥  EditorEvent::try_from: {}",
                 format!("{}", input_event).red().on_white()
             ));
         });
 
         match input_event {
+            // Undo, redo events.
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::Character('z'),
+                mask:
+                    ModifierKeysMask {
+                        ctrl_key_state: KeyState::Pressed,
+                        shift_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
+            }) => Ok(EditorEvent::Undo),
+
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::Character('y'),
+                mask:
+                    ModifierKeysMask {
+                        ctrl_key_state: KeyState::Pressed,
+                        shift_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
+            }) => Ok(EditorEvent::Redo),
+
             // Selection events.
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::Right),
@@ -276,6 +299,14 @@ impl EditorEvent {
         A: Debug + Default + Clone + Sync + Send,
     {
         match editor_event {
+            EditorEvent::Undo => {
+                history::undo(editor_buffer);
+            }
+
+            EditorEvent::Redo => {
+                history::redo(editor_buffer);
+            }
+
             EditorEvent::InsertChar(character) => {
                 Self::delete_text_if_selected(editor_engine, editor_buffer);
                 EditorEngineInternalApi::insert_str_at_caret(

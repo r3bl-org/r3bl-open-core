@@ -90,6 +90,11 @@ macro_rules! ch {
         ch_value -= 1;
         ch_value
     }};
+    // Returns isize.
+    (@to_isize $arg: expr) => {{
+        let isize_value: isize = $arg.into();
+        isize_value
+    }};
     // Returns usize.
     (@to_usize $arg: expr) => {{
         let usize_value: usize = $arg.into();
@@ -227,6 +232,10 @@ pub mod ch_unit_math_ops {
 pub mod convert_to_number {
     use super::*;
 
+    impl From<ChUnit> for isize {
+        fn from(arg: ChUnit) -> Self { arg.value as isize }
+    }
+
     impl From<ChUnit> for usize {
         fn from(arg: ChUnit) -> Self { arg.value as usize }
     }
@@ -238,6 +247,14 @@ pub mod convert_to_number {
 
 pub mod convert_from_number {
     use super::*;
+
+    impl From<isize> for ChUnit {
+        fn from(value: isize) -> Self {
+            Self {
+                value: value.try_into().unwrap_or(value as ChUnitPrimitiveType),
+            }
+        }
+    }
 
     impl From<u8> for ChUnit {
         fn from(value: u8) -> Self {

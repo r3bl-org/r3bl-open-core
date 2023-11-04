@@ -83,7 +83,15 @@ impl EditorEngineApi {
 
         if let Ok(editor_event) = EditorEvent::try_from(input_event) {
             // REVIEW: editor buffer gets cloned here
+            // 00: undo/redo
             let mut new_editor_buffer = editor_buffer.clone();
+
+            let editor_event_clone = editor_event.clone();
+
+            if editor_buffer.history.is_empty() {
+                history::push(&mut new_editor_buffer);
+            }
+
             EditorEvent::apply_editor_event(
                 editor_engine,
                 &mut new_editor_buffer,
@@ -92,6 +100,38 @@ impl EditorEngineApi {
                 component_registry,
                 self_id,
             );
+
+            // 00: Only push for content modification events (not caret movements)
+            // 00: use validate_editor_buffer_change::apply_change to ensure that caret and scroll_offset is valid
+
+            match editor_event_clone {
+                EditorEvent::InsertChar(_) => {
+                    history::push(&mut new_editor_buffer);
+                }
+                EditorEvent::InsertString(_) => {
+                    history::push(&mut new_editor_buffer);
+                }
+                EditorEvent::InsertNewLine => {
+                    history::push(&mut new_editor_buffer);
+                }
+                EditorEvent::Delete => {
+                    history::push(&mut new_editor_buffer);
+                }
+                EditorEvent::Backspace => {
+                    history::push(&mut new_editor_buffer);
+                }
+                EditorEvent::Copy => {
+                    history::push(&mut new_editor_buffer);
+                }
+                EditorEvent::Paste => {
+                    history::push(&mut new_editor_buffer);
+                }
+                EditorEvent::Cut => {
+                    history::push(&mut new_editor_buffer);
+                }
+                _ => {}
+            }
+
             Ok(EditorEngineApplyEventResult::Applied(new_editor_buffer))
         } else {
             Ok(EditorEngineApplyEventResult::NotApplied)
@@ -191,7 +231,7 @@ impl EditorEngineApi {
         );
     }
 
-    // BM: Render selection
+    // BOOKM: Render selection
     fn render_selection<S, A>(
         render_args: &RenderArgs<'_, S, A>,
         render_ops: &mut RenderOps,

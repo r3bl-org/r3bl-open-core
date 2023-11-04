@@ -14,6 +14,7 @@
     "BITALIC",
     "bitflags",
     "Blackbox",
+    "BOOKM",
     "boop",
     "chrono",
     "CLICOLOR",
@@ -111,6 +112,7 @@
     "truecolor",
     "trunc",
     "tuicore",
+    "undos",
     "uninteractive",
     "unspecial",
     "withmutreturns"
