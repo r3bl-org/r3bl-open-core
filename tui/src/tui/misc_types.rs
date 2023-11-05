@@ -50,7 +50,7 @@ pub mod args {
     /// Global scope args struct that holds references.
     ///
     /// ![Editor component lifecycle
-    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
     pub struct GlobalScopeArgs<'a, S, A>
     where
         S: Debug + Default + Clone + PartialEq + Sync + Send,
@@ -65,7 +65,7 @@ pub mod args {
     /// Component scope args struct that holds references.
     ///
     /// ![Editor component lifecycle
-    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
     pub struct ComponentScopeArgs<'a, S, A>
     where
         S: Debug + Default + Clone + PartialEq + Sync + Send,
@@ -81,7 +81,7 @@ pub mod args {
     /// [EditorEngine] args struct that holds references.
     ///
     /// ![Editor component lifecycle
-    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
     pub struct EditorEngineArgs<'a, S, A>
     where
         S: Debug + Default + Clone + PartialEq + Sync + Send,
@@ -99,7 +99,7 @@ pub mod args {
     /// [DialogEngine] args struct that holds references.
     ///
     /// ![Editor component lifecycle
-    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
     pub struct DialogEngineArgs<'a, S, A>
     where
         S: Debug + Default + Clone + PartialEq + Sync + Send,

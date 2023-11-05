@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>author</key>
-	<string>Nazmul Idris (https://github.com/r3bl-org/r3bl_rs_utils)</string>
+	<string>Nazmul Idris (https://github.com/r3bl-org/r3bl-open-core)</string>
 	<key>name</key>
 	<string>R3BL</string>
 	<key>semanticClass</key>
@@ -29,7 +29,7 @@
 			<key>settings</key>
 			<dict>
 				<key>background</key>
-				<string>#2b303b</string> 
+				<string>#2b303b</string>
 				<key>caret</key>
 				<string>#c0c5ce</string>
 				<!-- This is the most important color. Default or normal foreground color. -->
@@ -367,7 +367,7 @@
 				<string>#ce55b7</string>
 			</dict>
 		</dict>
-		
+
 		<dict>
 			<key>name</key>
 			<string>Link Text</string>

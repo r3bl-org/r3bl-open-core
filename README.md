@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/r3bl-term.svg" height="128px">
+  <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg" height="128px">
 </p>
 
 # Context
@@ -135,7 +135,7 @@ Here's a screenshot of running the `main` example on various operating systems:
 | *Running on macOS iTerm app (note Truecolor runtime detection)* |
 
 For more information please read the
-[README](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/ansi_color/README.md) for the
+[README](https://github.com/r3bl-org/r3bl-open-core/tree/main/ansi_color/README.md) for the
 [r3bl_ansi_color crate](https://docs.rs/r3bl_ansi_color/latest/r3bl_ansi_color/).
 
 ## tuify
@@ -156,10 +156,10 @@ binary target is called `rt`.
 
 Here's a demo of the binary target of this crate in action.
 
-https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/2b42db72-cd62-4ea2-80ae-ccc01008190c
+https://github.com/r3bl-org/r3bl-open-core/assets/2966499/2b42db72-cd62-4ea2-80ae-ccc01008190c
 
 For more information please read the
-[README](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/tuify/README.md) for the
+[README](https://github.com/r3bl-org/r3bl-open-core/tree/main/tuify/README.md) for the
 [r3bl_tuify crate](https://docs.rs/r3bl_tuify/latest/r3bl_tuify/).
 
 ## tui and tui_core
@@ -167,7 +167,7 @@ For more information please read the
 
 
 For more information please read the
-[README](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/tui/README.md#r3bl_tui-crate) for the [r3bl_tui
+[README](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/README.md#r3bl_tui-crate) for the [r3bl_tui
 crate](https://docs.rs/r3bl_tui/latest/r3bl_tui/).
 
 <!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
@@ -187,7 +187,7 @@ this TUI engine.
 
 
 For more information please read the
-[README](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/redux/README.md#r3bl_redux) for the [r3bl_redux
+[README](https://github.com/r3bl-org/r3bl-open-core/tree/main/redux/README.md#r3bl_redux) for the [r3bl_redux
 crate](https://docs.rs/r3bl_redux/latest/r3bl_redux/).
 
 ## Macros
@@ -199,7 +199,7 @@ crate](https://docs.rs/r3bl_redux/latest/r3bl_redux/).
 
 
 For more information please read the
-[README](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/core/README.md#r3bl_rs_utils_core) for the
+[README](https://github.com/r3bl-org/r3bl-open-core/tree/main/core/README.md#r3bl_rs_utils_core) for the
 [r3bl_rs_utils_core crate](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/).
 
 ### Procedural
@@ -207,7 +207,7 @@ For more information please read the
 
 
 For more information please read the
-[README](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/macro/README.md#r3bl_rs_utils_macro) for the
+[README](https://github.com/r3bl-org/r3bl-open-core/tree/main/macro/README.md#r3bl_rs_utils_macro) for the
 [r3bl_rs_utils_macro crate](https://docs.rs/r3bl_rs_utils_macro/latest/r3bl_rs_utils_macro/).
 
 ## tree_memory_arena (non-binary tree data structure)
@@ -578,4 +578,4 @@ rustflags = [
 
 - Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
 - And if you have any feature requests, feel free to add them there too 👍.
-- To contribute please check out [this page](https://github.com/r3bl-org/r3bl_rs_utils/contribute).
+- To contribute please check out [this page](https://github.com/r3bl-org/r3bl-open-core/contribute).

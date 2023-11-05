@@ -17,7 +17,7 @@
 
 //! # Context
 //!
-//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/r3bl-term.svg)
+//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg)
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
@@ -178,7 +178,7 @@
 //! ### Run the demo locally
 //! <a id="markdown-run-the-demo-locally" name="run-the-demo-locally"></a>
 //!
-//! Once you've cloned [the repo](https://github.com/r3bl-org/r3bl_rs_utils) to a folder on your
+//! Once you've cloned [the repo](https://github.com/r3bl-org/r3bl-open-core) to a folder on your
 //! computer, you can run the examples you see in the video with the following commands:
 //!
 //! ```sh
@@ -303,7 +303,7 @@
 //! Here's an architecture diagram that will be useful to keep in mind as we go through the details
 //! of the following sections:
 //!
-//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
 //!
 //! # The window
 //!
@@ -437,7 +437,7 @@
 //! The following diagram provides a high level overview of how apps (that contain components, which
 //! may contain components, and so on) are rendered to the terminal screen.
 //!
-//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/compositor.svg)
+//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/compositor.svg)
 //!
 //! Each component produces a `RenderPipeline`, which is a map of `ZOrder` and `Vec<RenderOps>`.
 //! `RenderOps` are the instructions that are grouped together, such as move the caret to a

@@ -17,7 +17,7 @@
 
 //! # Context
 //!
-//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/r3bl-term.svg)
+//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg)
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!

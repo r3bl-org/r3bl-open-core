@@ -29,7 +29,7 @@ Once captured you can upload to the following sites:
 
 - Github.com (r3bl_rs_utils repo)
 
-  - Edit an the main [README.md](https://github.com/r3bl-org/r3bl_rs_utils#readme) file and drag and
+  - Edit an the main [README.md](https://github.com/r3bl-org/r3bl-open-core#readme) file and drag and
     drop the MP4 file from your desktop to the editor. This will upload the video to github.com and
     generate a URL like this:
     <https://user-images.githubusercontent.com/2966499/233481838-b6da884f-f73d-4e1f-adef-94beb9761c46.mp4>.
@@ -59,7 +59,7 @@ the latest docs and links to SVG, MP4, etc.
 
    - `README.md` - the links to SVG, MP4 files are relative to the source file.
    - `src/lib.rs` - the links to SVG, MP4 files are direct to githubusercontent.com. For eg:
-     [memory-architecture.drawio.svg](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg).
+     [memory-architecture.drawio.svg](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg).
 
 ## draw.io (deprecated)
 

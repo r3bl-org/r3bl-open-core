@@ -124,7 +124,7 @@ Here's a video of this in action.
 
 <!-- tuify-long-command -->
 
-https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/c9b49bfb-b811-460e-a844-fe260eaa860a
+https://github.com/r3bl-org/r3bl-open-core/assets/2966499/c9b49bfb-b811-460e-a844-fe260eaa860a
 
 What does this do?
 
@@ -167,7 +167,7 @@ when:
      when they ran the command.
      <!-- tuify-interactive-happy-path -->
 
-     https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/51de8867-513b-429f-aff2-63dd25d71c82
+     https://github.com/r3bl-org/r3bl-open-core/assets/2966499/51de8867-513b-429f-aff2-63dd25d71c82
 
    - Another scenario is that the user does not provide the required information even when prompted
      interactively. In this scenario, the program exits with an error and help message.
@@ -177,7 +177,7 @@ when:
      continue, so it exits and provides some help message.
      <!-- tuify-interactive-unhappy-path -->
 
-     https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/664d0367-90fd-4f0a-ad87-3f4745642ad0
+     https://github.com/r3bl-org/r3bl-open-core/assets/2966499/664d0367-90fd-4f0a-ad87-3f4745642ad0
 
 1. `--selection-mode` is _not_ passed in the command line. So it only interactively prompts the user
    for this piece of information. Similarly, if the user does not provide this information, the app
@@ -189,7 +189,7 @@ when:
 
    <!-- tuify-interactive-selection-mode-not-provided -->
 
-   https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/be65d9b2-575b-47c0-8291-110340bd2fe7
+   https://github.com/r3bl-org/r3bl-open-core/assets/2966499/be65d9b2-575b-47c0-8291-110340bd2fe7
 
 1. `--command-to-run-with-each-selection` is _not_ passed in the command line. So it only
    interactively prompts the user for this piece of information. Similarly, if the user does not
@@ -198,7 +198,7 @@ when:
    cat TODO.todo | cargo run -- select-from-list --selection-mode single
    ```
    <!-- tuify-interactive-command-to-run-with-selection-not-provided -->
-   https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/d8d7d419-c85e-4c10-bea5-345aa31a92a3
+   https://github.com/r3bl-org/r3bl-open-core/assets/2966499/d8d7d419-c85e-4c10-bea5-345aa31a92a3
 
 ### Paths
 <a id="markdown-paths" name="paths"></a>
