@@ -2,7 +2,7 @@
 ┃ r3bl_rs_utils ┃
 ┛               ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-fix performance problem (https://github.com/r3bl-org/r3bl_rs_utils/issues/95):
+fix performance problem (https://github.com/r3bl-org/r3bl-open-core/issues/95):
   ✔ scroll left / right slow in type ahead completion dialog @done(23-04-25 18:31)
 
 update changelog for r3bl_tui v0.3.3, r3bl_rs_utils_core v0.9.2:
@@ -33,7 +33,7 @@ update changelog for r3bl_tui v0.3.3, r3bl_rs_utils_core v0.9.2:
     ✔ make animation general purpose (since it's already used in 2 places) @done(23-04-23 20:48)
     ✔ bold and italic should dim the `**` and `*` characters @done(23-04-24 12:35)
 
-fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
+fix syn hi (https://github.com/r3bl-org/r3bl-open-core/issues/82):
   ✔ `md_parser_syn_hi.rs`: @done(23-03-22 20:34)
     ✔ fn `try_parse_and_highlight`: `&Vec<US>` -(1)-> `Document` -(2)-> `StyleUSSpanLines` @done(23-03-22 20:34)
     ✔ rewrite `md_parser` @done(23-03-10 17:36)
@@ -87,7 +87,7 @@ fix syn hi (https://github.com/r3bl-org/r3bl_rs_utils/issues/82):
       ✔ add getting started guide w/ video & clear instructions on running demo, and looking at egs @done(23-04-20 14:11)
       ✔ update links in all the README (to the stuff above) @done(23-04-20 14:11)
 
-fix lolcat (https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aopen+is%3Aissue++project%3Ar3bl-org%2F1+lolcat+):
+fix lolcat (https://github.com/r3bl-org/r3bl-open-core/issues?q=is%3Aopen+is%3Aissue++project%3Ar3bl-org%2F1+lolcat+):
   ✔ add `color_wheel` mod to `core` crate @done(23-02-26 10:42)
   ✔ remove `lolcat` mod from `core` crate & update docs & check FIXMEs @done(23-02-26 10:42)
   ✔ add gradient and colorization policies to `color_wheel` @done(23-02-26 17:37)
@@ -118,7 +118,7 @@ md_parser:
   ✔ move `md_parser` from `rust_scratch/nom` to `r3bl_rs_utils` @done(23-02-20 11:26)
 
 redux-no-clone:
-✔ landed w/ huge performance boost <https://github.com/r3bl-org/r3bl_rs_utils/issues/70> @done(23-01-15 12:27)
+✔ landed w/ huge performance boost <https://github.com/r3bl-org/r3bl-open-core/issues/70> @done(23-01-15 12:27)
 
 auto completion provider design:
   ✔ change the `OnDialogEditorChangeFn`, `OnDialogPressFn` to be async trait impl which takes `App` @done(23-01-11 17:07)
@@ -132,9 +132,9 @@ auto completion provider design:
 
 auto completion provider impl:
   **tracking bug**:
-  ✔ [x] https://github.com/r3bl-org/r3bl_rs_utils/issues/49 @done(23-01-09 15:57)
+  ✔ [x] https://github.com/r3bl-org/r3bl-open-core/issues/49 @done(23-01-09 15:57)
   **bug fixes**:
-  - [x] https://github.com/r3bl-org/r3bl_rs_utils/issues/71
+  - [x] https://github.com/r3bl-org/r3bl-open-core/issues/71
 
   **dialog_engine_api.rs**:
   - [x] add `render_results_panel()` to display results panel (if in autocomplete mode)
@@ -211,7 +211,7 @@ editor engine bug:
     - paint.rs::paint() does not work property ... the optimization to prevent flicker causes this problem
     - this will be fixed by the compositor work!
     - this is also fixed by printing SPACERs in empty lines of the editor component
-    - SHA: https://github.com/r3bl-org/r3bl_rs_utils/commit/e1c6b6b87de0b06ee1f634c72b547bf792d012a7
+    - SHA: https://github.com/r3bl-org/r3bl-open-core/commit/e1c6b6b87de0b06ee1f634c72b547bf792d012a7
 
 compositor:
   ✔ implement `render_pipeline_to_offscreen_buffer::RenderPipeline` to IR (`OffscreenBuffer`): @done(22-11-26 10:13)
@@ -255,15 +255,15 @@ compositor:
     ✔ add figma diagram showing how the compositor works @done(22-12-09 19:54)
     ✔ add docs for 2 scripts: `run-with-flamegraph-profiling.fish` & `run-with-crash-reporting.fish` @done(22-12-10 11:27)
     ✔ remove all the TODO, BUG, BM, TK from changes made in this branch @done(22-12-11 10:15)
-  ✔ merge `compositor` branch into `main` & close issue https://github.com/r3bl-org/r3bl_rs_utils/issues/46 @done(22-12-10 11:27)
+  ✔ merge `compositor` branch into `main` & close issue https://github.com/r3bl-org/r3bl-open-core/issues/46 @done(22-12-10 11:27)
   ✔ cut releases & publish to crates.io @done(22-12-11 10:15)
   ✔ make a video & publicize it on reddit @done(22-12-11 10:15)
 
-refactor https://github.com/r3bl-org/r3bl_rs_utils/issues/63:
+refactor https://github.com/r3bl-org/r3bl-open-core/issues/63:
   ✔ index (starts at 0) vs size (starts at 1) confusion cleanup @done(22-11-21 08:40)
   ✔ move get_plain_text_clipped() to access.rs @done(22-11-21 08:40)
 
-editor engine extras core (https://github.com/r3bl-org/r3bl_rs_utils/issues/48):
+editor engine extras core (https://github.com/r3bl-org/r3bl-open-core/issues/48):
   ✔ syntax highlighting support @done(22-11-20 17:41)
   ✔ support editor config options to enable/disable syntax highlighting & update tests @done(22-11-20 17:41)
   ✔ markdown parsing (MD frontmatter in JSON format, and MD -> AST) @done(22-11-20 17:41)
@@ -273,7 +273,7 @@ cleanup:
   ✔ rename jsx macro names (layout and render macros) @done(22-10-30 19:31)
 
 editor engine extras (core):
-  ✔ add modal dialog support https://github.com/r3bl-org/r3bl_rs_utils/issues/45 @done(22-10-28 16:08)
+  ✔ add modal dialog support https://github.com/r3bl-org/r3bl-open-core/issues/45 @done(22-10-28 16:08)
 
 editor engine extras (core):
   ✔ add editor config options to enable/disable multiline & update tests @done(22-10-11 15:29)
@@ -281,13 +281,13 @@ editor engine extras (core):
   ✔ make sure window_size is correctly passed down from main_event_loop -> app -> component @done(22-10-17 11:13)
 
 framework:
-  ✔ [Enforce terminal window bounds in RenderPipeline](https://github.com/r3bl-org/r3bl_rs_utils/issues/28) @done(22-09-03 20:36)
-  ✔ [Z-ordering support in RenderPipeline](https://github.com/r3bl-org/r3bl_rs_utils/issues/27) @done(22-09-09 16:12)
-  ✔ [Fix broken unicode painting on different terminal + os combos](https://github.com/r3bl-org/r3bl_rs_utils/issues/33) @done(22-09-15 15:55)
-  ✔ [EditorBuffer rewrite](https://github.com/r3bl-org/r3bl_rs_utils/issues/40) @done(22-09-20 10:32)
-  ✔ [Migrate cmdr -> rs](https://github.com/r3bl-org/r3bl_rs_utils/issues/38) @done(22-09-20 13:59)
+  ✔ [Enforce terminal window bounds in RenderPipeline](https://github.com/r3bl-org/r3bl-open-core/issues/28) @done(22-09-03 20:36)
+  ✔ [Z-ordering support in RenderPipeline](https://github.com/r3bl-org/r3bl-open-core/issues/27) @done(22-09-09 16:12)
+  ✔ [Fix broken unicode painting on different terminal + os combos](https://github.com/r3bl-org/r3bl-open-core/issues/33) @done(22-09-15 15:55)
+  ✔ [EditorBuffer rewrite](https://github.com/r3bl-org/r3bl-open-core/issues/40) @done(22-09-20 10:32)
+  ✔ [Migrate cmdr -> rs](https://github.com/r3bl-org/r3bl-open-core/issues/38) @done(22-09-20 13:59)
 
-crate reorg (https://github.com/r3bl-org/r3bl_rs_utils/issues/42):
+crate reorg (https://github.com/r3bl-org/r3bl-open-core/issues/42):
   ✔ Move tests from tests/ into appropriate src/ module @done(22-10-04 09:21)
     ✔ r3bl_rs_utils_core @done(22-10-04 09:21)
     ✔ r3bl_rs_utils_macro @done(22-10-04 09:21)
@@ -298,7 +298,7 @@ crate reorg (https://github.com/r3bl-org/r3bl_rs_utils/issues/42):
     ✔ update all comments / docs @done(22-10-04 12:15)
     ✔ update all READMEs & lib.rs docs @done(22-10-04 13:52)
 
-editor engine core (https://github.com/r3bl-org/r3bl_rs_utils/issues/23):
+editor engine core (https://github.com/r3bl-org/r3bl-open-core/issues/23):
   ✔ wire up the engine into framework @done(22-08-31 13:56)
   ✔ fancy debug impl for editor buffer @done(22-08-31 13:57)
   ✔ insert content: @done(22-09-01 11:46)

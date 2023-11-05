@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/r3bl-term.svg" height="128px">
+  <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg" height="128px">
 </p>
 
 # Context

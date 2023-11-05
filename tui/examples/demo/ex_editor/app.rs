@@ -37,7 +37,6 @@ pub enum ComponentId {
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EditorStyleName {
-
     Default = 4,
 }
 

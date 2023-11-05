@@ -31,7 +31,7 @@ Status: Copied to tui/src/lib.rs, tui/README.md
 - The `app_handle_event()` method is responsible for handling events that are sent to the `App`
   trait when user input is detected from the keyboard or mouse.
 
-![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
 
 ## How do modal dialog boxes work?
 <a id="markdown-how-do-modal-dialog-boxes-work%3F" name="how-do-modal-dialog-boxes-work%3F"></a>

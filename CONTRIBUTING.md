@@ -72,7 +72,7 @@ Here are some guidelines to help you get started:
 
 
 If you encounter a bug or have an idea for a new feature, please open an issue on our
-[GitHub repository](https://github.com/r3bl-org/r3bl_rs_utils/issues). Please provide as much detail
+[GitHub repository](https://github.com/r3bl-org/r3bl-open-core/issues). Please provide as much detail
 as possible, including steps to reproduce the issue and any relevant error messages.
 
 ### Documentation Improvements
@@ -80,7 +80,7 @@ as possible, including steps to reproduce the issue and any relevant error messa
 
 
 If you notice any errors or omissions in our documentation, please open an issue on our
-[GitHub repository](https://github.com/r3bl-org/r3bl_rs_utils/issues) or submit a pull request with
+[GitHub repository](https://github.com/r3bl-org/r3bl-open-core/issues) or submit a pull request with
 your proposed changes.
 
 ### Code Contributions
@@ -215,8 +215,8 @@ I hope this guide helps you write better commit messages!
 
 
 If you want to get started, check out the list of
-[issues](https://github.com/r3bl-org/r3bl_rs_utils/issues) with the
-["good first issue" label](https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+[issues](https://github.com/r3bl-org/r3bl-open-core/issues) with the
+["good first issue" label](https://github.com/r3bl-org/r3bl-open-core/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
 You can also browse the more information TODOs in [TODO.todo](TODO.todo) which haven't been turned
 into issues yet.
@@ -253,7 +253,7 @@ important the related information is to using the R3BL codebase.
 <a id="markdown-redux-background-study" name="redux-background-study"></a>
 
 
-1. 🍌🍌🍌 A great starting point is the [redux](https://github.com/r3bl-org/r3bl_rs_utils#redux)
+1. 🍌🍌🍌 A great starting point is the [redux](https://github.com/r3bl-org/r3bl-open-core#redux)
    section.
 2. 🍌🍌🍌🍌 This [repo](https://github.com/r3bl-org/address-book-with-redux-tui/releases/tag/1.0) is
    a good one to start working on first.
@@ -267,11 +267,11 @@ important the related information is to using the R3BL codebase.
 <a id="markdown-tui-background-study" name="tui-background-study"></a>
 
 
-1. 🍌🍌🍌🍌 A great starting point is this [tui](https://github.com/r3bl-org/r3bl_rs_utils#tui)
+1. 🍌🍌🍌🍌 A great starting point is this [tui](https://github.com/r3bl-org/r3bl-open-core#tui)
    section.
 
-   - [Example of TUI only w/out layout](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/src/ex_app_no_layout)
-   - [Example of TUI only w/ layout](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/src/ex_app_with_layout)
+   - [Example of TUI only w/out layout](https://github.com/r3bl-org/r3bl-open-core/tree/main/src/ex_app_no_layout)
+   - [Example of TUI only w/ layout](https://github.com/r3bl-org/r3bl-open-core/tree/main/src/ex_app_with_layout)
 
 2. 🍌🍌🍌🍌 Here's a
    [repo](https://github.com/r3bl-org/address-book-with-redux-tui/releases/tag/1.0) that is a good
@@ -285,8 +285,8 @@ important the related information is to using the R3BL codebase.
 
 Here are some resources to learn more about the project itself:
 
-- [r3bl_rs_utils repo README](https://github.com/r3bl-org/r3bl_rs_utils/blob/main/README.md).
-- [r3bl-cmdr repo README](https://github.com/r3bl-org/r3bl_rs_utils/blob/main/README.md).
+- [r3bl_rs_utils repo README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
+- [r3bl-cmdr repo README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 - [Related content on developerlife.com](https://developerlife.com/category/Rust/).
 
 ## Developing
@@ -300,7 +300,7 @@ Here are some resources to learn more about the project itself:
 This is no different than other Rust projects.
 
 ```bash
-git clone https://github.com/r3bl-org/r3bl_rs_utils
+git clone https://github.com/r3bl-org/r3bl-open-core
 cd r3bl_rs_utils
 # To run the tests
 cargo test

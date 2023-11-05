@@ -17,7 +17,7 @@
 
 //! # Context
 //!
-//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/r3bl-term.svg)
+//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg)
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
@@ -115,7 +115,7 @@
 //! > 2. [Code example of an address book using
 //! >    Redux](https://github.com/r3bl-org/address-book-with-redux-tui).
 //! > 3. [Code example of TUI apps using
-//! >    Redux](https://github.com/r3bl-org/r3bl_rs_utils/tree/main/tui/examples/demo).
+//! >    Redux](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/demo).
 //!
 //! ## Middlewares
 //!

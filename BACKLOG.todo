@@ -20,7 +20,7 @@ editor engine extras (smart MD editing support like github web app):
 tui components (all implemented w/ editor component):
   ☐ checkbox (single, multi select) implemented w/ editor component (different config options)
   ☐ form implemented w/ editor component (different config options)
-  
+
 framework (configurable keyboard shortcuts):
   ☐ a json file w/ keybindings needs to be loaded / stored from `~/.config/r3bl/keybindings.json`
     - https://crates.io/crates/config
@@ -51,25 +51,25 @@ framework:
     - https://github.com/SergioBenitez/Rocket/discussions/1735#discussioncomment-941576
     - https://notado.substack.com/p/do-you-really-need-a-message-queue?sd=pf
     - https://github.com/smallnest/concurrency-programming-via-rust
-  ☐ [Filter unsupported graphemes in keypress](https://github.com/r3bl-org/r3bl_rs_utils/issues/26)
-  
+  ☐ [Filter unsupported graphemes in keypress](https://github.com/r3bl-org/r3bl-open-core/issues/26)
+
 testing:
   ☐ Write integration test w/ input simulation using [enigo](https://github.com/enigo-rs/enigo)
     - eg: https://github.com/enigo-rs/enigo/blob/master/examples/keyboard.rs
-  ☐ [Write tests: rendering, component, etc](https://github.com/r3bl-org/r3bl_rs_utils/issues?q=is%3Aissue+is%3Aopen+label%3Atesting)
+  ☐ [Write tests: rendering, component, etc](https://github.com/r3bl-org/r3bl-open-core/issues?q=is%3Aissue+is%3Aopen+label%3Atesting)
 
 cmdr:
-  ☐ [Create PRD](https://github.com/r3bl-org/r3bl_rs_utils/issues/39)
-    
+  ☐ [Create PRD](https://github.com/r3bl-org/r3bl-open-core/issues/39)
+
 writing:
-  ☐ [RSX & DSL articles](https://github.com/r3bl-org/r3bl_rs_utils/issues/19)
-  ☐ [Update DD for editor component](https://github.com/r3bl-org/r3bl_rs_utils/issues/23)
-  ☐ [Write DD for render pipeline & paint](https://github.com/r3bl-org/r3bl_rs_utils/issues/37)
-  ☐ [Write DD for tui module](https://github.com/r3bl-org/r3bl_rs_utils/issues/41)
+  ☐ [RSX & DSL articles](https://github.com/r3bl-org/r3bl-open-core/issues/19)
+  ☐ [Update DD for editor component](https://github.com/r3bl-org/r3bl-open-core/issues/23)
+  ☐ [Write DD for render pipeline & paint](https://github.com/r3bl-org/r3bl-open-core/issues/37)
+  ☐ [Write DD for tui module](https://github.com/r3bl-org/r3bl-open-core/issues/41)
   ☐ [Write coding pattern article on OOP -> Rust](https://gist.github.com/nazmulidris/f975795b98bc4573d6a0fb1e9bcca090#no-oop-in-rust)
 
 performance:
-  ☐ [Add termion support](https://github.com/r3bl-org/r3bl_rs_utils/issues/24)
+  ☐ [Add termion support](https://github.com/r3bl-org/r3bl-open-core/issues/24)
 
 multi user editor:
   ☐ editor engine enhancements (multi-user editing):

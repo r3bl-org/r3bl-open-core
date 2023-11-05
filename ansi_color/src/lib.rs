@@ -42,19 +42,19 @@
 //!
 //! Here's a screenshot of running the `main` example on various operating systems:
 //!
-//! | ![Linux screenshot](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/ansi_color/docs/screenshot_linux.png?raw=true) |
+//! | ![Linux screenshot](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/ansi_color/docs/screenshot_linux.png?raw=true) |
 //! |:--:|
 //! | *Running on Linux Tilix* |
 //!
-//! | ![Windows screenshot](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/ansi_color/docs/screenshot_windows.png?raw=true) |
+//! | ![Windows screenshot](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/ansi_color/docs/screenshot_windows.png?raw=true) |
 //! |:--:|
 //! | *Running on Windows Terminal* |
 //!
-//! | ![macOS screenshot Terminal app](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/ansi_color/docs/screenshot_macos_terminal_app.png?raw=true) |
+//! | ![macOS screenshot Terminal app](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/ansi_color/docs/screenshot_macos_terminal_app.png?raw=true) |
 //! |:--:|
 //! | *Running on macOS terminal app (note ANSI 256 runtime detection)* |
 //!
-//! | ![macOS screenshot iTerm app](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/ansi_color/docs/screenshot_macos_iterm_app.png?raw=true) |
+//! | ![macOS screenshot iTerm app](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/ansi_color/docs/screenshot_macos_iterm_app.png?raw=true) |
 //! |:--:|
 //! | *Running on macOS iTerm app (note Truecolor runtime detection)* |
 //!

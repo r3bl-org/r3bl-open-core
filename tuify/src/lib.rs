@@ -123,7 +123,7 @@
 //!
 //! <!-- tuify-long-command -->
 //! <video width="100%" controls>
-//!   <source src="https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/c9b49bfb-b811-460e-a844-fe260eaa860a" type="video/mp4"/>
+//!   <source src="https://github.com/r3bl-org/r3bl-open-core/assets/2966499/c9b49bfb-b811-460e-a844-fe260eaa860a" type="video/mp4"/>
 //! </video>
 //!
 //! What does this do?
@@ -167,7 +167,7 @@
 //!      selection. They didn't provide this up front when they ran the command.
 //!      <!-- tuify-interactive-happy-path -->
 //!      <video width="100%" controls>
-//!        <source src="https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/51de8867-513b-429f-aff2-63dd25d71c82" type="video/mp4"/>
+//!        <source src="https://github.com/r3bl-org/r3bl-open-core/assets/2966499/51de8867-513b-429f-aff2-63dd25d71c82" type="video/mp4"/>
 //!      </video>
 //!
 //!    - Another scenario is that the user does not provide the required information even when
@@ -179,7 +179,7 @@
 //!      can't continue, so it exits and provides some help message.
 //!      <!-- tuify-interactive-unhappy-path -->
 //!      <video width="100%" controls>
-//!        <source src="https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/664d0367-90fd-4f0a-ad87-3f4745642ad0" type="video/mp4"/>
+//!        <source src="https://github.com/r3bl-org/r3bl-open-core/assets/2966499/664d0367-90fd-4f0a-ad87-3f4745642ad0" type="video/mp4"/>
 //!      </video>
 //!
 //! 1. `--selection-mode` is *not* passed in the command line. So it only interactively
@@ -190,7 +190,7 @@
 //!    ```
 //!    <!-- tuify-interactive-selection-mode-not-provided -->
 //!      <video width="100%" controls>
-//!        <source src="https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/be65d9b2-575b-47c0-8291-110340bd2fe7" type="video/mp4"/>
+//!        <source src="https://github.com/r3bl-org/r3bl-open-core/assets/2966499/be65d9b2-575b-47c0-8291-110340bd2fe7" type="video/mp4"/>
 //!      </video>
 //!
 //! 1. `--command-to-run-with-each-selection` is *not* passed in the command line. So it only
@@ -201,7 +201,7 @@
 //!    ```
 //!    <!-- tuify-interactive-command-to-run-with-selection-not-provided -->
 //!      <video width="100%" controls>
-//!        <source src="https://github.com/r3bl-org/r3bl_rs_utils/assets/2966499/d8d7d419-c85e-4c10-bea5-345aa31a92a3" type="video/mp4"/>
+//!        <source src="https://github.com/r3bl-org/r3bl-open-core/assets/2966499/d8d7d419-c85e-4c10-bea5-345aa31a92a3" type="video/mp4"/>
 //!      </video>
 //!
 //! ### Paths

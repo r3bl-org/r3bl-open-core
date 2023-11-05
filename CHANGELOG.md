@@ -88,7 +88,7 @@
     [`simplelog`](https://crates.io/crates/simplelog) repo w/ conditional compilation
     (feature flags) removed. This crate was causing transitive dependency issues in
     upstream repos that added `r3bl_tuify` as a dependency. Here's a link to the related
-    [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/160).
+    [issue](https://github.com/r3bl-org/r3bl-open-core/issues/160).
 
 ## `r3bl_ansi_color`
 <a id="markdown-r3bl_ansi_color" name="r3bl_ansi_color"></a>
@@ -193,7 +193,7 @@
 <a id="markdown-v0.1.20-2023-10-21" name="v0.1.20-2023-10-21"></a>
 
 - Updated:
-  - Bug fix: <https://github.com/r3bl-org/r3bl_rs_utils/issues/170>
+  - Bug fix: <https://github.com/r3bl-org/r3bl-open-core/issues/170>
 
 ### v0.1.19 (2023-10-17)
 <a id="markdown-v0.1.19-2023-10-17" name="v0.1.19-2023-10-17"></a>
@@ -295,14 +295,14 @@
     maintained and supported by 1Password. New Github Actions have been added to ensure
     that `cargo-deny` is used in order to check for crates going unmaintained (along w/
     license audit checks). There are known issues w/ this crate on Wayland & Arch.
-    <https://github.com/r3bl-org/r3bl_rs_utils/commit/3ba4ff821373361bedcd0b7185a4b6ba15b745c8>
+    <https://github.com/r3bl-org/r3bl-open-core/commit/3ba4ff821373361bedcd0b7185a4b6ba15b745c8>
 
 ### v0.3.7 (2023-10-21)
 <a id="markdown-v0.3.7-2023-10-21" name="v0.3.7-2023-10-21"></a>
 
 - Changed:
   - Dropped support for `palette` crate. Use `colorgrad` instead. More info here:
-    <https://github.com/r3bl-org/r3bl_rs_utils/issues/162>
+    <https://github.com/r3bl-org/r3bl-open-core/issues/162>
 
 - Updated:
   - Upgraded all deps to their latest versions.
@@ -389,14 +389,14 @@
 - Added:
   - First changelog entry.
   - Remove dependency on ansi-parser crate:
-    [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/91).
-  - Make lolcat code better: [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/76).
+    [issue](https://github.com/r3bl-org/r3bl-open-core/issues/91).
+  - Make lolcat code better: [issue](https://github.com/r3bl-org/r3bl-open-core/issues/76).
     - Add `ColorSupport` as a way to detect terminal emulator capabilities at runtime.
     - Add `ColorWheel` as a way to consolidate all gradient related coloring. Use `ColorSupport` as
       a way to fallback from truecolor, to ANSI 256, to grayscale gracefully based on terminal
       emulator capabilities at runtime.
   - Provide for ANSI 256 color fallback for MacOS terminal app:
-    [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/79)
+    [issue](https://github.com/r3bl-org/r3bl-open-core/issues/79)
 - Removed: <a id="markdown-removed%3A" name="removed%3A"></a>
   - Removed lolcat example from demo.
 - Changed:

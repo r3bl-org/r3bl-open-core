@@ -15,7 +15,7 @@ Table of contents:
 # Context
 
 - In the `copypaste` branch, I've been working on editor component upgrades related to select, copy,
-  paste, cut, support. Here's the [issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/86).
+  paste, cut, support. Here's the [issue](https://github.com/r3bl-org/r3bl-open-core/issues/86).
   - Done:
     - Shift up and down are done
     - Shift page up and down are done

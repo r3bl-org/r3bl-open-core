@@ -30,7 +30,7 @@ pub const DEBUG_TUI_MOD: bool = true;
 pub const DEBUG_TUI_SYN_HI: bool = false;
 
 /// Enable or disable select, copy, paste debug logging.
-// DBG: disable when done https://github.com/r3bl-org/r3bl_rs_utils/issues/115
+// DBG: disable when done https://github.com/r3bl-org/r3bl-open-core/issues/115
 pub const DEBUG_TUI_COPY_PASTE: bool = true;
 
 /// Enable or disable compositor debug logging.

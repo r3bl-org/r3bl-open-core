@@ -85,7 +85,7 @@ Here are some other TUI frameworks:
 <a id="markdown-proposed-solution---add-an-editorengine-field-to-the-editorcomponent-and-add-an-editorbuffer-field-to-the-state" name="proposed-solution---add-an-editorengine-field-to-the-editorcomponent-and-add-an-editorbuffer-field-to-the-state"></a>
 
 
-![](https://raw.githubusercontent.com/r3bl-org/r3bl_rs_utils/main/docs/memory-architecture.drawio.svg)
+![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
 
 ### Scope
 <a id="markdown-scope" name="scope"></a>
@@ -165,7 +165,7 @@ pub struct EditorBuffer {
 
 These commits are related to the work described here:
 
-1. [Add EditorEngine & EditorBuffer skeleton](https://github.com/r3bl-org/r3bl_rs_utils/commit/6dea59b68f90330b3e95639751f92a18bf28bee4)
+1. [Add EditorEngine & EditorBuffer skeleton](https://github.com/r3bl-org/r3bl-open-core/commit/6dea59b68f90330b3e95639751f92a18bf28bee4)
 2. [Add EditorEngine & EditorBuffer integration for editor component](https://github.com/r3bl-org/r3bl-cmdr/commit/1041c1f7cfee91f9ca0166384dabeb8fe6b21a01)
 
 ## Painting caret (using cursor and another approach)
@@ -199,7 +199,7 @@ Use the terminal's cursor show / hide.
     is constantly moved around in order to paint anything (eg:
     `MoveTo(col, row), SetColor, PaintText(...)` sequence).
 3.  So it must be guaranteed by
-    [RenderPipeline via RenderOp::ShowCaretAtPosition???To(...)](https://github.com/r3bl-org/r3bl_rs_utils/blob/main/tui/src/tui/terminal_lib_backends/render_op.rs#L217).
+    [RenderPipeline via RenderOp::ShowCaretAtPosition???To(...)](https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/tui/terminal_lib_backends/render_op.rs#L217).
     The downside here too is that there's a chance that different components and render functions
     will clobber this value that's already been set. There's currently a weak warning that's
     displayed after the 1st time this value is set which isn't robust either.
@@ -260,7 +260,7 @@ cluster support in the editor meant that each line was converted to a UnicodeStr
 list of GraphemeClusterSegments. This is actually how all the code in the editor engine, editor
 buffer, and line buffer saw the document in the editor.
 
-So, the commit to fix [this issue](https://github.com/r3bl-org/r3bl_rs_utils/issues/40) changes the
+So, the commit to fix [this issue](https://github.com/r3bl-org/r3bl-open-core/issues/40) changes the
 way a document is stored in the editor buffer. The editor buffer now stores a list of lines, where
 each line is a UnicodeString. Converters are provide to turn this into a list of Strings and back
 and forth.
