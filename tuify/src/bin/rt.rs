@@ -15,6 +15,9 @@
  *   limitations under the License.
  */
 
+//! For more information on how to use CLAP and Tuify, please read this tutorial:
+//! <https://developerlife.com/2023/09/17/tuify-clap/>
+
 use std::{io::{stdin, BufRead, Result},
           process::Command};
 
