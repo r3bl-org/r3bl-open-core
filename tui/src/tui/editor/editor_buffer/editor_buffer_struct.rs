@@ -226,8 +226,10 @@ pub mod history {
     }
 
     pub fn undo(editor_buffer: &mut EditorBuffer) {
+        let retain_caret_position = editor_buffer.editor_content.caret_display_position;
         if let Some(content) = editor_buffer.history.previous_content() {
             editor_buffer.editor_content = content;
+            editor_buffer.editor_content.caret_display_position = retain_caret_position;
         }
 
         if DEBUG_TUI_COPY_PASTE {
