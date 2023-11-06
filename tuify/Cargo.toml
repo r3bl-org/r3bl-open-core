@@ -28,7 +28,6 @@ path = "src/bin/rt.rs"
 name = "giti"
 path = "src/bin/giti.rs"
 
-
 [dependencies]
 # r3bl_rs_utils
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
