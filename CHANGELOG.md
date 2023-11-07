@@ -20,6 +20,7 @@
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [r3bl_tuify](#r3bl_tuify)
+  - [Next release](#next-release)
   - [v0.1.21 2023-10-21](#v0121-2023-10-21)
   - [v0.1.20 2023-10-21](#v0120-2023-10-21)
   - [v0.1.19 2023-10-17](#v0119-2023-10-17)
@@ -34,6 +35,7 @@
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [Next release](#next-release)
   - [v0.3.10 2023-10-29](#v0310-2023-10-29)
   - [v0.3.9 2023-10-29](#v039-2023-10-29)
   - [v0.3.7 2023-10-21](#v037-2023-10-21)
@@ -183,6 +185,13 @@
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
+### Next release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Added:
+  - Binary target for `giti`. This will be an interactive git client that is tuified. It
+    is meant to be a useful productivity tool and an example of what is possible w/ tuify.
+
 ### v0.1.21 (2023-10-21)
 <a id="markdown-v0.1.21-2023-10-21" name="v0.1.21-2023-10-21"></a>
 
@@ -273,6 +282,15 @@
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
+
+### Next release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Added:
+  - Added undo, redo support for the editor component.
+  - Added binary target for `edi` which is going to be a Markdown editor similar to nano
+    or micro. It is meant to showcase what the `r3bl_tui` crate can do. It is also meant
+    to be a useful productivity tool.
 
 ### v0.3.10 (2023-10-29)
 <a id="markdown-v0.3.10-2023-10-29" name="v0.3.10-2023-10-29"></a>
