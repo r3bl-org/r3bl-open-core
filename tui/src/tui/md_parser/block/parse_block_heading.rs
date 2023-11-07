@@ -56,6 +56,9 @@ fn parse(input: &str) -> IResult<&str, HeadingData> {
             recognize(many1(anychar)),
         ))
     ))(input)?;
+    if level == HeadingLevel::NotHeading {
+        return Ok((input, HeadingData { level , text : input }));
+    }
     Ok((input, HeadingData { level, text }))
 }
 
@@ -67,7 +70,12 @@ fn parse_heading_tag(input: &str) -> IResult<&str, HeadingLevel> {
             /* output `#`+ */ take_while1(|it| it == constants::HEADING_CHAR),
             /* ends with (discarded) */ tag(constants::SPACE),
         ),
-        |it: &str| HeadingLevel::from(it.len()),
+        |it: &str| 
+        if it.len() <=6 {
+            HeadingLevel::from(it.len())
+        } else {
+            HeadingLevel::NotHeading
+        },
     )(input)
 }
 
