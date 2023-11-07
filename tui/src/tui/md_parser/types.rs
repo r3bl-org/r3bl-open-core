@@ -107,6 +107,7 @@ pub enum HeadingLevel {
     Heading4,
     Heading5,
     Heading6,
+    NotHeading,
 }
 
 impl From<HeadingLevel> for usize {
@@ -122,7 +123,7 @@ impl From<usize> for HeadingLevel {
             4 => HeadingLevel::Heading4,
             5 => HeadingLevel::Heading5,
             6 => HeadingLevel::Heading6,
-            _ => HeadingLevel::Heading6,
+            _ => HeadingLevel::NotHeading,
         }
     }
 }

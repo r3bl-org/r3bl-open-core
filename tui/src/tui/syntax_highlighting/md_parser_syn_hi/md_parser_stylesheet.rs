@@ -315,6 +315,7 @@ impl ColorWheel {
                     ANSI_SPEED,
                 ),
             ]),
+            HeadingLevel::NotHeading => ColorWheel::default(),
         }
     }
 }
