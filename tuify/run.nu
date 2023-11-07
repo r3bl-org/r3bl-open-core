@@ -119,6 +119,7 @@ def print-help [command: string] {
         print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)run(ansi reset)'
+        print $'    (ansi green)run-piped(ansi reset)'
         print $'    (ansi green)log(ansi reset)'
         print $'    (ansi green)run-with-flamegraph-profiling(ansi reset)'
         print $'    (ansi green)watch-run(ansi reset)'
@@ -166,7 +167,7 @@ def run [] {
 }
 
 def run-piped [] {
-    bat Cargo.toml | cargo run -q -- select-from-list
+    bat Cargo.toml | cargo run -q --bin rt -- select-from-list
 }
 
 def run-with-flamegraph [] {
