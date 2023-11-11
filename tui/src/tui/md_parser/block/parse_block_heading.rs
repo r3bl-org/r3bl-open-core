@@ -23,7 +23,8 @@ use nom::{branch::alt,
           sequence::*,
           IResult};
 
-use crate::{constants::NEW_LINE, *};
+use crate::{constants::{MAX_HEADING_LEVEL, NEW_LINE},
+            *};
 
 /// This matches the heading tag and text until EOL. Outputs a tuple of [HeadingLevel] and
 /// [FragmentsInOneLine].
@@ -57,7 +58,7 @@ fn parse(input: &str) -> IResult<&str, HeadingData> {
         ))
     ))(input)?;
     if level == HeadingLevel::NotHeading {
-        return Ok((input, HeadingData { level , text : input }));
+        return Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Tag)));
     }
     Ok((input, HeadingData { level, text }))
 }
@@ -70,8 +71,8 @@ fn parse_heading_tag(input: &str) -> IResult<&str, HeadingLevel> {
             /* output `#`+ */ take_while1(|it| it == constants::HEADING_CHAR),
             /* ends with (discarded) */ tag(constants::SPACE),
         ),
-        |it: &str| 
-        if it.len() <=6 {
+        |it: &str|
+        if it.len() <= MAX_HEADING_LEVEL {
             HeadingLevel::from(it.len())
         } else {
             HeadingLevel::NotHeading
