@@ -175,6 +175,8 @@ pub mod constants {
     pub const UNCHECKED: &str = "[ ]";
     pub const CHECKED_OUTPUT: &str = "┊✔┊";
     pub const UNCHECKED_OUTPUT: &str = "┊┈┊";
+
+    pub const MAX_HEADING_LEVEL: usize = 6;
 }
 
 #[derive(Debug, PartialEq, Clone)]
