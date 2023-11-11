@@ -18,20 +18,13 @@
 //! For more information on how to use CLAP and Tuify, please read this tutorial:
 //! <https://developerlife.com/2023/09/17/tuify-clap/>
 
-use std::{io::{stdin, BufRead, Result},
-          process::Command};
+use std::io::Result;
 
 #[allow(unused_imports)]
 use clap::{Args, CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum};
-use crossterm::style::Stylize;
 use r3bl_ansi_color::{AnsiStyledText, Color, Style};
 use r3bl_rs_utils_core::*;
 use r3bl_tuify::*;
-use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
-use StdinIsPipedResult::*;
-use StdoutIsPipedResult::*;
-
-const SELECTED_ITEM_SYMBOL: char = '%';
 
 #[derive(Debug, Parser)]
 #[command(bin_name = "giti")]
