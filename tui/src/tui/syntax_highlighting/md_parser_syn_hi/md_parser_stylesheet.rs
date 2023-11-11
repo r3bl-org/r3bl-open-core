@@ -247,6 +247,8 @@ const ANSI_SPEED: ColorWheelSpeed = ColorWheelSpeed::Slow;
 const STEPS: usize = 20;
 
 impl ColorWheel {
+    /// Currently only 6 heading levels are supported. If this changes in this function
+    /// please update this constant [constants::MAX_HEADING_LEVEL].
     /// More info on gradients: <https://uigradients.com/>.
     pub fn from_heading_data(heading_data: &HeadingData) -> Self {
         match heading_data.level {
@@ -304,7 +306,7 @@ impl ColorWheel {
                 ColorWheelConfig::Ansi256(Ansi256GradientIndex::RustToPurple, ANSI_SPEED),
             ]),
 
-            HeadingLevel::Heading6 => ColorWheel::new(vec![
+            _ => ColorWheel::new(vec![
                 ColorWheelConfig::Rgb(
                     Vec::from(["#8470ba", "#12c2e9"].map(String::from)),
                     SPEED,
@@ -315,7 +317,6 @@ impl ColorWheel {
                     ANSI_SPEED,
                 ),
             ]),
-            HeadingLevel::NotHeading => ColorWheel::default(),
         }
     }
 }

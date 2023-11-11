@@ -84,7 +84,7 @@ impl<'a> PrettyPrintDebug for MdBlockElement<'a> {
 impl PrettyPrintDebug for HeadingLevel {
     fn pretty_print_debug(&self) -> String {
         let num_of_hashes = usize::from(*self);
-        if  num_of_hashes<=6 {
+        if num_of_hashes <= MAX_HEADING_LEVEL {
             let it: String = format!(
                 "{}{}",
                 HEADING_CHAR.to_string().repeat(num_of_hashes),
@@ -92,13 +92,10 @@ impl PrettyPrintDebug for HeadingLevel {
             );
             it
         } else {
-            let it: String = format!(
-                "{}",
-                HEADING_CHAR.to_string().repeat(num_of_hashes),
-            );
+            let it: String =
+                format!("{}", HEADING_CHAR.to_string().repeat(num_of_hashes),);
             it
         }
-        
     }
 }
 
