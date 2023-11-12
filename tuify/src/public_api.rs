@@ -44,8 +44,8 @@ pub fn select_from_list(
     }
 
     // There are fewer items than viewport height. So make viewport shorter.
-    let max_height_row_count = if items.len() <= max_height_row_count {
-        items.len()
+    let max_height_row_count = if items.len()+HEADER_HEIGHT <= max_height_row_count {
+        items.len()+HEADER_HEIGHT
     } else {
         max_height_row_count
     };

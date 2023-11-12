@@ -308,6 +308,9 @@ pub mod react;
 pub mod scroll;
 pub mod state;
 pub mod term;
+pub mod terminal_window;
+pub mod misc_types;
+mod terminal_lib_backends;
 
 pub use components::*;
 pub use event_loop::*;
@@ -317,6 +320,33 @@ pub use react::*;
 pub use scroll::*;
 pub use state::*;
 pub use term::*;
+pub use terminal_window::*;
+pub use misc_types::*;
+pub use terminal_lib_backends::*;
+
+/// This is the global `DEBUG` const. It is possible to create local (module scoped) `DEBUG` const.
+/// However, you would have to use that symbol explicitly in the relevant module, eg:
+/// - `use $crate::terminal_lib_backends::DEBUG_TUI...;`
+///
+/// If set to `true`:
+/// 1. Enables file logging for entire module.
+/// 2. If a call to [r3bl_rs_utils_core::log_info], [r3bl_rs_utils_core::log_debug],
+///    [r3bl_rs_utils_core::log_warn], [r3bl_rs_utils_core::log_trace],
+///    [r3bl_rs_utils_core::log_error] fails, then it will print the error to stderr.
+pub const TRACE: bool = true;
+pub const HEADER_HEIGHT : usize = 1;
 
 /// Enable file logging. You can use `tail -f log.txt` to watch the logs.
-pub const TRACE: bool = true;
+pub const DEBUG_TUIFY_MOD: bool = true;
+
+/// Enable or disable compositor debug logging.
+pub const DEBUG_TUIFY_COMPOSITOR: bool = false;
+
+/// Controls input event debugging [crate::EventStreamExt], and execution of render ops [crate::exec_render_op!] debugging
+/// output.
+pub const DEBUG_TUIFY_SHOW_TERMINAL_BACKEND: bool = false;
+
+// Enable or disable debug logging for this `terminal_lib_backends` module.
+pub const DEBUG_TUIFY_SHOW_PIPELINE: bool = false;
+pub const DEBUG_TUIFY_SHOW_PIPELINE_EXPANDED: bool = false;
+

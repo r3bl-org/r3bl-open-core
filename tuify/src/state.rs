@@ -19,6 +19,11 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
+pub trait ViewportHeight {
+    fn get_viewport_height(&self) -> ChUnit;
+}
+
+
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 pub struct State {
     /// Does not include the header row.
@@ -32,6 +37,12 @@ pub struct State {
     pub selected_items: Vec<String>,
     pub header: String,
     pub selection_mode: SelectionMode,
+}
+
+impl ViewportHeight for State {
+    fn get_viewport_height(&self) -> ChUnit {
+        self.max_display_height
+    }
 }
 
 impl State {

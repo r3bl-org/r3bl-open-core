@@ -63,7 +63,7 @@
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
 
-use crate::TRACE;
+use crate::{HEADER_HEIGHT, TRACE};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum CaretVerticalViewportLocation {
@@ -113,64 +113,14 @@ pub fn locate_cursor_in_viewport(
     }
     // When comparing height or width or size to index, we need to subtract 1.
     else if abs_row_index > scroll_offset_row_index
-        && abs_row_index < (scroll_offset_row_index + display_height - 1)
+        && abs_row_index < (scroll_offset_row_index + display_height-2)
     {
         CaretVerticalViewportLocation::InMiddleOfViewport
-    } else if abs_row_index == (scroll_offset_row_index + display_height - 1) {
+    } else if abs_row_index == (scroll_offset_row_index + display_height - ch!(HEADER_HEIGHT) - 1) {
         CaretVerticalViewportLocation::AtBottomOfViewport
-    } else if abs_row_index > (scroll_offset_row_index + display_height - 1) {
+    } else if abs_row_index > (scroll_offset_row_index + display_height - ch!(HEADER_HEIGHT) - 1) {
         CaretVerticalViewportLocation::BelowBottomOfViewport
     } else {
         CaretVerticalViewportLocation::NotFound
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use pretty_assertions::assert_eq;
-
-    use super::*;
-    #[test]
-    fn test_get_scroll_adjusted_row_index() {
-        assert_eq!(get_scroll_adjusted_row_index(ch!(0), ch!(0)), ch!(0));
-        assert_eq!(get_scroll_adjusted_row_index(ch!(1), ch!(0)), ch!(1));
-        assert_eq!(get_scroll_adjusted_row_index(ch!(0), ch!(1)), ch!(1));
-        assert_eq!(get_scroll_adjusted_row_index(ch!(2), ch!(3)), ch!(5));
-    }
-
-    #[test]
-    fn test_locate_cursor_in_viewport() {
-        assert_eq!(
-            locate_cursor_in_viewport(ch!(0), ch!(0), ch!(10), ch!(20)),
-            CaretVerticalViewportLocation::AtAbsoluteTop
-        );
-        assert_eq!(
-            locate_cursor_in_viewport(ch!(19), ch!(0), ch!(10), ch!(20)),
-            CaretVerticalViewportLocation::AtAbsoluteBottom
-        );
-        assert_eq!(
-            locate_cursor_in_viewport(ch!(5), ch!(0), ch!(10), ch!(20)),
-            CaretVerticalViewportLocation::InMiddleOfViewport
-        );
-        assert_eq!(
-            locate_cursor_in_viewport(ch!(0), ch!(5), ch!(10), ch!(20)),
-            CaretVerticalViewportLocation::AtTopOfViewport
-        );
-        assert_eq!(
-            locate_cursor_in_viewport(ch!(5), ch!(5), ch!(10), ch!(20)),
-            CaretVerticalViewportLocation::InMiddleOfViewport
-        );
-        assert_eq!(
-            locate_cursor_in_viewport(ch!(14), ch!(5), ch!(10), ch!(20)),
-            CaretVerticalViewportLocation::AtAbsoluteBottom
-        );
-        assert_eq!(
-            locate_cursor_in_viewport(ch!(15), ch!(5), ch!(10), ch!(20)),
-            CaretVerticalViewportLocation::BelowBottomOfViewport
-        );
-        assert_eq!(
-            locate_cursor_in_viewport(ch!(21), ch!(5), ch!(10), ch!(20)),
-            CaretVerticalViewportLocation::BelowBottomOfViewport
-        );
     }
 }

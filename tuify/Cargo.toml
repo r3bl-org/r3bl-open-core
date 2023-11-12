@@ -44,6 +44,10 @@ log = { version = "0.4.20", features = ["std"] }
 # More info: https://stackoverflow.com/a/76131914/2085356
 clap = { version = "4.4.6", features = ["derive", "wrap_help"] }
 reedline = "0.25.0"
+serde = { version = "1.0.189", features = ["derive"] }
+
+# Get size
+get-size = { version = "0.1.4", features = ["derive"] }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

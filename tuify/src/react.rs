@@ -17,19 +17,18 @@
 
 use std::io::{Result, *};
 
-use crossterm::{cursor::*, queue, terminal::*};
+use crossterm::{cursor::*, queue, terminal::*, style::*};
 use r3bl_rs_utils_core::*;
 
-pub trait FunctionComponent<W: Write, S> {
+use crate::*;
+
+pub trait FunctionComponent<W: Write, S:ViewportHeight> {
     fn get_write(&mut self) -> &mut W;
-
-    fn calculate_viewport_height(&self, state: &mut S) -> ChUnit;
-
-    fn render(&mut self, state: &mut S) -> Result<()>;
-
-    fn allocate_viewport_height_space(&mut self, state: &mut S) -> Result<()> {
+    fn calculate_viewport_height(&self, state:&S) -> ChUnit;
+    fn render(&mut self, state: &S, shared_global_data : &mut SharedGlobalData) -> Result<()>;
+    fn allocate_viewport_height_space(&mut self, state: &S) -> Result<()>{
         let viewport_height =
-            /* not including the header */ self.calculate_viewport_height(state) + /* for header row */ 1;
+            /* including the header */ self.calculate_viewport_height(state);
 
         // Allocate space. This is required so that the commands to move the cursor up and
         // down shown below will work.
@@ -39,34 +38,34 @@ pub trait FunctionComponent<W: Write, S> {
 
         // Move the cursor back up.
         let writer = self.get_write();
-        queue! {
+        queue! (
             writer,
             MoveToPreviousLine(*viewport_height),
-        }?;
+        )?;
 
         Ok(())
     }
 
-    fn clear_viewport(&mut self, state: &mut S) -> Result<()> {
+    fn clear_viewport(&mut self, state: &S) -> Result<()> {
         let viewport_height =
-            /* not including the header */ self.calculate_viewport_height(state) + /* for header row */ 1;
+            /* including the header */ self.calculate_viewport_height(state);
 
         let writer = self.get_write();
-
         // Clear the viewport.
         for _ in 0..*viewport_height {
-            queue! {
+            queue! (
                 writer,
+                ResetColor,
                 Clear(ClearType::CurrentLine),
                 MoveToNextLine(1),
-            }?;
+            )?;
         }
 
         // Move the cursor back up.
-        queue! {
+        queue! (
             writer,
             MoveToPreviousLine(*viewport_height),
-        }?;
+        )?;
 
         Ok(())
     }

@@ -30,27 +30,31 @@ pub enum EventLoopResult {
     Select,
 }
 
-// TODO: add performance using output buffer
-pub fn enter_event_loop<W: Write, S>(
+pub fn enter_event_loop<W: Write, S:ViewportHeight>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<W, S>,
     on_keypress: impl Fn(&mut S, KeyPress) -> EventLoopResult,
 ) -> Result<EventLoopResult> {
+    let mut shared_global_data = SharedGlobalData::try_to_create_inline_instance(state).unwrap();
     execute!(function_component.get_write(), Hide)?;
+    // Start raw mode
     enable_raw_mode()?;
 
     // Use to handle clean up.
     #[allow(unused_assignments)]
-    let mut maybe_return_this: Option<EventLoopResult> = None;
+        let mut maybe_return_this: Option<EventLoopResult> = None;
+
+    // Only required for the first time to clean up the terminal,
+    // and place the cursor at the correct position.
+    function_component.allocate_viewport_height_space(state)?;
 
     loop {
-        function_component.render(state)?;
-
+        function_component.render(state, &mut shared_global_data)?;
         let key_event = read_key_press();
         match on_keypress(state, key_event) {
             EventLoopResult::ContinueAndRerender => {
                 // Continue the loop.
-                function_component.render(state)?;
+                function_component.render(state, &mut shared_global_data)?;
             }
             EventLoopResult::Continue | EventLoopResult::Select => {
                 // Noop. Simply continue the loop.

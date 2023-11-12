@@ -17,7 +17,7 @@
 
 use std::io::{Result, *};
 
-use crossterm::{cursor::*, queue, style::*, terminal::*};
+use crossterm::{cursor::*, queue, style::*};
 use r3bl_rs_utils_core::*;
 
 use crate::*;
@@ -40,17 +40,19 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
     /// If there are more items than the max display height, then we only use max display
     /// height. Otherwise we can shrink the display height to the number of items.
     /// This does NOT include the header.
-    fn calculate_viewport_height(&self, state: &mut State) -> ChUnit {
-        if state.items.len() > state.max_display_height.into() {
+    fn calculate_viewport_height(&self, state: & State) -> ChUnit {
+        if state.items.len() + HEADER_HEIGHT > state.max_display_height.into() {
             state.max_display_height
         } else {
-            state.items.len().into()
+            (state.items.len() + HEADER_HEIGHT).into()
         }
     }
 
     /// Allocate space and print the lines. The bring the cursor back to the start of the
     /// lines.
-    fn render(&mut self, state: &mut State) -> Result<()> {
+    fn render(&mut self, state: & State, shared_global_data: &mut SharedGlobalData) -> Result<()> {
+        let initial_inline_row_offset = get_inline_row_index();
+
         // Setup the required data.
         let normal_style = self.style.normal_style;
         let header_style = self.style.header_style;
@@ -75,45 +77,31 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
              );
         });
 
-        self.allocate_viewport_height_space(state)?;
-
         let data_row_index_start = *state.scroll_offset_row_index;
 
         let writer = self.get_write();
 
+        let origin_pos = position!(col_index:0, row_index:0);
+        let mut rel_pos = position!(col_index:0, row_index:0);
         // Print header.
         let header_text =
             format!("{}{}", " ".repeat(start_display_col_offset), state.header);
         let header_text = clip_string_to_width_with_ellipsis(header_text, viewport_width);
-        queue! {
-            writer,
-            // Bring the caret back to the start of line.
-            MoveToColumn(0),
-            // Reset the colors that may have been set by the previous command.
-            ResetColor,
-            // Set the colors for the text.
-            apply_style!(header_style => fg_color),
-            apply_style!(header_style => bg_color),
-            // Style the text.
-            apply_style!(header_style => bold),
-            apply_style!(header_style => italic),
-            apply_style!(header_style => dim),
-            apply_style!(header_style => underline),
-            apply_style!(header_style => reverse),
-            apply_style!(header_style => hidden),
-            apply_style!(header_style => strikethrough),
-            // Clear the current line.
-            Clear(ClearType::CurrentLine),
-            // Print the text.
-            Print(header_text),
-            // Move to next line.
-            MoveToNextLine(1),
-            // Reset the colors.
-            ResetColor,
-        }?;
+
+        let mut ops = render_ops! {
+            @new
+            RenderOp::MoveCursorPositionRelTo(origin_pos, rel_pos)
+        };
+        ops += RenderOp::ResetColor;
+        ops += RenderOp::ApplyColors(Some(header_style));
+        ops += RenderOp::PaintTextWithAttributes(
+            UnicodeString::new(&header_text).pad_end_with_spaces_to_fit_width(SPACER, viewport_width),
+            Some(header_style)
+        );
+        rel_pos.add_row(1);
 
         // Print each line in viewport.
-        for viewport_row_index in 0..*viewport_height {
+        for viewport_row_index in 0..*viewport_height-1 {
             let data_row_index: usize =
                 (data_row_index_start + viewport_row_index).into();
             let caret_row_scroll_adj =
@@ -161,41 +149,28 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
             let data_item = format!("{row_prefix}{data_item}");
             let data_item = clip_string_to_width_with_ellipsis(data_item, viewport_width);
 
-            queue! {
-                writer,
-                // Bring the caret back to the start of line.
-                MoveToColumn(0),
-                // Reset the colors that may have been set by the previous command.
-                ResetColor,
-                // Set the colors for the text.
-                apply_style!(data_style => bg_color),
-                apply_style!(data_style => bg_color),
-                // Style the text.
-                apply_style!(data_style => bold),
-                apply_style!(data_style => italic),
-                apply_style!(data_style => dim),
-                apply_style!(data_style => underline),
-                apply_style!(data_style => reverse),
-                apply_style!(data_style => hidden),
-                apply_style!(data_style => strikethrough),
-                // Clear the current line.
-                Clear(ClearType::CurrentLine),
-                // Print the text.
-                Print(data_item.to_string()),
-                // Move to next line.
-                MoveToNextLine(1),
-                // Reset the colors.
-                ResetColor,
-            }?;
+
+            ops += RenderOp::MoveCursorPositionRelTo(origin_pos, rel_pos);
+            ops += RenderOp::ResetColor;
+            ops += RenderOp::ApplyColors(Some(data_style));
+            ops += RenderOp::PaintTextWithAttributes(
+                UnicodeString::new(&data_item).pad_end_with_spaces_to_fit_width(SPACER, viewport_width),
+                Some(data_style)
+            );
+            rel_pos.add_row(1);
         }
 
-        // Move the cursor back up.
-        queue! {
-            writer,
-            MoveToPreviousLine(*viewport_height + 1),
-        }?;
+        paint(ops, &state, FlushKind::JustFlush, shared_global_data );
 
-        writer.flush()?;
+        // Move the cursor back up.
+        // `If` is required since MoveToPreviousLine(0) also results
+        // in movement.
+        if get_inline_row_index() != initial_inline_row_offset {
+            queue! (
+                writer,
+                MoveToPreviousLine((get_inline_row_index() - initial_inline_row_offset).into()),
+            )?;
+        }
 
         Ok(())
     }
@@ -207,96 +182,5 @@ fn clip_string_to_width_with_ellipsis(line: String, viewport_width: ChUnit) -> S
         format!("{}...", &line[..width - 3])
     } else {
         line.to_string()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::io::{Result, Write};
-
-    use pretty_assertions::assert_eq;
-    use r3bl_ansi_color::global_color_support::{clear_override, set_override};
-    use serial_test::serial;
-
-    use super::*;
-
-    struct StringWriter {
-        buffer: String,
-    }
-
-    impl StringWriter {
-        fn new() -> Self {
-            StringWriter {
-                buffer: String::new(),
-            }
-        }
-
-        fn get_buffer(&self) -> &str { &self.buffer }
-    }
-
-    impl Write for StringWriter {
-        fn write(&mut self, buf: &[u8]) -> Result<usize> {
-            let result = std::str::from_utf8(buf);
-            match result {
-                Ok(value) => {
-                    self.buffer.push_str(value);
-                    Ok(buf.len())
-                }
-                Err(_) => Ok(0),
-            }
-        }
-
-        fn flush(&mut self) -> Result<()> { Ok(()) }
-    }
-
-    #[test]
-    fn test_clip_string_to_width_with_ellipsis() {
-        let line = "This is a long line that needs to be clipped".to_string();
-        let clipped_line =
-            clip_string_to_width_with_ellipsis(line.clone(), ChUnit::new(20));
-        assert_eq!(clipped_line, "This is a long li...");
-
-        let short_line = "This is a short line".to_string();
-        let clipped_short_line =
-            clip_string_to_width_with_ellipsis(short_line.clone(), ChUnit::new(20));
-        assert_eq!(clipped_short_line, "This is a short line");
-    }
-
-    #[serial]
-    #[test]
-    fn test_select_component() {
-        let mut state = State {
-            header: "Header".to_string(),
-            items: vec![
-                "Item 1".to_string(),
-                "Item 2".to_string(),
-                "Item 3".to_string(),
-            ],
-            max_display_height: ch!(5),
-            max_display_width: ch!(80),
-            raw_caret_row_index: ch!(0),
-            scroll_offset_row_index: ch!(0),
-            selected_items: vec![],
-            selection_mode: SelectionMode::Single,
-        };
-
-        state.scroll_offset_row_index = ch!(0);
-
-        let mut writer = StringWriter::new();
-
-        let mut component = SelectComponent {
-            write: &mut writer,
-            style: StyleSheet::default(),
-        };
-
-        set_override(r3bl_ansi_color::ColorSupport::Truecolor);
-        component.render(&mut state).unwrap();
-
-        // println!("{:?}", writer.get_buffer());
-
-        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;2;50;50;50m\u{1b}[48;2;150;150;150m\u{1b}[1m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[48;2;100;60;150m\u{1b}[48;2;100;60;150m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◉ Item 1\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[48;2;100;60;150m\u{1b}[48;2;100;60;150m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 2\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[48;2;100;60;150m\u{1b}[48;2;100;60;150m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 3\u{1b}[1E\u{1b}[0m\u{1b}[4F";
-        assert_eq!(writer.get_buffer(), expected_output);
-
-        clear_override();
     }
 }

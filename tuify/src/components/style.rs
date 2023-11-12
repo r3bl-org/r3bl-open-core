@@ -14,8 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-use r3bl_ansi_color::Color;
+use r3bl_rs_utils_core::*;
 
 #[derive(Copy, Clone, Debug)]
 pub struct StyleSheet {
@@ -26,15 +25,32 @@ pub struct StyleSheet {
 
 impl Default for StyleSheet {
     fn default() -> Self {
-        let normal_style = Style::default();
+        let normal_style = Style {
+            color_fg: Some(TuiColor::Rgb(RgbValue {
+                red: 200, green: 200, blue:1
+            })),
+            color_bg: Some(TuiColor::Rgb(RgbValue {
+                red: 100, green: 60, blue: 150
+            })),
+            ..Style::default()
+
+        };
         let selected_style = Style {
-            fg_color: Color::Rgb(250, 250, 250),
-            bg_color: Color::Rgb(39, 45, 239),
+            color_fg: Some(TuiColor::Rgb(RgbValue {
+                red:250, green:250, blue:250
+            })),
+            color_bg: Some(TuiColor::Rgb(RgbValue {
+                red:39, green:45, blue:239
+            })),
             ..Style::default()
         };
         let header_style = Style {
-            fg_color: Color::Rgb(50, 50, 50),
-            bg_color: Color::Rgb(150, 150, 150),
+            color_fg: Some(TuiColor::Rgb(RgbValue {
+                red:50, green:50, blue:50
+            })),
+            color_bg: Some(TuiColor::Rgb(RgbValue {
+                red:150, green:150, blue:150
+            })),
             bold: true,
             ..Style::default()
         };
@@ -42,35 +58,6 @@ impl Default for StyleSheet {
             normal_style,
             selected_style,
             header_style,
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct Style {
-    pub bold: bool,
-    pub italic: bool,
-    pub dim: bool,
-    pub underline: bool,
-    pub reverse: bool,
-    pub hidden: bool,
-    pub strikethrough: bool,
-    pub fg_color: Color,
-    pub bg_color: Color,
-}
-
-impl Default for Style {
-    fn default() -> Self {
-        Style {
-            bold: false,
-            italic: false,
-            dim: false,
-            underline: false,
-            reverse: false,
-            hidden: false,
-            strikethrough: false,
-            fg_color: Color::Rgb(200, 200, 1),
-            bg_color: Color::Rgb(100, 60, 150),
         }
     }
 }
