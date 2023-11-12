@@ -25,7 +25,8 @@ mod test_config_options {
     #[test]
     fn test_multiline_true() {
         // multiline true.
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine: EditorEngine = EditorEngine {
             config_options: EditorEngineConfig {
                 multiline_mode: LineMode::MultiLine,
@@ -42,7 +43,7 @@ mod test_config_options {
         // 2 ▸a         │
         //   └─▴────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -52,16 +53,13 @@ mod test_config_options {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertString("a".into()),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 1, row_index: 2)
         );
 
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -69,9 +67,6 @@ mod test_config_options {
                 EditorEvent::MoveCaret(CaretDirection::Up),
                 EditorEvent::MoveCaret(CaretDirection::Down),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -82,7 +77,8 @@ mod test_config_options {
     #[test]
     fn test_multiline_false() {
         // multiline false.
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine: EditorEngine = EditorEngine {
             config_options: EditorEngineConfig {
                 multiline_mode: LineMode::SingleLine,
@@ -97,7 +93,7 @@ mod test_config_options {
         // 0 ▸abcaba    │
         //   └──────▴───┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -107,16 +103,13 @@ mod test_config_options {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertString("a".into()),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 6, row_index: 0)
         );
 
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -124,9 +117,6 @@ mod test_config_options {
                 EditorEvent::MoveCaret(CaretDirection::Up),
                 EditorEvent::MoveCaret(CaretDirection::Down),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -147,7 +137,8 @@ mod test_editor_ops {
 
     #[test]
     fn editor_delete() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "abc\nab\na".
@@ -158,7 +149,7 @@ mod test_editor_ops {
         // 2 ▸a         │
         //   └─▴────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -168,9 +159,6 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertString("a".into()),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -185,16 +173,13 @@ mod test_editor_ops {
         // 2 ▸          │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
                 EditorEvent::MoveCaret(CaretDirection::Left),
                 EditorEvent::Delete,
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -208,7 +193,7 @@ mod test_editor_ops {
         // 1 ▸ab        │
         //   └──▴───────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -217,9 +202,6 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::Delete,
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(buffer.get_lines().len(), 2);
         assert_eq2!(
@@ -233,7 +215,7 @@ mod test_editor_ops {
         // 0 ▸abcab     │
         //   └───▴──────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -241,9 +223,6 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::Delete,
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(buffer.get_lines().len(), 1);
         assert_eq2!(
@@ -255,7 +234,8 @@ mod test_editor_ops {
 
     #[test]
     fn editor_backspace() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "abc\nab\na".
@@ -266,7 +246,7 @@ mod test_editor_ops {
         // 2 ▸a         │
         //   └─▴────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -276,9 +256,6 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertString("a".into()),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -293,13 +270,10 @@ mod test_editor_ops {
         // 2 ▸          │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::Backspace],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -313,13 +287,10 @@ mod test_editor_ops {
         // 1 ▸ab        │
         //   └──▴───────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::Backspace],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -332,28 +303,22 @@ mod test_editor_ops {
         // 0 ▸abcab     │
         //   └───▴──────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
                 EditorEvent::MoveCaret(CaretDirection::Left),
                 EditorEvent::MoveCaret(CaretDirection::Left),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 0, row_index: 1)
         );
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::Backspace],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(buffer.get_lines().len(), 1);
         assert_eq2!(
@@ -368,7 +333,7 @@ mod test_editor_ops {
         // 0 ▸abcab😃   │
         //   └───────▴──┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -376,9 +341,6 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::InsertString("😃".into()),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -386,20 +348,14 @@ mod test_editor_ops {
         );
 
         // Press backspace.
-        EditorEvent::apply_editor_event(
-            &mut engine,
-            &mut buffer,
-            EditorEvent::Backspace,
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
-        );
+        EditorEvent::apply_editor_event(&mut engine, &mut buffer, EditorEvent::Backspace);
         assert::line_at_caret(&buffer, &engine, "abcab");
     }
 
     #[test]
     fn editor_validate_caret_position_on_up() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "😀\n1".
@@ -408,7 +364,7 @@ mod test_editor_ops {
         // 1 ▸1         │
         //   └─▴────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -416,9 +372,6 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertChar('1'),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -431,13 +384,10 @@ mod test_editor_ops {
         // 1 │1         │
         //   └──▴───────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Up)],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -447,7 +397,8 @@ mod test_editor_ops {
 
     #[test]
     fn editor_validate_caret_position_on_down() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "😀\n1".
@@ -456,7 +407,7 @@ mod test_editor_ops {
         // 1 │😀        │
         //   └──▴───────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -464,9 +415,6 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertString("😀".into()),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -480,16 +428,13 @@ mod test_editor_ops {
         // 1 │😀        │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
                 EditorEvent::MoveCaret(CaretDirection::Up),
                 EditorEvent::MoveCaret(CaretDirection::Right),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -502,13 +447,10 @@ mod test_editor_ops {
         // 1 ▸😀        │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Down)],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -518,7 +460,8 @@ mod test_editor_ops {
 
     #[test]
     fn editor_move_caret_up_down() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "abc\nab\na".
@@ -529,7 +472,7 @@ mod test_editor_ops {
         // 2 ▸a         │
         //   └─▴────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -539,9 +482,6 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertString("a".into()),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -556,7 +496,7 @@ mod test_editor_ops {
         // 2 ▸a         │
         //   └─▴────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -565,9 +505,6 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Down),
                 EditorEvent::MoveCaret(CaretDirection::Down),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -575,13 +512,10 @@ mod test_editor_ops {
         );
 
         // Move caret up.
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Up)],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -589,13 +523,10 @@ mod test_editor_ops {
         );
 
         // Move caret up.
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Up)],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -603,7 +534,7 @@ mod test_editor_ops {
         );
 
         // Move caret up a few times. Caret moves to position 0.
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -611,9 +542,6 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Up),
                 EditorEvent::MoveCaret(CaretDirection::Up),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -628,7 +556,7 @@ mod test_editor_ops {
         // 2 │a         │
         //   └──▴───────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -636,9 +564,6 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::MoveCaret(CaretDirection::Down),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -653,13 +578,10 @@ mod test_editor_ops {
         // 2 ▸a         │
         //   └─▴────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Down)],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -669,7 +591,8 @@ mod test_editor_ops {
 
     #[test]
     fn editor_insert_new_line() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Starts w/ an empty line.
@@ -689,13 +612,10 @@ mod test_editor_ops {
         // 0 ▸a         │
         //   └─▴────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('a')],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert::none_is_at_caret(&buffer, &engine);
         assert_eq2!(
@@ -710,13 +630,10 @@ mod test_editor_ops {
         // 1 ▸          │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertNewLine],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(buffer.get_lines().len(), 2);
         assert::none_is_at_caret(&buffer, &engine);
@@ -732,13 +649,10 @@ mod test_editor_ops {
         // 1 ▸a         │
         //   └─▴────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('a')],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
 
         // Move caret left.
@@ -748,13 +662,10 @@ mod test_editor_ops {
         // 1 ▸a         │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Left)],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert::str_is_at_caret(&buffer, &engine, "a");
 
@@ -766,13 +677,10 @@ mod test_editor_ops {
         // 2 ▸a         │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertNewLine],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(buffer.get_lines().len(), 3);
         assert::str_is_at_caret(&buffer, &engine, "a");
@@ -789,16 +697,13 @@ mod test_editor_ops {
         // 2 ▸ab        │
         //   └──▴───────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::InsertChar('b'),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
 
         assert::none_is_at_caret(&buffer, &engine);
@@ -818,16 +723,13 @@ mod test_editor_ops {
         // 3 ▸b         │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
                 EditorEvent::MoveCaret(CaretDirection::Left),
                 EditorEvent::InsertNewLine,
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert::str_is_at_caret(&buffer, &engine, "b");
         assert_eq2!(
@@ -845,7 +747,7 @@ mod test_editor_ops {
         // 4 │b         │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -853,9 +755,6 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::InsertNewLine,
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(buffer.get_lines().len(), 5);
         assert_eq2!(
@@ -866,7 +765,8 @@ mod test_editor_ops {
 
     #[test]
     fn editor_move_caret_left_right() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "a".
@@ -875,13 +775,10 @@ mod test_editor_ops {
         // 0 ▸a         │
         //   └─▴────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('a')],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert::none_is_at_caret(&buffer, &engine);
 
@@ -891,16 +788,13 @@ mod test_editor_ops {
         // 0 ▸a         │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
                 EditorEvent::MoveCaret(CaretDirection::Left),
                 EditorEvent::MoveCaret(CaretDirection::Left), // No-op.
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert::str_is_at_caret(&buffer, &engine, "a");
 
@@ -910,13 +804,10 @@ mod test_editor_ops {
         // 0 ▸1a        │
         //   └─▴────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('1')],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             EditorEngineInternalApi::line_at_caret_to_string(&buffer, &engine)
@@ -932,13 +823,10 @@ mod test_editor_ops {
         // 0 ▸1a        │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Left)],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert::str_is_at_caret(&buffer, &engine, "1");
 
@@ -948,13 +836,10 @@ mod test_editor_ops {
         // 0 ▸1a        │
         //   └─▴────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Right)],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert::str_is_at_caret(&buffer, &engine, "a");
 
@@ -964,13 +849,10 @@ mod test_editor_ops {
         // 0 ▸12a       │
         //   └──▴───────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('2')],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert::str_is_at_caret(&buffer, &engine, "a");
         assert_eq2!(
@@ -986,16 +868,13 @@ mod test_editor_ops {
         // 0 ▸12a       │
         //   └───▴──────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::MoveCaret(CaretDirection::Right), // No-op.
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert::none_is_at_caret(&buffer, &engine);
         assert_eq2!(
@@ -1009,7 +888,7 @@ mod test_editor_ops {
         // 0 ▸12a       │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -1017,9 +896,6 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Left),
                 EditorEvent::MoveCaret(CaretDirection::Left),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1033,7 +909,7 @@ mod test_editor_ops {
         // 1 │          │
         //   └───▴──────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -1043,9 +919,6 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::MoveCaret(CaretDirection::Left),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1059,13 +932,10 @@ mod test_editor_ops {
         // 1 ▸          │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Right)],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1080,7 +950,7 @@ mod test_editor_ops {
         // 2 ▸          │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -1088,9 +958,6 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Up),
                 EditorEvent::MoveCaret(CaretDirection::Right),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1100,14 +967,15 @@ mod test_editor_ops {
 
     #[test]
     fn editor_empty_state() {
-        let buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         assert_eq2!(buffer.get_lines().len(), 1);
         assert!(!buffer.is_empty());
     }
 
     #[test]
     fn editor_insertion() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Move caret to col: FlexBoxId::from(0), row: 0. Insert "a".
@@ -1120,13 +988,10 @@ mod test_editor_ops {
             buffer.get_caret(CaretKind::ScrollAdjusted),
             position!(col_index: 0, row_index: 0)
         );
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('a')],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(*buffer.get_lines(), vec![UnicodeString::from("a")]);
         assert_eq2!(
@@ -1145,13 +1010,10 @@ mod test_editor_ops {
             editor_buffer: &mut buffer,
             editor_engine: &mut engine,
         });
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('b')],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             *buffer.get_lines(),
@@ -1171,7 +1033,7 @@ mod test_editor_ops {
         // 3 ▸😀░       │
         //   └──▴───────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
@@ -1179,9 +1041,6 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertChar('😀'),
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             *buffer.get_lines(),
@@ -1206,13 +1065,10 @@ mod test_editor_ops {
         // 3 ▸😀d░      │
         //   └───▴──────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('d')],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             *buffer.get_lines(),
@@ -1237,13 +1093,10 @@ mod test_editor_ops {
         // 3 ▸😀d🙏🏽  ░  │
         //   └───────▴──┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertString("🙏🏽".into())],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             *buffer.get_lines(),
@@ -1262,7 +1115,8 @@ mod test_editor_ops {
 
     #[test]
     fn editor_move_caret_home_end() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "hello". Then press home.
@@ -1271,16 +1125,13 @@ mod test_editor_ops {
         // 0 ▸hello     │
         //   └▴─────────┘
         //   C0123456789
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![
                 EditorEvent::InsertString("hello".to_string()),
                 EditorEvent::Home,
             ],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1288,13 +1139,10 @@ mod test_editor_ops {
         );
 
         // Press end.
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::End],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1304,36 +1152,31 @@ mod test_editor_ops {
 
     #[test]
     fn editor_move_caret_page_up_page_down() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "hello" many times.
         let max_lines = 20;
         let mut count = max_lines;
         while count > 0 {
-            EditorEvent::apply_editor_events(
+            EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
                 vec![
                     EditorEvent::InsertString(format!("{count}: {}", "hello")),
                     EditorEvent::InsertNewLine,
                 ],
-                &mock_real_objects_for_editor::make_shared_global_data(None),
-                &mut mock_real_objects_for_editor::make_component_registry(),
-                FlexBoxId::from(0),
             );
             count -= 1;
         }
         assert_eq2!(buffer.len(), ch!(max_lines + 1)); /* One empty line after content */
 
         // Press page up.
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::PageUp],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1341,13 +1184,10 @@ mod test_editor_ops {
         );
 
         // Press page up.
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::PageUp],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1355,13 +1195,10 @@ mod test_editor_ops {
         );
 
         // Press page up.
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::PageUp],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1369,13 +1206,10 @@ mod test_editor_ops {
         );
 
         // Press page down.
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::PageDown],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
 
         assert_eq2!(
@@ -1384,13 +1218,10 @@ mod test_editor_ops {
         );
 
         // Press page down.
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::PageDown],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1398,13 +1229,10 @@ mod test_editor_ops {
         );
 
         // Press page down.
-        EditorEvent::apply_editor_events(
+        EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
             vec![EditorEvent::PageDown],
-            &mock_real_objects_for_editor::make_shared_global_data(None),
-            &mut mock_real_objects_for_editor::make_component_registry(),
-            FlexBoxId::from(0),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1414,35 +1242,30 @@ mod test_editor_ops {
 
     #[test]
     fn editor_scroll_vertical() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert "hello" many times.
         let max_lines = 20;
         for count in 1..=max_lines {
-            EditorEvent::apply_editor_events(
+            EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
                 vec![
                     EditorEvent::InsertString(format!("{count}: {}", "hello")),
                     EditorEvent::InsertNewLine,
                 ],
-                &mock_real_objects_for_editor::make_shared_global_data(None),
-                &mut mock_real_objects_for_editor::make_component_registry(),
-                FlexBoxId::from(0),
             );
         }
         assert_eq2!(buffer.len(), ch!(max_lines + 1)); /* One empty line after content */
 
         // Press up 12 times.
         for _ in 1..12 {
-            EditorEvent::apply_editor_events(
+            EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Up)],
-                &mock_real_objects_for_editor::make_shared_global_data(None),
-                &mut mock_real_objects_for_editor::make_component_registry(),
-                FlexBoxId::from(0),
             );
         }
         assert_eq2!(
@@ -1460,13 +1283,10 @@ mod test_editor_ops {
 
         // Press down 9 times.
         for _ in 1..9 {
-            EditorEvent::apply_editor_events(
+            EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Down)],
-                &mock_real_objects_for_editor::make_shared_global_data(None),
-                &mut mock_real_objects_for_editor::make_component_registry(),
-                FlexBoxId::from(0),
             );
         }
         assert_eq2!(
@@ -1485,19 +1305,17 @@ mod test_editor_ops {
 
     #[test]
     fn editor_scroll_horizontal() {
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Insert a long line of text.
         let max_cols = 15;
         for count in 1..=max_cols {
-            EditorEvent::apply_editor_events(
+            EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::InsertString(format!("{count}"))],
-                &mock_real_objects_for_editor::make_shared_global_data(None),
-                &mut mock_real_objects_for_editor::make_component_registry(),
-                FlexBoxId::from(0),
             );
         }
         assert_eq2!(buffer.len(), ch!(1));
@@ -1516,13 +1334,10 @@ mod test_editor_ops {
 
         // Press left 5 times.
         for _ in 1..5 {
-            EditorEvent::apply_editor_events(
+            EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Left)],
-                &mock_real_objects_for_editor::make_shared_global_data(None),
-                &mut mock_real_objects_for_editor::make_component_registry(),
-                FlexBoxId::from(0),
             );
         }
         assert_eq2!(
@@ -1540,13 +1355,10 @@ mod test_editor_ops {
 
         // Press right 3 times.
         for _ in 1..3 {
-            EditorEvent::apply_editor_events(
+            EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)],
-                &mock_real_objects_for_editor::make_shared_global_data(None),
-                &mut mock_real_objects_for_editor::make_component_registry(),
-                FlexBoxId::from(0),
             );
         }
         assert_eq2!(
@@ -1574,10 +1386,8 @@ mod test_editor_ops {
         let viewport_width = ch!(65);
         let viewport_height = ch!(2);
         let window_size = size!(col_count: viewport_width, row_count: viewport_height);
-
-        let shared_global_data =
-            mock_real_objects_for_editor::make_shared_global_data(window_size.into());
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT));
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine =
             mock_real_objects_for_editor::make_editor_engine_with_bounds(window_size);
 
@@ -1607,13 +1417,10 @@ mod test_editor_ops {
         {
             let num_of_right = 67;
             for _ in 1..num_of_right {
-                EditorEvent::apply_editor_events(
+                EditorEvent::apply_editor_events::<(), ()>(
                     &mut engine,
                     &mut buffer,
                     vec![EditorEvent::MoveCaret(CaretDirection::Right)],
-                    &shared_global_data,
-                    &mut mock_real_objects_for_editor::make_component_registry(),
-                    FlexBoxId::from(0),
                 );
             }
             assert_eq2!(
@@ -1634,13 +1441,10 @@ mod test_editor_ops {
 
             // Press right 1 more time. The caret should correctly jump the width of "😀" from 70 to
             // 72.
-            EditorEvent::apply_editor_events(
+            EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)],
-                &shared_global_data,
-                &mut mock_real_objects_for_editor::make_component_registry(),
-                FlexBoxId::from(0),
             );
             assert_eq2!(
                 buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1659,13 +1463,10 @@ mod test_editor_ops {
         // emoji.
         {
             for _ in 1..60 {
-                EditorEvent::apply_editor_events(
+                EditorEvent::apply_editor_events::<(), ()>(
                     &mut engine,
                     &mut buffer,
                     vec![EditorEvent::MoveCaret(CaretDirection::Right)],
-                    &shared_global_data,
-                    &mut mock_real_objects_for_editor::make_component_registry(),
-                    FlexBoxId::from(0),
                 );
             }
             assert_eq2!(
@@ -1691,13 +1492,10 @@ mod test_editor_ops {
         // just 1 character width). This moves the caret and the scroll offset to make sure that the
         // emoji at the start of the line can be displayed properly.
         {
-            EditorEvent::apply_editor_events(
+            EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)],
-                &shared_global_data,
-                &mut mock_real_objects_for_editor::make_component_registry(),
-                FlexBoxId::from(0),
             );
             assert_eq2!(
                 buffer.get_caret(CaretKind::Raw),
@@ -1723,13 +1521,10 @@ mod test_editor_ops {
         // properly displayed & it moves the caret too.
         {
             for _ in 1..4 {
-                EditorEvent::apply_editor_events(
+                EditorEvent::apply_editor_events::<(), ()>(
                     &mut engine,
                     &mut buffer,
                     vec![EditorEvent::MoveCaret(CaretDirection::Right)],
-                    &shared_global_data,
-                    &mut mock_real_objects_for_editor::make_component_registry(),
-                    FlexBoxId::from(0),
                 );
             }
             // Start of viewport.
@@ -1741,13 +1536,10 @@ mod test_editor_ops {
 
         // Press right 1 more time. It should jump the emoji.
         {
-            EditorEvent::apply_editor_events(
+            EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)],
-                &shared_global_data,
-                &mut mock_real_objects_for_editor::make_component_registry(),
-                FlexBoxId::from(0),
             );
             // Start of viewport.
             let result = buffer.get_lines()[0]
@@ -1759,27 +1551,30 @@ mod test_editor_ops {
 }
 
 pub mod mock_real_objects_for_editor {
+    use std::fmt::Debug;
+
     use r3bl_rs_utils_core::*;
+    use tokio::sync::mpsc;
 
-    use crate::{test_dialog::mock_real_objects_for_dialog::State, *};
+    use crate::*;
 
-    pub fn make_shared_global_data(window_size: Option<Size>) -> SharedGlobalData {
-        use std::sync::Arc;
-
-        use tokio::sync::RwLock;
-
-        let mut global_data = GlobalData::default();
-        if let Some(window_size) = window_size {
-            global_data.window_size = window_size;
-        }
-
-        let shared_global_data: SharedGlobalData = Arc::new(RwLock::new(global_data));
-        shared_global_data
-    }
-
-    pub fn make_component_registry() -> ComponentRegistry<State, String> {
-        let component_registry: ComponentRegistry<_, _> = ComponentRegistry::default();
-        component_registry
+    pub fn make_global_data<S, A>(window_size: Option<Size>) -> GlobalData<S, A>
+    where
+        S: Debug + Default + Clone + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
+    {
+        let (sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
+        let global_data = GlobalData {
+            window_size: if let Some(window_size) = window_size {
+                window_size
+            } else {
+                Default::default()
+            },
+            maybe_saved_offscreen_buffer: Default::default(),
+            main_thread_channel_sender: sender,
+            state: Default::default(),
+        };
+        global_data
     }
 
     pub fn make_editor_engine_with_bounds(size: Size) -> EditorEngine {

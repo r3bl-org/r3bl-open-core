@@ -48,20 +48,37 @@ The main struct that we have to consider is `AnsiStyledText`. It has two fields:
 - `text` - the text to print.
 - `style` - a list of styles to apply to the text.
 
+
+To install the crate as a library, add the following to your `Cargo.toml` file:
+
+```toml
+[dependencies]
+r3bl_ansi_color = "0.6.9" # Get the latest version at the time you run this.
+```
+
 Here's an example.
 
 ```rust
-AnsiStyledText {
-    text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
-    style: &[
-        Style::Bold,
-        Style::Italic,
-        Style::Underline,
-        Style::Foreground(Color::Rgb(50, 50, 50)),
-        Style::Background(Color::Rgb(100, 200, 1)),
-    ],
+use r3bl_ansi_color::*;
+
+fn main() {
+  let styled_text = AnsiStyledText {
+      text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
+      style: &[
+          Style::Bold,
+          Style::Italic,
+          Style::Underline,
+          Style::Foreground(Color::Rgb(50, 50, 50)),
+          Style::Background(Color::Rgb(100, 200, 1)),
+      ],
+  };
+
+  // The AnsiStyledText struct implements the `Display` trait, so you can do this.
+  println!("{}", styled_text);
+
+  // Alternatively, you can do this too.
+  styled_text.println();
 }
-.println();
 ```
 
 Please a look at the

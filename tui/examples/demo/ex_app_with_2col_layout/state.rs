@@ -32,3 +32,20 @@ impl Display for State {
         write!(f, "State {{ stack: {:?} }}", self.stack)
     }
 }
+
+/// Action.
+#[derive(Default, Clone, Debug)]
+#[non_exhaustive]
+#[allow(dead_code)]
+pub enum AppSignal {
+    Startup,
+    AddPop(i32),
+    SubPop(i32),
+    Clear,
+    #[default]
+    Noop,
+}
+
+impl Display for AppSignal {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
+}

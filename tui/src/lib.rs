@@ -342,7 +342,7 @@
 //! Typically your [App] will look like this:
 //!
 //! ```ignore
-//! /// Async trait object that implements the [App] trait.
+//! /// Trait object that implements the [App] trait.
 //! #[derive(Default)]
 //! pub struct AppWithLayout {
 //!   pub component_registry: ComponentRegistry<AppWithLayoutState, AppWithLayoutAction>,

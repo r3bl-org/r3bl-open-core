@@ -63,7 +63,6 @@
 //!     - <https://github.com/crossterm-rs/crossterm/wiki/Upgrade-from-0.13-to-0.14#111-new-event-api>
 //!     - <https://github.com/crossterm-rs/crossterm/blob/master/examples/event-stream-tokio.rs>
 
-use async_trait::async_trait;
 use crossterm::event::*;
 use futures_util::{FutureExt, StreamExt};
 use r3bl_rs_utils_core::*;
@@ -74,12 +73,6 @@ pub struct AsyncEventStream {
     event_stream: EventStream,
 }
 
-impl AsyncEventStream {
-    pub async fn try_to_get_input_event(&mut self) -> Option<InputEvent> {
-        self.event_stream.try_to_get_input_event().await
-    }
-}
-
 impl Default for AsyncEventStream {
     fn default() -> Self {
         Self {
@@ -88,18 +81,11 @@ impl Default for AsyncEventStream {
     }
 }
 
-#[async_trait]
-pub trait EventStreamExt {
-    /// Try and read an [Event] from the [EventStream], and convert it into an [InputEvent]. This is a
-    /// non-blocking call. It returns an [InputEvent] wrapped in a [Option]. [None] is returned if
-    /// there was an error.
-    async fn try_to_get_input_event(&mut self) -> Option<InputEvent>;
-}
-
-#[async_trait]
-impl EventStreamExt for EventStream {
-    async fn try_to_get_input_event(&mut self) -> Option<InputEvent> {
-        let maybe_event = self.next().fuse().await;
+impl AsyncEventStream {
+    pub async fn try_to_get_input_event(
+        async_event_stream: &mut AsyncEventStream,
+    ) -> Option<InputEvent> {
+        let maybe_event = async_event_stream.event_stream.next().fuse().await;
         match maybe_event {
             Some(Ok(event)) => {
                 let input_event: Result<InputEvent, ()> = event.try_into();

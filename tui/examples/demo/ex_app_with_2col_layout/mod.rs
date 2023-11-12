@@ -16,20 +16,12 @@
  */
 
 // Attach sources.
-pub mod action;
-pub mod app;
+pub mod app_main;
 pub mod column_render_component;
-pub mod create_store;
-pub mod debug;
 pub mod launcher;
-pub mod reducer;
 pub mod state;
 
 // Re-export only inside this module.
-pub use action::*;
-pub use app::*;
+pub use app_main::*;
 pub use column_render_component::*;
-pub use create_store::*;
-pub use debug::*;
-pub use reducer::*;
 pub use state::*;

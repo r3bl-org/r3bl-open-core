@@ -17,6 +17,7 @@
 
 use std::error::Error;
 
+use clipboard_provider::*;
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::{call_if_true, ch, log_debug, UnicodeString};
 
@@ -131,6 +132,7 @@ pub mod clipboard_support {
 /// <https://docs.rs/copypasta-ext/latest/copypasta_ext/>
 mod clipboard_provider {
     use copypasta_ext::{prelude::*, x11_fork::ClipboardContext};
+    use r3bl_rs_utils_core::throws;
 
     use super::*;
 
@@ -139,24 +141,25 @@ mod clipboard_provider {
     /// Wrap the call to the clipboard crate, so it returns a [Result]. This is to avoid
     /// calling `unwrap()` on the [ClipboardContext] object.
     pub fn try_to_put_content_into_clipboard(vec_str: &[&str]) -> ClipboardResult<()> {
-        let content = vec_str.join("\n");
+        throws!({
+            let content = vec_str.join("\n");
 
-        let mut ctx = ClipboardContext::new()?;
-        ctx.set_contents(content.clone())?;
+            let mut ctx = ClipboardContext::new()?;
+            ctx.set_contents(content.clone())?;
 
-        call_if_true!(DEBUG_TUI_COPY_PASTE, {
-            log_debug(
-                format!(
-                    "\n📋📋📋 Selected Text was copied to clipboard: \n{0}",
-                    /* 0 */
-                    content.dark_red()
+            call_if_true!(DEBUG_TUI_COPY_PASTE, {
+                log_debug(
+                    format!(
+                        "\n📋📋📋 Selected Text was copied to clipboard: \n{0}",
+                        /* 0 */
+                        content.dark_red()
+                    )
+                    .black()
+                    .on_green()
+                    .to_string(),
                 )
-                .black()
-                .on_green()
-                .to_string(),
-            )
+            });
         });
-        Ok(())
     }
 
     /// Wrap the call to the clipboard crate, so it returns a [Result]. This is to avoid
@@ -168,4 +171,3 @@ mod clipboard_provider {
         Ok(content)
     }
 }
-use clipboard_provider::*;

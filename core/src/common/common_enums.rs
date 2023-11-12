@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2023 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,14 +15,9 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
-use r3bl_tui::*;
-
-use super::*;
-
-pub fn debug_log_action(src: String, action: Action) {
-    call_if_true!(DEBUG_TUI_MOD, {
-        let msg = format!("🚀 {src} -> dispatch action: {action}");
-        log_info(msg)
-    });
+#[derive(Debug, Clone, PartialEq, Copy, Default)]
+pub enum ContainsResult {
+    #[default]
+    DoesNotContain,
+    DoesContain,
 }

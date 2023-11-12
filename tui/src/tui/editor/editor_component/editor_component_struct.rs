@@ -15,107 +15,160 @@
  *   limitations under the License.
  */
 
-use std::{borrow::Cow, fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
-use async_trait::async_trait;
-use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
-use tokio::sync::RwLock;
+use tokio::sync::mpsc::Sender;
 
 use crate::*;
 
-/// This is a shim which allows the reusable [EditorEngine] to be used in the context of [Component]
-/// and [Store]. The main methods here simply pass thru all their arguments to the [EditorEngine].
-#[derive(Clone, Default)]
+#[derive(Debug)]
+/// This is a shim which allows the reusable [EditorEngine] to be used in the context of
+/// [Component] and [App]. The main methods here simply pass thru all their
+/// arguments to the [EditorEngine].
 pub struct EditorComponent<S, A>
 where
-    S: Debug + Default + Clone + PartialEq + Sync + Send,
+    S: Debug + Default + Clone + Sync + Send,
+    A: Debug + Default + Clone + Sync + Send,
+{
+    pub data: EditorComponentData<S, A>,
+}
+
+#[derive(Debug, Default)]
+pub struct EditorComponentData<S, A>
+where
+    S: Debug + Default + Clone + Sync + Send,
     A: Debug + Default + Clone + Sync + Send,
 {
     pub editor_engine: EditorEngine,
     pub id: FlexBoxId,
-    pub on_editor_buffer_change_handler: Option<OnEditorBufferChangeFn<S, A>>,
+    pub on_editor_buffer_change_handler: Option<OnEditorBufferChangeFn<A>>,
+    _phantom: std::marker::PhantomData<S>,
 }
 
-pub type OnEditorBufferChangeFn<S, A> = fn(&SharedStore<S, A>, FlexBoxId, EditorBuffer);
+pub type OnEditorBufferChangeFn<A> =
+    fn(FlexBoxId, Sender<TerminalWindowMainThreadSignal<A>>);
 
-pub mod editor_component_impl {
+pub mod editor_component_impl_component_trait {
     use super::*;
 
-    #[async_trait]
+    fn get_existing_mut_editor_buffer_from_state_or_create_new_one<'a, S>(
+        mut_state: &'a mut S,
+        self_id: FlexBoxId,
+        maybe_file_extension_for_new_empty_buffer: Option<String>,
+    ) -> &'a mut EditorBuffer
+    where
+        S: HasEditorBuffers + Default + Clone + Debug + Sync + Send,
+    {
+        // Add an empty editor buffer if it doesn't exist.
+        if !mut_state.contains_editor_buffer(self_id) {
+            let it = EditorBuffer::new_empty(maybe_file_extension_for_new_empty_buffer);
+            mut_state.insert_editor_buffer(self_id, it);
+        }
+        // Safe to call unwrap here, since we are guaranteed to have an editor buffer.
+        mut_state.get_mut_editor_buffer(self_id).unwrap()
+    }
+
     impl<S, A> Component<S, A> for EditorComponent<S, A>
     where
-        S: HasEditorBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
+        S: HasEditorBuffers + Default + Clone + Debug + Sync + Send,
         A: Debug + Default + Clone + Sync + Send,
     {
         fn reset(&mut self) {}
 
-        fn get_id(&self) -> FlexBoxId { self.id }
+        fn get_id(&self) -> FlexBoxId { self.data.id }
+
+        /// This shim simply calls
+        /// [EditorEngineApi::render_engine](EditorEngineApi::render_engine) w/ all the
+        /// necessary arguments:
+        /// - Global scope: [GlobalData] containing app state.
+        /// - Current box: [FlexBox] containing the current box's bounds.
+        /// - Has focus: [HasFocus] containing whether the current box has focus.
+        fn render(
+            &mut self,
+            global_data: &mut GlobalData<S, A>,
+            current_box: FlexBox,
+            _surface_bounds: SurfaceBounds, /* Ignore this. */
+            has_focus: &mut HasFocus,
+        ) -> CommonResult<RenderPipeline> {
+            let GlobalData { state, .. } = global_data;
+
+            let EditorComponentData {
+                editor_engine, id, ..
+            } = &mut self.data;
+
+            let self_id = *id;
+
+            let editor_buffer =
+                get_existing_mut_editor_buffer_from_state_or_create_new_one(
+                    state,
+                    self_id,
+                    editor_engine
+                        .config_options
+                        .syntax_highlight
+                        .get_file_extension_for_new_empty_buffer(),
+                );
+
+            EditorEngineApi::render_engine(
+                editor_engine,
+                editor_buffer,
+                current_box,
+                has_focus,
+            )
+        }
 
         /// This shim simply calls [EditorEngineApi::apply_event](EditorEngineApi::apply_event) w/
         /// all the necessary arguments:
-        /// - Global scope: [SharedStore], [SharedGlobalData].
-        /// - App scope: `S`, [ComponentRegistry<S, A>].
+        /// - Global scope: [GlobalData] (containing app state).
         /// - User input (from [main_event_loop]): [InputEvent].
         ///
         /// Usually a component must have focus in order for the [App] to
         /// [route_event_to_focused_component](ComponentRegistry::route_event_to_focused_component)
         /// in the first place.
-        async fn handle_event(
+        fn handle_event(
             &mut self,
-            args: ComponentScopeArgs<'_, S, A>,
-            input_event: &InputEvent,
+            global_data: &mut GlobalData<S, A>,
+            input_event: InputEvent,
+            _: &mut HasFocus,
         ) -> CommonResult<EventPropagation> {
             throws_with_return!({
-                let ComponentScopeArgs {
-                    shared_global_data,
-                    shared_store,
-                    state,
-                    component_registry,
-                    ..
-                } = args;
+                let GlobalData { state, .. } = global_data;
 
-                let cow_buffer: Cow<EditorBuffer> = {
-                    // Either: get existing buffer ref from state.
-                    if let Some(existing_buffer_ref) =
-                        state.get_editor_buffer(self.get_id())
-                    {
-                        Cow::Borrowed(existing_buffer_ref)
-                    }
-                    // Or: create a new owned buffer.
-                    else {
-                        Cow::Owned(EditorBuffer::new_empty(
-                            self.editor_engine
-                                .config_options
-                                .syntax_highlight
-                                .get_file_extension_for_new_empty_buffer(),
-                        ))
-                    }
-                };
+                let EditorComponentData {
+                    editor_engine,
+                    id,
+                    on_editor_buffer_change_handler,
+                    ..
+                } = &mut self.data;
+
+                let self_id = *id;
+
+                let mut_editor_buffer: &mut EditorBuffer =
+                    get_existing_mut_editor_buffer_from_state_or_create_new_one(
+                        state,
+                        self_id,
+                        editor_engine
+                            .config_options
+                            .syntax_highlight
+                            .get_file_extension_for_new_empty_buffer(),
+                    );
 
                 // BOOKM: editor component processes input event here
                 // Try to apply the `input_event` to `editor_engine` to decide whether to
                 // fire action.
                 let result = EditorEngineApi::apply_event(
-                    EditorEngineArgs {
-                        state,
-                        editor_buffer: &cow_buffer,
-                        component_registry,
-                        shared_global_data,
-                        shared_store,
-                        self_id: self.id,
-                        editor_engine: &mut self.editor_engine,
-                    },
+                    mut_editor_buffer,
+                    editor_engine,
                     input_event,
-                )
-                .await?;
+                )?;
 
                 match result {
-                    EditorEngineApplyEventResult::Applied(new_buffer) => {
-                        if let Some(on_change_handler) =
-                            self.on_editor_buffer_change_handler
-                        {
-                            on_change_handler(shared_store, self.get_id(), new_buffer);
+                    EditorEngineApplyEventResult::Applied => {
+                        if let Some(on_change_handler) = on_editor_buffer_change_handler {
+                            on_change_handler(
+                                self_id,
+                                global_data.main_thread_channel_sender.clone(),
+                            );
                         }
                         EventPropagation::Consumed
                     }
@@ -126,88 +179,41 @@ pub mod editor_component_impl {
                 }
             });
         }
-
-        /// This shim simply calls [EditorEngineApi::render_engine](EditorEngineApi::render_engine)
-        /// w/ all the necessary arguments:
-        /// - Global scope: [SharedStore], [SharedGlobalData].
-        /// - App scope: `S`, [ComponentRegistry<S, A>].
-        /// - User input (from [main_event_loop]): [InputEvent].
-        async fn render(
-            &mut self,
-            args: ComponentScopeArgs<'_, S, A>,
-            current_box: &FlexBox,
-            _surface_bounds: SurfaceBounds, /* Ignore this. */
-        ) -> CommonResult<RenderPipeline> {
-            let ComponentScopeArgs {
-                state,
-                shared_store,
-                shared_global_data,
-                component_registry,
-                ..
-            } = args;
-
-            let my_buffer: Cow<EditorBuffer> = {
-                if let Some(buffer) = state.get_editor_buffer(self.get_id()) {
-                    Cow::Borrowed(buffer)
-                } else {
-                    Cow::Owned(EditorBuffer::new_empty(
-                        self.editor_engine
-                            .config_options
-                            .syntax_highlight
-                            .get_file_extension_for_new_empty_buffer(),
-                    ))
-                }
-            };
-
-            let render_args = EditorEngineArgs {
-                editor_engine: &mut self.editor_engine,
-                state,
-                editor_buffer: &my_buffer,
-                component_registry,
-                shared_global_data,
-                shared_store,
-                self_id: self.id,
-            };
-
-            EditorEngineApi::render_engine(render_args, current_box).await
-        }
     }
 }
-pub use editor_component_impl::*;
 
 pub mod constructor {
     use super::*;
 
     impl<S, A> EditorComponent<S, A>
     where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
+        S: Debug + Default + Clone + Sync + Send + HasEditorBuffers + 'static,
+        A: Debug + Default + Clone + Sync + Send + 'static,
     {
         /// The on_change_handler is a lambda that is called if the editor buffer changes. Typically this
         /// results in a Redux action being created and then dispatched to the given store.
         pub fn new(
             id: FlexBoxId,
             config_options: EditorEngineConfig,
-            on_buffer_change: OnEditorBufferChangeFn<S, A>,
+            on_buffer_change: OnEditorBufferChangeFn<A>,
         ) -> Self {
             Self {
-                editor_engine: EditorEngine::new(config_options),
-                id,
-                on_editor_buffer_change_handler: Some(on_buffer_change),
+                data: EditorComponentData {
+                    editor_engine: EditorEngine::new(config_options),
+                    id,
+                    on_editor_buffer_change_handler: Some(on_buffer_change),
+                    ..Default::default()
+                },
             }
         }
 
-        pub fn new_shared(
+        pub fn new_boxed(
             id: FlexBoxId,
             config_options: EditorEngineConfig,
-            on_buffer_change: OnEditorBufferChangeFn<S, A>,
-        ) -> Arc<RwLock<Self>> {
-            Arc::new(RwLock::new(EditorComponent::new(
-                id,
-                config_options,
-                on_buffer_change,
-            )))
+            on_buffer_change: OnEditorBufferChangeFn<A>,
+        ) -> BoxedSafeComponent<S, A> {
+            let it = EditorComponent::new(id, config_options, on_buffer_change);
+            Box::new(it)
         }
     }
 }
-pub use constructor::*;

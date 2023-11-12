@@ -24,7 +24,6 @@ use crate::*;
 /// [DialogEngine].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DialogEvent {
-    ActivateModal,
     EnterPressed,
     EscPressed,
     None,
@@ -34,25 +33,11 @@ mod dialog_event_impl {
     use super::*;
 
     impl DialogEvent {
-        /// The `modal_keypress` is used to determine whether the [InputEvent] should be converted to
-        /// [DialogEvent::ActivateModal].
-        pub fn should_activate_modal(
-            input_event: &InputEvent,
-            modal_keypress: KeyPress,
-        ) -> Self {
-            if let InputEvent::Keyboard(keypress) = input_event {
-                if keypress == &modal_keypress {
-                    return Self::ActivateModal;
-                }
-            }
-            Self::None
-        }
-
         /// Tries to convert the given [InputEvent] into a [DialogEvent].
         /// - Enter and Esc are also matched against to return [DialogEvent::EnterPressed] and
         ///   [DialogEvent::EscPressed]
         /// - Otherwise, [Err] is returned.
-        pub fn from(input_event: &InputEvent) -> Self {
+        pub fn from(input_event: InputEvent) -> Self {
             if let InputEvent::Keyboard(keypress) = input_event {
                 match keypress {
                     // Compare to `Enter`.
@@ -87,23 +72,14 @@ mod test_dialog_event {
     #[test]
     fn dialog_event_handles_enter() {
         let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Enter));
-        let dialog_event = DialogEvent::from(&input_event);
+        let dialog_event = DialogEvent::from(input_event);
         assert_eq2!(dialog_event, DialogEvent::EnterPressed);
     }
 
     #[test]
     fn dialog_event_handles_esc() {
         let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Esc));
-        let dialog_event = DialogEvent::from(&input_event);
+        let dialog_event = DialogEvent::from(input_event);
         assert_eq2!(dialog_event, DialogEvent::EscPressed);
-    }
-
-    #[test]
-    fn dialog_event_handles_modal_keypress() {
-        let modal_keypress = keypress!(@char ModifierKeysMask::new().with_ctrl(), 'l');
-        let input_event = InputEvent::Keyboard(modal_keypress);
-        let dialog_event =
-            DialogEvent::should_activate_modal(&input_event, modal_keypress);
-        assert_eq2!(dialog_event, DialogEvent::ActivateModal);
     }
 }

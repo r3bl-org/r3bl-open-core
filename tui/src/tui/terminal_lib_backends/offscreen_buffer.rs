@@ -18,7 +18,6 @@
 use std::{fmt::{self, Debug},
           ops::{Deref, DerefMut}};
 
-use async_trait::async_trait;
 use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::{Deserialize, Serialize};
@@ -412,24 +411,14 @@ mod pixel_char_impl {
     }
 }
 
-#[async_trait]
 pub trait OffscreenBufferPaint {
-    async fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOps;
+    fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOps;
 
-    async fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOps;
+    fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOps;
 
-    async fn paint(
-        &mut self,
-        render_ops: RenderOps,
-        flush_kind: FlushKind,
-        shared_global_data: &SharedGlobalData,
-    );
+    fn paint(&mut self, render_ops: RenderOps, flush_kind: FlushKind, window_size: Size);
 
-    async fn paint_diff(
-        &mut self,
-        render_ops: RenderOps,
-        shared_global_data: &SharedGlobalData,
-    );
+    fn paint_diff(&mut self, render_ops: RenderOps, window_size: Size);
 }
 
 #[cfg(test)]

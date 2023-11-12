@@ -90,49 +90,49 @@ mod tests {
 
     #[test]
     fn test_keypress() -> Result<(), ()> {
-        // "x"
-        {
-            let key_event =
-                keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::NONE);
-            let keypress: KeyPress = key_event.try_into()?;
-            assert_eq2!(
-                keypress,
-                KeyPress::Plain {
-                    key: Key::Character('x'),
-                }
-            );
-        }
+        throws!({
+            // "x"
+            {
+                let key_event =
+                    keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::NONE);
+                let keypress: KeyPress = key_event.try_into()?;
+                assert_eq2!(
+                    keypress,
+                    KeyPress::Plain {
+                        key: Key::Character('x'),
+                    }
+                );
+            }
 
-        // "Ctrl + x"
-        {
-            let key_event =
-                keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::CONTROL);
-            let converted_keypress: KeyPress = key_event.try_into()?;
-            assert_eq2!(
-                converted_keypress,
-                KeyPress::WithModifiers {
-                    mask: ModifierKeysMask::new().with_ctrl(),
-                    key: Key::Character('x'),
-                }
-            );
-        }
+            // "Ctrl + x"
+            {
+                let key_event =
+                    keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::CONTROL);
+                let converted_keypress: KeyPress = key_event.try_into()?;
+                assert_eq2!(
+                    converted_keypress,
+                    KeyPress::WithModifiers {
+                        mask: ModifierKeysMask::new().with_ctrl(),
+                        key: Key::Character('x'),
+                    }
+                );
+            }
 
-        // "Ctrl + Alt + x"
-        {
-            let key_event = keyevent!(
-              code: KeyCode::Char('x'),
-              modifiers: KeyModifiers::CONTROL | KeyModifiers::ALT
-            );
-            let converted_keypress: KeyPress = key_event.try_into()?;
-            assert_eq2!(
-                converted_keypress,
-                KeyPress::WithModifiers {
-                    mask: ModifierKeysMask::new().with_alt().with_ctrl(),
-                    key: Key::Character('x'),
-                }
-            );
-        }
-
-        Ok(())
+            // "Ctrl + Alt + x"
+            {
+                let key_event = keyevent!(
+                  code: KeyCode::Char('x'),
+                  modifiers: KeyModifiers::CONTROL | KeyModifiers::ALT
+                );
+                let converted_keypress: KeyPress = key_event.try_into()?;
+                assert_eq2!(
+                    converted_keypress,
+                    KeyPress::WithModifiers {
+                        mask: ModifierKeysMask::new().with_alt().with_ctrl(),
+                        key: Key::Character('x'),
+                    }
+                );
+            }
+        });
     }
 }

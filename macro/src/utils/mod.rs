@@ -21,7 +21,5 @@ pub mod syn_parser_helpers;
 pub mod type_ext;
 
 // Re-export.
-pub use data_ext::*;
 pub use ident_ext::*;
-pub use syn_parser_helpers::*;
 pub use type_ext::*;

@@ -165,7 +165,6 @@ use crate::*;
 /// in the map represents a row of text in the buffer.
 /// - The row index is the key.
 /// - The value is the [SelectionRange].
-// 00: undo/redo
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Default)]
 pub struct EditorBuffer {
     editor_content: EditorContent,
@@ -514,7 +513,7 @@ mod constructor {
 
     impl EditorBuffer {
         /// Marker method to make it easy to search for where an empty instance is created.
-        pub fn new_empty(file_extension: Option<&str>) -> Self {
+        pub fn new_empty(file_extension: Option<String>) -> Self {
             // Potentially do any other initialization here.
             call_if_true!(DEBUG_TUI_MOD, {
                 let msg = format!(

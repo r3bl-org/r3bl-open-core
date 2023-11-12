@@ -25,15 +25,12 @@ use crate::*;
 
 /// Please see [KeyPress] for more information about handling keyboard input.
 #[non_exhaustive]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Copy)]
 pub enum InputEvent {
     Keyboard(KeyPress),
     Resize(Size),
     Mouse(MouseInput),
     Focus(FocusEvent),
-    /// A string that was pasted into the terminal. Only emitted if `bracketed-paste` feature has
-    /// been enabled for crossterm in Cargo.toml.
-    Paste(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -97,7 +94,7 @@ pub(crate) mod converters {
                 Resize(cols, rows) => Ok((rows, cols).into()),
                 FocusGained => Ok(InputEvent::Focus(FocusEvent::Gained)),
                 FocusLost => Ok(InputEvent::Focus(FocusEvent::Lost)),
-                Paste(text) => Ok(InputEvent::Paste(text)),
+                _ => Err(()),
             }
         }
     }

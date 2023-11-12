@@ -28,7 +28,6 @@ r3bl_simple_logger = { path = "../simple_logger", version = "0.1.3" } # For logg
 log = { version = "0.4.20", features = ["std"] }                      # For logging.
 
 tokio = { version = "1.33.0", features = ["full"] }
-async-trait = "0.1.74"
 
 # https://github.com/serde-rs/serde.
 serde = { version = "1.0.189", features = ["derive"] }

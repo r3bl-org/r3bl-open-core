@@ -19,7 +19,7 @@
 
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
-use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
+use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
 use crate::{constants::*, *};
 
@@ -65,38 +65,38 @@ mod tests_try_parse_and_highlight {
 
     #[test]
     fn from_vec_us() -> CommonResult<()> {
-        let editor_text_lines = vec![US::new("Hello"), US::new("World")];
-        let current_box_computed_style = style! {
-            color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-        };
+        throws!({
+            let editor_text_lines = vec![US::new("Hello"), US::new("World")];
+            let current_box_computed_style = style! {
+                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+            };
 
-        let style_us_span_lines = try_parse_and_highlight(
-            &editor_text_lines,
-            &Some(current_box_computed_style),
-            None,
-        )?;
+            let style_us_span_lines = try_parse_and_highlight(
+                &editor_text_lines,
+                &Some(current_box_computed_style),
+                None,
+            )?;
 
-        println!(
-            "result: \n{}",
-            style_us_span_lines.pretty_print_debug().cyan()
-        );
+            println!(
+                "result: \n{}",
+                style_us_span_lines.pretty_print_debug().cyan()
+            );
 
-        assert_eq2!(editor_text_lines.len(), style_us_span_lines.len());
-        let line_0 = &style_us_span_lines[0][0];
-        let line_1 = &style_us_span_lines[1][0];
-        assert_eq2!(editor_text_lines[0], line_0.text);
-        assert_eq2!(editor_text_lines[1], line_1.text);
+            assert_eq2!(editor_text_lines.len(), style_us_span_lines.len());
+            let line_0 = &style_us_span_lines[0][0];
+            let line_1 = &style_us_span_lines[1][0];
+            assert_eq2!(editor_text_lines[0], line_0.text);
+            assert_eq2!(editor_text_lines[1], line_1.text);
 
-        assert_eq2!(
-            line_0.style,
-            current_box_computed_style + get_foreground_style()
-        );
-        assert_eq2!(
-            line_1.style,
-            current_box_computed_style + get_foreground_style()
-        );
-
-        Ok(())
+            assert_eq2!(
+                line_0.style,
+                current_box_computed_style + get_foreground_style()
+            );
+            assert_eq2!(
+                line_1.style,
+                current_box_computed_style + get_foreground_style()
+            );
+        });
     }
 }
 
@@ -154,6 +154,8 @@ impl StyleUSSpanLines {
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         mod inner {
+            use syntect::easy::HighlightLines;
+
             use super::*;
 
             pub fn try_use_syntect(
@@ -1021,57 +1023,57 @@ mod tests_style_us_span_lines_from {
 
         #[test]
         fn test_block_metadata_tags() -> Result<(), ()> {
-            let tags = MdBlockElement::Tags(list!["tag1", "tag2", "tag3"]);
-            let style = style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
-            let lines = StyleUSSpanLines::from_block(&tags, &Some(style), None);
-            let line_0 = &lines.items[0];
-            let mut iter = line_0.items.iter();
+            throws!({
+                let tags = MdBlockElement::Tags(list!["tag1", "tag2", "tag3"]);
+                let style = style! {
+                    color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+                };
+                let lines = StyleUSSpanLines::from_block(&tags, &Some(style), None);
+                let line_0 = &lines.items[0];
+                let mut iter = line_0.items.iter();
 
-            // println!("{}", line_0..pretty_print_debug());
-            assert_eq2!(
-                iter.next().ok_or(())?,
-                &StyleUSSpan::new(
-                    style + get_metadata_tags_marker_style(),
-                    US::from("@tags"),
-                )
-            );
-            assert_eq2!(
-                iter.next().ok_or(())?,
-                &StyleUSSpan::new(style + get_foreground_dim_style(), US::from(": "),)
-            );
-            assert_eq2!(
-                iter.next().ok_or(())?,
-                &StyleUSSpan::new(
-                    style + get_metadata_tags_values_style(),
-                    US::from("tag1"),
-                )
-            );
-            assert_eq2!(
-                iter.next().ok_or(())?,
-                &StyleUSSpan::new(style + get_foreground_dim_style(), US::from(", "),)
-            );
-            assert_eq2!(
-                iter.next().ok_or(())?,
-                &StyleUSSpan::new(
-                    style + get_metadata_tags_values_style(),
-                    US::from("tag2"),
-                )
-            );
-            assert_eq2!(
-                iter.next().ok_or(())?,
-                &StyleUSSpan::new(style + get_foreground_dim_style(), US::from(", "),)
-            );
-            assert_eq2!(
-                iter.next().ok_or(())?,
-                &StyleUSSpan::new(
-                    style + get_metadata_tags_values_style(),
-                    US::from("tag3"),
-                )
-            );
-
-            Ok(())
+                // println!("{}", line_0..pretty_print_debug());
+                assert_eq2!(
+                    iter.next().ok_or(())?,
+                    &StyleUSSpan::new(
+                        style + get_metadata_tags_marker_style(),
+                        US::from("@tags"),
+                    )
+                );
+                assert_eq2!(
+                    iter.next().ok_or(())?,
+                    &StyleUSSpan::new(style + get_foreground_dim_style(), US::from(": "),)
+                );
+                assert_eq2!(
+                    iter.next().ok_or(())?,
+                    &StyleUSSpan::new(
+                        style + get_metadata_tags_values_style(),
+                        US::from("tag1"),
+                    )
+                );
+                assert_eq2!(
+                    iter.next().ok_or(())?,
+                    &StyleUSSpan::new(style + get_foreground_dim_style(), US::from(", "),)
+                );
+                assert_eq2!(
+                    iter.next().ok_or(())?,
+                    &StyleUSSpan::new(
+                        style + get_metadata_tags_values_style(),
+                        US::from("tag2"),
+                    )
+                );
+                assert_eq2!(
+                    iter.next().ok_or(())?,
+                    &StyleUSSpan::new(style + get_foreground_dim_style(), US::from(", "),)
+                );
+                assert_eq2!(
+                    iter.next().ok_or(())?,
+                    &StyleUSSpan::new(
+                        style + get_metadata_tags_values_style(),
+                        US::from("tag3"),
+                    )
+                );
+            });
         }
 
         #[test]
@@ -1165,88 +1167,98 @@ mod tests_style_us_span_lines_from {
 
         #[test]
         fn test_block_ol() -> CommonResult<()> {
-            let style = style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
-            let (remainder, doc) = parse_markdown("100. Foo\n200. Bar\n")?;
-            assert_eq2!(remainder, "");
+            throws!({
+                let style = style! {
+                    color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+                };
+                let (remainder, doc) = parse_markdown("100. Foo\n200. Bar\n")?;
+                assert_eq2!(remainder, "");
 
-            let ol_block_1 = &doc[0];
-            {
-                // println!("{:#?}", ol_block_1);
-                let lines = StyleUSSpanLines::from_block(ol_block_1, &Some(style), None);
+                let ol_block_1 = &doc[0];
+                {
+                    // println!("{:#?}", ol_block_1);
+                    let lines =
+                        StyleUSSpanLines::from_block(ol_block_1, &Some(style), None);
 
-                let line_0 = &lines.items[0];
-                // println!("{}", line_0..pretty_print_debug());
-                assert_eq2!(
-                    line_0.items[0],
-                    StyleUSSpan::new(style + get_list_bullet_style(), US::from("100.│"))
-                );
-                assert_eq2!(
-                    line_0.items[1],
-                    StyleUSSpan::new(style + get_foreground_style(), US::from("Foo"),)
-                );
-            }
+                    let line_0 = &lines.items[0];
+                    // println!("{}", line_0..pretty_print_debug());
+                    assert_eq2!(
+                        line_0.items[0],
+                        StyleUSSpan::new(
+                            style + get_list_bullet_style(),
+                            US::from("100.│")
+                        )
+                    );
+                    assert_eq2!(
+                        line_0.items[1],
+                        StyleUSSpan::new(style + get_foreground_style(), US::from("Foo"),)
+                    );
+                }
 
-            let ol_block_2 = &doc[1];
-            {
-                // println!("{:#?}", ol_block_2);
-                let lines = StyleUSSpanLines::from_block(ol_block_2, &Some(style), None);
+                let ol_block_2 = &doc[1];
+                {
+                    // println!("{:#?}", ol_block_2);
+                    let lines =
+                        StyleUSSpanLines::from_block(ol_block_2, &Some(style), None);
 
-                let line_0 = &lines.items[0];
-                // println!("{}", line_0..pretty_print_debug());
-                assert_eq2!(
-                    line_0.items[0],
-                    StyleUSSpan::new(style + get_list_bullet_style(), US::from("200.│"))
-                );
-                assert_eq2!(
-                    line_0.items[1],
-                    StyleUSSpan::new(style + get_foreground_style(), US::from("Bar"),)
-                );
-            }
-
-            Ok(())
+                    let line_0 = &lines.items[0];
+                    // println!("{}", line_0..pretty_print_debug());
+                    assert_eq2!(
+                        line_0.items[0],
+                        StyleUSSpan::new(
+                            style + get_list_bullet_style(),
+                            US::from("200.│")
+                        )
+                    );
+                    assert_eq2!(
+                        line_0.items[1],
+                        StyleUSSpan::new(style + get_foreground_style(), US::from("Bar"),)
+                    );
+                }
+            });
         }
 
         #[test]
         fn test_block_ul() -> CommonResult<()> {
-            let style = style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
-            let (_, doc) = parse_markdown("- Foo\n- Bar\n")?;
-            println!("{}", format!("{:#?}", doc).cyan());
+            throws!({
+                let style = style! {
+                    color_bg: TuiColor::Basic(ANSIBasicColor::Red)
+                };
+                let (_, doc) = parse_markdown("- Foo\n- Bar\n")?;
+                println!("{}", format!("{:#?}", doc).cyan());
 
-            // First smart list.
-            {
-                let ul_block_0 = &doc[0];
-                let lines = StyleUSSpanLines::from_block(ul_block_0, &Some(style), None);
-                let line_0 = &lines.items[0];
-                assert_eq2!(
-                    line_0.items[0],
-                    StyleUSSpan::new(style + get_list_bullet_style(), US::from("─┤"))
-                );
-                assert_eq2!(
-                    line_0.items[1],
-                    StyleUSSpan::new(style + get_foreground_style(), US::from("Foo"))
-                );
-            }
+                // First smart list.
+                {
+                    let ul_block_0 = &doc[0];
+                    let lines =
+                        StyleUSSpanLines::from_block(ul_block_0, &Some(style), None);
+                    let line_0 = &lines.items[0];
+                    assert_eq2!(
+                        line_0.items[0],
+                        StyleUSSpan::new(style + get_list_bullet_style(), US::from("─┤"))
+                    );
+                    assert_eq2!(
+                        line_0.items[1],
+                        StyleUSSpan::new(style + get_foreground_style(), US::from("Foo"))
+                    );
+                }
 
-            // Second smart list.
-            {
-                let ul_block_1 = &doc[1];
-                let lines = StyleUSSpanLines::from_block(ul_block_1, &Some(style), None);
-                let line_0 = &lines.items[0];
-                assert_eq2!(
-                    line_0.items[0],
-                    StyleUSSpan::new(style + get_list_bullet_style(), US::from("─┤"))
-                );
-                assert_eq2!(
-                    line_0.items[1],
-                    StyleUSSpan::new(style + get_foreground_style(), US::from("Bar"))
-                );
-            }
-
-            Ok(())
+                // Second smart list.
+                {
+                    let ul_block_1 = &doc[1];
+                    let lines =
+                        StyleUSSpanLines::from_block(ul_block_1, &Some(style), None);
+                    let line_0 = &lines.items[0];
+                    assert_eq2!(
+                        line_0.items[0],
+                        StyleUSSpan::new(style + get_list_bullet_style(), US::from("─┤"))
+                    );
+                    assert_eq2!(
+                        line_0.items[1],
+                        StyleUSSpan::new(style + get_foreground_style(), US::from("Bar"))
+                    );
+                }
+            });
         }
 
         #[test]

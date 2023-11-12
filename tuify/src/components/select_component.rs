@@ -51,116 +51,42 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
     /// Allocate space and print the lines. The bring the cursor back to the start of the
     /// lines.
     fn render(&mut self, state: &mut State) -> Result<()> {
-        // Setup the required data.
-        let normal_style = self.style.normal_style;
-        let header_style = self.style.header_style;
-        let selected_style = self.style.selected_style;
+        throws!({
+            // Setup the required data.
+            let normal_style = self.style.normal_style;
+            let header_style = self.style.header_style;
+            let selected_style = self.style.selected_style;
 
-        let start_display_col_offset = 1;
+            let start_display_col_offset = 1;
 
-        // If there are more items than the max display height, then we only use max
-        // display height. Otherwise we can shrink the display height to the number of
-        // items.
-        let viewport_height: ChUnit = self.calculate_viewport_height(state);
-        let viewport_width: ChUnit = state.max_display_width;
+            // If there are more items than the max display height, then we only use max
+            // display height. Otherwise we can shrink the display height to the number of
+            // items.
+            let viewport_height: ChUnit = self.calculate_viewport_height(state);
+            let viewport_width: ChUnit = state.max_display_width;
 
-        call_if_true!(TRACE, {
-            log_debug(
-                 format!(
-                     "render()::state: \n\t[raw_caret_row_index: {}, scroll_offset_row_index: {}], \n\tdisplay_height:{}",
-                     state.raw_caret_row_index, state.scroll_offset_row_index, viewport_height
-                 )
-                 .blue()
-                 .to_string(),
-             );
-        });
+            call_if_true!(TRACE, {
+                log_debug(
+                     format!(
+                         "render()::state: \n\t[raw_caret_row_index: {}, scroll_offset_row_index: {}], \n\tdisplay_height:{}",
+                         state.raw_caret_row_index, state.scroll_offset_row_index, viewport_height
+                     )
+                     .blue()
+                     .to_string(),
+                 );
+            });
 
-        self.allocate_viewport_height_space(state)?;
+            self.allocate_viewport_height_space(state)?;
 
-        let data_row_index_start = *state.scroll_offset_row_index;
+            let data_row_index_start = *state.scroll_offset_row_index;
 
-        let writer = self.get_write();
+            let writer = self.get_write();
 
-        // Print header.
-        let header_text =
-            format!("{}{}", " ".repeat(start_display_col_offset), state.header);
-        let header_text = clip_string_to_width_with_ellipsis(header_text, viewport_width);
-        queue! {
-            writer,
-            // Bring the caret back to the start of line.
-            MoveToColumn(0),
-            // Reset the colors that may have been set by the previous command.
-            ResetColor,
-            // Set the colors for the text.
-            apply_style!(header_style => fg_color),
-            apply_style!(header_style => bg_color),
-            // Style the text.
-            apply_style!(header_style => bold),
-            apply_style!(header_style => italic),
-            apply_style!(header_style => dim),
-            apply_style!(header_style => underline),
-            apply_style!(header_style => reverse),
-            apply_style!(header_style => hidden),
-            apply_style!(header_style => strikethrough),
-            // Clear the current line.
-            Clear(ClearType::CurrentLine),
-            // Print the text.
-            Print(header_text),
-            // Move to next line.
-            MoveToNextLine(1),
-            // Reset the colors.
-            ResetColor,
-        }?;
-
-        // Print each line in viewport.
-        for viewport_row_index in 0..*viewport_height {
-            let data_row_index: usize =
-                (data_row_index_start + viewport_row_index).into();
-            let caret_row_scroll_adj =
-                ch!(viewport_row_index) + state.scroll_offset_row_index;
-            let is_focused = ch!(caret_row_scroll_adj) == state.get_focused_index();
-
-            let data_item = &state.items[data_row_index];
-
-            // Invert colors for selected items.
-            let is_selected = state.selected_items.contains(data_item);
-            let data_style = if is_selected {
-                selected_style
-            } else {
-                normal_style
-            };
-
-            let row_prefix = match state.selection_mode {
-                SelectionMode::Single => {
-                    let padding_left = " ".repeat(start_display_col_offset);
-                    if is_focused {
-                        format!("{padding_left} {SINGLE_SELECT_IS_SELECTED} ")
-                    } else {
-                        format!("{padding_left} {SINGLE_SELECT_IS_NOT_SELECTED} ")
-                    }
-                }
-                SelectionMode::Multiple => {
-                    let padding_left = " ".repeat(start_display_col_offset);
-                    match (is_focused, is_selected) {
-                         (true, true) => {
-                             format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
-                         }
-                         (true, false) => format!(
-                             "{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
-                         ),
-                         (false, true) => format!(
-                             "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} "
-                         ),
-                         (false, false) => format!(
-                             "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
-                         ),
-                     }
-                }
-            };
-
-            let data_item = format!("{row_prefix}{data_item}");
-            let data_item = clip_string_to_width_with_ellipsis(data_item, viewport_width);
-
+            // Print header.
+            let header_text =
+                format!("{}{}", " ".repeat(start_display_col_offset), state.header);
+            let header_text =
+                clip_string_to_width_with_ellipsis(header_text, viewport_width);
             queue! {
                 writer,
                 // Bring the caret back to the start of line.
@@ -168,36 +94,112 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                 // Reset the colors that may have been set by the previous command.
                 ResetColor,
                 // Set the colors for the text.
-                apply_style!(data_style => bg_color),
-                apply_style!(data_style => bg_color),
+                apply_style!(header_style => fg_color),
+                apply_style!(header_style => bg_color),
                 // Style the text.
-                apply_style!(data_style => bold),
-                apply_style!(data_style => italic),
-                apply_style!(data_style => dim),
-                apply_style!(data_style => underline),
-                apply_style!(data_style => reverse),
-                apply_style!(data_style => hidden),
-                apply_style!(data_style => strikethrough),
+                apply_style!(header_style => bold),
+                apply_style!(header_style => italic),
+                apply_style!(header_style => dim),
+                apply_style!(header_style => underline),
+                apply_style!(header_style => reverse),
+                apply_style!(header_style => hidden),
+                apply_style!(header_style => strikethrough),
                 // Clear the current line.
                 Clear(ClearType::CurrentLine),
                 // Print the text.
-                Print(data_item.to_string()),
+                Print(header_text),
                 // Move to next line.
                 MoveToNextLine(1),
                 // Reset the colors.
                 ResetColor,
             }?;
-        }
 
-        // Move the cursor back up.
-        queue! {
-            writer,
-            MoveToPreviousLine(*viewport_height + 1),
-        }?;
+            // Print each line in viewport.
+            for viewport_row_index in 0..*viewport_height {
+                let data_row_index: usize =
+                    (data_row_index_start + viewport_row_index).into();
+                let caret_row_scroll_adj =
+                    ch!(viewport_row_index) + state.scroll_offset_row_index;
+                let is_focused = ch!(caret_row_scroll_adj) == state.get_focused_index();
 
-        writer.flush()?;
+                let data_item = &state.items[data_row_index];
 
-        Ok(())
+                // Invert colors for selected items.
+                let is_selected = state.selected_items.contains(data_item);
+                let data_style = if is_selected {
+                    selected_style
+                } else {
+                    normal_style
+                };
+
+                let row_prefix = match state.selection_mode {
+                    SelectionMode::Single => {
+                        let padding_left = " ".repeat(start_display_col_offset);
+                        if is_focused {
+                            format!("{padding_left} {SINGLE_SELECT_IS_SELECTED} ")
+                        } else {
+                            format!("{padding_left} {SINGLE_SELECT_IS_NOT_SELECTED} ")
+                        }
+                    }
+                    SelectionMode::Multiple => {
+                        let padding_left = " ".repeat(start_display_col_offset);
+                        match (is_focused, is_selected) {
+                             (true, true) => {
+                                 format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
+                             }
+                             (true, false) => format!(
+                                 "{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
+                             ),
+                             (false, true) => format!(
+                                 "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} "
+                             ),
+                             (false, false) => format!(
+                                 "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
+                             ),
+                         }
+                    }
+                };
+
+                let data_item = format!("{row_prefix}{data_item}");
+                let data_item =
+                    clip_string_to_width_with_ellipsis(data_item, viewport_width);
+
+                queue! {
+                    writer,
+                    // Bring the caret back to the start of line.
+                    MoveToColumn(0),
+                    // Reset the colors that may have been set by the previous command.
+                    ResetColor,
+                    // Set the colors for the text.
+                    apply_style!(data_style => bg_color),
+                    apply_style!(data_style => bg_color),
+                    // Style the text.
+                    apply_style!(data_style => bold),
+                    apply_style!(data_style => italic),
+                    apply_style!(data_style => dim),
+                    apply_style!(data_style => underline),
+                    apply_style!(data_style => reverse),
+                    apply_style!(data_style => hidden),
+                    apply_style!(data_style => strikethrough),
+                    // Clear the current line.
+                    Clear(ClearType::CurrentLine),
+                    // Print the text.
+                    Print(data_item.to_string()),
+                    // Move to next line.
+                    MoveToNextLine(1),
+                    // Reset the colors.
+                    ResetColor,
+                }?;
+            }
+
+            // Move the cursor back up.
+            queue! {
+                writer,
+                MoveToPreviousLine(*viewport_height + 1),
+            }?;
+
+            writer.flush()?;
+        });
     }
 }
 

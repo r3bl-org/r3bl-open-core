@@ -48,7 +48,9 @@ impl DialogBuffer {
 impl DialogBuffer {
     pub fn new_empty() -> Self {
         DialogBuffer {
-            editor_buffer: EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT)),
+            editor_buffer: EditorBuffer::new_empty(Some(
+                DEFAULT_SYN_HI_FILE_EXT.to_owned(),
+            )),
             title: Default::default(),
             maybe_results: None,
         }
