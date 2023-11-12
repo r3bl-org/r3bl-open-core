@@ -69,10 +69,10 @@ pub enum CaretDirection {
     Right,
 }
 
-impl TryFrom<&InputEvent> for EditorEvent {
+impl TryFrom<InputEvent> for EditorEvent {
     type Error = String;
 
-    fn try_from(input_event: &InputEvent) -> Result<Self, Self::Error> {
+    fn try_from(input_event: InputEvent) -> Result<Self, Self::Error> {
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
             log_debug(format!(
                 "\n🐥🐥🐥  EditorEvent::try_from: {}",
@@ -231,11 +231,11 @@ impl TryFrom<&InputEvent> for EditorEvent {
                 key: Key::SpecialKey(SpecialKey::End),
             }) => Ok(EditorEvent::End),
 
-            InputEvent::Resize(size) => Ok(EditorEvent::Resize(*size)),
+            InputEvent::Resize(size) => Ok(EditorEvent::Resize(size)),
 
             InputEvent::Keyboard(KeyPress::Plain {
                 key: Key::Character(character),
-            }) => Ok(Self::InsertChar(*character)),
+            }) => Ok(Self::InsertChar(character)),
 
             InputEvent::Keyboard(KeyPress::Plain {
                 key: Key::SpecialKey(SpecialKey::Enter),
@@ -287,17 +287,11 @@ impl EditorEvent {
         );
     }
 
-    pub fn apply_editor_event<S, A>(
+    pub fn apply_editor_event(
         editor_engine: &mut EditorEngine,
         editor_buffer: &mut EditorBuffer,
         editor_event: EditorEvent,
-        _shared_global_data: &SharedGlobalData,
-        _component_registry: &mut ComponentRegistry<S, A>,
-        _self_id: FlexBoxId,
-    ) where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
-    {
+    ) {
         match editor_event {
             EditorEvent::Undo => {
                 history::undo(editor_buffer);
@@ -524,22 +518,12 @@ impl EditorEvent {
         editor_engine: &mut EditorEngine,
         editor_buffer: &mut EditorBuffer,
         editor_event_vec: Vec<EditorEvent>,
-        shared_global_data: &SharedGlobalData,
-        component_registry: &mut ComponentRegistry<S, A>,
-        self_id: FlexBoxId,
     ) where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        S: Debug + Default + Clone + Sync + Send,
         A: Debug + Default + Clone + Sync + Send,
     {
         for editor_event in editor_event_vec {
-            EditorEvent::apply_editor_event(
-                editor_engine,
-                editor_buffer,
-                editor_event,
-                shared_global_data,
-                component_registry,
-                self_id,
-            );
+            EditorEvent::apply_editor_event(editor_engine, editor_buffer, editor_event);
         }
     }
 }

@@ -20,7 +20,8 @@
 // #![warn(clippy::all)]
 // #![warn(rust_2018_idioms)]
 
-pub const DEBUG: bool = true;
+/// Enable debug logging.
+pub const ENABLE_TRACE_EXAMPLES: bool = true;
 
 use r3bl_rs_utils_core::*;
 use r3bl_tui::*;
@@ -71,8 +72,8 @@ async fn run_user_selected_example(selection: String) -> CommonResult<()> {
                 "0" => throws!(ex_app_no_layout::launcher::run_app().await?),
                 "1" => throws!(ex_app_with_1col_layout::launcher::run_app().await?),
                 "2" => throws!(ex_app_with_2col_layout::launcher::run_app().await?),
-                "3" => throws!(ex_editor::launcher::run_app().await?),
-                "4" => throws!(ex_pitch::launcher::run_app().await?),
+                "3" => throws!(ex_pitch::launcher::run_app().await?),
+                "4" => throws!(ex_editor::launcher::run_app().await?),
                 "5" => throws!(ex_rc::launcher::run_app().await?),
                 _ => eprintln!("{}", style_error("Unknown selection 🤷")),
             }

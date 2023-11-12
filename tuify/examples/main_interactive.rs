@@ -36,35 +36,35 @@ fn print_header(msg: &str) {
 }
 
 fn main() -> Result<()> {
-    call_if_true!(TRACE, {
-        try_to_set_log_level(log::LevelFilter::Trace).ok();
-        log_debug("Start logging...".to_string());
-        log_debug(format!("og_size: {:?}", get_size()?).to_string());
+    throws!({
+        call_if_true!(TRACE, {
+            try_to_set_log_level(log::LevelFilter::Trace).ok();
+            log_debug("Start logging...".to_string());
+            log_debug(format!("og_size: {:?}", get_size()?).to_string());
+        });
+
+        // Get display size.
+        let max_width_col_count: usize =
+            get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
+        let max_height_row_count: usize = 5;
+
+        let style = StyleSheet::default();
+
+        // Multiple select, single item.
+        multiple_select_single_item();
+
+        // Multiple select.
+        multiple_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
+        multiple_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
+
+        // Single select.
+        single_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
+        single_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
+
+        call_if_true!(TRACE, {
+            log_debug("Stop logging...".to_string());
+        });
     });
-
-    // Get display size.
-    let max_width_col_count: usize =
-        get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
-    let max_height_row_count: usize = 5;
-
-    let style = StyleSheet::default();
-
-    // Multiple select, single item.
-    multiple_select_single_item();
-
-    // Multiple select.
-    multiple_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
-    multiple_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
-
-    // Single select.
-    single_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
-    single_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
-
-    call_if_true!(TRACE, {
-        log_debug("Stop logging...".to_string());
-    });
-
-    Ok(())
 }
 
 /// Multiple select, single item.

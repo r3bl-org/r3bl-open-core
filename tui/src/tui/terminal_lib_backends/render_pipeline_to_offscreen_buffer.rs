@@ -26,14 +26,9 @@ impl RenderPipeline {
     /// 2. This is the intermediate representation (IR) of a [RenderPipeline]. In order to turn
     ///    this IR into actual paint commands for the terminal, you must use the
     ///    [OffscreenBufferPaint] trait implementations.
-    pub async fn convert(
-        &self,
-        shared_global_data: &SharedGlobalData,
-    ) -> OffscreenBuffer {
-        let my_window_size = shared_global_data.read().await.window_size;
-
+    pub fn convert(&self, window_size: Size) -> OffscreenBuffer {
         let mut my_offscreen_buffer =
-            OffscreenBuffer::new_with_capacity_initialized(my_window_size);
+            OffscreenBuffer::new_with_capacity_initialized(window_size);
 
         let mut local_data = RenderOpsLocalData::default();
 
@@ -43,11 +38,10 @@ impl RenderPipeline {
                     for (_render_op_index, render_op) in render_ops.iter().enumerate() {
                         process_render_op(
                             render_op,
-                            shared_global_data,
+                            window_size,
                             &mut my_offscreen_buffer,
                             &mut local_data,
-                        )
-                        .await;
+                        );
                     }
                 }
             }
@@ -62,9 +56,9 @@ impl RenderPipeline {
     }
 }
 
-async fn process_render_op(
+fn process_render_op(
     render_op: &RenderOp,
-    shared_global_data: &SharedGlobalData,
+    window_size: Size,
     my_offscreen_buffer: &mut OffscreenBuffer,
     local_data: &mut RenderOpsLocalData,
 ) {
@@ -76,21 +70,13 @@ async fn process_render_op(
             my_offscreen_buffer.clear();
         }
         RenderOp::MoveCursorPositionAbs(new_abs_pos) => {
-            my_offscreen_buffer.my_pos = sanitize_and_save_abs_position(
-                *new_abs_pos,
-                shared_global_data,
-                local_data,
-            )
-            .await;
+            my_offscreen_buffer.my_pos =
+                sanitize_and_save_abs_position(*new_abs_pos, window_size, local_data);
         }
         RenderOp::MoveCursorPositionRelTo(box_origin_pos_ref, content_rel_pos_ref) => {
             let new_abs_pos = *box_origin_pos_ref + *content_rel_pos_ref;
-            my_offscreen_buffer.my_pos = sanitize_and_save_abs_position(
-                new_abs_pos,
-                shared_global_data,
-                local_data,
-            )
-            .await;
+            my_offscreen_buffer.my_pos =
+                sanitize_and_save_abs_position(new_abs_pos, window_size, local_data);
         }
         RenderOp::SetFgColor(fg_color_ref) => {
             my_offscreen_buffer.my_fg_color = Some(*fg_color_ref);
@@ -116,20 +102,14 @@ async fn process_render_op(
         }
         RenderOp::PaintTextWithAttributes(arg_text_ref, maybe_style_ref) => {
             let result_new_pos = print_text_with_attributes(
-                shared_global_data,
                 arg_text_ref,
                 maybe_style_ref,
                 my_offscreen_buffer,
                 None,
-            )
-            .await;
+            );
             if let Ok(new_pos) = result_new_pos {
-                my_offscreen_buffer.my_pos = sanitize_and_save_abs_position(
-                    new_pos,
-                    shared_global_data,
-                    local_data,
-                )
-                .await;
+                my_offscreen_buffer.my_pos =
+                    sanitize_and_save_abs_position(new_pos, window_size, local_data);
             }
         }
     }
@@ -145,7 +125,7 @@ async fn process_render_op(
 /// <---------------- maybe_max_display_col_count ---------------->
 /// C0123456789012345678901234567890123456789012345678901234567890
 /// ```
-pub async fn print_plain_text(
+pub fn print_plain_text(
     arg_text_ref: &str,
     maybe_style_ref: &Option<Style>,
     my_offscreen_buffer: &mut OffscreenBuffer,
@@ -350,8 +330,7 @@ pub async fn print_plain_text(
 /// Render plain to an offscreen buffer. This will modify the `my_offscreen_buffer` argument.  For
 /// plain text it supports counting [GraphemeClusterSegment]s. The display width of each segment is
 /// taken into account when filling the offscreen buffer.
-pub async fn print_text_with_attributes(
-    _shared_global_data: &SharedGlobalData,
+pub fn print_text_with_attributes(
     arg_text_ref: &str,
     maybe_style_ref: &Option<Style>,
     my_offscreen_buffer: &mut OffscreenBuffer,
@@ -363,7 +342,6 @@ pub async fn print_text_with_attributes(
         my_offscreen_buffer,
         maybe_max_display_col_count,
     )
-    .await
 }
 
 #[cfg(test)]
@@ -371,14 +349,12 @@ mod tests {
     use r3bl_rs_utils_macro::style;
 
     use super::*;
-    use crate::test_editor::mock_real_objects_for_editor::make_shared_global_data;
 
-    #[tokio::test]
-    async fn test_print_plain_text_render_path_reuse_buffer() {
+    #[test]
+    fn test_print_plain_text_render_path_reuse_buffer() {
         let window_size = size! { col_count: 10, row_count: 2};
         let mut my_offscreen_buffer =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
-        let shared_global_data = make_shared_global_data(Some(window_size));
 
         // Input:  R0 "hello12345😃"
         //            C0123456789
@@ -396,13 +372,11 @@ mod tests {
             let maybe_max_display_col_count = Some(10.into());
 
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
-                &shared_global_data,
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
-            .await
             .ok();
 
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
@@ -461,13 +435,11 @@ mod tests {
             let maybe_max_display_col_count = Some(10.into());
 
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
-                &shared_global_data,
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
-            .await
             .ok();
 
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
@@ -503,10 +475,9 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_print_plain_text_render_path_new_buffer_for_each_paint() {
+    #[test]
+    fn test_print_plain_text_render_path_new_buffer_for_each_paint() {
         let window_size = size! { col_count: 10, row_count: 2};
-        let shared_global_data = make_shared_global_data(Some(window_size));
 
         // Input:  R0 "hello12345😃"
         //            C0123456789
@@ -526,13 +497,11 @@ mod tests {
             let maybe_max_display_col_count = Some(10.into());
 
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
-                &shared_global_data,
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
-            .await
             .ok();
 
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
@@ -593,13 +562,11 @@ mod tests {
             let maybe_max_display_col_count = Some(10.into());
 
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
-                &shared_global_data,
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
-            .await
             .ok();
 
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
@@ -650,13 +617,11 @@ mod tests {
             let maybe_max_display_col_count = Some(10.into());
 
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
-                &shared_global_data,
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
-            .await
             .ok();
 
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
@@ -716,13 +681,11 @@ mod tests {
             let maybe_max_display_col_count = Some(10.into());
 
             render_pipeline_to_offscreen_buffer::print_text_with_attributes(
-                &shared_global_data,
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
                 maybe_max_display_col_count,
             )
-            .await
             .ok();
 
             // my_offscreen_buffer:
@@ -785,10 +748,9 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_convert() {
+    #[test]
+    fn test_convert() {
         let window_size = size! { col_count: 10, row_count: 2 };
-        let shared_global_data = make_shared_global_data(window_size.into());
 
         // Create a RenderPipeline.
         // render_ops:
@@ -835,7 +797,7 @@ mod tests {
         //     0: ╳ ..
         //     9: ╳
 
-        let my_offscreen_buffer = pipeline.convert(&shared_global_data).await;
+        let my_offscreen_buffer = pipeline.convert(window_size);
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
         assert_eq2!(my_offscreen_buffer.buffer.len(), 2);
         assert_eq2!(
@@ -860,8 +822,8 @@ mod tests {
         assert_eq2!(my_offscreen_buffer.buffer[0][9], PixelChar::Spacer);
     }
 
-    #[tokio::test]
-    async fn test_convert_non_zero_position() {
+    #[test]
+    fn test_convert_non_zero_position() {
         let window_size = size! { col_count: 10, row_count: 2 };
 
         // pipeline:
@@ -899,8 +861,7 @@ mod tests {
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
 
-        let shared_global_data = make_shared_global_data(window_size.into());
-        let my_offscreen_buffer = pipeline.convert(&shared_global_data).await;
+        let my_offscreen_buffer = pipeline.convert(window_size);
         // my_offscreen_buffer:
         // window_size: [width:10, height:2],
         // row_index: [0]

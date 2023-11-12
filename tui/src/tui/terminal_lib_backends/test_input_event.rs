@@ -23,58 +23,58 @@ mod tests {
     use crate::*;
 
     #[test]
-    fn test_convert_keyevent_into_input_event() -> Result<(), ()> {
-        // Crossterm KeyEvents.
-        let x = keyevent! {
-          code: KeyCode::Char('x'),
-          modifiers: KeyModifiers::NONE
-        };
-        let caps_x = keyevent! {
-          code: KeyCode::Char('X'),
-          modifiers: KeyModifiers::SHIFT
-        };
-        let ctrl_x = keyevent! {
-          code: KeyCode::Char('x'),
-          modifiers: KeyModifiers::CONTROL
-        };
+    fn test_convert_key_event_into_input_event() -> Result<(), ()> {
+        throws!({
+            // Crossterm KeyEvents.
+            let x = keyevent! {
+              code: KeyCode::Char('x'),
+              modifiers: KeyModifiers::NONE
+            };
+            let caps_x = keyevent! {
+              code: KeyCode::Char('X'),
+              modifiers: KeyModifiers::SHIFT
+            };
+            let ctrl_x = keyevent! {
+              code: KeyCode::Char('x'),
+              modifiers: KeyModifiers::CONTROL
+            };
 
-        // InputEvents.
-        let x_tw = InputEvent::try_from(x)?;
-        let caps_x_tw = InputEvent::try_from(caps_x)?;
-        let ctrl_x_tw = InputEvent::try_from(ctrl_x);
+            // InputEvents.
+            let x_tw = InputEvent::try_from(x)?;
+            let caps_x_tw = InputEvent::try_from(caps_x)?;
+            let ctrl_x_tw = InputEvent::try_from(ctrl_x);
 
-        // Check that the conversion is correct.
-        assert_eq2!(x_tw, InputEvent::Keyboard(keypress! {@char 'x'}));
-        assert_eq2!(caps_x_tw, InputEvent::Keyboard(keypress! {@char 'X'}));
-        assert_eq2!(ctrl_x_tw, Ok(InputEvent::Keyboard(ctrl_x.try_into()?)));
-
-        Ok(())
+            // Check that the conversion is correct.
+            assert_eq2!(x_tw, InputEvent::Keyboard(keypress! {@char 'x'}));
+            assert_eq2!(caps_x_tw, InputEvent::Keyboard(keypress! {@char 'X'}));
+            assert_eq2!(ctrl_x_tw, Ok(InputEvent::Keyboard(ctrl_x.try_into()?)));
+        });
     }
 
     #[test]
     fn test_input_event_matches_correctly() -> Result<(), ()> {
-        let x = InputEvent::Keyboard(keypress! { @char 'x' });
-        let caps_x = InputEvent::Keyboard(keypress! {@char 'X'});
-        let ctrl_x = InputEvent::Keyboard(
-            keyevent! {
+        throws!({
+            let x = InputEvent::Keyboard(keypress! { @char 'x' });
+            let caps_x = InputEvent::Keyboard(keypress! {@char 'X'});
+            let ctrl_x = InputEvent::Keyboard(
+                keyevent! {
+                  code: KeyCode::Char('x'),
+                  modifiers: KeyModifiers::CONTROL
+                }
+                .try_into()?,
+            );
+            let events_to_match_against = [x, caps_x, ctrl_x];
+
+            let key_event = keyevent! {
               code: KeyCode::Char('x'),
-              modifiers: KeyModifiers::CONTROL
-            }
-            .try_into()?,
-        );
-        let events_to_match_against = [x, caps_x, ctrl_x];
+              modifiers: KeyModifiers::SHIFT
+            }; // "Shift + x"
+            let converted_event: InputEvent = key_event.try_into()?; // "X"
 
-        let key_event = keyevent! {
-          code: KeyCode::Char('x'),
-          modifiers: KeyModifiers::SHIFT
-        }; // "Shift + x"
-        let converted_event: InputEvent = key_event.try_into()?; // "X"
+            let result = converted_event.matches(&events_to_match_against);
 
-        let result = converted_event.matches(&events_to_match_against);
-
-        assert!(result);
-
-        Ok(())
+            assert!(result);
+        });
     }
 
     #[test]

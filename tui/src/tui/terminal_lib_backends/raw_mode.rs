@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use r3bl_rs_utils_core::Size;
+
 use crate::*;
 
 /// To use this directly, you need to make sure to create an instance using [start](RawMode::start)
@@ -23,25 +25,23 @@ use crate::*;
 pub struct RawMode;
 
 impl RawMode {
-    pub async fn start(shared_global_data: &SharedGlobalData) {
+    pub fn start(window_size: Size) {
         let mut skip_flush = false;
         RenderOps::route_paint_render_op_to_backend(
             &mut RenderOpsLocalData::default(),
             &mut skip_flush,
             &RenderOp::EnterRawMode,
-            shared_global_data,
-        )
-        .await;
+            window_size,
+        );
     }
 
-    pub async fn end(shared_global_data: &SharedGlobalData) {
+    pub fn end(window_size: Size) {
         let mut skip_flush = false;
         RenderOps::route_paint_render_op_to_backend(
             &mut RenderOpsLocalData::default(),
             &mut skip_flush,
             &RenderOp::ExitRawMode,
-            shared_global_data,
-        )
-        .await;
+            window_size,
+        );
     }
 }

@@ -15,21 +15,12 @@
  *   limitations under the License.
  */
 
-use std::sync::Arc;
-
-use tokio::sync::RwLock;
-
 use crate::*;
 
-// GlobalData.
-pub type SharedGlobalData = Arc<RwLock<GlobalData>>;
-
 // App.
-pub type SafeApp<S, A> = dyn App<S, A> + Send + Sync;
+pub type SafeApp<S, A> = dyn App<S = S, A = A> + Send + Sync;
 pub type BoxedSafeApp<S, A> = Box<SafeApp<S, A>>;
-pub type SharedApp<S, A> = Arc<RwLock<SafeApp<S, A>>>;
 
 // Component.
 pub type SafeComponent<S, A> = dyn Component<S, A> + Send + Sync;
 pub type BoxedSafeComponent<S, A> = Box<SafeComponent<S, A>>;
-pub type SharedComponent<S, A> = Arc<RwLock<SafeComponent<S, A>>>;

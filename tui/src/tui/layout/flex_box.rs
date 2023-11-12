@@ -34,13 +34,25 @@ pub enum LayoutDirection {
 /// This works w/ the [int-enum](https://crates.io/crates/int-enum) crate in order to
 /// allow for the definition of enums that are represented in memory as [u8]s.
 #[derive(Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
-pub struct FlexBoxId(u8);
+pub struct FlexBoxId(pub u8);
 
-mod flexboxid_impl {
+mod flexbox_id_impl {
+    use std::ops::Deref;
+
     use super::*;
+
+    impl From<FlexBoxId> for u8 {
+        fn from(id: FlexBoxId) -> Self { id.0 }
+    }
 
     impl From<u8> for FlexBoxId {
         fn from(id: u8) -> Self { Self(id) }
+    }
+
+    impl Deref for FlexBoxId {
+        type Target = u8;
+
+        fn deref(&self) -> &Self::Target { &self.0 }
     }
 
     impl FlexBoxId {

@@ -15,21 +15,14 @@
  *   limitations under the License.
  */
 
-use async_trait::async_trait;
 use r3bl_rs_utils_core::*;
 
 use crate::*;
 
 pub struct OffscreenBufferPaintImplCrossterm;
 
-#[async_trait]
 impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
-    async fn paint(
-        &mut self,
-        render_ops: RenderOps,
-        flush_kind: FlushKind,
-        shared_global_data: &SharedGlobalData,
-    ) {
+    fn paint(&mut self, render_ops: RenderOps, flush_kind: FlushKind, window_size: Size) {
         let mut skip_flush = false;
 
         if let FlushKind::ClearBeforeFlush = flush_kind {
@@ -37,9 +30,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         }
 
         // Execute each RenderOp.
-        render_ops
-            .execute_all(&mut skip_flush, shared_global_data)
-            .await;
+        render_ops.execute_all(&mut skip_flush, window_size);
 
         // Flush everything to the terminal.
         if !skip_flush {
@@ -55,17 +46,11 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         });
     }
 
-    async fn paint_diff(
-        &mut self,
-        render_ops: RenderOps,
-        shared_global_data: &SharedGlobalData,
-    ) {
+    fn paint_diff(&mut self, render_ops: RenderOps, window_size: Size) {
         let mut skip_flush = false;
 
         // Execute each RenderOp.
-        render_ops
-            .execute_all(&mut skip_flush, shared_global_data)
-            .await;
+        render_ops.execute_all(&mut skip_flush, window_size);
 
         // Flush everything to the terminal.
         if !skip_flush {
@@ -101,7 +86,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     ///     - end of line
     ///     - when style changes
     ///     - when switchover from ANSI <-> PLAIN happens
-    async fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOps {
+    fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOps {
         use render_helpers::*;
 
         let mut context = Context::new();
@@ -170,7 +155,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         context.render_ops
     }
 
-    async fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOps {
+    fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOps {
         call_if_true!(DEBUG_TUI_COMPOSITOR, {
             let msg = format!("🎨 offscreen_buffer_paint_impl_crossterm::render_diff() ok ✅: \ndiff_chunks: \n{}",
             diff_chunks.pretty_print());
@@ -304,14 +289,13 @@ mod tests {
     use r3bl_rs_utils_macro::*;
 
     use super::*;
-    use crate::test_editor::mock_real_objects_for_editor::make_shared_global_data;
 
     /// Helper function to make an `OffscreenBuffer`.
-    async fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
+    fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
         let window_size = size! { col_count: 10, row_count: 2};
         let mut my_offscreen_buffer =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
-        let shared_global_data = make_shared_global_data(Some(window_size));
+
         // Input:  R0 "hello1234😃"
         //            C0123456789
         // Output: R0 "hello1234╳"
@@ -326,13 +310,11 @@ mod tests {
         my_offscreen_buffer.my_bg_color = Some(color!(@blue));
         let maybe_max_display_col_count: Option<ChUnit> = Some(10.into());
         render_pipeline_to_offscreen_buffer::print_text_with_attributes(
-            &shared_global_data,
             text,
             &maybe_style,
             &mut my_offscreen_buffer,
             maybe_max_display_col_count,
         )
-        .await
         .ok();
         my_offscreen_buffer
 
@@ -355,12 +337,12 @@ mod tests {
         //   9: ╳
     }
 
-    #[tokio::test]
-    async fn test_render_plain_text() {
-        let my_offscreen_buffer = make_offscreen_buffer_plain_text().await;
+    #[test]
+    fn test_render_plain_text() {
+        let my_offscreen_buffer = make_offscreen_buffer_plain_text();
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
         let mut paint = OffscreenBufferPaintImplCrossterm {};
-        let render_ops = paint.render(&my_offscreen_buffer).await;
+        let render_ops = paint.render(&my_offscreen_buffer);
         // println!("render_ops: {:#?}", render_ops);
 
         // Output:

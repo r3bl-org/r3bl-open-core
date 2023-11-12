@@ -15,9 +15,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: hustcer/setup-nu@main
+      - uses: hustcer/setup-nu@v3.8
         with:
-          version: "*"
+          version: 0.86
       - name: install cargo-fmt
         run: rustup component add rustfmt
       - name: Run Nushell script

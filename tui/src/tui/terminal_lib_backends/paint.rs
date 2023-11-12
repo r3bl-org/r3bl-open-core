@@ -15,7 +15,9 @@
  *   limitations under the License.
  */
 
-use async_trait::async_trait;
+use std::fmt::Debug;
+
+pub use paint_exports::*;
 use r3bl_rs_utils_core::*;
 
 use super::*;
@@ -27,67 +29,60 @@ use crate::*;
 /// 2. And routing the execution to the correct backend specified in [TERMINAL_LIB_BACKEND].
 ///
 /// See [RenderOps] for more details of "atomic paint operations".
-pub async fn paint(
+pub fn paint<S, A>(
     pipeline: &RenderPipeline,
     flush_kind: FlushKind,
-    shared_global_data: &SharedGlobalData,
-) {
-    let maybe_saved_offscreen_buffer = shared_global_data
-        .read()
-        .await
-        .maybe_saved_offscreen_buffer
-        .clone();
-    let offscreen_buffer = pipeline.convert(shared_global_data).await;
+    global_data: &mut GlobalData<S, A>,
+) where
+    S: Debug + Default + Clone + Sync + Send,
+    A: Debug + Default + Clone + Sync + Send,
+{
+    let maybe_saved_offscreen_buffer = global_data.maybe_saved_offscreen_buffer.clone();
+
+    let window_size = global_data.window_size;
+
+    let offscreen_buffer = pipeline.convert(window_size);
+
     match maybe_saved_offscreen_buffer {
         None => {
-            perform_full_paint(&offscreen_buffer, flush_kind, shared_global_data).await;
+            perform_full_paint(&offscreen_buffer, flush_kind, window_size);
         }
         Some(saved_offscreen_buffer) => {
             // Compare offscreen buffers & paint only the diff.
             match saved_offscreen_buffer.diff(&offscreen_buffer) {
                 OffscreenBufferDiffResult::NotComparable => {
-                    perform_full_paint(&offscreen_buffer, flush_kind, shared_global_data)
-                        .await;
+                    perform_full_paint(&offscreen_buffer, flush_kind, window_size);
                 }
                 OffscreenBufferDiffResult::Comparable(ref diff_chunks) => {
-                    perform_diff_paint(diff_chunks, shared_global_data).await;
+                    perform_diff_paint(diff_chunks, window_size);
                 }
             }
         }
     }
-    shared_global_data
-        .write()
-        .await
-        .maybe_saved_offscreen_buffer = Some(offscreen_buffer);
 
-    async fn perform_diff_paint(
-        diff_chunks: &PixelCharDiffChunks,
-        shared_global_data: &SharedGlobalData,
-    ) {
+    global_data.maybe_saved_offscreen_buffer = Some(offscreen_buffer);
+
+    fn perform_diff_paint(diff_chunks: &PixelCharDiffChunks, window_size: Size) {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
                 let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
-                let render_ops = crossterm_impl.render_diff(diff_chunks).await;
-                crossterm_impl
-                    .paint_diff(render_ops, shared_global_data)
-                    .await;
+                let render_ops = crossterm_impl.render_diff(diff_chunks);
+                crossterm_impl.paint_diff(render_ops, window_size);
             }
             TerminalLibBackend::Termion => todo!(), // FUTURE: implement OffscreenBufferPaint trait for termion
         }
     }
 
-    async fn perform_full_paint(
+    fn perform_full_paint(
         offscreen_buffer: &OffscreenBuffer,
         flush_kind: FlushKind,
-        shared_global_data: &SharedGlobalData,
+        window_size: Size,
     ) {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
                 let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
-                let render_ops = crossterm_impl.render(offscreen_buffer).await;
-                crossterm_impl
-                    .paint(render_ops, flush_kind, shared_global_data)
-                    .await;
+                let render_ops = crossterm_impl.render(offscreen_buffer);
+                crossterm_impl.paint(render_ops, flush_kind, window_size);
             }
             TerminalLibBackend::Termion => todo!(), // FUTURE: implement OffscreenBufferPaint trait for termion
         }
@@ -99,15 +94,15 @@ pub async fn paint(
 /// 2. If the [Position] is outside of the bounds of the window then it is clamped to the nearest
 ///    edge of the window. This clamped [Position] is returned.
 /// 3. This also saves the clamped [Position] to [RenderOpsLocalData].
-pub async fn sanitize_and_save_abs_position(
+pub fn sanitize_and_save_abs_position(
     orig_abs_pos: Position,
-    shared_global_data: &SharedGlobalData,
+    window_size: Size,
     local_data: &mut RenderOpsLocalData,
 ) -> Position {
     let Size {
         col_count: max_cols,
         row_count: max_rows,
-    } = shared_global_data.read().await.window_size;
+    } = window_size;
 
     let mut sanitized_abs_pos: Position = orig_abs_pos;
 
@@ -150,15 +145,13 @@ pub async fn sanitize_and_save_abs_position(
 pub mod paint_exports {
     use super::*;
 
-    #[async_trait]
     pub trait PaintRenderOp {
-        async fn paint(
+        fn paint(
             &mut self,
             skip_flush: &mut bool,
             render_op: &RenderOp,
-            shared_global_data: &SharedGlobalData,
+            window_size: Size,
             local_data: &mut RenderOpsLocalData,
         );
     }
 }
-pub use paint_exports::*;

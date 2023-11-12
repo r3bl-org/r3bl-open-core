@@ -21,15 +21,26 @@ use std::fmt::{Display, Formatter};
 #[derive(Default, Clone, Debug)]
 #[non_exhaustive]
 #[allow(dead_code)]
-pub enum Action {
-    Startup,
-    AddPop(i32),
-    SubPop(i32),
+pub enum AppSignal {
+    Add,
+    Sub,
     Clear,
     #[default]
     Noop,
 }
 
-impl Display for Action {
+impl Display for AppSignal {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
+}
+
+/// State.
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
+pub struct State {
+    pub counter: isize,
+}
+
+impl Display for State {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "State {{ counter: {:?} }}", self.counter)
+    }
 }

@@ -15,8 +15,6 @@
  *   limitations under the License.
  */
 
-use std::fmt::Debug;
-
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
@@ -31,23 +29,11 @@ impl EditorEngineApi {
     /// Event based interface for the editor. This converts the [InputEvent] into an
     /// [EditorEvent] and then executes it. Returns a new [EditorBuffer] if the operation
     /// was applied otherwise returns [None].
-    pub async fn apply_event<S, A>(
-        args: EditorEngineArgs<'_, S, A>,
-        input_event: &InputEvent,
-    ) -> CommonResult<EditorEngineApplyEventResult<EditorBuffer>>
-    where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
-    {
-        let EditorEngineArgs {
-            editor_buffer,
-            component_registry,
-            shared_global_data,
-            self_id,
-            editor_engine,
-            ..
-        } = args;
-
+    pub fn apply_event(
+        editor_buffer: &mut EditorBuffer,
+        editor_engine: &mut EditorEngine,
+        input_event: InputEvent,
+    ) -> CommonResult<EditorEngineApplyEventResult> {
         let editor_config = &editor_engine.config_options;
 
         if let EditMode::ReadOnly = editor_config.edit_mode {
@@ -82,85 +68,63 @@ impl EditorEngineApi {
         }
 
         if let Ok(editor_event) = EditorEvent::try_from(input_event) {
-            // REVIEW: editor buffer gets cloned here
-            // 00: undo/redo
-            let mut new_editor_buffer = editor_buffer.clone();
-
-            let editor_event_clone = editor_event.clone();
-
             if editor_buffer.history.is_empty() {
-                history::push(&mut new_editor_buffer);
+                history::push(editor_buffer);
             }
 
             EditorEvent::apply_editor_event(
                 editor_engine,
-                &mut new_editor_buffer,
-                editor_event,
-                shared_global_data,
-                component_registry,
-                self_id,
+                editor_buffer,
+                editor_event.clone(),
             );
 
-            // 00: Only push for content modification events (not caret movements)
-            // 00: use validate_editor_buffer_change::apply_change to ensure that caret and scroll_offset is valid
-
-            match editor_event_clone {
+            match editor_event {
                 EditorEvent::InsertChar(_) => {
-                    history::push(&mut new_editor_buffer);
+                    history::push(editor_buffer);
                 }
                 EditorEvent::InsertString(_) => {
-                    history::push(&mut new_editor_buffer);
+                    history::push(editor_buffer);
                 }
                 EditorEvent::InsertNewLine => {
-                    history::push(&mut new_editor_buffer);
+                    history::push(editor_buffer);
                 }
                 EditorEvent::Delete => {
-                    history::push(&mut new_editor_buffer);
+                    history::push(editor_buffer);
                 }
                 EditorEvent::Backspace => {
-                    history::push(&mut new_editor_buffer);
+                    history::push(editor_buffer);
                 }
                 EditorEvent::Copy => {
-                    history::push(&mut new_editor_buffer);
+                    history::push(editor_buffer);
                 }
                 EditorEvent::Paste => {
-                    history::push(&mut new_editor_buffer);
+                    history::push(editor_buffer);
                 }
                 EditorEvent::Cut => {
-                    history::push(&mut new_editor_buffer);
+                    history::push(editor_buffer);
                 }
                 _ => {}
             }
-
-            Ok(EditorEngineApplyEventResult::Applied(new_editor_buffer))
+            Ok(EditorEngineApplyEventResult::Applied)
         } else {
             Ok(EditorEngineApplyEventResult::NotApplied)
         }
     }
 
-    pub async fn render_engine<S, A>(
-        args: EditorEngineArgs<'_, S, A>,
-        current_box: &FlexBox,
-    ) -> CommonResult<RenderPipeline>
-    where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
-    {
+    pub fn render_engine(
+        editor_engine: &mut EditorEngine,
+        editor_buffer: &mut EditorBuffer,
+        current_box: FlexBox,
+        has_focus: &mut HasFocus,
+    ) -> CommonResult<RenderPipeline> {
         throws_with_return!({
-            let EditorEngineArgs {
-                editor_buffer,
-                component_registry,
-                editor_engine,
-                ..
-            } = args;
-
             editor_engine.current_box = current_box.into();
 
             // Create reusable args for render functions.
             let render_args = RenderArgs {
                 editor_buffer,
-                component_registry,
                 editor_engine,
+                has_focus,
             };
 
             if editor_buffer.is_empty() {
@@ -179,13 +143,7 @@ impl EditorEngineApi {
         })
     }
 
-    fn render_content<S, A>(
-        render_args: &RenderArgs<'_, S, A>,
-        render_ops: &mut RenderOps,
-    ) where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
-    {
+    fn render_content(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) {
         let RenderArgs {
             editor_buffer,
             editor_engine,
@@ -232,13 +190,7 @@ impl EditorEngineApi {
     }
 
     // BOOKM: Render selection
-    fn render_selection<S, A>(
-        render_args: &RenderArgs<'_, S, A>,
-        render_ops: &mut RenderOps,
-    ) where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
-    {
+    fn render_selection(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) {
         let RenderArgs {
             editor_buffer,
             editor_engine,
@@ -325,22 +277,14 @@ impl EditorEngineApi {
         }
     }
 
-    fn render_caret<S, A>(render_args: &RenderArgs<'_, S, A>, render_ops: &mut RenderOps)
-    where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
-    {
+    fn render_caret(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) {
         let RenderArgs {
-            component_registry,
             editor_buffer,
             editor_engine,
-            ..
+            has_focus,
         } = render_args;
 
-        if component_registry
-            .has_focus
-            .does_id_have_focus(editor_engine.current_box.id)
-        {
+        if has_focus.does_id_have_focus(editor_engine.current_box.id) {
             let str_at_caret: String = if let Some(UnicodeStringSegmentSliceResult {
                 unicode_string_seg: str_seg,
                 ..
@@ -368,13 +312,9 @@ impl EditorEngineApi {
         }
     }
 
-    pub fn render_empty_state<S, A>(render_args: &RenderArgs<'_, S, A>) -> RenderPipeline
-    where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
-    {
+    pub fn render_empty_state(render_args: &RenderArgs<'_>) -> RenderPipeline {
         let RenderArgs {
-            component_registry,
+            has_focus,
             editor_engine,
             ..
         } = render_args;
@@ -398,10 +338,7 @@ impl EditorEngineApi {
         };
 
         // Paint the emoji.
-        if component_registry
-            .has_focus
-            .does_id_have_focus(editor_engine.current_box.id)
-        {
+        if has_focus.does_id_have_focus(editor_engine.current_box.id) {
             render_pipeline! {
               @push_into pipeline
               at ZOrder::Normal
@@ -421,11 +358,8 @@ impl EditorEngineApi {
     }
 }
 
-pub enum EditorEngineApplyEventResult<T>
-where
-    T: Debug,
-{
-    Applied(T),
+pub enum EditorEngineApplyEventResult {
+    Applied,
     NotApplied,
 }
 
@@ -469,43 +403,43 @@ mod syn_hi_r3bl_path {
         editor_engine: &&mut EditorEngine,
         max_display_col_count: ChUnit,
     ) -> CommonResult<()> {
-        let lines = try_parse_and_highlight(
-            editor_buffer.get_lines(),
-            &editor_engine.current_box.get_computed_style(),
-            Some((&editor_engine.syntax_set, &editor_engine.theme)),
-        )?;
+        throws!({
+            let lines = try_parse_and_highlight(
+                editor_buffer.get_lines(),
+                &editor_engine.current_box.get_computed_style(),
+                Some((&editor_engine.syntax_set, &editor_engine.theme)),
+            )?;
 
-        call_if_true!(DEBUG_TUI_SYN_HI, {
-            log_debug(format!(
-                "\n🎯🎯🎯\neditor_buffer.lines.len(): {} vs md_document.lines.len(): {}\n{}\n{}🎯🎯🎯",
-                editor_buffer.get_lines().len().to_string().cyan(),
-                lines.len().to_string().yellow(),
-                editor_buffer.get_as_string().cyan(),
-                lines.pretty_print_debug().yellow(),
-            ));
-        });
+            call_if_true!(DEBUG_TUI_SYN_HI, {
+                log_debug(format!(
+                    "\n🎯🎯🎯\neditor_buffer.lines.len(): {} vs md_document.lines.len(): {}\n{}\n{}🎯🎯🎯",
+                    editor_buffer.get_lines().len().to_string().cyan(),
+                    lines.len().to_string().yellow(),
+                    editor_buffer.get_as_string().cyan(),
+                    lines.pretty_print_debug().yellow(),
+                ));
+            });
 
-        for (row_index, line) in lines
-            .iter()
-            .skip(ch!(@to_usize editor_buffer.get_scroll_offset().row_index))
-            .enumerate()
-        {
-            // Clip the content to max rows.
-            if ch!(row_index) > max_display_row_count {
-                break;
+            for (row_index, line) in lines
+                .iter()
+                .skip(ch!(@to_usize editor_buffer.get_scroll_offset().row_index))
+                .enumerate()
+            {
+                // Clip the content to max rows.
+                if ch!(row_index) > max_display_row_count {
+                    break;
+                }
+
+                render_single_line(
+                    line,
+                    editor_buffer,
+                    editor_engine,
+                    row_index,
+                    max_display_col_count,
+                    render_ops,
+                );
             }
-
-            render_single_line(
-                line,
-                editor_buffer,
-                editor_engine,
-                row_index,
-                max_display_col_count,
-                render_ops,
-            );
-        }
-
-        Ok(())
+        });
     }
 
     fn render_single_line(

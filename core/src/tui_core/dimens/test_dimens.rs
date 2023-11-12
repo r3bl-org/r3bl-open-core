@@ -19,8 +19,8 @@
 mod tests {
     use crate::*;
 
-    #[tokio::test]
-    async fn test_add_box_size_to_pos() {
+    #[test]
+    fn test_add_box_size_to_pos() {
         // [10, 10] + [30, 10] = [40, 20]
         let pos = position!(col_index: 10, row_index: 10);
         let size = size!(col_count: 30, row_count: 10);
@@ -29,8 +29,8 @@ mod tests {
         assert_eq!(*new_pos.row_index, 20);
     }
 
-    #[tokio::test]
-    async fn test_mul_box_pos_to_pair() {
+    #[test]
+    fn test_mul_box_pos_to_pair() {
         // [30, 10] * [1, 0] = [30, 0]
         {
             let pos: Position = position!(col_index: 30, row_index: 10);

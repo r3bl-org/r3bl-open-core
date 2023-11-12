@@ -15,352 +15,302 @@
  *   limitations under the License.
  */
 
-use std::{fmt::Debug, sync::Arc};
+use std::{fmt::Debug, marker::PhantomData};
 
-use async_trait::async_trait;
 use get_size::GetSize;
-use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::*;
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::mpsc;
 
 use crate::*;
 
 pub struct TerminalWindow;
 
+pub const CHANNEL_WIDTH: usize = 1_000;
+
 #[derive(Debug)]
-pub enum ParallelExecutionPolicy {
-    /// Run all tasks in parallel.
-    Parallel,
-    /// Run all tasks in sequence.
-    Serial,
+pub enum TerminalWindowMainThreadSignal<A>
+where
+    A: Debug + Default + Clone + Sync + Send,
+{
+    /// Exit the main event loop.
+    Exit,
+    /// Render the app.
+    Render(Option<FlexBoxId>),
+    /// Apply an action to the app.
+    ApplyAction(A),
 }
 
-/// This value should be set to [ParallelExecutionPolicy::Serial] unless you have a very good reason
-/// otherwise.
-///
-/// # Issues w/ parallel processing of input events
-/// The event loop runs as a task in a tokio executor (runtime). It processes input events
-/// asynchronously. So you can easily spawn parallel tasks to process each input event as it comes
-/// in. This will result in a state consistency issue which you can easily observe this if you set
-/// this value to [ParallelExecutionPolicy::Parallel] and introduce a delay in any event handling of
-/// a [Component]. In parallel, each task gets a copy of the [r3bl_redux::Store] and it gets a copy
-/// of the state and mutates it. If 2 tasks are running in parallel and they both mutate the same
-/// starting state, then this will result in an undefined state. Eg: you press the right arrow twice
-/// in an editor component (which has a huge delay). Then it will look like only one right arrow
-/// action was dispatched.
-///
-/// # Deep dive into how HID / pointing devices work in Linux
-/// <https://monroeclinton.com/pointing-devices-in-linux/>
-pub const PARALLEL_EXECUTION_POLICY: ParallelExecutionPolicy =
-    ParallelExecutionPolicy::Serial;
-
 impl TerminalWindow {
-    /// The where clause needs to match up w/ the trait bounds for [Store].
-    ///
-    /// ```ignore
-    /// where
-    /// S: Debug + Default + Clone + PartialEq + Sync + Send,
-    /// A: Debug + Default + Clone + Sync + Send,
-    /// ```
+    /// This is the main event loop for the entire application. It is responsible for
+    /// handling all input events, and dispatching them to the [App] for processing. It is
+    /// also responsible for rendering the [App] after each input event. It is also
+    /// responsible for handling all signals sent from the [App] to the main event loop
+    /// (eg: exit, re-render, apply action, etc).
     pub async fn main_event_loop<S, A>(
-        shared_app: SharedApp<S, A>,
-        store: Store<S, A>,
+        mut app: BoxedSafeApp<S, A>,
         exit_keys: Vec<InputEvent>,
     ) -> CommonResult<()>
     where
-        S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
+        S: Debug + Default + Clone + Sync + Send,
         A: Debug + Default + Clone + Sync + Send + 'static,
     {
-        // Initialize the terminal window data struct.
-        let _global_data = GlobalData::try_to_create_instance()?;
-        let shared_global_data: SharedGlobalData = Arc::new(RwLock::new(_global_data));
+        throws!({
+            // mpsc channel to send signals from the app to the main event loop (eg: for exit,
+            // re-render, apply action, etc).
+            let (main_thread_channel_sender, mut main_thread_channel_receiver) =
+                mpsc::channel::<TerminalWindowMainThreadSignal<A>>(CHANNEL_WIDTH);
 
-        // Start raw mode.
-        RawMode::start(&shared_global_data).await;
+            // Initialize the terminal window data struct.
+            let mut global_data = &mut GlobalData::try_to_create_instance(
+                main_thread_channel_sender.clone(),
+            )?;
 
-        // Move the store into an Arc & RwLock.
-        let shared_store: SharedStore<S, A> = Arc::new(RwLock::new(store));
+            // Start raw mode.
+            RawMode::start(global_data.window_size);
 
-        // Create a subscriber (AppManager) & attach it to the store.
-        let _subscriber =
-            AppManager::new_box(&shared_app, &shared_store, &shared_global_data);
-        shared_store.write().await.add_subscriber(_subscriber).await;
+            // Create a new event stream (async).
+            let async_event_stream = &mut AsyncEventStream::default();
 
-        // Create a new event stream (async).
-        let mut async_event_stream = AsyncEventStream::default();
+            let app = &mut app;
 
-        // Perform first render.
-        AppManager::render_app(&shared_store, &shared_app, &shared_global_data, None)
-            .await?;
+            // This map is used to cache [Component]s that have been created and are meant to be reused between
+            // multiple renders.
+            // 1. It is entirely up to the [App] on how this [ComponentRegistryMap] is used.
+            // 2. The methods provided allow components to be added to the map.
+            let mut component_registry_map = &mut ComponentRegistryMap::default();
+            let mut has_focus = &mut HasFocus::default();
 
-        shared_global_data
-            .read()
-            .await
-            .dump_to_log("main_event_loop -> Startup 🚀");
+            // Init the app, and perform first render.
+            app.app_init(&mut component_registry_map, &mut has_focus);
+            AppManager::render_app(
+                app,
+                &mut global_data,
+                component_registry_map,
+                has_focus,
+            )?;
 
-        // mpsc channel to send exit signal to main loop.
-        let (exit_channel_sender, mut exit_channel_receiver) = mpsc::channel::<bool>(1);
+            global_data.dump_to_log("main_event_loop -> Startup 🚀");
 
-        // Main event loop.
-        loop {
-            tokio::select! {
-                // Handle exit channel.
-                result = exit_channel_receiver.recv() => {
-                    if result.is_some() {
-                        RawMode::end(&shared_global_data).await;
-                        break;
-                    }
-                }
-
-                // Handle input event.
-                maybe_input_event = async_event_stream.try_to_get_input_event() => {
-                    if let Some(input_event) = maybe_input_event {
-                        telemetry_global_static::set_start_ts();
-
-                        call_if_true!(DEBUG_TUI_MOD, {
-                            let msg = format!("main_event_loop -> Tick: ⏰ {input_event}");
-                            log_info(msg);
-                        });
-
-                        Self::handle_resize_event(&input_event, &shared_global_data, &shared_store, &shared_app).await;
-
-                        match PARALLEL_EXECUTION_POLICY {
-                            ParallelExecutionPolicy::Parallel => {
-                                let shared_global_data = shared_global_data.clone();
-                                let shared_store = shared_store.clone();
-                                let shared_app = shared_app.clone();
-                                let input_event = input_event.clone();
-                                let exit_keys = exit_keys.clone();
-                                let exit_channel_sender = exit_channel_sender.clone();
-                                tokio::spawn(async move {
-                                    // This function does not block the caller, since it
-                                    // [spawns](tokio::spawn) a task in parallel to handle the
-                                    // `input_event` by passing it to the app.
-                                    Self::actually_process_input_event(
-                                        shared_global_data,
-                                        shared_store,
-                                        shared_app,
-                                        input_event,
-                                        exit_keys,
-                                        exit_channel_sender,
-                                    ).await;
-                                });
-                            }
-                            ParallelExecutionPolicy::Serial => {
-                                Self::actually_process_input_event(
-                                    shared_global_data.clone(),
-                                    shared_store.clone(),
-                                    shared_app.clone(),
-                                    input_event.clone(),
-                                    exit_keys.clone(),
-                                    exit_channel_sender.clone(),
-                                ).await;
+            // Main event loop.
+            loop {
+                tokio::select! {
+                    // Handle signals on the channel.
+                    maybe_signal = main_thread_channel_receiver.recv() => {
+                        if let Some(ref signal) = maybe_signal {
+                            match signal {
+                                TerminalWindowMainThreadSignal::Exit => {
+                                    // 🐒 Actually exit the main loop!
+                                    RawMode::end(global_data.window_size);
+                                    break;
+                                },
+                                TerminalWindowMainThreadSignal::Render(_) => {
+                                    AppManager::render_app(
+                                        app,
+                                        global_data,
+                                        component_registry_map,
+                                        has_focus,
+                                    )?;
+                                },
+                                TerminalWindowMainThreadSignal::ApplyAction(action) => {
+                                    let result = app.app_handle_signal(action, &mut global_data)?;
+                                    handle_result_generated_by_app_after_handling_action_or_input_event(
+                                        Ok(result),
+                                        None,
+                                        &exit_keys,
+                                        app,
+                                        &mut global_data,
+                                        &mut component_registry_map,
+                                        &mut has_focus,
+                                    );
+                                },
                             }
                         }
                     }
-                }
-            }
-        } // End loop.
 
-        Ok(())
+                    // Handle input event.
+                    maybe_input_event = AsyncEventStream::try_to_get_input_event(async_event_stream) => {
+                        if let Some(input_event) = maybe_input_event {
+                            telemetry_global_static::set_start_ts();
+
+                            call_if_true!(DEBUG_TUI_MOD, {
+                                let msg = format!("main_event_loop -> Tick: ⏰ {input_event}");
+                                log_info(msg);
+                            });
+
+                            Self::handle_resize_if_applicable(input_event,
+                                &mut global_data, app,
+                                component_registry_map,
+                                has_focus);
+
+                            Self::actually_process_input_event(
+                                &mut global_data,
+                                app,
+                                input_event,
+                                &exit_keys,
+                                component_registry_map,
+                                has_focus,
+                            );
+                        }
+                    }
+                }
+            } // End loop.
+
+            call_if_true!(DEBUG_TUI_MOD, {
+                let msg = format!("\nmain_event_loop -> Shutdown 🛑");
+                log_info(msg);
+            });
+        });
     }
 
-    async fn actually_process_input_event<S, A>(
-        shared_global_data: SharedGlobalData,
-        shared_store: SharedStore<S, A>,
-        shared_app: SharedApp<S, A>,
+    fn actually_process_input_event<S, A>(
+        global_data: &mut GlobalData<S, A>,
+        app: &mut BoxedSafeApp<S, A>,
         input_event: InputEvent,
-        exit_keys: Vec<InputEvent>,
-        exit_channel_sender: mpsc::Sender<bool>,
+        exit_keys: &[InputEvent],
+        component_registry_map: &mut ComponentRegistryMap<S, A>,
+        has_focus: &mut HasFocus,
     ) where
-        S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
+        S: Debug + Default + Clone + Sync + Send,
         A: Debug + Default + Clone + Sync + Send + 'static,
     {
-        let result = AppManager::route_input_to_app(
-            shared_global_data.clone(),
-            shared_store.clone(),
-            shared_app.clone(),
-            input_event.clone(),
-        )
-        .await;
+        let result = app.app_handle_input_event(
+            input_event,
+            global_data,
+            component_registry_map,
+            has_focus,
+        );
 
-        call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!(
-                "main_event_loop -> 🚥 SPAWN propagation_result_from_app: {result:?}"
+        handle_result_generated_by_app_after_handling_action_or_input_event(
+            result,
+            Some(input_event),
+            &exit_keys,
+            app,
+            global_data,
+            component_registry_map,
+            has_focus,
+        );
+    }
+
+    /// Before any app gets to process the `input_event`, perform special handling in case
+    /// it is a resize event.
+    pub fn handle_resize_if_applicable<S, A>(
+        input_event: InputEvent,
+        global_data: &mut GlobalData<S, A>,
+        app: &mut BoxedSafeApp<S, A>,
+        component_registry_map: &mut ComponentRegistryMap<S, A>,
+        has_focus: &mut HasFocus,
+    ) where
+        S: Debug + Default + Clone + Sync + Send,
+        A: Debug + Default + Clone + Sync + Send,
+    {
+        if let InputEvent::Resize(new_size) = input_event {
+            global_data.set_size(new_size);
+            global_data.maybe_saved_offscreen_buffer = None;
+            let _ = AppManager::render_app(
+                app,
+                global_data,
+                component_registry_map,
+                has_focus,
             );
-            log_info(msg);
-        });
+        }
+    }
+}
 
-        if let Ok(event_propagation) = result {
-            match event_propagation {
-                EventPropagation::Propagate => {
+fn handle_result_generated_by_app_after_handling_action_or_input_event<S, A>(
+    result: CommonResult<EventPropagation>,
+    maybe_input_event: Option<InputEvent>,
+    exit_keys: &[InputEvent],
+    app: &mut BoxedSafeApp<S, A>,
+    global_data: &mut GlobalData<S, A>,
+    component_registry_map: &mut ComponentRegistryMap<S, A>,
+    has_focus: &mut HasFocus,
+) where
+    S: Debug + Default + Clone + Sync + Send,
+    A: Debug + Default + Clone + Sync + Send + 'static,
+{
+    let main_thread_channel_sender = global_data.main_thread_channel_sender.clone();
+
+    if let Ok(event_propagation) = result {
+        match event_propagation {
+            EventPropagation::Propagate => {
+                if let Some(input_event) = maybe_input_event {
                     let check_if_exit_keys_pressed = DefaultInputEventHandler::no_consume(
                         input_event.clone(),
                         &exit_keys,
                     );
-                    if let Continuation::Exit = check_if_exit_keys_pressed.await {
-                        // Exit keys were pressed.
-                        let _ = exit_channel_sender.send(true).await;
+                    if let Continuation::Exit = check_if_exit_keys_pressed {
+                        request_exit_by_sending_signal(main_thread_channel_sender);
                     };
                 }
-                EventPropagation::ConsumedRender => {
-                    let _ = AppManager::render_app(
-                        &shared_store,
-                        &shared_app,
-                        &shared_global_data,
-                        None,
-                    )
-                    .await;
-                }
-                EventPropagation::Consumed => {}
-                EventPropagation::ExitMainEventLoop => {
-                    // Exit the main event loop.
-                    let _ = exit_channel_sender.send(true).await;
-                }
+            }
+
+            EventPropagation::ConsumedRender => {
+                let _ = AppManager::render_app(
+                    app,
+                    global_data,
+                    component_registry_map,
+                    has_focus,
+                );
+            }
+
+            EventPropagation::Consumed => {}
+
+            EventPropagation::ExitMainEventLoop => {
+                request_exit_by_sending_signal(main_thread_channel_sender);
             }
         }
     }
+}
 
-    /// Before any app gets to process the `input_event`, perform special handling in case it is a
-    /// resize event.
-    pub async fn handle_resize_event<S, A>(
-        input_event: &InputEvent,
-        shared_global_data: &SharedGlobalData,
-        shared_store: &SharedStore<S, A>,
-        shared_app: &SharedApp<S, A>,
-    ) where
-        S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
-        A: Debug + Default + Clone + Sync + Send + 'static,
-    {
-        if let InputEvent::Resize(new_size) = input_event {
-            shared_global_data.write().await.set_size(*new_size);
-            shared_global_data
-                .write()
-                .await
-                .maybe_saved_offscreen_buffer = None;
-            let _ = AppManager::render_app(
-                shared_store,
-                shared_app,
-                shared_global_data,
-                None,
-            )
+fn request_exit_by_sending_signal<A: 'static>(
+    channel_sender: mpsc::Sender<TerminalWindowMainThreadSignal<A>>,
+) where
+    A: Debug + Default + Clone + Sync + Send,
+{
+    // Exit keys were pressed.
+    // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so that it doesn't
+    // block the calling thread. More info: <https://tokio.rs/tokio/tutorial/channels>.
+    tokio::spawn(async move {
+        let _ = channel_sender
+            .send(TerminalWindowMainThreadSignal::Exit)
             .await;
-        }
-    }
+    });
 }
 
 struct AppManager<S, A>
 where
-    S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
-    A: Debug + Default + Clone + Sync + Send + 'static,
-{
-    shared_app: SharedApp<S, A>,
-    shared_store: SharedStore<S, A>,
-    shared_global_data: SharedGlobalData,
-}
-
-#[async_trait]
-impl<S, A> AsyncSubscriber<S> for AppManager<S, A>
-where
-    S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
+    S: Debug + Default + Clone + Sync + Send,
     A: Debug + Default + Clone + Sync + Send,
 {
-    async fn run(&self, my_state: S) {
-        let result = AppManager::render_app(
-            &self.shared_store,
-            &self.shared_app,
-            &self.shared_global_data,
-            my_state.into(),
-        )
-        .await;
-        if let Err(e) = result {
-            call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("MySubscriber::run -> Error: {e}");
-                log_error(msg);
-            })
-        }
-    }
+    _phantom: PhantomData<(S, A)>,
 }
 
 impl<S, A> AppManager<S, A>
 where
-    S: Debug + Default + Clone + PartialEq + Sync + Send + 'static,
+    S: Debug + Default + Clone + Sync + Send,
     A: Debug + Default + Clone + Sync + Send,
 {
-    fn new_box(
-        shared_app: &SharedApp<S, A>,
-        shared_store: &SharedStore<S, A>,
-        shared_global_data: &SharedGlobalData,
-    ) -> Box<Self> {
-        Box::new(AppManager {
-            shared_app: shared_app.clone(),
-            shared_store: shared_store.clone(),
-            shared_global_data: shared_global_data.clone(),
-        })
-    }
-
-    /// Pass the event to the `shared_app` for further processing.
-    pub async fn route_input_to_app(
-        shared_global_data: SharedGlobalData,
-        shared_store: SharedStore<S, A>,
-        shared_app: SharedApp<S, A>,
-        input_event: InputEvent,
-    ) -> CommonResult<EventPropagation> {
-        throws_with_return!({
-            // Create global scope args.
-            let state = shared_store.read().await.get_state();
-            let window_size = shared_global_data.read().await.get_size();
-            let global_scope_args = GlobalScopeArgs {
-                shared_global_data: &shared_global_data,
-                shared_store: &shared_store,
-                state: &state,
-                window_size: &window_size,
-            };
-
-            // Call app_handle_event.
-            shared_app
-                .write()
-                .await
-                .app_handle_event(global_scope_args, &input_event)
-                .await?
-        });
-    }
-
-    pub async fn render_app(
-        shared_store: &SharedStore<S, A>,
-        shared_app: &SharedApp<S, A>,
-        shared_global_data: &SharedGlobalData,
-        maybe_state: Option<S>,
+    pub fn render_app(
+        app: &mut BoxedSafeApp<S, A>,
+        global_data: &mut GlobalData<S, A>,
+        component_registry_map: &mut ComponentRegistryMap<S, A>,
+        has_focus: &mut HasFocus,
     ) -> CommonResult<()> {
         throws!({
-            // Create global scope args.
-            let window_size = shared_global_data.read().await.get_size();
-            let state: S = if let Some(state) = maybe_state {
-                state
-            } else {
-                shared_store.read().await.get_state()
-            };
-            let global_scope_args = GlobalScopeArgs {
-                state: &state,
-                shared_store,
-                shared_global_data,
-                window_size: &window_size,
-            };
+            let window_size = global_data.window_size;
 
             // Check to see if the window_size is large enough to render.
-            let render_result: CommonResult<RenderPipeline> = if window_size
-                .is_too_small_to_display(MinSize::Col as u8, MinSize::Row as u8)
-            {
-                shared_global_data
-                    .write()
-                    .await
-                    .maybe_saved_offscreen_buffer = None;
-                Ok(render_window_size_too_small(window_size))
-            } else {
-                // Call app_render.
-                shared_app.write().await.app_render(global_scope_args).await
-            };
+            let render_result =
+                match window_size.fits_min_size(MinSize::Col as u8, MinSize::Row as u8) {
+                    TooSmallToDisplayResult::IsLargeEnough => {
+                        app.app_render(global_data, component_registry_map, has_focus)
+                    }
+                    TooSmallToDisplayResult::IsTooSmall => {
+                        global_data.maybe_saved_offscreen_buffer = None;
+                        Ok(render_window_too_small_error(window_size))
+                    }
+                };
 
             match render_result {
                 Err(error) => {
@@ -374,15 +324,14 @@ where
                     });
                 }
                 Ok(render_pipeline) => {
-                    render_pipeline
-                        .paint(FlushKind::ClearBeforeFlush, shared_global_data)
-                        .await;
+                    render_pipeline.paint(FlushKind::ClearBeforeFlush, global_data);
 
                     telemetry_global_static::set_end_ts();
 
                     // Print debug message w/ memory utilization, etc.
                     call_if_true!(DEBUG_TUI_MOD, {
                         {
+                            let state = &global_data.state;
                             let msg_1 = format!("🎨 MySubscriber::paint() ok ✅: \n window_size: {window_size:?}\n state: {state:?}");
                             let msg_2 = {
                                 format!(
@@ -392,10 +341,8 @@ where
                                 )
                             };
 
-                            if let Some(ref offscreen_buffer) = &shared_global_data
-                                .read()
-                                .await
-                                .maybe_saved_offscreen_buffer
+                            if let Some(ref offscreen_buffer) =
+                                global_data.maybe_saved_offscreen_buffer
                             {
                                 let msg_3 = format!(
                                     "offscreen_buffer: {0:.2}kb",
@@ -413,7 +360,7 @@ where
     }
 }
 
-fn render_window_size_too_small(window_size: Size) -> RenderPipeline {
+fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
     // Show warning message that window_size is too small.
     let display_msg = UnicodeString::from(format!(
         "Window size is too small. Minimum size is {} cols x {} rows",

@@ -17,16 +17,14 @@
 
 use std::fmt::Debug;
 
-use async_trait::async_trait;
 use r3bl_rs_utils_core::*;
 
 use crate::*;
 
 /// See [App].
-#[async_trait]
 pub trait Component<S, A>
 where
-    S: Debug + Default + Clone + PartialEq + Sync + Send,
+    S: Debug + Default + Clone + Sync + Send,
     A: Debug + Default + Clone + Sync + Send,
 {
     /// This is an optional method that can be used to initialize the state of the component's
@@ -61,11 +59,12 @@ where
     /// - Clipping, scrolling, overdrawing:
     ///   - Each implementation of this trait is solely responsible of taking care of these
     ///     behaviors
-    async fn render(
+    fn render(
         &mut self,
-        args: ComponentScopeArgs<'_, S, A>,
-        current_box: &FlexBox,
+        global_data: &mut GlobalData<S, A>,
+        current_box: FlexBox,
         surface_bounds: SurfaceBounds,
+        has_focus: &mut HasFocus,
     ) -> CommonResult<RenderPipeline>;
 
     /// If this component has focus [HasFocus] then this method will be called to handle input event
@@ -82,22 +81,24 @@ where
     /// 3. Finally an [EventPropagation] is returned to let the caller know whether the
     ///    `input_event` was consumed or not & whether it should re-render (outside of a redux store
     ///    state change).
-    async fn handle_event(
+    fn handle_event(
         &mut self,
-        args: ComponentScopeArgs<'_, S, A>,
-        input_event: &InputEvent,
+        global_data: &mut GlobalData<S, A>,
+        input_event: InputEvent,
+        has_focus: &mut HasFocus,
     ) -> CommonResult<EventPropagation>;
 }
 
-#[async_trait]
 pub trait SurfaceRender<S, A>
 where
-    S: Debug + Default + Clone + PartialEq + Sync + Send,
+    S: Debug + Default + Clone + Sync + Send,
     A: Debug + Default + Clone + Sync + Send,
 {
-    async fn render_in_surface(
+    fn render_in_surface(
         &mut self,
-        args: GlobalScopeArgs<'_, S, A>,
         surface: &mut Surface,
+        global_data: &mut GlobalData<S, A>,
+        component_registry_map: &mut ComponentRegistryMap<S, A>,
+        has_focus: &mut HasFocus,
     ) -> CommonResult<()>;
 }

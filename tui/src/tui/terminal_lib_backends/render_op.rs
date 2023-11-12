@@ -163,34 +163,32 @@ pub mod render_ops_impl {
     use super::*;
 
     impl RenderOps {
-        pub async fn execute_all(
-            &self,
-            skip_flush: &mut bool,
-            shared_global_data: &SharedGlobalData,
-        ) {
+        pub fn execute_all(&self, skip_flush: &mut bool, window_size: Size) {
             let mut local_data = RenderOpsLocalData::default();
             for render_op in self.list.iter() {
                 RenderOps::route_paint_render_op_to_backend(
                     &mut local_data,
                     skip_flush,
                     render_op,
-                    shared_global_data,
-                )
-                .await;
+                    window_size,
+                );
             }
         }
 
-        pub async fn route_paint_render_op_to_backend(
+        pub fn route_paint_render_op_to_backend(
             local_data: &mut RenderOpsLocalData,
             skip_flush: &mut bool,
             render_op: &RenderOp,
-            shared_global_data: &SharedGlobalData,
+            window_size: Size,
         ) {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    RenderOpImplCrossterm {}
-                        .paint(skip_flush, render_op, shared_global_data, local_data)
-                        .await;
+                    let _ = RenderOpImplCrossterm {}.paint(
+                        skip_flush,
+                        render_op,
+                        window_size,
+                        local_data,
+                    );
                 }
                 TerminalLibBackend::Termion => todo!(), // FUTURE: implement PaintRenderOp trait for termion
             }

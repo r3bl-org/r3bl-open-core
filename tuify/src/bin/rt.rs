@@ -82,73 +82,72 @@ fn get_bin_name() -> String {
 }
 
 fn main() -> Result<()> {
-    // If no args are passed, the following line will fail, and help will be printed
-    // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
-    let cli_args = AppArgs::parse();
+    throws!({
+        // If no args are passed, the following line will fail, and help will be printed
+        // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
+        let cli_args = AppArgs::parse();
 
-    let enable_logging = TRACE | cli_args.global_opts.enable_logging;
+        let enable_logging = TRACE | cli_args.global_opts.enable_logging;
 
-    call_if_true!(enable_logging, {
-        try_to_set_log_level(log::LevelFilter::Trace).ok();
-        log_debug("Start logging...".to_string());
-        log_debug(format!("og_size: {:?}", get_size()?).to_string());
-        log_debug(format!("cli_args {:?}", cli_args));
-    });
+        call_if_true!(enable_logging, {
+            try_to_set_log_level(log::LevelFilter::Trace).ok();
+            log_debug("Start logging...".to_string());
+            log_debug(format!("og_size: {:?}", get_size()?).to_string());
+            log_debug(format!("cli_args {:?}", cli_args));
+        });
 
-    match cli_args.command {
-        CLICommand::SelectFromList {
-            selection_mode,
-            command_to_run_with_each_selection: command_to_run_with_selection,
-        } => {
-            // macos has issues w/ stdin piped in.
-            // https://github.com/crossterm-rs/crossterm/issues/396
-            if cfg!(target_os = "macos") {
-                match (is_stdin_piped(), is_stdout_piped()) {
-                    (StdinIsPiped, _) => {
-                        show_error_stdin_pipe_does_not_work_on_macos();
-                    }
-                    (_, StdoutIsPiped) => {
-                        show_error_do_not_pipe_stdout(get_bin_name().as_ref());
-                    }
-                    (StdinIsNotPiped, StdoutIsNotPiped) => {
-                        print_help()?;
+        match cli_args.command {
+            CLICommand::SelectFromList {
+                selection_mode,
+                command_to_run_with_each_selection: command_to_run_with_selection,
+            } => {
+                // macos has issues w/ stdin piped in.
+                // https://github.com/crossterm-rs/crossterm/issues/396
+                if cfg!(target_os = "macos") {
+                    match (is_stdin_piped(), is_stdout_piped()) {
+                        (StdinIsPiped, _) => {
+                            show_error_stdin_pipe_does_not_work_on_macos();
+                        }
+                        (_, StdoutIsPiped) => {
+                            show_error_do_not_pipe_stdout(get_bin_name().as_ref());
+                        }
+                        (StdinIsNotPiped, StdoutIsNotPiped) => {
+                            print_help()?;
+                        }
                     }
                 }
-            }
-            // Linux works fine.
-            else {
-                match (is_stdin_piped(), is_stdout_piped()) {
-                    (StdinIsPiped, StdoutIsNotPiped) => {
-                        let tui_height = cli_args.global_opts.tui_height;
-                        let tui_width = cli_args.global_opts.tui_width;
-                        show_tui(
-                            selection_mode,
-                            command_to_run_with_selection,
-                            tui_height,
-                            tui_width,
-                            enable_logging,
-                        );
-                    }
-                    (StdinIsPiped, StdoutIsPiped) => {
-                        show_error_do_not_pipe_stdout(get_bin_name().as_ref());
-                    }
-                    (StdinIsNotPiped, StdoutIsPiped) => {
-                        show_error_need_to_pipe_stdin(get_bin_name().as_ref());
-                        show_error_do_not_pipe_stdout(get_bin_name().as_ref());
-                    }
-                    (StdinIsNotPiped, StdoutIsNotPiped) => {
-                        show_error_need_to_pipe_stdin(get_bin_name().as_ref());
+                // Linux works fine.
+                else {
+                    match (is_stdin_piped(), is_stdout_piped()) {
+                        (StdinIsPiped, StdoutIsNotPiped) => {
+                            let tui_height = cli_args.global_opts.tui_height;
+                            let tui_width = cli_args.global_opts.tui_width;
+                            show_tui(
+                                selection_mode,
+                                command_to_run_with_selection,
+                                tui_height,
+                                tui_width,
+                                enable_logging,
+                            );
+                        }
+                        (StdinIsPiped, StdoutIsPiped) => {
+                            show_error_do_not_pipe_stdout(get_bin_name().as_ref());
+                        }
+                        (StdinIsNotPiped, StdoutIsPiped) => {
+                            show_error_need_to_pipe_stdin(get_bin_name().as_ref());
+                            show_error_do_not_pipe_stdout(get_bin_name().as_ref());
+                        }
+                        (StdinIsNotPiped, StdoutIsNotPiped) => {
+                            show_error_need_to_pipe_stdin(get_bin_name().as_ref());
+                        }
                     }
                 }
             }
         }
-    }
-
-    call_if_true!(enable_logging, {
-        log_debug("Stop logging...".to_string());
+        call_if_true!(enable_logging, {
+            log_debug("Stop logging...".to_string());
+        });
     });
-
-    Ok(())
 }
 
 fn show_error_stdin_pipe_does_not_work_on_macos() {
@@ -342,36 +341,36 @@ fn execute_command(cmd_str: &str) {
 
 /// Programmatically prints out help.
 pub fn print_help() -> Result<()> {
-    let mut cmd = AppArgs::command();
-    cmd.print_help()?;
-
-    Ok(())
+    throws!({
+        let mut cmd = AppArgs::command();
+        cmd.print_help()?;
+    });
 }
 
 fn print_help_for(subcommand: &str) -> Result<()> {
-    let app_args_binding = AppArgs::command();
-    if let Some(it) = app_args_binding.find_subcommand(subcommand) {
-        it.clone().print_help()?;
-    }
-
-    Ok(())
+    throws!({
+        let app_args_binding = AppArgs::command();
+        if let Some(it) = app_args_binding.find_subcommand(subcommand) {
+            it.clone().print_help()?;
+        }
+    });
 }
 
 fn print_help_for_subcommand_and_option(subcommand: &str, option: &str) -> Result<()> {
-    let app_args_binding = AppArgs::command();
-    if let Some(it) = app_args_binding.find_subcommand(subcommand) {
-        for arg in it.get_arguments() {
-            if arg.get_long() == Some(option) {
-                let help = arg.get_help();
-                if let Some(help) = help {
-                    let output = format!("{}", help);
-                    println!("{}", output);
+    throws!({
+        let app_args_binding = AppArgs::command();
+        if let Some(it) = app_args_binding.find_subcommand(subcommand) {
+            for arg in it.get_arguments() {
+                if arg.get_long() == Some(option) {
+                    let help = arg.get_help();
+                    if let Some(help) = help {
+                        let output = format!("{}", help);
+                        println!("{}", output);
+                    }
                 }
             }
         }
-    }
-
-    Ok(())
+    });
 }
 
 fn get_possible_values_for_subcommand_and_option(

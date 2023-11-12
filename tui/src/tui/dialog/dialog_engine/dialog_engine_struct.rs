@@ -106,7 +106,7 @@ impl DialogEngine {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Copy)]
 pub struct DialogEngineConfigOptions {
     pub mode: DialogEngineMode,
     /// Max height of the results panel.

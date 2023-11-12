@@ -29,17 +29,14 @@ pub async fn run_app() -> CommonResult<()> {
             try_to_set_log_level(log::LevelFilter::Off).ok();
         }
 
-        // Create store.
-        let store = create_store().await;
-
         // Create an App (renders & responds to user input).
-        let shared_app = AppWithLayout::new_shared();
+        let app = AppMain::new_boxed();
 
         // Exit if these keys are pressed.
         let exit_keys: Vec<InputEvent> =
             vec![InputEvent::Keyboard(keypress! { @char 'x' })];
 
         // Create a window.
-        TerminalWindow::main_event_loop(shared_app, store, exit_keys).await?
+        TerminalWindow::main_event_loop(app, exit_keys).await?
     });
 }

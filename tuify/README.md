@@ -30,12 +30,17 @@ This crate can be used in two ways:
 ## How to use it as a library?
 <a id="markdown-how-to-use-it-as-a-library%3F" name="how-to-use-it-as-a-library%3F"></a>
 
-
 Here's a demo of the library target of this crate in action.
-
 
 [![asciicast](https://asciinema.org/a/614462.svg)](https://asciinema.org/a/614462)
 
+To install the crate as a library, add the following to your `Cargo.toml` file:
+
+```toml
+[dependencies]
+r3bl_tuify = "0.1.21" # Get the latest version at the time you get this.
+r3bl_rs_utils_core = "0.9.9" # Get the latest version at the time you get this.
+```
 
 The following example illustrates how you can use this as a library. The function that does the work
 of rendering the UI is called [`select_from_list`](crate::select_from_list). It takes a list of

@@ -71,44 +71,44 @@ enum CLICommand {
     },
 }
 
-fn get_bin_name() -> String {
+pub fn get_bin_name() -> String {
     let cmd = AppArgs::command();
     cmd.get_bin_name().unwrap_or("this command").to_string()
 }
 
 fn main() -> Result<()> {
-    AnsiStyledText {
-        text: "Hello, giti! 👋🐈",
-        style: &[Style::Bold, Style::Foreground(Color::Rgb(100, 200, 1))],
-    }
-    .println();
-
-    // If no args are passed, the following line will fail, and help will be printed
-    // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
-    let cli_args = AppArgs::parse();
-
-    let enable_logging = TRACE | cli_args.global_opts.enable_logging;
-
-    call_if_true!(enable_logging, {
-        try_to_set_log_level(log::LevelFilter::Trace).ok();
-        log_debug("Start logging...".to_string());
-        log_debug(format!("og_size: {:?}", get_size()?).to_string());
-        log_debug(format!("cli_args {:?}", cli_args));
-    });
-
-    // TODO: What is the UX of this command? https://github.com/r3bl-org/r3bl-open-core/issues/187
-    match cli_args.command {
-        CLICommand::Branch {
-            selection_mode,
-            command_to_run_with_each_selection: command_to_run_with_selection,
-        } => {
-            todo!()
+    throws!({
+        AnsiStyledText {
+            text: "Hello, giti! 👋🐈",
+            style: &[Style::Bold, Style::Foreground(Color::Rgb(100, 200, 1))],
         }
-    }
+        .println();
 
-    call_if_true!(enable_logging, {
-        log_debug("Stop logging...".to_string());
+        // If no args are passed, the following line will fail, and help will be printed
+        // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
+        let cli_args = AppArgs::parse();
+
+        let enable_logging = TRACE | cli_args.global_opts.enable_logging;
+
+        call_if_true!(enable_logging, {
+            try_to_set_log_level(log::LevelFilter::Trace).ok();
+            log_debug("Start logging...".to_string());
+            log_debug(format!("og_size: {:?}", get_size()?).to_string());
+            log_debug(format!("cli_args {:?}", cli_args));
+        });
+
+        // TODO: What is the UX of this command? https://github.com/r3bl-org/r3bl-open-core/issues/187
+        match cli_args.command {
+            CLICommand::Branch {
+                selection_mode: _,
+                command_to_run_with_each_selection: _,
+            } => {
+                // TODO: Implement this command
+            }
+        }
+
+        call_if_true!(enable_logging, {
+            log_debug("Stop logging...".to_string());
+        });
     });
-
-    Ok(())
 }

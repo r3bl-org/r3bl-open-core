@@ -16,12 +16,29 @@
  */
 
 pub mod mock_real_objects_for_dialog {
-    use std::{collections::HashMap, sync::Arc};
+    use std::{collections::HashMap, fmt::Debug};
 
-    use r3bl_redux::{SharedStore, Store};
-    use tokio::sync::RwLock;
+    use r3bl_rs_utils_core::Size;
+    use tokio::sync::mpsc;
 
     use crate::{test_editor::mock_real_objects_for_editor, *};
+
+    pub fn make_global_data(window_size: Option<Size>) -> GlobalData<State, ()> {
+        let (main_thread_channel_sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
+        let state = create_state();
+        let window_size = if let Some(window_size) = window_size {
+            window_size
+        } else {
+            Default::default()
+        };
+        let maybe_saved_offscreen_buffer = Default::default();
+        GlobalData {
+            state,
+            window_size,
+            maybe_saved_offscreen_buffer,
+            main_thread_channel_sender,
+        }
+    }
 
     #[derive(Clone, PartialEq, Default, Debug)]
     pub struct State {
@@ -29,15 +46,18 @@ pub mod mock_real_objects_for_dialog {
     }
 
     impl HasDialogBuffers for State {
-        fn get_dialog_buffer(&self, id: FlexBoxId) -> Option<&DialogBuffer> {
-            self.dialog_buffers.get(&id)
+        fn get_mut_dialog_buffer(&mut self, id: FlexBoxId) -> Option<&mut DialogBuffer> {
+            self.dialog_buffers.get_mut(&id)
         }
     }
 
-    pub fn create_store() -> Arc<RwLock<Store<State, String>>> {
-        let mut _store = Store::<_, _>::default();
-        let shared_store: SharedStore<_, _> = Arc::new(RwLock::new(_store));
-        shared_store
+    pub fn create_state() -> State {
+        let dialog_buffers = {
+            let mut it = HashMap::new();
+            it.insert(FlexBoxId::from(0), DialogBuffer::new_empty());
+            it
+        };
+        State { dialog_buffers }
     }
 
     pub fn make_dialog_engine() -> DialogEngine {

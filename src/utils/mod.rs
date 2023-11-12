@@ -26,12 +26,10 @@
 pub mod lazy_field;
 pub mod lazy_hash_map;
 pub mod safe_unwrap;
-pub mod tty;
 pub mod type_utils;
 
 // Re-export.
 pub use lazy_field::*;
 pub use lazy_hash_map::*;
 pub use safe_unwrap::*;
-pub use tty::*;
 pub use type_utils::*;
