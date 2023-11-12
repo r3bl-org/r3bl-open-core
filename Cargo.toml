@@ -44,7 +44,6 @@ rand = "0.8.5"
 
 # Async
 tokio = { version = "1.33.0", features = ["full"] }
-async-trait = "0.1.74"
 futures = "0.3.29"
 
 # Crossterm & EventStream support.

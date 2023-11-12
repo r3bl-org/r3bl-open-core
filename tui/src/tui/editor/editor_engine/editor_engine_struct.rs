@@ -120,10 +120,10 @@ mod syntax_highlight_config_impl {
     use super::*;
 
     impl SyntaxHighlightMode {
-        pub fn get_file_extension_for_new_empty_buffer(&self) -> Option<&str> {
+        pub fn get_file_extension_for_new_empty_buffer(&self) -> Option<String> {
             match self {
                 SyntaxHighlightMode::Disable => None,
-                SyntaxHighlightMode::Enable(ref ext) => Some(ext.as_str()),
+                SyntaxHighlightMode::Enable(ref ext) => Some(ext.clone()),
             }
         }
     }

@@ -82,6 +82,7 @@ pub enum CommonErrorType {
     IndexOutOfBounds,
     InvalidRgbColor,
     InvalidHexColorFormat,
+    NotFound,
 }
 
 /// Implement [`Error`] trait.

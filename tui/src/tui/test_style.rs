@@ -164,51 +164,52 @@ mod tests {
 
     #[test]
     fn test_stylesheet_builder() -> CommonResult<()> {
-        let id_2 = 2;
-        let style1 = make_a_style(1);
-        let mut stylesheet = stylesheet! {
-          style1,
-          style! {
-                id: id_2 /* using a variable instead of string literal */
-                padding: 1
-                color_bg: TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })
-          },
-          make_a_style(3),
-          vec![
-            style! {
-              id: 4
-              padding: 1
-              color_bg: TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })
-            },
-            style! {
-              id: 5
-              padding: 1
-              color_bg: TuiColor::Rgb (RgbValue{ red: 85, green: 85, blue: 255 })
-            },
-          ],
-          make_a_style(6)
-        };
+        throws!({
+            let id_2 = 2;
+            let style1 = make_a_style(1);
+            let mut stylesheet = stylesheet! {
+              style1,
+              style! {
+                    id: id_2 /* using a variable instead of string literal */
+                    padding: 1
+                    color_bg: TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })
+              },
+              make_a_style(3),
+              vec![
+                style! {
+                  id: 4
+                  padding: 1
+                  color_bg: TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })
+                },
+                style! {
+                  id: 5
+                  padding: 1
+                  color_bg: TuiColor::Rgb (RgbValue{ red: 85, green: 85, blue: 255 })
+                },
+              ],
+              make_a_style(6)
+            };
 
-        assert_eq2!(stylesheet.styles.len(), 6);
-        assert_eq2!(stylesheet.find_style_by_id(1).unwrap().id, 1);
-        assert_eq2!(stylesheet.find_style_by_id(2).unwrap().id, 2);
-        assert_eq2!(stylesheet.find_style_by_id(3).unwrap().id, 3);
-        assert_eq2!(stylesheet.find_style_by_id(4).unwrap().id, 4);
-        assert_eq2!(stylesheet.find_style_by_id(5).unwrap().id, 5);
-        assert_eq2!(stylesheet.find_style_by_id(6).unwrap().id, 6);
-        assert!(stylesheet.find_style_by_id(7).is_none());
+            assert_eq2!(stylesheet.styles.len(), 6);
+            assert_eq2!(stylesheet.find_style_by_id(1).unwrap().id, 1);
+            assert_eq2!(stylesheet.find_style_by_id(2).unwrap().id, 2);
+            assert_eq2!(stylesheet.find_style_by_id(3).unwrap().id, 3);
+            assert_eq2!(stylesheet.find_style_by_id(4).unwrap().id, 4);
+            assert_eq2!(stylesheet.find_style_by_id(5).unwrap().id, 5);
+            assert_eq2!(stylesheet.find_style_by_id(6).unwrap().id, 6);
+            assert!(stylesheet.find_style_by_id(7).is_none());
 
-        let result = stylesheet.find_styles_by_ids(vec![1, 2]);
-        assert_eq2!(result.as_ref().unwrap().len(), 2);
-        assert_eq2!(result.as_ref().unwrap()[0].id, 1);
-        assert_eq2!(result.as_ref().unwrap()[1].id, 2);
-        assert_eq2!(stylesheet.find_styles_by_ids(vec![13, 41]), None);
-        let style7 = make_a_style(7);
-        let result = stylesheet.add_style(style7);
-        result.unwrap();
-        assert_eq2!(stylesheet.styles.len(), 7);
-        assert_eq2!(stylesheet.find_style_by_id(7).unwrap().id, 7);
-        Ok(())
+            let result = stylesheet.find_styles_by_ids(vec![1, 2]);
+            assert_eq2!(result.as_ref().unwrap().len(), 2);
+            assert_eq2!(result.as_ref().unwrap()[0].id, 1);
+            assert_eq2!(result.as_ref().unwrap()[1].id, 2);
+            assert_eq2!(stylesheet.find_styles_by_ids(vec![13, 41]), None);
+            let style7 = make_a_style(7);
+            let result = stylesheet.add_style(style7);
+            result.unwrap();
+            assert_eq2!(stylesheet.styles.len(), 7);
+            assert_eq2!(stylesheet.find_style_by_id(7).unwrap().id, 7);
+        });
     }
 
     /// Helper function.

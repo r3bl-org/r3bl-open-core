@@ -28,46 +28,46 @@ pub trait FunctionComponent<W: Write, S> {
     fn render(&mut self, state: &mut S) -> Result<()>;
 
     fn allocate_viewport_height_space(&mut self, state: &mut S) -> Result<()> {
-        let viewport_height =
-            /* not including the header */ self.calculate_viewport_height(state) + /* for header row */ 1;
+        throws!({
+            let viewport_height =
+                /* not including the header */ self.calculate_viewport_height(state) + /* for header row */ 1;
 
-        // Allocate space. This is required so that the commands to move the cursor up and
-        // down shown below will work.
-        for _ in 0..*viewport_height {
-            println!();
-        }
+            // Allocate space. This is required so that the commands to move the cursor up and
+            // down shown below will work.
+            for _ in 0..*viewport_height {
+                println!();
+            }
 
-        // Move the cursor back up.
-        let writer = self.get_write();
-        queue! {
-            writer,
-            MoveToPreviousLine(*viewport_height),
-        }?;
-
-        Ok(())
+            // Move the cursor back up.
+            let writer = self.get_write();
+            queue! {
+                writer,
+                MoveToPreviousLine(*viewport_height),
+            }?;
+        });
     }
 
     fn clear_viewport(&mut self, state: &mut S) -> Result<()> {
-        let viewport_height =
-            /* not including the header */ self.calculate_viewport_height(state) + /* for header row */ 1;
+        throws!({
+            let viewport_height =
+                /* not including the header */ self.calculate_viewport_height(state) + /* for header row */ 1;
 
-        let writer = self.get_write();
+            let writer = self.get_write();
 
-        // Clear the viewport.
-        for _ in 0..*viewport_height {
+            // Clear the viewport.
+            for _ in 0..*viewport_height {
+                queue! {
+                    writer,
+                    Clear(ClearType::CurrentLine),
+                    MoveToNextLine(1),
+                }?;
+            }
+
+            // Move the cursor back up.
             queue! {
                 writer,
-                Clear(ClearType::CurrentLine),
-                MoveToNextLine(1),
+                MoveToPreviousLine(*viewport_height),
             }?;
-        }
-
-        // Move the cursor back up.
-        queue! {
-            writer,
-            MoveToPreviousLine(*viewport_height),
-        }?;
-
-        Ok(())
+        });
     }
 }

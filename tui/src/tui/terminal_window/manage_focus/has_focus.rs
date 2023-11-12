@@ -90,7 +90,7 @@ impl HasFocus {
     }
 
     /// Check whether the `id` of the [FlexBox] currently has keyboard focus.
-    pub fn does_current_box_have_focus(&self, current_box: &FlexBox) -> bool {
+    pub fn does_current_box_have_focus(&self, current_box: FlexBox) -> bool {
         self.does_id_have_focus(current_box.id)
     }
 }
@@ -99,24 +99,25 @@ impl HasFocus {
     /// Pushes the `id` to the `id_vec`. The previous `id` is saved and can be restored with
     /// [reset_modal_id](HasFocus::reset_modal_id).
     pub fn try_set_modal_id(&mut self, id: FlexBoxId) -> CommonResult<()> {
-        // Must have a non modal id already set.
-        if !self.is_set() {
-            let msg = "Modal id can only be set if id is already set. id is not set.";
-            return CommonError::new_err_with_only_msg(msg);
-        }
+        throws!({
+            // Must have a non modal id already set.
+            if !self.is_set() {
+                let msg = "Modal id can only be set if id is already set. id is not set.";
+                return CommonError::new_err_with_only_msg(msg);
+            }
 
-        // Must not have a modal id already set.
-        if self.is_modal_set() {
-            let msg = format!(
-                "Modal id is already set to {}. Can't set it to {id}.",
-                self.get_id().unwrap()
-            );
-            return CommonError::new_err_with_only_msg(&msg);
-        }
+            // Must not have a modal id already set.
+            if self.is_modal_set() {
+                let msg = format!(
+                    "Modal id is already set to {}. Can't set it to {id}.",
+                    self.get_id().unwrap()
+                );
+                return CommonError::new_err_with_only_msg(&msg);
+            }
 
-        // Ok to set modal id.
-        self.id_vec.push(id);
-        Ok(())
+            // Ok to set modal id.
+            self.id_vec.push(id);
+        });
     }
 
     /// Checks whether any modal `id` is set.
@@ -155,7 +156,7 @@ mod has_focus_tests {
             id: FlexBoxId::from(1),
             ..Default::default()
         };
-        assert!(has_focus.does_current_box_have_focus(&current_box_1));
+        assert!(has_focus.does_current_box_have_focus(current_box_1));
 
         has_focus.set_id(FlexBoxId::from(2));
         assert!(!has_focus.is_empty());
@@ -166,9 +167,9 @@ mod has_focus_tests {
             id: FlexBoxId::from(2),
             ..Default::default()
         };
-        assert!(has_focus.does_current_box_have_focus(&current_box_2));
+        assert!(has_focus.does_current_box_have_focus(current_box_2));
         assert!(!has_focus.does_id_have_focus(FlexBoxId::from(1)));
-        assert!(!has_focus.does_current_box_have_focus(&current_box_1));
+        assert!(!has_focus.does_current_box_have_focus(current_box_1));
     }
 
     #[test]
@@ -222,7 +223,7 @@ mod has_focus_tests {
             id: FlexBoxId::from(1),
             ..Default::default()
         };
-        assert!(has_focus.does_current_box_have_focus(&current_box_1));
+        assert!(has_focus.does_current_box_have_focus(current_box_1));
         assert!(has_focus.is_set());
         assert!(!has_focus.is_empty());
     }

@@ -17,7 +17,7 @@
 
 #[cfg(test)]
 mod syntect {
-    use r3bl_rs_utils_core::{assert_eq2, color};
+    use r3bl_rs_utils_core::{assert_eq2, color, throws};
 
     use crate::*;
 
@@ -25,9 +25,10 @@ mod syntect {
     /// <https://stackoverflow.com/a/41069910/2085356>
     #[test]
     fn load_theme() -> std::io::Result<()> {
-        let theme = try_load_r3bl_theme()?;
-        dbg!(&theme);
-        Ok(())
+        throws!({
+            let theme = try_load_r3bl_theme()?;
+            dbg!(&theme);
+        });
     }
 
     #[test]

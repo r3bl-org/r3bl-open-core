@@ -74,9 +74,18 @@ impl Size {
 }
 
 impl Size {
-    pub fn is_too_small_to_display(&self, min_col: u8, min_row: u8) -> bool {
-        self.col_count < ch!(min_col) || self.row_count < ch!(min_row)
+    pub fn fits_min_size(&self, min_col: u8, min_row: u8) -> TooSmallToDisplayResult {
+        match self.col_count < ch!(min_col) || self.row_count < ch!(min_row) {
+            false => TooSmallToDisplayResult::IsLargeEnough,
+            true => TooSmallToDisplayResult::IsTooSmall,
+        }
     }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum TooSmallToDisplayResult {
+    IsLargeEnough,
+    IsTooSmall,
 }
 
 pub mod size_debug_formatter {

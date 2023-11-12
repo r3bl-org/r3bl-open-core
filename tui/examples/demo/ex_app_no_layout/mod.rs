@@ -16,10 +16,10 @@
  */
 
 // Attach sources.
-pub mod app;
-pub mod create_store;
+pub mod app_main;
 pub mod launcher;
+pub mod state;
 
 // Re-export only inside this module.
-pub(super) use app::*;
-pub(super) use create_store::*;
+pub(super) use app_main::*;
+pub(super) use state::*;

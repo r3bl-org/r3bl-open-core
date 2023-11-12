@@ -41,8 +41,8 @@ pub const DEBUG_TUI_SHOW_PIPELINE: bool = false;
 
 pub const DEBUG_TUI_SHOW_PIPELINE_EXPANDED: bool = false;
 
-/// Controls input event debugging [crate::EventStreamExt], and execution of render ops [crate::exec_render_op!] debugging
-/// output.
+/// Controls input event debugging [crate::AsyncEventStream], and execution of render ops
+/// [crate::exec_render_op!] debugging output.
 pub const DEBUG_TUI_SHOW_TERMINAL_BACKEND: bool = false;
 
 // Attach sources.

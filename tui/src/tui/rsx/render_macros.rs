@@ -20,37 +20,26 @@
 #[macro_export]
 macro_rules! render_component_in_current_box {
     (
-        in:           $arg_surface          : expr, // Eg: in: surface
-        component_id: $arg_component_id     : expr, // Eg: "component1"
-        from:         $arg_registry         : expr, // Eg: from: registry
-        state:        $arg_state            : expr, // Eg: state
-        shared_store: $arg_shared_store     : expr, // Eg: shared_store
-        shared_global_data: $arg_shared_global_data : expr, // Eg: shared_global_data
-        window_size:  $arg_window_size      : expr  // Eg: window_size
-      ) => {
-        let maybe_component_ref = ComponentRegistry::get_component_ref_by_id(
-            &mut $arg_registry,
+        in:                  $arg_surface                 : expr,   // Eg: in: surface
+        component_id:        $arg_component_id            : expr,   // Eg: "0"
+        from:                $arg_component_registry_map  : expr,   // Eg: from: component_registry_map
+        global_data:         $arg_global_data             : expr,   // Eg: global_data
+        has_focus:           $arg_has_focus               : expr    // Eg: has_focus
+    ) => {
+        let maybe_component_ref = ComponentRegistry::try_to_get_component_by_id(
+            $arg_component_registry_map,
             $arg_component_id,
         );
 
         if let Some(component_ref) = maybe_component_ref {
             let surface_bounds = SurfaceBounds::from(&*($arg_surface));
             let current_box = $arg_surface.current_box()?;
-            let queue = component_ref
-                .write()
-                .await
-                .render(
-                    ComponentScopeArgs {
-                        shared_global_data: $arg_shared_global_data,
-                        shared_store: $arg_shared_store,
-                        state: $arg_state,
-                        component_registry: &mut $arg_registry,
-                        window_size: $arg_window_size,
-                    },
-                    current_box,
-                    surface_bounds,
-                )
-                .await?;
+            let queue = component_ref.render(
+                $arg_global_data,
+                *current_box,
+                surface_bounds,
+                $arg_has_focus,
+            )?;
             $arg_surface.render_pipeline += queue;
         }
     };
@@ -62,37 +51,26 @@ macro_rules! render_component_in_current_box {
 #[macro_export]
 macro_rules! render_component_in_given_box {
     (
-        in:           $arg_surface          : expr, // Eg: in: surface
-        box:          $arg_box              : expr, // Eg: box: FlexBox::default()
-        component_id: $arg_component_id     : expr, // Eg: "component1"
-        from:         $arg_registry         : expr, // Eg: from: registry
-        state:        $arg_state            : expr, // Eg: state
-        shared_store: $arg_shared_store     : expr, // Eg: shared_store
-        shared_global_data: $arg_shared_global_data : expr, // Eg: shared_global_data
-        window_size:  $arg_window_size      : expr  // Eg: window_size
+        in:           $arg_surface                  : expr, // Eg: in: surface
+        box:          $arg_box                      : expr, // Eg: box: FlexBox::default()
+        component_id: $arg_component_id             : expr, // Eg: "0"
+        from:         $arg_component_registry_map   : expr, // Eg: from: component_registry_map
+        global_data:  $arg_global_data              : expr, // Eg: global_data
+        has_focus:    $arg_has_focus                : expr  // Eg: has_focus
      ) => {{
-        let maybe_component_ref = ComponentRegistry::get_component_ref_by_id(
-            &mut $arg_registry,
+        let maybe_component_ref = ComponentRegistry::try_to_get_component_by_id(
+            $arg_component_registry_map,
             $arg_component_id,
         );
 
         if let Some(component_ref) = maybe_component_ref {
             let surface_bounds = SurfaceBounds::from(&*($arg_surface));
-            let queue: RenderPipeline = component_ref
-                .write()
-                .await
-                .render(
-                    ComponentScopeArgs {
-                        shared_global_data: $arg_shared_global_data,
-                        shared_store: $arg_shared_store,
-                        state: $arg_state,
-                        component_registry: &mut $arg_registry,
-                        window_size: $arg_window_size,
-                    },
-                    &$arg_box,
-                    surface_bounds,
-                )
-                .await?;
+            let queue: RenderPipeline = component_ref.render(
+                $arg_global_data,
+                $arg_box,
+                surface_bounds,
+                $arg_has_focus,
+            )?;
             $arg_surface.render_pipeline += queue;
         }
     }};

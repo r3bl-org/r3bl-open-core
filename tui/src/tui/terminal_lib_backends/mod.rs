@@ -88,7 +88,6 @@ pub use render_op::*;
 pub use render_pipeline::*;
 pub use render_pipeline_to_offscreen_buffer::*;
 pub use terminal_lib_operations::*;
-pub use termion_backend::*;
 
 // Tests.
 mod test_input_event;

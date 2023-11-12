@@ -18,7 +18,6 @@
 use std::{borrow::Cow,
           io::{stderr, stdout, Write}};
 
-use async_trait::async_trait;
 use crossterm::{cursor::*,
                 event::*,
                 queue,
@@ -35,40 +34,36 @@ pub struct RenderOpImplCrossterm;
 mod render_op_impl_crossterm_impl_trait_paint_render_op {
     use super::*;
 
-    #[async_trait]
     impl PaintRenderOp for RenderOpImplCrossterm {
-        async fn paint(
+        fn paint(
             &mut self,
             skip_flush: &mut bool,
             command_ref: &RenderOp,
-            shared_global_data: &SharedGlobalData,
+            window_size: Size,
             local_data: &mut RenderOpsLocalData,
         ) {
             match command_ref {
                 RenderOp::Noop => {}
                 RenderOp::EnterRawMode => {
-                    RenderOpImplCrossterm::raw_mode_enter(skip_flush, shared_global_data)
-                        .await;
+                    RenderOpImplCrossterm::raw_mode_enter(skip_flush, window_size);
                 }
                 RenderOp::ExitRawMode => {
                     RenderOpImplCrossterm::raw_mode_exit(skip_flush);
                 }
                 RenderOp::MoveCursorPositionAbs(abs_pos) => {
                     RenderOpImplCrossterm::move_cursor_position_abs(
-                        abs_pos,
-                        shared_global_data,
+                        *abs_pos,
+                        window_size,
                         local_data,
-                    )
-                    .await;
+                    );
                 }
                 RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
                     RenderOpImplCrossterm::move_cursor_position_rel_to(
-                        box_origin_pos,
-                        content_rel_pos,
-                        shared_global_data,
+                        *box_origin_pos,
+                        *content_rel_pos,
+                        window_size,
                         local_data,
-                    )
-                    .await;
+                    );
                 }
                 RenderOp::ClearScreen => {
                     exec_render_op!(
@@ -95,10 +90,9 @@ mod render_op_impl_crossterm_impl_trait_paint_render_op {
                     RenderOpImplCrossterm::paint_text_with_attributes(
                         text,
                         maybe_style,
-                        shared_global_data,
+                        window_size,
                         local_data,
-                    )
-                    .await;
+                    );
                 }
                 RenderOp::PaintTextWithAttributes(_text, _maybe_style) => {
                     // This should never be executed! The compositor always renders to an offscreen
@@ -138,27 +132,25 @@ mod render_op_impl_crossterm_impl {
     use super::*;
 
     impl RenderOpImplCrossterm {
-        pub async fn move_cursor_position_rel_to(
-            box_origin_pos: &Position,
-            content_rel_pos: &Position,
-            shared_global_data: &SharedGlobalData,
+        pub fn move_cursor_position_rel_to(
+            box_origin_pos: Position,
+            content_rel_pos: Position,
+            window_size: Size,
             local_data: &mut RenderOpsLocalData,
         ) {
-            let new_abs_pos = *box_origin_pos + *content_rel_pos;
-            Self::move_cursor_position_abs(&new_abs_pos, shared_global_data, local_data)
-                .await;
+            let new_abs_pos = box_origin_pos + content_rel_pos;
+            Self::move_cursor_position_abs(new_abs_pos, window_size, local_data);
         }
 
-        pub async fn move_cursor_position_abs(
-            abs_pos: &Position,
-            shared_global_data: &SharedGlobalData,
+        pub fn move_cursor_position_abs(
+            abs_pos: Position,
+            window_size: Size,
             local_data: &mut RenderOpsLocalData,
         ) {
             let Position {
                 col_index: col,
                 row_index: row,
-            } = sanitize_and_save_abs_position(*abs_pos, shared_global_data, local_data)
-                .await;
+            } = sanitize_and_save_abs_position(abs_pos, window_size, local_data);
             exec_render_op!(
                 queue!(stdout(), MoveTo(*col, *row)),
                 format!("MoveCursorPosition(col: {}, row: {})", *col, *row)
@@ -179,10 +171,7 @@ mod render_op_impl_crossterm_impl {
             *skip_flush = true;
         }
 
-        pub async fn raw_mode_enter(
-            skip_flush: &mut bool,
-            _shared_global_data: &SharedGlobalData,
-        ) {
+        pub fn raw_mode_enter(skip_flush: &mut bool, _: Size) {
             exec_render_op! {
               terminal::enable_raw_mode(),
               "EnterRawMode -> enable_raw_mode()"
@@ -218,10 +207,10 @@ mod render_op_impl_crossterm_impl {
             )
         }
 
-        pub async fn paint_text_with_attributes(
+        pub fn paint_text_with_attributes(
             text_arg: &String,
             maybe_style: &Option<Style>,
-            shared_global_data: &SharedGlobalData,
+            window_size: Size,
             local_data: &mut RenderOpsLocalData,
         ) {
             use perform_paint::*;
@@ -235,13 +224,13 @@ mod render_op_impl_crossterm_impl {
                 text,
                 log_msg,
                 maybe_style,
-                shared_global_data,
+                window_size,
             };
 
             let needs_reset = Cow::Owned(false);
 
             // Paint plain_text.
-            paint_style_and_text(&mut paint_args, needs_reset, local_data).await;
+            paint_style_and_text(&mut paint_args, needs_reset, local_data);
         }
 
         /// Use [crossterm::style::Color] to set crossterm Colors.
@@ -280,7 +269,7 @@ mod perform_paint {
         pub text: Cow<'a, str>,
         pub log_msg: Cow<'a, str>,
         pub maybe_style: &'a Option<Style>,
-        pub shared_global_data: &'a SharedGlobalData,
+        pub window_size: Size,
     }
 
     fn style_to_attribute(&style: &Style) -> Vec<Attribute> {
@@ -311,7 +300,7 @@ mod perform_paint {
 
     /// Use [Style] to set crossterm [Attributes] ([docs](
     /// https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes)).
-    pub async fn paint_style_and_text<'a>(
+    pub fn paint_style_and_text<'a>(
         paint_args: &mut PaintArgs<'a>,
         mut needs_reset: Cow<'_, bool>,
         local_data: &mut RenderOpsLocalData,
@@ -329,7 +318,7 @@ mod perform_paint {
             });
         }
 
-        paint_text(paint_args, local_data).await;
+        paint_text(paint_args, local_data);
 
         if *needs_reset {
             exec_render_op!(
@@ -339,14 +328,14 @@ mod perform_paint {
         }
     }
 
-    pub async fn paint_text<'a>(
+    pub fn paint_text<'a>(
         paint_args: &PaintArgs<'a>,
         local_data: &mut RenderOpsLocalData,
     ) {
         let PaintArgs {
             text,
             log_msg,
-            shared_global_data,
+            window_size,
             ..
         } = paint_args;
 
@@ -367,12 +356,7 @@ mod perform_paint {
         let display_width = unicode_string.display_width;
 
         cursor_position_copy.col_index += display_width;
-        sanitize_and_save_abs_position(
-            cursor_position_copy,
-            shared_global_data,
-            local_data,
-        )
-        .await;
+        sanitize_and_save_abs_position(cursor_position_copy, *window_size, local_data);
     }
 }
 

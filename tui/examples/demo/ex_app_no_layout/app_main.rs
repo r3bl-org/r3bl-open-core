@@ -15,92 +15,118 @@
  *   limitations under the License.
  */
 
-use async_trait::async_trait;
-use r3bl_redux::*;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::style;
 use r3bl_tui::*;
-use tokio::{task::JoinHandle, time, time::Duration};
+use tokio::{sync::mpsc::{self, Sender},
+            time,
+            time::Duration};
 
 use super::*;
-use crate::DEBUG;
+use crate::ENABLE_TRACE_EXAMPLES;
 
-/// Async trait object that implements the [Render] trait.
 #[derive(Default)]
-pub struct AppNoLayout {
+pub struct AppMain {
+    pub data: AppData,
+}
+
+#[derive(Default)]
+pub struct AppData {
     pub color_wheel_rgb: ColorWheel,
     pub color_wheel_ansi_vec: Vec<ColorWheel>,
     pub lolcat_fg: ColorWheel,
     pub lolcat_bg: ColorWheel,
-    pub component_registry: ComponentRegistry<State, Action>,
     pub animator: Animator,
 }
 
-macro_rules! fire {
-    ($arg_event_consumed: ident, $arg_shared_store: ident, $arg_action: expr) => {
-        spawn_and_consume_event!($arg_event_consumed, $arg_shared_store, $arg_action);
-        call_if_true!(DEBUG, {
-            let msg = format!(
-                "⛵ AppNoLayout::handle_event -> dispatch_spawn: {}",
-                $arg_action
-            );
-            log_info(msg)
-        });
-    };
-}
-
-pub fn start_animator_task_fn(
-    shared_store: &SharedStore<State, Action>,
-) -> JoinHandle<()> {
-    const ANIMATION_START_DELAY_MSEC: u64 = 500;
-    const ANIMATION_INTERVAL_MSEC: u64 = 500;
-    let copy = shared_store.clone();
-    tokio::spawn(async move {
-        // Give the app some time to actually render to offscreen buffer.
-        time::sleep(Duration::from_millis(ANIMATION_START_DELAY_MSEC)).await;
-
-        loop {
-            // Wire into the timing telemetry.
-            telemetry_global_static::set_start_ts();
-
-            // Dispatch the action.
-            copy.write().await.dispatch_action(Action::Add).await;
-
-            // Wire into the timing telemetry.
-            telemetry_global_static::set_end_ts();
-
-            // Wait for the next interval.
-            time::sleep(Duration::from_millis(ANIMATION_INTERVAL_MSEC)).await;
-        }
-    })
-}
-
-mod app_no_layout_impl_trait_app {
+mod constructor {
     use super::*;
 
-    #[async_trait]
-    impl App<State, Action> for AppNoLayout {
-        async fn app_render(
+    impl AppMain {
+        pub fn new_boxed() -> BoxedSafeApp<State, AppSignal> {
+            let it = Self::default();
+            Box::new(it)
+        }
+    }
+}
+
+mod animator_task {
+    use super::*;
+
+    pub fn start_animator_task(
+        main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AppSignal>>,
+    ) -> Sender<()> {
+        const ANIMATION_START_DELAY_MSEC: u64 = 500;
+        const ANIMATION_INTERVAL_MSEC: u64 = 500;
+
+        let (animator_kill_channel_sender, mut animator_kill_channel_receiver) =
+            mpsc::channel::<()>(1);
+        let animator_kill_channel_sender_clone = animator_kill_channel_sender.clone();
+
+        tokio::spawn(async move {
+            // Give the app some time to actually render to offscreen buffer.
+            time::sleep(Duration::from_millis(ANIMATION_START_DELAY_MSEC)).await;
+
+            loop {
+                tokio::select! {
+                    _ = animator_kill_channel_receiver.recv() => {
+                        break;
+                    }
+
+                    _ = time::sleep(Duration::from_millis(ANIMATION_INTERVAL_MSEC)) => {
+                        // Continue the animation.
+
+                        // Wire into the timing telemetry.
+                        telemetry_global_static::set_start_ts();
+
+                        // Send a signal to the main thread to render.
+                        let main_thread_channel_sender_clone = main_thread_channel_sender.clone();
+                        // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so
+                        // that it doesn't block the calling thread. More info:
+                        // <https://tokio.rs/tokio/tutorial/channels>.
+                        tokio::spawn(async move {
+                            let _ = main_thread_channel_sender_clone
+                            .send(TerminalWindowMainThreadSignal::ApplyAction(AppSignal::Add))
+                            .await;
+                        });
+
+                        // Wire into the timing telemetry.
+                        telemetry_global_static::set_end_ts();
+                    }
+                }
+            }
+        });
+
+        animator_kill_channel_sender_clone
+    }
+}
+
+mod app_main_impl_trait_app {
+    use super::{animator_task::start_animator_task, *};
+
+    impl App for AppMain {
+        type S = State;
+        type A = AppSignal;
+
+        fn app_render(
             &mut self,
-            args: GlobalScopeArgs<'_, State, Action>,
+            global_data: &mut GlobalData<State, AppSignal>,
+            _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+            _has_focus: &mut HasFocus,
         ) -> CommonResult<RenderPipeline> {
             throws_with_return!({
-                let GlobalScopeArgs {
-                    state,
-                    shared_global_data,
-                    shared_store,
-                    ..
-                } = args;
+                let state_str = format!("{}", global_data.state);
+                let data = &mut self.data;
 
                 let sample_line_of_text =
-                    format!("{state}, gradient: [index: X, len: Y]",);
-                let content_size_col: ChUnit = sample_line_of_text.len().into();
-                let window_size: Size = shared_global_data.read().await.get_size();
+                    format!("{state_str}, gradient: [index: X, len: Y]");
+                let content_size_col = ChUnit::from(sample_line_of_text.len());
+                let window_size = global_data.window_size;
 
-                let col: ChUnit = (window_size.col_count - content_size_col) / 2;
-                let mut row: ChUnit = (window_size.row_count
+                let col = (window_size.col_count - content_size_col) / 2;
+                let mut row = (window_size.row_count
                     - ch!(2)
-                    - ch!(self.color_wheel_ansi_vec.len()))
+                    - ch!(data.color_wheel_ansi_vec.len()))
                     / 2;
 
                 let mut pipeline = render_pipeline!();
@@ -112,9 +138,9 @@ mod app_no_layout_impl_trait_app {
                     };
 
                     // Render using color_wheel_ansi_vec.
-                    for color_wheel_index in 0..self.color_wheel_ansi_vec.len() {
+                    for color_wheel_index in 0..data.color_wheel_ansi_vec.len() {
                         let color_wheel =
-                            &mut self.color_wheel_ansi_vec[color_wheel_index];
+                            &mut data.color_wheel_ansi_vec[color_wheel_index];
 
                         let unicode_string = {
                             let index = color_wheel.get_index();
@@ -123,7 +149,7 @@ mod app_no_layout_impl_trait_app {
                                 _ => 0,
                             };
                             UnicodeString::from(format!(
-                                "{state}, gradient: [index: {index}, len: {len}]"
+                                "{state_str}, gradient: [index: {index}, len: {len}]"
                             ))
                         };
 
@@ -153,20 +179,20 @@ mod app_no_layout_impl_trait_app {
                         ));
 
                         let unicode_string = {
-                            let index = self.color_wheel_rgb.get_index();
-                            let len = match self.color_wheel_rgb.get_gradient_len() {
+                            let index = data.color_wheel_rgb.get_index();
+                            let len = match data.color_wheel_rgb.get_gradient_len() {
                                 GradientLengthKind::ColorWheel(len) => len,
                                 _ => 0,
                             };
                             UnicodeString::from(format!(
-                                "{state}, gradient: [index: {index}, len: {len}]"
+                                "{state_str}, gradient: [index: {index}, len: {len}]"
                             ))
                         };
 
                         render_ops! {
                             @render_styled_texts_into it
                             =>
-                            self.color_wheel_rgb.colorize_into_styled_texts(
+                            data.color_wheel_rgb.colorize_into_styled_texts(
                                 &unicode_string,
                                 GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                                 TextColorizationPolicy::ColorEachWord(None),
@@ -185,11 +211,11 @@ mod app_no_layout_impl_trait_app {
 
                         let unicode_string = {
                             UnicodeString::from(format!(
-                                "{state}, gradient: [index: _, len: _]"
+                                "{state_str}, gradient: [index: _, len: _]"
                             ))
                         };
 
-                        let st = self.lolcat_fg.colorize_into_styled_texts(
+                        let st = data.lolcat_fg.colorize_into_styled_texts(
                             &unicode_string,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(None),
@@ -208,11 +234,11 @@ mod app_no_layout_impl_trait_app {
 
                         let unicode_string = {
                             UnicodeString::from(format!(
-                                "{state}, gradient: [index: _, len: _]"
+                                "{state_str}, gradient: [index: _, len: _]"
                             ))
                         };
 
-                        let st = self.lolcat_bg.colorize_into_styled_texts(
+                        let st = data.lolcat_bg.colorize_into_styled_texts(
                             &unicode_string,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(None),
@@ -228,21 +254,29 @@ mod app_no_layout_impl_trait_app {
                 status_bar::create_status_bar_message(&mut pipeline, window_size);
 
                 // Handle animation.
-                self.animator.start(shared_store, start_animator_task_fn);
+                if data.animator.is_animation_not_started() {
+                    data.animator.start(
+                        global_data.main_thread_channel_sender.clone(),
+                        start_animator_task,
+                    )
+                }
 
                 pipeline
             });
         }
 
-        async fn app_handle_event(
+        fn app_handle_input_event(
             &mut self,
-            args: GlobalScopeArgs<'_, State, Action>,
-            input_event: &InputEvent,
+            input_event: InputEvent,
+            global_data: &mut GlobalData<State, AppSignal>,
+            _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+            _has_focus: &mut HasFocus,
         ) -> CommonResult<EventPropagation> {
-            throws_with_return!({
-                let GlobalScopeArgs { shared_store, .. } = args;
+            // Things from the app scope.
+            let AppData { animator, .. } = &mut self.data;
 
-                call_if_true!(DEBUG, {
+            throws_with_return!({
+                call_if_true!(ENABLE_TRACE_EXAMPLES, {
                     let msg = format!(
                         "⛵ AppNoLayout::handle_event -> input_event: {input_event}"
                     );
@@ -254,17 +288,36 @@ mod app_no_layout_impl_trait_app {
                 if let InputEvent::Keyboard(KeyPress::Plain { key }) = input_event {
                     // Check for + or - key.
                     if let Key::Character(typed_char) = key {
+                        let sender = global_data.main_thread_channel_sender.clone();
                         match typed_char {
                             '+' => {
-                                fire!(event_consumed, shared_store, Action::Add);
+                                event_consumed = true;
+                                tokio::spawn(async move {
+                                    let _ = sender
+                                        .send(
+                                            TerminalWindowMainThreadSignal::ApplyAction(
+                                                AppSignal::Add,
+                                            ),
+                                        )
+                                        .await;
+                                });
                             }
                             '-' => {
-                                fire!(event_consumed, shared_store, Action::Sub);
+                                event_consumed = true;
+                                tokio::spawn(async move {
+                                    let _ = sender
+                                        .send(
+                                            TerminalWindowMainThreadSignal::ApplyAction(
+                                                AppSignal::Sub,
+                                            ),
+                                        )
+                                        .await;
+                                });
                             }
                             // Override default behavior of 'x' key.
                             'x' => {
-                                self.animator.stop();
                                 event_consumed = false;
+                                let _ = animator.stop();
                             }
                             _ => {}
                         }
@@ -272,12 +325,31 @@ mod app_no_layout_impl_trait_app {
 
                     // Check for up or down arrow key.
                     if let Key::SpecialKey(special_key) = key {
+                        let sender = global_data.main_thread_channel_sender.clone();
                         match special_key {
                             SpecialKey::Up => {
-                                fire!(event_consumed, shared_store, Action::Add);
+                                event_consumed = true;
+                                tokio::spawn(async move {
+                                    let _ = sender
+                                        .send(
+                                            TerminalWindowMainThreadSignal::ApplyAction(
+                                                AppSignal::Add,
+                                            ),
+                                        )
+                                        .await;
+                                });
                             }
                             SpecialKey::Down => {
-                                fire!(event_consumed, shared_store, Action::Sub);
+                                event_consumed = true;
+                                tokio::spawn(async move {
+                                    let _ = sender
+                                        .send(
+                                            TerminalWindowMainThreadSignal::ApplyAction(
+                                                AppSignal::Sub,
+                                            ),
+                                        )
+                                        .await;
+                                });
                             }
                             _ => {}
                         }
@@ -285,15 +357,49 @@ mod app_no_layout_impl_trait_app {
                 }
 
                 if event_consumed {
-                    EventPropagation::Consumed
+                    EventPropagation::ConsumedRender
                 } else {
                     EventPropagation::Propagate
                 }
             });
         }
 
-        fn init(&mut self) {
-            self.color_wheel_ansi_vec = vec![
+        fn app_handle_signal(
+            &mut self,
+            action: &AppSignal,
+            global_data: &mut GlobalData<State, AppSignal>,
+        ) -> CommonResult<EventPropagation> {
+            throws_with_return!({
+                let GlobalData { state, .. } = global_data;
+
+                match action {
+                    AppSignal::Add => {
+                        state.counter += 1;
+                    }
+
+                    AppSignal::Sub => {
+                        state.counter -= 1;
+                    }
+
+                    AppSignal::Clear => {
+                        state.counter = 0;
+                    }
+
+                    _ => {}
+                }
+
+                EventPropagation::ConsumedRender
+            });
+        }
+
+        fn app_init(
+            &mut self,
+            _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+            _has_focus: &mut HasFocus,
+        ) {
+            let data = &mut self.data;
+
+            data.color_wheel_ansi_vec = vec![
                 ColorWheel::new(vec![ColorWheelConfig::Ansi256(
                     Ansi256GradientIndex::GrayscaleMediumGrayToWhite,
                     ColorWheelSpeed::Fast,
@@ -356,13 +462,13 @@ mod app_no_layout_impl_trait_app {
                 )]),
             ];
 
-            self.color_wheel_rgb = ColorWheel::new(vec![ColorWheelConfig::Rgb(
+            data.color_wheel_rgb = ColorWheel::new(vec![ColorWheelConfig::Rgb(
                 Vec::from(DEFAULT_GRADIENT_STOPS.map(String::from)),
                 ColorWheelSpeed::Fast,
                 25,
             )]);
 
-            self.lolcat_fg = ColorWheel::new(vec![
+            data.lolcat_fg = ColorWheel::new(vec![
                 ColorWheelConfig::Lolcat(
                     LolcatBuilder::new()
                         .set_color_change_speed(ColorChangeSpeed::Rapid)
@@ -375,7 +481,7 @@ mod app_no_layout_impl_trait_app {
                 ),
             ]);
 
-            self.lolcat_bg = ColorWheel::new(vec![
+            data.lolcat_bg = ColorWheel::new(vec![
                 ColorWheelConfig::Lolcat(
                     LolcatBuilder::new()
                         .set_background_mode(true)
@@ -388,11 +494,6 @@ mod app_no_layout_impl_trait_app {
                     ColorWheelSpeed::Slow,
                 ),
             ]);
-        }
-
-        /// No-op.
-        fn get_component_registry(&mut self) -> &mut ComponentRegistry<State, Action> {
-            &mut self.component_registry
         }
     }
 }

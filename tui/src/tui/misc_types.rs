@@ -18,7 +18,15 @@
 use std::{fmt::Debug,
           ops::{AddAssign, Deref, DerefMut}};
 
-use r3bl_redux::*;
+pub use args::*;
+pub use cli_args::*;
+pub use dialog_component_traits::*;
+pub use editor_component_traits::*;
+pub use global_constants::*;
+pub use list_of::*;
+pub use misc_type_aliases::*;
+pub use pretty_print_option::*;
+pub use pretty_print_traits::*;
 use r3bl_rs_utils_core::*;
 use strum_macros::AsRefStr;
 
@@ -27,14 +35,10 @@ use crate::*;
 pub mod args {
     use super::*;
 
-    pub struct RenderArgs<'a, S, A>
-    where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
-    {
+    pub struct RenderArgs<'a> {
         pub editor_engine: &'a mut EditorEngine,
         pub editor_buffer: &'a EditorBuffer,
-        pub component_registry: &'a ComponentRegistry<S, A>,
+        pub has_focus: &'a mut HasFocus,
     }
 
     pub struct EditorArgsMut<'a> {
@@ -47,75 +51,21 @@ pub mod args {
         pub editor_buffer: &'a EditorBuffer,
     }
 
-    /// Global scope args struct that holds references.
-    ///
-    /// ![Editor component lifecycle
-    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
-    pub struct GlobalScopeArgs<'a, S, A>
-    where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
-    {
-        pub shared_global_data: &'a SharedGlobalData,
-        pub shared_store: &'a SharedStore<S, A>,
-        pub state: &'a S,
-        pub window_size: &'a Size,
-    }
-
-    /// Component scope args struct that holds references.
-    ///
-    /// ![Editor component lifecycle
-    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
-    pub struct ComponentScopeArgs<'a, S, A>
-    where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
-    {
-        pub shared_global_data: &'a SharedGlobalData,
-        pub shared_store: &'a SharedStore<S, A>,
-        pub state: &'a S,
-        pub component_registry: &'a mut ComponentRegistry<S, A>,
-        pub window_size: &'a Size,
-    }
-
-    /// [EditorEngine] args struct that holds references.
-    ///
-    /// ![Editor component lifecycle
-    /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
-    pub struct EditorEngineArgs<'a, S, A>
-    where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
-    {
-        pub shared_global_data: &'a SharedGlobalData,
-        pub shared_store: &'a SharedStore<S, A>,
-        pub state: &'a S,
-        pub component_registry: &'a mut ComponentRegistry<S, A>,
-        pub self_id: FlexBoxId,
-        pub editor_buffer: &'a EditorBuffer,
-        pub editor_engine: &'a mut EditorEngine,
-    }
-
     /// [DialogEngine] args struct that holds references.
     ///
     /// ![Editor component lifecycle
     /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
     pub struct DialogEngineArgs<'a, S, A>
     where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        S: Debug + Default + Clone + Sync + Send,
         A: Debug + Default + Clone + Sync + Send,
     {
-        pub shared_global_data: &'a SharedGlobalData,
-        pub shared_store: &'a SharedStore<S, A>,
-        pub state: &'a S,
-        pub component_registry: &'a mut ComponentRegistry<S, A>,
         pub self_id: FlexBoxId,
-        pub dialog_buffer: &'a DialogBuffer,
+        pub global_data: &'a mut GlobalData<S, A>,
         pub dialog_engine: &'a mut DialogEngine,
-        pub window_size: &'a Size,
+        pub has_focus: &'a mut HasFocus,
     }
 }
-pub use args::*;
 
 pub mod misc_type_aliases {
     use super::*;
@@ -123,7 +73,6 @@ pub mod misc_type_aliases {
     pub type ScrollOffset = Position;
     pub type US = UnicodeString;
 }
-pub use misc_type_aliases::*;
 
 pub mod pretty_print_option {
     use super::*;
@@ -143,7 +92,6 @@ pub mod pretty_print_option {
         None,
     }
 }
-pub use pretty_print_option::*;
 
 pub mod global_constants {
     use super::*;
@@ -192,7 +140,6 @@ pub mod global_constants {
     pub const DEFAULT_CURSOR_CHAR: char = '▒';
     pub const DEFAULT_SYN_HI_FILE_EXT: &str = "md";
 }
-pub use global_constants::*;
 
 pub mod list_of {
     use get_size::GetSize;
@@ -266,7 +213,6 @@ pub mod list_of {
         fn deref_mut(&mut self) -> &mut Self::Target { &mut self.items }
     }
 }
-pub use list_of::*;
 
 mod cli_args {
     use super::*;
@@ -306,7 +252,6 @@ mod cli_args {
         }
     }
 }
-pub use cli_args::*;
 
 mod pretty_print_traits {
     use crossterm::style::Stylize;
@@ -363,7 +308,6 @@ mod pretty_print_traits {
         fn to_plain_text_us(&self) -> US;
     }
 }
-pub use pretty_print_traits::*;
 
 mod editor_component_traits {
     use super::*;
@@ -373,10 +317,11 @@ mod editor_component_traits {
     /// the [EditorComponent] to ensure that the generic type `S` implements this trait,
     /// guaranteeing that it holds a hash map of [EditorBuffer]s w/ key of [FlexBoxId].
     pub trait HasEditorBuffers {
-        fn get_editor_buffer(&self, id: FlexBoxId) -> Option<&EditorBuffer>;
+        fn get_mut_editor_buffer(&mut self, id: FlexBoxId) -> Option<&mut EditorBuffer>;
+        fn insert_editor_buffer(&mut self, id: FlexBoxId, buffer: EditorBuffer);
+        fn contains_editor_buffer(&self, id: FlexBoxId) -> bool;
     }
 }
-pub use editor_component_traits::*;
 
 pub mod dialog_component_traits {
     use super::*;
@@ -386,7 +331,7 @@ pub mod dialog_component_traits {
     /// [DialogComponent] to ensure that the generic type `S` implements this trait, guaranteeing that
     /// it holds a single [DialogBuffer].
     pub trait HasDialogBuffers {
-        fn get_dialog_buffer(&self, id: FlexBoxId) -> Option<&DialogBuffer>;
+        fn get_mut_dialog_buffer(&mut self, id: FlexBoxId) -> Option<&mut DialogBuffer>;
     }
 
     #[derive(Debug)]
@@ -395,8 +340,7 @@ pub mod dialog_component_traits {
         No,
     }
 
-    pub type OnDialogPressFn<S, A> = fn(DialogChoice, &SharedStore<S, A>);
+    pub type OnDialogPressFn<S> = fn(DialogChoice, &mut S);
 
-    pub type OnDialogEditorChangeFn<S, A> = fn(EditorBuffer, &SharedStore<S, A>);
+    pub type OnDialogEditorChangeFn<S> = fn(&mut S);
 }
-pub use dialog_component_traits::*;

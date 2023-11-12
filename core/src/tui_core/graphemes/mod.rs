@@ -159,9 +159,6 @@ pub mod result_types;
 pub mod unicode_string;
 
 // Re-export.
-pub use access::*;
-pub use change::*;
-pub use combine::*;
 pub use convert::*;
 pub use range::*;
 pub use result_types::*;

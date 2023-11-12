@@ -17,6 +17,26 @@
 
 use std::fmt::{Display, Formatter};
 
+/// Reducer.
+#[derive(Default)]
+pub struct Reducer;
+
+/// Action.
+#[derive(Default, Clone, Debug)]
+#[non_exhaustive]
+#[allow(dead_code)]
+pub enum AppSignal {
+    AddPop(i32),
+    SubPop(i32),
+    Clear,
+    #[default]
+    Noop,
+}
+
+impl Display for AppSignal {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{self:?}") }
+}
+
 /// State.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct State {

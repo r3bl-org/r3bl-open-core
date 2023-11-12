@@ -15,12 +15,11 @@
  *   limitations under the License.
  */
 
+// Attach sources.
 pub mod custom_syntax_parser;
 pub mod ident_ref;
 pub mod make_safe_async;
 pub mod make_shareable;
 
-pub use custom_syntax_parser::*;
+// Re-export.
 pub use ident_ref::*;
-pub use make_safe_async::*;
-pub use make_shareable::*;

@@ -23,7 +23,7 @@ use crate::*;
 
 #[derive(Debug)]
 pub enum DialogEngineApplyResponse {
-    UpdateEditorBuffer(EditorBuffer),
+    UpdateEditorBuffer,
     DialogChoice(DialogChoice),
     SelectScrollResultsPanel,
     Noop,
@@ -33,36 +33,48 @@ pub enum DialogEngineApplyResponse {
 pub struct DialogEngineApi;
 
 impl DialogEngineApi {
-    pub async fn render_engine<S, A>(
+    pub fn render_engine<S, A>(
         args: DialogEngineArgs<'_, S, A>,
     ) -> CommonResult<RenderPipeline>
     where
-        S: HasDialogBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
+        S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
         A: Debug + Default + Clone + Sync + Send,
     {
-        let mode = args.dialog_engine.dialog_options.mode;
+        // Unpack local scope data.
+        let DialogEngineArgs {
+            self_id,
+            global_data,
+            dialog_engine,
+            has_focus,
+        } = args;
+
+        // Unpack global data.
+        let GlobalData { state, .. } = global_data;
+
+        let mode = dialog_engine.dialog_options.mode;
         let overlay_flex_box: PartialFlexBox = {
-            match &args.dialog_engine.maybe_flex_box {
+            let window_size = global_data.window_size;
+            match &dialog_engine.maybe_flex_box {
                 // No need to calculate new flex box if:
                 // 1) there's an existing one & 2) the window size hasn't changed.
                 Some((saved_size, saved_mode, saved_box))
-                    if saved_size == args.window_size && saved_mode == &mode =>
+                    if *saved_size == window_size && saved_mode == &mode =>
                 {
                     *saved_box
                 }
                 // Otherwise, calculate a new flex box & save it.
                 _ => {
                     let it = internal_impl::make_flex_box_for_dialog(
-                        &args.self_id,
-                        &args.dialog_engine.dialog_options,
-                        args.window_size,
-                        args.dialog_engine.maybe_surface_bounds,
+                        self_id,
+                        dialog_engine.dialog_options,
+                        window_size,
+                        dialog_engine.maybe_surface_bounds,
                     )?;
-                    args.dialog_engine.maybe_flex_box.replace((
-                        *args.window_size,
-                        mode,
-                        it,
-                    ));
+
+                    dialog_engine
+                        .maybe_flex_box
+                        .replace((window_size, mode, it));
+
                     it
                 }
             }
@@ -76,41 +88,53 @@ impl DialogEngineApi {
 
             it.push(
                 ZOrder::Glass,
-                internal_impl::render_border(
-                    &origin_pos,
-                    &bounds_size,
-                    args.dialog_engine,
-                ),
+                internal_impl::render_border(&origin_pos, &bounds_size, dialog_engine),
             );
 
+            // Paint title.
+            let title = if let Some(dialog_buffer) = state.get_mut_dialog_buffer(self_id)
+            {
+                &dialog_buffer.title
+            } else {
+                "N/A"
+            };
             it.push(
                 ZOrder::Glass,
                 internal_impl::render_title(
                     &origin_pos,
                     &bounds_size,
-                    &args.dialog_buffer.title,
-                    args.dialog_engine,
+                    title,
+                    dialog_engine,
                 ),
             );
 
             // Call render_results_panel() if mode is autocomplete.
             if matches!(
-                args.dialog_engine.dialog_options.mode,
+                dialog_engine.dialog_options.mode,
                 DialogEngineMode::ModalAutocomplete
             ) {
                 let results_panel_ops = internal_impl::render_results_panel(
                     &origin_pos,
                     &bounds_size,
-                    args.dialog_engine,
-                    args.self_id,
-                    args.state,
+                    dialog_engine,
+                    self_id,
+                    state,
                 )?;
                 if !results_panel_ops.is_empty() {
                     it.push(ZOrder::Glass, results_panel_ops);
                 }
             }
 
-            it += internal_impl::render_editor(&origin_pos, &bounds_size, args).await?;
+            it += internal_impl::render_editor(
+                &origin_pos,
+                &bounds_size,
+                DialogEngineArgs {
+                    self_id,
+                    global_data,
+                    dialog_engine,
+                    has_focus,
+                },
+            )?;
 
             it
         };
@@ -124,29 +148,20 @@ impl DialogEngineApi {
     ///   pressed.
     /// - [DialogEngineApplyResponse::UpdateEditorBuffer] => the editor buffer was updated.
     /// - [DialogEngineApplyResponse::Noop] => otherwise.
-    pub async fn apply_event<S, A>(
-        args: DialogEngineArgs<'_, S, A>,
-        input_event: &InputEvent,
+    pub fn apply_event<S, A>(
+        mut_state: &mut S,
+        self_id: FlexBoxId,
+        dialog_engine: &mut DialogEngine,
+        input_event: InputEvent,
     ) -> CommonResult<DialogEngineApplyResponse>
     where
-        S: HasDialogBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
+        S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
         A: Debug + Default + Clone + Sync + Send,
     {
-        let DialogEngineArgs {
-            self_id,
-            component_registry,
-            shared_store,
-            shared_global_data,
-            state,
-            dialog_buffer,
-            dialog_engine,
-            ..
-        } = args;
-
         // Was a dialog choice made?
         if let Some(choice) = internal_impl::try_handle_dialog_choice(
             input_event,
-            dialog_buffer,
+            mut_state.get_mut_dialog_buffer(self_id),
             dialog_engine,
         ) {
             dialog_engine.reset();
@@ -154,34 +169,40 @@ impl DialogEngineApi {
         }
 
         // Was up / down pressed to select autocomplete results & vert scroll the results panel?
-        if let EventPropagation::ConsumedRender =
-            internal_impl::try_handle_up_down(input_event, dialog_buffer, dialog_engine)
-        {
+        if let EventPropagation::ConsumedRender = internal_impl::try_handle_up_down(
+            input_event,
+            mut_state.get_mut_dialog_buffer(self_id),
+            dialog_engine,
+        ) {
             return Ok(DialogEngineApplyResponse::SelectScrollResultsPanel);
         }
 
         // Otherwise, pass the event to the editor engine.
-        let editor_engine_args = EditorEngineArgs {
-            component_registry,
-            shared_global_data,
-            self_id,
-            editor_buffer: &dialog_buffer.editor_buffer,
-            editor_engine: &mut dialog_engine.editor_engine,
-            shared_store,
-            state,
+
+        // It is safe to unwrap the dialog buffer here (since it will have Some value).
+        let dialog_buffer = {
+            let it = mut_state.get_mut_dialog_buffer(self_id);
+            if it.is_none() {
+                return Ok(DialogEngineApplyResponse::Noop);
+            }
+            it.unwrap()
         };
-
-        // If the editor engine applied the event, return the new editor buffer.
-        if let EditorEngineApplyEventResult::Applied(new_editor_buffer) =
-            EditorEngineApi::apply_event(editor_engine_args, input_event).await?
-        {
-            return Ok(DialogEngineApplyResponse::UpdateEditorBuffer(
-                new_editor_buffer,
-            ));
+        let result = EditorEngineApi::apply_event(
+            &mut dialog_buffer.editor_buffer,
+            &mut dialog_engine.editor_engine,
+            input_event,
+        )?;
+        match result {
+            // If the editor engine applied the event, return the new editor buffer.
+            EditorEngineApplyEventResult::Applied => {
+                Ok(DialogEngineApplyResponse::UpdateEditorBuffer)
+            }
+            _ =>
+            // Otherwise, return noop.
+            {
+                Ok(DialogEngineApplyResponse::Noop)
+            }
         }
-
-        // Otherwise, return noop.
-        Ok(DialogEngineApplyResponse::Noop)
     }
 }
 
@@ -218,15 +239,15 @@ mod internal_impl {
     /// }
     /// ```
     pub fn make_flex_box_for_dialog(
-        dialog_id: &FlexBoxId,
-        dialog_options: &DialogEngineConfigOptions,
-        window_size: &Size,
+        dialog_id: FlexBoxId,
+        dialog_options: DialogEngineConfigOptions,
+        window_size: Size,
         maybe_surface_bounds: Option<SurfaceBounds>,
     ) -> CommonResult<PartialFlexBox> {
         let surface_size = if let Some(surface_bounds) = maybe_surface_bounds {
             surface_bounds.box_size
         } else {
-            *window_size
+            window_size
         };
 
         let surface_origin_pos = if let Some(surface_bounds) = maybe_surface_bounds {
@@ -312,7 +333,7 @@ mod internal_impl {
 
         throws_with_return!({
             PartialFlexBox {
-                id: *dialog_id,
+                id: dialog_id,
                 style_adjusted_origin_pos: origin_pos,
                 style_adjusted_bounds_size: bounds_size,
                 maybe_computed_style: None,
@@ -320,42 +341,58 @@ mod internal_impl {
         })
     }
 
-    pub async fn render_editor<S, A>(
+    pub fn render_editor<S, A>(
         origin_pos: &Position,
         bounds_size: &Size,
         args: DialogEngineArgs<'_, S, A>,
     ) -> CommonResult<RenderPipeline>
     where
-        S: Debug + Default + Clone + PartialEq + Sync + Send,
+        S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
         A: Debug + Default + Clone + Sync + Send,
     {
-        let maybe_style = args.dialog_engine.dialog_options.maybe_style_editor;
+        let DialogEngineArgs {
+            self_id,
+            global_data,
+            dialog_engine,
+            has_focus,
+        } = args;
+
+        let GlobalData { state, .. } = global_data;
+
+        let maybe_style = dialog_engine.dialog_options.maybe_style_editor;
 
         let flex_box: FlexBox = PartialFlexBox {
-            id: args.self_id,
+            id: self_id,
             style_adjusted_origin_pos: position! {col_index: origin_pos.col_index + 1, row_index: origin_pos.row_index + 2},
             style_adjusted_bounds_size: size! {col_count: bounds_size.col_count - 2, row_count: 1},
             maybe_computed_style: maybe_style,
         }
-        .into();
+            .into();
 
-        let editor_engine_args = EditorEngineArgs {
-            component_registry: args.component_registry,
-            shared_global_data: args.shared_global_data,
-            self_id: args.self_id,
-            editor_buffer: &args.dialog_buffer.editor_buffer,
-            editor_engine: &mut args.dialog_engine.editor_engine,
-            shared_store: args.shared_store,
-            state: args.state,
+        let dialog_buffer = {
+            let it = state.get_mut_dialog_buffer(self_id);
+            if it.is_none() {
+                return CommonError::new(
+                    CommonErrorType::NotFound,
+                    &format!("Dialog buffer does not exist for component id:{}", self_id),
+                );
+            }
+            // It is safe to unwrap the dialog buffer here (since it will have Some value).
+            it.unwrap()
         };
 
-        let mut pipeline =
-            EditorEngineApi::render_engine(editor_engine_args, &flex_box).await?;
+        let mut pipeline = EditorEngineApi::render_engine(
+            &mut dialog_engine.editor_engine,
+            &mut dialog_buffer.editor_buffer,
+            flex_box,
+            has_focus,
+        )?;
+
         pipeline.hoist(ZOrder::Normal, ZOrder::Glass);
 
         // Paint hint.
-        if args.dialog_buffer.editor_buffer.is_empty()
-            || args.dialog_buffer.editor_buffer.get_as_string() == ""
+        if dialog_buffer.editor_buffer.is_empty()
+            || dialog_buffer.editor_buffer.get_as_string() == ""
         {
             let mut ops = render_ops!();
             let msg = "Press <Esc> to close, or <Enter> to accept".to_string();
@@ -388,14 +425,14 @@ mod internal_impl {
         bounds_size: &Size,
         dialog_engine: &DialogEngine,
         self_id: FlexBoxId,
-        state: &S,
+        state: &mut S,
     ) -> CommonResult<RenderOps>
     where
-        S: HasDialogBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
+        S: Default + Clone + Debug + Sync + Send + HasDialogBuffers,
     {
         let mut it = render_ops!();
 
-        if let Some(dialog_buffer) = state.get_dialog_buffer(self_id) {
+        if let Some(dialog_buffer) = state.get_mut_dialog_buffer(self_id) {
             if let Some(results) = dialog_buffer.maybe_results.as_ref() {
                 if !results.is_empty() {
                     paint_results(
@@ -694,10 +731,18 @@ mod internal_impl {
     }
 
     pub fn try_handle_dialog_choice(
-        input_event: &InputEvent,
-        dialog_buffer: &DialogBuffer,
-        dialog_engine: &DialogEngine,
+        input_event: InputEvent,
+        maybe_dialog_buffer: Option<&mut DialogBuffer>,
+        dialog_engine: &mut DialogEngine,
     ) -> Option<DialogChoice> {
+        // It is safe to unwrap the dialog buffer here (since it will have Some value).
+        let dialog_buffer = {
+            if maybe_dialog_buffer.is_none() {
+                return None;
+            }
+            maybe_dialog_buffer.unwrap()
+        };
+
         match DialogEvent::from(input_event) {
             // Handle Enter.
             DialogEvent::EnterPressed => match dialog_engine.dialog_options.mode {
@@ -727,10 +772,18 @@ mod internal_impl {
     }
 
     pub fn try_handle_up_down(
-        input_event: &InputEvent,
-        dialog_buffer: &DialogBuffer,
+        input_event: InputEvent,
+        maybe_dialog_buffer: Option<&mut DialogBuffer>,
         dialog_engine: &mut DialogEngine,
     ) -> EventPropagation {
+        // It is safe to unwrap the dialog buffer here (since it will have Some value).
+        let dialog_buffer = {
+            if maybe_dialog_buffer.is_none() {
+                return EventPropagation::Propagate;
+            }
+            maybe_dialog_buffer.unwrap()
+        };
+
         // Handle up arrow?
         if input_event.matches(&[InputEvent::Keyboard(KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Up),
@@ -778,34 +831,42 @@ mod test_dialog_engine_api_render_engine {
     use r3bl_rs_utils_core::*;
 
     use super::*;
-    use crate::test_dialog::mock_real_objects_for_dialog;
+    use crate::test_dialog::mock_real_objects_for_dialog::{self, make_global_data};
 
-    #[tokio::test]
-    async fn render_engine() {
+    #[test]
+    fn render_engine_with_no_dialog_buffer_in_state() {
         let self_id: FlexBoxId = FlexBoxId::from(0);
-        let window_size = &size!( col_count: 70, row_count: 15 );
-        let dialog_buffer = &mut DialogBuffer::new_empty();
+        let window_size = size!( col_count: 70, row_count: 15 );
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
-        let shared_store = &mock_real_objects_for_dialog::create_store();
-        let shared_global_data =
-            &test_editor::mock_real_objects_for_editor::make_shared_global_data(
-                (*window_size).into(),
-            );
-        let component_registry =
-            &mut test_editor::mock_real_objects_for_editor::make_component_registry();
-        let state = &shared_store.read().await.state.clone();
-        let args = DialogEngineArgs {
-            shared_global_data,
-            shared_store,
-            state,
-            component_registry,
-            window_size,
-            self_id,
-            dialog_buffer,
-            dialog_engine,
+        let global_data = &mut {
+            let mut it = make_global_data(Some(window_size));
+            it.state.dialog_buffers.clear();
+            it
         };
+        let has_focus = &mut HasFocus::default();
+        let args = DialogEngineArgs {
+            self_id,
+            global_data,
+            dialog_engine,
+            has_focus,
+        };
+        assert_eq2!(DialogEngineApi::render_engine(args).is_err(), true);
+    }
 
-        let pipeline = dbg!(DialogEngineApi::render_engine(args).await.unwrap());
+    #[test]
+    fn render_engine_with_dialog_buffer_in_state() {
+        let self_id: FlexBoxId = FlexBoxId::from(0);
+        let window_size = size!( col_count: 70, row_count: 15 );
+        let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
+        let global_data = &mut make_global_data(Some(window_size));
+        let has_focus = &mut HasFocus::default();
+        let args = DialogEngineArgs {
+            self_id,
+            global_data,
+            dialog_engine,
+            has_focus,
+        };
+        let pipeline = dbg!(DialogEngineApi::render_engine(args).unwrap());
         assert_eq2!(pipeline.len(), 1);
         let render_ops = pipeline.get(&ZOrder::Glass).unwrap();
         assert!(!render_ops.is_empty());
@@ -838,12 +899,12 @@ mod test_dialog_api_make_flex_box_for_dialog {
         //       ),
         //   },
         let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
-            &dialog_id,
-            &DialogEngineConfigOptions {
+            dialog_id,
+            DialogEngineConfigOptions {
                 mode: DialogEngineMode::ModalSimple,
                 ..Default::default()
             },
-            &window_size,
+            window_size,
             Some(SurfaceBounds::from(&surface)),
         ));
 
@@ -881,12 +942,12 @@ mod test_dialog_api_make_flex_box_for_dialog {
         //       ),
         //   },
         let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
-            &dialog_id,
-            &DialogEngineConfigOptions {
+            dialog_id,
+            DialogEngineConfigOptions {
                 mode: DialogEngineMode::ModalAutocomplete,
                 ..Default::default()
             },
-            &window_size,
+            window_size,
             Some(SurfaceBounds::from(&surface)),
         ));
 
@@ -920,12 +981,12 @@ mod test_dialog_api_make_flex_box_for_dialog {
 
         // The dialog box should be centered inside the surface.
         let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
-            &self_id,
-            &DialogEngineConfigOptions {
+            self_id,
+            DialogEngineConfigOptions {
                 mode: DialogEngineMode::ModalSimple,
                 ..Default::default()
             },
-            &window_size,
+            window_size,
             Some(SurfaceBounds::from(&surface)),
         ));
 
@@ -944,7 +1005,6 @@ mod test_dialog_api_make_flex_box_for_dialog {
     }
 
     #[test]
-
     fn make_flex_box_for_dialog_autocomplete() {
         // 1. The surface and window_size are not the same width and height.
         // 2. The surface is also not starting from the top left corner of the window.
@@ -958,12 +1018,12 @@ mod test_dialog_api_make_flex_box_for_dialog {
 
         // The dialog box should be centered inside the surface.
         let result_flex_box = dbg!(internal_impl::make_flex_box_for_dialog(
-            &self_id,
-            &DialogEngineConfigOptions {
+            self_id,
+            DialogEngineConfigOptions {
                 mode: DialogEngineMode::ModalAutocomplete,
                 ..Default::default()
             },
-            &window_size,
+            window_size,
             Some(SurfaceBounds::from(&surface)),
         ));
 
@@ -989,70 +1049,36 @@ mod test_dialog_engine_api_apply_event {
     use super::*;
     use crate::test_dialog::mock_real_objects_for_dialog;
 
-    #[tokio::test]
-    async fn apply_event_esc() {
+    #[test]
+    fn apply_event_esc() {
         let self_id: FlexBoxId = FlexBoxId::from(0);
-        let window_size = &size!( col_count: 70, row_count: 15 );
-        let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
-        let shared_store = &mock_real_objects_for_dialog::create_store();
-        let shared_global_data =
-            &test_editor::mock_real_objects_for_editor::make_shared_global_data(
-                (*window_size).into(),
-            );
-        let component_registry =
-            &mut test_editor::mock_real_objects_for_editor::make_component_registry();
-        let state = &shared_store.read().await.state.clone();
-        let args = DialogEngineArgs {
-            shared_global_data,
-            shared_store,
-            state,
-            component_registry,
-            window_size,
-            self_id,
-            dialog_buffer,
-            dialog_engine,
-        };
-
+        let state = &mut mock_real_objects_for_dialog::create_state();
         let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Esc));
-        let response = dbg!(DialogEngineApi::apply_event(args, &input_event)
-            .await
-            .unwrap());
+        let response = dbg!(DialogEngineApi::apply_event::<_, ()>(
+            state,
+            self_id,
+            dialog_engine,
+            input_event,
+        )
+        .unwrap());
         assert!(matches!(
             response,
             DialogEngineApplyResponse::DialogChoice(DialogChoice::No)
         ));
     }
 
-    #[tokio::test]
-    async fn apply_event_enter() {
+    #[test]
+    fn apply_event_enter() {
         let self_id: FlexBoxId = FlexBoxId::from(0);
-        let window_size = &size!( col_count: 70, row_count: 15 );
-        let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
-        let shared_store = &mock_real_objects_for_dialog::create_store();
-        let shared_global_data =
-            &test_editor::mock_real_objects_for_editor::make_shared_global_data(
-                (*window_size).into(),
-            );
-        let component_registry =
-            &mut test_editor::mock_real_objects_for_editor::make_component_registry();
-        let state = &shared_store.read().await.state.clone();
-        let args = DialogEngineArgs {
-            shared_global_data,
-            shared_store,
-            state,
-            component_registry,
-            window_size,
-            self_id,
-            dialog_buffer,
-            dialog_engine,
-        };
-
+        let mut state = &mut mock_real_objects_for_dialog::create_state();
         let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Enter));
-        let response = dbg!(DialogEngineApi::apply_event(args, &input_event)
-            .await
-            .unwrap());
+        let response = dbg!(DialogEngineApi::apply_event::<
+            mock_real_objects_for_dialog::State,
+            (),
+        >(&mut state, self_id, dialog_engine, input_event)
+        .unwrap());
         if let DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(value)) =
             &response
         {
@@ -1064,37 +1090,24 @@ mod test_dialog_engine_api_apply_event {
         ));
     }
 
-    #[tokio::test]
-    async fn apply_event_other_key() {
+    #[test]
+    fn apply_event_other_key() {
         let self_id: FlexBoxId = FlexBoxId::from(0);
-        let window_size = &size!( col_count: 70, row_count: 15 );
-        let dialog_buffer = &mut DialogBuffer::new_empty();
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
-        let shared_store = &mock_real_objects_for_dialog::create_store();
-        let shared_global_data =
-            &test_editor::mock_real_objects_for_editor::make_shared_global_data(
-                (*window_size).into(),
-            );
-        let component_registry =
-            &mut test_editor::mock_real_objects_for_editor::make_component_registry();
-        let state = &shared_store.read().await.state.clone();
-        let args = DialogEngineArgs {
-            shared_global_data,
-            shared_store,
-            state,
-            component_registry,
-            window_size,
-            self_id,
-            dialog_buffer,
-            dialog_engine,
-        };
-
+        let state = &mut mock_real_objects_for_dialog::create_state();
         let input_event = InputEvent::Keyboard(keypress!(@char 'a'));
-        let response = dbg!(DialogEngineApi::apply_event(args, &input_event)
-            .await
-            .unwrap());
-        if let DialogEngineApplyResponse::UpdateEditorBuffer(editor_buffer) = &response {
-            assert_eq2!(editor_buffer.get_as_string(), "a");
+        let response = dbg!(DialogEngineApi::apply_event::<
+            mock_real_objects_for_dialog::State,
+            (),
+        >(state, self_id, dialog_engine, input_event)
+        .unwrap());
+        if let DialogEngineApplyResponse::UpdateEditorBuffer = &response {
+            let editor_content = state
+                .get_mut_dialog_buffer(self_id)
+                .unwrap()
+                .editor_buffer
+                .get_as_string();
+            assert_eq2!(editor_content, "a");
         }
     }
 }

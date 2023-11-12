@@ -16,10 +16,10 @@
  */
 
 // Attach sources.
-pub mod app;
+pub mod app_main;
 pub mod launcher;
-pub mod redux;
+pub mod state;
 
 // Re-export only inside this module.
-pub use app::*;
-pub use redux::*;
+pub use app_main::*;
+pub use state::*;

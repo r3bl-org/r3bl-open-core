@@ -326,11 +326,9 @@ composing your code in the following way:
 Typically your [App] will look like this:
 
 ```rust
-/// Async trait object that implements the [App] trait.
 #[derive(Default)]
-pub struct AppWithLayout {
-  pub component_registry: ComponentRegistry<AppWithLayoutState, AppWithLayoutAction>,
-  pub has_focus: HasFocus,
+pub struct AppMain {
+  ...
 }
 ```
 

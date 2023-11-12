@@ -15,182 +15,189 @@
  *   limitations under the License.
  */
 
-use std::{borrow::Cow, fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
-use async_trait::async_trait;
 use r3bl_rs_utils_core::*;
-use tokio::sync::RwLock;
 
 use crate::*;
 
 /// This is a shim which allows the reusable [DialogEngine] to be used in the context of [Component]
 /// and [r3bl_redux::Store]. The main methods here simply pass thru all their arguments to the
 /// [DialogEngine].
-#[derive(Clone, Default)]
+#[derive(Debug, Default)]
 pub struct DialogComponent<S, A>
 where
-    S: Debug + Default + Clone + PartialEq + Sync + Send,
+    S: Debug + Default + Clone + Sync + Send,
+    A: Debug + Default + Clone + Sync + Send,
+{
+    pub data: DialogComponentData<S, A>,
+}
+
+#[derive(Debug, Default)]
+pub struct DialogComponentData<S, A>
+where
+    S: Debug + Default + Clone + Sync + Send,
     A: Debug + Default + Clone + Sync + Send,
 {
     pub id: FlexBoxId,
     pub dialog_engine: DialogEngine,
     /// Make sure to dispatch actions to handle the user's dialog choice [DialogChoice].
-    pub on_dialog_press_handler: Option<OnDialogPressFn<S, A>>,
+    pub on_dialog_press_handler: Option<OnDialogPressFn<S>>,
     /// Make sure to dispatch an action to update the dialog buffer's editor buffer.
-    pub on_dialog_editor_change_handler: Option<OnDialogEditorChangeFn<S, A>>,
+    pub on_dialog_editor_change_handler: Option<OnDialogEditorChangeFn<S>>,
+    _phantom: std::marker::PhantomData<A>,
 }
 
-#[async_trait]
-impl<S, A> Component<S, A> for DialogComponent<S, A>
+impl<'a, S, A> Component<S, A> for DialogComponent<S, A>
 where
-    S: HasDialogBuffers + Default + Clone + PartialEq + Debug + Sync + Send,
+    S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
     A: Debug + Default + Clone + Sync + Send,
 {
-    fn reset(&mut self) { self.dialog_engine.reset(); }
+    fn reset(&mut self) { self.data.dialog_engine.reset(); }
 
-    fn get_id(&self) -> FlexBoxId { self.id }
+    fn get_id(&self) -> FlexBoxId { self.data.id }
 
-    /// This shim simply calls [DialogEngineApi::render_engine](DialogEngineApi::render_engine) w/
-    /// all the necessary arguments:
-    /// - Global scope: [r3bl_redux::SharedStore], [SharedGlobalData].
-    /// - App scope: `S`, [ComponentRegistry<S, A>].
-    /// - User input (from [main_event_loop]): [InputEvent].
+    /// This shim simply calls
+    /// [DialogEngineApi::render_engine](DialogEngineApi::render_engine) w/ all the
+    /// necessary arguments:
+    /// - Global scope: [GlobalData] containing the app's state.
+    /// - Has focus: [HasFocus] containing whether the current box has focus.
+    /// - Surface bounds: [SurfaceBounds] containing the bounds of the current box.
     ///
     /// Note:
     /// 1. The 3rd argument `_current_box` [FlexBox] is ignored since the dialog component
-    ///    breaks out of whatever box the layout places it in, and ends up painting itself over
-    ///    the entire screen.
-    /// 2. However, `SurfaceBounds` is saved for later use. And it is used to restrict where the
-    ///    dialog can be placed on the screen.
-    async fn render(
+    ///    breaks out of whatever box the layout places it in, and ends up painting itself
+    ///    over the entire screen.
+    /// 2. However, [SurfaceBounds] is saved for later use. And it is used to restrict
+    ///    where the dialog can be placed on the screen.
+    fn render(
         &mut self,
-        args: ComponentScopeArgs<'_, S, A>,
-        _current_box: &FlexBox,        /* Ignore this. */
+        global_data: &mut GlobalData<S, A>,
+        _current_box: FlexBox,         /* Ignore this. */
         surface_bounds: SurfaceBounds, /* Save this. */
+        has_focus: &mut HasFocus,
     ) -> CommonResult<RenderPipeline> {
-        self.dialog_engine.maybe_surface_bounds = Some(surface_bounds);
+        // Unpack the global data.
+        let GlobalData { state, .. } = global_data;
 
-        let ComponentScopeArgs {
-            state,
-            shared_store,
-            shared_global_data,
-            component_registry,
-            window_size,
-        } = args;
+        // Unpack the component data.
+        let DialogComponentData {
+            id, dialog_engine, ..
+        } = &mut self.data;
 
-        let dialog_buffer: Cow<DialogBuffer> =
-            if let Some(it) = state.get_dialog_buffer(self.get_id()) {
-                Cow::Borrowed(it)
-            } else {
-                Cow::Owned(DialogBuffer::new_empty())
-            };
+        let self_id = *id;
 
-        let dialog_engine_args = {
-            DialogEngineArgs {
-                shared_global_data,
-                shared_store,
-                state,
-                component_registry,
-                self_id: self.get_id(),
-                dialog_engine: &mut self.dialog_engine,
-                dialog_buffer: &dialog_buffer,
-                window_size,
+        dialog_engine.maybe_surface_bounds = Some(surface_bounds);
+
+        match state.get_mut_dialog_buffer(self_id) {
+            Some(_) => {
+                let args = {
+                    DialogEngineArgs {
+                        self_id,
+                        global_data,
+                        dialog_engine,
+                        has_focus,
+                    }
+                };
+                DialogEngineApi::render_engine(args)
             }
-        };
-
-        DialogEngineApi::render_engine(dialog_engine_args).await
+            None => Ok(RenderPipeline::default()),
+        }
     }
 
-    /// This shim simply calls [DialogEngineApi::apply_event](DialogEngineApi::apply_event) w/ all
-    /// the necessary arguments:
-    /// - Global scope: [r3bl_redux::SharedStore], [SharedGlobalData].
-    /// - App scope: `S`, [ComponentRegistry<S, A>].
+    /// This shim simply calls
+    /// [DialogEngineApi::apply_event](DialogEngineApi::apply_event) w/ all the necessary
+    /// arguments:
+    /// - Global scope: [GlobalData] containing the app's state.
     /// - User input (from [main_event_loop]): [InputEvent].
+    /// - Has focus: [HasFocus] containing whether the current box has focus.
     ///
     /// Usually a component must have focus in order for the [App] to
-    /// [route_event_to_focused_component](ComponentRegistry::route_event_to_focused_component) in
-    /// the first place.
-    async fn handle_event(
+    /// [route_event_to_focused_component](ComponentRegistry::route_event_to_focused_component)
+    /// in the first place.
+    fn handle_event(
         &mut self,
-        args: ComponentScopeArgs<'_, S, A>,
-        input_event: &InputEvent,
+        global_data: &mut GlobalData<S, A>,
+        input_event: InputEvent,
+        has_focus: &mut HasFocus,
     ) -> CommonResult<EventPropagation> {
-        let ComponentScopeArgs {
-            state,
-            shared_store,
-            shared_global_data,
-            component_registry,
-            window_size,
-        } = args;
+        // Unpack the global data.
+        let GlobalData { state, .. } = global_data;
 
-        let dialog_buffer: Cow<DialogBuffer> =
-            if let Some(it) = state.get_dialog_buffer(self.get_id()) {
-                Cow::Borrowed(it)
-            } else {
-                Cow::Owned(DialogBuffer::new_empty())
-            };
+        let DialogComponentData {
+            id,
+            dialog_engine,
+            on_dialog_press_handler,
+            on_dialog_editor_change_handler,
+            ..
+        } = &mut self.data;
 
-        let dialog_engine_args = {
-            DialogEngineArgs {
-                shared_global_data,
-                shared_store,
-                state,
-                component_registry,
-                self_id: self.get_id(),
-                dialog_engine: &mut self.dialog_engine,
-                dialog_buffer: &dialog_buffer,
-                window_size,
+        let id = *id;
+
+        match state.get_mut_dialog_buffer(id) {
+            // Happy branch.
+            Some(_) => {
+                match DialogEngineApi::apply_event::<S, A>(
+                    state,
+                    id,
+                    dialog_engine,
+                    input_event,
+                )? {
+                    // Handler user's choice.
+                    DialogEngineApplyResponse::DialogChoice(dialog_choice) => {
+                        has_focus.reset_modal_id();
+
+                        call_if_true!(DEBUG_TUI_MOD, {
+                            let msg =
+                                format!("🐝 restore focus to non modal: {:?}", has_focus);
+                            log_debug(msg);
+                        });
+
+                        // Run the handler (if any) w/ `dialog_choice`.
+                        if let Some(it) = &on_dialog_press_handler {
+                            it(dialog_choice, state);
+                        };
+
+                        // Trigger re-render, now that focus has been restored to non-modal component.
+                        Ok(EventPropagation::ConsumedRender)
+                    }
+
+                    // Handler user input that has updated the dialog_buffer.editor_buffer.
+                    DialogEngineApplyResponse::UpdateEditorBuffer => {
+                        // Run the handler (if any) w/ `new_editor_buffer`.
+                        if let Some(it) = &on_dialog_editor_change_handler {
+                            it(state);
+                        };
+
+                        // The handler should dispatch action to change state since dialog_buffer.editor_buffer is
+                        // updated.
+                        Ok(EventPropagation::Consumed)
+                    }
+
+                    // Handle user input that has updated the results panel.
+                    DialogEngineApplyResponse::SelectScrollResultsPanel => {
+                        Ok(EventPropagation::ConsumedRender)
+                    }
+
+                    // All else.
+                    _ => Ok(EventPropagation::Propagate),
+                }
             }
-        };
-
-        match DialogEngineApi::apply_event(dialog_engine_args, input_event).await? {
-            // Handler user's choice.
-            DialogEngineApplyResponse::DialogChoice(dialog_choice) => {
-                component_registry.has_focus.reset_modal_id();
-
-                call_if_true!(DEBUG_TUI_MOD, {
-                    let msg = format!(
-                        "🐝 restore focus to non modal: {:?}",
-                        component_registry.has_focus
-                    );
-                    log_debug(msg);
-                });
-
-                // Run the handler (if any) w/ `dialog_choice`.
-                if let Some(it) = &self.on_dialog_press_handler {
-                    it(dialog_choice, shared_store);
-                };
-
-                // Trigger re-render, now that focus has been restored to non-modal component.
-                Ok(EventPropagation::ConsumedRender)
+            // Error branch.
+            _ => {
+                let msg = format!(
+                    "🐝 DialogComponent::handle_event: dialog_buffer is None for id: {:?}",
+                    id
+                );
+                return CommonError::new(CommonErrorType::NotFound, &msg);
             }
-
-            // Handler user input that has updated the dialog_buffer.editor_buffer.
-            DialogEngineApplyResponse::UpdateEditorBuffer(new_editor_buffer) => {
-                // Run the handler (if any) w/ `new_editor_buffer`.
-                if let Some(it) = &self.on_dialog_editor_change_handler {
-                    it(new_editor_buffer, shared_store);
-                };
-
-                // The handler should dispatch action to change state since dialog_buffer.editor_buffer is
-                // updated.
-                Ok(EventPropagation::Consumed)
-            }
-
-            // Handle user input that has updated the results panel.
-            DialogEngineApplyResponse::SelectScrollResultsPanel => {
-                Ok(EventPropagation::ConsumedRender)
-            }
-
-            // All else.
-            _ => Ok(EventPropagation::Propagate),
         }
     }
 }
 
 impl<S, A> DialogComponent<S, A>
 where
-    S: Debug + Default + Clone + PartialEq + Sync + Send,
+    S: Debug + Default + Clone + Sync + Send,
     A: Debug + Default + Clone + Sync + Send,
 {
     /// The on_dialog_press_handler is a lambda that is called if the user presses enter or escape.
@@ -200,30 +207,35 @@ where
         id: FlexBoxId,
         dialog_options: DialogEngineConfigOptions,
         editor_options: EditorEngineConfig,
-        on_dialog_press_handler: OnDialogPressFn<S, A>,
-        on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, A>,
+        on_dialog_press_handler: OnDialogPressFn<S>,
+        on_dialog_editor_change_handler: OnDialogEditorChangeFn<S>,
     ) -> Self {
+        let dialog_engine = DialogEngine::new(dialog_options, editor_options);
         Self {
-            dialog_engine: DialogEngine::new(dialog_options, editor_options),
-            id,
-            on_dialog_press_handler: Some(on_dialog_press_handler),
-            on_dialog_editor_change_handler: Some(on_dialog_editor_change_handler),
+            data: DialogComponentData {
+                id,
+                dialog_engine,
+                on_dialog_press_handler: Some(on_dialog_press_handler),
+                on_dialog_editor_change_handler: Some(on_dialog_editor_change_handler),
+                ..Default::default()
+            },
         }
     }
 
-    pub fn new_shared(
+    pub fn new_boxed(
         id: FlexBoxId,
         dialog_options: DialogEngineConfigOptions,
         editor_options: EditorEngineConfig,
-        on_dialog_press_handler: OnDialogPressFn<S, A>,
-        on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, A>,
-    ) -> Arc<RwLock<Self>> {
-        Arc::new(RwLock::new(DialogComponent::new(
+        on_dialog_press_handler: OnDialogPressFn<S>,
+        on_dialog_editor_change_handler: OnDialogEditorChangeFn<S>,
+    ) -> Box<Self> {
+        let it = DialogComponent::new(
             id,
             dialog_options,
             editor_options,
             on_dialog_press_handler,
             on_dialog_editor_change_handler,
-        )))
+        );
+        Box::new(it)
     }
 }
