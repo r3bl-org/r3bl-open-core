@@ -34,6 +34,7 @@ pub enum KeyPress {
     Noop,
     Error,
     Space,
+    Resize(Size),
 }
 
 pub fn read_key_press() -> KeyPress {
@@ -52,6 +53,12 @@ fn read_key_press_unix() -> KeyPress {
         Ok(event) => {
             log_debug(format!("got event: {:?}", event).to_string());
             match event {
+                crossterm::event::Event::Resize(width, height) => {
+                    KeyPress::Resize(Size {
+                        col_count: ch!(width),
+                        row_count: ch!(height),
+                    })
+                }
                 crossterm::event::Event::Key(KeyEvent { code, .. }) => {
                     // Only trap the right code.
                     match code {
@@ -122,6 +129,12 @@ fn read_key_press_windows() -> KeyPress {
                     kind: KeyEventKind::Press, // This is for Windows.
                     state: KeyEventState::NONE,
                 }) => KeyPress::Space,
+
+                // Resize.
+                Event::Resize(width, height) => KeyPress::Resize(Size {
+                    col_count: ch!(width),
+                    row_count: ch!(height),
+                }),
 
                 // Catchall.
                 _ => KeyPress::Noop,

@@ -59,12 +59,17 @@ pub fn select_from_list(
         selected_items: Vec::new(),
         header,
         selection_mode,
+        ..Default::default()
     };
 
     let mut function_component = SelectComponent {
         write: stdout(),
         style,
     };
+
+    if let Ok(size) = get_size() {
+        state.set_size(size);
+    }
 
     let user_input =
         enter_event_loop(&mut state, &mut function_component, |state, key_press| {
@@ -92,6 +97,25 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
     let selection_mode = state.selection_mode;
 
     let return_it = match key_press {
+        // Resize.
+        KeyPress::Resize(Size {
+            col_count,
+            row_count,
+        }) => {
+            call_if_true!(TRACE, {
+                let msg = format!(
+                    "\n🍎🍎🍎\nNew size width:{} x height:{}",
+                    col_count, row_count
+                );
+                log_debug(msg.red().to_string());
+            });
+            state.set_resize_hint(Size {
+                col_count,
+                row_count,
+            });
+            EventLoopResult::ContinueAndRerenderAndClear
+        }
+
         // Down.
         KeyPress::Down => {
             call_if_true!(TRACE, {
@@ -124,7 +148,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
                 );
             });
 
-            EventLoopResult::Continue
+            EventLoopResult::ContinueAndRerender
         }
 
         // Up.
@@ -155,7 +179,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
                 }
             }
 
-            EventLoopResult::Continue
+            EventLoopResult::ContinueAndRerender
         }
 
         // Enter on multi-select.
@@ -224,7 +248,8 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
                 // Item not found in selected_items so add it.
                 (Some(it), None) => state.selected_items.push(it.to_string()),
             };
-            EventLoopResult::Continue
+
+            EventLoopResult::ContinueAndRerender
         }
 
         // Noop, default behavior on Space

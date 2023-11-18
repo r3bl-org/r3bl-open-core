@@ -97,19 +97,19 @@ fn multiple_select_13_items_vph_5(
     let user_input = select_from_list(
         "Multiple select".to_string(),
         [
-            "item 1 of 12",
-            "item 2 of 12",
-            "item 3 of 12",
-            "item 4 of 12",
-            "item 5 of 12",
-            "item 6 of 12",
-            "item 7 of 12",
-            "item 8 of 12",
-            "item 9 of 12",
-            "item 10 of 12",
-            "item 11 of 12",
-            "item 12 of 12",
-            "item 13 of 12",
+            "item 1 of 13",
+            "item 2 of 13",
+            "item 3 of 13",
+            "item 4 of 13",
+            "item 5 of 13",
+            "item 6 of 13",
+            "item 7 of 13",
+            "item 8 of 13",
+            "item 9 of 13",
+            "item 10 of 13",
+            "item 11 of 13",
+            "item 12 of 13",
+            "item 13 of 13",
         ]
         .iter()
         .map(|it| it.to_string())
