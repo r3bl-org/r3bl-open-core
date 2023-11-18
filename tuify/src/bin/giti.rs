@@ -72,7 +72,7 @@ mod display_prompts {
 
     pub fn show_exit_message() {
         let text = &{
-            format!("Goodbye, {}! 👋🐈 Thank you for using giti. Please give us a star on github! 🌟", get_username())
+            format!("Goodbye, {}! 👋🐈 Thank you for using giti. Please star r3bl-open-core repo on GitHub! 🌟", get_username())
         };
         AnsiStyledText {
             text,
