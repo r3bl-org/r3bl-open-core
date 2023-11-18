@@ -24,6 +24,7 @@ use crate::*;
 pub enum EventLoopResult {
     Continue,
     ContinueAndRerender,
+    ContinueAndRerenderAndClear,
     ExitWithResult(Vec<String>),
     ExitWithoutResult,
     ExitWithError,
@@ -31,7 +32,7 @@ pub enum EventLoopResult {
 }
 
 // TODO: add performance using output buffer
-pub fn enter_event_loop<W: Write, S>(
+pub fn enter_event_loop<W: Write, S: CalculateResizeHint>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<W, S>,
     on_keypress: impl Fn(&mut S, KeyPress) -> EventLoopResult,
@@ -43,11 +44,18 @@ pub fn enter_event_loop<W: Write, S>(
     #[allow(unused_assignments)]
     let mut maybe_return_this: Option<EventLoopResult> = None;
 
-    loop {
-        function_component.render(state)?;
+    // First render before blocking the main thread for user input.
+    function_component.render(state)?;
 
+    loop {
         let key_event = read_key_press();
         match on_keypress(state, key_event) {
+            EventLoopResult::ContinueAndRerenderAndClear => {
+                // Clear the viewport.
+                function_component.clear_viewport_for_resize(state)?;
+                // Repaint the viewport.
+                function_component.render(state)?;
+            }
             EventLoopResult::ContinueAndRerender => {
                 // Continue the loop.
                 function_component.render(state)?;

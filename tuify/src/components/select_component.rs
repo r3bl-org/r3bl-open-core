@@ -280,6 +280,7 @@ mod tests {
             scroll_offset_row_index: ch!(0),
             selected_items: vec![],
             selection_mode: SelectionMode::Single,
+            ..Default::default()
         };
 
         state.scroll_offset_row_index = ch!(0);

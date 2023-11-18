@@ -32,6 +32,53 @@ pub struct State {
     pub selected_items: Vec<String>,
     pub header: String,
     pub selection_mode: SelectionMode,
+    pub resize_hint: Option<ResizeHint>,
+    pub window_size: Option<Size>,
+}
+
+impl CalculateResizeHint for State {
+    fn set_size(&mut self, new_size: Size) {
+        self.window_size = Some(new_size);
+        self.clear_resize_hint();
+    }
+
+    fn get_resize_hint(&self) -> Option<ResizeHint> { self.resize_hint.clone() }
+
+    fn set_resize_hint(&mut self, new_size: Size) {
+        self.resize_hint = if let Some(old_size) = self.window_size {
+            if new_size != old_size {
+                if (new_size.col_count > old_size.col_count)
+                    || (new_size.row_count > old_size.row_count)
+                {
+                    Some(ResizeHint::GotBigger)
+                } else if (new_size.col_count < old_size.col_count)
+                    || (new_size.row_count < old_size.row_count)
+                {
+                    Some(ResizeHint::GotSmaller)
+                } else {
+                    Some(ResizeHint::NoChange)
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        if self.window_size.is_some() {
+            self.window_size = Some(new_size);
+        }
+    }
+
+    fn clear_resize_hint(&mut self) { self.resize_hint = None; }
+}
+
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+pub enum ResizeHint {
+    GotBigger,
+    GotSmaller,
+    #[default]
+    NoChange,
 }
 
 impl State {
