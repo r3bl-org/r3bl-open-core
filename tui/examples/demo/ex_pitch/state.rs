@@ -21,7 +21,8 @@ use r3bl_tui::*;
 
 use crate::ex_pitch::Id;
 
-pub const FILE_CONTENT_ARRAY: [&str; 12] = [
+pub const FILE_CONTENT_ARRAY: [&str; 13] = [
+    include_str!("slide0.md"),
     include_str!("slide1.md"),
     include_str!("slide2.md"),
     include_str!("slide3.md"),
