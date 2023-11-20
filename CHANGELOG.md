@@ -288,9 +288,21 @@
 
 - Added:
   - Added undo, redo support for the editor component.
-  - Added binary target for `edi` which is going to be a Markdown editor similar to nano
-    or micro. It is meant to showcase what the `r3bl_tui` crate can do. It is also meant
+  - Added binary target for `edi` which is going to be a Markdown editor similar to `nano`
+    or `micro`. It is meant to showcase what the `r3bl_tui` crate can do. It is also meant
     to be a useful productivity tool.
+
+- Changed:
+  - Redux is no longer used in order to propagate state transitions from async middleware
+    functions to the app. This is now accomplished using
+    [async `tokio::mpsc` channels](https://tokio.rs/tokio/tutorial/channels). Here's a
+    [design doc](https://docs.google.com/document/d/1OMB1rX6cUL_Jxpl-OUWMhJijM7c4FoDrK6qDViVXBWk/edit)
+    for this change. Here's the
+    [issue](https://github.com/r3bl-org/r3bl-open-core/issues/196) and
+    [PR](https://github.com/r3bl-org/r3bl-open-core/pull/205) for this change. Here are some videos
+    that go over this massive change:
+    - <https://youtu.be/o2CVEikbEAQ>
+    - <https://youtu.be/Ne5-MXxt97A>
 
 ### v0.3.10 (2023-10-29)
 <a id="markdown-v0.3.10-2023-10-29" name="v0.3.10-2023-10-29"></a>
