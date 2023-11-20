@@ -61,104 +61,97 @@
 //!    development w/ a twist: taking concepts that work really well for the frontend mobile and web
 //!    development world and re-imagining them for TUI & Rust.
 //!
-//!    - Taking things like React, JSX, CSS, and Redux, but making everything async (they can be run
-//!      in parallel & concurrent via Tokio).
+//!    - Taking inspiration from React, JSX, CSS, Redux, Elm, iced-rs, JetPack Compose,
+//!      but making things fast and Rusty and simple. For example, instead of using Redux
+//!      for complex state management and handling async middleware functions, we simply
+//!      using `tokio::mpsc` channels and allow tasks to send signals to the main thread to
+//!      re-render or relay these signals to the appropriate app logic.
 //!    - Even the thread running the main event loop doesn't block since it is async.
 //!    - Using proc macros to create DSLs to implement CSS & JSX.
 //!
 //! 2. 🌎 We are building apps to enhance developer productivity & workflows.
 //!
-//!    - The idea here is not to rebuild tmux in Rust (separate processes mux'd onto a single
-//!      terminal window). Rather it is to build a set of integrated "apps" (or "tasks") that run in
-//!      the same process that renders to one terminal window.
-//!    - Inside of this terminal window, we can implement things like "app" switching, routing,
-//!      tiling layout, stacking layout, etc. so that we can manage a lot of TUI apps (which are
-//!      tightly integrated) that are running in the same process, in the same window. So you can
-//!      imagine that all these "app"s have shared application state (that is in a Redux store).
-//!      Each "app" may also have its own Redux store.
-//!    - Here are some examples of the types of "app"s we want to build:
-//!      1. multi user text editors w/ syntax highlighting
-//!      2. integrations w/ github issues
-//!      3. integrations w/ calendar, email, contacts APIs
+//!    - The idea here is not to rebuild tmux in Rust (separate processes mux'd onto a
+//!      single terminal window). Rather it is to build a set of integrated "apps" (or
+//!      "tasks") that run in the same process that renders to one terminal window.
+//!    - Inside of this terminal window, we can implement things like "app" switching,
+//!      routing, tiling layout, stacking layout, etc. so that we can manage a lot of TUI
+//!      apps (which are tightly integrated) that are running in the same process, in the
+//!      same window. So you can imagine that all these "app"s have shared application
+//!      state (that is in a Redux store). Each "app" may also have its own Redux store.
+//!    - Here are some examples of the types of "app"s we plan to build (for which this
+//!      infrastructure acts as the open source engine):
+//!      1. Multi user text editors w/ syntax highlighting.
+//!      2. Integrations w/ github issues.
+//!      3. Integrations w/ calendar, email, contacts APIs.
 //!
-//! These crates provides lots of useful functionality to help you build TUI (text user interface)
-//! apps, along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
-//!
-//! 1. Loosely coupled & fully asynchronous [TUI
-//!    framework](https://docs.rs/r3bl_tui/latest/r3bl_tui/) to make it possible (and easy) to build
-//!    sophisticated TUIs (Text User Interface apps) in Rust that are inspired by React, Redux, CSS
-//!    and Flexbox.
-//! 2. Thread-safe & fully asynchronous [Redux](https://docs.rs/r3bl_redux/latest/r3bl_redux/) crate
-//!    (using Tokio to run subscribers and middleware in separate tasks). The reducer functions are
-//!    run sequentially.
-//! 3. Lots of [declarative macros](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/),
-//!    and [procedural macros](https://docs.rs/r3bl_rs_utils_macro/latest/r3bl_rs_utils_macro/)
-//!    (both function like and derive) to avoid having to write lots of boilerplate code for many
-//!    common (and complex) tasks. And even less noisy `Result` and `Error` types.
-//! 4. [Non binary tree data](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/) structure
-//!    inspired by memory arenas, that is thread safe and supports parallel tree walking.
-//! 5. Utility functions to improve
-//!    [ergonomics](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/) of commonly used patterns
-//!    in Rust programming, ranging from things like colorizing `stdout`, `stderr` output to lazy
-//!    value holders.
+//! All the crates in the `r3bl-open-core` repo provide lots of useful functionality to
+//! help you build TUI (text user interface) apps, along w/ general niceties & ergonomics
+//! that all Rustaceans 🦀 can enjoy 🎉:
 //!
 //! ## Learn more about how this library is built
 //!
-//! 🦜 Here are some articles (on [developerlife.com](https://developerlife.com)) about how this
-//! crate is made:
+//! 🦜 Here are some articles and videos (on
+//! [developerlife.com](https://developerlife.com)) about how this crate is made:
 //! 1. <https://developerlife.com/2022/02/24/rust-non-binary-tree/>
 //! 2. <https://developerlife.com/2022/03/12/rust-redux/>
 //! 3. <https://developerlife.com/2022/03/30/rust-proc-macro/>
+//! 4. <https://youtu.be/o2CVEikbEAQ>
+//! 5. <https://youtu.be/Ne5-MXxt97A>
+//!
 //!
 //! 🦀 You can also find all the Rust related content on developerlife.com
 //! [here](https://developerlife.com/category/Rust/).
 //!
-//! # r3bl_tui crate - Text User Interface engine for Rust
+//! # Text User Interface engine for Rust
 //!
-//! You can build fully async TUI (text user interface) apps with a modern API that brings the best
-//! of the web frontend development ideas to TUI apps written in Rust:
+//! You can build fully async TUI (text user interface) apps with a modern API that brings
+//! the best of the web frontend development ideas to TUI apps written in Rust:
 //!
-//! 1. Reactive & unidirectional data flow architecture from frontend web development (React,
-//!    Redux).
+//! 1. Reactive & unidirectional data flow architecture from frontend web development
+//!    (React, Redux).
 //! 2. Responsive design w/ CSS, flexbox like concepts.
 //! 3. Declarative style of expressing styling and layouts.
 //!
-//! And since this is using Rust and Tokio you get the advantages of concurrency and parallelism
-//! built-in. No more blocking the main thread for user input, for async middleware, or even
-//! rendering 🎉.
+//! And since this is using Rust and Tokio you get the advantages of concurrency and
+//! parallelism built-in. No more blocking the main thread for user input, for async
+//! middleware, or even rendering 🎉.
 //!
 //! > This framework is [loosely coupled and strongly
-//! > coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/) meaning
-//! > that you can pick and choose whatever pieces you would like to use w/out having the cognitive
-//! > load of having to grok all the things in the codebase. Its more like a collection of mostly
-//! > independent modules that work well w/ each other, but know very little about each other.
+//! > coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
+//! > meaning that you can pick and choose whatever pieces you would like to use w/out
+//! > having the cognitive load of having to grok all the things in the codebase. Its more
+//! > like a collection of mostly independent modules that work well w/ each other, but
+//! > know very little about each other.
 //!
 //! Here are some framework highlights:
 //!
-//! - An easy to use and approachable API that is inspired by React, JSX, CSS, and Redux. Lots of
-//!   components and things are provided for you so you don't have to build them from scratch. This is a
-//!   full featured component library including:
-//!   - Redux for state management (fully async, concurrent & parallel).
+//! - An easy to use and approachable API that is inspired by React, JSX, CSS, and Redux.
+//!   Lots of components and things are provided for you so you don't have to build them
+//!   from scratch. This is a full featured component library including:
+//!   - Elm like architecture w/ unidirectional data flow. The state is mutable. Async
+//!     middleware functions are supported, and they communicate w/ the main thread and
+//!     the [App] using an async `tokio::mpsc` channel and signals.
 //!   - CSS like declarative styling engine.
-//!   - CSS flexbox like declarative layout engine which is fully responsive. You can resize your
-//!     terminal window and everything will be laid out correctly.
-//!   - A terminal independent underlying rendering and painting engine (can use crossterm or termion or
-//!     whatever you want).
-//!   - Markdown text editor w/ syntax highlighting support, metadata (tags, title, author, date), smart
-//!     lists. This uses a custom Markdown parser and custom syntax highligther. Syntax highlighting for
-//!     code blocks is provided by the syntect crate.
+//!   - CSS like flexbox like declarative layout engine which is fully responsive. You can
+//!     resize your terminal window and everything will be laid out correctly.
+//!   - A terminal independent underlying rendering and painting engine (can use crossterm
+//!     or termion or whatever you want).
+//!   - Markdown text editor w/ syntax highlighting support, metadata (tags, title,
+//!     author, date), smart lists. This uses a custom Markdown parser and custom syntax
+//!     highligther. Syntax highlighting for code blocks is provided by the syntect crate.
 //!   - Modal dialog boxes. And autocompletion dialog boxes.
-//!   - Lolcat (color gradients) implementation w/ a rainbow color-wheel palette. All the color output
-//!     is sensitive to the capabilities of the terminal. Colors are gracefully downgraded from
-//!     truecolor, to ANSI256, to grayscale.
-//!   - Support for Unicode grapheme clusters in strings. You can safely use emojis, and other Unicode
-//!     characters in your TUI apps.
+//!   - Lolcat (color gradients) implementation w/ a rainbow color-wheel palette. All the
+//!     color output is sensitive to the capabilities of the terminal. Colors are
+//!     gracefully downgraded from truecolor, to ANSI256, to grayscale.
+//!   - Support for Unicode grapheme clusters in strings. You can safely use emojis, and
+//!     other Unicode characters in your TUI apps.
 //!   - Support for mouse events.
-//! - The entire TUI framework itself supports concurrency & parallelism (user input, rendering, etc.
-//!   are generally non blocking).
-//! - It is fast! There are no needless re-renders, or flickering. Animations and color changes are
-//!   smooth (check this out for yourself by running the examples). You can even build your TUI in
-//!   layers (like z-order in a browser's DOM).
+//! - The entire TUI framework itself supports concurrency & parallelism (user input,
+//!   rendering, etc. are generally non blocking).
+//! - It is fast! There are no needless re-renders, or flickering. Animations and color
+//!   changes are smooth (check this out for yourself by running the examples). You can
+//!   even build your TUI in layers (like z-order in a browser's DOM).
 //!
 //! ## Examples to get you started
 //! <a id="markdown-examples-to-get-you-started" name="examples-to-get-you-started"></a>
@@ -170,16 +163,17 @@
 //!
 //! ![video-gif](https://user-images.githubusercontent.com/2966499/233799311-210b887e-0aa6-470a-bcea-ee8e0e3eb019.gif)
 //!
-//! Here's a video of a prototype of [R3BL CMDR](https://github.com/r3bl-org/r3bl-cmdr) app built using
-//! this TUI engine.
+//! Here's a video of a prototype of [R3BL CMDR](https://github.com/r3bl-org/r3bl-cmdr)
+//! app built using this TUI engine.
 //!
 //! ![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
 //!
 //! ### Run the demo locally
 //! <a id="markdown-run-the-demo-locally" name="run-the-demo-locally"></a>
 //!
-//! Once you've cloned [the repo](https://github.com/r3bl-org/r3bl-open-core) to a folder on your
-//! computer, you can run the examples you see in the video with the following commands:
+//! Once you've cloned [the repo](https://github.com/r3bl-org/r3bl-open-core) to a folder
+//! on your computer, you can run the examples you see in the video with the following
+//! commands:
 //!
 //! ```sh
 //! cd tui/examples
@@ -194,12 +188,12 @@
 //! > `libxcb-shape0-dev` and `libxcb-xfixes0-dev` maybe required on top of `libxcb1-dev`.
 //! > [More info](https://github.com/orhun/kmon/issues/2#issuecomment-667108596).
 //!
-//! These examples cover the entire surface area of the TUI API. You can also take a look at
-//! the tests in the source (`tui/src/`) as well. A single [`nu`
+//! These examples cover the entire surface area of the TUI API. You can also take a look
+//! at the tests in the source (`tui/src/`) as well. A single [`nu`
 //! shell](https://www.nushell.sh/) script `run.nu` at the top level directory of the repo
-//! allows you to easily build, run, test, and do so much more with the repo. This script is
-//! very powerful and can be run in a CI/CD environment w/ all the required arguments supplied
-//! or in interactive mode, where the user will be prompted for input.
+//! allows you to easily build, run, test, and do so much more with the repo. This script
+//! is very powerful and can be run in a CI/CD environment w/ all the required arguments
+//! supplied or in interactive mode, where the user will be prompted for input.
 //!
 //! > The `run.nu` script works on Linux, macOS, and Windows. On Linux and macOS, you can
 //! > simply run `./run.nu` instead of `nu run.nu`.
@@ -236,19 +230,36 @@
 //! ## How does layout, rendering, and event handling work in general?
 //! <a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>
 //!
-//!
-//! - The `App` trait impl is the main entry point for laying out the entire application. And this is
-//!   where the `component_registry` lives and all the `Component`s are created and added to the
-//!   registry.
-//! - When an `App` trait impl is created by a call to `App::new_shared()`, then the `init()` method is
-//!   called, which should populate the `component_registry` with all the `Component`s that will be used
-//!   in the application.
-//! - This sets everything up so that `app_render()` and `app_handle_event()` can be called at a later
-//!   time.
-//! - The `app_render()` method is responsible for creating the layout by using `Surface` and `FlexBox`
-//!   to arrange whatever `Component`s are in the `component_registry`.
-//! - The `app_handle_event()` method is responsible for handling events that are sent to the `App`
-//!   trait when user input is detected from the keyboard or mouse.
+//! - The main struct for building a TUI app is your struct which implements the [App] trait.
+//! - The main event loop takes an [App] trait object and starts listening for input events. It
+//!   enters raw mode, and paints to an alternate screen buffer, leaving your original scroll back
+//!   buffer and history intact. When you exit this TUI app, it will return your terminal to where
+//!   you'd left off.
+//! - The [main_event_loop] is where many global structs live which are shared across the lifetime
+//!   of your app. These include the following:
+//!   - [HasFocus]
+//!   - [ComponentRegistryMap]
+//!   - [GlobalData] which contains the following
+//!     - Global application state. This is mutable. Whenever an input event or signal is
+//!       processed the entire [App] gets re-rendered. This is the unidirectional data
+//!       flow architecture inspired by React and Redux, and Elm.
+//! - Your [App] trait impl is the main entry point for laying out the entire application.
+//!   Before the first render, the [App] is initialized (via a call to [App::app_init]), and
+//!   is responsible for creating all the [Component]s that it uses, and saving them to
+//!   the [ComponentRegistryMap].
+//!   - State is stored in many places. Globally at the [GlobalData] level, and also in
+//!     [App], and also in [Component].
+//! - This sets everything up so that [App::app_render], [App::app_handle_input_event],
+//!   and [App::app_handle_signal] can be called at a later time.
+//! - The [App::app_render] method is responsible for creating the layout by using
+//!   [Surface] and [FlexBox] to arrange whatever [Component]'s are in the
+//!   [ComponentRegistryMap].
+//! - The [App::app_handle_input_event] method is responsible for handling events that
+//!   are sent to the [App] trait when user input is detected from the keyboard or mouse.
+//!   Similarly the [App::app_handle_signal] deals with signals that are sent from
+//!   background threads (Tokio tasks) to the main thread, which then get routed to the
+//!   [App] trait object. Typically this will then get routed to the [Component] that
+//!   currently has focus.
 //!
 //! # Life of an input event
 //!
@@ -264,7 +275,7 @@
 //! ```text
 //! 🧍⌨️🖱️
 //! input → [TerminalWindow]
-//! event       ↑      ↓               [ComponentRegistry] creates
+//! event       ↑      ↓               [ComponentRegistryMap] stores
 //!             ┊   [App] ───────────■ [Component]s at 1st render
 //!             ┊      │
 //!             ┊      │        ┌──────■ id=1 has focus
