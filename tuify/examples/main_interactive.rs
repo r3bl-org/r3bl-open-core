@@ -50,16 +50,121 @@ fn main() -> Result<()> {
 
         let style = StyleSheet::default();
 
-        // Multiple select, single item.
-        multiple_select_single_item();
+        let up_down_colored = AnsiStyledText {
+            text: &format!("{}", "`Up` or `Down` arrow",),
+            style: &[RStyle::Foreground(RColor::Rgb(0, 255, 0))],
+        };
 
-        // Multiple select.
-        multiple_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
-        multiple_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
+        let space_colored = AnsiStyledText {
+            text: &format!("{}", "`Space`",),
+            style: &[RStyle::Foreground(RColor::Rgb(255, 216, 9))],
+        };
 
-        // Single select.
-        single_select_13_items_vph_5(max_height_row_count, max_width_col_count, style);
-        single_select_2_items_vph_5(max_height_row_count, max_width_col_count, style);
+        let esc_colored = AnsiStyledText {
+            text: &format!("{}", "`Esc`",),
+            style: &[RStyle::Foreground(RColor::Rgb(255, 132, 18))],
+        };
+
+        let return_colored = AnsiStyledText {
+            text: &format!("{}", "`Return`",),
+            style: &[RStyle::Foreground(RColor::Rgb(234, 0, 196))],
+        };
+
+        let multi_select_instructions = AnsiStyledText {
+            text: &format!(
+                "{}{up_down_colored}{}{space_colored}{}{esc_colored}{}{return_colored}{}",
+                "",
+                " --> To move up or down\n",
+                " --> To select or deselect branches\n",
+                " --> To exit\n",
+                " --> To confirm selection"
+            ),
+            style: &[RStyle::Foreground(RColor::Rgb(195, 0, 94))],
+        };
+
+        const MULTIPLE_SELECT_SINGLE_ITEM: &str = "Multiple select, single item";
+        const MULTIPLE_SELECT_13_ITEMS_VPH_5: &str =
+            "Multiple select, 13 items, viewport height = 5";
+        const MULTIPLE_SELECT_2_ITEMS_VPH_5: &str =
+            "Multiple select, 2 items, viewport height = 5";
+        const SINGLE_SELECT_13_ITEMS_VPH_5: &str =
+            "Single select, 13 items, viewport height = 5";
+        const SINGLE_SELECT_2_ITEMS_VPH_5: &str =
+            "Single select, 2 items, viewport height = 5";
+
+        // Add tuify to select which example to run.
+        let maybe_user_input = select_from_list(
+            "Select which example to run".to_string(),
+            [
+                MULTIPLE_SELECT_SINGLE_ITEM,
+                MULTIPLE_SELECT_13_ITEMS_VPH_5,
+                MULTIPLE_SELECT_2_ITEMS_VPH_5,
+                SINGLE_SELECT_13_ITEMS_VPH_5,
+                SINGLE_SELECT_2_ITEMS_VPH_5,
+            ]
+            .iter()
+            .map(|it| it.to_string())
+            .collect(),
+            5,  /* whatever*/
+            80, /* whatever*/
+            SelectionMode::Single,
+            StyleSheet::default(),
+        );
+
+        match &maybe_user_input {
+            Some(input) => {
+                let first_line = input.first();
+
+                match first_line {
+                    Some(user_input) => {
+                        if *user_input == MULTIPLE_SELECT_SINGLE_ITEM.to_string() {
+                            // Multiple select, single item.
+                            multiple_select_single_item(multi_select_instructions)
+                        } else if *user_input
+                            == MULTIPLE_SELECT_13_ITEMS_VPH_5.to_string()
+                        {
+                            // Multiple select.
+                            multiple_select_13_items_vph_5(
+                                max_height_row_count,
+                                max_width_col_count,
+                                style,
+                                multi_select_instructions,
+                            );
+                        } else if *user_input
+                            == MULTIPLE_SELECT_2_ITEMS_VPH_5.to_string()
+                        {
+                            multiple_select_2_items_vph_5(
+                                max_height_row_count,
+                                max_width_col_count,
+                                style,
+                                multi_select_instructions,
+                            );
+                        } else if *user_input
+                            == SINGLE_SELECT_13_ITEMS_VPH_5.to_string()
+                        {
+                            // Single select.
+                            single_select_13_items_vph_5(
+                                max_height_row_count,
+                                max_width_col_count,
+                                style,
+                            );
+                        } else if *user_input
+                            == SINGLE_SELECT_2_ITEMS_VPH_5.to_string()
+                        {
+                            single_select_2_items_vph_5(
+                                max_height_row_count,
+                                max_width_col_count,
+                                style,
+                            );
+                        } else {
+                            println!("User did not select anything")
+                        }
+                    }
+                    None => println!("User did not select anything"),
+                }
+            }
+            None => println!("User did not select anything"),
+        }
 
         call_if_true!(TRACE, {
             log_debug("Stop logging...".to_string());
@@ -68,7 +173,8 @@ fn main() -> Result<()> {
 }
 
 /// Multiple select, single item.
-fn multiple_select_single_item() {
+fn multiple_select_single_item(multi_select_instructions: AnsiStyledText) {
+    multi_select_instructions.println();
     let max_width_col_count: usize = r3bl_tuify::get_size()
         .map(|it| it.col_count)
         .unwrap_or(ch!(80))
@@ -89,10 +195,9 @@ fn multiple_select_13_items_vph_5(
     max_height_row_count: usize,
     max_width_col_count: usize,
     style: StyleSheet,
+    multi_select_instructions: AnsiStyledText,
 ) {
-    print_header(
-        "Multiple select (move up and down, press space, then enter or esc) - 10 items",
-    );
+    multi_select_instructions.println();
 
     let user_input = select_from_list(
         "Multiple select".to_string(),
@@ -135,10 +240,9 @@ fn multiple_select_2_items_vph_5(
     max_height_row_count: usize,
     max_width_col_count: usize,
     style: StyleSheet,
+    multi_select_instructions: AnsiStyledText,
 ) {
-    print_header(
-        "Multiple select (move up and down, press space, then enter or esc) - 2 items",
-    );
+    multi_select_instructions.print();
 
     let user_input = select_from_list(
         "Multiple select".to_string(),
@@ -168,7 +272,7 @@ fn single_select_13_items_vph_5(
     max_width_col_count: usize,
     style: StyleSheet,
 ) {
-    print_header("Single select (move up and down, press enter or esc) - 10 items");
+    print_header("Single select (move up and down, press enter or esc) - 13 items");
 
     let user_input = select_from_list(
         "Single select".to_string(),

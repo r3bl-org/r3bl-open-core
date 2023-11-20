@@ -246,11 +246,12 @@
 //! 1. Install [`nu`](https://crates.io/crates/nu) shell on your system using `cargo install
 //!    nu`. It is available for Linux, macOS, and Windows.
 //!
-//! ### Nu shell script to make, build, run, etc.
+//! ### Nu shell scripts to build, run, test etc.
 //!
 //! | Command                                   | Description                                |
 //! | ----------------------------------------- | ------------------------------------------ |
-//! | `nu run.nu run`                           | Run examples                               |
+//! | `nu run.nu run`                           | Run examples in the `./examples` folder    |
+//! | `nu run.nu install-giti`                  | Install `giti` locally to `~/.cargo/bin`   |
 //! | `nu run.nu run-piped`                     | Run binary with piped input                |
 //! | `nu run.nu build`                         | Build                                      |
 //! | `nu run.nu clean`                         | Clean                                      |
@@ -272,6 +273,17 @@
 //! | `nu run.nu watch-one-test <test_name>`                 | Watch one test                     |
 //! | `nu run.nu watch-clippy`                               | Watch clippy                       |
 //! | `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
+//!
+//! ## Run `giti`
+//!
+//! 1. Move to `./tuify` folder in your terminal
+//! 2. Run `nu run.nu install-giti` to install `giti` locally to `~/.cargo/bin`
+//! 3. Run `giti` from anywhere on your system
+//! 4. To delete one or more branches in your repo run `giti branch -c delete`
+//!
+//! <video width="100%" controls>
+//!   <source src="https://github.com/r3bl-org/r3bl-open-core/assets/22040032/c133cd9d-4534-4507-9517-e2c7f73b4b2e" type="video/mp4"/>
+//! </video>
 //!
 //! ## References
 //!
