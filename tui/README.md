@@ -3,8 +3,8 @@
 </p>
 
 # Context
-
 <a id="markdown-context" name="context"></a>
+
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
@@ -20,44 +20,52 @@
 </span><span style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span style="color:#572CFC">r</span><span style="color:#532FFD">
 </span><span style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
 
-We are working on building command line apps in Rust which have rich text user interfaces (TUI). We
-want to lean into the terminal as a place of productivity, and build all kinds of awesome apps for
-it.
+
+We are working on building command line apps in Rust which have rich text user interfaces (TUI).
+We want to lean into the terminal as a place of productivity, and build all kinds of awesome
+apps for it.
 
 1. 🔮 Instead of just building one app, we are building a library to enable any kind of rich TUI
-   development w/ a twist: taking concepts that work really well for the frontend mobile and web
-   development world and re-imagining them for TUI & Rust.
+  development w/ a twist: taking concepts that work really well for the frontend mobile and web
+  development world and re-imagining them for TUI & Rust.
 
-   - Taking things like React, JSX, CSS, and Redux, but making everything async (they can be run in
-     parallel & concurrent via Tokio).
-   - Even the thread running the main event loop doesn't block since it is async.
-   - Using proc macros to create DSLs to implement CSS & JSX.
+  - Taking inspiration from React, JSX, CSS, Redux, Elm, iced-rs, JetPack Compose,
+    but making things fast and Rusty and simple. For example, instead of using Redux
+    for complex state management and handling async middleware functions, we simply
+    using `tokio::mpsc` channels and allow tasks to send signals to the main thread to
+    re-render or relay these signals to the appropriate app logic.
+  - Even the thread running the main event loop doesn't block since it is async.
+  - Using proc macros to create DSLs to implement CSS & JSX.
 
 2. 🌎 We are building apps to enhance developer productivity & workflows.
 
-   - The idea here is not to rebuild tmux in Rust (separate processes mux'd onto a single terminal
-     window). Rather it is to build a set of integrated "apps" (or "tasks") that run in the same
-     process that renders to one terminal window.
-   - Inside of this terminal window, we can implement things like "app" switching, routing, tiling
-     layout, stacking layout, etc. so that we can manage a lot of TUI apps (which are tightly
-     integrated) that are running in the same process, in the same window. So you can imagine that
-     all these "app"s have shared application state (that is in a Redux store). Each "app" may also
-     have its own Redux store.
-   - Here are some examples of the types of "app"s we want to build:
-     1. multi user text editors w/ syntax highlighting
-     2. integrations w/ github issues
-     3. integrations w/ calendar, email, contacts APIs
+  - The idea here is not to rebuild tmux in Rust (separate processes mux'd onto a
+    single terminal window). Rather it is to build a set of integrated "apps" (or
+    "tasks") that run in the same process that renders to one terminal window.
+  - Inside of this terminal window, we can implement things like "app" switching,
+    routing, tiling layout, stacking layout, etc. so that we can manage a lot of TUI
+    apps (which are tightly integrated) that are running in the same process, in the
+    same window. So you can imagine that all these "app"s have shared application
+    state (that is in a Redux store). Each "app" may also have its own Redux store.
+  - Here are some examples of the types of "app"s we plan to build (for which this
+    infrastructure acts as the open source engine):
+    1. Multi user text editors w/ syntax highlighting.
+    2. Integrations w/ github issues.
+    3. Integrations w/ calendar, email, contacts APIs.
+
+All the crates in the `r3bl-open-core` repo provide lots of useful functionality to
+help you build TUI (text user interface) apps, along w/ general niceties & ergonomics
+that all Rustaceans 🦀 can enjoy 🎉:
+
 
 # r3bl_tui crate
-
 <a id="markdown-r3bl_tui-crate" name="r3bl_tui-crate"></a>
 
 This crate is related to the first thing that's described above. It provides lots of useful
-functionality to help you build TUI (text user interface) apps, along w/ general niceties &
-ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 
-<!-- TOC depthfrom:2 updateonsave:true orderedlist:false insertanchor:true -->
+<!-- TOC -->
 
+- [Learn more about how this library is built](#learn-more-about-how-this-library-is-built)
 - [Text User Interface engine for Rust](#text-user-interface-engine-for-rust)
 - [Examples to get you started](#examples-to-get-you-started)
   - [Video of the demo in action](#video-of-the-demo-in-action)
@@ -87,65 +95,85 @@ ergonomics that all Rustaceans 🦀 can enjoy 🎉:
 
 <!-- /TOC -->
 
-## Text User Interface engine for Rust
+## Learn more about how this library is built
+<a id="markdown-learn-more-about-how-this-library-is-built" name="learn-more-about-how-this-library-is-built"></a>
 
+🦜 Here are some articles and videos (on [developerlife.com](https://developerlife.com)) about how this
+crate is made:
+1. <https://developerlife.com/2022/02/24/rust-non-binary-tree/>
+2. <https://developerlife.com/2022/03/12/rust-redux/>
+3. <https://developerlife.com/2022/03/30/rust-proc-macro/>
+4. <https://youtu.be/o2CVEikbEAQ>
+5. <https://youtu.be/Ne5-MXxt97A>
+
+
+🦀 You can also find all the Rust related content on developerlife.com
+[here](https://developerlife.com/category/Rust/).
+
+
+## Text User Interface engine for Rust
 <a id="markdown-text-user-interface-engine-for-rust" name="text-user-interface-engine-for-rust"></a>
 
-You can build fully async TUI (text user interface) apps with a modern API that brings the best of
-the web frontend development ideas to TUI apps written in Rust:
 
-1. Reactive & unidirectional data flow architecture from frontend web development (React, Redux).
+You can build fully async TUI (text user interface) apps with a modern API that brings
+the best of the web frontend development ideas to TUI apps written in Rust:
+
+1. Reactive & unidirectional data flow architecture from frontend web development
+  (React, Redux).
 2. Responsive design w/ CSS, flexbox like concepts.
 3. Declarative style of expressing styling and layouts.
 
-And since this is using Rust and Tokio you get the advantages of concurrency and parallelism
-built-in. No more blocking the main thread for user input, for async middleware, or even rendering
-🎉.
+And since this is using Rust and Tokio you get the advantages of concurrency and
+parallelism built-in. No more blocking the main thread for user input, for async
+middleware, or even rendering 🎉.
 
-> This framework is
-> [loosely coupled and strongly coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
-> meaning that you can pick and choose whatever pieces you would like to use w/out having the
-> cognitive load of having to grok all the things in the codebase. Its more like a collection of
-> mostly independent modules that work well w/ each other, but know very little about each other.
+> This framework is [loosely coupled and strongly
+> coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
+> meaning that you can pick and choose whatever pieces you would like to use w/out
+> having the cognitive load of having to grok all the things in the codebase. Its more
+> like a collection of mostly independent modules that work well w/ each other, but
+> know very little about each other.
 
 Here are some framework highlights:
 
-- An easy to use and approachable API that is inspired by React, JSX, CSS, and Redux. Lots of
-  components and things are provided for you so you don't have to build them from scratch. This is a
-  full featured component library including:
-  - Redux for state management (fully async, concurrent & parallel).
+- An easy to use and approachable API that is inspired by React, JSX, CSS, and Redux.
+  Lots of components and things are provided for you so you don't have to build them
+  from scratch. This is a full featured component library including:
+  - Elm like architecture w/ unidirectional data flow. The state is mutable. Async
+    middleware functions are supported, and they communicate w/ the main thread and
+    the [App] using an async `tokio::mpsc` channel and signals.
   - CSS like declarative styling engine.
-  - CSS flexbox like declarative layout engine which is fully responsive. You can resize your
-    terminal window and everything will be laid out correctly.
-  - A terminal independent underlying rendering and painting engine (can use crossterm or termion or
-    whatever you want).
-  - Markdown text editor w/ syntax highlighting support, metadata (tags, title, author, date), smart
-    lists. This uses a custom Markdown parser and custom syntax highlighter. Syntax highlighting for
-    code blocks is provided by the syntect crate.
+  - CSS like flexbox like declarative layout engine which is fully responsive. You can
+    resize your terminal window and everything will be laid out correctly.
+  - A terminal independent underlying rendering and painting engine (can use crossterm
+    or termion or whatever you want).
+  - Markdown text editor w/ syntax highlighting support, metadata (tags, title,
+    author, date), smart lists. This uses a custom Markdown parser and custom syntax
+    highligther. Syntax highlighting for code blocks is provided by the syntect crate.
   - Modal dialog boxes. And autocompletion dialog boxes.
-  - Lolcat (color gradients) implementation w/ a rainbow color-wheel palette. All the color output
-    is sensitive to the capabilities of the terminal. Colors are gracefully downgraded from
-    truecolor, to ANSI256, to grayscale.
-  - Support for Unicode grapheme clusters in strings. You can safely use emojis, and other Unicode
-    characters in your TUI apps.
+  - Lolcat (color gradients) implementation w/ a rainbow color-wheel palette. All the
+    color output is sensitive to the capabilities of the terminal. Colors are
+    gracefully downgraded from truecolor, to ANSI256, to grayscale.
+  - Support for Unicode grapheme clusters in strings. You can safely use emojis, and
+    other Unicode characters in your TUI apps.
   - Support for mouse events.
-- The entire TUI framework itself supports concurrency & parallelism (user input, rendering, etc.
-  are generally non blocking).
-- It is fast! There are no needless re-renders, or flickering. Animations and color changes are
-  smooth (check this out for yourself by running the examples). You can even build your TUI in
-  layers (like z-order in a browser's DOM).
+- The entire TUI framework itself supports concurrency & parallelism (user input,
+  rendering, etc. are generally non blocking).
+- It is fast! There are no needless re-renders, or flickering. Animations and color
+  changes are smooth (check this out for yourself by running the examples). You can
+  even build your TUI in layers (like z-order in a browser's DOM).
 
 ---
 
 ## Examples to get you started
-
 <a id="markdown-examples-to-get-you-started" name="examples-to-get-you-started"></a>
+
 
 <!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
 
 ### Video of the demo in action
-
 <a id="markdown-video-of-the-demo-in-action" name="video-of-the-demo-in-action"></a>
+
 
 ![video-gif](https://user-images.githubusercontent.com/2966499/233799311-210b887e-0aa6-470a-bcea-ee8e0e3eb019.gif)
 
@@ -155,8 +183,8 @@ this TUI engine.
 ![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
 
 ### Run the demo locally
-
 <a id="markdown-run-the-demo-locally" name="run-the-demo-locally"></a>
+
 
 Once you've cloned [the repo](https://github.com/r3bl-org/r3bl-open-core) to a folder on your
 computer, you can run the examples you see in the video with the following commands:
@@ -210,25 +238,42 @@ required arguments supplied or in interactive mode, where the user will be promp
 ---
 
 ## How does layout, rendering, and event handling work in general?
-
 <a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>
 
-- The `App` trait impl is the main entry point for laying out the entire application. And this is
-  where the `component_registry` lives and all the `Component`s are created and added to the
-  registry.
-- When an `App` trait impl is created by a call to `App::new_shared()`, then the `init()` method is
-  called, which should populate the `component_registry` with all the `Component`s that will be used
-  in the application.
-- This sets everything up so that `app_render()` and `app_handle_event()` can be called at a later
-  time.
-- The `app_render()` method is responsible for creating the layout by using `Surface` and `FlexBox`
-  to arrange whatever `Component`s are in the `component_registry`.
-- The `app_handle_event()` method is responsible for handling events that are sent to the `App`
-  trait when user input is detected from the keyboard or mouse.
+- The main struct for building a TUI app is your struct which implements the [App] trait.
+- The main event loop takes an [App] trait object and starts listening for input events. It
+  enters raw mode, and paints to an alternate screen buffer, leaving your original scroll back
+  buffer and history intact. When you exit this TUI app, it will return your terminal to where
+  you'd left off.
+- The [main_event_loop] is where many global structs live which are shared across the lifetime
+  of your app. These include the following:
+  - [HasFocus]
+  - [ComponentRegistryMap]
+  - [GlobalData] which contains the following
+    - Global application state. This is mutable. Whenever an input event or signal is
+      processed the entire [App] gets re-rendered. This is the unidirectional data
+      flow architecture inspired by React and Redux, and Elm.
+- Your [App] trait impl is the main entry point for laying out the entire application.
+  Before the first render, the [App] is initialized (via a call to [App::app_init]), and
+  is responsible for creating all the [Component]s that it uses, and saving them to
+  the [ComponentRegistryMap].
+  - State is stored in many places. Globally at the [GlobalData] level, and also in
+    [App], and also in [Component].
+- This sets everything up so that [App::app_render], [App::app_handle_input_event],
+  and [App::app_handle_signal] can be called at a later time.
+- The [App::app_render] method is responsible for creating the layout by using
+  [Surface] and [FlexBox] to arrange whatever [Component]'s are in the
+  [ComponentRegistryMap].
+- The [App::app_handle_input_event] method is responsible for handling events that
+  are sent to the [App] trait when user input is detected from the keyboard or mouse.
+  Similarly the [App::app_handle_signal] deals with signals that are sent from
+  background threads (Tokio tasks) to the main thread, which then get routed to the
+  [App] trait object. Typically this will then get routed to the [Component] that
+  currently has focus.
 
 ## Life of an input event
-
 <a id="markdown-life-of-an-input-event" name="life-of-an-input-event"></a>
+
 
 There is a clear separation of concerns in this module. To illustrate what goes where, and how
 things work let's look at an example that puts the main event loop front and center & deals w/ how
@@ -242,7 +287,7 @@ the system handles an input event (key press or mouse).
 ```text
 🧍⌨️🖱️
 input → [TerminalWindow]
-event       ↑      ↓               [ComponentRegistry] creates
+event       ↑      ↓               [ComponentRegistryMap] stores
             ┊   [App] ───────────■ [Component]s at 1st render
             ┊      │
             ┊      │        ┌──────■ id=1 has focus
@@ -250,8 +295,8 @@ event       ↑      ↓               [ComponentRegistry] creates
             ┊      ├→ [Component] id=1 ───┐
             ┊      ├→ [Component] id=2    │
             ┊      └→ [Component] id=3    │
-         default                          │
-         handler  ←───────────────────────┘
+        default                          │
+        handler  ←───────────────────────┘
 ```
 
 Let's trace the journey through the diagram when an input even is generated by the user (eg: a key
@@ -284,8 +329,8 @@ the following sections:
 ![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
 
 ## The window
-
 <a id="markdown-the-window" name="the-window"></a>
+
 
 The main building blocks of a TUI app are:
 
@@ -302,8 +347,8 @@ The main building blocks of a TUI app are:
     we have to deal with [FlexBox], [Component], and [crate::Style].
 
 ## Layout and styling
-
 <a id="markdown-layout-and-styling" name="layout-and-styling"></a>
+
 
 Inside of your [App] if you want to use flexbox like layout and CSS like styling you can think of
 composing your code in the following way:
@@ -320,8 +365,8 @@ composing your code in the following way:
     dispatch actions to the store, and even have async middleware!
 
 ## Component, ComponentRegistry, focus management, and event routing
-
 <a id="markdown-component%2C-componentregistry%2C-focus-management%2C-and-event-routing" name="component%2C-componentregistry%2C-focus-management%2C-and-event-routing"></a>
+
 
 Typically your [App] will look like this:
 
@@ -348,16 +393,16 @@ Another thing to keep in mind is that the [App] and [TerminalWindow] is persiste
 re-renders. The Redux store is also persistent between re-renders.
 
 ## Input event specificity
-
 <a id="markdown-input-event-specificity" name="input-event-specificity"></a>
+
 
 [TerminalWindow] gives [Component] first dibs when it comes to handling input events. If it punts
 handling this event, it will be handled by the default input event handler. And if nothing there
 matches this event, then it is simply dropped.
 
 ## Rendering and painting
-
 <a id="markdown-rendering-and-painting" name="rendering-and-painting"></a>
+
 
 The R3BL TUI engine uses a high performance compositor to render the UI to the terminal. This
 ensures that only "pixels" that have changed are painted to the terminal. This is done by creating a
@@ -366,8 +411,8 @@ row index position. There are only as many `PixelChar`s as there are rows and co
 screen. And the index maps directly to the position of the pixel in the terminal screen.
 
 ### Offscreen buffer
-
 <a id="markdown-offscreen-buffer" name="offscreen-buffer"></a>
+
 
 Here is an example of what a single row of rendered output might look like in a row of the
 `OffscreenBuffer`. This diagram shows each `PixelChar` in `row_index: 1` of the `OffscreenBuffer`.
@@ -419,8 +464,8 @@ Each `PixelChar` can be one of 4 things:
    the rainbow effect. An example of this is the outline around a modal dialog box.
 
 ### Render pipeline
-
 <a id="markdown-render-pipeline" name="render-pipeline"></a>
+
 
 The following diagram provides a high level overview of how apps (that contain components, which may
 contain components, and so on) are rendered to the terminal screen.
@@ -441,8 +486,8 @@ input event, and that produces a new state which then has to be rendered, they a
 painted into an `OffscreenBuffer`.
 
 ### First render
-
 <a id="markdown-first-render" name="first-render"></a>
+
 
 The `paint.rs` file contains the `paint` function, which is the entry point for all rendering. Once
 the first render occurs, the `OffscreenBuffer` that is generated is saved to `GlobalSharedState`.
@@ -462,8 +507,8 @@ really simple making it very easy to swap out other terminal libraries such as `
 GUI backend, or some other custom output driver.
 
 ### Subsequent render
-
 <a id="markdown-subsequent-render" name="subsequent-render"></a>
+
 
 Since the `OffscreenBuffer` is cached in `GlobalSharedState` a diff to be performed for subsequent
 renders. And only those diff chunks are painted to the screen. This ensures that there is no flicker
@@ -471,8 +516,8 @@ when the content of the screen changes. It also minimizes the amount of work tha
 terminal emulator has to do put the `PixelChar`s on the screen.
 
 ## Redux for state management
-
 <a id="markdown-redux-for-state-management" name="redux-for-state-management"></a>
+
 
 If you use Redux for state management, then you will create a [crate::redux] [crate::Store] that is
 passed into the [TerminalWindow]. For more detailed information on Redux, please read the
@@ -570,8 +615,8 @@ impl AsyncReducer<State, Action> for MyReducer {
 ```
 
 ## How does the editor component work?
-
 <a id="markdown-how-does-the-editor-component-work%3F" name="how-does-the-editor-component-work%3F"></a>
+
 
 The `EditorComponent` struct can hold data in its own memory, in addition to relying on the state.
 
@@ -607,8 +652,8 @@ Here are the connection points w/ the impl of `Component<S,A>` in `EditorCompone
     - Which will return a `RenderPipeline`.
 
 ### Painting the caret
-
 <a id="markdown-painting-the-caret" name="painting-the-caret"></a>
+
 
 > Definitions
 >
@@ -644,8 +689,8 @@ constraints).
      cursor features that are provided by the actual global cursor (discussed above).
 
 ## How do modal dialog boxes work?
-
 <a id="markdown-how-do-modal-dialog-boxes-work%3F" name="how-do-modal-dialog-boxes-work%3F"></a>
+
 
 A modal dialog box is different than a normal reusable component. This is because:
 
@@ -687,8 +732,8 @@ why:
     some portion of the component registry if one is not careful.
 
 ### Two callback functions
-
 <a id="markdown-two-callback-functions" name="two-callback-functions"></a>
+
 
 When creating a new dialog box component, two callback functions are passed in:
 
@@ -698,8 +743,8 @@ When creating a new dialog box component, two callback functions are passed in:
    editor.
 
 ### How to use this dialog to make an HTTP request & pipe the results into a selection area?
-
 <a id="markdown-how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F" name="how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F"></a>
+
 
 So far we have covered the use case for a simple modal dialog box. In order to provide
 auto-completion capabilities, via some kind of web service, there needs to be a slightly more
@@ -712,8 +757,8 @@ different on the screen. Instead of being in the middle of the screen, it starts
 screen. The callbacks are the same.
 
 ### How to make HTTP requests
-
 <a id="markdown-how-to-make-http-requests" name="how-to-make-http-requests"></a>
+
 
 Instead of using the `reqwest` crate, we should use the `hyper` crate (which is part of Tokio) and
 drop support for `reqwest` in all our crates.
@@ -721,29 +766,29 @@ drop support for `reqwest` in all our crates.
 - https://blessed.rs/crates#section-networking-subsection-http-foundations
 
 ## Grapheme support
-
 <a id="markdown-grapheme-support" name="grapheme-support"></a>
+
 
 Unicode is supported (to an extent). There are some caveats. The [crate::UnicodeStringExt] trait has
 lots of great information on this graphemes and what is supported and what is not.
 
 ## Lolcat support
-
 <a id="markdown-lolcat-support" name="lolcat-support"></a>
+
 
 An implementation of [crate::lolcat::cat] w/ a color wheel is provided.
 
 ## Other crates that depend on this
-
 <a id="markdown-other-crates-that-depend-on-this" name="other-crates-that-depend-on-this"></a>
+
 
 This crate is a dependency of the following crates:
 
 1. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crates (the "main" library)
 
 ## Issues, comments, feedback, and PRs
-
 <a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
+
 
 Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
 And if you have any feature requests, feel free to add them there too 👍.
