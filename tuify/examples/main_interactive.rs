@@ -93,6 +93,7 @@ fn main() -> Result<()> {
             "Single select, 13 items, viewport height = 5";
         const SINGLE_SELECT_2_ITEMS_VPH_5: &str =
             "Single select, 2 items, viewport height = 5";
+        const SINGLE_SELECT_QUIZ_GAME: &str = "Single select, quiz game";
 
         // Add tuify to select which example to run.
         let maybe_user_input = select_from_list(
@@ -103,12 +104,13 @@ fn main() -> Result<()> {
                 MULTIPLE_SELECT_2_ITEMS_VPH_5,
                 SINGLE_SELECT_13_ITEMS_VPH_5,
                 SINGLE_SELECT_2_ITEMS_VPH_5,
+                SINGLE_SELECT_QUIZ_GAME,
             ]
             .iter()
             .map(|it| it.to_string())
             .collect(),
-            5,  /* whatever*/
-            80, /* whatever*/
+            6,  /* height of the tuify component */
+            80, /* width of the tuify component */
             SelectionMode::Single,
             StyleSheet::default(),
         );
@@ -132,8 +134,7 @@ fn main() -> Result<()> {
                                 style,
                                 multi_select_instructions,
                             );
-                        } else if *user_input
-                            == MULTIPLE_SELECT_2_ITEMS_VPH_5.to_string()
+                        } else if *user_input == MULTIPLE_SELECT_2_ITEMS_VPH_5.to_string()
                         {
                             multiple_select_2_items_vph_5(
                                 max_height_row_count,
@@ -141,8 +142,7 @@ fn main() -> Result<()> {
                                 style,
                                 multi_select_instructions,
                             );
-                        } else if *user_input
-                            == SINGLE_SELECT_13_ITEMS_VPH_5.to_string()
+                        } else if *user_input == SINGLE_SELECT_13_ITEMS_VPH_5.to_string()
                         {
                             // Single select.
                             single_select_13_items_vph_5(
@@ -150,14 +150,14 @@ fn main() -> Result<()> {
                                 max_width_col_count,
                                 style,
                             );
-                        } else if *user_input
-                            == SINGLE_SELECT_2_ITEMS_VPH_5.to_string()
-                        {
+                        } else if *user_input == SINGLE_SELECT_2_ITEMS_VPH_5.to_string() {
                             single_select_2_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
                                 style,
                             );
+                        } else if *user_input == SINGLE_SELECT_QUIZ_GAME.to_string() {
+                            let _ = single_select_quiz_game();
                         } else {
                             println!("User did not select anything")
                         }
