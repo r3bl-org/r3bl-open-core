@@ -275,7 +275,6 @@ fn single_select_13_items_vph_5(
     style: StyleSheet,
 ) {
     print_header("Single select (move up and down, press enter or esc) - 13 items");
-    print_header("Single select (move up and down, press enter or esc) - 13 items");
 
     let user_input = select_from_list(
         "Single select".to_string(),
