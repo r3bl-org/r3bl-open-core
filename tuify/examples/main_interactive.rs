@@ -177,8 +177,6 @@ fn main() -> Result<()> {
 /// Multiple select, single item.
 fn multiple_select_single_item(multi_select_instructions: AnsiStyledText) {
     multi_select_instructions.println();
-fn multiple_select_single_item(multi_select_instructions: AnsiStyledText) {
-    multi_select_instructions.println();
     let max_width_col_count: usize = r3bl_tuify::get_size()
         .map(|it| it.col_count)
         .unwrap_or(ch!(80))
@@ -200,9 +198,7 @@ fn multiple_select_13_items_vph_5(
     max_width_col_count: usize,
     style: StyleSheet,
     multi_select_instructions: AnsiStyledText,
-    multi_select_instructions: AnsiStyledText,
 ) {
-    multi_select_instructions.println();
     multi_select_instructions.println();
 
     let user_input = select_from_list(
@@ -247,9 +243,7 @@ fn multiple_select_2_items_vph_5(
     max_width_col_count: usize,
     style: StyleSheet,
     multi_select_instructions: AnsiStyledText,
-    multi_select_instructions: AnsiStyledText,
 ) {
-    multi_select_instructions.print();
     multi_select_instructions.print();
 
     let user_input = select_from_list(
