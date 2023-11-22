@@ -171,7 +171,7 @@ where
 
                         // The handler should dispatch action to change state since dialog_buffer.editor_buffer is
                         // updated.
-                        Ok(EventPropagation::Consumed)
+                        Ok(EventPropagation::ConsumedRender)
                     }
 
                     // Handle user input that has updated the results panel.
