@@ -323,7 +323,8 @@ mod populate_component_registry {
         ) {
             // Construct Column1.
             let col1_id = FlexBoxId::from(Id::Column1 as u8);
-            if let ContainsResult::DoesContain = ComponentRegistry::contains(map, col1_id)
+            if let ContainsResult::DoesNotContain =
+                ComponentRegistry::contains(map, col1_id)
             {
                 let component = ColumnComponent::new_boxed(col1_id);
                 ComponentRegistry::put(map, col1_id, component);
@@ -331,7 +332,8 @@ mod populate_component_registry {
 
             // Construct Column2.
             let col2_id = FlexBoxId::from(Id::Column2 as u8);
-            if let ContainsResult::DoesContain = ComponentRegistry::contains(map, col2_id)
+            if let ContainsResult::DoesNotContain =
+                ComponentRegistry::contains(map, col2_id)
             {
                 let boxed_component = ColumnComponent::new_boxed(col2_id);
                 ComponentRegistry::put(map, col2_id, boxed_component);
