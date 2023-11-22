@@ -216,7 +216,7 @@ mod populate_component_registry {
         ) {
             // Construct column component.
             let id = FlexBoxId::from(Id::Column);
-            if let ContainsResult::DoesContain = ComponentRegistry::contains(map, id) {
+            if let ContainsResult::DoesNotContain = ComponentRegistry::contains(map, id) {
                 let component = SingleColumnComponent::new_boxed(id);
                 ComponentRegistry::put(map, id, component);
             }

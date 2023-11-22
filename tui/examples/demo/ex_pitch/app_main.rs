@@ -112,7 +112,7 @@ mod app_main_impl_app_trait {
             }) {
                 // Update state and re-render.
                 state_mutator::next_slide(state);
-                return Ok(EventPropagation::Consumed);
+                return Ok(EventPropagation::ConsumedRender);
             };
 
             // Ctrl + p => previous slide.
