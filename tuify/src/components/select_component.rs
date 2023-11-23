@@ -303,9 +303,8 @@ mod tests {
         set_override(r3bl_ansi_color::ColorSupport::Truecolor);
         component.render(&mut state).unwrap();
 
-        // println!("{:?}", writer.get_buffer());
-
-        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;2;50;50;50m\u{1b}[48;2;150;150;150m\u{1b}[1m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[48;2;100;60;150m\u{1b}[48;2;100;60;150m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◉ Item 1\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[48;2;100;60;150m\u{1b}[48;2;100;60;150m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 2\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[48;2;100;60;150m\u{1b}[48;2;100;60;150m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 3\u{1b}[1E\u{1b}[0m\u{1b}[4F";
+        // println!("writer.get_buffer: {:?}", writer.get_buffer());
+        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;2;171;204;242m\u{1b}[48;2;31;36;46m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[38;2;20;244;0m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◉ Item 1\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[38;2;193;193;193m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 2\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[38;2;193;193;193m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 3\u{1b}[1E\u{1b}[0m\u{1b}[4F";
         assert_eq!(writer.get_buffer(), expected_output);
 
         clear_override();
