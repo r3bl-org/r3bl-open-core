@@ -121,7 +121,9 @@ pub struct ConfigBuilder(Config);
 
 impl ConfigBuilder {
     /// Create a new default ConfigBuilder
-    pub fn new() -> ConfigBuilder { ConfigBuilder(Config::default()) }
+    pub fn new() -> ConfigBuilder {
+        ConfigBuilder(Config::default())
+    }
 
     /// Set at which level and above (more verbose) the level itself shall be logged (default is Error)
     pub fn set_max_level(&mut self, level: LevelFilter) -> &mut ConfigBuilder {
@@ -185,11 +187,7 @@ impl ConfigBuilder {
 
     /// Set the color used for printing the level (if the logger supports it),
     /// or None to use the default foreground color
-    pub fn set_level_color(
-        &mut self,
-        level: Level,
-        color: Option<Color>,
-    ) -> &mut ConfigBuilder {
+    pub fn set_level_color(&mut self, level: Level, color: Option<Color>) -> &mut ConfigBuilder {
         self.0.level_color[level as usize] = color;
         self
     }
@@ -248,10 +246,7 @@ impl ConfigBuilder {
     /// If any are specified, only records from targets matching one of these entries will be printed
     ///
     /// For example, `add_filter_allow_str("tokio::uds")` would allow only logging from the `tokio` crates `uds` module.
-    pub fn add_filter_allow_str(
-        &mut self,
-        filter_allow: &'static str,
-    ) -> &mut ConfigBuilder {
+    pub fn add_filter_allow_str(&mut self, filter_allow: &'static str) -> &mut ConfigBuilder {
         let mut list = Vec::from(&*self.0.filter_allow);
         list.push(Cow::Borrowed(filter_allow));
         self.0.filter_allow = Cow::Owned(list);
@@ -280,10 +275,7 @@ impl ConfigBuilder {
     /// If any are specified, records from targets matching one of these entries will be ignored
     ///
     /// For example, `add_filter_ignore_str("tokio::uds")` would deny logging from the `tokio` crates `uds` module.
-    pub fn add_filter_ignore_str(
-        &mut self,
-        filter_ignore: &'static str,
-    ) -> &mut ConfigBuilder {
+    pub fn add_filter_ignore_str(&mut self, filter_ignore: &'static str) -> &mut ConfigBuilder {
         let mut list = Vec::from(&*self.0.filter_ignore);
         list.push(Cow::Borrowed(filter_ignore));
         self.0.filter_ignore = Cow::Owned(list);
@@ -309,11 +301,15 @@ impl ConfigBuilder {
     }
 
     /// Build new `Config`
-    pub fn build(&mut self) -> Config { self.0.clone() }
+    pub fn build(&mut self) -> Config {
+        self.0.clone()
+    }
 }
 
 impl Default for ConfigBuilder {
-    fn default() -> Self { ConfigBuilder::new() }
+    fn default() -> Self {
+        ConfigBuilder::new()
+    }
 }
 
 impl Default for Config {
@@ -329,9 +325,7 @@ impl Default for Config {
             target_padding: TargetPadding::Off,
             location: LevelFilter::Trace,
             module: LevelFilter::Off,
-            time_format: TimeFormat::Custom(format_description!(
-                "[hour]:[minute]:[second]"
-            )),
+            time_format: TimeFormat::Custom(format_description!("[hour]:[minute]:[second]")),
             time_offset: UtcOffset::UTC,
             filter_allow: Cow::Borrowed(&[]),
             filter_ignore: Cow::Borrowed(&[]),

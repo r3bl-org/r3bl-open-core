@@ -17,11 +17,9 @@ pub fn main() -> Result<()> {
     let json_data = include_str!("data/quiz-game-single-select.json");
 
     // Parse string into Vec<QuestionData>
-    let all_questions_and_answers: Vec<QuestionData> =
-        serde_json::from_str(json_data).unwrap();
+    let all_questions_and_answers: Vec<QuestionData> = serde_json::from_str(json_data).unwrap();
     // Get display size.
-    let max_width_col_count: usize =
-        get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
+    let max_width_col_count: usize = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
     let max_height_row_count: usize = 5;
 
     let mut score = 0;
@@ -143,11 +141,7 @@ fn display_header(line_length: usize) {
     .println();
 }
 
-fn display_footer(
-    score: i32,
-    all_questions_and_answers: &Vec<QuestionData>,
-    line_length: usize,
-) {
+fn display_footer(score: i32, all_questions_and_answers: &Vec<QuestionData>, line_length: usize) {
     let line = "─".to_string().as_str().repeat(line_length - 2);
     let color = Color::Rgb(9, 183, 238);
 

@@ -45,6 +45,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils](#r3bl_rs_utils)
+  - [Next release](#next-release)
   - [v0.9.14 2023-10-29](#v0914-2023-10-29)
   - [v0.9.13 2023-10-29](#v0913-2023-10-29)
   - [v0.9.12 2023-10-29](#v0912-2023-10-29)
@@ -435,6 +436,13 @@
 
 ## `r3bl_rs_utils`
 <a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
+
+### Next release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Moved:
+  - All the source code from the top level folder of the `r3bl-open-core` repo into the
+    `utils` sub folder.
 
 ### v0.9.14 (2023-10-29)
 <a id="markdown-v0.9.14-2023-10-29" name="v0.9.14-2023-10-29"></a>

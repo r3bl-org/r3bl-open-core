@@ -94,12 +94,9 @@ fn main() -> Result<()> {
         const MULTIPLE_SELECT_SINGLE_ITEM: &str = "Multiple select, single item";
         const MULTIPLE_SELECT_13_ITEMS_VPH_5: &str =
             "Multiple select, 13 items, viewport height = 5";
-        const MULTIPLE_SELECT_2_ITEMS_VPH_5: &str =
-            "Multiple select, 2 items, viewport height = 5";
-        const SINGLE_SELECT_13_ITEMS_VPH_5: &str =
-            "Single select, 13 items, viewport height = 5";
-        const SINGLE_SELECT_2_ITEMS_VPH_5: &str =
-            "Single select, 2 items, viewport height = 5";
+        const MULTIPLE_SELECT_2_ITEMS_VPH_5: &str = "Multiple select, 2 items, viewport height = 5";
+        const SINGLE_SELECT_13_ITEMS_VPH_5: &str = "Single select, 13 items, viewport height = 5";
+        const SINGLE_SELECT_2_ITEMS_VPH_5: &str = "Single select, 2 items, viewport height = 5";
         const SINGLE_SELECT_QUIZ_GAME: &str = "Single select, quiz game";
 
         // Add tuify to select which example to run.
@@ -131,9 +128,7 @@ fn main() -> Result<()> {
                         if *user_input == MULTIPLE_SELECT_SINGLE_ITEM.to_string() {
                             // Multiple select, single item.
                             multiple_select_single_item(multi_select_instructions)
-                        } else if *user_input
-                            == MULTIPLE_SELECT_13_ITEMS_VPH_5.to_string()
-                        {
+                        } else if *user_input == MULTIPLE_SELECT_13_ITEMS_VPH_5.to_string() {
                             // Multiple select.
                             multiple_select_13_items_vph_5(
                                 max_height_row_count,
@@ -141,16 +136,14 @@ fn main() -> Result<()> {
                                 default_style,
                                 multi_select_instructions,
                             );
-                        } else if *user_input == MULTIPLE_SELECT_2_ITEMS_VPH_5.to_string()
-                        {
+                        } else if *user_input == MULTIPLE_SELECT_2_ITEMS_VPH_5.to_string() {
                             multiple_select_2_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
                                 sea_foam_style,
                                 multi_select_instructions,
                             );
-                        } else if *user_input == SINGLE_SELECT_13_ITEMS_VPH_5.to_string()
-                        {
+                        } else if *user_input == SINGLE_SELECT_13_ITEMS_VPH_5.to_string() {
                             // Single select.
                             single_select_13_items_vph_5(
                                 max_height_row_count,
