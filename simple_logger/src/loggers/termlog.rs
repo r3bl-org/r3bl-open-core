@@ -17,17 +17,14 @@
 
 //! Module providing the TermLogger Implementation
 
-use std::{io::{Error, Write},
-          sync::Mutex};
+use std::{
+    io::{Error, Write},
+    sync::Mutex,
+};
 
-use log::{set_boxed_logger,
-          set_max_level,
-          Level,
-          LevelFilter,
-          Log,
-          Metadata,
-          Record,
-          SetLoggerError};
+use log::{
+    set_boxed_logger, set_max_level, Level, LevelFilter, Log, Metadata, Record, SetLoggerError,
+};
 use termcolor::{BufferedStandardStream, ColorChoice};
 
 use super::logging::*;
@@ -154,8 +151,7 @@ impl TermLogger {
             write_level(record, term_lock, &self.config)?;
         }
 
-        if self.config.thread <= record.level() && self.config.thread != LevelFilter::Off
-        {
+        if self.config.thread <= record.level() && self.config.thread != LevelFilter::Off {
             match self.config.thread_log_mode {
                 ThreadLogMode::IDs => {
                     write_thread_id(term_lock, &self.config)?;
@@ -166,19 +162,15 @@ impl TermLogger {
             }
         }
 
-        if self.config.target <= record.level() && self.config.target != LevelFilter::Off
-        {
+        if self.config.target <= record.level() && self.config.target != LevelFilter::Off {
             write_target(record, term_lock, &self.config)?;
         }
 
-        if self.config.location <= record.level()
-            && self.config.location != LevelFilter::Off
-        {
+        if self.config.location <= record.level() && self.config.location != LevelFilter::Off {
             write_location(record, term_lock)?;
         }
 
-        if self.config.module <= record.level() && self.config.module != LevelFilter::Off
-        {
+        if self.config.module <= record.level() && self.config.module != LevelFilter::Off {
             write_module(record, term_lock)?;
         }
 
@@ -213,9 +205,13 @@ impl TermLogger {
 }
 
 impl Log for TermLogger {
-    fn enabled(&self, metadata: &Metadata<'_>) -> bool { metadata.level() <= self.level }
+    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
+        metadata.level() <= self.level
+    }
 
-    fn log(&self, record: &Record<'_>) { let _ = self.try_log(record); }
+    fn log(&self, record: &Record<'_>) {
+        let _ = self.try_log(record);
+    }
 
     fn flush(&self) {
         let mut streams = self.streams.lock().unwrap();
@@ -225,9 +221,15 @@ impl Log for TermLogger {
 }
 
 impl SharedLogger for TermLogger {
-    fn level(&self) -> LevelFilter { self.level }
+    fn level(&self) -> LevelFilter {
+        self.level
+    }
 
-    fn config(&self) -> Option<&Config> { Some(&self.config) }
+    fn config(&self) -> Option<&Config> {
+        Some(&self.config)
+    }
 
-    fn as_log(self: Box<Self>) -> Box<dyn Log> { Box::new(*self) }
+    fn as_log(self: Box<Self>) -> Box<dyn Log> {
+        Box::new(*self)
+    }
 }

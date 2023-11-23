@@ -2,6 +2,7 @@
 name = "r3bl_simple_logger"
 version = "0.1.3"
 edition = "2021"
+resolver = "2"
 readme = "README.md"
 
 description = "Replacement for the simplelog crate, which is simpler and has clearer dependencies."

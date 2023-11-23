@@ -15,13 +15,7 @@
  *   limitations under the License.
  */
 
-use crossterm::event::{read,
-                       Event,
-                       KeyCode,
-                       KeyEvent,
-                       KeyEventKind,
-                       KeyEventState,
-                       KeyModifiers};
+use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
 use r3bl_rs_utils_core::*;
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Copy)]
@@ -53,12 +47,10 @@ fn read_key_press_unix() -> KeyPress {
         Ok(event) => {
             log_debug(format!("got event: {:?}", event).to_string());
             match event {
-                crossterm::event::Event::Resize(width, height) => {
-                    KeyPress::Resize(Size {
-                        col_count: ch!(width),
-                        row_count: ch!(height),
-                    })
-                }
+                crossterm::event::Event::Resize(width, height) => KeyPress::Resize(Size {
+                    col_count: ch!(width),
+                    row_count: ch!(height),
+                }),
                 crossterm::event::Event::Key(KeyEvent { code, .. }) => {
                     // Only trap the right code.
                     match code {
