@@ -53,9 +53,11 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
     fn render(&mut self, state: &mut State) -> Result<()> {
         throws!({
             // Setup the required data.
-            let normal_style = self.style.normal_style;
-            let header_style = self.style.header_style;
+            let focused_and_selected_style = self.style.focused_and_selected_style;
+            let focused_style = self.style.focused_style;
+            let unselected_style = self.style.unselected_style;
             let selected_style = self.style.selected_style;
+            let header_style = self.style.header_style;
 
             let start_display_col_offset = 1;
 
@@ -120,16 +122,22 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                     (data_row_index_start + viewport_row_index).into();
                 let caret_row_scroll_adj =
                     ch!(viewport_row_index) + state.scroll_offset_row_index;
-                let is_focused = ch!(caret_row_scroll_adj) == state.get_focused_index();
-
                 let data_item = &state.items[data_row_index];
 
+                // TODO: remove booleans, replace with enums.
                 // Invert colors for selected items.
                 let is_selected = state.selected_items.contains(data_item);
-                let data_style = if is_selected {
+                let is_focused = ch!(caret_row_scroll_adj) == state.get_focused_index();
+                let is_focused_and_selected = is_focused && is_selected;
+
+                let data_style = if is_focused_and_selected {
+                    focused_and_selected_style
+                } else if is_focused {
+                    focused_style
+                } else if is_selected {
                     selected_style
                 } else {
-                    normal_style
+                    unselected_style
                 };
 
                 let row_prefix = match state.selection_mode {
@@ -171,7 +179,7 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                     // Reset the colors that may have been set by the previous command.
                     ResetColor,
                     // Set the colors for the text.
-                    apply_style!(data_style => bg_color),
+                    apply_style!(data_style => fg_color),
                     apply_style!(data_style => bg_color),
                     // Style the text.
                     apply_style!(data_style => bold),

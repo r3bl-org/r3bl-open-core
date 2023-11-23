@@ -19,27 +19,39 @@ use r3bl_ansi_color::Color;
 
 #[derive(Copy, Clone, Debug)]
 pub struct StyleSheet {
-    pub normal_style: Style,
+    pub focused_and_selected_style: Style,
+    pub focused_style: Style,
+    pub unselected_style: Style,
     pub selected_style: Style,
     pub header_style: Style,
 }
 
 impl Default for StyleSheet {
     fn default() -> Self {
-        let normal_style = Style::default();
+        let focused_and_selected_style = Style {
+            fg_color: Color::Rgb(20, 244, 0),
+            bg_color: Color::Rgb(51, 32, 66),
+            ..Style::default()
+        };
+        let focused_style = Style {
+            fg_color: Color::Rgb(20, 244, 0),
+            ..Style::default()
+        };
+        let unselected_style = Style { ..Style::default() };
         let selected_style = Style {
-            fg_color: Color::Rgb(250, 250, 250),
-            bg_color: Color::Rgb(39, 45, 239),
+            fg_color: Color::Rgb(203, 170, 250),
+            bg_color: Color::Rgb(51, 32, 66),
             ..Style::default()
         };
         let header_style = Style {
-            fg_color: Color::Rgb(50, 50, 50),
-            bg_color: Color::Rgb(150, 150, 150),
-            bold: true,
+            fg_color: Color::Rgb(171, 204, 242),
+            bg_color: Color::Rgb(31, 36, 46),
             ..Style::default()
         };
         StyleSheet {
-            normal_style,
+            focused_and_selected_style,
+            focused_style,
+            unselected_style,
             selected_style,
             header_style,
         }
@@ -69,8 +81,8 @@ impl Default for Style {
             reverse: false,
             hidden: false,
             strikethrough: false,
-            fg_color: Color::Rgb(200, 200, 1),
-            bg_color: Color::Rgb(100, 60, 150),
+            fg_color: Color::Rgb(193, 193, 193),
+            bg_color: Color::Rgb(14, 17, 23),
         }
     }
 }
