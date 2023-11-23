@@ -2,6 +2,7 @@
 name = "r3bl_tuify"
 version = "0.1.21"
 edition = "2021"
+resolver = "2"
 description = "Easily add lightweight TUI capabilities to any CLI apps"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["tui", "cli", "terminal", "color"]

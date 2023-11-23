@@ -38,11 +38,12 @@ def main [...args: string] {
         "build" => {build}
         "build-full" => {build-full}
         "clean" => {clean}
-        "install-cargo-tools" => {install-cargo-tools}
+        "run" => {run}
+        "run-release" => {run-release}
+        "run-with-flamegraph-profiling" => {run-with-flamegraph-profiling}
+        "run-with-crash-reporting" => {run-with-crash-reporting}
         "test" => {test}
-        "watch-one-test" => {watch-one-test $args}
         "watch-all-tests" => {watch-all-tests}
-        "watch-macro-expand-one-test" => {watch-macro-expand-one-test $args}
         "docs" => {docs}
         "check" => {check}
         "check-watch" => {check-watch}
@@ -55,29 +56,6 @@ def main [...args: string] {
         "log" => {log}
         "audit-deps" => {audit-deps}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
-    }
-}
-
-def watch-macro-expand-one-test [args: list<string>] {
-    let num_args = $args | length
-
-    let test_name = if $num_args == 2 {
-        let test_name = $args | get 1
-        $test_name
-    } else {
-        print-help watch-one-test
-        let user_input = (input "Enter the test-name: " )
-        $user_input
-    }
-
-    if $test_name != "" {
-        # More info on cargo test: https://doc.rust-lang.org/cargo/commands/cargo-test.html
-        # More info on cargo watch: https://github.com/watchexec/cargo-watch
-        let command_string = "expand --test " + $test_name
-        cargo watch -x $command_string -c -q -d 10
-        # cargo watch -x "expand --test $argv" -c -q -d 10
-    } else {
-        print $'Can not run this command without (ansi red_bold)test_name(ansi reset)'
     }
 }
 
@@ -149,15 +127,17 @@ def print-help [command: string] {
         print $'    (ansi green)all(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)docs(ansi reset)'
+        print $'    (ansi green)run(ansi reset)'
+        print $'    (ansi green)run-release(ansi reset)'
+        print $'    (ansi green)run-with-crash-reporting(ansi reset)'
+        print $'    (ansi green)run-with-flamegraph-profiling(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
         print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
         print $'    (ansi green)watch-all-tests(ansi reset)'
         print $'    (ansi green)watch-macro-expand-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
-        print $'    (ansi green)check(ansi reset)'
-        print $'    (ansi green)check-watch(ansi reset)'
+        print $'    (ansi green)serve-docs(ansi reset)'
         print $'    (ansi green)clippy(ansi reset)'
         print $'    (ansi green)clippy-watch(ansi reset)'
-        print $'    (ansi green)serve-docs(ansi reset)'
         print $'    (ansi green)upgrade-deps(ansi reset)'
         print $'    (ansi green)rustfmt(ansi reset)'
         print $'    (ansi green)help(ansi reset)'
@@ -168,17 +148,6 @@ def print-help [command: string] {
     } else {
         print $'Unknown command: (ansi red_bold)($command)(ansi reset)'
     }
-}
-
-def install-cargo-tools [] {
-    cargo install bacon
-    cargo install cargo-workspaces
-    cargo install cargo-cache
-    cargo install cargo-watch
-    cargo install flamegraph
-    cargo install cargo-outdated
-    cargo install cargo-update
-    cargo install cargo-deny
 }
 
 def all [] {
@@ -206,21 +175,22 @@ def clean [] {
     cargo clean
 }
 
+def run [] {
+    cargo run --example demo -q
+    cd ..
+}
+
+def run-release [] {
+    cargo run --release --example demo -q
+    cd ..
+}
+
+def run-with-flamegraph-profiling [] {
+    cargo flamegraph --example demo
+}
+
 def test [] {
-    for folder in ($workspace_folders) {
-        cd $folder
-        print $'(ansi magenta)≡ Running tests in ($folder) .. ≡(ansi reset)'
-        cargo test -q -- --test-threads=20
-        cd ..
-    }
-}
-
-def check [] {
-    cargo check --workspace
-}
-
-def check-watch [] {
-    cargo watch -x 'check --workspace'
+    cargo test
 }
 
 def clippy [] {
@@ -240,12 +210,7 @@ def clippy-watch [] {
 }
 
 def docs [] {
-    for folder in $workspace_folders {
-        cd $folder
-        print $'(ansi magenta)≡ Running cargo doc in ($folder) .. ≡(ansi reset)'
-        cargo doc
-        cd ..
-    }
+    cargo doc --no-deps --all-features
 }
 
 def serve-docs [] {
@@ -254,36 +219,28 @@ def serve-docs [] {
 }
 
 def upgrade-deps [] {
-    for folder in $workspace_folders {
-        cd $folder
-        print $'(ansi magenta)≡ Upgrading ($folder) .. ≡(ansi reset)'
-        cargo outdated --workspace --verbose
-        cargo upgrade --verbose
-        cd ..
-    }
+    cargo outdated --workspace --verbose
+    cargo upgrade --to-lockfile --verbose
+    cargo update
 }
 
 def rustfmt [] {
-    for folder in $workspace_folders {
-        cd $folder
-        print $'(ansi magenta)≡ Running cargo fmt --all in ($folder) .. ≡(ansi reset)'
-        cargo fmt --all
-        cd ..
-    }
+    cargo fmt --all
+}
+
+def run-with-crash-reporting [] {
+    cargo run --example demo out+err> | tee crash_log.txt
+    cd ..
+    code -n tui/crash_log.txt
 }
 
 def log [] {
     clear
-    cd tui
+    
     if ('log.txt' | path exists) {
         rm log.txt
     }
     touch log.txt
     tail -f -s 5 log.txt
     cd ..
-}
-
-# More info: https://github.com/EmbarkStudios/cargo-deny
-def audit-deps [] {
-    cargo deny check licenses advisories
 }

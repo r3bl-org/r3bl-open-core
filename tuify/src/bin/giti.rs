@@ -184,8 +184,7 @@ mod branch_delete {
         let tuify_output = show_tuify(options, header.to_string(), selection_mode);
         match tuify_output {
             Some(branches) => {
-                let options =
-                    vec!["Yes".to_string(), "No".to_string(), "Cancel".to_string()];
+                let options = vec!["Yes".to_string(), "No".to_string(), "Cancel".to_string()];
                 let header = format!("Are you sure you want to delete {:?}?", branches);
                 let selection_mode = SelectionMode::Single;
                 let tuify_output = show_tuify(options, header, selection_mode);
@@ -197,15 +196,11 @@ mod branch_delete {
                             for branch in branches {
                                 command.arg(branch.to_string());
                             }
-                            let op =
-                                command.output().expect("failed to execute git branch");
+                            let op = command.output().expect("failed to execute git branch");
                             if op.status.success() {
                                 (AnsiStyledText {
                                     text: "Deleted Successfully !",
-                                    style: &[
-                                        Style::Bold,
-                                        Style::Foreground(Color::Rgb(1, 200, 1)),
-                                    ],
+                                    style: &[Style::Bold, Style::Foreground(Color::Rgb(1, 200, 1))],
                                 })
                                 .println();
                                 tui_exit();
@@ -215,10 +210,7 @@ mod branch_delete {
                                         "Failed to delete branches !\n{:#?}",
                                         String::from_utf8(op.stderr).unwrap()
                                     ),
-                                    style: &[
-                                        Style::Bold,
-                                        Style::Foreground(Color::Rgb(200, 1, 1)),
-                                    ],
+                                    style: &[Style::Bold, Style::Foreground(Color::Rgb(200, 1, 1))],
                                 })
                                 .println();
                             }
@@ -258,8 +250,7 @@ mod branch_delete {
         selection_mode: SelectionMode,
     ) -> Option<Vec<String>> {
         let max_height_row_count = 50;
-        let max_width_col_count =
-            get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
+        let max_width_col_count = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
         let style = StyleSheet::default();
         let user_input = select_from_list(
             header,
@@ -284,8 +275,7 @@ mod git_commands {
             .output()
             .expect("failed to execute git branch");
 
-        let output =
-            String::from_utf8(output.stdout).expect("failed to convert output to string");
+        let output = String::from_utf8(output.stdout).expect("failed to convert output to string");
 
         let mut branches = vec![];
 

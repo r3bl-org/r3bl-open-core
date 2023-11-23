@@ -71,10 +71,9 @@ pub fn select_from_list(
         state.set_size(size);
     }
 
-    let user_input =
-        enter_event_loop(&mut state, &mut function_component, |state, key_press| {
-            keypress_handler(state, key_press)
-        });
+    let user_input = enter_event_loop(&mut state, &mut function_component, |state, key_press| {
+        keypress_handler(state, key_press)
+    });
 
     match user_input {
         Ok(EventLoopResult::ExitWithResult(it)) => Some(it),
@@ -283,9 +282,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
     return_it
 }
 
-#[derive(
-    Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default, Hash,
-)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default, Hash)]
 pub enum SelectionMode {
     /// Select only one option from list.
     #[default]

@@ -2,6 +2,7 @@
 name = "r3bl_rs_utils_macro"
 version = "0.9.7"
 edition = "2021"
+resolver = "2"
 description = """
 Internal support for a proc-macro library for reading attributes into structs when
 implementing custom derives. Used by workspace in https://crates.io/crates/r3bl_rs_utils.

@@ -17,13 +17,7 @@
 
 //! Module providing the CombinedLogger Implementation
 
-use log::{set_boxed_logger,
-          set_max_level,
-          LevelFilter,
-          Log,
-          Metadata,
-          Record,
-          SetLoggerError};
+use log::{set_boxed_logger, set_max_level, LevelFilter, Log, Metadata, Record, SetLoggerError};
 
 use crate::{Config, SharedLogger};
 
@@ -106,7 +100,9 @@ impl CombinedLogger {
 }
 
 impl Log for CombinedLogger {
-    fn enabled(&self, metadata: &Metadata<'_>) -> bool { metadata.level() <= self.level }
+    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
+        metadata.level() <= self.level
+    }
 
     fn log(&self, record: &Record<'_>) {
         if self.enabled(record.metadata()) {
@@ -124,9 +120,15 @@ impl Log for CombinedLogger {
 }
 
 impl SharedLogger for CombinedLogger {
-    fn level(&self) -> LevelFilter { self.level }
+    fn level(&self) -> LevelFilter {
+        self.level
+    }
 
-    fn config(&self) -> Option<&Config> { None }
+    fn config(&self) -> Option<&Config> {
+        None
+    }
 
-    fn as_log(self: Box<Self>) -> Box<dyn Log> { Box::new(*self) }
+    fn as_log(self: Box<Self>) -> Box<dyn Log> {
+        Box::new(*self)
+    }
 }
