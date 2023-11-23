@@ -121,18 +121,10 @@ mod app_main_impl_app_trait {
                 mask: ModifierKeysMask::new().with_ctrl(),
             }) {
                 // Spawn previous slide action.
-                let main_thread_sender_clone =
-                    global_data.main_thread_channel_sender.clone();
-                // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so
-                // that it doesn't block the calling thread. More info:
-                // <https://tokio.rs/tokio/tutorial/channels>.
-                tokio::spawn(async move {
-                    let _ = main_thread_sender_clone
-                        .send(TerminalWindowMainThreadSignal::ApplyAction(
-                            AppSignal::PreviousSlide,
-                        ))
-                        .await;
-                });
+                send_signal!(
+                    global_data.main_thread_channel_sender,
+                    TerminalWindowMainThreadSignal::ApplyAction(AppSignal::PreviousSlide)
+                );
                 return Ok(EventPropagation::Consumed);
             };
 
@@ -285,11 +277,10 @@ mod populate_component_registry {
                     TerminalWindowMainThreadSignal<AppSignal>,
                 >,
             ) {
-                tokio::spawn(async move {
-                    let _ = main_thread_channel_sender
-                        .send(TerminalWindowMainThreadSignal::Render(Some(my_id)))
-                        .await;
-                });
+                send_signal!(
+                    main_thread_channel_sender,
+                    TerminalWindowMainThreadSignal::Render(Some(my_id))
+                );
             }
 
             let config_options = EditorEngineConfig {

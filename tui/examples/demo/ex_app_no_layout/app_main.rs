@@ -80,15 +80,10 @@ mod animator_task {
                         telemetry_global_static::set_start_ts();
 
                         // Send a signal to the main thread to render.
-                        let main_thread_channel_sender_clone = main_thread_channel_sender.clone();
-                        // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so
-                        // that it doesn't block the calling thread. More info:
-                        // <https://tokio.rs/tokio/tutorial/channels>.
-                        tokio::spawn(async move {
-                            let _ = main_thread_channel_sender_clone
-                            .send(TerminalWindowMainThreadSignal::ApplyAction(AppSignal::Add))
-                            .await;
-                        });
+                        send_signal!(
+                            main_thread_channel_sender,
+                            TerminalWindowMainThreadSignal::ApplyAction(AppSignal::Add)
+                        );
 
                         // Wire into the timing telemetry.
                         telemetry_global_static::set_end_ts();
@@ -292,27 +287,21 @@ mod app_main_impl_trait_app {
                         match typed_char {
                             '+' => {
                                 event_consumed = true;
-                                tokio::spawn(async move {
-                                    let _ = sender
-                                        .send(
-                                            TerminalWindowMainThreadSignal::ApplyAction(
-                                                AppSignal::Add,
-                                            ),
-                                        )
-                                        .await;
-                                });
+                                send_signal!(
+                                    sender,
+                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                        AppSignal::Add,
+                                    )
+                                );
                             }
                             '-' => {
                                 event_consumed = true;
-                                tokio::spawn(async move {
-                                    let _ = sender
-                                        .send(
-                                            TerminalWindowMainThreadSignal::ApplyAction(
-                                                AppSignal::Sub,
-                                            ),
-                                        )
-                                        .await;
-                                });
+                                send_signal!(
+                                    sender,
+                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                        AppSignal::Sub,
+                                    )
+                                );
                             }
                             // Override default behavior of 'x' key.
                             'x' => {
@@ -329,27 +318,21 @@ mod app_main_impl_trait_app {
                         match special_key {
                             SpecialKey::Up => {
                                 event_consumed = true;
-                                tokio::spawn(async move {
-                                    let _ = sender
-                                        .send(
-                                            TerminalWindowMainThreadSignal::ApplyAction(
-                                                AppSignal::Add,
-                                            ),
-                                        )
-                                        .await;
-                                });
+                                send_signal!(
+                                    sender,
+                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                        AppSignal::Add,
+                                    )
+                                );
                             }
                             SpecialKey::Down => {
                                 event_consumed = true;
-                                tokio::spawn(async move {
-                                    let _ = sender
-                                        .send(
-                                            TerminalWindowMainThreadSignal::ApplyAction(
-                                                AppSignal::Sub,
-                                            ),
-                                        )
-                                        .await;
-                                });
+                                send_signal!(
+                                    sender,
+                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                        AppSignal::Sub,
+                                    )
+                                );
                             }
                             _ => {}
                         }
