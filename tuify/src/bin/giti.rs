@@ -145,7 +145,7 @@ mod clap_config {
             selection_mode: Option<SelectionMode>,
 
             /// Each selected item is passed to this command as an argument and executed in your shell.
-            #[arg(value_name = "command", long, short = 'c')]
+            #[arg(value_name = "command")]
             command_to_run_with_each_selection: Option<BranchSubcommands>,
         },
     }
