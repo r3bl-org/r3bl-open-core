@@ -150,15 +150,13 @@ fn main() -> Result<()> {
                                 max_width_col_count,
                                 style,
                             );
-                        } else if *user_input == SINGLE_SELECT_2_ITEMS_VPH_5.to_string() 
-                        {
+                        } else if *user_input == SINGLE_SELECT_2_ITEMS_VPH_5.to_string() {
                             single_select_2_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
                                 style,
                             );
-                        } else if *user_input == SINGLE_SELECT_QUIZ_GAME.to_string() 
-                        {
+                        } else if *user_input == SINGLE_SELECT_QUIZ_GAME.to_string() {
                             let _ = single_select_quiz_game();
                         } else {
                             println!("User did not select anything")

@@ -74,39 +74,29 @@ mod column_render_component_impl_component_trait {
                 let mut event_consumed = false;
 
                 if let InputEvent::Keyboard(KeyPress::Plain { key }) = input_event {
-                    let sender = global_data.main_thread_channel_sender.clone();
                     // Check for + or - key.
                     if let Key::Character(typed_char) = key {
                         match typed_char {
                             '+' => {
                                 event_consumed = true;
-                                // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so
-                                // that it doesn't block the calling thread. More info:
-                                // <https://tokio.rs/tokio/tutorial/channels>.
-                                tokio::spawn(async move {
-                                    let _ = sender
-                                        .send(
-                                            TerminalWindowMainThreadSignal::ApplyAction(
-                                                AppSignal::AddPop(1),
-                                            ),
-                                        )
-                                        .await;
-                                });
+                                send_signal!(
+                                    global_data.main_thread_channel_sender,
+                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                        AppSignal::AddPop(1),
+                                    )
+                                );
                             }
                             '-' => {
                                 event_consumed = true;
                                 // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so
                                 // that it doesn't block the calling thread. More info:
                                 // <https://tokio.rs/tokio/tutorial/channels>.
-                                tokio::spawn(async move {
-                                    let _ = sender
-                                        .send(
-                                            TerminalWindowMainThreadSignal::ApplyAction(
-                                                AppSignal::SubPop(1),
-                                            ),
-                                        )
-                                        .await;
-                                });
+                                send_signal!(
+                                    global_data.main_thread_channel_sender,
+                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                        AppSignal::SubPop(1),
+                                    )
+                                );
                             }
                             _ => {}
                         }
@@ -114,37 +104,24 @@ mod column_render_component_impl_component_trait {
 
                     // Check for up or down arrow key.
                     if let Key::SpecialKey(special_key) = key {
-                        let sender = global_data.main_thread_channel_sender.clone();
                         match special_key {
                             SpecialKey::Up => {
                                 event_consumed = true;
-                                // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so
-                                // that it doesn't block the calling thread. More info:
-                                // <https://tokio.rs/tokio/tutorial/channels>.
-                                tokio::spawn(async move {
-                                    let _ = sender
-                                        .send(
-                                            TerminalWindowMainThreadSignal::ApplyAction(
-                                                AppSignal::AddPop(1),
-                                            ),
-                                        )
-                                        .await;
-                                });
+                                send_signal!(
+                                    global_data.main_thread_channel_sender,
+                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                        AppSignal::AddPop(1),
+                                    )
+                                );
                             }
                             SpecialKey::Down => {
                                 event_consumed = true;
-                                // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so
-                                // that it doesn't block the calling thread. More info:
-                                // <https://tokio.rs/tokio/tutorial/channels>.
-                                tokio::spawn(async move {
-                                    let _ = sender
-                                        .send(
-                                            TerminalWindowMainThreadSignal::ApplyAction(
-                                                AppSignal::SubPop(1),
-                                            ),
-                                        )
-                                        .await;
-                                });
+                                send_signal!(
+                                    global_data.main_thread_channel_sender,
+                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                        AppSignal::SubPop(1),
+                                    )
+                                );
                             }
                             _ => {}
                         }
