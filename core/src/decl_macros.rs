@@ -387,3 +387,23 @@ macro_rules! assert_eq2 {
         pretty_assertions::assert_eq!($($params)*)
     };
 }
+
+/// Send a signal to the main thread of app to render. The two things to pass in this macro are
+/// 1. Sender
+/// 2. AppEvent (Signal to MPSC channel)
+#[macro_export]
+macro_rules! send_signal {
+    (
+        $main_thread_channel_sender : expr,
+        $signal : expr
+    ) => {{
+        let sender_clone = $main_thread_channel_sender.clone();
+
+        // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so
+        // that it doesn't block the calling thread. More info:
+        // <https://tokio.rs/tokio/tutorial/channels>.
+        tokio::spawn(async move {
+            let _ = sender_clone.send($signal).await;
+        });
+    }};
+}

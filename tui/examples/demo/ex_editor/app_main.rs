@@ -523,11 +523,10 @@ mod populate_component_registry {
                     TerminalWindowMainThreadSignal<AppSignal>,
                 >,
             ) {
-                tokio::spawn(async move {
-                    let _ = main_thread_channel_sender
-                        .send(TerminalWindowMainThreadSignal::Render(Some(my_id)))
-                        .await;
-                });
+                send_signal!(
+                    main_thread_channel_sender,
+                    TerminalWindowMainThreadSignal::Render(Some(my_id))
+                );
             }
 
             let config_options = EditorEngineConfig::default();
