@@ -25,8 +25,8 @@ pub fn main() -> Result<()> {
     let max_height_row_count: usize = 5;
 
     let mut score = 0;
-    let correct_answer_color = Color::Rgb(5, 236, 0);
-    let incorrect_answer_color = Color::Rgb(234, 0, 196);
+    let correct_answer_color = Color::Rgb(255, 216, 9);
+    let incorrect_answer_color = Color::Rgb(255, 70, 30);
     let line_length = 60;
 
     display_header(line_length.clone());

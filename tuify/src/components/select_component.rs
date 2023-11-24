@@ -53,9 +53,11 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
     fn render(&mut self, state: &mut State) -> Result<()> {
         throws!({
             // Setup the required data.
-            let normal_style = self.style.normal_style;
-            let header_style = self.style.header_style;
+            let focused_and_selected_style = self.style.focused_and_selected_style;
+            let focused_style = self.style.focused_style;
+            let unselected_style = self.style.unselected_style;
             let selected_style = self.style.selected_style;
+            let header_style = self.style.header_style;
 
             let start_display_col_offset = 1;
 
@@ -120,16 +122,33 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                     (data_row_index_start + viewport_row_index).into();
                 let caret_row_scroll_adj =
                     ch!(viewport_row_index) + state.scroll_offset_row_index;
-                let is_focused = ch!(caret_row_scroll_adj) == state.get_focused_index();
-
                 let data_item = &state.items[data_row_index];
 
                 // Invert colors for selected items.
+                enum SelectionStateStyle {
+                    IsFocusedAndSelected,
+                    IsFocused,
+                    IsSelected,
+                    IsUnselected,
+                }
+
                 let is_selected = state.selected_items.contains(data_item);
-                let data_style = if is_selected {
-                    selected_style
-                } else {
-                    normal_style
+                let is_focused = ch!(caret_row_scroll_adj) == state.get_focused_index();
+
+                let selection_state = match (is_focused, is_selected) {
+                    (true, true) => SelectionStateStyle::IsFocusedAndSelected,
+                    (true, false) => SelectionStateStyle::IsFocused,
+                    (false, true) => SelectionStateStyle::IsSelected,
+                    (false, false) => SelectionStateStyle::IsUnselected,
+                };
+
+                let data_style = match selection_state {
+                    SelectionStateStyle::IsFocusedAndSelected => {
+                        focused_and_selected_style
+                    }
+                    SelectionStateStyle::IsFocused => focused_style,
+                    SelectionStateStyle::IsSelected => selected_style,
+                    SelectionStateStyle::IsUnselected => unselected_style,
                 };
 
                 let row_prefix = match state.selection_mode {
@@ -171,7 +190,7 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                     // Reset the colors that may have been set by the previous command.
                     ResetColor,
                     // Set the colors for the text.
-                    apply_style!(data_style => bg_color),
+                    apply_style!(data_style => fg_color),
                     apply_style!(data_style => bg_color),
                     // Style the text.
                     apply_style!(data_style => bold),
@@ -295,9 +314,8 @@ mod tests {
         set_override(r3bl_ansi_color::ColorSupport::Truecolor);
         component.render(&mut state).unwrap();
 
-        // println!("{:?}", writer.get_buffer());
-
-        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;2;50;50;50m\u{1b}[48;2;150;150;150m\u{1b}[1m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[48;2;100;60;150m\u{1b}[48;2;100;60;150m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◉ Item 1\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[48;2;100;60;150m\u{1b}[48;2;100;60;150m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 2\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[48;2;100;60;150m\u{1b}[48;2;100;60;150m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 3\u{1b}[1E\u{1b}[0m\u{1b}[4F";
+        // println!("writer.get_buffer: {:?}", writer.get_buffer());
+        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;2;171;204;242m\u{1b}[48;2;31;36;46m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[38;2;20;244;0m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◉ Item 1\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[38;2;193;193;193m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 2\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[38;2;193;193;193m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 3\u{1b}[1E\u{1b}[0m\u{1b}[4F";
         assert_eq!(writer.get_buffer(), expected_output);
 
         clear_override();
