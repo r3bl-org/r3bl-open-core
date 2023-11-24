@@ -50,8 +50,10 @@ fn main() -> Result<()> {
             get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
         let max_height_row_count: usize = 5;
 
-        let style = StyleSheet::default();
+        // Create styles.
+        let default_style = StyleSheet::default();
         let sea_foam_style = StyleSheet::sea_foam_style();
+        let hot_pink_style = StyleSheet::hot_pink_style();
 
         let up_down_colored = AnsiStyledText {
             text: &format!("{}", "`Up` or `Down` arrow",),
@@ -132,7 +134,7 @@ fn main() -> Result<()> {
                             multiple_select_13_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
-                                sea_foam_style,
+                                default_style,
                                 multi_select_instructions,
                             );
                         } else if *user_input == MULTIPLE_SELECT_2_ITEMS_VPH_5.to_string()
@@ -140,7 +142,7 @@ fn main() -> Result<()> {
                             multiple_select_2_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
-                                style,
+                                sea_foam_style,
                                 multi_select_instructions,
                             );
                         } else if *user_input == SINGLE_SELECT_13_ITEMS_VPH_5.to_string()
@@ -149,13 +151,13 @@ fn main() -> Result<()> {
                             single_select_13_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
-                                style,
+                                hot_pink_style,
                             );
                         } else if *user_input == SINGLE_SELECT_2_ITEMS_VPH_5.to_string() {
                             single_select_2_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
-                                style,
+                                default_style,
                             );
                         } else if *user_input == SINGLE_SELECT_QUIZ_GAME.to_string() {
                             let _ = single_select_quiz_game();

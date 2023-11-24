@@ -93,6 +93,41 @@ impl StyleSheet {
             header_style,
         }
     }
+
+    pub fn hot_pink_style() -> Self {
+        let focused_and_selected_style = Style {
+            fg_color: Color::Rgb(255, 0, 214),
+            bg_color: Color::Rgb(62, 14, 74),
+            ..Style::default()
+        };
+        let focused_style = Style {
+            fg_color: Color::Rgb(255, 0, 214),
+            bg_color: Color::Rgb(14, 17, 23) ,
+            ..Style::default()
+        };
+        let unselected_style = Style {
+            fg_color: Color::Rgb(219, 202, 232),
+            bg_color: Color::Rgb(14, 17, 23),
+            ..Style::default()
+        };
+        let selected_style = Style {
+            fg_color: Color::Rgb(255, 181, 234),
+            bg_color: Color::Rgb(62, 14, 74),
+            ..Style::default()
+        };
+        let header_style = Style {
+            fg_color: Color::Rgb(190, 253, 249),
+            bg_color: Color::Rgb(31, 36, 46),
+            ..Style::default()
+        };
+        StyleSheet {
+            focused_and_selected_style,
+            focused_style,
+            unselected_style,
+            selected_style,
+            header_style,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
