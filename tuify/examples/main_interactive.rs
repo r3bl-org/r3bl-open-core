@@ -17,9 +17,13 @@
 
 use std::io::Result;
 
-use r3bl_ansi_color::{AnsiStyledText, Color as RColor, Style as RStyle};
+use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
 use r3bl_rs_utils_core::*;
-use r3bl_tuify::*;
+use r3bl_tuify::{components::style::StyleSheet,
+                 get_size,
+                 select_from_list,
+                 SelectionMode,
+                 TRACE};
 mod single_select_quiz_game;
 use single_select_quiz_game::main as single_select_quiz_game;
 
@@ -30,8 +34,8 @@ fn print_header(msg: &str) {
             RStyle::Bold,
             RStyle::Italic,
             RStyle::Underline,
-            RStyle::Foreground(RColor::Rgb(236, 230, 230)),
-            RStyle::Background(RColor::Rgb(10, 109, 33)),
+            RStyle::Foreground(Color::Rgb(236, 230, 230)),
+            RStyle::Background(Color::Rgb(10, 109, 33)),
         ],
     }
     .println();
@@ -50,26 +54,29 @@ fn main() -> Result<()> {
             get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
         let max_height_row_count: usize = 5;
 
-        let style = StyleSheet::default();
+        // Create styles.
+        let default_style = StyleSheet::default();
+        let sea_foam_style = StyleSheet::sea_foam_style();
+        let hot_pink_style = StyleSheet::hot_pink_style();
 
         let up_down_colored = AnsiStyledText {
             text: &format!("{}", "`Up` or `Down` arrow",),
-            style: &[RStyle::Foreground(RColor::Rgb(0, 255, 0))],
+            style: &[RStyle::Foreground(Color::Rgb(0, 255, 0))],
         };
 
         let space_colored = AnsiStyledText {
             text: &format!("{}", "`Space`",),
-            style: &[RStyle::Foreground(RColor::Rgb(255, 216, 9))],
+            style: &[RStyle::Foreground(Color::Rgb(255, 216, 9))],
         };
 
         let esc_colored = AnsiStyledText {
             text: &format!("{}", "`Esc`",),
-            style: &[RStyle::Foreground(RColor::Rgb(255, 132, 18))],
+            style: &[RStyle::Foreground(Color::Rgb(255, 132, 18))],
         };
 
         let return_colored = AnsiStyledText {
             text: &format!("{}", "`Return`",),
-            style: &[RStyle::Foreground(RColor::Rgb(234, 0, 196))],
+            style: &[RStyle::Foreground(Color::Rgb(234, 0, 196))],
         };
 
         let multi_select_instructions = AnsiStyledText {
@@ -81,7 +88,7 @@ fn main() -> Result<()> {
                 " --> To exit\n",
                 " --> To confirm selection"
             ),
-            style: &[RStyle::Foreground(RColor::Rgb(195, 0, 94))],
+            style: &[RStyle::Foreground(Color::Rgb(195, 0, 94))],
         };
 
         const MULTIPLE_SELECT_SINGLE_ITEM: &str = "Multiple select, single item";
@@ -131,7 +138,7 @@ fn main() -> Result<()> {
                             multiple_select_13_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
-                                style,
+                                default_style,
                                 multi_select_instructions,
                             );
                         } else if *user_input == MULTIPLE_SELECT_2_ITEMS_VPH_5.to_string()
@@ -139,7 +146,7 @@ fn main() -> Result<()> {
                             multiple_select_2_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
-                                style,
+                                sea_foam_style,
                                 multi_select_instructions,
                             );
                         } else if *user_input == SINGLE_SELECT_13_ITEMS_VPH_5.to_string()
@@ -148,17 +155,15 @@ fn main() -> Result<()> {
                             single_select_13_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
-                                style,
+                                hot_pink_style,
                             );
-                        } else if *user_input == SINGLE_SELECT_2_ITEMS_VPH_5.to_string() 
-                        {
+                        } else if *user_input == SINGLE_SELECT_2_ITEMS_VPH_5.to_string() {
                             single_select_2_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
-                                style,
+                                default_style,
                             );
-                        } else if *user_input == SINGLE_SELECT_QUIZ_GAME.to_string() 
-                        {
+                        } else if *user_input == SINGLE_SELECT_QUIZ_GAME.to_string() {
                             let _ = single_select_quiz_game();
                         } else {
                             println!("User did not select anything")
@@ -184,14 +189,20 @@ fn multiple_select_single_item(multi_select_instructions: AnsiStyledText) {
         .unwrap_or(ch!(80))
         .into();
     let list = vec![format!("one element")];
-    r3bl_tuify::select_from_list(
+    let user_input = select_from_list(
         "There is only one item to choose from".to_owned(),
         list,
         6, /* whatever*/
         max_width_col_count,
-        r3bl_tuify::SelectionMode::Multiple,
-        r3bl_tuify::StyleSheet::default(),
+        SelectionMode::Multiple,
+        StyleSheet::default(),
     );
+    match &user_input {
+        Some(it) => {
+            println!("User selected: {:?}", it);
+        }
+        None => println!("User did not select anything"),
+    }
 }
 
 /// 13 items & viewport height = 5.
@@ -276,7 +287,7 @@ fn single_select_13_items_vph_5(
     max_width_col_count: usize,
     style: StyleSheet,
 ) {
-    print_header("Single select (move up and down, press enter or esc) - 13 items");
+    print_header("Move up and down, press enter or esc - 13 items");
 
     let user_input = select_from_list(
         "Single select".to_string(),
