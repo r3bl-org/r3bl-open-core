@@ -124,20 +124,31 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                     ch!(viewport_row_index) + state.scroll_offset_row_index;
                 let data_item = &state.items[data_row_index];
 
-                // TODO: remove booleans, replace with enums.
                 // Invert colors for selected items.
+                enum SelectionStateStyle {
+                    IsFocusedAndSelected,
+                    IsFocused,
+                    IsSelected,
+                    IsUnselected,
+                }
+
                 let is_selected = state.selected_items.contains(data_item);
                 let is_focused = ch!(caret_row_scroll_adj) == state.get_focused_index();
-                let is_focused_and_selected = is_focused && is_selected;
 
-                let data_style = if is_focused_and_selected {
-                    focused_and_selected_style
-                } else if is_focused {
-                    focused_style
-                } else if is_selected {
-                    selected_style
-                } else {
-                    unselected_style
+                let selection_state = match (is_focused, is_selected) {
+                    (true, true) => SelectionStateStyle::IsFocusedAndSelected,
+                    (true, false) => SelectionStateStyle::IsFocused,
+                    (false, true) => SelectionStateStyle::IsSelected,
+                    (false, false) => SelectionStateStyle::IsUnselected,
+                };
+
+                let data_style = match selection_state {
+                    SelectionStateStyle::IsFocusedAndSelected => {
+                        focused_and_selected_style
+                    }
+                    SelectionStateStyle::IsFocused => focused_style,
+                    SelectionStateStyle::IsSelected => selected_style,
+                    SelectionStateStyle::IsUnselected => unselected_style,
                 };
 
                 let row_prefix = match state.selection_mode {
