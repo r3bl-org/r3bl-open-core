@@ -237,6 +237,15 @@
 //!
 //! Built-in styles are called `default`, `sea_foam_style`, and `hot_pink_style`. You can find them in the `style.rs` file (tuify/src/components/style.rs).
 //!
+//! ### default style
+//! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/eaf990a4-1c33-4783-9f39-82af42568183)
+//! 
+//! ### sea_foam_style
+//! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/fc414f56-2f72-4d3a-86eb-bfd732b66bd1)
+//! 
+//! ### hot_pink_style
+//! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/06c155f9-11a9-416d-8056-cb4c741ac3d7)
+//!
 //! To use one of the built-in styles, simply pass it as an argument to the `select_from_list` function.
 //!
 //! ```rust
@@ -287,10 +296,8 @@
 //! use std::io::Result;
 //! use r3bl_ansi_color::{AnsiStyledText, Color};
 //! use r3bl_tuify::{components::style::{Style, StyleSheet},
-//!                  get_size,
-//!                  select_from_list,
-//!                  SelectionMode,
-//!                  TRACE};
+//!                 select_from_list,
+//!                 SelectionMode};
 //!
 //! fn main() -> Result<()> {
 //!    // This is how you can define your custom style.
