@@ -150,15 +150,13 @@ fn main() -> Result<()> {
                                 max_width_col_count,
                                 style,
                             );
-                        } else if *user_input == SINGLE_SELECT_2_ITEMS_VPH_5.to_string() 
-                        {
+                        } else if *user_input == SINGLE_SELECT_2_ITEMS_VPH_5.to_string() {
                             single_select_2_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
                                 style,
                             );
-                        } else if *user_input == SINGLE_SELECT_QUIZ_GAME.to_string() 
-                        {
+                        } else if *user_input == SINGLE_SELECT_QUIZ_GAME.to_string() {
                             let _ = single_select_quiz_game();
                         } else {
                             println!("User did not select anything")
@@ -184,7 +182,7 @@ fn multiple_select_single_item(multi_select_instructions: AnsiStyledText) {
         .unwrap_or(ch!(80))
         .into();
     let list = vec![format!("one element")];
-    r3bl_tuify::select_from_list(
+    let user_input = select_from_list(
         "There is only one item to choose from".to_owned(),
         list,
         6, /* whatever*/
@@ -192,6 +190,12 @@ fn multiple_select_single_item(multi_select_instructions: AnsiStyledText) {
         r3bl_tuify::SelectionMode::Multiple,
         r3bl_tuify::StyleSheet::default(),
     );
+    match &user_input {
+        Some(it) => {
+            println!("User selected: {:?}", it);
+        }
+        None => println!("User did not select anything"),
+    }
 }
 
 /// 13 items & viewport height = 5.
