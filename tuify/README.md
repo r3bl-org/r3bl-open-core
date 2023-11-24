@@ -294,50 +294,62 @@ fn main() -> Result<()> {
 To create your style, you need to create a `StyleSheet` struct and pass it as an argument to the `select_from_list` function.
 
 ```rust
+use std::io::Result;
+use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
 use r3bl_tuify::{components::style::{Style, StyleSheet},
                  get_size,
                  select_from_list,
                  SelectionMode,
                  TRACE};
 
-// This is how you can define your custom style.
-// For each Style struct, you can define different style overrides.
-// Please take a look at the Style struct to see what you can override.
-let my_custom_style = StyleSheet {
-   focused_and_selected_style: Style {
-         fg_color: Color::Rgb(20, 244, 0),
-         bg_color: Color::Rgb(51, 32, 66),
-         ..Style::default()
-   },
-   focused_style: Style {
-         fg_color: Color::Rgb(20, 244, 0),
-         ..Style::default()
-   },
-   unselected_style: Style { ..Style::default() },
-   selected_style: Style {
-         fg_color: Color::Rgb(203, 170, 250),
-         bg_color: Color::Rgb(51, 32, 66),
-         ..Style::default()
-   },
-   header_style: Style {
-         fg_color: Color::Rgb(171, 204, 242),
-         bg_color: Color::Rgb(31, 36, 46),
-         ..Style::default()
-   },
-};
+fn main() -> Result<()> {
+   // This is how you can define your custom style.
+   // For each Style struct, you can define different style overrides.
+   // Please take a look at the Style struct to see what you can override.
+   let my_custom_style = StyleSheet {
+      focused_and_selected_style: Style {
+            fg_color: Color::Rgb(255, 244, 0),
+            bg_color: Color::Rgb(15, 32, 66),
+            ..Style::default()
+      },
+      focused_style: Style {
+            fg_color: Color::Rgb(255, 244, 0),
+            ..Style::default()
+      },
+      unselected_style: Style { ..Style::default() },
+      selected_style: Style {
+            fg_color: Color::Rgb(203, 170, 250),
+            bg_color: Color::Rgb(15, 32, 66),
+            ..Style::default()
+      },
+      header_style: Style {
+            fg_color: Color::Rgb(171, 204, 242),
+            bg_color: Color::Rgb(31, 36, 46),
+            ..Style::default()
+      },
+   };
 
-// Then pass `my_custom_style` as the last argument to the `select_from_list` function.
-let user_input = select_from_list(
-   "Multiple select".to_string(),
-   ["item 1 of 3", "item 2 of 3", "item 3 of 3"]
-      .iter()
-      .map(|it| it.to_string())
-      .collect(),
-   6, // max_height_row_count
-   80, // max_width_col_count
-   SelectionMode::Multiple,
-   my_custom_style,
-);
+   // Then pass `my_custom_style` as the last argument to the `select_from_list` function.
+   let user_input = select_from_list(
+      "Multiple select".to_string(),
+      ["item 1 of 3", "item 2 of 3", "item 3 of 3"]
+         .iter()
+         .map(|it| it.to_string())
+         .collect(),
+      6, // max_height_row_count
+      80, // max_width_col_count
+      SelectionMode::Multiple,
+      my_custom_style,
+   );
+
+   match &user_input {
+      Some(it) => {
+         println!("User selected: {:?}", it);
+      }
+      None => println!("User did not select anything"),
+   }
+   Ok(())
+}
 ```
 
 ## Build, run, test tasks
