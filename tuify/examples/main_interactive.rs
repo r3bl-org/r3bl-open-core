@@ -51,6 +51,7 @@ fn main() -> Result<()> {
         let max_height_row_count: usize = 5;
 
         let style = StyleSheet::default();
+        let sea_foam_style = StyleSheet::sea_foam_style();
 
         let up_down_colored = AnsiStyledText {
             text: &format!("{}", "`Up` or `Down` arrow",),
@@ -131,7 +132,7 @@ fn main() -> Result<()> {
                             multiple_select_13_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
-                                style,
+                                sea_foam_style,
                                 multi_select_instructions,
                             );
                         } else if *user_input == MULTIPLE_SELECT_2_ITEMS_VPH_5.to_string()
@@ -187,8 +188,8 @@ fn multiple_select_single_item(multi_select_instructions: AnsiStyledText) {
         list,
         6, /* whatever*/
         max_width_col_count,
-        r3bl_tuify::SelectionMode::Multiple,
-        r3bl_tuify::StyleSheet::default(),
+        SelectionMode::Multiple,
+        StyleSheet::default(),
     );
     match &user_input {
         Some(it) => {
@@ -280,7 +281,7 @@ fn single_select_13_items_vph_5(
     max_width_col_count: usize,
     style: StyleSheet,
 ) {
-    print_header("Single select (move up and down, press enter or esc) - 13 items");
+    print_header("Move up and down, press enter or esc - 13 items");
 
     let user_input = select_from_list(
         "Single select".to_string(),
