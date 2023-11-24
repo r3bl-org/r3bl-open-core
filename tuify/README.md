@@ -289,7 +289,7 @@ The following commands will watch for changes in the source folder and re-run:
 1. Move to `./tuify` folder in your terminal
 2. Run `nu run.nu install-giti` to install `giti` locally to `~/.cargo/bin`
 3. Run `giti` from anywhere on your system
-4. To delete one or more branches in your repo run `giti branch -c delete`
+4. To delete one or more branches in your repo run `giti branch delete`
 
 [![asciicast](https://asciinema.org/a/14V8v3OKKYvDkUDkRFiMDsCNg.svg)](https://asciinema.org/a/14V8v3OKKYvDkUDkRFiMDsCNg)
 
