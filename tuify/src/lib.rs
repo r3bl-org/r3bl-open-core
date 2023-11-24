@@ -279,7 +279,7 @@
 //! 1. Move to `./tuify` folder in your terminal
 //! 2. Run `nu run.nu install-giti` to install `giti` locally to `~/.cargo/bin`
 //! 3. Run `giti` from anywhere on your system
-//! 4. To delete one or more branches in your repo run `giti branch -c delete`
+//! 4. To delete one or more branches in your repo run `giti branch delete`
 //!
 //! <video width="100%" controls>
 //!   <source src="https://github.com/r3bl-org/r3bl-open-core/assets/22040032/c133cd9d-4534-4507-9517-e2c7f73b4b2e" type="video/mp4"/>
