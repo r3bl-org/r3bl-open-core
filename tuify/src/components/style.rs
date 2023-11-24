@@ -102,7 +102,7 @@ impl StyleSheet {
         };
         let focused_style = Style {
             fg_color: Color::Rgb(255, 0, 214),
-            bg_color: Color::Rgb(14, 17, 23) ,
+            bg_color: Color::Rgb(14, 17, 23),
             ..Style::default()
         };
         let unselected_style = Style {
@@ -224,5 +224,36 @@ mod tests {
 
         assert_eq!(stylesheet.header_style.fg_color, Color::Rgb(229, 239, 123));
         assert_eq!(stylesheet.header_style.bg_color, Color::Rgb(31, 36, 46));
+    }
+
+    #[test]
+    fn test_hot_pink_style() {
+        let style_sheet = StyleSheet::hot_pink_style();
+
+        assert_eq!(
+            style_sheet.focused_and_selected_style.fg_color,
+            Color::Rgb(255, 0, 214)
+        );
+        assert_eq!(
+            style_sheet.focused_and_selected_style.bg_color,
+            Color::Rgb(62, 14, 74)
+        );
+        assert_eq!(style_sheet.focused_style.fg_color, Color::Rgb(255, 0, 214));
+        assert_eq!(style_sheet.focused_style.bg_color, Color::Rgb(14, 17, 23));
+        assert_eq!(
+            style_sheet.unselected_style.fg_color,
+            Color::Rgb(219, 202, 232)
+        );
+        assert_eq!(
+            style_sheet.unselected_style.bg_color,
+            Color::Rgb(14, 17, 23)
+        );
+        assert_eq!(
+            style_sheet.selected_style.fg_color,
+            Color::Rgb(255, 181, 234)
+        );
+        assert_eq!(style_sheet.selected_style.bg_color, Color::Rgb(62, 14, 74));
+        assert_eq!(style_sheet.header_style.fg_color, Color::Rgb(190, 253, 249));
+        assert_eq!(style_sheet.header_style.bg_color, Color::Rgb(31, 36, 46));
     }
 }

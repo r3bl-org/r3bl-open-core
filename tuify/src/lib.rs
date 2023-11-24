@@ -231,6 +231,105 @@
 //! > the `rt` binary simply takes a command that it will run after the user has made their
 //! > selection. Using the selected item(s) and applying them to this command.
 //!
+//! ## Style the components
+//!
+//! ### Choose one of the 3 built-in styles
+//!
+//! Built-in styles are called `default`, `sea_foam_style`, and `hot_pink_style`. You can find them in the `style.rs` file (tuify/src/components/style.rs).
+//!
+//! To use one of the built-in styles, simply pass it as an argument to the `select_from_list` function.
+//!
+//! ```rust
+//! use r3bl_rs_utils_core::*;
+//! use r3bl_tuify::*;
+//! use std::io::Result;
+//!
+//! fn main() -> Result<()> {
+//!     // 🎨 Uncomment the lines below to choose the other 2 built-in styles.
+//!     // let default_style = StyleSheet::default();
+//!     // let hot_pink_style = StyleSheet::hot_pink_style();
+//!     let sea_foam_style = StyleSheet::sea_foam_style();
+//!
+//!     let max_width_col_count: usize = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
+//!     let max_height_row_count: usize = 5;
+//!
+//!     let user_input = select_from_list(
+//!         "Select an item".to_string(),
+//!         [
+//!             "item 1", "item 2", "item 3", "item 4", "item 5", "item 6", "item 7", "item 8",
+//!             "item 9", "item 10",
+//!         ]
+//!         .iter()
+//!         .map(|it| it.to_string())
+//!         .collect(),
+//!         max_height_row_count,
+//!         max_width_col_count,
+//!         SelectionMode::Single,
+//!         sea_foam_style,  // 🖌️ or default_style or hot_pink_style
+//!     );
+//!
+//!     match &user_input {
+//!         Some(it) => {
+//!             println!("User selected: {:?}", it);
+//!         }
+//!         None => println!("User did not select anything"),
+//!     }
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### Create your style
+//!
+//! To create your style, you need to create a `StyleSheet` struct and pass it as an argument to the `select_from_list` function.
+//!
+//! ```rust
+//! use r3bl_tuify::{components::style::{Style, StyleSheet},
+//!                  get_size,
+//!                  select_from_list,
+//!                  SelectionMode,
+//!                  TRACE};
+//!
+//! // This is how you can define your custom style.
+//! // For each Style struct, you can define different style overrides.
+//! // Please take a look at the Style struct to see what you can override.
+//! let my_custom_style = StyleSheet {
+//!    focused_and_selected_style: Style {
+//!          fg_color: Color::Rgb(20, 244, 0),
+//!          bg_color: Color::Rgb(51, 32, 66),
+//!          ..Style::default()
+//!    },
+//!    focused_style: Style {
+//!          fg_color: Color::Rgb(20, 244, 0),
+//!          ..Style::default()
+//!    },
+//!    unselected_style: Style { ..Style::default() },
+//!    selected_style: Style {
+//!          fg_color: Color::Rgb(203, 170, 250),
+//!          bg_color: Color::Rgb(51, 32, 66),
+//!          ..Style::default()
+//!    },
+//!    header_style: Style {
+//!          fg_color: Color::Rgb(171, 204, 242),
+//!          bg_color: Color::Rgb(31, 36, 46),
+//!          ..Style::default()
+//!    },
+//! };
+//!
+//! // Then pass `my_custom_style` as the last argument to the `select_from_list` function.
+//! let user_input = select_from_list(
+//!    "Multiple select".to_string(),
+//!    ["item 1 of 3", "item 2 of 3", "item 3 of 3"]
+//!       .iter()
+//!       .map(|it| it.to_string())
+//!       .collect(),
+//!    6, // max_height_row_count
+//!    80, // max_width_col_count
+//!    SelectionMode::Multiple,
+//!    my_custom_style,
+//! );
+//! ```
+//!
 //! ## Build, run, test tasks
 //!
 //! ### Prerequisites

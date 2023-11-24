@@ -17,9 +17,13 @@
 
 use std::io::Result;
 
-use r3bl_ansi_color::{AnsiStyledText, Color as RColor, Style as RStyle};
+use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
 use r3bl_rs_utils_core::*;
-use r3bl_tuify::*;
+use r3bl_tuify::{components::style::StyleSheet,
+                 get_size,
+                 select_from_list,
+                 SelectionMode,
+                 TRACE};
 mod single_select_quiz_game;
 use single_select_quiz_game::main as single_select_quiz_game;
 
@@ -30,8 +34,8 @@ fn print_header(msg: &str) {
             RStyle::Bold,
             RStyle::Italic,
             RStyle::Underline,
-            RStyle::Foreground(RColor::Rgb(236, 230, 230)),
-            RStyle::Background(RColor::Rgb(10, 109, 33)),
+            RStyle::Foreground(Color::Rgb(236, 230, 230)),
+            RStyle::Background(Color::Rgb(10, 109, 33)),
         ],
     }
     .println();
@@ -57,22 +61,22 @@ fn main() -> Result<()> {
 
         let up_down_colored = AnsiStyledText {
             text: &format!("{}", "`Up` or `Down` arrow",),
-            style: &[RStyle::Foreground(RColor::Rgb(0, 255, 0))],
+            style: &[RStyle::Foreground(Color::Rgb(0, 255, 0))],
         };
 
         let space_colored = AnsiStyledText {
             text: &format!("{}", "`Space`",),
-            style: &[RStyle::Foreground(RColor::Rgb(255, 216, 9))],
+            style: &[RStyle::Foreground(Color::Rgb(255, 216, 9))],
         };
 
         let esc_colored = AnsiStyledText {
             text: &format!("{}", "`Esc`",),
-            style: &[RStyle::Foreground(RColor::Rgb(255, 132, 18))],
+            style: &[RStyle::Foreground(Color::Rgb(255, 132, 18))],
         };
 
         let return_colored = AnsiStyledText {
             text: &format!("{}", "`Return`",),
-            style: &[RStyle::Foreground(RColor::Rgb(234, 0, 196))],
+            style: &[RStyle::Foreground(Color::Rgb(234, 0, 196))],
         };
 
         let multi_select_instructions = AnsiStyledText {
@@ -84,7 +88,7 @@ fn main() -> Result<()> {
                 " --> To exit\n",
                 " --> To confirm selection"
             ),
-            style: &[RStyle::Foreground(RColor::Rgb(195, 0, 94))],
+            style: &[RStyle::Foreground(Color::Rgb(195, 0, 94))],
         };
 
         const MULTIPLE_SELECT_SINGLE_ITEM: &str = "Multiple select, single item";
