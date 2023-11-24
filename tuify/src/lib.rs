@@ -287,10 +287,8 @@
 //! use std::io::Result;
 //! use r3bl_ansi_color::{AnsiStyledText, Color};
 //! use r3bl_tuify::{components::style::{Style, StyleSheet},
-//!                  get_size,
-//!                  select_from_list,
-//!                  SelectionMode,
-//!                  TRACE};
+//!                 select_from_list,
+//!                 SelectionMode};
 //!
 //! fn main() -> Result<()> {
 //!    // This is how you can define your custom style.
