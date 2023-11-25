@@ -297,19 +297,45 @@ the system handles an input event (key press or mouse).
 - And then you click or type something in the terminal window that you're running this app in.
 
 ```text
-🧍⌨️🖱️
-input → [TerminalWindow]
-event       ↑      ↓               [ComponentRegistryMap] stores
-            ┊   [App] ───────────■ [Component]s at 1st render
-            ┊      │
-            ┊      │        ┌──────■ id=1 has focus
-            ┊      │        │
-            ┊      ├→ [Component] id=1 ───┐
-            ┊      ├→ [Component] id=2    │
-            ┊      └→ [Component] id=3    │
-         default                          │
-         handler  ←───────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│In band input event                                                       │
+│                                                                          │
+│  Input ──► [TerminalWindow]                                              │
+│  Event          ▲      │                                                 │
+│                 │      ▼                  [ComponentRegistryMap] stores  │
+│                 │   [App]────────────────►[Component]s at 1st render     │
+│                 │      │                                                 │
+│                 │      │                                                 │
+│                 │      │          ┌──────► id=1 has focus                │
+│                 │      │          │                                      │
+│                 │      ├──► [Component] id=1 ─────┐                      │
+│                 │      │                          │                      │
+│                 │      └──► [Component] id=2      │                      │
+│                 │                                 │                      │
+│          default handler                          │                      │
+│                 ▲                                 │                      │
+│                 └─────────────────────────────────┘                      │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────┐
+│Out of band app signal                                      │
+│                                                            │
+│  App                                                       │
+│  Signal ──► [App]                                          │
+│               │                                            │
+│               │                                            │
+│               └──────►Update state                         │
+│                       main thread rerender                 │
+│                              │                             │
+│                              │                             │
+│                              └─────►[App]                  │
+│                                       │                    │
+│                                       └────►[Component]s   │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
 ```
+<!-- https://asciiflow.com/#/share/eJzdls9OwjAcx1%2Fll565wEEiiQdjPHAwJv6JB7ZDtQWabF3TdgohZC9h9iAeiU%2FDk1gcY8AAXbdh5JdfmkGbT7%2Ff7te1E8SxT1GHh57XQB4eU4k6aOKgkYM65%2B2zhoPG5qnVbpsnTUfa%2FHDQ%2FP3z5NNxuGm7HJ4xJ8C4CDXQV8o12MUKGWVhicohAbrf%2Bpbi4xn0Hqj0GcfeE%2BMkeHOtwdeblufxx2pIGb35npS%2FA9u7CnwRcCPkjg6Y0nJ8g4ULSgeSqh%2BxUe9SCLdwBcSzbFpXAdbQVBok5YTKX7upaZGOgN23KMDIRROGWEE%2FeAlVBdNUqX9tA2QvL5Gcd1NmooNCa3HQKo8%2FEEWwhPZx6GlTBJx4y81QGpr2pN%2BXirRmPcfJosKsY4U8%2BTQ2k%2FxzJWUsmPbWnNBBP7lPYCFAsYE5oAu%2B7kpqBsAcieUh94mBpc3FJ2tx0lqhtv%2B3VFQTZkfGs0dBsKaR0qYtDE3Dx4xHeigpJpGka7eLIpBsmJXB2jD5NdtTIEWre89IC8y2vvUrX9W77p%2Bmg6Zo%2BgU42osD) -->
 
 Let's trace the journey through the diagram when an input even is generated by the user (eg: a key
 press, or mouse event). When the app is started via `cargo run` it sets up a main loop, and lays out
