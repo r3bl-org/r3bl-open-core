@@ -62,11 +62,11 @@ mod app_main_impl_app_trait {
 
     impl App for AppMain {
         type S = State;
-        type A = AppSignal;
+        type AS = AppSignal;
 
         fn app_init(
             &mut self,
-            component_registry_map: &mut ComponentRegistryMap<Self::S, Self::A>,
+            component_registry_map: &mut ComponentRegistryMap<Self::S, Self::AS>,
             has_focus: &mut HasFocus,
         ) {
             self.init_component_registry(component_registry_map, has_focus);
