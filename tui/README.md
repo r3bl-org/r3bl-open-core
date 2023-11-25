@@ -82,7 +82,6 @@ This crate is related to the first thing that's described above. It provides lot
   - [Render pipeline](#render-pipeline)
   - [First render](#first-render)
   - [Subsequent render](#subsequent-render)
-- [Redux for state management](#redux-for-state-management)
 - [How does the editor component work?](#how-does-the-editor-component-work)
   - [Painting the caret](#painting-the-caret)
 - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
@@ -91,7 +90,6 @@ This crate is related to the first thing that's described above. It provides lot
   - [How to make HTTP requests](#how-to-make-http-requests)
 - [Grapheme support](#grapheme-support)
 - [Lolcat support](#lolcat-support)
-- [Other crates that depend on this](#other-crates-that-depend-on-this)
 - [Issues, comments, feedback, and PRs](#issues-comments-feedback-and-prs)
 
 <!-- /TOC -->
@@ -150,7 +148,7 @@ Here are some framework highlights:
     or termion or whatever you want).
   - Markdown text editor w/ syntax highlighting support, metadata (tags, title,
     author, date), smart lists. This uses a custom Markdown parser and custom syntax
-    highligther. Syntax highlighting for code blocks is provided by the syntect crate.
+    highlighter. Syntax highlighting for code blocks is provided by the syntect crate.
   - Modal dialog boxes. And autocompletion dialog boxes.
   - Lolcat (color gradients) implementation w/ a rainbow color-wheel palette. All the
     color output is sensitive to the capabilities of the terminal. Colors are
