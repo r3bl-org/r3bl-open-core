@@ -59,15 +59,13 @@ development world and re-imagining them for TUI & Rust.
 # Table of contents
 <a id="markdown-table-of-contents" name="table-of-contents"></a>
 
-<!-- TOC depthfrom:2 updateonsave:true orderedlist:false insertanchor:true -->
+<!-- TOC -->
 
 - [Folder structure and code organization](#folder-structure-and-code-organization)
 - [Issues, comments, feedback, PRs, and Discord](#issues-comments-feedback-prs-and-discord)
 - [ansi_color folder -> r3bl_ansi_color crate](#ansi_color-folder---r3bl_ansi_color-crate)
 - [tuify folder -> r3bl_tuify crate](#tuify-folder---r3bl_tuify-crate)
 - [tui folder -> r3bl_tui crate](#tui-folder---r3bl_tui-crate)
-- [redux folder -> r3bl_redux crate](#redux-folder---r3bl_redux-crate)
-- [Notes](#notes)
 
 <!-- /TOC -->
 
