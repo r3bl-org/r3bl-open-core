@@ -517,10 +517,29 @@
 //! ### Render pipeline
 //! <a id="markdown-render-pipeline" name="render-pipeline"></a>
 //!
-//! The following diagram provides a high level overview of how apps (that contain components, which
-//! may contain components, and so on) are rendered to the terminal screen.
+//! The following diagram provides a high level overview of how apps (that contain components,
+//! which may contain components, and so on) are rendered to the terminal screen.
 //!
-//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/compositor.svg)
+//!     ```text
+//!     ┌──────────────────────────────────┐
+//!     │ Container                        │
+//!     │                                  │
+//!     │ ┌─────────────┐  ┌─────────────┐ │
+//!     │ │ Col 1       │  │ Col 2       │ │
+//!     │ │             │  │             │ │
+//!     │ │             │  │     ────────┼─┼──────────► RenderPipeline─────┐
+//!     │ │             │  │             │ │                               │
+//!     │ │             │  │             │ │                               │
+//!     │ │      ───────┼──┼─────────────┼─┼──────────► RenderPipeline─┐   │
+//!     │ │             │  │             │ │                           │   │
+//!     │ │             │  │             │ │                           ▼ + ▼
+//!     │ │             │  │             │ │                  ┌─────────────────────┐
+//!     │ └─────────────┘  └─────────────┘ │                  │                     │
+//!     │                                  │                  │  OffscreenBuffer    │
+//!     └──────────────────────────────────┘                  │                     │
+//!                                                           └─────────────────────┘
+//!     ```
+//!     <!-- https://asciiflow.com/#/share/eJyrVspLzE1VssorzcnRUcpJrEwtUrJSqo5RqohRsrK0MNaJUaoEsozMTYGsktSKEiAnRunRlD10QzExeUBSwTk%2FryQxMy%2B1SAEHQCglCBBKSXKJAonKUawBeiBHwRDhAAW4oBGSIKoWNDcrYBUkUgulETFtl0JQal5KalFAZkFqDjAicMYUKS4nJaJoaCgdkjExgUkLH9PK2Gl7FLRBJFWMpUqo0ilL4wpirOIklEg4BP3T0oqTi1JT85xK09IgpR%2FcXLohUv1M2MM49FIhFSjVKtUCAEVNQq0%3D) -->
 //!
 //! Each component produces a `RenderPipeline`, which is a map of `ZOrder` and `Vec<RenderOps>`.
 //! `RenderOps` are the instructions that are grouped together, such as move the caret to a
