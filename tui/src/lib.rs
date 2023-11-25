@@ -398,7 +398,8 @@
 //! ```rust
 //! #[derive(Default)]
 //! pub struct AppMain {
-//!   ...
+//!   // Might have some app data here as well.
+//!   // Or `_phantom: std::marker::PhantomData<(State, AppSignal)>,`
 //! }
 //! ```
 //!
@@ -409,7 +410,7 @@
 //! The [HasFocus] struct takes care of this. This provides 2 things:
 //!
 //! 1.  It holds an `id` of a [FlexBox] / [Component] that has focus.
-//! 2.  It also holds a map that holds a [crate::Position] for each `id`. This is used to represent a
+//! 2.  It also holds a map that holds a [r3bl_rs_utils_core::Position] for each `id`. This is used to represent a
 //!     cursor (whatever that means to your app & component). This cursor is maintained for each `id`.
 //!     This allows a separate cursor for each [Component] that has focus. This is needed to build apps
 //!     like editors and viewers that maintains a cursor position between focus switches.
