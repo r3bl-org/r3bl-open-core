@@ -30,7 +30,7 @@ fn main() -> Result<()> {
     use clap_config::*;
 
     display_prompts::show_welcome_message();
-
+    display_prompts::instruction_header();
     // If no args are passed, the following line will fail, and help will be printed
     // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
     let giti_app_args = GitiAppArgs::parse();
@@ -53,11 +53,16 @@ fn main() -> Result<()> {
                 BranchSubcommands::Delete => {
                     branch_delete::tui_init();
                 }
-                BranchSubcommands::Add => todo!(),
                 BranchSubcommands::Show => todo!(),
+                BranchSubcommands::Checkout => {
+                    checkout_branch::tui_init();
+                }
             },
             None => todo!(),
         },
+        CLICommands::Add => {
+            add_files_to_staging::tui_init();
+        }
     }
 
     call_if_true!(enable_logging, {
@@ -69,6 +74,38 @@ fn main() -> Result<()> {
 
 mod display_prompts {
     use super::*;
+
+    pub fn instruction_header() {
+        AnsiStyledText {
+            text: &format!(
+                "{}{}{}",
+                "Press Space : To Select or DeSelect branches\n",
+                "Press Esc : To Exit\n",
+                "Press Return: To Confirm Selection"
+            ),
+            style: &[Style::Bold, Style::Foreground(Color::Rgb(200, 1, 200))],
+        }
+        .println();
+    }
+
+    pub fn show_tuify(
+        options: Vec<String>,
+        header: String,
+        selection_mode: SelectionMode,
+    ) -> Option<Vec<String>> {
+        let max_height_row_count = 50;
+        let max_width_col_count = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
+        let style = StyleSheet::default();
+        let user_input = select_from_list(
+            header,
+            options,
+            max_height_row_count,
+            max_width_col_count,
+            selection_mode,
+            style,
+        );
+        user_input
+    }
 
     pub fn show_exit_message() {
         let text = &{
@@ -98,6 +135,23 @@ mod display_prompts {
             style: &[Style::Bold, Style::Foreground(Color::Rgb(100, 200, 1))],
         }
         .println();
+    }
+
+    pub fn tui_exit<F: Fn()>(go_back_fn: F) {
+        let options = vec!["Go Back".to_string(), "Exit".to_string()];
+        let header = format!("Would you like to exit giti 🐈 ?");
+        let selection_mode = SelectionMode::Single;
+        let tuify_output = show_tuify(options, header, selection_mode);
+        match tuify_output {
+            Some(it) => {
+                if it[0] == "Go Back".to_string() {
+                    go_back_fn();
+                } else if it[0] == "Exit".to_string() {
+                    display_prompts::show_exit_message();
+                }
+            }
+            None => tui_exit(go_back_fn),
+        }
     }
 }
 
@@ -148,12 +202,13 @@ mod clap_config {
             #[arg(value_name = "command")]
             command_to_run_with_each_selection: Option<BranchSubcommands>,
         },
+        Add,
     }
 
     #[derive(Clone, Debug, ValueEnum)]
     pub enum BranchSubcommands {
         Delete,
-        Add,
+        Checkout,
         Show,
     }
 
@@ -166,18 +221,9 @@ mod clap_config {
 
 mod branch_delete {
     use super::*;
+    use crate::display_prompts::{show_tuify, tui_exit};
 
     pub fn tui_init() {
-        AnsiStyledText {
-            text: &format!(
-                "{}{}{}",
-                "Press Space : To Select or DeSelect branches\n",
-                "Press Esc : To Exit\n",
-                "Press Return: To Confirm Selection"
-            ),
-            style: &[Style::Bold, Style::Foreground(Color::Rgb(200, 1, 200))],
-        }
-        .println();
         let options = git_commands::get_branches();
         let header = "Please select the branches you want to delete";
         let selection_mode = SelectionMode::Multiple;
@@ -203,7 +249,7 @@ mod branch_delete {
                                     style: &[Style::Bold, Style::Foreground(Color::Rgb(1, 200, 1))],
                                 })
                                 .println();
-                                tui_exit();
+                                tui_exit(tui_init);
                             } else {
                                 (AnsiStyledText {
                                     text: &format!(
@@ -215,55 +261,111 @@ mod branch_delete {
                                 .println();
                             }
                         } else if it[0] == "No".to_string() {
-                            tui_exit();
+                            tui_exit(tui_init);
                         } else {
                             tui_init();
                         }
                     }
-                    None => tui_exit(),
+                    None => tui_exit(tui_init),
                 }
             }
-            None => tui_exit(),
+            None => tui_exit(tui_init),
         }
-    }
-
-    pub fn tui_exit() {
-        let options = vec!["Go Back".to_string(), "Exit".to_string()];
-        let header = format!("Would you like to exit giti 🐈 ?");
-        let selection_mode = SelectionMode::Single;
-        let tuify_output = show_tuify(options, header, selection_mode);
-        match tuify_output {
-            Some(it) => {
-                if it[0] == "Go Back".to_string() {
-                    tui_init();
-                } else if it[0] == "Exit".to_string() {
-                    display_prompts::show_exit_message();
-                }
-            }
-            None => tui_exit(),
-        }
-    }
-
-    pub fn show_tuify(
-        options: Vec<String>,
-        header: String,
-        selection_mode: SelectionMode,
-    ) -> Option<Vec<String>> {
-        let max_height_row_count = 50;
-        let max_width_col_count = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
-        let style = StyleSheet::default();
-        let user_input = select_from_list(
-            header,
-            options,
-            max_height_row_count,
-            max_width_col_count,
-            selection_mode,
-            style,
-        );
-        user_input
     }
 }
 
+mod checkout_branch {
+    use super::*;
+    use crate::display_prompts::{show_tuify, tui_exit};
+
+    pub fn tui_init() {
+        let options = git_commands::get_branches();
+        let header = "Please select the branch you want to checkout to";
+        let selection_mode = SelectionMode::Single;
+        let tuify_output = show_tuify(options, header.to_string(), selection_mode);
+        match tuify_output {
+            Some(branches) => {
+                let options = vec!["Yes".to_string(), "No".to_string(), "Cancel".to_string()];
+                let header = format!("Are you sure you want to checkout to {:?} ?", branches[0]);
+                let selection_mode = SelectionMode::Single;
+                let tuify_output = show_tuify(options, header, selection_mode);
+                match tuify_output {
+                    Some(it) => {
+                        if it[0] == "Yes".to_string() {
+                            let mut command = Command::new("git");
+                            command.arg("checkout").arg(branches[0].to_string());
+                            let op = command.output().expect("failed to execute git branch");
+                            if op.status.success() {
+                                (AnsiStyledText {
+                                    text: &format!("You are now on branch {}", branches[0]),
+                                    style: &[Style::Bold, Style::Foreground(Color::Rgb(1, 200, 1))],
+                                })
+                                .println();
+                                tui_exit(tui_init);
+                            } else {
+                                (AnsiStyledText {
+                                    text: &format!(
+                                        "Failed to checkout branch !\n{:#?}",
+                                        String::from_utf8(op.stderr).unwrap()
+                                    ),
+                                    style: &[Style::Bold, Style::Foreground(Color::Rgb(200, 1, 1))],
+                                })
+                                .println();
+                            }
+                        } else if it[0] == "No".to_string() {
+                            tui_exit(tui_init);
+                        } else {
+                            tui_init();
+                        }
+                    }
+                    None => tui_exit(tui_init),
+                }
+            }
+            None => tui_exit(tui_init),
+        }
+    }
+}
+
+mod add_files_to_staging {
+    use crate::display_prompts::{show_tuify, tui_exit};
+
+    use super::*;
+
+    pub fn tui_init() {
+        let options = git_commands::get_changed_files();
+        let header = "Please select the files you want to add to staging area.";
+        let selection_mode = SelectionMode::Multiple;
+        let tuify_output = show_tuify(options, header.to_string(), selection_mode);
+        match tuify_output {
+            Some(files) => {
+                let mut command = Command::new("git");
+                command.arg("add");
+                for file in files {
+                    command.arg(file);
+                }
+                let op = command.output().expect("failed to add file to staging.");
+                if op.status.success() {
+                    (AnsiStyledText {
+                        text: &format!("All selected files were added to staging"),
+                        style: &[Style::Bold, Style::Foreground(Color::Rgb(1, 200, 1))],
+                    })
+                    .println();
+                    tui_exit(tui_init);
+                } else {
+                    (AnsiStyledText {
+                        text: &format!(
+                            "Failed to add file !\n{:#?}",
+                            String::from_utf8(op.stderr).unwrap()
+                        ),
+                        style: &[Style::Bold, Style::Foreground(Color::Rgb(200, 1, 1))],
+                    })
+                    .println();
+                }
+            }
+            None => tui_exit(tui_init),
+        }
+    }
+}
 mod git_commands {
     use super::*;
 
@@ -283,5 +385,24 @@ mod git_commands {
             branches.push(line.to_string());
         }
         branches
+    }
+
+    pub fn get_changed_files() -> Vec<String> {
+        let output = Command::new("git")
+            .arg("diff")
+            .arg("--name-only")
+            .arg("--relative")
+            .output()
+            .expect("failed to execute git diff");
+
+        let output = String::from_utf8(output.stdout).expect("failed to convert output to string");
+
+        let mut changed_files = vec![];
+
+        for line in output.lines() {
+            changed_files.push(line.to_string());
+        }
+
+        changed_files
     }
 }
