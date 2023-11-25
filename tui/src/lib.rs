@@ -90,6 +90,7 @@
 //! that all Rustaceans 🦀 can enjoy 🎉:
 //!
 //! ## Learn more about how this library is built
+//! <a id="markdown-learn-more-about-how-this-library-is-built" name="learn-more-about-how-this-library-is-built"></a>
 //!
 //! 🦜 Here are some articles and videos (on
 //! [developerlife.com](https://developerlife.com)) about how this crate is made:
@@ -230,6 +231,21 @@
 //! ## How does layout, rendering, and event handling work in general?
 //! <a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>
 //!
+//! ```text
+//! ┌──────────────────────────────────────────────────┐
+//! │                                                  │
+//! │  main.rs                                         │
+//! │                             ┌──────────────────┐ │
+//! │  GlobalData ───────────────►│ window size      │ │
+//! │  HasFocus                   │ offscreen buffer │ │
+//! │  ComponentRegistryMap       │ state            │ │
+//! │  App & Component(s)         │ channel sender   │ │
+//! │                             └──────────────────┘ │
+//! │                                                  │
+//! └──────────────────────────────────────────────────┘
+//! ```
+//! <!-- https://asciiflow.com/#/share/eJzNkE0KwjAQha9SZiEK4kIUsTtR1I0b19mMdaqFdFKSFK0iXkI8jHgaT2JcqPUHoS7E4REmJN97k6yBMSbwOZWyChIz0uDDWsBSgN9utKoCMtfVW03XWVpatxFw2h3%2FVkKwW73ClUNjjLimzTfo51tfKx8xkGqCsocWC1ruDxd%2BEfFULTwTreg2V95%2BiKavgvTd6y%2FnKgxNoIl4O0nDkPQz3lVxopjYjmkWGauzESY53Fi0tL3Wa3onSbzS3aRsKg%2FpwRyZSXqGeOqyX%2FAffH%2FRuqF%2FKwEb2JwB17oGMg%3D%3D) -->
+//!
 //! - The main struct for building a TUI app is your struct which implements the [App] trait.
 //! - The main event loop takes an [App] trait object and starts listening for input events. It
 //!   enters raw mode, and paints to an alternate screen buffer, leaving your original scroll back
@@ -273,19 +289,45 @@
 //! - And then you click or type something in the terminal window that you're running this app in.
 //!
 //! ```text
-//! 🧍⌨️🖱️
-//! input → [TerminalWindow]
-//! event       ↑      ↓               [ComponentRegistryMap] stores
-//!             ┊   [App] ───────────■ [Component]s at 1st render
-//!             ┊      │
-//!             ┊      │        ┌──────■ id=1 has focus
-//!             ┊      │        │
-//!             ┊      ├→ [Component] id=1 ───┐
-//!             ┊      ├→ [Component] id=2    │
-//!             ┊      └→ [Component] id=3    │
-//!          default                          │
-//!          handler  ←───────────────────────┘
+//! ┌──────────────────────────────────────────────────────────────────────────┐
+//! │In band input event                                                       │
+//! │                                                                          │
+//! │  Input ──► [TerminalWindow]                                              │
+//! │  Event          ▲      │                                                 │
+//! │                 │      ▼                  [ComponentRegistryMap] stores  │
+//! │                 │   [App]────────────────►[Component]s at 1st render     │
+//! │                 │      │                                                 │
+//! │                 │      │                                                 │
+//! │                 │      │          ┌──────► id=1 has focus                │
+//! │                 │      │          │                                      │
+//! │                 │      ├──► [Component] id=1 ─────┐                      │
+//! │                 │      │                          │                      │
+//! │                 │      └──► [Component] id=2      │                      │
+//! │                 │                                 │                      │
+//! │          default handler                          │                      │
+//! │                 ▲                                 │                      │
+//! │                 └─────────────────────────────────┘                      │
+//! │                                                                          │
+//! └──────────────────────────────────────────────────────────────────────────┘
+//!
+//! ┌────────────────────────────────────────────────────────────┐
+//! │Out of band app signal                                      │
+//! │                                                            │
+//! │  App                                                       │
+//! │  Signal ──► [App]                                          │
+//! │               │                                            │
+//! │               │                                            │
+//! │               └──────►Update state                         │
+//! │                       main thread rerender                 │
+//! │                              │                             │
+//! │                              │                             │
+//! │                              └─────►[App]                  │
+//! │                                       │                    │
+//! │                                       └────►[Component]s   │
+//! │                                                            │
+//! └────────────────────────────────────────────────────────────┘
 //! ```
+//! <!-- https://asciiflow.com/#/share/eJzdls9OwjAcx1%2Fll565wEEiiQdjPHAwJv6JB7ZDtQWabF3TdgohZC9h9iAeiU%2FDk1gcY8AAXbdh5JdfmkGbT7%2Ff7te1E8SxT1GHh57XQB4eU4k6aOKgkYM65%2B2zhoPG5qnVbpsnTUfa%2FHDQ%2FP3z5NNxuGm7HJ4xJ8C4CDXQV8o12MUKGWVhicohAbrf%2Bpbi4xn0Hqj0GcfeE%2BMkeHOtwdeblufxx2pIGb35npS%2FA9u7CnwRcCPkjg6Y0nJ8g4ULSgeSqh%2BxUe9SCLdwBcSzbFpXAdbQVBok5YTKX7upaZGOgN23KMDIRROGWEE%2FeAlVBdNUqX9tA2QvL5Gcd1NmooNCa3HQKo8%2FEEWwhPZx6GlTBJx4y81QGpr2pN%2BXirRmPcfJosKsY4U8%2BTQ2k%2FxzJWUsmPbWnNBBP7lPYCFAsYE5oAu%2B7kpqBsAcieUh94mBpc3FJ2tx0lqhtv%2B3VFQTZkfGs0dBsKaR0qYtDE3Dx4xHeigpJpGka7eLIpBsmJXB2jD5NdtTIEWre89IC8y2vvUrX9W77p%2Bmg6Zo%2BgU42osD) -->
 //!
 //! Let's trace the journey through the diagram when an input even is generated by the user (eg: a
 //! key press, or mouse event). When the app is started via `cargo run` it sets up a main loop, and
@@ -308,15 +350,40 @@
 //!    an enum indicating that the event has been consumed, else, it returns an enum that indicates
 //!    the event should be propagated.
 //!
-//! Now that we have seen this whirlwind overview of the life of an input event, let's look at the
-//! details in each of the sections below.
+//! An input event is processed by the main thread in the main event loop. This is a
+//! synchronous operation and thus it is safe to mutate state directly in this code path. This
+//! is why there is no sophisticated locking in place. You can mutate the state directly in
+//! - [App::app_handle_input_event]
+//! - [Component::handle_event]
 //!
-//! Here's an architecture diagram that will be useful to keep in mind as we go through the details
-//! of the following sections:
+//! ## Life of a signal (aka "out of band event")
+//! <a id="markdown-life-of-a-signal-aka-%22out-of-band-event%22" name="life-of-a-signal-aka-%22out-of-band-event%22"></a>
 //!
-//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
+//! This is great for input events which are generated by the user using their keyboard or
+//! mouse. These are all considered "in-band" events or signals, which have no delay or
+//! asynchronous behavior. But what about "out of band" signals or events, which do have
+//! unknown delays and asynchronous behaviors? These are important to handle as well. For
+//! example, if you want to make an HTTP request, you don't want to block the main thread.
+//! In these cases you can use a `tokio::mpsc` channel to send a signal from a background
+//! thread to the main thread. This is how you can handle "out of band" events or signals.
+//!
+//! To provide support for these "out of band" events or signals, the [App] trait has a method
+//! called [App::app_handle_signal]. This is where you can handle signals that are sent from
+//! background threads. One of the arguments to this associated function is a `signal`. This
+//! signal needs to contain all the data that is needed for a state mutation to occur on the
+//! main thread. So the background thread has the responsibility of doing some work (eg:
+//! making an HTTP request), getting some information as a result, and then packaging that
+//! information into a `signal` and sending it to the main thread. The main thread then
+//! handles this signal by calling the [App::app_handle_signal] method. This method can then
+//! mutate the state of the [App] and return an [EventPropagation] enum indicating whether the
+//! main thread should repaint the UI or not.
+//!
+//! Now that we have seen this whirlwind overview of the life of an input event, let's look at
+//! the details in each of the sections below.
+//!
 //!
 //! # The window
+//! <a id="markdown-the-window" name="the-window"></a>
 //!
 //! The main building blocks of a TUI app are:
 //! 1. [TerminalWindow] - You can think of this as the main "window" of the app. All the content of
@@ -332,57 +399,60 @@
 //!    now we have to deal with [FlexBox], [Component], and [r3bl_rs_utils_core::Style].
 //!
 //! # Layout and styling
+//! <a id="markdown-layout-and-styling" name="layout-and-styling"></a>
 //!
-//! Inside of your [App] if you want to use flexbox like layout and CSS like styling you can think
-//! of composing your code in the following way:
+//! Inside of your [App] if you want to use flexbox like layout and CSS like styling you can think of
+//! composing your code in the following way:
 //!
-//! 1. [App] is like a box or container. You can attach styles and an id here. The id has to be
-//!    unique, and you can reference as many styles as you want from your stylesheet. Yes, cascading
-//!    styles are supported! 👏 You can put boxes inside of boxes. You can make a container box and
-//!    inside of that you can add other boxes (you can give them a direction and even relative
-//!    sizing out of 100%).
-//! 2. As you approach the "leaf" nodes of your layout, you will find [Component] trait objects.
-//!    These are black boxes which are sized, positioned, and painted *relative* to their parent
-//!    box. They get to handle input events and render [RenderOp]s into a [RenderPipeline]. This is
-//!    kind of like virtual DOM in React. This queue of commands is collected from all the
-//!    components and ultimately painted to the screen, for each render! You can also use Redux to
-//!    maintain your app's state, and dispatch actions to the store, and even have async middleware!
+//! 1.  [App] is like a box or container. You can attach styles and an id here. The id has to be unique,
+//!     and you can reference as many styles as you want from your stylesheet. Yes, cascading styles are
+//!     supported! 👏 You can put boxes inside of boxes. You can make a container box and inside of that
+//!     you can add other boxes (you can give them a direction and even relative sizing out of 100%).
+//! 2.  As you approach the "leaf" nodes of your layout, you will find [Component] trait objects. These
+//!     are black boxes which are sized, positioned, and painted _relative_ to their parent box. They
+//!     get to handle input events and render [RenderOp]s into a [RenderPipeline]. This is kind of like
+//!     virtual DOM in React. This queue of commands is collected from all the components and ultimately
+//!     painted to the screen, for each render! Your app's state is mutable and is stored in the
+//!     [GlobalData] struct. You can handle out of band events as well using the signal mechanism.
 //!
-//! # [Component] and [ComponentRegistry], focus management, and event routing
+//! ## Component, ComponentRegistry, focus management, and event routing
+//! <a id="markdown-component%2C-componentregistry%2C-focus-management%2C-and-event-routing" name="component%2C-componentregistry%2C-focus-management%2C-and-event-routing"></a>
+//!
 //!
 //! Typically your [App] will look like this:
 //!
-//! ```ignore
-//! /// Trait object that implements the [App] trait.
+//! ```rust
 //! #[derive(Default)]
-//! pub struct AppWithLayout {
-//!   pub component_registry: ComponentRegistry<AppWithLayoutState, AppWithLayoutAction>,
-//!   pub has_focus: HasFocus,
+//! pub struct AppMain {
+//!   // Might have some app data here as well.
+//!   // Or `_phantom: std::marker::PhantomData<(State, AppSignal)>,`
 //! }
 //! ```
 //!
 //! As we look at [Component] & [App] more closely we will find a curious thing [ComponentRegistry]
-//! (that is managed by the [App]). The reason this exists is for input event routing. The input
-//! events are routed to the [Component] that currently has focus.
+//! (that is managed by the [App]). The reason this exists is for input event routing. The input events
+//! are routed to the [Component] that currently has focus.
 //!
 //! The [HasFocus] struct takes care of this. This provides 2 things:
-//! 1. It holds an `id` of a [FlexBox] / [Component] that has focus.
-//! 2. It also holds a map that holds a [r3bl_rs_utils_core::Position] for each `id`. This is used
-//!    to represent a cursor (whatever that means to your app & component). This cursor is
-//!    maintained for each `id`. This allows a separate cursor for each [Component] that has focus.
-//!    This is needed to build apps like editors and viewers that maintains a cursor position
-//!    between focus switches.
+//!
+//! 1.  It holds an `id` of a [FlexBox] / [Component] that has focus.
+//! 2.  It also holds a map that holds a [r3bl_rs_utils_core::Position] for each `id`. This is used to represent a
+//!     cursor (whatever that means to your app & component). This cursor is maintained for each `id`.
+//!     This allows a separate cursor for each [Component] that has focus. This is needed to build apps
+//!     like editors and viewers that maintains a cursor position between focus switches.
 //!
 //! Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent between
 //! re-renders. The Redux store is also persistent between re-renders.
 //!
-//! # Input event specificity
+//! ## Input event specificity
+//! <a id="markdown-input-event-specificity" name="input-event-specificity"></a>
 //!
 //! [TerminalWindow] gives [Component] first dibs when it comes to handling input events. If it
 //! punts handling this event, it will be handled by the default input event handler. And if nothing
 //! there matches this event, then it is simply dropped.
 //!
-//! # Rendering and painting
+//! ## Rendering and painting
+//! <a id="markdown-rendering-and-painting" name="rendering-and-painting"></a>
 //!
 //! The R3BL TUI engine uses a high performance compositor to render the UI to the terminal. This
 //! ensures that only "pixels" that have changed are painted to the terminal. This is done by
@@ -391,7 +461,8 @@
 //! in a terminal screen. And the index maps directly to the position of the pixel in the terminal
 //! screen.
 //!
-//! ## Offscreen buffer
+//! ### Offscreen buffer
+//! <a id="markdown-offscreen-buffer" name="offscreen-buffer"></a>
 //!
 //! Here is an example of what a single row of rendered output might look like in a row of the
 //! `OffscreenBuffer`. This diagram shows each `PixelChar` in `row_index: 1` of the
@@ -443,12 +514,32 @@
 //!    information is encoded in the ANSI escape codes. `lolcat_api.rs` generates these ANSI strings
 //!    for the rainbow effect. An example of this is the outline around a modal dialog box.
 //!
-//! ## Render pipeline
+//! ### Render pipeline
+//! <a id="markdown-render-pipeline" name="render-pipeline"></a>
 //!
-//! The following diagram provides a high level overview of how apps (that contain components, which
-//! may contain components, and so on) are rendered to the terminal screen.
+//! The following diagram provides a high level overview of how apps (that contain components,
+//! which may contain components, and so on) are rendered to the terminal screen.
 //!
-//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/compositor.svg)
+//! ```text
+//! ┌──────────────────────────────────┐
+//! │ Container                        │
+//! │                                  │
+//! │ ┌─────────────┐  ┌─────────────┐ │
+//! │ │ Col 1       │  │ Col 2       │ │
+//! │ │             │  │             │ │
+//! │ │             │  │     ────────┼─┼──────────► RenderPipeline─────┐
+//! │ │             │  │             │ │                               │
+//! │ │             │  │             │ │                               │
+//! │ │      ───────┼──┼─────────────┼─┼──────────► RenderPipeline─┐   │
+//! │ │             │  │             │ │                           │   │
+//! │ │             │  │             │ │                           ▼ + ▼
+//! │ │             │  │             │ │                  ┌─────────────────────┐
+//! │ └─────────────┘  └─────────────┘ │                  │                     │
+//! │                                  │                  │  OffscreenBuffer    │
+//! └──────────────────────────────────┘                  │                     │
+//!                                                       └─────────────────────┘
+//! ```
+//! <!-- https://asciiflow.com/#/share/eJyrVspLzE1VssorzcnRUcpJrEwtUrJSqo5RqohRsrK0MNaJUaoEsozMTYGsktSKEiAnRunRlD10QzExeUBSwTk%2FryQxMy%2B1SAEHQCglCBBKSXKJAonKUawBeiBHwRDhAAW4oBGSIKoWNDcrYBUkUgulETFtl0JQal5KalFAZkFqDjAicMYUKS4nJaJoaCgdkjExgUkLH9PK2Gl7FLRBJFWMpUqo0ilL4wpirOIklEg4BP3T0oqTi1JT85xK09IgpR%2FcXLohUv1M2MM49FIhFSjVKtUCAEVNQq0%3D) -->
 //!
 //! Each component produces a `RenderPipeline`, which is a map of `ZOrder` and `Vec<RenderOps>`.
 //! `RenderOps` are the instructions that are grouped together, such as move the caret to a
@@ -464,6 +555,7 @@
 //! painted into an `OffscreenBuffer`.
 //!
 //! ## First render
+//! <a id="markdown-first-render" name="first-render"></a>
 //!
 //! The `paint.rs` file contains the `paint` function, which is the entry point for all rendering.
 //! Once the first render occurs, the `OffscreenBuffer` that is generated is saved to
@@ -484,107 +576,12 @@
 //! even a GUI backend, or some other custom output driver.
 //!
 //! ## Subsequent render
+//! <a id="markdown-subsequent-render" name="subsequent-render"></a>
 //!
 //! Since the `OffscreenBuffer` is cached in `GlobalSharedState` a diff to be performed for
 //! subsequent renders. And only those diff chunks are painted to the screen. This ensures that
 //! there is no flicker when the content of the screen changes. It also minimizes the amount of work
 //! that the terminal or terminal emulator has to do put the `PixelChar`s on the screen.
-//!
-//! # Redux for state management
-//!
-//! If you use Redux for state management, then you will create a redux
-//! [Store](r3bl_redux::redux::store::async_store::Store) that is passed into the [TerminalWindow]. For
-//! more detailed information on Redux, please read the
-//! [docs](https://docs.rs/r3bl_redux/latest/r3bl_redux/) for the `r3bl_redux` crate.
-//!
-//! ```ignore
-//! use crossterm::event::*;
-//! use r3bl_rs_utils::*;
-//! use super::*;
-//!
-//! const DEBUG: bool = true;
-//!
-//! pub async fn run_app() -> CommonResult<()> {
-//!   throws!({
-//!     if DEBUG {
-//!       try_to_set_log_level(log::LevelFilter::Trace)?;
-//!     } else {
-//!       try_to_set_log_level(log::LevelFilter::Off)?;
-//!     }
-//!
-//!     // Create store.
-//!     let store = create_store().await;
-//!
-//!     // Create an App (renders & responds to user input).
-//!     let shared_app = AppWithLayout::new_shared();
-//!
-//!     // Exit if these keys are pressed.
-//!     let exit_keys: Vec<KeyEvent> = vec![KeyEvent {
-//!       code: KeyCode::Char('q'),
-//!       modifiers: KeyModifiers::CONTROL,
-//!     }];
-//!
-//!     // Create a window.
-//!     TerminalWindow::main_event_loop(store, shared_app, exit_keys).await?
-//!   });
-//! }
-//!
-//! async fn create_store() -> Store<AppWithLayoutState, AppWithLayoutAction> {
-//!     let mut store: Store<AppWithLayoutState, AppWithLayoutAction> = Store::default();
-//!     store.add_reducer(MyReducer::default()).await;
-//!     store
-//!   }
-//!
-//!   /// Action enum.
-//!   #[derive(Debug, PartialEq, Eq, Clone)]
-//!   pub enum Action {
-//!     Add(i32, i32),
-//!     AddPop(i32),
-//!     Clear,
-//!     MiddlewareCreateClearAction,
-//!     Noop,
-//!   }
-//!
-//!   impl Default for Action {
-//!     fn default() -> Self {
-//!       Action::Noop
-//!     }
-//!   }
-//!
-//!   /// State.
-//!   #[derive(Clone, Default, PartialEq, Debug)]
-//!   pub struct State {
-//!     pub stack: Vec<i32>,
-//!   }
-//!
-//!   /// Reducer function (pure).
-//!   #[derive(Default)]
-//!   struct MyReducer;
-//!
-//!   #[async_trait]
-//!   impl AsyncReducer<State, Action> for MyReducer {
-//!     async fn run(
-//!       &self,
-//!       action: &Action,
-//!       state: &mut State,
-//!     ) {
-//!       match action {
-//!         Action::Add(a, b) => {
-//!           let sum = a + b;
-//!           state.stack = vec![sum];
-//!         }
-//!         Action::AddPop(a) => {
-//!           let sum = a + state.stack[0];
-//!           state.stack = vec![sum];
-//!         }
-//!         Action::Clear => State {
-//!           state.stack.clear();
-//!         },
-//!         _ => {}
-//!       }
-//!     }
-//!   }
-//! ```
 //!
 //! ## How does the editor component work?
 //! <a id="markdown-how-does-the-editor-component-work%3F" name="how-does-the-editor-component-work%3F"></a>
@@ -738,12 +735,14 @@
 //! - <https://blessed.rs/crates#section-networking-subsection-http-foundations>
 //!
 //! # Grapheme support
+//! <a id="markdown-grapheme-support" name="grapheme-support"></a>
 //!
 //! Unicode is supported (to an extent). There are some caveats. The
 //! [r3bl_rs_utils_core::UnicodeString] struct has lots of great information on this graphemes and
 //! what is supported and what is not.
 //!
 //! # Lolcat support
+//! <a id="markdown-lolcat-support" name="lolcat-support"></a>
 //!
 //! An implementation of lolcat color wheel is provided. Here's an example.
 //!

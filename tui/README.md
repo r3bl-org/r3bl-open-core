@@ -72,6 +72,7 @@ This crate is related to the first thing that's described above. It provides lot
   - [Run the demo locally](#run-the-demo-locally)
 - [How does layout, rendering, and event handling work in general?](#how-does-layout-rendering-and-event-handling-work-in-general)
 - [Life of an input event](#life-of-an-input-event)
+- [Life of a signal aka "out of band event"](#life-of-a-signal-aka-out-of-band-event)
 - [The window](#the-window)
 - [Layout and styling](#layout-and-styling)
 - [Component, ComponentRegistry, focus management, and event routing](#component-componentregistry-focus-management-and-event-routing)
@@ -81,7 +82,6 @@ This crate is related to the first thing that's described above. It provides lot
   - [Render pipeline](#render-pipeline)
   - [First render](#first-render)
   - [Subsequent render](#subsequent-render)
-- [Redux for state management](#redux-for-state-management)
 - [How does the editor component work?](#how-does-the-editor-component-work)
   - [Painting the caret](#painting-the-caret)
 - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
@@ -90,7 +90,6 @@ This crate is related to the first thing that's described above. It provides lot
   - [How to make HTTP requests](#how-to-make-http-requests)
 - [Grapheme support](#grapheme-support)
 - [Lolcat support](#lolcat-support)
-- [Other crates that depend on this](#other-crates-that-depend-on-this)
 - [Issues, comments, feedback, and PRs](#issues-comments-feedback-and-prs)
 
 <!-- /TOC -->
@@ -149,7 +148,7 @@ Here are some framework highlights:
     or termion or whatever you want).
   - Markdown text editor w/ syntax highlighting support, metadata (tags, title,
     author, date), smart lists. This uses a custom Markdown parser and custom syntax
-    highligther. Syntax highlighting for code blocks is provided by the syntect crate.
+    highlighter. Syntax highlighting for code blocks is provided by the syntect crate.
   - Modal dialog boxes. And autocompletion dialog boxes.
   - Lolcat (color gradients) implementation w/ a rainbow color-wheel palette. All the
     color output is sensitive to the capabilities of the terminal. Colors are
@@ -235,10 +234,23 @@ required arguments supplied or in interactive mode, where the user will be promp
 - `nu run.nu rustfmt`: Run rustfmt on all the crates in the Rust workspace.
 - and more!
 
----
-
 ## How does layout, rendering, and event handling work in general?
 <a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>
+
+```text
+┌──────────────────────────────────────────────────┐
+│                                                  │
+│  main.rs                                         │
+│                             ┌──────────────────┐ │
+│  GlobalData ───────────────►│ window size      │ │
+│  HasFocus                   │ offscreen buffer │ │
+│  ComponentRegistryMap       │ state            │ │
+│  App & Component(s)         │ channel sender   │ │
+│                             └──────────────────┘ │
+│                                                  │
+└──────────────────────────────────────────────────┘
+```
+<!-- https://asciiflow.com/#/share/eJzNkE0KwjAQha9SZiEK4kIUsTtR1I0b19mMdaqFdFKSFK0iXkI8jHgaT2JcqPUHoS7E4REmJN97k6yBMSbwOZWyChIz0uDDWsBSgN9utKoCMtfVW03XWVpatxFw2h3%2FVkKwW73ClUNjjLimzTfo51tfKx8xkGqCsocWC1ruDxd%2BEfFULTwTreg2V95%2BiKavgvTd6y%2FnKgxNoIl4O0nDkPQz3lVxopjYjmkWGauzESY53Fi0tL3Wa3onSbzS3aRsKg%2FpwRyZSXqGeOqyX%2FAffH%2FRuqF%2FKwEb2JwB17oGMg%3D%3D) -->
 
 - The main struct for building a TUI app is your struct which implements the [App] trait.
 - The main event loop takes an [App] trait object and starts listening for input events. It
@@ -285,19 +297,45 @@ the system handles an input event (key press or mouse).
 - And then you click or type something in the terminal window that you're running this app in.
 
 ```text
-🧍⌨️🖱️
-input → [TerminalWindow]
-event       ↑      ↓               [ComponentRegistryMap] stores
-            ┊   [App] ───────────■ [Component]s at 1st render
-            ┊      │
-            ┊      │        ┌──────■ id=1 has focus
-            ┊      │        │
-            ┊      ├→ [Component] id=1 ───┐
-            ┊      ├→ [Component] id=2    │
-            ┊      └→ [Component] id=3    │
-        default                          │
-        handler  ←───────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│In band input event                                                       │
+│                                                                          │
+│  Input ──► [TerminalWindow]                                              │
+│  Event          ▲      │                                                 │
+│                 │      ▼                  [ComponentRegistryMap] stores  │
+│                 │   [App]────────────────►[Component]s at 1st render     │
+│                 │      │                                                 │
+│                 │      │                                                 │
+│                 │      │          ┌──────► id=1 has focus                │
+│                 │      │          │                                      │
+│                 │      ├──► [Component] id=1 ─────┐                      │
+│                 │      │                          │                      │
+│                 │      └──► [Component] id=2      │                      │
+│                 │                                 │                      │
+│          default handler                          │                      │
+│                 ▲                                 │                      │
+│                 └─────────────────────────────────┘                      │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────┐
+│Out of band app signal                                      │
+│                                                            │
+│  App                                                       │
+│  Signal ──► [App]                                          │
+│               │                                            │
+│               │                                            │
+│               └──────►Update state                         │
+│                       main thread rerender                 │
+│                              │                             │
+│                              │                             │
+│                              └─────►[App]                  │
+│                                       │                    │
+│                                       └────►[Component]s   │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
 ```
+<!-- https://asciiflow.com/#/share/eJzdls9OwjAcx1%2Fll565wEEiiQdjPHAwJv6JB7ZDtQWabF3TdgohZC9h9iAeiU%2FDk1gcY8AAXbdh5JdfmkGbT7%2Ff7te1E8SxT1GHh57XQB4eU4k6aOKgkYM65%2B2zhoPG5qnVbpsnTUfa%2FHDQ%2FP3z5NNxuGm7HJ4xJ8C4CDXQV8o12MUKGWVhicohAbrf%2Bpbi4xn0Hqj0GcfeE%2BMkeHOtwdeblufxx2pIGb35npS%2FA9u7CnwRcCPkjg6Y0nJ8g4ULSgeSqh%2BxUe9SCLdwBcSzbFpXAdbQVBok5YTKX7upaZGOgN23KMDIRROGWEE%2FeAlVBdNUqX9tA2QvL5Gcd1NmooNCa3HQKo8%2FEEWwhPZx6GlTBJx4y81QGpr2pN%2BXirRmPcfJosKsY4U8%2BTQ2k%2FxzJWUsmPbWnNBBP7lPYCFAsYE5oAu%2B7kpqBsAcieUh94mBpc3FJ2tx0lqhtv%2B3VFQTZkfGs0dBsKaR0qYtDE3Dx4xHeigpJpGka7eLIpBsmJXB2jD5NdtTIEWre89IC8y2vvUrX9W77p%2Bmg6Zo%2BgU42osD) -->
 
 Let's trace the journey through the diagram when an input even is generated by the user (eg: a key
 press, or mouse event). When the app is started via `cargo run` it sets up a main loop, and lays out
@@ -320,13 +358,36 @@ main loop of [TerminalWindow].
     indicating that the event has been consumed, else, it returns an enum that indicates the event
     should be propagated.
 
-Now that we have seen this whirlwind overview of the life of an input event, let's look at the
-details in each of the sections below.
+An input event is processed by the main thread in the main event loop. This is a
+synchronous operation and thus it is safe to mutate state directly in this code path. This
+is why there is no sophisticated locking in place. You can mutate the state directly in
+- [App::app_handle_input_event]
+- [Component::handle_event]
 
-Here's an architecture diagram that will be useful to keep in mind as we go through the details of
-the following sections:
+## Life of a signal (aka "out of band event")
+<a id="markdown-life-of-a-signal-aka-%22out-of-band-event%22" name="life-of-a-signal-aka-%22out-of-band-event%22"></a>
 
-![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
+This is great for input events which are generated by the user using their keyboard or
+mouse. These are all considered "in-band" events or signals, which have no delay or
+asynchronous behavior. But what about "out of band" signals or events, which do have
+unknown delays and asynchronous behaviors? These are important to handle as well. For
+example, if you want to make an HTTP request, you don't want to block the main thread.
+In these cases you can use a `tokio::mpsc` channel to send a signal from a background
+thread to the main thread. This is how you can handle "out of band" events or signals.
+
+To provide support for these "out of band" events or signals, the [App] trait has a method
+called [App::app_handle_signal]. This is where you can handle signals that are sent from
+background threads. One of the arguments to this associated function is a `signal`. This
+signal needs to contain all the data that is needed for a state mutation to occur on the
+main thread. So the background thread has the responsibility of doing some work (eg:
+making an HTTP request), getting some information as a result, and then packaging that
+information into a `signal` and sending it to the main thread. The main thread then
+handles this signal by calling the [App::app_handle_signal] method. This method can then
+mutate the state of the [App] and return an [EventPropagation] enum indicating whether the
+main thread should repaint the UI or not.
+
+Now that we have seen this whirlwind overview of the life of an input event, let's look at
+the details in each of the sections below.
 
 ## The window
 <a id="markdown-the-window" name="the-window"></a>
@@ -361,8 +422,8 @@ composing your code in the following way:
     are black boxes which are sized, positioned, and painted _relative_ to their parent box. They
     get to handle input events and render [RenderOp]s into a [RenderPipeline]. This is kind of like
     virtual DOM in React. This queue of commands is collected from all the components and ultimately
-    painted to the screen, for each render! You can also use Redux to maintain your app's state, and
-    dispatch actions to the store, and even have async middleware!
+    painted to the screen, for each render! Your app's state is mutable and is stored in the
+    [GlobalData] struct. You can handle out of band events as well using the signal mechanism.
 
 ## Component, ComponentRegistry, focus management, and event routing
 <a id="markdown-component%2C-componentregistry%2C-focus-management%2C-and-event-routing" name="component%2C-componentregistry%2C-focus-management%2C-and-event-routing"></a>
@@ -466,11 +527,29 @@ Each `PixelChar` can be one of 4 things:
 ### Render pipeline
 <a id="markdown-render-pipeline" name="render-pipeline"></a>
 
+The following diagram provides a high level overview of how apps (that contain components,
+which may contain components, and so on) are rendered to the terminal screen.
 
-The following diagram provides a high level overview of how apps (that contain components, which may
-contain components, and so on) are rendered to the terminal screen.
-
-![](../docs/compositor.svg)
+```text
+┌──────────────────────────────────┐
+│ Container                        │
+│                                  │
+│ ┌─────────────┐  ┌─────────────┐ │
+│ │ Col 1       │  │ Col 2       │ │
+│ │             │  │             │ │
+│ │             │  │     ────────┼─┼──────────► RenderPipeline─────┐
+│ │             │  │             │ │                               │
+│ │             │  │             │ │                               │
+│ │      ───────┼──┼─────────────┼─┼──────────► RenderPipeline─┐   │
+│ │             │  │             │ │                           │   │
+│ │             │  │             │ │                           ▼ + ▼
+│ │             │  │             │ │                  ┌─────────────────────┐
+│ └─────────────┘  └─────────────┘ │                  │                     │
+│                                  │                  │  OffscreenBuffer    │
+└──────────────────────────────────┘                  │                     │
+                                                      └─────────────────────┘
+```
+<!-- https://asciiflow.com/#/share/eJyrVspLzE1VssorzcnRUcpJrEwtUrJSqo5RqohRsrK0MNaJUaoEsozMTYGsktSKEiAnRunRlD10QzExeUBSwTk%2FryQxMy%2B1SAEHQCglCBBKSXKJAonKUawBeiBHwRDhAAW4oBGSIKoWNDcrYBUkUgulETFtl0JQal5KalFAZkFqDjAicMYUKS4nJaJoaCgdkjExgUkLH9PK2Gl7FLRBJFWMpUqo0ilL4wpirOIklEg4BP3T0oqTi1JT85xK09IgpR%2FcXLohUv1M2MM49FIhFSjVKtUCAEVNQq0%3D) -->
 
 Each component produces a `RenderPipeline`, which is a map of `ZOrder` and `Vec<RenderOps>`.
 `RenderOps` are the instructions that are grouped together, such as move the caret to a position,
@@ -514,105 +593,6 @@ Since the `OffscreenBuffer` is cached in `GlobalSharedState` a diff to be perfor
 renders. And only those diff chunks are painted to the screen. This ensures that there is no flicker
 when the content of the screen changes. It also minimizes the amount of work that the terminal or
 terminal emulator has to do put the `PixelChar`s on the screen.
-
-## Redux for state management
-<a id="markdown-redux-for-state-management" name="redux-for-state-management"></a>
-
-
-If you use Redux for state management, then you will create a [crate::redux] [crate::Store] that is
-passed into the [TerminalWindow]. For more detailed information on Redux, please read the
-[docs for the `r3bl_redux` create](https://docs.rs/r3bl_redux/latest/r3bl_redux/).
-
-Here's an example of this.
-
-```rust
-use crossterm::event::*;
-use r3bl_rs_utils::*;
-use super::*;
-
-const DEBUG: bool = true;
-
-pub async fn run_app() -> CommonResult<()> {
-  throws!({
-    if DEBUG {
-      try_to_set_log_level(log::LevelFilter::Trace)?;
-    } else {
-      try_to_set_log_level(log::LevelFilter::Off)?;
-    }
-
-    // Create store.
-    let store = create_store().await;
-
-    // Create an App (renders & responds to user input).
-    let shared_app = AppWithLayout::new_shared();
-
-    // Exit if these keys are pressed.
-    let exit_keys: Vec<KeyEvent> = vec![KeyEvent {
-      code: KeyCode::Char('q'),
-      modifiers: KeyModifiers::CONTROL,
-    }];
-
-    // Create a window.
-    TerminalWindow::main_event_loop(store, shared_app, exit_keys).await?
-  });
-}
-
-async fn create_store() -> Store<AppWithLayoutState, AppWithLayoutAction> {
-  let mut store: Store<AppWithLayoutState, AppWithLayoutAction> = Store::default();
-  store.add_reducer(MyReducer::default()).await;
-  store
-}
-
-/// Action enum.
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Action {
-  Add(i32, i32),
-  AddPop(i32),
-  Clear,
-  MiddlewareCreateClearAction,
-  Noop,
-}
-
-impl Default for Action {
-  fn default() -> Self {
-    Action::Noop
-  }
-}
-
-/// State.
-#[derive(Clone, Default, PartialEq, Debug)]
-pub struct State {
-  pub stack: Vec<i32>,
-}
-
-/// Reducer function (pure).
-#[derive(Default)]
-struct MyReducer;
-
-#[async_trait]
-impl AsyncReducer<State, Action> for MyReducer {
-  async fn run(
-    &self,
-    action: &Action,
-    state: &mut State,
-  ) {
-    match action {
-      Action::Add(a, b) => {
-        let sum = a + b;
-        state.stack = vec![sum];
-      }
-      Action::AddPop(a) => {
-        let sum = a + state.stack[0];
-        state.stack = vec![sum];
-      }
-      Action::Clear => State {
-        state.stack.clear();
-      },
-      _ => {}
-    }
-  }
-}
-```
 
 ## How does the editor component work?
 <a id="markdown-how-does-the-editor-component-work%3F" name="how-does-the-editor-component-work%3F"></a>
@@ -775,16 +755,34 @@ lots of great information on this graphemes and what is supported and what is no
 ## Lolcat support
 <a id="markdown-lolcat-support" name="lolcat-support"></a>
 
+An implementation of lolcat color wheel is provided. Here's an example.
 
-An implementation of [crate::lolcat::cat] w/ a color wheel is provided.
+```rust
+use r3bl_rs_utils_core::*;
+use r3bl_tui::*;
 
-## Other crates that depend on this
-<a id="markdown-other-crates-that-depend-on-this" name="other-crates-that-depend-on-this"></a>
+let mut lolcat = LolcatBuilder::new()
+  .set_color_change_speed(ColorChangeSpeed::Rapid)
+  .set_seed(1.0)
+  .set_seed_delta(1.0)
+  .build();
 
+let content = "Hello, world!";
+let unicode_string = UnicodeString::from(content);
+let lolcat_mut = &mut lolcat;
+let st = lolcat_mut.colorize_to_styled_texts(&unicode_string);
 
-This crate is a dependency of the following crates:
+lolcat.next_color();
+```
 
-1. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crates (the "main" library)
+This [crate::lolcat::Lolcat] that is returned by `build()` is safe to re-use.
+- The colors it cycles through are "stable" meaning that once constructed via the
+  [builder](crate::lolcat::LolcatBuilder) (which sets the speed, seed, and delta
+  that determine where the color wheel starts when it is used). For eg, when used in a dialog
+  box component that re-uses the instance, repeated calls to the `render()` function of this
+  component will produce the same generated colors over and over again.
+- If you want to change where the color wheel "begins", you have to change the speed, seed, and
+  delta of this [crate::lolcat::Lolcat] instance.
 
 ## Issues, comments, feedback, and PRs
 <a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
