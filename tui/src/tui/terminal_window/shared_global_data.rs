@@ -29,24 +29,24 @@ use crate::*;
 /// - The `maybe_saved_offscreen_buffer` holds the last rendered [OffscreenBuffer].
 /// - The `main_thread_channel_sender` is used to send [TerminalWindowMainThreadSignal]s
 /// - The `state` holds the application's state.
-pub struct GlobalData<S, A>
+pub struct GlobalData<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
     pub window_size: Size,
     pub maybe_saved_offscreen_buffer: Option<OffscreenBuffer>,
-    pub main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<A>>,
+    pub main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
     pub state: S,
 }
 
 mod global_data_impl {
     use super::*;
 
-    impl<S, A> Debug for GlobalData<S, A>
+    impl<S, AS> Debug for GlobalData<S, AS>
     where
         S: Debug + Default + Clone + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
+        AS: Debug + Default + Clone + Sync + Send,
     {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             let vec_lines = {
@@ -67,16 +67,16 @@ mod global_data_impl {
         }
     }
 
-    impl<S, A> GlobalData<S, A>
+    impl<S, AS> GlobalData<S, AS>
     where
         S: Debug + Default + Clone + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
+        AS: Debug + Default + Clone + Sync + Send,
     {
         pub fn try_to_create_instance(
-            main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<A>>,
-        ) -> CommonResult<GlobalData<S, A>>
+            main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
+        ) -> CommonResult<GlobalData<S, AS>>
         where
-            A: Debug + Default + Clone + Sync + Send,
+            AS: Debug + Default + Clone + Sync + Send,
         {
             let mut it = GlobalData {
                 window_size: Default::default(),

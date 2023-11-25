@@ -22,10 +22,10 @@ use r3bl_rs_utils_core::*;
 use crate::*;
 
 /// See [App].
-pub trait Component<S, A>
+pub trait Component<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
     /// This is an optional method that can be used to initialize the state of the component's
     /// engines. This applies to modal dialog components that need their engine to be initialized
@@ -61,7 +61,7 @@ where
     ///     behaviors
     fn render(
         &mut self,
-        global_data: &mut GlobalData<S, A>,
+        global_data: &mut GlobalData<S, AS>,
         current_box: FlexBox,
         surface_bounds: SurfaceBounds,
         has_focus: &mut HasFocus,
@@ -83,7 +83,7 @@ where
     ///    state change).
     fn handle_event(
         &mut self,
-        global_data: &mut GlobalData<S, A>,
+        global_data: &mut GlobalData<S, AS>,
         input_event: InputEvent,
         has_focus: &mut HasFocus,
     ) -> CommonResult<EventPropagation>;

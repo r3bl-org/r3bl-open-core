@@ -19,11 +19,7 @@ use std::io::Result;
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
 use r3bl_rs_utils_core::*;
-use r3bl_tuify::{components::style::StyleSheet,
-                 get_size,
-                 select_from_list,
-                 SelectionMode,
-                 TRACE};
+use r3bl_tuify::{components::style::StyleSheet, get_size, select_from_list, SelectionMode, TRACE};
 mod single_select_quiz_game;
 use single_select_quiz_game::main as single_select_quiz_game;
 

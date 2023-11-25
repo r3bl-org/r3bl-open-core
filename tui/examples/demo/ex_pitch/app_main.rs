@@ -74,7 +74,7 @@ mod app_main_impl_app_trait {
 
     impl App for AppMain {
         type S = State;
-        type A = AppSignal;
+        type AS = AppSignal;
 
         fn app_init(
             &mut self,

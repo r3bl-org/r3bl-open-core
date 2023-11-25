@@ -18,9 +18,9 @@
 use crate::*;
 
 // App.
-pub type SafeApp<S, A> = dyn App<S = S, A = A> + Send + Sync;
-pub type BoxedSafeApp<S, A> = Box<SafeApp<S, A>>;
+pub type SafeApp<S, AS> = dyn App<S = S, AS = AS> + Send + Sync;
+pub type BoxedSafeApp<S, AS> = Box<SafeApp<S, AS>>;
 
 // Component.
-pub type SafeComponent<S, A> = dyn Component<S, A> + Send + Sync;
-pub type BoxedSafeComponent<S, A> = Box<SafeComponent<S, A>>;
+pub type SafeComponent<S, AS> = dyn Component<S, AS> + Send + Sync;
+pub type BoxedSafeComponent<S, AS> = Box<SafeComponent<S, AS>>;

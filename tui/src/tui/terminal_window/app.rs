@@ -31,14 +31,14 @@ use crate::*;
 /// - Limitations of linking to examples module: <https://users.rust-lang.org/t/how-to-link-to-examples/67918>
 pub trait App {
     type S: Debug + Default + Clone + Sync + Send;
-    type A: Debug + Default + Clone + Sync + Send;
+    type AS: Debug + Default + Clone + Sync + Send;
 
     /// This is called once at the beginning of the app's lifecycle. It is used to
     /// initialize the [ComponentRegistryMap] and [HasFocus] structs. It is called before the
     /// first render by the [TerminalWindow::main_event_loop].
     fn app_init(
         &mut self,
-        component_registry_map: &mut ComponentRegistryMap<Self::S, Self::A>,
+        component_registry_map: &mut ComponentRegistryMap<Self::S, Self::AS>,
         has_focus: &mut HasFocus,
     );
 
@@ -51,8 +51,8 @@ pub trait App {
     fn app_handle_input_event(
         &mut self,
         input_event: InputEvent,
-        global_data: &mut GlobalData<Self::S, Self::A>,
-        component_registry_map: &mut ComponentRegistryMap<Self::S, Self::A>,
+        global_data: &mut GlobalData<Self::S, Self::AS>,
+        component_registry_map: &mut ComponentRegistryMap<Self::S, Self::AS>,
         has_focus: &mut HasFocus,
     ) -> CommonResult<EventPropagation>;
 
@@ -64,8 +64,8 @@ pub trait App {
     /// handling.
     fn app_handle_signal(
         &mut self,
-        action: &Self::A,
-        global_data: &mut GlobalData<Self::S, Self::A>,
+        signal: &Self::AS,
+        global_data: &mut GlobalData<Self::S, Self::AS>,
     ) -> CommonResult<EventPropagation>;
 
     /// Use the state to render the output (via crossterm). The state is immutable. If you want to
@@ -74,8 +74,8 @@ pub trait App {
     /// More than likely a bunch of other [Component::render]s will perform the actual rendering.
     fn app_render(
         &mut self,
-        global_data: &mut GlobalData<Self::S, Self::A>,
-        component_registry_map: &mut ComponentRegistryMap<Self::S, Self::A>,
+        global_data: &mut GlobalData<Self::S, Self::AS>,
+        component_registry_map: &mut ComponentRegistryMap<Self::S, Self::AS>,
         has_focus: &mut HasFocus,
     ) -> CommonResult<RenderPipeline>;
 }
