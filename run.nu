@@ -19,7 +19,7 @@
 #     - thinking in nu: https://www.nushell.sh/book/thinking_in_nu.html
 
 let workspace_folders = [
-    "core", "macro", "redux", "tui", "tuify", "ansi_color", "simple_logger"
+    "core", "macro", "redux", "tui", "tuify", "ansi_color", "simple_logger", "utils",
 ]
 
 # Main entry point for the script.
@@ -40,9 +40,6 @@ def main [...args: string] {
         "clean" => {clean}
         "install-cargo-tools" => {install-cargo-tools}
         "test" => {test}
-        "watch-one-test" => {watch-one-test $args}
-        "watch-all-tests" => {watch-all-tests}
-        "watch-macro-expand-one-test" => {watch-macro-expand-one-test $args}
         "docs" => {docs}
         "check" => {check}
         "check-watch" => {check-watch}
@@ -52,89 +49,11 @@ def main [...args: string] {
         "upgrade-deps" => {upgrade-deps}
         "serve-docs" => {serve-docs}
         "help" => {print-help all}
-        "log" => {log}
         "audit-deps" => {audit-deps}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
     }
 }
 
-def watch-macro-expand-one-test [args: list<string>] {
-    let num_args = $args | length
-
-    let test_name = if $num_args == 2 {
-        let test_name = $args | get 1
-        $test_name
-    } else {
-        print-help watch-one-test
-        let user_input = (input "Enter the test-name: " )
-        $user_input
-    }
-
-    if $test_name != "" {
-        # More info on cargo test: https://doc.rust-lang.org/cargo/commands/cargo-test.html
-        # More info on cargo watch: https://github.com/watchexec/cargo-watch
-        let command_string = "expand --test " + $test_name
-        cargo watch -x $command_string -c -q -d 10
-        # cargo watch -x "expand --test $argv" -c -q -d 10
-    } else {
-        print $'Can not run this command without (ansi red_bold)test_name(ansi reset)'
-    }
-}
-
-# Watch a single test. This expects the test name to be passed in as an argument.
-# If it isn't passed in, it will prompt the user for it.
-def watch-one-test [args: list<string>] {
-    let num_args = $args | length
-
-    let folder_name = ""
-    let test_name = ""
-
-    let folder_name = if $num_args > 1 {
-        let folder_name = $args | get 1
-        $folder_name
-    } else {
-        print-help watch-one-test
-        let user_input = (input "Enter the folder-name: " )
-        $user_input
-    }
-
-    let test_name = if $num_args > 2 {
-        let test_name = $args | get 2
-        $test_name
-    } else {
-        print-help watch-one-test
-        let user_input = (input "Enter the test-name: " )
-        $user_input
-    }
-
-    if $folder_name != "" {
-        cd $folder_name
-    }
-
-    # Debug.
-    # print $folder_name
-    # print $test_name
-    # pwd
-
-    if $test_name != "" {
-        # OG command:
-        # set -l prefix "cargo watch -x check -x 'test -- --test-threads=1 --nocapture"
-        # set -l middle "$argv'"
-        # set -l postfix "-c -q -d 5"
-        # set -l cmd "$prefix $middle $postfix"
-
-        # More info on cargo test: https://doc.rust-lang.org/cargo/commands/cargo-test.html
-        # More info on cargo watch: https://github.com/watchexec/cargo-watch
-        let command_string = "test -- --test-threads=1 --nocapture " + $test_name
-        cargo watch -x check -x $command_string -c -q -d 5
-    } else {
-        print $'Can not run this command without (ansi red_bold)test_name(ansi reset)'
-    }
-}
-
-def watch-all-tests [] {
-    RUST_BACKTRACE=0 cargo watch --exec check --exec 'test --quiet --color always -- --test-threads 4' --clear --quiet --delay 10
-}
 
 # Prints help for the script.
 # - If "all" is passed in, prints help for all commands.
@@ -143,16 +62,13 @@ def print-help [command: string] {
     if $command == "all" {
         print $'Usage: (ansi magenta_bold)run.nu(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi blue_bold)[args](ansi reset)'
         print $'(ansi green_bold)<command>(ansi reset) can be:'
-        print $'    (ansi green)install-cargo-tools(ansi reset)'
-        print $'    (ansi green)build-full(ansi reset)'
-        print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)all(ansi reset)'
+        print $'    (ansi green)build(ansi reset)'
+        print $'    (ansi green)build-full(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
-        print $'    (ansi green)docs(ansi reset)'
+        print $'    (ansi green)install-cargo-tools(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
-        print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
-        print $'    (ansi green)watch-all-tests(ansi reset)'
-        print $'    (ansi green)watch-macro-expand-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
+        print $'    (ansi green)docs(ansi reset)'
         print $'    (ansi green)check(ansi reset)'
         print $'    (ansi green)check-watch(ansi reset)'
         print $'    (ansi green)clippy(ansi reset)'
@@ -161,10 +77,6 @@ def print-help [command: string] {
         print $'    (ansi green)upgrade-deps(ansi reset)'
         print $'    (ansi green)rustfmt(ansi reset)'
         print $'    (ansi green)help(ansi reset)'
-    } else if $command == "watch-one-test" {
-        print $'(ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
-        print $'    (ansi blue_bold)folder-name(ansi reset) (ansi yellow)eg: `tui`(ansi reset)'
-        print $'    (ansi blue_bold)test-name(ansi reset) (ansi yellow)eg: `test_with_unicode`(ansi reset)'
     } else {
         print $'Unknown command: (ansi red_bold)($command)(ansi reset)'
     }
@@ -270,17 +182,6 @@ def rustfmt [] {
         cargo fmt --all
         cd ..
     }
-}
-
-def log [] {
-    clear
-    cd tui
-    if ('log.txt' | path exists) {
-        rm log.txt
-    }
-    touch log.txt
-    tail -f -s 5 log.txt
-    cd ..
 }
 
 # More info: https://github.com/EmbarkStudios/cargo-deny
