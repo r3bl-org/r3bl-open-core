@@ -44,6 +44,8 @@ def main [...args: string] {
         "run-with-crash-reporting" => {run-with-crash-reporting}
         "test" => {test}
         "watch-all-tests" => {watch-all-tests}
+        "watch-one-test" => {watch-one-test $args}
+        "watch-macro-expand-one-test" => {watch-macro-expand-one-test $args}
         "docs" => {docs}
         "check" => {check}
         "check-watch" => {check-watch}
@@ -57,6 +59,14 @@ def main [...args: string] {
         "audit-deps" => {audit-deps}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
     }
+}
+
+def check [] {
+    cargo check --workspace
+}
+
+def check-watch [] {
+    cargo watch -x 'check --workspace'
 }
 
 # Watch a single test. This expects the test name to be passed in as an argument.
@@ -110,8 +120,31 @@ def watch-one-test [args: list<string>] {
     }
 }
 
+def watch-macro-expand-one-test [args: list<string>] {
+    let num_args = $args | length
+
+    let test_name = if $num_args == 2 {
+        let test_name = $args | get 1
+        $test_name
+    } else {
+        print-help watch-one-test
+        let user_input = (input "Enter the test-name: " )
+        $user_input
+    }
+
+    if $test_name != "" {
+        # More info on cargo test: https://doc.rust-lang.org/cargo/commands/cargo-test.html
+        # More info on cargo watch: https://github.com/watchexec/cargo-watch
+        let command_string = "expand --test " + $test_name
+        cargo watch -x $command_string -c -q -d 10
+        # cargo watch -x "expand --test $argv" -c -q -d 10
+    } else {
+        print $'Can not run this command without (ansi red_bold)test_name(ansi reset)'
+    }
+}
+
 def watch-all-tests [] {
-    RUST_BACKTRACE=0 cargo watch --exec check --exec 'test --quiet --color always -- --test-threads 4' --clear --quiet --delay 10
+    RUST_BACKTRACE=0 cargo watch --exec check --exec 'test --quiet --color always -- --test-threads 4' --clear --quiet --delay 2
 }
 
 # Prints help for the script.
@@ -143,7 +176,7 @@ def print-help [command: string] {
         print $'    (ansi green)help(ansi reset)'
     } else if $command == "watch-one-test" {
         print $'(ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
-        print $'    (ansi blue_bold)folder-name(ansi reset) (ansi yellow)eg: `tui`(ansi reset)'
+        print $'    (ansi blue_bold)folder-name(ansi reset) (ansi yellow)eg: `.`(ansi reset)'
         print $'    (ansi blue_bold)test-name(ansi reset) (ansi yellow)eg: `test_with_unicode`(ansi reset)'
     } else {
         print $'Unknown command: (ansi red_bold)($command)(ansi reset)'
@@ -236,7 +269,7 @@ def run-with-crash-reporting [] {
 
 def log [] {
     clear
-    
+
     if ('log.txt' | path exists) {
         rm log.txt
     }
