@@ -143,6 +143,7 @@ impl EditorEngineApi {
         })
     }
 
+    // 00: look into this
     fn render_content(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) {
         let RenderArgs {
             editor_buffer,

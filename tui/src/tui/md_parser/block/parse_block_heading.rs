@@ -68,7 +68,7 @@ fn parse(input: &str) -> IResult<&str, HeadingData> {
 fn parse_heading_tag(input: &str) -> IResult<&str, HeadingLevel> {
     map(
         terminated(
-            /* output `#`+ */ take_while1(|it| it == constants::HEADING_CHAR),
+            /* output `#`+ */ take_while_m_n(1, MAX_HEADING_LEVEL, |it| it == constants::HEADING_CHAR),
             /* ends with (discarded) */ tag(constants::SPACE),
         ),
         |it: &str|
@@ -98,13 +98,21 @@ mod tests {
             parse_heading_tag(" "),
             Err(NomErr::Error(Error {
                 input: " ",
-                code: ErrorKind::TakeWhile1
+                code: ErrorKind::TakeWhileMN
             }))
         );
         assert_eq2!(
             parse_heading_tag("#"),
             Err(NomErr::Error(Error {
                 input: "",
+                code: ErrorKind::Tag
+            }))
+        );
+        // Max heading level is 6.
+        assert_eq2!(
+            parse_heading_tag("####### "),
+            Err(NomErr::Error(Error {
+                input: "# ",
                 code: ErrorKind::Tag
             }))
         );
