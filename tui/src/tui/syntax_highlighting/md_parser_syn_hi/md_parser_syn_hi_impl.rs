@@ -48,7 +48,8 @@ pub fn try_parse_and_highlight(
 
     // Try and parse `editor_text_to_string` into a `Document`.
     match parse_markdown(&editor_text_to_string) {
-        Ok((_, document)) => Ok(StyleUSSpanLines::from_document(
+        // 00: what about the _remainder?
+        Ok((_remainder, document)) => Ok(StyleUSSpanLines::from_document(
             &document,
             maybe_current_box_computed_style,
             maybe_syntect_tuple,
