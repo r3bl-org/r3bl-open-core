@@ -178,7 +178,7 @@ mod tests {
             parse_block_heading_opt_eol(""),
             Err(NomErr::Error(Error {
                 input: "",
-                code: ErrorKind::TakeWhile1
+                code: ErrorKind::TakeWhileMN
             }))
         );
         assert_eq2!(
