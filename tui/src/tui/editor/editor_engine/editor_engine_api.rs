@@ -143,7 +143,6 @@ impl EditorEngineApi {
         })
     }
 
-    // 00: look into this
     fn render_content(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) {
         let RenderArgs {
             editor_buffer,
@@ -170,6 +169,8 @@ impl EditorEngineApi {
             );
             return;
         }
+
+        // BOOKM: Render using syntect first, then custom MD parser.
 
         // Render using syntect first.
         syn_hi_syntect_path::render_content(

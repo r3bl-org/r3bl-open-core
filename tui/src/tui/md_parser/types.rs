@@ -41,9 +41,9 @@ pub struct HeadingData<'a> {
 }
 
 /// A Markdown document once parsed is turned into a [Vec] of "blocks". A block is the top-level
-/// element of a Markdown document and rougly represents a single line of text.
+/// element of a Markdown document and roughly represents a single line of text.
 /// - It is the intermediate representation (IR) of a single line of text.
-/// - There are some exceptions such as smart lists and code blocks which represent multple lines of
+/// - There are some exceptions such as smart lists and code blocks which represent multiple lines of
 ///   text.
 #[derive(Clone, Debug, PartialEq)]
 pub enum MdBlockElement<'a> {
@@ -73,7 +73,6 @@ pub enum MdLineFragment<'a> {
     Plain(&'a str),
     Bold(&'a str),
     Italic(&'a str),
-    BoldItalic(&'a str),
     InlineCode(&'a str),
     Link(HyperlinkData<'a>),
     Image(HyperlinkData<'a>),
@@ -155,12 +154,8 @@ pub mod constants {
     pub const UNORDERED_LIST: &str = "-";
     pub const UNORDERED_LIST_PREFIX: &str = "- ";
     pub const ORDERED_LIST_PARTIAL_PREFIX: &str = ". ";
-    pub const BITALIC_1: &str = "***";
-    pub const BITALIC_2: &str = "___";
-    pub const BOLD_1: &str = "**";
-    pub const BOLD_2: &str = "__";
-    pub const ITALIC_1: &str = "*";
-    pub const ITALIC_2: &str = "_";
+    pub const BOLD: &str = "*";
+    pub const ITALIC: &str = "_";
     pub const BACK_TICK: &str = "`";
     pub const LEFT_BRACKET: &str = "[";
     pub const RIGHT_BRACKET: &str = "]";

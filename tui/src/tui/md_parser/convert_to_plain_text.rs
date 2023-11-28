@@ -116,9 +116,8 @@ impl PrettyPrintDebug for MdLineFragment<'_> {
                     "{LEFT_IMAGE}{alt_text}{RIGHT_IMAGE}{LEFT_PARENTHESIS}{url}{RIGHT_PARENTHESIS}"
                 )
             }
-            MdLineFragment::Bold(text) => format!("{BOLD_1}{text}{BOLD_1}"),
-            MdLineFragment::Italic(text) => format!("{ITALIC_1}{text}{ITALIC_1}"),
-            MdLineFragment::BoldItalic(text) => format!("{BITALIC_1}{text}{BITALIC_1}"),
+            MdLineFragment::Bold(text) => format!("{BOLD}{text}{BOLD}"),
+            MdLineFragment::Italic(text) => format!("{ITALIC}{text}{ITALIC}"),
             MdLineFragment::InlineCode(text) => format!("{BACK_TICK}{text}{BACK_TICK}"),
             MdLineFragment::Checkbox(is_checked) => {
                 (if *is_checked { CHECKED } else { UNCHECKED }).to_string()
@@ -203,15 +202,11 @@ mod to_plain_text_tests {
         );
         assert_eq2!(
             MdLineFragment::Bold("Hello World").pretty_print_debug(),
-            "**Hello World**"
-        );
-        assert_eq2!(
-            MdLineFragment::Italic("Hello World").pretty_print_debug(),
             "*Hello World*"
         );
         assert_eq2!(
-            MdLineFragment::BoldItalic("Hello World").pretty_print_debug(),
-            "***Hello World***"
+            MdLineFragment::Italic("Hello World").pretty_print_debug(),
+            "_Hello World_"
         );
         assert_eq2!(
             MdLineFragment::InlineCode("Hello World").pretty_print_debug(),

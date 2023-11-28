@@ -85,13 +85,14 @@ mod tests {
 
     use super::*;
 
-    // 00: look into this
     #[test]
-    fn fix_italic() {
+    fn test_parse_markdown_single_line_plain_text() {
         let input = ["_this should not be italic", ""].join("\n");
         let (remainder, blocks) = parse_markdown(&input).unwrap();
-        println!("{:?}", remainder);
-        println!("{:?}", blocks);
+        println!("\nremainder:\n{:?}", remainder);
+        println!("\nblocks:\n{:?}", blocks);
+        assert_eq2!(remainder, "_this should not be italic\n");
+        assert_eq2!(blocks.len(), 0);
     }
 
     #[test]

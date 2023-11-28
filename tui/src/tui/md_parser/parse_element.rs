@@ -24,34 +24,20 @@ use nom::{branch::*,
           bytes::complete::*,
           character::complete::*,
           combinator::*,
+          error::ErrorKind,
           multi::*,
           sequence::*,
           IResult};
+use r3bl_rs_utils_core::{call_if_true, log_debug};
 
 use crate::*;
 
-#[rustfmt::skip]
-pub fn parse_element_bold_italic(input: &str) -> IResult<&str, &str> {
-    alt((
-        delimited(/* start */ tag(BITALIC_1), /* output */ is_not(BITALIC_1), /* end */ tag(BITALIC_1)),
-        delimited(/* start */ tag(BITALIC_2), /* output */ is_not(BITALIC_2), /* end */ tag(BITALIC_2)),
-    ))(input)
-}
-
-#[rustfmt::skip]
 pub fn parse_element_bold(input: &str) -> IResult<&str, &str> {
-    alt((
-        delimited(/* start */ tag(BOLD_1), /* output */ is_not(BOLD_1), /* end */ tag(BOLD_1)),
-        delimited(/* start */ tag(BOLD_2), /* output */ is_not(BOLD_2), /* end */ tag(BOLD_2)),
-    ))(input)
+    parse_fenced_no_newline(input, BOLD)
 }
 
-#[rustfmt::skip]
 pub fn parse_element_italic(input: &str) -> IResult<&str, &str> {
-    alt((
-        delimited(/* start */ tag(ITALIC_1), /* output */ is_not(ITALIC_1), /* end */ tag(ITALIC_1)),
-        delimited(/* start */ tag(ITALIC_2), /* output */ is_not(ITALIC_2), /* end */ tag(ITALIC_2)),
-    ))(input)
+    parse_fenced_no_newline(input, ITALIC)
 }
 
 #[rustfmt::skip]
@@ -99,6 +85,7 @@ pub fn parse_element_image(input: &str) -> IResult<&str, HyperlinkData> {
     Ok((input, HyperlinkData::from(output)))
 }
 
+/// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
 /// There must be at least one match. We want to match many things that are not any of our
 /// special tags, but since we have no tools available to match and consume in the negative case
 /// (without regex) we need to match against our (start) tags, then consume one char; we repeat
@@ -112,12 +99,8 @@ pub fn parse_element_plaintext(input: &str) -> IResult<&str, &str> {
                 not(
                     /* starts with special characters */
                     alt((
-                        tag(BITALIC_1),
-                        tag(BITALIC_2),
-                        tag(BOLD_1),
-                        tag(BOLD_2),
-                        tag(ITALIC_1),
-                        tag(ITALIC_2),
+                        tag(BOLD),
+                        tag(ITALIC),
                         tag(BACK_TICK),
                         tag(LEFT_BRACKET),
                         tag(LEFT_IMAGE),
@@ -141,7 +124,6 @@ pub fn parse_element_markdown_inline(
         CheckboxParsePolicy::IgnoreCheckbox => alt((
             map(parse_element_italic, MdLineFragment::Italic),
             map(parse_element_bold, MdLineFragment::Bold),
-            map(parse_element_bold_italic, MdLineFragment::BoldItalic),
             map(parse_element_code, MdLineFragment::InlineCode),
             map(parse_element_image, MdLineFragment::Image),
             map(parse_element_link, MdLineFragment::Link),
@@ -151,7 +133,6 @@ pub fn parse_element_markdown_inline(
         CheckboxParsePolicy::ParseCheckbox => alt((
             map(parse_element_italic, MdLineFragment::Italic),
             map(parse_element_bold, MdLineFragment::Bold),
-            map(parse_element_bold_italic, MdLineFragment::BoldItalic),
             map(parse_element_code, MdLineFragment::InlineCode),
             map(parse_element_image, MdLineFragment::Image),
             map(parse_element_link, MdLineFragment::Link),
@@ -162,6 +143,40 @@ pub fn parse_element_markdown_inline(
     }
 }
 
+/// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
+fn fenced<'a>(
+    start: &'a str,
+    end: &'a str,
+) -> impl FnMut(&'a str) -> IResult<&'a str, &'a str> {
+    map(tuple((tag(start), take_until(end), tag(end))), |x| x.1)
+}
+
+pub fn parse_fenced_no_newline<'a>(
+    input: &'a str,
+    delim: &'a str,
+) -> IResult<&'a str, &'a str> {
+    let it = fenced(delim, delim)(input);
+
+    if let Ok((_, output)) = &it {
+        if output.contains(NEW_LINE) {
+            return Err(nom::Err::Error(nom::error::Error {
+                input: "",
+                code: ErrorKind::TakeUntil,
+            }));
+        };
+    }
+
+    call_if_true!(DEBUG_TUI_MOD, {
+        log_debug(format!("\n📣📣📣\n input: {:?}", input));
+        match it {
+            Ok(_) => log_debug(format!("✅✅✅ OK")),
+            Result::Err(_) => log_debug(format!("🟥🟥🟥 NO")),
+        }
+    });
+
+    it
+}
+
 #[cfg(test)]
 mod tests_parse_element {
     use nom::{error::{Error, ErrorKind},
@@ -169,6 +184,55 @@ mod tests_parse_element {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
+
+    #[test]
+    fn test_parse_fenced_no_newline() {
+        let input = "_foo\nbar_";
+        let it = parse_fenced_no_newline(input, "_");
+        println!("it: {:?}", it);
+        assert_eq2!(
+            it,
+            Err(NomErr::Error(Error {
+                input: "",
+                code: ErrorKind::TakeUntil
+            }))
+        );
+
+        let input = "_foo bar_";
+        let it = parse_fenced_no_newline(input, "_");
+        println!("it: {:?}", it);
+        assert_eq2!(it, Ok(("", "foo bar")));
+    }
+
+    #[test]
+    fn test_fenced() {
+        let input = "_foo bar baz_";
+        let it = fenced("_", "_")(input);
+        println!("it: {:?}", it);
+        assert_eq2!(it, Ok(("", "foo bar baz")));
+
+        let input = "_foo bar baz";
+        let it = fenced("_", "_")(input);
+        println!("it: {:?}", it);
+        assert_eq2!(
+            it,
+            Err(NomErr::Error(Error {
+                input: "foo bar baz",
+                code: ErrorKind::TakeUntil
+            }))
+        );
+
+        let input = "foo _bar_ baz";
+        let it = fenced("_", "_")(input);
+        println!("it: {:?}", it);
+        assert_eq2!(
+            it,
+            Err(NomErr::Error(Error {
+                input: "foo _bar_ baz",
+                code: ErrorKind::Tag
+            }))
+        );
+    }
 
     #[test]
     fn test_parse_element_checkbox_into_str() {
@@ -199,7 +263,7 @@ mod tests_parse_element {
     #[test]
     fn test_parse_element_italic() {
         assert_eq2!(
-            parse_element_italic("*here is italic*"),
+            parse_element_italic("_here is italic_"),
             Ok(("", "here is italic"))
         );
 
@@ -266,74 +330,24 @@ mod tests_parse_element {
     }
 
     #[test]
-    fn test_parse_element_bold_italic() {
-        assert_eq2!(
-            parse_element_bold_italic("***here is bitalic***"),
-            Ok(("", "here is bitalic"))
-        );
-
-        assert_eq2!(
-            parse_element_bold("***here is bitalic"),
-            Err(NomErr::Error(Error {
-                input: "***here is bitalic",
-                code: ErrorKind::Tag
-            }))
-        );
-
-        assert_eq2!(
-            parse_element_bold("here is bitalic***"),
-            Err(NomErr::Error(Error {
-                input: "here is bitalic***",
-                code: ErrorKind::Tag
-            }))
-        );
-
-        assert_eq2!(
-            parse_element_bold_italic("___here is bitalic___"),
-            Ok(("", "here is bitalic"))
-        );
-
-        assert_eq2!(
-            parse_element_bold_italic("___here is bitalic"),
-            Err(NomErr::Error(Error {
-                input: "",
-                code: ErrorKind::Tag
-            }))
-        );
-
-        assert_eq2!(
-            parse_element_bold_italic("here is bitalic___"),
-            Err(NomErr::Error(Error {
-                input: "here is bitalic___",
-                code: ErrorKind::Tag
-            }))
-        );
-    }
-
-    #[test]
     fn test_parse_element_bold() {
         assert_eq2!(
-            parse_element_bold("**here is bold**"),
+            parse_element_bold("*here is bold*"),
             Ok(("", "here is bold"))
         );
 
         assert_eq2!(
-            parse_element_bold("__here is bold__"),
-            Ok(("", "here is bold"))
-        );
-
-        assert_eq2!(
-            parse_element_bold("**here is bold"),
+            parse_element_bold("*here is bold"),
             Err(NomErr::Error(Error {
-                input: "**here is bold",
-                code: ErrorKind::Tag
+                input: "here is bold",
+                code: ErrorKind::TakeUntil
             }))
         );
 
         assert_eq2!(
-            parse_element_bold("here is bold**"),
+            parse_element_bold("here is bold*"),
             Err(NomErr::Error(Error {
-                input: "here is bold**",
+                input: "here is bold*",
                 code: ErrorKind::Tag
             }))
         );
@@ -347,26 +361,10 @@ mod tests_parse_element {
         );
 
         assert_eq2!(
-            parse_element_bold("****"),
-            Err(NomErr::Error(Error {
-                input: "****",
-                code: ErrorKind::Tag
-            }))
-        );
-
-        assert_eq2!(
-            parse_element_bold("**"),
-            Err(NomErr::Error(Error {
-                input: "**",
-                code: ErrorKind::Tag
-            }))
-        );
-
-        assert_eq2!(
             parse_element_bold("*"),
             Err(NomErr::Error(Error {
-                input: "*",
-                code: ErrorKind::Tag
+                input: "",
+                code: ErrorKind::TakeUntil
             }))
         );
 
@@ -374,14 +372,6 @@ mod tests_parse_element {
             parse_element_bold(""),
             Err(NomErr::Error(Error {
                 input: "",
-                code: ErrorKind::Tag
-            }))
-        );
-
-        assert_eq2!(
-            parse_element_bold("*this is italic*"),
-            Err(NomErr::Error(Error {
-                input: "*this is italic*",
                 code: ErrorKind::Tag
             }))
         );
@@ -575,17 +565,17 @@ mod tests_parse_element {
     fn test_parse_element_markdown_inline() {
         assert_eq2!(
             parse_element_markdown_inline(
-                "*here is italic*",
-                CheckboxParsePolicy::IgnoreCheckbox
-            ),
-            Ok(("", MdLineFragment::Italic("here is italic")))
-        );
-        assert_eq2!(
-            parse_element_markdown_inline(
-                "**here is bold**",
+                "*here is bold*",
                 CheckboxParsePolicy::IgnoreCheckbox
             ),
             Ok(("", MdLineFragment::Bold("here is bold")))
+        );
+        assert_eq2!(
+            parse_element_markdown_inline(
+                "_here is italic_",
+                CheckboxParsePolicy::IgnoreCheckbox
+            ),
+            Ok(("", MdLineFragment::Italic("here is italic")))
         );
         assert_eq2!(
             parse_element_markdown_inline(
