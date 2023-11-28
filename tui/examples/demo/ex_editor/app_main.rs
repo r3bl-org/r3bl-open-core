@@ -99,11 +99,6 @@ mod app_main_impl_app_trait {
             // Things from global scope.
             let GlobalData { state, .. } = global_data;
 
-            call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("🐝 focus: {:?}", has_focus);
-                log_debug(msg);
-            });
-
             // Check to see if the modal dialog should be activated.
             if let modal_dialogs::ModalActivateResult::Yes =
                 modal_dialogs::should_activate(
@@ -113,10 +108,6 @@ mod app_main_impl_app_trait {
                     state,
                 )
             {
-                call_if_true!(DEBUG_TUI_MOD, {
-                    let msg = format!("🐝 focus move to modal: {:?}", has_focus);
-                    log_debug(msg);
-                });
                 return Ok(EventPropagation::ConsumedRender);
             }
 

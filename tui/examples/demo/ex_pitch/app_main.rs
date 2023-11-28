@@ -100,11 +100,6 @@ mod app_main_impl_app_trait {
             // Things from global scope.
             let GlobalData { state, .. } = global_data;
 
-            call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("🐝 focus: {:?}", has_focus);
-                log_debug(msg);
-            });
-
             // Ctrl + n => next slide.
             if input_event.matches_keypress(KeyPress::WithModifiers {
                 key: Key::Character('n'),
