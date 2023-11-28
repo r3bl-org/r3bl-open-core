@@ -104,25 +104,27 @@ mod test {
         );
         assert_eq2!(
             parse_block_markdown_text_until_eol(
-                "here is some plaintext *but what if we italicize?*\n"
+                "here is some plaintext *but what if we bold?*\n"
             ),
             Ok((
                 "",
                 list![
                     MdLineFragment::Plain("here is some plaintext "),
-                    MdLineFragment::Italic("but what if we italicize?"),
+                    MdLineFragment::Bold("but what if we bold?"),
                 ]
             ))
         );
         assert_eq2!(
-            parse_block_markdown_text_until_eol("here is some plaintext *but what if we italicize?* I guess it doesn't **matter** in my `code`\n"),
+            parse_block_markdown_text_until_eol("here is some plaintext *but what if we bold?* I guess it doesn't **matter** in my `code`\n"),
             Ok(
                 ("",
                 list![
                     MdLineFragment::Plain("here is some plaintext "),
-                    MdLineFragment::Italic("but what if we italicize?"),
+                    MdLineFragment::Bold("but what if we bold?"),
                     MdLineFragment::Plain(" I guess it doesn't "),
-                    MdLineFragment::Bold("matter"),
+                    MdLineFragment::Bold(""),
+                    MdLineFragment::Plain("matter"),
+                    MdLineFragment::Bold(""),
                     MdLineFragment::Plain(" in my "),
                     MdLineFragment::InlineCode("code"),
                 ])
@@ -130,13 +132,13 @@ mod test {
         );
         assert_eq2!(
             parse_block_markdown_text_until_eol(
-                "here is some plaintext *but what if we italicize?*\n"
+                "here is some plaintext _but what if we italic?_\n"
             ),
             Ok((
                 "",
                 list![
                     MdLineFragment::Plain("here is some plaintext "),
-                    MdLineFragment::Italic("but what if we italicize?"),
+                    MdLineFragment::Italic("but what if we italic?"),
                 ]
             ))
         );

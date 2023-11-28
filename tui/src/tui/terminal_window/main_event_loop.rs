@@ -134,8 +134,13 @@ impl TerminalWindow {
                             telemetry_global_static::set_start_ts();
 
                             call_if_true!(DEBUG_TUI_MOD, {
-                                let msg = format!("main_event_loop -> Tick: ⏰ {input_event}");
-                                log_info(msg);
+                                match input_event {
+                                    InputEvent::Keyboard(_) => {
+                                        let msg = format!("main_event_loop -> Tick: ⏰ {input_event}");
+                                        log_info(msg);
+                                    }
+                                    _ => {}
+                                }
                             });
 
                             Self::handle_resize_if_applicable(input_event,

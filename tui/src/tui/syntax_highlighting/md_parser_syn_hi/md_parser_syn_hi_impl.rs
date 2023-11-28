@@ -48,7 +48,6 @@ pub fn try_parse_and_highlight(
 
     // Try and parse `editor_text_to_string` into a `Document`.
     match parse_markdown(&editor_text_to_string) {
-        // 00: what about the _remainder?
         Ok((_remainder, document)) => Ok(StyleUSSpanLines::from_document(
             &document,
             maybe_current_box_computed_style,
@@ -481,7 +480,7 @@ impl StyleUSSpan {
                     StyleUSSpan::new(
                         maybe_current_box_computed_style.unwrap_or_default()
                             + get_foreground_dim_style(),
-                        US::from(BOLD_1),
+                        US::from(BOLD),
                     ),
                     StyleUSSpan::new(
                         maybe_current_box_computed_style.unwrap_or_default()
@@ -491,7 +490,7 @@ impl StyleUSSpan {
                     StyleUSSpan::new(
                         maybe_current_box_computed_style.unwrap_or_default()
                             + get_foreground_dim_style(),
-                        US::from(BOLD_1),
+                        US::from(BOLD),
                     ),
                 ]
             }
@@ -500,7 +499,7 @@ impl StyleUSSpan {
                 StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_foreground_dim_style(),
-                    US::from(ITALIC_1),
+                    US::from(ITALIC),
                 ),
                 StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
@@ -510,25 +509,7 @@ impl StyleUSSpan {
                 StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_foreground_dim_style(),
-                    US::from(ITALIC_1),
-                ),
-            ],
-
-            MdLineFragment::BoldItalic(bitalic_text) => vec![
-                StyleUSSpan::new(
-                    maybe_current_box_computed_style.unwrap_or_default()
-                        + get_foreground_dim_style(),
-                    US::from(BITALIC_1),
-                ),
-                StyleUSSpan::new(
-                    maybe_current_box_computed_style.unwrap_or_default()
-                        + get_bold_italic_style(),
-                    US::from(*bitalic_text),
-                ),
-                StyleUSSpan::new(
-                    maybe_current_box_computed_style.unwrap_or_default()
-                        + get_foreground_dim_style(),
-                    US::from(BITALIC_1),
+                    US::from(ITALIC),
                 ),
             ],
 
@@ -938,7 +919,7 @@ mod tests_style_us_span_lines_from {
 
             assert_eq2!(
                 actual[0],
-                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("*"),)
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("_"),)
             );
             assert_eq2!(
                 actual[1],
@@ -946,7 +927,7 @@ mod tests_style_us_span_lines_from {
             );
             assert_eq2!(
                 actual[2],
-                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("*"),)
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("_"),)
             );
         }
 
@@ -963,7 +944,7 @@ mod tests_style_us_span_lines_from {
 
             assert_eq2!(
                 actual[0],
-                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("**"),)
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("*"),)
             );
             assert_eq2!(
                 actual[1],
@@ -971,32 +952,7 @@ mod tests_style_us_span_lines_from {
             );
             assert_eq2!(
                 actual[2],
-                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("**"),)
-            );
-        }
-
-        #[test]
-        fn test_bold_italic() {
-            let fragment = MdLineFragment::BoldItalic("Foobar");
-            let style = style! {
-                color_bg: TuiColor::Basic(ANSIBasicColor::Red)
-            };
-
-            let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
-
-            // println!("{}", List::from(actual.clone())..pretty_print_debug());
-
-            assert_eq2!(
-                actual[0],
-                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("***"),)
-            );
-            assert_eq2!(
-                actual[1],
-                StyleUSSpan::new(style + get_bold_italic_style(), US::from("Foobar"),)
-            );
-            assert_eq2!(
-                actual[2],
-                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("***"),)
+                StyleUSSpan::new(style + get_foreground_dim_style(), US::from("*"),)
             );
         }
 
