@@ -23,8 +23,7 @@ use nom::{branch::alt,
           sequence::*,
           IResult};
 
-use crate::{constants::{MAX_HEADING_LEVEL, NEW_LINE},
-            *};
+use crate::{constants::NEW_LINE, *};
 
 /// This matches the heading tag and text until EOL. Outputs a tuple of [HeadingLevel] and
 /// [FragmentsInOneLine].
@@ -36,7 +35,7 @@ pub fn parse_block_heading_opt_eol(input: &str) -> IResult<&str, HeadingData> {
     if output.text.starts_with(NEW_LINE) {
         if let Some(stripped) = output.text.strip_prefix(NEW_LINE) {
             return Ok((stripped, HeadingData {
-                level: output.level,
+                heading_level: output.heading_level,
                 text: "",
             }));
         }
@@ -57,10 +56,7 @@ fn parse(input: &str) -> IResult<&str, HeadingData> {
             recognize(many1(anychar)),
         ))
     ))(input)?;
-    if level == HeadingLevel::NotHeading {
-        return Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Tag)));
-    }
-    Ok((input, HeadingData { level, text }))
+    Ok((input, HeadingData { heading_level: level, text }))
 }
 
 /// Matches one or more `#` chars, consumes it, and outputs [Level].
@@ -68,15 +64,11 @@ fn parse(input: &str) -> IResult<&str, HeadingData> {
 fn parse_heading_tag(input: &str) -> IResult<&str, HeadingLevel> {
     map(
         terminated(
-            /* output `#`+ */ take_while_m_n(1, MAX_HEADING_LEVEL, |it| it == constants::HEADING_CHAR),
+            /* output `#`+ */ take_while1(|it| it == constants::HEADING_CHAR),
             /* ends with (discarded) */ tag(constants::SPACE),
         ),
         |it: &str|
-        if it.len() <= MAX_HEADING_LEVEL {
-            HeadingLevel::from(it.len())
-        } else {
-            HeadingLevel::NotHeading
-        },
+        HeadingLevel::from(it.len())
     )(input)
 }
 
@@ -98,7 +90,7 @@ mod tests {
             parse_heading_tag(" "),
             Err(NomErr::Error(Error {
                 input: " ",
-                code: ErrorKind::TakeWhileMN
+                code: ErrorKind::TakeWhile1
             }))
         );
         assert_eq2!(
@@ -108,14 +100,7 @@ mod tests {
                 code: ErrorKind::Tag
             }))
         );
-        // Max heading level is 6.
-        assert_eq2!(
-            parse_heading_tag("####### "),
-            Err(NomErr::Error(Error {
-                input: "# ",
-                code: ErrorKind::Tag
-            }))
-        );
+        assert_eq2!(parse_heading_tag("####### "), Ok(("", 7.into())));
     }
 
     #[test]
@@ -125,7 +110,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    level: 1.into(),
+                    heading_level: 1.into(),
                     text: "h1",
                 }
             ))
@@ -135,7 +120,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    level: 2.into(),
+                    heading_level: 2.into(),
                     text: "h2",
                 }
             ))
@@ -145,7 +130,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    level: 3.into(),
+                    heading_level: 3.into(),
                     text: " h3",
                 }
             ))
@@ -155,7 +140,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    level: 3.into(),
+                    heading_level: 3.into(),
                     text: "h3 *foo* **bar**",
                 }
             ))
@@ -178,7 +163,7 @@ mod tests {
             parse_block_heading_opt_eol(""),
             Err(NomErr::Error(Error {
                 input: "",
-                code: ErrorKind::TakeWhileMN
+                code: ErrorKind::TakeWhile1
             }))
         );
         assert_eq2!(
@@ -197,7 +182,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    level: 1.into(),
+                    heading_level: 1.into(),
                     text: "",
                 }
             ))
@@ -211,7 +196,7 @@ mod tests {
             Ok((
                 "",
                 HeadingData {
-                    level: 1.into(),
+                    heading_level: 1.into(),
                     text: "test",
                 }
             ))

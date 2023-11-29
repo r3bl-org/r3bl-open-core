@@ -251,8 +251,8 @@ impl ColorWheel {
     /// please update this constant [constants::MAX_HEADING_LEVEL].
     /// More info on gradients: <https://uigradients.com/>.
     pub fn from_heading_data(heading_data: &HeadingData) -> Self {
-        match heading_data.level {
-            HeadingLevel::Heading1 => ColorWheel::new(vec![
+        match heading_data.heading_level.level {
+            1 => ColorWheel::new(vec![
                 ColorWheelConfig::Rgb(
                     Vec::from(["#01fa22", "#00eef2"].map(String::from)),
                     SPEED,
@@ -264,7 +264,7 @@ impl ColorWheel {
                 ),
             ]),
 
-            HeadingLevel::Heading2 => ColorWheel::new(vec![
+            2 => ColorWheel::new(vec![
                 ColorWheelConfig::Rgb(
                     Vec::from(["#fff200", "#de211b"].map(String::from)),
                     SPEED,
@@ -273,7 +273,7 @@ impl ColorWheel {
                 ColorWheelConfig::Ansi256(Ansi256GradientIndex::GreenToBlue, ANSI_SPEED),
             ]),
 
-            HeadingLevel::Heading3 => ColorWheel::new(vec![
+            3 => ColorWheel::new(vec![
                 ColorWheelConfig::Rgb(
                     Vec::from(["#00dbde", "#fc00ff"].map(String::from)),
                     SPEED,
@@ -285,7 +285,7 @@ impl ColorWheel {
                 ),
             ]),
 
-            HeadingLevel::Heading4 => ColorWheel::new(vec![
+            4 => ColorWheel::new(vec![
                 ColorWheelConfig::Rgb(
                     Vec::from(["#ff28a9", "#bd60eb"].map(String::from)),
                     SPEED,
@@ -297,7 +297,7 @@ impl ColorWheel {
                 ),
             ]),
 
-            HeadingLevel::Heading5 => ColorWheel::new(vec![
+            5 => ColorWheel::new(vec![
                 ColorWheelConfig::Rgb(
                     Vec::from(["#ff6a00", "#ee0979"].map(String::from)),
                     SPEED,

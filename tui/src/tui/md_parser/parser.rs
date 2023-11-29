@@ -137,7 +137,7 @@ mod tests {
             MdBlockElement::Title("Something"),
             MdBlockElement::Tags(list!["tag1", "tag2", "tag3"]),
             MdBlockElement::Heading(HeadingData {
-                level: HeadingLevel::Heading1,
+                heading_level: HeadingLevel { level: 1 },
                 text: "Foobar",
             }),
             MdBlockElement::Text(list![]), // Empty line.
@@ -158,7 +158,7 @@ mod tests {
                 vec![""],
             )),
             MdBlockElement::Heading(HeadingData {
-                level: HeadingLevel::Heading2,
+                heading_level: HeadingLevel { level: 2 },
                 text: "Installation",
             }),
             MdBlockElement::Text(list![]), // Empty line.
