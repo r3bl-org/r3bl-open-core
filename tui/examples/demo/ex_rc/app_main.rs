@@ -71,7 +71,7 @@ mod animator_task {
         A: Debug + Default + Clone + Sync + Send + 'static,
     {
         const ANIMATION_START_DELAY_MSEC: u64 = 500;
-        const ANIMATION_INTERVAL_MSEC: u64 = 16; // 60 FPS.
+        const ANIMATION_INTERVAL_MSEC: u64 = 30; // 33 FPS.
 
         let (animator_kill_channel_sender, mut animator_kill_channel_receiver) =
             mpsc::channel::<()>(1);
