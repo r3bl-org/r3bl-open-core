@@ -36,7 +36,7 @@ pub type Lines<'a> = List<FragmentsInOneLine<'a>>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HeadingData<'a> {
-    pub level: HeadingLevel,
+    pub heading_level: HeadingLevel,
     pub text: &'a str,
 }
 
@@ -97,34 +97,17 @@ mod hyperlink_data_impl {
     }
 }
 
-#[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum HeadingLevel {
-    Heading1 = 1,
-    Heading2,
-    Heading3,
-    Heading4,
-    Heading5,
-    Heading6,
-    NotHeading,
+pub struct HeadingLevel {
+    pub level: usize,
 }
 
 impl From<HeadingLevel> for usize {
-    fn from(level: HeadingLevel) -> Self { (level as u8).into() }
+    fn from(other: HeadingLevel) -> Self { other.level }
 }
 
 impl From<usize> for HeadingLevel {
-    fn from(size: usize) -> Self {
-        match size {
-            1 => HeadingLevel::Heading1,
-            2 => HeadingLevel::Heading2,
-            3 => HeadingLevel::Heading3,
-            4 => HeadingLevel::Heading4,
-            5 => HeadingLevel::Heading5,
-            6 => HeadingLevel::Heading6,
-            _ => HeadingLevel::NotHeading,
-        }
-    }
+    fn from(size: usize) -> Self { HeadingLevel { level: size } }
 }
 
 /// All the Markdown literals that are used to perform parsing.
@@ -170,8 +153,6 @@ pub mod constants {
     pub const UNCHECKED: &str = "[ ]";
     pub const CHECKED_OUTPUT: &str = "┊✔┊";
     pub const UNCHECKED_OUTPUT: &str = "┊┈┊";
-
-    pub const MAX_HEADING_LEVEL: usize = 6;
 }
 
 #[derive(Debug, PartialEq, Clone)]
