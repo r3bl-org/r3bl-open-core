@@ -247,8 +247,7 @@ const ANSI_SPEED: ColorWheelSpeed = ColorWheelSpeed::Slow;
 const STEPS: usize = 20;
 
 impl ColorWheel {
-    /// Currently only 6 heading levels are supported. If this changes in this function
-    /// please update this constant [constants::MAX_HEADING_LEVEL].
+    /// Currently unique coloring of up to 6 heading levels are supported.
     /// More info on gradients: <https://uigradients.com/>.
     pub fn from_heading_data(heading_data: &HeadingData) -> Self {
         match heading_data.heading_level.level {
