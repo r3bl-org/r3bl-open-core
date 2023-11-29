@@ -166,7 +166,7 @@ pub fn parse_fenced_no_newline<'a>(
         };
     }
 
-    call_if_true!(DEBUG_TUI_MOD, {
+    call_if_true!(DEBUG_MD_PARSER, {
         log_debug(format!("\n📣📣📣\n input: {:?}", input));
         match it {
             Ok(_) => log_debug(format!("✅✅✅ OK")),
