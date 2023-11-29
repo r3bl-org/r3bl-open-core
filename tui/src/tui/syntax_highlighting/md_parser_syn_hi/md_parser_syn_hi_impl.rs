@@ -610,7 +610,7 @@ impl StyleUSSpanLine {
         let mut line = StyleUSSpanLine::default();
 
         let heading_level_span: StyleUSSpan = {
-            let heading_level = US::from(heading_data.level.pretty_print_debug());
+            let heading_level = US::from(heading_data.heading_level.pretty_print_debug());
             let my_style = {
                 maybe_current_box_computed_style.unwrap_or_default()
                     + style! {
@@ -1238,7 +1238,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_heading() {
             let heading_block = MdBlockElement::Heading(HeadingData {
-                level: HeadingLevel::Heading1,
+                heading_level: HeadingLevel { level: 1 },
                 text: "Foobar",
             });
             let maybe_style = Some(style! {

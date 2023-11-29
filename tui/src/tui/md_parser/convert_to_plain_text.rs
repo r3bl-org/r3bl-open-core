@@ -47,7 +47,7 @@ impl<'a> PrettyPrintDebug for MdBlockElement<'a> {
             MdBlockElement::Heading(heading_data) => {
                 format!(
                     "{}{}",
-                    heading_data.level.pretty_print_debug(),
+                    heading_data.heading_level.pretty_print_debug(),
                     heading_data.text,
                 )
             }
@@ -84,18 +84,12 @@ impl<'a> PrettyPrintDebug for MdBlockElement<'a> {
 impl PrettyPrintDebug for HeadingLevel {
     fn pretty_print_debug(&self) -> String {
         let num_of_hashes = usize::from(*self);
-        if num_of_hashes <= MAX_HEADING_LEVEL {
-            let it: String = format!(
-                "{}{}",
-                HEADING_CHAR.to_string().repeat(num_of_hashes),
-                SPACE
-            );
-            it
-        } else {
-            let it: String =
-                format!("{}", HEADING_CHAR.to_string().repeat(num_of_hashes),);
-            it
-        }
+        let it: String = format!(
+            "{}{}",
+            HEADING_CHAR.to_string().repeat(num_of_hashes),
+            SPACE
+        );
+        it
     }
 }
 
@@ -218,11 +212,12 @@ mod to_plain_text_tests {
 
     #[test]
     fn test_level_to_plain_text() {
-        assert_eq2!(HeadingLevel::Heading1.pretty_print_debug(), "# ");
-        assert_eq2!(HeadingLevel::Heading2.pretty_print_debug(), "## ");
-        assert_eq2!(HeadingLevel::Heading3.pretty_print_debug(), "### ");
-        assert_eq2!(HeadingLevel::Heading4.pretty_print_debug(), "#### ");
-        assert_eq2!(HeadingLevel::Heading5.pretty_print_debug(), "##### ");
-        assert_eq2!(HeadingLevel::Heading6.pretty_print_debug(), "###### ");
+        assert_eq2!(HeadingLevel { level: 1 }.pretty_print_debug(), "# ");
+        assert_eq2!(HeadingLevel { level: 2 }.pretty_print_debug(), "## ");
+        assert_eq2!(HeadingLevel { level: 3 }.pretty_print_debug(), "### ");
+        assert_eq2!(HeadingLevel { level: 4 }.pretty_print_debug(), "#### ");
+        assert_eq2!(HeadingLevel { level: 5 }.pretty_print_debug(), "##### ");
+        assert_eq2!(HeadingLevel { level: 6 }.pretty_print_debug(), "###### ");
+        assert_eq2!(HeadingLevel { level: 7 }.pretty_print_debug(), "####### ");
     }
 }
