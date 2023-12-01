@@ -20,6 +20,7 @@
 //! either a string slice or some other intermediate representation.
 
 use constants::*;
+use crossterm::style::Stylize;
 use nom::{branch::*,
           bytes::complete::*,
           character::complete::*,
@@ -32,24 +33,41 @@ use r3bl_rs_utils_core::{call_if_true, log_debug};
 
 use crate::*;
 
-pub fn parse_element_bold(input: &str) -> IResult<&str, &str> {
-    parse_fenced_no_newline(input, BOLD)
+pub fn parse_element_starts_with_star(input: &str) -> IResult<&str, &str> {
+    let it = parse_fenced_no_newline(input, BOLD);
+    it
 }
 
-pub fn parse_element_italic(input: &str) -> IResult<&str, &str> {
-    parse_fenced_no_newline(input, ITALIC)
-}
-
-#[rustfmt::skip]
-pub fn parse_element_code(input: &str) -> IResult<&str, &str> {
-    delimited(/* start */ tag(BACK_TICK), /* output */ is_not(BACK_TICK), /* end */ tag(BACK_TICK))(input)
+pub fn parse_element_starts_with_underscore(input: &str) -> IResult<&str, &str> {
+    let it = parse_fenced_no_newline(input, ITALIC);
+    it
 }
 
 #[rustfmt::skip]
-pub fn parse_element_link(input: &str) -> IResult<&str, HyperlinkData> {
+pub fn parse_element_starts_with_backtick(input: &str) -> IResult<&str, &str> {
+    let it =
+    delimited(
+        /* start */ tag(BACK_TICK),
+        /* output */ is_not(BACK_TICK),
+        /* end */ tag(BACK_TICK)
+    )(input);
+
+    it
+}
+
+#[rustfmt::skip]
+pub fn parse_element_starts_with_left_bracket(input: &str) -> IResult<&str, HyperlinkData> {
     let (input, output) = pair(
-        delimited(/* start */ tag(LEFT_BRACKET), /* output */ is_not(RIGHT_BRACKET), /* end */ tag(RIGHT_BRACKET)),
-        delimited(/* start */ tag(LEFT_PARENTHESIS), /* output */ is_not(RIGHT_PARENTHESIS), /* end */ tag(RIGHT_PARENTHESIS)),
+        delimited(
+            /* start */ tag(LEFT_BRACKET),
+            /* output */ is_not(RIGHT_BRACKET),
+            /* end */ tag(RIGHT_BRACKET)
+        ),
+        delimited(
+            /* start */ tag(LEFT_PARENTHESIS),
+            /* output */ is_not(RIGHT_PARENTHESIS),
+            /* end */ tag(RIGHT_PARENTHESIS)
+        ),
     )(input)?;
     Ok((input, HyperlinkData::from(output)))
 }
@@ -59,10 +77,11 @@ pub fn parse_element_link(input: &str) -> IResult<&str, HyperlinkData> {
 /// a checkbox into plain text, or into a boolean.
 #[rustfmt::skip]
 pub fn parse_element_checkbox_into_str(input: &str) -> IResult<&str, &str> {
-    alt((
+    let it = alt((
         recognize(tag(CHECKED)),
         recognize(tag(UNCHECKED))
-    ))(input)
+    ))(input);
+    it
 }
 
 #[rustfmt::skip]
@@ -70,14 +89,15 @@ pub fn parse_element_checkbox_into_str(input: &str) -> IResult<&str, &str> {
 /// So some extra hint is need from the code calling this parser to let it know whether to parse
 /// a checkbox into plain text, or into a boolean.
 pub fn parse_element_checkbox_into_bool(input: &str) -> IResult<&str, bool> {
-    alt((
+    let it = alt((
         map(tag(CHECKED), |_| true),
         map(tag(UNCHECKED), |_| false),
-    ))(input)
+    ))(input);
+    it
 }
 
 #[rustfmt::skip]
-pub fn parse_element_image(input: &str) -> IResult<&str, HyperlinkData> {
+pub fn parse_element_starts_with_left_image(input: &str) -> IResult<&str, HyperlinkData> {
     let (input, output) =pair(
         delimited(/* start */ tag(LEFT_IMAGE), /* output */ is_not(RIGHT_IMAGE), /* end */ tag(RIGHT_IMAGE)),
         delimited(/* start */ tag(LEFT_PARENTHESIS), /* output */ is_not(RIGHT_PARENTHESIS), /* end */ tag(RIGHT_PARENTHESIS)),
@@ -85,14 +105,38 @@ pub fn parse_element_image(input: &str) -> IResult<&str, HyperlinkData> {
     Ok((input, HyperlinkData::from(output)))
 }
 
+/// This is the lowest priority parser called by [parse_element_markdown_inline], which
+/// itself is called repeatedly in a loop in [parse_block_markdown_text_opt_eol()].
+///
+/// It will match anything that is not a special character. This is used to parse plain
+/// text. However, when it encounters a special character, it will break the input at that
+/// character and split the input into two parts: the plain text, and the remainder (after
+/// the special character).
+///
+/// This allows other more specialized parsers to then address these special characters
+/// (like italic, bold, links, etc). If these more specialized parsers error out, then
+/// this parser will be called again to parse the remainder; this time the input will
+/// start with the special character; and in this edge case it will take the input until
+/// the first new line; or until the end of the input.
+///
 /// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
-/// There must be at least one match. We want to match many things that are not any of our
-/// special tags, but since we have no tools available to match and consume in the negative case
-/// (without regex) we need to match against our (start) tags, then consume one char; we repeat
-/// this until we run into one of our special characters (start tags) then we return this slice.
 #[rustfmt::skip]
-pub fn parse_element_plaintext(input: &str) -> IResult<&str, &str> {
-    recognize(
+pub fn parse_plain_text_no_new_line1(input: &str) -> IResult<&str, &str> {
+    // Edge case: If the input starts with [ITALIC, UNDERSCORE, BACKTICK, LEFT_BRACKET,
+    // NEW_LINE], then take till the first newline.
+    if input.starts_with(ITALIC)
+        || input.starts_with(BOLD)
+        || input.starts_with(BACK_TICK)
+        || input.starts_with(LEFT_BRACKET)
+        || input.starts_with(LEFT_IMAGE)
+    {
+        return take_till1(|c: char|
+             c == '\n'
+        )(input);
+    }
+
+    // Otherwise take till the first special character. And split the input there.
+    let it = recognize(
         many1(
             preceded(
                 /* prefix - discarded */
@@ -111,36 +155,70 @@ pub fn parse_element_plaintext(input: &str) -> IResult<&str, &str> {
                 anychar,
             )
         )
-    )(input)
+    )(input);
+    it
 }
 
+/// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
+#[rustfmt::skip]
+pub fn parse_anychar_in_heading_no_new_line1(input: &str) -> IResult<&str, &str> {
+    let it = recognize(
+        many1(
+            preceded(
+                /* prefix - discarded */
+                not(
+                    /* starts with special characters */
+                    alt((
+                        tag(NEW_LINE),
+                    ))
+                ),
+                /* output - keep char */
+                anychar,
+            )
+        )
+    )(input);
+
+    it
+}
+
+// BOOKM: parser for a single line of markdown
 /// Parse a single chunk of markdown text (found in a single line of text) into a [MdLineFragment].
 #[rustfmt::skip]
 pub fn parse_element_markdown_inline(
     input: &str,
     checkbox_policy: CheckboxParsePolicy,
 ) -> IResult<&str, MdLineFragment> {
-    match checkbox_policy {
+    let it = match checkbox_policy {
         CheckboxParsePolicy::IgnoreCheckbox => alt((
-            map(parse_element_italic, MdLineFragment::Italic),
-            map(parse_element_bold, MdLineFragment::Bold),
-            map(parse_element_code, MdLineFragment::InlineCode),
-            map(parse_element_image, MdLineFragment::Image),
-            map(parse_element_link, MdLineFragment::Link),
+            map(parse_element_starts_with_underscore, MdLineFragment::Italic),
+            map(parse_element_starts_with_star, MdLineFragment::Bold),
+            map(parse_element_starts_with_backtick, MdLineFragment::InlineCode),
+            map(parse_element_starts_with_left_image, MdLineFragment::Image),
+            map(parse_element_starts_with_left_bracket, MdLineFragment::Link),
             map(parse_element_checkbox_into_str, MdLineFragment::Plain),
-            map(parse_element_plaintext, MdLineFragment::Plain),
+            map(parse_plain_text_no_new_line1, MdLineFragment::Plain),
         ))(input),
         CheckboxParsePolicy::ParseCheckbox => alt((
-            map(parse_element_italic, MdLineFragment::Italic),
-            map(parse_element_bold, MdLineFragment::Bold),
-            map(parse_element_code, MdLineFragment::InlineCode),
-            map(parse_element_image, MdLineFragment::Image),
-            map(parse_element_link, MdLineFragment::Link),
+            map(parse_element_starts_with_underscore, MdLineFragment::Italic),
+            map(parse_element_starts_with_star, MdLineFragment::Bold),
+            map(parse_element_starts_with_backtick, MdLineFragment::InlineCode),
+            map(parse_element_starts_with_left_image, MdLineFragment::Image),
+            map(parse_element_starts_with_left_bracket, MdLineFragment::Link),
             map(parse_element_checkbox_into_bool, MdLineFragment::Checkbox),
-            map(parse_element_plaintext, MdLineFragment::Plain),
+            map(parse_plain_text_no_new_line1, MdLineFragment::Plain),
         ))(input)
 
-    }
+    };
+
+    call_if_true!(DEBUG_MD_PARSER, {
+        log_debug(format!("\n📣📣📣\n input: {:?}", input).green().to_string());
+        match it {
+            Ok(ref element) => log_debug(format!("✅✅✅ OK {:#?}", element).magenta().to_string()),
+            Result::Err(ref error) => log_debug(format!("🟥🟥🟥 NO {:#?}", error)),
+        }
+    });
+
+    it
 }
 
 /// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
@@ -156,7 +234,6 @@ pub fn parse_fenced_no_newline<'a>(
     delim: &'a str,
 ) -> IResult<&'a str, &'a str> {
     let it = fenced(delim, delim)(input);
-
     if let Ok((_, output)) = &it {
         if output.contains(NEW_LINE) {
             return Err(nom::Err::Error(nom::error::Error {
@@ -165,15 +242,6 @@ pub fn parse_fenced_no_newline<'a>(
             }));
         };
     }
-
-    call_if_true!(DEBUG_MD_PARSER, {
-        log_debug(format!("\n📣📣📣\n input: {:?}", input));
-        match it {
-            Ok(_) => log_debug(format!("✅✅✅ OK")),
-            Result::Err(_) => log_debug(format!("🟥🟥🟥 NO")),
-        }
-    });
-
     it
 }
 
@@ -184,6 +252,18 @@ mod tests_parse_element {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
+
+    #[test]
+    fn test_parse_plain_text_no_new_line1() {
+        assert_eq2!(
+            parse_plain_text_no_new_line1("this _bar"),
+            Ok(("_bar", "this "))
+        );
+
+        assert_eq2!(parse_plain_text_no_new_line1("_bar"), Ok(("", "_bar")));
+
+        assert_eq2!(parse_plain_text_no_new_line1("bar_"), Ok(("_", "bar")));
+    }
 
     #[test]
     fn test_parse_fenced_no_newline() {
@@ -263,17 +343,17 @@ mod tests_parse_element {
     #[test]
     fn test_parse_element_italic() {
         assert_eq2!(
-            parse_element_italic("_here is italic_"),
+            parse_element_starts_with_underscore("_here is italic_"),
             Ok(("", "here is italic"))
         );
 
         assert_eq2!(
-            parse_element_italic("_here is italic_"),
+            parse_element_starts_with_underscore("_here is italic_"),
             Ok(("", "here is italic"))
         );
 
         assert_eq2!(
-            parse_element_italic("*here is italic"),
+            parse_element_starts_with_underscore("*here is italic"),
             Err(NomErr::Error(Error {
                 input: "*here is italic",
                 code: ErrorKind::Tag
@@ -281,7 +361,7 @@ mod tests_parse_element {
         );
 
         assert_eq2!(
-            parse_element_italic("here is italic*"),
+            parse_element_starts_with_underscore("here is italic*"),
             Err(NomErr::Error(Error {
                 input: "here is italic*",
                 code: ErrorKind::Tag,
@@ -289,7 +369,7 @@ mod tests_parse_element {
         );
 
         assert_eq2!(
-            parse_element_italic("here is italic"),
+            parse_element_starts_with_underscore("here is italic"),
             Err(NomErr::Error(Error {
                 input: "here is italic",
                 code: ErrorKind::Tag
@@ -297,7 +377,7 @@ mod tests_parse_element {
         );
 
         assert_eq2!(
-            parse_element_italic("*"),
+            parse_element_starts_with_underscore("*"),
             Err(NomErr::Error(Error {
                 input: "*",
                 code: ErrorKind::Tag
@@ -305,7 +385,7 @@ mod tests_parse_element {
         );
 
         assert_eq2!(
-            parse_element_italic("**"),
+            parse_element_starts_with_underscore("**"),
             Err(NomErr::Error(Error {
                 input: "**",
                 code: ErrorKind::Tag
@@ -313,7 +393,7 @@ mod tests_parse_element {
         );
 
         assert_eq2!(
-            parse_element_italic(""),
+            parse_element_starts_with_underscore(""),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
@@ -321,7 +401,7 @@ mod tests_parse_element {
         );
 
         assert_eq2!(
-            parse_element_italic("**we are doing bold**"),
+            parse_element_starts_with_underscore("**we are doing bold**"),
             Err(NomErr::Error(Error {
                 input: "**we are doing bold**",
                 code: ErrorKind::Tag
@@ -332,12 +412,12 @@ mod tests_parse_element {
     #[test]
     fn test_parse_element_bold() {
         assert_eq2!(
-            parse_element_bold("*here is bold*"),
+            parse_element_starts_with_star("*here is bold*"),
             Ok(("", "here is bold"))
         );
 
         assert_eq2!(
-            parse_element_bold("*here is bold"),
+            parse_element_starts_with_star("*here is bold"),
             Err(NomErr::Error(Error {
                 input: "here is bold",
                 code: ErrorKind::TakeUntil
@@ -345,7 +425,7 @@ mod tests_parse_element {
         );
 
         assert_eq2!(
-            parse_element_bold("here is bold*"),
+            parse_element_starts_with_star("here is bold*"),
             Err(NomErr::Error(Error {
                 input: "here is bold*",
                 code: ErrorKind::Tag
@@ -353,7 +433,7 @@ mod tests_parse_element {
         );
 
         assert_eq2!(
-            parse_element_bold("here is bold"),
+            parse_element_starts_with_star("here is bold"),
             Err(NomErr::Error(Error {
                 input: "here is bold",
                 code: ErrorKind::Tag
@@ -361,7 +441,7 @@ mod tests_parse_element {
         );
 
         assert_eq2!(
-            parse_element_bold("*"),
+            parse_element_starts_with_star("*"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::TakeUntil
@@ -369,7 +449,7 @@ mod tests_parse_element {
         );
 
         assert_eq2!(
-            parse_element_bold(""),
+            parse_element_starts_with_star(""),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
@@ -380,35 +460,35 @@ mod tests_parse_element {
     #[test]
     fn test_parse_element_code() {
         assert_eq2!(
-            parse_element_code("`here is code"),
+            parse_element_starts_with_backtick("`here is code"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
             }))
         );
         assert_eq2!(
-            parse_element_code("here is code`"),
+            parse_element_starts_with_backtick("here is code`"),
             Err(NomErr::Error(Error {
                 input: "here is code`",
                 code: ErrorKind::Tag
             }))
         );
         assert_eq2!(
-            parse_element_code("``"),
+            parse_element_starts_with_backtick("``"),
             Err(NomErr::Error(Error {
                 input: "`",
                 code: ErrorKind::IsNot
             }))
         );
         assert_eq2!(
-            parse_element_code("`"),
+            parse_element_starts_with_backtick("`"),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::IsNot
             }))
         );
         assert_eq2!(
-            parse_element_code(""),
+            parse_element_starts_with_backtick(""),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
@@ -419,11 +499,11 @@ mod tests_parse_element {
     #[test]
     fn test_parse_element_link() {
         assert_eq2!(
-            parse_element_link("[title](https://www.example.com)"),
+            parse_element_starts_with_left_bracket("[title](https://www.example.com)"),
             Ok(("", HyperlinkData::new("title", "https://www.example.com")))
         );
         assert_eq2!(
-            parse_element_code(""),
+            parse_element_starts_with_backtick(""),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
@@ -434,11 +514,11 @@ mod tests_parse_element {
     #[test]
     fn test_parse_element_image() {
         assert_eq2!(
-            parse_element_image("![alt text](image.jpg)"),
+            parse_element_starts_with_left_image("![alt text](image.jpg)"),
             Ok(("", HyperlinkData::new("alt text", "image.jpg")))
         );
         assert_eq2!(
-            parse_element_code(""),
+            parse_element_starts_with_backtick(""),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Tag
@@ -448,7 +528,7 @@ mod tests_parse_element {
 
     #[test]
     fn test_parse_element_plaintext_unicode() {
-        let result = parse_element_plaintext("- straight😃\n");
+        let result = parse_plain_text_no_new_line1("- straight😃\n");
         let remainder = result.as_ref().unwrap().0;
         let output = result.as_ref().unwrap().1;
         assert_eq2!(remainder, "\n");
@@ -458,102 +538,75 @@ mod tests_parse_element {
     #[test]
     fn test_parse_element_plaintext() {
         assert_eq2!(
-            parse_element_plaintext("1234567890"),
+            parse_plain_text_no_new_line1("1234567890"),
             Ok(("", "1234567890"))
         );
         assert_eq2!(
-            parse_element_plaintext("oh my gosh!"),
+            parse_plain_text_no_new_line1("oh my gosh!"),
             Ok(("", "oh my gosh!"))
         );
         assert_eq2!(
-            parse_element_plaintext("oh my gosh!["),
+            parse_plain_text_no_new_line1("oh my gosh!["),
             Ok(("![", "oh my gosh"))
         );
         assert_eq2!(
-            parse_element_plaintext("oh my gosh!*"),
+            parse_plain_text_no_new_line1("oh my gosh!*"),
             Ok(("*", "oh my gosh!"))
         );
         assert_eq2!(
-            parse_element_plaintext("*bold baby bold*"),
-            Err(NomErr::Error(Error {
-                input: "*bold baby bold*",
-                code: ErrorKind::Not
-            }))
+            parse_plain_text_no_new_line1("*bold baby bold*"),
+            Ok(("", "*bold baby bold*"))
         );
         assert_eq2!(
-            parse_element_plaintext("[link baby](and then somewhat)"),
-            Err(NomErr::Error(Error {
-                input: "[link baby](and then somewhat)",
-                code: ErrorKind::Not
-            }))
+            parse_plain_text_no_new_line1("[link baby](and then somewhat)"),
+            Ok(("", "[link baby](and then somewhat)"))
         );
         assert_eq2!(
-            parse_element_plaintext("`codeblock for bums`"),
-            Err(NomErr::Error(Error {
-                input: "`codeblock for bums`",
-                code: ErrorKind::Not
-            }))
+            parse_plain_text_no_new_line1("`codeblock for bums`"),
+            Ok(("", "`codeblock for bums`"))
         );
         assert_eq2!(
-            parse_element_plaintext("![ but wait theres more](jk)"),
-            Err(NomErr::Error(Error {
-                input: "![ but wait theres more](jk)",
-                code: ErrorKind::Not
-            }))
+            parse_plain_text_no_new_line1("![ but wait theres more](jk)"),
+            Ok(("", "![ but wait theres more](jk)"))
         );
         assert_eq2!(
-            parse_element_plaintext("here is plaintext"),
+            parse_plain_text_no_new_line1("here is plaintext"),
             Ok(("", "here is plaintext"))
         );
         assert_eq2!(
-            parse_element_plaintext("here is plaintext!"),
+            parse_plain_text_no_new_line1("here is plaintext!"),
             Ok(("", "here is plaintext!"))
         );
         assert_eq2!(
-            parse_element_plaintext("here is plaintext![image starting"),
+            parse_plain_text_no_new_line1("here is plaintext![image starting"),
             Ok(("![image starting", "here is plaintext"))
         );
         assert_eq2!(
-            parse_element_plaintext("here is plaintext\n"),
+            parse_plain_text_no_new_line1("here is plaintext\n"),
             Ok(("\n", "here is plaintext"))
         );
         assert_eq2!(
-            parse_element_plaintext("*here is italic*"),
-            Err(NomErr::Error(Error {
-                input: "*here is italic*",
-                code: ErrorKind::Not
-            }))
+            parse_plain_text_no_new_line1("*here is italic*"),
+            Ok(("", "*here is italic*"))
         );
         assert_eq2!(
-            parse_element_plaintext("**here is bold**"),
-            Err(NomErr::Error(Error {
-                input: "**here is bold**",
-                code: ErrorKind::Not
-            }))
+            parse_plain_text_no_new_line1("**here is bold**"),
+            Ok(("", "**here is bold**"))
         );
         assert_eq2!(
-            parse_element_plaintext("`here is code`"),
-            Err(NomErr::Error(Error {
-                input: "`here is code`",
-                code: ErrorKind::Not
-            }))
+            parse_plain_text_no_new_line1("`here is code`"),
+            Ok(("", "`here is code`"))
         );
         assert_eq2!(
-            parse_element_plaintext("[title](https://www.example.com)"),
-            Err(NomErr::Error(Error {
-                input: "[title](https://www.example.com)",
-                code: ErrorKind::Not
-            }))
+            parse_plain_text_no_new_line1("[title](https://www.example.com)"),
+            Ok(("", "[title](https://www.example.com)"))
         );
         assert_eq2!(
-            parse_element_plaintext("![alt text](image.jpg)"),
-            Err(NomErr::Error(Error {
-                input: "![alt text](image.jpg)",
-                code: ErrorKind::Not
-            }))
+            parse_plain_text_no_new_line1("![alt text](image.jpg)"),
+            Ok(("", "![alt text](image.jpg)"))
         );
         assert_eq2!(
-            parse_element_plaintext(""),
+            parse_plain_text_no_new_line1(""),
             Err(NomErr::Error(Error {
                 input: "",
                 code: ErrorKind::Eof

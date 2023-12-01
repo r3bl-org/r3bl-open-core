@@ -15,13 +15,7 @@
  *   limitations under the License.
  */
 
-use nom::{branch::alt,
-          bytes::complete::*,
-          character::complete::anychar,
-          combinator::*,
-          multi::many1,
-          sequence::*,
-          IResult};
+use nom::{bytes::complete::*, combinator::*, sequence::*, IResult};
 
 use crate::{constants::NEW_LINE, *};
 
@@ -30,31 +24,15 @@ use crate::{constants::NEW_LINE, *};
 #[rustfmt::skip]
 pub fn parse_block_heading_opt_eol(input: &str) -> IResult<&str, HeadingData> {
     let (remainder, output) = parse(input)?;
-
-    // Special case: Early return when just a newline after the heading prefix. Eg: `# \n..`.
-    if output.text.starts_with(NEW_LINE) {
-        if let Some(stripped) = output.text.strip_prefix(NEW_LINE) {
-            return Ok((stripped, HeadingData {
-                heading_level: output.heading_level,
-                text: "",
-            }));
-        }
-    }
-
-    // Normal case: if there is a newline, consume it since there may or may not be a newline at the
-    // end.
-    let (remainder, _) = opt(tag(NEW_LINE))(remainder)?;
     Ok((remainder, output))
 }
 
 #[rustfmt::skip]
 fn parse(input: &str) -> IResult<&str, HeadingData> {
-    let (input, (level, text)) = tuple((
+    let (input, (level, text, _)) = tuple((
         parse_heading_tag,
-        alt((
-            is_not(NEW_LINE),
-            recognize(many1(anychar)),
-        ))
+        parse_anychar_in_heading_no_new_line1,
+        opt(tag(NEW_LINE)),
     ))(input)?;
     Ok((input, HeadingData { heading_level: level, text }))
 }
@@ -179,13 +157,10 @@ mod tests {
     fn test_parse_header_with_newline() {
         assert_eq2!(
             parse_block_heading_opt_eol("# \n"),
-            Ok((
-                "",
-                HeadingData {
-                    heading_level: 1.into(),
-                    text: "",
-                }
-            ))
+            Err(NomErr::Error(Error {
+                input: "\n",
+                code: ErrorKind::Not
+            }))
         );
     }
 

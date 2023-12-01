@@ -40,27 +40,32 @@ pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
     // key: TAGS, value: CSV parser.
     fn parse_tags_list(input: &str) -> IResult<&str, List<&str>>
     {
-        parse_csv_opt_eol(TAGS, input)
+        let it = parse_csv_opt_eol(TAGS, input);
+        it
     }
 
     // key: AUTHORS, value: CSV parser.
     fn parse_authors_list(input: &str) -> IResult<&str, List<&str>>
     {
-        parse_csv_opt_eol(AUTHORS, input)
+        let it = parse_csv_opt_eol(AUTHORS, input);
+        it
     }
 
     // key: TITLE, value: KV parser.
     fn parse_title_value(input: &str) -> IResult<&str, &str>
     {
-        parse_kv_opt_eol(TITLE, input)
+        let it = parse_kv_opt_eol(TITLE, input);
+        it
     }
 
     // key: DATE, value: KV parser.
     fn parse_date_value(input: &str) -> IResult<&str, &str>
     {
-        parse_kv_opt_eol(DATE, input)
+        let it = parse_kv_opt_eol(DATE, input);
+        it
     }
 
+    // BOOKM: main parser entry point
     let (input, output) = many0(
         // NOTE: The ordering of the parsers below matters.
         alt((
@@ -85,14 +90,50 @@ mod tests {
 
     use super::*;
 
+    // BOOKM: main parser test entry point
+
+    #[test]
+    fn test_parse_markdown_with_invalid_text_in_heading() {
+        let input = ["# LINE 1", "", "##% LINE 2 FOO_BAR:", ""].join("\n");
+        let (remainder, blocks) = parse_markdown(&input).unwrap();
+        println!("\nremainder:\n{:?}", remainder);
+        println!("\nblocks:\n{:#?}", blocks);
+        assert_eq2!(remainder, "");
+        assert_eq2!(blocks.len(), 3);
+        assert_eq2!(
+            blocks[0],
+            MdBlockElement::Heading(HeadingData {
+                heading_level: HeadingLevel { level: 1 },
+                text: "LINE 1",
+            })
+        );
+        assert_eq2!(
+            blocks[1],
+            MdBlockElement::Text(list![]), // Empty line.
+        );
+        assert_eq2!(
+            blocks[2],
+            MdBlockElement::Text(list![
+                MdLineFragment::Plain("##% LINE 2 FOO"),
+                MdLineFragment::Plain("_BAR:")
+            ])
+        );
+    }
+
     #[test]
     fn test_parse_markdown_single_line_plain_text() {
         let input = ["_this should not be italic", ""].join("\n");
         let (remainder, blocks) = parse_markdown(&input).unwrap();
         println!("\nremainder:\n{:?}", remainder);
         println!("\nblocks:\n{:?}", blocks);
-        assert_eq2!(remainder, "_this should not be italic\n");
-        assert_eq2!(blocks.len(), 0);
+        assert_eq2!(remainder, "");
+        assert_eq2!(blocks.len(), 1);
+        assert_eq2!(
+            blocks[0],
+            MdBlockElement::Text(list![MdLineFragment::Plain(
+                "_this should not be italic"
+            )])
+        );
     }
 
     #[test]

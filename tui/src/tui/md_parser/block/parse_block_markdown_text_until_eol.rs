@@ -89,8 +89,28 @@ mod test {
                 "here is some plaintext *but what if we italicize?"
             ),
             Ok((
-                "*but what if we italicize?",
-                list![MdLineFragment::Plain("here is some plaintext "),]
+                "",
+                list![
+                    MdLineFragment::Plain("here is some plaintext "),
+                    MdLineFragment::Plain("*but what if we italicize?"),
+                ]
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_multiple_plain_text_fragments_in_single_line() {
+        let it = parse_block_markdown_text_until_eol("this _bar\n");
+        println!("it: {:#?}", it);
+        assert_eq2!(
+            it,
+            Ok((
+                /* remainder */ "",
+                /* output */
+                list![
+                    MdLineFragment::Plain("this "),
+                    MdLineFragment::Plain("_bar"),
+                ]
             ))
         );
     }

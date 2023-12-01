@@ -36,6 +36,7 @@
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
   - [Next release](#next-release)
+- [- Fixed:](#--fixed)
   - [v0.3.10 2023-10-29](#v0310-2023-10-29)
   - [v0.3.9 2023-10-29](#v039-2023-10-29)
   - [v0.3.7 2023-10-21](#v037-2023-10-21)
@@ -287,6 +288,12 @@
 ### Next release
 <a id="markdown-next-release" name="next-release"></a>
 
+- Fixed:
+  - Fix the custom MD parser so that it correctly parses plain text. Also disable the
+    syntect highlighter for the editor by default and just use the custom MD parser. For
+    files that are not Markdown, we will probably need to enable syntect in the future
+    since it is not covered by the custom MD parser & highlighter combo.
+
 - Added:
   - Added undo, redo support for the editor component.
   - Added binary target for `edi` which is going to be a Markdown editor similar to `nano`
@@ -295,13 +302,13 @@
 
 - Changed:
   - Redux is no longer used in order to propagate state transitions from async middleware
-    functions to the app. This is now accomplished using
-    [async `tokio::mpsc` channels](https://tokio.rs/tokio/tutorial/channels). Here's a
-    [design doc](https://docs.google.com/document/d/1OMB1rX6cUL_Jxpl-OUWMhJijM7c4FoDrK6qDViVXBWk/edit)
+    functions to the app. This is now accomplished using [async `tokio::mpsc`
+    channels](https://tokio.rs/tokio/tutorial/channels). Here's a [design
+    doc](https://docs.google.com/document/d/1OMB1rX6cUL_Jxpl-OUWMhJijM7c4FoDrK6qDViVXBWk/edit)
     for this change. Here's the
     [issue](https://github.com/r3bl-org/r3bl-open-core/issues/196) and
-    [PR](https://github.com/r3bl-org/r3bl-open-core/pull/205) for this change. Here are some videos
-    that go over this massive change:
+    [PR](https://github.com/r3bl-org/r3bl-open-core/pull/205) for this change. Here are
+    some videos that go over this massive change:
     - <https://youtu.be/o2CVEikbEAQ>
     - <https://youtu.be/Ne5-MXxt97A>
 

@@ -26,7 +26,9 @@
 ///    [r3bl_rs_utils_core::log_error] fails, then it will print the error to stderr.
 pub const DEBUG_TUI_MOD: bool = true;
 
-pub const DEBUG_MD_PARSER: bool = false;
+// 00: DEBUG REMOVE SYNTECT & FIX MD PARSER
+pub const ENABLE_SYNTECT_MD_PARSE_AND_HIGHLIGHT: bool = false;
+pub const DEBUG_MD_PARSER: bool = true;
 
 /// Enable or disable syntax highlighting debug logging.
 pub const DEBUG_TUI_SYN_HI: bool = false;
