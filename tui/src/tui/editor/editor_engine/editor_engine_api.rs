@@ -173,13 +173,15 @@ impl EditorEngineApi {
         // BOOKM: Render using syntect first, then custom MD parser.
 
         // Render using syntect first.
-        syn_hi_syntect_path::render_content(
-            editor_buffer,
-            max_display_row_count,
-            render_ops,
-            editor_engine,
-            max_display_col_count,
-        );
+        call_if_true!(ENABLE_SYNTECT_MD_PARSE_AND_HIGHLIGHT, {
+            syn_hi_syntect_path::render_content(
+                editor_buffer,
+                max_display_row_count,
+                render_ops,
+                editor_engine,
+                max_display_col_count,
+            );
+        });
 
         // Any overrides can be applied here.
         syn_hi_r3bl_path::render_content(

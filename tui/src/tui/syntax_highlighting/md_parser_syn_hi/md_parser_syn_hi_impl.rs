@@ -46,6 +46,7 @@ pub fn try_parse_and_highlight(
         line_to_str_acc.join("")
     };
 
+    // BOOKM: Parse markdown from editor and render it
     // Try and parse `editor_text_to_string` into a `Document`.
     match parse_markdown(&editor_text_to_string) {
         Ok((_remainder, document)) => Ok(StyleUSSpanLines::from_document(
