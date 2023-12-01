@@ -3,7 +3,8 @@
 </p>
 
 
-> 🪷 If you are interested in contributing to this project, please read our [📒 contributing guide](https://github.com/r3bl-org/r3bl-open-core/blob/e2d0ca7fed4147c27fa2217d2e14549d3af3dc48/CONTRIBUTING.md).
+> 🪷 If you are interested in contributing to this project, please read our [📒 contributing
+> guide](CONTRIBUTING.md).
 
 # Context
 <a id="markdown-context" name="context"></a>
