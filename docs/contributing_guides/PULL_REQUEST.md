@@ -33,9 +33,9 @@ If you're interested in contributing code, updating docs, etc., please follow th
 1. Fork the repository on GitHub.
 2. Clone your forked repository to your local machine.
 3. Create a new branch for your changes. Please read our
-   [guide to naming a 🌳 branch](https://github.com/r3bl-org/r3bl-open-core/blob/fe8ef6b8bbc2b1f73730659b1863216c8b8f0909/docs/contributing_guides/BRANCH.md).
+   [guide to naming a 🌳 branch](BRANCH.md).
 4. Make your changes and commit them with a descriptive commit message. Please read our
-   [guide to writing a 📝 commit message](https://github.com/r3bl-org/r3bl-open-core/blob/fe8ef6b8bbc2b1f73730659b1863216c8b8f0909/docs/contributing_guides/COMMIT_MESSAGE.md).
+   [guide to writing a 📝 commit message](COMMIT_MESSAGE.md).
 5. Write tests when relevant.
 6. Run tests: `nu run.nu test` (works on all OSs) or simply `./run.nu test` (works on MacOS and
    Linux). Take a look at
@@ -72,7 +72,7 @@ A checklist to ensure that all of the necessary steps have been completed.
 
 - [ ] I have added tests that prove my fix is effective or that my feature works.
 - [ ] I have manually tested my changes and they work as intended.
-- [ ] I have read the [guide to writing a PR](https://github.com/r3bl-org/r3bl-open-core/blob/343cbf802449afa5ec0dbdd4a4c1c798b5919710/docs/contributing_guides/PULL_REQUEST.md).
+- [ ] I have read the [guide to writing a PR](https://github.com/r3bl-org/r3bl-open-core/blob/main/docs/contributing_guides/PULL_REQUEST.md).
 
 ## Steps to reproduce the new behavior (if relevant):
 1. ...
@@ -81,7 +81,7 @@ A checklist to ensure that all of the necessary steps have been completed.
 Screenshots or other relevant media if applicable.
 
 Commit message:
-I have squashed all my commits to one commit that follows the [guide on how to write a commit message](https://github.com/r3bl-org/r3bl-open-core/blob/343cbf802449afa5ec0dbdd4a4c1c798b5919710/docs/contributing_guides/COMMIT_MESSAGE.md).
+I have squashed all my commits to one commit that follows the [guide on how to write a commit message](https://github.com/r3bl-org/r3bl-open-core/blob/main/docs/contributing_guides/COMMIT_MESSAGE.md).
 ```
 
 ### Title
@@ -119,4 +119,4 @@ items if relevant.
 
 - Make sure your PR has only one commit.
 - If you have multiple commits, squash them into one commit before submitting the PR. See
-  [guide to writing a commit message](https://github.com/r3bl-org/r3bl-open-core/blob/343cbf802449afa5ec0dbdd4a4c1c798b5919710/docs/contributing_guides/COMMIT_MESSAGE.md).
+  [guide to writing a commit message](COMMIT_MESSAGE.md).
