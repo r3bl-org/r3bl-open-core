@@ -34,6 +34,7 @@ mod syntect {
     #[cfg(not(target_os = "windows"))]
     #[test]
     fn simple_md_highlight() {
+        use r3bl_rs_utils_core::{assert_eq2, color};
         use syntect::{easy::*, highlighting::*, parsing::*, util::*};
 
         // Generate MD content.
