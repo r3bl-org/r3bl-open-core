@@ -33,6 +33,8 @@ def main [...args: string] {
 
     let command = $args | get 0
 
+    # Nu version 0.87.1 broke the following, commenting out for now.
+    # "run-with-crash-reporting" => {run-with-crash-reporting}
     match $command {
         "all" => {all}
         "build" => {build}
@@ -41,7 +43,6 @@ def main [...args: string] {
         "run" => {run}
         "run-release" => {run-release}
         "run-with-flamegraph-profiling" => {run-with-flamegraph-profiling}
-        "run-with-crash-reporting" => {run-with-crash-reporting}
         "test" => {test}
         "watch-all-tests" => {watch-all-tests}
         "watch-one-test" => {watch-one-test $args}
@@ -162,7 +163,7 @@ def print-help [command: string] {
         print $'    (ansi green)docs(ansi reset)'
         print $'    (ansi green)run(ansi reset)'
         print $'    (ansi green)run-release(ansi reset)'
-        print $'    (ansi green)run-with-crash-reporting(ansi reset)'
+        # print $'    (ansi green)run-with-crash-reporting(ansi reset)'
         print $'    (ansi green)run-with-flamegraph-profiling(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
         print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
@@ -261,11 +262,11 @@ def rustfmt [] {
     cargo fmt --all
 }
 
-def run-with-crash-reporting [] {
-    cargo run --example demo out+err> | tee crash_log.txt
-    cd ..
-    code -n tui/crash_log.txt
-}
+# def run-with-crash-reporting [] {
+#     cargo run --example demo out+err> | tee crash_log.txt
+#     cd ..
+#     code -n tui/crash_log.txt
+# }
 
 def log [] {
     clear
