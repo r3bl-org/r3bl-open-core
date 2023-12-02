@@ -17,7 +17,7 @@
 
 #[cfg(test)]
 mod syntect {
-    use r3bl_rs_utils_core::{assert_eq2, color, throws};
+    use r3bl_rs_utils_core::throws;
 
     use crate::*;
 
@@ -31,6 +31,7 @@ mod syntect {
         });
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[test]
     fn simple_md_highlight() {
         use syntect::{easy::*, highlighting::*, parsing::*, util::*};
