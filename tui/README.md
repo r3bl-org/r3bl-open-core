@@ -71,6 +71,7 @@ This crate is related to the first thing that's described above. It provides lot
   - [Video of the demo in action](#video-of-the-demo-in-action)
   - [Run the demo locally](#run-the-demo-locally)
 - [How does layout, rendering, and event handling work in general?](#how-does-layout-rendering-and-event-handling-work-in-general)
+- [Switching from shared memory to message passing architecture after v0.3.10](#switching-from-shared-memory-to-message-passing-architecture-after-v0310)
 - [Life of an input event](#life-of-an-input-event)
 - [Life of a signal aka "out of band event"](#life-of-a-signal-aka-out-of-band-event)
 - [The window](#the-window)
@@ -293,6 +294,32 @@ interactive mode, where the user will be prompted for input.
   background threads (Tokio tasks) to the main thread, which then get routed to the
   [App] trait object. Typically this will then get routed to the [Component] that
   currently has focus.
+
+## Switching from shared memory to message passing architecture after v0.3.10
+<a id="markdown-switching-from-shared-memory-to-message-passing-architecture-after-v0.3.10" name="switching-from-shared-memory-to-message-passing-architecture-after-v0.3.10"></a>
+
+Versions of this crate <= `0.3.10` used shared memory to communicate between the
+background threads and the main thread. This was done using the async `Arc<RwLock<T>>`
+from tokio. The state storage, mutation, subscription (on change handlers) were all
+managed by the [`r3bl_redux`](https://github.com/r3bl-org/r3bl-open-core/tree/main/redux)
+crate. The use of the Redux pattern, inspired by React, brought with it a lot of overhead
+both mentally and in terms of performance (since state changes needed to be cloned every
+time a change was made, and `memcpy` or `clone` is expensive).
+
+Versions > `0.3.10` use message passing to communicate between the background threads
+using the `tokio::mpsc` channel (also async). This is a much easier and more performant
+model given the nature of the engine and the use cases it has to handle. It also has the
+benefit of providing an easy way to attach protocol servers in the future over various
+transport layers (eg: TCP, IPC, etc.); these protocol servers can be used to manage a
+connection between a process running the engine, and other processes running on the same
+host or on other hosts, in order to handle use cases like synchronizing rendered output,
+or state.
+
+> Here are some papers outlining the differences between message passing and shared memory
+> for communication between threads.
+>
+> 1. <https://rits.github-pages.ucl.ac.uk/intro-hpchtc/morea/lesson2/reading4.html>
+> 2. <https://www.javatpoint.com/shared-memory-vs-message-passing-in-operating-system>
 
 ## Life of an input event
 <a id="markdown-life-of-an-input-event" name="life-of-an-input-event"></a>
