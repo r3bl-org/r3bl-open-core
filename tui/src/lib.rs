@@ -383,6 +383,14 @@
 //! mutate the state of the [App] and return an [EventPropagation] enum indicating whether the
 //! main thread should repaint the UI or not.
 //!
+//! So far we have covered what happens when the [App] receives a signal. Who sends this
+//! signal? Who actually creates the `tokio::spawn` task that sends this signal? This can
+//! happen anywhere in the [App] and [Component]. Any code that has access to [GlobalData]
+//! can use the [r3bl_rs_utils_core::send_signal!] macro to send a signal in a background
+//! task. However, only the [App] can receive the signal and do something with it, which
+//! is usually apply the signal to update the state and then tell the main thread to
+//! repaint the UI.
+//!
 //! Now that we have seen this whirlwind overview of the life of an input event, let's look at
 //! the details in each of the sections below.
 //!
