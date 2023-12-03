@@ -31,20 +31,26 @@ mod syntect {
         });
     }
 
-    #[cfg(not(target_os = "windows"))]
     #[test]
     fn simple_md_highlight() {
         use r3bl_rs_utils_core::{assert_eq2, color};
         use syntect::{easy::*, highlighting::*, parsing::*, util::*};
 
         // Generate MD content.
-        let md_content = include_str!("test_assets/valid-content.md");
+        let md_content = {
+            let it = include_str!("test_assets/valid-content.md").to_string();
+            #[cfg(target_os = "windows")]
+            {
+                it = it.replace("\r\n", "\n");
+            }
+            it
+        };
 
         // Load these once at the start of your program.
         let syntax_set = SyntaxSet::load_defaults_newlines();
         let theme = try_load_r3bl_theme().unwrap();
 
-        // Prepare Markdown syntax highlighting.
+        // Prepare Markdown syntax highlighting.q
         let md_syntax = syntax_set.find_syntax_by_extension("md").unwrap();
         let mut highlight_lines = HighlightLines::new(md_syntax, &theme);
 
@@ -52,7 +58,7 @@ mod syntect {
         let mut vec_styled_texts = vec![];
 
         for line in /* LinesWithEndings enables use of newlines mode. */
-            LinesWithEndings::from(md_content)
+            LinesWithEndings::from(md_content.as_str())
         {
             let vec_styled_str: Vec<(Style, &str)> =
                 highlight_lines.highlight_line(line, &syntax_set).unwrap();
