@@ -1,13 +1,13 @@
 ---
-name: Missing feature
-about: Suggest an idea for r3bl_rs_utils library
-title: ''
+name: New feature request
+about: Suggest an idea for r3bl-open-core library
+title: '[feature request] '
 labels: enhancement
 assignees: ''
 
 ---
 
-Let us know about features you really want to see in r3bl_rs_utils library. 
+Let us know about a new feature you want to see in r3bl-open-core library. 
 
 ## References
 
