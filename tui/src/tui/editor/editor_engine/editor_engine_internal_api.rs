@@ -1678,10 +1678,11 @@ pub mod validate_editor_buffer_change {
         let scroll_offset = editor_buffer.get_scroll_offset();
 
         // Check right side of line. Clip scroll adjusted caret to max line width.
-        let caret = editor_buffer.get_caret(CaretKind::Raw);
-        let row_content_width =
-            content_get::line_display_width_at_row_index(editor_buffer, caret.row_index)
-                - scroll_offset.col_index;
+        let scroll_adjusted_caret = editor_buffer.get_caret(CaretKind::ScrollAdjusted);
+        let row_content_width = content_get::line_display_width_at_row_index(
+            editor_buffer,
+            scroll_adjusted_caret.row_index,
+        ) - scroll_offset.col_index;
 
         let (_, caret, _, _) = editor_buffer.get_mut();
         let new_caret_col_index =
