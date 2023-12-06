@@ -33,8 +33,9 @@
 
 <a id="markdown-title" name="title"></a>
 
-- The title should start with the category name in square brackets (e.g. [tui][docs]), if relevant,
-  followed by a **short description** of the issue.
+- The title should start with the category name in square brackets (e.g. `[tui][docs]`), if relevant,
+  followed by a **short description** of the issue. Also associate a label with the issue that
+  matches this prefix category to the appropriate label (e.g. `tui` and `component: tui`).
 - The title should be in the **imperative mood**. Using the imperative mood means to phrase your
   commit description as an order or instruction. For example, instead of writing "Fixed bug in user
   login", you would write **"Fix a bug in user login"**. This makes it clear and concise, describing
