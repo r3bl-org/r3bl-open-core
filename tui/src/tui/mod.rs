@@ -26,15 +26,17 @@
 ///    [r3bl_rs_utils_core::log_error] fails, then it will print the error to stderr.
 pub const DEBUG_TUI_MOD: bool = true;
 
-// 00: DEBUG REMOVE SYNTECT & FIX MD PARSER
+/// False means that only the custom r3bl MD parser is used w/ no fallback on syntect.
 pub const ENABLE_SYNTECT_MD_PARSE_AND_HIGHLIGHT: bool = false;
-pub const DEBUG_MD_PARSER: bool = true;
+
+/// Enable or disable MD parser debug logging. This makes the parser very slow when
+/// enabled.
+pub const DEBUG_MD_PARSER: bool = false;
 
 /// Enable or disable syntax highlighting debug logging.
 pub const DEBUG_TUI_SYN_HI: bool = false;
 
 /// Enable or disable select, copy, paste debug logging.
-// DBG: disable when done https://github.com/r3bl-org/r3bl-open-core/issues/115
 pub const DEBUG_TUI_COPY_PASTE: bool = false;
 
 /// Enable or disable compositor debug logging.
