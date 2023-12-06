@@ -155,7 +155,7 @@ def docs [] {
     for folder in $workspace_folders {
         cd $folder
         print $'(ansi magenta)≡ Running cargo doc in ($folder) .. ≡(ansi reset)'
-        cargo doc
+        cargo doc --no-deps --all-features
         cd ..
     }
 }
