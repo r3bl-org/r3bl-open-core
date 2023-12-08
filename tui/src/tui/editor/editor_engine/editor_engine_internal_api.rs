@@ -841,7 +841,11 @@ mod caret_mut {
                             scroll_editor_buffer::dec_caret_row(caret, scroll_offset);
                         },
                     );
-                    caret_mut::to_end_of_line(editor_buffer, editor_engine, select_mode);
+                    caret_mut::to_end_of_line(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Disabled,
+                    );
                 }
             }
             CaretColLocationInLine::AtEnd => {
