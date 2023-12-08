@@ -18,86 +18,83 @@
 //! For more information on how to use CLAP and Tuify, please read this tutorial:
 //! <https://developerlife.com/2023/09/17/tuify-clap/>
 
-use std::{io::Result, process::Command};
+use crate::giti::branch::delete::try_delete_branch;
+use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap_config::*;
+use r3bl_rs_utils_core::{call_if_true, log_debug, log_error, try_to_set_log_level, CommonResult};
+use r3bl_tuify::{giti_ui_templates::ask_user_to_select_from_list, *};
 
-#[allow(unused_imports)]
-use clap::{Args, CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum};
-use r3bl_ansi_color::{AnsiStyledText, Color, Style};
-use r3bl_rs_utils_core::*;
-use r3bl_tuify::*;
-
-fn main() -> Result<()> {
-    use clap_config::*;
-
-    display_prompts::show_welcome_message();
-
+fn main() {
     // If no args are passed, the following line will fail, and help will be printed
     // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
-    let giti_app_args = GitiAppArgs::parse();
+    let giti_app_args = GitiAppArg::parse();
 
-    let enable_logging = TRACE | giti_app_args.global_options.enable_logging;
-
+    let enable_logging = DEVELOPMENT_MODE | giti_app_args.global_options.enable_logging;
     call_if_true!(enable_logging, {
         try_to_set_log_level(log::LevelFilter::Trace).ok();
         log_debug("Start logging...".to_string());
-        log_debug(format!("og_size: {:?}", get_size()?).to_string());
         log_debug(format!("cli_args {:?}", giti_app_args));
     });
 
-    match giti_app_args.command {
-        CLICommands::Branch {
-            selection_mode: _selection_mode,
-            command_to_run_with_each_selection,
-        } => match command_to_run_with_each_selection {
-            Some(subcommand) => match subcommand {
-                BranchSubcommands::Delete => {
-                    branch_delete::tui_init();
-                }
-                BranchSubcommands::Add => todo!(),
-                BranchSubcommands::Show => todo!(),
-            },
-            None => todo!(),
-        },
+    if let Err(error) = try_run_program(giti_app_args) {
+        log_error(format!("Error running program, error: {:?}", error));
+        println!("Error running program! 🤦‍♀️");
     }
 
     call_if_true!(enable_logging, {
         log_debug("Stop logging...".to_string());
     });
+}
 
+fn try_run_program(giti_app_args: GitiAppArg) -> CommonResult<()> {
+    match giti_app_args.command {
+        CLICommand::Branch {
+            command_to_run_with_each_selection,
+            ..
+        } => match command_to_run_with_each_selection {
+            Some(subcommand) => match subcommand {
+                BranchSubcommand::Delete => {
+                    try_delete_branch()?;
+                }
+                _ => unimplemented!(),
+            },
+            _ => {
+                // Show all the branch sub-commands (delete, checkout, new, etc.) in a tuify component.
+                giti_ui_templates::single_select_instruction_header();
+                let options = get_giti_command_subcommand_names(CLICommand::Branch {
+                    selection_mode: Some(SelectionMode::Single),
+                    command_to_run_with_each_selection: None,
+                });
+
+                let maybe_selected = ask_user_to_select_from_list(
+                    options,
+                    "Please select a branch subcommand".to_string(),
+                    SelectionMode::Single,
+                );
+
+                if let Some(selected) = maybe_selected {
+                    match selected[0].as_str() {
+                        "delete" => {
+                            try_delete_branch()?;
+                        }
+                        _ => unimplemented!(),
+                    }
+                }
+            }
+        },
+    }
     Ok(())
 }
 
-mod display_prompts {
-    use super::*;
-
-    pub fn show_exit_message() {
-        let text = &{
-            format!("Goodbye, {}! 👋🐈 Thank you for using giti. Please star r3bl-open-core repo on GitHub! 🌟", get_username())
-        };
-        AnsiStyledText {
-            text,
-            style: &[Style::Bold, Style::Foreground(Color::Rgb(1, 200, 200))],
-        }
-        .println();
-
-        AnsiStyledText {
-            text: "https://github.com/r3bl-org/r3bl-open-core",
-            style: &[Style::Bold, Style::Foreground(Color::Rgb(200, 50, 100))],
-        }
-        .println();
-    }
-
-    pub fn get_username() -> String {
-        std::env::var("USER").unwrap_or("unknown".to_string())
-    }
-
-    pub fn show_welcome_message() {
-        let text = &{ format!("Hello, {}! 👋🐈", get_username()) };
-        AnsiStyledText {
-            text,
-            style: &[Style::Bold, Style::Foreground(Color::Rgb(100, 200, 1))],
-        }
-        .println();
+pub fn get_giti_command_subcommand_names(arg: CLICommand) -> Vec<String> {
+    match arg {
+        CLICommand::Branch { .. } => BranchSubcommand::value_variants()
+            .iter()
+            .map(|subcommand| {
+                let lower_case_subcommand = format!("{:?}", subcommand).to_ascii_lowercase();
+                lower_case_subcommand
+            })
+            .collect(),
     }
 }
 
@@ -113,175 +110,59 @@ mod clap_config {
     #[command(version)]
     #[command(next_line_help = true)]
     #[command(arg_required_else_help(true))]
-    pub struct GitiAppArgs {
+    pub struct GitiAppArg {
         #[clap(subcommand)]
-        pub command: CLICommands,
+        pub command: CLICommand,
 
         #[clap(flatten)]
-        pub global_options: GlobalOptions,
+        pub global_options: GlobalOption,
     }
 
     #[derive(Debug, Args)]
-    pub struct GlobalOptions {
-        /// Print debug output to log file (log.txt)
-        #[arg(long, short = 'l')]
+    pub struct GlobalOption {
+        /// Enables logging to a file named `log.txt`.
+        #[arg(long, short = 'l', help = "Enables logging to a file")]
         pub enable_logging: bool,
 
-        /// Optional maximum height of the TUI (rows)
-        #[arg(value_name = "height", long, short = 'r')]
-        pub tui_height: Option<usize>,
+        /// Sets the maximum height of the Tuify component (rows).
+        /// If height is not provided, it defaults to the terminal height.
+        #[arg(
+            value_name = "height",
+            long,
+            short = 'h',
+            help = "Sets the maximum height of the Tuify component (rows)"
+        )]
+        pub tuify_height: Option<usize>,
 
-        /// Optional maximum width of the TUI (columns)
-        #[arg(value_name = "width", long, short = 'c')]
-        pub tui_width: Option<usize>,
+        /// Sets the maximum width of the Tuify component (columns).
+        /// If width is not provided, it defaults to the terminal width.
+        #[arg(
+            value_name = "width",
+            long,
+            short = 'w',
+            help = "Sets the maximum width of the Tuify component (columns)"
+        )]
+        pub tuify_width: Option<usize>,
     }
 
     #[derive(Debug, Subcommand)]
-    pub enum CLICommands {
-        /// Show TUI to allow you to select one or more local branches for deletion 🌿
+    pub enum CLICommand {
+        /// Manages giti branches. This command has subcommands like `delete`, `checkout`, and `new`. 🌿
         Branch {
-            /// Would you like to select one or more items?
+            /// Select one or more items to operate on. Available modes are: `Single` or `Multi`.
             #[arg(value_name = "mode", long, short = 's')]
             selection_mode: Option<SelectionMode>,
 
-            /// Each selected item is passed to this command as an argument and executed in your shell.
+            /// This command will be executed in your shell with each selected item as an argument.
             #[arg(value_name = "command")]
-            command_to_run_with_each_selection: Option<BranchSubcommands>,
+            command_to_run_with_each_selection: Option<BranchSubcommand>,
         },
     }
 
     #[derive(Clone, Debug, ValueEnum)]
-    pub enum BranchSubcommands {
+    pub enum BranchSubcommand {
         Delete,
-        Add,
-        Show,
-    }
-
-    #[allow(dead_code)]
-    pub fn get_bin_name() -> String {
-        let cmd = GitiAppArgs::command();
-        cmd.get_bin_name().unwrap_or("this command").to_string()
-    }
-}
-
-mod branch_delete {
-    use super::*;
-
-    pub fn tui_init() {
-        AnsiStyledText {
-            text: &format!(
-                "{}{}{}",
-                "Press Space : To Select or DeSelect branches\n",
-                "Press Esc : To Exit\n",
-                "Press Return: To Confirm Selection"
-            ),
-            style: &[Style::Bold, Style::Foreground(Color::Rgb(200, 1, 200))],
-        }
-        .println();
-        let options = git_commands::get_branches();
-        let header = "Please select the branches you want to delete";
-        let selection_mode = SelectionMode::Multiple;
-        let tuify_output = show_tuify(options, header.to_string(), selection_mode);
-        match tuify_output {
-            Some(branches) => {
-                let options = vec!["Yes".to_string(), "No".to_string(), "Cancel".to_string()];
-                let header = format!("Are you sure you want to delete {:?}?", branches);
-                let selection_mode = SelectionMode::Single;
-                let tuify_output = show_tuify(options, header, selection_mode);
-                match tuify_output {
-                    Some(it) => {
-                        if it[0] == "Yes".to_string() {
-                            let mut command = Command::new("git");
-                            command.arg("branch").arg("-D");
-                            for branch in branches {
-                                command.arg(branch.to_string());
-                            }
-                            let op = command.output().expect("failed to execute git branch");
-                            if op.status.success() {
-                                (AnsiStyledText {
-                                    text: "Deleted Successfully !",
-                                    style: &[Style::Bold, Style::Foreground(Color::Rgb(1, 200, 1))],
-                                })
-                                .println();
-                                tui_exit();
-                            } else {
-                                (AnsiStyledText {
-                                    text: &format!(
-                                        "Failed to delete branches !\n{:#?}",
-                                        String::from_utf8(op.stderr).unwrap()
-                                    ),
-                                    style: &[Style::Bold, Style::Foreground(Color::Rgb(200, 1, 1))],
-                                })
-                                .println();
-                            }
-                        } else if it[0] == "No".to_string() {
-                            tui_exit();
-                        } else {
-                            tui_init();
-                        }
-                    }
-                    None => tui_exit(),
-                }
-            }
-            None => tui_exit(),
-        }
-    }
-
-    pub fn tui_exit() {
-        let options = vec!["Go Back".to_string(), "Exit".to_string()];
-        let header = format!("Would you like to exit giti 🐈 ?");
-        let selection_mode = SelectionMode::Single;
-        let tuify_output = show_tuify(options, header, selection_mode);
-        match tuify_output {
-            Some(it) => {
-                if it[0] == "Go Back".to_string() {
-                    tui_init();
-                } else if it[0] == "Exit".to_string() {
-                    display_prompts::show_exit_message();
-                }
-            }
-            None => tui_exit(),
-        }
-    }
-
-    pub fn show_tuify(
-        options: Vec<String>,
-        header: String,
-        selection_mode: SelectionMode,
-    ) -> Option<Vec<String>> {
-        let max_height_row_count = 50;
-        let max_width_col_count = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
-        let style = StyleSheet::default();
-        let user_input = select_from_list(
-            header,
-            options,
-            max_height_row_count,
-            max_width_col_count,
-            selection_mode,
-            style,
-        );
-        user_input
-    }
-}
-
-mod git_commands {
-    use super::*;
-
-    pub fn get_branches() -> Vec<String> {
-        let output = Command::new("git")
-            .arg("branch")
-            .arg("--format")
-            .arg("%(refname:short)")
-            .output()
-            .expect("failed to execute git branch");
-
-        let output = String::from_utf8(output.stdout).expect("failed to convert output to string");
-
-        let mut branches = vec![];
-
-        for line in output.lines() {
-            branches.push(line.to_string());
-        }
-        branches
+        Checkout,
+        New,
     }
 }

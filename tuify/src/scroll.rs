@@ -63,7 +63,7 @@
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
 
-use crate::TRACE;
+use crate::DEVELOPMENT_MODE;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum CaretVerticalViewportLocation {
@@ -92,7 +92,7 @@ pub fn locate_cursor_in_viewport(
 ) -> CaretVerticalViewportLocation {
     let abs_row_index = get_scroll_adjusted_row_index(raw_caret_row_index, scroll_offset_row_index);
 
-    call_if_true!(TRACE, {
+    call_if_true!(DEVELOPMENT_MODE, {
         log_debug(format!(
             "locate_cursor_in_viewport(): raw_caret_row_index: {}, scroll_offset_row_index: {}, abs_row_index: {}, display_height: {}, items_size: {}",
             raw_caret_row_index, scroll_offset_row_index, abs_row_index, display_height, items_size

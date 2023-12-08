@@ -19,7 +19,9 @@ use std::io::Result;
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
 use r3bl_rs_utils_core::*;
-use r3bl_tuify::{components::style::StyleSheet, get_size, select_from_list, SelectionMode, TRACE};
+use r3bl_tuify::{
+    components::style::StyleSheet, get_size, select_from_list, SelectionMode, DEVELOPMENT_MODE,
+};
 mod single_select_quiz_game;
 use single_select_quiz_game::main as single_select_quiz_game;
 
@@ -39,7 +41,7 @@ fn print_header(msg: &str) {
 
 fn main() -> Result<()> {
     throws!({
-        call_if_true!(TRACE, {
+        call_if_true!(DEVELOPMENT_MODE, {
             try_to_set_log_level(log::LevelFilter::Trace).ok();
             log_debug("Start logging...".to_string());
             log_debug(format!("og_size: {:?}", get_size()?).to_string());
@@ -164,7 +166,7 @@ fn main() -> Result<()> {
             None => println!("User did not select anything"),
         }
 
-        call_if_true!(TRACE, {
+        call_if_true!(DEVELOPMENT_MODE, {
             log_debug("Stop logging...".to_string());
         });
     });
@@ -234,7 +236,7 @@ fn multiple_select_13_items_vph_5(
         }
         None => println!("User did not select anything"),
     }
-    call_if_true!(TRACE, {
+    call_if_true!(DEVELOPMENT_MODE, {
         log_debug(format!("user_input: {:?}", user_input).to_string());
     });
 }
@@ -265,7 +267,7 @@ fn multiple_select_2_items_vph_5(
         }
         None => println!("User did not select anything"),
     }
-    call_if_true!(TRACE, {
+    call_if_true!(DEVELOPMENT_MODE, {
         log_debug(format!("user_input: {:?}", user_input).to_string());
     });
 }
@@ -309,7 +311,7 @@ fn single_select_13_items_vph_5(
         }
         None => println!("User did not select anything"),
     }
-    call_if_true!(TRACE, {
+    call_if_true!(DEVELOPMENT_MODE, {
         log_debug(format!("user_input: {:?}", user_input).to_string());
     });
 }
@@ -339,7 +341,7 @@ fn single_select_2_items_vph_5(
         }
         None => println!("User did not select anything"),
     }
-    call_if_true!(TRACE, {
+    call_if_true!(DEVELOPMENT_MODE, {
         log_debug(format!("user_input: {:?}", user_input).to_string());
     });
 }

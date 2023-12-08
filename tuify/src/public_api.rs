@@ -82,7 +82,7 @@ pub fn select_from_list(
 }
 
 fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
-    call_if_true!(TRACE, {
+    call_if_true!(DEVELOPMENT_MODE, {
         log_debug(
             format!(
                 "🔆🔆🔆 *before* keypress: locate_cursor_in_viewport(): {:?}",
@@ -101,7 +101,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
             col_count,
             row_count,
         }) => {
-            call_if_true!(TRACE, {
+            call_if_true!(DEVELOPMENT_MODE, {
                 let msg = format!(
                     "\n🍎🍎🍎\nNew size width:{} x height:{}",
                     col_count, row_count
@@ -117,7 +117,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
 
         // Down.
         KeyPress::Down => {
-            call_if_true!(TRACE, {
+            call_if_true!(DEVELOPMENT_MODE, {
                 log_debug("Down".black().bold().on_green().to_string());
             });
             let caret_location = state.locate_cursor_in_viewport();
@@ -139,7 +139,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
                     // Do nothing.
                 }
             }
-            call_if_true!(TRACE, {
+            call_if_true!(DEVELOPMENT_MODE, {
                 log_debug(
                     format!("enter_event_loop()::state: {:?}", state)
                         .blue()
@@ -152,7 +152,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
 
         // Up.
         KeyPress::Up => {
-            call_if_true!(TRACE, {
+            call_if_true!(DEVELOPMENT_MODE, {
                 log_debug("Up".black().bold().on_green().to_string());
             });
 
@@ -183,7 +183,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
 
         // Enter on multi-select.
         KeyPress::Enter if selection_mode == SelectionMode::Multiple => {
-            call_if_true!(TRACE, {
+            call_if_true!(DEVELOPMENT_MODE, {
                 log_debug(
                     format!("Enter: {:?}", state.selected_items)
                         .green()
@@ -199,7 +199,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
 
         // Enter.
         KeyPress::Enter => {
-            call_if_true!(TRACE, {
+            call_if_true!(DEVELOPMENT_MODE, {
                 log_debug(
                     format!("Enter: {}", state.get_focused_index())
                         .green()
@@ -216,7 +216,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
 
         // Escape.
         KeyPress::Esc => {
-            call_if_true!(TRACE, {
+            call_if_true!(DEVELOPMENT_MODE, {
                 log_debug("Esc".red().to_string());
             });
             EventLoopResult::ExitWithoutResult
@@ -224,7 +224,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
 
         // Space on multi-select.
         KeyPress::Space if selection_mode == SelectionMode::Multiple => {
-            call_if_true!(TRACE, {
+            call_if_true!(DEVELOPMENT_MODE, {
                 log_debug(
                     format!("Space: {}", state.get_focused_index())
                         .magenta()
@@ -253,7 +253,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
 
         // Noop, default behavior on Space
         KeyPress::Noop | KeyPress::Space => {
-            call_if_true!(TRACE, {
+            call_if_true!(DEVELOPMENT_MODE, {
                 log_debug("Noop".yellow().to_string());
             });
             EventLoopResult::Continue
@@ -261,14 +261,14 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
 
         // Error.
         KeyPress::Error => {
-            call_if_true!(TRACE, {
+            call_if_true!(DEVELOPMENT_MODE, {
                 log_debug("Exit with error".red().to_string());
             });
             EventLoopResult::ExitWithError
         }
     };
 
-    call_if_true!(TRACE, {
+    call_if_true!(DEVELOPMENT_MODE, {
         log_debug(
             format!(
                 "👉 *after* keypress: locate_cursor_in_viewport(): {:?}",

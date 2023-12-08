@@ -50,16 +50,18 @@ pub struct AppArgs {
 
 #[derive(Debug, Args)]
 struct GlobalOpts {
-    /// Print debug output to log file (log.txt)
+    /// Enables logging to a file named `log.txt`.
     #[arg(long, short = 'l')]
     enable_logging: bool,
 
-    /// Optional maximum height of the TUI (rows)
-    #[arg(value_name = "height", long, short = 'r')]
+    /// Sets the maximum height of the Tuify component (rows).
+    /// If height is not provided, it defaults to the terminal height.
+    #[arg(value_name = "height", long, short = 'h')]
     tui_height: Option<usize>,
 
-    /// Optional maximum width of the TUI (columns)
-    #[arg(value_name = "width", long, short = 'c')]
+    /// Sets the maximum width of the Tuify component (columns).
+    /// If width is not provided, it defaults to the terminal width.
+    #[arg(value_name = "width", long, short = 'w')]
     tui_width: Option<usize>,
 }
 
@@ -89,7 +91,7 @@ fn main() -> Result<()> {
         // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
         let cli_args = AppArgs::parse();
 
-        let enable_logging = TRACE | cli_args.global_opts.enable_logging;
+        let enable_logging = DEVELOPMENT_MODE | cli_args.global_opts.enable_logging;
 
         call_if_true!(enable_logging, {
             try_to_set_log_level(log::LevelFilter::Trace).ok();
@@ -381,7 +383,7 @@ fn get_possible_values_for_subcommand_and_option(subcommand: &str, option: &str)
                     .map(|it| it.get_name().to_string())
                     .collect::<Vec<_>>();
 
-                call_if_true!(TRACE, {
+                call_if_true!(DEVELOPMENT_MODE, {
                     log_debug(
                         format!(
                             "{subcommand}, {option} - possible_values: {:?}",

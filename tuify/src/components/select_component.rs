@@ -69,7 +69,7 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
             let viewport_height: ChUnit = self.calculate_viewport_height(state);
             let viewport_width: ChUnit = state.max_display_width;
 
-            call_if_true!(TRACE, {
+            call_if_true!(DEVELOPMENT_MODE, {
                 log_debug(
                       format!(
                           "render()::state: \n\t[raw_caret_row_index: {}, scroll_offset_row_index: {}], \n\tdisplay_height:{}",
