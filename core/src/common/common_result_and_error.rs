@@ -83,6 +83,7 @@ pub enum CommonErrorType {
     InvalidRgbColor,
     InvalidHexColorFormat,
     NotFound,
+    CommandExecutionError,
 }
 
 /// Implement [`Error`] trait.

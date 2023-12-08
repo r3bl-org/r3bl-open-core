@@ -431,7 +431,9 @@
 #![warn(rust_2018_idioms)]
 
 pub mod components;
+pub mod constants;
 pub mod event_loop;
+pub mod giti;
 pub mod keypress;
 pub mod public_api;
 pub mod react;
@@ -440,7 +442,9 @@ pub mod state;
 pub mod term;
 
 pub use components::*;
+pub use constants::*;
 pub use event_loop::*;
+pub use giti::*;
 pub use keypress::*;
 pub use public_api::*;
 pub use react::*;
@@ -449,4 +453,4 @@ pub use state::*;
 pub use term::*;
 
 /// Enable file logging. You can use `tail -f log.txt` to watch the logs.
-pub const TRACE: bool = true;
+pub const DEVELOPMENT_MODE: bool = true;

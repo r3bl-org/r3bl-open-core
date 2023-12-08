@@ -20,7 +20,7 @@ use std::io::{Result, *};
 use crossterm::{cursor::*, queue, terminal::*};
 use r3bl_rs_utils_core::*;
 
-use crate::{ResizeHint, TRACE};
+use crate::{ResizeHint, DEVELOPMENT_MODE};
 
 pub trait CalculateResizeHint {
     fn set_size(&mut self, new_size: Size);
@@ -58,7 +58,7 @@ pub trait FunctionComponent<W: Write, S: CalculateResizeHint> {
 
     fn clear_viewport_for_resize(&mut self, state: &mut S) -> Result<()> {
         throws!({
-            call_if_true!(TRACE, {
+            call_if_true!(DEVELOPMENT_MODE, {
                 log_debug(format!(
                     "\n🥑🥑🥑\nresize hint: {:?}",
                     state.get_resize_hint()
