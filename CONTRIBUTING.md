@@ -68,7 +68,7 @@ Below are some guides to help you get started:
 
 <a id="markdown-working-on-issues" name="working-on-issues"></a>
 
-If you want to work on an issue, please comment on the issue asing to be assigned to it, so that we
+If you want to work on an issue, please comment on the issue asking to be assigned to it, so that we
 can assign the issue to you. If you have any questions about the issue, we can discuss them in the
 comments or on [R3BL Discord server](https://discord.gg/8M2ePAevaM).
 
