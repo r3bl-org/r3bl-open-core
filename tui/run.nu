@@ -40,6 +40,7 @@ def main [...args: string] {
         "build" => {build}
         "build-full" => {build-full}
         "clean" => {clean}
+        "log" => {log}
         "run" => {run}
         "run-release" => {run-release}
         "run-with-flamegraph-profiling" => {run-with-flamegraph-profiling}
@@ -159,6 +160,7 @@ def print-help [command: string] {
         print $'    (ansi green)build-full(ansi reset)'
         print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)all(ansi reset)'
+        print $'    (ansi green)log(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)docs(ansi reset)'
         print $'    (ansi green)run(ansi reset)'
