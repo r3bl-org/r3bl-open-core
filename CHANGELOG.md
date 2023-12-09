@@ -36,7 +36,6 @@
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
   - [Next release](#next-release)
-- [- Fixed:](#--fixed)
   - [v0.3.10 2023-10-29](#v0310-2023-10-29)
   - [v0.3.9 2023-10-29](#v039-2023-10-29)
   - [v0.3.7 2023-10-21](#v037-2023-10-21)
@@ -299,6 +298,11 @@
   - Added binary target for `edi` which is going to be a Markdown editor similar to `nano`
     or `micro`. It is meant to showcase what the `r3bl_tui` crate can do. It is also meant
     to be a useful productivity tool.
+  - Added function `colorize_into_string()` to make it easy to apply color wheel to a
+    string and then convert it into an ANSI styled string that can be used to print to the
+    terminal emulator. Also added conversion function
+    `convert_tui_color_into_r3bl_ansi_color()` to convert from `TuiColor` to
+    `r3bl_ansi_term::Color`.
 
 - Changed:
   - Redux is no longer used in order to propagate state transitions from async middleware

@@ -16,11 +16,12 @@
  */
 
 use get_size::GetSize;
-use r3bl_ansi_color::{global_color_support, ColorSupport};
+use r3bl_ansi_color::{global_color_support, AnsiStyledText, ColorSupport};
 use r3bl_rs_utils_core::*;
 use serde::*;
 
-use crate::*;
+use crate::{color_wheel_struct::color_converter::convert_tui_color_into_r3bl_ansi_color,
+            *};
 
 /// For RGB colors:
 /// 1. The stops are the colors that will be used to create the gradient.
@@ -452,6 +453,51 @@ impl ColorWheel {
         self.index_direction = ColorWheelDirection::Forward;
     }
 
+    pub fn colorize_into_string(
+        &mut self,
+        text: String,
+        gradient_generation_policy: GradientGenerationPolicy,
+        text_colorization_policy: TextColorizationPolicy,
+    ) -> String {
+        let unicode_string = UnicodeString::from(text);
+        let it = self.colorize_into_styled_texts(
+            &unicode_string,
+            gradient_generation_policy,
+            text_colorization_policy,
+        );
+
+        let mut acc_vec = vec![];
+
+        for StyledText(style, unicode_string) in it.items {
+            let maybe_src_color_fg = style.color_fg;
+            let maybe_src_color_bg = style.color_bg;
+
+            let mut acc_style = vec![];
+
+            if let Some(src_color_fg) = maybe_src_color_fg {
+                acc_style.push(r3bl_ansi_color::Style::Foreground(
+                    convert_tui_color_into_r3bl_ansi_color(src_color_fg),
+                ));
+            }
+
+            if let Some(src_color_bg) = maybe_src_color_bg {
+                acc_style.push(r3bl_ansi_color::Style::Background(
+                    convert_tui_color_into_r3bl_ansi_color(src_color_bg),
+                ));
+            }
+
+            let ansi_styled_text = AnsiStyledText {
+                style: &acc_style,
+                text: &(unicode_string.string),
+            };
+
+            let output = format!("{}", ansi_styled_text);
+            acc_vec.push(output);
+        }
+
+        acc_vec.join("")
+    }
+
     /// This method gives you fine grained control over the color wheel. It returns a
     /// gradient-colored string. It respects the [ColorSupport] restrictions for the terminal.
     ///
@@ -655,6 +701,87 @@ impl ColorWheel {
                 self.reset_index();
             }
         };
+    }
+}
+
+mod color_converter {
+    use super::*;
+
+    pub fn convert_tui_color_into_r3bl_ansi_color(
+        color: TuiColor,
+    ) -> r3bl_ansi_color::Color {
+        match color {
+            TuiColor::Rgb(RgbValue { red, green, blue }) => {
+                r3bl_ansi_color::Color::Rgb(red, green, blue)
+            }
+            TuiColor::Ansi(ansi_value) => {
+                r3bl_ansi_color::Color::Ansi256(ansi_value.color)
+            }
+            TuiColor::Basic(basic_color) => match basic_color {
+                ANSIBasicColor::Black => r3bl_ansi_color::Color::Rgb(0, 0, 0),
+                ANSIBasicColor::White => r3bl_ansi_color::Color::Rgb(255, 255, 255),
+                ANSIBasicColor::Grey => r3bl_ansi_color::Color::Rgb(128, 128, 128),
+                ANSIBasicColor::DarkGrey => r3bl_ansi_color::Color::Rgb(64, 64, 64),
+                ANSIBasicColor::Red => r3bl_ansi_color::Color::Rgb(255, 0, 0),
+                ANSIBasicColor::DarkRed => r3bl_ansi_color::Color::Rgb(128, 0, 0),
+                ANSIBasicColor::Green => r3bl_ansi_color::Color::Rgb(0, 255, 0),
+                ANSIBasicColor::DarkGreen => r3bl_ansi_color::Color::Rgb(0, 128, 0),
+                ANSIBasicColor::Yellow => r3bl_ansi_color::Color::Rgb(255, 255, 0),
+                ANSIBasicColor::DarkYellow => r3bl_ansi_color::Color::Rgb(128, 128, 0),
+                ANSIBasicColor::Blue => r3bl_ansi_color::Color::Rgb(0, 0, 255),
+                ANSIBasicColor::DarkBlue => r3bl_ansi_color::Color::Rgb(0, 0, 128),
+                ANSIBasicColor::Magenta => r3bl_ansi_color::Color::Rgb(255, 0, 255),
+                ANSIBasicColor::DarkMagenta => r3bl_ansi_color::Color::Rgb(128, 0, 128),
+                ANSIBasicColor::Cyan => r3bl_ansi_color::Color::Rgb(0, 255, 255),
+                ANSIBasicColor::DarkCyan => r3bl_ansi_color::Color::Rgb(0, 128, 128),
+            },
+            TuiColor::Reset => r3bl_ansi_color::Color::Rgb(0, 0, 0),
+        }
+    }
+
+    #[cfg(test)]
+    mod color_converter_tests {
+        use super::*;
+
+        #[test]
+        fn test_convert_tui_color_into_r3bl_ansi_color_rgb() {
+            let tui_color = TuiColor::Rgb(RgbValue {
+                red: 255,
+                green: 0,
+                blue: 0,
+            });
+            let expected_color = r3bl_ansi_color::Color::Rgb(255, 0, 0);
+            let converted_color =
+                color_converter::convert_tui_color_into_r3bl_ansi_color(tui_color);
+            assert_eq!(converted_color, expected_color);
+        }
+
+        #[test]
+        fn test_convert_tui_color_into_r3bl_ansi_color_ansi() {
+            let tui_color = TuiColor::Ansi(AnsiValue { color: 42 });
+            let expected_color = r3bl_ansi_color::Color::Ansi256(42);
+            let converted_color =
+                color_converter::convert_tui_color_into_r3bl_ansi_color(tui_color);
+            assert_eq!(converted_color, expected_color);
+        }
+
+        #[test]
+        fn test_convert_tui_color_into_r3bl_ansi_color_basic() {
+            let tui_color = TuiColor::Basic(ANSIBasicColor::Red);
+            let expected_color = r3bl_ansi_color::Color::Rgb(255, 0, 0);
+            let converted_color =
+                color_converter::convert_tui_color_into_r3bl_ansi_color(tui_color);
+            assert_eq!(converted_color, expected_color);
+        }
+
+        #[test]
+        fn test_convert_tui_color_into_r3bl_ansi_color_reset() {
+            let tui_color = TuiColor::Reset;
+            let expected_color = r3bl_ansi_color::Color::Rgb(0, 0, 0);
+            let converted_color =
+                color_converter::convert_tui_color_into_r3bl_ansi_color(tui_color);
+            assert_eq!(converted_color, expected_color);
+        }
     }
 }
 
@@ -933,6 +1060,31 @@ mod tests_color_wheel_rgb {
         assert_eq2!(
             styled_texts[4].get_style().color_fg,
             Some(TuiColor::Rgb(RgbValue::from_u8(102, 102, 102)))
+        );
+
+        global_color_support::clear_override()
+    }
+
+    #[test]
+    fn test_colorize_into_ansi_styled_string_each_character() {
+        let color_wheel_rgb = &mut test_helpers::create_color_wheel_rgb();
+
+        global_color_support::set_override(ColorSupport::Truecolor);
+
+        let unicode_string = UnicodeString::from("HELLO WORLD");
+
+        let ansi_styled_string = color_wheel_rgb.colorize_into_string(
+            unicode_string.string,
+            GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength,
+            TextColorizationPolicy::ColorEachCharacter(None),
+        );
+
+        println!("ansi_styled_string: {}", ansi_styled_string);
+        println!("ansi_styled_string: {:?}", ansi_styled_string);
+
+        assert_eq2!(
+            ansi_styled_string,
+            "\u{1b}[38;2;0;0;0mH\u{1b}[0m\u{1b}[38;2;0;0;0mE\u{1b}[0m\u{1b}[38;2;23;23;23mL\u{1b}[0m\u{1b}[38;2;23;23;23mL\u{1b}[0m\u{1b}[38;2;46;46;46mO\u{1b}[0m\u{1b}[38;2;46;46;46m \u{1b}[0m\u{1b}[38;2;70;70;70mW\u{1b}[0m\u{1b}[38;2;70;70;70mO\u{1b}[0m\u{1b}[38;2;93;93;93mR\u{1b}[0m\u{1b}[38;2;93;93;93mL\u{1b}[0m\u{1b}[38;2;116;116;116mD\u{1b}[0m"
         );
 
         global_color_support::clear_override()
