@@ -116,13 +116,14 @@ impl EditorEngineApi {
         editor_buffer: &mut EditorBuffer,
         current_box: FlexBox,
         has_focus: &mut HasFocus,
+        window_size: Size,
     ) -> CommonResult<RenderPipeline> {
         throws_with_return!({
             editor_engine.current_box = current_box.into();
 
             // Create reusable args for render functions.
             let render_args = RenderArgs {
-                editor_buffer,
+                editor_buffer: &editor_buffer.clone(),
                 editor_engine,
                 has_focus,
             };
@@ -131,8 +132,18 @@ impl EditorEngineApi {
                 EditorEngineApi::render_empty_state(&render_args)
             } else {
                 let mut render_ops = render_ops!();
+                // Cache key is combination of scroll_offset and window_size.
+                let cache_key = format!(
+                    "{}{}",
+                    editor_buffer.get_scroll_offset().to_string(),
+                    window_size.to_string()
+                );
 
-                EditorEngineApi::render_content(&render_args, &mut render_ops);
+                editor_buffer.render_content_from_cache(
+                    cache_key,
+                    &render_args,
+                    &mut render_ops,
+                );
                 EditorEngineApi::render_selection(&render_args, &mut render_ops);
                 EditorEngineApi::render_caret(&render_args, &mut render_ops);
 
@@ -143,7 +154,7 @@ impl EditorEngineApi {
         })
     }
 
-    fn render_content(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) {
+    pub fn render_content(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) {
         let RenderArgs {
             editor_buffer,
             editor_engine,
