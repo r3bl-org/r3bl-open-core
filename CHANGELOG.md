@@ -453,7 +453,9 @@
 
 - Moved:
   - All the source code from the top level folder of the `r3bl-open-core` repo into the
-    `utils` sub folder.
+    `utils` sub folder. The crate `r3bl_rs_utils` used to reside at the top level folder
+    of this repo. It has been moved into the `utils` sub folder. At the top level, only a
+    workspace remains to link all the contained crates together for efficient builds.
 
 ### v0.9.14 (2023-10-29)
 <a id="markdown-v0.9.14-2023-10-29" name="v0.9.14-2023-10-29"></a>

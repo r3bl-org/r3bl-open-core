@@ -47,7 +47,6 @@ def main [...args: string] {
         "watch-run" => {watch-run}
         "watch-all-tests" => {watch-all-tests}
         "watch-clippy" => {watch-clippy}
-        "upgrade-deps" => {upgrade-deps}
         "serve-docs" => {serve-docs}
         "help" => {print-help all}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
@@ -123,7 +122,7 @@ def print-help [command: string] {
         print $'    (ansi green)install-giti(ansi reset)'
         print $'    (ansi green)run-piped(ansi reset)'
         print $'    (ansi green)log(ansi reset)'
-        print $'    (ansi green)run-with-flamegraph-profiling(ansi reset)'
+        print $'    (ansi green)run-with-flamegraph-profiling(ansi reset), (ansi blue)For more info, watch: https://www.youtube.com/watch?v=Sy26IMkOEiM(ansi reset)'
         print $'    (ansi green)watch-run(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
         print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
@@ -133,7 +132,6 @@ def print-help [command: string] {
         print $'    (ansi green)docs(ansi reset)'
         print $'    (ansi green)watch-macro-expansion-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
         print $'    (ansi green)serve-docs(ansi reset)'
-        print $'    (ansi green)upgrade-deps(ansi reset)'
         print $'    (ansi green)rustfmt(ansi reset)'
         print $'    (ansi green)help(ansi reset)'
     } else if $command == "watch-one-test" {
@@ -209,12 +207,6 @@ def docs [] {
 def serve-docs [] {
     npm i -g serve
     serve target/doc
-}
-
-def upgrade-deps [] {
-    cargo outdated --workspace --verbose
-    cargo upgrade --to-lockfile --verbose
-    cargo update
 }
 
 def rustfmt [] {

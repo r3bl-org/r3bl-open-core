@@ -36,9 +36,7 @@ def main [...args: string] {
     # Nu version 0.87.1 broke the following, commenting out for now.
     # "run-with-crash-reporting" => {run-with-crash-reporting}
     match $command {
-        "all" => {all}
         "build" => {build}
-        "build-full" => {build-full}
         "clean" => {clean}
         "log" => {log}
         "run" => {run}
@@ -54,7 +52,6 @@ def main [...args: string] {
         "clippy" => {clippy}
         "clippy-watch" => {clippy-watch}
         "rustfmt" => {rustfmt}
-        "upgrade-deps" => {upgrade-deps}
         "serve-docs" => {serve-docs}
         "help" => {print-help all}
         "log" => {log}
@@ -156,17 +153,14 @@ def print-help [command: string] {
     if $command == "all" {
         print $'Usage: (ansi magenta_bold)run.nu(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi blue_bold)[args](ansi reset)'
         print $'(ansi green_bold)<command>(ansi reset) can be:'
-        print $'    (ansi green)install-cargo-tools(ansi reset)'
-        print $'    (ansi green)build-full(ansi reset)'
         print $'    (ansi green)build(ansi reset)'
-        print $'    (ansi green)all(ansi reset)'
         print $'    (ansi green)log(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)docs(ansi reset)'
         print $'    (ansi green)run(ansi reset)'
         print $'    (ansi green)run-release(ansi reset)'
         # print $'    (ansi green)run-with-crash-reporting(ansi reset)'
-        print $'    (ansi green)run-with-flamegraph-profiling(ansi reset)'
+        print $'    (ansi green)run-with-flamegraph-profiling(ansi reset), (ansi blue)For more info, watch: https://www.youtube.com/watch?v=Sy26IMkOEiM(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
         print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
         print $'    (ansi green)watch-all-tests(ansi reset)'
@@ -174,7 +168,6 @@ def print-help [command: string] {
         print $'    (ansi green)serve-docs(ansi reset)'
         print $'    (ansi green)clippy(ansi reset)'
         print $'    (ansi green)clippy-watch(ansi reset)'
-        print $'    (ansi green)upgrade-deps(ansi reset)'
         print $'    (ansi green)rustfmt(ansi reset)'
         print $'    (ansi green)help(ansi reset)'
     } else if $command == "watch-one-test" {
@@ -186,24 +179,7 @@ def print-help [command: string] {
     }
 }
 
-def all [] {
-    cargo install cargo-deny
-    cargo build
-    test
-    clippy
-    docs
-    audit-deps
-}
-
 def build [] {
-    cargo build
-}
-
-def build-full [] {
-    install-cargo-tools
-    cargo cache -r all
-    cargo clean
-    cargo +nightly update
     cargo build
 }
 
@@ -252,12 +228,6 @@ def docs [] {
 def serve-docs [] {
     npm i -g serve
     serve target/doc
-}
-
-def upgrade-deps [] {
-    cargo outdated --workspace --verbose
-    cargo upgrade --to-lockfile --verbose
-    cargo update
 }
 
 def rustfmt [] {
