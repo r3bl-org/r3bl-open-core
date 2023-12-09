@@ -206,9 +206,13 @@
 //! - `nu run.nu test`: Run all the tests (in all crates in the Rust workspace).
 //! - `nu run.nu watch-one-test`: Run a single test and watch it in the given crate / folder.
 //! - `nu run.nu build`: build the code in all the crates in the Rust workspace.
-//! - `nu run.nu log`: Run the logger to see log output.
+//! - `nu run.nu log`: Run the logger to see log output. This
+//!   [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use
+//!   this.
 //! - `nu run.nu run-with-flamegraph-profiling`: This will run the examples and generate a
-//!    flamegraph at the end so you can see profile the performance of the app.
+//!   flamegraph at the end so you can see profile the performance of the app. This
+//!   [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use
+//!   this.
 //! - `nu run.nu docs`: Generate docs for all the crates in the Rust workspace.
 //! - `nu run.nu clippy`: Run clippy on all the crates in the Rust workspace.
 //! - `nu run.nu rustfmt`: Run rustfmt on all the crates in the Rust workspace.
