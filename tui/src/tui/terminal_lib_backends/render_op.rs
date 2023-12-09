@@ -18,6 +18,7 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::{Deref, DerefMut}};
 
+use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::{Deserialize, Serialize};
 
@@ -147,7 +148,7 @@ macro_rules! render_ops {
 /// Due to the compositor [OffscreenBuffer], there is no need to optimize the individual paint
 /// operations. You don't have to manage your own whitespace or doing clear before paint! 🎉 The
 /// compositor takes care of that for you!
-#[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, GetSize)]
 pub struct RenderOps {
     pub list: Vec<RenderOp>,
 }
@@ -229,7 +230,7 @@ pub mod render_ops_impl {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash, GetSize)]
 pub enum RenderOp {
     EnterRawMode,
 

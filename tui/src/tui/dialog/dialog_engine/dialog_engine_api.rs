@@ -386,6 +386,7 @@ mod internal_impl {
             &mut dialog_buffer.editor_buffer,
             flex_box,
             has_focus,
+            global_data.window_size,
         )?;
 
         pipeline.hoist(ZOrder::Normal, ZOrder::Glass);
