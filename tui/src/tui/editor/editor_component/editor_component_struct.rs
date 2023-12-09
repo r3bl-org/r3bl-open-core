@@ -114,6 +114,7 @@ pub mod editor_component_impl_component_trait {
                 editor_buffer,
                 current_box,
                 has_focus,
+                global_data.window_size,
             )
         }
 

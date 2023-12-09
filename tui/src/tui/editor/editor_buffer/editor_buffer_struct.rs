@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use std::fmt::{Debug, Formatter, Result};
+use std::{collections::HashMap,
+          fmt::{Debug, Formatter, Result}};
 
 use get_size::GetSize;
 use r3bl_rs_utils_core::*;
@@ -169,6 +170,7 @@ use crate::*;
 pub struct EditorBuffer {
     editor_content: EditorContent,
     pub(crate) history: EditorBufferHistory,
+    pub render_cache: RenderCache,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Default)]
@@ -184,6 +186,12 @@ pub struct EditorContent {
 pub struct EditorBufferHistory {
     versions: Vec<EditorContent>,
     current_index: isize,
+}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Default, GetSize)]
+pub struct RenderCache {
+    cache_map: HashMap<String, RenderOps>,
+    editor_content: EditorContent,
 }
 
 impl Default for EditorBufferHistory {
@@ -535,6 +543,52 @@ mod constructor {
     }
 }
 
+pub mod cache {
+    use super::*;
+
+    impl EditorBuffer {
+        /// Render the content of the editor buffer to the screen from the cache if the content
+        /// has not been modified.
+        ///
+        /// The cache miss occurs if
+        /// - Scroll Offset changes
+        /// - Window size changes
+        /// - Content of the editor changes
+        pub fn render_content_from_cache(
+            &mut self,
+            key: String,
+            render_args: &RenderArgs<'_>,
+            render_ops: &mut RenderOps,
+        ) {
+            if let Some(cached_output) = self.render_cache.cache_map.get(&key) {
+                if &self.render_cache.editor_content.lines == &self.editor_content.lines {
+                    // Cache hit
+                    *render_ops = cached_output.clone();
+                } else {
+                    // Content has been modified.
+                    self.handle_cache_miss(key, render_args, render_ops);
+                }
+            } else {
+                // Scroll Offset or Window size has been modified.
+                self.handle_cache_miss(key, render_args, render_ops);
+            }
+        }
+
+        /// When the cache miss occurs, the entire buffer needs to be re-rendered.
+        /// Cache Map is cleared and the new render ops are stored in the cache.
+        fn handle_cache_miss(
+            &mut self,
+            key: String,
+            render_args: &RenderArgs<'_>,
+            render_ops: &mut RenderOps,
+        ) {
+            self.render_cache.cache_map.clear();
+            EditorEngineApi::render_content(render_args, render_ops);
+            self.render_cache.editor_content = self.editor_content.clone();
+            self.render_cache.cache_map.insert(key, render_ops.clone());
+        }
+    }
+}
 pub enum CaretKind {
     Raw,
     ScrollAdjusted,
