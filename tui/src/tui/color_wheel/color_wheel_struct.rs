@@ -455,11 +455,10 @@ impl ColorWheel {
 
     pub fn colorize_into_string(
         &mut self,
-        text: String,
+        unicode_string: &UnicodeString,
         gradient_generation_policy: GradientGenerationPolicy,
         text_colorization_policy: TextColorizationPolicy,
     ) -> String {
-        let unicode_string = UnicodeString::from(text);
         let it = self.colorize_into_styled_texts(
             &unicode_string,
             gradient_generation_policy,
@@ -1074,7 +1073,7 @@ mod tests_color_wheel_rgb {
         let unicode_string = UnicodeString::from("HELLO WORLD");
 
         let ansi_styled_string = color_wheel_rgb.colorize_into_string(
-            unicode_string.string,
+            &unicode_string,
             GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength,
             TextColorizationPolicy::ColorEachCharacter(None),
         );
