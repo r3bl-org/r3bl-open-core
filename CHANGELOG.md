@@ -288,10 +288,13 @@
 <a id="markdown-next-release" name="next-release"></a>
 
 - Fixed:
-  - Fix the custom MD parser so that it correctly parses plain text. Also disable the
-    syntect highlighter for the editor by default and just use the custom MD parser. For
-    files that are not Markdown, we will probably need to enable syntect in the future
-    since it is not covered by the custom MD parser & highlighter combo.
+  - Fix the custom MD parser so that it correctly parses plain text.
+
+- Changed:
+  - In the editor component - disable the syntect highlighter for the editor by default
+    and just use the custom MD parser. For files that are not Markdown, we will probably
+    need to enable syntect in the future since it is not covered by the custom MD parser &
+    highlighter combo.
 
 - Added:
   - Add undo, redo support for the editor component.
@@ -303,6 +306,11 @@
     terminal emulator. Also added conversion function
     `convert_tui_color_into_r3bl_ansi_color()` to convert from `TuiColor` to
     `r3bl_ansi_term::Color`.
+  - In editor component, add support for caching rendered output of content. When the
+    content changes, or the viewport size or window size change, the cache is invalidated.
+    This is useful for performance reasons. It also leverages the undo/redo system for
+    cache invalidation (which makes it fast to invalidate the render ops cache w/out
+    having to do a content comparison to detect changes).
 
 - Changed:
   - Redux is no longer used in order to propagate state transitions from async middleware
