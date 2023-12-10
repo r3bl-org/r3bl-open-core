@@ -121,31 +121,39 @@ impl EditorEngineApi {
         throws_with_return!({
             editor_engine.current_box = current_box.into();
 
-            // Create reusable args for render functions.
-            let render_args = RenderArgs {
-                editor_buffer: &editor_buffer.clone(),
-                editor_engine,
-                has_focus,
-            };
-
             if editor_buffer.is_empty() {
-                EditorEngineApi::render_empty_state(&render_args)
+                EditorEngineApi::render_empty_state(RenderArgs {
+                    editor_buffer,
+                    editor_engine,
+                    has_focus,
+                })
             } else {
                 let mut render_ops = render_ops!();
-                // Cache key is combination of scroll_offset and window_size.
-                let cache_key = format!(
-                    "{}{}",
-                    editor_buffer.get_scroll_offset().to_string(),
-                    window_size.to_string()
-                );
 
-                editor_buffer.render_content_from_cache(
-                    cache_key,
-                    &render_args,
+                cache::render_content(
+                    editor_buffer,
+                    editor_engine,
+                    window_size,
+                    has_focus,
                     &mut render_ops,
                 );
-                EditorEngineApi::render_selection(&render_args, &mut render_ops);
-                EditorEngineApi::render_caret(&render_args, &mut render_ops);
+
+                EditorEngineApi::render_selection(
+                    RenderArgs {
+                        editor_buffer,
+                        editor_engine,
+                        has_focus,
+                    },
+                    &mut render_ops,
+                );
+                EditorEngineApi::render_caret(
+                    RenderArgs {
+                        editor_buffer,
+                        editor_engine,
+                        has_focus,
+                    },
+                    &mut render_ops,
+                );
 
                 let mut render_pipeline = render_pipeline!();
                 render_pipeline.push(ZOrder::Normal, render_ops);
@@ -205,7 +213,7 @@ impl EditorEngineApi {
     }
 
     // BOOKM: Render selection
-    fn render_selection(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) {
+    fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
         let RenderArgs {
             editor_buffer,
             editor_engine,
@@ -292,7 +300,7 @@ impl EditorEngineApi {
         }
     }
 
-    fn render_caret(render_args: &RenderArgs<'_>, render_ops: &mut RenderOps) {
+    fn render_caret(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
         let RenderArgs {
             editor_buffer,
             editor_engine,
@@ -327,7 +335,7 @@ impl EditorEngineApi {
         }
     }
 
-    pub fn render_empty_state(render_args: &RenderArgs<'_>) -> RenderPipeline {
+    pub fn render_empty_state(render_args: RenderArgs<'_>) -> RenderPipeline {
         let RenderArgs {
             has_focus,
             editor_engine,
