@@ -170,7 +170,7 @@ use crate::*;
 pub struct EditorBuffer {
     editor_content: EditorContent,
     pub(crate) history: EditorBufferHistory,
-    pub render_cache: RenderCache,
+    pub render_cache: HashMap<String, RenderOps>,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Default)]
@@ -186,12 +186,6 @@ pub struct EditorContent {
 pub struct EditorBufferHistory {
     versions: Vec<EditorContent>,
     current_index: isize,
-}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Default, GetSize)]
-pub struct RenderCache {
-    cache_map: HashMap<String, RenderOps>,
-    editor_content: EditorContent,
 }
 
 impl Default for EditorBufferHistory {
@@ -211,6 +205,9 @@ pub mod history {
     }
 
     pub fn push(editor_buffer: &mut EditorBuffer) {
+        // Invalidate the content cache, since the content just changed.
+        cache::clear(editor_buffer);
+
         let content_copy = editor_buffer.editor_content.clone();
 
         // Delete the history from the current version index to the end.
@@ -233,6 +230,9 @@ pub mod history {
     }
 
     pub fn undo(editor_buffer: &mut EditorBuffer) {
+        // Invalidate the content cache, since the content just changed.
+        cache::clear(editor_buffer);
+
         let retain_caret_position = editor_buffer.editor_content.caret_display_position;
         if let Some(content) = editor_buffer.history.previous_content() {
             editor_buffer.editor_content = content;
@@ -245,6 +245,9 @@ pub mod history {
     }
 
     pub fn redo(editor_buffer: &mut EditorBuffer) {
+        // Invalidate the content cache, since the content just changed.
+        cache::clear(editor_buffer);
+
         if let Some(content) = editor_buffer.history.next_content() {
             editor_buffer.editor_content = content;
         }
@@ -546,47 +549,49 @@ mod constructor {
 pub mod cache {
     use super::*;
 
-    impl EditorBuffer {
-        /// Render the content of the editor buffer to the screen from the cache if the content
-        /// has not been modified.
-        ///
-        /// The cache miss occurs if
-        /// - Scroll Offset changes
-        /// - Window size changes
-        /// - Content of the editor changes
-        pub fn render_content_from_cache(
-            &mut self,
-            key: String,
-            render_args: &RenderArgs<'_>,
-            render_ops: &mut RenderOps,
-        ) {
-            if let Some(cached_output) = self.render_cache.cache_map.get(&key) {
-                if &self.render_cache.editor_content.lines == &self.editor_content.lines {
-                    // Cache hit
-                    *render_ops = cached_output.clone();
-                } else {
-                    // Content has been modified.
-                    self.handle_cache_miss(key, render_args, render_ops);
-                }
-            } else {
-                // Scroll Offset or Window size has been modified.
-                self.handle_cache_miss(key, render_args, render_ops);
-            }
+    pub fn clear(editor_buffer: &mut EditorBuffer) { editor_buffer.render_cache.clear(); }
+
+    /// Cache key is combination of scroll_offset and window_size.
+    fn generate_key(editor_buffer: &EditorBuffer, window_size: Size) -> String {
+        format!("{}{}", editor_buffer.get_scroll_offset(), window_size,)
+    }
+
+    /// Render the content of the editor buffer to the screen from the cache if the content
+    /// has not been modified.
+    ///
+    /// The cache miss occurs if
+    /// - Scroll Offset changes
+    /// - Window size changes
+    /// - Content of the editor changes
+    pub fn render_content(
+        editor_buffer: &mut EditorBuffer,
+        editor_engine: &mut EditorEngine,
+        window_size: Size,
+        has_focus: &mut HasFocus,
+        render_ops: &mut RenderOps,
+    ) {
+        let key = generate_key(editor_buffer, window_size);
+        if let Some(cached_output) = editor_buffer.render_cache.get(&key) {
+            // Cache hit
+            *render_ops = cached_output.clone();
+            return;
         }
 
-        /// When the cache miss occurs, the entire buffer needs to be re-rendered.
-        /// Cache Map is cleared and the new render ops are stored in the cache.
-        fn handle_cache_miss(
-            &mut self,
-            key: String,
-            render_args: &RenderArgs<'_>,
-            render_ops: &mut RenderOps,
-        ) {
-            self.render_cache.cache_map.clear();
-            EditorEngineApi::render_content(render_args, render_ops);
-            self.render_cache.editor_content = self.editor_content.clone();
-            self.render_cache.cache_map.insert(key, render_ops.clone());
-        }
+        // Cache miss, due to either:
+        // - Content has been modified.
+        // - Scroll Offset or Window size has been modified.
+        editor_buffer.render_cache.clear();
+        let render_args = RenderArgs {
+            editor_engine,
+            editor_buffer,
+            has_focus,
+        };
+
+        // Re-render content, generate & write to render_ops.
+        EditorEngineApi::render_content(&render_args, render_ops);
+
+        // Snapshot the render_ops in the cache.
+        editor_buffer.render_cache.insert(key, render_ops.clone());
     }
 }
 pub enum CaretKind {
