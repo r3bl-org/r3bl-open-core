@@ -89,6 +89,7 @@ This crate is related to the first thing that's described above. It provides lot
   - [Two callback functions](#two-callback-functions)
   - [How to use this dialog to make an HTTP request & pipe the results into a selection area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
   - [How to make HTTP requests](#how-to-make-http-requests)
+- [Custom Markdown MD parsing and custom syntax highlighting](#custom-markdown-md-parsing-and-custom-syntax-highlighting)
 - [Grapheme support](#grapheme-support)
 - [Lolcat support](#lolcat-support)
 - [Issues, comments, feedback, and PRs](#issues-comments-feedback-and-prs)
@@ -794,6 +795,35 @@ Instead of using the `reqwest` crate, we should use the `hyper` crate (which is 
 drop support for `reqwest` in all our crates.
 
 - https://blessed.rs/crates#section-networking-subsection-http-foundations
+
+## Custom Markdown (MD) parsing and custom syntax highlighting
+<a id="markdown-custom-markdown-md-parsing-and-custom-syntax-highlighting" name="custom-markdown-md-parsing-and-custom-syntax-highlighting"></a>
+
+The code for parsing and syntax highlighting is in [try_parse_and_highlight].
+
+A custom Markdown parser is provided to provide some extensions over the standard
+Markdown syntax. The parser code is in the [parse_markdown] function. Here are some of
+the extensions:
+- Metadata title (eg: `@title: <title_text>`). Similar to front matter.
+- Metadata tags (eg: `@tags: <tag1>, <tag2>`).
+- Metadata authors (eg: `@authors: <author1>, <author2>`).
+- Metadata date (eg: `@date: <date>`).
+
+Some other changes are adding support for smart lists. These are lists that span
+multiple lines of text. And indentation levels are tracked. This information is used
+to render the list items in a way that is visually appealing.
+- The code for parsing smart lists is in [parse_smart_list].
+- The code for syntax highlighting is in
+  [StyleUSSpanLines::from_document].
+
+Also, `syntect` crate is still used by the editor component
+[EditorEngineApi::render_engine] to syntax highlight the text inside code blocks of
+Markdown documents.
+
+An alternative approach to doing this was considered using the crate `markdown-rs`, but we
+decided to implement our own parser using
+[`nom`](https://developerlife.com/2023/02/20/guide-to-nom-parsing/) since it was streaming
+and used less CPU and memory.
 
 ## Grapheme support
 <a id="markdown-grapheme-support" name="grapheme-support"></a>

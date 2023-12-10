@@ -815,13 +815,6 @@ mod tests_color_wheel_rgb {
     /// If these two are left as separate tests, then these tests will be flaky.
     #[serial]
     #[test]
-    fn test_things_that_change_global_color_support_override() {
-        test_color_wheel_config_narrowing();
-        test_color_wheel_iterator();
-        test_colorize_into_styled_texts_color_each_word();
-        test_colorize_to_styled_texts_color_each_character();
-    }
-
     fn test_color_wheel_config_narrowing() {
         let default_color_wheel = ColorWheel::default();
         let configs = &default_color_wheel.configs;
@@ -870,6 +863,18 @@ mod tests_color_wheel_rgb {
         }
     }
 
+    /// This strange test is needed because the color wheel uses a global variable to determine
+    /// color support. This test ensures that the global variable is reset to its original value
+    /// after each test.
+    ///
+    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to ensure that
+    /// the global variable is reset to its original value before each test. This is why
+    /// `test_color_wheel_config_narrowing`, `test_color_wheel_iterator`, etc. are wrapped in a
+    /// single test.
+    ///
+    /// If these two are left as separate tests, then these tests will be flaky.
+    #[serial]
+    #[test]
     fn test_color_wheel_iterator() {
         global_color_support::set_override(ColorSupport::Truecolor);
 
@@ -969,6 +974,18 @@ mod tests_color_wheel_rgb {
         global_color_support::clear_override()
     }
 
+    /// This strange test is needed because the color wheel uses a global variable to determine
+    /// color support. This test ensures that the global variable is reset to its original value
+    /// after each test.
+    ///
+    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to ensure that
+    /// the global variable is reset to its original value before each test. This is why
+    /// `test_color_wheel_config_narrowing`, `test_color_wheel_iterator`, etc. are wrapped in a
+    /// single test.
+    ///
+    /// If these two are left as separate tests, then these tests will be flaky.
+    #[serial]
+    #[test]
     fn test_colorize_into_styled_texts_color_each_word() {
         let color_wheel_rgb = &mut test_helpers::create_color_wheel_rgb();
 
@@ -1006,6 +1023,18 @@ mod tests_color_wheel_rgb {
         global_color_support::clear_override()
     }
 
+    /// This strange test is needed because the color wheel uses a global variable to determine
+    /// color support. This test ensures that the global variable is reset to its original value
+    /// after each test.
+    ///
+    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to ensure that
+    /// the global variable is reset to its original value before each test. This is why
+    /// `test_color_wheel_config_narrowing`, `test_color_wheel_iterator`, etc. are wrapped in a
+    /// single test.
+    ///
+    /// If these two are left as separate tests, then these tests will be flaky.
+    #[serial]
+    #[test]
     fn test_colorize_to_styled_texts_color_each_character() {
         use r3bl_rs_utils_macro::style;
 
@@ -1064,6 +1093,17 @@ mod tests_color_wheel_rgb {
         global_color_support::clear_override()
     }
 
+    /// This strange test is needed because the color wheel uses a global variable to determine
+    /// color support. This test ensures that the global variable is reset to its original value
+    /// after each test.
+    ///
+    /// Additionally, since Rust runs tests in a multi-threaded environment, we need to ensure that
+    /// the global variable is reset to its original value before each test. This is why
+    /// `test_color_wheel_config_narrowing`, `test_color_wheel_iterator`, etc. are wrapped in a
+    /// single test.
+    ///
+    /// If these two are left as separate tests, then these tests will be flaky.
+    #[serial]
     #[test]
     fn test_colorize_into_ansi_styled_string_each_character() {
         let color_wheel_rgb = &mut test_helpers::create_color_wheel_rgb();

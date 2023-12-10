@@ -227,7 +227,7 @@ def docs [] {
 
 def serve-docs [] {
     npm i -g serve
-    serve target/doc
+    serve ../target/doc
 }
 
 def rustfmt [] {
