@@ -25,7 +25,7 @@ pub enum EventLoopResult {
     Continue,
     ContinueAndRerender,
     ContinueAndRerenderAndClear,
-    ExitWithResult(Vec<String>),
+    ExitWithResult(SelectModeResult),
     ExitWithoutResult,
     ExitWithError,
     Select,

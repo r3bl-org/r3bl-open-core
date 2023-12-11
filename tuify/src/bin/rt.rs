@@ -222,17 +222,14 @@ fn show_tui(
             StyleSheet::default(),
         );
 
-        let it = if let Some(user_selection) = user_selection {
-            if let Some(it) = user_selection.first() {
-                println!("selection-mode: {}", it);
-                SelectionMode::from_str(it, true).unwrap_or(SelectionMode::Single)
-            } else {
+        let it = match user_selection {
+            SelectModeResult::Single(item) => {
+                SelectionMode::from_str(&item, true).unwrap_or(SelectionMode::Single)
+            }
+            _ => {
                 print_help_for("select-from-list").ok();
                 return;
             }
-        } else {
-            print_help_for("select-from-list").ok();
-            return;
         };
 
         it
@@ -275,15 +272,14 @@ fn show_tui(
 
     // Actually get input from the user.
     let selected_items = {
-        let it = select_from_list(
+        select_from_list(
             "Select one line".to_string(),
             lines,
             max_height_row_count,
             max_width_col_count,
             selection_mode,
             StyleSheet::default(),
-        );
-        convert_user_input_into_vec_of_strings(it)
+        )
     };
 
     call_if_true!(enable_logging, {

@@ -15,7 +15,7 @@ pub fn try_delete_branch() -> CommonResult<()> {
         SelectionMode::Multiple,
     );
 
-    if let Some(branches) = maybe_selected_branches {
+    if let SelectModeResult::Multiple(branches) = maybe_selected_branches {
         let branches_to_delete = branches.join(", ");
         let num_of_branches = branches.len();
 
@@ -47,26 +47,24 @@ pub fn try_delete_branch() -> CommonResult<()> {
 
         use user_choice::Selection::{self, *};
 
-        if let Some(selected) = maybe_selected_delete_or_exit {
-            match Selection::from(selected) {
-                Delete => {
-                    let mut command =
-                        inner::run_git_command_to_delete_branches_on_all_branches(&branches);
-                    let output = command.output()?;
-                    if output.status.success() {
-                        if num_of_branches == 1 {
-                            inner::display_one_branch_deleted_success_message(&branches);
-                        } else {
-                            inner::display_all_branches_deleted_success_messages(&branches);
-                        }
+        match user_choice::Selection::from(maybe_selected_delete_or_exit) {
+            user_choice::Selection::Delete => {
+                let mut command =
+                    inner::run_git_command_to_delete_branches_on_all_branches(&branches);
+                let output = command.output()?;
+                if output.status.success() {
+                    if num_of_branches == 1 {
+                        inner::display_one_branch_deleted_success_message(&branches);
                     } else {
-                        inner::display_correct_error_message(branches, output);
+                        inner::display_all_branches_deleted_success_messages(&branches);
                     }
+                } else {
+                    inner::display_correct_error_message(branches, output);
                 }
+            }
 
-                Exit => {
-                    giti_ui_templates::show_exit_message();
-                }
+            user_choice::Selection::Exit => {
+                giti_ui_templates::show_exit_message();
             }
         }
     }
@@ -80,20 +78,23 @@ pub fn try_delete_branch() -> CommonResult<()> {
             Exit,
         }
 
-        impl From<Vec<String>> for Selection {
-            fn from(selected: Vec<String>) -> Selection {
-                let selected_to_delete_one_branch = selected[0] == DELETE_BRANCH.to_string();
-                let selected_to_delete_multiple_branches =
-                    selected[0] == DELETE_BRANCHES.to_string();
-                let selected_to_exit = selected[0] == EXIT.to_string();
-
-                if selected_to_delete_one_branch || selected_to_delete_multiple_branches {
-                    return Selection::Delete;
+        impl From<SelectModeResult> for Selection {
+            fn from(selected: SelectModeResult) -> Selection {
+                match selected {
+                    SelectModeResult::None => Selection::Exit,
+                    SelectModeResult::Single(user_input) => {
+                        return if user_input == DELETE_BRANCH.to_string() {
+                            Selection::Delete
+                        }
+                        else { Selection::Exit }
+                    }
+                    SelectModeResult::Multiple(user_inputs) => {
+                        return if user_inputs[0] == DELETE_BRANCHES.to_string() {
+                            Selection::Delete
+                        }
+                        else { Selection::Exit }
+                    }
                 }
-                if selected_to_exit {
-                    return Selection::Exit;
-                }
-                Selection::Exit
             }
         }
     }
@@ -234,7 +235,7 @@ pub mod giti_ui_templates {
         options: Vec<String>,
         header: String,
         selection_mode: SelectionMode,
-    ) -> Option<Vec<String>> {
+    ) -> SelectModeResult {
         let max_height_row_count = 20;
         let max_width_col_count = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
         let style = StyleSheet::default();

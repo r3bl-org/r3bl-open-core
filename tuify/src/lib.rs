@@ -70,10 +70,10 @@
 //!     );
 //!
 //!     match &user_input {
-//!         Some(it) => {
+//!         SelectModeResult::Single(it) => {
 //!             println!("User selected: {:?}", it);
 //!         }
-//!         None => println!("User did not select anything"),
+//!         _ => println!("User did not select anything"),
 //!     }
 //!
 //!     Ok(())
@@ -278,10 +278,10 @@
 //!     );
 //!
 //!     match &user_input {
-//!         Some(it) => {
+//!         SelectModeResult::Single(it) => {
 //!             println!("User selected: {:?}", it);
 //!         }
-//!         None => println!("User did not select anything"),
+//!         _ => println!("User did not select anything"),
 //!     }
 //!
 //!     Ok(())
@@ -303,6 +303,7 @@
 //!    // This is how you can define your custom style.
 //!    // For each Style struct, you can define different style overrides.
 //!    // Please take a look at the Style struct to see what you can override.
+//!    use r3bl_tuify::SelectModeResult;
 //!    let my_custom_style = StyleSheet {
 //!       focused_and_selected_style: Style {
 //!             fg_color: Color::Rgb(255, 244, 0),
@@ -340,10 +341,10 @@
 //!    );
 //!
 //!    match &user_input {
-//!       Some(it) => {
+//!       SelectModeResult::Multiple(it) => {
 //!          println!("User selected: {:?}", it);
 //!       }
-//!       None => println!("User did not select anything"),
+//!       _ => println!("User did not select anything"),
 //!    }
 //!    Ok(())
 //! }

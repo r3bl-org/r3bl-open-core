@@ -29,11 +29,31 @@ pub struct State {
     pub raw_caret_row_index: ChUnit,
     pub scroll_offset_row_index: ChUnit,
     pub items: Vec<String>,
-    pub selected_items: Vec<String>,
+    pub selected_items: SelectModeResult,
     pub header: String,
     pub selection_mode: SelectionMode,
     pub resize_hint: Option<ResizeHint>,
     pub window_size: Option<Size>,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Default)]
+pub enum SelectModeResult {
+    #[default]
+    None,
+    Single(String),
+    Multiple(Vec<String>),
+}
+
+impl Iterator for SelectModeResult {
+    type Item = String;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            SelectModeResult::None => None,
+            SelectModeResult::Multiple(vec) => vec.pop(),
+            SelectModeResult::Single(s) => Some(s.to_string())
+        }
+    }
 }
 
 impl CalculateResizeHint for State {

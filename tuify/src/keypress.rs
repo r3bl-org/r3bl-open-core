@@ -29,6 +29,7 @@ pub enum KeyPress {
     Error,
     Space,
     Resize(Size),
+    CtrlC,
 }
 
 pub fn read_key_press() -> KeyPress {
@@ -113,6 +114,13 @@ fn read_key_press_windows() -> KeyPress {
                     kind: KeyEventKind::Press, // This is for Windows.
                     state: KeyEventState::NONE,
                 }) => KeyPress::Esc,
+                // Ctrl + c.
+                Event::Key(KeyEvent{
+                       code: KeyCode::Char('c'),
+                       modifiers: KeyModifiers::CONTROL,
+                       kind: KeyEventKind::Press, // This is for Windows.
+                       state: KeyEventState::NONE
+                }) => KeyPress::CtrlC,
 
                 // Space.
                 Event::Key(KeyEvent {

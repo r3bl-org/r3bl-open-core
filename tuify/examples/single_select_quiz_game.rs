@@ -43,18 +43,18 @@ pub fn main() -> Result<()> {
         );
 
         match &user_input {
-            Some(input) => {
+            SelectModeResult::Single(input) => {
                 check_user_input_and_display_result(
-                    input,
+                    input.to_string(),
                     question_data,
-                    &user_input,
+                    user_input,
                     correct_answer_color,
                     incorrect_answer_color,
                     &mut score,
                     &all_questions_and_answers,
                 );
             }
-            None => {
+            _ => {
                 println!("You did not select anything");
                 // Exit the game.
                 break;
@@ -97,24 +97,22 @@ impl Display for Answer {
     }
 }
 
-fn check_answer(guess: &QuestionData, maybe_user_input: &Option<Vec<String>>) -> Answer {
+fn check_answer(guess: &QuestionData, maybe_user_input: SelectModeResult) -> Answer {
     // If the maybe_user_input has 1 item then proceed. Otherwise return incorrect.
     match maybe_user_input {
-        Some(user_input) => {
-            let maybe_user_answer = user_input.first();
-
-            match maybe_user_answer {
-                Some(user_answer) => {
-                    if *user_answer == guess.correct_answer {
-                        Answer::Correct
-                    } else {
-                        Answer::Incorrect
-                    }
-                }
-                None => Answer::Incorrect,
+        SelectModeResult::Single(user_answer) => {
+            return if user_answer == guess.correct_answer {
+                Answer::Correct
             }
+            else { Answer::Incorrect }
+        },
+        SelectModeResult::Multiple(user_input) => {
+            return if user_input.iter().any(|user_answer| *user_answer == guess.correct_answer) {
+                Answer::Correct
+            }
+            else { Answer::Incorrect }
         }
-        None => Answer::Incorrect,
+        SelectModeResult::None => Answer::Incorrect,
     }
 }
 
@@ -179,15 +177,15 @@ fn display_footer(score: i32, all_questions_and_answers: &Vec<QuestionData>, lin
 }
 
 fn check_user_input_and_display_result(
-    input: &Vec<String>,
+    input: String,
     question_data: &QuestionData,
-    user_input: &Option<Vec<String>>,
+    user_input: SelectModeResult,
     correct_answer_color: Color,
     incorrect_answer_color: Color,
     score: &mut i32,
     all_questions_and_answers: &Vec<QuestionData>,
 ) {
-    let answer = check_answer(&question_data, &user_input);
+    let answer = check_answer(&question_data, user_input);
 
     let background_color = match answer {
         Answer::Correct => correct_answer_color,
@@ -215,7 +213,7 @@ fn check_user_input_and_display_result(
             text: format!("{}. {}", question_number, &question_data.question).as_str(),
             style: &[r3bl_ansi_color::Style::Foreground(background_color)],
         },
-        input[0],
+        input,
         correct_or_incorrect
     );
 }
@@ -250,8 +248,8 @@ mod tests {
             correct_answer: "Paris".to_string(),
         };
 
-        let correct_answer = Some(vec!["Paris".to_string()]);
-        let result = check_answer(&guess, &correct_answer);
+        let correct_answer = SelectModeResult::Single("Paris".to_string());
+        let result = check_answer(&guess, correct_answer);
         assert_eq!(result, Answer::Correct);
     }
 
@@ -267,8 +265,8 @@ mod tests {
             correct_answer: "Paris".to_string(),
         };
 
-        let incorrect_answer = Some(vec!["London".to_string()]);
-        let result = check_answer(&guess, &incorrect_answer);
+        let incorrect_answer = SelectModeResult::Single("London".to_string());
+        let result = check_answer(&guess, incorrect_answer);
         assert_eq!(result, Answer::Incorrect);
     }
 }

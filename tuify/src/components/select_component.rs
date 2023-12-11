@@ -130,7 +130,15 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                     IsUnselected,
                 }
 
-                let is_selected = state.selected_items.contains(data_item);
+                let is_selected = match &state.selected_items {
+                    SelectModeResult::Single(item) => {
+                        item == data_item
+                    }
+                    SelectModeResult::Multiple(items) => {
+                        items.contains(data_item)
+                    }
+                    SelectModeResult::None => false
+                };
                 let is_focused = ch!(caret_row_scroll_adj) == state.get_focused_index();
 
                 let selection_state = match (is_focused, is_selected) {
@@ -295,7 +303,7 @@ mod tests {
             max_display_width: ch!(80),
             raw_caret_row_index: ch!(0),
             scroll_offset_row_index: ch!(0),
-            selected_items: vec![],
+            selected_items: SelectModeResult::Single("".to_string()),
             selection_mode: SelectionMode::Single,
             ..Default::default()
         };

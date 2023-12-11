@@ -72,8 +72,8 @@ fn try_run_program(giti_app_args: GitiAppArg) -> CommonResult<()> {
                     SelectionMode::Single,
                 );
 
-                if let Some(selected) = maybe_selected {
-                    match selected[0].as_str() {
+                if let SelectModeResult::Single(selected) = maybe_selected {
+                    match selected.as_str() {
                         "delete" => {
                             try_delete_branch()?;
                         }

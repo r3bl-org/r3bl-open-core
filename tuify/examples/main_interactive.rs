@@ -19,9 +19,7 @@ use std::io::Result;
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
 use r3bl_rs_utils_core::*;
-use r3bl_tuify::{
-    components::style::StyleSheet, get_size, select_from_list, SelectionMode, DEVELOPMENT_MODE,
-};
+use r3bl_tuify::{components::style::StyleSheet, get_size, select_from_list, SelectionMode, SelectModeResult, DEVELOPMENT_MODE};
 mod single_select_quiz_game;
 use single_select_quiz_game::main as single_select_quiz_game;
 
@@ -118,53 +116,21 @@ fn main() -> Result<()> {
         );
 
         match &maybe_user_input {
-            Some(input) => {
-                let first_line = input.first();
-
-                match first_line {
-                    Some(user_input) => {
-                        if *user_input == MULTIPLE_SELECT_SINGLE_ITEM.to_string() {
-                            // Multiple select, single item.
-                            multiple_select_single_item(multi_select_instructions)
-                        } else if *user_input == MULTIPLE_SELECT_13_ITEMS_VPH_5.to_string() {
-                            // Multiple select.
-                            multiple_select_13_items_vph_5(
-                                max_height_row_count,
-                                max_width_col_count,
-                                default_style,
-                                multi_select_instructions,
-                            );
-                        } else if *user_input == MULTIPLE_SELECT_2_ITEMS_VPH_5.to_string() {
-                            multiple_select_2_items_vph_5(
-                                max_height_row_count,
-                                max_width_col_count,
-                                sea_foam_style,
-                                multi_select_instructions,
-                            );
-                        } else if *user_input == SINGLE_SELECT_13_ITEMS_VPH_5.to_string() {
-                            // Single select.
-                            single_select_13_items_vph_5(
-                                max_height_row_count,
-                                max_width_col_count,
-                                hot_pink_style,
-                            );
-                        } else if *user_input == SINGLE_SELECT_2_ITEMS_VPH_5.to_string() {
-                            single_select_2_items_vph_5(
-                                max_height_row_count,
-                                max_width_col_count,
-                                default_style,
-                            );
-                        } else if *user_input == SINGLE_SELECT_QUIZ_GAME.to_string() {
-                            let _ = single_select_quiz_game();
-                        } else {
-                            println!("User did not select anything")
-                        }
-                    }
-                    None => println!("User did not select anything"),
+            SelectModeResult::Single(input) => {
+                match input.as_str() {
+                    MULTIPLE_SELECT_SINGLE_ITEM => multiple_select_single_item(multi_select_instructions),
+                    MULTIPLE_SELECT_13_ITEMS_VPH_5 => multiple_select_13_items_vph_5(max_height_row_count, max_width_col_count, default_style, multi_select_instructions),
+                    MULTIPLE_SELECT_2_ITEMS_VPH_5 => multiple_select_2_items_vph_5(max_height_row_count, max_width_col_count, sea_foam_style, multi_select_instructions),
+                    SINGLE_SELECT_13_ITEMS_VPH_5 => single_select_13_items_vph_5(max_height_row_count, max_width_col_count, hot_pink_style),
+                    SINGLE_SELECT_2_ITEMS_VPH_5 => single_select_2_items_vph_5(max_height_row_count, max_width_col_count, default_style),
+                    SINGLE_SELECT_QUIZ_GAME => {
+                        let _ = single_select_quiz_game();
+                    },
+                    _ => println!("User did not select anything"),
                 }
             }
-            None => println!("User did not select anything"),
-        }
+            _ => println!("User did not select anything"),
+        };
 
         call_if_true!(DEVELOPMENT_MODE, {
             log_debug("Stop logging...".to_string());
@@ -189,10 +155,10 @@ fn multiple_select_single_item(multi_select_instructions: AnsiStyledText) {
         StyleSheet::default(),
     );
     match &user_input {
-        Some(it) => {
+        SelectModeResult::Multiple(it) => {
             println!("User selected: {:?}", it);
         }
-        None => println!("User did not select anything"),
+        _ => println!("User did not select anything"),
     }
 }
 
@@ -231,10 +197,10 @@ fn multiple_select_13_items_vph_5(
         style,
     );
     match &user_input {
-        Some(it) => {
+        SelectModeResult::Multiple(it) => {
             println!("User selected: {:?}", it);
         }
-        None => println!("User did not select anything"),
+        _ => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
         log_debug(format!("user_input: {:?}", user_input).to_string());
@@ -262,10 +228,10 @@ fn multiple_select_2_items_vph_5(
         style,
     );
     match &user_input {
-        Some(it) => {
+        SelectModeResult::Multiple(it) => {
             println!("User selected: {:?}", it);
         }
-        None => println!("User did not select anything"),
+        _ => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
         log_debug(format!("user_input: {:?}", user_input).to_string());
@@ -306,10 +272,10 @@ fn single_select_13_items_vph_5(
         style,
     );
     match &user_input {
-        Some(it) => {
+        SelectModeResult::Multiple(it) => {
             println!("User selected: {:?}", it);
         }
-        None => println!("User did not select anything"),
+        _ => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
         log_debug(format!("user_input: {:?}", user_input).to_string());
@@ -336,10 +302,10 @@ fn single_select_2_items_vph_5(
         style,
     );
     match &user_input {
-        Some(it) => {
+        SelectModeResult::Multiple(it) => {
             println!("User selected: {:?}", it);
         }
-        None => println!("User did not select anything"),
+        _ => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
         log_debug(format!("user_input: {:?}", user_input).to_string());

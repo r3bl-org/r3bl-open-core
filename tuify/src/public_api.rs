@@ -37,10 +37,10 @@ pub fn select_from_list(
     max_width_col_count: usize,
     selection_mode: SelectionMode,
     style: StyleSheet,
-) -> Option<Vec<String>> {
+) -> SelectModeResult {
     // Don't block tests.
     if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-        return None;
+        return SelectModeResult::None;
     }
 
     // There are fewer items than viewport height. So make viewport shorter.
@@ -56,7 +56,6 @@ pub fn select_from_list(
         raw_caret_row_index: ch!(0),
         scroll_offset_row_index: ch!(0),
         items,
-        selected_items: Vec::new(),
         header,
         selection_mode,
         ..Default::default()
@@ -76,8 +75,8 @@ pub fn select_from_list(
     });
 
     match user_input {
-        Ok(EventLoopResult::ExitWithResult(it)) => Some(it),
-        _ => None,
+        Ok(EventLoopResult::ExitWithResult(it)) => it,
+        _ => SelectModeResult::None,
     }
 }
 
@@ -190,7 +189,7 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
                         .to_string(),
                 );
             });
-            if state.selected_items.is_empty() {
+            if state.selected_items == SelectModeResult::None {
                 EventLoopResult::ExitWithoutResult
             } else {
                 EventLoopResult::ExitWithResult(state.selected_items.clone())
@@ -209,13 +208,16 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
             let selection_index: usize = ch!(@to_usize state.get_focused_index());
             let maybe_item: Option<&String> = state.items.get(selection_index);
             match maybe_item {
-                Some(it) => EventLoopResult::ExitWithResult(vec![it.to_string()]),
+                Some(it) => {
+                    state.selected_items = SelectModeResult::Single(it.to_string());
+                    EventLoopResult::ExitWithResult(state.selected_items.clone())
+                },
                 None => EventLoopResult::ExitWithoutResult,
             }
         }
 
         // Escape.
-        KeyPress::Esc => {
+        KeyPress::Esc | KeyPress::CtrlC => {
             call_if_true!(DEVELOPMENT_MODE, {
                 log_debug("Esc".red().to_string());
             });
@@ -233,19 +235,31 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
             });
             let selection_index: usize = ch!(@to_usize state.get_focused_index());
             let maybe_item: Option<&String> = state.items.get(selection_index);
-            let maybe_index: Option<usize> = state
-                .selected_items
-                .iter()
-                .position(|x| Some(x) == maybe_item);
+            let maybe_index: Option<usize> = match &state.selected_items{
+                SelectModeResult::Multiple(items) => items.iter().position(|x| Some(x) == maybe_item),
+                _ => None
+            };
             match (maybe_item, maybe_index) {
                 // No selected_item.
                 (None, _) => (),
                 // Item already in selected_items so remove it.
                 (Some(_), Some(it)) => {
-                    state.selected_items.remove(it);
+                    if let SelectModeResult::Multiple(ref mut items) = state.selected_items {
+                        items.remove(it);
+                    }
+                    if SelectModeResult::Multiple(vec![]) == state.selected_items {
+                        state.selected_items = SelectModeResult::None;
+                    }
                 }
                 // Item not found in selected_items so add it.
-                (Some(it), None) => state.selected_items.push(it.to_string()),
+                (Some(it), None) => {
+                    if let SelectModeResult::Multiple(ref mut items) = state.selected_items {
+                        items.push(it.to_string());
+                    }
+                    else {
+                        state.selected_items = SelectModeResult::Multiple(vec![it.to_string()]);
+                    }
+                },
             };
 
             EventLoopResult::ContinueAndRerender
