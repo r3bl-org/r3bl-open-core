@@ -677,3 +677,130 @@ mod no_syn_hi_path {
         render_ops.push(RenderOp::ResetColor);
     }
 }
+
+#[cfg(test)]
+mod test_cache {
+    use std::collections::HashMap;
+
+    use super::*;
+
+    #[test]
+    fn test_render_content() {
+        let mut render_ops = &mut render_ops!();
+
+        let editor_buffer = &mut EditorBuffer::default();
+        let editor_engine = &mut EditorEngine::default();
+        let window_size = Size {
+            col_count: ch!(70),
+            row_count: ch!(15),
+        };
+        let has_focus = &mut HasFocus::default();
+
+        // Creating expected cache data structure
+        let mut cache = HashMap::new();
+
+        // The very first request to cache is always missed since cache is empty.
+        cache::render_content(
+            editor_buffer,
+            editor_engine,
+            window_size,
+            has_focus,
+            &mut render_ops,
+        );
+        test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
+
+        // Render the caret to screen. This should not change the content and result in a cache hit.
+        EditorEngineApi::render_caret(
+            RenderArgs {
+                editor_buffer,
+                editor_engine,
+                has_focus,
+            },
+            &mut render_ops,
+        );
+        cache::render_content(
+            editor_buffer,
+            editor_engine,
+            window_size,
+            has_focus,
+            &mut render_ops,
+        );
+        test_cache_hit(editor_buffer, &mut cache);
+
+        // Change in window size should invalidate the cache and result in a cache miss.
+        let window_size = Size {
+            col_count: ch!(50),
+            row_count: ch!(15),
+        };
+        cache::render_content(
+            editor_buffer,
+            editor_engine,
+            window_size,
+            has_focus,
+            &mut render_ops,
+        );
+        test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
+
+        // Render the selection of text to screen. This should not change the content and result in a cache hit.
+        EditorEngineApi::render_selection(
+            RenderArgs {
+                editor_buffer,
+                editor_engine,
+                has_focus,
+            },
+            &mut render_ops,
+        );
+        cache::render_content(
+            editor_buffer,
+            editor_engine,
+            window_size,
+            has_focus,
+            &mut render_ops,
+        );
+        test_cache_hit(editor_buffer, &mut cache);
+
+        // Change in scroll_offset should invalidate the cache and result in a cache miss.
+        editor_buffer.editor_content.scroll_offset = ScrollOffset {
+            col_index: ch!(1),
+            row_index: ch!(1),
+        };
+        cache::render_content(
+            editor_buffer,
+            editor_engine,
+            window_size,
+            has_focus,
+            &mut render_ops,
+        );
+        test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
+
+        // Change in content should invalidate the cache and result in a cache miss.
+        editor_buffer.set_lines(vec!["r3bl".to_string()]);
+        cache::render_content(
+            editor_buffer,
+            editor_engine,
+            window_size,
+            has_focus,
+            &mut render_ops,
+        );
+        test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
+    }
+
+    fn test_cache_miss(
+        editor_buffer: &mut EditorBuffer,
+        window_size: Size,
+        render_ops: &mut RenderOps,
+        cache: &mut HashMap<String, RenderOps>,
+    ) {
+        cache.clear(); // invalidating cache
+        let key = format!("{}{}", editor_buffer.get_scroll_offset(), window_size); // generating key
+        cache.insert(key, render_ops.clone()); // enter the new entry into cache
+        assert_eq2!(editor_buffer.render_cache, cache.clone());
+    }
+
+    fn test_cache_hit(
+        editor_buffer: &mut EditorBuffer,
+        cache: &mut HashMap<String, RenderOps>,
+    ) {
+        assert_eq2!(editor_buffer.render_cache, cache.clone());
+    }
+}
