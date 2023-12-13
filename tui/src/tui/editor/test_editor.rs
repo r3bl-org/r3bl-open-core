@@ -1643,3 +1643,189 @@ pub mod assert {
         );
     }
 }
+
+#[cfg(test)]
+mod selection_tests {
+    use std::collections::HashMap;
+
+    use r3bl_rs_utils_core::*;
+
+    use super::*;
+    use crate::*;
+
+    #[test]
+    fn test_text_selection() {
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+        // Buffer has two lines.
+        // Row Index : 0 , Column Length : 12
+        // Row Index : 1 , Column Length : 12
+        buffer.set_lines(vec!["abc r3bl xyz".to_string(), "pqr rust uvw".to_string()]);
+
+        {
+            // Current Caret Position : [row : 0, col : 0]
+            // Selecting up to the end of the first line.
+
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionScope::End)],
+            );
+            // Current Caret Position : [row : 0, col : 12]
+
+            // Selection Map : {{0, SelectionRange {start: 0, end: 12}}}
+            let mut selection_map = HashMap::new();
+            selection_map.insert(ch!(0), SelectionRange::new(ch!(0), ch!(12)));
+            assert_eq2!(buffer.get_selection_map().map, selection_map);
+        }
+
+        {
+            // Current Caret Position : [row : 0, col : 12]
+            // Reverse selection up to the start of the line.
+
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Right); 5], // Move caret to right for 5 times
+            );
+            // Current Caret Position : [row : 1, col : 4]
+
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionScope::Home)], // Select text upto starting
+            );
+            // Current Caret Position : [row : 1, col : 0]
+
+            // Selection Map : {{1, SelectionRange {start: 0, end: 4}}}
+            let mut selection_map = HashMap::new();
+            selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(4)));
+            assert_eq2!(buffer.get_selection_map().map, selection_map);
+        }
+
+        {
+            // Current Caret Position : [row : 1, col : 0]
+            // De-Select one character to right
+
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionScope::OneCharRight)], // Move Selection to Right
+            );
+            // Current Caret Position : [row : 1, col : 1]
+
+            // Selection Map : {{1, SelectionRange {start: 1, end: 4}}}
+            let mut selection_map = HashMap::new();
+            selection_map.insert(ch!(1), SelectionRange::new(ch!(1), ch!(4)));
+            assert_eq2!(buffer.get_selection_map().map, selection_map);
+        }
+
+        {
+            // Current Caret Position : [row : 1, col : 1]
+            // Select one character to left
+
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionScope::OneCharLeft)], // Move Selection to Left
+            );
+            // Current Caret Position : [row : 1, col : 0]
+
+            // Selection Map : {{1, SelectionRange {start: 0, end: 4}}}
+            let mut selection_map = HashMap::new();
+            selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(4)));
+            assert_eq2!(buffer.get_selection_map().map, selection_map);
+        }
+
+        {
+            // Current Caret Position : [row : 1, col : 0]
+            // Move Selection Caret to one line upwards
+
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionScope::OneLineUp)], // Select one line up
+            );
+            // Current Caret Position : [row : 0, col : 0]
+
+            // Selection Map : {{0, SelectionRange {start: 0, end: 12}}, {1, SelectionRange {start: 0, end: 4}}}
+            let mut selection_map = HashMap::new();
+            selection_map.insert(ch!(0), SelectionRange::new(ch!(0), ch!(12)));
+            selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(4)));
+            assert_eq2!(buffer.get_selection_map().map, selection_map);
+        }
+
+        {
+            // Current Caret Position : [row : 0, col : 0]
+            // Move Selection Caret to one line downwards
+
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionScope::OneLineDown)], // De-Select one line down
+            );
+            // Current Caret Position : [row : 1, col : 0]
+
+            // Selection Map : {{1, SelectionRange {start: 0, end: 4}}}
+            let mut selection_map = HashMap::new();
+            selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(4)));
+            assert_eq2!(buffer.get_selection_map().map, selection_map);
+        }
+
+        {
+            // Current Caret Position : [row : 1, col : 0]
+            // Move Caret to one char right and drop down selection
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Right)], // Move caret to right
+            );
+            // Current Caret Position : [row : 1, col : 1]
+
+            // Selection Map : {}
+            let selection_map = HashMap::new();
+            assert_eq2!(buffer.get_selection_map().map, selection_map);
+        }
+
+        {
+            // Current Caret Position : [row : 1, col : 1]
+            // Select by pressing PageUp
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionScope::PageUp)], // Select by pressing PageUp
+            );
+            // Current Caret Position : [row : 0, col : 1]
+
+            // Selection Map : {{0, SelectionRange {start: 1, end: 12}}, {1, SelectionRange {start: 0, end: 1}}}
+            let mut selection_map = HashMap::new();
+            selection_map.insert(ch!(0), SelectionRange::new(ch!(1), ch!(12)));
+            selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(1)));
+            assert_eq2!(buffer.get_selection_map().map, selection_map);
+        }
+
+        {
+            // Current Caret Position : [row : 0, col : 1]
+            // Select by pressing PageDown
+
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Right)], // Move caret one char right
+            );
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionScope::PageDown)], // Select by pressing PageDown
+            );
+            // Current Caret Position : [row : 1, col : 2]
+
+            // Selection Map : {{0, SelectionRange {start: 2, end: 12}},{1, SelectionRange {start: 0, end: 2}}}
+            let mut selection_map = HashMap::new();
+            selection_map.insert(ch!(0), SelectionRange::new(ch!(2), ch!(12)));
+            selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(2)));
+            assert_eq2!(buffer.get_selection_map().map, selection_map);
+        }
+    }
+}
