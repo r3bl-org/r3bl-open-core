@@ -174,6 +174,7 @@
     This is useful for performance reasons. It also leverages the undo/redo system for
     cache invalidation (which makes it fast to invalidate the render ops cache w/out
     having to do a content comparison to detect changes).
+  - Add lots of editor component tests for selection, content cache.
 
 ### v0.3.10 (2023-10-29)
 <a id="markdown-v0.3.10-2023-10-29" name="v0.3.10-2023-10-29"></a>
