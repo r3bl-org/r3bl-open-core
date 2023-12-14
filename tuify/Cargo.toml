@@ -49,7 +49,7 @@ log = { version = "0.4.20", features = ["std"] }
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
 clap = { version = "4.4.6", features = ["derive", "wrap_help"] }
-reedline = "0.25.0"
+reedline = "0.27.1"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
