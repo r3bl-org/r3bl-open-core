@@ -30,7 +30,6 @@ def main [...args: string] {
     let command = $args | get 0
 
     match $command {
-        "all" => {all}
         "build" => {build}
         "clean" => {clean}
         "run" => {run}
@@ -115,7 +114,6 @@ def print-help [command: string] {
     if $command == "all" {
         print $'Usage: (ansi blue_bold)run.nu(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi yellow)[args](ansi reset)'
         print $'(ansi green_bold)<command>(ansi reset) can be:'
-        print $'    (ansi green)all(ansi reset)'
         print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)run(ansi reset)'
@@ -143,15 +141,6 @@ def print-help [command: string] {
     } else {
         print $'Unknown command: (ansi red_bold)($command)(ansi reset)'
     }
-}
-
-def all [] {
-    clean
-    build
-    test
-    clippy
-    docs
-    rustfmt
 }
 
 def build [] {
