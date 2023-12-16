@@ -190,8 +190,15 @@
 <a id="markdown-next-release" name="next-release"></a>
 
 - Added:
-  - Binary target for `giti`. This will be an interactive git client that is tuified. It
-    is meant to be a useful productivity tool and an example of what is possible w/ tuify.
+  - Binary target for `giti`. This is an interactive git client that is tuified. It is a
+    productivity tool for git workflows, and is meant as a replacement for directly using
+    `git`. This also serves as a real world example of using the `r3bl_tuify` crate.
+  - View all the `giti branch` subcommands (e.g. `delete`, `checkout`, `new`, etc.) and
+    select one subcommand using the `select_from_list()` when `giti branch` runs.
+  - Delete one or more branches using `select_from_list()` when  `giti branch delete`
+    command runs.
+  - `Ctrl + c` now behaves just like the `Escape` key. In the past, pressing `Ctrl + c`
+    would do nothing the user could not exit the app by pressing this shortcut.
 
 ### v0.1.21 (2023-10-21)
 <a id="markdown-v0.1.21-2023-10-21" name="v0.1.21-2023-10-21"></a>
