@@ -214,8 +214,8 @@ fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
             }
         }
 
-        // Escape.
-        KeyPress::Esc => {
+        // Escape or Ctrl + c.
+        KeyPress::Esc | KeyPress::CtrlC => {
             call_if_true!(DEVELOPMENT_MODE, {
                 log_debug("Esc".red().to_string());
             });
