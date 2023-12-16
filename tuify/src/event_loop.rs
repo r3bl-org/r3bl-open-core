@@ -31,7 +31,6 @@ pub enum EventLoopResult {
     Select,
 }
 
-// TODO: add performance using output buffer
 pub fn enter_event_loop<W: Write, S: CalculateResizeHint>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<W, S>,
@@ -41,15 +40,15 @@ pub fn enter_event_loop<W: Write, S: CalculateResizeHint>(
     enable_raw_mode()?;
 
     // Use to handle clean up.
-    #[allow(unused_assignments)]
-    let mut maybe_return_this: Option<EventLoopResult> = None;
+    let return_this: EventLoopResult;
 
     // First render before blocking the main thread for user input.
     function_component.render(state)?;
 
     loop {
         let key_event = read_key_press();
-        match on_keypress(state, key_event) {
+        let it = on_keypress(state, key_event);
+        match it {
             EventLoopResult::ContinueAndRerenderAndClear => {
                 // Clear the viewport.
                 function_component.clear_viewport_for_resize(state)?;
@@ -65,18 +64,18 @@ pub fn enter_event_loop<W: Write, S: CalculateResizeHint>(
             }
             EventLoopResult::ExitWithResult(it) => {
                 // Break the loop and return the result.
-                maybe_return_this = Some(EventLoopResult::ExitWithResult(it));
+                return_this = EventLoopResult::ExitWithResult(it);
                 function_component.clear_viewport(state)?;
                 break;
             }
             EventLoopResult::ExitWithoutResult => {
                 // Break the loop and return the result.
-                maybe_return_this = Some(EventLoopResult::ExitWithoutResult);
+                return_this = EventLoopResult::ExitWithoutResult;
                 function_component.clear_viewport(state)?;
                 break;
             }
             EventLoopResult::ExitWithError => {
-                maybe_return_this = Some(EventLoopResult::ExitWithError);
+                return_this = EventLoopResult::ExitWithError;
                 function_component.clear_viewport(state)?;
                 break;
             }
@@ -84,12 +83,7 @@ pub fn enter_event_loop<W: Write, S: CalculateResizeHint>(
     }
 
     // Perform cleanup of raw mode, and show cursor.
-    match maybe_return_this {
-        Some(it) => {
-            execute!(function_component.get_write(), Show)?;
-            disable_raw_mode()?;
-            Ok(it)
-        }
-        None => Ok(EventLoopResult::ExitWithoutResult),
-    }
+    execute!(function_component.get_write(), Show)?;
+    disable_raw_mode()?;
+    Ok(return_this)
 }

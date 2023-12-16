@@ -159,7 +159,7 @@ impl EditorEngine {
 }
 
 pub struct EditorBuffer {
-  // TODO
+  
 }
 ```
 
