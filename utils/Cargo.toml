@@ -60,11 +60,3 @@ get-size = { version = "0.1.4", features = ["derive"] }
 
 # For assert_eq2! macro.
 pretty_assertions = "1.4.0"
-
-# For examples.
-# http://xion.io/post/code/rust-examples.html
-[dev-dependencies]
-reedline = "0.25.0"
-textwrap = "0.16.0"
-# The following is needed for integration tests in the `tests` folder.
-pretty_assertions = "1.4.0"

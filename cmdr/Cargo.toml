@@ -36,5 +36,5 @@ clap = { version = "4.1.1", features = ["derive"] }
 serde_json = "1.0.91"
 
 # R3BL crates (from this mono repo).
-r3bl_rs_utils_core = { version = "0.9.9", path = "../core" }
-r3bl_tui = { version = "0.3.10", path = "../tui" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.9" }
+r3bl_tui = { path = "../tui", version = "0.3.10" }
