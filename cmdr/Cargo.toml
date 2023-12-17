@@ -1,0 +1,40 @@
+[package]
+name = "r3bl-cmdr"
+version = "0.0.7"             # remember to update README & src/entry_point/app.rs
+readme = "README.md"
+edition = "2021"
+homepage = "https://r3bl.com"
+license = "Apache-2.0"
+
+description = """
+WIP: a TUI app suite for developers built in Rust
+"""
+
+# TODO: Replace the following commented lines w/ real values
+# categories = ["development-tools::procedural-macro-helpers"] # https://doc.rust-lang.org/cargo/reference/manifest.html#the-categories-field
+# keywords = ["macros"] # https://doc.rust-lang.org/cargo/reference/manifest.html#the-keywords-field
+
+# TODO: Replace the following lines w/ real values
+repository = "https://github.com/r3bl-org/r3bl-cmdr"
+authors = ["Nazmul Idris <idris@developerlife.com>"]
+documentation = "https://developerlife.com/category/Rust/"
+
+# More info on default-run: https://stackoverflow.com/a/51790493/2085356
+default-run = "rc"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+# Tokio.
+tokio = { version = "1.24.1", features = ["full"] }
+
+# CLI argument parser.
+clap = { version = "4.1.1", features = ["derive"] }
+
+# serde-json
+serde_json = "1.0.91"
+
+# R3BL crates (from this mono repo).
+r3bl_rs_utils_core = { version = "0.9.9", path = "../core" }
+r3bl_tui = { version = "0.3.10", path = "../tui" }

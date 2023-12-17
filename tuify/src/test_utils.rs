@@ -81,35 +81,7 @@ impl KeyPressReader for TestVecKeyPressReader {
 }
 
 pub fn contains_ansi_escape_sequence(text: &str) -> bool {
-    pub fn is_ansi_escape_sequence(c: char) -> bool {
-        c == '\x1b'
-    }
-
-    let mut index = 0;
-    let mut chars = text.chars();
-
-    loop {
-        if index >= text.len() {
-            break;
-        }
-
-        let maybe_char = chars.nth(index);
-
-        match maybe_char {
-            Some(char) => {
-                if is_ansi_escape_sequence(char) {
-                    return true;
-                } else {
-                    index += 1;
-                }
-            }
-            None => {
-                break;
-            }
-        }
-    }
-
-    false
+    text.chars().find(|it| *it == '\x1b').is_some()
 }
 
 #[test]

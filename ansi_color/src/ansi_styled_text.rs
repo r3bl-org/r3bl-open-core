@@ -19,7 +19,7 @@ use crate::*;
 
 /// The main struct that we have to consider is `AnsiStyledText`. It has two fields:
 /// - `text` - the text to print.
-/// - `style` - a list of styles to apply to the text.
+/// - `style` - a list of [Style] to apply to the text.
 ///
 /// ## Example usage:
 ///

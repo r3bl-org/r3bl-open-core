@@ -19,7 +19,7 @@
 #     - thinking in nu: https://www.nushell.sh/book/thinking_in_nu.html
 
 let workspace_folders = [
-    "core", "macro", "redux", "tui", "tuify", "ansi_color", "simple_logger", "utils",
+    "core", "macro", "redux", "tui", "tuify", "ansi_color", "simple_logger", "utils", "cmdr",
 ]
 
 # Main entry point for the script.
