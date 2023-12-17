@@ -79,3 +79,66 @@ impl KeyPressReader for TestVecKeyPressReader {
         self.key_press_vec[index]
     }
 }
+
+pub fn contains_ansi_escape_sequence(text: &str) -> bool {
+    pub fn is_ansi_escape_sequence(c: char) -> bool {
+        c == '\x1b'
+    }
+
+    let mut index = 0;
+    let mut chars = text.chars();
+
+    loop {
+        if index >= text.len() {
+            break;
+        }
+
+        let maybe_char = chars.nth(index);
+
+        match maybe_char {
+            Some(char) => {
+                if is_ansi_escape_sequence(char) {
+                    return true;
+                } else {
+                    index += 1;
+                }
+            }
+            None => {
+                break;
+            }
+        }
+    }
+
+    false
+}
+
+#[test]
+fn test_is_ansi_escape_sequence() {
+    use r3bl_ansi_color::Color;
+    use r3bl_ansi_color::{AnsiStyledText, Style};
+    use r3bl_rs_utils_core::assert_eq2;
+
+    assert_eq2!(
+        contains_ansi_escape_sequence("\x1b[31mThis is red text.\x1b[0m And this is normal text."),
+        true
+    );
+
+    assert_eq2!(contains_ansi_escape_sequence("This is normal text."), false);
+
+    assert_eq2!(
+        contains_ansi_escape_sequence(
+            &AnsiStyledText {
+                text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
+                style: &[
+                    Style::Bold,
+                    Style::Italic,
+                    Style::Underline,
+                    Style::Foreground(Color::Rgb(50, 50, 50)),
+                    Style::Background(Color::Rgb(100, 200, 1)),
+                ],
+            }
+            .to_string()
+        ),
+        true
+    );
+}
