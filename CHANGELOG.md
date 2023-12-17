@@ -199,6 +199,10 @@
     command runs.
   - `Ctrl + c` now behaves just like the `Escape` key. In the past, pressing `Ctrl + c`
     would do nothing the user could not exit the app by pressing this shortcut.
+  - More code quality and ability to test the main event loop, by creating a new
+    `TestVecKeyPressReader` struct, and abstracting the `read()` (from `stdin`) into a
+    `KeyPressReader` trait. This is similar to what is done for `TestStringWriter` (to
+    `stdout`).
 
 ### v0.1.21 (2023-10-21)
 <a id="markdown-v0.1.21-2023-10-21" name="v0.1.21-2023-10-21"></a>

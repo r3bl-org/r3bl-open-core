@@ -35,6 +35,7 @@ pub fn enter_event_loop<W: Write, S: CalculateResizeHint>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<W, S>,
     on_keypress: impl Fn(&mut S, KeyPress) -> EventLoopResult,
+    reader: &mut impl KeyPressReader,
 ) -> Result<EventLoopResult> {
     execute!(function_component.get_write(), Hide)?;
     enable_raw_mode()?;
@@ -46,9 +47,9 @@ pub fn enter_event_loop<W: Write, S: CalculateResizeHint>(
     function_component.render(state)?;
 
     loop {
-        let key_event = read_key_press();
-        let it = on_keypress(state, key_event);
-        match it {
+        let key_press = reader.read_key_press();
+        let result = on_keypress(state, key_press);
+        match result {
             EventLoopResult::ContinueAndRerenderAndClear => {
                 // Clear the viewport.
                 function_component.clear_viewport_for_resize(state)?;
