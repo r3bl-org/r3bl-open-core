@@ -38,7 +38,7 @@ mod syntect {
 
         // Generate MD content.
         let md_content = {
-            let mut it = include_str!("test_assets/valid-content.md").to_string();
+            let it = include_str!("test_assets/valid-content.md").to_string();
             #[cfg(target_os = "windows")]
             {
                 it = it.replace("\r\n", "\n");

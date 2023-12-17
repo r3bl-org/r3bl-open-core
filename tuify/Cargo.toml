@@ -36,8 +36,6 @@ r3bl_rs_utils_core = { path = "../core", version = "0.9.9" }
 # serde for JSON serialization.
 serde = { version = "1.0.190", features = ["derive"] }
 serde_json = "1.0.107"
-r3bl_tui = { path = "../tui", version = "0.3.10" }
-
 
 # Terminal output.
 crossterm = "0.27.0"
@@ -49,7 +47,7 @@ log = { version = "0.4.20", features = ["std"] }
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
 clap = { version = "4.4.6", features = ["derive", "wrap_help"] }
-reedline = "0.25.0"
+reedline = "0.27.1"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

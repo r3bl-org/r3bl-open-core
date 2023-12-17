@@ -70,6 +70,17 @@
 ### r3bl_tuify next release
 <a id="markdown-r3bl_tuify-next-release" name="r3bl_tuify-next-release"></a>
 
+- Updated:
+  - Update dependency on `reedline` crate to `0.27.1`.
+  - Update dependency on `r3bl_rs_utils_core` to `0.9.9`.
+
+- Removed:
+  - Remove dependency on `r3bl_tui` crate.
+
+- Changed:
+  - Change the default theme so that it is better looking and more readable on Mac, Linux,
+    and Windows. Add many different themes to choose from.
+
 - Added:
   - Binary target for `giti`. This is an interactive git client that is tuified. It is a
     productivity tool for git workflows, and is meant as a replacement for directly using
@@ -126,14 +137,27 @@
 ### r3bl_tui next release
 <a id="markdown-r3bl_tui-next-release" name="r3bl_tui-next-release"></a>
 
-- Fixed:
-  - Fix the custom MD parser so that it correctly parses plain text.
+- Updated:
+  - Update dependency on `reedline` crate to `0.27.1`.
 
 - Changed:
   - In the editor component - disable the syntect highlighter for the editor by default
     and just use the custom MD parser. For files that are not Markdown, we will probably
     need to enable syntect in the future since it is not covered by the custom MD parser &
     highlighter combo.
+  - Redux is no longer used in order to propagate state transitions from async middleware
+    functions to the app. This is now accomplished using [async `tokio::mpsc`
+    channels](https://tokio.rs/tokio/tutorial/channels). Here's a [design
+    doc](https://docs.google.com/document/d/1OMB1rX6cUL_Jxpl-OUWMhJijM7c4FoDrK6qDViVXBWk/edit)
+    for this change. Here's the
+    [issue](https://github.com/r3bl-org/r3bl-open-core/issues/196) and
+    [PR](https://github.com/r3bl-org/r3bl-open-core/pull/205) for this change. Here are
+    some videos that go over this massive change:
+    - <https://youtu.be/o2CVEikbEAQ>
+    - <https://youtu.be/Ne5-MXxt97A>
+
+- Fixed:
+  - Fix the custom MD parser so that it correctly parses plain text.
 
 - Added:
   - Add undo, redo support for the editor component.
@@ -150,18 +174,6 @@
     This is useful for performance reasons. It also leverages the undo/redo system for
     cache invalidation (which makes it fast to invalidate the render ops cache w/out
     having to do a content comparison to detect changes).
-
-- Changed:
-  - Redux is no longer used in order to propagate state transitions from async middleware
-    functions to the app. This is now accomplished using [async `tokio::mpsc`
-    channels](https://tokio.rs/tokio/tutorial/channels). Here's a [design
-    doc](https://docs.google.com/document/d/1OMB1rX6cUL_Jxpl-OUWMhJijM7c4FoDrK6qDViVXBWk/edit)
-    for this change. Here's the
-    [issue](https://github.com/r3bl-org/r3bl-open-core/issues/196) and
-    [PR](https://github.com/r3bl-org/r3bl-open-core/pull/205) for this change. Here are
-    some videos that go over this massive change:
-    - <https://youtu.be/o2CVEikbEAQ>
-    - <https://youtu.be/Ne5-MXxt97A>
 
 ### v0.3.10 (2023-10-29)
 <a id="markdown-v0.3.10-2023-10-29" name="v0.3.10-2023-10-29"></a>
@@ -476,6 +488,9 @@
 
 ### r3bl_rs_utils final release
 <a id="markdown-r3bl_rs_utils-final-release" name="r3bl_rs_utils-final-release"></a>
+
+- Removed:
+  - Remove unnecessary `dev-dependencies` from `Cargo.toml`.
 
 - Moved:
   - All the source code from the top level folder of the `r3bl-open-core` repo into the
