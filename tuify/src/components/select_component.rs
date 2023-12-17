@@ -228,46 +228,11 @@ fn clip_string_to_width_with_ellipsis(line: String, viewport_width: ChUnit) -> S
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Result, Write};
-
     use pretty_assertions::assert_eq;
     use r3bl_ansi_color::global_color_support::{clear_override, set_override};
     use serial_test::serial;
 
     use super::*;
-
-    struct StringWriter {
-        buffer: String,
-    }
-
-    impl StringWriter {
-        fn new() -> Self {
-            StringWriter {
-                buffer: String::new(),
-            }
-        }
-
-        fn get_buffer(&self) -> &str {
-            &self.buffer
-        }
-    }
-
-    impl Write for StringWriter {
-        fn write(&mut self, buf: &[u8]) -> Result<usize> {
-            let result = std::str::from_utf8(buf);
-            match result {
-                Ok(value) => {
-                    self.buffer.push_str(value);
-                    Ok(buf.len())
-                }
-                Err(_) => Ok(0),
-            }
-        }
-
-        fn flush(&mut self) -> Result<()> {
-            Ok(())
-        }
-    }
 
     #[test]
     fn test_clip_string_to_width_with_ellipsis() {
@@ -302,7 +267,7 @@ mod tests {
 
         state.scroll_offset_row_index = ch!(0);
 
-        let mut writer = StringWriter::new();
+        let mut writer = TestStringWriter::new();
 
         let mut component = SelectComponent {
             write: &mut writer,

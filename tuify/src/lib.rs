@@ -440,6 +440,7 @@ pub mod react;
 pub mod scroll;
 pub mod state;
 pub mod term;
+pub mod test_utils;
 
 pub use components::*;
 pub use constants::*;
@@ -451,6 +452,7 @@ pub use react::*;
 pub use scroll::*;
 pub use state::*;
 pub use term::*;
+pub use test_utils::*;
 
 /// Enable file logging. You can use `tail -f log.txt` to watch the logs.
 pub const DEVELOPMENT_MODE: bool = true;

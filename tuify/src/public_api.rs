@@ -71,11 +71,14 @@ pub fn select_from_list(
         state.set_size(size);
     }
 
-    let user_input = enter_event_loop(&mut state, &mut function_component, |state, key_press| {
-        keypress_handler(state, key_press)
-    });
+    let result_user_input = enter_event_loop(
+        &mut state,
+        &mut function_component,
+        |state, key_press| keypress_handler(state, key_press),
+        &mut CrosstermKeyPressReader {},
+    );
 
-    match user_input {
+    match result_user_input {
         Ok(EventLoopResult::ExitWithResult(it)) => Some(it),
         _ => None,
     }
@@ -289,4 +292,89 @@ pub enum SelectionMode {
     Single,
     /// Select multiple options from list.
     Multiple,
+}
+
+#[cfg(test)]
+mod test_select_from_list {
+    use super::*;
+
+    fn create_state() -> State {
+        State {
+            max_display_height: ch!(10),
+            max_display_width: ch!(80),
+            items: vec!["a", "b", "c"]
+                .iter()
+                .map(|it| it.to_string())
+                .collect(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn enter_pressed() {
+        // Don't run this test in CI/CD, non-interactive terminals.
+        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+            return;
+        }
+
+        let mut state = create_state();
+        let string_writer = TestStringWriter::new();
+        let style_sheet = StyleSheet::default();
+
+        let mut function_component = SelectComponent {
+            write: string_writer,
+            style: style_sheet,
+        };
+
+        let mut reader = TestVecKeyPressReader {
+            key_press_vec: vec![KeyPress::Down, KeyPress::Down, KeyPress::Enter],
+            index: None,
+        };
+
+        let result_event_loop_result = enter_event_loop(
+            &mut state,
+            &mut function_component,
+            |state, key_press| keypress_handler(state, key_press),
+            &mut reader,
+        );
+
+        assert_eq2!(
+            result_event_loop_result.unwrap(),
+            EventLoopResult::ExitWithResult(vec!["c".to_string()])
+        );
+    }
+
+    #[test]
+    fn ctrl_c_pressed() {
+        // Don't run this test in CI/CD, non-interactive terminals.
+        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+            return;
+        }
+
+        let mut state = create_state();
+        let string_writer = TestStringWriter::new();
+        let style_sheet = StyleSheet::default();
+
+        let mut function_component = SelectComponent {
+            write: string_writer,
+            style: style_sheet,
+        };
+
+        let mut reader = TestVecKeyPressReader {
+            key_press_vec: vec![KeyPress::Down, KeyPress::Down, KeyPress::CtrlC],
+            index: None,
+        };
+
+        let result_event_loop_result = enter_event_loop(
+            &mut state,
+            &mut function_component,
+            |state, key_press| keypress_handler(state, key_press),
+            &mut reader,
+        );
+
+        assert_eq2!(
+            result_event_loop_result.unwrap(),
+            EventLoopResult::ExitWithoutResult
+        );
+    }
 }

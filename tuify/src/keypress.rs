@@ -18,6 +18,10 @@
 use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
 use r3bl_rs_utils_core::*;
 
+pub trait KeyPressReader {
+    fn read_key_press(&mut self) -> KeyPress;
+}
+
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum KeyPress {
     Up,
@@ -32,7 +36,14 @@ pub enum KeyPress {
     CtrlC,
 }
 
-pub fn read_key_press() -> KeyPress {
+pub struct CrosstermKeyPressReader {}
+impl KeyPressReader for CrosstermKeyPressReader {
+    fn read_key_press(&mut self) -> KeyPress {
+        read_key_press()
+    }
+}
+
+fn read_key_press() -> KeyPress {
     if cfg!(windows) {
         // Windows.
         read_key_press_windows()
