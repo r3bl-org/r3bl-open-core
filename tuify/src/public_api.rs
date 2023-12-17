@@ -38,11 +38,6 @@ pub fn select_from_list(
     selection_mode: SelectionMode,
     style: StyleSheet,
 ) -> Option<Vec<String>> {
-    // Don't block tests.
-    if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-        return None;
-    }
-
     // There are fewer items than viewport height. So make viewport shorter.
     let max_height_row_count = if items.len() <= max_height_row_count {
         items.len()
@@ -312,11 +307,6 @@ mod test_select_from_list {
 
     #[test]
     fn enter_pressed() {
-        // Don't run this test in CI/CD, non-interactive terminals.
-        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-            return;
-        }
-
         let mut state = create_state();
         let string_writer = TestStringWriter::new();
         let style_sheet = StyleSheet::default();
@@ -340,17 +330,16 @@ mod test_select_from_list {
 
         assert_eq2!(
             result_event_loop_result.unwrap(),
-            EventLoopResult::ExitWithResult(vec!["c".to_string()])
+            if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+                EventLoopResult::ExitWithError
+            } else {
+                EventLoopResult::ExitWithResult(vec!["c".to_string()])
+            }
         );
     }
 
     #[test]
     fn ctrl_c_pressed() {
-        // Don't run this test in CI/CD, non-interactive terminals.
-        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-            return;
-        }
-
         let mut state = create_state();
         let string_writer = TestStringWriter::new();
         let style_sheet = StyleSheet::default();
@@ -374,7 +363,11 @@ mod test_select_from_list {
 
         assert_eq2!(
             result_event_loop_result.unwrap(),
-            EventLoopResult::ExitWithoutResult
+            if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+                EventLoopResult::ExitWithError
+            } else {
+                EventLoopResult::ExitWithoutResult
+            }
         );
     }
 }

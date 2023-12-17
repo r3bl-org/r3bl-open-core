@@ -37,6 +37,11 @@ pub fn enter_event_loop<W: Write, S: CalculateResizeHint>(
     on_keypress: impl Fn(&mut S, KeyPress) -> EventLoopResult,
     reader: &mut impl KeyPressReader,
 ) -> Result<EventLoopResult> {
+    // Don't block tests.
+    if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+        return Ok(EventLoopResult::ExitWithError);
+    }
+
     execute!(function_component.get_write(), Hide)?;
     enable_raw_mode()?;
 
