@@ -9,5 +9,6 @@ members = [
   "redux",
   "tui",
   "utils",
+  "cmdr",
 ]
 resolver = "2"

@@ -3,11 +3,25 @@
 
 <!-- TOC -->
 
-- [r3bl_simple_logger](#r3bl_simple_logger)
-  - [v0.1.3 2023-10-21](#v013-2023-10-21)
-  - [v0.1.2 2023-10-21](#v012-2023-10-21)
-  - [v0.1.1 2023-10-17](#v011-2023-10-17)
-  - [v0.1.0 2023-10-14](#v010-2023-10-14)
+- [r3bl-cmdr](#r3bl-cmdr)
+  - [r3bl-cmdr first release](#r3bl-cmdr-first-release)
+- [r3bl_tuify](#r3bl_tuify)
+  - [r3bl_tuify next release](#r3bl_tuify-next-release)
+  - [v0.1.21 2023-10-21](#v0121-2023-10-21)
+  - [v0.1.20 2023-10-21](#v0120-2023-10-21)
+  - [v0.1.19 2023-10-17](#v0119-2023-10-17)
+  - [v0.1.18 2023-10-17](#v0118-2023-10-17)
+  - [v0.1.17 2023-10-14](#v0117-2023-10-14)
+- [r3bl_tui](#r3bl_tui)
+  - [r3bl_tui next release](#r3bl_tui-next-release)
+  - [v0.3.10 2023-10-29](#v0310-2023-10-29)
+  - [v0.3.9 2023-10-29](#v039-2023-10-29)
+  - [v0.3.7 2023-10-21](#v037-2023-10-21)
+  - [v0.3.6 2023-10-17](#v036-2023-10-17)
+  - [v0.3.5 2023-10-14](#v035-2023-10-14)
+  - [v0.3.3 2023-04-20](#v033-2023-04-20)
+  - [v0.3.2 2023-03-06](#v032-2023-03-06)
+  - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_ansi_color](#r3bl_ansi_color)
   - [v0.6.9 2023-10-21](#v069-2023-10-21)
   - [v0.6.8 2023-10-16](#v068-2023-10-16)
@@ -19,33 +33,21 @@
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
-- [r3bl_tuify](#r3bl_tuify)
-  - [Next release](#next-release)
-  - [v0.1.21 2023-10-21](#v0121-2023-10-21)
-  - [v0.1.20 2023-10-21](#v0120-2023-10-21)
-  - [v0.1.19 2023-10-17](#v0119-2023-10-17)
-  - [v0.1.18 2023-10-17](#v0118-2023-10-17)
-  - [v0.1.17 2023-10-14](#v0117-2023-10-14)
-- [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
-  - [v0.9.7 2023-10-21](#v097-2023-10-21)
-  - [v0.9.6 2023-10-17](#v096-2023-10-17)
-  - [v0.9.5 2023-10-14](#v095-2023-10-14)
+- [r3bl_simple_logger](#r3bl_simple_logger)
+  - [v0.1.3 2023-10-21](#v013-2023-10-21)
+  - [v0.1.2 2023-10-21](#v012-2023-10-21)
+  - [v0.1.1 2023-10-17](#v011-2023-10-17)
+  - [v0.1.0 2023-10-14](#v010-2023-10-14)
 - [r3bl_rs_utils_redux](#r3bl_rs_utils_redux)
   - [v0.2.6 2023-10-21](#v026-2023-10-21)
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
-- [r3bl_tui](#r3bl_tui)
-  - [Next release](#next-release)
-  - [v0.3.10 2023-10-29](#v0310-2023-10-29)
-  - [v0.3.9 2023-10-29](#v039-2023-10-29)
-  - [v0.3.7 2023-10-21](#v037-2023-10-21)
-  - [v0.3.6 2023-10-17](#v036-2023-10-17)
-  - [v0.3.5 2023-10-14](#v035-2023-10-14)
-  - [v0.3.3 2023-04-20](#v033-2023-04-20)
-  - [v0.3.2 2023-03-06](#v032-2023-03-06)
-  - [v0.3.1 2023-03-06](#v031-2023-03-06)
+- [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
+  - [v0.9.7 2023-10-21](#v097-2023-10-21)
+  - [v0.9.6 2023-10-17](#v096-2023-10-17)
+  - [v0.9.5 2023-10-14](#v095-2023-10-14)
 - [r3bl_rs_utils](#r3bl_rs_utils)
-  - [Next release](#next-release)
+  - [r3bl_rs_utils final release](#r3bl_rs_utils-final-release)
   - [v0.9.14 2023-10-29](#v0914-2023-10-29)
   - [v0.9.13 2023-10-29](#v0913-2023-10-29)
   - [v0.9.12 2023-10-29](#v0912-2023-10-29)
@@ -56,138 +58,17 @@
 
 <!-- /TOC -->
 
-## `r3bl_simple_logger`
-<a id="markdown-r3bl_simple_logger" name="r3bl_simple_logger"></a>
+## `r3bl-cmdr`
+<a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
 
-### v0.1.3 (2023-10-21)
-<a id="markdown-v0.1.3-2023-10-21" name="v0.1.3-2023-10-21"></a>
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.1.2 (2023-10-21)
-<a id="markdown-v0.1.2-2023-10-21" name="v0.1.2-2023-10-21"></a>
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.1.1 (2023-10-17)
-<a id="markdown-v0.1.1-2023-10-17" name="v0.1.1-2023-10-17"></a>
-
-- Replaced:
-  - Dependency on `ansi_term` is dropped due to this security advisory
-    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. Replaced with
-    `r3bl_ansi_color`.
-
-- Added:
-  - Documentation for `r3bl_simple_logger` crate. And how to think about it vs. using log
-    facilities from the `r3bl_rs_utils_core` crate. Update docs there too.
-
-### v0.1.0 (2023-10-14)
-<a id="markdown-v0.1.0-2023-10-14" name="v0.1.0-2023-10-14"></a>
-
-- Added:
-  - First changelog entry. This crate is a fork of the
-    [`simplelog`](https://crates.io/crates/simplelog) repo w/ conditional compilation
-    (feature flags) removed. This crate was causing transitive dependency issues in
-    upstream repos that added `r3bl_tuify` as a dependency. Here's a link to the related
-    [issue](https://github.com/r3bl-org/r3bl-open-core/issues/160).
-
-## `r3bl_ansi_color`
-<a id="markdown-r3bl_ansi_color" name="r3bl_ansi_color"></a>
-
-
-### v0.6.9 (2023-10-21)
-<a id="markdown-v0.6.9-2023-10-21" name="v0.6.9-2023-10-21"></a>
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.6.8 (2023-10-16)
-<a id="markdown-v0.6.8-2023-10-16" name="v0.6.8-2023-10-16"></a>
-
-- Added:
-  - Support for `Grayscale` color output. This is in preparation of making the color
-    support work across all platforms (MacOS, Linux, Windows). And use this in the
-    `r3bl_tui` crate. Update tests to reflect this.
-
-- Removed:
-  - Dependency on `once-cell` removed by replacing `Arc<Mutex<_>>` with `unsafe` and
-    `AtomicI8`.
-
-### v0.6.7 (2023-09-12)
-<a id="markdown-v0.6.7-2023-09-12" name="v0.6.7-2023-09-12"></a>
-
-- Added:
-  - Tests.
-
-- Replaced:
-  - `justfile` is now replaced with `nu` script `run.nu`.
-
-## `r3bl_rs_utils_core`
-<a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
-
-### v0.9.9 (2023-10-21)
-<a id="markdown-v0.9.9-2023-10-21" name="v0.9.9-2023-10-21"></a>
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.9.8 (2023-10-21)
-<a id="markdown-v0.9.8-2023-10-21" name="v0.9.8-2023-10-21"></a>
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.9.7 (2023-10-17)
-<a id="markdown-v0.9.7-2023-10-17" name="v0.9.7-2023-10-17"></a>
-
-- Updated:
-  - Dependency on `simple_logger` updated due to this security advisory
-    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. `simple_logger` itself had to
-    drop `ansi_term`.
-
-### v0.9.6 (2023-10-17)
-<a id="markdown-v0.9.6-2023-10-17" name="v0.9.6-2023-10-17"></a>
-
-- Removed:
-  - Dependency on `ansi_term` is dropped due to this security advisory
-    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. Flagged when running CI/CD
-    job on Ockam [repo](https://github.com/build-trust/ockam).
-
-- Updated:
-  - Documentation for `r3bl_simple_logger` crate. And how to think about it vs. using log
-    facilities from the `r3bl_rs_utils_core` crate. Update docs there too.
-
-### v0.9.5 (2023-10-14)
-<a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
-
-- Updated:
-  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
-    `r3bl_rs_utils` repo workspace as `simple_logger`).
-  - `TuiColor` has a few new variants. They can be `RgbValue`, `AnsiValue`, or `ANSIBasicColor`. It
-    is safe to use just `RgbValue` since the library will degrade gracefully to ANSI 256 or
-    grayscale based on terminal emulator capabilities at runtime (provided by `to_crossterm_color()`
-    and `ColorSupport`). If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not
-    be downgraded.
-
-
-### v0.9.1 (2023-03-06)
-<a id="markdown-v0.9.1-2023-03-06" name="v0.9.1-2023-03-06"></a>
-
-- Added:
-  - First changelog entry.
-  - Move lolcat into `tui_core` crate.
-- Removed:
-  - ANSI escape sequences are no longer used internally in any intermediate format used by the TUI
-    engine. It is reserved exclusively for output to stdout using (for now) crossterm. This opens
-    the door for future support for GUI app (not just terminal emulators).
+### r3bl-cmdr first release
+<a id="markdown-r3bl-cmdr-first-release" name="r3bl-cmdr-first-release"></a>
 
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
-### Next release
-<a id="markdown-next-release" name="next-release"></a>
+### r3bl_tuify next release
+<a id="markdown-r3bl_tuify-next-release" name="r3bl_tuify-next-release"></a>
 
 - Added:
   - Binary target for `giti`. This is an interactive git client that is tuified. It is a
@@ -239,64 +120,11 @@
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
     `r3bl_rs_utils` repo workspace as `simple_logger`).
 
-## `r3bl_rs_utils_macro`
-<a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>
-
-### v0.9.7 (2023-10-21)
-<a id="markdown-v0.9.7-2023-10-21" name="v0.9.7-2023-10-21"></a>
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.9.6 (2023-10-17)
-<a id="markdown-v0.9.6-2023-10-17" name="v0.9.6-2023-10-17"></a>
-
-- Updated:
-  - Update `r3bl_rs_utils_core` crate due to
-    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
-    maintained anymore.
-
-### v0.9.5 (2023-10-14)
-<a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
-
-- Updated:
-  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
-    `r3bl_rs_utils` repo workspace as `simple_logger`).
-
-## `r3bl_rs_utils_redux`
-<a id="markdown-r3bl_rs_utils_redux" name="r3bl_rs_utils_redux"></a>
-
-### v0.2.6 (2023-10-21)
-<a id="markdown-v0.2.6-2023-10-21" name="v0.2.6-2023-10-21"></a>
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.2.5 (2023-10-17)
-<a id="markdown-v0.2.5-2023-10-17" name="v0.2.5-2023-10-17"></a>
-
-- Updated:
-  - Dependency on `r3bl_rs_utils_core` & `r3bl_rs_utils_macro` crates due to
-    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
-    maintained anymore.
-
-### v0.2.4 (2023-10-14)
-<a id="markdown-v0.2.4-2023-10-14" name="v0.2.4-2023-10-14"></a>
-
-- Updated:
-  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
-    `r3bl_rs_utils` repo workspace as `simple_logger`).
-
-- Removed:
-  - Dependency on `ansi_term` which is no longer maintained
-    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>.
-  - Needless dependencies on crates that are not used.
-
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
-### Next release
-<a id="markdown-next-release" name="next-release"></a>
+### r3bl_tui next release
+<a id="markdown-r3bl_tui-next-release" name="r3bl_tui-next-release"></a>
 
 - Fixed:
   - Fix the custom MD parser so that it correctly parses plain text.
@@ -464,11 +292,190 @@
   - The first demo example (`ex_app_no_layout`) now has support for animation. It automatically
     increments the state every second and the gradient color wheel is updated accordingly.
 
+## `r3bl_ansi_color`
+<a id="markdown-r3bl_ansi_color" name="r3bl_ansi_color"></a>
+
+### v0.6.9 (2023-10-21)
+<a id="markdown-v0.6.9-2023-10-21" name="v0.6.9-2023-10-21"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.6.8 (2023-10-16)
+<a id="markdown-v0.6.8-2023-10-16" name="v0.6.8-2023-10-16"></a>
+
+- Added:
+  - Support for `Grayscale` color output. This is in preparation of making the color
+    support work across all platforms (MacOS, Linux, Windows). And use this in the
+    `r3bl_tui` crate. Update tests to reflect this.
+
+- Removed:
+  - Dependency on `once-cell` removed by replacing `Arc<Mutex<_>>` with `unsafe` and
+    `AtomicI8`.
+
+### v0.6.7 (2023-09-12)
+<a id="markdown-v0.6.7-2023-09-12" name="v0.6.7-2023-09-12"></a>
+
+- Added:
+  - Tests.
+
+- Replaced:
+  - `justfile` is now replaced with `nu` script `run.nu`.
+
+## `r3bl_rs_utils_core`
+<a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
+
+### v0.9.9 (2023-10-21)
+<a id="markdown-v0.9.9-2023-10-21" name="v0.9.9-2023-10-21"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.9.8 (2023-10-21)
+<a id="markdown-v0.9.8-2023-10-21" name="v0.9.8-2023-10-21"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.9.7 (2023-10-17)
+<a id="markdown-v0.9.7-2023-10-17" name="v0.9.7-2023-10-17"></a>
+
+- Updated:
+  - Dependency on `simple_logger` updated due to this security advisory
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. `simple_logger` itself had to
+    drop `ansi_term`.
+
+### v0.9.6 (2023-10-17)
+<a id="markdown-v0.9.6-2023-10-17" name="v0.9.6-2023-10-17"></a>
+
+- Removed:
+  - Dependency on `ansi_term` is dropped due to this security advisory
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. Flagged when running CI/CD
+    job on Ockam [repo](https://github.com/build-trust/ockam).
+
+- Updated:
+  - Documentation for `r3bl_simple_logger` crate. And how to think about it vs. using log
+    facilities from the `r3bl_rs_utils_core` crate. Update docs there too.
+
+### v0.9.5 (2023-10-14)
+<a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
+
+- Updated:
+  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
+    `r3bl_rs_utils` repo workspace as `simple_logger`).
+  - `TuiColor` has a few new variants. They can be `RgbValue`, `AnsiValue`, or `ANSIBasicColor`. It
+    is safe to use just `RgbValue` since the library will degrade gracefully to ANSI 256 or
+    grayscale based on terminal emulator capabilities at runtime (provided by `to_crossterm_color()`
+    and `ColorSupport`). If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not
+    be downgraded.
+
+
+### v0.9.1 (2023-03-06)
+<a id="markdown-v0.9.1-2023-03-06" name="v0.9.1-2023-03-06"></a>
+
+- Added:
+  - First changelog entry.
+  - Move lolcat into `tui_core` crate.
+- Removed:
+  - ANSI escape sequences are no longer used internally in any intermediate format used by the TUI
+    engine. It is reserved exclusively for output to stdout using (for now) crossterm. This opens
+    the door for future support for GUI app (not just terminal emulators).
+
+## `r3bl_simple_logger`
+<a id="markdown-r3bl_simple_logger" name="r3bl_simple_logger"></a>
+
+### v0.1.3 (2023-10-21)
+<a id="markdown-v0.1.3-2023-10-21" name="v0.1.3-2023-10-21"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.1.2 (2023-10-21)
+<a id="markdown-v0.1.2-2023-10-21" name="v0.1.2-2023-10-21"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.1.1 (2023-10-17)
+<a id="markdown-v0.1.1-2023-10-17" name="v0.1.1-2023-10-17"></a>
+
+- Replaced:
+  - Dependency on `ansi_term` is dropped due to this security advisory
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. Replaced with
+    `r3bl_ansi_color`.
+
+- Added:
+  - Documentation for `r3bl_simple_logger` crate. And how to think about it vs. using log
+    facilities from the `r3bl_rs_utils_core` crate. Update docs there too.
+
+### v0.1.0 (2023-10-14)
+<a id="markdown-v0.1.0-2023-10-14" name="v0.1.0-2023-10-14"></a>
+
+- Added:
+  - First changelog entry. This crate is a fork of the
+    [`simplelog`](https://crates.io/crates/simplelog) repo w/ conditional compilation
+    (feature flags) removed. This crate was causing transitive dependency issues in
+    upstream repos that added `r3bl_tuify` as a dependency. Here's a link to the related
+    [issue](https://github.com/r3bl-org/r3bl-open-core/issues/160).
+
+## `r3bl_rs_utils_redux`
+<a id="markdown-r3bl_rs_utils_redux" name="r3bl_rs_utils_redux"></a>
+
+### v0.2.6 (2023-10-21)
+<a id="markdown-v0.2.6-2023-10-21" name="v0.2.6-2023-10-21"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.2.5 (2023-10-17)
+<a id="markdown-v0.2.5-2023-10-17" name="v0.2.5-2023-10-17"></a>
+
+- Updated:
+  - Dependency on `r3bl_rs_utils_core` & `r3bl_rs_utils_macro` crates due to
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
+    maintained anymore.
+
+### v0.2.4 (2023-10-14)
+<a id="markdown-v0.2.4-2023-10-14" name="v0.2.4-2023-10-14"></a>
+
+- Updated:
+  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
+    `r3bl_rs_utils` repo workspace as `simple_logger`).
+
+- Removed:
+  - Dependency on `ansi_term` which is no longer maintained
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>.
+  - Needless dependencies on crates that are not used.
+
+## `r3bl_rs_utils_macro`
+<a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>
+
+### v0.9.7 (2023-10-21)
+<a id="markdown-v0.9.7-2023-10-21" name="v0.9.7-2023-10-21"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.9.6 (2023-10-17)
+<a id="markdown-v0.9.6-2023-10-17" name="v0.9.6-2023-10-17"></a>
+
+- Updated:
+  - Update `r3bl_rs_utils_core` crate due to
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
+    maintained anymore.
+
+### v0.9.5 (2023-10-14)
+<a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
+
+- Updated:
+  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
+    `r3bl_rs_utils` repo workspace as `simple_logger`).
+
 ## `r3bl_rs_utils`
 <a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
 
-### Next release
-<a id="markdown-next-release" name="next-release"></a>
+### r3bl_rs_utils final release
+<a id="markdown-r3bl_rs_utils-final-release" name="r3bl_rs_utils-final-release"></a>
 
 - Moved:
   - All the source code from the top level folder of the `r3bl-open-core` repo into the
