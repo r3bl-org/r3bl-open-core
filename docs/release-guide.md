@@ -41,6 +41,36 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 cd ~/github/r3bl_rs_utils/
 rm Cargo.lock
 
+cd tuify
+# Update cargo.toml version number manually
+# Update CHANGELOG.md
+cargo build; cargo test; cargo doc
+git add -A
+git commit -m "v0.1.21-tuify"
+git tag -a v0.1.21-tuify -m "v0.1.21-tuify"
+cargo publish
+cd ..
+
+cd tui
+# Update cargo.toml version number manually
+# Update CHANGELOG.md
+cargo build; cargo test; cargo doc
+git add -A
+git commit -m "v0.3.10-tui"
+git tag -a v0.3.10-tui -m "v0.3.10-tui"
+cargo publish
+cd ..
+
+cd cmdr
+# Update cargo.toml version number manually
+# Update CHANGELOG.md
+cargo build; cargo test; cargo doc
+git add -A
+git commit -m "v0.0.7-cmdr"
+git tag -a v0.0.7-cmdr -m "v0.0.7-cmdr"
+cargo publish
+cd ..
+
 cd ansi_color
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
@@ -48,16 +78,6 @@ cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.6.9-ansi_color"
 git tag -a v0.6.9-ansi_color -m "v0.6.9-ansi_color"
-cargo publish
-cd ..
-
-cd simple_logger
-# Update cargo.toml version number manually
-# Update CHANGELOG.md
-cargo build; cargo test; cargo doc
-git add -A
-git commit -m "v0.1.3-simple_logger"
-git tag -a v0.1.3-simple_logger -m "v0.1.3-simple_logger"
 cargo publish
 cd ..
 
@@ -71,13 +91,13 @@ git tag -a v0.9.9-core -m "v0.9.9-core"
 cargo publish
 cd ..
 
-cd tuify
+cd simple_logger
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.1.21-tuify"
-git tag -a v0.1.21-tuify -m "v0.1.21-tuify"
+git commit -m "v0.1.3-simple_logger"
+git tag -a v0.1.3-simple_logger -m "v0.1.3-simple_logger"
 cargo publish
 cd ..
 
@@ -98,16 +118,6 @@ cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.2.6-redux"
 git tag -a v0.2.6-redux -m "v0.2.6-redux"
-cargo publish
-cd ..
-
-cd tui
-# Update cargo.toml version number manually
-# Update CHANGELOG.md
-cargo build; cargo test; cargo doc
-git add -A
-git commit -m "v0.3.10-tui"
-git tag -a v0.3.10-tui -m "v0.3.10-tui"
 cargo publish
 cd ..
 
