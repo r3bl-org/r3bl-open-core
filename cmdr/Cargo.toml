@@ -22,6 +22,14 @@ documentation = "https://developerlife.com/category/Rust/"
 # More info on default-run: https://stackoverflow.com/a/51790493/2085356
 default-run = "rc"
 
+[[bin]]
+name = "giti"
+path = "src/bin/giti.rs"
+
+[[bin]]
+name = "rc"
+path = "src/bin/rc.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -29,12 +37,24 @@ default-run = "rc"
 # Tokio.
 tokio = { version = "1.24.1", features = ["full"] }
 
-# CLI argument parser.
-clap = { version = "4.1.1", features = ["derive"] }
+# Clap.
+# More info: https://stackoverflow.com/a/76131914/2085356
+clap = { version = "4.4.6", features = ["derive", "wrap_help"] }
+reedline = "0.27.1"
 
 # serde-json
 serde_json = "1.0.91"
 
 # R3BL crates (from this mono repo).
+r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
 r3bl_rs_utils_core = { path = "../core", version = "0.9.9" }
 r3bl_tui = { path = "../tui", version = "0.3.10" }
+r3bl_tuify = { path = "../tuify", version = "0.1.21" }
+
+# Logging.
+is-terminal = "0.4.9"
+log = { version = "0.4.20", features = ["std"] }
+
+[dev-dependencies]
+pretty_assertions = "1.4.0"
+serial_test = "2.0.0"

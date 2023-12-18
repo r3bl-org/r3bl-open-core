@@ -14,7 +14,6 @@
 - [Build, run, test tasks](#build-run-test-tasks)
   - [Prerequisites](#prerequisites)
   - [Nu shell scripts to build, run, test etc.](#nu-shell-scripts-to-build-run-test-etc)
-- [Run giti](#run-giti)
 - [References](#references)
 
 <!-- /TOC -->
@@ -384,7 +383,6 @@ fn main() -> Result<()> {
 | Command                                   | Description                                |
 | ----------------------------------------- | ------------------------------------------ |
 | `nu run.nu run`                           | Run examples in the `./examples` folder    |
-| `nu run.nu install-giti`                  | Install `giti` locally to `~/.cargo/bin`   |
 | `nu run.nu run-piped`                     | Run binary with piped input                |
 | `nu run.nu build`                         | Build                                      |
 | `nu run.nu clean`                         | Clean                                      |
@@ -406,16 +404,6 @@ The following commands will watch for changes in the source folder and re-run:
 | `nu run.nu watch-one-test <test_name>`                 | Watch one test                     |
 | `nu run.nu watch-clippy`                               | Watch clippy                       |
 | `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
-
-## Run `giti`
-<a id="markdown-run-giti" name="run-giti"></a>
-
-1. Move to `./tuify` folder in your terminal
-2. Run `nu run.nu install-giti` to install `giti` locally to `~/.cargo/bin`
-3. Run `giti` from anywhere on your system
-4. To delete one or more branches in your repo run `giti branch delete`
-
-[![asciicast](https://asciinema.org/a/14V8v3OKKYvDkUDkRFiMDsCNg.svg)](https://asciinema.org/a/14V8v3OKKYvDkUDkRFiMDsCNg)
 
 ## References
 <a id="markdown-references" name="references"></a>

@@ -369,7 +369,6 @@
 //! | Command                                   | Description                                |
 //! | ----------------------------------------- | ------------------------------------------ |
 //! | `nu run.nu run`                           | Run examples in the `./examples` folder    |
-//! | `nu run.nu install-giti`                  | Install `giti` locally to `~/.cargo/bin`   |
 //! | `nu run.nu run-piped`                     | Run binary with piped input                |
 //! | `nu run.nu build`                         | Build                                      |
 //! | `nu run.nu clean`                         | Clean                                      |
@@ -391,17 +390,6 @@
 //! | `nu run.nu watch-one-test <test_name>`                 | Watch one test                     |
 //! | `nu run.nu watch-clippy`                               | Watch clippy                       |
 //! | `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
-//!
-//! ## Run `giti`
-//!
-//! 1. Move to `./tuify` folder in your terminal
-//! 2. Run `nu run.nu install-giti` to install `giti` locally to `~/.cargo/bin`
-//! 3. Run `giti` from anywhere on your system
-//! 4. To delete one or more branches in your repo run `giti branch delete`
-//!
-//! <video width="100%" controls>
-//!   <source src="https://github.com/r3bl-org/r3bl-open-core/assets/22040032/c133cd9d-4534-4507-9517-e2c7f73b4b2e" type="video/mp4"/>
-//! </video>
 //!
 //! ## References
 //!
@@ -433,7 +421,6 @@
 pub mod components;
 pub mod constants;
 pub mod event_loop;
-pub mod giti;
 pub mod keypress;
 pub mod public_api;
 pub mod react;
@@ -445,7 +432,6 @@ pub mod test_utils;
 pub use components::*;
 pub use constants::*;
 pub use event_loop::*;
-pub use giti::*;
 pub use keypress::*;
 pub use public_api::*;
 pub use react::*;

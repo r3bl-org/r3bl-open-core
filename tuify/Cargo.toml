@@ -17,17 +17,13 @@ license = "Apache-2.0"
 
 # This is the default binary to run when running `cargo run`.
 # More info: https://stackoverflow.com/a/51790493/2085356
-default-run = "giti"
+default-run = "rt"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
 name = "rt"
 path = "src/bin/rt.rs"
-
-[[bin]]
-name = "giti"
-path = "src/bin/giti.rs"
 
 [dependencies]
 # r3bl_rs_utils
