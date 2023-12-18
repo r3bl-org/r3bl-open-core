@@ -30,6 +30,10 @@ path = "src/bin/giti.rs"
 name = "rc"
 path = "src/bin/rc.rs"
 
+[[bin]]
+name = "edi"
+path = "src/bin/edi.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
