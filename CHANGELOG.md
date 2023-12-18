@@ -72,6 +72,8 @@ Added:
       select one subcommand using the `select_from_list()` when `giti branch` runs.
     - Delete one or more branches using `select_from_list()` when  `giti branch delete`
       command runs.
+  - Binary target for `edi`.
+  - Binary target for `rc` aka `r3bl-cmdr`.
 
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
