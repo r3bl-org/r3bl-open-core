@@ -40,8 +40,10 @@
 #![warn(clippy::all)]
 #![warn(rust_2018_idioms)]
 
-pub const DEBUG: bool = true;
+pub const DEVELOPMENT_MODE: bool = true;
 
-pub mod entry_point;
+pub mod giti;
+pub mod rc;
 
-pub use entry_point::*;
+pub use giti::*;
+pub use rc::*;

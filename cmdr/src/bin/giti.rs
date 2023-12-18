@@ -18,11 +18,18 @@
 //! For more information on how to use CLAP and Tuify, please read this tutorial:
 //! <https://developerlife.com/2023/09/17/tuify-clap/>
 
-use crate::giti::branch::delete::try_delete_branch;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use clap_config::*;
-use r3bl_rs_utils_core::{call_if_true, log_debug, log_error, try_to_set_log_level, CommonResult};
-use r3bl_tuify::{giti_ui_templates::ask_user_to_select_from_list, *};
+use giti::{branch::delete::try_delete_branch,
+           giti_ui_templates::ask_user_to_select_from_list,
+           *};
+use r3bl_cmdr::{giti, DEVELOPMENT_MODE};
+use r3bl_rs_utils_core::{call_if_true,
+                         log_debug,
+                         log_error,
+                         try_to_set_log_level,
+                         CommonResult};
+use r3bl_tuify::SelectionMode;
 
 fn main() {
     // If no args are passed, the following line will fail, and help will be printed
@@ -91,7 +98,8 @@ pub fn get_giti_command_subcommand_names(arg: CLICommand) -> Vec<String> {
         CLICommand::Branch { .. } => BranchSubcommand::value_variants()
             .iter()
             .map(|subcommand| {
-                let lower_case_subcommand = format!("{:?}", subcommand).to_ascii_lowercase();
+                let lower_case_subcommand =
+                    format!("{:?}", subcommand).to_ascii_lowercase();
                 lower_case_subcommand
             })
             .collect(),
@@ -102,6 +110,8 @@ pub fn get_giti_command_subcommand_names(arg: CLICommand) -> Vec<String> {
 /// - <https://docs.rs/clap/latest/clap/_derive/#overview>
 /// - <https://developerlife.com/2023/09/17/tuify-clap/>
 mod clap_config {
+    use r3bl_tuify::SelectionMode;
+
     use super::*;
 
     #[derive(Debug, Parser)]

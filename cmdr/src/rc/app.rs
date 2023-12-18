@@ -59,7 +59,7 @@ macro_rules! DEBUG_MSG_TEMPLATE {
 }
 
 pub async fn debug_cli_args() {
-    call_if_true!(DEBUG, {
+    call_if_true!(DEVELOPMENT_MODE, {
         // Get the command line arguments w/out the process name. Eg: `$ rc edit file --help` will
         // produce `edit file --help`.
         let argv_without_process: Vec<String> = args().filter_and_convert_to_strings();

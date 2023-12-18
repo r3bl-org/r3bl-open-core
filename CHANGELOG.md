@@ -64,6 +64,15 @@
 ### r3bl-cmdr first release
 <a id="markdown-r3bl-cmdr-first-release" name="r3bl-cmdr-first-release"></a>
 
+Added:
+  - Binary target for `giti`. This is an interactive git client that is tuified. It is a
+    productivity tool for git workflows, and is meant as a replacement for directly using
+    `git`. This also serves as a real world example of using the `r3bl_tuify` crate.
+    - View all the `giti branch` subcommands (e.g. `delete`, `checkout`, `new`, etc.) and
+      select one subcommand using the `select_from_list()` when `giti branch` runs.
+    - Delete one or more branches using `select_from_list()` when  `giti branch delete`
+      command runs.
+
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
@@ -82,13 +91,6 @@
     and Windows. Add many different themes to choose from.
 
 - Added:
-  - Binary target for `giti`. This is an interactive git client that is tuified. It is a
-    productivity tool for git workflows, and is meant as a replacement for directly using
-    `git`. This also serves as a real world example of using the `r3bl_tuify` crate.
-  - View all the `giti branch` subcommands (e.g. `delete`, `checkout`, `new`, etc.) and
-    select one subcommand using the `select_from_list()` when `giti branch` runs.
-  - Delete one or more branches using `select_from_list()` when  `giti branch delete`
-    command runs.
   - `Ctrl + c` now behaves just like the `Escape` key. In the past, pressing `Ctrl + c`
     would do nothing the user could not exit the app by pressing this shortcut.
   - More code quality and ability to test the main event loop, by creating a new

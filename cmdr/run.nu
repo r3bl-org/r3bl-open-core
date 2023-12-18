@@ -150,11 +150,11 @@ def clean [] {
 }
 
 def run [] {
-    cargo run --example main_interactive -q
+    cargo run
 }
 
 def install [] {
-    cargo install --path .
+    cargo install --path . --force
 }
 
 def run-with-flamegraph [] {

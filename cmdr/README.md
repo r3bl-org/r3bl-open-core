@@ -5,19 +5,19 @@
 # r3bl-cmdr
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
 
-
 <!-- TOC -->
 
 - [Context](#context)
-- [This binary crate: r3bl-cmdr](#this-binary-crate-r3bl-cmdr)
-- [Building & running locally](#building--running-locally)
-- [Contributing](#contributing)
+- [Run giti binary target](#run-giti-binary-target)
+- [Run r3bl-cmdr or rc binary target](#run-r3bl-cmdr-or-rc-binary-target)
+- [Build, run, test tasks](#build-run-test-tasks)
+  - [Prerequisites](#prerequisites)
+  - [Nu shell scripts to build, run, test etc.](#nu-shell-scripts-to-build-run-test-etc)
 
 <!-- /TOC -->
 
 ## Context
 <a id="markdown-context" name="context"></a>
-
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
@@ -61,9 +61,19 @@ it.
      2. integrations w/ github issues
      3. integrations w/ calendar, email, contacts APIs
 
-## This binary crate: r3bl-cmdr
-<a id="markdown-this-binary-crate%3A-r3bl-cmdr" name="this-binary-crate%3A-r3bl-cmdr"></a>
+## Run `giti` binary target
+<a id="markdown-run-giti-binary-target" name="run-giti-binary-target"></a>
 
+1. Move to `./tuify` folder in your terminal
+2. Run `nu run.nu install` to install `giti` locally to `~/.cargo/bin`
+3. Run `giti` from anywhere on your system
+4. To delete one or more branches in your repo run `giti branch delete`
+
+[![asciicast](https://asciinema.org/a/14V8v3OKKYvDkUDkRFiMDsCNg.svg)](https://asciinema.org/a/14V8v3OKKYvDkUDkRFiMDsCNg)
+
+## Run `r3bl-cmdr` or `rc` binary target
+
+<a id="markdown-run-r3bl-cmdr-or-rc-binary-target" name="run-r3bl-cmdr-or-rc-binary-target"></a>
 
 `r3bl-cmdr` is the second thing that's described above. It contains a set of apps for developers by
 developers. It is engineered to enhance your:
@@ -75,44 +85,47 @@ developers. It is engineered to enhance your:
 
 Our goal is to put a smile on your face every time you use this product.
 
-## Building & running locally
-<a id="markdown-building-%26-running-locally" name="building-%26-running-locally"></a>
+## Build, run, test tasks
+<a id="markdown-build%2C-run%2C-test-tasks" name="build%2C-run%2C-test-tasks"></a>
 
+### Prerequisites
+<a id="markdown-prerequisites" name="prerequisites"></a>
 
-You can run it using `cargo run`. There are 2 other ways to launch it if you install it on your
-machine both that involve a little less typing.
+🌠 In order for these to work you have to install the Rust toolchain, `nu`, `cargo-watch`, `bat`,
+and `flamegraph` on your system. Here are the instructions:
 
-```sh
-cargo install --path .
-r3bl-cmdr # this is the same as `cargo run` or `cargo run --bin r3bl-cmdr`
-rc # this is an alias for `r3bl-cmdr`, equivalent to `cargo run --bin rc``
-```
+1. Install the Rust toolchain using `rustup` by following the instructions
+   [here](https://rustup.rs/).
+1. Install `cargo-watch` using `cargo install cargo-watch`.
+1. Install `flamegraph` using `cargo install flamegraph`.
+1. Install `bat` using `cargo install bat`.
+1. Install [`nu`](https://crates.io/crates/nu) shell on your system using `cargo install nu`. It is
+   available for Linux, macOS, and Windows.
 
-The `Cargo.toml` file contains a `[dependencies]` section which lists all the dependencies that this
-crate has, one of which is a
-[path dependency](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#multiple-locations)
-on the `r3bl_rs_utils` crate. The creates.io version uses the `r3bl_rs_utils` crate from the
-crates.io repository, but your local copy will use the folder specified in the path.
+### Nu shell scripts to build, run, test etc.
+<a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test-etc." name="nu-shell-scripts-to-build%2C-run%2C-test-etc."></a>
 
-> We plan to remove the `path` dependency when this crate is ready to be used by end users.
-> Currently it early WIP so it has this dependency for ease of development.
+| Command                                   | Description                                       |
+| ----------------------------------------- | ------------------------------------------------- |
+| `nu run.nu run`                           | Run the default binary target                     |
+| `nu run.nu install`                       | Install `giti` and `rc` locally to `~/.cargo/bin` |
+| `nu run.nu build`                         | Build                                             |
+| `nu run.nu clean`                         | Clean                                             |
+| `nu run.nu all`                           | All                                               |
+| `nu run.nu run-with-flamegraph-profiling` | Run examples with flamegraph profiling            |
+| `nu run.nu test`                          | Run tests                                         |
+| `nu run.nu clippy`                        | Run clippy                                        |
+| `nu run.nu docs`                          | Build docs                                        |
+| `nu run.nu serve-docs`                    | Serve docs over VSCode Remote SSH session.        |
+| `nu run.nu upgrade-deps`                  | Upgrade deps                                      |
+| `nu run.nu rustfmt`                       | Run rustfmt                                       |
 
-So, to build and run this locally, you have to clone the
-[r3bl_rs_utils](https://github.com/r3bl-org/r3bl_rs_utils) repo so that it shares the same parent as
-this crate. Here's a sample folder structure.
+The following commands will watch for changes in the source folder and re-run:
 
-```text
-├── github
-│     ├── r3bl-cmdr
-│     └── r3bl-rs-utils
-```
-
-## Contributing
-<a id="markdown-contributing" name="contributing"></a>
-
-
-This binary crate is being developed as a set of examples. The actual product will emerge as these
-examples are evolved into features of the actual product, which is intended to be released to
-developers.
-
-Please read our [community contributing guidelines here](./CONTRIBUTING.md).
+| Command                                                | Description                        |
+| ------------------------------------------------------ | ---------------------------------- |
+| `nu run.nu watch-run`                                  | Watch run                          |
+| `nu run.nu watch-all-tests`                            | Watch all test                     |
+| `nu run.nu watch-one-test <test_name>`                 | Watch one test                     |
+| `nu run.nu watch-clippy`                               | Watch clippy                       |
+| `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |

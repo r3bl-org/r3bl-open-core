@@ -1,8 +1,27 @@
-use self::giti_ui_templates::ask_user_to_select_from_list;
-use crate::*;
+/*
+ *   Copyright (c) 2023 R3BL LLC
+ *   All rights reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
+use std::process::Command;
+
 use r3bl_ansi_color::{AnsiStyledText, Color, Style};
 use r3bl_rs_utils_core::{log_error, CommonError, CommonErrorType, CommonResult};
-use std::process::Command;
+use r3bl_tuify::{SelectionMode, DELETE_BRANCH, DELETE_BRANCHES, EXIT};
+
+use self::giti_ui_templates::ask_user_to_select_from_list;
 
 pub fn try_delete_branch() -> CommonResult<()> {
     giti_ui_templates::multi_select_instruction_header();
@@ -51,13 +70,17 @@ pub fn try_delete_branch() -> CommonResult<()> {
             match Selection::from(selected) {
                 Delete => {
                     let mut command =
-                        inner::run_git_command_to_delete_branches_on_all_branches(&branches);
+                        inner::run_git_command_to_delete_branches_on_all_branches(
+                            &branches,
+                        );
                     let output = command.output()?;
                     if output.status.success() {
                         if num_of_branches == 1 {
                             inner::display_one_branch_deleted_success_message(&branches);
                         } else {
-                            inner::display_all_branches_deleted_success_messages(&branches);
+                            inner::display_all_branches_deleted_success_messages(
+                                &branches,
+                            );
                         }
                     } else {
                         inner::display_correct_error_message(branches, output);
@@ -82,7 +105,8 @@ pub fn try_delete_branch() -> CommonResult<()> {
 
         impl From<Vec<String>> for Selection {
             fn from(selected: Vec<String>) -> Selection {
-                let selected_to_delete_one_branch = selected[0] == DELETE_BRANCH.to_string();
+                let selected_to_delete_one_branch =
+                    selected[0] == DELETE_BRANCH.to_string();
                 let selected_to_delete_multiple_branches =
                     selected[0] == DELETE_BRANCHES.to_string();
                 let selected_to_exit = selected[0] == EXIT.to_string();
@@ -99,9 +123,14 @@ pub fn try_delete_branch() -> CommonResult<()> {
     }
 
     mod inner {
+        use r3bl_tuify::{FAILED_COLOR, LIGHT_GRAY_COLOR, SUCCESS_COLOR};
+
         use super::*;
 
-        pub fn display_correct_error_message(branches: Vec<String>, output: std::process::Output) {
+        pub fn display_correct_error_message(
+            branches: Vec<String>,
+            output: std::process::Output,
+        ) {
             if branches.len() == 1 {
                 let branch = &branches[0];
                 AnsiStyledText {
@@ -199,9 +228,14 @@ pub fn try_execute_git_command_to_get_branches() -> CommonResult<Vec<String>> {
 }
 
 pub mod giti_ui_templates {
+    use r3bl_rs_utils_core::{ch, ChUnit};
+    use r3bl_tuify::{get_size,
+                     select_from_list,
+                     StyleSheet,
+                     DUSTY_LIGHT_BLUE_COLOR,
+                     LIGHT_GRAY_COLOR};
+
     use super::*;
-    use r3bl_rs_utils_core::ch;
-    use r3bl_rs_utils_core::ChUnit;
 
     pub fn multi_select_instruction_header() {
         AnsiStyledText {
@@ -236,7 +270,8 @@ pub mod giti_ui_templates {
         selection_mode: SelectionMode,
     ) -> Option<Vec<String>> {
         let max_height_row_count = 20;
-        let max_width_col_count = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
+        let max_width_col_count =
+            get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
         let style = StyleSheet::default();
         let user_input = select_from_list(
             header,
