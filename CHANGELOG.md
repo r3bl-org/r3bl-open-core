@@ -6,7 +6,7 @@
 - [r3bl-cmdr](#r3bl-cmdr)
   - [r3bl-cmdr first release](#r3bl-cmdr-first-release)
 - [r3bl_tuify](#r3bl_tuify)
-  - [r3bl_tuify next release](#r3bl_tuify-next-release)
+  - [v0.1.22 2023-12-20](#v0122-2023-12-20)
   - [v0.1.21 2023-10-21](#v0121-2023-10-21)
   - [v0.1.20 2023-10-21](#v0120-2023-10-21)
   - [v0.1.19 2023-10-17](#v0119-2023-10-17)
@@ -79,7 +79,7 @@ Added:
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
 ### v0.1.22 (2023-12-20)
-<a id="markdown-r3bl_tuify-next-release" name="r3bl_tuify-next-release"></a>
+<a id="markdown-v0.1.22-2023-12-20" name="v0.1.22-2023-12-20"></a>
 
 - Updated:
   - Update dependency on `reedline` crate to `0.27.1`.
