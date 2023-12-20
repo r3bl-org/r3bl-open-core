@@ -64,16 +64,18 @@ it.
 ## Run `giti` binary target
 <a id="markdown-run-giti-binary-target" name="run-giti-binary-target"></a>
 
-1. Move to `./tuify` folder in your terminal
-2. Run `nu run.nu install` to install `giti` locally to `~/.cargo/bin`
+1. Go to the `cmdr` folder in your terminal
+2. Run `nu run install` to install `giti` locally to `~/.cargo/bin`
 3. Run `giti` from anywhere on your system
-4. To delete one or more branches in your repo run `giti branch delete`
+4. To delete one or more branches in your repo run `giti branch delete`.
+5. If you want to generate log output for `giti`, run `giti -l`. For example, `giti -l
+   branch delete`.
 
 [![asciicast](https://asciinema.org/a/14V8v3OKKYvDkUDkRFiMDsCNg.svg)](https://asciinema.org/a/14V8v3OKKYvDkUDkRFiMDsCNg)
 
 ## Run `r3bl-cmdr` or `rc` binary target
-
 <a id="markdown-run-r3bl-cmdr-or-rc-binary-target" name="run-r3bl-cmdr-or-rc-binary-target"></a>
+
 
 `r3bl-cmdr` is the second thing that's described above. It contains a set of apps for developers by
 developers. It is engineered to enhance your:

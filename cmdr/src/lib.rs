@@ -15,25 +15,17 @@
  *   limitations under the License.
  */
 
-//! # r3bl-cmdr
+//! ## Run `giti` binary target
+//! <a id="markdown-run-giti-binary-target" name="run-giti-binary-target"></a>
 //!
-//! This TUI (text user interface) app showcases the use of the [`r3bl_rs_utils`
-//! crate](https://crates.io/crates/r3bl_rs_utils). It contains quite a few sample apps which are
-//! meant to be relevant use cases that are relevant for developer workflows (who are remote, and
-//! work w/ teams).
+//! 1. Go to the `cmdr` folder in your terminal
+//! 2. Run `nu run install` to install `giti` locally to `~/.cargo/bin`
+//! 3. Run `giti` from anywhere on your system
+//! 4. To delete one or more branches in your repo run `giti branch delete`.
+//! 5. If you want to generate log output for `giti`, run `giti -l`. For example, `giti -l
+//!    branch delete`.
 //!
-//! The [`r3bl_rs_utils` crate](https://crates.io/crates/r3bl_rs_utils) allows you to build fully
-//! async (parallel and concurrent via Tokio) TUI apps with a modern API that integrates the best of
-//! frontend web development.
-//!
-//! Here are some framework highlights:
-//! - The entire TUI framework itself supports concurrency & parallelism (user input, rendering,
-//!   etc. are generally non blocking).
-//! - You can use:
-//!   - something like Flexbox for responsive layout.
-//!   - something like CSS for styling.
-//!   - Redux for state management (fully async, concurrent & parallel).
-//!   - A lolcat implementation w/ a rainbow color-wheel palette.
+//! [![asciicast](https://asciinema.org/a/14V8v3OKKYvDkUDkRFiMDsCNg.svg)](https://asciinema.org/a/14V8v3OKKYvDkUDkRFiMDsCNg)
 
 // https://github.com/rust-lang/rust-clippy
 // https://rust-lang.github.io/rust-clippy/master/index.html
