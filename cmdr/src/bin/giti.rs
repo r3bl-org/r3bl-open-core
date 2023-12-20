@@ -23,7 +23,7 @@ use clap_config::*;
 use giti::{branch::delete::try_delete_branch,
            giti_ui_templates::ask_user_to_select_from_list,
            *};
-use r3bl_cmdr::{giti, DEVELOPMENT_MODE};
+use r3bl_cmdr::giti;
 use r3bl_rs_utils_core::{call_if_true,
                          log_debug,
                          log_error,
@@ -36,7 +36,7 @@ fn main() {
     // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
     let giti_app_args = GitiAppArg::parse();
 
-    let enable_logging = DEVELOPMENT_MODE | giti_app_args.global_options.enable_logging;
+    let enable_logging = giti_app_args.global_options.enable_logging;
     call_if_true!(enable_logging, {
         try_to_set_log_level(log::LevelFilter::Trace).ok();
         log_debug("Start logging...".to_string());
