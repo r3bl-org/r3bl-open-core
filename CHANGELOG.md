@@ -78,7 +78,7 @@ Added:
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
-### r3bl_tuify next release
+### v0.1.22 (2023-12-20)
 <a id="markdown-r3bl_tuify-next-release" name="r3bl_tuify-next-release"></a>
 
 - Updated:
