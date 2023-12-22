@@ -21,7 +21,9 @@ use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{editor_buffer_clipboard_support::clipboard_support, *};
+use crate::{editor_buffer_clipboard_support::{clipboard_provider_mock::EditorClipboard,
+                                              clipboard_support},
+            *};
 
 /// Functions that implement the editor engine.
 pub struct EditorEngineInternalApi;
@@ -143,12 +145,18 @@ impl EditorEngineInternalApi {
         content_mut::backspace_at_caret(buffer, engine)
     }
 
-    pub fn copy_editor_selection_to_clipboard(buffer: &EditorBuffer) {
-        clipboard_support::copy(buffer)
+    pub fn copy_editor_selection_to_clipboard(
+        buffer: &EditorBuffer,
+        clipboard: &mut impl EditorClipboard,
+    ) {
+        clipboard_support::copy(buffer, clipboard)
     }
 
-    pub fn paste_clipboard_content_into_editor(args: EditorArgsMut<'_>) {
-        clipboard_support::paste(args)
+    pub fn paste_clipboard_content_into_editor(
+        args: EditorArgsMut<'_>,
+        clipboard: &mut impl EditorClipboard,
+    ) {
+        clipboard_support::paste(args, clipboard)
     }
 }
 

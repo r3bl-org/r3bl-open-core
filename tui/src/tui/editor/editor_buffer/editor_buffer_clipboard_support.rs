@@ -24,9 +24,9 @@ use r3bl_rs_utils_core::{call_if_true, ch, log_debug, UnicodeString};
 use crate::*;
 
 pub mod clipboard_support {
-    use super::*;
+    use super::{clipboard_provider_mock::EditorClipboard, *};
 
-    pub fn copy(buffer: &EditorBuffer) {
+    pub fn copy(buffer: &EditorBuffer, clipboard: &mut impl EditorClipboard) {
         let lines: &Vec<UnicodeString> = buffer.get_lines();
         let selection_map = buffer.get_selection_map();
 
@@ -46,7 +46,7 @@ pub mod clipboard_support {
             }
         }
 
-        if let Err(error) = try_to_put_content_into_clipboard(&vec_str) {
+        if let Err(error) = try_to_put_content_into_clipboard(&vec_str, clipboard) {
             call_if_true!(DEBUG_TUI_COPY_PASTE, {
                 log_debug(
                     format!(
@@ -61,8 +61,8 @@ pub mod clipboard_support {
         }
     }
 
-    pub fn paste(args: EditorArgsMut<'_>) {
-        match try_to_get_content_from_clipboard() {
+    pub fn paste(args: EditorArgsMut<'_>, clipboard: &mut impl EditorClipboard) {
+        match try_to_get_content_from_clipboard(clipboard) {
             Ok(clipboard_text) => {
                 // If the clipboard text does not contain a new line, then insert the text.
                 if !clipboard_text.contains(&"\n") {
@@ -131,22 +131,21 @@ pub mod clipboard_support {
 
 /// <https://docs.rs/copypasta-ext/latest/copypasta_ext/>
 mod clipboard_provider {
-    use copypasta_ext::{prelude::*, x11_fork::ClipboardContext};
     use r3bl_rs_utils_core::throws;
 
-    use super::*;
+    use super::{clipboard_provider_mock::EditorClipboard, *};
 
     type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 
     /// Wrap the call to the clipboard crate, so it returns a [Result]. This is to avoid
     /// calling `unwrap()` on the [ClipboardContext] object.
-    pub fn try_to_put_content_into_clipboard(vec_str: &[&str]) -> ClipboardResult<()> {
+    pub fn try_to_put_content_into_clipboard(
+        vec_str: &[&str],
+        clipboard: &mut impl EditorClipboard,
+    ) -> ClipboardResult<()> {
         throws!({
             let content = vec_str.join("\n");
-
-            let mut ctx = ClipboardContext::new()?;
-            ctx.set_contents(content.clone())?;
-
+            clipboard.copy(&content);
             call_if_true!(DEBUG_TUI_COPY_PASTE, {
                 log_debug(
                     format!(
@@ -164,10 +163,56 @@ mod clipboard_provider {
 
     /// Wrap the call to the clipboard crate, so it returns a [Result]. This is to avoid
     /// calling `unwrap()` on the [ClipboardContext] object.
-    pub fn try_to_get_content_from_clipboard() -> ClipboardResult<String> {
-        let mut ctx = ClipboardContext::new()?;
-        let content = ctx.get_contents()?;
+    pub fn try_to_get_content_from_clipboard(
+        clipboard: &mut impl EditorClipboard,
+    ) -> ClipboardResult<String> {
+        Ok(clipboard.paste())
+    }
+}
 
-        Ok(content)
+pub mod clipboard_provider_mock {
+    use copypasta_ext::{copypasta::ClipboardProvider, x11_fork::ClipboardContext};
+
+    pub trait EditorClipboard {
+        fn copy(&mut self, content: &str);
+        fn paste(&mut self) -> String;
+    }
+
+    pub struct TestClipboard {
+        pub content: String,
+    }
+
+    pub struct RealClipboard {
+        pub ctx: ClipboardContext,
+    }
+
+    impl EditorClipboard for RealClipboard {
+        fn copy(&mut self, content: &str) {
+            self.ctx.set_contents(content.to_string()).unwrap();
+        }
+
+        fn paste(&mut self) -> String { self.ctx.get_contents().unwrap() }
+    }
+
+    impl EditorClipboard for TestClipboard {
+        fn copy(&mut self, content: &str) { self.content = content.to_string(); }
+
+        fn paste(&mut self) -> String { self.content.clone() }
+    }
+
+    impl RealClipboard {
+        pub fn new() -> Self {
+            Self {
+                ctx: ClipboardContext::new().unwrap(),
+            }
+        }
+    }
+
+    impl TestClipboard {
+        pub fn new() -> Self {
+            Self {
+                content: String::new(),
+            }
+        }
     }
 }

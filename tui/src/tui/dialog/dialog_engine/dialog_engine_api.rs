@@ -19,7 +19,7 @@ use std::fmt::Debug;
 
 use r3bl_rs_utils_core::*;
 
-use crate::*;
+use crate::{editor_buffer_clipboard_support::clipboard_provider_mock::TestClipboard, *};
 
 #[derive(Debug)]
 pub enum DialogEngineApplyResponse {
@@ -187,10 +187,12 @@ impl DialogEngineApi {
             }
             it.unwrap()
         };
+        let mut clipboard = TestClipboard::new();
         let result = EditorEngineApi::apply_event(
             &mut dialog_buffer.editor_buffer,
             &mut dialog_engine.editor_engine,
             input_event,
+            &mut clipboard,
         )?;
         match result {
             // If the editor engine applied the event, return the new editor buffer.

@@ -22,7 +22,8 @@ use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use crate::{editor_buffer_clipboard_support::clipboard_provider_mock::EditorClipboard,
+            *};
 
 /// Events that can be applied to the [EditorEngine] to modify an [EditorBuffer].
 ///
@@ -291,6 +292,7 @@ impl EditorEvent {
         editor_engine: &mut EditorEngine,
         editor_buffer: &mut EditorBuffer,
         editor_event: EditorEvent,
+        clipboard: &mut impl EditorClipboard,
     ) {
         match editor_event {
             EditorEvent::Undo => {
@@ -492,6 +494,7 @@ impl EditorEvent {
             EditorEvent::Cut => {
                 EditorEngineInternalApi::copy_editor_selection_to_clipboard(
                     editor_buffer,
+                    clipboard,
                 );
                 Self::delete_text_if_selected(editor_engine, editor_buffer);
             }
@@ -499,6 +502,7 @@ impl EditorEvent {
             EditorEvent::Copy => {
                 EditorEngineInternalApi::copy_editor_selection_to_clipboard(
                     editor_buffer,
+                    clipboard,
                 );
             }
 
@@ -509,6 +513,7 @@ impl EditorEvent {
                         editor_buffer,
                         editor_engine,
                     },
+                    clipboard,
                 )
             }
         };
@@ -518,12 +523,18 @@ impl EditorEvent {
         editor_engine: &mut EditorEngine,
         editor_buffer: &mut EditorBuffer,
         editor_event_vec: Vec<EditorEvent>,
+        clipboard: &mut impl EditorClipboard,
     ) where
         S: Debug + Default + Clone + Sync + Send,
         A: Debug + Default + Clone + Sync + Send,
     {
         for editor_event in editor_event_vec {
-            EditorEvent::apply_editor_event(editor_engine, editor_buffer, editor_event);
+            EditorEvent::apply_editor_event(
+                editor_engine,
+                editor_buffer,
+                editor_event,
+                clipboard,
+            );
         }
     }
 }

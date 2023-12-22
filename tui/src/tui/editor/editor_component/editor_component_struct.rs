@@ -51,6 +51,7 @@ pub type OnEditorBufferChangeFn<A> =
 
 pub mod editor_component_impl_component_trait {
     use super::*;
+    use crate::editor_buffer_clipboard_support::clipboard_provider_mock::RealClipboard;
 
     fn get_existing_mut_editor_buffer_from_state_or_create_new_one<'a, S>(
         mut_state: &'a mut S,
@@ -157,10 +158,12 @@ pub mod editor_component_impl_component_trait {
                 // BOOKM: editor component processes input event here
                 // Try to apply the `input_event` to `editor_engine` to decide whether to
                 // fire action.
+                let mut clipboard = RealClipboard::new();
                 let result = EditorEngineApi::apply_event(
                     mut_editor_buffer,
                     editor_engine,
                     input_event,
+                    &mut clipboard,
                 )?;
 
                 match result {
