@@ -23,29 +23,18 @@ path = "src/lib.rs"
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-# r3bl_rs_utils
+# r3bl-open-core.
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }       # Convert between ansi and rgb.
 r3bl_simple_logger = { path = "../simple_logger", version = "0.1.3" } # For logging.
 log = { version = "0.4.20", features = ["std"] }                      # For logging.
 
-tokio = { version = "1.33.0", features = ["full"] }
-
 # https://github.com/serde-rs/serde.
-serde = { version = "1.0.189", features = ["derive"] }
+serde = { version = "1.0.190", features = ["derive"] }
 serde_json = "1.0.107"
-
-# Crossterm & EventStream support.
-crossterm = { version = "0.27.0", features = ["event-stream"] }
-futures-util = "0.3.28"
-paste = "1.0.14"
 
 # Unicode, grapheme clusters.
 unicode-width = "0.1.11"
 unicode-segmentation = "1.10.1"
-
-# For lolcat.
-rand = "0.8.5"
-is-terminal = "0.4.9"
 
 # get-size.
 get-size = { version = "0.1.4", features = ["derive"] }
@@ -60,5 +49,6 @@ syntect = "5.1.0"
 # nom parser combinator.
 nom = "7.1.3"
 
+[dev-dependencies]
 # for assert_eq! macro
 pretty_assertions = "1.4.0"

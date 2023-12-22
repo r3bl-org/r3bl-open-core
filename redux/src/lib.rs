@@ -128,10 +128,9 @@
 //! 1. `AsyncMiddlewareSpawns<State, Action>` - Your middleware has to use `tokio::spawn` to run
 //!    `async` blocks in a [separate
 //!    thread](https://docs.rs/tokio/latest/tokio/task/index.html#spawning) and return a
-//!    `JoinHandle` that contains an `Option<Action>`. A macro
-//!    [`fire_and_forget!`](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/macro.fire_and_forget.html)
-//!    is provided so that you can easily spawn parallel blocks of code in your `async` functions.
-//!    These are added to the store via a call to `add_middleware_spawns(...)`.
+//!    `JoinHandle` that contains an `Option<Action>`. You can use [tokio::task::spawn] to
+//!    spawn parallel blocks of code in your `async` functions. These are added to the
+//!    store via a call to `add_middleware_spawns(...)`.
 //!
 //! 2. `AsyncMiddleware<State, Action>` - They are will all be run together concurrently using
 //!    [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
@@ -160,9 +159,9 @@
 //!    for examples of both. The `run()` method is passed two arguments: the `State` and the
 //!    `Action`.
 //!
-//!    1. For `AsyncMiddlewareSpawns<S,A>` in your `run()` implementation you have to use the
-//!       [`fire_and_forget!`](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/macro.fire_and_forget.html)
-//!       macro to surround your code. And this will return a `JoinHandle<Option<A>>`.
+//!    1. For `AsyncMiddlewareSpawns<S,A>` in your `run()` implementation you can use
+//!       [tokio::task::spawn] surround your code. And this will return a
+//!       `JoinHandle<Option<A>>`.
 //!    2. For `AsyncMiddleware<S,A>` in your `run()` implementation you just have to return an
 //!       `Option<A>>`.
 //!
@@ -369,7 +368,7 @@
 //!     action: Action,
 //!     store_ref: Arc<RwLock<StoreStateMachine<State, Action>>>,
 //!   ) -> JoinHandle<Option<Action>> {
-//!     fire_and_forget!(
+//!     tokio::task::spawn(async move
 //!       {
 //!         let mut stack = self
 //!           .shared_object_ref

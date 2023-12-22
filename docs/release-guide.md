@@ -41,6 +41,16 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 cd ~/github/r3bl_rs_utils/
 rm Cargo.lock
 
+cd cmdr
+# Update cargo.toml version number manually
+# Update CHANGELOG.md
+cargo build; cargo test; cargo doc
+git add -A
+git commit -m "v0.0.7-cmdr"
+git tag -a v0.0.7-cmdr -m "v0.0.7-cmdr"
+cargo publish
+cd ..
+
 cd tuify
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
@@ -61,23 +71,13 @@ git tag -a v0.3.10-tui -m "v0.3.10-tui"
 cargo publish
 cd ..
 
-cd cmdr
+cd macro
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.0.7-cmdr"
-git tag -a v0.0.7-cmdr -m "v0.0.7-cmdr"
-cargo publish
-cd ..
-
-cd ansi_color
-# Update cargo.toml version number manually
-# Update CHANGELOG.md
-cargo build; cargo test; cargo doc
-git add -A
-git commit -m "v0.6.9-ansi_color"
-git tag -a v0.6.9-ansi_color -m "v0.6.9-ansi_color"
+git commit -m "v0.9.7-macro"
+git tag -a v0.9.7-macro -m "v0.9.7-macro"
 cargo publish
 cd ..
 
@@ -91,6 +91,16 @@ git tag -a v0.9.9-core -m "v0.9.9-core"
 cargo publish
 cd ..
 
+cd ansi_color
+# Update cargo.toml version number manually
+# Update CHANGELOG.md
+cargo build; cargo test; cargo doc
+git add -A
+git commit -m "v0.6.9-ansi_color"
+git tag -a v0.6.9-ansi_color -m "v0.6.9-ansi_color"
+cargo publish
+cd ..
+
 cd simple_logger
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
@@ -98,16 +108,6 @@ cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.1.3-simple_logger"
 git tag -a v0.1.3-simple_logger -m "v0.1.3-simple_logger"
-cargo publish
-cd ..
-
-cd macro
-# Update cargo.toml version number manually
-# Update CHANGELOG.md
-cargo build; cargo test; cargo doc
-git add -A
-git commit -m "v0.9.7-macro"
-git tag -a v0.9.7-macro -m "v0.9.7-macro"
 cargo publish
 cd ..
 
@@ -121,6 +121,7 @@ git tag -a v0.2.6-redux -m "v0.2.6-redux"
 cargo publish
 cd ..
 
+cd utils
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
@@ -128,6 +129,7 @@ git add -A
 git commit -m "v0.9.14-public"
 git tag -a v0.9.14-public -m "v0.9.14-public"
 cargo publish
+cd ..
 
 # Finally, push the git commit and tag to the remote repo
 git tag -l --sort=-creatordate # Check the tags
