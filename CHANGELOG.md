@@ -22,17 +22,23 @@
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
-- [r3bl_ansi_color](#r3bl_ansi_color)
-  - [v0.6.9 2023-10-21](#v069-2023-10-21)
-  - [v0.6.8 2023-10-16](#v068-2023-10-16)
-  - [v0.6.7 2023-09-12](#v067-2023-09-12)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
+  - [r3bl_rs_utils_core next release](#r3bl_rs_utils_core-next-release)
   - [v0.9.9 2023-10-21](#v099-2023-10-21)
   - [v0.9.8 2023-10-21](#v098-2023-10-21)
   - [v0.9.7 2023-10-17](#v097-2023-10-17)
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
+- [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
+  - [r3bl_rs_utils_macro next release](#r3bl_rs_utils_macro-next-release)
+  - [v0.9.7 2023-10-21](#v097-2023-10-21)
+  - [v0.9.6 2023-10-17](#v096-2023-10-17)
+  - [v0.9.5 2023-10-14](#v095-2023-10-14)
+- [r3bl_ansi_color](#r3bl_ansi_color)
+  - [v0.6.9 2023-10-21](#v069-2023-10-21)
+  - [v0.6.8 2023-10-16](#v068-2023-10-16)
+  - [v0.6.7 2023-09-12](#v067-2023-09-12)
 - [r3bl_simple_logger](#r3bl_simple_logger)
   - [v0.1.3 2023-10-21](#v013-2023-10-21)
   - [v0.1.2 2023-10-21](#v012-2023-10-21)
@@ -42,10 +48,6 @@
   - [v0.2.6 2023-10-21](#v026-2023-10-21)
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
-- [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
-  - [v0.9.7 2023-10-21](#v097-2023-10-21)
-  - [v0.9.6 2023-10-17](#v096-2023-10-17)
-  - [v0.9.5 2023-10-14](#v095-2023-10-14)
 - [r3bl_rs_utils](#r3bl_rs_utils)
   - [r3bl_rs_utils final release](#r3bl_rs_utils-final-release)
   - [v0.9.14 2023-10-29](#v0914-2023-10-29)
@@ -309,44 +311,15 @@ Added:
   - The first demo example (`ex_app_no_layout`) now has support for animation. It automatically
     increments the state every second and the gradient color wheel is updated accordingly.
 
-## `r3bl_ansi_color`
-<a id="markdown-r3bl_ansi_color" name="r3bl_ansi_color"></a>
-
-### v0.6.9 (2023-10-21)
-<a id="markdown-v0.6.9-2023-10-21" name="v0.6.9-2023-10-21"></a>
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.6.8 (2023-10-16)
-<a id="markdown-v0.6.8-2023-10-16" name="v0.6.8-2023-10-16"></a>
-
-- Added:
-  - Support for `Grayscale` color output. This is in preparation of making the color
-    support work across all platforms (MacOS, Linux, Windows). And use this in the
-    `r3bl_tui` crate. Update tests to reflect this.
-
-- Removed:
-  - Dependency on `once-cell` removed by replacing `Arc<Mutex<_>>` with `unsafe` and
-    `AtomicI8`.
-
-### v0.6.7 (2023-09-12)
-<a id="markdown-v0.6.7-2023-09-12" name="v0.6.7-2023-09-12"></a>
-
-- Added:
-  - Tests.
-
-- Replaced:
-  - `justfile` is now replaced with `nu` script `run.nu`.
-
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
 ### r3bl_rs_utils_core next release
+<a id="markdown-r3bl_rs_utils_core-next-release" name="r3bl_rs_utils_core-next-release"></a>
 
 - Updated:
-  - TODO: Upgrade all the deps to their latest versions: `serde`.
-    TODO: Propagate this to all the other crates in the `r3bl_rs_utils` repo, and bump their version numbers: e.g. `tuify`, `tui`, etc.
+  - TODO: Upgrade all the deps to their latest versions: `serde` version `1.0.190`.
+    TODO: Propagate this to all the other crates in the `r3bl_rs_utils` repo, and bump their version numbers: e.g. `tuify`, `tui`, `cmdr`, `macro`.
 
 ### v0.9.9 (2023-10-21)
 <a id="markdown-v0.9.9-2023-10-21" name="v0.9.9-2023-10-21"></a>
@@ -403,6 +376,66 @@ Added:
   - ANSI escape sequences are no longer used internally in any intermediate format used by the TUI
     engine. It is reserved exclusively for output to stdout using (for now) crossterm. This opens
     the door for future support for GUI app (not just terminal emulators).
+
+## `r3bl_rs_utils_macro`
+<a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>
+
+### r3bl_rs_utils_macro next release
+<a id="markdown-r3bl_rs_utils_macro-next-release" name="r3bl_rs_utils_macro-next-release"></a>
+
+- Updated:
+  - Remove unused dependencies, and update to the latest ones.
+
+### v0.9.7 (2023-10-21)
+<a id="markdown-v0.9.7-2023-10-21" name="v0.9.7-2023-10-21"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.9.6 (2023-10-17)
+<a id="markdown-v0.9.6-2023-10-17" name="v0.9.6-2023-10-17"></a>
+
+- Updated:
+  - Update `r3bl_rs_utils_core` crate due to
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
+    maintained anymore.
+
+### v0.9.5 (2023-10-14)
+<a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
+
+- Updated:
+  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
+    `r3bl_rs_utils` repo workspace as `simple_logger`).
+
+## `r3bl_ansi_color`
+<a id="markdown-r3bl_ansi_color" name="r3bl_ansi_color"></a>
+
+### v0.6.9 (2023-10-21)
+<a id="markdown-v0.6.9-2023-10-21" name="v0.6.9-2023-10-21"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.6.8 (2023-10-16)
+<a id="markdown-v0.6.8-2023-10-16" name="v0.6.8-2023-10-16"></a>
+
+- Added:
+  - Support for `Grayscale` color output. This is in preparation of making the color
+    support work across all platforms (MacOS, Linux, Windows). And use this in the
+    `r3bl_tui` crate. Update tests to reflect this.
+
+- Removed:
+  - Dependency on `once-cell` removed by replacing `Arc<Mutex<_>>` with `unsafe` and
+    `AtomicI8`.
+
+### v0.6.7 (2023-09-12)
+<a id="markdown-v0.6.7-2023-09-12" name="v0.6.7-2023-09-12"></a>
+
+- Added:
+  - Tests.
+
+- Replaced:
+  - `justfile` is now replaced with `nu` script `run.nu`.
 
 ## `r3bl_simple_logger`
 <a id="markdown-r3bl_simple_logger" name="r3bl_simple_logger"></a>
@@ -469,30 +502,6 @@ Added:
   - Dependency on `ansi_term` which is no longer maintained
     <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>.
   - Needless dependencies on crates that are not used.
-
-## `r3bl_rs_utils_macro`
-<a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>
-
-### v0.9.7 (2023-10-21)
-<a id="markdown-v0.9.7-2023-10-21" name="v0.9.7-2023-10-21"></a>
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.9.6 (2023-10-17)
-<a id="markdown-v0.9.6-2023-10-17" name="v0.9.6-2023-10-17"></a>
-
-- Updated:
-  - Update `r3bl_rs_utils_core` crate due to
-    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
-    maintained anymore.
-
-### v0.9.5 (2023-10-14)
-<a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
-
-- Updated:
-  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
-    `r3bl_rs_utils` repo workspace as `simple_logger`).
 
 ## `r3bl_rs_utils`
 <a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>

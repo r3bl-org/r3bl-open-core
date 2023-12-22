@@ -85,46 +85,6 @@ macro_rules! throws_with_return {
     }};
 }
 
-/// Declarative macro to surround the given block with a call to
-/// [`tokio::spawn`]. This is useful for spawning a task that will run in the
-/// background from a function that is NOT async.
-///
-/// # Examples:
-///
-/// Your block can be sync and `foo` is not async.
-///
-/// ```ignore
-/// pub fn foo() {
-///   fire_and_forget!({
-///     println!("Hello");
-///   });
-/// }
-/// ```
-///
-/// Your block can be async and `foo` is still not async.
-///
-/// ```ignore
-/// pub fn foo() {
-///   fire_and_forget!(
-///      let fake_data = fake_contact_data_api()
-///      .await
-///      .unwrap_or_else(|_| FakeContactData {
-///        name: "Foo Bar".to_string(),
-///        phone_h: "123-456-7890".to_string(),
-///        email_u: "foo".to_string(),
-///        email_d: "bar.com".to_string(),
-///        ..FakeContactData::default()
-///      });
-///   );
-/// }
-/// ```
-#[macro_export]
-macro_rules! fire_and_forget {
-    ($block:block) => {
-        return tokio::spawn(async move { $block });
-    };
-}
-
 /// Syntactic sugar to run a conditional statement. Here's an example.
 /// ```ignore
 /// const DEBUG: bool = true;

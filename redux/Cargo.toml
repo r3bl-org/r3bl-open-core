@@ -22,7 +22,7 @@ path = "src/lib.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# r3bl_rs_utils
+# r3bl-open-core.
 r3bl_rs_utils_core = { path = "../core", version = "0.9.9" }
 r3bl_rs_utils_macro = { path = "../macro", version = "0.9.7" }
 
@@ -43,11 +43,12 @@ crossterm = { version = "0.27.0", features = ["event-stream"] }
 futures-util = "0.3.28"
 
 # https://github.com/serde-rs/serde.
-serde = { version = "1.0.189", features = ["derive"] }
+serde = { version = "1.0.190", features = ["derive"] }
 serde_json = "1.0.107"
 
 # get-size.
 get-size = { version = "0.1.4", features = ["derive"] }
 
+[dev-dependencies]
 # For assert_eq2! macro.
 pretty_assertions = "1.4.0"

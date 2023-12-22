@@ -22,7 +22,7 @@ path = "src/lib.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# r3bl_rs_utils
+# r3bl-open-core.
 r3bl_rs_utils_core = { path = "../core", version = "0.9.9" }
 r3bl_rs_utils_macro = { path = "../macro", version = "0.9.7" }
 r3bl_redux = { path = "../redux", version = "0.2.6" }
@@ -31,14 +31,12 @@ log = { version = "0.4.20", features = ["std"] }                # Logging.
 
 # Time
 chrono = "0.4.31"
-time = "0.3.30"
 
 # Misc
 rand = "0.8.5"
 
 # Async
 tokio = { version = "1.33.0", features = ["full"] }
-futures = "0.3.29"
 
 # Crossterm & EventStream support.
 crossterm = { version = "0.27.0", features = ["event-stream"] }
@@ -70,13 +68,12 @@ is-terminal = "0.4.9"
 # For examples.
 # http://xion.io/post/code/rust-examples.html
 
-# For assert_eq2! macro.
-pretty_assertions = "1.4.0"
-
 # For clipboard.
 copypasta-ext = "0.4.4"
 
 [dev-dependencies]
+# For assert_eq2! macro.
+pretty_assertions = "1.4.0"
 reedline = "0.27.1"
 textwrap = "0.16.0"
 serial_test = "2.0.0"

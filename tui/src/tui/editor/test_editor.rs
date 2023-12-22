@@ -1604,6 +1604,7 @@ pub mod mock_real_objects_for_editor {
     }
 }
 
+#[cfg(test)]
 pub mod assert {
     use r3bl_rs_utils_core::*;
 
