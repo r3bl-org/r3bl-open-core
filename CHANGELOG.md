@@ -342,6 +342,12 @@ Added:
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
+### r3bl_rs_utils_core next release
+
+- Updated:
+  - TODO: Upgrade all the deps to their latest versions: `serde`.
+    TODO: Propagate this to all the other crates in the `r3bl_rs_utils` repo, and bump their version numbers: e.g. `tuify`, `tui`, etc.
+
 ### v0.9.9 (2023-10-21)
 <a id="markdown-v0.9.9-2023-10-21" name="v0.9.9-2023-10-21"></a>
 
