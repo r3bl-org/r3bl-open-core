@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_rs_utils_core"
-version = "0.9.9"
+version = "0.9.10"
 edition = "2021"
 resolver = "2"
 description = """
