@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_tuify"
-version = "0.1.22"
+version = "0.1.23"
 edition = "2021"
 resolver = "2"
 description = "Easily add lightweight TUI capabilities to any CLI apps"
@@ -28,7 +28,7 @@ path = "src/bin/rt.rs"
 [dependencies]
 # r3bl-open-core.
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
-r3bl_rs_utils_core = { path = "../core", version = "0.9.9" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.10" }
 
 # serde for JSON serialization.
 serde = { version = "1.0.190", features = ["derive"] }
