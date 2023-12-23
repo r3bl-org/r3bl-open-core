@@ -23,7 +23,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
-  - [r3bl_rs_utils_core next release](#r3bl_rs_utils_core-next-release)
+  - [v0.9.10 2023-12-22](#v0.9.10-2023-12-22)
   - [v0.9.9 2023-10-21](#v099-2023-10-21)
   - [v0.9.8 2023-10-21](#v098-2023-10-21)
   - [v0.9.7 2023-10-17](#v097-2023-10-17)
@@ -314,12 +314,13 @@ Added:
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
-### r3bl_rs_utils_core next release
-<a id="markdown-r3bl_rs_utils_core-next-release" name="r3bl_rs_utils_core-next-release"></a>
+### v0.9.10 (2023-12-22)
+<a id="markdown-v0.9.10-2023-12-22" name="v0.9.10-2023-12-22"></a>
 
 - Updated:
-  - TODO: Upgrade all the deps to their latest versions: `serde` version `1.0.190`.
-    TODO: Propagate this to all the other crates in the `r3bl_rs_utils` repo, and bump their version numbers: e.g. `tuify`, `tui`, `cmdr`, `macro`.
+  - Upgrade all the deps to their latest versions: `serde` version `1.0.190`. Propagate
+    this to all the other crates in the `r3bl-open-core` repo, and bump their version
+    numbers: e.g. `tuify`, `macro`, `tui`, `cmdr`.
 
 ### v0.9.9 (2023-10-21)
 <a id="markdown-v0.9.9-2023-10-21" name="v0.9.9-2023-10-21"></a>

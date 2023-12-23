@@ -86,8 +86,8 @@ cd core
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.9.9-core"
-git tag -a v0.9.9-core -m "v0.9.9-core"
+git commit -m "v0.9.10-core"
+git tag -a v0.9.10-core -m "v0.9.10-core"
 cargo publish
 cd ..
 
