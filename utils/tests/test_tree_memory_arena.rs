@@ -21,11 +21,9 @@ use std::{collections::VecDeque,
           sync::Arc,
           thread::{self, JoinHandle}};
 
-/// Rust book: https://doc.rust-lang.org/book/ch11-03-test-organization.html#the-tests-directory
-use r3bl_rs_utils::{assert_eq2,
-                    tree_memory_arena::{Arena, MTArena, ResultUidList},
+use r3bl_rs_utils::{tree_memory_arena::{Arena, MTArena, ResultUidList},
                     TraversalKind};
-use r3bl_rs_utils_core::{style_primary, style_prompt};
+use r3bl_rs_utils_core::{assert_eq2, style_primary, style_prompt};
 
 #[test]
 fn test_can_add_nodes_to_tree() {

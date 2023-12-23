@@ -21,8 +21,8 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-/// This is a shim which allows the reusable [DialogEngine] to be used in the context of [Component]
-/// and [r3bl_redux::Store]. The main methods here simply pass thru all their arguments to the
+/// This is a shim which allows the reusable [DialogEngine] to be used in the context of
+/// [Component]. The main methods here simply pass thru all their arguments to the
 /// [DialogEngine].
 #[derive(Debug, Default)]
 pub struct DialogComponent<S, A>

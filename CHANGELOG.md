@@ -14,7 +14,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
-  - [r3bl_tui next release](#r3bl_tui-next-release)
+  - [v0.4.0 2023-12-22](#v040-2023-12-22)
   - [v0.3.10 2023-10-29](#v0310-2023-10-29)
   - [v0.3.9 2023-10-29](#v039-2023-10-29)
   - [v0.3.7 2023-10-21](#v037-2023-10-21)
@@ -147,19 +147,15 @@ Added:
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
-### r3bl_tui next release
-<a id="markdown-r3bl_tui-next-release" name="r3bl_tui-next-release"></a>
-
-- Updated:
-  - Update dependency on `reedline` crate to `0.27.1`.
+### v0.4.0 (2023-12-22)
+<a id="markdown-v0.4.0-2023-12-22" name="v0.4.0-2023-12-22"></a>
 
 - Changed:
-  - In the editor component - disable the syntect highlighter for the editor by default
-    and just use the custom MD parser. For files that are not Markdown, we will probably
-    need to enable syntect in the future since it is not covered by the custom MD parser &
-    highlighter combo.
-  - Redux is no longer used in order to propagate state transitions from async middleware
-    functions to the app. This is now accomplished using [async `tokio::mpsc`
+  - Drop the use of Redux for state management entirely. Replace this with mutable state.
+    And a new architecture for App and Component, that is more like Elm, rather than React
+    and Redux.
+  - Async middleware functions no longer use Redux for propagating state transitions to
+    the app; instead, they now achieve this through [async `tokio::mpsc`
     channels](https://tokio.rs/tokio/tutorial/channels). Here's a [design
     doc](https://docs.google.com/document/d/1OMB1rX6cUL_Jxpl-OUWMhJijM7c4FoDrK6qDViVXBWk/edit)
     for this change. Here's the
@@ -168,6 +164,10 @@ Added:
     some videos that go over this massive change:
     - <https://youtu.be/o2CVEikbEAQ>
     - <https://youtu.be/Ne5-MXxt97A>
+  - In the editor component, disable the syntect highlighter for the editor by default
+    and just use the custom MD parser. For files that are not Markdown, we will probably
+    need to enable syntect in the future since it is not covered by the custom MD parser &
+    highlighter combo.
 
 - Fixed:
   - Fix the custom MD parser so that it correctly parses plain text.
@@ -188,6 +188,11 @@ Added:
     cache invalidation (which makes it fast to invalidate the render ops cache w/out
     having to do a content comparison to detect changes).
   - Add lots of editor component tests for selection, content cache.
+
+- Updated:
+  - Update dependency on `reedline` crate to `0.27.1`.
+  - Update dependency on `r3bl_rs_utils_core` to `0.9.10`.
+  - Update dependency on `r3bl_rs_utils_macro` to `0.9.8`.
 
 ### v0.3.10 (2023-10-29)
 <a id="markdown-v0.3.10-2023-10-29" name="v0.3.10-2023-10-29"></a>
@@ -518,8 +523,12 @@ Added:
 ### r3bl_rs_utils final release
 <a id="markdown-r3bl_rs_utils-final-release" name="r3bl_rs_utils-final-release"></a>
 
+- Updated:
+  - Add single dependency on `r3bl_rs_utils_core` version `0.9.10`.
+
 - Removed:
-  - Remove unnecessary `dev-dependencies` from `Cargo.toml`.
+  - Remove all the unnecessary dependencies from `Cargo.toml`.
+  - Remove all unnecessary `dev-dependencies` from `Cargo.toml`.
 
 - Moved:
   - All the source code from the top level folder of the `r3bl-open-core` repo into the

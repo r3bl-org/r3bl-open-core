@@ -26,11 +26,11 @@ use crate::*;
 /// Do not create this struct directly. Please use [new()](EditorEngine::new) instead.
 ///
 /// Holds data related to rendering in between render calls.
-/// 1. This is not stored in the [EditorBuffer] struct, which lives in the [r3bl_redux::Store]. The
-///    store provides the underlying document or buffer struct that holds the actual document.
-/// 2. Rather, this struct is stored in the [EditorComponent] struct, which lives inside of the
-///    [App] and outside of the Redux store. Keep in mind that both the [App] and
-///    [r3bl_redux::Store] are passed into the [main_event_loop] function to launch an app.
+/// 1. This is not stored in the [EditorBuffer] struct, which lives in the app's state.
+///    The state provides the underlying document or buffer struct that holds the actual
+///    document.
+/// 2. Rather, this struct is stored in the [EditorComponent] struct, which lives inside
+///    of the [App].
 ///
 /// In order to change the document, you can use the
 /// [EditorEngineApi::apply_event](EditorEngineApi::apply_event) method which takes [InputEvent] and
