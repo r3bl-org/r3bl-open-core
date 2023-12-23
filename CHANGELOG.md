@@ -14,6 +14,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [r3bl_tui-next-release](#r3bl_tui-next-release)
   - [v0.4.0 2023-12-22](#v040-2023-12-22)
   - [v0.3.10 2023-10-29](#v0310-2023-10-29)
   - [v0.3.9 2023-10-29](#v039-2023-10-29)
@@ -151,6 +152,16 @@ Added:
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
+
+### r3bl_tui-next-release
+<a id="markdown-r3bl_tui-next-release" name="r3bl_tui-next-release"></a>
+
+- Changed:
+  - Rename `run.nu` to `run`. This simplifies commands to run it, eg: `nu run build`, or
+    `./run build`.
+
+- Added:
+  - Add tests to editor component for clipboard service.
 
 ### v0.4.0 (2023-12-22)
 <a id="markdown-v0.4.0-2023-12-22" name="v0.4.0-2023-12-22"></a>
@@ -382,7 +393,6 @@ Added:
     grayscale based on terminal emulator capabilities at runtime (provided by `to_crossterm_color()`
     and `ColorSupport`). If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not
     be downgraded.
-
 
 ### v0.9.1 (2023-03-06)
 <a id="markdown-v0.9.1-2023-03-06" name="v0.9.1-2023-03-06"></a>
