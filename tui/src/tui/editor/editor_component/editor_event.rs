@@ -59,6 +59,7 @@ pub enum SelectionScope {
     PageDown,
     Home,
     End,
+    All,
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, GetSize)]
@@ -182,6 +183,16 @@ impl TryFrom<InputEvent> for EditorEvent {
                         alt_key_state: KeyState::NotPressed,
                     },
             }) => Ok(EditorEvent::Select(SelectionScope::End)),
+
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::Character('a'),
+                mask:
+                    ModifierKeysMask {
+                        shift_key_state: KeyState::NotPressed,
+                        ctrl_key_state: KeyState::Pressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
+            }) => Ok(EditorEvent::Select(SelectionScope::All)),
 
             //  Clipboard events.
             InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -482,6 +493,13 @@ impl EditorEvent {
                 }
                 SelectionScope::End => {
                     EditorEngineInternalApi::end(
+                        editor_buffer,
+                        editor_engine,
+                        SelectMode::Enabled,
+                    );
+                }
+                SelectionScope::All => {
+                    EditorEngineInternalApi::select_all(
                         editor_buffer,
                         editor_engine,
                         SelectMode::Enabled,

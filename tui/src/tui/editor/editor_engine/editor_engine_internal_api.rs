@@ -91,6 +91,14 @@ impl EditorEngineInternalApi {
         caret_mut::to_end_of_line(buffer, engine, select_mode)
     }
 
+    pub fn select_all(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
+        caret_mut::select_all(buffer, engine, select_mode)
+    }
+
     pub fn validate_scroll(args: EditorArgsMut) {
         scroll_editor_buffer::validate_scroll(args);
     }
@@ -625,6 +633,25 @@ mod caret_mut {
         None
     }
 
+    pub fn select_all(
+        editor_buffer: &mut EditorBuffer,
+        editor_engine: &mut EditorEngine,
+        select_mode: SelectMode,
+    ) -> Option<()> {
+        empty_check_early_return!(editor_buffer, @None);
+        let number_of_lines = editor_buffer.get_lines().len();
+        match select_mode {
+            SelectMode::Enabled => {
+                for _ in 0..number_of_lines {
+                    down(editor_buffer, editor_engine, select_mode);
+                }
+            }
+            SelectMode::Disabled => {
+                // No Use case for this yet.
+            }
+        }
+        None
+    }
     /// ```text
     /// Caret : ▴, ▸
     ///
