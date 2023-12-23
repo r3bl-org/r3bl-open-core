@@ -4,7 +4,7 @@ description = "Misc utility functions for r3bl-open-core repo"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["non-binary-tree"]
 # When you change this, make sure to update `README.md` as well.
-version = "0.9.14"
+version = "0.9.15"
 edition = "2021"
 resolver = "2"
 readme = "README.md" # This is not included in cargo docs.

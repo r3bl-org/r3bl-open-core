@@ -520,7 +520,7 @@ Added:
 ## `r3bl_rs_utils`
 <a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
 
-### r3bl_rs_utils final release
+### v0.9.15 (2023-12-22)
 <a id="markdown-r3bl_rs_utils-final-release" name="r3bl_rs_utils-final-release"></a>
 
 - Updated:
