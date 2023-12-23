@@ -1,6 +1,6 @@
 [package]
 name = "r3bl-cmdr"
-version = "0.0.7"
+version = "0.0.8"
 readme = "README.md"
 edition = "2021"
 homepage = "https://r3bl.com"
@@ -10,7 +10,7 @@ description = """
 A TUI app suite for developers built in Rust. Includes an editor `edi` and a git client `giti`.
 """
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
-keywords = ["tui", "md editor", "git client", "tuify"]
+keywords = ["tui", "editor", "git", "tuify"]
 categories = ["command-line-interface", "command-line-utilities"]
 
 # TODO: Replace the following lines w/ real values
@@ -36,6 +36,12 @@ path = "src/bin/edi.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# R3BL crates (from this mono repo).
+r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.10" }
+r3bl_tui = { path = "../tui", version = "0.4.0" }
+r3bl_tuify = { path = "../tuify", version = "0.1.23" }
+log = { version = "0.4.20", features = ["std"] }
 
 # Tokio.
 tokio = { version = "1.33.0", features = ["full"] }
@@ -46,13 +52,6 @@ clap = { version = "4.4.6", features = ["derive", "wrap_help"] }
 
 # serde-json
 serde_json = "1.0.107"
-
-# R3BL crates (from this mono repo).
-r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
-r3bl_rs_utils_core = { path = "../core", version = "0.9.10" }
-r3bl_tui = { path = "../tui", version = "0.4.0" }
-r3bl_tuify = { path = "../tuify", version = "0.1.23" }
-log = { version = "0.4.20", features = ["std"] }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
