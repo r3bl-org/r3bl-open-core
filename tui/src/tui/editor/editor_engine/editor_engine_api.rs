@@ -21,7 +21,7 @@ use r3bl_rs_utils_macro::style;
 use syntect::easy::HighlightLines;
 
 use super::*;
-use crate::*;
+use crate::{editor_buffer_clipboard_support::ClipboardService, *};
 
 pub struct EditorEngineApi;
 
@@ -33,6 +33,7 @@ impl EditorEngineApi {
         editor_buffer: &mut EditorBuffer,
         editor_engine: &mut EditorEngine,
         input_event: InputEvent,
+        clipboard: &mut impl ClipboardService,
     ) -> CommonResult<EditorEngineApplyEventResult> {
         let editor_config = &editor_engine.config_options;
 
@@ -76,6 +77,7 @@ impl EditorEngineApi {
                 editor_engine,
                 editor_buffer,
                 editor_event.clone(),
+                clipboard,
             );
 
             match editor_event {
