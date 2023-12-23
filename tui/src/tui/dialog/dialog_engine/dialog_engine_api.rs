@@ -19,7 +19,8 @@ use std::fmt::Debug;
 
 use r3bl_rs_utils_core::*;
 
-use crate::*;
+use crate::{editor_buffer_clipboard_support::system_clipboard_service_provider::SystemClipboard,
+            *};
 
 #[derive(Debug)]
 pub enum DialogEngineApplyResponse {
@@ -182,15 +183,17 @@ impl DialogEngineApi {
         // It is safe to unwrap the dialog buffer here (since it will have Some value).
         let dialog_buffer = {
             let it = mut_state.get_mut_dialog_buffer(self_id);
-            if it.is_none() {
-                return Ok(DialogEngineApplyResponse::Noop);
+            match it {
+                Some(it) => it,
+                None => return Ok(DialogEngineApplyResponse::Noop),
             }
-            it.unwrap()
         };
+
         let result = EditorEngineApi::apply_event(
             &mut dialog_buffer.editor_buffer,
             &mut dialog_engine.editor_engine,
             input_event,
+            &mut SystemClipboard,
         )?;
         match result {
             // If the editor engine applied the event, return the new editor buffer.
@@ -371,14 +374,18 @@ mod internal_impl {
 
         let dialog_buffer = {
             let it = state.get_mut_dialog_buffer(self_id);
-            if it.is_none() {
-                return CommonError::new(
-                    CommonErrorType::NotFound,
-                    &format!("Dialog buffer does not exist for component id:{}", self_id),
-                );
+            match it {
+                Some(it) => it,
+                None => {
+                    return CommonError::new(
+                        CommonErrorType::NotFound,
+                        &format!(
+                            "Dialog buffer does not exist for component id:{}",
+                            self_id
+                        ),
+                    )
+                }
             }
-            // It is safe to unwrap the dialog buffer here (since it will have Some value).
-            it.unwrap()
         };
 
         let mut pipeline = EditorEngineApi::render_engine(
@@ -738,10 +745,11 @@ mod internal_impl {
     ) -> Option<DialogChoice> {
         // It is safe to unwrap the dialog buffer here (since it will have Some value).
         let dialog_buffer = {
-            if maybe_dialog_buffer.is_none() {
+            if let Some(it) = maybe_dialog_buffer {
+                it
+            } else {
                 return None;
             }
-            maybe_dialog_buffer.unwrap()
         };
 
         match DialogEvent::from(input_event) {
@@ -779,10 +787,11 @@ mod internal_impl {
     ) -> EventPropagation {
         // It is safe to unwrap the dialog buffer here (since it will have Some value).
         let dialog_buffer = {
-            if maybe_dialog_buffer.is_none() {
+            if let Some(it) = maybe_dialog_buffer {
+                it
+            } else {
                 return EventPropagation::Propagate;
             }
-            maybe_dialog_buffer.unwrap()
         };
 
         // Handle up arrow?
