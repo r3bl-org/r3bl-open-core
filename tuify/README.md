@@ -380,30 +380,30 @@ fn main() -> Result<()> {
 ### Nu shell scripts to build, run, test etc.
 <a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test-etc." name="nu-shell-scripts-to-build%2C-run%2C-test-etc."></a>
 
-| Command                                   | Description                                |
-| ----------------------------------------- | ------------------------------------------ |
-| `nu run.nu run`                           | Run examples in the `./examples` folder    |
-| `nu run.nu run-piped`                     | Run binary with piped input                |
-| `nu run.nu build`                         | Build                                      |
-| `nu run.nu clean`                         | Clean                                      |
-| `nu run.nu all`                           | All                                        |
-| `nu run.nu run-with-flamegraph-profiling` | Run examples with flamegraph profiling     |
-| `nu run.nu test`                          | Run tests                                  |
-| `nu run.nu clippy`                        | Run clippy                                 |
-| `nu run.nu docs`                          | Build docs                                 |
-| `nu run.nu serve-docs`                    | Serve docs over VSCode Remote SSH session. |
-| `nu run.nu upgrade-deps`                  | Upgrade deps                               |
-| `nu run.nu rustfmt`                       | Run rustfmt                                |
+| Command                                | Description                                |
+| -------------------------------------- | ------------------------------------------ |
+| `nu run run`                           | Run examples in the `./examples` folder    |
+| `nu run run-piped`                     | Run binary with piped input                |
+| `nu run build`                         | Build                                      |
+| `nu run clean`                         | Clean                                      |
+| `nu run all`                           | All                                        |
+| `nu run run-with-flamegraph-profiling` | Run examples with flamegraph profiling     |
+| `nu run test`                          | Run tests                                  |
+| `nu run clippy`                        | Run clippy                                 |
+| `nu run docs`                          | Build docs                                 |
+| `nu run serve-docs`                    | Serve docs over VSCode Remote SSH session. |
+| `nu run upgrade-deps`                  | Upgrade deps                               |
+| `nu run rustfmt`                       | Run rustfmt                                |
 
 The following commands will watch for changes in the source folder and re-run:
 
-| Command                                                | Description                        |
-| ------------------------------------------------------ | ---------------------------------- |
-| `nu run.nu watch-run`                                  | Watch run                          |
-| `nu run.nu watch-all-tests`                            | Watch all test                     |
-| `nu run.nu watch-one-test <test_name>`                 | Watch one test                     |
-| `nu run.nu watch-clippy`                               | Watch clippy                       |
-| `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
+| Command                                             | Description                        |
+| --------------------------------------------------- | ---------------------------------- |
+| `nu run watch-run`                                  | Watch run                          |
+| `nu run watch-all-tests`                            | Watch all test                     |
+| `nu run watch-one-test <test_name>`                 | Watch one test                     |
+| `nu run watch-clippy`                               | Watch clippy                       |
+| `nu run watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
 
 ## References
 <a id="markdown-references" name="references"></a>

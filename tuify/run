@@ -111,7 +111,7 @@ def watch-macro-expansion-one-test [args: list<string>] {
 # - Otherwise, prints help for the specified command.
 def print-help [command: string] {
     if $command == "all" {
-        print $'Usage: (ansi blue_bold)run.nu(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi yellow)[args](ansi reset)'
+        print $'Usage: (ansi blue_bold)run(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi yellow)[args](ansi reset)'
         print $'(ansi green_bold)<command>(ansi reset) can be:'
         print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
@@ -131,10 +131,10 @@ def print-help [command: string] {
         print $'    (ansi green)rustfmt(ansi reset)'
         print $'    (ansi green)help(ansi reset)'
     } else if $command == "watch-one-test" {
-        print $'Usage: (ansi blue_bold)run.nu(ansi reset) (ansi green_bold)watch-one-test(ansi reset) (ansi yellow)<test-name>(ansi reset)'
+        print $'Usage: (ansi blue_bold)run(ansi reset) (ansi green_bold)watch-one-test(ansi reset) (ansi yellow)<test-name>(ansi reset)'
         print $'    (ansi green)<test-name>(ansi reset) is the name of the test to watch.'
     } else if $command == "watch-macro-expansion-one-test" {
-        print $'Usage: (ansi blue_bold)run.nu(ansi reset) (ansi green_bold)watch-macro-expansion-one-test(ansi reset) (ansi yellow)<test-name>(ansi reset)'
+        print $'Usage: (ansi blue_bold)run(ansi reset) (ansi green_bold)watch-macro-expansion-one-test(ansi reset) (ansi yellow)<test-name>(ansi reset)'
         print $'    (ansi green)<test-name>(ansi reset) is the name of the test to watch.'
     } else {
         print $'Unknown command: (ansi red_bold)($command)(ansi reset)'
