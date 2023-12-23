@@ -4,7 +4,7 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
-  - [r3bl-cmdr first release](#r3bl-cmdr-first-release)
+  - [v0.0.8 2023-12-22](#v008-2023-12-22)
 - [r3bl_tuify](#r3bl_tuify)
   - [v0.1.23 2023-12-22](#v0123-2023-12-22)
   - [v0.1.22 2023-12-20](#v0122-2023-12-20)
@@ -50,7 +50,7 @@
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_rs_utils](#r3bl_rs_utils)
-  - [r3bl_rs_utils final release](#r3bl_rs_utils-final-release)
+  - [v0.9.15 2023-12-22](#v0915-2023-12-22)
   - [v0.9.14 2023-10-29](#v0914-2023-10-29)
   - [v0.9.13 2023-10-29](#v0913-2023-10-29)
   - [v0.9.12 2023-10-29](#v0912-2023-10-29)
@@ -64,19 +64,24 @@
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
 
-### r3bl-cmdr first release
-<a id="markdown-r3bl-cmdr-first-release" name="r3bl-cmdr-first-release"></a>
+### v0.0.8 (2023-12-22)
+<a id="markdown-v0.0.8-2023-12-22" name="v0.0.8-2023-12-22"></a>
+
+Changed:
+  - Rename `run.nu` to `run` and update `README.md` and `lib.rs` to reflect this change.
+    This is a more ergonomic command to use, when using it directly eg: `./run build`
+    (macOS, Linux), or `nu run build` (Windows).
 
 Added:
-  - Binary target for `giti`. This is an interactive git client that is tuified. It is a
+  - Add binary target `giti`. This is an interactive git client that is tuified. It is a
     productivity tool for git workflows, and is meant as a replacement for directly using
     `git`. This also serves as a real world example of using the `r3bl_tuify` crate.
     - View all the `giti branch` subcommands (e.g. `delete`, `checkout`, `new`, etc.) and
       select one subcommand using the `select_from_list()` when `giti branch` runs.
     - Delete one or more branches using `select_from_list()` when  `giti branch delete`
       command runs.
-  - Binary target for `edi`.
-  - Binary target for `rc` aka `r3bl-cmdr`.
+  - Add binary target `edi`.
+  - Add binary target `rc` aka `r3bl-cmdr`.
 
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
@@ -521,7 +526,7 @@ Added:
 <a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
 
 ### v0.9.15 (2023-12-22)
-<a id="markdown-r3bl_rs_utils-final-release" name="r3bl_rs_utils-final-release"></a>
+<a id="markdown-v0.9.15-2023-12-22" name="v0.9.15-2023-12-22"></a>
 
 - Updated:
   - Add single dependency on `r3bl_rs_utils_core` version `0.9.10`.
