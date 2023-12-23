@@ -20,7 +20,8 @@ mod test_config_options {
     use r3bl_rs_utils_core::*;
 
     use super::*;
-    use crate::*;
+    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
+                *};
 
     #[test]
     fn test_multiline_true() {
@@ -53,6 +54,7 @@ mod test_config_options {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertString("a".into()),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -67,6 +69,7 @@ mod test_config_options {
                 EditorEvent::MoveCaret(CaretDirection::Up),
                 EditorEvent::MoveCaret(CaretDirection::Down),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -103,6 +106,7 @@ mod test_config_options {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertString("a".into()),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -117,6 +121,7 @@ mod test_config_options {
                 EditorEvent::MoveCaret(CaretDirection::Up),
                 EditorEvent::MoveCaret(CaretDirection::Down),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -133,7 +138,8 @@ mod test_editor_ops {
     use r3bl_rs_utils_core::*;
 
     use super::*;
-    use crate::*;
+    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
+                *};
 
     #[test]
     fn editor_delete() {
@@ -159,6 +165,7 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertString("a".into()),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -180,6 +187,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Left),
                 EditorEvent::Delete,
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -202,6 +210,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::Delete,
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(buffer.get_lines().len(), 2);
         assert_eq2!(
@@ -223,6 +232,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::Delete,
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(buffer.get_lines().len(), 1);
         assert_eq2!(
@@ -256,6 +266,7 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertString("a".into()),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -274,6 +285,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::Backspace],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -291,6 +303,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::Backspace],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -310,6 +323,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Left),
                 EditorEvent::MoveCaret(CaretDirection::Left),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -319,6 +333,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::Backspace],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(buffer.get_lines().len(), 1);
         assert_eq2!(
@@ -341,6 +356,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::InsertString("😃".into()),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -348,7 +364,12 @@ mod test_editor_ops {
         );
 
         // Press backspace.
-        EditorEvent::apply_editor_event(&mut engine, &mut buffer, EditorEvent::Backspace);
+        EditorEvent::apply_editor_event(
+            &mut engine,
+            &mut buffer,
+            EditorEvent::Backspace,
+            &mut TestClipboard::default(),
+        );
         assert::line_at_caret(&buffer, &engine, "abcab");
     }
 
@@ -372,6 +393,7 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertChar('1'),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -388,6 +410,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Up)],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -415,6 +438,7 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertString("😀".into()),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -435,6 +459,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Up),
                 EditorEvent::MoveCaret(CaretDirection::Right),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -451,6 +476,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Down)],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -482,6 +508,7 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertString("a".into()),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -505,6 +532,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Down),
                 EditorEvent::MoveCaret(CaretDirection::Down),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -516,6 +544,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Up)],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -527,6 +556,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Up)],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -542,6 +572,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Up),
                 EditorEvent::MoveCaret(CaretDirection::Up),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -564,6 +595,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::MoveCaret(CaretDirection::Down),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -582,6 +614,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Down)],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -616,6 +649,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('a')],
+            &mut TestClipboard::default(),
         );
         assert::none_is_at_caret(&buffer, &engine);
         assert_eq2!(
@@ -634,6 +668,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertNewLine],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(buffer.get_lines().len(), 2);
         assert::none_is_at_caret(&buffer, &engine);
@@ -653,6 +688,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('a')],
+            &mut TestClipboard::default(),
         );
 
         // Move caret left.
@@ -666,6 +702,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Left)],
+            &mut TestClipboard::default(),
         );
         assert::str_is_at_caret(&buffer, &engine, "a");
 
@@ -681,6 +718,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertNewLine],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(buffer.get_lines().len(), 3);
         assert::str_is_at_caret(&buffer, &engine, "a");
@@ -704,6 +742,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::InsertChar('b'),
             ],
+            &mut TestClipboard::default(),
         );
 
         assert::none_is_at_caret(&buffer, &engine);
@@ -730,6 +769,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Left),
                 EditorEvent::InsertNewLine,
             ],
+            &mut TestClipboard::default(),
         );
         assert::str_is_at_caret(&buffer, &engine, "b");
         assert_eq2!(
@@ -755,6 +795,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::InsertNewLine,
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(buffer.get_lines().len(), 5);
         assert_eq2!(
@@ -779,6 +820,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('a')],
+            &mut TestClipboard::default(),
         );
         assert::none_is_at_caret(&buffer, &engine);
 
@@ -795,6 +837,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Left),
                 EditorEvent::MoveCaret(CaretDirection::Left), // No-op.
             ],
+            &mut TestClipboard::default(),
         );
         assert::str_is_at_caret(&buffer, &engine, "a");
 
@@ -808,6 +851,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('1')],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             EditorEngineInternalApi::line_at_caret_to_string(&buffer, &engine)
@@ -827,6 +871,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Left)],
+            &mut TestClipboard::default(),
         );
         assert::str_is_at_caret(&buffer, &engine, "1");
 
@@ -840,6 +885,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+            &mut TestClipboard::default(),
         );
         assert::str_is_at_caret(&buffer, &engine, "a");
 
@@ -853,6 +899,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('2')],
+            &mut TestClipboard::default(),
         );
         assert::str_is_at_caret(&buffer, &engine, "a");
         assert_eq2!(
@@ -875,6 +922,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Right),
                 EditorEvent::MoveCaret(CaretDirection::Right), // No-op.
             ],
+            &mut TestClipboard::default(),
         );
         assert::none_is_at_caret(&buffer, &engine);
         assert_eq2!(
@@ -896,6 +944,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Left),
                 EditorEvent::MoveCaret(CaretDirection::Left),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -919,6 +968,7 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::MoveCaret(CaretDirection::Left),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -936,6 +986,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -958,6 +1009,7 @@ mod test_editor_ops {
                 EditorEvent::MoveCaret(CaretDirection::Up),
                 EditorEvent::MoveCaret(CaretDirection::Right),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -992,6 +1044,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('a')],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(*buffer.get_lines(), vec![UnicodeString::from("a")]);
         assert_eq2!(
@@ -1014,6 +1067,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('b')],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             *buffer.get_lines(),
@@ -1041,6 +1095,7 @@ mod test_editor_ops {
                 EditorEvent::InsertNewLine,
                 EditorEvent::InsertChar('😀'),
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             *buffer.get_lines(),
@@ -1069,6 +1124,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertChar('d')],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             *buffer.get_lines(),
@@ -1097,6 +1153,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::InsertString("🙏🏽".into())],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             *buffer.get_lines(),
@@ -1132,6 +1189,7 @@ mod test_editor_ops {
                 EditorEvent::InsertString("hello".to_string()),
                 EditorEvent::Home,
             ],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1143,6 +1201,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::End],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1167,6 +1226,7 @@ mod test_editor_ops {
                     EditorEvent::InsertString(format!("{count}: {}", "hello")),
                     EditorEvent::InsertNewLine,
                 ],
+                &mut TestClipboard::default(),
             );
             count -= 1;
         }
@@ -1177,6 +1237,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::PageUp],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1188,6 +1249,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::PageUp],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1199,6 +1261,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::PageUp],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1210,6 +1273,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::PageDown],
+            &mut TestClipboard::default(),
         );
 
         assert_eq2!(
@@ -1222,6 +1286,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::PageDown],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1233,6 +1298,7 @@ mod test_editor_ops {
             &mut engine,
             &mut buffer,
             vec![EditorEvent::PageDown],
+            &mut TestClipboard::default(),
         );
         assert_eq2!(
             buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1256,6 +1322,7 @@ mod test_editor_ops {
                     EditorEvent::InsertString(format!("{count}: {}", "hello")),
                     EditorEvent::InsertNewLine,
                 ],
+                &mut TestClipboard::default(),
             );
         }
         assert_eq2!(buffer.len(), ch!(max_lines + 1)); /* One empty line after content */
@@ -1266,6 +1333,7 @@ mod test_editor_ops {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Up)],
+                &mut TestClipboard::default(),
             );
         }
         assert_eq2!(
@@ -1287,6 +1355,7 @@ mod test_editor_ops {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Down)],
+                &mut TestClipboard::default(),
             );
         }
         assert_eq2!(
@@ -1316,6 +1385,7 @@ mod test_editor_ops {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::InsertString(format!("{count}"))],
+                &mut TestClipboard::default(),
             );
         }
         assert_eq2!(buffer.len(), ch!(1));
@@ -1338,6 +1408,7 @@ mod test_editor_ops {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Left)],
+                &mut TestClipboard::default(),
             );
         }
         assert_eq2!(
@@ -1359,6 +1430,7 @@ mod test_editor_ops {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                &mut TestClipboard::default(),
             );
         }
         assert_eq2!(
@@ -1421,6 +1493,7 @@ mod test_editor_ops {
                     &mut engine,
                     &mut buffer,
                     vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                    &mut TestClipboard::default(),
                 );
             }
             assert_eq2!(
@@ -1445,6 +1518,7 @@ mod test_editor_ops {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                &mut TestClipboard::default(),
             );
             assert_eq2!(
                 buffer.get_caret(CaretKind::ScrollAdjusted),
@@ -1467,6 +1541,7 @@ mod test_editor_ops {
                     &mut engine,
                     &mut buffer,
                     vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                    &mut TestClipboard::default(),
                 );
             }
             assert_eq2!(
@@ -1496,6 +1571,7 @@ mod test_editor_ops {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                &mut TestClipboard::default(),
             );
             assert_eq2!(
                 buffer.get_caret(CaretKind::Raw),
@@ -1525,6 +1601,7 @@ mod test_editor_ops {
                     &mut engine,
                     &mut buffer,
                     vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                    &mut TestClipboard::default(),
                 );
             }
             // Start of viewport.
@@ -1540,6 +1617,7 @@ mod test_editor_ops {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)],
+                &mut TestClipboard::default(),
             );
             // Start of viewport.
             let result = buffer.get_lines()[0]
@@ -1652,13 +1730,15 @@ mod selection_tests {
     use r3bl_rs_utils_core::*;
 
     use super::*;
-    use crate::*;
+    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
+                *};
 
     #[test]
     fn test_text_selection() {
         let mut buffer =
             EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
         // Buffer has two lines.
         // Row Index : 0 , Column Length : 12
         // Row Index : 1 , Column Length : 12
@@ -1672,6 +1752,7 @@ mod selection_tests {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::Select(SelectionScope::End)],
+                &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 0, col : 12]
 
@@ -1689,13 +1770,15 @@ mod selection_tests {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Right); 5], // Move caret to right for 5 times
+                &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 4]
 
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
-                vec![EditorEvent::Select(SelectionScope::Home)], // Select text upto starting
+                vec![EditorEvent::Select(SelectionScope::Home)], // Select text up to starting
+                &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 0]
 
@@ -1713,6 +1796,7 @@ mod selection_tests {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::Select(SelectionScope::OneCharRight)], // Move Selection to Right
+                &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 1]
 
@@ -1730,6 +1814,7 @@ mod selection_tests {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::Select(SelectionScope::OneCharLeft)], // Move Selection to Left
+                &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 0]
 
@@ -1747,6 +1832,7 @@ mod selection_tests {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::Select(SelectionScope::OneLineUp)], // Select one line up
+                &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 0, col : 0]
 
@@ -1765,6 +1851,7 @@ mod selection_tests {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::Select(SelectionScope::OneLineDown)], // De-Select one line down
+                &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 0]
 
@@ -1781,6 +1868,7 @@ mod selection_tests {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)], // Move caret to right
+                &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 1]
 
@@ -1796,6 +1884,7 @@ mod selection_tests {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::Select(SelectionScope::PageUp)], // Select by pressing PageUp
+                &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 0, col : 1]
 
@@ -1814,11 +1903,13 @@ mod selection_tests {
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::MoveCaret(CaretDirection::Right)], // Move caret one char right
+                &mut TestClipboard::default(),
             );
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
                 vec![EditorEvent::Select(SelectionScope::PageDown)], // Select by pressing PageDown
+                &mut TestClipboard::default(),
             );
             // Current Caret Position : [row : 1, col : 2]
 
@@ -1827,6 +1918,220 @@ mod selection_tests {
             selection_map.insert(ch!(0), SelectionRange::new(ch!(2), ch!(12)));
             selection_map.insert(ch!(1), SelectionRange::new(ch!(0), ch!(2)));
             assert_eq2!(buffer.get_selection_map().map, selection_map);
+        }
+    }
+}
+
+#[cfg(test)]
+mod clipboard_tests {
+
+    use r3bl_rs_utils_core::*;
+
+    use super::*;
+    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
+                *};
+
+    #[test]
+    fn test_copy() {
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+        // Buffer has two lines.
+        // Row Index : 0 , Column Length : 12
+        // Row Index : 1 , Column Length : 12
+        buffer.set_lines(vec!["abc r3bl xyz".to_string(), "pqr rust uvw".to_string()]);
+        let mut test_clipboard = TestClipboard::default();
+        // Single Line copying
+        {
+            // Current Caret Position : [row : 0, col : 0]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionScope::End)],
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 0, col : 12]
+
+            // Copying the contents from Selection
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Copy],
+                &mut test_clipboard,
+            );
+            let content = test_clipboard.content.clone();
+            assert_eq2!(content, "abc r3bl xyz".to_string());
+        }
+
+        // Multi-line Copying
+        {
+            // Current Caret Position : [row : 0, col : 12]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionScope::PageDown)],
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 1, col : 12]
+
+            // Copying the contents from Selection
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Copy],
+                &mut test_clipboard,
+            );
+
+            let content = test_clipboard.content;
+            assert_eq2!(content, "abc r3bl xyz\npqr rust uvw".to_string());
+        }
+    }
+
+    #[test]
+    fn test_paste() {
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        // Buffer has two lines.
+        // Row Index : 0 , Column Length : 12
+        // Row Index : 1 , Column Length : 12
+        buffer.set_lines(vec!["abc r3bl xyz".to_string(), "pqr rust uvw".to_string()]);
+
+        // Single Line Pasting
+        {
+            let mut test_clipboard = TestClipboard {
+                content: "copied text ".to_string(),
+            };
+
+            // Current Caret Position : [row : 0, col : 0]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Right); 4], // Move caret by 4 positions
+                &mut test_clipboard,
+            );
+
+            // Current Caret Position : [row : 0, col : 4]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Paste],
+                &mut test_clipboard,
+            );
+
+            let new_lines = vec![
+                UnicodeString::from("abc copied text r3bl xyz"),
+                UnicodeString::from("pqr rust uvw"),
+            ];
+            assert_eq2!(buffer.get_lines(), &new_lines);
+        }
+
+        // Multi-line Pasting
+        {
+            // Current Caret Position : [row : 0, col : 4]
+            let mut test_clipboard = TestClipboard {
+                content: "old line\nnew line ".to_string(),
+            };
+
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Paste],
+                &mut test_clipboard,
+            );
+
+            let new_lines = vec![
+                UnicodeString::from("abc copied text old line"),
+                UnicodeString::from("new line r3bl xyz"),
+                UnicodeString::from("pqr rust uvw"),
+            ];
+            assert_eq2!(buffer.get_lines(), &new_lines);
+        }
+    }
+
+    #[test]
+    fn test_cut() {
+        let mut buffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
+        let mut engine = mock_real_objects_for_editor::make_editor_engine();
+
+        // Buffer has two lines.
+        // Row Index : 0 , Column Length : 12
+        // Row Index : 1 , Column Length : 12
+        buffer.set_lines(vec!["abc r3bl xyz".to_string(), "pqr rust uvw".to_string()]);
+
+        // Single Line cutting
+        {
+            let mut test_clipboard = TestClipboard::default();
+
+            // Current Caret Position : [row : 0, col : 0]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionScope::End)],
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 0, col : 12]
+
+            // Cutting the contents from Selection and pasting to clipboard
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Cut],
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 0, col : 0]
+
+            let content = test_clipboard.content.clone();
+            assert_eq2!(content, "abc r3bl xyz".to_string()); // copied to clipboard
+            let new_lines = vec![
+                UnicodeString::from("pqr rust uvw"), // First line 'abc r3bl xyz' is cut
+            ];
+            assert_eq2!(buffer.get_lines(), &new_lines);
+        }
+
+        // Multi-line Cutting
+        {
+            let mut test_clipboard = TestClipboard::default();
+
+            buffer
+                .set_lines(vec!["abc r3bl xyz".to_string(), "pqr rust uvw".to_string()]);
+            // Current Caret Position : [row : 0, col : 0]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Down)],
+                &mut test_clipboard,
+            );
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::MoveCaret(CaretDirection::Right); 4], // Move caret by 4 positions
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 1, col : 4]
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Select(SelectionScope::PageUp)], // Select by pressing PageUp
+                &mut test_clipboard,
+            );
+            // Current Caret Position : [row : 0, col : 4]
+
+            // Cutting the contents from Selection and pasting to clipboard
+            EditorEvent::apply_editor_events::<(), ()>(
+                &mut engine,
+                &mut buffer,
+                vec![EditorEvent::Cut],
+                &mut test_clipboard,
+            );
+
+            let content = test_clipboard.content;
+            assert_eq2!(content, "r3bl xyz\npqr ".to_string()); // copied to clipboard
+            let new_lines =
+                vec![UnicodeString::from("abc "), UnicodeString::from("rust uvw")];
+            assert_eq2!(buffer.get_lines(), &new_lines);
         }
     }
 }
