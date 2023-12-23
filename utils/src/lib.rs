@@ -110,9 +110,5 @@ pub mod utils;
 
 // Re-export from core and macro (so users of public crate can use them w/out having to
 // add dependency on each core and macro).
-pub use r3bl_redux::*;
-pub use r3bl_rs_utils_core::*;
-pub use r3bl_rs_utils_macro::*;
-pub use r3bl_tui::*;
 pub use tree_memory_arena::*;
 pub use utils::*;

@@ -25,8 +25,8 @@ use crate::*;
 /// Please do not construct this struct directly, and use [new](DialogEngine::new) instead.
 ///
 /// Holds data related to rendering in between render calls. This is not stored in the
-/// [DialogBuffer] struct, which lives in the [r3bl_redux::Store]. The store provides the underlying
-/// document or buffer struct that holds the actual document.
+/// [DialogBuffer] struct, which lives in the app's state. The store provides the
+/// underlying document or buffer struct that holds the actual document.
 ///
 /// In order to change the document, you can use the
 /// [DialogEngineApi::apply_event](DialogEngineApi::apply_event) method which takes [InputEvent] and

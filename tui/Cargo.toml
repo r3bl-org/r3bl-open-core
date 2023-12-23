@@ -1,11 +1,11 @@
 [package]
 name = "r3bl_tui"
-version = "0.3.10"
+version = "0.4.0"
 edition = "2021"
 resolver = "2"
-description = "TUI library inspired by Redux, Redux, Flexbox, CSS, editor components, etc"
+description = "TUI library to build modern apps inspired by Elm, with Flexbox, CSS, editor component, emoji support, and more"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
-keywords = ["tui", "editor", "terminal", "redux", "color"]
+keywords = ["tui", "editor", "flexbox", "terminal", "emoji"]
 categories = ["command-line-interface", "command-line-utilities"]
 readme = "README.md"                                              # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/
@@ -23,9 +23,8 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl-open-core.
-r3bl_rs_utils_core = { path = "../core", version = "0.9.9" }
-r3bl_rs_utils_macro = { path = "../macro", version = "0.9.7" }
-r3bl_redux = { path = "../redux", version = "0.2.6" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.10" }
+r3bl_rs_utils_macro = { path = "../macro", version = "0.9.8" }
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
 log = { version = "0.4.20", features = ["std"] }                # Logging.
 

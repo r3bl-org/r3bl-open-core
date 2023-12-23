@@ -66,8 +66,8 @@ cd tui
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.3.10-tui"
-git tag -a v0.3.10-tui -m "v0.3.10-tui"
+git commit -m "v0.4.0-tui"
+git tag -a v0.4.0-tui -m "v0.4.0-tui"
 cargo publish
 cd ..
 
@@ -126,8 +126,8 @@ cd utils
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.9.14-public"
-git tag -a v0.9.14-public -m "v0.9.14-public"
+git commit -m "v0.9.15-public"
+git tag -a v0.9.15-public -m "v0.9.15-public"
 cargo publish
 cd ..
 

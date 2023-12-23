@@ -27,8 +27,7 @@ use crate::*;
 /// Stores the data for a single editor buffer. Please do not construct this struct
 /// directly and use [new_empty](EditorBuffer::new_empty) instead.
 ///
-/// 1. This struct is stored in the [r3bl_redux::Store]'s
-///    [state](r3bl_redux::Store::state) field.
+/// 1. This struct is stored in the app's state.
 /// 2. And it is paired w/ [EditorEngine] at runtime; which is responsible for rendering
 ///    it to TUI, and handling user input.
 ///
