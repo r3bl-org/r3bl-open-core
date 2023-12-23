@@ -87,6 +87,12 @@ Added:
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
+### r3bl_tuify-next-release
+
+- Changed:
+  - Rename `run.nu` to `run`. This simplifies commands to run it, eg: `nu run build`, or
+    `./run build`.
+
 ### v0.1.23 (2023-12-22)
 <a id="markdown-v0.1.23-2023-12-22" name="v0.1.23-2023-12-22"></a>
 
