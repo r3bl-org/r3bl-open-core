@@ -23,7 +23,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
-  - [v0.9.10 2023-12-22](#v0.9.10-2023-12-22)
+  - [v0.9.10 2023-12-22](#v0910-2023-12-22)
   - [v0.9.9 2023-10-21](#v099-2023-10-21)
   - [v0.9.8 2023-10-21](#v098-2023-10-21)
   - [v0.9.7 2023-10-17](#v097-2023-10-17)
@@ -31,7 +31,7 @@
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
-  - [r3bl_rs_utils_macro next release](#r3bl_rs_utils_macro-next-release)
+  - [v0.9.8 2023-12-22](#v098-2023-12-22)
   - [v0.9.7 2023-10-21](#v097-2023-10-21)
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
@@ -381,11 +381,12 @@ Added:
 ## `r3bl_rs_utils_macro`
 <a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>
 
-### r3bl_rs_utils_macro next release
-<a id="markdown-r3bl_rs_utils_macro-next-release" name="r3bl_rs_utils_macro-next-release"></a>
+### v0.9.8 (2023-12-22)
+<a id="markdown-v0.9.8-2023-12-22" name="v0.9.8-2023-12-22"></a>
 
 - Updated:
-  - Remove unused dependencies, and update to the latest ones.
+  - Use latest `r3bl_rs_utils_core` version `0.9.10`. Remove unused dependencies, and
+    update to the latest ones.
 
 ### v0.9.7 (2023-10-21)
 <a id="markdown-v0.9.7-2023-10-21" name="v0.9.7-2023-10-21"></a>
