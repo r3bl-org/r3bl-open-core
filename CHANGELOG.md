@@ -6,6 +6,7 @@
 - [r3bl-cmdr](#r3bl-cmdr)
   - [r3bl-cmdr first release](#r3bl-cmdr-first-release)
 - [r3bl_tuify](#r3bl_tuify)
+  - [v0.1.23 2023-12-22](#v0123-2023-12-22)
   - [v0.1.22 2023-12-20](#v0122-2023-12-20)
   - [v0.1.21 2023-10-21](#v0121-2023-10-21)
   - [v0.1.20 2023-10-21](#v0120-2023-10-21)
@@ -79,6 +80,12 @@ Added:
 
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
+
+### v0.1.23 (2023-12-22)
+<a id="markdown-v0.1.23-2023-12-22" name="v0.1.23-2023-12-22"></a>
+
+- Updated:
+  - Update dependency on `r3bl_rs_utils_core` to `0.9.10`.
 
 ### v0.1.22 (2023-12-20)
 <a id="markdown-v0.1.22-2023-12-20" name="v0.1.22-2023-12-20"></a>
