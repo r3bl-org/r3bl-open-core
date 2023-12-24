@@ -197,7 +197,7 @@ cargo run --release --example demo
 
 These examples cover the entire surface area of the TUI API. You can also take a look at
 the tests in the source (`tui/src/`) as well. A single [`nu`
-shell](https://www.nushell.sh/) script `run.nu` in **the `tui` sub folder** in the repo
+shell](https://www.nushell.sh/) script `run` in **the `tui` sub folder** in the repo
 allows you to easily build, run, test, and do so much more with the repo.
 
 > The `run` script works on Linux, macOS, and Windows. On Linux and macOS, you can

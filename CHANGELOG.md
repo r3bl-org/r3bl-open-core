@@ -165,8 +165,9 @@ Added:
 <a id="markdown-r3bl_tui-next-release" name="r3bl_tui-next-release"></a>
 
 - Changed:
-  - Rename `run.nu` to `run`. This simplifies commands to run it, eg: `nu run build`, or
-    `./run build`.
+  - Rename `run.nu` to `run` in the `tui` folder. This simplifies commands to run it, eg:
+    `nu run build`, or `./run build`.
+  - Rename `run.nu` to `run` in the top level folder as well.
 
 - Added:
   - Add tests to editor component for clipboard service.
