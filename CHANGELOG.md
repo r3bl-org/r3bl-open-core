@@ -169,14 +169,17 @@ Added:
     `nu run build`, or `./run build`.
   - Rename `run.nu` to `run` in the top level folder as well.
 
-- Added:
-  - Add tests to editor component for clipboard service.
-
 - Fixed:
   - Editor component now cleans up state correctly after new content loads. This includes
     the undo/redo stack, and the render ops cache (for the content).
-  - Fix tui/examples/demo/ex_pitch example to correctly move back and forward between
+  - Fix `tui/examples/demo/ex_pitch` example to correctly move back and forward between
     slides.
+
+- Added:
+  - <kbd>Escape</kbd> key now clears the selection.
+  - <kbd>Ctrl+A</kbd> now selects all text.
+  - Tests for `EditorComponent` for undo / redo history, text selection, and clipboard service.
+  - Add tests to editor component for clipboard service.
 
 ### v0.4.0 (2023-12-22)
 <a id="markdown-v0.4.0-2023-12-22" name="v0.4.0-2023-12-22"></a>

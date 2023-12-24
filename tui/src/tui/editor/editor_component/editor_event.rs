@@ -41,7 +41,7 @@ pub enum EditorEvent {
     PageUp,
     MoveCaret(CaretDirection),
     Resize(Size),
-    Select(SelectionScope),
+    Select(SelectionAction),
     Copy,
     Paste,
     Cut,
@@ -50,7 +50,7 @@ pub enum EditorEvent {
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum SelectionScope {
+pub enum SelectionAction {
     OneCharLeft,
     OneCharRight,
     OneLineUp,
@@ -59,6 +59,8 @@ pub enum SelectionScope {
     PageDown,
     Home,
     End,
+    All,
+    Esc,
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, GetSize)]
@@ -111,7 +113,7 @@ impl TryFrom<InputEvent> for EditorEvent {
                         ctrl_key_state: KeyState::NotPressed,
                         alt_key_state: KeyState::NotPressed,
                     },
-            }) => Ok(EditorEvent::Select(SelectionScope::OneCharRight)),
+            }) => Ok(EditorEvent::Select(SelectionAction::OneCharRight)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::Left),
@@ -121,7 +123,7 @@ impl TryFrom<InputEvent> for EditorEvent {
                         ctrl_key_state: KeyState::NotPressed,
                         alt_key_state: KeyState::NotPressed,
                     },
-            }) => Ok(EditorEvent::Select(SelectionScope::OneCharLeft)),
+            }) => Ok(EditorEvent::Select(SelectionAction::OneCharLeft)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::Down),
@@ -131,7 +133,7 @@ impl TryFrom<InputEvent> for EditorEvent {
                         ctrl_key_state: KeyState::NotPressed,
                         alt_key_state: KeyState::NotPressed,
                     },
-            }) => Ok(EditorEvent::Select(SelectionScope::OneLineDown)),
+            }) => Ok(EditorEvent::Select(SelectionAction::OneLineDown)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::Up),
@@ -141,7 +143,7 @@ impl TryFrom<InputEvent> for EditorEvent {
                         ctrl_key_state: KeyState::NotPressed,
                         alt_key_state: KeyState::NotPressed,
                     },
-            }) => Ok(EditorEvent::Select(SelectionScope::OneLineUp)),
+            }) => Ok(EditorEvent::Select(SelectionAction::OneLineUp)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::PageUp),
@@ -151,7 +153,7 @@ impl TryFrom<InputEvent> for EditorEvent {
                         ctrl_key_state: KeyState::NotPressed,
                         alt_key_state: KeyState::NotPressed,
                     },
-            }) => Ok(EditorEvent::Select(SelectionScope::PageUp)),
+            }) => Ok(EditorEvent::Select(SelectionAction::PageUp)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::PageDown),
@@ -161,7 +163,7 @@ impl TryFrom<InputEvent> for EditorEvent {
                         ctrl_key_state: KeyState::NotPressed,
                         alt_key_state: KeyState::NotPressed,
                     },
-            }) => Ok(EditorEvent::Select(SelectionScope::PageDown)),
+            }) => Ok(EditorEvent::Select(SelectionAction::PageDown)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::Home),
@@ -171,7 +173,7 @@ impl TryFrom<InputEvent> for EditorEvent {
                         ctrl_key_state: KeyState::NotPressed,
                         alt_key_state: KeyState::NotPressed,
                     },
-            }) => Ok(EditorEvent::Select(SelectionScope::Home)),
+            }) => Ok(EditorEvent::Select(SelectionAction::Home)),
 
             InputEvent::Keyboard(KeyPress::WithModifiers {
                 key: Key::SpecialKey(SpecialKey::End),
@@ -181,7 +183,21 @@ impl TryFrom<InputEvent> for EditorEvent {
                         ctrl_key_state: KeyState::NotPressed,
                         alt_key_state: KeyState::NotPressed,
                     },
-            }) => Ok(EditorEvent::Select(SelectionScope::End)),
+            }) => Ok(EditorEvent::Select(SelectionAction::End)),
+
+            InputEvent::Keyboard(KeyPress::WithModifiers {
+                key: Key::Character('a'),
+                mask:
+                    ModifierKeysMask {
+                        shift_key_state: KeyState::NotPressed,
+                        ctrl_key_state: KeyState::Pressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
+            }) => Ok(EditorEvent::Select(SelectionAction::All)),
+
+            InputEvent::Keyboard(KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::Esc),
+            }) => Ok(EditorEvent::Select(SelectionAction::Esc)),
 
             //  Clipboard events.
             InputEvent::Keyboard(KeyPress::WithModifiers {
@@ -291,7 +307,7 @@ impl EditorEvent {
         editor_engine: &mut EditorEngine,
         editor_buffer: &mut EditorBuffer,
         editor_event: EditorEvent,
-        clipboard: &mut impl ClipboardService,
+        clipboard_service_provider: &mut impl ClipboardService,
     ) {
         match editor_event {
             EditorEvent::Undo => {
@@ -431,69 +447,78 @@ impl EditorEvent {
                 );
             }
 
-            EditorEvent::Select(selection_scope) => match selection_scope {
-                SelectionScope::OneCharRight => {
+            EditorEvent::Select(selection_action) => match selection_action {
+                SelectionAction::OneCharRight => {
                     EditorEngineInternalApi::right(
                         editor_buffer,
                         editor_engine,
                         SelectMode::Enabled,
                     );
                 }
-                SelectionScope::OneCharLeft => {
+                SelectionAction::OneCharLeft => {
                     EditorEngineInternalApi::left(
                         editor_buffer,
                         editor_engine,
                         SelectMode::Enabled,
                     );
                 }
-                SelectionScope::OneLineDown => {
+                SelectionAction::OneLineDown => {
                     EditorEngineInternalApi::down(
                         editor_buffer,
                         editor_engine,
                         SelectMode::Enabled,
                     );
                 }
-                SelectionScope::OneLineUp => {
+                SelectionAction::OneLineUp => {
                     EditorEngineInternalApi::up(
                         editor_buffer,
                         editor_engine,
                         SelectMode::Enabled,
                     );
                 }
-                SelectionScope::PageUp => {
+                SelectionAction::PageUp => {
                     EditorEngineInternalApi::page_up(
                         editor_buffer,
                         editor_engine,
                         SelectMode::Enabled,
                     );
                 }
-                SelectionScope::PageDown => {
+                SelectionAction::PageDown => {
                     EditorEngineInternalApi::page_down(
                         editor_buffer,
                         editor_engine,
                         SelectMode::Enabled,
                     );
                 }
-                SelectionScope::Home => {
+                SelectionAction::Home => {
                     EditorEngineInternalApi::home(
                         editor_buffer,
                         editor_engine,
                         SelectMode::Enabled,
                     );
                 }
-                SelectionScope::End => {
+                SelectionAction::End => {
                     EditorEngineInternalApi::end(
                         editor_buffer,
                         editor_engine,
                         SelectMode::Enabled,
                     );
                 }
+                SelectionAction::All => {
+                    EditorEngineInternalApi::select_all(
+                        editor_buffer,
+                        SelectMode::Enabled,
+                    );
+                }
+                SelectionAction::Esc => {
+                    EditorEngineInternalApi::clear_selection(editor_buffer);
+                }
             },
 
             EditorEvent::Cut => {
                 EditorEngineInternalApi::copy_editor_selection_to_clipboard(
                     editor_buffer,
-                    clipboard,
+                    clipboard_service_provider,
                 );
                 Self::delete_text_if_selected(editor_engine, editor_buffer);
             }
@@ -501,7 +526,7 @@ impl EditorEvent {
             EditorEvent::Copy => {
                 EditorEngineInternalApi::copy_editor_selection_to_clipboard(
                     editor_buffer,
-                    clipboard,
+                    clipboard_service_provider,
                 );
             }
 
@@ -512,7 +537,7 @@ impl EditorEvent {
                         editor_buffer,
                         editor_engine,
                     },
-                    clipboard,
+                    clipboard_service_provider,
                 )
             }
         };
