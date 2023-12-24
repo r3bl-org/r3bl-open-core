@@ -120,7 +120,7 @@ mod app_main_impl_app_trait {
                     global_data.main_thread_channel_sender,
                     TerminalWindowMainThreadSignal::ApplyAction(AppSignal::PreviousSlide)
                 );
-                return Ok(EventPropagation::Consumed);
+                return Ok(EventPropagation::ConsumedRender);
             };
 
             // If modal not activated, route the input event to the focused component.

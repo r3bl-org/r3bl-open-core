@@ -6,6 +6,7 @@
 - [r3bl-cmdr](#r3bl-cmdr)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
 - [r3bl_tuify](#r3bl_tuify)
+  - [r3bl_tuify-next-release](#r3bl_tuify-next-release)
   - [v0.1.23 2023-12-22](#v0123-2023-12-22)
   - [v0.1.22 2023-12-20](#v0122-2023-12-20)
   - [v0.1.21 2023-10-21](#v0121-2023-10-21)
@@ -88,6 +89,7 @@ Added:
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
 ### r3bl_tuify-next-release
+<a id="markdown-r3bl_tuify-next-release" name="r3bl_tuify-next-release"></a>
 
 - Changed:
   - Rename `run.nu` to `run`. This simplifies commands to run it, eg: `nu run build`, or
@@ -168,6 +170,12 @@ Added:
 
 - Added:
   - Add tests to editor component for clipboard service.
+
+- Fixed:
+  - Editor component now cleans up state correctly after new content loads. This includes
+    the undo/redo stack, and the render ops cache (for the content).
+  - Fix tui/examples/demo/ex_pitch example to correctly move back and forward between
+    slides.
 
 ### v0.4.0 (2023-12-22)
 <a id="markdown-v0.4.0-2023-12-22" name="v0.4.0-2023-12-22"></a>
