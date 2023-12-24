@@ -60,7 +60,7 @@ def main [...args: string] {
 # - Otherwise, prints help for the specified command.
 def print-help [command: string] {
     if $command == "all" {
-        print $'Usage: (ansi magenta_bold)run.nu(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi blue_bold)[args](ansi reset)'
+        print $'Usage: (ansi magenta_bold)run(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi blue_bold)[args](ansi reset)'
         print $'(ansi green_bold)<command>(ansi reset) can be:'
         print $'    (ansi green)all(ansi reset)'
         print $'    (ansi green)build(ansi reset)'
