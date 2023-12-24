@@ -33,7 +33,7 @@ impl EditorEngineApi {
         editor_buffer: &mut EditorBuffer,
         editor_engine: &mut EditorEngine,
         input_event: InputEvent,
-        clipboard: &mut impl ClipboardService,
+        clipboard_service_provider: &mut impl ClipboardService,
     ) -> CommonResult<EditorEngineApplyEventResult> {
         let editor_config = &editor_engine.config_options;
 
@@ -77,7 +77,7 @@ impl EditorEngineApi {
                 editor_engine,
                 editor_buffer,
                 editor_event.clone(),
-                clipboard,
+                clipboard_service_provider,
             );
 
             match editor_event {
