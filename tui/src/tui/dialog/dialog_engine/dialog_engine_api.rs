@@ -195,6 +195,7 @@ impl DialogEngineApi {
             input_event,
             &mut SystemClipboard,
         )?;
+
         match result {
             // If the editor engine applied the event, return the new editor buffer.
             EditorEngineApplyEventResult::Applied => {
