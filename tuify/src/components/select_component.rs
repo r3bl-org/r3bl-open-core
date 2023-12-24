@@ -18,6 +18,7 @@
 use std::io::{Result, *};
 
 use crossterm::{cursor::*, queue, style::*, terminal::*};
+use r3bl_ansi_color::AnsiStyledText;
 use r3bl_rs_utils_core::*;
 
 use crate::*;
@@ -34,46 +35,76 @@ const MULTI_SELECT_IS_NOT_SELECTED: &str = "☐";
 const SINGLE_SELECT_IS_SELECTED: &str = "◉";
 const SINGLE_SELECT_IS_NOT_SELECTED: &str = "◌";
 
-impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
+impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
     fn get_write(&mut self) -> &mut W {
         &mut self.write
+    }
+
+    // Header can be either a single line or a multi line.
+    fn calculate_header_viewport_height(&self, state: &mut State<'_>) -> ChUnit {
+        match state.get_header() {
+            Header::Single => ch!(1),
+            Header::Multiple => ch!(state.multi_line_header.len()),
+        }
     }
 
     /// If there are more items than the max display height, then we only use max display
     /// height. Otherwise we can shrink the display height to the number of items.
     /// This does NOT include the header.
-    fn calculate_viewport_height(&self, state: &mut State) -> ChUnit {
-        if state.items.len() > state.max_display_height.into() {
+    fn calculate_items_viewport_height(&self, state: &mut State<'_>) -> ChUnit {
+        if state.items.len() > ch!(@to_usize state.max_display_height) {
             state.max_display_height
         } else {
-            state.items.len().into()
+            ch!(state.items.len())
         }
     }
 
     /// Allocate space and print the lines. The bring the cursor back to the start of the
     /// lines.
-    fn render(&mut self, state: &mut State) -> Result<()> {
+    fn render(&mut self, state: &mut State<'_>) -> Result<()> {
         throws!({
             // Setup the required data.
             let focused_and_selected_style = self.style.focused_and_selected_style;
             let focused_style = self.style.focused_style;
             let unselected_style = self.style.unselected_style;
             let selected_style = self.style.selected_style;
-            let header_style = self.style.header_style;
-
+            let single_line_header_style = self.style.header_style;
             let start_display_col_offset = 1;
+            let header_viewport_height: ChUnit = self.calculate_header_viewport_height(state);
 
             // If there are more items than the max display height, then we only use max
             // display height. Otherwise we can shrink the display height to the number of
             // items.
-            let viewport_height: ChUnit = self.calculate_viewport_height(state);
-            let viewport_width: ChUnit = state.max_display_width;
+            let items_viewport_height: ChUnit = self.calculate_items_viewport_height(state);
+
+            let viewport_width: ChUnit = {
+                // Try to get the terminal width from state first (since it should be set
+                // when resize events occur). If that is not set, then get the terminal
+                // width directly.
+                let terminal_width = match state.window_size {
+                    Some(size) => size.col_count.into(),
+                    None => ch!(get_terminal_width()),
+                };
+
+                // Do not exceed the max display width (if it is set).
+                let it = if state.max_display_width == ch!(0) {
+                    ch!(terminal_width)
+                } else {
+                    if state.max_display_width > ch!(terminal_width) {
+                        ch!(terminal_width)
+                    } else {
+                        state.max_display_width
+                    }
+                };
+
+                it
+            };
 
             call_if_true!(DEVELOPMENT_MODE, {
                 log_debug(
                       format!(
-                          "render()::state: \n\t[raw_caret_row_index: {}, scroll_offset_row_index: {}], \n\tdisplay_height:{}",
-                          state.raw_caret_row_index, state.scroll_offset_row_index, viewport_height
+                          "🍎🍎🍎\n render()::state: \n\t[raw_caret_row_index: {}, scroll_offset_row_index: {}], \n\theader_viewport_height: {}, items_viewport_height:{}, viewport_width:{}",
+                          state.raw_caret_row_index, state.scroll_offset_row_index, header_viewport_height, items_viewport_height, viewport_width
                       )
                       .blue()
                       .to_string(),
@@ -86,38 +117,152 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
 
             let writer = self.get_write();
 
-            // Print header.
-            let header_text = format!("{}{}", " ".repeat(start_display_col_offset), state.header);
-            let header_text = clip_string_to_width_with_ellipsis(header_text, viewport_width);
-            queue! {
-                writer,
-                // Bring the caret back to the start of line.
-                MoveToColumn(0),
-                // Reset the colors that may have been set by the previous command.
-                ResetColor,
-                // Set the colors for the text.
-                apply_style!(header_style => fg_color),
-                apply_style!(header_style => bg_color),
-                // Style the text.
-                apply_style!(header_style => bold),
-                apply_style!(header_style => italic),
-                apply_style!(header_style => dim),
-                apply_style!(header_style => underline),
-                apply_style!(header_style => reverse),
-                apply_style!(header_style => hidden),
-                apply_style!(header_style => strikethrough),
-                // Clear the current line.
-                Clear(ClearType::CurrentLine),
-                // Print the text.
-                Print(header_text),
-                // Move to next line.
-                MoveToNextLine(1),
-                // Reset the colors.
-                ResetColor,
-            }?;
+            match state.get_header() {
+                Header::Single => {
+                    let mut header_text =
+                        format!("{}{}", " ".repeat(start_display_col_offset), state.header);
+
+                    header_text = clip_string_to_width_with_ellipsis(header_text, viewport_width);
+
+                    queue! {
+                        writer,
+                        // Bring the caret back to the start of line.
+                        MoveToColumn(0),
+                        // Reset the colors that may have been set by the previous command.
+                        ResetColor,
+                        // Set the colors for the text.
+                        apply_style!(single_line_header_style => fg_color),
+                        apply_style!(single_line_header_style => bg_color),
+                        // Style the text.
+                        apply_style!(single_line_header_style => bold),
+                        apply_style!(single_line_header_style => italic),
+                        apply_style!(single_line_header_style => dim),
+                        apply_style!(single_line_header_style => underline),
+                        apply_style!(single_line_header_style => reverse),
+                        apply_style!(single_line_header_style => hidden),
+                        apply_style!(single_line_header_style => strikethrough),
+                        // Clear the current line.
+                        Clear(ClearType::CurrentLine),
+                        // Print the text.
+                        Print(header_text),
+                        // Move to next line.
+                        MoveToNextLine(1),
+                        // Reset the colors.
+                        ResetColor,
+                    }?;
+                }
+                Header::Multiple => {
+                    // Subtract 3 from viewport width because we need to add "..." to the
+                    // end of the line.
+                    let mut available_space_col_count: ChUnit = viewport_width - 3;
+                    // This is the vector of vectors of AnsiStyledText we want to print to
+                    // the screen.
+                    let mut multi_line_header_clipped_vec: Vec<Vec<AnsiStyledText<'_>>> =
+                        Vec::new();
+                    let mut maybe_clipped_text_vec: Vec<Vec<String>> = Vec::new();
+
+                    for header_line in state.multi_line_header.iter() {
+                        let mut header_line_modified = vec![];
+
+                        'inner: for last_span in header_line.iter() {
+                            let span_text = last_span.text;
+                            let span_as_unicode_string = UnicodeString::from(span_text);
+                            let unicode_string_width = span_as_unicode_string.display_width;
+
+                            if unicode_string_width > available_space_col_count {
+                                // Clip the text to available space.
+                                let clipped_text = span_as_unicode_string
+                                    .clip_to_width(ch!(0), available_space_col_count);
+                                let clipped_text = format!("{clipped_text}...");
+                                header_line_modified.push(clipped_text.to_owned());
+                                break 'inner;
+                            } else {
+                                available_space_col_count -= unicode_string_width;
+
+                                // If last item in the header, then fill the remaining
+                                // space with spaces.
+                                let maybe_header_line_last_span: Option<&AnsiStyledText<'_>> =
+                                    header_line.last();
+
+                                match maybe_header_line_last_span {
+                                    Some(header_line_last_span) => {
+                                        if last_span == header_line_last_span {
+                                            // Because text is not clipped, we add back the 3 we subtracted
+                                            // earlier for the "...".
+                                            let num_of_spaces: ChUnit =
+                                                available_space_col_count + ch!(3);
+                                            let span_with_spaces = span_text.to_owned()
+                                                + &" ".repeat(num_of_spaces.into());
+                                            header_line_modified.push(span_with_spaces);
+                                        } else {
+                                            header_line_modified.push(span_text.to_owned());
+                                        }
+                                    }
+                                    None => {}
+                                }
+                            };
+                        }
+
+                        // Reset the available space.
+                        available_space_col_count = viewport_width - 3;
+                        maybe_clipped_text_vec.push(header_line_modified);
+                    }
+
+                    // Replace the text inside vector of vectors of AnsiStyledText with
+                    // the clipped text.
+                    let zipped = maybe_clipped_text_vec
+                        .iter()
+                        .zip(state.multi_line_header.iter());
+                    zipped.for_each(|(clipped_text_vec, header_span_vec)| {
+                        let mut ansi_styled_text_vec: Vec<AnsiStyledText<'_>> = Vec::new();
+                        let zipped = clipped_text_vec.iter().zip(header_span_vec.iter());
+                        zipped.for_each(|(clipped_text, header_span)| {
+                            ansi_styled_text_vec.push(AnsiStyledText {
+                                text: clipped_text,
+                                style: header_span.style,
+                            });
+                        });
+                        multi_line_header_clipped_vec.push(ansi_styled_text_vec);
+                    });
+
+                    let multi_line_header_text = multi_line_header_clipped_vec
+                        .iter()
+                        .map(|header_line| {
+                            header_line
+                                .iter()
+                                .map(|header_span| header_span.to_string())
+                                .collect::<Vec<String>>()
+                                .join("")
+                        })
+                        .collect::<Vec<String>>()
+                        .join("\r\n");
+
+                    log_debug(
+                        format!("multi_line_header_text: \n`{}`", multi_line_header_text)
+                            .blue()
+                            .to_string(),
+                    );
+
+                    queue! {
+                        writer,
+                        // Bring the caret back to the start of line.
+                        MoveToColumn(0),
+                        // Reset the colors that may have been set by the previous command.
+                        ResetColor,
+                        // Clear the current line.
+                        Clear(ClearType::CurrentLine),
+                        // Print each AnsiStyledText.
+                        Print(multi_line_header_text),
+                        // Move to next line.
+                        MoveToNextLine(1),
+                        // Reset the colors.
+                        ResetColor,
+                    }?;
+                }
+            }
 
             // Print each line in viewport.
-            for viewport_row_index in 0..*viewport_height {
+            for viewport_row_index in 0..*items_viewport_height {
                 let data_row_index: usize = (data_row_index_start + viewport_row_index).into();
                 let caret_row_scroll_adj = ch!(viewport_row_index) + state.scroll_offset_row_index;
                 let data_item = &state.items[data_row_index];
@@ -176,7 +321,25 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                 };
 
                 let data_item = format!("{row_prefix}{data_item}");
-                let data_item = clip_string_to_width_with_ellipsis(data_item, viewport_width);
+                let data_item: String =
+                    clip_string_to_width_with_ellipsis(data_item, viewport_width);
+                let data_item_display_width: ChUnit = UnicodeString::from(&data_item).display_width;
+                let padding_right = if data_item_display_width < viewport_width {
+                    " ".repeat(ch!(@to_usize (viewport_width - data_item_display_width)))
+                } else {
+                    "".to_string()
+                };
+
+                call_if_true!(DEVELOPMENT_MODE, {
+                    log_debug(
+                        format!(
+                            "🍍🍍🍍\n render()::data_item: \n\t[data_row_index: {}, caret_row_scroll_adj: {}, data_item: {}]",
+                            data_row_index, caret_row_scroll_adj, data_item
+                        )
+                        .magenta()
+                        .to_string(),
+                    );
+                });
 
                 queue! {
                     writer,
@@ -184,6 +347,8 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                     MoveToColumn(0),
                     // Reset the colors that may have been set by the previous command.
                     ResetColor,
+                    // Clear the current line.
+                    Clear(ClearType::CurrentLine),
                     // Set the colors for the text.
                     apply_style!(data_style => fg_color),
                     apply_style!(data_style => bg_color),
@@ -195,10 +360,10 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
                     apply_style!(data_style => reverse),
                     apply_style!(data_style => hidden),
                     apply_style!(data_style => strikethrough),
-                    // Clear the current line.
-                    Clear(ClearType::CurrentLine),
                     // Print the text.
-                    Print(data_item.to_string()),
+                    Print(data_item),
+                    // Print the padding text.
+                    Print(padding_right),
                     // Move to next line.
                     MoveToNextLine(1),
                     // Reset the colors.
@@ -209,7 +374,7 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
             // Move the cursor back up.
             queue! {
                 writer,
-                MoveToPreviousLine(*viewport_height + 1),
+                MoveToPreviousLine(*items_viewport_height + *header_viewport_height),
             }?;
 
             writer.flush()?;
@@ -217,13 +382,19 @@ impl<W: Write> FunctionComponent<W, State> for SelectComponent<W> {
     }
 }
 
-fn clip_string_to_width_with_ellipsis(line: String, viewport_width: ChUnit) -> String {
-    let width = viewport_width.into();
-    if line.len() > width {
-        format!("{}...", &line[..width - 3])
+fn clip_string_to_width_with_ellipsis(mut header_text: String, viewport_width: ChUnit) -> String {
+    let unicode_string = UnicodeString::from(header_text);
+    let unicode_string_width = unicode_string.display_width;
+    let available_space_col_count: ChUnit = viewport_width;
+    if unicode_string_width > available_space_col_count {
+        // Clip the text to available space.
+        let clipped_text = unicode_string.clip_to_width(ch!(0), available_space_col_count - 3);
+        let clipped_text = format!("{clipped_text}...");
+        header_text = clipped_text;
     } else {
-        line.to_string()
+        header_text = unicode_string.string;
     }
+    header_text
 }
 
 #[cfg(test)]
@@ -277,8 +448,9 @@ mod tests {
         set_override(r3bl_ansi_color::ColorSupport::Truecolor);
         component.render(&mut state).unwrap();
 
-        // println!("writer.get_buffer: {:?}", writer.get_buffer());
-        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;2;171;204;242m\u{1b}[48;2;31;36;46m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[38;2;20;244;0m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◉ Item 1\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[38;2;193;193;193m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 2\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[38;2;193;193;193m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K  ◌ Item 3\u{1b}[1E\u{1b}[0m\u{1b}[4F";
+        println!("writer.get_buffer(): \n\n{:?}\n\n", writer.get_buffer());
+
+        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;2;171;204;242m\u{1b}[48;2;31;36;46m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;2;20;244;0m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◉ Item 1                                                                      \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;2;193;193;193m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 2                                                                      \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;2;193;193;193m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 3                                                                      \u{1b}[1E\u{1b}[0m\u{1b}[4F";
         assert_eq!(writer.get_buffer(), expected_output);
 
         clear_override();

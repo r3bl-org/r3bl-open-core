@@ -1,7 +1,6 @@
 use std::{fmt::Display, io::Result, option::Option, string::String};
 
 use r3bl_ansi_color::*;
-use r3bl_rs_utils_core::*;
 use r3bl_tuify::*;
 use serde::{Deserialize, Serialize};
 
@@ -19,7 +18,7 @@ pub fn main() -> Result<()> {
     // Parse string into Vec<QuestionData>
     let all_questions_and_answers: Vec<QuestionData> = serde_json::from_str(json_data).unwrap();
     // Get display size.
-    let max_width_col_count: usize = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
+    let max_width_col_count: usize = get_terminal_width();
     let max_height_row_count: usize = 5;
 
     let mut score = 0;

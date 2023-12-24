@@ -96,7 +96,7 @@ fn main() -> Result<()> {
         call_if_true!(enable_logging, {
             try_to_set_log_level(log::LevelFilter::Trace).ok();
             log_debug("Start logging...".to_string());
-            log_debug(format!("og_size: {:?}", get_size()?).to_string());
+            log_debug(format!("terminal window size: {:?}", get_size()?).to_string());
             log_debug(format!("cli_args {:?}", cli_args));
         });
 
@@ -201,8 +201,7 @@ fn show_tui(
     }
 
     // Get display size.
-    let max_width_col_count: usize =
-        tui_width.unwrap_or(get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into());
+    let max_width_col_count: usize = tui_width.unwrap_or(get_terminal_width());
     let max_height_row_count: usize = tui_height.unwrap_or(5);
 
     // Handle `selection-mode` is not passed in.

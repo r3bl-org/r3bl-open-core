@@ -32,14 +32,17 @@ pub trait CalculateResizeHint {
 pub trait FunctionComponent<W: Write, S: CalculateResizeHint> {
     fn get_write(&mut self) -> &mut W;
 
-    fn calculate_viewport_height(&self, state: &mut S) -> ChUnit;
+    fn calculate_header_viewport_height(&self, state: &mut S) -> ChUnit;
+
+    fn calculate_items_viewport_height(&self, state: &mut S) -> ChUnit;
 
     fn render(&mut self, state: &mut S) -> Result<()>;
 
     fn allocate_viewport_height_space(&mut self, state: &mut S) -> Result<()> {
         throws!({
             let viewport_height =
-                /* not including the header */ self.calculate_viewport_height(state) + /* for header row */ 1;
+                /* not including the header */ self.calculate_items_viewport_height(state) + 
+                /* for header row(s) */ self.calculate_header_viewport_height(state);
 
             // Allocate space. This is required so that the commands to move the cursor up and
             // down shown below will work.
@@ -71,9 +74,9 @@ pub trait FunctionComponent<W: Write, S: CalculateResizeHint> {
                 | Some(ResizeHint::NoChange)
                 | Some(ResizeHint::GotSmaller) => {
                     /* not including the header */
-                    self.calculate_viewport_height(state) +
-                    /* for header row */
-                    1
+                    self.calculate_items_viewport_height(state) +
+                    /* for header row(s) */
+                    self.calculate_header_viewport_height(state)
                 }
                 // Nothing to do, since resize didn't happen.
                 None => return Ok(()),
@@ -104,7 +107,8 @@ pub trait FunctionComponent<W: Write, S: CalculateResizeHint> {
     fn clear_viewport(&mut self, state: &mut S) -> Result<()> {
         throws!({
             let viewport_height =
-                /* not including the header */ self.calculate_viewport_height(state) + /* for header row */ 1;
+                /* not including the header */ self.calculate_items_viewport_height(state) + 
+                /* for header row(s) */ self.calculate_header_viewport_height(state);
 
             let writer = self.get_write();
 

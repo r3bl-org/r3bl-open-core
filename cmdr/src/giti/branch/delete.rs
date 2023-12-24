@@ -228,8 +228,7 @@ pub fn try_execute_git_command_to_get_branches() -> CommonResult<Vec<String>> {
 }
 
 pub mod giti_ui_templates {
-    use r3bl_rs_utils_core::{ch, ChUnit};
-    use r3bl_tuify::{get_size,
+    use r3bl_tuify::{get_terminal_width,
                      select_from_list,
                      StyleSheet,
                      DUSTY_LIGHT_BLUE_COLOR,
@@ -270,8 +269,7 @@ pub mod giti_ui_templates {
         selection_mode: SelectionMode,
     ) -> Option<Vec<String>> {
         let max_height_row_count = 20;
-        let max_width_col_count =
-            get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
+        let max_width_col_count = get_terminal_width();
         let style = StyleSheet::default();
         let user_input = select_from_list(
             header,

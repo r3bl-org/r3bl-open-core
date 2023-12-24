@@ -1,15 +1,24 @@
 # r3bl_tuify
+
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
 <!-- TOC -->
 
-- [What does it do?](#what-does-it-do)
+- [What is r3bl_tuify?](#what-is-r3bl_tuify)
 - [How to use it as a library?](#how-to-use-it-as-a-library)
+- [APIs](#apis)
+  - [select_from_list](#select_from_list)
+    - [select_from_list signature:](#select_from_list-signature)
+  - [select_from_list_with_multi_line_header](#select_from_list_with_multi_line_header)
+    - [select_from_list_with_multi_line_header signature:](#select_from_list_with_multi_line_header-signature)
 - [How to use it as a binary?](#how-to-use-it-as-a-binary)
   - [Interactive user experience](#interactive-user-experience)
   - [Paths](#paths)
 - [Style the components](#style-the-components)
   - [Choose one of the 3 built-in styles](#choose-one-of-the-3-built-in-styles)
+  - [default style](#default-style)
+  - [sea_foam_style](#sea_foam_style)
+  - [hot_pink_style](#hot_pink_style)
   - [Create your style](#create-your-style)
 - [Build, run, test tasks](#build-run-test-tasks)
   - [Prerequisites](#prerequisites)
@@ -18,24 +27,27 @@
 
 <!-- /TOC -->
 
-## What does it do?
-<a id="markdown-what-does-it-do%3F" name="what-does-it-do%3F"></a>
+## What is r3bl_tuify?
 
+<a id="markdown-what-is-r3bl_tuify%3F" name="what-is-r3bl_tuify%3F"></a>
 
-This crate can be used in two ways:
+r3bl_tuify is a Rust crate that allows you to add simple interactivity to your CLI app.
+
+r3bl_tuify crate can be used in two ways:
 
 1. As a library. This is useful if you want to add simple interactivity to your CLI app written in
    Rust. You can see an example of this in the `examples` folder in the `main_interactive.rs` file.
-   You can run it using `cargo run --example main_interactive`.
-1. As a binary. This is useful if you want to use this crate as a command line tool. The binary
+   You can run it using `cargo run --example main_interactive` or using nu `nu run examples`.
+2. As a binary. This is useful if you want to use this crate as a command line tool. The binary
    target is called `rt`.
 
 ## How to use it as a library?
+
 <a id="markdown-how-to-use-it-as-a-library%3F" name="how-to-use-it-as-a-library%3F"></a>
 
 Here's a demo of the library target of this crate in action.
 
-[![asciicast](https://asciinema.org/a/614462.svg)](https://asciinema.org/a/614462)
+https://github.com/r3bl-org/r3bl-open-core/assets/22040032/46850043-4973-49fa-9824-58f32f21e96e
 
 To install the crate as a library, add the following to your `Cargo.toml` file:
 
@@ -55,6 +67,40 @@ It works on macOS, Linux, and Windows. And is aware of terminal color output lim
 For eg, it uses Windows API on Windows for keyboard input. And on macOS Terminal.app it restricts
 color output to a 256 color palette.
 
+## APIs
+
+<a id="markdown-apis" name="apis"></a>
+
+We provide 2 APIs:
+
+- `select_from_list`: Use this API if you want to display a list of items with a single line header.
+- `select_from_list_with_multi_line_header`: Use this API if you want to display a list of items
+  with a multi line header.
+
+### select_from_list
+
+<a id="markdown-select_from_list" name="select_from_list"></a>
+
+Use this API if you want to display a list of items with a single line header.
+
+![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/0ae722bb-8cd1-47b1-a293-1a96e84d24d0)
+
+#### `select_from_list` signature:
+
+<a id="markdown-select_from_list-signature%3A" name="select_from_list-signature%3A"></a>
+
+```
+fn select_from_list(
+    header: String,
+    items: Vec<String>,
+    max_height_row_count: usize,
+    // If you pass 0, then the width of your terminal gets set as max_width_col_count.
+    max_width_col_count: usize,
+    selection_mode: SelectionMode,
+    style: StyleSheet,
+) -> Option<Vec<String>>
+```
+
 ```rust
 use r3bl_rs_utils_core::*;
 use r3bl_tuify::*;
@@ -62,9 +108,7 @@ use std::io::Result;
 
 fn main() -> Result<()> {
     // Get display size.
-    let max_width_col_count: usize = get_size().map(|it| it.col_count).unwrap_or(ch!(80)).into();
     let max_height_row_count: usize = 5;
-
     let user_input = select_from_list(
         "Select an item".to_string(),
         [
@@ -75,7 +119,7 @@ fn main() -> Result<()> {
         .map(|it| it.to_string())
         .collect(),
         max_height_row_count,
-        max_width_col_count,
+        0,
         SelectionMode::Single,
         StyleSheet::default(),
     );
@@ -91,9 +135,163 @@ fn main() -> Result<()> {
 }
 ```
 
-## How to use it as a binary?
-<a id="markdown-how-to-use-it-as-a-binary%3F" name="how-to-use-it-as-a-binary%3F"></a>
+### select_from_list_with_multi_line_header
 
+<a id="markdown-select_from_list_with_multi_line_header" name="select_from_list_with_multi_line_header"></a>
+
+Use `select_from_list_with_multi_line_header` API if you want to display a list of items with a
+multi line header. The first 5 lines are all part of the multi line header.
+
+![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/2f82a42c-f720-4bcb-925d-0d5ad0b0a3c9)
+
+#### `select_from_list_with_multi_line_header` signature:
+
+<a id="markdown-select_from_list_with_multi_line_header-signature%3A" name="select_from_list_with_multi_line_header-signature%3A"></a>
+
+```
+fn select_from_list_with_multi_line_header(
+    multi_line_header: Vec<Vec<AnsiStyledText<'_>>>,
+    items: Vec<String>,
+    maybe_max_height_row_count: Option<usize>,
+    // If you pass None, then the width of your terminal gets used.
+    maybe_max_width_col_count: Option<usize>,
+    selection_mode: SelectionMode,
+    style: StyleSheet,
+) -> Option<Vec<String>>
+```
+
+```rust
+use std::{io::Result, vec};
+
+use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
+use r3bl_rs_utils_core::*;
+use r3bl_tuify::{
+    components::style::StyleSheet,
+    select_from_list_with_multi_line_header,
+    SelectionMode,
+};
+
+fn multi_select_instructions() -> Vec<Vec<AnsiStyledText<'static>>> {
+    let up_and_down = AnsiStyledText {
+        text: " Up or down:",
+        style: &[
+            RStyle::Foreground(Color::Rgb(9, 238, 211)),
+            RStyle::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+    let navigate = AnsiStyledText {
+        text: "     navigate",
+        style: &[
+            RStyle::Foreground(Color::Rgb(94, 103, 111)),
+            RStyle::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+
+    let line_1 = vec![up_and_down, navigate];
+
+    let space = AnsiStyledText {
+        text: " Space:",
+        style: &[
+            RStyle::Foreground(Color::Rgb(255, 216, 9)),
+            RStyle::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+    let select = AnsiStyledText {
+        text: "          select or deselect item",
+        style: &[
+            RStyle::Foreground(Color::Rgb(94, 103, 111)),
+            RStyle::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+
+    let line_2 = vec![space, select];
+
+    let esc = AnsiStyledText {
+        text: " Esc or Ctrl+C:",
+        style: &[
+            RStyle::Foreground(Color::Rgb(255, 132, 18)),
+            RStyle::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+    let exit = AnsiStyledText {
+        text: "  exit program",
+        style: &[
+            RStyle::Foreground(Color::Rgb(94, 103, 111)),
+            RStyle::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+
+    let line_3 = vec![esc, exit];
+    let return_key = AnsiStyledText {
+        text: " Return:",
+        style: &[
+            RStyle::Foreground(Color::Rgb(234, 0, 196)),
+            RStyle::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+    let confirm = AnsiStyledText {
+        text: "         confirm selection",
+        style: &[
+            RStyle::Foreground(Color::Rgb(94, 103, 111)),
+            RStyle::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+    let line_4 = vec![return_key, confirm];
+    vec![line_1, line_2, line_3, line_4]
+}
+
+fn main() -> Result<()> {
+   let header = AnsiStyledText {
+        text: " Please select one or more items. This is a really long heading that just keeps going and if your terminal viewport is small enough, this heading will be clipped",
+        style: &[
+            RStyle::Foreground(Color::Rgb(171, 204, 242)),
+            RStyle::Background(Color::Rgb(31, 36, 46)),
+        ],
+    };
+
+   let line_5 = vec![header];
+
+    let mut instructions: Vec<Vec<AnsiStyledText>> = multi_select_instructions();
+    instructions.push(line_5);
+
+    let user_input = select_from_list_with_multi_line_header(
+        vec![instructions, vec![header]],
+        [
+            "item 1 of 13",
+            "item 2 of 13",
+            "item 3 of 13",
+            "item 4 of 13",
+            "item 5 of 13",
+            "item 6 of 13",
+            "item 7 of 13",
+            "item 8 of 13",
+            "item 9 of 13",
+            "item 10 of 13",
+            "item 11 of 13",
+            "item 12 of 13",
+            "item 13 of 13",
+        ]
+        .iter()
+        .map(|it| it.to_string())
+        .collect(),
+        Some(6),
+        None,
+        SelectionMode::Multiple,
+        StyleSheet::default(),
+    );
+    match &user_input {
+        Some(it) => {
+            println!("User selected: {:?}", it);
+        }
+        None => println!("User did not select anything"),
+    }
+   Ok(())
+}
+```
+
+## How to use it as a binary?
+
+<a id="markdown-how-to-use-it-as-a-binary%3F" name="how-to-use-it-as-a-binary%3F"></a>
 
 Here's a demo of the binary target of this crate in action.
 
@@ -113,8 +311,8 @@ Here are the command line arguments that it accepts:
 1. `-t` or `--tui-height` - Optionally allows you to set the height of the TUI. The default is 5.
 
 ### Interactive user experience
-<a id="markdown-interactive-user-experience" name="interactive-user-experience"></a>
 
+<a id="markdown-interactive-user-experience" name="interactive-user-experience"></a>
 
 Typically a CLI app is not interactive. You can pass commands, subcommands, options, and arguments
 to it, but if you get something wrong, then you get an error, and have to start all over again. This
@@ -209,8 +407,8 @@ when:
    https://github.com/r3bl-org/r3bl-open-core/assets/2966499/d8d7d419-c85e-4c10-bea5-345aa31a92a3
 
 ### Paths
-<a id="markdown-paths" name="paths"></a>
 
+<a id="markdown-paths" name="paths"></a>
 
 There are a lot of different execution paths that you can take with this relatively simple program.
 Here is a list.
@@ -238,20 +436,32 @@ Here is a list.
 > them to this command.
 
 ## Style the components
+
 <a id="markdown-style-the-components" name="style-the-components"></a>
 
 ### Choose one of the 3 built-in styles
+
 <a id="markdown-choose-one-of-the-3-built-in-styles" name="choose-one-of-the-3-built-in-styles"></a>
 
-Built-in styles are called `default`, `sea_foam_style`, and `hot_pink_style`. You can find them in the `style.rs` file (tuify/src/components/style.rs).
+Built-in styles are called `default`, `sea_foam_style`, and `hot_pink_style`. You can find them in
+the `style.rs` file (tuify/src/components/style.rs).
 
 ### default style
+
+<a id="markdown-default-style" name="default-style"></a>
+
 ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/eaf990a4-1c33-4783-9f39-82af42568183)
 
 ### sea_foam_style
+
+<a id="markdown-sea_foam_style" name="sea_foam_style"></a>
+
 ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/fc414f56-2f72-4d3a-86eb-bfd732b66bd1)
 
 ### hot_pink_style
+
+<a id="markdown-hot_pink_style" name="hot_pink_style"></a>
+
 ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/06c155f9-11a9-416d-8056-cb4c741ac3d7)
 
 To use one of the built-in styles, simply pass it as an argument to the `select_from_list` function.
@@ -297,9 +507,11 @@ fn main() -> Result<()> {
 ```
 
 ### Create your style
+
 <a id="markdown-create-your-style" name="create-your-style"></a>
 
-To create your style, you need to create a `StyleSheet` struct and pass it as an argument to the `select_from_list` function.
+To create your style, you need to create a `StyleSheet` struct and pass it as an argument to the
+`select_from_list` function.
 
 ```rust
 use std::io::Result;
@@ -359,66 +571,73 @@ fn main() -> Result<()> {
 ```
 
 ## Build, run, test tasks
+
 <a id="markdown-build%2C-run%2C-test-tasks" name="build%2C-run%2C-test-tasks"></a>
 
-
 ### Prerequisites
+
 <a id="markdown-prerequisites" name="prerequisites"></a>
 
-
-🌠 In order for these to work you have to install the Rust toolchain, `nu`, `cargo-watch`,
-`bat`, and `flamegraph` on your system. Here are the instructions:
+🌠 In order for these to work you have to install the Rust toolchain, `nu`, `cargo-watch`, `bat`,
+and `flamegraph` on your system. Here are the instructions:
 
 1. Install the Rust toolchain using `rustup` by following the instructions
    [here](https://rustup.rs/).
 1. Install `cargo-watch` using `cargo install cargo-watch`.
 1. Install `flamegraph` using `cargo install flamegraph`.
 1. Install `bat` using `cargo install bat`.
-1. Install [`nu`](https://crates.io/crates/nu) shell on your system using `cargo install
-   nu`. It is available for Linux, macOS, and Windows.
+1. Install [`nu`](https://crates.io/crates/nu) shell on your system using `cargo install nu`. It is
+   available for Linux, macOS, and Windows.
 
 ### Nu shell scripts to build, run, test etc.
+
 <a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test-etc." name="nu-shell-scripts-to-build%2C-run%2C-test-etc."></a>
 
-| Command                                | Description                                |
-| -------------------------------------- | ------------------------------------------ |
-| `nu run examples`                  | Run examples in the `./examples` folder    |
-| `nu run piped`                     | Run binary with piped input                |
-| `nu run build`                         | Build                                      |
-| `nu run clean`                         | Clean                                      |
-| `nu run all`                           | All                                        |
-| `nu run examples-with-flamegraph-profiling` | Run examples with flamegraph profiling |
-| `nu run test`                          | Run tests                                  |
-| `nu run clippy`                        | Run clippy                                 |
-| `nu run docs`                          | Build docs                                 |
-| `nu run serve-docs`                    | Serve docs over VSCode Remote SSH session. |
-| `nu run upgrade-deps`                  | Upgrade deps                               |
-| `nu run rustfmt`                       | Run rustfmt                                |
+<a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test-etc."
+name="nu-shell-scripts-to-build%2C-run%2C-test-etc."></a>
+
+Go to the `tuify` folder and run the commands below. These commands are defined in the `./run`
+folder.
+
+| Command                                     | Description                                |
+| ------------------------------------------- | ------------------------------------------ |
+| `nu run examples`                           | Run examples in the `./examples` folder    |
+| `nu run piped`                              | Run binary with piped input                |
+| `nu run build`                              | Build                                      |
+| `nu run clean`                              | Clean                                      |
+| `nu run all`                                | All                                        |
+| `nu run examples-with-flamegraph-profiling` | Run examples with flamegraph profiling     |
+| `nu run test`                               | Run tests                                  |
+| `nu run clippy`                             | Run clippy                                 |
+| `nu run docs`                               | Build docs                                 |
+| `nu run serve-docs`                         | Serve docs over VSCode Remote SSH session. |
+| `nu run upgrade-deps`                       | Upgrade deps                               |
+| `nu run rustfmt`                            | Run rustfmt                                |
 
 The following commands will watch for changes in the source folder and re-run:
 
 | Command                                             | Description                        |
 | --------------------------------------------------- | ---------------------------------- |
-| `nu run watch-examples`                         | Watch run examples                 |
+| `nu run watch-examples`                             | Watch run examples                 |
 | `nu run watch-all-tests`                            | Watch all test                     |
 | `nu run watch-one-test <test_name>`                 | Watch one test                     |
 | `nu run watch-clippy`                               | Watch clippy                       |
 | `nu run watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
 
-There's also a `run` script at the **top level folder** of the repo. It is intended to
-be used in a CI/CD environment w/ all the required arguments supplied or in
-interactive mode, where the user will be prompted for input.
+There's also a `run` script at the **top level folder** of the repo. It is intended to be used in a
+CI/CD environment w/ all the required arguments supplied or in interactive mode, where the user will
+be prompted for input.
 
-| Command                       | Description                        |
-| ----------------------------- | ---------------------------------- |
-| `nu run all`                  | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD |
-| `nu run build-full`           | This will build all the crates in the Rust workspace. And it will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
-| `nu run install-cargo-tools`  | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`, `flamegraph` will all be installed in one go) |
-| `nu run check-licenses`       | Use `cargo-deny` to audit all licenses used in the Rust workspace |
+| Command                      | Description                                                                                                                                                                                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `nu run all`                 | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD                                                                                                                                                                                  |
+| `nu run build-full`          | This will build all the crates in the Rust workspace. And it will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
+| `nu run install-cargo-tools` | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`, `flamegraph` will all be installed in one go)                                                                                         |
+| `nu run check-licenses`      | Use `cargo-deny` to audit all licenses used in the Rust workspace                                                                                                                                                                                      |
 
 ## References
-<a id="markdown-references" name="references"></a>
 
+<a id="markdown-references" name="references"></a>
 
 CLI UX guidelines:
 
