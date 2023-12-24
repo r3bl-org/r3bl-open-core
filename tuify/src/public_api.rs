@@ -19,9 +19,12 @@ use std::io::stdout;
 
 use clap::ValueEnum;
 use crossterm::style::Stylize;
+use r3bl_ansi_color::AnsiStyledText;
 use r3bl_rs_utils_core::*;
 
 use crate::*;
+
+pub const DEFAULT_HEIGHT: usize = 5;
 
 /// This function does the work of rendering the TUI. It takes a list of items, and returns
 /// the selected item or items (depending on the selection mode). If the user does not
@@ -34,6 +37,7 @@ pub fn select_from_list(
     header: String,
     items: Vec<String>,
     max_height_row_count: usize,
+    // If you pass 0, then the width of your terminal gets set as max_width_col_count.
     max_width_col_count: usize,
     selection_mode: SelectionMode,
     style: StyleSheet,
@@ -46,12 +50,9 @@ pub fn select_from_list(
     };
 
     let mut state = State {
-        max_display_height: max_height_row_count.into(),
-        max_display_width: max_width_col_count.into(),
-        raw_caret_row_index: ch!(0),
-        scroll_offset_row_index: ch!(0),
+        max_display_height: ch!(max_height_row_count),
+        max_display_width: ch!(max_width_col_count),
         items,
-        selected_items: Vec::new(),
         header,
         selection_mode,
         ..Default::default()
@@ -79,7 +80,67 @@ pub fn select_from_list(
     }
 }
 
-fn keypress_handler(state: &mut State, key_press: KeyPress) -> EventLoopResult {
+pub fn select_from_list_with_multi_line_header(
+    multi_line_header: Vec<Vec<AnsiStyledText<'_>>>,
+    items: Vec<String>,
+    maybe_max_height_row_count: Option<usize>,
+    // If you pass None, then the width of your terminal gets used.
+    maybe_max_width_col_count: Option<usize>,
+    selection_mode: SelectionMode,
+    style: StyleSheet,
+) -> Option<Vec<String>> {
+    // There are fewer items than viewport height. So make viewport shorter.
+    let max_height_row_count = match maybe_max_height_row_count {
+        Some(requested_height) => sanitize_height(&items, requested_height),
+        None => sanitize_height(&items, DEFAULT_HEIGHT),
+    };
+
+    let max_width_col_count = match maybe_max_width_col_count {
+        Some(requested_width) => requested_width,
+        None => 0,
+    };
+
+    let mut state = State {
+        max_display_height: ch!(max_height_row_count),
+        max_display_width: ch!(max_width_col_count),
+        items,
+        multi_line_header,
+        selection_mode,
+        ..Default::default()
+    };
+
+    let mut function_component = SelectComponent {
+        write: stdout(),
+        style,
+    };
+
+    if let Ok(size) = get_size() {
+        state.set_size(size);
+    }
+
+    let result_user_input = enter_event_loop(
+        &mut state,
+        &mut function_component,
+        |state, key_press| keypress_handler(state, key_press),
+        &mut CrosstermKeyPressReader {},
+    );
+
+    match result_user_input {
+        Ok(EventLoopResult::ExitWithResult(it)) => Some(it),
+        _ => None,
+    }
+}
+
+fn sanitize_height(items: &Vec<String>, requested_height: usize) -> usize {
+    let num_items = items.len();
+    if num_items > requested_height {
+        requested_height
+    } else {
+        num_items
+    }
+}
+
+fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResult {
     call_if_true!(DEVELOPMENT_MODE, {
         log_debug(
             format!(
@@ -293,10 +354,9 @@ pub enum SelectionMode {
 mod test_select_from_list {
     use super::*;
 
-    fn create_state() -> State {
+    fn create_state<'a>() -> State<'a> {
         State {
             max_display_height: ch!(10),
-            max_display_width: ch!(80),
             items: vec!["a", "b", "c"]
                 .iter()
                 .map(|it| it.to_string())
