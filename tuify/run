@@ -32,7 +32,9 @@ def main [...args: string] {
     match $command {
         "build" => {build}
         "clean" => {clean}
-        "run" => {run}
+        "run-examples" => {run-examples}
+        "watch-run-examples" => {watch-run-examples}
+        "run-examples-with-flamegraph-profiling" => {run-examples-with-flamegraph-profiling}
         "run-piped" => {run-piped}
         "log" => {log}
         "test" => {test}
@@ -41,7 +43,6 @@ def main [...args: string] {
         "rustfmt" => {rustfmt}
         "watch-one-test" => {watch-one-test $args}
         "watch-macro-expansion-one-test" => {watch-macro-expansion-one-test $args}
-        "run-with-flamegraph-profiling" => {run-with-flamegraph-profiling}
         "watch-run" => {watch-run}
         "watch-all-tests" => {watch-all-tests}
         "watch-clippy" => {watch-clippy}
@@ -115,11 +116,11 @@ def print-help [command: string] {
         print $'(ansi green_bold)<command>(ansi reset) can be:'
         print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
-        print $'    (ansi green)run(ansi reset)'
+        print $'    (ansi green)run-examples(ansi reset)'
         print $'    (ansi green)run-piped(ansi reset)'
         print $'    (ansi green)log(ansi reset)'
-        print $'    (ansi green)run-with-flamegraph-profiling(ansi reset), (ansi blue)For more info, watch: https://www.youtube.com/watch?v=Sy26IMkOEiM(ansi reset)'
-        print $'    (ansi green)watch-run(ansi reset)'
+        print $'    (ansi green)run-examples-with-flamegraph-profiling(ansi reset), (ansi blue)For more info, watch: https://www.youtube.com/watch?v=Sy26IMkOEiM(ansi reset)'
+        print $'    (ansi green)watch-run-examples(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
         print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
         print $'    (ansi green)watch-all-tests(ansi reset)'
@@ -149,7 +150,7 @@ def clean [] {
     cargo clean
 }
 
-def run [] {
+def run-examples [] {
     cargo run --example main_interactive -q
 }
 
@@ -157,11 +158,11 @@ def run-piped [] {
     bat Cargo.toml | cargo run -q --bin rt -- select-from-list
 }
 
-def run-with-flamegraph [] {
+def run-examples-with-flamegraph-profiling [] {
     cargo flamegraph --example main_interactive
 }
 
-def watch-run [] {
+def watch-run-examples [] {
     cargo watch -- cargo run --example main_interactive
 }
 

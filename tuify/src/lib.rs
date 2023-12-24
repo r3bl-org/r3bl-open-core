@@ -365,15 +365,16 @@
 //!    nu`. It is available for Linux, macOS, and Windows.
 //!
 //! ### Nu shell scripts to build, run, test etc.
+//! <a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test-etc." name="nu-shell-scripts-to-build%2C-run%2C-test-etc."></a>
 //!
 //! | Command                                | Description                                |
 //! | -------------------------------------- | ------------------------------------------ |
-//! | `nu run run`                           | Run examples in the `./examples` folder    |
+//! | `nu run run-examples`                  | Run examples in the `./examples` folder    |
 //! | `nu run run-piped`                     | Run binary with piped input                |
 //! | `nu run build`                         | Build                                      |
 //! | `nu run clean`                         | Clean                                      |
 //! | `nu run all`                           | All                                        |
-//! | `nu run run-with-flamegraph-profiling` | Run examples with flamegraph profiling     |
+//! | `nu run run-examples-with-flamegraph-profiling` | Run examples with flamegraph profiling |
 //! | `nu run test`                          | Run tests                                  |
 //! | `nu run clippy`                        | Run clippy                                 |
 //! | `nu run docs`                          | Build docs                                 |
@@ -385,11 +386,23 @@
 //!
 //! | Command                                             | Description                        |
 //! | --------------------------------------------------- | ---------------------------------- |
-//! | `nu run watch-run`                                  | Watch run                          |
+//! | `nu run watch-run-examples`                         | Watch run examples                 |
 //! | `nu run watch-all-tests`                            | Watch all test                     |
 //! | `nu run watch-one-test <test_name>`                 | Watch one test                     |
 //! | `nu run watch-clippy`                               | Watch clippy                       |
 //! | `nu run watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
+//!
+//! There's also a `run` script at the **top level folder** of the repo. It is intended to
+//! be used in a CI/CD environment w/ all the required arguments supplied or in
+//! interactive mode, where the user will be prompted for input.
+//!
+//! | Command                       | Description                        |
+//! | ----------------------------- | ---------------------------------- |
+//! | `nu run all`                  | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD |
+//! | `nu run build-full`           | This will build all the crates in the Rust workspace. And it will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
+//! | `nu run install-cargo-tools`  | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`, `flamegraph` will all be installed in one go) |
+//! | `nu run check-licenses`       | Use `cargo-deny` to audit all licenses used in the Rust workspace |
+//!
 //!
 //! ## References
 //!

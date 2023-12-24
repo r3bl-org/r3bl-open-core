@@ -64,18 +64,21 @@ it.
 ## Run `giti` binary target
 <a id="markdown-run-giti-binary-target" name="run-giti-binary-target"></a>
 
-1. Go to the `cmdr` folder in your terminal
-2. Run `nu run install` to install `giti` locally to `~/.cargo/bin`
-3. Run `giti` from anywhere on your system
+1. Go to the `cmdr` folder in your terminal.
+2. Run `nu run install` to install `giti` locally to `~/.cargo/bin`.
+3. Run `giti` from anywhere on your system.
 4. To delete one or more branches in your repo run `giti branch delete`.
 5. If you want to generate log output for `giti`, run `giti -l`. For example, `giti -l
-   branch delete`.
+   branch delete`. To view this log output run `nu run log`.
 
 [![asciicast](https://asciinema.org/a/14V8v3OKKYvDkUDkRFiMDsCNg.svg)](https://asciinema.org/a/14V8v3OKKYvDkUDkRFiMDsCNg)
 
+## Run `edi` binary target
+
+TODO: Add instructions here after `edi` is implemented.
+
 ## Run `r3bl-cmdr` or `rc` binary target
 <a id="markdown-run-r3bl-cmdr-or-rc-binary-target" name="run-r3bl-cmdr-or-rc-binary-target"></a>
-
 
 `r3bl-cmdr` is the second thing that's described above. It contains a set of apps for developers by
 developers. It is engineered to enhance your:
@@ -107,27 +110,34 @@ and `flamegraph` on your system. Here are the instructions:
 ### Nu shell scripts to build, run, test etc.
 <a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test-etc." name="nu-shell-scripts-to-build%2C-run%2C-test-etc."></a>
 
-| Command                                   | Description                                       |
-| ----------------------------------------- | ------------------------------------------------- |
-| `nu run.nu run`                           | Run the default binary target                     |
-| `nu run.nu install`                       | Install `giti` and `rc` locally to `~/.cargo/bin` |
-| `nu run.nu build`                         | Build                                             |
-| `nu run.nu clean`                         | Clean                                             |
-| `nu run.nu all`                           | All                                               |
-| `nu run.nu run-with-flamegraph-profiling` | Run examples with flamegraph profiling            |
-| `nu run.nu test`                          | Run tests                                         |
-| `nu run.nu clippy`                        | Run clippy                                        |
-| `nu run.nu docs`                          | Build docs                                        |
-| `nu run.nu serve-docs`                    | Serve docs over VSCode Remote SSH session.        |
-| `nu run.nu upgrade-deps`                  | Upgrade deps                                      |
-| `nu run.nu rustfmt`                       | Run rustfmt                                       |
+| Command                                | Description                                       |
+| -------------------------------------- | ------------------------------------------------- |
+| `nu run install`                       | Install `giti`, `edi`, `rc`  to `~/.cargo/bin`    |
+| `nu run build`                         | Build                                             |
+| `nu run clean`                         | Clean                                             |
+| `nu run all`                           | All                                               |
+| `nu run test`                          | Run tests                                         |
+| `nu run clippy`                        | Run clippy                                        |
+| `nu run docs`                          | Build docs                                        |
+| `nu run serve-docs`                    | Serve docs over VSCode Remote SSH session         |
+| `nu run rustfmt`                       | Run rustfmt                                       |
 
 The following commands will watch for changes in the source folder and re-run:
 
-| Command                                                | Description                        |
-| ------------------------------------------------------ | ---------------------------------- |
-| `nu run.nu watch-run`                                  | Watch run                          |
-| `nu run.nu watch-all-tests`                            | Watch all test                     |
-| `nu run.nu watch-one-test <test_name>`                 | Watch one test                     |
-| `nu run.nu watch-clippy`                               | Watch clippy                       |
-| `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
+| Command                                             | Description                        |
+| --------------------------------------------------- | ---------------------------------- |
+| `nu run watch-all-tests`                            | Watch all test                     |
+| `nu run watch-one-test <test_name>`                 | Watch one test                     |
+| `nu run watch-clippy`                               | Watch clippy                       |
+| `nu run watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
+
+There's also a `run` script at the **top level folder** of the repo. It is intended to
+be used in a CI/CD environment w/ all the required arguments supplied or in
+interactive mode, where the user will be prompted for input.
+
+| Command                       | Description                        |
+| ----------------------------- | ---------------------------------- |
+| `nu run all`                  | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD |
+| `nu run build-full`           | This will build all the crates in the Rust workspace. And it will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
+| `nu run install-cargo-tools`  | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`, `flamegraph` will all be installed in one go) |
+| `nu run check-licenses`       | Use `cargo-deny` to audit all licenses used in the Rust workspace |
