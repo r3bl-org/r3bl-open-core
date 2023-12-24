@@ -15,28 +15,63 @@
  *   limitations under the License.
  */
 
+use r3bl_ansi_color::AnsiStyledText;
 use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
-pub struct State {
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
+pub struct State<'a> {
     /// Does not include the header row.
     pub max_display_height: ChUnit,
     pub max_display_width: ChUnit,
-    /// This is not adjusted for
-    /// [scroll_offset_row_index](State::scroll_offset_row_index).
+    /// This is not adjusted for [scroll_offset_row_index](State::scroll_offset_row_index).
     pub raw_caret_row_index: ChUnit,
     pub scroll_offset_row_index: ChUnit,
     pub items: Vec<String>,
     pub selected_items: Vec<String>,
     pub header: String,
+    pub multi_line_header: Vec<Vec<AnsiStyledText<'a>>>,
     pub selection_mode: SelectionMode,
+    /// This is used to determine if the terminal has been resized.
     pub resize_hint: Option<ResizeHint>,
+    /// This is used to determine if the terminal has been resized.
     pub window_size: Option<Size>,
 }
 
-impl CalculateResizeHint for State {
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Header {
+    Single,
+    Multiple,
+}
+
+impl State<'_> {
+    pub fn get_header(&self) -> Header {
+        match self.multi_line_header.is_empty() {
+            true => Header::Single,
+            false => Header::Multiple,
+        }
+    }
+}
+
+#[test]
+fn test_header_enum() {
+    let mut state = State {
+        multi_line_header: vec![vec![AnsiStyledText {
+            text: "line1",
+            style: &[],
+        }]],
+        ..Default::default()
+    };
+    let lhs = state.get_header();
+    let rhs = Header::Multiple;
+    assert_eq2!(lhs, rhs);
+
+    state.multi_line_header = vec![];
+    assert_eq2!(state.get_header(), Header::Single);
+}
+
+impl CalculateResizeHint for State<'_> {
     fn set_size(&mut self, new_size: Size) {
         self.window_size = Some(new_size);
         self.clear_resize_hint();
@@ -68,7 +103,7 @@ impl CalculateResizeHint for State {
         };
 
         if self.window_size.is_some() {
-            self.window_size = Some(new_size);
+            self.set_size(new_size)
         }
     }
 
@@ -85,7 +120,7 @@ pub enum ResizeHint {
     NoChange,
 }
 
-impl State {
+impl State<'_> {
     /// This the row index that currently has keyboard focus.
     pub fn get_focused_index(&self) -> ChUnit {
         get_scroll_adjusted_row_index(self.raw_caret_row_index, self.scroll_offset_row_index)

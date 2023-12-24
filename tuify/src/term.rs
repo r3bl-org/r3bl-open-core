@@ -21,6 +21,16 @@ use crossterm::terminal::*;
 use is_terminal::IsTerminal;
 use r3bl_rs_utils_core::*;
 
+pub const DEFAULT_WIDTH: usize = 80;
+
+/// Get the terminal width. If there is a problem, return the default width.
+pub fn get_terminal_width() -> usize {
+    match get_size() {
+        Ok(size) => ch!(@to_usize size.col_count),
+        Err(_) => DEFAULT_WIDTH,
+    }
+}
+
 /// Get the terminal size.
 pub fn get_size() -> io::Result<Size> {
     let (columns, rows) = size()?;
