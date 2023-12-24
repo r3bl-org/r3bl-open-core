@@ -39,9 +39,9 @@ def main [...args: string] {
         "build" => {build}
         "clean" => {clean}
         "log" => {log}
-        "run" => {run}
-        "run-release" => {run-release}
-        "run-with-flamegraph-profiling" => {run-with-flamegraph-profiling}
+        "run-examples" => {run-examples}
+        "run-release-examples" => {run-release-examples}
+        "run-examples-with-flamegraph-profiling" => {run-examples-with-flamegraph-profiling}
         "test" => {test}
         "watch-all-tests" => {watch-all-tests}
         "watch-one-test" => {watch-one-test $args}
@@ -55,7 +55,6 @@ def main [...args: string] {
         "serve-docs" => {serve-docs}
         "help" => {print-help all}
         "log" => {log}
-        "audit-deps" => {audit-deps}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
     }
 }
@@ -157,10 +156,10 @@ def print-help [command: string] {
         print $'    (ansi green)log(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)docs(ansi reset)'
-        print $'    (ansi green)run(ansi reset)'
-        print $'    (ansi green)run-release(ansi reset)'
+        print $'    (ansi green)run-examples(ansi reset)'
+        print $'    (ansi green)run-release-examples(ansi reset)'
         # print $'    (ansi green)run-with-crash-reporting(ansi reset)'
-        print $'    (ansi green)run-with-flamegraph-profiling(ansi reset), (ansi blue)For more info, watch: https://www.youtube.com/watch?v=Sy26IMkOEiM(ansi reset)'
+        print $'    (ansi green)run-examples-with-flamegraph-profiling(ansi reset), (ansi blue)For more info, watch: https://www.youtube.com/watch?v=Sy26IMkOEiM(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
         print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
         print $'    (ansi green)watch-all-tests(ansi reset)'
@@ -187,17 +186,17 @@ def clean [] {
     cargo clean
 }
 
-def run [] {
+def run-examples [] {
     cargo run --example demo -q
     cd ..
 }
 
-def run-release [] {
+def run-release-examples [] {
     cargo run --release --example demo -q
     cd ..
 }
 
-def run-with-flamegraph-profiling [] {
+def run-examples-with-flamegraph-profiling [] {
     cargo flamegraph --example demo
 }
 

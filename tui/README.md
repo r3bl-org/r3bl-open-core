@@ -175,7 +175,6 @@ Here are some framework highlights:
 ### Video of the demo in action
 <a id="markdown-video-of-the-demo-in-action" name="video-of-the-demo-in-action"></a>
 
-
 ![video-gif](https://user-images.githubusercontent.com/2966499/233799311-210b887e-0aa6-470a-bcea-ee8e0e3eb019.gif)
 
 Here's a video of a prototype of [R3BL CMDR](https://github.com/r3bl-org/r3bl-cmdr) app built using
@@ -185,7 +184,6 @@ this TUI engine.
 
 ### Run the demo locally
 <a id="markdown-run-the-demo-locally" name="run-the-demo-locally"></a>
-
 
 Once you've cloned [the repo](https://github.com/r3bl-org/r3bl-open-core) to a folder on your
 computer, you can run the examples you see in the video with the following commands:
@@ -203,45 +201,43 @@ allows you to easily build, run, test, and do so much more with the repo.
 > The `run` script works on Linux, macOS, and Windows. On Linux and macOS, you can
 > simply run `./run` instead of `nu run`.
 
-- `nu run help`: This will show you all the commands that you can pass to the `run`
-  script.
-- `nu run run-release`: This will simply run the examples w/ the release build (so it
-  will be fast). You can watch the logs by running `nu run log`.
-- `nu run run`: This will simply run the examples. You can watch the logs by running
-  `nu run log`.
-- `nu run test`: Run all the tests (in all crates in the Rust workspace).
-- `nu run watch-one-test`: Run a single test and watch it in the given crate / folder.
-- `nu run build`: build the code in all the crates in the Rust workspace.
-- `nu run log`: Run the logger to see log output. This
-  [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use
-  this.
-- `nu run run-with-flamegraph-profiling`: This will run the examples and generate a
-  flamegraph at the end so you can see profile the performance of the app. This
-  [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use
-  this.
-- `nu run docs`: Generate docs for all the crates in the Rust workspace.
-- `nu run clippy`: Run clippy on all the crates in the Rust workspace.
-- `nu run rustfmt`: Run rustfmt on all the crates in the Rust workspace.
-- `nu run run-with-crash-reporting`: This will run the examples and generate a
-  `crash_log.txt` file (in the `tui` folder) in case the app crashes. This is useful for
-  debugging.
-- and more!
+### Nu shell scripts to build, run, test etc.
+<a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test-etc." name="nu-shell-scripts-to-build%2C-run%2C-test-etc."></a>
+
+| Command                                | Description                                       |
+| -------------------------------------- | ------------------------------------------------- |
+| `nu run help`                          | See all the commands you can pass to the `run` script |
+| `nu run run-examples`                  | Run all the examples                              |
+| `nu run run-release-examples`          | Run all the examples with the release binary      |
+| `nu run run-examples-with-flamegraph-profiling` | This will run the examples and generate a flamegraph at the end so you can see profile the performance of the app. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this |
+| `nu run log`                           | View the log output. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this. |
+| `nu run build`                         | Build                                             |
+| `nu run clean`                         | Clean                                             |
+| `nu run test`                          | Run tests                                         |
+| `nu run clippy`                        | Run clippy                                        |
+| `nu run docs`                          | Build docs                                        |
+| `nu run serve-docs`                    | Serve docs over VSCode Remote SSH session         |
+| `nu run rustfmt`                       | Run rustfmt                                       |
+
+The following commands will watch for changes in the source folder and re-run:
+
+| Command                                             | Description                        |
+| --------------------------------------------------- | ---------------------------------- |
+| `nu run watch-all-tests`                            | Watch all test                     |
+| `nu run watch-one-test <test_name>`                 | Watch one test                     |
+| `nu run watch-clippy`                               | Watch clippy                       |
+| `nu run watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
 
 There's also a `run` script at the **top level folder** of the repo. It is intended to
 be used in a CI/CD environment w/ all the required arguments supplied or in
 interactive mode, where the user will be prompted for input.
-- `nu run all`: There's a command called `all` that you can use to run all the
-  tests, linting, formatting, etc. in one go by running `./run all` at the top
-  level folder of the repo.
-- `nu run build-full`: This will build all the crates in the Rust workspace. And it
-  will install all the required pre-requisite tools needed to work with this crate
-  (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a
-  really clean build.
-- `nu run install-cargo-tools`: This will install all the required pre-requisite
-  tools needed to work with this crate (things like `cargo-deny`, `flamegraph` will
-  all be installed in one go).
-- `nu run check-licenses`: Use `cargo-deny` to audit all licenses used in the Rust
-  workspace.
+
+| Command                       | Description                        |
+| ----------------------------- | ---------------------------------- |
+| `nu run all`                  | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD |
+| `nu run build-full`           | This will build all the crates in the Rust workspace. And it will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
+| `nu run install-cargo-tools`  | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`, `flamegraph` will all be installed in one go) |
+| `nu run check-licenses`       | Use `cargo-deny` to audit all licenses used in the Rust workspace |
 
 ## How does layout, rendering, and event handling work in general?
 <a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>

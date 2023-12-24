@@ -66,6 +66,15 @@
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
 
+### r3bl-cmdr-next-release
+
+Changed:
+  - Replace the `run` command with `examples` in the `run` nu shell script. To run an
+    example you use `nu run examples`. and provide instructions on the `run` script at the
+    top level folder of this monorepo. Update `lib.rs` and `README.md` to reflect this
+    change. The behavior of the `run` nu shell script is more uniform across all crates in
+    this repo.
+
 ### v0.0.8 (2023-12-22)
 <a id="markdown-v0.0.8-2023-12-22" name="v0.0.8-2023-12-22"></a>
 
@@ -94,6 +103,11 @@ Added:
 - Changed:
   - Rename `run.nu` to `run`. This simplifies commands to run it, eg: `nu run build`, or
     `./run build`.
+  - Replace the `run` command with `examples` in the `run` nu shell script. To run an
+    example you use `nu run examples`. and provide instructions on the `run` script at the
+    top level folder of this monorepo. Update `lib.rs` and `README.md` to reflect this
+    change. The behavior of the `run` nu shell script is more uniform across all crates in
+    this repo.
 
 ### v0.1.23 (2023-12-22)
 <a id="markdown-v0.1.23-2023-12-22" name="v0.1.23-2023-12-22"></a>
@@ -168,6 +182,11 @@ Added:
   - Rename `run.nu` to `run` in the `tui` folder. This simplifies commands to run it, eg:
     `nu run build`, or `./run build`.
   - Rename `run.nu` to `run` in the top level folder as well.
+  - Replace the `run` command with `examples` in the `run` nu shell script. To run an
+    example you use `nu run examples`. and provide instructions on the `run` script at the
+    top level folder of this monorepo. Update `lib.rs` and `README.md` to reflect this
+    change. The behavior of the `run` nu shell script is more uniform across all crates in
+    this repo.
 
 - Fixed:
   - Editor component now cleans up state correctly after new content loads. This includes

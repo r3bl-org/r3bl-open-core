@@ -32,7 +32,6 @@ def main [...args: string] {
     match $command {
         "build" => {build}
         "clean" => {clean}
-        "run" => {run}
         "install" => {install}
         "log" => {log}
         "test" => {test}
@@ -41,8 +40,6 @@ def main [...args: string] {
         "rustfmt" => {rustfmt}
         "watch-one-test" => {watch-one-test $args}
         "watch-macro-expansion-one-test" => {watch-macro-expansion-one-test $args}
-        "run-with-flamegraph-profiling" => {run-with-flamegraph-profiling}
-        "watch-run" => {watch-run}
         "watch-all-tests" => {watch-all-tests}
         "watch-clippy" => {watch-clippy}
         "serve-docs" => {serve-docs}
@@ -115,11 +112,8 @@ def print-help [command: string] {
         print $'(ansi green_bold)<command>(ansi reset) can be:'
         print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
-        print $'    (ansi green)run(ansi reset)'
         print $'    (ansi green)install(ansi reset)'
         print $'    (ansi green)log(ansi reset)'
-        print $'    (ansi green)run-with-flamegraph-profiling(ansi reset), (ansi blue)For more info, watch: https://www.youtube.com/watch?v=Sy26IMkOEiM(ansi reset)'
-        print $'    (ansi green)watch-run(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
         print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
         print $'    (ansi green)watch-all-tests(ansi reset)'
@@ -149,20 +143,8 @@ def clean [] {
     cargo clean
 }
 
-def run [] {
-    cargo run
-}
-
 def install [] {
     cargo install --path . --force
-}
-
-def run-with-flamegraph [] {
-    cargo flamegraph --example main_interactive
-}
-
-def watch-run [] {
-    cargo watch -- cargo run --example main_interactive
 }
 
 def test [] {
