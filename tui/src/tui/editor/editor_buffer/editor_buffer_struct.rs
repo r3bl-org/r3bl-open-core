@@ -203,6 +203,10 @@ pub mod history {
         index.try_into().unwrap_or(index as usize)
     }
 
+    pub fn clear(editor_buffer: &mut EditorBuffer) {
+        editor_buffer.history = EditorBufferHistory::default();
+    }
+
     pub fn push(editor_buffer: &mut EditorBuffer) {
         // Invalidate the content cache, since the content just changed.
         cache::clear(editor_buffer);
@@ -640,10 +644,18 @@ pub mod access_and_mutate {
             // Set lines.
             self.editor_content.lines =
                 lines.into_iter().map(UnicodeString::from).collect();
+
             // Reset caret.
             self.editor_content.caret_display_position = Position::default();
+
             // Reset scroll_offset.
             self.editor_content.scroll_offset = ScrollOffset::default();
+
+            // Empty the content render cache.
+            cache::clear(self);
+
+            // Reset undo/redo history.
+            history::clear(self);
         }
 
         /// Returns the current caret position in two variants:
