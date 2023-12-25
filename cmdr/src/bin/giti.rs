@@ -34,16 +34,16 @@ use r3bl_tuify::SelectionMode;
 fn main() {
     // If no args are passed, the following line will fail, and help will be printed
     // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
-    let giti_app_args = GitiAppArg::parse();
+    let cli_arg = CLIArg::parse();
 
-    let enable_logging = giti_app_args.global_options.enable_logging;
+    let enable_logging = cli_arg.global_options.enable_logging;
     call_if_true!(enable_logging, {
         try_to_set_log_level(log::LevelFilter::Trace).ok();
         log_debug("Start logging...".to_string());
-        log_debug(format!("cli_args {:?}", giti_app_args));
+        log_debug(format!("cli_args {:?}", cli_arg));
     });
 
-    if let Err(error) = try_run_program(giti_app_args) {
+    if let Err(error) = try_run_program(cli_arg) {
         log_error(format!("Error running program, error: {:?}", error));
         println!("Error running program! 🤦‍♀️");
     }
@@ -53,7 +53,7 @@ fn main() {
     });
 }
 
-fn try_run_program(giti_app_args: GitiAppArg) -> CommonResult<()> {
+fn try_run_program(giti_app_args: CLIArg) -> CommonResult<()> {
     match giti_app_args.command {
         CLICommand::Branch {
             command_to_run_with_each_selection,
@@ -120,7 +120,7 @@ mod clap_config {
     #[command(version)]
     #[command(next_line_help = true)]
     #[command(arg_required_else_help(true))]
-    pub struct GitiAppArg {
+    pub struct CLIArg {
         #[clap(subcommand)]
         pub command: CLICommand,
 
