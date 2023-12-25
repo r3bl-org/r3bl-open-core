@@ -382,12 +382,12 @@ fn main() -> Result<()> {
 
 | Command                                | Description                                |
 | -------------------------------------- | ------------------------------------------ |
-| `nu run run-examples`                  | Run examples in the `./examples` folder    |
-| `nu run run-piped`                     | Run binary with piped input                |
+| `nu run examples`                  | Run examples in the `./examples` folder    |
+| `nu run piped`                     | Run binary with piped input                |
 | `nu run build`                         | Build                                      |
 | `nu run clean`                         | Clean                                      |
 | `nu run all`                           | All                                        |
-| `nu run run-examples-with-flamegraph-profiling` | Run examples with flamegraph profiling |
+| `nu run examples-with-flamegraph-profiling` | Run examples with flamegraph profiling |
 | `nu run test`                          | Run tests                                  |
 | `nu run clippy`                        | Run clippy                                 |
 | `nu run docs`                          | Build docs                                 |
@@ -399,7 +399,7 @@ The following commands will watch for changes in the source folder and re-run:
 
 | Command                                             | Description                        |
 | --------------------------------------------------- | ---------------------------------- |
-| `nu run watch-run-examples`                         | Watch run examples                 |
+| `nu run watch-examples`                         | Watch run examples                 |
 | `nu run watch-all-tests`                            | Watch all test                     |
 | `nu run watch-one-test <test_name>`                 | Watch one test                     |
 | `nu run watch-clippy`                               | Watch clippy                       |
