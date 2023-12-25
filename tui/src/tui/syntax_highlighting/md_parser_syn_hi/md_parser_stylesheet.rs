@@ -249,7 +249,7 @@ const STEPS: usize = 20;
 impl ColorWheel {
     /// Currently unique coloring of up to 6 heading levels are supported.
     /// More info on gradients: <https://uigradients.com/>.
-    pub fn from_heading_data(heading_data: &HeadingData) -> Self {
+    pub fn from_heading_data(heading_data: &HeadingData<'_>) -> Self {
         match heading_data.heading_level.level {
             1 => ColorWheel::new(vec![
                 ColorWheelConfig::Rgb(

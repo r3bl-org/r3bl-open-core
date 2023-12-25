@@ -44,9 +44,19 @@ fn main() {
     });
 
     if let Err(error) = try_run_program(cli_arg) {
-        log_error(format!("Error running program, error: {:?}", error));
-        println!("Error running program! 🤦‍♀️");
+        use r3bl_ansi_color::{AnsiStyledText, Style};
+        use r3bl_tuify::FAILED_COLOR;
+
+        let err_msg = format!("Problem running command: {:?}", error);
+        log_error(err_msg.clone());
+        AnsiStyledText {
+            text: &format!("Problem running command:\n ╴{err_msg}",),
+            style: &[Style::Foreground(FAILED_COLOR)],
+        }
+        .println();
     }
+
+    giti_ui_templates::show_exit_message();
 
     call_if_true!(enable_logging, {
         log_debug("Stop logging...".to_string());

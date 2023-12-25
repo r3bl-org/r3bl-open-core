@@ -15,10 +15,32 @@
  *   limitations under the License.
  */
 
-// Attach.
-pub mod delete;
-pub mod giti_ui_templates;
+use r3bl_tui::*;
 
-// Re-export.
-pub use delete::*;
-pub use giti_ui_templates::*;
+/// Constants for the ids.
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Id {
+    Editor = 1,
+    SimpleDialog = 2,
+    AutocompleteDialog = 3,
+    EditorStyleNameDefault = 4,
+    DialogStyleNameBorder = 5,
+    DialogStyleNameTitle = 6,
+    DialogStyleNameEditor = 7,
+    DialogStyleNameResultsPanel = 8,
+}
+
+mod id_impl {
+    use super::*;
+
+    impl From<Id> for u8 {
+        fn from(id: Id) -> u8 { id as u8 }
+    }
+
+    impl From<Id> for FlexBoxId {
+        fn from(id: Id) -> FlexBoxId { FlexBoxId(id as u8) }
+    }
+}
+
+// 00: app_main - copy from ex_editor

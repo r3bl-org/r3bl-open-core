@@ -36,7 +36,7 @@ use crate::{constants::*, tui::misc_types::list_of::List, *};
 ///    [mod@parse_block_code] file handle this.
 /// 6. line (which contains a [MdLineFragments]). The parsers in [parse_element] file handle this.
 #[rustfmt::skip]
-pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument> {
+pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument<'_>> {
     // key: TAGS, value: CSV parser.
     fn parse_tags_list(input: &str) -> IResult<&str, List<&str>>
     {
