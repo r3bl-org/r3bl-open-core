@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2023 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,13 +15,15 @@
  *   limitations under the License.
  */
 
-// Attach sources.
-pub mod app_main;
-pub mod app_signal;
-pub mod launcher;
-pub mod state;
+use std::fmt::*;
 
-// Re-export only inside this module.
-pub use app_main::*;
-pub use app_signal::*;
-pub use state::*;
+#[derive(Default, Clone, Debug)]
+#[non_exhaustive]
+pub enum AppSignal {
+    #[default]
+    Noop,
+}
+
+impl Display for AppSignal {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result { write!(f, "{self:?}") }
+}

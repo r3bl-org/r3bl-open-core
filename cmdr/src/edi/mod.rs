@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2023 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,17 +15,12 @@
  *   limitations under the License.
  */
 
-// https://github.com/rust-lang/rust-clippy
-// https://rust-lang.github.io/rust-clippy/master/index.html
-#![warn(clippy::all)]
-#![warn(rust_2018_idioms)]
+// Include.
+pub mod app_main;
+pub mod app_signal;
+pub mod state;
 
-use r3bl_cmdr::run_app;
-use r3bl_rs_utils_core::*;
-
-#[tokio::main]
-async fn main() -> CommonResult<()> {
-    throws!({
-        run_app().await?;
-    })
-}
+// Reexport.
+pub use app_main::*;
+pub use app_signal::*;
+pub use state::*;

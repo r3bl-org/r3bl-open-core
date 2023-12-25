@@ -834,6 +834,12 @@
 //! - If you want to change where the color wheel "begins", you have to change the speed, seed, and
 //!   delta of this [crate::lolcat::Lolcat] instance.
 
+// https://github.com/rust-lang/rust-clippy
+// https://rust-lang.github.io/rust-clippy/master/index.html
+#![warn(clippy::all)]
+#![warn(clippy::unwrap_in_result)]
+#![warn(rust_2018_idioms)]
+
 // Attach.
 pub mod tui;
 

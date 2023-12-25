@@ -28,7 +28,7 @@ use crate::*;
 /// No language, no line:    "```\n```\n"
 /// No language, multi line: "```\npip install foobar\npip install foobar\n```\n"
 #[rustfmt::skip]
-pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine>> {
+pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine<'_>>> {
     let (remainder, (lang, code)) = tuple((
         parse_code_block_lang_to_eol,
         parse_code_block_body_to_code_block_end,

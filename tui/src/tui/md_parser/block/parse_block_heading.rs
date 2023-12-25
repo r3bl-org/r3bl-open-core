@@ -22,13 +22,13 @@ use crate::{constants::NEW_LINE, *};
 /// This matches the heading tag and text until EOL. Outputs a tuple of [HeadingLevel] and
 /// [FragmentsInOneLine].
 #[rustfmt::skip]
-pub fn parse_block_heading_opt_eol(input: &str) -> IResult<&str, HeadingData> {
+pub fn parse_block_heading_opt_eol(input: &str) -> IResult<&str, HeadingData<'_>> {
     let (remainder, output) = parse(input)?;
     Ok((remainder, output))
 }
 
 #[rustfmt::skip]
-fn parse(input: &str) -> IResult<&str, HeadingData> {
+fn parse(input: &str) -> IResult<&str, HeadingData<'_>> {
     let (input, (level, text, _)) = tuple((
         parse_heading_tag,
         parse_anychar_in_heading_no_new_line1,

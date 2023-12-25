@@ -99,7 +99,7 @@ impl EditorEngineInternalApi {
         caret_mut::clear_selection(buffer)
     }
 
-    pub fn validate_scroll(args: EditorArgsMut) {
+    pub fn validate_scroll(args: EditorArgsMut<'_>) {
         scroll_editor_buffer::validate_scroll(args);
     }
 

@@ -36,7 +36,7 @@ pub fn lolcat_each_char_in_unicode_string(
 ) -> StyledTexts {
     let mut saved_orig_speed = None;
 
-    let mut my_lolcat: Cow<Lolcat> = match lolcat {
+    let mut my_lolcat: Cow<'_, Lolcat> = match lolcat {
         Some(lolcat_arg) => {
             saved_orig_speed = Some(lolcat_arg.color_wheel_control.color_change_speed);
             lolcat_arg.color_wheel_control.color_change_speed = ColorChangeSpeed::Rapid;

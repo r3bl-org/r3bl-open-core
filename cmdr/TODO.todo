@@ -1,0 +1,46 @@
+giti cli args:
+  ✔ clean up the docs for giti using clap @done(23-12-26 10:09)
+  ✔ clean up the subcommands, arguments, global options @done(23-12-26 10:09)
+  ✔ add colorwheel exit msg @done(23-12-26 15:26)
+
+edi cli args <https://g.co/bard/share/d1219f20675c>:
+  ✔ accept multiple args that are files to open (eg: edi file1 file2 file3) @done(23-12-26 10:09)
+  ✔ more info  @done(23-12-26 10:09)
+  ✔ flag to enable logging @done(23-12-26 10:09)
+  ✔ flag to show version number @done(23-12-26 10:09)
+  ✔ flag to show help (state this is a EAP here) @done(23-12-26 10:09)
+
+edi ui <https://github.com/r3bl-org/r3bl-open-core/issues/188>:
+  ✔ add colorwheel exit msg @done(23-12-26 15:26)
+  ☐ if multiple filenames are passed in show an message and exit
+  ☐ only edit a single file (copy from ex_editor example)
+  ☐ show filename, ext in status bar
+  ☐ show quick actions in status bar (eg: help, save, open, quit)
+
+edi single file editor screen:
+  ☐ show editor component to edit a single file
+
+edi help screen:
+  ☐ show a manual on how to use edi (keyboard shortcuts, etc)
+  ☐ state that this is a EAP
+
+edi save dialog box:
+  ☐ show a dialog box to save the file as a new file
+  ☐ maybe add different shortcut for save as (eg: ctrl+shift+s)
+
+edi open dialog box:
+  ☐ show a dialog box to open a file
+
+edi and giti analytics:
+  ✔ more info: https://www.meilisearch.com/docs/learn/what_is_meilisearch/telemetry#why-collect-telemetry-data @done(23-12-26 11:54)
+  ✔ edi - add CLI flag to disable anonymous analytics reporting @done(23-12-26 11:54)
+  ✔ giti - add CLI flag to disable anonymous analytics reporting @done(23-12-26 11:54)
+  ☐ create engine to report usage stats for products w/ anonymous ids
+  ☐ do not collect any PII (ip address, branch names, files names, etc)
+  ☐ intention is to collect usage stats to improve specific areas of the product
+  ☐ use flag to disable anonymous analytics reporting
+
+edi extras:
+  ☐ animation in status bar
+  ☐ animation is dialog box border
+  ☐ weather data in status bar
