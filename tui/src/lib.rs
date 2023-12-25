@@ -150,9 +150,9 @@
 //! | Command                                | Description                                       |
 //! | -------------------------------------- | ------------------------------------------------- |
 //! | `nu run help`                          | See all the commands you can pass to the `run` script |
-//! | `nu run run-examples`                  | Run all the examples                              |
-//! | `nu run run-release-examples`          | Run all the examples with the release binary      |
-//! | `nu run run-examples-with-flamegraph-profiling` | This will run the examples and generate a flamegraph at the end so you can see profile the performance of the app. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this |
+//! | `nu run examples`                  | Run all the examples                              |
+//! | `nu run release-examples`          | Run all the examples with the release binary      |
+//! | `nu run examples-with-flamegraph-profiling` | This will run the examples and generate a flamegraph at the end so you can see profile the performance of the app. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this |
 //! | `nu run log`                           | View the log output. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this. |
 //! | `nu run build`                         | Build                                             |
 //! | `nu run clean`                         | Clean                                             |
