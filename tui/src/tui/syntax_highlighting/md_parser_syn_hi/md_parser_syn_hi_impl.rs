@@ -115,7 +115,7 @@ impl PrettyPrintDebug for StyleUSSpanLines {
 
 impl StyleUSSpanLines {
     pub fn from_document(
-        document: &MdDocument,
+        document: &MdDocument<'_>,
         maybe_current_box_computed_style: &Option<Style>,
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
@@ -150,7 +150,7 @@ impl StyleUSSpanLines {
     /// - 2nd line .. end : use syntect to highlight
     /// - last line       : "```": `get_foreground_dim_style()`
     pub fn from_block_codeblock(
-        code_block_lines: &CodeBlockLines,
+        code_block_lines: &CodeBlockLines<'_>,
         maybe_current_box_computed_style: &Option<Style>,
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
@@ -160,7 +160,7 @@ impl StyleUSSpanLines {
             use super::*;
 
             pub fn try_use_syntect(
-                code_block_lines: &CodeBlockLines,
+                code_block_lines: &CodeBlockLines<'_>,
                 maybe_current_box_computed_style: &Option<Style>,
                 maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
             ) -> Option<StyleUSSpanLines> {
@@ -233,7 +233,7 @@ impl StyleUSSpanLines {
             }
 
             pub fn use_fallback(
-                code_block_lines: &CodeBlockLines,
+                code_block_lines: &CodeBlockLines<'_>,
                 maybe_current_box_computed_style: &Option<Style>,
             ) -> StyleUSSpanLines {
                 let mut acc_lines_output = StyleUSSpanLines::default();
@@ -293,7 +293,7 @@ impl StyleUSSpanLines {
     }
 
     pub fn from_block_smart_list(
-        input_ul_lines: &Lines,
+        input_ul_lines: &Lines<'_>,
         maybe_current_box_computed_style: &Option<Style>,
     ) -> Self {
         let mut acc_lines_output = StyleUSSpanLines::default();
@@ -319,7 +319,7 @@ impl StyleUSSpanLines {
     /// the only block that needs to be translated into multiple lines. This is why the return type
     /// is a [StyleUSSpanLines] (and not a single line).
     pub fn from_block(
-        block: &MdBlockElement,
+        block: &MdBlockElement<'_>,
         maybe_current_box_computed_style: &Option<Style>,
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
@@ -392,7 +392,7 @@ enum HyperlinkType {
 
 impl StyleUSSpan {
     fn format_hyperlink_data(
-        link_data: &HyperlinkData,
+        link_data: &HyperlinkData<'_>,
         maybe_current_box_computed_style: &Option<Style>,
         hyperlink_type: HyperlinkType,
     ) -> Vec<Self> {
@@ -440,7 +440,7 @@ impl StyleUSSpan {
     /// 2. ... which is then rolled up into [StyleUSSpanLines] by
     ///    [StyleUSSpanLine::from_block](StyleUSSpanLine::from_block).
     pub fn from_fragment(
-        fragment: &MdLineFragment,
+        fragment: &MdLineFragment<'_>,
         maybe_current_box_computed_style: &Option<Style>,
     ) -> Vec<Self> {
         match fragment {
@@ -577,7 +577,7 @@ impl PrettyPrintDebug for StyleUSSpanLine {
 
 impl StyleUSSpanLine {
     pub fn from_fragments(
-        fragments_in_one_line: &FragmentsInOneLine,
+        fragments_in_one_line: &FragmentsInOneLine<'_>,
         maybe_current_box_computed_style: &Option<Style>,
     ) -> Self {
         let mut acc = vec![];
@@ -604,7 +604,7 @@ impl StyleUSSpanLine {
     /// + Level::Heading1
     /// ```
     pub fn from_heading_data(
-        heading_data: &HeadingData,
+        heading_data: &HeadingData<'_>,
         maybe_current_box_computed_style: &Option<Style>,
     ) -> Self {
         let mut color_wheel = ColorWheel::from_heading_data(heading_data);

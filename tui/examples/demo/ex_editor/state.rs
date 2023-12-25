@@ -15,31 +15,43 @@
  *   limitations under the License.
  */
 
-use std::{collections::HashMap,
-          fmt::{Debug, Display, Formatter, Result}};
+use std::{collections::HashMap, fmt::*};
 
-use r3bl_tui::{DialogBuffer, *};
+use r3bl_tui::*;
 
 use crate::ex_editor::Id;
 
-#[derive(Default, Clone, Debug)]
-#[allow(dead_code)]
-#[non_exhaustive]
-pub enum AppSignal {
-    #[default]
-    Noop,
+#[derive(Clone, PartialEq)]
+pub struct State {
+    pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
+    pub dialog_buffers: HashMap<FlexBoxId, DialogBuffer>,
 }
 
-mod action_impl {
+mod state_impl_default {
     use super::*;
 
-    impl Display for AppSignal {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result { write!(f, "{self:?}") }
+    impl Default for State {
+        fn default() -> Self { state_impl_default::get_initial_state() }
     }
-}
 
-mod state_mutator {
-    use super::*;
+    pub fn get_initial_state() -> State {
+        let editor_buffers: HashMap<FlexBoxId, EditorBuffer> = {
+            let editor_buffer = {
+                let mut editor_buffer =
+                    EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
+                editor_buffer.set_lines(get_default_content());
+                editor_buffer
+            };
+            let mut it = HashMap::new();
+            it.insert(FlexBoxId::from(Id::Editor as u8), editor_buffer);
+            it
+        };
+
+        State {
+            editor_buffers,
+            dialog_buffers: Default::default(),
+        }
+    }
 
     pub fn get_default_content() -> Vec<String> {
         vec![
@@ -101,39 +113,10 @@ mod state_mutator {
 "",
 ].iter().map(|s| s.to_string()).collect()
     }
-
-    pub fn get_initial_state() -> State {
-        let editor_buffers: HashMap<FlexBoxId, EditorBuffer> = {
-            let editor_buffer = {
-                let mut editor_buffer =
-                    EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
-                editor_buffer.set_lines(get_default_content());
-                editor_buffer
-            };
-            let mut it = HashMap::new();
-            it.insert(FlexBoxId::from(Id::Editor as u8), editor_buffer);
-            it
-        };
-
-        State {
-            editor_buffers,
-            dialog_buffers: Default::default(),
-        }
-    }
 }
 
-#[derive(Clone, PartialEq)]
-pub struct State {
-    pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
-    pub dialog_buffers: HashMap<FlexBoxId, DialogBuffer>,
-}
-
-mod state_impl {
+mod state_impl_editor_support {
     use super::*;
-
-    impl Default for State {
-        fn default() -> Self { state_mutator::get_initial_state() }
-    }
 
     impl HasEditorBuffers for State {
         fn get_mut_editor_buffer(&mut self, id: FlexBoxId) -> Option<&mut EditorBuffer> {
@@ -152,33 +135,37 @@ mod state_impl {
             self.editor_buffers.contains_key(&id)
         }
     }
+}
+
+mod state_impl_dialog_support {
+    use super::*;
 
     impl HasDialogBuffers for State {
         fn get_mut_dialog_buffer(&mut self, id: FlexBoxId) -> Option<&mut DialogBuffer> {
             self.dialog_buffers.get_mut(&id)
         }
     }
+}
 
-    mod debug_format_helpers {
-        use super::*;
+mod state_impl_debug_format {
+    use super::*;
 
-        fn fmt(this: &State, f: &mut Formatter<'_>) -> Result {
-            write! { f,
-                "\nState [\n\
-                - dialog_buffers:\n{:?}\n\
-                - editor_buffers:\n{:?}\n\
-                ]",
-                this.dialog_buffers,
-                this.editor_buffers,
-            }
-        }
+    impl Display for State {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
+    }
 
-        impl Display for State {
-            fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
-        }
+    impl Debug for State {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
+    }
 
-        impl Debug for State {
-            fn fmt(&self, f: &mut Formatter<'_>) -> Result { fmt(self, f) }
+    fn fmt(this: &State, f: &mut Formatter<'_>) -> Result {
+        write! { f,
+            "\nState [\n\
+            - dialog_buffers:\n{:?}\n\
+            - editor_buffers:\n{:?}\n\
+            ]",
+            this.dialog_buffers,
+            this.editor_buffers,
         }
     }
 }

@@ -50,7 +50,7 @@ pub fn try_get_syntax_ref<'a>(
 }
 
 pub fn from_syntect_to_tui(
-    syntect_highlighted_line: SyntectStyleStrSpanLine,
+    syntect_highlighted_line: SyntectStyleStrSpanLine<'_>,
 ) -> StyleUSSpanLine {
     let mut it = StyleUSSpanLine::from(syntect_highlighted_line);
 
@@ -65,11 +65,11 @@ mod syntect_support {
     use super::*;
 
     impl From<SyntectStyleStrSpanLine<'_>> for StyledTexts {
-        fn from(value: SyntectStyleStrSpanLine) -> Self { StyledTexts::from(&value) }
+        fn from(value: SyntectStyleStrSpanLine<'_>) -> Self { StyledTexts::from(&value) }
     }
 
     impl From<&SyntectStyleStrSpanLine<'_>> for StyledTexts {
-        fn from(syntect_styles: &SyntectStyleStrSpanLine) -> Self {
+        fn from(syntect_styles: &SyntectStyleStrSpanLine<'_>) -> Self {
             let mut acc = StyledTexts::default();
             for (syntect_style, text) in syntect_styles {
                 let my_style = Style::from(*syntect_style);
@@ -80,9 +80,9 @@ mod syntect_support {
     }
 
     impl From<SyntectStyleStrSpanLine<'_>> for StyleUSSpanLine {
-        fn from(value: SyntectStyleStrSpanLine) -> Self {
+        fn from(value: SyntectStyleStrSpanLine<'_>) -> Self {
             pub fn from_vec_styled_str(
-                vec_styled_str: &SyntectStyleStrSpanLine,
+                vec_styled_str: &SyntectStyleStrSpanLine<'_>,
             ) -> StyleUSSpanLine {
                 let mut it: StyleUSSpanLine = Default::default();
 

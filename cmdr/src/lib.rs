@@ -82,12 +82,15 @@
 // https://github.com/rust-lang/rust-clippy
 // https://rust-lang.github.io/rust-clippy/master/index.html
 #![warn(clippy::all)]
+#![warn(clippy::unwrap_in_result)]
 #![warn(rust_2018_idioms)]
 
 pub const DEVELOPMENT_MODE: bool = true;
 
+pub mod edi;
 pub mod giti;
 pub mod rc;
 
+pub use edi::*;
 pub use giti::*;
 pub use rc::*;

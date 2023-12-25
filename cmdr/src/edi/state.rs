@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2023 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,13 +15,14 @@
  *   limitations under the License.
  */
 
-// Attach sources.
-pub mod app_main;
-pub mod app_signal;
-pub mod launcher;
-pub mod state;
+use std::collections::HashMap;
 
-// Re-export only inside this module.
-pub use app_main::*;
-pub use app_signal::*;
-pub use state::*;
+use r3bl_tui::*;
+
+#[derive(Clone, PartialEq)]
+pub struct State {
+    pub editor_buffers: HashMap<FlexBoxId, EditorBuffer>,
+    pub dialog_buffers: HashMap<FlexBoxId, DialogBuffer>,
+}
+
+// 00: state - copy from ex_editor

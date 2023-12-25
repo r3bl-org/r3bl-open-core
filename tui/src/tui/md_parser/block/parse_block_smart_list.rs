@@ -27,12 +27,15 @@ use nom::{branch::alt,
 use crate::*;
 
 /// Public API for parsing a smart list block in markdown.
-pub fn parse_block_smart_list(input: &str) -> IResult<&str, (Lines, BulletKind, usize)> {
+pub fn parse_block_smart_list(
+    input: &str,
+) -> IResult<&str, (Lines<'_>, BulletKind, usize)> {
     let (remainder, smart_list_ir) = parse_smart_list(input)?;
 
     let indent = smart_list_ir.indent;
     let bullet_kind = smart_list_ir.bullet_kind;
-    let mut output_lines: Lines = List::with_capacity(smart_list_ir.content_lines.len());
+    let mut output_lines: Lines<'_> =
+        List::with_capacity(smart_list_ir.content_lines.len());
 
     for (index, line) in smart_list_ir.content_lines.iter().enumerate() {
         // Parse the line as a markdown text. Take special care of checkboxes if they show up at the
@@ -317,7 +320,7 @@ mod tests_parse_smart_lists_in_markdown {
 
         let result = parse_markdown(input.as_str());
         let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument = result.unwrap().1;
+        let md_doc: MdDocument<'_> = result.unwrap().1;
 
         // md_doc.console_log_fg();
         // remainder.console_log_bg();
@@ -357,7 +360,7 @@ mod tests_parse_smart_lists_in_markdown {
 
         let result = parse_markdown(input.as_str());
         let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument = result.unwrap().1;
+        let md_doc: MdDocument<'_> = result.unwrap().1;
 
         // md_doc.console_log_fg();
         // remainder.console_log_bg();
@@ -412,7 +415,7 @@ mod tests_parse_smart_lists_in_markdown {
 
         let result = parse_markdown(input.as_str());
         let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument = result.unwrap().1;
+        let md_doc: MdDocument<'_> = result.unwrap().1;
 
         md_doc.console_log_fg();
         remainder.console_log_bg();
@@ -455,7 +458,7 @@ mod tests_parse_smart_lists_in_markdown {
 
         let result = parse_markdown(input.as_str());
         let remainder = result.as_ref().unwrap().0;
-        let md_doc: MdDocument = result.unwrap().1;
+        let md_doc: MdDocument<'_> = result.unwrap().1;
 
         // md_doc.console_log_fg();
         // remainder.console_log_bg();
@@ -539,7 +542,7 @@ pub enum BulletKind {
 #[rustfmt::skip]
 pub fn parse_smart_list(
     input: &str
-) -> IResult</* remainder */ &str, SmartListIR> {
+) -> IResult</* remainder */ &str, SmartListIR<'_>> {
     // Match empty spaces & count them into indent.
     let (input, indent) = map(
         space0,
@@ -675,7 +678,7 @@ pub fn parse_smart_list_content_lines<'a>(
             )(input)?;
 
             // Convert `rest` into a Vec<&str> that contains the output lines.
-            let output_lines: Vec<SmartListLine> = {
+            let output_lines: Vec<SmartListLine<'_>> = {
                 let mut it = Vec::with_capacity(rest.len() + 1);
 
                 it.push(SmartListLine {

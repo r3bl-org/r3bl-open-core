@@ -56,7 +56,7 @@ pub fn parse_element_starts_with_backtick(input: &str) -> IResult<&str, &str> {
 }
 
 #[rustfmt::skip]
-pub fn parse_element_starts_with_left_bracket(input: &str) -> IResult<&str, HyperlinkData> {
+pub fn parse_element_starts_with_left_bracket(input: &str) -> IResult<&str, HyperlinkData<'_>> {
     let (input, output) = pair(
         delimited(
             /* start */ tag(LEFT_BRACKET),
@@ -97,7 +97,7 @@ pub fn parse_element_checkbox_into_bool(input: &str) -> IResult<&str, bool> {
 }
 
 #[rustfmt::skip]
-pub fn parse_element_starts_with_left_image(input: &str) -> IResult<&str, HyperlinkData> {
+pub fn parse_element_starts_with_left_image(input: &str) -> IResult<&str, HyperlinkData<'_>> {
     let (input, output) =pair(
         delimited(/* start */ tag(LEFT_IMAGE), /* output */ is_not(RIGHT_IMAGE), /* end */ tag(RIGHT_IMAGE)),
         delimited(/* start */ tag(LEFT_PARENTHESIS), /* output */ is_not(RIGHT_PARENTHESIS), /* end */ tag(RIGHT_PARENTHESIS)),
@@ -187,7 +187,7 @@ pub fn parse_anychar_in_heading_no_new_line1(input: &str) -> IResult<&str, &str>
 pub fn parse_element_markdown_inline(
     input: &str,
     checkbox_policy: CheckboxParsePolicy,
-) -> IResult<&str, MdLineFragment> {
+) -> IResult<&str, MdLineFragment<'_>> {
     let it = match checkbox_policy {
         CheckboxParsePolicy::IgnoreCheckbox => alt((
             map(parse_element_starts_with_underscore, MdLineFragment::Italic),

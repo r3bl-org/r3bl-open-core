@@ -109,6 +109,11 @@ Added:
     change. The behavior of the `run` nu shell script is more uniform across all crates in
     this repo.
 
+- Added:
+  - Add a new top level function `select_from_list_with_multi_line_header()` in
+    `public_api.rs` to allow for multi-line headers in the list selection menu. This
+    allows ANSI formatted strings to be used in each header line.
+
 ### v0.1.23 (2023-12-22)
 <a id="markdown-v0.1.23-2023-12-22" name="v0.1.23-2023-12-22"></a>
 
