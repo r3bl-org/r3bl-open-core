@@ -48,7 +48,7 @@ tokio = { version = "1.33.0", features = ["full"] }
 
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
-clap = { version = "4.4.6", features = ["derive", "wrap_help"] }
+clap = { version = "4.4.6", features = ["derive", "wrap_help", "help"] }
 
 # serde-json
 serde_json = "1.0.107"

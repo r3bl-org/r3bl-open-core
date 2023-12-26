@@ -69,7 +69,6 @@ fn try_run_program(giti_app_args: CLIArg) -> CommonResult<()> {
                 // Show all the branch sub-commands (delete, checkout, new, etc.) in a tuify component.
                 giti_ui_templates::single_select_instruction_header();
                 let options = get_giti_command_subcommand_names(CLICommand::Branch {
-                    selection_mode: Some(SelectionMode::Single),
                     command_to_run_with_each_selection: None,
                 });
 
@@ -89,6 +88,9 @@ fn try_run_program(giti_app_args: CLIArg) -> CommonResult<()> {
                 }
             }
         },
+        _ => {
+            unimplemented!()
+        }
     }
     Ok(())
 }
@@ -103,6 +105,7 @@ pub fn get_giti_command_subcommand_names(arg: CLICommand) -> Vec<String> {
                 lower_case_subcommand
             })
             .collect(),
+        _ => unimplemented!(),
     }
 }
 
@@ -110,69 +113,71 @@ pub fn get_giti_command_subcommand_names(arg: CLICommand) -> Vec<String> {
 /// - <https://docs.rs/clap/latest/clap/_derive/#overview>
 /// - <https://developerlife.com/2023/09/17/tuify-clap/>
 mod clap_config {
-    use r3bl_tuify::SelectionMode;
-
     use super::*;
 
     #[derive(Debug, Parser)]
     #[command(bin_name = "giti")]
-    #[command(about = "Easy to use, interactive, tuified git", long_about = None)]
+    #[command(
+        about = "Version control with confidence 💪\n\x1b[31mEarly access preview 🐣\x1b[0m"
+    )]
     #[command(version)]
     #[command(next_line_help = true)]
     #[command(arg_required_else_help(true))]
+    /// More info: <https://docs.rs/clap/latest/clap/struct.Command.html#method.help_template>
+    #[command(
+        help_template = "{about}\nVersion: {bin} {version} 💻\n\nUSAGE 📓:\n  giti [\x1b[32mCommand\x1b[0m] [\x1b[34mOptions\x1b[0m]\n\n{all-args}\n",
+        subcommand_help_heading("Command")
+    )]
     pub struct CLIArg {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         pub command: CLICommand,
 
-        #[clap(flatten)]
+        #[command(flatten)]
         pub global_options: GlobalOption,
     }
 
     #[derive(Debug, Args)]
     pub struct GlobalOption {
-        /// Enables logging to a file named `log.txt`.
-        #[arg(long, short = 'l', help = "Enables logging to a file")]
+        #[arg(
+            global = true,
+            long,
+            short = 'l',
+            help = "Log app output to a file named `log.txt` for debugging."
+        )]
         pub enable_logging: bool,
-
-        /// Sets the maximum height of the Tuify component (rows).
-        /// If height is not provided, it defaults to the terminal height.
-        #[arg(
-            value_name = "height",
-            long,
-            short = 'h',
-            help = "Sets the maximum height of the Tuify component (rows)"
-        )]
-        pub tuify_height: Option<usize>,
-
-        /// Sets the maximum width of the Tuify component (columns).
-        /// If width is not provided, it defaults to the terminal width.
-        #[arg(
-            value_name = "width",
-            long,
-            short = 'w',
-            help = "Sets the maximum width of the Tuify component (columns)"
-        )]
-        pub tuify_width: Option<usize>,
     }
 
     #[derive(Debug, Subcommand)]
     pub enum CLICommand {
-        /// Manages giti branches. This command has subcommands like `delete`, `checkout`, and `new`. 🌿
+        #[clap(
+            about = "🌱 Manage your git branches with commands: `delete`, `checkout`, and `new`\n💡 Eg: `giti branch delete`"
+        )]
+        /// More info: <https://docs.rs/clap/latest/clap/struct.Command.html#method.help_template>
+        #[command(
+            help_template = "{about} \n\nUSAGE 📓:\n  giti branch [\x1b[34mcommand\x1b[0m] [\x1b[32moptions\x1b[0m]\n\n{positionals}\n\n  [options]\n{options}"
+        )]
         Branch {
-            /// Select one or more items to operate on. Available modes are: `Single` or `Multi`.
-            #[arg(value_name = "mode", long, short = 's')]
-            selection_mode: Option<SelectionMode>,
-
-            /// This command will be executed in your shell with each selected item as an argument.
-            #[arg(value_name = "command")]
+            #[arg(
+                value_name = "command",
+                help = "In your shell, this command will execute, taking each selected item as an argument."
+            )]
             command_to_run_with_each_selection: Option<BranchSubcommand>,
         },
+
+        #[clap(about = "TODO Commit help")]
+        Commit {},
+
+        #[clap(about = "TODO Remote help")]
+        Remote {},
     }
 
     #[derive(Clone, Debug, ValueEnum)]
     pub enum BranchSubcommand {
+        #[clap(help = "Delete one or more selected branches")]
         Delete,
+        #[clap(help = "TODO Checkout a selected branch")]
         Checkout,
+        #[clap(help = "TODO Create a new branch")]
         New,
     }
 }
