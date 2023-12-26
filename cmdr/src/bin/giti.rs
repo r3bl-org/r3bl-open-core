@@ -118,7 +118,7 @@ mod clap_config {
     #[derive(Debug, Parser)]
     #[command(bin_name = "giti")]
     #[command(
-        about = "Version control with confidence 💪\n\x1b[31mEarly access preview 🐣\x1b[0m"
+        about = "Version control with confidence 💪\n\x1b[38;5;206mEarly access preview \x1b[0m🐣"
     )]
     #[command(version)]
     #[command(next_line_help = true)]
