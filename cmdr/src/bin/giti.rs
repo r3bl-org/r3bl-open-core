@@ -145,6 +145,14 @@ mod clap_config {
             help = "Log app output to a file named `log.txt` for debugging"
         )]
         pub enable_logging: bool,
+
+        #[arg(
+            global = true,
+            long,
+            short = 'n',
+            help = "Disable anonymous data collection for analytics to improve the product; this data does not include IP addresses, or any other private user data, like user, branch, or repo names"
+        )]
+        pub no_analytics: bool,
     }
 
     #[derive(Debug, Subcommand)]
