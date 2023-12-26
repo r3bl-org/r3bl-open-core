@@ -142,7 +142,7 @@ mod clap_config {
             global = true,
             long,
             short = 'l',
-            help = "Log app output to a file named `log.txt` for debugging."
+            help = "Log app output to a file named `log.txt` for debugging"
         )]
         pub enable_logging: bool,
     }
