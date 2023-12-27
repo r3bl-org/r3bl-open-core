@@ -41,7 +41,7 @@ pub trait FunctionComponent<W: Write, S: CalculateResizeHint> {
     fn allocate_viewport_height_space(&mut self, state: &mut S) -> Result<()> {
         throws!({
             let viewport_height =
-                /* not including the header */ self.calculate_items_viewport_height(state) + 
+                /* not including the header */ self.calculate_items_viewport_height(state) +
                 /* for header row(s) */ self.calculate_header_viewport_height(state);
 
             // Allocate space. This is required so that the commands to move the cursor up and
@@ -107,7 +107,7 @@ pub trait FunctionComponent<W: Write, S: CalculateResizeHint> {
     fn clear_viewport(&mut self, state: &mut S) -> Result<()> {
         throws!({
             let viewport_height =
-                /* not including the header */ self.calculate_items_viewport_height(state) + 
+                /* not including the header */ self.calculate_items_viewport_height(state) +
                 /* for header row(s) */ self.calculate_header_viewport_height(state);
 
             let writer = self.get_write();
