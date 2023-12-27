@@ -51,7 +51,10 @@ fn main() {
         }
         // Handle unrecoverable / unknown errors here.
         Err(error) => {
-            let err_msg = format!("Could not run giti due to the following problem.\n{:#?}", error);
+            let err_msg = format!(
+                "Could not run giti due to the following problem.\n{:#?}",
+                error
+            );
             log_error(err_msg.clone());
             AnsiStyledText {
                 text: &format!("{err_msg}",),
@@ -73,9 +76,7 @@ fn try_run_program(giti_app_args: CLIArg) -> CommonResult<()> {
             ..
         } => match command_to_run_with_each_selection {
             Some(subcommand) => match subcommand {
-                BranchSubcommand::Delete => {
-                    try_delete_branch()?
-                }
+                BranchSubcommand::Delete => try_delete_branch()?,
                 _ => unimplemented!(),
             },
             _ => {
