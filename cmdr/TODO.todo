@@ -36,6 +36,10 @@ edi and giti analytics:
   ✔ edi - add CLI flag to disable anonymous analytics reporting @done(23-12-26 11:54)
   ✔ giti - add CLI flag to disable anonymous analytics reporting @done(23-12-26 11:54)
   ☐ create engine to report usage stats for products w/ anonymous ids
+    ☐ use crate to save config to disk (generate a friendly name for an id)
+    ☐ use crate to send data to a server (figure out what analytics data format to use)
+    ☐ on cloud hosting, use web server crate
+    ☐ on cloud hosting, provide a CLI to to report / view stats
   ☐ do not collect any PII (ip address, branch names, files names, etc)
   ☐ intention is to collect usage stats to improve specific areas of the product
   ☐ use flag to disable anonymous analytics reporting
