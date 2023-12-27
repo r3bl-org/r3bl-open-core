@@ -91,7 +91,7 @@ Added:
       select one subcommand using the `select_from_list()` when `giti branch` runs.
     - Delete one or more branches using `select_from_list()` when  `giti branch delete`
       command runs.
-  - Add binary target `edi`.
+  - Add binary target `edi`. This is a powerful TUI Markdown editor.
   - Add binary target `rc` aka `r3bl-cmdr`.
 
 ## `r3bl_tuify`
@@ -113,6 +113,10 @@ Added:
   - Add a new top level function `select_from_list_with_multi_line_header()` in
     `public_api.rs` to allow for multi-line headers in the list selection menu. This
     allows ANSI formatted strings to be used in each header line.
+
+- Fixed:
+  - In `select_from_list()`, the `max_width_col_count` is now respected to limit the max
+    width of the terminal window that is used.
 
 ### v0.1.23 (2023-12-22)
 <a id="markdown-v0.1.23-2023-12-22" name="v0.1.23-2023-12-22"></a>

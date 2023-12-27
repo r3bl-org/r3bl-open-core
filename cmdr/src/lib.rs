@@ -87,10 +87,7 @@
 
 pub const DEVELOPMENT_MODE: bool = true;
 
+// Attach sources.
 pub mod edi;
 pub mod giti;
 pub mod rc;
-
-pub use edi::*;
-pub use giti::*;
-pub use rc::*;

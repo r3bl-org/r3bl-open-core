@@ -26,7 +26,6 @@ use r3bl_rs_utils_core::{log_error,
 use r3bl_tui::{ColorWheel, GradientGenerationPolicy, TextColorizationPolicy};
 use r3bl_tuify::LIGHT_GRAY_COLOR;
 
-
 pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
     let up_and_down = AnsiStyledText {
         text: " Up or down:     navigate",
@@ -94,15 +93,15 @@ pub fn show_exit_message() {
     println!("{}", {
         let goodbye_to_user = match var("USER") {
             Ok(username) => {
-                format!("Goodbye, {} 👋 🦜. Thanks for using giti!", username)
+                format!("Goodbye, {} 👋 😽. Thanks for using giti!", username)
             }
-            Err(_) => "  Thanks for using giti! 👋 🦜".to_owned(),
+            Err(_) => "Thanks for using giti! 👋 😽".to_owned(),
         };
 
         let please_star_us = format!(
             "{}\n{}",
             "Please star r3bl-open-core repo on GitHub!",
-            "🌟 https://github.com/r3bl-org/r3bl-open-core\n"
+            "🌟 https://github.com/r3bl-org/r3bl-open-core"
         );
 
         let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");

@@ -50,6 +50,7 @@ impl TerminalWindow {
     pub async fn main_event_loop<S, A>(
         mut app: BoxedSafeApp<S, A>,
         exit_keys: Vec<InputEvent>,
+        state: S,
     ) -> CommonResult<()>
     where
         S: Debug + Default + Clone + Sync + Send,
@@ -64,6 +65,7 @@ impl TerminalWindow {
             // Initialize the terminal window data struct.
             let mut global_data = &mut GlobalData::try_to_create_instance(
                 main_thread_channel_sender.clone(),
+                state,
             )?;
 
             // Start raw mode.
