@@ -2,6 +2,7 @@ giti cli args:
   ✔ clean up the docs for giti using clap @done(23-12-26 10:09)
   ✔ clean up the subcommands, arguments, global options @done(23-12-26 10:09)
   ✔ add colorwheel exit msg @done(23-12-26 15:26)
+  ✔ clean up error reporting and handling @done(23-12-27 11:29)
 
 edi cli args <https://g.co/bard/share/d1219f20675c>:
   ✔ accept multiple args that are files to open (eg: edi file1 file2 file3) @done(23-12-26 10:09)
@@ -36,10 +37,12 @@ edi and giti analytics:
   ✔ edi - add CLI flag to disable anonymous analytics reporting @done(23-12-26 11:54)
   ✔ giti - add CLI flag to disable anonymous analytics reporting @done(23-12-26 11:54)
   ☐ create engine to report usage stats for products w/ anonymous ids
-    ☐ use crate to save config to disk (generate a friendly name for an id)
-    ☐ use crate to send data to a server (figure out what analytics data format to use)
-    ☐ on cloud hosting, use web server crate
-    ☐ on cloud hosting, provide a CLI to to report / view stats
+    ☐ on TUI / client side
+      ☐ use crate to save config to disk (generate a friendly name for an id)
+      ☐ use crate to send data to a server (figure out what analytics data format to use)
+    ☐ on cloud hosting side
+      ☐ use web server crate
+      ☐ provide a CLI to to report / view stats
   ☐ do not collect any PII (ip address, branch names, files names, etc)
   ☐ intention is to collect usage stats to improve specific areas of the product
   ☐ use flag to disable anonymous analytics reporting
