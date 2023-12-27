@@ -27,9 +27,9 @@ use r3bl_tuify::{select_from_list_with_multi_line_header,
                  EXIT};
 use try_delete_branch_user_choice::Selection::{self, *};
 
-use crate::{giti_ui_templates::multi_select_instruction_header,
-            report_unknown_error_and_propagate,
-            single_select_instruction_header};
+use crate::giti::{giti_ui_templates::report_unknown_error_and_propagate,
+                  multi_select_instruction_header,
+                  single_select_instruction_header};
 
 pub fn try_delete_branch() -> CommonResult<()> {
     let default_header_style = [

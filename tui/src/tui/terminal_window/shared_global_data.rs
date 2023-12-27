@@ -74,6 +74,7 @@ mod global_data_impl {
     {
         pub fn try_to_create_instance(
             main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
+            state: S,
         ) -> CommonResult<GlobalData<S, AS>>
         where
             AS: Debug + Default + Clone + Sync + Send,
@@ -81,7 +82,7 @@ mod global_data_impl {
             let mut it = GlobalData {
                 window_size: Default::default(),
                 maybe_saved_offscreen_buffer: Default::default(),
-                state: Default::default(),
+                state,
                 main_thread_channel_sender,
             };
 
