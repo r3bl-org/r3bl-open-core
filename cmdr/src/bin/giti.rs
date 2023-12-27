@@ -23,13 +23,14 @@ use clap_config::*;
 use giti::{branch::delete::try_delete_branch,
            giti_ui_templates::ask_user_to_select_from_list,
            *};
+use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_cmdr::giti;
 use r3bl_rs_utils_core::{call_if_true,
                          log_debug,
                          log_error,
                          try_to_set_log_level,
                          CommonResult};
-use r3bl_tuify::SelectionMode;
+use r3bl_tuify::{SelectionMode, FAILED_COLOR};
 
 fn main() {
     // If no args are passed, the following line will fail, and help will be printed
@@ -43,20 +44,22 @@ fn main() {
         log_debug(format!("cli_args {:?}", cli_arg));
     });
 
-    if let Err(error) = try_run_program(cli_arg) {
-        use r3bl_ansi_color::{AnsiStyledText, Style};
-        use r3bl_tuify::FAILED_COLOR;
-
-        let err_msg = format!("Problem running command: {:?}", error);
-        log_error(err_msg.clone());
-        AnsiStyledText {
-            text: &format!("Problem running command:\n ╴{err_msg}",),
-            style: &[Style::Foreground(FAILED_COLOR)],
+    match try_run_program(cli_arg) {
+        // Command ran successfully.
+        Ok(_) => {
+            giti_ui_templates::show_exit_message();
         }
-        .println();
+        // Handle unrecoverable / unknown errors here.
+        Err(error) => {
+            let err_msg = format!("Could not run giti due to the following problem.\n{:#?}", error);
+            log_error(err_msg.clone());
+            AnsiStyledText {
+                text: &format!("{err_msg}",),
+                style: &[Style::Foreground(FAILED_COLOR)],
+            }
+            .println();
+        }
     }
-
-    giti_ui_templates::show_exit_message();
 
     call_if_true!(enable_logging, {
         log_debug("Stop logging...".to_string());
@@ -71,7 +74,7 @@ fn try_run_program(giti_app_args: CLIArg) -> CommonResult<()> {
         } => match command_to_run_with_each_selection {
             Some(subcommand) => match subcommand {
                 BranchSubcommand::Delete => {
-                    try_delete_branch()?;
+                    try_delete_branch()?
                 }
                 _ => unimplemented!(),
             },
