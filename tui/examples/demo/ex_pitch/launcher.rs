@@ -38,6 +38,7 @@ pub async fn run_app() -> CommonResult<()> {
         )];
 
         // Create a window.
-        TerminalWindow::main_event_loop(app, exit_keys).await?
+        TerminalWindow::main_event_loop(app, exit_keys, self::state::State::default())
+            .await?
     });
 }

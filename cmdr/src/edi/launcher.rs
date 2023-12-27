@@ -15,14 +15,20 @@
  *   limitations under the License.
  */
 
-// Include.
-pub mod app_main;
-pub mod app_signal;
-pub mod launcher;
-pub mod state;
+use r3bl_ansi_color::{AnsiStyledText, Style};
+use r3bl_rs_utils_core::{throws, CommonResult};
+use r3bl_tuify::LIGHT_GRAY_COLOR;
 
-// Reexport.
-pub use app_main::*;
-pub use app_signal::*;
-pub use launcher::*;
-pub use state::*;
+// 00: copy ex_editor/launcher.rs
+pub async fn run_app(file_path: Option<String>) -> CommonResult<()> {
+    throws!({
+        AnsiStyledText {
+            text: &format!(
+                "🔅 TODO implement edi_launcher::open_editor({:?}) 🔅",
+                file_path
+            ),
+            style: &[Style::Foreground(LIGHT_GRAY_COLOR)],
+        }
+        .println();
+    })
+}
