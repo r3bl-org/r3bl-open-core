@@ -15,10 +15,14 @@
  *   limitations under the License.
  */
 
-use std::env::var;
+use std::{env::var, process::Command};
 
 use r3bl_ansi_color::{AnsiStyledText, Style};
-use r3bl_rs_utils_core::UnicodeString;
+use r3bl_rs_utils_core::{log_error,
+                         CommonError,
+                         CommonErrorType,
+                         CommonResult,
+                         UnicodeString};
 use r3bl_tui::{ColorWheel, GradientGenerationPolicy, TextColorizationPolicy};
 use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, LIGHT_GRAY_COLOR};
 
@@ -97,4 +101,29 @@ pub fn show_exit_message() {
     });
 }
 
-pub fn get_username() -> String { std::env::var("USER").unwrap_or("unknown".to_string()) }
+/// Call this function when you can't even execute [Command::output] and something unknown
+/// has gone wrong. Propagate the error to the caller since it is not recoverable and can't
+/// be handled.
+pub fn report_unknown_error_and_propagate<T>(
+    command: &mut Command,
+    command_output_error: std::io::Error,
+) -> CommonResult<T> {
+    let program_name_to_string: String =
+        command.get_program().to_string_lossy().to_string();
+
+    let command_args_to_string: String = {
+        let mut it = vec![];
+        for item in command.get_args() {
+            it.push(item.to_string_lossy().to_string());
+        }
+        it.join(" ")
+    };
+
+    let error_msg = format!(
+        "Error executing command: '{} {}'. Error: {}",
+        program_name_to_string, command_args_to_string, command_output_error
+    );
+
+    log_error(error_msg.clone());
+    CommonError::new::<T>(CommonErrorType::CommandExecutionError, &error_msg)
+}
