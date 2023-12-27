@@ -15,5 +15,8 @@
  *   limitations under the License.
  */
 
+// Attach.
 pub mod branch;
+
+// Re-export.
 pub use branch::*;

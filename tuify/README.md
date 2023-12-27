@@ -22,7 +22,7 @@
   - [Create your style](#create-your-style)
 - [Build, run, test tasks](#build-run-test-tasks)
   - [Prerequisites](#prerequisites)
-  - [Nu shell scripts to build, run, test etc.](#nu-shell-scripts-to-build-run-test-etc)
+  - [Nu shell scripts to build, run, test, etc.](#nu-shell-scripts-to-build-run-test-etc)
 - [References](#references)
 
 <!-- /TOC -->
@@ -59,13 +59,13 @@ r3bl_rs_utils_core = "0.9.9" # Get the latest version at the time you get this.
 
 The following example illustrates how you can use this as a library. The function that does the work
 of rendering the UI is called [`select_from_list`](crate::select_from_list). It takes a list of
-items, and returns the selected item or items (depending on the selection mode). If the user does
-not select anything, it returns `None`. The function also takes the maximum height and width of the
+items and returns the selected item or items (depending on the selection mode). If the user does not
+select anything, it returns `None`. The function also takes the maximum height and width of the
 display, and the selection mode (single select or multiple select).
 
-It works on macOS, Linux, and Windows. And is aware of terminal color output limitations of each.
-For eg, it uses Windows API on Windows for keyboard input. And on macOS Terminal.app it restricts
-color output to a 256 color palette.
+It works on macOS, Linux, and Windows. And is aware of the terminal color output limitations of
+each. For eg, it uses Windows API on Windows for keyboard input. And on macOS Terminal.app it
+restricts color output to a 256 color palette.
 
 ## APIs
 
@@ -139,7 +139,7 @@ fn main() -> Result<()> {
 
 <a id="markdown-select_from_list_with_multi_line_header" name="select_from_list_with_multi_line_header"></a>
 
-Use `select_from_list_with_multi_line_header` API if you want to display a list of items with a
+Use the `select_from_list_with_multi_line_header` API if you want to display a list of items with a
 multi line header. The first 5 lines are all part of the multi line header.
 
 ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/2f82a42c-f720-4bcb-925d-0d5ad0b0a3c9)
@@ -241,7 +241,7 @@ fn multi_select_instructions() -> Vec<Vec<AnsiStyledText<'static>>> {
 }
 
 fn main() -> Result<()> {
-   let header = AnsiStyledText {
+    let header = AnsiStyledText {
         text: " Please select one or more items. This is a really long heading that just keeps going and if your terminal viewport is small enough, this heading will be clipped",
         style: &[
             RStyle::Foreground(Color::Rgb(171, 204, 242)),
@@ -249,13 +249,11 @@ fn main() -> Result<()> {
         ],
     };
 
-   let line_5 = vec![header];
-
-    let mut instructions: Vec<Vec<AnsiStyledText>> = multi_select_instructions();
-    instructions.push(line_5);
+    let mut instructions_and_header: Vec<Vec<AnsiStyledText>> = multi_select_instructions();
+    instructions_and_header.push(vec![header]);
 
     let user_input = select_from_list_with_multi_line_header(
-        vec![instructions, vec![header]],
+        instructions_and_header,
         [
             "item 1 of 13",
             "item 2 of 13",
@@ -298,9 +296,9 @@ Here's a demo of the binary target of this crate in action.
 https://github-production-user-asset-6210df.s3.amazonaws.com/2966499/267427392-2b42db72-cd62-4ea2-80ae-ccc01008190c.mp4
 
 You can install the binary using `cargo install r3bl_tuify` (from crates.io). Or
-`cargo install --path .` from source. Once installed, you can `rt` is a command line tool that
-allows you to select one of the options from the list that is passed into it via `stdin`. It
-supports both `stdin` and `stdout` piping.
+`cargo install --path .` from source. `rt` is a command line tool that allows you to select one of
+the options from the list that is passed into it via `stdin`. It supports both `stdin` and `stdout`
+piping.
 
 Here are the command line arguments that it accepts:
 
@@ -315,7 +313,7 @@ Here are the command line arguments that it accepts:
 <a id="markdown-interactive-user-experience" name="interactive-user-experience"></a>
 
 Typically a CLI app is not interactive. You can pass commands, subcommands, options, and arguments
-to it, but if you get something wrong, then you get an error, and have to start all over again. This
+to it, but if you get something wrong, then you get an error and have to start all over again. This
 "conversation" style interface might require a lot of trial and error to get the desired result.
 
 The following is an example of using the binary with many subcommands, options, and arguments.
@@ -350,12 +348,11 @@ What does this do?
    the selected item to `stdout`.
 
 Now that is a lot to remember. It is helpful to use `clap` to provide nice command line help but
-that is still quite a few things that you have to get right in order for this command to work.
+that are still quite a few things that you have to get right for this command to work.
 
-It doesn't have to be this way. It is entirely possible for the binary to be interactive along with
-the use of `clap` to specify some of the subcommands, and arguments. It doesn't have to be an all or
-nothing approach. We can have the best of both worlds. The following videos illustrate what happens
-when:
+It doesn't have to be this way. The binary can be interactive along with the use of `clap` to
+specify some of the subcommands, and arguments. It doesn't have to be an all or nothing approach. We
+can have the best of both worlds. The following videos illustrate what happens when:
 
 1. `--selection-mode` and `--command-to-run-with-each-selection` are _not_ passed in the command
    line.
@@ -367,10 +364,10 @@ when:
    Here are the 3 scenarios that can happen:
 
    - The user first chooses `single` selection mode (using a list selection component), and then
-     types in `echo %` in the terminal, as the command to run with each selection. This is the
-     really interactive scenario, since the user has to provide 2 pieces of information: the
-     selection mode, and the command to run with each selection. They didn't provide this up front
-     when they ran the command.
+     types in `echo %` in the terminal, as the command to run with each selection. This is an
+     interactive scenario since the user has to provide 2 pieces of information: the selection mode,
+     and the command to run with each selection. They didn't provide this upfront when they ran the
+     command.
      <!-- tuify-interactive-happy-path -->
 
      https://github.com/r3bl-org/r3bl-open-core/assets/2966499/51de8867-513b-429f-aff2-63dd25d71c82
@@ -428,12 +425,11 @@ Here is a list.
   1. `ls -la | rt -s multiple | xargs -0` - does not expect `stdout` to be piped out, and prints
      help.
 
-> Due to the way in which unix pipes are implemented, it is not possible to pipe the `stdout` of
-> this command to anything else. Unix pipes are non blocking. So there is no way to stop the pipe
-> "mid way". This is why `rt` displays an error when the `stdout` is piped out. It is not possible
-> to pipe the `stdout` of `rt` to another command. Instead, the `rt` binary simply takes a command
-> that it will run after the user has made their selection. Using the selected item(s) and applying
-> them to this command.
+> Due to how unix pipes are implemented, it is not possible to pipe the `stdout` of this command to
+> anything else. Unix pipes are nonblocking. So there is no way to stop the pipe "midway". This is
+> why `rt` displays an error when the `stdout` is piped out. It is not possible to pipe the `stdout`
+> of `rt` to another command. Instead, the `rt` binary simply takes a command that will run after
+> the user has made their selection. Using the selected item(s) and applying them to this command.
 
 ## Style the components
 
@@ -578,8 +574,8 @@ fn main() -> Result<()> {
 
 <a id="markdown-prerequisites" name="prerequisites"></a>
 
-🌠 In order for these to work you have to install the Rust toolchain, `nu`, `cargo-watch`, `bat`,
-and `flamegraph` on your system. Here are the instructions:
+🌠 For these to work you have to install the Rust toolchain, `nu`, `cargo-watch`, `bat`, and
+`flamegraph` on your system. Here are the instructions:
 
 1. Install the Rust toolchain using `rustup` by following the instructions
    [here](https://rustup.rs/).
@@ -589,12 +585,9 @@ and `flamegraph` on your system. Here are the instructions:
 1. Install [`nu`](https://crates.io/crates/nu) shell on your system using `cargo install nu`. It is
    available for Linux, macOS, and Windows.
 
-### Nu shell scripts to build, run, test etc.
+### Nu shell scripts to build, run, test, etc.
 
-<a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test-etc." name="nu-shell-scripts-to-build%2C-run%2C-test-etc."></a>
-
-<a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test-etc."
-name="nu-shell-scripts-to-build%2C-run%2C-test-etc."></a>
+<a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test%2C-etc." name="nu-shell-scripts-to-build%2C-run%2C-test%2C-etc."></a>
 
 Go to the `tuify` folder and run the commands below. These commands are defined in the `./run`
 folder.
@@ -628,12 +621,12 @@ There's also a `run` script at the **top level folder** of the repo. It is inten
 CI/CD environment w/ all the required arguments supplied or in interactive mode, where the user will
 be prompted for input.
 
-| Command                      | Description                                                                                                                                                                                                                                            |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `nu run all`                 | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD                                                                                                                                                                                  |
-| `nu run build-full`          | This will build all the crates in the Rust workspace. And it will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
-| `nu run install-cargo-tools` | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`, `flamegraph` will all be installed in one go)                                                                                         |
-| `nu run check-licenses`      | Use `cargo-deny` to audit all licenses used in the Rust workspace                                                                                                                                                                                      |
+| Command                      | Description                                                                                                                                                                                                                                        |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `nu run all`                 | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD                                                                                                                                                                              |
+| `nu run build-full`          | This will build all the crates in the Rust workspace. It will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
+| `nu run install-cargo-tools` | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`, and `flamegraph` will all be installed in one go)                                                                                 |
+| `nu run check-licenses`      | Use `cargo-deny` to audit all licenses used in the Rust workspace                                                                                                                                                                                  |
 
 ## References
 

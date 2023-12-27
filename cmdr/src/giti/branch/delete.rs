@@ -17,24 +17,45 @@
 
 use std::process::Command;
 
-use r3bl_ansi_color::{AnsiStyledText, Style};
+use r3bl_ansi_color::{AnsiStyledText, Color, Style};
 use r3bl_rs_utils_core::CommonResult;
-use r3bl_tuify::{SelectionMode, DELETE_BRANCH, DELETE_BRANCHES, EXIT};
+use r3bl_tuify::{select_from_list_with_multi_line_header,
+                 SelectionMode,
+                 StyleSheet,
+                 DELETE_BRANCH,
+                 DELETE_BRANCHES,
+                 EXIT};
 use try_delete_branch_user_choice::Selection::{self, *};
 
-use crate::{ask_user_to_select_from_list,
-            giti_ui_templates::multi_select_instruction_header,
-            report_unknown_error_and_propagate};
+use crate::{giti_ui_templates::multi_select_instruction_header,
+            report_unknown_error_and_propagate,
+            single_select_instruction_header};
 
 pub fn try_delete_branch() -> CommonResult<()> {
-    multi_select_instruction_header();
+    let default_header_style = [
+        Style::Foreground(Color::Rgb(171, 204, 242)),
+        Style::Background(Color::Rgb(31, 36, 46)),
+    ];
+
+    let instructions_and_branches_to_delete = {
+        let mut instructions_and_branches_to_delete = multi_select_instruction_header();
+        let header = AnsiStyledText {
+            text: " Please select branches you want to delete",
+            style: &default_header_style,
+        };
+        instructions_and_branches_to_delete.push(vec![header]);
+        instructions_and_branches_to_delete
+    };
 
     let branches = try_execute_git_command_to_get_branches()?;
 
-    let maybe_selected_branches = ask_user_to_select_from_list(
+    let maybe_selected_branches = select_from_list_with_multi_line_header(
+        instructions_and_branches_to_delete,
         branches,
-        "Please select branches you want to delete".to_string(),
+        Some(20),
+        None,
         SelectionMode::Multiple,
+        StyleSheet::default(),
     );
 
     if let Some(branches) = maybe_selected_branches {
@@ -61,10 +82,24 @@ pub fn try_delete_branch() -> CommonResult<()> {
             }
         };
 
-        let maybe_selected_delete_or_exit = ask_user_to_select_from_list(
+        let instructions_and_confirm_deletion_options = {
+            let mut instructions_and_confirm_deletion_header =
+                single_select_instruction_header();
+            let header = AnsiStyledText {
+                text: &confirm_branch_deletion_header,
+                style: &default_header_style,
+            };
+            instructions_and_confirm_deletion_header.push(vec![header]);
+            instructions_and_confirm_deletion_header
+        };
+
+        let maybe_selected_delete_or_exit = select_from_list_with_multi_line_header(
+            instructions_and_confirm_deletion_options,
             confirm_deletion_options,
-            confirm_branch_deletion_header,
+            Some(20),
+            None,
             SelectionMode::Single,
+            StyleSheet::default(),
         );
 
         if let Some(selected) = maybe_selected_delete_or_exit {
@@ -105,7 +140,7 @@ pub fn try_delete_branch() -> CommonResult<()> {
                     }
                 }
 
-                Exit => return Ok(()),
+                Exit => return Ok(println!("You chose not to delete any branches.")),
             }
         }
     }
@@ -154,8 +189,7 @@ mod try_delete_branch_inner {
                     let branch = &branches[0];
                     AnsiStyledText {
                         text: &format!(
-                            "Failed to delete branch: {}!\n\n{}",
-                            branch,
+                            "Failed to delete branch: {branch}!\n\n{}",
                             String::from_utf8_lossy(&output.stderr)
                         ),
                         style: &[Style::Foreground(FAILED_COLOR)],
@@ -165,8 +199,7 @@ mod try_delete_branch_inner {
                     let branches = branches.join(",\n ╴");
                     AnsiStyledText {
                         text: &format!(
-                            "Failed to delete branches:\n ╴{}!\n\n{}",
-                            branches,
+                            "Failed to delete branches:\n ╴{branches}!\n\n{}",
                             String::from_utf8_lossy(&output.stderr)
                         ),
                         style: &[Style::Foreground(FAILED_COLOR)],
@@ -178,8 +211,7 @@ mod try_delete_branch_inner {
                 let branches = branches.join(",\n ╴");
                 AnsiStyledText {
                     text: &format!(
-                        "Failed to run command to delete branches:\n ╴{}!",
-                        branches
+                        "Failed to run command to delete branches:\n ╴{branches}!"
                     ),
                     style: &[Style::Foreground(FAILED_COLOR)],
                 }
@@ -209,7 +241,7 @@ mod try_delete_branch_inner {
             style: &[Style::Foreground(LIGHT_GRAY_COLOR)],
         };
         AnsiStyledText {
-            text: &format!("✅ {} {}", deleted_branch, deleted).as_str(),
+            text: &format!("✅ {deleted_branch} {deleted}").as_str(),
             style: &[Style::Foreground(SUCCESS_COLOR)],
         }
         .println();
@@ -226,7 +258,7 @@ mod try_delete_branch_inner {
                 style: &[Style::Foreground(LIGHT_GRAY_COLOR)],
             };
             AnsiStyledText {
-                text: &format!("✅ {} {}", deleted_branch, deleted).as_str(),
+                text: &format!("✅ {deleted_branch} {deleted}").as_str(),
                 style: &[Style::Foreground(SUCCESS_COLOR)],
             }
             .println();

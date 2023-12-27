@@ -20,17 +20,18 @@
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use clap_config::*;
-use giti::{branch::delete::try_delete_branch,
-           giti_ui_templates::ask_user_to_select_from_list,
-           *};
-use r3bl_ansi_color::{AnsiStyledText, Style};
+use giti::{branch::delete::try_delete_branch, *};
+use r3bl_ansi_color::{AnsiStyledText, Color, Style};
 use r3bl_cmdr::giti;
 use r3bl_rs_utils_core::{call_if_true,
                          log_debug,
                          log_error,
                          try_to_set_log_level,
                          CommonResult};
-use r3bl_tuify::{SelectionMode, FAILED_COLOR};
+use r3bl_tuify::{components::style::StyleSheet,
+                 select_from_list_with_multi_line_header,
+                 SelectionMode,
+                 FAILED_COLOR};
 
 fn main() {
     // If no args are passed, the following line will fail, and help will be printed
@@ -44,7 +45,15 @@ fn main() {
         log_debug(format!("cli_args {:?}", cli_arg));
     });
 
-    match try_run_program(cli_arg) {
+    launch_giti(cli_arg);
+
+    call_if_true!(enable_logging, {
+        log_debug("Stop logging...".to_string());
+    });
+}
+
+pub fn launch_giti(cli_arg: CLIArg) {
+    match try_run_command(cli_arg) {
         // Command ran successfully.
         Ok(_) => {
             giti_ui_templates::show_exit_message();
@@ -63,13 +72,9 @@ fn main() {
             .println();
         }
     }
-
-    call_if_true!(enable_logging, {
-        log_debug("Stop logging...".to_string());
-    });
 }
 
-fn try_run_program(giti_app_args: CLIArg) -> CommonResult<()> {
+pub fn try_run_command(giti_app_args: CLIArg) -> CommonResult<()> {
     match giti_app_args.command {
         CLICommand::Branch {
             command_to_run_with_each_selection,
@@ -86,10 +91,27 @@ fn try_run_program(giti_app_args: CLIArg) -> CommonResult<()> {
                     command_to_run_with_each_selection: None,
                 });
 
-                let maybe_selected = ask_user_to_select_from_list(
+                let instructions_and_select_branch_subcommand = {
+                    let mut instructions_and_select_branch_subcommand =
+                        giti_ui_templates::single_select_instruction_header();
+                    let header = AnsiStyledText {
+                        text: "Please select a branch subcommand",
+                        style: &[
+                            Style::Foreground(Color::Rgb(171, 204, 242)),
+                            Style::Background(Color::Rgb(31, 36, 46)),
+                        ],
+                    };
+                    instructions_and_select_branch_subcommand.push(vec![header]);
+                    instructions_and_select_branch_subcommand
+                };
+
+                let maybe_selected = select_from_list_with_multi_line_header(
+                    instructions_and_select_branch_subcommand,
                     options,
-                    "Please select a branch subcommand".to_string(),
+                    Some(20),
+                    None,
                     SelectionMode::Single,
+                    StyleSheet::default(),
                 );
 
                 if let Some(selected) = maybe_selected {
