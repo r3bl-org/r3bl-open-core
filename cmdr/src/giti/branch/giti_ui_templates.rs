@@ -17,59 +17,77 @@
 
 use std::{env::var, process::Command};
 
-use r3bl_ansi_color::{AnsiStyledText, Style};
+use r3bl_ansi_color::{AnsiStyledText, Color, Style};
 use r3bl_rs_utils_core::{log_error,
                          CommonError,
                          CommonErrorType,
                          CommonResult,
                          UnicodeString};
 use r3bl_tui::{ColorWheel, GradientGenerationPolicy, TextColorizationPolicy};
-use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, LIGHT_GRAY_COLOR};
+use r3bl_tuify::LIGHT_GRAY_COLOR;
 
-pub fn multi_select_instruction_header() {
-    AnsiStyledText {
-        text: &format!(
-            "{}{}{}{}",
-            "┆ Up or Down:      navigate\n",
-            "┆ Space:           select or unselect branches\n",
-            "┆ Return:          confirm selection\n",
-            "┆ Esc:             exit program\n",
-        ),
-        style: &[Style::Foreground(LIGHT_GRAY_COLOR)],
-    }
-    .println();
+
+pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
+    let up_and_down = AnsiStyledText {
+        text: " Up or down:     navigate",
+        style: &[
+            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+
+    let space = AnsiStyledText {
+        text: " Space:          select or deselect item",
+        style: &[
+            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+
+    let esc = AnsiStyledText {
+        text: " Esc or Ctrl+C:  exit program",
+        style: &[
+            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+
+    let return_key = AnsiStyledText {
+        text: " Return:         confirm selection",
+        style: &[
+            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+
+    vec![vec![up_and_down], vec![space], vec![esc], vec![return_key]]
 }
 
-pub fn single_select_instruction_header() {
-    AnsiStyledText {
-        text: &format!(
-            "{}{}{}",
-            "┆ Up or Down:      navigate\n",
-            "┆ Return:          confirm selection\n",
-            "┆ Esc:             exit program\n",
-        ),
-        style: &[Style::Foreground(LIGHT_GRAY_COLOR)],
-    }
-    .println();
-}
+pub fn single_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
+    let up_or_down = AnsiStyledText {
+        text: " Up or down:     navigate",
+        style: &[
+            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+    let esc = AnsiStyledText {
+        text: " Esc or Ctrl+C:  exit program",
+        style: &[
+            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
 
-pub fn ask_user_to_select_from_list(
-    options: Vec<String>,
-    header: String,
-    selection_mode: SelectionMode,
-) -> Option<Vec<String>> {
-    let max_height_row_count = 20;
-    let max_width_col_count = 0;
-    let style = StyleSheet::default();
-    let user_input = select_from_list(
-        header,
-        options,
-        max_height_row_count,
-        max_width_col_count,
-        selection_mode,
-        style,
-    );
-    user_input
+    let return_key = AnsiStyledText {
+        text: " Return:         confirm selection",
+        style: &[
+            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Background(Color::Rgb(14, 17, 23)),
+        ],
+    };
+
+    vec![vec![up_or_down], vec![esc], vec![return_key]]
 }
 
 pub fn show_exit_message() {
@@ -78,7 +96,7 @@ pub fn show_exit_message() {
             Ok(username) => {
                 format!("Goodbye, {} 👋 🦜. Thanks for using giti!", username)
             }
-            Err(_) => "Thanks for using giti! 👋 🦜".to_owned(),
+            Err(_) => "  Thanks for using giti! 👋 🦜".to_owned(),
         };
 
         let please_star_us = format!(
