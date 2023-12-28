@@ -15,20 +15,25 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_rs_utils_core::{throws, CommonResult};
-use r3bl_tuify::LIGHT_GRAY_COLOR;
+use r3bl_tui::*;
 
-// 00: copy ex_editor/launcher.rs
-pub async fn run_app(file_path: Option<String>) -> CommonResult<()> {
+use crate::edi::{constructor, AppMain};
+
+pub async fn run_app(maybe_file_path: Option<String>) -> CommonResult<()> {
     throws!({
-        AnsiStyledText {
-            text: &format!(
-                "🔅 TODO implement edi_launcher::open_editor({:?}) 🔅",
-                file_path
-            ),
-            style: &[Style::Foreground(LIGHT_GRAY_COLOR)],
-        }
-        .println();
+        // Create a new state from the file path.
+        let state = constructor::new(&maybe_file_path);
+
+        // Create a new app.
+        let app = AppMain::new_boxed();
+
+        // Exit if these keys are pressed.
+        let exit_keys: Vec<InputEvent> = vec![InputEvent::Keyboard(
+            keypress! { @char ModifierKeysMask::new().with_ctrl(), 'q' },
+        )];
+
+        // Create a window.
+        TerminalWindow::main_event_loop(app, exit_keys, state).await?;
     })
 }

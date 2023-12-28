@@ -29,8 +29,7 @@ use r3bl_tui::{ColorWheel, GradientGenerationPolicy, TextColorizationPolicy};
 
 use crate::clap_config::CLIArg;
 
-// 00: copy ex_editor example here
-// 00: handle analytics flag
+// 00: [_] handle analytics flag
 
 #[tokio::main]
 async fn main() -> CommonResult<()> {

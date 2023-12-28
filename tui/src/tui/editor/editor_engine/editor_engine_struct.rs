@@ -85,9 +85,7 @@ mod editor_engine_config_options_impl {
         fn default() -> Self {
             Self {
                 multiline_mode: LineMode::MultiLine,
-                syntax_highlight: SyntaxHighlightMode::Enable(
-                    DEFAULT_SYN_HI_FILE_EXT.to_string(),
-                ),
+                syntax_highlight: SyntaxHighlightMode::Enable,
                 edit_mode: EditMode::ReadWrite,
             }
         }
@@ -109,22 +107,5 @@ pub enum LineMode {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SyntaxHighlightMode {
     Disable,
-    /// This is only the default for buffers that are created by the component when not passed in
-    /// via state. The String represents the `file_extension_for_new_empty_buffer` which is used as
-    /// the argument to [EditorBuffer::new_empty()](EditorBuffer::new_empty()) when creating a new
-    /// editor buffer.
-    Enable(String),
-}
-
-mod syntax_highlight_config_impl {
-    use super::*;
-
-    impl SyntaxHighlightMode {
-        pub fn get_file_extension_for_new_empty_buffer(&self) -> Option<String> {
-            match self {
-                SyntaxHighlightMode::Disable => None,
-                SyntaxHighlightMode::Enable(ref ext) => Some(ext.clone()),
-            }
-        }
-    }
+    Enable,
 }

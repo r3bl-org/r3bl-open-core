@@ -177,7 +177,7 @@ impl EditorEngineApi {
 
         let syntax_highlight_enabled = matches!(
             editor_engine.config_options.syntax_highlight,
-            SyntaxHighlightMode::Enable(_)
+            SyntaxHighlightMode::Enable
         );
 
         if !syntax_highlight_enabled {
@@ -193,25 +193,52 @@ impl EditorEngineApi {
 
         // BOOKM: Render using syntect first, then custom MD parser.
 
-        // Render using syntect first.
-        call_if_true!(ENABLE_SYNTECT_MD_PARSE_AND_HIGHLIGHT, {
-            syn_hi_syntect_path::render_content(
+        call_if_true!(
+            DEBUG_TUI_MOD,
+            log_debug(format!(
+                "\n🍉🍉🍉\n\t{0}\n\t{1}\n\t{2}\n🍉🍉🍉",
+                /* 0 */
+                format!(
+                    "editor_buffer.is_file_extension_default(): {}",
+                    editor_buffer.is_file_extension_default()
+                )
+                .to_string()
+                .magenta(),
+                /* 1 */
+                format!(
+                    "editor_engine.config_options.syntax_highlight: {:?}",
+                    editor_engine.config_options.syntax_highlight
+                )
+                .to_string()
+                .blue(),
+                /* 2 */
+                format!(
+                    "editor_buffer.get_maybe_file_extension(): {:?}",
+                    editor_buffer.get_maybe_file_extension()
+                )
+                .to_string()
+                .green(),
+            ))
+        );
+
+        match editor_buffer.is_file_extension_default() {
+            // Render using custom MD parser.
+            true => syn_hi_r3bl_path::render_content(
                 editor_buffer,
                 max_display_row_count,
                 render_ops,
                 editor_engine,
                 max_display_col_count,
-            );
-        });
-
-        // Any overrides can be applied here.
-        syn_hi_r3bl_path::render_content(
-            editor_buffer,
-            max_display_row_count,
-            render_ops,
-            editor_engine,
-            max_display_col_count,
-        );
+            ),
+            // Render using syntect.
+            false => syn_hi_syntect_path::render_content(
+                editor_buffer,
+                max_display_row_count,
+                render_ops,
+                editor_engine,
+                max_display_col_count,
+            ),
+        };
     }
 
     // BOOKM: Render selection
