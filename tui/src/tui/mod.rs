@@ -26,9 +26,6 @@
 ///    [r3bl_rs_utils_core::log_error] fails, then it will print the error to stderr.
 pub const DEBUG_TUI_MOD: bool = true;
 
-/// False means that only the custom r3bl MD parser is used w/ no fallback on syntect.
-pub const ENABLE_SYNTECT_MD_PARSE_AND_HIGHLIGHT: bool = false;
-
 /// Enable or disable MD parser debug logging. This makes the parser very slow when
 /// enabled.
 pub const DEBUG_MD_PARSER: bool = false;

@@ -54,6 +54,12 @@ clap = { version = "4.4.6", features = ["derive", "wrap_help", "help"] }
 # serde-json
 serde_json = "1.0.107"
 
+# Time
+chrono = "0.4.31"
+
+# Misc
+rand = "0.8.5"
+
 [dev-dependencies]
 pretty_assertions = "1.4.0"
 serial_test = "2.0.0"

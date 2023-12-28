@@ -55,7 +55,7 @@ mod constructor {
     impl Default for AppMain {
         fn default() -> Self {
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("🪙 {}", "construct ex_rc::AppWithLayout");
+                let msg = format!("🪙 {}", "construct ex_rc::AppMain");
                 log_debug(msg);
             });
             Self

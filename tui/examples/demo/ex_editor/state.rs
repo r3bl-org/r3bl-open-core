@@ -27,11 +27,11 @@ pub struct State {
     pub dialog_buffers: HashMap<FlexBoxId, DialogBuffer>,
 }
 
-mod state_impl_default {
+mod constructor {
     use super::*;
 
     impl Default for State {
-        fn default() -> Self { state_impl_default::get_initial_state() }
+        fn default() -> Self { constructor::get_initial_state() }
     }
 
     pub fn get_initial_state() -> State {
@@ -115,7 +115,7 @@ mod state_impl_default {
     }
 }
 
-mod state_impl_editor_support {
+mod impl_editor_support {
     use super::*;
 
     impl HasEditorBuffers for State {
@@ -137,7 +137,7 @@ mod state_impl_editor_support {
     }
 }
 
-mod state_impl_dialog_support {
+mod impl_dialog_support {
     use super::*;
 
     impl HasDialogBuffers for State {
@@ -147,7 +147,7 @@ mod state_impl_dialog_support {
     }
 }
 
-mod state_impl_debug_format {
+mod impl_debug_format {
     use super::*;
 
     impl Display for State {

@@ -56,14 +56,13 @@ pub mod editor_component_impl_component_trait {
     fn get_existing_mut_editor_buffer_from_state_or_create_new_one<'a, S>(
         mut_state: &'a mut S,
         self_id: FlexBoxId,
-        maybe_file_extension_for_new_empty_buffer: Option<String>,
     ) -> &'a mut EditorBuffer
     where
         S: HasEditorBuffers + Default + Clone + Debug + Sync + Send,
     {
         // Add an empty editor buffer if it doesn't exist.
         if !mut_state.contains_editor_buffer(self_id) {
-            let it = EditorBuffer::new_empty(maybe_file_extension_for_new_empty_buffer);
+            let it = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_string()));
             mut_state.insert_editor_buffer(self_id, it);
         }
         // Safe to call unwrap here, since we are guaranteed to have an editor buffer.
@@ -102,12 +101,7 @@ pub mod editor_component_impl_component_trait {
 
             let editor_buffer =
                 get_existing_mut_editor_buffer_from_state_or_create_new_one(
-                    state,
-                    self_id,
-                    editor_engine
-                        .config_options
-                        .syntax_highlight
-                        .get_file_extension_for_new_empty_buffer(),
+                    state, self_id,
                 );
 
             EditorEngineApi::render_engine(
@@ -147,12 +141,7 @@ pub mod editor_component_impl_component_trait {
 
                 let mut_editor_buffer: &mut EditorBuffer =
                     get_existing_mut_editor_buffer_from_state_or_create_new_one(
-                        state,
-                        self_id,
-                        editor_engine
-                            .config_options
-                            .syntax_highlight
-                            .get_file_extension_for_new_empty_buffer(),
+                        state, self_id,
                     );
 
                 // BOOKM: editor component processes input event here
