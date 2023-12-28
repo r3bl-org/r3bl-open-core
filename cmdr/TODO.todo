@@ -16,7 +16,7 @@ edi ui <https://github.com/r3bl-org/r3bl-open-core/issues/188>:
   ✔ if multiple filenames are passed in show an message, and use tuify to proceed or exit @done(23-12-27 12:26)
   ✔ handle logging flag @done(23-12-27 14:40)
   ✔ change tui main_event_loop() to receive a state argument @done(23-12-27 19:19)
-  ☐ create a state struct to read contents of a file
+  ✔ create state struct to read contents of a file & write tests @done(23-12-27 19:37)
   ☐ only edit a single file (copy from ex_editor example)
   ☐ show filename, ext in status bar
   ☐ show quick actions in status bar (eg: help, save, open, quit)

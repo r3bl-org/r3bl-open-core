@@ -167,18 +167,18 @@ use crate::*;
 /// - The value is the [SelectionRange].
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Default)]
 pub struct EditorBuffer {
-    pub(crate) editor_content: EditorContent,
-    pub(crate) history: EditorBufferHistory,
-    pub(crate) render_cache: HashMap<String, RenderOps>,
+    pub editor_content: EditorContent,
+    pub history: EditorBufferHistory,
+    pub render_cache: HashMap<String, RenderOps>,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Default)]
 pub struct EditorContent {
-    pub(crate) lines: Vec<UnicodeString>,
-    pub(crate) caret_display_position: Position,
-    pub(crate) scroll_offset: ScrollOffset,
-    pub(crate) maybe_file_extension: Option<String>,
-    pub(crate) selection_map: SelectionMap,
+    pub lines: Vec<UnicodeString>,
+    pub caret_display_position: Position,
+    pub scroll_offset: ScrollOffset,
+    pub maybe_file_extension: Option<String>,
+    pub selection_map: SelectionMap,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]

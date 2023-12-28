@@ -43,7 +43,7 @@ pub mod state_constructor {
                 editor_buffer
             };
             let mut it = HashMap::new();
-            it.insert(FlexBoxId::from(Id::Editor as u8), editor_buffer);
+            it.insert(FlexBoxId::from(Id::Editor), editor_buffer);
             it
         };
 
@@ -83,7 +83,9 @@ pub mod state_constructor {
 
 #[cfg(test)]
 mod state_tests {
-    use r3bl_tui::generate_random_friendly_id;
+    use r3bl_tui::{generate_random_friendly_id, FlexBoxId};
+
+    use crate::edi::Id;
 
     #[test]
     fn test_file_extension() {
@@ -128,7 +130,6 @@ mod state_tests {
     fn test_read_file_content() {
         // Make up a file name.
         let filename = format!("/tmp/{}_file.md", generate_random_friendly_id());
-
         println!("🍍🍎🍏filename: {}", filename);
 
         // Write some content to this file.
@@ -143,5 +144,52 @@ mod state_tests {
     }
 
     #[test]
-    fn test_state_constructor() {}
+    fn test_state_constructor() {
+        // Make up a file name.
+        let filename = format!("/tmp/{}_file.md", generate_random_friendly_id());
+        println!("🍍🍎🍏filename: {}", filename);
+
+        // Write some content to this file.
+        let content = "This is a test.\nThis is only a test.";
+        std::fs::write(filename.clone(), content).unwrap();
+
+        // Create a state.
+        let state = super::state_constructor::new(Some(filename.clone()));
+
+        // Check the state.
+        assert_eq!(state.editor_buffers.len(), 1);
+        assert_eq!(state.dialog_buffers.len(), 0);
+        assert_eq!(
+            state
+                .editor_buffers
+                .contains_key(&FlexBoxId::from(Id::Editor)),
+            true
+        );
+        assert_eq!(
+            state
+                .editor_buffers
+                .get(&FlexBoxId::from(Id::Editor))
+                .unwrap()
+                .editor_content
+                .lines
+                .len(),
+            2
+        );
+        assert_eq!(
+            state
+                .editor_buffers
+                .get(&FlexBoxId::from(Id::Editor))
+                .unwrap()
+                .editor_content
+                .lines
+                .iter()
+                .map(|us| us.string.clone())
+                .collect::<Vec<String>>()
+                .join("\n"),
+            content
+        );
+
+        // Delete the file.
+        std::fs::remove_file(filename).unwrap();
+    }
 }

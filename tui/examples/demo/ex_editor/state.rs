@@ -43,7 +43,7 @@ mod state_impl_default {
                 editor_buffer
             };
             let mut it = HashMap::new();
-            it.insert(FlexBoxId::from(Id::Editor as u8), editor_buffer);
+            it.insert(FlexBoxId::from(Id::Editor), editor_buffer);
             it
         };
 
