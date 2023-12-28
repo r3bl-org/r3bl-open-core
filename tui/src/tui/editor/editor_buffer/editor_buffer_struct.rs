@@ -607,6 +607,13 @@ pub mod access_and_mutate {
     use super::*;
 
     impl EditorBuffer {
+        pub fn is_file_extension_default(&self) -> bool {
+            match self.editor_content.maybe_file_extension {
+                Some(ref ext) => ext == DEFAULT_SYN_HI_FILE_EXT,
+                None => false,
+            }
+        }
+
         pub fn has_file_extension(&self) -> bool {
             self.editor_content.maybe_file_extension.is_some()
         }

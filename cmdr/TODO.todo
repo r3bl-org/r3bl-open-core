@@ -17,10 +17,13 @@ edi ui <https://github.com/r3bl-org/r3bl-open-core/issues/188>:
   ✔ handle logging flag @done(23-12-27 14:40)
   ✔ change tui main_event_loop() to receive a state argument @done(23-12-27 19:19)
   ✔ create state struct to read contents of a file & write tests @done(23-12-27 19:37)
-  ☐ only edit a single file (copy from ex_editor example)
+  ✔ only edit a single file (copy from ex_editor example) @done(23-12-28 14:31)
+  ✔ based on file ext: @done(23-12-28 19:30)
+    ✔ use the syntect hi or custom one (.md DEFAULT_SYN_HI_FILE_EXT only) @done(23-12-28 19:30)
+    ✔ not this bool ENABLE_SYNTECT_MD_PARSE_AND_HIGHLIGHT @done(23-12-28 19:30)
+  ☐ implement save action (for a file that's opened from disk)
   ☐ show filename, ext in status bar
   ☐ show quick actions in status bar (eg: help, save, open, quit)
-  ☐ implement save action (for a file that's opened from disk)
   ☐ implement save action (for a new buffer)
 
 edi and giti analytics:
