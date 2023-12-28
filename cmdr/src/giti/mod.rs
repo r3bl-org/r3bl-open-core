@@ -17,6 +17,12 @@
 
 // Attach.
 pub mod branch;
+pub mod clap_config;
+pub mod common_types;
+pub mod ui_strings;
 
 // Re-export.
 pub use branch::*;
+pub use clap_config::*;
+pub use common_types::*;
+pub use ui_strings::*;
