@@ -18,21 +18,24 @@
 //! For more information on how to use CLAP and Tuify, please read this tutorial:
 //! <https://developerlife.com/2023/09/17/tuify-clap/>
 
-use clap::{Args, Parser, Subcommand, ValueEnum};
-use clap_config::*;
-use giti::{branch::delete::try_delete_branch, *};
-use r3bl_ansi_color::{AnsiStyledText, Color, Style};
-use r3bl_cmdr::{giti, report_analytics, AnalyticsAction};
+use clap::Parser;
+use giti::{branch::{checkout::try_checkout_branch, delete::try_delete_branch},
+           *};
+use r3bl_ansi_color::{AnsiStyledText, Style};
+use r3bl_cmdr::{color_constants::DefaultColors::{FrozenBlue, GuardsRed, MoonlightBlue},
+                giti::{self,
+                       clap_config::clap_config::{BranchSubcommand,
+                                                  CLIArg,
+                                                  CLICommand}},
+                report_analytics,
+                AnalyticsAction};
 use r3bl_rs_utils_core::{call_if_true,
                          log_debug,
                          log_error,
                          throws,
                          try_to_set_log_level,
                          CommonResult};
-use r3bl_tuify::{components::style::StyleSheet,
-                 select_from_list_with_multi_line_header,
-                 SelectionMode,
-                 FAILED_COLOR};
+use r3bl_tuify::{select_from_list_with_multi_line_header, SelectionMode, StyleSheet};
 
 #[tokio::main]
 async fn main() -> CommonResult<()> {
@@ -64,10 +67,27 @@ async fn main() -> CommonResult<()> {
 }
 
 pub fn launch_giti(cli_arg: CLIArg) {
-    match try_run_command(cli_arg) {
+    match try_run_command(&cli_arg) {
         // Command ran successfully.
-        Ok(_) => {
-            giti_ui_templates::show_exit_message();
+        Ok(try_run_command_result) => {
+            if let CLICommand::Branch { .. } = cli_arg.command {
+                // If user selected to delete a branch, then show exit message. If user
+                // didn't select any branch, then show message that no branches were
+                // deleted.
+                match (
+                    try_run_command_result.maybe_deleted_branches,
+                    try_run_command_result.branch_subcommand,
+                ) {
+                    (Some(_), Some(BranchSubcommand::Delete)) => {
+                        giti_ui_templates::show_exit_message();
+                    }
+                    (None, Some(BranchSubcommand::Delete)) => {
+                        println!("You chose not to delete any branches.");
+                        giti_ui_templates::show_exit_message();
+                    }
+                    _ => {}
+                }
+            }
         }
         // Handle unrecoverable / unknown errors here.
         Err(error) => {
@@ -83,162 +103,67 @@ pub fn launch_giti(cli_arg: CLIArg) {
             log_error(err_msg.clone());
             AnsiStyledText {
                 text: &format!("{err_msg}",),
-                style: &[Style::Foreground(FAILED_COLOR)],
+                style: &[Style::Foreground(GuardsRed.as_ansi_color())],
             }
             .println();
         }
     }
 }
 
-pub fn try_run_command(giti_app_args: CLIArg) -> CommonResult<()> {
-    match giti_app_args.command {
+pub fn try_run_command(giti_app_args: &CLIArg) -> CommonResult<TryRunCommandResult> {
+    match &giti_app_args.command {
         CLICommand::Branch {
             command_to_run_with_each_selection,
             ..
         } => match command_to_run_with_each_selection {
             Some(subcommand) => match subcommand {
-                BranchSubcommand::Delete => try_delete_branch()?,
+                BranchSubcommand::Delete => return try_delete_branch(),
+                BranchSubcommand::Checkout => return try_checkout_branch(),
                 _ => unimplemented!(),
             },
             _ => {
-                // Show all the branch sub-commands (delete, checkout, new, etc.) in a tuify component.
-                giti_ui_templates::single_select_instruction_header();
-                let options = get_giti_command_subcommand_names(CLICommand::Branch {
-                    command_to_run_with_each_selection: None,
-                });
-
-                let instructions_and_select_branch_subcommand = {
-                    let mut instructions_and_select_branch_subcommand =
-                        giti_ui_templates::single_select_instruction_header();
-                    let header = AnsiStyledText {
-                        text: "Please select a branch subcommand",
-                        style: &[
-                            Style::Foreground(Color::Rgb(171, 204, 242)),
-                            Style::Background(Color::Rgb(31, 36, 46)),
-                        ],
-                    };
-                    instructions_and_select_branch_subcommand.push(vec![header]);
-                    instructions_and_select_branch_subcommand
-                };
-
-                let maybe_selected = select_from_list_with_multi_line_header(
-                    instructions_and_select_branch_subcommand,
-                    options,
-                    Some(20),
-                    None,
-                    SelectionMode::Single,
-                    StyleSheet::default(),
-                );
-
-                if let Some(selected) = maybe_selected {
-                    match selected[0].as_str() {
-                        "delete" => {
-                            try_delete_branch()?;
-                        }
-                        _ => unimplemented!(),
-                    }
-                }
+                return user_typed_giti_branch();
             }
         },
-        _ => {
-            unimplemented!()
-        }
-    }
-    Ok(())
+        CLICommand::Commit {} => unimplemented!(),
+        CLICommand::Remote {} => unimplemented!(),
+    };
 }
 
-pub fn get_giti_command_subcommand_names(arg: CLICommand) -> Vec<String> {
-    match arg {
-        CLICommand::Branch { .. } => BranchSubcommand::value_variants()
-            .iter()
-            .map(|subcommand| {
-                let lower_case_subcommand =
-                    format!("{:?}", subcommand).to_ascii_lowercase();
-                lower_case_subcommand
-            })
-            .collect(),
-        _ => unimplemented!(),
-    }
-}
+fn user_typed_giti_branch() -> CommonResult<TryRunCommandResult> {
+    let branch_subcommands = get_giti_command_subcommand_names(CLICommand::Branch {
+        command_to_run_with_each_selection: None,
+    });
+    let default_header_style = [
+        Style::Foreground(FrozenBlue.as_ansi_color()),
+        Style::Background(MoonlightBlue.as_ansi_color()),
+    ];
+    let instructions_and_select_branch_subcommand = {
+        let mut instructions_and_select_branch_subcommand =
+            single_select_instruction_header();
+        let header = AnsiStyledText {
+            text: "Please select a branch subcommand",
+            style: &default_header_style,
+        };
+        instructions_and_select_branch_subcommand.push(vec![header]);
+        instructions_and_select_branch_subcommand
+    };
+    let maybe_selected = select_from_list_with_multi_line_header(
+        instructions_and_select_branch_subcommand,
+        branch_subcommands,
+        Some(20),
+        None,
+        SelectionMode::Single,
+        StyleSheet::default(),
+    );
+    if let Some(selected) = maybe_selected {
+        let it = selected[0].as_str();
+        match it {
+            "delete" => return try_delete_branch(),
+            "checkout" => return try_checkout_branch(),
+            _ => unimplemented!(),
+        };
+    };
 
-/// More info:
-/// - <https://docs.rs/clap/latest/clap/_derive/#overview>
-/// - <https://developerlife.com/2023/09/17/tuify-clap/>
-mod clap_config {
-    use super::*;
-
-    #[derive(Debug, Parser)]
-    #[command(bin_name = "giti")]
-    #[command(
-        about = "Version control with confidence 💪\n\x1b[38;5;206mEarly access preview \x1b[0m🐣"
-    )]
-    #[command(version)]
-    #[command(next_line_help = true)]
-    #[command(arg_required_else_help(true))]
-    /// More info: <https://docs.rs/clap/latest/clap/struct.Command.html#method.help_template>
-    #[command(
-        help_template = "{about}\nVersion: {bin} {version} 💻\n\nUSAGE 📓:\n  giti [\x1b[32mCommand\x1b[0m] [\x1b[34mOptions\x1b[0m]\n\n{all-args}\n",
-        subcommand_help_heading("Command")
-    )]
-    pub struct CLIArg {
-        #[command(subcommand)]
-        pub command: CLICommand,
-
-        #[command(flatten)]
-        pub global_options: GlobalOption,
-    }
-
-    #[derive(Debug, Args)]
-    pub struct GlobalOption {
-        #[arg(
-            global = true,
-            long,
-            short = 'l',
-            help = "Log app output to a file named `log.txt` for debugging"
-        )]
-        pub enable_logging: bool,
-
-        #[arg(
-            global = true,
-            long,
-            short = 'n',
-            help = "Disable anonymous data collection for analytics to improve the product; this data does not include IP addresses, or any other private user data, like user, branch, or repo names"
-        )]
-        pub no_analytics: bool,
-    }
-
-    #[derive(Debug, Subcommand)]
-    pub enum CLICommand {
-        #[clap(
-            about = "🌱 Manage your git branches with commands: `delete`, `checkout`, and `new`\n💡 Eg: `giti branch delete`"
-        )]
-        /// More info: <https://docs.rs/clap/latest/clap/struct.Command.html#method.help_template>
-        #[command(
-            /* cSpell:disable-next-line */
-            help_template = "{about} \n\nUSAGE 📓:\n  giti branch [\x1b[34mcommand\x1b[0m] [\x1b[32moptions\x1b[0m]\n\n{positionals}\n\n  [options]\n{options}"
-        )]
-        Branch {
-            #[arg(
-                value_name = "command",
-                help = "In your shell, this command will execute, taking each selected item as an argument."
-            )]
-            command_to_run_with_each_selection: Option<BranchSubcommand>,
-        },
-
-        #[clap(about = "TODO Commit help")]
-        Commit {},
-
-        #[clap(about = "TODO Remote help")]
-        Remote {},
-    }
-
-    #[derive(Clone, Debug, ValueEnum)]
-    pub enum BranchSubcommand {
-        #[clap(help = "Delete one or more selected branches")]
-        Delete,
-        #[clap(help = "TODO Checkout a selected branch")]
-        Checkout,
-        #[clap(help = "TODO Create a new branch")]
-        New,
-    }
+    Ok(TryRunCommandResult::default())
 }

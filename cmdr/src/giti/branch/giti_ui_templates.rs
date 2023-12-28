@@ -24,13 +24,15 @@ use r3bl_rs_utils_core::{log_error,
                          CommonResult,
                          UnicodeString};
 use r3bl_tui::{ColorWheel, GradientGenerationPolicy, TextColorizationPolicy};
-use r3bl_tuify::LIGHT_GRAY_COLOR;
+use r3bl_tuify::SLATE_GRAY;
+
+use crate::giti::ui_strings::UIStrings::*;
 
 pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
     let up_and_down = AnsiStyledText {
         text: " Up or down:     navigate",
         style: &[
-            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Foreground(SLATE_GRAY),
             Style::Background(Color::Rgb(14, 17, 23)),
         ],
     };
@@ -38,7 +40,7 @@ pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
     let space = AnsiStyledText {
         text: " Space:          select or deselect item",
         style: &[
-            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Foreground(SLATE_GRAY),
             Style::Background(Color::Rgb(14, 17, 23)),
         ],
     };
@@ -46,7 +48,7 @@ pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
     let esc = AnsiStyledText {
         text: " Esc or Ctrl+C:  exit program",
         style: &[
-            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Foreground(SLATE_GRAY),
             Style::Background(Color::Rgb(14, 17, 23)),
         ],
     };
@@ -54,7 +56,7 @@ pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
     let return_key = AnsiStyledText {
         text: " Return:         confirm selection",
         style: &[
-            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Foreground(SLATE_GRAY),
             Style::Background(Color::Rgb(14, 17, 23)),
         ],
     };
@@ -66,14 +68,14 @@ pub fn single_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
     let up_or_down = AnsiStyledText {
         text: " Up or down:     navigate",
         style: &[
-            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Foreground(SLATE_GRAY),
             Style::Background(Color::Rgb(14, 17, 23)),
         ],
     };
     let esc = AnsiStyledText {
         text: " Esc or Ctrl+C:  exit program",
         style: &[
-            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Foreground(SLATE_GRAY),
             Style::Background(Color::Rgb(14, 17, 23)),
         ],
     };
@@ -81,7 +83,7 @@ pub fn single_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
     let return_key = AnsiStyledText {
         text: " Return:         confirm selection",
         style: &[
-            Style::Foreground(LIGHT_GRAY_COLOR),
+            Style::Foreground(SLATE_GRAY),
             Style::Background(Color::Rgb(14, 17, 23)),
         ],
     };
@@ -92,20 +94,11 @@ pub fn single_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
 pub fn show_exit_message() {
     println!("{}", {
         let goodbye_to_user = match var("USER") {
-            Ok(username) => {
-                format!("Goodbye, {} 👋 😽. Thanks for using giti!", username)
-            }
-            Err(_) => "Thanks for using giti! 👋 😽".to_owned(),
+            Ok(username) => GoodbyeThanksForUsingGitiUsername { username }.to_string(),
+            Err(_) => GoodbyeThanksForUsingGiti.to_string(),
         };
 
-        let please_star_us = format!(
-            "{}\n{}\n{}\n{}",
-            "Please star us on GitHub:",
-            "→ 🌟 https://github.com/r3bl-org/r3bl-open-core",
-            "And report any issues you have with giti, so we can fix them:",
-            "→ 🐞 https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
-        );
-
+        let please_star_us = PleaseStarUs.to_string();
         let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");
 
         let unicode_string = UnicodeString::from(plain_text_exit_msg);
@@ -138,10 +131,12 @@ pub fn report_unknown_error_and_propagate<T>(
         it.join(" ")
     };
 
-    let error_msg = format!(
-        "Error executing command: '{} {}'. Error: {}",
-        program_name_to_string, command_args_to_string, command_output_error
-    );
+    let error_msg = ErrorExecutingCommand {
+        program_name_to_string,
+        command_args_to_string,
+        command_output_error,
+    }
+    .to_string();
 
     log_error(error_msg.clone());
     CommonError::new::<T>(CommonErrorType::CommandExecutionError, &error_msg)
