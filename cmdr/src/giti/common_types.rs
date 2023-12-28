@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2023 R3BL LLC
+ *   Copyright (c) 2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +15,10 @@
  *   limitations under the License.
  */
 
-// Attach.
-pub mod checkout;
-pub mod delete;
-pub mod giti_ui_templates;
+use super::clap_config::clap_config::BranchSubcommand;
 
-// Re-export.
-pub use checkout::*;
-pub use delete::*;
-pub use giti_ui_templates::*;
+#[derive(Debug, Clone, Default)]
+pub struct TryRunCommandResult {
+    pub maybe_deleted_branches: Option<Vec<String>>,
+    pub branch_subcommand: Option<BranchSubcommand>,
+}

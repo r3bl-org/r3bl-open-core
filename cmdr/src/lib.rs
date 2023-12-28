@@ -49,12 +49,14 @@
 //!
 //! | Command                                | Description                                       |
 //! | -------------------------------------- | ------------------------------------------------- |
+//! | `nu run help`                          | See all the commands you can pass to the `run` script|
 //! | `nu run install`                       | Install `giti`, `edi`, `rc`  to `~/.cargo/bin`    |
 //! | `nu run build`                         | Build                                             |
 //! | `nu run clean`                         | Clean                                             |
 //! | `nu run all`                           | All                                               |
 //! | `nu run test`                          | Run tests                                         |
 //! | `nu run clippy`                        | Run clippy                                        |
+//! | `nu run log`        | View the log output. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this. |
 //! | `nu run docs`                          | Build docs                                        |
 //! | `nu run serve-docs`                    | Serve docs over VSCode Remote SSH session         |
 //! | `nu run rustfmt`                       | Run rustfmt                                       |
@@ -89,6 +91,7 @@ pub const DEVELOPMENT_MODE: bool = true;
 
 // Attach sources.
 pub mod analytics_client;
+pub mod color_constants;
 pub mod edi;
 pub mod giti;
 pub mod rc;

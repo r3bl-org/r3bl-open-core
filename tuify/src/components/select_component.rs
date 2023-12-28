@@ -237,14 +237,6 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                         .collect::<Vec<String>>()
                         .join("\r\n");
 
-                    call_if_true!(DEVELOPMENT_MODE, {
-                        log_debug(
-                            format!("multi_line_header_text: \n`{}`", multi_line_header_text)
-                                .blue()
-                                .to_string(),
-                        );
-                    });
-
                     queue! {
                         writer,
                         // Bring the caret back to the start of line.
@@ -331,17 +323,6 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                 } else {
                     "".to_string()
                 };
-
-                call_if_true!(DEVELOPMENT_MODE, {
-                    log_debug(
-                        format!(
-                            "🍍🍍🍍\n render()::data_item: \n\t[data_row_index: {}, caret_row_scroll_adj: {}, data_item: {}]",
-                            data_row_index, caret_row_scroll_adj, data_item
-                        )
-                        .magenta()
-                        .to_string(),
-                    );
-                });
 
                 queue! {
                     writer,

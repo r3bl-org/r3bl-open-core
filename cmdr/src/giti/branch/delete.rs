@@ -17,139 +17,161 @@
 
 use std::process::Command;
 
-use r3bl_ansi_color::{AnsiStyledText, Color, Style};
+use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_rs_utils_core::CommonResult;
-use r3bl_tuify::{select_from_list_with_multi_line_header,
-                 SelectionMode,
-                 StyleSheet,
-                 DELETE_BRANCH,
-                 DELETE_BRANCHES,
-                 EXIT};
+use r3bl_tuify::{select_from_list_with_multi_line_header, SelectionMode, StyleSheet};
 use try_delete_branch_user_choice::Selection::{self, *};
 
-use crate::{giti::{giti_ui_templates::report_unknown_error_and_propagate,
+use crate::{color_constants::DefaultColors::{FrozenBlue,
+                                             GuardsRed,
+                                             LizardGreen,
+                                             MoonlightBlue,
+                                             SlateGray},
+            giti::{clap_config::clap_config::BranchSubcommand,
+                   giti_ui_templates::report_unknown_error_and_propagate,
                    multi_select_instruction_header,
-                   single_select_instruction_header},
+                   single_select_instruction_header,
+                   ui_strings::UIStrings::*,
+                   TryRunCommandResult},
             report_analytics,
             AnalyticsAction};
 
-pub fn try_delete_branch() -> CommonResult<()> {
+pub fn try_delete_branch() -> CommonResult<TryRunCommandResult> {
     report_analytics::generate_event("".to_string(), AnalyticsAction::GitiBranchDelete);
 
+    let mut try_run_command_result = TryRunCommandResult {
+        branch_subcommand: Some(BranchSubcommand::Delete),
+        ..Default::default()
+    };
+
     let default_header_style = [
-        Style::Foreground(Color::Rgb(171, 204, 242)),
-        Style::Background(Color::Rgb(31, 36, 46)),
+        Style::Foreground(FrozenBlue.as_ansi_color()),
+        Style::Background(MoonlightBlue.as_ansi_color()),
     ];
+
+    let select_branches_header_text = &PleaseSelectBranchesYouWantToDelete.to_string();
 
     let instructions_and_branches_to_delete = {
         let mut instructions_and_branches_to_delete = multi_select_instruction_header();
         let header = AnsiStyledText {
-            text: " Please select branches you want to delete",
+            text: select_branches_header_text,
             style: &default_header_style,
         };
         instructions_and_branches_to_delete.push(vec![header]);
         instructions_and_branches_to_delete
     };
 
-    let branches = try_execute_git_command_to_get_branches()?;
-
-    let maybe_selected_branches = select_from_list_with_multi_line_header(
-        instructions_and_branches_to_delete,
-        branches,
-        Some(20),
-        None,
-        SelectionMode::Multiple,
-        StyleSheet::default(),
-    );
-
-    if let Some(branches) = maybe_selected_branches {
-        let branches_to_delete = branches.join(", ");
-        let num_of_branches = branches.len();
-
-        let (confirm_branch_deletion_header, confirm_deletion_options) = {
-            let mut confirm_deletion_options: Vec<String> = vec![EXIT.to_string()];
-            if num_of_branches == 1 {
-                confirm_deletion_options.insert(0, DELETE_BRANCH.to_string());
-                (
-                    format!("Confirm deleting 1 branch: {}", branches_to_delete),
-                    confirm_deletion_options,
-                )
-            } else {
-                confirm_deletion_options.insert(0, DELETE_BRANCHES.to_string());
-                (
-                    format!(
-                        "Confirm deleting {} branches: {}?",
-                        num_of_branches, branches_to_delete
-                    ),
-                    confirm_deletion_options,
-                )
-            }
-        };
-
-        let instructions_and_confirm_deletion_options = {
-            let mut instructions_and_confirm_deletion_header =
-                single_select_instruction_header();
-            let header = AnsiStyledText {
-                text: &confirm_branch_deletion_header,
-                style: &default_header_style,
-            };
-            instructions_and_confirm_deletion_header.push(vec![header]);
-            instructions_and_confirm_deletion_header
-        };
-
-        let maybe_selected_delete_or_exit = select_from_list_with_multi_line_header(
-            instructions_and_confirm_deletion_options,
-            confirm_deletion_options,
+    if let Ok(branches) = get_branches() {
+        let maybe_selected_branches = select_from_list_with_multi_line_header(
+            instructions_and_branches_to_delete,
+            branches,
             Some(20),
             None,
-            SelectionMode::Single,
+            SelectionMode::Multiple,
             StyleSheet::default(),
         );
 
-        if let Some(selected) = maybe_selected_delete_or_exit {
-            match Selection::from(selected) {
-                Delete => {
-                    let command: &mut Command =
-                        &mut try_delete_branch_inner::create_git_command_to_delete_branches(
-                            &branches,
-                        );
-                    let result_output = command.output();
+        if let Some(branches) = maybe_selected_branches {
+            let branches_to_delete = branches.join(", ");
+            let num_of_branches = branches.len();
 
-                    match result_output {
-                        Ok(output) => {
-                            // Got output, check exit code for success (known errors).
-                            if output.status.success() {
-                                if num_of_branches == 1 {
-                                    try_delete_branch_inner::display_one_branch_deleted_success_message(&branches);
+            let (confirm_branch_deletion_header, confirm_deletion_options) = {
+                let mut confirm_deletion_options: Vec<String> = vec![Exit.to_string()];
+                if num_of_branches == 1 {
+                    confirm_deletion_options.insert(0, YesDeleteBranch.to_string());
+                    (
+                        ConfirmDeletingOneBranch.to_string(),
+                        confirm_deletion_options,
+                    )
+                } else {
+                    confirm_deletion_options.insert(0, YesDeleteBranches.to_string());
+                    (
+                        ConfirmDeletingMultipleBranches {
+                            num_of_branches,
+                            branches_to_delete,
+                        }
+                        .to_string(),
+                        confirm_deletion_options,
+                    )
+                }
+            };
+
+            let instructions_and_confirm_deletion_options = {
+                let mut instructions_and_confirm_deletion_header =
+                    single_select_instruction_header();
+                let header = AnsiStyledText {
+                    text: &confirm_branch_deletion_header,
+                    style: &default_header_style,
+                };
+                instructions_and_confirm_deletion_header.push(vec![header]);
+                instructions_and_confirm_deletion_header
+            };
+
+            let maybe_selected_delete_or_exit = select_from_list_with_multi_line_header(
+                instructions_and_confirm_deletion_options,
+                confirm_deletion_options,
+                Some(20),
+                None,
+                SelectionMode::Single,
+                StyleSheet::default(),
+            );
+
+            if let Some(selected) = maybe_selected_delete_or_exit {
+                match Selection::from(selected) {
+                    Delete => {
+                        let command: &mut Command =
+                            &mut try_delete_branch_inner::create_git_command_to_delete_branches(
+                                &branches,
+                            );
+                        let result_output = command.output();
+
+                        match result_output {
+                            Ok(output) => {
+                                // Got output, check exit code for success (known errors).
+                                if output.status.success() {
+                                    // Add branches to deleted branches.
+                                    try_run_command_result.maybe_deleted_branches =
+                                        Some({
+                                            let mut it = vec![];
+                                            for branch in &branches {
+                                                it.push(branch.clone());
+                                            }
+                                            it
+                                        });
+                                    if num_of_branches == 1 {
+                                        try_delete_branch_inner::display_one_branch_deleted_success_message(&branches);
+                                    } else {
+                                        try_delete_branch_inner::display_all_branches_deleted_success_messages(
+                                            &branches,
+                                        );
+                                    }
                                 } else {
-                                    try_delete_branch_inner::display_all_branches_deleted_success_messages(
-                                        &branches,
+                                    try_delete_branch_inner::display_error_message(
+                                        branches,
+                                        Some(output),
                                     );
                                 }
-                            } else {
+                            }
+                            Err(error) => {
+                                // Can't even execute output(), something unknown has gone
+                                // wrong. Propagate the error.
                                 try_delete_branch_inner::display_error_message(
-                                    branches,
-                                    Some(output),
+                                    branches, None,
+                                );
+                                return report_unknown_error_and_propagate(
+                                    command, error,
                                 );
                             }
                         }
-                        Err(error) => {
-                            // Can't even execute output(), something unknown has gone
-                            // wrong. Propagate the error.
-                            try_delete_branch_inner::display_error_message(
-                                branches, None,
-                            );
-                            return report_unknown_error_and_propagate(command, error);
-                        }
                     }
-                }
 
-                Exit => return Ok(println!("You chose not to delete any branches.")),
+                    ExitProgram => (),
+                }
             }
         }
     }
 
-    return Ok(());
+    Ok(try_run_command_result)
 }
 
 mod try_delete_branch_user_choice {
@@ -157,56 +179,60 @@ mod try_delete_branch_user_choice {
 
     pub enum Selection {
         Delete,
-        Exit,
+        ExitProgram,
     }
 
     impl From<Vec<String>> for Selection {
         fn from(selected: Vec<String>) -> Selection {
-            let selected_to_delete_one_branch = selected[0] == DELETE_BRANCH.to_string();
+            let selected_to_delete_one_branch =
+                selected[0] == YesDeleteBranch.to_string();
             let selected_to_delete_multiple_branches =
-                selected[0] == DELETE_BRANCHES.to_string();
-            let selected_to_exit = selected[0] == EXIT.to_string();
+                selected[0] == YesDeleteBranches.to_string();
+            let selected_to_exit = selected[0] == Exit.to_string();
 
             if selected_to_delete_one_branch || selected_to_delete_multiple_branches {
                 return Selection::Delete;
             }
             if selected_to_exit {
-                return Selection::Exit;
+                return Selection::ExitProgram;
             }
-            Selection::Exit
+            Selection::ExitProgram
         }
     }
 }
 
 mod try_delete_branch_inner {
-    use r3bl_tuify::{FAILED_COLOR, LIGHT_GRAY_COLOR, SUCCESS_COLOR};
-
     use super::*;
 
     pub fn display_error_message(
         branches: Vec<String>,
         maybe_output: Option<std::process::Output>,
     ) {
+        let ferrari_red = GuardsRed.as_ansi_color();
         match maybe_output {
             Some(output) => {
                 if branches.len() == 1 {
                     let branch = &branches[0];
                     AnsiStyledText {
-                        text: &format!(
-                            "Failed to delete branch: {branch}!\n\n{}",
-                            String::from_utf8_lossy(&output.stderr)
-                        ),
-                        style: &[Style::Foreground(FAILED_COLOR)],
+                        text: &FailedToDeleteBranch {
+                            branch_name: branch.clone(),
+                            error_message: String::from_utf8_lossy(&output.stderr)
+                                .to_string(),
+                        }
+                        .to_string(),
+                        style: &[Style::Foreground(ferrari_red)],
                     }
                     .println();
                 } else {
                     let branches = branches.join(",\n ╴");
                     AnsiStyledText {
-                        text: &format!(
-                            "Failed to delete branches:\n ╴{branches}!\n\n{}",
-                            String::from_utf8_lossy(&output.stderr)
-                        ),
-                        style: &[Style::Foreground(FAILED_COLOR)],
+                        text: &FailedToDeleteBranches {
+                            branches,
+                            error_message: String::from_utf8_lossy(&output.stderr)
+                                .to_string(),
+                        }
+                        .to_string(),
+                        style: &[Style::Foreground(ferrari_red)],
                     }
                     .println();
                 }
@@ -214,10 +240,8 @@ mod try_delete_branch_inner {
             None => {
                 let branches = branches.join(",\n ╴");
                 AnsiStyledText {
-                    text: &format!(
-                        "Failed to run command to delete branches:\n ╴{branches}!"
-                    ),
-                    style: &[Style::Foreground(FAILED_COLOR)],
+                    text: &FailedToRunCommandToDeleteBranches { branches }.to_string(),
+                    style: &[Style::Foreground(ferrari_red)],
                 }
                 .println();
             }
@@ -235,37 +259,31 @@ mod try_delete_branch_inner {
     }
 
     pub fn display_one_branch_deleted_success_message(branches: &Vec<String>) {
+        let lizard_green = LizardGreen.as_ansi_color();
         let branch_name = &branches[0].to_string();
         let deleted_branch = AnsiStyledText {
             text: branch_name,
-            style: &[Style::Foreground(SUCCESS_COLOR)],
+            style: &[Style::Foreground(lizard_green)],
         };
         let deleted = AnsiStyledText {
-            text: "deleted",
-            style: &[Style::Foreground(LIGHT_GRAY_COLOR)],
+            text: &Deleted.to_string(),
+            style: &[Style::Foreground(SlateGray.as_ansi_color())],
         };
-        AnsiStyledText {
-            text: &format!("✅ {deleted_branch} {deleted}").as_str(),
-            style: &[Style::Foreground(SUCCESS_COLOR)],
-        }
-        .println();
+        println!("✅ {deleted_branch} {deleted}");
     }
 
     pub fn display_all_branches_deleted_success_messages(branches: &Vec<String>) {
+        let lizard_green = LizardGreen.as_ansi_color();
         for branch in branches {
             let deleted_branch = AnsiStyledText {
                 text: branch,
-                style: &[Style::Foreground(SUCCESS_COLOR)],
+                style: &[Style::Foreground(lizard_green)],
             };
             let deleted = AnsiStyledText {
-                text: "deleted",
-                style: &[Style::Foreground(LIGHT_GRAY_COLOR)],
+                text: &Deleted.to_string(),
+                style: &[Style::Foreground(SlateGray.as_ansi_color())],
             };
-            AnsiStyledText {
-                text: &format!("✅ {deleted_branch} {deleted}").as_str(),
-                style: &[Style::Foreground(SUCCESS_COLOR)],
-            }
-            .println();
+            println!("✅ {deleted_branch} {deleted}");
         }
     }
 }
@@ -292,4 +310,62 @@ pub fn try_execute_git_command_to_get_branches() -> CommonResult<Vec<String>> {
             Ok(branches)
         }
     }
+}
+
+// Get all the branches to check out to. prefix current branch with `(current)`.
+pub fn get_branches() -> CommonResult<Vec<String>> {
+    let branches = try_execute_git_command_to_get_branches()?;
+    // If branch name is current_branch, then append `(current)` in front of it.
+    // Create command.
+    let mut command = Command::new("git");
+    let command: &mut Command = command.args(["branch", "--show-current"]);
+
+    let result_output = command.output();
+
+    let current_branch;
+    match result_output {
+        // Can't even execute output(), something unknown has gone wrong. Propagate the
+        // error.
+        Err(error) => {
+            return report_unknown_error_and_propagate(command, error);
+        }
+        Ok(output) => {
+            let output_string = String::from_utf8_lossy(&output.stdout);
+            current_branch = output_string.to_string().trim_end_matches('\n').to_string();
+        }
+    };
+
+    let mut return_vec = vec![];
+    for branch in branches {
+        if branch == current_branch {
+            return_vec.push(CurrentBranch { branch }.to_string());
+        } else {
+            return_vec.push(branch.to_string());
+        }
+    }
+
+    Ok(return_vec)
+}
+
+pub fn try_get_current_branch() -> CommonResult<String> {
+    // If branch name is current_branch, then append `(current)` in front of it.
+    // Create command.
+    let mut command = Command::new("git");
+    let command: &mut Command = command.args(["branch", "--show-current"]);
+
+    let result_output = command.output();
+
+    let current_branch;
+    match result_output {
+        // Can't even execute output(), something unknown has gone wrong. Propagate the
+        // error.
+        Err(error) => {
+            return report_unknown_error_and_propagate(command, error);
+        }
+        Ok(output) => {
+            let output_string = String::from_utf8_lossy(&output.stdout);
+            current_branch = output_string.to_string().trim_end_matches('\n').to_string();
+        }
+    };
+    Ok(current_branch)
 }
