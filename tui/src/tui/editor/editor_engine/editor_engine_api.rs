@@ -373,35 +373,42 @@ impl EditorEngineApi {
         let mut pipeline = render_pipeline!();
         let mut content_cursor_pos = position! { col_index: 0 , row_index: 0 };
 
-        // Paint the text.
-        render_pipeline! {
-          @push_into pipeline
-          at ZOrder::Normal
-          =>
-            RenderOp::MoveCursorPositionRelTo(
-              editor_engine.current_box.style_adjusted_origin_pos,
-              position! { col_index: 0 , row_index: 0 }
-            ),
-            RenderOp::ApplyColors(style! {
-              color_fg: TuiColor::Basic(ANSIBasicColor::Red)
-            }.into()),
-            RenderOp::PaintTextWithAttributes("No content added".into(), None),
-            RenderOp::ResetColor
-        };
-
-        // Paint the emoji.
+        // Only when the editor has focus.
         if has_focus.does_id_have_focus(editor_engine.current_box.id) {
+            // Paint line 1.
+            render_pipeline! {
+                @push_into pipeline
+                at ZOrder::Normal
+                =>
+                RenderOp::MoveCursorPositionRelTo(
+                    editor_engine.current_box.style_adjusted_origin_pos,
+                    position! { col_index: 0 , row_index: 0 }
+                ),
+                RenderOp::ApplyColors(style! {
+                    attrib: [dim]
+                    color_fg: TuiColor::Basic(ANSIBasicColor::Green)
+                }.into()),
+                RenderOp::PaintTextWithAttributes("📝 Please start typing your MD content.".into(), None),
+                RenderOp::ResetColor
+            };
+
+            // Paint line 2.
             render_pipeline! {
               @push_into pipeline
               at ZOrder::Normal
               =>
                 RenderOp::MoveCursorPositionRelTo(
-                  editor_engine.current_box.style_adjusted_origin_pos,
-                  content_cursor_pos.add_row_with_bounds(
-                    ch!(1),
-                    editor_engine.current_box.style_adjusted_bounds_size.row_count)
+                    editor_engine.current_box.style_adjusted_origin_pos,
+                    content_cursor_pos.add_row_with_bounds(
+                        ch!(1),
+                        editor_engine.current_box.style_adjusted_bounds_size.row_count
+                    )
                 ),
-                RenderOp::PaintTextWithAttributes("👀".into(), None),
+                RenderOp::ApplyColors(style! {
+                    attrib: [dim]
+                    color_fg: TuiColor::Basic(ANSIBasicColor::DarkGrey)
+                }.into()),
+                RenderOp::PaintTextWithAttributes("🧭 Ctrl+S: Save your work. Ctrl+Q: Exit the app.".into(), None),
                 RenderOp::ResetColor
             };
         }

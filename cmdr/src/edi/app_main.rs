@@ -26,8 +26,8 @@ use crate::edi::{AppSignal, State};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Id {
     Editor = 1,
+    // 00: rename this to something like AskUserForFilenameToSaveFile.
     SimpleDialog = 2,
-    AutocompleteDialog = 3,
     EditorStyleNameDefault = 4,
     DialogStyleNameBorder = 5,
     DialogStyleNameTitle = 6,
@@ -72,9 +72,8 @@ mod constructor {
 }
 
 mod app_main_impl_app_trait {
-    use crossterm::style::Stylize;
-
     use super::*;
+    use crate::edi::file_utils;
 
     impl App for AppMain {
         type S = State;
@@ -99,29 +98,20 @@ mod app_main_impl_app_trait {
             has_focus: &mut HasFocus,
         ) -> CommonResult<EventPropagation> {
             // Things from global scope.
-            let GlobalData { state, .. } = global_data;
+            let GlobalData {
+                main_thread_channel_sender,
+                ..
+            } = global_data;
 
-            // 00: [_] send SaveFile signal here by intercepting keybinding.
+            // 00: [x] send SaveFile signal here by intercepting keybinding.
             if input_event.matches_keypress(KeyPress::WithModifiers {
                 key: Key::Character('s'),
                 mask: ModifierKeysMask::new().with_ctrl(),
             }) {
                 send_signal!(
-                    global_data.main_thread_channel_sender,
+                    main_thread_channel_sender,
                     TerminalWindowMainThreadSignal::ApplyAction(AppSignal::SaveFile)
                 );
-                return Ok(EventPropagation::ConsumedRender);
-            }
-
-            // Check to see if the modal dialog should be activated.
-            if let modal_dialogs::ModalActivateResult::Yes =
-                modal_dialogs::should_activate(
-                    input_event.clone(),
-                    component_registry_map,
-                    has_focus,
-                    state,
-                )
-            {
                 return Ok(EventPropagation::ConsumedRender);
             }
 
@@ -138,10 +128,13 @@ mod app_main_impl_app_trait {
             &mut self,
             action: &AppSignal,
             global_data: &mut GlobalData<State, AppSignal>,
+            component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+            has_focus: &mut HasFocus,
         ) -> CommonResult<EventPropagation> {
-            // 00: [_] handle SaveFile signal here.
             match action {
                 AppSignal::SaveFile => {
+                    // 00: [x] handle SaveFile signal here.
+
                     // Save the file using information from state (editor buffer,
                     // filename, etc). If this fails, then return an error.
                     let GlobalData { state, .. } = global_data;
@@ -154,20 +147,58 @@ mod app_main_impl_app_trait {
                             editor_buffer.editor_content.maybe_file_path.clone();
                         let content: String = editor_buffer.get_as_string_with_newlines();
 
-                        if let Some(file_path) = maybe_file_path {
-                            tokio::spawn(async move {
-                                let msg = format!("About to save file: {file_path:?}")
-                                    .green()
-                                    .to_string();
-                                call_if_true!(DEBUG_TUI_MOD, {
-                                    log_debug(format!("\n💾💾💾 {}", msg));
-                                });
-                                let _ = std::fs::write(file_path, content);
-                            });
+                        match maybe_file_path {
+                            // Found file path in the editor buffer.
+                            Some(file_path) => {
+                                file_utils::save_content_to_file(file_path, content);
+                            }
+                            // Could not find file path in the editor buffer. This is a
+                            // new buffer. Need to ask user via dialog box.
+                            _ => {
+                                if !editor_buffer.is_empty() {
+                                    send_signal!(
+                                        global_data.main_thread_channel_sender,
+                                        TerminalWindowMainThreadSignal::ApplyAction(
+                                            AppSignal::AskUserForFilenameThenSaveFile
+                                        )
+                                    );
+                                }
+                            }
                         }
                     }
                 }
-                _ => {}
+                AppSignal::AskUserForFilenameThenSaveFile => {
+                    // 00: [_] handle AskUserForFilenameThenSaveFile signal here.
+                    let GlobalData { state, .. } = global_data;
+
+                    // Reset the dialog component prior to activating / showing it.
+                    ComponentRegistry::reset_component(
+                        component_registry_map,
+                        FlexBoxId::from(Id::SimpleDialog),
+                    );
+
+                    match modal_dialogs::activate_simple_modal(
+                        component_registry_map,
+                        has_focus,
+                        state,
+                    ) {
+                        Err(err) => {
+                            if let Some(CommonError {
+                                err_type: _,
+                                err_msg: msg,
+                            }) = err.downcast_ref::<CommonError>()
+                            {
+                                log_error(format!(
+                                    "📣 Error activating simple modal: {msg:?}"
+                                ));
+                            }
+                        }
+                        _ => {}
+                    };
+
+                    return Ok(EventPropagation::ConsumedRender);
+                }
+                AppSignal::Noop => {}
             }
 
             Ok(EventPropagation::ConsumedRender)
@@ -219,141 +250,6 @@ mod app_main_impl_app_trait {
 mod modal_dialogs {
     use super::*;
 
-    // This runs on every keystroke, so it should be fast.
-    pub fn dialog_component_update_content(state: &mut State, id: FlexBoxId) {
-        // This is Some only if the content has changed (ignoring caret movements).
-        let maybe_changed_results: Option<Vec<String>> = {
-            if let Some(dialog_buffer) = state.dialog_buffers.get_mut(&id) {
-                let vec_result = generate_random_results(
-                    dialog_buffer
-                        .editor_buffer
-                        .get_as_string_with_comma_instead_of_newlines()
-                        .as_str(),
-                );
-                Some(vec_result)
-            } else {
-                None
-            }
-        };
-
-        state
-            .dialog_buffers
-            .entry(id)
-            .and_modify(|it| {
-                if let Some(results) = maybe_changed_results {
-                    it.maybe_results = Some(results);
-                }
-            })
-            .or_insert_with(
-                // This code path should never execute, since to update the buffer given an id,
-                // it should have already existed in the first place, which is created by:
-                // 1. [Action::SimpleDialogComponentInitializeFocused].
-                // 2. [Action::AutocompleteDialogComponentInitializeFocused].
-                || {
-                    let mut it = DialogBuffer::new_empty();
-                    it.editor_buffer = EditorBuffer::new_empty(&None, &None);
-                    it
-                },
-            );
-
-        // Content is empty.
-        if let Some(dialog_buffer) = state.dialog_buffers.get_mut(&id) {
-            if dialog_buffer
-                .editor_buffer
-                .get_as_string_with_comma_instead_of_newlines()
-                == ""
-            {
-                if let Some(it) = state.dialog_buffers.get_mut(&id) {
-                    it.maybe_results = None;
-                }
-            }
-        }
-    }
-
-    fn generate_random_results(content: &str) -> Vec<String> {
-        let vec_result = {
-            let start_rand_num = rand::random::<u8>() as usize;
-            let max = 10;
-            let mut it = Vec::with_capacity(max);
-            for index in start_rand_num..(start_rand_num + max) {
-                it.push(format!("{content}{index}"));
-            }
-            it
-        };
-        vec_result
-    }
-
-    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-    pub enum ModalActivateResult {
-        Yes,
-        No,
-    }
-
-    pub fn should_activate(
-        input_event: InputEvent,
-        component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
-        has_focus: &mut HasFocus,
-        state: &mut State,
-    ) -> ModalActivateResult {
-        // "Ctrl + l" => activate Simple.
-        if input_event.matches_keypress(KeyPress::WithModifiers {
-            key: Key::Character('l'),
-            mask: ModifierKeysMask::new().with_ctrl(),
-        }) {
-            // Reset the dialog component prior to activating / showing it.
-            ComponentRegistry::reset_component(
-                component_registry_map,
-                FlexBoxId::from(Id::SimpleDialog),
-            );
-            return match activate_simple_modal(component_registry_map, has_focus, state) {
-                Ok(_) => ModalActivateResult::Yes,
-                Err(err) => {
-                    if let Some(CommonError {
-                        err_type: _,
-                        err_msg: msg,
-                    }) = err.downcast_ref::<CommonError>()
-                    {
-                        log_error(format!("📣 Error activating simple modal: {msg:?}"));
-                    }
-                    ModalActivateResult::No
-                }
-            };
-        };
-
-        // "Ctrl + k" => activate Autocomplete.
-        if input_event.matches_keypress(KeyPress::WithModifiers {
-            key: Key::Character('k'),
-            mask: ModifierKeysMask::new().with_ctrl(),
-        }) {
-            // Reset the dialog component prior to activating / showing it.
-            ComponentRegistry::reset_component(
-                component_registry_map,
-                FlexBoxId::from(Id::AutocompleteDialog),
-            );
-            return match activate_autocomplete_modal(
-                component_registry_map,
-                has_focus,
-                state,
-            ) {
-                Ok(_) => ModalActivateResult::Yes,
-                Err(err) => {
-                    if let Some(CommonError {
-                        err_type: _,
-                        err_msg: msg,
-                    }) = err.downcast_ref::<CommonError>()
-                    {
-                        log_error(format!(
-                            "📣 Error activating autocomplete modal: {msg:?}"
-                        ));
-                    }
-                    ModalActivateResult::No
-                }
-            };
-        };
-
-        ModalActivateResult::No
-    }
-
     /// If `input_event` matches <kbd>Ctrl+l</kbd> or <kbd>Ctrl+k</kbd>, then toggle the modal
     /// dialog.
     ///
@@ -371,12 +267,9 @@ mod modal_dialogs {
         let dialog_buffer = {
             let mut it = DialogBuffer::new_empty();
             it.title = title.into();
-            let max_width = 100;
             let line: String = {
                 if text.is_empty() {
                     "".to_string()
-                } else if text.len() > max_width {
-                    text.split_at(max_width).0.to_string()
                 } else {
                     text.clone()
                 }
@@ -387,23 +280,17 @@ mod modal_dialogs {
         state.dialog_buffers.insert(id, dialog_buffer);
     }
 
-    fn activate_simple_modal(
+    // 00: rename this function to something like AskUserForFilenameThenSaveFile.
+    pub fn activate_simple_modal(
         _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
         has_focus: &mut HasFocus,
         state: &mut State,
     ) -> CommonResult<()> {
         throws!({
             // Initialize the dialog buffer with title & text.
+            // 00: rename this title.
             let title = "Simple Modal Dialog Title";
-            let text = {
-                if let Some(editor_buffer) =
-                    state.get_mut_editor_buffer(FlexBoxId::from(Id::Editor))
-                {
-                    editor_buffer.get_as_string_with_comma_instead_of_newlines()
-                } else {
-                    "".to_string()
-                }
-            };
+            let text = "".to_string();
 
             // Setting the has_focus to ComponentId::SimpleDialog will cause the dialog to
             // appear on the next render.
@@ -423,44 +310,6 @@ mod modal_dialogs {
                 log_debug(msg);
             });
         });
-    }
-
-    fn activate_autocomplete_modal(
-        _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
-        has_focus: &mut HasFocus,
-        state: &mut State,
-    ) -> CommonResult<()> {
-        // Initialize the dialog buffer with title & text.
-        let title = "Autocomplete Modal Dialog Title";
-        let text = {
-            if let Some(editor_buffer) =
-                state.get_mut_editor_buffer(FlexBoxId::from(Id::Editor))
-            {
-                editor_buffer.get_as_string_with_comma_instead_of_newlines()
-            } else {
-                "".to_string()
-            }
-        };
-
-        // Setting the has_focus to Id::Dialog will cause the dialog to appear on the next
-        // render.
-        has_focus.try_set_modal_id(FlexBoxId::from(Id::AutocompleteDialog))?;
-
-        // Change the state so that it will trigger a render. This will show the title &
-        // text on the next render.
-        dialog_component_initialize_focused(
-            state,
-            FlexBoxId::from(Id::AutocompleteDialog),
-            title.to_owned(),
-            text,
-        );
-
-        call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!("📣 activate modal autocomplete: {:?}", has_focus);
-            log_debug(msg);
-        });
-
-        Ok(())
     }
 }
 
@@ -511,28 +360,17 @@ mod perform_layout {
                       has_focus:          has_focus
                     };
                 }
-
-                // Or, render autocomplete modal dialog (if it is active, on top of the editor
-                // component).
-                if has_focus.is_modal_id(FlexBoxId::from(Id::AutocompleteDialog)) {
-                    render_component_in_given_box! {
-                      in:                 surface,
-                      box:                FlexBox::default(), /* This is not used as the modal breaks out of its box. */
-                      component_id:       FlexBoxId::from(Id::AutocompleteDialog),
-                      from:               component_registry_map,
-                      global_data:        global_data,
-                      has_focus:          has_focus
-                    };
-                }
             });
         }
     }
 }
 
 mod populate_component_registry {
+    use crossterm::style::Stylize;
     use tokio::sync::mpsc::Sender;
 
     use super::*;
+    use crate::edi::file_utils;
 
     pub fn create_components(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
@@ -540,7 +378,6 @@ mod populate_component_registry {
     ) {
         insert_editor_component(component_registry_map);
         insert_dialog_component_simple(component_registry_map);
-        insert_dialog_component_autocomplete(component_registry_map);
 
         // Switch focus to the editor component if focus is not set.
         let id = FlexBoxId::from(Id::Editor);
@@ -621,8 +458,66 @@ mod populate_component_registry {
                             state,
                             FlexBoxId::from(Id::SimpleDialog),
                             "Yes".to_string(),
-                            text,
+                            text.clone(),
                         );
+
+                        // 00: [🔥] Save the file here!
+                        let user_input_file_path = text.trim().to_string();
+                        if user_input_file_path != "" {
+                            call_if_true!(DEBUG_TUI_MOD, {
+                                let msg = format!("\n💾💾💾 About to save the new buffer with given filename: {user_input_file_path:?}")
+                                    .magenta()
+                                    .to_string();
+                                log_debug(msg);
+                            });
+
+                            let maybe_editor_buffer =
+                                state.get_mut_editor_buffer(FlexBoxId::from(Id::Editor));
+
+                            match maybe_editor_buffer {
+                                Some(editor_buffer) => {
+                                    // Set the file path.
+                                    editor_buffer.editor_content.maybe_file_path =
+                                        Some(user_input_file_path.clone());
+
+                                    // Set the file extension.
+                                    editor_buffer.editor_content.maybe_file_extension =
+                                        Some(file_utils::get_file_extension(&Some(
+                                            user_input_file_path.clone(),
+                                        )));
+
+                                    // Get the content from the new editor buffer.
+                                    let content =
+                                        editor_buffer.get_as_string_with_newlines();
+
+                                    call_if_true!(DEBUG_TUI_MOD, {
+                                        let msg = format!(
+                                            "\n💾💾💾 About to save this content: \n{:?}",
+                                            editor_buffer.get_as_string_with_newlines()
+                                        )
+                                        .magenta()
+                                        .to_string();
+                                        log_debug(msg);
+                                    });
+
+                                    // Actually save the file.
+                                    file_utils::save_content_to_file(
+                                        user_input_file_path.clone(),
+                                        content,
+                                    );
+
+                                    // 00: Route a GlobalData here, to access main_thread_channel_sender
+                                    // Should be able to just fire a signal to save the file.
+                                    // send_signal!(
+                                    //     state.main_thread_channel_sender,
+                                    //     TerminalWindowMainThreadSignal::ApplyAction(
+                                    //         AppSignal::SaveFile
+                                    //     )
+                                    // );
+                                }
+                                _ => {}
+                            }
+                        }
                     }
                     DialogChoice::No => {
                         modal_dialogs::dialog_component_initialize_focused(
@@ -635,12 +530,7 @@ mod populate_component_registry {
                 }
             }
 
-            fn on_dialog_editor_change_handler(state: &mut State) {
-                modal_dialogs::dialog_component_update_content(
-                    state,
-                    FlexBoxId::from(Id::SimpleDialog),
-                );
-            }
+            fn on_dialog_editor_change_handler(_state: &mut State) {}
 
             it
         };
@@ -655,82 +545,6 @@ mod populate_component_registry {
             let msg = format!(
                 "🪙 {}",
                 "construct DialogComponent (simple) { on_dialog_press }"
-            );
-            log_debug(msg);
-        });
-    }
-
-    /// Insert autocomplete dialog component into registry if it's not already there.
-    fn insert_dialog_component_autocomplete(
-        component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
-    ) {
-        let result_stylesheet = stylesheet::create_stylesheet();
-
-        let dialog_options = DialogEngineConfigOptions {
-            mode: DialogEngineMode::ModalAutocomplete,
-            maybe_style_border: get_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder.into() },
-            maybe_style_title: get_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle.into() },
-            maybe_style_editor: get_style! { @from_result: result_stylesheet , Id::DialogStyleNameEditor.into() },
-            maybe_style_results_panel: get_style! { @from_result: result_stylesheet , Id::DialogStyleNameResultsPanel.into() },
-            ..Default::default()
-        };
-
-        let editor_options = EditorEngineConfig {
-            multiline_mode: LineMode::SingleLine,
-            syntax_highlight: SyntaxHighlightMode::Disable,
-            edit_mode: EditMode::ReadWrite,
-        };
-
-        let boxed_dialog_component = {
-            let it = DialogComponent::new_boxed(
-                FlexBoxId::from(Id::AutocompleteDialog),
-                dialog_options,
-                editor_options,
-                on_dialog_press_handler,
-                on_dialog_editor_change_handler,
-            );
-
-            fn on_dialog_press_handler(dialog_choice: DialogChoice, state: &mut State) {
-                match dialog_choice {
-                    DialogChoice::Yes(text) => {
-                        modal_dialogs::dialog_component_initialize_focused(
-                            state,
-                            FlexBoxId::from(Id::AutocompleteDialog),
-                            "Yes".to_string(),
-                            text,
-                        );
-                    }
-                    DialogChoice::No => {
-                        modal_dialogs::dialog_component_initialize_focused(
-                            state,
-                            FlexBoxId::from(Id::AutocompleteDialog),
-                            "No".to_string(),
-                            "".to_string(),
-                        );
-                    }
-                }
-            }
-
-            fn on_dialog_editor_change_handler(state: &mut State) {
-                modal_dialogs::dialog_component_update_content(
-                    state,
-                    FlexBoxId::from(Id::AutocompleteDialog),
-                );
-            }
-
-            it
-        };
-
-        ComponentRegistry::put(
-            component_registry_map,
-            FlexBoxId::from(Id::AutocompleteDialog),
-            boxed_dialog_component,
-        );
-
-        call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!(
-                "🪙 {}",
-                "construct DialogComponent (autocomplete) { on_dialog_press }"
             );
             log_debug(msg);
         });
@@ -784,22 +598,61 @@ mod status_bar {
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
-        let styled_texts = styled_texts! {
+        let separator_style = style!(
+            attrib: [dim]
+            color_fg: TuiColor::Basic(ANSIBasicColor::DarkGrey)
+        );
 
-            // 00: [_] show keybinding for save.
+        let app_text = &UnicodeString::from("edi 🦜 ✶early access✶");
 
-            styled_text! { @style: style!(attrib: [bold, dim]) ,      @text: "Hints: "},
-            styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + q"},
-            styled_text! { @style: style!(attrib: [bold]) ,           @text: " : Exit 🖖"},
-            styled_text! { @style: style!(attrib: [dim]) ,            @text: " … "},
-            styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + l"},
-            styled_text! { @style: style!(attrib: [bold]) ,           @text: " : Simple 📣"},
-            styled_text! { @style: style!(attrib: [dim]) ,            @text: " … "},
-            styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + k"},
-            styled_text! { @style: style!(attrib: [bold]) ,           @text: " : Autocomplete 🤖"},
-            styled_text! { @style: style!(attrib: [dim]) ,            @text: " … "},
-            styled_text! { @style: style!(attrib: [underline]) ,      @text: "Type content 🌊"},
+        let mut color_wheel = ColorWheel::new(vec![
+            ColorWheelConfig::Rgb(
+                Vec::from(["#3eff03", "#00e5ff"].map(String::from)),
+                ColorWheelSpeed::Fast,
+                15,
+            ),
+            ColorWheelConfig::Ansi256(
+                Ansi256GradientIndex::MediumGreenToMediumBlue,
+                ColorWheelSpeed::Fast,
+            ),
+        ]);
+
+        let app_text_styled_texts = color_wheel.colorize_into_styled_texts(
+            app_text,
+            GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+            TextColorizationPolicy::ColorEachCharacter(None),
+        );
+
+        let styled_texts: StyledTexts = {
+            let mut it = Default::default();
+            it += app_text_styled_texts;
+            it += styled_text! { @style: separator_style , @text: " │ "};
+            it += styled_text! { @style: style!(attrib: [dim]) , @text: "Save: Ctrl+S "};
+            it += styled_text! { @style: style!() , @text: "💾"};
+            it += styled_text! { @style: separator_style , @text: " │ "};
+            it += styled_text! { @style: style!(attrib: [dim]) , @text: "Exit: Ctrl+Q "};
+            it += styled_text! { @style: style!() , @text: "🖖"};
+            it
         };
+
+        // 00: [x] show keybinding for save.
+        // 00: [_] remove commented code.
+        // let styled_texts = styled_texts! {
+        // styled_text! { @style: edi_style,                    @text: "edi 🦜" },
+        // styled_text! { @style: early_access_style ,          @text: " ★early access★"},
+        // styled_text! { @style: separator_style ,             @text: " │ "},
+        // styled_text! { @style: style!(attrib: [dim]) ,       @text: "Save: Ctrl+S "},
+        // styled_text! { @style: style!() ,                    @text: "💾"},
+        // styled_text! { @style: separator_style ,             @text: " │ "},
+        // styled_text! { @style: style!(attrib: [dim]) ,       @text: "Exit: Ctrl+Q "},
+        // styled_text! { @style: style!() ,                    @text: "🖖"},
+        // styled_text! { @style: separator_style ,             @text: " │ "},
+        // styled_text! { @style: style!(attrib: [dim]) ,       @text: "Ctrl+l: Simple "},
+        // styled_text! { @style: style!() ,                    @text: "📣"},
+        // styled_text! { @style: separator_style ,             @text: " │ "},
+        // styled_text! { @style: style!(attrib: [dim]) ,       @text: "Ctrl+k: Auto "},
+        // styled_text! { @style: style!() ,                    @text: "🤖"},
+        // };
 
         let display_width = styled_texts.display_width();
         let col_center: ChUnit = (size.col_count - display_width) / 2;
