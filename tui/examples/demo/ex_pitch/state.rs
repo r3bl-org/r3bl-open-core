@@ -82,7 +82,7 @@ pub mod state_mutator {
     pub fn get_initial_state() -> State {
         let editor_buffer = {
             let mut it =
-                EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()));
+                EditorBuffer::new_empty(&Some(DEFAULT_SYN_HI_FILE_EXT.to_owned()), &None);
             it.set_lines(get_slide_content(0));
             it
         };

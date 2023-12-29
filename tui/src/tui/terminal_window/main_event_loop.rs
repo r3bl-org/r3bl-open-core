@@ -115,9 +115,9 @@ impl TerminalWindow {
                                     )?;
                                 },
                                 TerminalWindowMainThreadSignal::ApplyAction(action) => {
-                                    let result = app.app_handle_signal(action, &mut global_data)?;
+                                    let result = app.app_handle_signal(action, &mut global_data);
                                     handle_result_generated_by_app_after_handling_action_or_input_event(
-                                        Ok(result),
+                                        result,
                                         None,
                                         &exit_keys,
                                         app,
@@ -238,8 +238,8 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, A>(
 {
     let main_thread_channel_sender = global_data.main_thread_channel_sender.clone();
 
-    if let Ok(event_propagation) = result {
-        match event_propagation {
+    match result {
+        Ok(event_propagation) => match event_propagation {
             EventPropagation::Propagate => {
                 if let Some(input_event) = maybe_input_event {
                     let check_if_exit_keys_pressed = DefaultInputEventHandler::no_consume(
@@ -266,6 +266,9 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, A>(
             EventPropagation::ExitMainEventLoop => {
                 request_exit_by_sending_signal(main_thread_channel_sender);
             }
+        },
+        Err(error) => {
+            log_error(format!("main_event_loop -> handle_result_generated_by_app_after_handling_action. Error: {error}"));
         }
     }
 }
