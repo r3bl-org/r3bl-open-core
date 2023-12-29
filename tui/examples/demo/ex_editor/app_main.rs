@@ -124,6 +124,8 @@ mod app_main_impl_app_trait {
             &mut self,
             _action: &AppSignal,
             _global_data: &mut GlobalData<State, AppSignal>,
+            _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+            _has_focus: &mut HasFocus,
         ) -> CommonResult<EventPropagation> {
             Ok(EventPropagation::ConsumedRender)
         }

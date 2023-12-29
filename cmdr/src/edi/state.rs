@@ -186,6 +186,9 @@ pub mod constructor {
 }
 
 pub mod file_utils {
+    use crossterm::style::Stylize;
+    use r3bl_rs_utils_core::{call_if_true, log_debug};
+
     use super::*;
 
     pub fn get_file_extension(maybe_file_path: &Option<String>) -> String {
@@ -213,6 +216,18 @@ pub mod file_utils {
         }
         // Otherwise, an empty vec is returned.
         vec![]
+    }
+
+    pub fn save_content_to_file(file_path: String, content: String) {
+        tokio::spawn(async move {
+            let msg = format!("About to save file: {file_path:?}")
+                .green()
+                .to_string();
+            call_if_true!(DEBUG_TUI_MOD, {
+                log_debug(format!("\n💾💾💾 {}", msg));
+            });
+            let _ = std::fs::write(file_path, content);
+        });
     }
 }
 

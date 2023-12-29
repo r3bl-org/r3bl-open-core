@@ -104,9 +104,9 @@ pub mod edi_ui_templates {
         println!("{}", {
             let goodbye_to_user = match var("USER") {
                 Ok(username) => {
-                    format!("Goodbye, {} 👋 🦜. Thanks for using edi!", username)
+                    format!("Goodbye, {} 👋. Thanks for using edi 🦜!", username)
                 }
-                Err(_) => "Thanks for using edi! 👋 🦜".to_owned(),
+                Err(_) => "Goodbye 👋. Thanks for using edi 🦜!".to_owned(),
             };
 
             let please_star_us = format!(

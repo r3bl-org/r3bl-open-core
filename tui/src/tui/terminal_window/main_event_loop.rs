@@ -115,7 +115,7 @@ impl TerminalWindow {
                                     )?;
                                 },
                                 TerminalWindowMainThreadSignal::ApplyAction(action) => {
-                                    let result = app.app_handle_signal(action, &mut global_data);
+                                    let result = app.app_handle_signal(action, &mut global_data, component_registry_map, has_focus);
                                     handle_result_generated_by_app_after_handling_action_or_input_event(
                                         result,
                                         None,

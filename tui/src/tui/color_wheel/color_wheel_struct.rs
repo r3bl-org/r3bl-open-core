@@ -155,7 +155,7 @@ pub struct ColorWheel {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, GetSize, Debug)]
-enum Defaults {
+pub enum Defaults {
     Steps = 50,
 }
 
