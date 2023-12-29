@@ -401,7 +401,10 @@ mod internal_impl {
 
         // Paint hint.
         if dialog_buffer.editor_buffer.is_empty()
-            || dialog_buffer.editor_buffer.get_as_string() == ""
+            || dialog_buffer
+                .editor_buffer
+                .get_as_string_with_comma_instead_of_newlines()
+                == ""
         {
             let mut ops = render_ops!();
             let msg = "Press <Esc> to close, or <Enter> to accept".to_string();
@@ -757,7 +760,9 @@ mod internal_impl {
             // Handle Enter.
             DialogEvent::EnterPressed => match dialog_engine.dialog_options.mode {
                 DialogEngineMode::ModalSimple => {
-                    let text = dialog_buffer.editor_buffer.get_as_string();
+                    let text = dialog_buffer
+                        .editor_buffer
+                        .get_as_string_with_comma_instead_of_newlines();
                     return Some(DialogChoice::Yes(text));
                 }
 
@@ -1117,7 +1122,7 @@ mod test_dialog_engine_api_apply_event {
                 .get_mut_dialog_buffer(self_id)
                 .unwrap()
                 .editor_buffer
-                .get_as_string();
+                .get_as_string_with_comma_instead_of_newlines();
             assert_eq2!(editor_content, "a");
         }
     }

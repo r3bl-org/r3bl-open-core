@@ -21,15 +21,17 @@ edi ui <https://github.com/r3bl-org/r3bl-open-core/issues/188>:
   ✔ based on file ext: @done(23-12-28 19:30)
     ✔ use the syntect hi or custom one (.md DEFAULT_SYN_HI_FILE_EXT only) @done(23-12-28 19:30)
     ✔ not this bool ENABLE_SYNTECT_MD_PARSE_AND_HIGHLIGHT @done(23-12-28 19:30)
-  ☐ implement save action (for a file that's opened from disk)
+  ☐ implement file save action (for a file that's opened from disk)
+  ☐ implement save action (for a new buffer) - requires dialog box to be shown for filename
   ☐ show filename, ext in status bar
   ☐ show quick actions in status bar (eg: help, save, open, quit)
-  ☐ implement save action (for a new buffer)
+  ☐ hide autocomplete dialog keybinding in status bar & disable it
 
 edi and giti analytics:
   ✔ more info: https://www.meilisearch.com/docs/learn/what_is_meilisearch/telemetry#why-collect-telemetry-data @done(23-12-26 11:54)
   ✔ edi - add CLI flag to disable anonymous analytics reporting @done(23-12-26 11:54)
   ✔ giti - add CLI flag to disable anonymous analytics reporting @done(23-12-26 11:54)
+  ☐ design doc: https://docs.google.com/document/d/1J9qVHexmBjBwmpxgTWpCoYxk2qiiw-yrSv7ULr7AQrA/edit
   ☐ create engine to report usage stats for products w/ anonymous ids
     ☐ on TUI / client side
       ☐ use crate to save config to disk (generate a friendly name for an id)

@@ -20,6 +20,7 @@ use std::fmt::*;
 #[derive(Default, Clone, Debug)]
 #[non_exhaustive]
 pub enum AppSignal {
+    SaveFile,
     #[default]
     Noop,
 }

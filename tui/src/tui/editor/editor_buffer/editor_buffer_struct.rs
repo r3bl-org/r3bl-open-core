@@ -178,6 +178,7 @@ pub struct EditorContent {
     pub caret_display_position: Position,
     pub scroll_offset: ScrollOffset,
     pub maybe_file_extension: Option<String>,
+    pub maybe_file_path: Option<String>,
     pub selection_map: SelectionMap,
 }
 
@@ -527,7 +528,10 @@ mod constructor {
 
     impl EditorBuffer {
         /// Marker method to make it easy to search for where an empty instance is created.
-        pub fn new_empty(file_extension: Option<String>) -> Self {
+        pub fn new_empty(
+            maybe_file_extension: &Option<String>,
+            maybe_file_path: &Option<String>,
+        ) -> Self {
             // Potentially do any other initialization here.
             call_if_true!(DEBUG_TUI_MOD, {
                 let msg = format!(
@@ -540,7 +544,8 @@ mod constructor {
             Self {
                 editor_content: EditorContent {
                     lines: vec![UnicodeString::default()],
-                    maybe_file_extension: file_extension.map(|s| s.to_string()),
+                    maybe_file_extension: maybe_file_extension.clone(),
+                    maybe_file_path: maybe_file_path.clone(),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -639,12 +644,20 @@ pub mod access_and_mutate {
 
         pub fn get_lines(&self) -> &Vec<UnicodeString> { &self.editor_content.lines }
 
-        pub fn get_as_string(&self) -> String {
+        pub fn get_as_string_with_comma_instead_of_newlines(&self) -> String {
             self.get_lines()
                 .iter()
-                .map(|l| l.string.clone())
+                .map(|it| it.string.clone())
                 .collect::<Vec<String>>()
                 .join(", ")
+        }
+
+        pub fn get_as_string_with_newlines(&self) -> String {
+            self.get_lines()
+                .iter()
+                .map(|it| it.string.clone())
+                .collect::<Vec<String>>()
+                .join("\n")
         }
 
         pub fn set_lines(&mut self, lines: Vec<String>) {
@@ -745,7 +758,7 @@ pub mod debug_format_helpers {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             write! {
                 f,
-                "\nEditorBuffer [                                  \n \
+                "\nEditorBuffer [                                    \n \
                 ├ content: {0:?}                                     \n \
                 └ history: {1:?}                                     \n \
                 ]",
@@ -759,10 +772,10 @@ pub mod debug_format_helpers {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             write! {
                 f,
-                "\n\tEditorContent [                                  \n \
+                "\n\tEditorContent [                                 \n \
                 \t├ lines: {0}, size: {1}                            \n \
                 \t├ selection_map: {4}                               \n \
-                \t└ ext: {2:?}, caret: {3:?}, scroll_offset: {5:?}   \n \
+                \t└ ext: {2:?}, path:{6:?}, caret: {3:?}, scroll_offset: {5:?}   \n \
                 \t]",
                 /* 0 */ self.lines.len(),
                 /* 1 */ self.lines.get_heap_size(),
@@ -770,6 +783,7 @@ pub mod debug_format_helpers {
                 /* 3 */ self.caret_display_position,
                 /* 4 */ self.selection_map.to_formatted_string(),
                 /* 5 */ self.scroll_offset,
+                /* 6 */ self.maybe_file_path,
             }
         }
     }

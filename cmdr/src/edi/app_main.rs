@@ -72,6 +72,8 @@ mod constructor {
 }
 
 mod app_main_impl_app_trait {
+    use crossterm::style::Stylize;
+
     use super::*;
 
     impl App for AppMain {
@@ -99,6 +101,18 @@ mod app_main_impl_app_trait {
             // Things from global scope.
             let GlobalData { state, .. } = global_data;
 
+            // 00: [_] send SaveFile signal here by intercepting keybinding.
+            if input_event.matches_keypress(KeyPress::WithModifiers {
+                key: Key::Character('s'),
+                mask: ModifierKeysMask::new().with_ctrl(),
+            }) {
+                send_signal!(
+                    global_data.main_thread_channel_sender,
+                    TerminalWindowMainThreadSignal::ApplyAction(AppSignal::SaveFile)
+                );
+                return Ok(EventPropagation::ConsumedRender);
+            }
+
             // Check to see if the modal dialog should be activated.
             if let modal_dialogs::ModalActivateResult::Yes =
                 modal_dialogs::should_activate(
@@ -122,9 +136,40 @@ mod app_main_impl_app_trait {
 
         fn app_handle_signal(
             &mut self,
-            _action: &AppSignal,
-            _global_data: &mut GlobalData<State, AppSignal>,
+            action: &AppSignal,
+            global_data: &mut GlobalData<State, AppSignal>,
         ) -> CommonResult<EventPropagation> {
+            // 00: [_] handle SaveFile signal here.
+            match action {
+                AppSignal::SaveFile => {
+                    // Save the file using information from state (editor buffer,
+                    // filename, etc). If this fails, then return an error.
+                    let GlobalData { state, .. } = global_data;
+
+                    let maybe_editor_buffer =
+                        state.editor_buffers.get_mut(&FlexBoxId::from(Id::Editor));
+
+                    if let Some(editor_buffer) = maybe_editor_buffer {
+                        let maybe_file_path =
+                            editor_buffer.editor_content.maybe_file_path.clone();
+                        let content: String = editor_buffer.get_as_string_with_newlines();
+
+                        if let Some(file_path) = maybe_file_path {
+                            tokio::spawn(async move {
+                                let msg = format!("About to save file: {file_path:?}")
+                                    .green()
+                                    .to_string();
+                                call_if_true!(DEBUG_TUI_MOD, {
+                                    log_debug(format!("\n💾💾💾 {}", msg));
+                                });
+                                let _ = std::fs::write(file_path, content);
+                            });
+                        }
+                    }
+                }
+                _ => {}
+            }
+
             Ok(EventPropagation::ConsumedRender)
         }
 
@@ -180,7 +225,10 @@ mod modal_dialogs {
         let maybe_changed_results: Option<Vec<String>> = {
             if let Some(dialog_buffer) = state.dialog_buffers.get_mut(&id) {
                 let vec_result = generate_random_results(
-                    dialog_buffer.editor_buffer.get_as_string().as_str(),
+                    dialog_buffer
+                        .editor_buffer
+                        .get_as_string_with_comma_instead_of_newlines()
+                        .as_str(),
                 );
                 Some(vec_result)
             } else {
@@ -203,14 +251,18 @@ mod modal_dialogs {
                 // 2. [Action::AutocompleteDialogComponentInitializeFocused].
                 || {
                     let mut it = DialogBuffer::new_empty();
-                    it.editor_buffer = EditorBuffer::new_empty(None);
+                    it.editor_buffer = EditorBuffer::new_empty(&None, &None);
                     it
                 },
             );
 
         // Content is empty.
         if let Some(dialog_buffer) = state.dialog_buffers.get_mut(&id) {
-            if dialog_buffer.editor_buffer.get_as_string() == "" {
+            if dialog_buffer
+                .editor_buffer
+                .get_as_string_with_comma_instead_of_newlines()
+                == ""
+            {
                 if let Some(it) = state.dialog_buffers.get_mut(&id) {
                     it.maybe_results = None;
                 }
@@ -347,7 +399,7 @@ mod modal_dialogs {
                 if let Some(editor_buffer) =
                     state.get_mut_editor_buffer(FlexBoxId::from(Id::Editor))
                 {
-                    editor_buffer.get_as_string()
+                    editor_buffer.get_as_string_with_comma_instead_of_newlines()
                 } else {
                     "".to_string()
                 }
@@ -384,7 +436,7 @@ mod modal_dialogs {
             if let Some(editor_buffer) =
                 state.get_mut_editor_buffer(FlexBoxId::from(Id::Editor))
             {
-                editor_buffer.get_as_string()
+                editor_buffer.get_as_string_with_comma_instead_of_newlines()
             } else {
                 "".to_string()
             }
@@ -733,6 +785,9 @@ mod status_bar {
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
         let styled_texts = styled_texts! {
+
+            // 00: [_] show keybinding for save.
+
             styled_text! { @style: style!(attrib: [bold, dim]) ,      @text: "Hints: "},
             styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + q"},
             styled_text! { @style: style!(attrib: [bold]) ,           @text: " : Exit 🖖"},
