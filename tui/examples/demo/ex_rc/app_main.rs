@@ -235,6 +235,8 @@ mod app_main_impl_app_trait {
             &mut self,
             action: &AppSignal,
             global_data: &mut GlobalData<State, AppSignal>,
+            _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+            _has_focus: &mut HasFocus,
         ) -> CommonResult<EventPropagation> {
             throws_with_return!({
                 let state = &mut global_data.state;

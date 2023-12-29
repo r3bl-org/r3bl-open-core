@@ -30,7 +30,9 @@ use crate::*;
 /// - Async trait docs: <https://doc.rust-lang.org/book/ch10-02-traits.html>
 /// - Limitations of linking to examples module: <https://users.rust-lang.org/t/how-to-link-to-examples/67918>
 pub trait App {
+    /// State.
     type S: Debug + Default + Clone + Sync + Send;
+    /// App Signal.
     type AS: Debug + Default + Clone + Sync + Send;
 
     /// This is called once at the beginning of the app's lifecycle. It is used to
@@ -66,6 +68,8 @@ pub trait App {
         &mut self,
         signal: &Self::AS,
         global_data: &mut GlobalData<Self::S, Self::AS>,
+        component_registry_map: &mut ComponentRegistryMap<Self::S, Self::AS>,
+        has_focus: &mut HasFocus,
     ) -> CommonResult<EventPropagation>;
 
     /// Use the state to render the output (via crossterm). The state is immutable. If you want to

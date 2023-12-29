@@ -4,6 +4,7 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
+  - [r3bl-cmdr-next-release](#r3bl-cmdr-next-release)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
 - [r3bl_tuify](#r3bl_tuify)
   - [r3bl_tuify-next-release](#r3bl_tuify-next-release)
@@ -67,6 +68,7 @@
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
 
 ### r3bl-cmdr-next-release
+<a id="markdown-r3bl-cmdr-next-release" name="r3bl-cmdr-next-release"></a>
 
 Changed:
   - Replace the `run` command with `examples` in the `run` nu shell script. To run an
@@ -91,7 +93,9 @@ Added:
       select one subcommand using the `select_from_list()` when `giti branch` runs.
     - Delete one or more branches using `select_from_list()` when  `giti branch delete`
       command runs.
-  - Add binary target `edi`. This is a powerful TUI Markdown editor.
+  - Add binary target `edi`. This is a powerful TUI Markdown editor. You can use it to
+    create new MD files, or edit any type of text file. It supports syntax highlighting
+    for most file formats (though `.toml` and `.todo` are missing).
   - Add binary target `rc` aka `r3bl-cmdr`.
 
 ## `r3bl_tuify`
@@ -184,7 +188,7 @@ Added:
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
-### r3bl_tui-next-release
+### r3bl_tui-next-breaking-release
 <a id="markdown-r3bl_tui-next-release" name="r3bl_tui-next-release"></a>
 
 - Changed:
@@ -196,6 +200,9 @@ Added:
     top level folder of this monorepo. Update `lib.rs` and `README.md` to reflect this
     change. The behavior of the `run` nu shell script is more uniform across all crates in
     this repo.
+  - In `app.rs`, change `App` trait function `app_handle_signal()` to receive 2 new
+    arguments: `component_registry_map`, and `has_focus`. This makes it similar to
+    `app_handle_input_event()`.
 
 - Fixed:
   - Editor component now cleans up state correctly after new content loads. This includes
