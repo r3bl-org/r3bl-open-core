@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{collections::HashMap, fmt::*};
+use std::{collections::HashMap, ffi::OsStr, fmt::*, path::Path};
 
 use r3bl_tui::*;
 
@@ -36,39 +36,39 @@ mod state_tests {
     #[test]
     fn test_file_extension() {
         let file_path = Some("foo.rs".to_string());
-        let file_ext = super::constructor::get_file_extension(&file_path);
+        let file_ext = super::file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "rs");
 
         let file_path = Some("foo".to_string());
-        let file_ext = super::constructor::get_file_extension(&file_path);
+        let file_ext = super::file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "md");
 
         let file_path = Some("foo.".to_string());
-        let file_ext = super::constructor::get_file_extension(&file_path);
+        let file_ext = super::file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "md");
 
         let file_path = Some("foo.bar.rs".to_string());
-        let file_ext = super::constructor::get_file_extension(&file_path);
+        let file_ext = super::file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "rs");
 
         let file_path = Some("foo.bar".to_string());
-        let file_ext = super::constructor::get_file_extension(&file_path);
+        let file_ext = super::file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "bar");
 
         let file_path = Some("foo.bar.".to_string());
-        let file_ext = super::constructor::get_file_extension(&file_path);
+        let file_ext = super::file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "md");
 
         let file_path = Some("foo.bar.baz".to_string());
-        let file_ext = super::constructor::get_file_extension(&file_path);
+        let file_ext = super::file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "baz");
 
         let file_path = Some("foo.bar.baz.".to_string());
-        let file_ext = super::constructor::get_file_extension(&file_path);
+        let file_ext = super::file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "md");
 
         let file_path = None;
-        let file_ext = super::constructor::get_file_extension(&file_path);
+        let file_ext = super::file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "md");
     }
 
@@ -82,7 +82,7 @@ mod state_tests {
         let content = "This is a test.\nThis is only a test.";
         std::fs::write(filename.clone(), content).unwrap();
 
-        let content = super::constructor::get_content(&Some(filename.clone()));
+        let content = super::file_utils::get_content(&Some(filename.clone()));
         assert_eq!(content.len(), 2);
 
         // Delete the file.
@@ -142,8 +142,6 @@ mod state_tests {
 }
 
 pub mod constructor {
-    use std::{ffi::OsStr, path::Path};
-
     use super::*;
 
     impl Default for State {
@@ -169,9 +167,11 @@ pub mod constructor {
         maybe_file_path: &Option<String>,
     ) -> HashMap<FlexBoxId, EditorBuffer> {
         let editor_buffer = {
-            let mut editor_buffer =
-                EditorBuffer::new_empty(Some(get_file_extension(&maybe_file_path)));
-            editor_buffer.set_lines(get_content(&maybe_file_path));
+            let mut editor_buffer = EditorBuffer::new_empty(
+                &Some(file_utils::get_file_extension(&maybe_file_path)),
+                maybe_file_path,
+            );
+            editor_buffer.set_lines(file_utils::get_content(&maybe_file_path));
             editor_buffer
         };
 
@@ -183,6 +183,10 @@ pub mod constructor {
 
         hash_map
     }
+}
+
+pub mod file_utils {
+    use super::*;
 
     pub fn get_file_extension(maybe_file_path: &Option<String>) -> String {
         if let Some(file_path) = maybe_file_path {

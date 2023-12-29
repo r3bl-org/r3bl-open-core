@@ -467,7 +467,7 @@ mod syn_hi_r3bl_path {
                     "\n🎯🎯🎯\neditor_buffer.lines.len(): {} vs md_document.lines.len(): {}\n{}\n{}🎯🎯🎯",
                     editor_buffer.get_lines().len().to_string().cyan(),
                     lines.len().to_string().yellow(),
-                    editor_buffer.get_as_string().cyan(),
+                    editor_buffer.get_as_string_with_comma_instead_of_newlines().cyan(),
                     lines.pretty_print_debug().yellow(),
                 ));
             });
