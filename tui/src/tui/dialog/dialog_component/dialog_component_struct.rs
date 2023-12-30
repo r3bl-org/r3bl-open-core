@@ -128,7 +128,6 @@ where
             ..
         } = global_data;
 
-        // 00: [🔥] Thread GlobalData into on_dialog_press_handler & on_dialog_editor_change_handler
         let DialogComponentData {
             id,
             dialog_engine,
