@@ -571,7 +571,13 @@ mod populate_component_registry {
                 on_dialog_editor_change_handler,
             );
 
-            fn on_dialog_press_handler(dialog_choice: DialogChoice, state: &mut State) {
+            fn on_dialog_press_handler(
+                dialog_choice: DialogChoice,
+                state: &mut State,
+                main_thread_channel_sender: &mut Sender<
+                    TerminalWindowMainThreadSignal<AppSignal>,
+                >,
+            ) {
                 match dialog_choice {
                     DialogChoice::Yes(text) => {
                         modal_dialogs::dialog_component_initialize_focused(
@@ -592,7 +598,12 @@ mod populate_component_registry {
                 }
             }
 
-            fn on_dialog_editor_change_handler(state: &mut State) {
+            fn on_dialog_editor_change_handler(
+                state: &mut State,
+                main_thread_channel_sender: &mut Sender<
+                    TerminalWindowMainThreadSignal<AppSignal>,
+                >,
+            ) {
                 modal_dialogs::dialog_component_update_content(
                     state,
                     FlexBoxId::from(Id::SimpleDialog),
@@ -647,7 +658,13 @@ mod populate_component_registry {
                 on_dialog_editor_change_handler,
             );
 
-            fn on_dialog_press_handler(dialog_choice: DialogChoice, state: &mut State) {
+            fn on_dialog_press_handler(
+                dialog_choice: DialogChoice,
+                state: &mut State,
+                main_thread_channel_sender: &mut Sender<
+                    TerminalWindowMainThreadSignal<AppSignal>,
+                >,
+            ) {
                 match dialog_choice {
                     DialogChoice::Yes(text) => {
                         modal_dialogs::dialog_component_initialize_focused(
@@ -668,7 +685,12 @@ mod populate_component_registry {
                 }
             }
 
-            fn on_dialog_editor_change_handler(state: &mut State) {
+            fn on_dialog_editor_change_handler(
+                state: &mut State,
+                main_thread_channel_sender: &mut Sender<
+                    TerminalWindowMainThreadSignal<AppSignal>,
+                >,
+            ) {
                 modal_dialogs::dialog_component_update_content(
                     state,
                     FlexBoxId::from(Id::AutocompleteDialog),

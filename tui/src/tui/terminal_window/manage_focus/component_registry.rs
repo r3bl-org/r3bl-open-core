@@ -22,31 +22,31 @@ use r3bl_rs_utils_core::*;
 use crate::*;
 
 #[derive(Debug)]
-pub struct ComponentRegistry<S, A>
+pub struct ComponentRegistry<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
-    _phantom: PhantomData<(S, A)>,
+    _phantom: PhantomData<(S, AS)>,
 }
 
 pub type ComponentRegistryMap<S, A> = HashMap<FlexBoxId, BoxedSafeComponent<S, A>>;
 
-impl<S, A> ComponentRegistry<S, A>
+impl<S, AS> ComponentRegistry<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
     pub fn put(
-        map: &mut ComponentRegistryMap<S, A>,
+        map: &mut ComponentRegistryMap<S, AS>,
         id: FlexBoxId,
-        component: BoxedSafeComponent<S, A>,
+        component: BoxedSafeComponent<S, AS>,
     ) {
         map.insert(id, component);
     }
 
     pub fn contains(
-        map: &mut ComponentRegistryMap<S, A>,
+        map: &mut ComponentRegistryMap<S, AS>,
         id: FlexBoxId,
     ) -> ContainsResult {
         match map.contains_key(&id) {
@@ -56,23 +56,23 @@ where
     }
 
     pub fn get(
-        map: &mut ComponentRegistryMap<S, A>,
+        map: &mut ComponentRegistryMap<S, AS>,
         id: FlexBoxId,
-    ) -> Option<&BoxedSafeComponent<S, A>> {
+    ) -> Option<&BoxedSafeComponent<S, AS>> {
         map.get(&id)
     }
 
     pub fn remove(
-        map: &mut ComponentRegistryMap<S, A>,
+        map: &mut ComponentRegistryMap<S, AS>,
         id: FlexBoxId,
-    ) -> Option<BoxedSafeComponent<S, A>> {
+    ) -> Option<BoxedSafeComponent<S, AS>> {
         map.remove(&id)
     }
 
     pub fn try_to_get_focused_component<'a>(
-        map: &'a mut ComponentRegistryMap<S, A>,
+        map: &'a mut ComponentRegistryMap<S, AS>,
         has_focus: &'_ HasFocus,
-    ) -> Option<&'a mut BoxedSafeComponent<S, A>> {
+    ) -> Option<&'a mut BoxedSafeComponent<S, AS>> {
         if let Some(ref id) = has_focus.get_id() {
             ComponentRegistry::try_to_get_component_by_id(map, *id)
         } else {
@@ -81,23 +81,23 @@ where
     }
 
     pub fn try_to_get_component_by_id(
-        map: &mut ComponentRegistryMap<S, A>,
+        map: &mut ComponentRegistryMap<S, AS>,
         id: FlexBoxId,
-    ) -> Option<&mut BoxedSafeComponent<S, A>> {
+    ) -> Option<&mut BoxedSafeComponent<S, AS>> {
         if let Some(component) = map.get_mut(&id) {
             return Some(component);
         }
         None
     }
 
-    pub fn reset_component(map: &mut ComponentRegistryMap<S, A>, id: FlexBoxId) {
+    pub fn reset_component(map: &mut ComponentRegistryMap<S, AS>, id: FlexBoxId) {
         if let Some(it) = ComponentRegistry::try_to_get_component_by_id(map, id) {
             it.reset();
         }
     }
 
     pub fn reset_focused_component(
-        map: &mut ComponentRegistryMap<S, A>,
+        map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
     ) {
         if let Some(it) = ComponentRegistry::try_to_get_focused_component(map, has_focus)
@@ -107,9 +107,9 @@ where
     }
 
     pub fn route_event_to_focused_component(
-        global_data: &mut GlobalData<S, A>,
+        global_data: &mut GlobalData<S, AS>,
         input_event: InputEvent,
-        component_registry_map: &mut ComponentRegistryMap<S, A>,
+        component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
     ) -> CommonResult<EventPropagation> {
         // If component has focus, then route input_event to it. Return its

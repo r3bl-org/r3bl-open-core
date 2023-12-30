@@ -451,7 +451,13 @@ mod populate_component_registry {
                 on_dialog_editor_change_handler,
             );
 
-            fn on_dialog_press_handler(dialog_choice: DialogChoice, state: &mut State) {
+            fn on_dialog_press_handler(
+                dialog_choice: DialogChoice,
+                state: &mut State,
+                main_thread_channel_sender: &mut Sender<
+                    TerminalWindowMainThreadSignal<AppSignal>,
+                >,
+            ) {
                 match dialog_choice {
                     DialogChoice::Yes(text) => {
                         modal_dialogs::dialog_component_initialize_focused(
@@ -486,6 +492,8 @@ mod populate_component_registry {
                                             user_input_file_path.clone(),
                                         )));
 
+                                    // 00: Review this code and remove it.
+                                    /*
                                     // Get the content from the new editor buffer.
                                     let content =
                                         editor_buffer.get_as_string_with_newlines();
@@ -505,15 +513,16 @@ mod populate_component_registry {
                                         user_input_file_path.clone(),
                                         content,
                                     );
+                                    */
 
                                     // 00: Route a GlobalData here, to access main_thread_channel_sender
                                     // Should be able to just fire a signal to save the file.
-                                    // send_signal!(
-                                    //     state.main_thread_channel_sender,
-                                    //     TerminalWindowMainThreadSignal::ApplyAction(
-                                    //         AppSignal::SaveFile
-                                    //     )
-                                    // );
+                                    send_signal!(
+                                        main_thread_channel_sender,
+                                        TerminalWindowMainThreadSignal::ApplyAction(
+                                            AppSignal::SaveFile
+                                        )
+                                    );
                                 }
                                 _ => {}
                             }
@@ -530,7 +539,13 @@ mod populate_component_registry {
                 }
             }
 
-            fn on_dialog_editor_change_handler(_state: &mut State) {}
+            fn on_dialog_editor_change_handler(
+                _state: &mut State,
+                _main_thread_channel_sender: &mut Sender<
+                    TerminalWindowMainThreadSignal<AppSignal>,
+                >,
+            ) {
+            }
 
             it
         };
