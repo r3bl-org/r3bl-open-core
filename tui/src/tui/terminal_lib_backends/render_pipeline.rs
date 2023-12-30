@@ -213,13 +213,13 @@ mod render_pipeline_impl {
             Some(vec_render_op)
         }
 
-        pub fn paint<S, A>(
+        pub fn paint<S, AS>(
             &self,
             flush_kind: FlushKind,
-            global_data: &mut GlobalData<S, A>,
+            global_data: &mut GlobalData<S, AS>,
         ) where
             S: Debug + Default + Clone + Sync + Send,
-            A: Debug + Default + Clone + Sync + Send,
+            AS: Debug + Default + Clone + Sync + Send,
         {
             paint(self, flush_kind, global_data);
             // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24

@@ -64,11 +64,11 @@ mod animator_task {
 
     /// Note the [Sender] is used to send a signal to the animator to kill it when
     /// [Animator::stop](Animator::stop) is used.
-    pub fn start_animator_task<A>(
-        main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<A>>,
+    pub fn start_animator_task<AS>(
+        main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
     ) -> Sender<()>
     where
-        A: Debug + Default + Clone + Sync + Send + 'static,
+        AS: Debug + Default + Clone + Sync + Send + 'static,
     {
         const ANIMATION_START_DELAY_MSEC: u64 = 500;
         const ANIMATION_INTERVAL_MSEC: u64 = 30; // 33 FPS.

@@ -1637,10 +1637,10 @@ pub mod mock_real_objects_for_editor {
 
     use crate::*;
 
-    pub fn make_global_data<S, A>(window_size: Option<Size>) -> GlobalData<S, A>
+    pub fn make_global_data<S, AS>(window_size: Option<Size>) -> GlobalData<S, AS>
     where
         S: Debug + Default + Clone + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
+        AS: Debug + Default + Clone + Sync + Send,
     {
         let (sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
         let global_data = GlobalData {

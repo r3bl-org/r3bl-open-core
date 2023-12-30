@@ -89,16 +89,16 @@ where
     ) -> CommonResult<EventPropagation>;
 }
 
-pub trait SurfaceRender<S, A>
+pub trait SurfaceRender<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
     fn render_in_surface(
         &mut self,
         surface: &mut Surface,
-        global_data: &mut GlobalData<S, A>,
-        component_registry_map: &mut ComponentRegistryMap<S, A>,
+        global_data: &mut GlobalData<S, AS>,
+        component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
     ) -> CommonResult<()>;
 }

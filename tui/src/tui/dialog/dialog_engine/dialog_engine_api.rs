@@ -34,12 +34,12 @@ pub enum DialogEngineApplyResponse {
 pub struct DialogEngineApi;
 
 impl DialogEngineApi {
-    pub fn render_engine<S, A>(
-        args: DialogEngineArgs<'_, S, A>,
+    pub fn render_engine<S, AS>(
+        args: DialogEngineArgs<'_, S, AS>,
     ) -> CommonResult<RenderPipeline>
     where
         S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
-        A: Debug + Default + Clone + Sync + Send,
+        AS: Debug + Default + Clone + Sync + Send,
     {
         // Unpack local scope data.
         let DialogEngineArgs {
@@ -149,7 +149,7 @@ impl DialogEngineApi {
     ///   pressed.
     /// - [DialogEngineApplyResponse::UpdateEditorBuffer] => the editor buffer was updated.
     /// - [DialogEngineApplyResponse::Noop] => otherwise.
-    pub fn apply_event<S, A>(
+    pub fn apply_event<S, AS>(
         mut_state: &mut S,
         self_id: FlexBoxId,
         dialog_engine: &mut DialogEngine,
@@ -157,7 +157,7 @@ impl DialogEngineApi {
     ) -> CommonResult<DialogEngineApplyResponse>
     where
         S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
-        A: Debug + Default + Clone + Sync + Send,
+        AS: Debug + Default + Clone + Sync + Send,
     {
         // Was a dialog choice made?
         if let Some(choice) = internal_impl::try_handle_dialog_choice(
@@ -345,14 +345,14 @@ mod internal_impl {
         })
     }
 
-    pub fn render_editor<S, A>(
+    pub fn render_editor<S, AS>(
         origin_pos: &Position,
         bounds_size: &Size,
-        args: DialogEngineArgs<'_, S, A>,
+        args: DialogEngineArgs<'_, S, AS>,
     ) -> CommonResult<RenderPipeline>
     where
         S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
-        A: Debug + Default + Clone + Sync + Send,
+        AS: Debug + Default + Clone + Sync + Send,
     {
         let DialogEngineArgs {
             self_id,

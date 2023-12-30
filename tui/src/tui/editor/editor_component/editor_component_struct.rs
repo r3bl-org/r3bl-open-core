@@ -26,23 +26,23 @@ use crate::*;
 /// This is a shim which allows the reusable [EditorEngine] to be used in the context of
 /// [Component] and [App]. The main methods here simply pass thru all their
 /// arguments to the [EditorEngine].
-pub struct EditorComponent<S, A>
+pub struct EditorComponent<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
-    pub data: EditorComponentData<S, A>,
+    pub data: EditorComponentData<S, AS>,
 }
 
 #[derive(Debug, Default)]
-pub struct EditorComponentData<S, A>
+pub struct EditorComponentData<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
     pub editor_engine: EditorEngine,
     pub id: FlexBoxId,
-    pub on_editor_buffer_change_handler: Option<OnEditorBufferChangeFn<A>>,
+    pub on_editor_buffer_change_handler: Option<OnEditorBufferChangeFn<AS>>,
     _phantom: std::marker::PhantomData<S>,
 }
 
@@ -72,10 +72,10 @@ pub mod editor_component_impl_component_trait {
         mut_state.get_mut_editor_buffer(self_id).unwrap()
     }
 
-    impl<S, A> Component<S, A> for EditorComponent<S, A>
+    impl<S, AS> Component<S, AS> for EditorComponent<S, AS>
     where
         S: HasEditorBuffers + Default + Clone + Debug + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
+        AS: Debug + Default + Clone + Sync + Send,
     {
         fn reset(&mut self) {}
 
@@ -89,7 +89,7 @@ pub mod editor_component_impl_component_trait {
         /// - Has focus: [HasFocus] containing whether the current box has focus.
         fn render(
             &mut self,
-            global_data: &mut GlobalData<S, A>,
+            global_data: &mut GlobalData<S, AS>,
             current_box: FlexBox,
             _surface_bounds: SurfaceBounds, /* Ignore this. */
             has_focus: &mut HasFocus,
@@ -126,7 +126,7 @@ pub mod editor_component_impl_component_trait {
         /// in the first place.
         fn handle_event(
             &mut self,
-            global_data: &mut GlobalData<S, A>,
+            global_data: &mut GlobalData<S, AS>,
             input_event: InputEvent,
             _: &mut HasFocus,
         ) -> CommonResult<EventPropagation> {
@@ -180,17 +180,17 @@ pub mod editor_component_impl_component_trait {
 pub mod constructor {
     use super::*;
 
-    impl<S, A> EditorComponent<S, A>
+    impl<S, AS> EditorComponent<S, AS>
     where
         S: Debug + Default + Clone + Sync + Send + HasEditorBuffers + 'static,
-        A: Debug + Default + Clone + Sync + Send + 'static,
+        AS: Debug + Default + Clone + Sync + Send + 'static,
     {
         /// The on_change_handler is a lambda that is called if the editor buffer changes. Typically this
         /// results in a Redux action being created and then dispatched to the given store.
         pub fn new(
             id: FlexBoxId,
             config_options: EditorEngineConfig,
-            on_buffer_change: OnEditorBufferChangeFn<A>,
+            on_buffer_change: OnEditorBufferChangeFn<AS>,
         ) -> Self {
             Self {
                 data: EditorComponentData {
@@ -205,8 +205,8 @@ pub mod constructor {
         pub fn new_boxed(
             id: FlexBoxId,
             config_options: EditorEngineConfig,
-            on_buffer_change: OnEditorBufferChangeFn<A>,
-        ) -> BoxedSafeComponent<S, A> {
+            on_buffer_change: OnEditorBufferChangeFn<AS>,
+        ) -> BoxedSafeComponent<S, AS> {
             let it = EditorComponent::new(id, config_options, on_buffer_change);
             Box::new(it)
         }
