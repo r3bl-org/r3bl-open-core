@@ -50,12 +50,12 @@ impl Animator {
     ///    manipulated over time and the action is what will change this property.
     /// 2. `start_animator_task_fn`: This is a function that will start the animation
     ///    task. It will typically spawn a Tokio task and return a handle to it.
-    pub fn start<A>(
+    pub fn start<AS>(
         &mut self,
-        channel_sender: Sender<TerminalWindowMainThreadSignal<A>>,
-        start_animator_task: fn(Sender<TerminalWindowMainThreadSignal<A>>) -> Sender<()>,
+        channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
+        start_animator_task: fn(Sender<TerminalWindowMainThreadSignal<AS>>) -> Sender<()>,
     ) where
-        A: Debug + Default + Clone + Sync + Send,
+        AS: Debug + Default + Clone + Sync + Send,
     {
         if self.is_animation_started() {
             return;

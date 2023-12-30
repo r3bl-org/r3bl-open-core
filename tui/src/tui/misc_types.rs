@@ -55,13 +55,13 @@ pub mod args {
     ///
     /// ![Editor component lifecycle
     /// diagram](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/docs/memory-architecture.drawio.svg)
-    pub struct DialogEngineArgs<'a, S, A>
+    pub struct DialogEngineArgs<'a, S, AS>
     where
         S: Debug + Default + Clone + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
+        AS: Debug + Default + Clone + Sync + Send,
     {
         pub self_id: FlexBoxId,
-        pub global_data: &'a mut GlobalData<S, A>,
+        pub global_data: &'a mut GlobalData<S, AS>,
         pub dialog_engine: &'a mut DialogEngine,
         pub has_focus: &'a mut HasFocus,
     }
@@ -324,6 +324,8 @@ mod editor_component_traits {
 }
 
 pub mod dialog_component_traits {
+    use tokio::sync::mpsc::Sender;
+
     use super::*;
 
     /// This marker trait is meant to be implemented by whatever state struct is being used to store the
@@ -340,9 +342,16 @@ pub mod dialog_component_traits {
         No,
     }
 
-    pub type OnDialogPressFn<S> = fn(DialogChoice, &mut S);
+    pub type OnDialogPressFn<S, AS> = fn(
+        DialogChoice,
+        &mut S,
+        main_thread_channel_sender: &mut Sender<TerminalWindowMainThreadSignal<AS>>,
+    );
 
-    pub type OnDialogEditorChangeFn<S> = fn(&mut S);
+    pub type OnDialogEditorChangeFn<S, AS> = fn(
+        &mut S,
+        main_thread_channel_sender: &mut Sender<TerminalWindowMainThreadSignal<AS>>,
+    );
 }
 
 const PET_NAMES: [&str; 5] = ["Buddy", "Max", "Bella", "Charlie", "Lucy"];

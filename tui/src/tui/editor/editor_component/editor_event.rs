@@ -543,14 +543,14 @@ impl EditorEvent {
         };
     }
 
-    pub fn apply_editor_events<S, A>(
+    pub fn apply_editor_events<S, AS>(
         editor_engine: &mut EditorEngine,
         editor_buffer: &mut EditorBuffer,
         editor_event_vec: Vec<EditorEvent>,
         clipboard: &mut impl ClipboardService,
     ) where
         S: Debug + Default + Clone + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
+        AS: Debug + Default + Clone + Sync + Send,
     {
         for editor_event in editor_event_vec {
             EditorEvent::apply_editor_event(

@@ -25,33 +25,33 @@ use crate::*;
 /// [Component]. The main methods here simply pass thru all their arguments to the
 /// [DialogEngine].
 #[derive(Debug, Default)]
-pub struct DialogComponent<S, A>
+pub struct DialogComponent<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
-    pub data: DialogComponentData<S, A>,
+    pub data: DialogComponentData<S, AS>,
 }
 
 #[derive(Debug, Default)]
-pub struct DialogComponentData<S, A>
+pub struct DialogComponentData<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
     pub id: FlexBoxId,
     pub dialog_engine: DialogEngine,
     /// Make sure to dispatch actions to handle the user's dialog choice [DialogChoice].
-    pub on_dialog_press_handler: Option<OnDialogPressFn<S>>,
+    pub on_dialog_press_handler: Option<OnDialogPressFn<S, AS>>,
     /// Make sure to dispatch an action to update the dialog buffer's editor buffer.
-    pub on_dialog_editor_change_handler: Option<OnDialogEditorChangeFn<S>>,
-    _phantom: std::marker::PhantomData<A>,
+    pub on_dialog_editor_change_handler: Option<OnDialogEditorChangeFn<S, AS>>,
+    _phantom: std::marker::PhantomData<AS>,
 }
 
-impl<'a, S, A> Component<S, A> for DialogComponent<S, A>
+impl<'a, S, AS> Component<S, AS> for DialogComponent<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
     fn reset(&mut self) { self.data.dialog_engine.reset(); }
 
@@ -72,7 +72,7 @@ where
     ///    where the dialog can be placed on the screen.
     fn render(
         &mut self,
-        global_data: &mut GlobalData<S, A>,
+        global_data: &mut GlobalData<S, AS>,
         _current_box: FlexBox,         /* Ignore this. */
         surface_bounds: SurfaceBounds, /* Save this. */
         has_focus: &mut HasFocus,
@@ -117,13 +117,18 @@ where
     /// in the first place.
     fn handle_event(
         &mut self,
-        global_data: &mut GlobalData<S, A>,
+        global_data: &mut GlobalData<S, AS>,
         input_event: InputEvent,
         has_focus: &mut HasFocus,
     ) -> CommonResult<EventPropagation> {
         // Unpack the global data.
-        let GlobalData { state, .. } = global_data;
+        let GlobalData {
+            state,
+            main_thread_channel_sender,
+            ..
+        } = global_data;
 
+        // 00: [🔥] Thread GlobalData into on_dialog_press_handler & on_dialog_editor_change_handler
         let DialogComponentData {
             id,
             dialog_engine,
@@ -137,7 +142,7 @@ where
         match state.get_mut_dialog_buffer(id) {
             // Happy branch.
             Some(_) => {
-                match DialogEngineApi::apply_event::<S, A>(
+                match DialogEngineApi::apply_event::<S, AS>(
                     state,
                     id,
                     dialog_engine,
@@ -155,7 +160,11 @@ where
 
                         // Run the handler (if any) w/ `dialog_choice`.
                         if let Some(it) = &on_dialog_press_handler {
-                            it(dialog_choice, state);
+                            it(
+                                dialog_choice,
+                                state,
+                                &mut main_thread_channel_sender.clone(),
+                            );
                         };
 
                         // Trigger re-render, now that focus has been restored to non-modal component.
@@ -166,7 +175,7 @@ where
                     DialogEngineApplyResponse::UpdateEditorBuffer => {
                         // Run the handler (if any) w/ `new_editor_buffer`.
                         if let Some(it) = &on_dialog_editor_change_handler {
-                            it(state);
+                            it(state, &mut main_thread_channel_sender.clone());
                         };
 
                         // The handler should dispatch action to change state since dialog_buffer.editor_buffer is
@@ -195,10 +204,10 @@ where
     }
 }
 
-impl<S, A> DialogComponent<S, A>
+impl<S, AS> DialogComponent<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
     /// The on_dialog_press_handler is a lambda that is called if the user presses enter or escape.
     /// Typically this results in a Redux action being created and then dispatched to the given
@@ -207,8 +216,8 @@ where
         id: FlexBoxId,
         dialog_options: DialogEngineConfigOptions,
         editor_options: EditorEngineConfig,
-        on_dialog_press_handler: OnDialogPressFn<S>,
-        on_dialog_editor_change_handler: OnDialogEditorChangeFn<S>,
+        on_dialog_press_handler: OnDialogPressFn<S, AS>,
+        on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, AS>,
     ) -> Self {
         let dialog_engine = DialogEngine::new(dialog_options, editor_options);
         Self {
@@ -226,8 +235,8 @@ where
         id: FlexBoxId,
         dialog_options: DialogEngineConfigOptions,
         editor_options: EditorEngineConfig,
-        on_dialog_press_handler: OnDialogPressFn<S>,
-        on_dialog_editor_change_handler: OnDialogEditorChangeFn<S>,
+        on_dialog_press_handler: OnDialogPressFn<S, AS>,
+        on_dialog_editor_change_handler: OnDialogEditorChangeFn<S, AS>,
     ) -> Box<Self> {
         let it = DialogComponent::new(
             id,

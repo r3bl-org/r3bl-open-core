@@ -29,16 +29,16 @@ pub struct TerminalWindow;
 pub const CHANNEL_WIDTH: usize = 1_000;
 
 #[derive(Debug)]
-pub enum TerminalWindowMainThreadSignal<A>
+pub enum TerminalWindowMainThreadSignal<AS>
 where
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
     /// Exit the main event loop.
     Exit,
     /// Render the app.
     Render(Option<FlexBoxId>),
     /// Apply an action to the app.
-    ApplyAction(A),
+    ApplyAction(AS),
 }
 
 impl TerminalWindow {
@@ -47,20 +47,20 @@ impl TerminalWindow {
     /// also responsible for rendering the [App] after each input event. It is also
     /// responsible for handling all signals sent from the [App] to the main event loop
     /// (eg: exit, re-render, apply action, etc).
-    pub async fn main_event_loop<S, A>(
-        mut app: BoxedSafeApp<S, A>,
+    pub async fn main_event_loop<S, AS>(
+        mut app: BoxedSafeApp<S, AS>,
         exit_keys: Vec<InputEvent>,
         state: S,
     ) -> CommonResult<()>
     where
         S: Debug + Default + Clone + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send + 'static,
+        AS: Debug + Default + Clone + Sync + Send + 'static,
     {
         throws!({
             // mpsc channel to send signals from the app to the main event loop (eg: for exit,
             // re-render, apply action, etc).
             let (main_thread_channel_sender, mut main_thread_channel_receiver) =
-                mpsc::channel::<TerminalWindowMainThreadSignal<A>>(CHANNEL_WIDTH);
+                mpsc::channel::<TerminalWindowMainThreadSignal<AS>>(CHANNEL_WIDTH);
 
             // Initialize the terminal window data struct.
             let mut global_data = &mut GlobalData::try_to_create_instance(
@@ -170,16 +170,16 @@ impl TerminalWindow {
         });
     }
 
-    fn actually_process_input_event<S, A>(
-        global_data: &mut GlobalData<S, A>,
-        app: &mut BoxedSafeApp<S, A>,
+    fn actually_process_input_event<S, AS>(
+        global_data: &mut GlobalData<S, AS>,
+        app: &mut BoxedSafeApp<S, AS>,
         input_event: InputEvent,
         exit_keys: &[InputEvent],
-        component_registry_map: &mut ComponentRegistryMap<S, A>,
+        component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
     ) where
         S: Debug + Default + Clone + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send + 'static,
+        AS: Debug + Default + Clone + Sync + Send + 'static,
     {
         let result = app.app_handle_input_event(
             input_event,
@@ -201,15 +201,15 @@ impl TerminalWindow {
 
     /// Before any app gets to process the `input_event`, perform special handling in case
     /// it is a resize event.
-    pub fn handle_resize_if_applicable<S, A>(
+    pub fn handle_resize_if_applicable<S, AS>(
         input_event: InputEvent,
-        global_data: &mut GlobalData<S, A>,
-        app: &mut BoxedSafeApp<S, A>,
-        component_registry_map: &mut ComponentRegistryMap<S, A>,
+        global_data: &mut GlobalData<S, AS>,
+        app: &mut BoxedSafeApp<S, AS>,
+        component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
     ) where
         S: Debug + Default + Clone + Sync + Send,
-        A: Debug + Default + Clone + Sync + Send,
+        AS: Debug + Default + Clone + Sync + Send,
     {
         if let InputEvent::Resize(new_size) = input_event {
             global_data.set_size(new_size);
@@ -224,17 +224,17 @@ impl TerminalWindow {
     }
 }
 
-fn handle_result_generated_by_app_after_handling_action_or_input_event<S, A>(
+fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     result: CommonResult<EventPropagation>,
     maybe_input_event: Option<InputEvent>,
     exit_keys: &[InputEvent],
-    app: &mut BoxedSafeApp<S, A>,
-    global_data: &mut GlobalData<S, A>,
-    component_registry_map: &mut ComponentRegistryMap<S, A>,
+    app: &mut BoxedSafeApp<S, AS>,
+    global_data: &mut GlobalData<S, AS>,
+    component_registry_map: &mut ComponentRegistryMap<S, AS>,
     has_focus: &mut HasFocus,
 ) where
     S: Debug + Default + Clone + Sync + Send,
-    A: Debug + Default + Clone + Sync + Send + 'static,
+    AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     let main_thread_channel_sender = global_data.main_thread_channel_sender.clone();
 
@@ -273,10 +273,10 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, A>(
     }
 }
 
-fn request_exit_by_sending_signal<A: 'static>(
-    channel_sender: mpsc::Sender<TerminalWindowMainThreadSignal<A>>,
+fn request_exit_by_sending_signal<AS: 'static>(
+    channel_sender: mpsc::Sender<TerminalWindowMainThreadSignal<AS>>,
 ) where
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
     // Exit keys were pressed.
     // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so that it doesn't
@@ -288,23 +288,23 @@ fn request_exit_by_sending_signal<A: 'static>(
     });
 }
 
-struct AppManager<S, A>
+struct AppManager<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
-    _phantom: PhantomData<(S, A)>,
+    _phantom: PhantomData<(S, AS)>,
 }
 
-impl<S, A> AppManager<S, A>
+impl<S, AS> AppManager<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
-    A: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
     pub fn render_app(
-        app: &mut BoxedSafeApp<S, A>,
-        global_data: &mut GlobalData<S, A>,
-        component_registry_map: &mut ComponentRegistryMap<S, A>,
+        app: &mut BoxedSafeApp<S, AS>,
+        global_data: &mut GlobalData<S, AS>,
+        component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
     ) -> CommonResult<()> {
         throws!({
