@@ -17,12 +17,10 @@
 
 // Include.
 pub mod app_main;
-pub mod app_signal;
 pub mod launcher;
 pub mod state;
 
 // Reexport.
 pub use app_main::*;
-pub use app_signal::*;
 pub use launcher::*;
 pub use state::*;

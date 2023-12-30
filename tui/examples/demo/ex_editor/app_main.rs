@@ -574,7 +574,7 @@ mod populate_component_registry {
             fn on_dialog_press_handler(
                 dialog_choice: DialogChoice,
                 state: &mut State,
-                main_thread_channel_sender: &mut Sender<
+                _main_thread_channel_sender: &mut Sender<
                     TerminalWindowMainThreadSignal<AppSignal>,
                 >,
             ) {
@@ -600,7 +600,7 @@ mod populate_component_registry {
 
             fn on_dialog_editor_change_handler(
                 state: &mut State,
-                main_thread_channel_sender: &mut Sender<
+                _main_thread_channel_sender: &mut Sender<
                     TerminalWindowMainThreadSignal<AppSignal>,
                 >,
             ) {
@@ -661,7 +661,7 @@ mod populate_component_registry {
             fn on_dialog_press_handler(
                 dialog_choice: DialogChoice,
                 state: &mut State,
-                main_thread_channel_sender: &mut Sender<
+                _main_thread_channel_sender: &mut Sender<
                     TerminalWindowMainThreadSignal<AppSignal>,
                 >,
             ) {
@@ -687,7 +687,7 @@ mod populate_component_registry {
 
             fn on_dialog_editor_change_handler(
                 state: &mut State,
-                main_thread_channel_sender: &mut Sender<
+                _main_thread_channel_sender: &mut Sender<
                     TerminalWindowMainThreadSignal<AppSignal>,
                 >,
             ) {

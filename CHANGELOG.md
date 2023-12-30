@@ -16,7 +16,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
-  - [r3bl_tui-next-release](#r3bl_tui-next-release)
+  - [r3bl_tui-next-breaking-release](#r3bl_tui-next-breaking-release)
   - [v0.4.0 2023-12-22](#v040-2023-12-22)
   - [v0.3.10 2023-10-29](#v0310-2023-10-29)
   - [v0.3.9 2023-10-29](#v039-2023-10-29)
@@ -189,7 +189,7 @@ Added:
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
 ### r3bl_tui-next-breaking-release
-<a id="markdown-r3bl_tui-next-release" name="r3bl_tui-next-release"></a>
+<a id="markdown-r3bl_tui-next-breaking-release" name="r3bl_tui-next-breaking-release"></a>
 
 - Changed:
   - Rename `run.nu` to `run` in the `tui` folder. This simplifies commands to run it, eg:

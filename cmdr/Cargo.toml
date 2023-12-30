@@ -7,7 +7,7 @@ homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
 description = """
-A TUI app suite for developers built in Rust. Includes an editor `edi` and a git client `giti`.
+A TUI app suite for developers. Includes a Markdown editor `edi` and a git client `giti`.
 """
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["tui", "editor", "git", "tuify"]
@@ -26,12 +26,12 @@ name = "giti"
 path = "src/bin/giti.rs"
 
 [[bin]]
-name = "rc"
-path = "src/bin/rc.rs"
-
-[[bin]]
 name = "edi"
 path = "src/bin/edi.rs"
+
+[[bin]]
+name = "rc"
+path = "src/bin/rc.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -51,17 +51,20 @@ tokio = { version = "1.33.0", features = ["full"] }
 # More info: https://stackoverflow.com/a/76131914/2085356
 clap = { version = "4.4.6", features = ["derive", "wrap_help", "help"] }
 
-# serde-json
+# serde-json.
 serde_json = "1.0.107"
 
-# Time
+# Time.
 chrono = "0.4.31"
 
-# Misc
+# Misc.
 rand = "0.8.5"
 
-# Crossterm styling
+# Crossterm styling.
 crossterm = { version = "0.27.0" }
+
+# Open URLs.
+open = "5"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

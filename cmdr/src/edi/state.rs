@@ -109,13 +109,13 @@ mod state_tests {
         assert_eq!(
             state
                 .editor_buffers
-                .contains_key(&FlexBoxId::from(Id::Editor)),
+                .contains_key(&FlexBoxId::from(Id::ComponentEditor)),
             true
         );
         assert_eq!(
             state
                 .editor_buffers
-                .get(&FlexBoxId::from(Id::Editor))
+                .get(&FlexBoxId::from(Id::ComponentEditor))
                 .unwrap()
                 .editor_content
                 .lines
@@ -125,7 +125,7 @@ mod state_tests {
         assert_eq!(
             state
                 .editor_buffers
-                .get(&FlexBoxId::from(Id::Editor))
+                .get(&FlexBoxId::from(Id::ComponentEditor))
                 .unwrap()
                 .editor_content
                 .lines
@@ -177,7 +177,7 @@ pub mod constructor {
 
         let hash_map = {
             let mut it = HashMap::new();
-            it.insert(FlexBoxId::from(Id::Editor), editor_buffer);
+            it.insert(FlexBoxId::from(Id::ComponentEditor), editor_buffer);
             it
         };
 
@@ -187,7 +187,7 @@ pub mod constructor {
 
 pub mod file_utils {
     use crossterm::style::Stylize;
-    use r3bl_rs_utils_core::{call_if_true, log_debug};
+    use r3bl_rs_utils_core::{call_if_true, log_debug, log_error};
 
     use super::*;
 
@@ -209,9 +209,21 @@ pub mod file_utils {
     pub fn get_content(maybe_file_path: &Option<String>) -> Vec<String> {
         // Get the content if the file exists, and it can be read.
         if let Some(file_path) = maybe_file_path {
-            let it = std::fs::read_to_string(file_path);
-            if let Ok(it) = it {
-                return it.lines().map(|s| s.to_string()).collect();
+            let result_file_read = std::fs::read_to_string(file_path);
+            match result_file_read {
+                Ok(content) => {
+                    let msg = format!("Successfully read file: {file_path:?}")
+                        .green()
+                        .to_string();
+                    call_if_true!(DEBUG_TUI_MOD, {
+                        log_debug(format!("\n💾💾💾✅ {}", msg));
+                    });
+                    return content.lines().map(|s| s.to_string()).collect();
+                }
+                Err(error) => {
+                    let msg = format!("Failed to read file: {error:?}").red().to_string();
+                    log_error(format!("\n💾💾💾❌ {}", msg));
+                }
             }
         }
         // Otherwise, an empty vec is returned.
@@ -220,13 +232,21 @@ pub mod file_utils {
 
     pub fn save_content_to_file(file_path: String, content: String) {
         tokio::spawn(async move {
-            let msg = format!("About to save file: {file_path:?}")
-                .green()
-                .to_string();
-            call_if_true!(DEBUG_TUI_MOD, {
-                log_debug(format!("\n💾💾💾 {}", msg));
-            });
-            let _ = std::fs::write(file_path, content);
+            let result_file_write = std::fs::write(file_path.clone(), content);
+            match result_file_write {
+                Ok(_) => {
+                    let msg = format!("Successfully saved file: {file_path:?}")
+                        .green()
+                        .to_string();
+                    call_if_true!(DEBUG_TUI_MOD, {
+                        log_debug(format!("\n💾💾💾❌ {}", msg));
+                    });
+                }
+                Err(error) => {
+                    let msg = format!("Failed to save file: {error:?}").red().to_string();
+                    log_error(format!("\n💾💾💾✅ {}", msg));
+                }
+            }
         });
     }
 }
