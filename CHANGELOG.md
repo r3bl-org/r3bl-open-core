@@ -35,7 +35,7 @@
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [r3bl_analytics_schema](#r3bl_analytics_schema)
-  - [first-release](#first-release)
+  - [v0.0.1 2023-12-31](#v001-2023-12-31)
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
   - [v0.9.8 2023-12-22](#v098-2023-12-22)
   - [v0.9.7 2023-10-21](#v097-2023-10-21)
@@ -463,8 +463,8 @@ Added:
 ## `r3bl_analytics_schema`
 <a id="markdown-r3bl_analytics_schema" name="r3bl_analytics_schema"></a>
 
-### first-release
-<a id="markdown-first-release" name="first-release"></a>
+### v0.0.1 (2023-12-31)
+<a id="markdown-v0.0.1-2023-12-31" name="v0.0.1-2023-12-31"></a>
 
 - Added:
   - Initial support structs for use by `r3bl-base` and `r3bl-cmdr`.
