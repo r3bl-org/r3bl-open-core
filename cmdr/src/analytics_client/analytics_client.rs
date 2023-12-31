@@ -29,22 +29,30 @@ use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AnalyticsAction {
-    GitiMachineIdProxyCreate,
     GitiBranchDelete,
-    EdiFileOpen,
+    GitiFailedToRun,
+    GitiAppStart,
+    EdiAppStart,
+    EdiFileNew,
+    EdiFileOpenSingle,
+    EdiFileOpenMultiple,
     EdiFileSave,
-    EdiMachineIdProxyCreate,
+    MachineIdProxyCreate,
 }
 
 impl AnalyticsAction {
     pub fn to_string(&self) -> String {
         #[rustfmt::skip]
         let action = match self {
-            AnalyticsAction::GitiBranchDelete =>         "giti branch delete",
-            AnalyticsAction::GitiMachineIdProxyCreate => "giti proxy machine id create",
-            AnalyticsAction::EdiFileOpen =>              "edi file open",
-            AnalyticsAction::EdiFileSave =>              "edi file save",
-            AnalyticsAction::EdiMachineIdProxyCreate =>  "edi proxy machine id create",
+            AnalyticsAction::GitiAppStart =>          "giti app start",
+            AnalyticsAction::GitiBranchDelete =>      "giti branch delete",
+            AnalyticsAction::GitiFailedToRun =>       "giti failed to run",
+            AnalyticsAction::EdiAppStart =>           "edi app start",
+            AnalyticsAction::EdiFileNew =>            "edi file new",
+            AnalyticsAction::EdiFileOpenSingle =>     "edi file open one file",
+            AnalyticsAction::EdiFileOpenMultiple =>   "edi file open many files",
+            AnalyticsAction::EdiFileSave =>           "edi file save",
+            AnalyticsAction::MachineIdProxyCreate =>  "proxy machine id create",
         };
         action.to_string()
     }
@@ -148,6 +156,11 @@ pub mod config_file_proxy_machine_id {
                             try_write_file_contents(&config_file_path, &new_id);
                         match result_write_file_contents {
                             Ok(_) => {
+                                report_analytics::generate_event(
+                                    "".to_string(),
+                                    AnalyticsAction::MachineIdProxyCreate,
+                                );
+
                                 call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
                                     log_debug(
                                     format!(
@@ -210,6 +223,7 @@ pub mod report_analytics {
         tokio::spawn(async move {
             let proxy_machine_id =
                 config_file_proxy_machine_id::load_id_from_file_or_generate_and_save_it();
+
             let event =
                 AnalyticsEvent::new(proxy_user_id, proxy_machine_id, action.to_string());
             let result_event_json = serde_json::to_value(&event);

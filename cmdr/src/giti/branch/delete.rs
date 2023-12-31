@@ -27,11 +27,15 @@ use r3bl_tuify::{select_from_list_with_multi_line_header,
                  EXIT};
 use try_delete_branch_user_choice::Selection::{self, *};
 
-use crate::giti::{giti_ui_templates::report_unknown_error_and_propagate,
-                  multi_select_instruction_header,
-                  single_select_instruction_header};
+use crate::{giti::{giti_ui_templates::report_unknown_error_and_propagate,
+                   multi_select_instruction_header,
+                   single_select_instruction_header},
+            report_analytics,
+            AnalyticsAction};
 
 pub fn try_delete_branch() -> CommonResult<()> {
+    report_analytics::generate_event("".to_string(), AnalyticsAction::GitiBranchDelete);
+
     let default_header_style = [
         Style::Foreground(Color::Rgb(171, 204, 242)),
         Style::Background(Color::Rgb(31, 36, 46)),

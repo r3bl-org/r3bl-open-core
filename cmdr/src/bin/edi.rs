@@ -18,7 +18,7 @@
 use std::env::var;
 
 use clap::Parser;
-use r3bl_cmdr::{edi::launcher, report_analytics};
+use r3bl_cmdr::{edi::launcher, report_analytics, AnalyticsAction};
 use r3bl_rs_utils_core::{call_if_true,
                          log_debug,
                          throws,
@@ -48,17 +48,31 @@ async fn main() -> CommonResult<()> {
             report_analytics::disable();
         }
 
+        report_analytics::generate_event("".to_string(), AnalyticsAction::EdiAppStart);
+
         // Open the editor.
         match cli_arg.file_paths.len() {
             0 => {
+                report_analytics::generate_event(
+                    "".to_string(),
+                    AnalyticsAction::EdiFileNew,
+                );
                 launcher::run_app(None).await?;
             }
             1 => {
+                report_analytics::generate_event(
+                    "".to_string(),
+                    AnalyticsAction::EdiFileOpenSingle,
+                );
                 launcher::run_app(Some(cli_arg.file_paths[0].clone())).await?;
             }
             _ => match edi_ui_templates::handle_multiple_files_not_supported_yet(cli_arg)
             {
                 Some(file_path) => {
+                    report_analytics::generate_event(
+                        "".to_string(),
+                        AnalyticsAction::EdiFileOpenMultiple,
+                    );
                     launcher::run_app(Some(file_path)).await?;
                 }
                 _ => {}

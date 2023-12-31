@@ -190,6 +190,7 @@ pub mod file_utils {
     use r3bl_rs_utils_core::{call_if_true, log_debug, log_error};
 
     use super::*;
+    use crate::{report_analytics, AnalyticsAction};
 
     pub fn get_file_extension(maybe_file_path: &Option<String>) -> String {
         if let Some(file_path) = maybe_file_path {
@@ -232,6 +233,11 @@ pub mod file_utils {
 
     pub fn save_content_to_file(file_path: String, content: String) {
         tokio::spawn(async move {
+            report_analytics::generate_event(
+                "".to_string(),
+                AnalyticsAction::EdiFileSave,
+            );
+
             let result_file_write = std::fs::write(file_path.clone(), content);
             match result_file_write {
                 Ok(_) => {
