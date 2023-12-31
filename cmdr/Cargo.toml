@@ -46,6 +46,7 @@ r3bl_rs_utils_core = { path = "../core", version = "0.9.10" }
 r3bl_rs_utils_macro = { path = "../macro", version = "0.9.8" }
 r3bl_tui = { path = "../tui", version = "0.4.0" }
 r3bl_tuify = { path = "../tuify", version = "0.1.23" }
+r3bl_analytics_schema = { path = "../analytics_schema", version = "0.0.1" }
 log = { version = "0.4.20", features = ["std"] }
 
 # Tokio.
@@ -73,13 +74,6 @@ crossterm = { version = "0.27.0" }
 
 # Open URLs.
 open = "5"
-
-# Uuid.
-uuid = { version = "1.6.1", features = [
-  "v4",                # Lets you generate random UUIDs
-  "fast-rng",          # Use a faster (but still sufficiently random) RNG
-  "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
-] }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

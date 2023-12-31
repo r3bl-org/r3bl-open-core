@@ -16,10 +16,11 @@
  */
 
 use crossterm::style::Stylize;
+use r3bl_analytics_schema::AnalyticsEvent;
 use r3bl_rs_utils_core::{call_if_true, log_debug, log_error};
 use reqwest::Client;
 
-use crate::{AnalyticsEvent, DEBUG_ANALYTICS_MOD};
+use crate::DEBUG_ANALYTICS_MOD;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AnalyticsAction {

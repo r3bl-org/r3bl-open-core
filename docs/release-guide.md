@@ -91,6 +91,16 @@ git tag -a v0.9.10-core -m "v0.9.10-core"
 cargo publish
 cd ..
 
+cd analytics_schema
+# Update cargo.toml version number manually
+# Update CHANGELOG.md
+cargo build; cargo test; cargo doc
+git add -A
+git commit -m "v0.0.1-analytics_schema"
+git tag -a v0.0.1-analytics_schema -m "v0.0.1-analytics_schema"
+cargo publish
+cd ..
+
 cd ansi_color
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
