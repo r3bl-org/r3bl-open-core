@@ -99,9 +99,11 @@ pub fn show_exit_message() {
         };
 
         let please_star_us = format!(
-            "{}\n{}",
-            "Please star r3bl-open-core repo on GitHub!",
-            "🌟 https://github.com/r3bl-org/r3bl-open-core"
+            "{}\n{}\n{}\n{}",
+            "Please star us on GitHub:",
+            "→ 🌟 https://github.com/r3bl-org/r3bl-open-core",
+            "And report any issues you have with giti, so we can fix them:",
+            "→ 🐞 https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
         );
 
         let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");

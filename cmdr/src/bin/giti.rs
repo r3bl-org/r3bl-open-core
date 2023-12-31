@@ -53,11 +53,7 @@ async fn main() -> CommonResult<()> {
             report_analytics::disable();
         }
 
-        // 00: [_] remove this test analytics HTTP POST client code
-        report_analytics::generate_event(
-            "".to_string(),
-            AnalyticsAction::GitiBranchDelete,
-        );
+        report_analytics::generate_event("".to_string(), AnalyticsAction::GitiAppStart);
 
         launch_giti(cli_arg);
 
@@ -75,6 +71,11 @@ pub fn launch_giti(cli_arg: CLIArg) {
         }
         // Handle unrecoverable / unknown errors here.
         Err(error) => {
+            report_analytics::generate_event(
+                "".to_string(),
+                AnalyticsAction::GitiFailedToRun,
+            );
+
             let err_msg = format!(
                 "Could not run giti due to the following problem.\n{:#?}",
                 error
