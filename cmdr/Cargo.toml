@@ -33,6 +33,10 @@ path = "src/bin/edi.rs"
 name = "rc"
 path = "src/bin/rc.rs"
 
+[lib]
+name = "r3bl_cmdr"
+path = "src/lib.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -47,11 +51,15 @@ log = { version = "0.4.20", features = ["std"] }
 # Tokio.
 tokio = { version = "1.33.0", features = ["full"] }
 
+# Reqwest (HTTP client).
+reqwest = { version = "0.11", features = ["json"] }
+
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
 clap = { version = "4.4.6", features = ["derive", "wrap_help", "help"] }
 
 # serde-json.
+serde = { version = "1.0.190", features = ["derive"] }
 serde_json = "1.0.107"
 
 # Time.
@@ -65,6 +73,13 @@ crossterm = { version = "0.27.0" }
 
 # Open URLs.
 open = "5"
+
+# Uuid.
+uuid = { version = "1.6.1", features = [
+  "v4",                # Lets you generate random UUIDs
+  "fast-rng",          # Use a faster (but still sufficiently random) RNG
+  "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+] }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

@@ -237,11 +237,13 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                         .collect::<Vec<String>>()
                         .join("\r\n");
 
-                    log_debug(
-                        format!("multi_line_header_text: \n`{}`", multi_line_header_text)
-                            .blue()
-                            .to_string(),
-                    );
+                    call_if_true!(DEVELOPMENT_MODE, {
+                        log_debug(
+                            format!("multi_line_header_text: \n`{}`", multi_line_header_text)
+                                .blue()
+                                .to_string(),
+                        );
+                    });
 
                     queue! {
                         writer,

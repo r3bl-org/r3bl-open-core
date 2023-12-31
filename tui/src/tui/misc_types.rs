@@ -353,30 +353,3 @@ pub mod dialog_component_traits {
         main_thread_channel_sender: &mut Sender<TerminalWindowMainThreadSignal<AS>>,
     );
 }
-
-const PET_NAMES: [&str; 5] = ["Buddy", "Max", "Bella", "Charlie", "Lucy"];
-const FRUIT_NAMES: [&str; 5] = ["Apple", "Banana", "Orange", "Pear", "Peach"];
-
-pub fn generate_random_friendly_id() -> String {
-    use rand::Rng;
-
-    // Generate friendly pet and fruit name combination.
-    let pet = {
-        let mut rng = rand::thread_rng();
-        let pet = PET_NAMES[rng.gen_range(0..PET_NAMES.len())];
-        pet.to_lowercase()
-    };
-
-    let fruit = {
-        let mut rng = rand::thread_rng();
-        let fruit = FRUIT_NAMES[rng.gen_range(0..FRUIT_NAMES.len())];
-        fruit.to_lowercase()
-    };
-
-    let random_number = {
-        let mut rng = rand::thread_rng();
-        rng.gen_range(0..1000)
-    };
-
-    format!("{pet}-{fruit}-{random_number}")
-}

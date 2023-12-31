@@ -18,6 +18,8 @@
 use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
 use r3bl_rs_utils_core::*;
 
+use crate::DEVELOPMENT_MODE;
+
 pub trait KeyPressReader {
     fn read_key_press(&mut self) -> KeyPress;
 }
@@ -57,7 +59,10 @@ fn read_key_press_unix() -> KeyPress {
     let result_event = read();
     match result_event {
         Ok(event) => {
-            log_debug(format!("got event: {:?}", event).to_string());
+            call_if_true!(DEVELOPMENT_MODE, {
+                log_debug(format!("got event: {:?}", event).to_string());
+            });
+
             match event {
                 crossterm::event::Event::Resize(width, height) => KeyPress::Resize(Size {
                     col_count: ch!(width),
@@ -83,7 +88,7 @@ fn read_key_press_unix() -> KeyPress {
             }
         }
         Err(err) => {
-            log_debug(format!("ERROR getting event: {:?}", err).to_string());
+            log_error(format!("ERROR getting event: {:?}", err).to_string());
             KeyPress::Error
         }
     }
@@ -97,7 +102,10 @@ fn read_key_press_windows() -> KeyPress {
     let result_event = read();
     match result_event {
         Ok(event) => {
-            log_debug(format!("got event: {:?}", event).to_string());
+            call_if_true!(DEVELOPMENT_MODE, {
+                log_debug(format!("got event: {:?}", event).to_string());
+            });
+
             match event {
                 // Enter.
                 Event::Key(KeyEvent {
@@ -158,7 +166,7 @@ fn read_key_press_windows() -> KeyPress {
             }
         }
         Err(err) => {
-            log_debug(format!("ERROR getting event: {:?}", err).to_string());
+            log_error(format!("ERROR getting event: {:?}", err).to_string());
             KeyPress::Error
         }
     }
