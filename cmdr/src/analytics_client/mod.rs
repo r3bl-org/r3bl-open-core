@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-pub const DEBUG_ANALYTICS_MOD: bool = true;
+pub const DEBUG_ANALYTICS_CLIENT_MOD: bool = true;
 
 // Attach.
 pub mod analytics_client;

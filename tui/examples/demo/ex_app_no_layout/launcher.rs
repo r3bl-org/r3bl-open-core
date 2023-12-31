@@ -22,7 +22,7 @@ pub async fn run_app() -> CommonResult<()> {
     throws!({
         // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
         if ENABLE_TRACE_EXAMPLES {
-            try_to_set_log_level(log::LevelFilter::Trace).ok();
+            try_to_set_log_level(log::LevelFilter::Debug).ok();
         } else {
             try_to_set_log_level(log::LevelFilter::Off).ok();
         }

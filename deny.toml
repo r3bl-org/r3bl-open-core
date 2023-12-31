@@ -1,6 +1,6 @@
 [licenses]
 unlicensed = "deny"
-allow = ["MIT", "Apache-2.0", "BSL-1.0", "ISC", "BSD-3-Clause"]
+allow = ["MIT", "Apache-2.0", "BSL-1.0", "ISC", "BSD-3-Clause", "MPL-2.0"]
 copyleft = "deny"
 
 exceptions = [

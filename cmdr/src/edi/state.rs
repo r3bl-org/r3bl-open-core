@@ -31,7 +31,7 @@ pub struct State {
 mod state_tests {
     use r3bl_tui::FlexBoxId;
 
-    use crate::{edi::Id, generate_random_friendly_id};
+    use crate::{edi::Id, friendly_random_id};
 
     #[test]
     fn test_file_extension() {
@@ -75,7 +75,7 @@ mod state_tests {
     #[test]
     fn test_read_file_content() {
         // Make up a file name.
-        let filename = format!("/tmp/{}_file.md", generate_random_friendly_id());
+        let filename = format!("/tmp/{}_file.md", friendly_random_id::generate());
         println!("🍍🍎🍏filename: {}", filename);
 
         // Write some content to this file.
@@ -92,7 +92,7 @@ mod state_tests {
     #[test]
     fn test_state_constructor() {
         // Make up a file name.
-        let filename = format!("/tmp/{}_file.md", generate_random_friendly_id());
+        let filename = format!("/tmp/{}_file.md", friendly_random_id::generate());
         let maybe_file_path = Some(filename.clone());
         println!("🍍🍎🍏filename: {}", filename);
 

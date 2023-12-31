@@ -233,7 +233,7 @@ use r3bl_rs_utils::{try_to_set_log_level, CommonResult, CommonError};
 use log::LevelFilter;
 
 fn run() {
-  match try_to_set_log_level(LevelFilter::Trace) {
+  match try_to_set_log_level(LevelFilter::Debug) {
       Ok(level_set) => debug!(level_set),
       Err(error) => debug!(error),
   }

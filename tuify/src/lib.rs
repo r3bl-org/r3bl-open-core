@@ -652,4 +652,4 @@ pub use term::*;
 pub use test_utils::*;
 
 /// Enable file logging. You can use `tail -f log.txt` to watch the logs.
-pub const DEVELOPMENT_MODE: bool = true;
+pub const DEVELOPMENT_MODE: bool = false;
