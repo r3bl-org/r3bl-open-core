@@ -88,6 +88,10 @@
 pub const DEVELOPMENT_MODE: bool = true;
 
 // Attach sources.
+pub mod analytics;
 pub mod edi;
 pub mod giti;
 pub mod rc;
+
+// Re-export.
+pub use analytics::*;

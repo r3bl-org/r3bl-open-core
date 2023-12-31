@@ -29,9 +29,9 @@ pub struct State {
 
 #[cfg(test)]
 mod state_tests {
-    use r3bl_tui::{generate_random_friendly_id, FlexBoxId};
+    use r3bl_tui::FlexBoxId;
 
-    use crate::edi::Id;
+    use crate::{edi::Id, generate_random_friendly_id};
 
     #[test]
     fn test_file_extension() {
