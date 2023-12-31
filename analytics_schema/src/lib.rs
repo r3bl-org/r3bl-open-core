@@ -15,12 +15,8 @@
  *   limitations under the License.
  */
 
-pub const DEBUG_ANALYTICS_MOD: bool = true;
-
 // Attach.
-pub mod analytics_client;
 pub mod analytics_data;
 
-// Re-exports.
-pub use analytics_client::*;
+// Re-export.
 pub use analytics_data::*;

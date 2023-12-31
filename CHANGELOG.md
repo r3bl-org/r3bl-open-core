@@ -34,6 +34,8 @@
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
+- [r3bl_analytics_schema](#r3bl_analytics_schema)
+  - [first-release](#first-release)
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
   - [v0.9.8 2023-12-22](#v098-2023-12-22)
   - [v0.9.7 2023-10-21](#v097-2023-10-21)
@@ -457,6 +459,15 @@ Added:
   - ANSI escape sequences are no longer used internally in any intermediate format used by the TUI
     engine. It is reserved exclusively for output to stdout using (for now) crossterm. This opens
     the door for future support for GUI app (not just terminal emulators).
+
+## `r3bl_analytics_schema`
+<a id="markdown-r3bl_analytics_schema" name="r3bl_analytics_schema"></a>
+
+### first-release
+<a id="markdown-first-release" name="first-release"></a>
+
+- Added:
+  - Initial support structs for use by `r3bl-base` and `r3bl-cmdr`.
 
 ## `r3bl_rs_utils_macro`
 <a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>

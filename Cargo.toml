@@ -10,5 +10,6 @@ members = [
   "tui",
   "utils",
   "cmdr",
+  "analytics_schema",
 ]
 resolver = "2"
