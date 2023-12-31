@@ -18,7 +18,7 @@
 use std::env::var;
 
 use clap::Parser;
-use r3bl_cmdr::edi::launcher;
+use r3bl_cmdr::{edi::launcher, report_analytics};
 use r3bl_rs_utils_core::{call_if_true,
                          log_debug,
                          throws,
@@ -29,8 +29,6 @@ use r3bl_tui::{ColorWheel, GradientGenerationPolicy, TextColorizationPolicy};
 
 use crate::clap_config::CLIArg;
 
-// 00: [_] handle analytics flag
-
 #[tokio::main]
 async fn main() -> CommonResult<()> {
     throws!({
@@ -40,10 +38,15 @@ async fn main() -> CommonResult<()> {
         // Start logging.
         let enable_logging = cli_arg.global_options.enable_logging;
         call_if_true!(enable_logging, {
-            try_to_set_log_level(log::LevelFilter::Trace).ok();
+            try_to_set_log_level(log::LevelFilter::Debug).ok();
             log_debug("Start logging...".to_string());
             log_debug(format!("cli_args {:?}", cli_arg));
         });
+
+        // Check analytics reporting.
+        if cli_arg.global_options.no_analytics {
+            report_analytics::disable();
+        }
 
         // Open the editor.
         match cli_arg.file_paths.len() {

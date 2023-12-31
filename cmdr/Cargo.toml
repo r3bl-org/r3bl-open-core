@@ -75,6 +75,9 @@ crossterm = { version = "0.27.0" }
 # Open URLs.
 open = "5"
 
+# Save config files.
+dirs = "5.0.1"
+
 [dev-dependencies]
 pretty_assertions = "1.4.0"
 serial_test = "2.0.0"

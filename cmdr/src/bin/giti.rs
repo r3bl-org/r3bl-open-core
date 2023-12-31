@@ -22,7 +22,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use clap_config::*;
 use giti::{branch::delete::try_delete_branch, *};
 use r3bl_ansi_color::{AnsiStyledText, Color, Style};
-use r3bl_cmdr::{giti, report_analytics_event, AnalyticsAction};
+use r3bl_cmdr::{giti, report_analytics, AnalyticsAction};
 use r3bl_rs_utils_core::{call_if_true,
                          log_debug,
                          log_error,
@@ -37,19 +37,27 @@ use r3bl_tuify::{components::style::StyleSheet,
 #[tokio::main]
 async fn main() -> CommonResult<()> {
     throws!({
-        // 00: [_] remove this test analytics HTTP POST client code
-        report_analytics_event("".to_string(), AnalyticsAction::GitiBranchDelete);
-
         // If no args are passed, the following line will fail, and help will be printed
         // thanks to `arg_required_else_help(true)` in the `CliArgs` struct.
         let cli_arg = CLIArg::parse();
 
         let enable_logging = cli_arg.global_options.enable_logging;
         call_if_true!(enable_logging, {
-            try_to_set_log_level(log::LevelFilter::Trace).ok();
+            try_to_set_log_level(log::LevelFilter::Debug).ok();
             log_debug("Start logging...".to_string());
             log_debug(format!("cli_args {:?}", cli_arg));
         });
+
+        // Check analytics reporting.
+        if cli_arg.global_options.no_analytics {
+            report_analytics::disable();
+        }
+
+        // 00: [_] remove this test analytics HTTP POST client code
+        report_analytics::generate_event(
+            "".to_string(),
+            AnalyticsAction::GitiBranchDelete,
+        );
 
         launch_giti(cli_arg);
 
@@ -205,6 +213,7 @@ mod clap_config {
         )]
         /// More info: <https://docs.rs/clap/latest/clap/struct.Command.html#method.help_template>
         #[command(
+            /* cSpell:disable-next-line */
             help_template = "{about} \n\nUSAGE 📓:\n  giti branch [\x1b[34mcommand\x1b[0m] [\x1b[32moptions\x1b[0m]\n\n{positionals}\n\n  [options]\n{options}"
         )]
         Branch {
