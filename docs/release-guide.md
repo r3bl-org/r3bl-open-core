@@ -46,8 +46,8 @@ cd cmdr
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.0.8-cmdr"
-git tag -a v0.0.8-cmdr -m "v0.0.8-cmdr"
+git commit -m "v0.0.9-cmdr"
+git tag -a v0.0.9-cmdr -m "v0.0.9-cmdr"
 cargo publish
 cd ..
 
@@ -66,8 +66,8 @@ cd tui
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.4.0-tui"
-git tag -a v0.4.0-tui -m "v0.4.0-tui"
+git commit -m "v0.5.0-tui"
+git tag -a v0.5.0-tui -m "v0.5.0-tui"
 cargo publish
 cd ..
 

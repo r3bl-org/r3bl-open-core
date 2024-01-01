@@ -67,7 +67,7 @@ pub mod config_file_proxy_machine_id {
     const PROXY_MACHINE_ID_FILE_NAME: &str = "id";
 
     /// This is where the config file is stored.
-    fn try_get_config_file_path() -> Option<PathBuf> {
+    pub fn try_get_config_file_path() -> Option<PathBuf> {
         let config_dir = config_dir()?;
         let config_file_path = config_dir
             .join(CONFIG_FOLDER_NAME)

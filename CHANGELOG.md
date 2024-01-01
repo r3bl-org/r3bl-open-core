@@ -4,7 +4,7 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
-  - [r3bl-cmdr-next-release](#r3bl-cmdr-next-release)
+  - [v0.0.9 2023-12-31](#v009-2023-12-31)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
 - [r3bl_tuify](#r3bl_tuify)
   - [r3bl_tuify-next-release](#r3bl_tuify-next-release)
@@ -16,7 +16,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
-  - [r3bl_tui-next-breaking-release](#r3bl_tui-next-breaking-release)
+  - [v0.5.0 2023-12-31](#v050-2023-12-31)
   - [v0.4.0 2023-12-22](#v040-2023-12-22)
   - [v0.3.10 2023-10-29](#v0310-2023-10-29)
   - [v0.3.9 2023-10-29](#v039-2023-10-29)
@@ -69,8 +69,11 @@
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
 
-### r3bl-cmdr-next-release
-<a id="markdown-r3bl-cmdr-next-release" name="r3bl-cmdr-next-release"></a>
+### v0.0.9 (2023-12-31)
+<a id="markdown-v0.0.9-2023-12-31" name="v0.0.9-2023-12-31"></a>
+
+Added:
+  - Anonymized analytics reporting to prioritize feature development for `edi` and `giti`.
 
 Changed:
   - Replace the `run` command with `examples` in the `run` nu shell script. To run an
@@ -190,8 +193,8 @@ Added:
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
-### r3bl_tui-next-breaking-release
-<a id="markdown-r3bl_tui-next-breaking-release" name="r3bl_tui-next-breaking-release"></a>
+### v0.5.0 (2023-12-31)
+<a id="markdown-v0.5.0-2023-12-31" name="v0.5.0-2023-12-31"></a>
 
 - Changed:
   - Rename `run.nu` to `run` in the `tui` folder. This simplifies commands to run it, eg:
