@@ -7,7 +7,7 @@
   - [v0.0.9 2023-12-31](#v009-2023-12-31)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
 - [r3bl_tuify](#r3bl_tuify)
-  - [r3bl_tuify-next-release](#r3bl_tuify-next-release)
+  - [v0.1.24 2023-12-31](#v0124-2023-12-31)
   - [v0.1.23 2023-12-22](#v0123-2023-12-22)
   - [v0.1.22 2023-12-20](#v0122-2023-12-20)
   - [v0.1.21 2023-10-21](#v0121-2023-10-21)
@@ -106,8 +106,8 @@ Added:
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
-### r3bl_tuify-next-release
-<a id="markdown-r3bl_tuify-next-release" name="r3bl_tuify-next-release"></a>
+### v0.1.24 (2023-12-31)
+<a id="markdown-v0.1.24-2023-12-31" name="v0.1.24-2023-12-31"></a>
 
 - Changed:
   - Rename `run.nu` to `run`. This simplifies commands to run it, eg: `nu run build`, or

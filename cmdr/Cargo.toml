@@ -13,7 +13,6 @@ A TUI app suite for developers. Includes a Markdown editor `edi` and a git clien
 keywords = ["tui", "editor", "git", "tuify"]
 categories = ["command-line-interface", "command-line-utilities"]
 
-# TODO: Replace the following lines w/ real values
 repository = "https://github.com/r3bl-org/r3bl-open-core"
 authors = ["Nazmul Idris <idris@developerlife.com>"]
 documentation = "https://developerlife.com/category/Rust/"
