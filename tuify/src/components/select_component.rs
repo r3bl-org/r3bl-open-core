@@ -430,7 +430,7 @@ mod tests {
                 "Item 3".to_string(),
             ],
             max_display_height: ch!(5),
-            max_display_width: ch!(80),
+            max_display_width: ch!(40),
             raw_caret_row_index: ch!(0),
             scroll_offset_row_index: ch!(0),
             selected_items: vec![],
@@ -447,13 +447,18 @@ mod tests {
             style: StyleSheet::default(),
         };
 
-        set_override(r3bl_ansi_color::ColorSupport::Truecolor);
+        set_override(r3bl_ansi_color::ColorSupport::Ansi256);
         component.render(&mut state).unwrap();
 
-        println!("writer.get_buffer(): \n\n{:?}\n\n", writer.get_buffer());
+        let generated_output = writer.get_buffer().to_string();
 
-        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;2;171;204;242m\u{1b}[48;2;31;36;46m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;2;20;244;0m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◉ Item 1                                                                      \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;2;193;193;193m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 2                                                                      \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;2;193;193;193m\u{1b}[48;2;14;17;23m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 3                                                                      \u{1b}[1E\u{1b}[0m\u{1b}[4F";
-        assert_eq!(writer.get_buffer(), expected_output);
+        println!(
+            "generated_output = writer.get_buffer(): \n\n{:#?}\n\n",
+            generated_output
+        );
+
+        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;5;153m\u{1b}[48;5;235m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;46m\u{1b}[48;5;233m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◉ Item 1                              \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;250m\u{1b}[48;5;233m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 2                              \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;250m\u{1b}[48;5;233m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 3                              \u{1b}[1E\u{1b}[0m\u{1b}[4F";
+        assert_eq!(generated_output, expected_output);
 
         clear_override();
     }
