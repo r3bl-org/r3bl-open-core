@@ -84,6 +84,8 @@ pub enum CommonErrorType {
     InvalidHexColorFormat,
     NotFound,
     CommandExecutionError,
+    ConfigFolderCountNotBeCreated,
+    ConfigFolderPathCouldNotBeGenerated,
 }
 
 /// Implement [`Error`] trait.
