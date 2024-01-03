@@ -77,6 +77,9 @@
 - Fixed:
   - Refactor & clean up the analytics client code.
 
+- Updated:
+  - Use the latest `r3bl_rs_utils_core` version `0.9.11`.
+
 ### v0.0.9 (2023-12-31)
 <a id="markdown-v0.0.9-2023-12-31" name="v0.0.9-2023-12-31"></a>
 
