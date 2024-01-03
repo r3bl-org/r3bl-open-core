@@ -4,7 +4,7 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
-  - [r3bl-cmdr-next-release](#r3bl-cmdr-next-release)
+  - [v0.0.10 2024-01-02](#v0010-2024-01-02)
   - [v0.0.9 2023-12-31](#v009-2023-12-31)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
 - [r3bl_tuify](#r3bl_tuify)
@@ -71,8 +71,8 @@
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
 
-### r3bl-cmdr-next-release
-<a id="markdown-r3bl-cmdr-next-release" name="r3bl-cmdr-next-release"></a>
+### v0.0.10 (2024-01-02)
+<a id="markdown-v0.0.10-2024-01-02" name="v0.0.10-2024-01-02"></a>
 
 - Fixed:
   - Refactor & clean up the analytics client code.
@@ -408,7 +408,7 @@ Added:
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
-### next-release
+### v0.9.11 (2024-01-02)
 <a id="markdown-next-release" name="next-release"></a>
 
 - Added:

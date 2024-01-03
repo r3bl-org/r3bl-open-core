@@ -39,8 +39,8 @@
 //!
 //! ```toml
 //! [dependencies]
-//! r3bl_tuify = "0.1.21" # Get the latest version at the time you get this.
-//! r3bl_rs_utils_core = "0.9.9" # Get the latest version at the time you get this.
+//! r3bl_tuify = "0.1.24" # Get the latest version at the time you get this.
+//! r3bl_rs_utils_core = "0.9.11" # Get the latest version at the time you get this.
 //! ```
 //!
 //! The following example illustrates how you can use this as a library. The function that

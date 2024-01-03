@@ -28,7 +28,7 @@ path = "src/bin/rt.rs"
 [dependencies]
 # r3bl-open-core.
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
-r3bl_rs_utils_core = { path = "../core", version = "0.9.10" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.11" }
 
 # serde for JSON serialization.
 serde = { version = "1.0.190", features = ["derive"] }

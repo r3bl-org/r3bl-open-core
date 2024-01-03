@@ -23,8 +23,8 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl-open-core.
-r3bl_rs_utils_core = { path = "../core", version = "0.9.9" }
-r3bl_rs_utils_macro = { path = "../macro", version = "0.9.7" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.11" }
+r3bl_rs_utils_macro = { path = "../macro", version = "0.9.8" }
 
 # Time
 chrono = "0.4.31"
