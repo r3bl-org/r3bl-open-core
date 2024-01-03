@@ -4,6 +4,7 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
+- [r3bl-cmdr-next-release](#r3bl-cmdr-next-release)
   - [v0.0.9 2023-12-31](#v009-2023-12-31)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
 - [r3bl_tuify](#r3bl_tuify)
@@ -27,6 +28,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
+  - [next-release](#next-release)
   - [v0.9.10 2023-12-22](#v0910-2023-12-22)
   - [v0.9.9 2023-10-21](#v099-2023-10-21)
   - [v0.9.8 2023-10-21](#v098-2023-10-21)
@@ -68,6 +70,12 @@
 
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
+
+## r3bl-cmdr-next-release
+<a id="markdown-r3bl-cmdr-next-release" name="r3bl-cmdr-next-release"></a>
+
+- Fixed:
+  - Refactor & clean up the analytics client code.
 
 ### v0.0.9 (2023-12-31)
 <a id="markdown-v0.0.9-2023-12-31" name="v0.0.9-2023-12-31"></a>
@@ -399,6 +407,13 @@ Added:
 
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
+
+### next-release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Added:
+  - Add more variants to the `CommonErrorType` enum: `ConfigFolderCountNotBeCreated`,
+    `ConfigFolderPathCouldNotBeGenerated`.
 
 ### v0.9.10 (2023-12-22)
 <a id="markdown-v0.9.10-2023-12-22" name="v0.9.10-2023-12-22"></a>
