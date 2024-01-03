@@ -15,8 +15,9 @@
  *   limitations under the License.
  */
 
-use std::{fs::File,
-          io::{BufReader, Read},
+use std::{fs,
+          fs::File,
+          io::{BufReader, Read, Write},
           path::PathBuf};
 
 use crossterm::style::Stylize;
@@ -58,47 +59,48 @@ impl AnalyticsAction {
     }
 }
 
-pub mod config_file_proxy_machine_id {
-    use std::{fs, io::Write};
+pub mod config_folder {
+    use r3bl_rs_utils_core::{CommonError, CommonErrorType};
 
     use super::*;
 
-    const CONFIG_FOLDER_NAME: &str = "r3bl-cmdr";
-    const PROXY_MACHINE_ID_FILE_NAME: &str = "id";
+    pub enum ConfigPaths {
+        R3BLTopLevelFolderName,
+        ProxyMachineIdFile,
+    }
+
+    impl ConfigPaths {
+        pub fn to_string(&self) -> String {
+            let path = match self {
+                ConfigPaths::R3BLTopLevelFolderName => "r3bl-cmdr",
+                ConfigPaths::ProxyMachineIdFile => "id",
+            };
+            path.to_string()
+        }
+    }
 
     /// This is where the config file is stored.
-    pub fn try_get_config_file_path() -> Option<PathBuf> {
-        let config_dir = config_dir()?;
-        let config_file_path = config_dir
-            .join(CONFIG_FOLDER_NAME)
-            .join(PROXY_MACHINE_ID_FILE_NAME);
-        Some(config_file_path)
+    pub fn get_id_file_path(path: PathBuf) -> PathBuf {
+        let id_file_path = path.join(ConfigPaths::ProxyMachineIdFile.to_string());
+        id_file_path
     }
 
     /// This is where the config folder is.
-    fn try_get_config_folder_path() -> Option<PathBuf> {
-        let config_dir = config_dir()?;
-        let config_file_path = config_dir.join(CONFIG_FOLDER_NAME);
+    pub fn try_get_config_folder_path() -> Option<PathBuf> {
+        let home_config_folder_path = config_dir()?;
+        let config_file_path =
+            home_config_folder_path.join(ConfigPaths::R3BLTopLevelFolderName.to_string());
         Some(config_file_path)
     }
 
-    fn try_read_file_contents(path: &PathBuf) -> CommonResult<String> {
-        let file = File::open(path)?;
-        let mut reader = BufReader::new(file);
-        let mut contents = String::new();
-        let _ = reader.read_to_string(&mut contents)?;
-        Ok(contents)
+    pub fn exists() -> bool {
+        match try_get_config_folder_path() {
+            Some(config_file_path) => config_file_path.exists(),
+            None => false,
+        }
     }
 
-    fn try_write_file_contents(path: &PathBuf, contents: &str) -> CommonResult<()> {
-        let mut file = File::create(path)?;
-        file.write_all(contents.as_bytes())?;
-        Ok(())
-    }
-
-    /// Read the file contents from [try_get_config_file_path] and return it as a string
-    /// if it exists and can be read.
-    pub fn load_id_from_file_or_generate_and_save_it() -> String {
+    pub fn create() -> CommonResult<PathBuf> {
         match try_get_config_folder_path() {
             Some(config_folder_path) => {
                 let result_create_dir_all = fs::create_dir_all(&config_folder_path);
@@ -113,6 +115,7 @@ pub mod config_file_proxy_machine_id {
                                 .to_string(),
                             );
                         });
+                        Ok(config_folder_path)
                     }
                     Err(error) => {
                         log_error(
@@ -120,40 +123,73 @@ pub mod config_file_proxy_machine_id {
                                 .red()
                                 .to_string(),
                         );
+                        CommonError::new_err_with_only_type(
+                            CommonErrorType::ConfigFolderCountNotBeCreated,
+                        )
                     }
                 }
             }
             None => {
                 log_error(
                     format!(
-                        "Could not get config folder for proxy machine ID.\n{:?}",
+                        "Could not get config folder.\n{:?}",
                         try_get_config_folder_path(),
                     )
                     .red()
                     .to_string(),
                 );
-                return friendly_random_id::generate();
+                CommonError::new_err_with_only_type(
+                    CommonErrorType::ConfigFolderPathCouldNotBeGenerated,
+                )
             }
         }
+    }
+}
 
-        match try_get_config_file_path() {
-            Some(config_file_path) => {
-                let result = try_read_file_contents(&config_file_path);
+pub mod file_io {
+    use super::*;
+
+    pub fn try_read_file_contents(path: &PathBuf) -> CommonResult<String> {
+        let file = File::open(path)?;
+        let mut reader = BufReader::new(file);
+        let mut contents = String::new();
+        let _ = reader.read_to_string(&mut contents)?;
+        Ok(contents)
+    }
+
+    pub fn try_write_file_contents(path: &PathBuf, contents: &str) -> CommonResult<()> {
+        let mut file = File::create(path)?;
+        file.write_all(contents.as_bytes())?;
+        Ok(())
+    }
+}
+
+pub mod proxy_machine_id {
+    use super::*;
+
+    /// Read the file contents from [config_folder::get_id_file_path] and return it as a
+    /// string if it exists and can be read.
+    pub fn load_id_from_file_or_generate_and_save_it() -> String {
+        match config_folder::create() {
+            Ok(config_folder_path) => {
+                let id_file_path =
+                    config_folder::get_id_file_path(config_folder_path.clone());
+                let result = file_io::try_read_file_contents(&id_file_path);
                 match result {
                     Ok(contents) => {
                         call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
                             log_debug(
-                            format!("Successfully read proxy machine ID from file: {contents:?}")
-                            .green()
-                            .to_string(),
-                        );
+                                format!("Successfully read proxy machine ID from file: {contents:?}")
+                                .green()
+                                .to_string(),
+                            );
                         });
                         return contents;
                     }
                     Err(_) => {
                         let new_id = friendly_random_id::generate();
                         let result_write_file_contents =
-                            try_write_file_contents(&config_file_path, &new_id);
+                            file_io::try_write_file_contents(&id_file_path, &new_id);
                         match result_write_file_contents {
                             Ok(_) => {
                                 report_analytics::generate_event(
@@ -163,37 +199,29 @@ pub mod config_file_proxy_machine_id {
 
                                 call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
                                     log_debug(
-                                    format!(
-                                        "Successfully wrote proxy machine ID to file: {new_id:?}"
-                                    )
-                                    .green()
-                                    .to_string(),
-                                );
+                                        format!(
+                                            "Successfully wrote proxy machine ID to file: {new_id:?}"
+                                        )
+                                        .green()
+                                        .to_string(),
+                                    );
                                 });
                             }
                             Err(error) => {
                                 log_error(
-                                    format!(
-                                        "Could not write proxy machine ID to file.\n{error:?}",
-                                    )
-                                    .red()
-                                    .to_string(),
-                                );
+                                        format!(
+                                            "Could not write proxy machine ID to file.\n{error:?}",
+                                        )
+                                        .red()
+                                        .to_string(),
+                                    );
                             }
                         }
                         return new_id;
                     }
                 }
             }
-            None => {
-                log_error(
-                    format!(
-                        "Could not get config file path for proxy machine ID.\n{:?}",
-                        try_get_config_file_path(),
-                    )
-                    .red()
-                    .to_string(),
-                );
+            Err(_) => {
                 return friendly_random_id::generate();
             }
         }
@@ -222,7 +250,7 @@ pub mod report_analytics {
 
         tokio::spawn(async move {
             let proxy_machine_id =
-                config_file_proxy_machine_id::load_id_from_file_or_generate_and_save_it();
+                proxy_machine_id::load_id_from_file_or_generate_and_save_it();
 
             let event =
                 AnalyticsEvent::new(proxy_user_id, proxy_machine_id, action.to_string());
