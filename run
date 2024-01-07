@@ -101,6 +101,7 @@ def all [] {
     clippy
     docs
     audit-deps
+    rustfmt
 }
 
 def build [] {
