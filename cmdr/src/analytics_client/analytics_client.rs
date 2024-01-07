@@ -165,6 +165,8 @@ pub mod file_io {
 }
 
 pub mod proxy_machine_id {
+    use r3bl_rs_utils_core::friendly_random_id;
+
     use super::*;
 
     /// Read the file contents from [config_folder::get_id_file_path] and return it as a
@@ -187,7 +189,7 @@ pub mod proxy_machine_id {
                         return contents;
                     }
                     Err(_) => {
-                        let new_id = friendly_random_id::generate();
+                        let new_id = friendly_random_id::generate_friendly_random_id();
                         let result_write_file_contents =
                             file_io::try_write_file_contents(&id_file_path, &new_id);
                         match result_write_file_contents {
@@ -222,7 +224,7 @@ pub mod proxy_machine_id {
                 }
             }
             Err(_) => {
-                return friendly_random_id::generate();
+                return friendly_random_id::generate_friendly_random_id();
             }
         }
     }
@@ -354,60 +356,5 @@ pub mod http_client {
             );
             return response.error_for_status();
         }
-    }
-}
-
-pub mod friendly_random_id {
-    const PET_NAMES: [&str; 20] = [
-        "Buddy", "Max", "Bella", "Charlie", "Lucy", "Daisy", "Molly", "Lola", "Sadie",
-        "Maggie", "Bailey", "Sophie", "Chloe", "Duke", "Lily", "Rocky", "Jack", "Cooper",
-        "Riley", "Zoey",
-    ];
-
-    const FRUIT_NAMES: [&str; 20] = [
-        "Apple",
-        "Banana",
-        "Orange",
-        "Pear",
-        "Peach",
-        "Strawberry",
-        "Grape",
-        "Kiwi",
-        "Mango",
-        "Pineapple",
-        "Watermelon",
-        "Cherry",
-        "Blueberry",
-        "Raspberry",
-        "Lemon",
-        "Lime",
-        "Grapefruit",
-        "Plum",
-        "Apricot",
-        "Pomegranate",
-    ];
-
-    pub fn generate() -> String {
-        use rand::Rng;
-
-        // Generate friendly pet and fruit name combination.
-        let pet = {
-            let mut rng = rand::thread_rng();
-            let pet = PET_NAMES[rng.gen_range(0..PET_NAMES.len())];
-            pet.to_lowercase()
-        };
-
-        let fruit = {
-            let mut rng = rand::thread_rng();
-            let fruit = FRUIT_NAMES[rng.gen_range(0..FRUIT_NAMES.len())];
-            fruit.to_lowercase()
-        };
-
-        let random_number = {
-            let mut rng = rand::thread_rng();
-            rng.gen_range(0..1000)
-        };
-
-        format!("{pet}-{fruit}-{random_number}")
     }
 }
