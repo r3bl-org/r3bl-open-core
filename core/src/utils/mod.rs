@@ -17,6 +17,8 @@
 
 // Attach.
 pub mod file_logging;
+pub mod friendly_random_id;
 
 // Re-export.
 pub use file_logging::*;
+pub use friendly_random_id::*;

@@ -8,9 +8,9 @@ Date: 2022-11-06
 This is a lengthy and repetitive process. The following steps have to be applied repeatedly to all
 the crates in the project.
 
-Starting at the root folder of the project, eg `~/github/r3bl_rs_utils/`, the following steps are
-applied to each crate (`simple_logger`, `ansi_color`, `core`, `macro`, `redux`, `tui`, `tuify`, and
-"public" / self):
+Starting at the root folder of the project, eg `~/github/r3bl_rs_utils/`, the following
+steps are applied to each crate (`simple_logger`, `ansi_color`, `core`, `macro`, `redux`,
+`tui`, `tuify`, `analytics_schema` and "public" / self):
 
 1. Update the version in `Cargo.toml`.
 2. Make sure to run the "Crates: Update all dependencies of the Cargo.toml" action in VSCode for
@@ -86,8 +86,8 @@ cd core
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.9.11-core"
-git tag -a v0.9.11-core -m "v0.9.11-core"
+git commit -m "v0.9.12-core"
+git tag -a v0.9.12-core -m "v0.9.12-core"
 cargo publish
 cd ..
 

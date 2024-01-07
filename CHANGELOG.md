@@ -4,6 +4,7 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
+  - [r3bl-cmdr-next-release](#r3bl-cmdr-next-release)
   - [v0.0.10 2024-01-02](#v0010-2024-01-02)
   - [v0.0.9 2023-12-31](#v009-2023-12-31)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
@@ -28,7 +29,8 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
-  - [next-release](#next-release)
+  - [v0.9.12 2024-01-07](#v0912-2024-01-07)
+  - [v0.9.11 2024-01-02](#v0911-2024-01-02)
   - [v0.9.10 2023-12-22](#v0910-2023-12-22)
   - [v0.9.9 2023-10-21](#v099-2023-10-21)
   - [v0.9.8 2023-10-21](#v098-2023-10-21)
@@ -70,6 +72,12 @@
 
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
+
+### r3bl-cmdr-next-release
+<a id="markdown-r3bl-cmdr-next-release" name="r3bl-cmdr-next-release"></a>
+
+- Updated:
+  - First EAP of `giti` and `edi`, with checks to see if they need to be upgraded.
 
 ### v0.0.10 (2024-01-02)
 <a id="markdown-v0.0.10-2024-01-02" name="v0.0.10-2024-01-02"></a>
@@ -411,8 +419,14 @@ Added:
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
+### v0.9.12 (2024-01-07)
+<a id="markdown-v0.9.12-2024-01-07" name="v0.9.12-2024-01-07"></a>
+
+Added:
+  - Add `generate_friendly_random_id()` to generate human readable and friendly IDs.
+
 ### v0.9.11 (2024-01-02)
-<a id="markdown-next-release" name="next-release"></a>
+<a id="markdown-v0.9.11-2024-01-02" name="v0.9.11-2024-01-02"></a>
 
 - Added:
   - Add more variants to the `CommonErrorType` enum: `ConfigFolderCountNotBeCreated`,
