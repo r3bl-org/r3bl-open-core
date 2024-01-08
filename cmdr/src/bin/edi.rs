@@ -18,7 +18,7 @@
 use std::env::var;
 
 use clap::Parser;
-use r3bl_cmdr::{edi::launcher, report_analytics, AnalyticsAction};
+use r3bl_cmdr::{edi::launcher, report_analytics, upgrade_check, AnalyticsAction};
 use r3bl_rs_utils_core::{call_if_true,
                          log_debug,
                          throws,
@@ -48,19 +48,23 @@ async fn main() -> CommonResult<()> {
             report_analytics::disable();
         }
 
-        report_analytics::generate_event("".to_string(), AnalyticsAction::EdiAppStart);
+        upgrade_check::start_task_to_check_for_updates();
+        report_analytics::start_task_to_generate_event(
+            "".to_string(),
+            AnalyticsAction::EdiAppStart,
+        );
 
         // Open the editor.
         match cli_arg.file_paths.len() {
             0 => {
-                report_analytics::generate_event(
+                report_analytics::start_task_to_generate_event(
                     "".to_string(),
                     AnalyticsAction::EdiFileNew,
                 );
                 launcher::run_app(None).await?;
             }
             1 => {
-                report_analytics::generate_event(
+                report_analytics::start_task_to_generate_event(
                     "".to_string(),
                     AnalyticsAction::EdiFileOpenSingle,
                 );
@@ -69,7 +73,7 @@ async fn main() -> CommonResult<()> {
             _ => match edi_ui_templates::handle_multiple_files_not_supported_yet(cli_arg)
             {
                 Some(file_path) => {
-                    report_analytics::generate_event(
+                    report_analytics::start_task_to_generate_event(
                         "".to_string(),
                         AnalyticsAction::EdiFileOpenMultiple,
                     );
@@ -90,7 +94,13 @@ async fn main() -> CommonResult<()> {
 }
 
 pub mod edi_ui_templates {
-    use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet};
+    use r3bl_ansi_color::{AnsiStyledText, Style};
+    use r3bl_cmdr::upgrade_check;
+    use r3bl_tuify::{select_from_list,
+                     SelectionMode,
+                     StyleSheet,
+                     LIZARD_GREEN,
+                     SLATE_GRAY};
 
     use super::*;
 
@@ -118,32 +128,60 @@ pub mod edi_ui_templates {
     }
 
     pub fn print_exit_message() {
-        println!("{}", {
-            let goodbye_to_user = match var("USER") {
-                Ok(username) => {
-                    format!("Goodbye, 👋 {}. Thanks for using 🦜 edi !", username)
-                }
-                Err(_) => "Goodbye 👋. Thanks for using 🦜 edi!".to_owned(),
-            };
+        if upgrade_check::is_update_required() {
+            println!("{}", {
+                let msg_line_1 = {
+                    ColorWheel::default().colorize_into_string(
+                        &UnicodeString::from("New version of edi is available 📦."),
+                        GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                        TextColorizationPolicy::ColorEachCharacter(None),
+                    )
+                };
 
-            let please_star_us = format!(
-                "{}\n{}",
-                "Please star r3bl-open-core repo on GitHub!",
-                "🌟 https://github.com/r3bl-org/r3bl-open-core"
-            );
+                let msg_line_2 = {
+                    let chunk_1 = AnsiStyledText {
+                        text: "Run `",
+                        style: &[Style::Foreground(SLATE_GRAY)],
+                    };
+                    let chunk_2 = AnsiStyledText {
+                        text: "cargo install r3bl-cmdr",
+                        style: &[Style::Foreground(LIZARD_GREEN)],
+                    };
+                    let chunk_3 = AnsiStyledText {
+                        text: "` to upgrade 🚀.",
+                        style: &[Style::Foreground(SLATE_GRAY)],
+                    };
+                    format!("{}{}{}", chunk_1, chunk_2, chunk_3,)
+                };
 
-            let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");
+                format!("{}\n{}", msg_line_1, msg_line_2)
+            });
+        } else {
+            println!("{}", {
+                let goodbye_to_user = match var("USER") {
+                    Ok(username) => {
+                        format!("Goodbye, 👋 {}. Thanks for using 🦜 edi !", username)
+                    }
+                    Err(_) => "Goodbye 👋. Thanks for using 🦜 edi!".to_owned(),
+                };
 
-            let unicode_string = UnicodeString::from(plain_text_exit_msg);
-            let mut color_wheel = ColorWheel::default();
-            let lolcat_exit_msg = color_wheel.colorize_into_string(
-                &unicode_string,
-                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-                TextColorizationPolicy::ColorEachCharacter(None),
-            );
+                let please_star_us = format!(
+                    "{}\n{}",
+                    "Please star r3bl-open-core repo on GitHub!",
+                    "🌟 https://github.com/r3bl-org/r3bl-open-core"
+                );
 
-            lolcat_exit_msg
-        });
+                let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");
+
+                let lolcat_exit_msg = ColorWheel::default().colorize_into_string(
+                    &UnicodeString::from(plain_text_exit_msg),
+                    GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                    TextColorizationPolicy::ColorEachCharacter(None),
+                );
+
+                lolcat_exit_msg
+            });
+        }
     }
 }
 

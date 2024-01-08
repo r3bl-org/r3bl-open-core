@@ -26,7 +26,7 @@ use r3bl_rs_utils_core::{log_error,
 use r3bl_tui::{ColorWheel, GradientGenerationPolicy, TextColorizationPolicy};
 use r3bl_tuify::SLATE_GRAY;
 
-use crate::giti::ui_strings::UIStrings::*;
+use crate::{giti::ui_strings::UIStrings::*, upgrade_check};
 
 pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
     let up_and_down = AnsiStyledText {
@@ -92,25 +92,45 @@ pub fn single_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
 }
 
 pub fn show_exit_message() {
-    println!("{}", {
-        let goodbye_to_user = match var("USER") {
-            Ok(username) => GoodbyeThanksForUsingGitiUsername { username }.to_string(),
-            Err(_) => GoodbyeThanksForUsingGiti.to_string(),
-        };
-
-        let please_star_us = PleaseStarUs.to_string();
-        let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");
-
-        let unicode_string = UnicodeString::from(plain_text_exit_msg);
-        let mut color_wheel = ColorWheel::default();
-        let lolcat_exit_msg = color_wheel.colorize_into_string(
-            &unicode_string,
-            GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-            TextColorizationPolicy::ColorEachCharacter(None),
+    if upgrade_check::is_update_required() {
+        println!("{}", {
+            let plain_text_exit_msg = format!(
+                "{}\n{}",
+                "💿 A new version of giti is available.",
+                "Run `cargo install r3bl-cmdr` to upgrade 🙌."
         );
 
-        lolcat_exit_msg
-    });
+            let lolcat_exit_msg = ColorWheel::default().colorize_into_string(
+                &UnicodeString::from(plain_text_exit_msg),
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(None),
+            );
+
+            lolcat_exit_msg
+        });
+    } else {
+        println!("{}", {
+            let goodbye_to_user = match var("USER") {
+                Ok(username) => {
+                    GoodbyeThanksForUsingGitiUsername { username }.to_string()
+                }
+                Err(_) => GoodbyeThanksForUsingGiti.to_string(),
+            };
+
+            let please_star_us = PleaseStarUs.to_string();
+            let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");
+
+            let unicode_string = UnicodeString::from(plain_text_exit_msg);
+            let mut color_wheel = ColorWheel::default();
+            let lolcat_exit_msg = color_wheel.colorize_into_string(
+                &unicode_string,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(None),
+            );
+
+            lolcat_exit_msg
+        });
+    }
 }
 
 /// Call this function when you can't even execute [Command::output] and something unknown

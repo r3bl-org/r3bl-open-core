@@ -37,7 +37,10 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
             AnalyticsAction};
 
 pub fn try_delete_branch() -> CommonResult<TryRunCommandResult> {
-    report_analytics::generate_event("".to_string(), AnalyticsAction::GitiBranchDelete);
+    report_analytics::start_task_to_generate_event(
+        "".to_string(),
+        AnalyticsAction::GitiBranchDelete,
+    );
 
     let mut try_run_command_result = TryRunCommandResult {
         branch_subcommand: Some(BranchSubcommand::Delete),
