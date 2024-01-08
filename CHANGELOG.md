@@ -77,7 +77,9 @@
 <a id="markdown-r3bl-cmdr-next-release" name="r3bl-cmdr-next-release"></a>
 
 - Updated:
-  - First EAP of `giti` and `edi`, with checks to see if they need to be upgraded.
+  - Add checks to see if `edi`, `giti`, etc. need to be upgraded. Search for
+    `UPDATE_IF_NOT_THIS_VERSION` in `r3bl-open-core` repo (in `cmdr` folder), and in
+    `r3bl-base` repo.
 
 ### v0.0.10 (2024-01-02)
 <a id="markdown-v0.0.10-2024-01-02" name="v0.0.10-2024-01-02"></a>

@@ -28,6 +28,7 @@ use r3bl_cmdr::{color_constants::DefaultColors::{FrozenBlue, GuardsRed, Moonligh
                                                   CLIArg,
                                                   CLICommand}},
                 report_analytics,
+                upgrade_check,
                 AnalyticsAction};
 use r3bl_rs_utils_core::{call_if_true,
                          log_debug,
@@ -56,7 +57,11 @@ async fn main() -> CommonResult<()> {
             report_analytics::disable();
         }
 
-        report_analytics::generate_event("".to_string(), AnalyticsAction::GitiAppStart);
+        upgrade_check::start_task_to_check_for_updates();
+        report_analytics::start_task_to_generate_event(
+            "".to_string(),
+            AnalyticsAction::GitiAppStart,
+        );
 
         launch_giti(cli_arg);
 
@@ -91,7 +96,7 @@ pub fn launch_giti(cli_arg: CLIArg) {
         }
         // Handle unrecoverable / unknown errors here.
         Err(error) => {
-            report_analytics::generate_event(
+            report_analytics::start_task_to_generate_event(
                 "".to_string(),
                 AnalyticsAction::GitiFailedToRun,
             );

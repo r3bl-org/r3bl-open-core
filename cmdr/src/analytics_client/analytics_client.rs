@@ -18,13 +18,21 @@
 use std::{fs,
           fs::File,
           io::{BufReader, Read, Write},
-          path::PathBuf};
+          path::PathBuf,
+          sync::atomic::AtomicBool};
 
 use crossterm::style::Stylize;
 use dirs::*;
 use r3bl_analytics_schema::AnalyticsEvent;
-use r3bl_rs_utils_core::{call_if_true, log_debug, log_error, CommonResult};
-use reqwest::Client;
+use r3bl_rs_utils_core::{call_if_true,
+                         friendly_random_id,
+                         log_debug,
+                         log_error,
+                         log_info,
+                         CommonError,
+                         CommonErrorType,
+                         CommonResult};
+use reqwest::{Client, Response};
 
 use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
@@ -60,8 +68,6 @@ impl AnalyticsAction {
 }
 
 pub mod config_folder {
-    use r3bl_rs_utils_core::{CommonError, CommonErrorType};
-
     use super::*;
 
     pub enum ConfigPaths {
@@ -165,8 +171,6 @@ pub mod file_io {
 }
 
 pub mod proxy_machine_id {
-    use r3bl_rs_utils_core::friendly_random_id;
-
     use super::*;
 
     /// Read the file contents from [config_folder::get_id_file_path] and return it as a
@@ -194,7 +198,7 @@ pub mod proxy_machine_id {
                             file_io::try_write_file_contents(&id_file_path, &new_id);
                         match result_write_file_contents {
                             Ok(_) => {
-                                report_analytics::generate_event(
+                                report_analytics::start_task_to_generate_event(
                                     "".to_string(),
                                     AnalyticsAction::MachineIdProxyCreate,
                                 );
@@ -234,6 +238,7 @@ pub mod report_analytics {
     use super::*;
 
     static mut ANALYTICS_REPORTING_ENABLED: bool = true;
+
     const ANALYTICS_REPORTING_ENDPOINT: &str =
         "https://r3bl-base.shuttleapp.rs/add_analytics_event"; // "http://localhost:8000/add_analytics_event"
 
@@ -243,7 +248,7 @@ pub mod report_analytics {
         }
     }
 
-    pub fn generate_event(proxy_user_id: String, action: AnalyticsAction) {
+    pub fn start_task_to_generate_event(proxy_user_id: String, action: AnalyticsAction) {
         unsafe {
             if !ANALYTICS_REPORTING_ENABLED {
                 return;
@@ -302,9 +307,56 @@ pub mod report_analytics {
     }
 }
 
-pub mod http_client {
-    use reqwest::Response;
+/// If you want to trigger an update message to be displayed to the user, the value of
+/// `GET_LATEST_VERSION_ENDPOINT` needs to be different from the value of
+/// `UPDATE_IF_NOT_THIS_VERSION` in the `r3bl_base` repo.
+pub mod upgrade_check {
+    use super::*;
 
+    static UPDATE_REQUIRED: AtomicBool = AtomicBool::new(false);
+
+    const UPDATE_IF_NOT_THIS_VERSION: &str = "0.0.11";
+
+    const GET_LATEST_VERSION_ENDPOINT: &str =
+        "https://r3bl-base.shuttleapp.rs/get_latest_version"; // "http://localhost:8000/get_latest_version"
+
+    pub fn is_update_required() -> bool {
+        UPDATE_REQUIRED.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    pub fn start_task_to_check_for_updates() {
+        tokio::spawn(async move {
+            let result = http_client::make_get_request(GET_LATEST_VERSION_ENDPOINT).await;
+            if let Ok(response) = result {
+                if let Ok(body_text) = response.text().await {
+                    let latest_version = body_text.trim().to_string();
+                    log_info(
+                        format!(
+                            "\n📦📦📦\nLatest version of cmdr is: {}",
+                            latest_version
+                        )
+                        .magenta()
+                        .to_string(),
+                    );
+                    let current_version = UPDATE_IF_NOT_THIS_VERSION.to_string();
+                    if latest_version != current_version {
+                        UPDATE_REQUIRED.store(true, std::sync::atomic::Ordering::Relaxed);
+                        log_info(
+                            format!(
+                                "\n💿💿💿\nThere is a new version of cmdr available: {latest_version}",
+                                latest_version = latest_version
+                            )
+                            .magenta()
+                            .to_string(),
+                        );
+                    }
+                }
+            }
+        });
+    }
+}
+
+pub mod http_client {
     use super::*;
 
     pub async fn make_get_request(url: &str) -> Result<Response, reqwest::Error> {

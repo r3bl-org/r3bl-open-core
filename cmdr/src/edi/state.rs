@@ -240,7 +240,7 @@ pub mod file_utils {
 
     pub fn save_content_to_file(file_path: String, content: String) {
         tokio::spawn(async move {
-            report_analytics::generate_event(
+            report_analytics::start_task_to_generate_event(
                 "".to_string(),
                 AnalyticsAction::EdiFileSave,
             );

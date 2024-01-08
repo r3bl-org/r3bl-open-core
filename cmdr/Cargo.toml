@@ -41,7 +41,7 @@ path = "src/lib.rs"
 [dependencies]
 # R3BL crates (from this mono repo).
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
-r3bl_rs_utils_core = { path = "../core", version = "0.9.11" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.12" }
 r3bl_rs_utils_macro = { path = "../macro", version = "0.9.8" }
 r3bl_tui = { path = "../tui", version = "0.5.0" }
 r3bl_tuify = { path = "../tuify", version = "0.1.24" }
