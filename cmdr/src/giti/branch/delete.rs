@@ -321,33 +321,37 @@ pub fn get_branches() -> CommonResult<Vec<String>> {
     // If branch name is current_branch, then append `(current)` in front of it.
     // Create command.
     let mut command = Command::new("git");
-    let command: &mut Command = command.args(["branch", "--show-current"]);
+    let show_current_branch_command: &mut Command =
+        command.args(["branch", "--show-current"]);
 
-    let result_output = command.output();
+    let current_branch_result_output = show_current_branch_command.output();
 
     let current_branch;
-    match result_output {
-        // Can't even execute output(), something unknown has gone wrong. Propagate the
-        // error.
-        Err(error) => {
-            return report_unknown_error_and_propagate(command, error);
-        }
+    match current_branch_result_output {
         Ok(output) => {
             let output_string = String::from_utf8_lossy(&output.stdout);
             current_branch = output_string.to_string().trim_end_matches('\n').to_string();
         }
+        // Can't even execute output(), something unknown has gone wrong. Propagate the
+        // error.
+        Err(error) => {
+            return report_unknown_error_and_propagate(
+                show_current_branch_command,
+                error,
+            );
+        }
     };
 
-    let mut return_vec = vec![];
+    let mut branches_vec = vec![];
     for branch in branches {
         if branch == current_branch {
-            return_vec.push(CurrentBranch { branch }.to_string());
+            branches_vec.push(CurrentBranch { branch }.to_string());
         } else {
-            return_vec.push(branch.to_string());
+            branches_vec.push(branch.to_string());
         }
     }
 
-    Ok(return_vec)
+    Ok(branches_vec)
 }
 
 pub fn try_get_current_branch() -> CommonResult<String> {
