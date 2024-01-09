@@ -95,6 +95,7 @@ pub mod clap_config {
                 help = "In your shell, this command will execute, taking each selected item as an argument."
             )]
             command_to_run_with_each_selection: Option<BranchSubcommand>,
+            maybe_branch_name: Option<String>,
         },
 
         #[clap(about = "TODO Commit help")]

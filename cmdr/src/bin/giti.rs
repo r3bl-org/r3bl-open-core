@@ -119,11 +119,14 @@ pub fn try_run_command(giti_app_args: &CLIArg) -> CommonResult<TryRunCommandResu
     match &giti_app_args.command {
         CLICommand::Branch {
             command_to_run_with_each_selection,
+            maybe_branch_name,
             ..
         } => match command_to_run_with_each_selection {
             Some(subcommand) => match subcommand {
                 BranchSubcommand::Delete => return try_delete_branch(),
-                BranchSubcommand::Checkout => return try_checkout_branch(),
+                BranchSubcommand::Checkout => {
+                    return try_checkout_branch(maybe_branch_name.clone())
+                }
                 _ => unimplemented!(),
             },
             _ => {
@@ -138,6 +141,7 @@ pub fn try_run_command(giti_app_args: &CLIArg) -> CommonResult<TryRunCommandResu
 fn user_typed_giti_branch() -> CommonResult<TryRunCommandResult> {
     let branch_subcommands = get_giti_command_subcommand_names(CLICommand::Branch {
         command_to_run_with_each_selection: None,
+        maybe_branch_name: None,
     });
     let default_header_style = [
         Style::Foreground(FrozenBlue.as_ansi_color()),
@@ -165,7 +169,7 @@ fn user_typed_giti_branch() -> CommonResult<TryRunCommandResult> {
         let it = selected[0].as_str();
         match it {
             "delete" => return try_delete_branch(),
-            "checkout" => return try_checkout_branch(),
+            "checkout" => return try_checkout_branch(None),
             _ => unimplemented!(),
         };
     };

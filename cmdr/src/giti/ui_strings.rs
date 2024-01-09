@@ -60,6 +60,18 @@ pub enum UIStrings {
         command_args_to_string: String,
         command_output_error: std::io::Error,
     },
+    BranchDoesNotExist {
+        branch_name: String,
+    },
+    ModifiedFileOnCurrentBranch,
+    ModifiedFilesOnCurrentBranch,
+    WouldYouLikeToSwitchToBranch {
+        branch_name: String,
+    },
+    SwitchToBranchAndApplyChanges,
+    StayOnCurrentBranch,
+    StayingOnCurrentBranch,
+    PleaseCommitChangesBeforeSwitchingBranches,
 }
 
 impl UIStrings {
@@ -120,7 +132,7 @@ impl UIStrings {
                 error_message,
             } => {
                 format!(
-                    "Failed to switch to branch:\n ╴{branch}!\n\n{}",
+                    "Failed to switch to branch '{branch}'!\n\n{}",
                     error_message
                 )
             }
@@ -151,6 +163,28 @@ impl UIStrings {
                     "Error executing command: '{program_name_to_string} {command_args_to_string}'. Error: {command_output_error}"
                 )
             }
+            UIStrings::BranchDoesNotExist { branch_name } => {
+                format!("Branch `{}` does not exist.", branch_name)
+            }
+            UIStrings::ModifiedFileOnCurrentBranch => {
+                format!(" You have a 📝 modified file on the current branch: ")
+            }
+            UIStrings::ModifiedFilesOnCurrentBranch => {
+                format!(" You have 📝 modified files on the current branch: ")
+            }
+            UIStrings::WouldYouLikeToSwitchToBranch { branch_name } => {
+                format!(" Would you like to switch to branch '{branch_name}?'")
+            }
+            UIStrings::SwitchToBranchAndApplyChanges => {
+                String::from("Switch to branch and apply changes")
+            }
+            UIStrings::StayOnCurrentBranch => String::from("Stay on current branch"),
+            UIStrings::StayingOnCurrentBranch => {
+                String::from(" Staying on current branch ")
+            }
+            UIStrings::PleaseCommitChangesBeforeSwitchingBranches => String::from(
+                " Please commit your changes or stash them before you switch branches.",
+            ),
         }
     }
 }
