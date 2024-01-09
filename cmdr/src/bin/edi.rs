@@ -173,13 +173,7 @@ pub mod edi_ui_templates {
 
                 let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");
 
-                let lolcat_exit_msg = ColorWheel::default().colorize_into_string(
-                    &UnicodeString::from(plain_text_exit_msg),
-                    GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-                    TextColorizationPolicy::ColorEachCharacter(None),
-                );
-
-                lolcat_exit_msg
+                ColorWheel::lolcat_into_string(&plain_text_exit_msg)
             });
         }
     }

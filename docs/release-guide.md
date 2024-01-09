@@ -66,8 +66,8 @@ cd tui
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.5.0-tui"
-git tag -a v0.5.0-tui -m "v0.5.0-tui"
+git commit -m "v0.5.1-tui"
+git tag -a v0.5.1-tui -m "v0.5.1-tui"
 cargo publish
 cd ..
 
