@@ -120,15 +120,7 @@ pub fn show_exit_message() {
             let please_star_us = PleaseStarUs.to_string();
             let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");
 
-            let unicode_string = UnicodeString::from(plain_text_exit_msg);
-            let mut color_wheel = ColorWheel::default();
-            let lolcat_exit_msg = color_wheel.colorize_into_string(
-                &unicode_string,
-                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-                TextColorizationPolicy::ColorEachCharacter(None),
-            );
-
-            lolcat_exit_msg
+            ColorWheel::lolcat_into_string(&plain_text_exit_msg)
         });
     }
 }

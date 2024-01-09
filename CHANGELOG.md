@@ -214,6 +214,14 @@ Added:
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
+### v0.5.1 (2024-01-09)
+
+- Added:
+  - Simple function `ColorWheel::lolcat_into_string()` that receives a string and
+    colorizes it using some defaults. It is similar to the
+    `ColorWheel::colorize_into_string()` which it uses under the hood, but it is simpler
+    to use.
+
 ### v0.5.0 (2023-12-31)
 <a id="markdown-v0.5.0-2023-12-31" name="v0.5.0-2023-12-31"></a>
 

@@ -453,6 +453,16 @@ impl ColorWheel {
         self.index_direction = ColorWheelDirection::Forward;
     }
 
+    /// Simplified version of [ColorWheel::colorize_into_string] with some defaults.
+    pub fn lolcat_into_string(text: &str) -> String {
+        ColorWheel::default().colorize_into_string(
+            &UnicodeString::from(text),
+            GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+            TextColorizationPolicy::ColorEachCharacter(None),
+        )
+    }
+
+    /// See [ColorWheel::lolcat_into_string] for an easy to use version of this function.
     pub fn colorize_into_string(
         &mut self,
         unicode_string: &UnicodeString,
