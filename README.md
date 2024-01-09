@@ -2,12 +2,10 @@
   <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg" height="128px">
 </p>
 
-
 > 🪷 If you are interested in contributing to this project, please read our [📒 contributing
 > guide](CONTRIBUTING.md).
 
 # Context
-<a id="markdown-context-*fef*-_fewfj_" name="context-*fef*-_fewfj_"></a>
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
@@ -31,21 +29,21 @@ it.
 development w/ a twist: taking concepts that work really well for the frontend mobile and web
 development world and re-imagining them for TUI & Rust.
 
-  - Draw inspiration from declarative and reactive frameworks for web, mobile, and desktop, to
-    create responsive TUIs.
-  - The idea here is not to rebuild tmux in Rust (separate processes mux'd onto a single terminal
-    window). Rather it is to build a set of integrated "apps" (or "tasks") that run in the same
-    process that renders to one terminal window.
-  - Inside of this terminal window, we can implement things like "app" switching, routing, tiling
-    layout, stacking layout, etc. so that we can manage a lot of TUI apps (which are tightly
-    integrated) that are running in the same process, in the same window. So you can imagine that
-    all these "app"s have shared application state. As the application state is modified via
-    user input events, API callbacks, and animator updates, this results in performant re-renders,
-    and repaints of only parts of the UI that have changed.
-  - Here are some examples of the types of "app"s we are building using this engine:
-      1. multi user text editors w/ syntax highlighting
-      2. integrations w/ github issues
-      3. integrations w/ calendar, email, contacts APIs
+- Draw inspiration from declarative and reactive frameworks for web, mobile, and desktop, to
+  create responsive TUIs.
+- The idea here is not to rebuild tmux in Rust (separate processes mux'd onto a single terminal
+  window). Rather it is to build a set of integrated "apps" (or "tasks") that run in the same
+  process that renders to one terminal window.
+- Inside of this terminal window, we can implement things like "app" switching, routing, tiling
+  layout, stacking layout, etc. so that we can manage a lot of TUI apps (which are tightly
+  integrated) that are running in the same process, in the same window. So you can imagine that
+  all these "app"s have shared application state. As the application state is modified via
+  user input events, API callbacks, and animator updates, this results in performant re-renders,
+  and repaints of only parts of the UI that have changed.
+- Here are some examples of the types of "app"s we are building using this engine:
+  1. multi user text editors w/ syntax highlighting
+  2. integrations w/ github issues
+  3. integrations w/ calendar, email, contacts APIs
 
 
 > 🦜 To learn more about this library, please read how it was built (on
@@ -67,9 +65,10 @@ development world and re-imagining them for TUI & Rust.
 
 - [Folder structure and code organization](#folder-structure-and-code-organization)
 - [Issues, comments, feedback, PRs, and Discord](#issues-comments-feedback-prs-and-discord)
+- [cmdr folder -> r3bl_cmdr crate](#cmdr-folder---r3bl_cmdr-crate)
+- [tui folder -> r3bl_tui crate](#tui-folder---r3bl_tui-crate)
 - [ansi_color folder -> r3bl_ansi_color crate](#ansi_color-folder---r3bl_ansi_color-crate)
 - [tuify folder -> r3bl_tuify crate](#tuify-folder---r3bl_tuify-crate)
-- [tui folder -> r3bl_tui crate](#tui-folder---r3bl_tui-crate)
 
 <!-- /TOC -->
 
@@ -92,6 +91,31 @@ this repo at the same time.
 - And if you have any feature requests, feel free to add them there too 👍.
 - And we have a [discord server](https://discord.gg/8M2ePAevaM) if you would like to chat
   about the issue or PR.
+
+## cmdr folder -> r3bl_cmdr crate
+<a id="markdown-cmdr-folder--%3E-r3bl_cmdr-crate" name="cmdr-folder--%3E-r3bl_cmdr-crate"></a>
+
+Here's a video of a prototype of [R3BL
+CMDR](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr) app built using this TUI
+engine. You can install the apps in this crate using `cargo install r3bl-cmdr`. This will
+install:
+- `giti` - Interactive git client.
+- `edi` - Markdown editor.
+
+![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
+
+## tui folder -> r3bl_tui crate
+<a id="markdown-tui-folder--%3E-r3bl_tui-crate" name="tui-folder--%3E-r3bl_tui-crate"></a>
+
+For more information please read the
+[README](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/README.md#r3bl_tui-crate) for the [r3bl_tui
+crate](https://docs.rs/r3bl_tui/latest/r3bl_tui/).
+
+<!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
+
+Here's a video of the demo in action:
+
+![video-gif](https://user-images.githubusercontent.com/2966499/233799311-210b887e-0aa6-470a-bcea-ee8e0e3eb019.gif)
 
 ## ansi_color folder -> r3bl_ansi_color crate
 <a id="markdown-ansi_color-folder--%3E-r3bl_ansi_color-crate" name="ansi_color-folder--%3E-r3bl_ansi_color-crate"></a>
@@ -125,22 +149,3 @@ https://github.com/r3bl-org/r3bl-open-core/assets/2966499/2b42db72-cd62-4ea2-80a
 For more information please read the
 [README](https://github.com/r3bl-org/r3bl-open-core/tree/main/tuify/README.md) for the
 [r3bl_tuify crate](https://docs.rs/r3bl_tuify/latest/r3bl_tuify/).
-
-## tui folder -> r3bl_tui crate
-<a id="markdown-tui-folder--%3E-r3bl_tui-crate" name="tui-folder--%3E-r3bl_tui-crate"></a>
-
-
-For more information please read the
-[README](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/README.md#r3bl_tui-crate) for the [r3bl_tui
-crate](https://docs.rs/r3bl_tui/latest/r3bl_tui/).
-
-<!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
-
-Here's a video of the demo in action:
-
-![video-gif](https://user-images.githubusercontent.com/2966499/233799311-210b887e-0aa6-470a-bcea-ee8e0e3eb019.gif)
-
-Here's a video of a prototype of [R3BL CMDR](https://github.com/r3bl-org/r3bl-cmdr) app built using
-this TUI engine.
-
-![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
