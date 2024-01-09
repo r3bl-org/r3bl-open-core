@@ -98,7 +98,7 @@ pub fn show_exit_message() {
                 "{}\n{}",
                 "💿 A new version of giti is available.",
                 "Run `cargo install r3bl-cmdr` to upgrade 🙌."
-        );
+            );
 
             let lolcat_exit_msg = ColorWheel::default().colorize_into_string(
                 &UnicodeString::from(plain_text_exit_msg),

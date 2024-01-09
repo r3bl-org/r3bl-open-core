@@ -13,3 +13,7 @@ members = [
   "analytics_schema",
 ]
 resolver = "2"
+
+# https://github.com/trailofbits/cargo-unmaintained
+[workspace.metadata.unmaintained]
+ignore = ["gethostname", "objc", "home", "proc-macro-error", "wayland-commons"]
