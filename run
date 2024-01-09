@@ -92,16 +92,23 @@ def install-cargo-tools [] {
     cargo install cargo-outdated
     cargo install cargo-update
     cargo install cargo-deny
+    cargo install cargo-unmaintained
 }
 
 def all [] {
     cargo install cargo-deny
+    cargo install cargo-unmaintained
     cargo build
     test
     clippy
     docs
     audit-deps
+    unmaintained
     rustfmt
+}
+
+def unmaintained [] {
+    cargo unmaintained --color always --fail-fast --tree --verbose
 }
 
 def build [] {
