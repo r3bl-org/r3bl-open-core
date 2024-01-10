@@ -160,15 +160,15 @@ pub mod edi_ui_templates {
             println!("{}", {
                 let goodbye_to_user = match var("USER") {
                     Ok(username) => {
-                        format!("Goodbye, 👋 {}. Thanks for using 🦜 edi !", username)
+                        format!("\n Goodbye, 👋 {}. Thanks for using 🦜 edi !", username)
                     }
-                    Err(_) => "Goodbye 👋. Thanks for using 🦜 edi!".to_owned(),
+                    Err(_) => "\n Goodbye 👋. Thanks for using 🦜 edi!".to_owned(),
                 };
 
                 let please_star_us = format!(
-                    "{}\n{}",
-                    "Please star r3bl-open-core repo on GitHub!",
-                    "🌟 https://github.com/r3bl-org/r3bl-open-core"
+                    "{}: {}",
+                    " Please star us and report issues on GitHub",
+                    "🌟 🐞 https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
                 );
 
                 let plain_text_exit_msg = format!("{goodbye_to_user}\n{please_star_us}");
@@ -193,10 +193,10 @@ mod clap_config {
     #[command(arg_required_else_help(false))]
     /// More info: <https://docs.rs/clap/latest/clap/struct.Command.html#method.help_template>
     #[command(
-        /* cspell: disable-next-line */
-        help_template = "{about}\nVersion: {bin} {version} 💻\n\nProvide file paths, separated by spaces, to edit in edi. Or no arguments to edit a new file.\nUSAGE 📓:\n  edi [\x1b[32mfile paths\x1b[0m] [\x1b[34moptions\x1b[0m]\n\n[options]\n{options}",
-        subcommand_help_heading("Command")
-    )]
+         /* cspell: disable-next-line */
+         help_template = "{about}\nVersion: {bin} {version} 💻\n\nProvide file paths, separated by spaces, to edit in edi. Or no arguments to edit a new file.\nUSAGE 📓:\n  edi [\x1b[32mfile paths\x1b[0m] [\x1b[34moptions\x1b[0m]\n\n[options]\n{options}",
+         subcommand_help_heading("Command")
+     )]
     pub struct CLIArg {
         #[arg(name = "file paths")]
         pub file_paths: Vec<String>,
