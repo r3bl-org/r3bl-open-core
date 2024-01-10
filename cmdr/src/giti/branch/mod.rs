@@ -19,8 +19,10 @@
 pub mod checkout;
 pub mod delete;
 pub mod giti_ui_templates;
+pub mod new;
 
 // Re-export.
 pub use checkout::*;
 pub use delete::*;
 pub use giti_ui_templates::*;
+pub use new::*;

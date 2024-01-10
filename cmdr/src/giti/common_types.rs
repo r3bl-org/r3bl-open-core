@@ -18,7 +18,7 @@
 use super::clap_config::clap_config::BranchSubcommand;
 
 #[derive(Debug, Clone, Default)]
-pub struct TryRunCommandResult {
+pub struct CommandSuccessfulResponse {
     pub maybe_deleted_branches: Option<Vec<String>>,
     pub branch_subcommand: Option<BranchSubcommand>,
 }
