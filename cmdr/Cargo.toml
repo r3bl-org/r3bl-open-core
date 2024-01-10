@@ -77,6 +77,9 @@ open = "5"
 # Save config files.
 dirs = "5.0.1"
 
+# Reedline 
+reedline = "0.28.0"
+
 [dev-dependencies]
 pretty_assertions = "1.4.0"
 serial_test = "2.0.0"

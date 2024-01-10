@@ -32,17 +32,17 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                    multi_select_instruction_header,
                    single_select_instruction_header,
                    ui_strings::UIStrings::*,
-                   TryRunCommandResult},
+                   CommandSuccessfulResponse},
             report_analytics,
             AnalyticsAction};
 
-pub fn try_delete_branch() -> CommonResult<TryRunCommandResult> {
+pub fn try_delete_branch() -> CommonResult<CommandSuccessfulResponse> {
     report_analytics::start_task_to_generate_event(
         "".to_string(),
         AnalyticsAction::GitiBranchDelete,
     );
 
-    let mut try_run_command_result = TryRunCommandResult {
+    let mut try_run_command_result = CommandSuccessfulResponse {
         branch_subcommand: Some(BranchSubcommand::Delete),
         ..Default::default()
     };
@@ -81,9 +81,11 @@ pub fn try_delete_branch() -> CommonResult<TryRunCommandResult> {
             let (confirm_branch_deletion_header, confirm_deletion_options) = {
                 let mut confirm_deletion_options: Vec<String> = vec![Exit.to_string()];
                 if num_of_branches == 1 {
+                    let branch_name = &branches[0];
+                    let branch_name = branch_name.to_string();
                     confirm_deletion_options.insert(0, YesDeleteBranch.to_string());
                     (
-                        ConfirmDeletingOneBranch.to_string(),
+                        ConfirmDeletingOneBranch { branch_name }.to_string(),
                         confirm_deletion_options,
                     )
                 } else {
@@ -272,7 +274,7 @@ mod try_delete_branch_inner {
             text: &Deleted.to_string(),
             style: &[Style::Foreground(SlateGray.as_ansi_color())],
         };
-        println!("✅ {deleted_branch} {deleted}");
+        println!(" ✅ {deleted_branch} {deleted}");
     }
 
     pub fn display_all_branches_deleted_success_messages(branches: &Vec<String>) {
@@ -286,7 +288,7 @@ mod try_delete_branch_inner {
                 text: &Deleted.to_string(),
                 style: &[Style::Foreground(SlateGray.as_ansi_color())],
             };
-            println!("✅ {deleted_branch} {deleted}");
+            println!(" ✅ {deleted_branch} {deleted}");
         }
     }
 }

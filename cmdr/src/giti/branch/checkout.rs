@@ -39,11 +39,11 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                    report_unknown_error_and_propagate,
                    single_select_instruction_header,
                    ui_strings::UIStrings::*,
-                   TryRunCommandResult}};
+                   CommandSuccessfulResponse}};
 pub fn try_checkout_branch(
     maybe_branch_name: Option<String>,
-) -> CommonResult<TryRunCommandResult> {
-    let try_run_command_result = TryRunCommandResult {
+) -> CommonResult<CommandSuccessfulResponse> {
+    let try_run_command_result = CommandSuccessfulResponse {
         maybe_deleted_branches: None,
         branch_subcommand: Some(BranchSubcommand::Checkout),
     };

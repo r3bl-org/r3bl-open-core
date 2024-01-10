@@ -17,7 +17,9 @@
 
 pub enum UIStrings {
     PleaseSelectBranchesYouWantToDelete,
-    ConfirmDeletingOneBranch,
+    ConfirmDeletingOneBranch {
+        branch_name: String,
+    },
     ConfirmDeletingMultipleBranches {
         num_of_branches: usize,
         branches_to_delete: String,
@@ -72,6 +74,15 @@ pub enum UIStrings {
     StayOnCurrentBranch,
     StayingOnCurrentBranch,
     PleaseCommitChangesBeforeSwitchingBranches,
+    BranchAlreadyExists {
+        branch_name: String,
+    },
+    CreatedAndSwitchedToNewBranch,
+    FailedToCreateAndSwitchToBranch {
+        branch_name: String,
+    },
+    EnterBranchNameYouWantToCreate,
+    NoNewBranchWasCreated,
 }
 
 impl UIStrings {
@@ -80,15 +91,15 @@ impl UIStrings {
             UIStrings::PleaseSelectBranchesYouWantToDelete => {
                 String::from(" Please select branches you want to delete")
             }
-            UIStrings::ConfirmDeletingOneBranch => {
-                String::from("Confirm deleting 1 branch: ")
+            UIStrings::ConfirmDeletingOneBranch { branch_name } => {
+                format!(" Confirm deleting 1 branch: {branch_name}")
             }
             UIStrings::ConfirmDeletingMultipleBranches {
                 num_of_branches,
                 branches_to_delete,
             } => {
                 format!(
-                    "Confirm deleting {} branches: {}?",
+                    " Confirm deleting {} branches: {}?",
                     num_of_branches, branches_to_delete
                 )
             }
@@ -100,7 +111,7 @@ impl UIStrings {
                 error_message,
             } => {
                 format!(
-                    "Failed to delete branch: {}!\n\n{}",
+                    " Failed to delete branch: {}!\n\n{}",
                     branch_name, error_message
                 )
             }
@@ -109,19 +120,19 @@ impl UIStrings {
                 error_message,
             } => {
                 format!(
-                    "Failed to delete branches:\n ╴{}!\n\n{}",
+                    " Failed to delete branches:\n ╴{}!\n\n{}",
                     branches, error_message
                 )
             }
             UIStrings::FailedToRunCommandToDeleteBranches { branches } => {
-                format!("Failed to run command to delete branches:\n ╴{branches}!")
+                format!(" Failed to run command to delete branches:\n ╴{branches}!")
             }
             UIStrings::Deleted => String::from("deleted"),
             UIStrings::CurrentBranch { branch } => {
                 format!("(current) {branch}")
             }
             UIStrings::SelectBranchToSwitchTo => {
-                String::from("Select a branch to switch to:")
+                String::from(" Select a branch to switch to")
             }
             UIStrings::AlreadyOnCurrentBranch => {
                 String::from(" You are already on branch ")
@@ -132,26 +143,28 @@ impl UIStrings {
                 error_message,
             } => {
                 format!(
-                    "Failed to switch to branch '{branch}'!\n\n{}",
+                    " Failed to switch to branch '{branch}'!\n\n{}",
                     error_message
                 )
             }
             UIStrings::NoBranchGotCheckedOut { branch } => {
-                format!("No branch got checked out ... \n ╴{branch}!\n\n")
+                format!(" No branch got checked out ... \n ╴{branch}!\n\n")
             }
             UIStrings::GoodbyeThanksForUsingGitiUsername { username } => {
-                format!("Goodbye, 👋 {}. Thanks for using 😺 giti!", username)
+                format!("\n Goodbye, 👋 {}. Thanks for using 😺 giti!", username)
             }
             UIStrings::GoodbyeThanksForUsingGiti => {
-                format!("Goodbye 👋. Thanks for using 😺 giti!")
+                format!(
+                    "\n Goodbye 👋. 
+                
+                 😺 giti!"
+                )
             }
             UIStrings::PleaseStarUs => {
                 format!(
-                    "{}\n{}\n{}\n{}",
-                    "Please star us on GitHub:",
-                    "→ 🌟 https://github.com/r3bl-org/r3bl-open-core",
-                    "And report any issues you have with giti, so we can fix them:",
-                    "→ 🐞 https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
+                    "{}: {}",
+                    " Please star us and report issues on GitHub",
+                    "🌟 🐞 https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
                 )
             }
             UIStrings::ErrorExecutingCommand {
@@ -160,7 +173,7 @@ impl UIStrings {
                 command_output_error,
             } => {
                 format!(
-                    "Error executing command: '{program_name_to_string} {command_args_to_string}'. Error: {command_output_error}"
+                    " Error executing command: '{program_name_to_string} {command_args_to_string}'. Error: {command_output_error}"
                 )
             }
             UIStrings::BranchDoesNotExist { branch_name } => {
@@ -185,6 +198,21 @@ impl UIStrings {
             UIStrings::PleaseCommitChangesBeforeSwitchingBranches => String::from(
                 " Please commit your changes or stash them before you switch branches.",
             ),
+            UIStrings::BranchAlreadyExists { branch_name } => {
+                format!(" Branch {branch_name} already exists!")
+            }
+            UIStrings::CreatedAndSwitchedToNewBranch => {
+                format!(" You created and switched to branch ")
+            }
+            UIStrings::FailedToCreateAndSwitchToBranch { branch_name } => {
+                format!(" Failed to create and switch to branch {branch_name}")
+            }
+            UIStrings::EnterBranchNameYouWantToCreate => {
+                format!(" Enter a branch name you want to create (Ctrl+C to exit) ")
+            }
+            UIStrings::NoNewBranchWasCreated => {
+                String::from(" No new branch was created")
+            }
         }
     }
 }

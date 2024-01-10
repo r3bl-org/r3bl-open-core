@@ -87,7 +87,7 @@ pub fn launch_giti(cli_arg: CLIArg) {
                         giti_ui_templates::show_exit_message();
                     }
                     (None, Some(BranchSubcommand::Delete)) => {
-                        println!("You chose not to delete any branches.");
+                        println!(" You chose not to delete any branches.");
                         giti_ui_templates::show_exit_message();
                     }
                     _ => {}
@@ -102,7 +102,7 @@ pub fn launch_giti(cli_arg: CLIArg) {
             );
 
             let err_msg = format!(
-                "Could not run giti due to the following problem.\n{:#?}",
+                " Could not run giti due to the following problem.\n{:#?}",
                 error
             );
             log_error(err_msg.clone());
@@ -115,7 +115,9 @@ pub fn launch_giti(cli_arg: CLIArg) {
     }
 }
 
-pub fn try_run_command(giti_app_args: &CLIArg) -> CommonResult<TryRunCommandResult> {
+pub fn try_run_command(
+    giti_app_args: &CLIArg,
+) -> CommonResult<CommandSuccessfulResponse> {
     match &giti_app_args.command {
         CLICommand::Branch {
             command_to_run_with_each_selection,
@@ -127,7 +129,9 @@ pub fn try_run_command(giti_app_args: &CLIArg) -> CommonResult<TryRunCommandResu
                 BranchSubcommand::Checkout => {
                     return try_checkout_branch(maybe_branch_name.clone())
                 }
-                _ => unimplemented!(),
+                BranchSubcommand::New => {
+                    return try_make_new_branch(maybe_branch_name.clone())
+                }
             },
             _ => {
                 return user_typed_giti_branch();
@@ -138,7 +142,7 @@ pub fn try_run_command(giti_app_args: &CLIArg) -> CommonResult<TryRunCommandResu
     };
 }
 
-fn user_typed_giti_branch() -> CommonResult<TryRunCommandResult> {
+fn user_typed_giti_branch() -> CommonResult<CommandSuccessfulResponse> {
     let branch_subcommands = get_giti_command_subcommand_names(CLICommand::Branch {
         command_to_run_with_each_selection: None,
         maybe_branch_name: None,
@@ -170,9 +174,10 @@ fn user_typed_giti_branch() -> CommonResult<TryRunCommandResult> {
         match it {
             "delete" => return try_delete_branch(),
             "checkout" => return try_checkout_branch(None),
+            "new" => return try_make_new_branch(None),
             _ => unimplemented!(),
         };
     };
 
-    Ok(TryRunCommandResult::default())
+    Ok(CommandSuccessfulResponse::default())
 }
