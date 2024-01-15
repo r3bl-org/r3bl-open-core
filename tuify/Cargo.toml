@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_tuify"
-version = "0.1.24"
+version = "0.1.25"
 edition = "2021"
 resolver = "2"
 description = "Easily add lightweight TUI capabilities to any CLI apps"
@@ -9,7 +9,10 @@ keywords = ["tui", "cli", "terminal", "color"]
 categories = ["command-line-interface", "command-line-utilities"]
 readme = "README.md"                                              # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/
-authors = ["Nazmul Idris <idris@developerlife.com>"]
+authors = [
+  "Nazmul Idris <idris@developerlife.com>",
+  "Nadia Idris <nadia@developerlife.com>",
+]
 repository = "https://github.com/r3bl-org/r3bl-open-core/tree/main/tuify"
 documentation = "https://docs.rs/r3bl_tuify"
 homepage = "https://r3bl.com"
@@ -28,7 +31,7 @@ path = "src/bin/rt.rs"
 [dependencies]
 # r3bl-open-core.
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
-r3bl_rs_utils_core = { path = "../core", version = "0.9.11" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.12" }
 
 # serde for JSON serialization.
 serde = { version = "1.0.190", features = ["derive"] }
@@ -44,7 +47,7 @@ log = { version = "0.4.20", features = ["std"] }
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
 clap = { version = "4.4.6", features = ["derive", "wrap_help"] }
-reedline = "0.27.1"
+reedline = "0.28.0"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

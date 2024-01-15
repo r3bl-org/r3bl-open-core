@@ -9,7 +9,10 @@ keywords = ["tui", "editor", "flexbox", "terminal", "emoji"]
 categories = ["command-line-interface", "command-line-utilities"]
 readme = "README.md"                                              # This is not included in cargo docs.
 # Email address(es) has to be verified at https://crates.io/me/
-authors = ["Nazmul Idris <idris@developerlife.com>"]
+authors = [
+  "Nazmul Idris <idris@developerlife.com>",
+  "Nadia Idris <nadia@developerlife.com>",
+]
 repository = "https://github.com/r3bl-org/r3bl-open-core/tree/main/tui"
 documentation = "https://docs.rs/r3bl_tui"
 homepage = "https://r3bl.com"
@@ -23,7 +26,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl-open-core.
-r3bl_rs_utils_core = { path = "../core", version = "0.9.11" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.12" }
 r3bl_rs_utils_macro = { path = "../macro", version = "0.9.8" }
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
 log = { version = "0.4.20", features = ["std"] }                # Logging.
@@ -73,6 +76,6 @@ copypasta-ext = "0.4.4"
 [dev-dependencies]
 # For assert_eq2! macro.
 pretty_assertions = "1.4.0"
-reedline = "0.27.1"
+reedline = "0.28.0"
 textwrap = "0.16.0"
 serial_test = "2.0.0"

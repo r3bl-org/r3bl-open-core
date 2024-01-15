@@ -11,7 +11,10 @@ keywords = ["logging", "log", "filelog", "tui", "cli"]
 categories = ["command-line-interface", "command-line-utilities"]
 
 # Email address(es) has to be verified at https://crates.io/me/
-authors = ["Nazmul Idris <idris@developerlife.com>"]
+authors = [
+  "Nazmul Idris <idris@developerlife.com>",
+  "Nadia Idris <nadia@developerlife.com>",
+]
 repository = "https://github.com/r3bl-org/r3bl-open-core/tree/main/simple_logger"
 documentation = "https://docs.rs/r3bl_simple_logger"
 homepage = "https://r3bl.com"

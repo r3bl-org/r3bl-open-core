@@ -14,7 +14,10 @@ keywords = ["tui", "editor", "git", "tuify"]
 categories = ["command-line-interface", "command-line-utilities"]
 
 repository = "https://github.com/r3bl-org/r3bl-open-core"
-authors = ["Nazmul Idris <idris@developerlife.com>"]
+authors = [
+  "Nazmul Idris <idris@developerlife.com>",
+  "Nadia Idris <nadia@developerlife.com>",
+]
 documentation = "https://developerlife.com/category/Rust/"
 
 # More info on default-run: https://stackoverflow.com/a/51790493/2085356
@@ -77,7 +80,7 @@ open = "5"
 # Save config files.
 dirs = "5.0.1"
 
-# Reedline 
+# Reedline.
 reedline = "0.28.0"
 
 [dev-dependencies]
