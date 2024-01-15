@@ -38,26 +38,13 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 ## Example of full workflow
 
 ```sh
-cd ~/github/r3bl_rs_utils/
-rm Cargo.lock
-
-cd cmdr
-# Update cargo.toml version number manually
-# Update CHANGELOG.md
-cargo build; cargo test; cargo doc
-git add -A
-git commit -m "v0.0.10-cmdr"
-git tag -a v0.0.10-cmdr -m "v0.0.10-cmdr"
-cargo publish
-cd ..
-
 cd tuify
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.1.24-tuify"
-git tag -a v0.1.24-tuify -m "v0.1.24-tuify"
+git commit -m "v0.1.25-tuify"
+git tag -a v0.1.25-tuify -m "v0.1.25-tuify"
 cargo publish
 cd ..
 
@@ -68,6 +55,16 @@ cargo build; cargo test; cargo doc
 git add -A
 git commit -m "v0.5.1-tui"
 git tag -a v0.5.1-tui -m "v0.5.1-tui"
+cargo publish
+cd ..
+
+cd cmdr
+# Update cargo.toml version number manually
+# Update CHANGELOG.md
+cargo build; cargo test; cargo doc
+git add -A
+git commit -m "v0.0.11-cmdr"
+git tag -a v0.0.11-cmdr -m "v0.0.11-cmdr"
 cargo publish
 cd ..
 

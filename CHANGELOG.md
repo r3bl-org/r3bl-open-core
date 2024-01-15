@@ -4,7 +4,7 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
-  - [r3bl-cmdr-next-release](#r3bl-cmdr-next-release)
+  - [v0.0.11 2024-01-14](#v0011-2024-01-14)
   - [v0.0.10 2024-01-02](#v0010-2024-01-02)
   - [v0.0.9 2023-12-31](#v009-2023-12-31)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
@@ -18,6 +18,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [v0.5.1 2024-01-09](#v051-2024-01-09)
   - [v0.5.0 2023-12-31](#v050-2023-12-31)
   - [v0.4.0 2023-12-22](#v040-2023-12-22)
   - [v0.3.10 2023-10-29](#v0310-2023-10-29)
@@ -73,13 +74,19 @@
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
 
-### r3bl-cmdr-next-release
-<a id="markdown-r3bl-cmdr-next-release" name="r3bl-cmdr-next-release"></a>
+### v0.0.11 (2024-01-14)
+<a id="markdown-v0.0.11-2024-01-14" name="v0.0.11-2024-01-14"></a>
 
-- Updated:
-  - Add checks to see if `edi`, `giti`, etc. need to be upgraded. Search for
-    `UPDATE_IF_NOT_THIS_VERSION` in `r3bl-open-core` repo (in `cmdr` folder), and in
-    `r3bl-base` repo.
+- Added:
+  - `edi`, `giti`: Add checks to see if binary needs to be upgraded.
+    - Search for `UPDATE_IF_NOT_THIS_VERSION` in `r3bl-open-core` repo (in `cmdr` folder),
+      and in `r3bl-base` repo. `UPDATE_IF_NOT_THIS_VERSION` is set to `0.0.11` for this
+      release.
+    - If upgrade is needed, then display a message to the user asking them to run `cargo
+    install r3bl-cmdr` again.
+  - `giti` add feature: `giti branch checkout`
+  - `giti` add feature: `giti branch new`
+  - Add `reedline` version `0.28.0` dependency in `Cargo.toml`.
 
 ### v0.0.10 (2024-01-02)
 <a id="markdown-v0.0.10-2024-01-02" name="v0.0.10-2024-01-02"></a>
@@ -93,10 +100,10 @@
 ### v0.0.9 (2023-12-31)
 <a id="markdown-v0.0.9-2023-12-31" name="v0.0.9-2023-12-31"></a>
 
-Added:
+- Added:
   - Anonymized analytics reporting to prioritize feature development for `edi` and `giti`.
 
-Changed:
+- Changed:
   - Replace the `run` command with `examples` in the `run` nu shell script. To run an
     example you use `nu run examples`. and provide instructions on the `run` script at the
     top level folder of this monorepo. Update `lib.rs` and `README.md` to reflect this
@@ -106,12 +113,12 @@ Changed:
 ### v0.0.8 (2023-12-22)
 <a id="markdown-v0.0.8-2023-12-22" name="v0.0.8-2023-12-22"></a>
 
-Changed:
+- Changed:
   - Rename `run.nu` to `run` and update `README.md` and `lib.rs` to reflect this change.
     This is a more ergonomic command to use, when using it directly eg: `./run build`
     (macOS, Linux), or `nu run build` (Windows).
 
-Added:
+- Added:
   - Add binary target `giti`. This is an interactive git client that is tuified. It is a
     productivity tool for git workflows, and is meant as a replacement for directly using
     `git`. This also serves as a real world example of using the `r3bl_tuify` crate.
@@ -126,6 +133,13 @@ Added:
 
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
+
+### v0.1.25 (2024-01-14)
+
+- Updated:
+  - Dependency updated `reedline` version `0.28.0`, `r3bl_rs_utils_core` version `0.9.12`.
+- Added:
+  - Add `tuify/src/constants.rs` with color constants.
 
 ### v0.1.24 (2023-12-31)
 <a id="markdown-v0.1.24-2023-12-31" name="v0.1.24-2023-12-31"></a>
@@ -214,7 +228,13 @@ Added:
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
+### v0.5.2 (2024-01-14)
+
+- Updated:
+  - Dependency updated `reedline` version `0.28.0`, `r3bl_rs_utils_core` version `0.9.12`.
+
 ### v0.5.1 (2024-01-09)
+<a id="markdown-v0.5.1-2024-01-09" name="v0.5.1-2024-01-09"></a>
 
 - Added:
   - Simple function `ColorWheel::lolcat_into_string()` that receives a string and

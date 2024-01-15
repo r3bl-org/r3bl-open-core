@@ -56,12 +56,12 @@ struct GlobalOpts {
 
     /// Sets the maximum height of the Tuify component (rows).
     /// If height is not provided, it defaults to the terminal height.
-    #[arg(value_name = "height", long, short = 'h')]
+    #[arg(value_name = "height", long, short = 'r')]
     tui_height: Option<usize>,
 
     /// Sets the maximum width of the Tuify component (columns).
     /// If width is not provided, it defaults to the terminal width.
-    #[arg(value_name = "width", long, short = 'w')]
+    #[arg(value_name = "width", long, short = 'c')]
     tui_width: Option<usize>,
 }
 
