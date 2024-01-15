@@ -43,9 +43,8 @@ cargo install r3bl-cmdr
 giti branch video
 Source: https://github.com/nazmulidris/developerlife.com/issues/5
 -->
-<video width="100%" controls>
-  <source src="https://github.com/nazmulidris/developerlife.com/assets/2966499/262f59d1-a95c-4af3-accf-c3d6cac6e586" type="video/mp4"/>
-</video>
+
+https://github.com/nazmulidris/developerlife.com/assets/2966499/262f59d1-a95c-4af3-accf-c3d6cac6e586
 
 To run from binary:
 - Run `cargo install r3bl-cmdr` (detailed instructions above). This will install `giti`
@@ -75,10 +74,8 @@ To run from source:
 edi video
 Source: https://github.com/nazmulidris/developerlife.com/issues/6
 -->
-<video width="100%" controls>
-  <source src="https://github.com/nazmulidris/developerlife.com/assets/2966499/f2c4b07d-b5a2-4f41-af7a-06d1b6660c41" type="video/mp4"/>
-</video>
 
+https://github.com/nazmulidris/developerlife.com/assets/2966499/f2c4b07d-b5a2-4f41-af7a-06d1b6660c41
 
 To run from binary:
 - Run `cargo install r3bl-cmdr` (detailed instructions above). This will install `giti`
