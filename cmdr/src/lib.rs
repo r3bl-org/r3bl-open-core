@@ -39,9 +39,9 @@
 //! Two apps, `edi` and `giti`, that comprise `r3bl-cmdr` will put a smile on your face and
 //! make you more productive:
 //!
-//! - `giti` - an interactive git CLI app designed to give you more confidence and a better
+//! - 😺 `giti` - an interactive git CLI app designed to give you more confidence and a better
 //!   experience when working with git.
-//! - `edi` - a TUI Markdown editor that lets you edit Markdown files in your terminal in
+//! - 🦜 `edi` - a TUI Markdown editor that lets you edit Markdown files in your terminal in
 //!   style.
 //!
 //! To install `r3bl-cmdr` on your system, run the following command:
