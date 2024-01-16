@@ -37,7 +37,7 @@
 //! <a id="markdown-install-the-apps-on-your-system-using-cargo" name="install-the-apps-on-your-system-using-cargo"></a>
 //!
 //! Two apps, `edi` and `giti`, that comprise `r3bl-cmdr` will put a smile on your face and
-//! make you more productive:
+//! make you more productive. These apps are currently available as early access preview 🐣.
 //!
 //! - 😺 `giti` - an interactive git CLI app designed to give you more confidence and a better
 //!   experience when working with git.

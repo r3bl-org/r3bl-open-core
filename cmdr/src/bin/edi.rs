@@ -186,7 +186,7 @@ mod clap_config {
     #[derive(Debug, Parser)]
     #[command(bin_name = "edi")]
     #[command(
-        about = "Edit Markdown with happiness 💖\n\x1b[38;5;206mEarly access preview \x1b[0m🐣"
+        about = "🦜 Edit Markdown with style 💖\n\x1b[38;5;206mEarly access preview \x1b[0m🐣"
     )]
     #[command(version)]
     #[command(next_line_help = true)]
