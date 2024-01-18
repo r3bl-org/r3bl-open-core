@@ -1,54 +1,96 @@
 <p align="center">
-  <img src="r3bl-term.svg" height="128px">
+  <img src="r3bl-cmdr-eap.svg" height="148px">
 </p>
 
-# Suite of TUI apps focused on developer productivity
-<a id="markdown-r3bl-cmdr%3A-suite-of-tui-apps-focused-on-developer-productivity" name="r3bl-cmdr%3A-suite-of-tui-apps-focused-on-developer-productivity"></a>
+# <font color="#F07B14">S</font><font color="#F27716">u</font><font color="#F37219">i</font><font color="#F56E1B">t</font><font color="#F76A1E">e</font><font color="#F86621"> </font><font color="#F96223">o</font><font color="#FA5E26">f</font><font color="#FB5A2A"> </font><font color="#FC562D">T</font><font color="#FD5230">U</font><font color="#FE4E33">I</font><font color="#FE4A37"> </font><font color="#FE463A">a</font><font color="#FE423E">p</font><font color="#FE3F41">p</font><font color="#FE3B45">s</font><font color="#FE3749"> </font><font color="#FE344D">f</font><font color="#FD3151">o</font><font color="#FC2D55">c</font><font color="#FC2A59">u</font><font color="#FB275D">s</font><font color="#FA2461">e</font><font color="#F82165">d</font><font color="#F71E69"> </font><font color="#F51C6D">o</font><font color="#F41972">n</font><font color="#F21776"> </font><font color="#F0147A">d</font><font color="#EE127E">e</font><font color="#EC1082">v</font><font color="#EA0E87">e</font><font color="#E70C8B">l</font><font color="#E50B8F">o</font><font color="#E20993">p</font><font color="#E00897">e</font><font color="#DD069C">r</font><font color="#DA05A0"> </font><font color="#D704A4">p</font><font color="#D403A8">r</font><font color="#D002AC">o</font><font color="#CD02B0">d</font><font color="#CA01B4">u</font><font color="#C601B7">c</font><font color="#C301BB">t</font><font color="#BF01BF">i</font><font color="#BB01C3">v</font><font color="#B801C6">i</font><font color="#B401CA">t</font><font color="#B002CD">y</font>
+
+<!-- Suite of R3BL TUI apps focused on developer productivity -->
 
 <!-- TOC -->
 
+- [R3BL CMDR is comprised of two apps](#r3bl-cmdr-is-comprised-of-two-apps)
 - [Install the apps on your system using cargo](#install-the-apps-on-your-system-using-cargo)
+- [R3BL giti - perform verison control with confidence](#r3bl-giti---perform-verison-control-with-confidence)
+  - [Commands that allow you to work with branches](#commands-that-allow-you-to-work-with-branches)
+  - [See giti branch delete in action](#see-giti-branch-delete-in-action)
+  - [See giti branch checkout in action](#see-giti-branch-checkout-in-action)
 - [Run giti binary target](#run-giti-binary-target)
+- [R3BL edi - edit Markdown files in your terminal in style](#r3bl-edi---edit-markdown-files-in-your-terminal-in-style)
 - [Run edi binary target](#run-edi-binary-target)
 - [Build, run, test tasks](#build-run-test-tasks)
   - [Prerequisites](#prerequisites)
-  - [Nu shell scripts to build, run, test etc.](#nu-shell-scripts-to-build-run-test-etc)
+  - [Nushell scripts to build, run, test etc.](#nushell-scripts-to-build-run-test-etc)
 
 <!-- /TOC -->
 
+## R3BL CMDR is comprised of two apps
+
+<a id="markdown-r3bl-cmdr-is-comprised-of-two-apps" name="r3bl-cmdr-is-comprised-of-two-apps"></a>
+
+1. [`giti`](#r3bl-giti---verison-control-with-confidence) 🐱 is an interactive CLI app to give you
+   more confidence when working with git 💪.
+2. [`edi`](#r3bl-edi---edit-markdown-files-in-your-terminal-in-style) 🦜 is a TUI Markdown editor
+   that lets you edit Markdown files in your terminal in style 💖.
+
+- These apps are currently available as 🐣 Early Access Preview.
+- They run on **Linux, macOS and Windows**, and are written in Rust 🦀.
+
 ## Install the apps on your system using cargo
+
 <a id="markdown-install-the-apps-on-your-system-using-cargo" name="install-the-apps-on-your-system-using-cargo"></a>
 
-Two apps, `edi` and `giti`, that comprise `r3bl-cmdr` will put a smile on your face and
-make you more productive. These apps are currently available as early access preview 🐣.
-
-- 😺 `giti` - an interactive git CLI app designed to give you more confidence and a better
-  experience when working with git.
-- 🦜 `edi` - a TUI Markdown editor that lets you edit Markdown files in your terminal in
-  style.
-
-To install `r3bl-cmdr` on your system, run the following command:
+To install `r3bl-cmdr` on your system, run the following in your terminal:
 
 ```bash
 cargo install r3bl-cmdr
 ```
 
-> You will need `cargo` installed on your system. If you don't have it, follow the instructions
-> [here](https://rustup.rs/).
+> - 📦 You will need `cargo` installed on your system. If you don't have it, follow the instructions
+>   [here](https://rustup.rs/) to install it.
+> - 🐧 On Linux you will need `libssl-dev` installed on your system. On Ubuntu based systems, you
+>   can get it by running `sudo apt install libssl-dev pkg-config`. For other distros, please refer
+>   to this
+>   [stackoverflow question](https://stackoverflow.com/questions/65553557/why-rust-is-failing-to-build-command-for-openssl-sys-v0-9-60-even-after-local-in).
+
+## R3BL giti - perform verison control with confidence
+
+<a id="markdown-r3bl-giti---perform-verison-control-with-confidence" name="r3bl-giti---perform-verison-control-with-confidence"></a>
+
+R3BL [`giti`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr/src/giti) 🐱 is an
+interactive CLI app to give you more confidence when working with git 💪.
+
+### Commands that allow you to work with branches
+
+<a id="markdown-commands-that-allow-you-to-work-with-branches" name="commands-that-allow-you-to-work-with-branches"></a>
+
+| Command                | Description                       |
+| ---------------------- | --------------------------------- |
+| `giti --help`          | See all the available commands    |
+| `giti branch`          | List all the branch subcommands   |
+| `giti branch delete`   | Delete one or more local branches |
+| `giti branch checkout` | Checkout a branch                 |
+| `giti branch new`      | Create a new branch               |
+
+### See `giti branch delete` in action
+
+<a id="markdown-see-giti-branch-delete-in-action" name="see-giti-branch-delete-in-action"></a>
+
+[![Video Preview](https://img.youtube.com/vi/aI550ZvuD0s/0.jpg)](https://www.youtube.com/watch?v=aI550ZvuD0s)
+
+### See `giti branch checkout` in action
+
+<a id="markdown-see-giti-branch-checkout-in-action" name="see-giti-branch-checkout-in-action"></a>
+
+[![Video Preview](https://img.youtube.com/vi/pc4BP1GjFGo/0.jpg)](https://www.youtube.com/watch?v=pc4BP1GjFGo)
 
 ## Run `giti` binary target
+
 <a id="markdown-run-giti-binary-target" name="run-giti-binary-target"></a>
 
-<!--
-giti branch video
-Source: https://github.com/nazmulidris/developerlife.com/issues/5
--->
-
-https://github.com/nazmulidris/developerlife.com/assets/2966499/262f59d1-a95c-4af3-accf-c3d6cac6e586
-
 To run from binary:
-- Run `cargo install r3bl-cmdr` (detailed instructions above). This will install `giti`
-  locally to `~/.cargo/bin`.
+
+- Run `cargo install r3bl-cmdr` (detailed instructions above). This will install `giti` locally to
+  `~/.cargo/bin`.
 - Run `giti` from anywhere on your system.
 - Try `giti --help` to see the available commands.
 - To delete one or more branches in your repo run `giti branch delete`.
@@ -56,6 +98,7 @@ To run from binary:
 - To create a new branch run `giti branch new`.
 
 To run from source:
+
 - Clone the `r3bl-open-core` repo.
 - Go to the `cmdr` folder in your terminal.
 - Run `nu run install` to install `giti` locally to `~/.cargo/bin`.
@@ -67,7 +110,15 @@ To run from source:
 - If you want to generate log output for `giti`, run `giti -l`. For example,
   `giti -l branch delete`. To view this log output run `nu run log`.
 
+## R3BL edi - edit Markdown files in your terminal in style
+
+<a id="markdown-r3bl-edi---edit-markdown-files-in-your-terminal-in-style" name="r3bl-edi---edit-markdown-files-in-your-terminal-in-style"></a>
+
+🦜 [`edi`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr/src/edi) is a TUI Markdown
+editor that lets you edit Markdown files in your terminal in style 💖.
+
 ## Run `edi` binary target
+
 <a id="markdown-run-edi-binary-target" name="run-edi-binary-target"></a>
 
 <!--
@@ -78,28 +129,31 @@ Source: https://github.com/nazmulidris/developerlife.com/issues/6
 https://github.com/nazmulidris/developerlife.com/assets/2966499/f2c4b07d-b5a2-4f41-af7a-06d1b6660c41
 
 To run from binary:
-- Run `cargo install r3bl-cmdr` (detailed instructions above). This will install `giti`
-  locally to `~/.cargo/bin`.
+
+- Run `cargo install r3bl-cmdr` (detailed instructions above). This will install `giti` locally to
+  `~/.cargo/bin`.
 - Run `edi` from anywhere on your system.
 - Try `edi --help` to see the available commands.
 - To open an existing file, run `edi <file_name>`. For example, `edi README.md`.
 
 To run from source:
+
 - Clone the `r3bl-open-core` repo.
 - Go to the `cmdr` folder in your terminal.
 - Run `nu run install` to install `edi` locally to `~/.cargo/bin`.
 - Run `edi` from anywhere on your system.
 - Try `edi --help` to see the available commands.
 - To open an existing file, run `edi <file_name>`. For example, `edi README.md`.
-- If you want to generate log output for `edi`, run `edi -l`. For example,
-  `edi -l README.md`. To view this log output run `nu run log`.
+- If you want to generate log output for `edi`, run `edi -l`. For example, `edi -l README.md`. To
+  view this log output run `nu run log`.
 
 ## Build, run, test tasks
+
 <a id="markdown-build%2C-run%2C-test-tasks" name="build%2C-run%2C-test-tasks"></a>
 
 ### Prerequisites
-<a id="markdown-prerequisites" name="prerequisites"></a>
 
+<a id="markdown-prerequisites" name="prerequisites"></a>
 
 🌠 In order for these to work you have to install the Rust toolchain, `nu`, `cargo-watch`, `bat`,
 and `flamegraph` on your system. Here are the instructions:
@@ -112,9 +166,9 @@ and `flamegraph` on your system. Here are the instructions:
 1. Install [`nu`](https://crates.io/crates/nu) shell on your system using `cargo install nu`. It is
    available for Linux, macOS, and Windows.
 
-### Nu shell scripts to build, run, test etc.
-<a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test-etc." name="nu-shell-scripts-to-build%2C-run%2C-test-etc."></a>
+### Nushell scripts to build, run, test etc.
 
+<a id="markdown-nushell-scripts-to-build%2C-run%2C-test-etc." name="nushell-scripts-to-build%2C-run%2C-test-etc."></a>
 
 | Command             | Description                                                                                                          |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------- |
