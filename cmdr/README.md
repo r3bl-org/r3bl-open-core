@@ -10,7 +10,7 @@
 
 - [R3BL CMDR is comprised of two apps](#r3bl-cmdr-is-comprised-of-two-apps)
 - [Install the apps on your system using cargo](#install-the-apps-on-your-system-using-cargo)
-- [R3BL giti - perform verison control with confidence](#r3bl-giti---perform-verison-control-with-confidence)
+- [R3BL giti - perform version control with confidence](#r3bl-giti---perform-version-control-with-confidence)
   - [Commands that allow you to work with branches](#commands-that-allow-you-to-work-with-branches)
   - [See giti branch delete in action](#see-giti-branch-delete-in-action)
   - [See giti branch checkout in action](#see-giti-branch-checkout-in-action)
@@ -24,7 +24,6 @@
 <!-- /TOC -->
 
 ## R3BL CMDR is comprised of two apps
-
 <a id="markdown-r3bl-cmdr-is-comprised-of-two-apps" name="r3bl-cmdr-is-comprised-of-two-apps"></a>
 
 1. [`giti`](#r3bl-giti---verison-control-with-confidence) 🐱 is an interactive CLI app to give you
@@ -36,7 +35,6 @@
 - They run on **Linux, macOS and Windows**, and are written in Rust 🦀.
 
 ## Install the apps on your system using cargo
-
 <a id="markdown-install-the-apps-on-your-system-using-cargo" name="install-the-apps-on-your-system-using-cargo"></a>
 
 To install `r3bl-cmdr` on your system, run the following in your terminal:
@@ -52,15 +50,13 @@ cargo install r3bl-cmdr
 >   to this
 >   [stackoverflow question](https://stackoverflow.com/questions/65553557/why-rust-is-failing-to-build-command-for-openssl-sys-v0-9-60-even-after-local-in).
 
-## R3BL giti - perform verison control with confidence
-
-<a id="markdown-r3bl-giti---perform-verison-control-with-confidence" name="r3bl-giti---perform-verison-control-with-confidence"></a>
+## R3BL giti - perform version control with confidence
+<a id="markdown-r3bl-giti---perform-version-control-with-confidence" name="r3bl-giti---perform-version-control-with-confidence"></a>
 
 R3BL [`giti`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr/src/giti) 🐱 is an
 interactive CLI app to give you more confidence when working with git 💪.
 
 ### Commands that allow you to work with branches
-
 <a id="markdown-commands-that-allow-you-to-work-with-branches" name="commands-that-allow-you-to-work-with-branches"></a>
 
 | Command                | Description                       |
@@ -72,19 +68,16 @@ interactive CLI app to give you more confidence when working with git 💪.
 | `giti branch new`      | Create a new branch               |
 
 ### See `giti branch delete` in action
-
 <a id="markdown-see-giti-branch-delete-in-action" name="see-giti-branch-delete-in-action"></a>
 
-[![Video Preview](https://img.youtube.com/vi/aI550ZvuD0s/0.jpg)](https://www.youtube.com/watch?v=aI550ZvuD0s)
+![](videos/giti-branch-delete.gif)
 
 ### See `giti branch checkout` in action
-
 <a id="markdown-see-giti-branch-checkout-in-action" name="see-giti-branch-checkout-in-action"></a>
 
-[![Video Preview](https://img.youtube.com/vi/pc4BP1GjFGo/0.jpg)](https://www.youtube.com/watch?v=pc4BP1GjFGo)
+![](videos/giti-branch-checkout.gif)
 
 ## Run `giti` binary target
-
 <a id="markdown-run-giti-binary-target" name="run-giti-binary-target"></a>
 
 To run from binary:
@@ -111,14 +104,12 @@ To run from source:
   `giti -l branch delete`. To view this log output run `nu run log`.
 
 ## R3BL edi - edit Markdown files in your terminal in style
-
 <a id="markdown-r3bl-edi---edit-markdown-files-in-your-terminal-in-style" name="r3bl-edi---edit-markdown-files-in-your-terminal-in-style"></a>
 
 🦜 [`edi`](https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr/src/edi) is a TUI Markdown
 editor that lets you edit Markdown files in your terminal in style 💖.
 
 ## Run `edi` binary target
-
 <a id="markdown-run-edi-binary-target" name="run-edi-binary-target"></a>
 
 <!--
@@ -148,11 +139,9 @@ To run from source:
   view this log output run `nu run log`.
 
 ## Build, run, test tasks
-
 <a id="markdown-build%2C-run%2C-test-tasks" name="build%2C-run%2C-test-tasks"></a>
 
 ### Prerequisites
-
 <a id="markdown-prerequisites" name="prerequisites"></a>
 
 🌠 In order for these to work you have to install the Rust toolchain, `nu`, `cargo-watch`, `bat`,
@@ -167,7 +156,6 @@ and `flamegraph` on your system. Here are the instructions:
    available for Linux, macOS, and Windows.
 
 ### Nushell scripts to build, run, test etc.
-
 <a id="markdown-nushell-scripts-to-build%2C-run%2C-test-etc." name="nushell-scripts-to-build%2C-run%2C-test-etc."></a>
 
 | Command             | Description                                                                                                          |
