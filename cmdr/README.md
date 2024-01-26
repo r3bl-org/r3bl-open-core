@@ -2,9 +2,8 @@
   <img src="r3bl-cmdr-eap.svg" height="148px">
 </p>
 
-# <font color="#F07B14">S</font><font color="#F27716">u</font><font color="#F37219">i</font><font color="#F56E1B">t</font><font color="#F76A1E">e</font><font color="#F86621"> </font><font color="#F96223">o</font><font color="#FA5E26">f</font><font color="#FB5A2A"> </font><font color="#FC562D">T</font><font color="#FD5230">U</font><font color="#FE4E33">I</font><font color="#FE4A37"> </font><font color="#FE463A">a</font><font color="#FE423E">p</font><font color="#FE3F41">p</font><font color="#FE3B45">s</font><font color="#FE3749"> </font><font color="#FE344D">f</font><font color="#FD3151">o</font><font color="#FC2D55">c</font><font color="#FC2A59">u</font><font color="#FB275D">s</font><font color="#FA2461">e</font><font color="#F82165">d</font><font color="#F71E69"> </font><font color="#F51C6D">o</font><font color="#F41972">n</font><font color="#F21776"> </font><font color="#F0147A">d</font><font color="#EE127E">e</font><font color="#EC1082">v</font><font color="#EA0E87">e</font><font color="#E70C8B">l</font><font color="#E50B8F">o</font><font color="#E20993">p</font><font color="#E00897">e</font><font color="#DD069C">r</font><font color="#DA05A0"> </font><font color="#D704A4">p</font><font color="#D403A8">r</font><font color="#D002AC">o</font><font color="#CD02B0">d</font><font color="#CA01B4">u</font><font color="#C601B7">c</font><font color="#C301BB">t</font><font color="#BF01BF">i</font><font color="#BB01C3">v</font><font color="#B801C6">i</font><font color="#B401CA">t</font><font color="#B002CD">y</font>
-
-<!-- Suite of R3BL TUI apps focused on developer productivity -->
+# Suite of R3BL TUI apps focused on developer productivity
+<a id="markdown-suite-of-r3bl-tui-apps-focused-on-developer-productivity" name="suite-of-r3bl-tui-apps-focused-on-developer-productivity"></a>
 
 <!-- TOC -->
 
@@ -14,6 +13,7 @@
   - [Commands that allow you to work with branches](#commands-that-allow-you-to-work-with-branches)
   - [See giti branch delete in action](#see-giti-branch-delete-in-action)
   - [See giti branch checkout in action](#see-giti-branch-checkout-in-action)
+  - [See giti branch new in action](#see-giti-branch-new-in-action)
 - [Run giti binary target](#run-giti-binary-target)
 - [R3BL edi - edit Markdown files in your terminal in style](#r3bl-edi---edit-markdown-files-in-your-terminal-in-style)
 - [Run edi binary target](#run-edi-binary-target)
@@ -70,12 +70,25 @@ interactive CLI app to give you more confidence when working with git 💪.
 ### See `giti branch delete` in action
 <a id="markdown-see-giti-branch-delete-in-action" name="see-giti-branch-delete-in-action"></a>
 
+R3BL giti 🐱: how to interactively delete multiple branches with giti: https://www.youtube.com/watch?v=aI550ZvuD0s
+
 ![](videos/giti-branch-delete.gif)
 
 ### See `giti branch checkout` in action
 <a id="markdown-see-giti-branch-checkout-in-action" name="see-giti-branch-checkout-in-action"></a>
 
+R3BL giti 🐱: how to interactively switch to a new branch using giti: https://youtu.be/pc4BP1GjFGo?si=J_2021-5g0XTuSPe
+
 ![](videos/giti-branch-checkout.gif)
+
+### See `giti branch new` in action
+<a id="markdown-see-giti-branch-new-in-action" name="see-giti-branch-new-in-action"></a>
+
+R3BL giti 🐱: how to interactively create a new branch with giti:
+https://youtu.be/u_OqQyRQEZM?si=V4xt6xdAYNMz-2lb
+
+
+![](videos/giti-branch-new.gif)
 
 ## Run `giti` binary target
 <a id="markdown-run-giti-binary-target" name="run-giti-binary-target"></a>
