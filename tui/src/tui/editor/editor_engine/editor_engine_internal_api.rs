@@ -1179,21 +1179,66 @@ mod content_mut {
                     editor_engine,
                 } = args;
 
-                let viewport_height = editor_engine.viewport_height();
+                if let Some(line_content) =
+                    content_get::line_at_caret_to_string(editor_buffer, editor_engine)
+                {
+                    let mut new_line_text = String::new();
+                    match check_smart_list_type(&line_content.string) {
+                        Some(list_type) => match list_type {
+                            ListType::Ordered(indent, number) => {
+                                let indent_spaces = " ".repeat(indent);
+                                new_line_text.push_str(&format!(
+                                    "{}{}. ",
+                                    indent_spaces,
+                                    number + 1
+                                ));
+                            }
+                            ListType::Unordered(indent, checkbox) => {
+                                let indent_spaces = " ".repeat(indent);
+                                match checkbox {
+                                    CheckboxParsePolicy::IgnoreCheckbox => {
+                                        new_line_text
+                                            .push_str(&format!("{}- ", indent_spaces));
+                                    }
+                                    CheckboxParsePolicy::ParseCheckbox => {
+                                        new_line_text.push_str(&format!(
+                                            "{}- [ ] ",
+                                            indent_spaces
+                                        ));
+                                    }
+                                }
+                            }
+                        },
+                        None => {}
+                    }
 
-                validate_editor_buffer_change::apply_change(
-                    editor_buffer,
-                    editor_engine,
-                    |lines, caret, scroll_offset| {
-                        let new_row_idx = scroll_editor_buffer::inc_caret_row(
-                            caret,
-                            scroll_offset,
-                            viewport_height,
-                        );
-                        scroll_editor_buffer::reset_caret_col(caret, scroll_offset);
-                        lines.insert(new_row_idx, String::new().into());
-                    },
-                );
+                    let viewport_width = editor_engine.viewport_width();
+                    let viewport_height = editor_engine.viewport_height();
+                    let caret_adj = editor_buffer.get_caret(CaretKind::ScrollAdjusted);
+                    let row: usize = ch!(@to_usize caret_adj.row_index);
+                    validate_editor_buffer_change::apply_change(
+                        editor_buffer,
+                        editor_engine,
+                        |lines, caret, scroll_offset| {
+                            let new_row_idx = scroll_editor_buffer::inc_caret_row(
+                                caret,
+                                scroll_offset,
+                                viewport_height,
+                            );
+                            let col_amt =
+                                ch!(UnicodeString::str_display_width(&new_line_text));
+                            let line_content_display_width = lines[row].display_width;
+                            lines.insert(new_row_idx, new_line_text.into());
+                            scroll_editor_buffer::inc_caret_col(
+                                caret,
+                                scroll_offset,
+                                col_amt,
+                                line_content_display_width,
+                                viewport_width,
+                            );
+                        },
+                    );
+                }
             }
 
             // Handle inserting a new line at the start of the current line.
@@ -1243,24 +1288,52 @@ mod content_mut {
                     let col_index = caret_adj.col_index;
                     let split_result = line_content.split_at_display_col(col_index);
                     if let Some((left, right)) = split_result {
+                        let mut new_line_text = String::new();
+                        match check_smart_list_type(&line_content.string) {
+                            Some(list_type) => match list_type {
+                                ListType::Ordered(indent, number) => {
+                                    let indent_spaces = " ".repeat(indent);
+                                    new_line_text.push_str(&format!(
+                                        "{}{}. {}",
+                                        indent_spaces,
+                                        number + 1,
+                                        right.string
+                                    ));
+                                }
+                                ListType::Unordered(indent, checkbox) => {
+                                    let indent_spaces = " ".repeat(indent);
+                                    match checkbox {
+                                        CheckboxParsePolicy::IgnoreCheckbox => {
+                                            new_line_text.push_str(&format!(
+                                                "{}- {}",
+                                                indent_spaces, right.string
+                                            ));
+                                        }
+                                        CheckboxParsePolicy::ParseCheckbox => {
+                                            new_line_text.push_str(&format!(
+                                                "{}- [ ] {}",
+                                                indent_spaces, right.string
+                                            ));
+                                        }
+                                    }
+                                }
+                            },
+                            None => new_line_text.push_str(&format!("{}", right.string)),
+                        }
                         let row_index = ch!(@to_usize caret_adj.row_index);
                         let viewport_height = editor_engine.viewport_height();
-
                         validate_editor_buffer_change::apply_change(
                             editor_buffer,
                             editor_engine,
                             |lines, caret, scroll_offset| {
                                 let _ = replace(&mut lines[row_index], left);
-                                lines.insert(row_index + 1, right);
+                                lines.insert(row_index + 1, new_line_text.into());
                                 scroll_editor_buffer::inc_caret_row(
                                     caret,
                                     scroll_offset,
                                     viewport_height,
                                 );
-                                scroll_editor_buffer::reset_caret_col(
-                                    caret,
-                                    scroll_offset,
-                                );
+                                scroll_editor_buffer::reset_caret_col(caret, scroll_offset);
                             },
                         );
                     }
