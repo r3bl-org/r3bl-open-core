@@ -90,6 +90,35 @@ pub fn parse_block_smart_list(
     Ok((remainder, (output_lines, bullet_kind, indent)))
 }
 
+pub enum ListType {
+    Unordered(usize, CheckboxParsePolicy),
+    Ordered(usize, usize),
+}
+
+pub fn check_smart_list_type(input: &str) -> Option<ListType> {
+    match parse_block_smart_list(input) {
+        Ok((_, (_, bullet_kind, indent))) => match bullet_kind {
+            BulletKind::Ordered(number) => Some(ListType::Ordered(indent, number)),
+            BulletKind::Unordered => {
+                let checked = format!("-{}{}{}", SPACE, CHECKED, SPACE);
+                let unchecked = format!("-{}{}{}", SPACE, UNCHECKED, SPACE);
+                if input.starts_with(&checked) || input.starts_with(&unchecked) {
+                    Some(ListType::Unordered(
+                        indent,
+                        CheckboxParsePolicy::ParseCheckbox,
+                    ))
+                } else {
+                    Some(ListType::Unordered(
+                        indent,
+                        CheckboxParsePolicy::IgnoreCheckbox,
+                    ))
+                }
+            }
+        },
+        Err(_) => None,
+    }
+}
+
 /// Tests things that are final output (and not at the IR level).
 #[cfg(test)]
 mod tests_parse_block_smart_list {
