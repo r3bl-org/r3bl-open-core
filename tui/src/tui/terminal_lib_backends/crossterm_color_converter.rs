@@ -19,7 +19,7 @@ use r3bl_ansi_color::{global_color_support, ColorSupport, TransformColor};
 use r3bl_rs_utils_core::*;
 
 #[rustfmt::skip]
-pub fn from_crossterm_color(value: crossterm::style::Color) -> TuiColor {
+pub fn convert_from_crossterm_color_to_tui_color(value: crossterm::style::Color) -> TuiColor {
     match value {
         // Basic colors.
         crossterm::style::Color::Reset       => TuiColor::Reset,
@@ -56,7 +56,9 @@ pub fn from_crossterm_color(value: crossterm::style::Color) -> TuiColor {
 
 /// Respect the color support of the terminal and downgrade the color if needed. This really only
 /// applies to the [TuiColor::Rgb] variant.
-pub fn to_crossterm_color(from_tui_color: TuiColor) -> crossterm::style::Color {
+pub fn convert_from_tui_color_to_crossterm_color(
+    from_tui_color: TuiColor,
+) -> crossterm::style::Color {
     match from_tui_color {
         TuiColor::Reset => crossterm::style::Color::Reset,
 

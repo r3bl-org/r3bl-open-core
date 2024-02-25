@@ -19,14 +19,9 @@
 //! <https://developerlife.com/2023/09/17/tuify-clap/>
 
 use clap::Parser;
-use giti::{branch::{checkout::try_checkout_branch, delete::try_delete_branch},
-           *};
 use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_cmdr::{color_constants::DefaultColors::{FrozenBlue, GuardsRed, MoonlightBlue},
-                giti::{self,
-                       clap_config::clap_config::{BranchSubcommand,
-                                                  CLIArg,
-                                                  CLICommand}},
+                giti::{clap_config::*, *},
                 report_analytics,
                 upgrade_check,
                 AnalyticsAction};
@@ -107,7 +102,7 @@ pub fn launch_giti(cli_arg: CLIArg) {
             );
             log_error(err_msg.clone());
             AnsiStyledText {
-                text: &format!("{err_msg}",),
+                text: &err_msg.to_string(),
                 style: &[Style::Foreground(GuardsRed.as_ansi_color())],
             }
             .println();
@@ -125,21 +120,17 @@ pub fn try_run_command(
             ..
         } => match command_to_run_with_each_selection {
             Some(subcommand) => match subcommand {
-                BranchSubcommand::Delete => return try_delete_branch(),
+                BranchSubcommand::Delete => try_delete_branch(),
                 BranchSubcommand::Checkout => {
-                    return try_checkout_branch(maybe_branch_name.clone())
+                    try_checkout_branch(maybe_branch_name.clone())
                 }
-                BranchSubcommand::New => {
-                    return try_make_new_branch(maybe_branch_name.clone())
-                }
+                BranchSubcommand::New => try_make_new_branch(maybe_branch_name.clone()),
             },
-            _ => {
-                return user_typed_giti_branch();
-            }
+            _ => user_typed_giti_branch(),
         },
         CLICommand::Commit {} => unimplemented!(),
         CLICommand::Remote {} => unimplemented!(),
-    };
+    }
 }
 
 fn user_typed_giti_branch() -> CommonResult<CommandSuccessfulResponse> {

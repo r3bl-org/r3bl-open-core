@@ -176,6 +176,7 @@
 #![warn(rust_2018_idioms)]
 
 pub const DEVELOPMENT_MODE: bool = true;
+pub const DEBUG_ANALYTICS_CLIENT_MOD: bool = true;
 
 // Attach sources.
 pub mod analytics_client;

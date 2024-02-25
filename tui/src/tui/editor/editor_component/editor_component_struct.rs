@@ -53,10 +53,10 @@ pub mod editor_component_impl_component_trait {
     use super::*;
     use crate::editor_buffer_clipboard_support::system_clipboard_service_provider::SystemClipboard;
 
-    fn get_existing_mut_editor_buffer_from_state_or_create_new_one<'a, S>(
-        mut_state: &'a mut S,
+    fn get_existing_mut_editor_buffer_from_state_or_create_new_one<S>(
+        mut_state: &mut S,
         self_id: FlexBoxId,
-    ) -> &'a mut EditorBuffer
+    ) -> &mut EditorBuffer
     where
         S: HasEditorBuffers + Default + Clone + Debug + Sync + Send,
     {

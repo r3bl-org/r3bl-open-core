@@ -40,7 +40,7 @@ macro_rules! box_start {
             id:                     $arg_id,
             dir:                    $arg_dir,
             requested_size_percent: $arg_requested_size_percent,
-            maybe_styles:           get_styles! { @from: $arg_surface.stylesheet, [$($args)*] }
+            maybe_styles:           get_tui_styles! { @from: $arg_surface.stylesheet, [$($args)*] }
         })?
     };
 }
@@ -51,7 +51,7 @@ macro_rules! box_props {
     id:                     $arg_id : expr,                     // Eg: 0,
     dir:                    $arg_dir : expr,                    // Eg: Direction::Horizontal,
     requested_size_percent: $arg_requested_size_percent : expr, // Eg: (50, 100).try_into()?,
-    maybe_styles:           $arg_styles: expr                   // Eg: get_styles! {
+    maybe_styles:           $arg_styles: expr                   // Eg: get_tui_styles! {
                                                                 //     from: stylesheet,
                                                                 //     ["style1", "style2"] };
     $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */

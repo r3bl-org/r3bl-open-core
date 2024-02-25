@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::io::{Result, *};
+use std::io::*;
 
 use crossterm::{cursor::*, queue, style::*, terminal::*};
 use r3bl_ansi_color::AnsiStyledText;
@@ -82,22 +82,18 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                 // when resize events occur). If that is not set, then get the terminal
                 // width directly.
                 let terminal_width = match state.window_size {
-                    Some(size) => size.col_count.into(),
+                    Some(size) => size.col_count,
                     None => ch!(get_terminal_width()),
                 };
 
                 // Do not exceed the max display width (if it is set).
-                let it = if state.max_display_width == ch!(0) {
+                if state.max_display_width == ch!(0)
+                    || state.max_display_width > ch!(terminal_width)
+                {
                     ch!(terminal_width)
                 } else {
-                    if state.max_display_width > ch!(terminal_width) {
-                        ch!(terminal_width)
-                    } else {
-                        state.max_display_width
-                    }
-                };
-
-                it
+                    state.max_display_width
+                }
             };
 
             call_if_true!(DEVELOPMENT_MODE, {
@@ -184,21 +180,18 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                                 let maybe_header_line_last_span: Option<&AnsiStyledText<'_>> =
                                     header_line.last();
 
-                                match maybe_header_line_last_span {
-                                    Some(header_line_last_span) => {
-                                        if last_span == header_line_last_span {
-                                            // Because text is not clipped, we add back the 3 we subtracted
-                                            // earlier for the "...".
-                                            let num_of_spaces: ChUnit =
-                                                available_space_col_count + ch!(3);
-                                            let span_with_spaces = span_text.to_owned()
-                                                + &" ".repeat(num_of_spaces.into());
-                                            header_line_modified.push(span_with_spaces);
-                                        } else {
-                                            header_line_modified.push(span_text.to_owned());
-                                        }
+                                if let Some(header_line_last_span) = maybe_header_line_last_span {
+                                    if last_span == header_line_last_span {
+                                        // Because text is not clipped, we add back the 3 we subtracted
+                                        // earlier for the "...".
+                                        let num_of_spaces: ChUnit =
+                                            available_space_col_count + ch!(3);
+                                        let span_with_spaces = span_text.to_owned()
+                                            + &" ".repeat(num_of_spaces.into());
+                                        header_line_modified.push(span_with_spaces);
+                                    } else {
+                                        header_line_modified.push(span_text.to_owned());
                                     }
-                                    None => {}
                                 }
                             };
                         }
@@ -263,27 +256,27 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
 
                 // Invert colors for selected items.
                 enum SelectionStateStyle {
-                    IsFocusedAndSelected,
-                    IsFocused,
-                    IsSelected,
-                    IsUnselected,
+                    FocusedAndSelected,
+                    Focused,
+                    Selected,
+                    Unselected,
                 }
 
                 let is_selected = state.selected_items.contains(data_item);
                 let is_focused = ch!(caret_row_scroll_adj) == state.get_focused_index();
 
                 let selection_state = match (is_focused, is_selected) {
-                    (true, true) => SelectionStateStyle::IsFocusedAndSelected,
-                    (true, false) => SelectionStateStyle::IsFocused,
-                    (false, true) => SelectionStateStyle::IsSelected,
-                    (false, false) => SelectionStateStyle::IsUnselected,
+                    (true, true) => SelectionStateStyle::FocusedAndSelected,
+                    (true, false) => SelectionStateStyle::Focused,
+                    (false, true) => SelectionStateStyle::Selected,
+                    (false, false) => SelectionStateStyle::Unselected,
                 };
 
                 let data_style = match selection_state {
-                    SelectionStateStyle::IsFocusedAndSelected => focused_and_selected_style,
-                    SelectionStateStyle::IsFocused => focused_style,
-                    SelectionStateStyle::IsSelected => selected_style,
-                    SelectionStateStyle::IsUnselected => unselected_style,
+                    SelectionStateStyle::FocusedAndSelected => focused_and_selected_style,
+                    SelectionStateStyle::Focused => focused_style,
+                    SelectionStateStyle::Selected => selected_style,
+                    SelectionStateStyle::Unselected => unselected_style,
                 };
 
                 let row_prefix = match state.selection_mode {

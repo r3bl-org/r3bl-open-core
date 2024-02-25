@@ -324,8 +324,7 @@ where
             return None;
         }
         if let Ok(map) = self.map.read() {
-            map.get(&node_id.get_id()) // Returns `None` if `node_id` doesn't exist.
-                .map(Arc::clone) // Runs if `node_ref` is some, else returns `None`.
+            map.get(&node_id.get_id()).cloned() // Runs if `node_ref` is some, else returns `None`.
         } else {
             None
         }

@@ -1,4 +1,21 @@
-use std::{fmt::Display, io::Result, option::Option, string::String};
+/*
+ *   Copyright (c) 2024 R3BL LLC
+ *   All rights reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
+use std::{fmt::Display, io::Result};
 
 use r3bl_ansi_color::*;
 use r3bl_tuify::*;
@@ -26,7 +43,7 @@ pub fn main() -> Result<()> {
     let incorrect_answer_color = Color::Rgb(255, 70, 30);
     let line_length = 60;
 
-    display_header(line_length.clone());
+    display_header(line_length);
 
     for question_data in &all_questions_and_answers {
         let question = question_data.question.clone();
@@ -89,7 +106,7 @@ impl Display for Answer {
             f,
             "{}",
             AnsiStyledText {
-                text: &text.to_string(),
+                text,
                 style: &[r3bl_ansi_color::Style::Foreground(color)],
             }
         )
@@ -119,8 +136,8 @@ fn check_answer(guess: &QuestionData, maybe_user_input: &Option<Vec<String>>) ->
 
 fn display_header(line_length: usize) {
     let color = Color::Rgb(9, 183, 238);
-    println!("");
-    println!("");
+    println!();
+    println!();
     AnsiStyledText {
         text: "👋 Welcome to the Simple Quiz with Tuify",
         style: &[r3bl_ansi_color::Style::Foreground(color)],
@@ -140,7 +157,7 @@ fn display_header(line_length: usize) {
     .println();
 }
 
-fn display_footer(score: i32, all_questions_and_answers: &Vec<QuestionData>, line_length: usize) {
+fn display_footer(score: i32, all_questions_and_answers: &[QuestionData], line_length: usize) {
     let line = "─".to_string().as_str().repeat(line_length - 2);
     let color = Color::Rgb(9, 183, 238);
 
@@ -155,7 +172,7 @@ fn display_footer(score: i32, all_questions_and_answers: &Vec<QuestionData>, lin
     score_text.push(vertical_line.clone());
     score_text.push(format!(
         " End of the game: Your score is {}/{}",
-        score.to_string(),
+        score,
         all_questions_and_answers.len()
     ));
 
@@ -178,15 +195,15 @@ fn display_footer(score: i32, all_questions_and_answers: &Vec<QuestionData>, lin
 }
 
 fn check_user_input_and_display_result(
-    input: &Vec<String>,
+    input: &[String],
     question_data: &QuestionData,
     user_input: &Option<Vec<String>>,
     correct_answer_color: Color,
     incorrect_answer_color: Color,
     score: &mut i32,
-    all_questions_and_answers: &Vec<QuestionData>,
+    all_questions_and_answers: &[QuestionData],
 ) {
-    let answer = check_answer(&question_data, &user_input);
+    let answer = check_answer(question_data, user_input);
 
     let background_color = match answer {
         Answer::Correct => correct_answer_color,

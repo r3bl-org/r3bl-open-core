@@ -97,7 +97,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
             // For each pixel char in the line.
             for (pixel_char_index, pixel_char) in line.iter().enumerate() {
-                let (pixel_char_str, pixel_char_style): (&str, Option<Style>) =
+                let (pixel_char_str, pixel_char_style): (&str, Option<TuiStyle>) =
                     match pixel_char {
                         PixelChar::Void => continue,
                         PixelChar::Spacer => (SPACER, None),
@@ -200,7 +200,7 @@ mod render_helpers {
         pub display_col_index_for_line: ChUnit,
         pub display_row_index: ChUnit,
         pub buffer_plain_text: String,
-        pub prev_style: Option<Style>,
+        pub prev_style: Option<TuiStyle>,
         pub render_ops: RenderOps,
     }
 
@@ -231,7 +231,7 @@ mod render_helpers {
     /// - `reverse`
     /// - `hidden`
     /// - `strikethrough`
-    pub fn style_eq(this: &Option<Style>, other: &Option<Style>) -> bool {
+    pub fn style_eq(this: &Option<TuiStyle>, other: &Option<TuiStyle>) -> bool {
         match (this.is_some(), other.is_some()) {
             (false, false) => true,
             (true, true) => {
@@ -303,7 +303,7 @@ mod tests {
         let text = "hello1234😃";
         // The style colors should be overwritten by fg_color and bg_color.
         let maybe_style = Some(
-            style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+            tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
         );
         my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
         my_offscreen_buffer.my_fg_color = Some(color!(@green));
@@ -372,7 +372,7 @@ mod tests {
             RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                 "hello1234".to_string(),
                 Some(
-                    style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                    tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                 )
             )
         );

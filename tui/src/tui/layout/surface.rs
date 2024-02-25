@@ -27,7 +27,7 @@ pub struct Surface {
     pub origin_pos: Position,
     pub box_size: Size,
     pub stack_of_boxes: Vec<FlexBox>,
-    pub stylesheet: Stylesheet,
+    pub stylesheet: TuiStylesheet,
     pub render_pipeline: RenderPipeline,
 }
 
@@ -194,7 +194,7 @@ impl PerformPositioningAndSizing for Surface {
             let container_box = self.current_box()?;
             let container_bounds = container_box.bounds_size;
 
-            let maybe_cascaded_style: Option<Style> =
+            let maybe_cascaded_style: Option<TuiStyle> =
                 cascade_styles(container_box, &flex_box_props);
 
             let RequestedSizePercent {
@@ -263,7 +263,7 @@ fn make_non_root_box_with_style(
     }: FlexBoxProps,
     origin_pos: Position,
     container_bounds: Size,
-    maybe_cascaded_style: Option<Style>,
+    maybe_cascaded_style: Option<TuiStyle>,
 ) -> FlexBox {
     let bounds_size = size!(
       col_count: width_pc.calc_percentage(container_bounds.col_count),
@@ -300,7 +300,7 @@ fn make_root_box_with_style(
     origin_pos: Position,
     bounds_size: Size,
 ) -> FlexBox {
-    let computed_style = Stylesheet::compute(&maybe_styles);
+    let computed_style = TuiStylesheet::compute(&maybe_styles);
 
     // Adjust `bounds_size` & `origin` based on the style's padding.
     let (style_adjusted_origin_pos, style_adjusted_bounds_size) =
@@ -321,7 +321,7 @@ fn make_root_box_with_style(
 
 /// Adjust `origin` & `bounds_size` based on the `maybe_style`'s padding.
 fn adjust_with_style(
-    maybe_computed_style: &Option<Style>,
+    maybe_computed_style: &Option<TuiStyle>,
     origin_pos: Position,
     bounds_size: Size,
 ) -> (Position, Size) {
@@ -338,8 +338,11 @@ fn adjust_with_style(
     (style_adjusted_origin_pos, style_adjusted_bounds_size)
 }
 
-fn cascade_styles(parent_box: &FlexBox, self_box_props: &FlexBoxProps) -> Option<Style> {
-    let mut style_vec: Vec<Style> = vec![];
+fn cascade_styles(
+    parent_box: &FlexBox,
+    self_box_props: &FlexBoxProps,
+) -> Option<TuiStyle> {
+    let mut style_vec: Vec<TuiStyle> = vec![];
 
     if let Some(parent_style) = parent_box.get_computed_style() {
         style_vec.push(parent_style);
@@ -352,6 +355,6 @@ fn cascade_styles(parent_box: &FlexBox, self_box_props: &FlexBoxProps) -> Option
     if style_vec.is_empty() {
         None
     } else {
-        Stylesheet::compute(&Some(style_vec))
+        TuiStylesheet::compute(&Some(style_vec))
     }
 }

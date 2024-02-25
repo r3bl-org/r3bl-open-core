@@ -49,7 +49,7 @@ mod grapheme_cluster_segment_impl {
         pub fn new(chunk: &str) -> GraphemeClusterSegment {
             let my_string: String = chunk.to_string();
             let unicode_string = UnicodeString::from(my_string);
-            let result = unicode_string.vec_segment.get(0).unwrap().clone();
+            let result = unicode_string.vec_segment.first().unwrap().clone();
             result
         }
     }

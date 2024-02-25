@@ -17,12 +17,12 @@
 
 // Attach sources.
 pub mod hex_color_parser;
-pub mod style;
-pub mod stylesheet;
 pub mod tui_color;
+pub mod tui_style;
+pub mod tui_stylesheet;
 
 // Re-export.
 pub use hex_color_parser::*;
-pub use style::*;
-pub use stylesheet::*;
 pub use tui_color::*;
+pub use tui_style::*;
+pub use tui_stylesheet::*;

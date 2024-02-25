@@ -27,7 +27,7 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                                              SilverMetallic,
                                              SlateGray},
             giti::{self,
-                   clap_config::clap_config::BranchSubcommand,
+                   clap_config::BranchSubcommand,
                    report_unknown_error_and_propagate,
                    CommandSuccessfulResponse,
                    UIStrings::*}};

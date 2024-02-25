@@ -113,12 +113,9 @@ mod state_tests {
         // Check the state.
         assert_eq!(state.editor_buffers.len(), 1);
         assert_eq!(state.dialog_buffers.len(), 0);
-        assert_eq!(
-            state
-                .editor_buffers
-                .contains_key(&FlexBoxId::from(Id::ComponentEditor)),
-            true
-        );
+        assert!(state
+            .editor_buffers
+            .contains_key(&FlexBoxId::from(Id::ComponentEditor)));
         assert_eq!(
             state
                 .editor_buffers
@@ -163,7 +160,7 @@ pub mod constructor {
     pub fn new(maybe_file_path: &Option<String>) -> State {
         match maybe_file_path {
             Some(_) => State {
-                editor_buffers: create_hash_map_of_editor_buffers(&maybe_file_path),
+                editor_buffers: create_hash_map_of_editor_buffers(maybe_file_path),
                 dialog_buffers: Default::default(),
             },
             None => State::default(),
@@ -175,20 +172,18 @@ pub mod constructor {
     ) -> HashMap<FlexBoxId, EditorBuffer> {
         let editor_buffer = {
             let mut editor_buffer = EditorBuffer::new_empty(
-                &Some(file_utils::get_file_extension(&maybe_file_path)),
+                &Some(file_utils::get_file_extension(maybe_file_path)),
                 maybe_file_path,
             );
-            editor_buffer.set_lines(file_utils::get_content(&maybe_file_path));
+            editor_buffer.set_lines(file_utils::get_content(maybe_file_path));
             editor_buffer
         };
 
-        let hash_map = {
+        {
             let mut it = HashMap::new();
             it.insert(FlexBoxId::from(Id::ComponentEditor), editor_buffer);
             it
-        };
-
-        hash_map
+        }
     }
 }
 
@@ -211,7 +206,7 @@ pub mod file_utils {
             }
         }
 
-        return DEFAULT_SYN_HI_FILE_EXT.to_owned();
+        DEFAULT_SYN_HI_FILE_EXT.to_owned()
     }
 
     pub fn get_content(maybe_file_path: &Option<String>) -> Vec<String> {

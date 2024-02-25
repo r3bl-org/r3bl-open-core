@@ -18,11 +18,11 @@
 // Attach.
 pub mod ansi_256_color_gradients;
 pub mod color_wheel_struct;
-pub mod styled_text;
 pub mod truecolor_gradient;
+pub mod tui_styled_text;
 
 // Re-export.
 pub use ansi_256_color_gradients::*;
 pub use color_wheel_struct::*;
-pub use styled_text::*;
 pub use truecolor_gradient::*;
+pub use tui_styled_text::*;

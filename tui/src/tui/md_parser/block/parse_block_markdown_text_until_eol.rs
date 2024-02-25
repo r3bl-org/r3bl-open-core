@@ -18,7 +18,7 @@
 use constants::*;
 use nom::{bytes::complete::*, multi::*, sequence::*, IResult};
 
-use crate::{md_parser::parse_element::parse_element_markdown_inline, *};
+use crate::*;
 
 /// Parse a single line of markdown text [FragmentsInOneLine] terminated by EOL.
 #[rustfmt::skip]

@@ -257,11 +257,7 @@ pub mod convert_from_number {
     }
 
     impl From<u8> for ChUnit {
-        fn from(value: u8) -> Self {
-            Self {
-                value: value.try_into().unwrap_or(value as ChUnitPrimitiveType),
-            }
-        }
+        fn from(it: u8) -> Self { Self { value: it.into() } }
     }
 
     impl From<ChUnitPrimitiveType> for ChUnit {

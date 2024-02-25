@@ -45,14 +45,13 @@ pub fn parse_element_starts_with_underscore(input: &str) -> IResult<&str, &str> 
 
 #[rustfmt::skip]
 pub fn parse_element_starts_with_backtick(input: &str) -> IResult<&str, &str> {
-    let it =
+    
+
     delimited(
         /* start */ tag(BACK_TICK),
         /* output */ is_not(BACK_TICK),
         /* end */ tag(BACK_TICK)
-    )(input);
-
-    it
+    )(input)
 }
 
 #[rustfmt::skip]
@@ -77,11 +76,11 @@ pub fn parse_element_starts_with_left_bracket(input: &str) -> IResult<&str, Hype
 /// a checkbox into plain text, or into a boolean.
 #[rustfmt::skip]
 pub fn parse_element_checkbox_into_str(input: &str) -> IResult<&str, &str> {
-    let it = alt((
+    
+    alt((
         recognize(tag(CHECKED)),
         recognize(tag(UNCHECKED))
-    ))(input);
-    it
+    ))(input)
 }
 
 #[rustfmt::skip]
@@ -89,11 +88,11 @@ pub fn parse_element_checkbox_into_str(input: &str) -> IResult<&str, &str> {
 /// So some extra hint is need from the code calling this parser to let it know whether to parse
 /// a checkbox into plain text, or into a boolean.
 pub fn parse_element_checkbox_into_bool(input: &str) -> IResult<&str, bool> {
-    let it = alt((
+    
+    alt((
         map(tag(CHECKED), |_| true),
         map(tag(UNCHECKED), |_| false),
-    ))(input);
-    it
+    ))(input)
 }
 
 #[rustfmt::skip]
@@ -136,7 +135,8 @@ pub fn parse_plain_text_no_new_line1(input: &str) -> IResult<&str, &str> {
     }
 
     // Otherwise take till the first special character. And split the input there.
-    let it = recognize(
+    
+    recognize(
         many1(
             preceded(
                 /* prefix - discarded */
@@ -155,14 +155,15 @@ pub fn parse_plain_text_no_new_line1(input: &str) -> IResult<&str, &str> {
                 anychar,
             )
         )
-    )(input);
-    it
+    )(input)
 }
 
 /// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
 #[rustfmt::skip]
 pub fn parse_anychar_in_heading_no_new_line1(input: &str) -> IResult<&str, &str> {
-    let it = recognize(
+    
+
+    recognize(
         many1(
             preceded(
                 /* prefix - discarded */
@@ -176,9 +177,7 @@ pub fn parse_anychar_in_heading_no_new_line1(input: &str) -> IResult<&str, &str>
                 anychar,
             )
         )
-    )(input);
-
-    it
+    )(input)
 }
 
 // BOOKM: parser for a single line of markdown
@@ -247,8 +246,7 @@ pub fn parse_fenced_no_newline<'a>(
 
 #[cfg(test)]
 mod tests_parse_element {
-    use nom::{error::{Error, ErrorKind},
-              Err as NomErr};
+    use nom::{error::Error, Err as NomErr};
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;

@@ -19,52 +19,52 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-/// Use [styled_text!] macro for easier construction.
+/// Use [tui_styled_text!] macro for easier construction.
 #[derive(Debug, Clone, Default)]
-pub struct StyledText(pub Style, pub UnicodeString);
+pub struct TuiStyledText(pub TuiStyle, pub UnicodeString);
 
 /// Use [styled_texts!] macro for easier construction.
-pub type StyledTexts = List<StyledText>;
+pub type TuiStyledTexts = List<TuiStyledText>;
 
-mod styled_text_impl {
+mod tui_styled_text_impl {
     use super::*;
 
-    impl StyledText {
-        pub fn new(style: Style, text: String) -> Self {
-            StyledText(style, UnicodeString::from(text))
+    impl TuiStyledText {
+        pub fn new(style: TuiStyle, text: String) -> Self {
+            TuiStyledText(style, UnicodeString::from(text))
         }
 
         pub fn get_text(&self) -> &UnicodeString { &self.1 }
 
-        pub fn get_style(&self) -> &Style { &self.0 }
+        pub fn get_style(&self) -> &TuiStyle { &self.0 }
     }
 }
 
-/// Macro to make building [StyledText] easy.
+/// Macro to make building [TuiStyledText] easy.
 ///
 /// Here's an example.
 /// ```rust
 /// use r3bl_rs_utils_core::*;
 /// use r3bl_tui::*;
 ///
-/// let style = Style::default();
-/// let st = styled_text!(@style: style, @text: "Hello World");
+/// let style = TuiStyle::default();
+/// let st = tui_styled_text!(@style: style, @text: "Hello World");
 /// ```
 #[macro_export]
-macro_rules! styled_text {
+macro_rules! tui_styled_text {
     (
         @style: $style_arg: expr,
         @text: $text_arg: expr
         $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
     ) => {
-        StyledText::new($style_arg, $text_arg.to_string())
+        TuiStyledText::new($style_arg, $text_arg.to_string())
     };
 }
 
-mod impl_styled_texts {
+mod tui_styled_texts_impl {
     use super::*;
 
-    impl PrettyPrintDebug for StyledTexts {
+    impl PrettyPrintDebug for TuiStyledTexts {
         fn pretty_print_debug(&self) -> String {
             let mut it = vec![];
             for (index, item) in self.iter().enumerate() {
@@ -79,7 +79,7 @@ mod impl_styled_texts {
         }
     }
 
-    impl ConvertToPlainText for StyledTexts {
+    impl ConvertToPlainText for TuiStyledTexts {
         fn to_plain_text_us(&self) -> UnicodeString {
             let mut it = UnicodeString::default();
             for styled_text in self.iter() {
@@ -89,7 +89,7 @@ mod impl_styled_texts {
         }
     }
 
-    impl StyledTexts {
+    impl TuiStyledTexts {
         pub fn display_width(&self) -> ChUnit { self.to_plain_text_us().display_width }
 
         pub fn render_into(&self, render_ops: &mut RenderOps) {
@@ -107,33 +107,33 @@ mod impl_styled_texts {
     }
 }
 
-/// Macro to make building [`StyledTexts`] easy.
+/// Macro to make building [`TuiStyledTexts`] easy.
 ///
 /// Here's an example.
 /// ```rust
 /// use r3bl_rs_utils_core::*;
 /// use r3bl_tui::*;
 ///
-/// let mut st_vec = styled_texts! {
-///   styled_text! {
-///     @style: Style::default(),
+/// let mut st_vec = tui_styled_texts! {
+///   tui_styled_text! {
+///     @style: TuiStyle::default(),
 ///     @text: "Hello",
 ///   },
-///   styled_text! {
-///     @style: Style::default(),
+///   tui_styled_text! {
+///     @style: TuiStyle::default(),
 ///     @text: "World",
 ///   }
 /// };
 /// ```
 #[macro_export]
-macro_rules! styled_texts {
+macro_rules! tui_styled_texts {
     (
         $($styled_text_arg : expr),*
         $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
     ) =>
     {
         {
-            let mut styled_texts: StyledTexts = Default::default();
+            let mut styled_texts: TuiStyledTexts = Default::default();
             $(
                 styled_texts += $styled_text_arg;
             )*
@@ -145,7 +145,7 @@ macro_rules! styled_texts {
 #[cfg(test)]
 mod tests {
     use r3bl_rs_utils_core::*;
-    use r3bl_rs_utils_macro::style;
+    use r3bl_rs_utils_macro::tui_style;
 
     use crate::*;
 
@@ -158,15 +158,15 @@ mod tests {
         mod helpers {
             use super::*;
 
-            pub fn get_s1() -> Style {
-                style! {
+            pub fn get_s1() -> TuiStyle {
+                tui_style! {
                   id: 1
                   color_bg: TuiColor::Rgb (RgbValue{ red: 1, green: 1, blue: 1 })
                 }
             }
 
-            pub fn get_s2() -> Style {
-                style! {
+            pub fn get_s2() -> TuiStyle {
+                tui_style! {
                   id: 2
                   color_bg: TuiColor::Rgb(RgbValue{ red: 2, green: 2, blue: 2 })
                 }
@@ -218,7 +218,7 @@ mod tests {
 
             // Equivalent no highlight version.
             {
-                let line = StyledTexts::from(get_list()).to_plain_text_us().string;
+                let line = TuiStyledTexts::from(get_list()).to_plain_text_us().string;
                 let line = UnicodeString::from(line);
                 let truncated_line =
                     line.truncate_start_by_n_col(scroll_offset_col_index);
@@ -271,7 +271,7 @@ mod tests {
 
             // Equivalent no highlight version.
             {
-                let line = StyledTexts::from(helpers::get_list())
+                let line = TuiStyledTexts::from(helpers::get_list())
                     .to_plain_text_us()
                     .string;
                 let line = UnicodeString::from(line);
@@ -327,7 +327,7 @@ mod tests {
 
             // Equivalent no highlight version.
             {
-                let line = StyledTexts::from(helpers::get_list())
+                let line = TuiStyledTexts::from(helpers::get_list())
                     .to_plain_text_us()
                     .string;
                 let line = UnicodeString::from(line);
@@ -383,7 +383,7 @@ mod tests {
 
             // Expected no highlight version.
             {
-                let line = StyledTexts::from(helpers::get_list())
+                let line = TuiStyledTexts::from(helpers::get_list())
                     .to_plain_text_us()
                     .string;
                 let line = UnicodeString::from(line);
@@ -441,7 +441,7 @@ mod tests {
 
             // Expected no highlight version.
             {
-                let line = StyledTexts::from(get_list()).to_plain_text_us().string;
+                let line = TuiStyledTexts::from(get_list()).to_plain_text_us().string;
                 let line = UnicodeString::from(line);
                 let truncated_line =
                     line.truncate_start_by_n_col(scroll_offset_col_index);
@@ -497,7 +497,7 @@ mod tests {
 
             // Expected no highlight version.
             {
-                let line = StyledTexts::from(get_list()).to_plain_text_us().string;
+                let line = TuiStyledTexts::from(get_list()).to_plain_text_us().string;
                 let line = UnicodeString::from(line);
                 let truncated_line =
                     line.truncate_start_by_n_col(scroll_offset_col_index);
@@ -568,7 +568,7 @@ mod tests {
             ),
         ];
 
-        let styled_texts = StyledTexts::from(st_vec);
+        let styled_texts = TuiStyledTexts::from(st_vec);
 
         // Should have 3 items.
         assert_eq2!(styled_texts.len(), 3);
@@ -687,18 +687,18 @@ mod tests {
     mod helpers {
         use super::*;
 
-        pub fn create_styled_text() -> CommonResult<StyledTexts> {
+        pub fn create_styled_text() -> CommonResult<TuiStyledTexts> {
             throws_with_return!({
                 let stylesheet = create_stylesheet()?;
                 let maybe_style1 = stylesheet.find_style_by_id(1);
                 let maybe_style2 = stylesheet.find_style_by_id(2);
 
-                styled_texts! {
-                    styled_text! {
+                tui_styled_texts! {
+                    tui_styled_text! {
                         @style: maybe_style1.unwrap(),
                         @text: "Hello",
                     },
-                    styled_text! {
+                    tui_styled_text! {
                         @style: maybe_style2.unwrap(),
                         @text: "World",
                     }
@@ -706,15 +706,15 @@ mod tests {
             })
         }
 
-        pub fn create_stylesheet() -> CommonResult<Stylesheet> {
+        pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
             throws_with_return!({
-                stylesheet! {
-                  style! {
+                tui_stylesheet! {
+                  tui_style! {
                     id: 1
                     padding: 1
                     color_bg: TuiColor::Rgb(RgbValue{ red: 55, green: 55, blue: 100 })
                   },
-                  style! {
+                  tui_style! {
                     id: 2
                     padding: 1
                     color_bg: TuiColor::Rgb(RgbValue{ red: 55, green: 55, blue: 248 })

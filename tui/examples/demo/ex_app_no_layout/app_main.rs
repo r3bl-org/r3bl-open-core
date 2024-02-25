@@ -16,7 +16,7 @@
  */
 
 use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::style;
+use r3bl_rs_utils_macro::tui_style;
 use r3bl_tui::*;
 use tokio::{sync::mpsc::{self, Sender},
             time,
@@ -488,13 +488,13 @@ mod status_bar {
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {
-        let styled_texts = styled_texts! {
-            styled_text!{ @style: style!(attrib: [dim])       , @text: "Hints:"},
-            styled_text!{ @style: style!(attrib: [bold])      , @text: " x : Exit ⛔ "},
-            styled_text!{ @style: style!(attrib: [dim])       , @text: " … "},
-            styled_text!{ @style: style!(attrib: [underline]) , @text: " ↑ / + : inc "},
-            styled_text!{ @style: style!(attrib: [dim])       , @text: " … "},
-            styled_text!{ @style: style!(attrib: [underline]) , @text: " ↓ / - : dec "},
+        let styled_texts = tui_styled_texts! {
+            tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: "Hints:"},
+            tui_styled_text!{ @style: tui_style!(attrib: [bold])      , @text: " x : Exit ⛔ "},
+            tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},
+            tui_styled_text!{ @style: tui_style!(attrib: [underline]) , @text: " ↑ / + : inc "},
+            tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},
+            tui_styled_text!{ @style: tui_style!(attrib: [underline]) , @text: " ↓ / - : dec "},
         };
 
         let display_width = styled_texts.display_width();

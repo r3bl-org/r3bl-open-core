@@ -46,9 +46,6 @@ get-size = { version = "0.1.4", features = ["derive"] }
 chrono = "0.4.31"
 time = "0.3.30"
 
-# Syntax highlighting.
-syntect = "5.1.0"
-
 # nom parser combinator.
 nom = "7.1.3"
 

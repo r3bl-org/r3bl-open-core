@@ -81,40 +81,40 @@ fn main() -> Result<()> {
 
                 match first_line {
                     Some(user_input) => {
-                        if *user_input == MULTI_LINE_HEADER {
+                        if user_input == MULTI_LINE_HEADER {
                             multi_line_header();
-                        } else if *user_input == SINGLE_LINE_HEADER {
+                        } else if user_input == SINGLE_LINE_HEADER {
                             single_line_header();
-                        } else if *user_input == MULTIPLE_SELECT_SINGLE_ITEM.to_string() {
+                        } else if user_input == MULTIPLE_SELECT_SINGLE_ITEM {
                             // Multiple select, single item.
                             multiple_select_single_item()
-                        } else if *user_input == MULTIPLE_SELECT_13_ITEMS_VPH_5.to_string() {
+                        } else if user_input == MULTIPLE_SELECT_13_ITEMS_VPH_5 {
                             // Multiple select.
                             multiple_select_13_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
                                 sea_foam_style,
                             );
-                        } else if *user_input == MULTIPLE_SELECT_2_ITEMS_VPH_5.to_string() {
+                        } else if user_input == MULTIPLE_SELECT_2_ITEMS_VPH_5 {
                             multiple_select_2_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
                                 sea_foam_style,
                             );
-                        } else if *user_input == SINGLE_SELECT_13_ITEMS_VPH_5.to_string() {
+                        } else if user_input == SINGLE_SELECT_13_ITEMS_VPH_5 {
                             // Single select.
                             single_select_13_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
                                 hot_pink_style,
                             );
-                        } else if *user_input == SINGLE_SELECT_2_ITEMS_VPH_5.to_string() {
+                        } else if user_input == SINGLE_SELECT_2_ITEMS_VPH_5 {
                             single_select_2_items_vph_5(
                                 max_height_row_count,
                                 max_width_col_count,
                                 default_style,
                             );
-                        } else if *user_input == SINGLE_SELECT_QUIZ_GAME.to_string() {
+                        } else if user_input == SINGLE_SELECT_QUIZ_GAME {
                             let _ = single_select_quiz_game();
                         } else {
                             println!("User did not select anything")

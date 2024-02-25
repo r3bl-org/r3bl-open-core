@@ -63,7 +63,7 @@ impl TerminalWindow {
                 mpsc::channel::<TerminalWindowMainThreadSignal<AS>>(CHANNEL_WIDTH);
 
             // Initialize the terminal window data struct.
-            let mut global_data = &mut GlobalData::try_to_create_instance(
+            let global_data = &mut GlobalData::try_to_create_instance(
                 main_thread_channel_sender.clone(),
                 state,
             )?;
@@ -80,17 +80,12 @@ impl TerminalWindow {
             // multiple renders.
             // 1. It is entirely up to the [App] on how this [ComponentRegistryMap] is used.
             // 2. The methods provided allow components to be added to the map.
-            let mut component_registry_map = &mut ComponentRegistryMap::default();
-            let mut has_focus = &mut HasFocus::default();
+            let component_registry_map = &mut ComponentRegistryMap::default();
+            let has_focus = &mut HasFocus::default();
 
             // Init the app, and perform first render.
-            app.app_init(&mut component_registry_map, &mut has_focus);
-            AppManager::render_app(
-                app,
-                &mut global_data,
-                component_registry_map,
-                has_focus,
-            )?;
+            app.app_init(component_registry_map, has_focus);
+            AppManager::render_app(app, global_data, component_registry_map, has_focus)?;
 
             global_data.dump_to_log("main_event_loop -> Startup 🚀");
 
@@ -115,15 +110,15 @@ impl TerminalWindow {
                                     )?;
                                 },
                                 TerminalWindowMainThreadSignal::ApplyAction(action) => {
-                                    let result = app.app_handle_signal(action, &mut global_data, component_registry_map, has_focus);
+                                    let result = app.app_handle_signal(action, global_data, component_registry_map, has_focus);
                                     handle_result_generated_by_app_after_handling_action_or_input_event(
                                         result,
                                         None,
                                         &exit_keys,
                                         app,
-                                        &mut global_data,
-                                        &mut component_registry_map,
-                                        &mut has_focus,
+                                        global_data,
+                                        component_registry_map,
+                                        has_focus,
                                     );
                                 },
                             }
@@ -136,22 +131,19 @@ impl TerminalWindow {
                             telemetry_global_static::set_start_ts();
 
                             call_if_true!(DEBUG_TUI_MOD, {
-                                match input_event {
-                                    InputEvent::Keyboard(_) => {
-                                        let msg = format!("main_event_loop -> Tick: ⏰ {input_event}");
-                                        log_info(msg);
-                                    }
-                                    _ => {}
+                                if let InputEvent::Keyboard(_)= input_event {
+                                    let msg = format!("main_event_loop -> Tick: ⏰ {input_event}");
+                                    log_info(msg);
                                 }
                             });
 
                             Self::handle_resize_if_applicable(input_event,
-                                &mut global_data, app,
+                                global_data, app,
                                 component_registry_map,
                                 has_focus);
 
                             Self::actually_process_input_event(
-                                &mut global_data,
+                                global_data,
                                 app,
                                 input_event,
                                 &exit_keys,
@@ -164,7 +156,7 @@ impl TerminalWindow {
             } // End loop.
 
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("\nmain_event_loop -> Shutdown 🛑");
+                let msg = "\nmain_event_loop -> Shutdown 🛑".to_string();
                 log_info(msg);
             });
         });
@@ -191,7 +183,7 @@ impl TerminalWindow {
         handle_result_generated_by_app_after_handling_action_or_input_event(
             result,
             Some(input_event),
-            &exit_keys,
+            exit_keys,
             app,
             global_data,
             component_registry_map,
@@ -242,10 +234,8 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
         Ok(event_propagation) => match event_propagation {
             EventPropagation::Propagate => {
                 if let Some(input_event) = maybe_input_event {
-                    let check_if_exit_keys_pressed = DefaultInputEventHandler::no_consume(
-                        input_event.clone(),
-                        &exit_keys,
-                    );
+                    let check_if_exit_keys_pressed =
+                        DefaultInputEventHandler::no_consume(input_event, exit_keys);
                     if let Continuation::Exit = check_if_exit_keys_pressed {
                         request_exit_by_sending_signal(main_thread_channel_sender);
                     };
@@ -386,7 +376,7 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
 
     let mut pipeline = render_pipeline!();
 
-    let style_bold = style!(attrib: [bold]);
+    let style_bold = tui_style!(attrib: [bold]);
 
     render_pipeline! {
         @push_into pipeline
