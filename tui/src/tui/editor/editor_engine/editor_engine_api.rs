@@ -17,7 +17,7 @@
 
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::style;
+use r3bl_rs_utils_macro::tui_style;
 use syntect::easy::HighlightLines;
 
 use super::*;
@@ -354,7 +354,7 @@ impl EditorEngineApi {
             ));
             render_ops.push(RenderOp::PaintTextWithAttributes(
                 str_at_caret,
-                style! { attrib: [reverse] }.into(),
+                tui_style! { attrib: [reverse] }.into(),
             ));
             render_ops.push(RenderOp::MoveCursorPositionRelTo(
                 editor_engine.current_box.style_adjusted_origin_pos,
@@ -384,7 +384,7 @@ impl EditorEngineApi {
                     editor_engine.current_box.style_adjusted_origin_pos,
                     position! { col_index: 0 , row_index: 0 }
                 ),
-                RenderOp::ApplyColors(style! {
+                RenderOp::ApplyColors(tui_style! {
                     attrib: [dim]
                     color_fg: TuiColor::Basic(ANSIBasicColor::Green)
                 }.into()),
@@ -404,7 +404,7 @@ impl EditorEngineApi {
                         editor_engine.current_box.style_adjusted_bounds_size.row_count
                     )
                 ),
-                RenderOp::ApplyColors(style! {
+                RenderOp::ApplyColors(tui_style! {
                     attrib: [dim]
                     color_fg: TuiColor::Basic(ANSIBasicColor::DarkGrey)
                 }.into()),
@@ -514,7 +514,7 @@ mod syn_hi_r3bl_path {
             position! { col_index: 0 , row_index: ch!(@to_usize row_index) },
         ));
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
-        let styled_texts: StyledTexts =
+        let styled_texts: TuiStyledTexts =
             line.clip(scroll_offset_col, max_display_col_count);
         styled_texts.render_into(render_ops);
         render_ops.push(RenderOp::ResetColor);
@@ -605,7 +605,7 @@ mod syn_hi_syntect_path {
             syntect_to_styled_text_conversion::from_syntect_to_tui(
                 syntect_highlighted_line,
             );
-        let styled_texts: StyledTexts =
+        let styled_texts: TuiStyledTexts =
             list.clip(scroll_offset_col, max_display_col_count);
         styled_texts.render_into(render_ops);
         render_ops.push(RenderOp::ResetColor);
@@ -722,7 +722,7 @@ mod test_cache {
 
     #[test]
     fn test_render_content() {
-        let mut render_ops = &mut render_ops!();
+        let render_ops = &mut render_ops!();
 
         let editor_buffer = &mut EditorBuffer::default();
         let editor_engine = &mut EditorEngine::default();
@@ -741,7 +741,7 @@ mod test_cache {
             editor_engine,
             window_size,
             has_focus,
-            &mut render_ops,
+            render_ops,
         );
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
 
@@ -752,14 +752,14 @@ mod test_cache {
                 editor_engine,
                 has_focus,
             },
-            &mut render_ops,
+            render_ops,
         );
         cache::render_content(
             editor_buffer,
             editor_engine,
             window_size,
             has_focus,
-            &mut render_ops,
+            render_ops,
         );
         test_cache_hit(editor_buffer, &mut cache);
 
@@ -773,7 +773,7 @@ mod test_cache {
             editor_engine,
             window_size,
             has_focus,
-            &mut render_ops,
+            render_ops,
         );
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
 
@@ -784,14 +784,14 @@ mod test_cache {
                 editor_engine,
                 has_focus,
             },
-            &mut render_ops,
+            render_ops,
         );
         cache::render_content(
             editor_buffer,
             editor_engine,
             window_size,
             has_focus,
-            &mut render_ops,
+            render_ops,
         );
         test_cache_hit(editor_buffer, &mut cache);
 
@@ -805,7 +805,7 @@ mod test_cache {
             editor_engine,
             window_size,
             has_focus,
-            &mut render_ops,
+            render_ops,
         );
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
 
@@ -816,7 +816,7 @@ mod test_cache {
             editor_engine,
             window_size,
             has_focus,
-            &mut render_ops,
+            render_ops,
         );
         test_cache_miss(editor_buffer, window_size, render_ops, &mut cache);
     }

@@ -17,23 +17,23 @@
 
 use std::borrow::Cow;
 
-use get_size::*;
-use r3bl_rs_utils_core::*;
-use serde::*;
+use get_size::GetSize;
+use r3bl_rs_utils_core::UnicodeString;
+use serde::{Deserialize, Serialize};
 
-use crate::*;
+use crate::{ColorChangeSpeed, Lolcat, TuiStyledTexts};
 
 pub fn colorize_to_styled_texts(
     lolcat: &mut Lolcat,
     input: &UnicodeString,
-) -> StyledTexts {
+) -> TuiStyledTexts {
     lolcat.colorize_to_styled_texts(input)
 }
 
 pub fn lolcat_each_char_in_unicode_string(
     unicode_string: &UnicodeString,
     lolcat: Option<&mut Lolcat>,
-) -> StyledTexts {
+) -> TuiStyledTexts {
     let mut saved_orig_speed = None;
 
     let mut my_lolcat: Cow<'_, Lolcat> = match lolcat {

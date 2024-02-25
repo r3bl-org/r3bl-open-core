@@ -189,7 +189,11 @@ fn show_tui(
     tui_width: Option<usize>,
     enable_logging: bool,
 ) {
-    let lines = stdin().lock().lines().flatten().collect::<Vec<String>>();
+    let lines: Vec<String> = stdin()
+        .lock()
+        .lines()
+        .map_while(Result::ok)
+        .collect::<Vec<String>>();
 
     call_if_true!(enable_logging, {
         log_debug(format!("lines: {:?}", lines));

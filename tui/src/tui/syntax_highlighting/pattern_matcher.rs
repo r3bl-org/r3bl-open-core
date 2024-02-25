@@ -96,7 +96,7 @@ impl<'a> PatternMatcherStateMachine<'a> {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::{assert_eq2, ch, UnicodeString};
+    use r3bl_rs_utils_core::{assert_eq2, ch};
 
     use super::*;
 

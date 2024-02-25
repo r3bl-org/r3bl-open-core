@@ -17,11 +17,28 @@
 
 use get_size::GetSize;
 use r3bl_ansi_color::{global_color_support, AnsiStyledText, ColorSupport};
-use r3bl_rs_utils_core::*;
-use serde::*;
+use r3bl_rs_utils_core::{ch,
+                         AnsiValue,
+                         ChUnit,
+                         GraphemeClusterSegment,
+                         RgbValue,
+                         TuiColor,
+                         TuiStyle,
+                         UnicodeString};
+use serde::{Deserialize, Serialize};
 
-use crate::{color_wheel_struct::color_converter::convert_tui_color_into_r3bl_ansi_color,
-            *};
+use crate::{color_wheel_color_converter::convert_tui_color_into_r3bl_ansi_color,
+            generate_random_truecolor_gradient,
+            generate_truecolor_gradient,
+            get_gradient_array_for,
+            tui_styled_text,
+            Ansi256GradientIndex,
+            ColorUtils,
+            Lolcat,
+            LolcatBuilder,
+            TuiStyledText,
+            TuiStyledTexts,
+            SPACER};
 
 /// For RGB colors:
 /// 1. The stops are the colors that will be used to create the gradient.
@@ -216,8 +233,8 @@ pub enum GradientGenerationPolicy {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, GetSize, Debug)]
 pub enum TextColorizationPolicy {
-    ColorEachCharacter(Option<Style>),
-    ColorEachWord(Option<Style>),
+    ColorEachCharacter(Option<TuiStyle>),
+    ColorEachWord(Option<TuiStyle>),
 }
 
 impl ColorWheel {
@@ -470,14 +487,14 @@ impl ColorWheel {
         text_colorization_policy: TextColorizationPolicy,
     ) -> String {
         let it = self.colorize_into_styled_texts(
-            &unicode_string,
+            unicode_string,
             gradient_generation_policy,
             text_colorization_policy,
         );
 
         let mut acc_vec = vec![];
 
-        for StyledText(style, unicode_string) in it.items {
+        for TuiStyledText(style, unicode_string) in it.items {
             let maybe_src_color_fg = style.color_fg;
             let maybe_src_color_bg = style.color_bg;
 
@@ -524,7 +541,7 @@ impl ColorWheel {
         text: &UnicodeString,
         gradient_generation_policy: GradientGenerationPolicy,
         text_colorization_policy: TextColorizationPolicy,
-    ) -> StyledTexts {
+    ) -> TuiStyledTexts {
         self.generate_gradient(text, gradient_generation_policy);
         self.generate_styled_texts(text_colorization_policy, text)
     }
@@ -533,16 +550,16 @@ impl ColorWheel {
         &mut self,
         text_colorization_policy: TextColorizationPolicy,
         text: &UnicodeString,
-    ) -> StyledTexts {
+    ) -> TuiStyledTexts {
         mod inner {
-            use super::*;
+            use r3bl_rs_utils_core::{TuiColor, TuiStyle};
 
             // Inner function.
             pub fn gen_style_fg_color_for(
-                maybe_style: Option<Style>,
+                maybe_style: Option<TuiStyle>,
                 next_color: Option<TuiColor>,
-            ) -> Style {
-                let mut it = Style {
+            ) -> TuiStyle {
+                let mut it = TuiStyle {
                     color_fg: next_color,
                     ..Default::default()
                 };
@@ -552,11 +569,11 @@ impl ColorWheel {
 
             // Inner function.
             pub fn gen_style_fg_bg_color_for(
-                maybe_style: Option<Style>,
+                maybe_style: Option<TuiStyle>,
                 next_fg_color: Option<TuiColor>,
                 next_bg_color: Option<TuiColor>,
-            ) -> Style {
-                let mut it = Style {
+            ) -> TuiStyle {
+                let mut it = TuiStyle {
                     color_fg: next_fg_color,
                     color_bg: next_bg_color,
                     ..Default::default()
@@ -566,7 +583,7 @@ impl ColorWheel {
             }
         }
 
-        let mut acc = StyledTexts::default();
+        let mut acc = TuiStyledTexts::default();
 
         // Handle special case for lolcat background mode is true.
         if ColorWheelConfig::config_contains_bg_lolcat(&self.configs) {
@@ -610,7 +627,7 @@ impl ColorWheel {
                     if let Some((bg_red, bg_green, bg_blue)) = maybe_bg_color {
                         let (fg_red, fg_green, fg_blue) =
                             ColorUtils::calc_fg_color((bg_red, bg_green, bg_blue));
-                        acc += styled_text!(
+                        acc += tui_styled_text!(
                             @style: inner::gen_style_fg_bg_color_for(
                                 maybe_style,
                                 Some(TuiColor::Rgb(RgbValue::from_u8(fg_red, fg_green, fg_blue))),
@@ -619,13 +636,13 @@ impl ColorWheel {
                             @text: next_character,
                         );
                     } else {
-                        acc += styled_text!(
+                        acc += tui_styled_text!(
                             @style: inner::gen_style_fg_bg_color_for(maybe_style, None, None,),
                             @text: next_character,
                         );
                     }
                 } else {
-                    acc += styled_text!(
+                    acc += tui_styled_text!(
                         @style: inner::gen_style_fg_bg_color_for(maybe_style, None, None,),
                         @text: next_character,
                     );
@@ -643,7 +660,7 @@ impl ColorWheel {
                 } in text.iter()
                 {
                     // Loop: Colorize each (next) character w/ (next) color.
-                    acc += styled_text!(
+                    acc += tui_styled_text!(
                         @style: inner::gen_style_fg_color_for(maybe_style, self.next_color()),
                         @text: next_character,
                     );
@@ -654,13 +671,13 @@ impl ColorWheel {
                 let mut peekable = text.string.split_ascii_whitespace().peekable();
                 while let Some(next_word) = peekable.next() {
                     // Loop: Colorize each (next) word w/ (next) color.
-                    acc += styled_text!(
+                    acc += tui_styled_text!(
                         @style: inner::gen_style_fg_color_for(maybe_style, self.next_color()),
                         @text: next_word,
                     );
                     if peekable.peek().is_some() {
-                        acc += styled_text!(
-                            @style: Style::default(),
+                        acc += tui_styled_text!(
+                            @style: TuiStyle::default(),
                             @text: SPACER,
                         );
                     }
@@ -713,8 +730,8 @@ impl ColorWheel {
     }
 }
 
-mod color_converter {
-    use super::*;
+pub mod color_wheel_color_converter {
+    use r3bl_rs_utils_core::{ANSIBasicColor, RgbValue, TuiColor};
 
     pub fn convert_tui_color_into_r3bl_ansi_color(
         color: TuiColor,
@@ -750,7 +767,9 @@ mod color_converter {
 
     #[cfg(test)]
     mod color_converter_tests {
-        use super::*;
+        use r3bl_rs_utils_core::{ANSIBasicColor, AnsiValue, RgbValue, TuiColor};
+
+        use crate::color_wheel_struct::color_wheel_color_converter;
 
         #[test]
         fn test_convert_tui_color_into_r3bl_ansi_color_rgb() {
@@ -761,7 +780,9 @@ mod color_converter {
             });
             let expected_color = r3bl_ansi_color::Color::Rgb(255, 0, 0);
             let converted_color =
-                color_converter::convert_tui_color_into_r3bl_ansi_color(tui_color);
+                color_wheel_color_converter::convert_tui_color_into_r3bl_ansi_color(
+                    tui_color,
+                );
             assert_eq!(converted_color, expected_color);
         }
 
@@ -770,7 +791,9 @@ mod color_converter {
             let tui_color = TuiColor::Ansi(AnsiValue { color: 42 });
             let expected_color = r3bl_ansi_color::Color::Ansi256(42);
             let converted_color =
-                color_converter::convert_tui_color_into_r3bl_ansi_color(tui_color);
+                color_wheel_color_converter::convert_tui_color_into_r3bl_ansi_color(
+                    tui_color,
+                );
             assert_eq!(converted_color, expected_color);
         }
 
@@ -779,7 +802,9 @@ mod color_converter {
             let tui_color = TuiColor::Basic(ANSIBasicColor::Red);
             let expected_color = r3bl_ansi_color::Color::Rgb(255, 0, 0);
             let converted_color =
-                color_converter::convert_tui_color_into_r3bl_ansi_color(tui_color);
+                color_wheel_color_converter::convert_tui_color_into_r3bl_ansi_color(
+                    tui_color,
+                );
             assert_eq!(converted_color, expected_color);
         }
 
@@ -788,7 +813,9 @@ mod color_converter {
             let tui_color = TuiColor::Reset;
             let expected_color = r3bl_ansi_color::Color::Rgb(0, 0, 0);
             let converted_color =
-                color_converter::convert_tui_color_into_r3bl_ansi_color(tui_color);
+                color_wheel_color_converter::convert_tui_color_into_r3bl_ansi_color(
+                    tui_color,
+                );
             assert_eq!(converted_color, expected_color);
         }
     }
@@ -796,7 +823,7 @@ mod color_converter {
 
 #[cfg(test)]
 mod tests_color_wheel_rgb {
-    use r3bl_ansi_color::ColorSupport;
+    use r3bl_rs_utils_core::assert_eq2;
     use serial_test::serial;
 
     use super::*;
@@ -1046,7 +1073,7 @@ mod tests_color_wheel_rgb {
     #[serial]
     #[test]
     fn test_colorize_to_styled_texts_color_each_character() {
-        use r3bl_rs_utils_macro::style;
+        use r3bl_rs_utils_macro::tui_style;
 
         let color_wheel_rgb = &mut test_helpers::create_color_wheel_rgb();
 
@@ -1054,7 +1081,7 @@ mod tests_color_wheel_rgb {
 
         let unicode_string = UnicodeString::from("HELLO");
 
-        let style = style!(attrib: [bold, dim]);
+        let style = tui_style!(attrib: [bold, dim]);
 
         let styled_texts = color_wheel_rgb.colorize_into_styled_texts(
             &unicode_string,

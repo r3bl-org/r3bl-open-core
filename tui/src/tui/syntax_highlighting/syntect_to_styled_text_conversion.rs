@@ -28,7 +28,6 @@
 //! 1. Convert the syntect [SyntectStyleStrSpanLine] into a [StyleUSSpanLine].
 //! 2. Then convert [StyleUSSpanLine] into a [StyledTexts].
 
-use r3bl_rs_utils_core::*;
 use syntect::parsing::SyntaxSet;
 
 use crate::*;
@@ -64,16 +63,18 @@ pub fn from_syntect_to_tui(
 mod syntect_support {
     use super::*;
 
-    impl From<SyntectStyleStrSpanLine<'_>> for StyledTexts {
-        fn from(value: SyntectStyleStrSpanLine<'_>) -> Self { StyledTexts::from(&value) }
+    impl From<SyntectStyleStrSpanLine<'_>> for TuiStyledTexts {
+        fn from(value: SyntectStyleStrSpanLine<'_>) -> Self {
+            TuiStyledTexts::from(&value)
+        }
     }
 
-    impl From<&SyntectStyleStrSpanLine<'_>> for StyledTexts {
+    impl From<&SyntectStyleStrSpanLine<'_>> for TuiStyledTexts {
         fn from(syntect_styles: &SyntectStyleStrSpanLine<'_>) -> Self {
-            let mut acc = StyledTexts::default();
+            let mut acc = TuiStyledTexts::default();
             for (syntect_style, text) in syntect_styles {
-                let my_style = Style::from(*syntect_style);
-                acc += styled_text!(@style: my_style, @text: text.to_string());
+                let my_style = convert_style_from_syntect_to_tui(*syntect_style);
+                acc += tui_styled_text!(@style: my_style, @text: text.to_string());
             }
             acc
         }
@@ -87,7 +88,7 @@ mod syntect_support {
                 let mut it: StyleUSSpanLine = Default::default();
 
                 for (style, text) in vec_styled_str {
-                    let my_style = Style::from(*style);
+                    let my_style = convert_style_from_syntect_to_tui(*style);
                     let unicode_string = US::from(*text);
                     it.push(StyleUSSpan::new(my_style, unicode_string));
                 }

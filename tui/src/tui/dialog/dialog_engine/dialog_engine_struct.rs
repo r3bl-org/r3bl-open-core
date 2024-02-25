@@ -111,10 +111,10 @@ pub struct DialogEngineConfigOptions {
     pub mode: DialogEngineMode,
     /// Max height of the results panel.
     pub result_panel_display_row_count: ChUnit,
-    pub maybe_style_border: Option<Style>,
-    pub maybe_style_title: Option<Style>,
-    pub maybe_style_editor: Option<Style>,
-    pub maybe_style_results_panel: Option<Style>,
+    pub maybe_style_border: Option<TuiStyle>,
+    pub maybe_style_title: Option<TuiStyle>,
+    pub maybe_style_editor: Option<TuiStyle>,
+    pub maybe_style_results_panel: Option<TuiStyle>,
 }
 
 mod dialog_engine_config_options_impl {

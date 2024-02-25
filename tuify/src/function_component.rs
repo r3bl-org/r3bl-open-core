@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::io::{Result, *};
+use std::io::*;
 
 use crossterm::{cursor::*, queue, terminal::*};
 use r3bl_rs_utils_core::*;

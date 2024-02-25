@@ -18,7 +18,7 @@
 #[cfg(test)]
 mod tests {
     use r3bl_rs_utils_core::*;
-    use r3bl_rs_utils_macro::style;
+    use r3bl_rs_utils_macro::tui_style;
 
     use crate::*;
 
@@ -128,7 +128,9 @@ mod tests {
                 assert_eq2!(layout_item.insertion_pos_for_next_box, None);
                 assert_eq2!(
                     layout_item.get_computed_style(),
-                    Stylesheet::compute(&surface.stylesheet.find_styles_by_ids(vec![1]))
+                    TuiStylesheet::compute(
+                        &surface.stylesheet.find_styles_by_ids(vec![1])
+                    )
                 );
             });
         }
@@ -139,7 +141,7 @@ mod tests {
         throws!({
             // No macro.
             surface.box_start(FlexBoxProps {
-                maybe_styles: get_styles! { @from: surface.stylesheet, [2] },
+                maybe_styles: get_tui_styles! { @from: surface.stylesheet, [2] },
                 id: FlexBoxId::from(2),
                 dir: LayoutDirection::Vertical,
                 requested_size_percent: requested_size_percent!(width:50, height:100),
@@ -176,24 +178,26 @@ mod tests {
                 assert_eq2!(current_box.insertion_pos_for_next_box, None);
                 assert_eq2!(
                     current_box.get_computed_style(),
-                    Stylesheet::compute(&surface.stylesheet.find_styles_by_ids(vec![2]))
+                    TuiStylesheet::compute(
+                        &surface.stylesheet.find_styles_by_ids(vec![2])
+                    )
                 );
             });
         }
     }
 
     /// Create a stylesheet containing styles using DSL.
-    fn dsl_stylesheet() -> CommonResult<Stylesheet> {
+    fn dsl_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
-            stylesheet! {
-              style! {
+            tui_stylesheet! {
+              tui_style! {
                 id: 1
                 attrib: [dim, bold]
                 padding: 2
                 color_fg: TuiColor::Rgb (RgbValue{ red: 255, green: 255, blue: 0 }) /* Yellow. */
                 color_bg: TuiColor::Rgb (RgbValue{ red: 128, green: 128, blue: 128 }) /* Grey. */
               },
-              style! {
+              tui_style! {
                 id: 2
                 attrib: [underline, strikethrough]
                 padding: 3

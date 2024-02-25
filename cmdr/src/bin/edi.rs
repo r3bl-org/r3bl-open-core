@@ -70,17 +70,17 @@ async fn main() -> CommonResult<()> {
                 );
                 launcher::run_app(Some(cli_arg.file_paths[0].clone())).await?;
             }
-            _ => match edi_ui_templates::handle_multiple_files_not_supported_yet(cli_arg)
-            {
-                Some(file_path) => {
+            _ => {
+                if let Some(file_path) =
+                    edi_ui_templates::handle_multiple_files_not_supported_yet(cli_arg)
+                {
                     report_analytics::start_task_to_generate_event(
                         "".to_string(),
                         AnalyticsAction::EdiFileOpenMultiple,
                     );
                     launcher::run_app(Some(file_path)).await?;
                 }
-                _ => {}
-            },
+            }
         }
 
         // Stop logging.
@@ -95,7 +95,6 @@ async fn main() -> CommonResult<()> {
 
 pub mod edi_ui_templates {
     use r3bl_ansi_color::{AnsiStyledText, Style};
-    use r3bl_cmdr::upgrade_check;
     use r3bl_tuify::{select_from_list,
                      SelectionMode,
                      StyleSheet,

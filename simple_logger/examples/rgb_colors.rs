@@ -17,7 +17,6 @@
 
 use log::*;
 use r3bl_simple_logger::*;
-use termcolor::Color;
 
 fn main() {
     let config = ConfigBuilder::new()

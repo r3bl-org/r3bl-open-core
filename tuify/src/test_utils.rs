@@ -23,6 +23,12 @@ pub struct TestStringWriter {
     buffer: String,
 }
 
+impl Default for TestStringWriter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TestStringWriter {
     pub fn new() -> Self {
         TestStringWriter {
@@ -81,7 +87,7 @@ impl KeyPressReader for TestVecKeyPressReader {
 }
 
 pub fn contains_ansi_escape_sequence(text: &str) -> bool {
-    text.chars().find(|it| *it == '\x1b').is_some()
+    text.chars().any(|it| it == '\x1b')
 }
 
 #[test]

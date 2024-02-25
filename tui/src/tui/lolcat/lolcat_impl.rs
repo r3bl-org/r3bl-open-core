@@ -17,14 +17,15 @@
 
 use std::fmt::{Debug, Display, Formatter, Result};
 
+pub use control_wheel_control::*;
 use get_size::GetSize;
 use is_terminal::IsTerminal;
-use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::*;
+use r3bl_rs_utils_core::{RgbValue, TuiColor, TuiStyle, UnicodeString};
+use r3bl_rs_utils_macro::tui_style;
 use rand::random;
-use serde::*;
+use serde::{Deserialize, Serialize};
 
-use crate::*;
+use crate::{tui_styled_text, ColorUtils, LolcatBuilder, TuiStyledText, TuiStyledTexts};
 
 /// Please use the [LolcatBuilder] to create this struct (lots of documentation is provided here).
 /// Please do not use this struct directly.
@@ -58,25 +59,25 @@ impl Lolcat {
     /// (it will always colorize to truecolor regardless of terminal limitations). Use
     /// [ColorWheel] if you want to respect
     /// [r3bl_ansi_color::global_color_support::detect].
-    pub fn colorize_to_styled_texts(&mut self, input: &UnicodeString) -> StyledTexts {
-        let mut acc = StyledTexts::default();
+    pub fn colorize_to_styled_texts(&mut self, input: &UnicodeString) -> TuiStyledTexts {
+        let mut acc = TuiStyledTexts::default();
 
         for segment in &input.vec_segment {
             let new_color = ColorUtils::get_color_tuple(&self.color_wheel_control);
             let derived_from_new_color = ColorUtils::calc_fg_color(new_color);
 
             let style = if self.color_wheel_control.background_mode {
-                style! (
+                tui_style! (
                     color_fg: TuiColor::Rgb(RgbValue::from_u8(derived_from_new_color.0, derived_from_new_color.1, derived_from_new_color.2))
                     color_bg: TuiColor::Rgb(RgbValue::from_u8(new_color.0, new_color.1, new_color.2))
                 )
             } else {
-                style! (
+                tui_style! (
                     color_fg: TuiColor::Rgb(RgbValue::from_u8(new_color.0, new_color.1, new_color.2))
                 )
             };
 
-            acc += styled_text!(
+            acc += tui_styled_text!(
                 @style: style,
                 @text: segment.string.clone(),
             );
@@ -91,7 +92,9 @@ impl Lolcat {
     pub fn next_color(&mut self) { self.color_wheel_control.seed += self.seed_delta; }
 }
 
-mod control_wheel_control {
+pub mod control_wheel_control {
+    use serde::{Deserialize, Serialize};
+
     use super::*;
 
     /// A struct to contain info we need to print with every character.
@@ -184,4 +187,3 @@ mod control_wheel_control {
         fn default() -> Self { Self::new("0.0", "3.0", "0.1", ColorChangeSpeed::Slow) }
     }
 }
-pub use control_wheel_control::*;

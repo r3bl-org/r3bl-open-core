@@ -28,11 +28,11 @@
 #[cfg(test)]
 mod tests {
     use r3bl_rs_utils_core::*;
-    use r3bl_rs_utils_macro::style;
+    use r3bl_rs_utils_macro::tui_style;
 
     #[test]
     fn test_syntax_expansion() {
-        let _ = style! {
+        let _ = tui_style! {
           id:       1
           attrib:   [dim, bold]
           padding:  1
@@ -43,21 +43,21 @@ mod tests {
 
     #[test]
     fn test_syntax_expansion_dsl() {
-        let _ = style! {
+        let _ = tui_style! {
           id: 1
           attrib: [dim, bold]
           padding: 1
           color_fg: color!(@red)
           color_bg: color!(0, 0, 0)
         };
-        let _ = style! {
+        let _ = tui_style! {
           id: 1
           attrib: [dim, bold]
           padding: 1
           color_fg: color!(@red)
           color_bg: color!(0, 0, 0)
         };
-        let _ = style! {
+        let _ = tui_style! {
           id: 1
           attrib: [dim, bold]
           padding: 1
@@ -68,20 +68,20 @@ mod tests {
 
     #[test]
     fn test_with_nothing() {
-        let style: Style = style! {};
+        let style: TuiStyle = tui_style! {};
         assert_eq2!(style.id, u8::MAX);
     }
 
     #[test]
     fn test_with_attrib() {
-        let style_no_attrib = style! {
+        let style_no_attrib = tui_style! {
           id: 1
         };
         assert_eq!(style_no_attrib.id, 1);
         assert!(!style_no_attrib.bold);
         assert!(!style_no_attrib.dim);
 
-        let style_with_attrib = style! {
+        let style_with_attrib = tui_style! {
           id: 2
           attrib: [dim, bold]
         };
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn test_with_padding() {
         with! {
-          style! {
+          tui_style! {
             id: 1
             padding: 1
           },
@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn test_with_color_fg() {
         with! {
-          style! {
+          tui_style! {
             id: 1
             color_fg: color!(@red)
           },
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn test_with_color_bg() {
         with! {
-          style! {
+          tui_style! {
             id: 1
             color_bg: color!(0, 0, 0)
           },

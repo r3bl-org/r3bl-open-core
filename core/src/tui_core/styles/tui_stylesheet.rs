@@ -20,12 +20,12 @@ use serde::{Deserialize, Serialize};
 use crate::*;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct Stylesheet {
-    pub styles: Vec<Style>,
+pub struct TuiStylesheet {
+    pub styles: Vec<TuiStyle>,
 }
 
 #[macro_export]
-macro_rules! get_style {
+macro_rules! get_tui_style {
     (
         @from_result: $arg_stylesheet_result : expr, // Eg: from: stylesheet,
         $arg_style_name : expr                      // Eg: "style1"
@@ -46,7 +46,7 @@ macro_rules! get_style {
 }
 
 #[macro_export]
-macro_rules! get_styles {
+macro_rules! get_tui_styles {
     (
         @from_result: $arg_stylesheet_result : expr, // Eg: from: stylesheet,
         [$($args:tt)*]                              // Eg: ["style1", "style2"]
@@ -66,10 +66,10 @@ macro_rules! get_styles {
     };
 }
 
-impl Stylesheet {
+impl TuiStylesheet {
     pub fn new() -> Self { Self::default() }
 
-    pub fn add_style(&mut self, style: Style) -> CommonResult<()> {
+    pub fn add_style(&mut self, style: TuiStyle) -> CommonResult<()> {
         throws!({
             if style.id == u8::MAX {
                 return CommonError::new_err_with_only_msg("Style id must be defined");
@@ -78,7 +78,7 @@ impl Stylesheet {
         });
     }
 
-    pub fn add_styles(&mut self, styles: Vec<Style>) -> CommonResult<()> {
+    pub fn add_styles(&mut self, styles: Vec<TuiStyle>) -> CommonResult<()> {
         throws!({
             for style in styles {
                 self.add_style(style)?;
@@ -86,12 +86,12 @@ impl Stylesheet {
         });
     }
 
-    pub fn find_style_by_id(&self, id: u8) -> Option<Style> {
+    pub fn find_style_by_id(&self, id: u8) -> Option<TuiStyle> {
         self.styles.iter().find(|style| style.id == id).cloned()
     }
 
     /// Returns [None] if no style in `ids` [Vec] is found.
-    pub fn find_styles_by_ids(&self, ids: Vec<u8>) -> Option<Vec<Style>> {
+    pub fn find_styles_by_ids(&self, ids: Vec<u8>) -> Option<Vec<TuiStyle>> {
         let mut styles = Vec::new();
 
         for id in ids {
@@ -107,9 +107,9 @@ impl Stylesheet {
         }
     }
 
-    pub fn compute(styles: &Option<Vec<Style>>) -> Option<Style> {
+    pub fn compute(styles: &Option<Vec<TuiStyle>>) -> Option<TuiStyle> {
         if let Some(styles) = styles {
-            let mut computed = Style::default();
+            let mut computed = TuiStyle::default();
             styles.iter().for_each(|style| computed += style);
             computed.into()
         } else {
@@ -124,25 +124,29 @@ impl Stylesheet {
 /// retrieved after they're added here, rendering them useless.
 ///
 /// Here's an example.
-/// ```ignore
-/// fn create_stylesheet() -> CommonResult<Stylesheet> {
+/// ```
+/// use r3bl_rs_utils_core::{ch, ChUnit, TuiColor, RgbValue, TuiStyle, TryAdd, tui_stylesheet, CommonResult, throws_with_return, TuiStylesheet};
+/// fn create_tui_stylesheet() -> CommonResult<TuiStylesheet> {
 ///   throws_with_return!({
-///     stylesheet! {
-///         style! {
-///           id: style1
-///           padding: 1
-///           color_bg: Color::Rgb { r: 55, g: 55, b: 248 }
+///     tui_stylesheet! {
+///         TuiStyle {
+///             id: 1,
+///             padding: Some(ch!(1)),
+///             color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(55, 55, 248))),
+///             ..Default::default()
 ///         },
 ///         vec![
-///             style! {
-///                 id: style1
-///                 padding: 1
-///                 color_bg: Color::Rgb { r: 55, g: 55, b: 248 }
+///             TuiStyle {
+///                 id: 2,
+///                 padding: Some(ch!(1)),
+///                 color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(155, 155, 48))),
+///                 ..Default::default()
 ///             },
-///             style! {
-///                 id: style2
-///                 padding: 1
-///                 color_bg: Color::Rgb { r: 85, g: 85, b: 255 }
+///             TuiStyle {
+///                 id: 3,
+///                 padding: Some(ch!(1)),
+///                 color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(5, 5, 48))),
+///                 ..Default::default()
 ///             },
 ///         ]
 ///     }
@@ -150,13 +154,13 @@ impl Stylesheet {
 /// }
 /// ```
 #[macro_export]
-macro_rules! stylesheet {
+macro_rules! tui_stylesheet {
     (
         $($style:expr),*
         $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
     ) => {
     {
-        let mut stylesheet = Stylesheet::new();
+        let mut stylesheet = TuiStylesheet::new();
             $(
                 stylesheet.try_add($style)?;
             )*
@@ -173,12 +177,12 @@ pub trait TryAdd<OtherType = Self> {
     fn try_add(&mut self, other: OtherType) -> CommonResult<()>;
 }
 
-impl TryAdd<Style> for Stylesheet {
-    fn try_add(&mut self, other: Style) -> CommonResult<()> { self.add_style(other) }
+impl TryAdd<TuiStyle> for TuiStylesheet {
+    fn try_add(&mut self, other: TuiStyle) -> CommonResult<()> { self.add_style(other) }
 }
 
-impl TryAdd<Vec<Style>> for Stylesheet {
-    fn try_add(&mut self, other: Vec<Style>) -> CommonResult<()> {
+impl TryAdd<Vec<TuiStyle>> for TuiStylesheet {
+    fn try_add(&mut self, other: Vec<TuiStyle>) -> CommonResult<()> {
         self.add_styles(other)
     }
 }

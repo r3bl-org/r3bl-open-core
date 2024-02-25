@@ -16,7 +16,7 @@
  */
 
 use super::*;
-use crate::{ENABLE_TRACE_EXAMPLES, *};
+use crate::*;
 
 pub async fn run_app() -> CommonResult<()> {
     throws!({
