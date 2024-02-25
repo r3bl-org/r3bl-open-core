@@ -59,7 +59,7 @@ pub fn generate_random_truecolor_gradient(steps: usize) -> Vec<TuiColor> {
 ///
 /// # Returns
 /// A vector of [TuiColor] objects representing the gradient.
-pub fn generate_truecolor_gradient(stops: &Vec<String>, steps: usize) -> Vec<TuiColor> {
+pub fn generate_truecolor_gradient(stops: &[String], steps: usize) -> Vec<TuiColor> {
     let colors = stops.iter().map(|s| s.as_str()).collect::<Vec<&str>>();
 
     let result_gradient = colorgrad::CustomGradient::new()
@@ -82,7 +82,7 @@ pub fn generate_truecolor_gradient(stops: &Vec<String>, steps: usize) -> Vec<Tui
                 }));
             }
 
-            return it;
+            it
         }
         Err(_) => {
             // Gradient w/ 10 stops going from red to green to blue.
@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn test_generate_truecolor_gradient() {
-        let stops = vec!["#ff0000", "#00ff00", "#0000ff"]
+        let stops = ["#ff0000", "#00ff00", "#0000ff"]
             .iter()
             .map(|s| s.to_string())
             .collect::<Vec<String>>();

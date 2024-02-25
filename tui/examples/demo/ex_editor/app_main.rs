@@ -16,7 +16,7 @@
  */
 
 use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::style;
+use r3bl_rs_utils_macro::tui_style;
 use r3bl_tui::*;
 
 use super::*;
@@ -65,7 +65,7 @@ mod constructor {
     impl AppMain {
         /// Note that this needs to be initialized before it can be used.
         pub fn new_boxed() -> BoxedSafeApp<State, AppSignal> {
-            let it = Self::default();
+            let it = Self;
             Box::new(it)
         }
     }
@@ -102,7 +102,7 @@ mod app_main_impl_app_trait {
             // Check to see if the modal dialog should be activated.
             if let modal_dialogs::ModalActivateResult::Yes =
                 modal_dialogs::should_activate(
-                    input_event.clone(),
+                    input_event,
                     component_registry_map,
                     has_focus,
                     state,
@@ -114,7 +114,7 @@ mod app_main_impl_app_trait {
             // If modal not activated, route the input event to the focused component.
             ComponentRegistry::route_event_to_focused_component(
                 global_data,
-                input_event.clone(),
+                input_event,
                 component_registry_map,
                 has_focus,
             )
@@ -228,7 +228,7 @@ mod modal_dialogs {
     }
 
     fn generate_random_results(content: &str) -> Vec<String> {
-        let vec_result = {
+        {
             let start_rand_num = rand::random::<u8>() as usize;
             let max = 10;
             let mut it = Vec::with_capacity(max);
@@ -236,8 +236,7 @@ mod modal_dialogs {
                 it.push(format!("{content}{index}"));
             }
             it
-        };
-        vec_result
+        }
     }
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -327,7 +326,7 @@ mod modal_dialogs {
     ) {
         let dialog_buffer = {
             let mut it = DialogBuffer::new_empty();
-            it.title = title.into();
+            it.title = title;
             let max_width = 100;
             let line: String = {
                 if text.is_empty() {
@@ -549,10 +548,10 @@ mod populate_component_registry {
 
         let dialog_options = DialogEngineConfigOptions {
             mode: DialogEngineMode::ModalSimple,
-            maybe_style_border: get_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder.into() },
-            maybe_style_title: get_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle.into() },
-            maybe_style_editor: get_style! { @from_result: result_stylesheet , Id::DialogStyleNameEditor.into() },
-            maybe_style_results_panel: get_style! { @from_result: result_stylesheet , Id::DialogStyleNameResultsPanel.into() },
+            maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder.into() },
+            maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle.into() },
+            maybe_style_editor: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameEditor.into() },
+            maybe_style_results_panel: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameResultsPanel.into() },
             ..Default::default()
         };
 
@@ -636,10 +635,10 @@ mod populate_component_registry {
 
         let dialog_options = DialogEngineConfigOptions {
             mode: DialogEngineMode::ModalAutocomplete,
-            maybe_style_border: get_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder.into() },
-            maybe_style_title: get_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle.into() },
-            maybe_style_editor: get_style! { @from_result: result_stylesheet , Id::DialogStyleNameEditor.into() },
-            maybe_style_results_panel: get_style! { @from_result: result_stylesheet , Id::DialogStyleNameResultsPanel.into() },
+            maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameBorder.into() },
+            maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameTitle.into() },
+            maybe_style_editor: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameEditor.into() },
+            maybe_style_results_panel: get_tui_style! { @from_result: result_stylesheet , Id::DialogStyleNameResultsPanel.into() },
             ..Default::default()
         };
 
@@ -719,36 +718,36 @@ mod populate_component_registry {
 mod stylesheet {
     use super::*;
 
-    pub fn create_stylesheet() -> CommonResult<Stylesheet> {
+    pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
-            stylesheet! {
-              style! {
+            tui_stylesheet! {
+              tui_style! {
                 id: Id::EditorStyleNameDefault.into()
                 padding: 1
                 // These are ignored due to syntax highlighting.
                 // attrib: [bold]
                 // color_fg: TuiColor::Blue
               },
-              style! {
+              tui_style! {
                 id: Id::DialogStyleNameTitle.into()
                 lolcat: true
                 // These are ignored due to lolcat: true.
                 // attrib: [bold]
                 // color_fg: TuiColor::Yellow
               },
-              style! {
+              tui_style! {
                 id: Id::DialogStyleNameBorder.into()
                 lolcat: true
                 // These are ignored due to lolcat: true.
                 // attrib: [dim]
                 // color_fg: TuiColor::Green
               },
-              style! {
+              tui_style! {
                 id: Id::DialogStyleNameEditor.into()
                 attrib: [bold]
                 color_fg: TuiColor::Basic(ANSIBasicColor::Magenta)
               },
-              style! {
+              tui_style! {
                 id: Id::DialogStyleNameResultsPanel.into()
                 // attrib: [bold]
                 color_fg: TuiColor::Basic(ANSIBasicColor::Blue)
@@ -763,18 +762,18 @@ mod status_bar {
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
-        let styled_texts = styled_texts! {
-            styled_text! { @style: style!(attrib: [bold, dim]) ,      @text: "Hints: "},
-            styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + q"},
-            styled_text! { @style: style!(attrib: [bold]) ,           @text: " : Exit 🖖"},
-            styled_text! { @style: style!(attrib: [dim]) ,            @text: " … "},
-            styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + l"},
-            styled_text! { @style: style!(attrib: [bold]) ,           @text: " : Simple 📣"},
-            styled_text! { @style: style!(attrib: [dim]) ,            @text: " … "},
-            styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + k"},
-            styled_text! { @style: style!(attrib: [bold]) ,           @text: " : Autocomplete 🤖"},
-            styled_text! { @style: style!(attrib: [dim]) ,            @text: " … "},
-            styled_text! { @style: style!(attrib: [underline]) ,      @text: "Type content 🌊"},
+        let styled_texts = tui_styled_texts! {
+            tui_styled_text! { @style: tui_style!(attrib: [bold, dim]) ,      @text: "Hints: "},
+            tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + q"},
+            tui_styled_text! { @style: tui_style!(attrib: [bold]) ,           @text: " : Exit 🖖"},
+            tui_styled_text! { @style: tui_style!(attrib: [dim]) ,            @text: " … "},
+            tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + l"},
+            tui_styled_text! { @style: tui_style!(attrib: [bold]) ,           @text: " : Simple 📣"},
+            tui_styled_text! { @style: tui_style!(attrib: [dim]) ,            @text: " … "},
+            tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + k"},
+            tui_styled_text! { @style: tui_style!(attrib: [bold]) ,           @text: " : Autocomplete 🤖"},
+            tui_styled_text! { @style: tui_style!(attrib: [dim]) ,            @text: " … "},
+            tui_styled_text! { @style: tui_style!(attrib: [underline]) ,      @text: "Type content 🌊"},
         };
 
         let display_width = styled_texts.display_width();

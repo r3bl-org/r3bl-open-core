@@ -60,7 +60,7 @@ pub struct FlexBoxProps {
     pub id: FlexBoxId,
     pub dir: LayoutDirection,
     pub requested_size_percent: RequestedSizePercent,
-    pub maybe_styles: Option<Vec<Style>>,
+    pub maybe_styles: Option<Vec<TuiStyle>>,
 }
 
 /// Properties that are needed to create a [Surface].

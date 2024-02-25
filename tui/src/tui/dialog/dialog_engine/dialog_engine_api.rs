@@ -417,9 +417,9 @@ mod internal_impl {
             ops.push(RenderOp::PaintTextWithAttributes(
                 msg,
                 Some(if let Some(style) = maybe_style {
-                    Style { dim: true, ..style }
+                    TuiStyle { dim: true, ..style }
                 } else {
-                    Style {
+                    TuiStyle {
                         dim: true,
                         ..Default::default()
                     }
@@ -529,12 +529,12 @@ mod internal_impl {
                             .maybe_style_results_panel
                         {
                             // Update existing style.
-                            Some(style) => Style {
+                            Some(style) => TuiStyle {
                                 underline: true,
                                 ..style
                             },
                             // No existing style, so create a new style w/ only underline.
-                            _ => Style {
+                            _ => TuiStyle {
                                 underline: true,
                                 ..Default::default()
                             },
@@ -600,7 +600,7 @@ mod internal_impl {
     fn lolcat_from_style(
         ops: &mut RenderOps,
         color_wheel: &mut ColorWheel,
-        maybe_style: &Option<Style>,
+        maybe_style: &Option<TuiStyle>,
         text: &str,
     ) {
         // If lolcat is enabled, then colorize the text.
@@ -748,13 +748,7 @@ mod internal_impl {
         dialog_engine: &mut DialogEngine,
     ) -> Option<DialogChoice> {
         // It is safe to unwrap the dialog buffer here (since it will have Some value).
-        let dialog_buffer = {
-            if let Some(it) = maybe_dialog_buffer {
-                it
-            } else {
-                return None;
-            }
-        };
+        let dialog_buffer = { maybe_dialog_buffer? };
 
         match DialogEvent::from(input_event) {
             // Handle Enter.
@@ -1088,12 +1082,12 @@ mod test_dialog_engine_api_apply_event {
     fn apply_event_enter() {
         let self_id: FlexBoxId = FlexBoxId::from(0);
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
-        let mut state = &mut mock_real_objects_for_dialog::create_state();
+        let state = &mut mock_real_objects_for_dialog::create_state();
         let input_event = InputEvent::Keyboard(keypress!(@special SpecialKey::Enter));
         let response = dbg!(DialogEngineApi::apply_event::<
             mock_real_objects_for_dialog::State,
             (),
-        >(&mut state, self_id, dialog_engine, input_event)
+        >(state, self_id, dialog_engine, input_event)
         .unwrap());
         if let DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(value)) =
             &response

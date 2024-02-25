@@ -86,14 +86,14 @@ pub struct FlexBox {
     pub style_adjusted_bounds_size: Size,
     pub requested_size_percent: RequestedSizePercent,
     pub insertion_pos_for_next_box: Option<Position>,
-    pub maybe_computed_style: Option<Style>,
+    pub maybe_computed_style: Option<TuiStyle>,
 }
 
 mod flex_box_impl {
     use super::*;
 
     impl FlexBox {
-        pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style }
+        pub fn get_computed_style(&self) -> Option<TuiStyle> { self.maybe_computed_style }
     }
 
     impl Debug for FlexBox {
@@ -129,14 +129,14 @@ pub struct PartialFlexBox {
     pub id: FlexBoxId,
     pub style_adjusted_origin_pos: Position,
     pub style_adjusted_bounds_size: Size,
-    pub maybe_computed_style: Option<Style>,
+    pub maybe_computed_style: Option<TuiStyle>,
 }
 
 mod partial_flex_box_impl {
     use super::*;
 
     impl PartialFlexBox {
-        pub fn get_computed_style(&self) -> Option<Style> { self.maybe_computed_style }
+        pub fn get_computed_style(&self) -> Option<TuiStyle> { self.maybe_computed_style }
 
         pub fn get_style_adjusted_position_and_size(&self) -> (Position, Size) {
             (

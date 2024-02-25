@@ -184,7 +184,7 @@ pub mod render_ops_impl {
         ) {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    let _ = RenderOpImplCrossterm {}.paint(
+                    RenderOpImplCrossterm {}.paint(
                         skip_flush,
                         render_op,
                         window_size,
@@ -262,7 +262,7 @@ pub enum RenderOp {
     /// Translate [Style] into fg and bg colors for crossterm. Note that this does not
     /// apply attributes (bold, italic, underline, strikethrough, etc). If you need to
     /// apply attributes, use [RenderOp::PaintTextWithAttributes] instead.
-    ApplyColors(Option<Style>),
+    ApplyColors(Option<TuiStyle>),
 
     /// Translate [Style] into *only* attributes for crossterm (bold, italic, underline,
     /// strikethrough, etc) and not colors. If you need to apply color, use
@@ -274,14 +274,14 @@ pub enum RenderOp {
     /// 2. If the [String] argument contains ANSI sequences then it will be printed as-is.
     ///    You are responsible for handling clipping of the text to the bounds of the
     ///    terminal screen.
-    PaintTextWithAttributes(String, Option<Style>),
+    PaintTextWithAttributes(String, Option<TuiStyle>),
 
     /// This is **not** meant for use directly by apps. It is to be used only by the
     /// [OffscreenBuffer]. This operation skips the checks for content width padding & clipping, and
     /// window bounds clipping. These are not needed when the compositor is painting an offscreen
     /// buffer, since when the offscreen buffer was created the two render ops above were used which
     /// already handle the clipping and padding.
-    CompositorNoClipTruncPaintTextWithAttributes(String, Option<Style>),
+    CompositorNoClipTruncPaintTextWithAttributes(String, Option<TuiStyle>),
 
     /// For [Default] impl.
     Noop,

@@ -1555,7 +1555,6 @@ dependencies = [
  "rand",
  "serde",
  "serde_json",
- "syntect",
  "time",
  "unicode-segmentation",
  "unicode-width",

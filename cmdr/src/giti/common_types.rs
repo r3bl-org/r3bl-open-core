@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use super::clap_config::clap_config::BranchSubcommand;
+use super::clap_config::BranchSubcommand;
 
 #[derive(Debug, Clone, Default)]
 pub struct CommandSuccessfulResponse {

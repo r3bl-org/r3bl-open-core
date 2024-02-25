@@ -16,7 +16,7 @@
  */
 
 use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::style;
+use r3bl_rs_utils_macro::tui_style;
 use r3bl_tui::*;
 
 use super::*;
@@ -81,7 +81,7 @@ mod app_main_impl_app_trait {
         ) -> CommonResult<EventPropagation> {
             ComponentRegistry::route_event_to_focused_component(
                 global_data,
-                input_event.clone(),
+                input_event,
                 component_registry_map,
                 has_focus,
             )
@@ -100,20 +100,16 @@ mod app_main_impl_app_trait {
                     AppSignal::AddPop(arg) => {
                         if stack.is_empty() {
                             stack.push(*arg)
-                        } else {
-                            let top = stack.pop().unwrap();
-                            let sum = top + arg;
-                            stack.push(sum);
+                        } else if let Some(top) = stack.pop() {
+                            stack.push(top + arg)
                         }
                     }
 
                     AppSignal::SubPop(arg) => {
                         if stack.is_empty() {
                             stack.push(*arg)
-                        } else {
-                            let top = stack.pop().unwrap();
-                            let sum = top - arg;
-                            stack.push(sum);
+                        } else if let Some(top) = stack.pop() {
+                            stack.push(top - arg)
                         }
                     }
 
@@ -224,7 +220,7 @@ mod populate_component_registry {
             }
             // Init has focus.
             if has_focus.get_id().is_none() {
-                has_focus.set_id(FlexBoxId::from(id));
+                has_focus.set_id(id);
             }
         }
     }
@@ -233,14 +229,14 @@ mod populate_component_registry {
 mod stylesheet {
     use super::*;
 
-    pub fn create_stylesheet() -> CommonResult<Stylesheet> {
+    pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
-            stylesheet! {
-              style! {
+            tui_stylesheet! {
+              tui_style! {
                 id: Id::Container as u8
                 padding: 1
               },
-              style! {
+              tui_style! {
                 id: Id::Column as u8
                 padding: 1
                 color_bg: TuiColor::Rgb (RgbValue { red: 55, green: 55, blue: 100 })
@@ -255,13 +251,13 @@ mod status_bar {
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
-        let styled_texts = styled_texts! {
-            styled_text! { @style: style!(attrib: [dim])       , @text: "Hints:"},
-            styled_text! { @style: style!(attrib: [bold])      , @text: " x : Exit ⛔ "},
-            styled_text! { @style: style!(attrib: [dim])       , @text: " … "},
-            styled_text! { @style: style!(attrib: [underline]) , @text: " ↑ / + : inc "},
-            styled_text! { @style: style!(attrib: [dim])       , @text: " … "},
-            styled_text! { @style: style!(attrib: [underline]) , @text: " ↓ / - : dec "}
+        let styled_texts = tui_styled_texts! {
+            tui_styled_text! { @style: tui_style!(attrib: [dim])       , @text: "Hints:"},
+            tui_styled_text! { @style: tui_style!(attrib: [bold])      , @text: " x : Exit ⛔ "},
+            tui_styled_text! { @style: tui_style!(attrib: [dim])       , @text: " … "},
+            tui_styled_text! { @style: tui_style!(attrib: [underline]) , @text: " ↑ / + : inc "},
+            tui_styled_text! { @style: tui_style!(attrib: [dim])       , @text: " … "},
+            tui_styled_text! { @style: tui_style!(attrib: [underline]) , @text: " ↓ / - : dec "}
         };
 
         let display_width = styled_texts.display_width();

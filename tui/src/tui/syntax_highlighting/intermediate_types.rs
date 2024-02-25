@@ -38,7 +38,7 @@ use crate::{constants::*, *};
 /// line of text.
 #[derive(Default, Clone, PartialEq, Eq, Debug)]
 pub struct StyleUSSpan {
-    pub style: Style,
+    pub style: TuiStyle,
     pub text: US,
 }
 
@@ -46,11 +46,13 @@ mod style_us_span_impl {
     use super::*;
 
     impl StyleUSSpan {
-        pub fn new(style: Style, text: US) -> Self { Self { style, text } }
+        pub fn new(style: TuiStyle, text: US) -> Self { Self { style, text } }
     }
 
-    impl From<(&Style, &US)> for StyleUSSpan {
-        fn from((style, text): (&Style, &US)) -> Self { Self::new(*style, text.clone()) }
+    impl From<(&TuiStyle, &US)> for StyleUSSpan {
+        fn from((style, text): (&TuiStyle, &US)) -> Self {
+            Self::new(*style, text.clone())
+        }
     }
 }
 
@@ -65,7 +67,7 @@ impl StyleUSSpanLine {
     pub fn from_csvp(
         key: &str,
         tag_list: &List<&'_ str>,
-        maybe_current_box_computed_style: &Option<Style>,
+        maybe_current_box_computed_style: &Option<TuiStyle>,
     ) -> Self {
         let mut acc_line_output = StyleUSSpanLine::default();
         acc_line_output += StyleUSSpan::new(
@@ -101,7 +103,7 @@ impl StyleUSSpanLine {
     pub fn from_kvp(
         key: &str,
         text: &str,
-        maybe_current_box_computed_style: &Option<Style>,
+        maybe_current_box_computed_style: &Option<TuiStyle>,
     ) -> Self {
         let mut acc_line_output = StyleUSSpanLine::default();
         acc_line_output += StyleUSSpan::new(
@@ -125,7 +127,7 @@ impl StyleUSSpanLine {
 
     /// This applies the given style to every single item in the list. It has the highest
     /// specificity.
-    pub fn add_style(&mut self, style: Style) {
+    pub fn add_style(&mut self, style: TuiStyle) {
         for StyleUSSpan { style: s, text: _ } in self.iter_mut() {
             *s += style;
         }
@@ -137,7 +139,7 @@ impl StyleUSSpanLine {
         &self,
         scroll_offset_col_index: ChUnit,
         max_display_col_count: ChUnit,
-    ) -> StyledTexts {
+    ) -> TuiStyledTexts {
         // Populated and returned at the end.
         let mut list: List<StyleUSSpan> = List::default();
 
@@ -190,7 +192,7 @@ impl StyleUSSpanLine {
             }
         }
 
-        StyledTexts::from(list)
+        TuiStyledTexts::from(list)
     }
 
     pub fn display_width(&self) -> ChUnit {
@@ -228,11 +230,11 @@ impl StyleUSSpanLine {
     }
 }
 
-impl From<StyleUSSpanLine> for StyledTexts {
+impl From<StyleUSSpanLine> for TuiStyledTexts {
     fn from(styles: StyleUSSpanLine) -> Self {
-        let mut acc = StyledTexts::default();
+        let mut acc = TuiStyledTexts::default();
         for StyleUSSpan { style, text } in styles.iter() {
-            acc += styled_text!(@style: *style, @text: text.string.clone());
+            acc += tui_styled_text!(@style: *style, @text: text.string.clone());
         }
         acc
     }

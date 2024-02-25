@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{cmp::{self, Ord},
+use std::{cmp::{self},
           fmt::{Debug, Display}};
 
 use get_size::GetSize;

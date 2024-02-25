@@ -191,7 +191,10 @@ mod render_op_impl_crossterm_impl {
         }
 
         pub fn set_fg_color(color: &TuiColor) {
-            let color = color_converter::to_crossterm_color(*color);
+            let color =
+                crossterm_color_converter::convert_from_tui_color_to_crossterm_color(
+                    *color,
+                );
             exec_render_op!(
                 queue!(stdout(), SetForegroundColor(color)),
                 format!("SetFgColor({color:?})")
@@ -200,7 +203,9 @@ mod render_op_impl_crossterm_impl {
 
         pub fn set_bg_color(color: &TuiColor) {
             let color: crossterm::style::Color =
-                color_converter::to_crossterm_color(*color);
+                crossterm_color_converter::convert_from_tui_color_to_crossterm_color(
+                    *color,
+                );
             exec_render_op!(
                 queue!(stdout(), SetBackgroundColor(color)),
                 format!("SetBgColor({color:?})")
@@ -209,7 +214,7 @@ mod render_op_impl_crossterm_impl {
 
         pub fn paint_text_with_attributes(
             text_arg: &String,
-            maybe_style: &Option<Style>,
+            maybe_style: &Option<TuiStyle>,
             window_size: Size,
             local_data: &mut RenderOpsLocalData,
         ) {
@@ -235,12 +240,12 @@ mod render_op_impl_crossterm_impl {
 
         /// Use [crossterm::style::Color] to set crossterm Colors.
         /// Docs: <https://docs.rs/crossterm/latest/crossterm/style/index.html#colors>
-        pub fn apply_colors(maybe_style: &Option<Style>) {
+        pub fn apply_colors(maybe_style: &Option<TuiStyle>) {
             if let Some(style) = maybe_style {
                 // Handle background color.
                 if let Some(tui_color_bg) = style.color_bg {
                     let color_bg: crossterm::style::Color =
-                        color_converter::to_crossterm_color(tui_color_bg);
+                        crate::convert_from_tui_color_to_crossterm_color(tui_color_bg);
                     exec_render_op!(
                         queue!(stdout(), SetBackgroundColor(color_bg)),
                         format!("ApplyColors -> SetBgColor({color_bg:?})")
@@ -250,7 +255,7 @@ mod render_op_impl_crossterm_impl {
                 // Handle foreground color.
                 if let Some(tui_color_fg) = style.color_fg {
                     let color_fg: crossterm::style::Color =
-                        color_converter::to_crossterm_color(tui_color_fg);
+                        crate::convert_from_tui_color_to_crossterm_color(tui_color_fg);
                     exec_render_op!(
                         queue!(stdout(), SetForegroundColor(color_fg)),
                         format!("ApplyColors -> SetFgColor({color_fg:?})")
@@ -268,11 +273,11 @@ mod perform_paint {
     pub struct PaintArgs<'a> {
         pub text: Cow<'a, str>,
         pub log_msg: Cow<'a, str>,
-        pub maybe_style: &'a Option<Style>,
+        pub maybe_style: &'a Option<TuiStyle>,
         pub window_size: Size,
     }
 
-    fn style_to_attribute(&style: &Style) -> Vec<Attribute> {
+    fn style_to_attribute(&style: &TuiStyle) -> Vec<Attribute> {
         let mut it = vec![];
         if style.bold {
             it.push(Attribute::Bold);
@@ -300,8 +305,8 @@ mod perform_paint {
 
     /// Use [Style] to set crossterm [Attributes] ([docs](
     /// https://docs.rs/crossterm/latest/crossterm/style/index.html#attributes)).
-    pub fn paint_style_and_text<'a>(
-        paint_args: &mut PaintArgs<'a>,
+    pub fn paint_style_and_text(
+        paint_args: &mut PaintArgs<'_>,
         mut needs_reset: Cow<'_, bool>,
         local_data: &mut RenderOpsLocalData,
     ) {
@@ -328,10 +333,7 @@ mod perform_paint {
         }
     }
 
-    pub fn paint_text<'a>(
-        paint_args: &PaintArgs<'a>,
-        local_data: &mut RenderOpsLocalData,
-    ) {
+    pub fn paint_text(paint_args: &PaintArgs<'_>, local_data: &mut RenderOpsLocalData) {
         let PaintArgs {
             text,
             log_msg,

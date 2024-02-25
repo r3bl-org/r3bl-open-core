@@ -17,7 +17,7 @@
 
 use nom::{branch::*, combinator::*, multi::*, IResult};
 
-use crate::{constants::*, tui::misc_types::list_of::List, *};
+use crate::{constants::*, *};
 
 /// This is the main parser entry point. It takes a string slice and if it can be parsed, returns a
 /// [MdDocument] that represents the parsed Markdown.
