@@ -18,7 +18,7 @@
 use std::fmt::Debug;
 
 use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::style;
+use r3bl_rs_utils_macro::tui_style;
 use r3bl_tui::*;
 
 use crate::ex_pitch::state::{AppSignal, State};
@@ -62,7 +62,7 @@ mod constructor {
     impl AppMain {
         /// Note that this needs to be initialized before it can be used.
         pub fn new_boxed() -> BoxedSafeApp<State, AppSignal> {
-            let it = Self::default();
+            let it = Self;
             Box::new(it)
         }
     }
@@ -126,7 +126,7 @@ mod app_main_impl_app_trait {
             // If modal not activated, route the input event to the focused component.
             ComponentRegistry::route_event_to_focused_component(
                 global_data,
-                input_event.clone(),
+                input_event,
                 component_registry_map,
                 has_focus,
             )
@@ -300,10 +300,10 @@ mod populate_component_registry {
 mod stylesheet {
     use super::*;
 
-    pub fn create_stylesheet() -> CommonResult<Stylesheet> {
+    pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
-            stylesheet! {
-              style! {
+            tui_stylesheet! {
+              tui_style! {
                 id: Id::EditorStyleNameDefault.into()
                 padding: 1
                 // These are ignored due to syntax highlighting.
@@ -325,21 +325,21 @@ mod status_bar {
         window_size: Size,
         state: &State,
     ) {
-        let mut it = styled_texts! {
-            styled_text! { @style:style!(attrib: [dim, bold]) ,      @text: "Exit 👋 : "},
-            styled_text! { @style:style!(attrib: [dim, underline]) , @text: "Ctrl + q"},
+        let mut it = tui_styled_texts! {
+            tui_styled_text! { @style:tui_style!(attrib: [dim, bold]) ,      @text: "Exit 👋 : "},
+            tui_styled_text! { @style:tui_style!(attrib: [dim, underline]) , @text: "Ctrl + q"},
         };
 
         if state.current_slide_index < FILE_CONTENT_ARRAY.len() - 1 {
-            it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: " ┊ "};
-            it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: "Next 👉 : "};
-            it += styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + n"};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: " ┊ "};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: "Next 👉 : "};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + n"};
         }
 
         if state.current_slide_index > 0 {
-            it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: " ┊ "};
-            it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: "Prev 👈 : "};
-            it += styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + p"};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: " ┊ "};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: "Prev 👈 : "};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + p"};
         }
 
         let display_width = it.display_width();

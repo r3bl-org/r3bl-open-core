@@ -60,14 +60,7 @@ impl HasFocus {
     pub fn is_set(&self) -> bool { !self.is_empty() }
 
     /// Get the `id` of the [FlexBox] that has keyboard focus.
-    pub fn get_id(&self) -> Option<FlexBoxId> {
-        if self.id_vec.is_empty() {
-            None
-        } else {
-            let it = self.id_vec.last().unwrap();
-            Some(*it)
-        }
-    }
+    pub fn get_id(&self) -> Option<FlexBoxId> { self.id_vec.last().copied() }
 
     /// Set the `id` of the [FlexBox] that has keyboard focus.
     pub fn set_id(&mut self, id: FlexBoxId) {
@@ -109,8 +102,12 @@ impl HasFocus {
             // Must not have a modal id already set.
             if self.is_modal_set() {
                 let msg = format!(
-                    "Modal id is already set to {}. Can't set it to {id}.",
-                    self.get_id().unwrap()
+                    "Modal id is already set to {}. Can't set it to {}.",
+                    match self.get_id() {
+                        Some(existing_id) => format!("{}", existing_id),
+                        None => "None".to_string(),
+                    },
+                    id
                 );
                 return CommonError::new_err_with_only_msg(&msg);
             }

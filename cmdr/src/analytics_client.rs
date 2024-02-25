@@ -34,8 +34,6 @@ use r3bl_rs_utils_core::{call_if_true,
                          CommonResult};
 use reqwest::{Client, Response};
 
-use crate::DEBUG_ANALYTICS_CLIENT_MOD;
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AnalyticsAction {
     GitiBranchDelete,
@@ -49,8 +47,8 @@ pub enum AnalyticsAction {
     MachineIdProxyCreate,
 }
 
-impl AnalyticsAction {
-    pub fn to_string(&self) -> String {
+impl std::fmt::Display for AnalyticsAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         #[rustfmt::skip]
         let action = match self {
             AnalyticsAction::GitiAppStart =>          "giti app start",
@@ -63,32 +61,34 @@ impl AnalyticsAction {
             AnalyticsAction::EdiFileSave =>           "edi file save",
             AnalyticsAction::MachineIdProxyCreate =>  "proxy machine id create",
         };
-        action.to_string()
+        write!(f, "{}", action)
     }
 }
 
 pub mod config_folder {
+    use std::fmt::{Display, Formatter, Result};
+
     use super::*;
+    use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
     pub enum ConfigPaths {
         R3BLTopLevelFolderName,
         ProxyMachineIdFile,
     }
 
-    impl ConfigPaths {
-        pub fn to_string(&self) -> String {
+    impl Display for ConfigPaths {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             let path = match self {
                 ConfigPaths::R3BLTopLevelFolderName => "r3bl-cmdr",
                 ConfigPaths::ProxyMachineIdFile => "id",
             };
-            path.to_string()
+            write!(f, "{}", path)
         }
     }
 
     /// This is where the config file is stored.
     pub fn get_id_file_path(path: PathBuf) -> PathBuf {
-        let id_file_path = path.join(ConfigPaths::ProxyMachineIdFile.to_string());
-        id_file_path
+        path.join(ConfigPaths::ProxyMachineIdFile.to_string())
     }
 
     /// This is where the config folder is.
@@ -172,6 +172,7 @@ pub mod file_io {
 
 pub mod proxy_machine_id {
     use super::*;
+    use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
     /// Read the file contents from [config_folder::get_id_file_path] and return it as a
     /// string if it exists and can be read.
@@ -190,7 +191,7 @@ pub mod proxy_machine_id {
                                 .to_string(),
                             );
                         });
-                        return contents;
+                        contents
                     }
                     Err(_) => {
                         let new_id = friendly_random_id::generate_friendly_random_id();
@@ -223,13 +224,11 @@ pub mod proxy_machine_id {
                                     );
                             }
                         }
-                        return new_id;
+                        new_id
                     }
                 }
             }
-            Err(_) => {
-                return friendly_random_id::generate_friendly_random_id();
-            }
+            Err(_) => friendly_random_id::generate_friendly_random_id(),
         }
     }
 }
@@ -358,6 +357,7 @@ pub mod upgrade_check {
 
 pub mod http_client {
     use super::*;
+    use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
     pub async fn make_get_request(url: &str) -> Result<Response, reqwest::Error> {
         let client = Client::new();
@@ -371,7 +371,7 @@ pub mod http_client {
                         .to_string(),
                 );
             });
-            return Ok(response);
+            Ok(response)
         } else {
             // Handle error response.
             log_error(
@@ -379,7 +379,7 @@ pub mod http_client {
                     .red()
                     .to_string(),
             );
-            return response.error_for_status();
+            response.error_for_status()
         }
     }
 
@@ -398,7 +398,7 @@ pub mod http_client {
                         .to_string(),
                 );
             });
-            return Ok(response);
+            Ok(response)
         } else {
             // Handle error response.
             log_error(
@@ -406,7 +406,7 @@ pub mod http_client {
                     .red()
                     .to_string(),
             );
-            return response.error_for_status();
+            response.error_for_status()
         }
     }
 }

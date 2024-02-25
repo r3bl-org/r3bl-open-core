@@ -19,7 +19,7 @@ use std::fmt::*;
 
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::style;
+use r3bl_rs_utils_macro::tui_style;
 use r3bl_tui::*;
 use tokio::sync::mpsc::Sender;
 
@@ -90,7 +90,7 @@ mod app_main_constructor {
     impl AppMain {
         /// Note that this needs to be initialized before it can be used.
         pub fn new_boxed() -> BoxedSafeApp<State, AppSignal> {
-            let it = Self::default();
+            let it = Self;
             Box::new(it)
         }
     }
@@ -173,7 +173,7 @@ mod app_main_impl_app_trait {
             // If modal not activated, route the input event to the focused component.
             ComponentRegistry::route_event_to_focused_component(
                 global_data,
-                input_event.clone(),
+                input_event,
                 component_registry_map,
                 has_focus,
             )
@@ -232,23 +232,20 @@ mod app_main_impl_app_trait {
                         ),
                     );
 
-                    match modal_dialog_ask_for_filename_to_save_file::show(
+                    if let Err(err) = modal_dialog_ask_for_filename_to_save_file::show(
                         component_registry_map,
                         has_focus,
                         state,
                     ) {
-                        Err(err) => {
-                            if let Some(CommonError {
-                                err_type: _,
-                                err_msg: msg,
-                            }) = err.downcast_ref::<CommonError>()
-                            {
-                                log_error(format!(
-                                    "📣 Error activating simple modal: {msg:?}"
-                                ));
-                            }
+                        if let Some(CommonError {
+                            err_type: _,
+                            err_msg: msg,
+                        }) = err.downcast_ref::<CommonError>()
+                        {
+                            log_error(format!(
+                                "📣 Error activating simple modal: {msg:?}"
+                            ));
                         }
-                        _ => {}
                     };
 
                     return Ok(EventPropagation::ConsumedRender);
@@ -308,7 +305,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
     pub fn initialize(state: &mut State, id: FlexBoxId, title: String, text: String) {
         let new_dialog_buffer = {
             let mut it = DialogBuffer::new_empty();
-            it.title = title.into();
+            it.title = title;
             let line: String = {
                 if text.is_empty() {
                     "".to_string()
@@ -362,10 +359,10 @@ mod modal_dialog_ask_for_filename_to_save_file {
 
         let dialog_options = DialogEngineConfigOptions {
             mode: DialogEngineMode::ModalSimple,
-            maybe_style_border: get_style! { @from_result: result_stylesheet , Id::StyleDialogBorder.into() },
-            maybe_style_title: get_style! { @from_result: result_stylesheet , Id::StyleDialogTitle.into() },
-            maybe_style_editor: get_style! { @from_result: result_stylesheet , Id::StyleDialogEditor.into() },
-            maybe_style_results_panel: get_style! { @from_result: result_stylesheet , Id::StyleDialogResultsPanel.into() },
+            maybe_style_border: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogBorder.into() },
+            maybe_style_title: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogTitle.into() },
+            maybe_style_editor: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogEditor.into() },
+            maybe_style_results_panel: get_tui_style! { @from_result: result_stylesheet , Id::StyleDialogResultsPanel.into() },
             ..Default::default()
         };
 
@@ -403,7 +400,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
                         );
 
                         let user_input_file_path = text.trim().to_string();
-                        if user_input_file_path != "" {
+                        if !user_input_file_path.is_empty() {
                             call_if_true!(DEBUG_TUI_MOD, {
                                 let msg = format!("\n💾💾💾 About to save the new buffer with given filename: {user_input_file_path:?}")
                                     .magenta()
@@ -415,27 +412,24 @@ mod modal_dialog_ask_for_filename_to_save_file {
                                 FlexBoxId::from(Id::ComponentEditor),
                             );
 
-                            match maybe_editor_buffer {
-                                Some(editor_buffer) => {
-                                    // Set the file path.
-                                    editor_buffer.editor_content.maybe_file_path =
-                                        Some(user_input_file_path.clone());
+                            if let Some(editor_buffer) = maybe_editor_buffer {
+                                // Set the file path.
+                                editor_buffer.editor_content.maybe_file_path =
+                                    Some(user_input_file_path.clone());
 
-                                    // Set the file extension.
-                                    editor_buffer.editor_content.maybe_file_extension =
-                                        Some(file_utils::get_file_extension(&Some(
-                                            user_input_file_path.clone(),
-                                        )));
+                                // Set the file extension.
+                                editor_buffer.editor_content.maybe_file_extension =
+                                    Some(file_utils::get_file_extension(&Some(
+                                        user_input_file_path.clone(),
+                                    )));
 
-                                    // Fire a signal to save the file.
-                                    send_signal!(
-                                        main_thread_channel_sender,
-                                        TerminalWindowMainThreadSignal::ApplyAction(
-                                            AppSignal::SaveFile
-                                        )
-                                    );
-                                }
-                                _ => {}
+                                // Fire a signal to save the file.
+                                send_signal!(
+                                    main_thread_channel_sender,
+                                    TerminalWindowMainThreadSignal::ApplyAction(
+                                        AppSignal::SaveFile
+                                    )
+                                );
                             }
                         }
                     }
@@ -591,36 +585,36 @@ mod populate_component_registry {
 mod stylesheet {
     use super::*;
 
-    pub fn create_stylesheet() -> CommonResult<Stylesheet> {
+    pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
-            stylesheet! {
-              style! {
+            tui_stylesheet! {
+              tui_style! {
                 id: Id::StyleEditorDefault.into()
                 padding: 1
                 // These are ignored due to syntax highlighting.
                 // attrib: [bold]
                 // color_fg: TuiColor::Blue
               },
-              style! {
+              tui_style! {
                 id: Id::StyleDialogTitle.into()
                 lolcat: true
                 // These are ignored due to lolcat: true.
                 // attrib: [bold]
                 // color_fg: TuiColor::Yellow
               },
-              style! {
+              tui_style! {
                 id: Id::StyleDialogBorder.into()
                 lolcat: true
                 // These are ignored due to lolcat: true.
                 // attrib: [dim]
                 // color_fg: TuiColor::Green
               },
-              style! {
+              tui_style! {
                 id: Id::StyleDialogEditor.into()
                 attrib: [bold]
                 color_fg: TuiColor::Basic(ANSIBasicColor::Magenta)
               },
-              style! {
+              tui_style! {
                 id: Id::StyleDialogResultsPanel.into()
                 // attrib: [bold]
                 color_fg: TuiColor::Basic(ANSIBasicColor::Blue)
@@ -635,7 +629,7 @@ mod status_bar {
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
-        let separator_style = style!(
+        let separator_style = tui_style!(
             attrib: [dim]
             color_fg: TuiColor::Basic(ANSIBasicColor::DarkGrey)
         );
@@ -660,18 +654,18 @@ mod status_bar {
             TextColorizationPolicy::ColorEachCharacter(None),
         );
 
-        let styled_texts: StyledTexts = {
+        let styled_texts: TuiStyledTexts = {
             let mut it = Default::default();
             it += app_text_styled_texts;
-            it += styled_text! { @style: separator_style , @text: " │ "};
-            it += styled_text! { @style: style!(attrib: [dim]) , @text: "Save: Ctrl+S "};
-            it += styled_text! { @style: style!() , @text: "💾"};
-            it += styled_text! { @style: separator_style , @text: " │ "};
-            it += styled_text! { @style: style!(attrib: [dim]) , @text: "Feedback: Ctrl+K "};
-            it += styled_text! { @style: style!() , @text: "💭"};
-            it += styled_text! { @style: separator_style , @text: " │ "};
-            it += styled_text! { @style: style!(attrib: [dim]) , @text: "Exit: Ctrl+Q "};
-            it += styled_text! { @style: style!() , @text: "🖖"};
+            it += tui_styled_text! { @style: separator_style , @text: " │ "};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim]) , @text: "Save: Ctrl+S "};
+            it += tui_styled_text! { @style: tui_style!() , @text: "💾"};
+            it += tui_styled_text! { @style: separator_style , @text: " │ "};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim]) , @text: "Feedback: Ctrl+K "};
+            it += tui_styled_text! { @style: tui_style!() , @text: "💭"};
+            it += tui_styled_text! { @style: separator_style , @text: " │ "};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim]) , @text: "Exit: Ctrl+Q "};
+            it += tui_styled_text! { @style: tui_style!() , @text: "🖖"};
             it
         };
 

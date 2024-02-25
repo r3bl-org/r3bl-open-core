@@ -16,7 +16,7 @@
  */
 
 use get_size::GetSize;
-use serde::*;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Hash, Debug, GetSize)]
 pub enum Ansi256GradientIndex {

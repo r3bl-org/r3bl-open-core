@@ -1643,7 +1643,8 @@ pub mod mock_real_objects_for_editor {
         AS: Debug + Default + Clone + Sync + Send,
     {
         let (sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
-        let global_data = GlobalData {
+
+        GlobalData {
             window_size: if let Some(window_size) = window_size {
                 window_size
             } else {
@@ -1652,8 +1653,7 @@ pub mod mock_real_objects_for_editor {
             maybe_saved_offscreen_buffer: Default::default(),
             main_thread_channel_sender: sender,
             state: Default::default(),
-        };
-        global_data
+        }
     }
 
     pub fn make_editor_engine_with_bounds(size: Size) -> EditorEngine {

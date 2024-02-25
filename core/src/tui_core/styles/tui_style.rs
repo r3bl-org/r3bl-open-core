@@ -24,42 +24,44 @@ use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-/// Please use [style!](crate::style) proc macro to generate code for this struct. For the macro, if
+/// Please use [tui_style!](crate::tui_style) proc macro to generate code for this struct. For the macro, if
 /// `id` isn't supplied, then [u8::MAX](u8::MAX) is used. This represents the "style does not have
 /// an assigned id" case. Computed styles don't have an id and are set to [u8::MAX](u8::MAX) as
 /// well.
 ///
 /// Here's an example.
 ///
-/// ```ignore
-/// use r3bl_rs_utils_core::Stylesheet;
-/// use r3bl_rs_utils_macro::style;
+/// ```rust
+/// use r3bl_rs_utils_core::{TuiStyle, TuiColor, TuiStylesheet, RgbValue};
 ///
 /// // Turquoise:  TuiColor::Rgb { r: 51, g: 255, b: 255 }
 /// // Pink:       TuiColor::Rgb { r: 252, g: 157, b: 248 }
 /// // Blue:       TuiColor::Rgb { r: 55, g: 55, b: 248 }
 /// // Faded blue: TuiColor::Rgb { r: 85, g: 85, b: 255 }
-/// let mut stylesheet = Stylesheet::new();
+/// let mut stylesheet = TuiStylesheet::new();
 ///
-/// stylesheet.add_styles(vec![
-///   style! {
-///     id: style1
-///     attrib: [dim, bold]
-///     padding: 1
-///     color_bg: TuiColor::Rgb { r: 55, g: 55, b: 248 }
-///   },
-///   style! {
-///     id: style2
-///     padding: 1
-///     color_bg: TuiColor::Rgb { r: 85, g: 85, b: 255 }
-///   }
+/// let _ = stylesheet.add_styles(vec![
+///     TuiStyle {
+///         id: 1,
+///         bold: true,
+///         dim: true,
+///         color_fg: Some(TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })),
+///         .. Default::default()
+///     },
+///     TuiStyle {
+///         id: 1,
+///         bold: true,
+///         dim: true,
+///         color_fg: Some(TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })),
+///         .. Default::default()
+///     },
 /// ]);
 /// ```
 ///
 /// Here are the [crossterm docs on
 /// attributes](https://docs.rs/crossterm/0.25.0/crossterm/style/enum.Attribute.html)
 #[derive(Copy, Default, Clone, PartialEq, Eq, Serialize, Deserialize, Hash, GetSize)]
-pub struct Style {
+pub struct TuiStyle {
     pub id: u8,
     pub bold: bool,
     pub italic: bool,
@@ -83,24 +85,24 @@ pub struct Style {
 mod addition {
     use super::*;
 
-    impl Add for Style {
+    impl Add for TuiStyle {
         type Output = Self;
         fn add(self, other: Self) -> Self { add_styles(self, other) }
     }
 
-    pub fn add_styles(lhs: Style, rhs: Style) -> Style {
+    pub fn add_styles(lhs: TuiStyle, rhs: TuiStyle) -> TuiStyle {
         // Computed style has no id.
-        let mut new_style: Style = Style {
+        let mut new_style: TuiStyle = TuiStyle {
             id: u8::MAX,
             computed: true,
-            ..Style::default()
+            ..TuiStyle::default()
         };
 
         apply_style_flag(&mut new_style, &lhs);
         apply_style_flag(&mut new_style, &rhs);
 
         // other (if set) overrides new_style.
-        fn apply_style_flag(new_style: &mut Style, other: &Style) {
+        fn apply_style_flag(new_style: &mut TuiStyle, other: &TuiStyle) {
             if other.color_fg.is_some() {
                 new_style.color_fg = other.color_fg;
             }
@@ -145,22 +147,22 @@ mod addition {
         new_style
     }
 
-    impl AddAssign<Style> for Style {
-        fn add_assign(&mut self, rhs: Style) {
+    impl AddAssign<TuiStyle> for TuiStyle {
+        fn add_assign(&mut self, rhs: TuiStyle) {
             let sum = add_styles(*self, rhs);
             *self = sum;
         }
     }
 
-    impl AddAssign<&Style> for Style {
-        fn add_assign(&mut self, rhs: &Style) {
+    impl AddAssign<&TuiStyle> for TuiStyle {
+        fn add_assign(&mut self, rhs: &TuiStyle) {
             let sum = add_styles(*self, *rhs);
             *self = sum;
         }
     }
 
-    impl AddAssign<&Option<Style>> for Style {
-        fn add_assign(&mut self, rhs: &Option<Style>) {
+    impl AddAssign<&Option<TuiStyle>> for TuiStyle {
+        fn add_assign(&mut self, rhs: &Option<TuiStyle>) {
             if let Some(rhs) = rhs {
                 *self += rhs;
             }
@@ -171,14 +173,14 @@ mod addition {
 mod style_helpers {
     use super::*;
 
-    impl Display for Style {
+    impl Display for TuiStyle {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             let msg = format!("{self:?}");
             f.write_str(&msg)
         }
     }
 
-    impl Style {
+    impl TuiStyle {
         pub fn pretty_print(&self) -> String {
             let mut msg_vec: Vec<String> = Default::default();
 
@@ -226,7 +228,7 @@ mod style_helpers {
         }
     }
 
-    impl Debug for Style {
+    impl Debug for TuiStyle {
         fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
             let mut msg_vec: Vec<String> = vec![];
 
@@ -281,35 +283,8 @@ mod style_helpers {
 mod style_impl {
     use super::*;
 
-    impl Style {
+    impl TuiStyle {
         pub fn remove_bg_color(&mut self) { self.color_bg = None; }
-    }
-}
-
-mod convert_syntect_highlighting_style {
-    use super::*;
-
-    type SyntectStyle = syntect::highlighting::Style;
-    type SyntectFontStyle = syntect::highlighting::FontStyle;
-    type SyntectColor = syntect::highlighting::Color;
-
-    impl From<SyntectStyle> for Style {
-        fn from(st_style: SyntectStyle) -> Self {
-            Style {
-                color_fg: Some(st_style.foreground.into()),
-                color_bg: Some(st_style.background.into()),
-                bold: st_style.font_style.contains(SyntectFontStyle::BOLD),
-                italic: st_style.font_style.contains(SyntectFontStyle::ITALIC),
-                underline: st_style.font_style.contains(SyntectFontStyle::UNDERLINE),
-                ..Default::default()
-            }
-        }
-    }
-
-    impl From<SyntectColor> for TuiColor {
-        fn from(st_color: SyntectColor) -> Self {
-            TuiColor::Rgb(RgbValue::from_u8(st_color.r, st_color.g, st_color.b))
-        }
     }
 }
 
@@ -319,7 +294,7 @@ mod test_style {
 
     #[test]
     fn test_all_fields_in_style() {
-        let style = Style {
+        let style = TuiStyle {
             id: 1,
             bold: true,
             dim: true,
@@ -330,7 +305,7 @@ mod test_style {
             color_fg: color!(@red).into(),
             color_bg: color!(0, 0, 0).into(),
             padding: Some(ch!(10)),
-            ..Style::default()
+            ..TuiStyle::default()
         };
 
         assert!(!style.computed);
@@ -348,14 +323,14 @@ mod test_style {
 
     #[test]
     fn test_style() {
-        let style = Style {
+        let style = TuiStyle {
             id: 1,
             color_fg: color!(0, 0, 0).into(),
             color_bg: color!(0, 0, 0).into(),
             bold: true,
             dim: true,
             italic: true,
-            ..Style::default()
+            ..TuiStyle::default()
         };
 
         dbg!(&style);

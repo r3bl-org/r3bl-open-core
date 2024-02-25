@@ -276,7 +276,7 @@ mod tests {
         assert_eq2! {lhs_u_s.truncate_start_by_n_col(00.into()), "Hi "};
         assert_eq2! {rhs_u_s.truncate_start_by_n_col(00.into()), "😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
 
-        let acc = vec![lhs_u_s, rhs_u_s];
+        let acc = [lhs_u_s, rhs_u_s];
         assert_eq2! {acc[0].string, "Hi "};
         assert_eq2! {acc[1].string, "😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿."};
     }

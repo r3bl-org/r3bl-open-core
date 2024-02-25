@@ -18,7 +18,6 @@
 //! [`MTArena`] is defined here.
 
 use std::{fmt::Debug,
-          marker::{Send, Sync},
           sync::{Arc, RwLock},
           thread::{spawn, JoinHandle}};
 
