@@ -42,6 +42,22 @@ impl UnicodeString {
             None => acc.push(chunk),
         };
 
+        // Auto-Close the chunk if it is an opening delimiter.
+        match chunk {
+            "(" => acc.push(")"),
+            "[" => acc.push("]"),
+            "{" => acc.push("}"),
+            "<" => acc.push(">"),
+            "\"" => acc.push("\""),
+            "\'" => acc.push("\'"),
+            "`" => acc.push("`"),
+            // Overwrite the closing delimiter.
+            ")" | "]" | "}" | ">" => {
+                acc.pop();
+            }
+            _ => {}
+        }
+
         // Generate a new string from self.vec_segment and return it and the unicode width of the
         // character.
         let new_string = acc.join("");

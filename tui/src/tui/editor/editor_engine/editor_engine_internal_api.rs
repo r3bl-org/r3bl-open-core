@@ -144,6 +144,14 @@ impl EditorEngineInternalApi {
         content_mut::delete_selected(buffer, engine, with)
     }
 
+    pub fn wrap_selected_text_with_delimiters(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        open: &str,
+        close: &str,
+    ) -> Option<()> {
+        content_mut::wrap_selected_text_with_delimiters(buffer, engine, open, close)
+    }
     pub fn backspace_at_caret(
         buffer: &mut EditorBuffer,
         engine: &mut EditorEngine,
@@ -1545,6 +1553,104 @@ mod content_mut {
 
         buffer.clear_selection();
 
+        None
+    }
+
+    pub fn wrap_selected_text_with_delimiters(
+        buffer: &mut EditorBuffer,
+        engine: &mut EditorEngine,
+        open: &str,
+        close: &str,
+    ) -> Option<()> {
+        empty_check_early_return!(buffer, @None);
+        if buffer.get_selection_map().is_empty() {
+            return None;
+        }
+
+        let selection_map = buffer.get_selection_map().clone();
+        let map_indices = selection_map.get_ordered_indices();
+        let lines = buffer.get_lines().clone();
+
+        // Single Line Selection
+        if map_indices.len() == 1 {
+            let index = map_indices[0];
+            match selection_map.get(index) {
+                Some(selection) => {
+                    let line = &mut lines[ch!(@to_usize *index)].clone();
+                    let line_width = buffer.get_line_display_width(index);
+                    let before =
+                        line.clip_to_width(ch!(0), selection.start_display_col_index);
+                    let selected = line.clip_to_range(*selection);
+                    let after =
+                        line.clip_to_width(selection.end_display_col_index, line_width);
+                    let new_line =
+                        format!("{}{}{}{}{}", before, open, selected, close, after);
+                    validate_editor_buffer_change::apply_change(
+                        buffer,
+                        engine,
+                        |lines, _, _| {
+                            // Replace existing line w/ new line.
+                            let _ = replace(
+                                &mut lines[ch!(@to_usize * index)],
+                                UnicodeString::from(new_line),
+                            );
+                        },
+                    );
+                }
+                _ => {}
+            };
+        } else {
+            // Multi-Line Selection where we only need to modify starting and ending row index
+            let (start_row, end_row) =
+                (map_indices[0], map_indices[map_indices.len() - 1]);
+
+            match (selection_map.get(start_row), selection_map.get(end_row)) {
+                (Some(start_row_selection), Some(end_row_selection)) => {
+                    let (start_line, end_line) = (
+                        &mut lines[ch!(@to_usize * start_row)].clone(),
+                        &mut lines[ch!(@to_usize * end_row)].clone(),
+                    );
+
+                    let end_line_width = buffer.get_line_display_width(end_row);
+
+                    let (start_before, start_selected, end_selected, end_after) = (
+                        start_line.clip_to_width(
+                            ch!(0),
+                            start_row_selection.start_display_col_index,
+                        ),
+                        start_line.clip_to_range(*start_row_selection),
+                        end_line.clip_to_range(*end_row_selection),
+                        end_line.clip_to_width(
+                            end_row_selection.end_display_col_index,
+                            end_line_width,
+                        ),
+                    );
+
+                    let new_start_line =
+                        format!("{}{}{}", start_before, open, start_selected);
+                    let new_end_line = format!("{}{}{}", end_selected, close, end_after);
+
+                    validate_editor_buffer_change::apply_change(
+                        buffer,
+                        engine,
+                        |lines, _, _| {
+                            // Replace existing line w/ new line.
+                            let _ = replace(
+                                &mut lines[ch!(@to_usize * start_row)],
+                                UnicodeString::from(new_start_line),
+                            );
+
+                            let _ = replace(
+                                &mut lines[ch!(@to_usize * end_row)],
+                                UnicodeString::from(new_end_line),
+                            );
+                        },
+                    );
+                }
+                _ => {}
+            };
+        }
+        buffer.clear_selection();
         None
     }
 
