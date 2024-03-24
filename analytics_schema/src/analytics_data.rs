@@ -25,6 +25,12 @@ pub struct AnalyticsRecord {
     pub events: Vec<AnalyticsEvent>,
 }
 
+impl Default for AnalyticsRecord {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AnalyticsRecord {
     pub fn new() -> AnalyticsRecord {
         let events = Vec::new();
@@ -53,6 +59,7 @@ pub struct AnalyticsEvent {
 impl AnalyticsEvent {
     /// This is meant to be called on the client, before the data is sent to the server.
     /// The time is not set here since it will be set on the server-side.
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(
         proxy_user_id: String,
         proxy_machine_id: String,

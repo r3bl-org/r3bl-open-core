@@ -100,13 +100,11 @@ pub fn show_exit_message() {
                 "Run `cargo install r3bl-cmdr` to upgrade 🙌."
             );
 
-            let lolcat_exit_msg = ColorWheel::default().colorize_into_string(
+            ColorWheel::default().colorize_into_string(
                 &UnicodeString::from(plain_text_exit_msg),
                 GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
                 TextColorizationPolicy::ColorEachCharacter(None),
-            );
-
-            lolcat_exit_msg
+            )
         });
     } else {
         println!("{}", {

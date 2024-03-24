@@ -282,31 +282,25 @@ pub mod history {
 
         fn increment_index(&mut self) {
             // Don't do anything if is empty.
-            match self.get_last_index() {
-                Some(max_index) => {
-                    // Make sure it doesn't go past the end.
-                    if self.current_index == ch!(@to_isize max_index) {
-                        return;
-                    }
-                    // Increment index.
-                    self.current_index += 1;
+            if let Some(max_index) = self.get_last_index() {
+                // Make sure it doesn't go past the end.
+                if self.current_index == ch!(@to_isize max_index) {
+                    return;
                 }
-                _ => (),
+                // Increment index.
+                self.current_index += 1;
             }
         }
 
         fn decrement_index(&mut self) {
             // Don't do anything if is empty.
-            match self.get_current_index() {
-                Some(current_index) => {
-                    // Make sure it doesn't go past the start.
-                    if current_index == 0 {
-                        return;
-                    }
-                    // Decrement index.
-                    self.current_index -= 1;
+            if let Some(current_index) = self.get_current_index() {
+                // Make sure it doesn't go past the start.
+                if current_index == 0 {
+                    return;
                 }
-                _ => (),
+                // Decrement index.
+                self.current_index -= 1;
             }
         }
 
@@ -362,8 +356,6 @@ pub mod history {
 
 #[cfg(test)]
 mod history_tests {
-    use r3bl_rs_utils_core::UnicodeString;
-
     use super::*;
 
     #[test]

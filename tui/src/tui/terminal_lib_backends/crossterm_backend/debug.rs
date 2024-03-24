@@ -25,8 +25,8 @@ pub struct CrosstermDebugFormatRenderOp;
 
 fn format_print_text(
     op_name: &str,
-    text: &String,
-    maybe_style: &Option<Style>,
+    text: &str,
+    maybe_style: &Option<TuiStyle>,
 ) -> String {
     match maybe_style {
         Some(style) => {

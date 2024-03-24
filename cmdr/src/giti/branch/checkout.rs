@@ -35,7 +35,7 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                                              NightBlue,
                                              Orange,
                                              SlateGray},
-            giti::{clap_config::clap_config::BranchSubcommand,
+            giti::{clap_config::BranchSubcommand,
                    report_unknown_error_and_propagate,
                    single_select_instruction_header,
                    ui_strings::UIStrings::*,
@@ -99,7 +99,7 @@ pub fn try_checkout_branch(
                         get_formatted_modified_files(output);
 
                     // If user has files that are modified (unstaged or staged), but not committed.
-                    if modified_files.len() > 0 {
+                    if !modified_files.is_empty() {
                         let terminal_width = get_terminal_width();
 
                         let one_modified_file = &ModifiedFileOnCurrentBranch.to_string();
@@ -287,7 +287,7 @@ pub fn try_checkout_branch(
         }
     }
 
-    return Ok(try_run_command_result);
+    Ok(try_run_command_result)
 }
 
 mod branch_checkout_formatting {
@@ -305,11 +305,11 @@ mod branch_checkout_formatting {
         let mut modified_files_vec: Vec<String> = Vec::new();
         let modified_files = String::from_utf8_lossy(&output.stdout).to_string();
         // Early return if there are no modified files.
-        if modified_files.len() == 0 {
+        if modified_files.is_empty() {
             return modified_files_vec;
         }
         let modified_files = modified_files.trim();
-        let modified_files_vector: Vec<&str> = modified_files.split("\n").collect();
+        let modified_files_vector: Vec<&str> = modified_files.split('\n').collect();
         // Remove all the spaces from start and end of each modified file.
         let modified_files_vector: Vec<String> = modified_files_vector
             .iter()

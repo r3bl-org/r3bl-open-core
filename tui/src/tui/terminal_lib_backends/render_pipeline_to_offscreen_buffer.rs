@@ -34,8 +34,8 @@ impl RenderPipeline {
 
         for z_order in ZOrder::get_render_order().iter() {
             if let Some(render_ops_vec) = self.get(z_order) {
-                for (_render_ops_index, render_ops) in render_ops_vec.iter().enumerate() {
-                    for (_render_op_index, render_op) in render_ops.iter().enumerate() {
+                for render_ops in render_ops_vec.iter() {
+                    for render_op in render_ops.iter() {
                         process_render_op(
                             render_op,
                             window_size,
@@ -127,7 +127,7 @@ fn process_render_op(
 /// ```
 pub fn print_plain_text(
     arg_text_ref: &str,
-    maybe_style_ref: &Option<Style>,
+    maybe_style_ref: &Option<TuiStyle>,
     my_offscreen_buffer: &mut OffscreenBuffer,
     maybe_max_display_col_count: Option<ChUnit>,
 ) -> CommonResult<Position> {
@@ -196,7 +196,7 @@ pub fn print_plain_text(
     let mut insertion_col_index = display_col_index;
     let mut already_inserted_display_width = ch!(0);
 
-    let maybe_style: Option<Style> = {
+    let maybe_style: Option<TuiStyle> = {
         if let Some(maybe_style) = maybe_style_ref {
             // We get the attributes from `maybe_style_ref`.
             let mut it = *maybe_style;
@@ -207,7 +207,7 @@ pub fn print_plain_text(
         } else if my_offscreen_buffer.my_fg_color.is_some()
             || my_offscreen_buffer.my_bg_color.is_some()
         {
-            Some(Style {
+            Some(TuiStyle {
                 color_fg: my_offscreen_buffer.my_fg_color,
                 color_bg: my_offscreen_buffer.my_bg_color,
                 ..Default::default()
@@ -332,7 +332,7 @@ pub fn print_plain_text(
 /// taken into account when filling the offscreen buffer.
 pub fn print_text_with_attributes(
     arg_text_ref: &str,
-    maybe_style_ref: &Option<Style>,
+    maybe_style_ref: &Option<TuiStyle>,
     my_offscreen_buffer: &mut OffscreenBuffer,
     maybe_max_display_col_count: Option<ChUnit>,
 ) -> CommonResult<Position> {
@@ -346,7 +346,7 @@ pub fn print_text_with_attributes(
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_macro::style;
+    use r3bl_rs_utils_macro::tui_style;
 
     use super::*;
 
@@ -364,7 +364,7 @@ mod tests {
             let text = "hello12345😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
-                style! { attrib: [dim, bold, italic] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+                tui_style! { attrib: [dim, bold, italic] color_fg: color!(@cyan) color_bg: color!(@cyan) },
             );
             my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
             my_offscreen_buffer.my_fg_color = Some(color!(@green));
@@ -386,7 +386,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("h"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -395,7 +395,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("o"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -404,7 +404,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("1"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -413,7 +413,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("5"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold, italic] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -427,7 +427,7 @@ mod tests {
             let text = "hello1234😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
-                style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+                tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
             );
             my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
             my_offscreen_buffer.my_fg_color = Some(color!(@green));
@@ -449,7 +449,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("h"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -458,7 +458,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("o"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -467,7 +467,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("1"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -489,7 +489,7 @@ mod tests {
             let text = "hello12345😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
-                style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+                tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
             );
             my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
             my_offscreen_buffer.my_fg_color = Some(color!(@green));
@@ -511,7 +511,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("h"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -520,7 +520,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("o"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -529,7 +529,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("1"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -538,7 +538,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("5"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -554,7 +554,7 @@ mod tests {
             let text = "hello1234😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
-                style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+                tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
             );
             my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
             my_offscreen_buffer.my_fg_color = Some(color!(@green));
@@ -576,7 +576,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("h"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -585,7 +585,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("o"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -594,7 +594,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("1"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -609,7 +609,7 @@ mod tests {
             let text = "hello123😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
-                style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+                tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
             );
             my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
             my_offscreen_buffer.my_fg_color = Some(color!(@green));
@@ -631,7 +631,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("h"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -640,7 +640,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("o"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -649,7 +649,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("1"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -658,7 +658,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("😃"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -673,7 +673,7 @@ mod tests {
             let text = "hello12😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
-                style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
+                tui_style! { attrib: [dim, bold] color_fg: color!(@cyan) color_bg: color!(@cyan) },
             );
             my_offscreen_buffer.my_pos = position! { col_index: 0, row_index: 0 };
             my_offscreen_buffer.my_fg_color = Some(color!(@green));
@@ -712,7 +712,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("h"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -721,7 +721,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("o"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -730,7 +730,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("1"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -739,7 +739,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("😃"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -774,7 +774,7 @@ mod tests {
             RenderOp::SetBgColor(color!(@blue)),
             RenderOp::MoveCursorPositionAbs(position! { col_index: 0, row_index: 0 }),
             RenderOp::PaintTextWithAttributes(
-                "hello12😃".to_string(), Some(style! { attrib: [dim, bold] })),
+                "hello12😃".to_string(), Some(tui_style! { attrib: [dim, bold] })),
             RenderOp::ResetColor
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
@@ -805,7 +805,7 @@ mod tests {
             PixelChar::PlainText {
                 content: GraphemeClusterSegment::from("h"),
                 maybe_style: Some(
-                    style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                    tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                 ),
             }
         );
@@ -814,7 +814,7 @@ mod tests {
             PixelChar::PlainText {
                 content: GraphemeClusterSegment::from("😃"),
                 maybe_style: Some(
-                    style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                    tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                 ),
             }
         );
@@ -850,13 +850,13 @@ mod tests {
             RenderOp::SetBgColor(color!(@blue)),
             RenderOp::MoveCursorPositionAbs(position! { col_index: 2, row_index: 0 }),
             RenderOp::PaintTextWithAttributes(
-                "hello😃".to_string(), Some(style! { attrib: [dim, bold] })),
+                "hello😃".to_string(), Some(tui_style! { attrib: [dim, bold] })),
             RenderOp::ResetColor,
             RenderOp::SetFgColor(color!(@green)),
             RenderOp::SetBgColor(color!(@blue)),
             RenderOp::MoveCursorPositionAbs(position! { col_index: 4, row_index: 1 }),
             RenderOp::PaintTextWithAttributes(
-                "world".to_string(), Some(style! { attrib: [dim, bold] })),
+                "world".to_string(), Some(tui_style! { attrib: [dim, bold] })),
             RenderOp::ResetColor,
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
@@ -901,7 +901,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("h"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -910,7 +910,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("😃"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -929,7 +929,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("w"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );
@@ -938,7 +938,7 @@ mod tests {
                 PixelChar::PlainText {
                     content: GraphemeClusterSegment::from("d"),
                     maybe_style: Some(
-                        style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
+                        tui_style! { attrib: [dim, bold] color_fg: color!(@green) color_bg: color!(@blue) }
                     ),
                 }
             );

@@ -48,7 +48,7 @@ where
     _phantom: std::marker::PhantomData<AS>,
 }
 
-impl<'a, S, AS> Component<S, AS> for DialogComponent<S, AS>
+impl<S, AS> Component<S, AS> for DialogComponent<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send + HasDialogBuffers,
     AS: Debug + Default + Clone + Sync + Send,
@@ -197,7 +197,7 @@ where
                     "🐝 DialogComponent::handle_event: dialog_buffer is None for id: {:?}",
                     id
                 );
-                return CommonError::new(CommonErrorType::NotFound, &msg);
+                CommonError::new(CommonErrorType::NotFound, &msg)
             }
         }
     }

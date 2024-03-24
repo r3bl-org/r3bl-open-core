@@ -124,14 +124,10 @@ pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
 ///
 /// Here's a usage example.
 ///
-/// ```ignore
-/// style! {
-///   id: "my_style",          /* Optional. */
-///   attrib: [dim, bold]      /* Optional. */
-///   padding: 10,             /* Optional. */
-///   color_fg: TuiColor::Blue, /* Optional. */
-///   color_bg: TuiColor::Red,  /* Optional. */
-/// }
+/// ```rust
+/// use r3bl_rs_utils_macro::{tui_style};
+/// use r3bl_rs_utils_core::{TuiStyle, TuiColor, RgbValue};
+/// let _ = tui_style!(attrib: [dim]);
 /// ```
 ///
 /// - All the attributes are:
@@ -141,7 +137,9 @@ pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
 ///   - Rgb value.
 ///   - Variable holding either of the above.
 #[proc_macro]
-pub fn style(input: TokenStream) -> TokenStream { make_style::fn_proc_macro_impl(input) }
+pub fn tui_style(input: TokenStream) -> TokenStream {
+    make_style::fn_proc_macro_impl(input)
+}
 
 #[proc_macro]
 pub fn make_struct_safe_to_share_and_mutate(input: TokenStream) -> TokenStream {

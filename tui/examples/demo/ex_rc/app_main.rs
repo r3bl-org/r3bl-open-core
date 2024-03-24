@@ -19,7 +19,7 @@ use std::fmt::Debug;
 
 use chrono::{DateTime, Local};
 use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::style;
+use r3bl_rs_utils_macro::tui_style;
 use r3bl_tui::*;
 use tokio::{sync::mpsc::{self, Sender},
             time,
@@ -223,7 +223,7 @@ mod app_main_impl_app_trait {
 
             ComponentRegistry::route_event_to_focused_component(
                 global_data,
-                input_event.clone(),
+                input_event,
                 component_registry_map,
                 has_focus,
             )
@@ -390,8 +390,7 @@ mod populate_component_registry {
                 ..Default::default()
             };
 
-            let it = EditorComponent::new_boxed(id, config_options, on_buffer_change);
-            it
+            EditorComponent::new_boxed(id, config_options, on_buffer_change)
         };
 
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
@@ -406,11 +405,11 @@ mod populate_component_registry {
 mod stylesheet {
     use super::*;
 
-    pub fn create_stylesheet() -> CommonResult<Stylesheet> {
+    pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
             let id = Id::EditorStyleNameDefault.into();
-            stylesheet! {
-              style! {
+            tui_stylesheet! {
+              tui_style! {
                 id: id
                 padding: 1
                 // These are ignored due to syntax highlighting.
@@ -432,13 +431,13 @@ mod status_bar {
         window_size: Size,
         state: &State,
     ) {
-        let mut it = styled_texts!();
+        let mut it = tui_styled_texts!();
 
         let lolcat_st = {
             let date_time: DateTime<Local> = Local::now();
             let time_str = date_time.format("%H:%M:%S").to_string();
             let time_us = UnicodeString::from(format!(" 🦜 {} ", time_str));
-            let style = style! {
+            let style = tui_style! {
                 color_fg: TuiColor::Basic(ANSIBasicColor::Black)
             };
             app.data.lolcat_bg.colorize_into_styled_texts(
@@ -450,19 +449,19 @@ mod status_bar {
 
         it += lolcat_st;
 
-        it += styled_text! { @style:style!(attrib: [dim, bold]) ,      @text: " Exit 👋 : "};
-        it += styled_text! { @style:style!(attrib: [dim, underline]) , @text: "Ctrl + q"};
+        it += tui_styled_text! { @style:tui_style!(attrib: [dim, bold]) ,      @text: " Exit 👋 : "};
+        it += tui_styled_text! { @style:tui_style!(attrib: [dim, underline]) , @text: "Ctrl + q"};
 
         if state.current_slide_index < FILE_CONTENT_ARRAY.len() - 1 {
-            it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: " ┊ "};
-            it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: "Next 👉 : "};
-            it += styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + n"};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: " ┊ "};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: "Next 👉 : "};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + n"};
         }
 
         if state.current_slide_index > 0 {
-            it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: " ┊ "};
-            it += styled_text! { @style: style!(attrib: [dim, bold]) ,      @text: "Prev 👈 : "};
-            it += styled_text! { @style: style!(attrib: [dim, underline]) , @text: "Ctrl + p"};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: " ┊ "};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: "Prev 👈 : "};
+            it += tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + p"};
         }
 
         let display_width = it.display_width();

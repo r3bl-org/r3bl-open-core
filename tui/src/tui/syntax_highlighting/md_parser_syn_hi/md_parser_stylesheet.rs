@@ -21,15 +21,15 @@
 
 use r3bl_ansi_color::{global_color_support, ColorSupport};
 use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::style;
+use r3bl_rs_utils_macro::tui_style;
 
 use crate::*;
 
 /// This style is for any selected range in the document.
-pub fn get_selection_style() -> Style {
+pub fn get_selection_style() -> TuiStyle {
     let color_fg = TuiColor::Rgb(RgbValue::from_hex("#dddddd"));
     let color_bg = TuiColor::Rgb(RgbValue::from_hex("#ff00ff"));
-    style! {
+    tui_style! {
         color_fg: color_fg
         color_bg: color_bg
     }
@@ -37,8 +37,8 @@ pub fn get_selection_style() -> Style {
 
 /// This style is for the foreground text of the entire document. This is the default
 /// style. It is overridden by other styles like bold, italic, etc. below.
-pub fn get_foreground_style() -> Style {
-    style! {
+pub fn get_foreground_style() -> TuiStyle {
+    tui_style! {
         color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#c1b3d0")),
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(244)), // Grey50.
@@ -51,17 +51,17 @@ pub fn get_foreground_style() -> Style {
 /// This style is for things like `[`, `]`, `*`, "`", etc. They are dimmed so that they
 /// don't distract from the main content they are wrapping like a link or inline code
 /// block, etc.
-pub fn get_foreground_dim_style() -> Style {
+pub fn get_foreground_dim_style() -> TuiStyle {
     get_foreground_style()
-        + style! {
+        + tui_style! {
             attrib: [dim]
             color_fg: TuiColor::Rgb(RgbValue::from_hex("#5f5f5f"))
         }
 }
 
 /// This is just for the bold content, not the enclosing `**`.
-pub fn get_bold_style() -> Style {
-    style! {
+pub fn get_bold_style() -> TuiStyle {
+    tui_style! {
         attrib: [bold]
         color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#dacd24")),
@@ -73,8 +73,8 @@ pub fn get_bold_style() -> Style {
 }
 
 /// This is just for the bold content, not the enclosing `*`.
-pub fn get_italic_style() -> Style {
-    style! {
+pub fn get_italic_style() -> TuiStyle {
+    tui_style! {
         attrib: [italic]
         color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#a59e3a")),
@@ -86,8 +86,8 @@ pub fn get_italic_style() -> Style {
 }
 
 /// This is just for the bold content, not the enclosing `***`.
-pub fn get_bold_italic_style() -> Style {
-    style! {
+pub fn get_bold_italic_style() -> TuiStyle {
+    tui_style! {
         attrib: [bold, italic]
         color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#dacd24")),
@@ -99,8 +99,8 @@ pub fn get_bold_italic_style() -> Style {
 }
 
 /// This is just for the bold content, not the enclosing "`".
-pub fn get_inline_code_style() -> Style {
-    style! {
+pub fn get_inline_code_style() -> TuiStyle {
+    tui_style! {
         color_fg: match global_color_support::detect(){
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ce55b7")),
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Magenta),
@@ -111,8 +111,8 @@ pub fn get_inline_code_style() -> Style {
 }
 
 /// This is just for the link text not the enclosing `[` and `]`.
-pub fn get_link_text_style() -> Style {
-    style! {
+pub fn get_link_text_style() -> TuiStyle {
+    tui_style! {
         color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4f86ed")),
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(33)), // DodgerBlue1.
@@ -123,8 +123,8 @@ pub fn get_link_text_style() -> Style {
 }
 
 /// This is just for the link url not the enclosing `(` and `)`.
-pub fn get_link_url_style() -> Style {
-    style! {
+pub fn get_link_url_style() -> TuiStyle {
+    tui_style! {
         attrib: [underline]
         color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#16adf3")),
@@ -136,8 +136,8 @@ pub fn get_link_url_style() -> Style {
 }
 
 /// This is for the entire checkbox span (checked).
-pub fn get_checkbox_checked_style() -> Style {
-    style! {
+pub fn get_checkbox_checked_style() -> TuiStyle {
+    tui_style! {
         attrib: [bold, dim]
         color_fg: match global_color_support::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::DarkMagenta),
@@ -147,8 +147,8 @@ pub fn get_checkbox_checked_style() -> Style {
 }
 
 /// This is for the entire checkbox span (unchecked).
-pub fn get_checkbox_unchecked_style() -> Style {
-    style! {
+pub fn get_checkbox_unchecked_style() -> TuiStyle {
+    tui_style! {
         attrib: [bold]
         color_fg: match global_color_support::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Green),
@@ -158,8 +158,8 @@ pub fn get_checkbox_unchecked_style() -> Style {
 }
 
 /// This is for the bullet or numbered bullet of a list item, not the content.
-pub fn get_list_bullet_style() -> Style {
-    style! {
+pub fn get_list_bullet_style() -> TuiStyle {
+    tui_style! {
         color_fg: match global_color_support::detect() {
             ColorSupport::Grayscale => TuiColor::Basic(ANSIBasicColor::Yellow), // There is no equivalent.
             _ => TuiColor::Rgb(RgbValue::from_hex("#f8f8a6")), // Pale yellow.
@@ -167,19 +167,19 @@ pub fn get_list_bullet_style() -> Style {
     }
 }
 
-pub fn get_code_block_lang_style() -> Style {
+pub fn get_code_block_lang_style() -> TuiStyle {
     get_inline_code_style()
-        + style! {
+        + tui_style! {
             attrib: [italic]
         }
 }
 
-pub fn get_code_block_content_style() -> Style { get_inline_code_style() }
+pub fn get_code_block_content_style() -> TuiStyle { get_inline_code_style() }
 
 /// - Bg color: #4f86ed
 /// - Fg color: black
-pub fn get_metadata_title_marker_style() -> Style {
-    style! {
+pub fn get_metadata_title_marker_style() -> TuiStyle {
+    tui_style! {
         color_fg: TuiColor::Basic(ANSIBasicColor::Black)
         color_bg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4f86ed")), // Soft blue.
@@ -192,8 +192,8 @@ pub fn get_metadata_title_marker_style() -> Style {
 
 /// - Fg color: #4fcbd4
 /// - Bg color: #444444
-pub fn get_metadata_title_value_style() -> Style {
-    style! {
+pub fn get_metadata_title_value_style() -> TuiStyle {
+    tui_style! {
         color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#4fcbd4")), // Moderate cyan.
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(51)), // Cyan1.
@@ -211,8 +211,8 @@ pub fn get_metadata_title_value_style() -> Style {
 
 /// - Bg color: #ad83da
 /// - Fg color: black
-pub fn get_metadata_tags_marker_style() -> Style {
-    style! {
+pub fn get_metadata_tags_marker_style() -> TuiStyle {
+    tui_style! {
         color_fg: TuiColor::Basic(ANSIBasicColor::Black)
         color_bg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#ad83da")), // Very soft violet.
@@ -225,8 +225,8 @@ pub fn get_metadata_tags_marker_style() -> Style {
 
 /// - Fg color: #e2a1e3
 /// - Bg color: #303030
-pub fn get_metadata_tags_values_style() -> Style {
-    style! {
+pub fn get_metadata_tags_values_style() -> TuiStyle {
+    tui_style! {
         color_fg: match global_color_support::detect() {
             ColorSupport::Truecolor => TuiColor::Rgb(RgbValue::from_hex("#e2a1e3")), // Soft violet.
             ColorSupport::Ansi256 => TuiColor::Ansi(AnsiValue::new(45)), // Turquoise2

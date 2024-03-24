@@ -27,7 +27,7 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                                              LizardGreen,
                                              MoonlightBlue,
                                              SlateGray},
-            giti::{clap_config::clap_config::BranchSubcommand,
+            giti::{clap_config::BranchSubcommand,
                    giti_ui_templates::report_unknown_error_and_propagate,
                    multi_select_instruction_header,
                    single_select_instruction_header,
@@ -263,7 +263,7 @@ mod try_delete_branch_inner {
         command
     }
 
-    pub fn display_one_branch_deleted_success_message(branches: &Vec<String>) {
+    pub fn display_one_branch_deleted_success_message(branches: &[String]) {
         let lizard_green = LizardGreen.as_ansi_color();
         let branch_name = &branches[0].to_string();
         let deleted_branch = AnsiStyledText {
@@ -328,11 +328,10 @@ pub fn get_branches() -> CommonResult<Vec<String>> {
 
     let current_branch_result_output = show_current_branch_command.output();
 
-    let current_branch;
-    match current_branch_result_output {
+    let current_branch = match current_branch_result_output {
         Ok(output) => {
             let output_string = String::from_utf8_lossy(&output.stdout);
-            current_branch = output_string.to_string().trim_end_matches('\n').to_string();
+            output_string.to_string().trim_end_matches('\n').to_string()
         }
         // Can't even execute output(), something unknown has gone wrong. Propagate the
         // error.
@@ -364,8 +363,7 @@ pub fn try_get_current_branch() -> CommonResult<String> {
 
     let result_output = command.output();
 
-    let current_branch;
-    match result_output {
+    let current_branch = match result_output {
         // Can't even execute output(), something unknown has gone wrong. Propagate the
         // error.
         Err(error) => {
@@ -373,8 +371,9 @@ pub fn try_get_current_branch() -> CommonResult<String> {
         }
         Ok(output) => {
             let output_string = String::from_utf8_lossy(&output.stdout);
-            current_branch = output_string.to_string().trim_end_matches('\n').to_string();
+            output_string.to_string().trim_end_matches('\n').to_string()
         }
     };
+
     Ok(current_branch)
 }

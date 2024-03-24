@@ -291,9 +291,7 @@ mod pixel_char_line_impl {
                     Exists,
                 }
 
-                pub fn does_current_range_exist(
-                    current_range: &Vec<usize>,
-                ) -> CurrentRange {
+                pub fn does_current_range_exist(current_range: &[usize]) -> CurrentRange {
                     match current_range.is_empty() {
                         true => CurrentRange::DoesNotExist,
                         false => CurrentRange::Exists,
@@ -357,7 +355,7 @@ pub enum PixelChar {
     Spacer,
     PlainText {
         content: GraphemeClusterSegment,
-        maybe_style: Option<Style>,
+        maybe_style: Option<TuiStyle>,
     },
 }
 
@@ -423,7 +421,7 @@ pub trait OffscreenBufferPaint {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_macro::style;
+    use r3bl_rs_utils_macro::tui_style;
 
     use super::*;
 
@@ -450,11 +448,11 @@ mod tests {
             OffscreenBuffer::new_with_capacity_initialized(window_size);
         my_offscreen_buffer.buffer[0][0] = PixelChar::PlainText {
             content: GraphemeClusterSegment::from("a"),
-            maybe_style: Some(style! {color_bg: color!(@green) }),
+            maybe_style: Some(tui_style! {color_bg: color!(@green) }),
         };
         my_offscreen_buffer.buffer[1][9] = PixelChar::PlainText {
             content: GraphemeClusterSegment::from("z"),
-            maybe_style: Some(style! {color_bg: color!(@red) }),
+            maybe_style: Some(tui_style! {color_bg: color!(@red) }),
         };
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
         my_offscreen_buffer.clear();

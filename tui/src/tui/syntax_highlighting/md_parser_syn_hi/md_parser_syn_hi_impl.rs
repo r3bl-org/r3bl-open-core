@@ -18,7 +18,7 @@
 //! This module is responsible for converting a [MdDocument] into a [StyleUSSpanLines].
 
 use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::style;
+use r3bl_rs_utils_macro::tui_style;
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
 use crate::{constants::*, *};
@@ -33,7 +33,7 @@ use crate::{constants::*, *};
 /// - `current_box_computed_style` - The computed style of the box that the editor is in.
 pub fn try_parse_and_highlight(
     editor_text_lines: &Vec<US>,
-    maybe_current_box_computed_style: &Option<Style>,
+    maybe_current_box_computed_style: &Option<TuiStyle>,
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
 ) -> CommonResult<StyleUSSpanLines> {
     // Convert the editor text into a string.
@@ -68,7 +68,7 @@ mod tests_try_parse_and_highlight {
     fn from_vec_us() -> CommonResult<()> {
         throws!({
             let editor_text_lines = vec![US::new("Hello"), US::new("World")];
-            let current_box_computed_style = style! {
+            let current_box_computed_style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
 
@@ -116,7 +116,7 @@ impl PrettyPrintDebug for StyleUSSpanLines {
 impl StyleUSSpanLines {
     pub fn from_document(
         document: &MdDocument<'_>,
-        maybe_current_box_computed_style: &Option<Style>,
+        maybe_current_box_computed_style: &Option<TuiStyle>,
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         let mut lines = StyleUSSpanLines::default();
@@ -151,7 +151,7 @@ impl StyleUSSpanLines {
     /// - last line       : "```": `get_foreground_dim_style()`
     pub fn from_block_codeblock(
         code_block_lines: &CodeBlockLines<'_>,
-        maybe_current_box_computed_style: &Option<Style>,
+        maybe_current_box_computed_style: &Option<TuiStyle>,
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         mod inner {
@@ -161,7 +161,7 @@ impl StyleUSSpanLines {
 
             pub fn try_use_syntect(
                 code_block_lines: &CodeBlockLines<'_>,
-                maybe_current_box_computed_style: &Option<Style>,
+                maybe_current_box_computed_style: &Option<TuiStyle>,
                 maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
             ) -> Option<StyleUSSpanLines> {
                 let mut acc_lines_output = StyleUSSpanLines::default();
@@ -234,7 +234,7 @@ impl StyleUSSpanLines {
 
             pub fn use_fallback(
                 code_block_lines: &CodeBlockLines<'_>,
-                maybe_current_box_computed_style: &Option<Style>,
+                maybe_current_box_computed_style: &Option<TuiStyle>,
             ) -> StyleUSSpanLines {
                 let mut acc_lines_output = StyleUSSpanLines::default();
 
@@ -294,7 +294,7 @@ impl StyleUSSpanLines {
 
     pub fn from_block_smart_list(
         input_ul_lines: &Lines<'_>,
-        maybe_current_box_computed_style: &Option<Style>,
+        maybe_current_box_computed_style: &Option<TuiStyle>,
     ) -> Self {
         let mut acc_lines_output = StyleUSSpanLines::default();
 
@@ -320,7 +320,7 @@ impl StyleUSSpanLines {
     /// is a [StyleUSSpanLines] (and not a single line).
     pub fn from_block(
         block: &MdBlockElement<'_>,
-        maybe_current_box_computed_style: &Option<Style>,
+        maybe_current_box_computed_style: &Option<TuiStyle>,
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         let mut lines = StyleUSSpanLines::default();
@@ -393,7 +393,7 @@ enum HyperlinkType {
 impl StyleUSSpan {
     fn format_hyperlink_data(
         link_data: &HyperlinkData<'_>,
-        maybe_current_box_computed_style: &Option<Style>,
+        maybe_current_box_computed_style: &Option<TuiStyle>,
         hyperlink_type: HyperlinkType,
     ) -> Vec<Self> {
         let link_text = link_data.text.to_string();
@@ -441,7 +441,7 @@ impl StyleUSSpan {
     ///    [StyleUSSpanLine::from_block](StyleUSSpanLine::from_block).
     pub fn from_fragment(
         fragment: &MdLineFragment<'_>,
-        maybe_current_box_computed_style: &Option<Style>,
+        maybe_current_box_computed_style: &Option<TuiStyle>,
     ) -> Vec<Self> {
         match fragment {
             MdLineFragment::OrderedListBullet {
@@ -578,7 +578,7 @@ impl PrettyPrintDebug for StyleUSSpanLine {
 impl StyleUSSpanLine {
     pub fn from_fragments(
         fragments_in_one_line: &FragmentsInOneLine<'_>,
-        maybe_current_box_computed_style: &Option<Style>,
+        maybe_current_box_computed_style: &Option<TuiStyle>,
     ) -> Self {
         let mut acc = vec![];
 
@@ -605,7 +605,7 @@ impl StyleUSSpanLine {
     /// ```
     pub fn from_heading_data(
         heading_data: &HeadingData<'_>,
-        maybe_current_box_computed_style: &Option<Style>,
+        maybe_current_box_computed_style: &Option<TuiStyle>,
     ) -> Self {
         let mut color_wheel = ColorWheel::from_heading_data(heading_data);
         let mut line = StyleUSSpanLine::default();
@@ -614,7 +614,7 @@ impl StyleUSSpanLine {
             let heading_level = US::from(heading_data.heading_level.pretty_print_debug());
             let my_style = {
                 maybe_current_box_computed_style.unwrap_or_default()
-                    + style! {
+                    + tui_style! {
                         attrib: [dim]
                     }
             };
@@ -640,8 +640,8 @@ impl StyleUSSpanLine {
     }
 }
 
-impl From<StyledTexts> for StyleUSSpanLine {
-    fn from(styled_texts: StyledTexts) -> Self {
+impl From<TuiStyledTexts> for StyleUSSpanLine {
+    fn from(styled_texts: TuiStyledTexts) -> Self {
         let mut it = StyleUSSpanLine::default();
         // More info on `into_iter`: <https://users.rust-lang.org/t/move-value-from-an-iterator/46172>
         for styled_text in styled_texts.items.into_iter() {
@@ -655,7 +655,7 @@ impl From<StyledTexts> for StyleUSSpanLine {
 
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
-    use r3bl_rs_utils_macro::style;
+    use r3bl_rs_utils_macro::tui_style;
 
     use super::*;
 
@@ -667,7 +667,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_checkbox_unchecked() {
             let fragment = MdLineFragment::Checkbox(false);
-            let style = style! {
+            let style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
@@ -675,7 +675,7 @@ mod tests_style_us_span_lines_from {
             assert_eq2!(actual.len(), 1);
 
             assert_eq2!(
-                actual.get(0).unwrap(),
+                actual.first().unwrap(),
                 &StyleUSSpan::new(
                     style + get_checkbox_unchecked_style(),
                     US::from(UNCHECKED_OUTPUT)
@@ -688,7 +688,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_checkbox_checked() {
             let fragment = MdLineFragment::Checkbox(true);
-            let style = style! {
+            let style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
@@ -696,7 +696,7 @@ mod tests_style_us_span_lines_from {
             assert_eq2!(actual.len(), 1);
 
             assert_eq2!(
-                actual.get(0).unwrap(),
+                actual.first().unwrap(),
                 &StyleUSSpan::new(
                     style + get_checkbox_checked_style(),
                     US::from(CHECKED_OUTPUT)
@@ -712,7 +712,7 @@ mod tests_style_us_span_lines_from {
                 text: "R3BL",
                 url: "https://r3bl.com",
             });
-            let style = style! {
+            let style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
@@ -720,7 +720,7 @@ mod tests_style_us_span_lines_from {
             assert_eq2!(actual.len(), 6);
 
             // "!["
-            let actual = actual.get(0).unwrap();
+            let actual = actual.first().unwrap();
             let actual_style_color_fg = actual
                 .style
                 .color_fg
@@ -729,7 +729,7 @@ mod tests_style_us_span_lines_from {
                 actual,
                 &StyleUSSpan::new(
                     style
-                        + style! {
+                        + tui_style! {
                             attrib: [dim]
                             color_fg: actual_style_color_fg
                             color_bg: TuiColor::Basic(ANSIBasicColor::Red)
@@ -747,7 +747,7 @@ mod tests_style_us_span_lines_from {
                 text: "R3BL",
                 url: "https://r3bl.com",
             });
-            let style = style! {
+            let style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
@@ -756,7 +756,7 @@ mod tests_style_us_span_lines_from {
 
             // "["
             {
-                let actual = actual.get(0).unwrap();
+                let actual = actual.first().unwrap();
                 let actual_style_color_fg = actual
                     .style
                     .color_fg
@@ -765,7 +765,7 @@ mod tests_style_us_span_lines_from {
                     actual,
                     &StyleUSSpan::new(
                         style
-                            + style! {
+                            + tui_style! {
                                 attrib: [dim]
                                 color_fg: actual_style_color_fg
                                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
@@ -786,7 +786,7 @@ mod tests_style_us_span_lines_from {
                     actual,
                     &StyleUSSpan::new(
                         style
-                            + style! {
+                            + tui_style! {
                                 color_fg: actual_style_color_fg
                                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                             },
@@ -806,7 +806,7 @@ mod tests_style_us_span_lines_from {
                     actual,
                     &StyleUSSpan::new(
                         style
-                            + style! {
+                            + tui_style! {
                                 attrib: [dim]
                                 color_fg: actual_style_color_fg
                                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
@@ -827,7 +827,7 @@ mod tests_style_us_span_lines_from {
                     actual,
                     &StyleUSSpan::new(
                         style
-                            + style! {
+                            + tui_style! {
                                 attrib: [dim]
                                 color_fg: actual_style_color_fg
                                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
@@ -848,7 +848,7 @@ mod tests_style_us_span_lines_from {
                     actual,
                     &StyleUSSpan::new(
                         style
-                            + style! {
+                            + tui_style! {
                                 attrib: [underline]
                                 color_fg: actual_style_color_fg
                                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
@@ -869,7 +869,7 @@ mod tests_style_us_span_lines_from {
                     actual,
                     &StyleUSSpan::new(
                         style
-                            + style! {
+                            + tui_style! {
                                 attrib: [dim]
                                 color_fg: actual_style_color_fg
                                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
@@ -885,7 +885,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_inline_code() {
             let fragment = MdLineFragment::InlineCode("Foobar");
-            let style = style! {
+            let style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
 
@@ -910,7 +910,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_italic() {
             let fragment = MdLineFragment::Italic("Foobar");
-            let style = style! {
+            let style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
 
@@ -935,7 +935,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_bold() {
             let fragment = MdLineFragment::Bold("Foobar");
-            let style = style! {
+            let style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
 
@@ -960,7 +960,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_plain() {
             let fragment = MdLineFragment::Plain("Foobar");
-            let style = style! {
+            let style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
             let actual = StyleUSSpan::from_fragment(&fragment, &Some(style));
@@ -983,7 +983,7 @@ mod tests_style_us_span_lines_from {
         fn test_block_metadata_tags() -> Result<(), ()> {
             throws!({
                 let tags = MdBlockElement::Tags(list!["tag1", "tag2", "tag3"]);
-                let style = style! {
+                let style = tui_style! {
                     color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                 };
                 let lines = StyleUSSpanLines::from_block(&tags, &Some(style), None);
@@ -1037,7 +1037,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_metadata_title() {
             let title = MdBlockElement::Title("Something");
-            let style = style! {
+            let style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
             let lines = StyleUSSpanLines::from_block(&title, &Some(style), None);
@@ -1087,7 +1087,7 @@ mod tests_style_us_span_lines_from {
                 },
             ));
 
-            let style = style! {
+            let style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
 
@@ -1126,7 +1126,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_ol() -> CommonResult<()> {
             throws!({
-                let style = style! {
+                let style = tui_style! {
                     color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                 };
                 let (remainder, doc) = parse_markdown("100. Foo\n200. Bar\n")?;
@@ -1179,7 +1179,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_ul() -> CommonResult<()> {
             throws!({
-                let style = style! {
+                let style = tui_style! {
                     color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                 };
                 let (_, doc) = parse_markdown("- Foo\n- Bar\n")?;
@@ -1222,7 +1222,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_text() {
             let text_block = MdBlockElement::Text(list![MdLineFragment::Plain("Foobar")]);
-            let style = style! {
+            let style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
 
@@ -1242,7 +1242,7 @@ mod tests_style_us_span_lines_from {
                 heading_level: HeadingLevel { level: 1 },
                 text: "Foobar",
             });
-            let maybe_style = Some(style! {
+            let maybe_style = Some(tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             });
 

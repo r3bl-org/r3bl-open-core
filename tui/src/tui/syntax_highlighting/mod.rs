@@ -16,6 +16,7 @@
  */
 
 // Attach sources.
+pub mod convert_syntect_highlighting_to_tui_style;
 pub mod intermediate_types;
 pub mod md_parser_syn_hi;
 pub mod pattern_matcher;
@@ -23,6 +24,7 @@ pub mod r3bl_syntect_theme;
 pub mod syntect_to_styled_text_conversion;
 
 // Re-export
+pub use convert_syntect_highlighting_to_tui_style::*;
 pub use intermediate_types::*;
 pub use md_parser_syn_hi::*;
 pub use pattern_matcher::*;

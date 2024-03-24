@@ -95,10 +95,7 @@ pub fn select_from_list_with_multi_line_header(
         None => sanitize_height(&items, DEFAULT_HEIGHT),
     };
 
-    let max_width_col_count = match maybe_max_width_col_count {
-        Some(requested_width) => requested_width,
-        None => 0,
-    };
+    let max_width_col_count = maybe_max_width_col_count.unwrap_or(0);
 
     let mut state = State {
         max_display_height: ch!(max_height_row_count),
@@ -131,7 +128,7 @@ pub fn select_from_list_with_multi_line_header(
     }
 }
 
-fn sanitize_height(items: &Vec<String>, requested_height: usize) -> usize {
+fn sanitize_height(items: &[String], requested_height: usize) -> usize {
     let num_items = items.len();
     if num_items > requested_height {
         requested_height
@@ -357,10 +354,7 @@ mod test_select_from_list {
     fn create_state<'a>() -> State<'a> {
         State {
             max_display_height: ch!(10),
-            items: vec!["a", "b", "c"]
-                .iter()
-                .map(|it| it.to_string())
-                .collect(),
+            items: ["a", "b", "c"].iter().map(|it| it.to_string()).collect(),
             ..Default::default()
         }
     }

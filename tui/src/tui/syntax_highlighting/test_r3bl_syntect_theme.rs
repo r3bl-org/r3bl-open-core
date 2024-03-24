@@ -46,8 +46,7 @@ mod syntect {
             }
             #[cfg(not(target_os = "windows"))]
             {
-                let it = include_str!("test_assets/valid-content.md").to_string();
-                it
+                include_str!("test_assets/valid-content.md").to_string()
             }
         };
 
@@ -72,7 +71,7 @@ mod syntect {
             // let escaped = as_24_bit_terminal_escaped(&vec_styled_str[..], false);
             // print!("{}", escaped);
 
-            let styled_texts = StyledTexts::from(vec_styled_str);
+            let styled_texts = TuiStyledTexts::from(vec_styled_str);
             line_idx += 1;
             for (col_idx, styled_text) in styled_texts.iter().enumerate() {
                 println!("[L#:{line_idx} => C#:{col_idx}] {styled_text:#?}");

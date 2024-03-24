@@ -83,7 +83,7 @@ pub fn paste_from_clipboard(
     match result {
         Ok(clipboard_text) => {
             // If the clipboard text does not contain a new line, then insert the text.
-            if !clipboard_text.contains(&"\n") {
+            if !clipboard_text.contains('\n') {
                 EditorEngineInternalApi::insert_str_at_caret(
                     EditorArgsMut {
                         editor_engine: args.editor_engine,
@@ -94,7 +94,7 @@ pub fn paste_from_clipboard(
             }
             // If the clipboard text contains a new line, then insert the text line by line.
             else {
-                let lines = clipboard_text.split("\n");
+                let lines = clipboard_text.split('\n');
                 let line_count = lines.clone().count();
                 for (line_index, line) in lines.enumerate() {
                     EditorEngineInternalApi::insert_str_at_caret(

@@ -28,7 +28,9 @@
 #[cfg(test)]
 mod tests {
     use r3bl_rs_utils_core::*;
-    use r3bl_rs_utils_macro::style;
+    use r3bl_rs_utils_macro::tui_style;
+
+    use crate::convert_style_from_syntect_to_tui;
 
     #[test]
     fn syntect_style_conversion() {
@@ -39,7 +41,7 @@ mod tests {
                 | syntect::highlighting::FontStyle::ITALIC
                 | syntect::highlighting::FontStyle::UNDERLINE,
         };
-        let style = Style::from(st_style);
+        let style = convert_style_from_syntect_to_tui(st_style);
         assert_eq2!(
             style.color_fg.unwrap(),
             TuiColor::Rgb(RgbValue {
@@ -62,33 +64,33 @@ mod tests {
 
     #[test]
     fn test_cascade_style() {
-        let style_bold_green_fg = style! {
+        let style_bold_green_fg = tui_style! {
           id: 1 // "bold_green_fg"
           attrib: [bold]
           color_fg: TuiColor::Basic(ANSIBasicColor::Green)
         };
 
-        let style_dim = style! {
+        let style_dim = tui_style! {
           id: 2 // "dim"
           attrib: [dim]
         };
 
-        let style_yellow_bg = style! {
+        let style_yellow_bg = tui_style! {
           id: 3 // "yellow_bg"
           color_bg: TuiColor::Basic(ANSIBasicColor::Yellow)
         };
 
-        let style_padding = style! {
+        let style_padding = tui_style! {
           id: 4 // "padding"
           padding: 2
         };
 
-        let style_red_fg = style! {
+        let style_red_fg = tui_style! {
           id: 5 // "red_fg"
           color_fg: TuiColor::Basic(ANSIBasicColor::Red)
         };
 
-        let style_padding_another = style! {
+        let style_padding_another = tui_style! {
           id: 6 // "padding"
           padding: 1
         };
@@ -119,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_stylesheet() {
-        let mut stylesheet = Stylesheet::new();
+        let mut stylesheet = TuiStylesheet::new();
 
         let style1 = make_a_style(1);
         let result = stylesheet.add_style(style1);
@@ -138,27 +140,27 @@ mod tests {
             assert_eq2!(stylesheet.find_style_by_id(2).unwrap().id, 2);
             assert!(stylesheet.find_style_by_id(3).is_none());
             // Macro.
-            assert_eq2!(get_style!(@from: stylesheet, 1).unwrap().id, 1);
-            assert_eq2!(get_style!(@from: stylesheet, 2).unwrap().id, 2);
-            assert!(get_style!(@from: stylesheet, 3).is_none());
+            assert_eq2!(get_tui_style!(@from: stylesheet, 1).unwrap().id, 1);
+            assert_eq2!(get_tui_style!(@from: stylesheet, 2).unwrap().id, 2);
+            assert!(get_tui_style!(@from: stylesheet, 3).is_none());
         }
 
         // Test find_styles_by_ids.
         {
             // Contains.
             assertions_for_find_styles_by_ids(&stylesheet.find_styles_by_ids(vec![1, 2]));
-            assertions_for_find_styles_by_ids(&get_styles!(
+            assertions_for_find_styles_by_ids(&get_tui_styles!(
                 @from: &stylesheet,
                 [1, 2]
             ));
-            fn assertions_for_find_styles_by_ids(result: &Option<Vec<Style>>) {
+            fn assertions_for_find_styles_by_ids(result: &Option<Vec<TuiStyle>>) {
                 assert_eq2!(result.as_ref().unwrap().len(), 2);
                 assert_eq2!(result.as_ref().unwrap()[0].id, 1);
                 assert_eq2!(result.as_ref().unwrap()[1].id, 2);
             }
             // Does not contain.
             assert_eq2!(stylesheet.find_styles_by_ids(vec![3, 4]), None);
-            assert_eq2!(get_styles!(@from: stylesheet, [3, 4]), None);
+            assert_eq2!(get_tui_styles!(@from: stylesheet, [3, 4]), None);
         }
     }
 
@@ -167,21 +169,21 @@ mod tests {
         throws!({
             let id_2 = 2;
             let style1 = make_a_style(1);
-            let mut stylesheet = stylesheet! {
+            let mut stylesheet = tui_stylesheet! {
               style1,
-              style! {
+              tui_style! {
                     id: id_2 /* using a variable instead of string literal */
                     padding: 1
                     color_bg: TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })
               },
               make_a_style(3),
               vec![
-                style! {
+                tui_style! {
                   id: 4
                   padding: 1
                   color_bg: TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })
                 },
-                style! {
+                tui_style! {
                   id: 5
                   padding: 1
                   color_bg: TuiColor::Rgb (RgbValue{ red: 85, green: 85, blue: 255 })
@@ -213,14 +215,14 @@ mod tests {
     }
 
     /// Helper function.
-    fn make_a_style(id: u8) -> Style {
-        Style {
+    fn make_a_style(id: u8) -> TuiStyle {
+        TuiStyle {
             id,
             dim: true,
             bold: true,
             color_fg: color!(0, 0, 0).into(),
             color_bg: color!(0, 0, 0).into(),
-            ..Style::default()
+            ..TuiStyle::default()
         }
     }
 }
