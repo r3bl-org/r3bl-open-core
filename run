@@ -93,6 +93,7 @@ def install-cargo-tools [] {
     cargo install cargo-update
     cargo install cargo-deny
     cargo install cargo-unmaintained
+    cargo install cargo-expand
 }
 
 def all [] {
