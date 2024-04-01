@@ -263,10 +263,10 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     }
 }
 
-fn request_exit_by_sending_signal<AS: 'static>(
+fn request_exit_by_sending_signal<AS>(
     channel_sender: mpsc::Sender<TerminalWindowMainThreadSignal<AS>>,
 ) where
-    AS: Debug + Default + Clone + Sync + Send,
+    AS: 'static + Debug + Default + Clone + Sync + Send,
 {
     // Exit keys were pressed.
     // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so that it doesn't
