@@ -53,6 +53,7 @@ pub enum StdoutIsPipedResult {
 }
 
 /// If you run `echo "test" | cargo run` the following will return true.
+/// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
 pub fn is_stdin_piped() -> StdinIsPipedResult {
     if !std::io::stdin().is_terminal() {
         StdinIsPipedResult::StdinIsPiped
@@ -62,6 +63,7 @@ pub fn is_stdin_piped() -> StdinIsPipedResult {
 }
 
 /// If you run `cargo run | grep foo` the following will return true.
+/// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
 pub fn is_stdout_piped() -> StdoutIsPipedResult {
     if !std::io::stdout().is_terminal() {
         StdoutIsPipedResult::StdoutIsPiped
@@ -76,7 +78,8 @@ pub enum TTYResult {
     IsNotInteractive,
 }
 
-/// Returns IsTTYResult::IsTTY if stdin, stdout, and stderr are *all* fully interactive.
+/// Returns [TTYResult::IsInteractive] if stdin, stdout, and stderr are *all* fully
+/// interactive.
 ///
 /// There are situations where some can be interactive and others not, such as when piping
 /// is active.
@@ -89,7 +92,7 @@ pub fn is_fully_interactive_terminal() -> TTYResult {
     }
 }
 
-/// Returns IsTTYResult::IsNotTTY if stdin, stdout, and stderr are *all* fully
+/// Returns [TTYResult::IsNotInteractive] if stdin, stdout, and stderr are *all* fully
 /// uninteractive. This happens when `cargo test` runs.
 ///
 /// There are situations where some can be interactive and others not, such as when piping
