@@ -358,7 +358,10 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
     }
 }
 
-fn clip_string_to_width_with_ellipsis(mut header_text: String, viewport_width: ChUnit) -> String {
+pub fn clip_string_to_width_with_ellipsis(
+    mut header_text: String,
+    viewport_width: ChUnit,
+) -> String {
     let unicode_string = UnicodeString::from(header_text);
     let unicode_string_width = unicode_string.display_width;
     let available_space_col_count: ChUnit = viewport_width;
