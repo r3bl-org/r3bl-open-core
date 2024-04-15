@@ -18,10 +18,6 @@
 #     - coming from bash: https://www.nushell.sh/book/coming_from_bash.html
 #     - thinking in nu: https://www.nushell.sh/book/thinking_in_nu.html
 
-let workspace_folders = [
-    "core", "macro", "redux", "tui", "tuify", "ansi_color", "simple_logger"
-]
-
 # Main entry point for the script.
 def main [...args: string] {
     let num_args = $args | length
@@ -205,13 +201,8 @@ def test [] {
 }
 
 def clippy [] {
-    for folder in ($workspace_folders) {
-        cd $folder
-        print $'(ansi magenta)≡ Running cargo clippy in ($folder) .. ≡(ansi reset)'
-        cargo fix --allow-dirty --allow-staged
-        cargo fmt --all
-        cd ..
-    }
+    cargo fix --allow-dirty --allow-staged
+    cargo fmt --all
 }
 
 def clippy-watch [] {

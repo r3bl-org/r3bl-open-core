@@ -11,6 +11,7 @@ members = [
   "utils",
   "cmdr",
   "analytics_schema",
+  "terminal_async",
 ]
 resolver = "2"
 

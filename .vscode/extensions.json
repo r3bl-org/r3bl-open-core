@@ -13,6 +13,7 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "teabyii.ayu", // Ayu Theme.
     "GitHub.github-vscode-theme", // Github Theme.
     "vadimcn.vscode-lldb", // LLDB. Debugger.
     "ms-vscode.cpptools", // C/C++. Debugger.
@@ -38,22 +39,22 @@
     "streetsidesoftware.code-spell-checker", // Code Spell Checker.
     "TheNuProjectContributors.vscode-nushell-lang", // Nushell.
     "serayuzgur.crates", // Crates.
+    "eamodio.gitlens", // GitLens.
+    "s-nlf-fh.glassit", // GlassIt.
+    "alefragnani.separators", // Suspected (in the past) that this makes VSCode main thread unresponsive after running for a few hours.
+    "bmalehorn.vscode-fish", // Fish.
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
     "esbenp.prettier-vscode", // prettier.
     "unifiedjs.vscode-remark", // remark.
     "ccy.ayu-adaptive", // Ayu Adaptive theme.
-    "alefragnani.separators", // Suspect that this makes VSCode main thread unresponsive after running for a few hours.
     "bierner.emojisense",
     "owldarkertheme.owldarker-theme", // Owl Darker theme.
     "Compulim.vscode-clock",
     "nowsci.glassit-linux",
     "bungcip.better-toml",
-    "vadimcn.vscode-lldb",
-    "serayuzgur.crates", // Crates.
     "donjayamanne.githistory",
-    "bmalehorn.vscode-fish",
     "github.github-vscode-theme",
     "rsbondi.highlight-words",
     "arzg.intellij-theme",

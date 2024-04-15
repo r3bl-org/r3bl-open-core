@@ -88,6 +88,16 @@ git tag -a v0.9.12-core -m "v0.9.12-core"
 cargo publish
 cd ..
 
+cd terminal_async
+# Update cargo.toml version number manually
+# Update CHANGELOG.md
+cargo build; cargo test; cargo doc
+git add -A
+git commit -m "v0.3.0-terminal_async"
+git tag -a v0.3.0-terminal_async -m "v0.3.0-terminal_async"
+cargo publish
+cd ..
+
 cd analytics_schema
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
