@@ -1,0 +1,57 @@
+[package]
+name = "r3bl_terminal_async"
+version = "0.3.0"
+edition = "2021"
+resolver = "2"
+description = "Async non-blocking read_line implemenation with multiline editor, with concurrent display output from tasks, and colorful animated spinners"
+# At most 5 keywords w/ no spaces, each has max length of 20 char.
+keywords = ["cli", "spinner", "readline", "terminal", "async"]
+categories = ["command-line-interface", "command-line-utilities"]
+readme = "README.md"
+# Email address(es) has to be verified at https://crates.io/me/
+authors = [
+  "Nazmul Idris <idris@developerlife.com>",
+  "Nadia Idris <nadia@developerlife.com>",
+]
+repository = "https://github.com/r3bl-org/r3bl-open-core/tree/main/r3bl_terminal_async"
+documentation = "https://docs.rs/r3bl_terminal_async"
+homepage = "https://r3bl.com"
+license = "Apache-2.0"
+
+[dependencies]
+# Terminal output.
+crossterm = { version = "0.27.0", features = ["event-stream"] }                               # EventStream
+futures-util = "0.3.30"                                                                       # Needed for crossterm EventStream
+r3bl_tuify = { path = "/home/nazmul/github/r3bl-open-core/tuify", version = "0.1.25" }
+r3bl_tui = { path = "/home/nazmul/github/r3bl-open-core/tui", version = "0.5.2" }
+r3bl_rs_utils_core = { path = "/home/nazmul/github/r3bl-open-core/core", version = "0.9.12" }
+
+# Unicode support.
+unicode-segmentation = "1.10"
+unicode-width = "0.1"
+
+# Enum to string generation.
+strum = "0.26"
+strum_macros = "0.26"
+
+# Error handling.
+thiserror = "1.0.58"
+miette = { version = "7.2.0", features = ["fancy"] }
+pretty_assertions = "1.4.0"
+
+# Tokio / Tracing / Logging.
+# https://tokio.rs/tokio/topics/tracing
+# https://tokio.rs/tokio/topics/tracing-next-steps
+tokio = { version = "1.36.0", features = ["full", "tracing"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+tracing-appender = "0.2.3"
+
+# Async stream for DI and testing.
+futures-core = "0.3"
+async-stream = "0.3.5"
+strip-ansi-escapes = "0.2.0"
+
+[features]
+default = ["emacs"]
+emacs = []

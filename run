@@ -20,7 +20,7 @@
 
 let workspace_folders = [
     "core", "macro", "redux", "tui", "tuify", "ansi_color", "simple_logger", "utils",
-    "cmdr", "analytics_schema",
+    "cmdr", "analytics_schema", "terminal_async"
 ]
 
 # Main entry point for the script.
