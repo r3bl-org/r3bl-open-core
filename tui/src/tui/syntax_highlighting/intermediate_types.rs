@@ -28,7 +28,7 @@
 //!    strings).
 //! 2. This intermediate type is [clipped](StyleUSSpanLine::clip) to the visible area of the editor
 //!    component (based on scroll state in viewport). And finally that is converted to a
-//!    [crate::StyledTexts].
+//!    [crate::TuiStyledTexts].
 
 use r3bl_rs_utils_core::*;
 
@@ -134,7 +134,7 @@ impl StyleUSSpanLine {
     }
 
     /// Clip the text (in one line) in this range: [ `start_col` .. `end_col` ]. Each line is
-    /// represented as a [List] of ([Style], [US])`s.
+    /// represented as a [List] of ([TuiStyle], [US])`s.
     pub fn clip(
         &self,
         scroll_offset_col_index: ChUnit,

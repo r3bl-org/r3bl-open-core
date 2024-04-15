@@ -251,20 +251,20 @@ pub enum RenderOp {
 
     ClearScreen,
 
-    /// Directly set the fg color for crossterm w/out using [Style].
+    /// Directly set the fg color for crossterm w/out using [TuiStyle].
     SetFgColor(TuiColor),
 
-    /// Directly set the bg color for crossterm w/out using [Style].
+    /// Directly set the bg color for crossterm w/out using [TuiStyle].
     SetBgColor(TuiColor),
 
     ResetColor,
 
-    /// Translate [Style] into fg and bg colors for crossterm. Note that this does not
+    /// Translate [TuiStyle] into fg and bg colors for crossterm. Note that this does not
     /// apply attributes (bold, italic, underline, strikethrough, etc). If you need to
     /// apply attributes, use [RenderOp::PaintTextWithAttributes] instead.
     ApplyColors(Option<TuiStyle>),
 
-    /// Translate [Style] into *only* attributes for crossterm (bold, italic, underline,
+    /// Translate [TuiStyle] into *only* attributes for crossterm (bold, italic, underline,
     /// strikethrough, etc) and not colors. If you need to apply color, use
     /// [RenderOp::ApplyColors] instead.
     ///

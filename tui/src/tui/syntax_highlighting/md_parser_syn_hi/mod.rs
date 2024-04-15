@@ -19,7 +19,7 @@
 //! 1. [crate::md_parser] - Responsible for parsing markdown into a [crate::MdDocument] data
 //!    structure.
 //! 2. [crate::syntax_highlighting] - Responsible for converting a [crate::MdDocument] into a list
-//!    of tuples of [r3bl_rs_utils_core::Style] and [String].
+//!    of tuples of [r3bl_rs_utils_core::TuiStyle] and [String].
 //! 3. [crate::editor] - Responsible for displaying the [crate::MdDocument] to the user.
 
 // Attach.

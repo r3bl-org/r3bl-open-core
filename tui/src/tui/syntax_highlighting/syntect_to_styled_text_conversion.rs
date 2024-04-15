@@ -26,7 +26,7 @@
 //!
 //! This requires the conversion code to perform the following steps:
 //! 1. Convert the syntect [SyntectStyleStrSpanLine] into a [StyleUSSpanLine].
-//! 2. Then convert [StyleUSSpanLine] into a [StyledTexts].
+//! 2. Then convert [StyleUSSpanLine] into a [TuiStyledTexts].
 
 use syntect::parsing::SyntaxSet;
 

@@ -429,7 +429,7 @@
 //! 2. [App] - This is where you write your code. You pass in a [App] to the [TerminalWindow] to
 //!    bootstrap your TUI app. You can just use [App] to build your app, if it is a simple one & you
 //!    don't really need any sophisticated layout or styling. But if you want layout and styling,
-//!    now we have to deal with [FlexBox], [Component], and [r3bl_rs_utils_core::Style].
+//!    now we have to deal with [FlexBox], [Component], and [r3bl_rs_utils_core::TuiStyle].
 //!
 //! # Layout and styling
 //! <a id="markdown-layout-and-styling" name="layout-and-styling"></a>

@@ -57,7 +57,7 @@ impl Debug for Lolcat {
 impl Lolcat {
     /// This function does not respect [r3bl_ansi_color::global_color_support::detect()]
     /// (it will always colorize to truecolor regardless of terminal limitations). Use
-    /// [ColorWheel] if you want to respect
+    /// [crate::ColorWheel] if you want to respect
     /// [r3bl_ansi_color::global_color_support::detect].
     pub fn colorize_to_styled_texts(&mut self, input: &UnicodeString) -> TuiStyledTexts {
         let mut acc = TuiStyledTexts::default();
