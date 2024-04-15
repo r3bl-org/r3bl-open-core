@@ -69,9 +69,9 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     /// Process each [PixelChar] in [OffscreenBuffer] and generate a [RenderOp] for it. Return a
     /// [RenderOps] containing all the [RenderOp]s.
     ///
-    /// > Note that each [PixelChar] gets the full [Style] embedded in it (not just a part of it
+    /// > Note that each [PixelChar] gets the full [TuiStyle] embedded in it (not just a part of it
     /// > that is different than the previous char). This means that it is possible to quickly
-    /// > "diff" between 2 of them, since the [Style] is part of the [PixelChar]. This is important
+    /// > "diff" between 2 of them, since the [TuiStyle] is part of the [PixelChar]. This is important
     /// > for selective re-rendering of the [OffscreenBuffer].
     ///
     /// Here's the algorithm used in this function using pseudo-code:

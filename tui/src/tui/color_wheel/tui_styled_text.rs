@@ -23,7 +23,7 @@ use crate::*;
 #[derive(Debug, Clone, Default)]
 pub struct TuiStyledText(pub TuiStyle, pub UnicodeString);
 
-/// Use [styled_texts!] macro for easier construction.
+/// Use [tui_styled_texts!] macro for easier construction.
 pub type TuiStyledTexts = List<TuiStyledText>;
 
 mod tui_styled_text_impl {

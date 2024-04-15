@@ -4,11 +4,14 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
+  - [Next Release](#next-release)
   - [v0.0.11 2024-01-14](#v0011-2024-01-14)
   - [v0.0.10 2024-01-02](#v0010-2024-01-02)
   - [v0.0.9 2023-12-31](#v009-2023-12-31)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
 - [r3bl_tuify](#r3bl_tuify)
+  - [v0.1.26 2024-04-15](#v0126-2024-04-15)
+  - [v0.1.25 2024-01-14](#v0125-2024-01-14)
   - [v0.1.24 2023-12-31](#v0124-2023-12-31)
   - [v0.1.23 2023-12-22](#v0123-2023-12-22)
   - [v0.1.22 2023-12-20](#v0122-2023-12-20)
@@ -18,6 +21,8 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [v0.5.3 2024-04-15](#v053-2024-04-15)
+  - [v0.5.2 2024-01-14](#v052-2024-01-14)
   - [v0.5.1 2024-01-09](#v051-2024-01-09)
   - [v0.5.0 2023-12-31](#v050-2023-12-31)
   - [v0.4.0 2023-12-22](#v040-2023-12-22)
@@ -30,6 +35,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
+  - [v0.9.13 2024-04-15](#v0913-2024-04-15)
   - [v0.9.12 2024-01-07](#v0912-2024-01-07)
   - [v0.9.11 2024-01-02](#v0911-2024-01-02)
   - [v0.9.10 2023-12-22](#v0910-2023-12-22)
@@ -46,6 +52,8 @@
   - [v0.9.7 2023-10-21](#v097-2023-10-21)
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
+- [r3bl_terminal_async](#r3bl_terminal_async)
+  - [v0.3.0 2024-04-15](#v030-2024-04-15)
 - [r3bl_ansi_color](#r3bl_ansi_color)
   - [v0.6.9 2023-10-21](#v069-2023-10-21)
   - [v0.6.8 2023-10-16](#v068-2023-10-16)
@@ -73,6 +81,17 @@
 
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
+
+### Next Release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Changed:
+  - Use the latest deps:
+     - `r3bl_tui` version `0.5.3`.
+     - `r3bl_rs_utils_core` version `0.9.13`.
+- Fixed:
+  - TBD: markdown parser issues
+  - TBD: editor issues
 
 ### v0.0.11 (2024-01-14)
 <a id="markdown-v0.0.11-2024-01-14" name="v0.0.11-2024-01-14"></a>
@@ -134,7 +153,18 @@
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
+### v0.1.26 (2024-04-15)
+<a id="markdown-v0.1.26-2024-04-15" name="v0.1.26-2024-04-15"></a>
+
+- Updated:
+  - Make `clip_string_to_width_with_ellipsis` pub so that other crates can use it (eg:
+    `r3bl_terminal_async`).
+  - Change the names of enums to be more readable.
+    - `IsTTYResult::IsTTY` -> `TTYResult::IsInteractive`.
+    - `IsTTYResult::IsNotTTY` -> `TTYResult::IsNotInteractive`.
+
 ### v0.1.25 (2024-01-14)
+<a id="markdown-v0.1.25-2024-01-14" name="v0.1.25-2024-01-14"></a>
 
 - Updated:
   - Dependency updated `reedline` version `0.28.0`, `r3bl_rs_utils_core` version `0.9.12`.
@@ -228,7 +258,15 @@
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
+### v0.5.3 (2024-04-15)
+<a id="markdown-v0.5.3-2024-04-15" name="v0.5.3-2024-04-15"></a>
+
+- Updated:
+  - Dependency changes inherited from `r3bl_rs_utils_core` version `0.9.13`.
+  - Lots of clippy fixes.
+
 ### v0.5.2 (2024-01-14)
+<a id="markdown-v0.5.2-2024-01-14" name="v0.5.2-2024-01-14"></a>
 
 - Updated:
   - Dependency updated `reedline` version `0.28.0`, `r3bl_rs_utils_core` version `0.9.12`.
@@ -449,10 +487,18 @@
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
+### v0.9.13 (2024-04-15)
+<a id="markdown-v0.9.13-2024-04-15" name="v0.9.13-2024-04-15"></a>
+
+- Changed:
+  - Removed `syntect` dep.
+  - Rename `Style` to `TuiStyle`.
+  - Lots of cargo clippy fixes.
+
 ### v0.9.12 (2024-01-07)
 <a id="markdown-v0.9.12-2024-01-07" name="v0.9.12-2024-01-07"></a>
 
-Added:
+- Added:
   - Add `generate_friendly_random_id()` to generate human readable and friendly IDs.
 
 ### v0.9.11 (2024-01-02)
@@ -564,6 +610,21 @@ Added:
 - Updated:
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
     `r3bl_rs_utils` repo workspace as `simple_logger`).
+
+## `r3bl_terminal_async`
+<a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
+
+### v0.3.0 (2024-04-15)
+<a id="markdown-v0.3.0-2024-04-15" name="v0.3.0-2024-04-15"></a>
+
+This is the first release of this crate.
+
+- Added:
+  - A new crate in this repo that allows for async terminal input and output. This is
+    useful for building TUIs that are async and can handle input and output in parallel.
+    To build apps that are not full TUI, this is a great option to create interactive CLIs
+    and REPLs that are fully async and multithreaded (with input and output) with a really
+    powerful (multi) line editor and prompt.
 
 ## `r3bl_ansi_color`
 <a id="markdown-r3bl_ansi_color" name="r3bl_ansi_color"></a>
