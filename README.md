@@ -29,21 +29,30 @@ the same time.
     Markdown editor for the terminal and cloud. It lets you edit Markdown files in your in style
     (supports emoji, has color gradient headers, and more).
 
-### R3BL component offerings
+### R3BL framework and component offerings
 
 - [**tui** folder](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui)
   ([r3bl_tui crate](https://crates.io/crates/r3bl_tui)): TUI library to build modern apps inspired
-  by Elm, with Flexbox, CSS, editor component, emoji support, and more
+  by Elm, with Flexbox, CSS, editor component, emoji support, and more.
 - [**tuify** folder](https://github.com/r3bl-org/r3bl-open-core/tree/main/tuify)
-  ([r3bl_tuify crate](https://crates.io/crates/r3bl_tuify)): single and multi-select TUI components
-  used in giti.
+  ([r3bl_tuify crate](https://crates.io/crates/r3bl_tuify)): Single and multi-select
+  "mini" TUI components used in giti.
+- [**terminal_async**
+  folder](https://github.com/r3bl-org/r3bl-open-core/tree/main/terminal_async)
+  ([r3bl_terminal_async crate](https://crates.io/crates/r3bl_terminal_async)): Rust crate
+  to create CLI programs that are asynchronous and interactive without blocking the main
+  thread. Your spawned tasks can use it to concurrently write to the display output, pause
+  and resume it. You can also display of colorful animated spinners ⌛🌈 for long running
+  tasks. With it, you can create beautiful, powerful, and interactive REPLs (read execute
+  print loops) with ease.
 
-### R3BL library offerings
+### R3BL (low level) library offerings
 
-- [**ansi_color** folder](https://github.com/r3bl-org/r3bl-open-core/tree/main/ansi_color): Rust
-  crate to generate formatted ANSI 256 (8-bit) and truecolor (24-bit) color output to stdout. On
-  macOS, the default Terminal.app does not support truecolor, so ANSI 256 colors are used instead.
-  ([r3bl_ansi_color crate](https://crates.io/crates/r3bl_ansi_color))
+- [**ansi_color** folder](https://github.com/r3bl-org/r3bl-open-core/tree/main/ansi_color)
+  ([r3bl_ansi_color crate](https://crates.io/crates/r3bl_ansi_color)): Rust crate to
+  generate formatted ANSI 256 (8-bit) and truecolor (24-bit) color output to stdout. On
+  macOS, the default Terminal.app does not support truecolor, so ANSI 256 colors are used
+  instead.
 - [**core** folder](https://github.com/r3bl-org/r3bl-open-core/tree/main/core)
   ([r3bl_rs_utils_core crate](https://crates.io/crates/r3bl_rs_utils_core))
 - [**macro** folder](https://github.com/r3bl-org/r3bl-open-core/tree/main/macro)
@@ -59,8 +68,13 @@ the same time.
 To learn more about this library, please read how it was built (on
 [developerlife.com](https://developerlife.com)):
 
-1.  [Build a non-binary tree that is thread safe using Rust](https://developerlife.com/2022/02/24/rust-non-binary-tree/)
-2.  [Guide to Rust procedural macros](https://developerlife.com/2022/03/30/rust-proc-macro/)
+1.  [Build a non-binary tree that is thread safe using
+    Rust](https://developerlife.com/2022/02/24/rust-non-binary-tree/)
+2.  [Guide to Rust procedural
+    macros](https://developerlife.com/2022/03/30/rust-proc-macro/)
 
 You can also find all the 🦀 Rust related content on developerlife.com
 [here](https://developerlife.com/category/Rust/).
+
+You can also watch 🦀 Rust videos on the developerlife.com YouTube channel
+[here](https://www.youtube.com/@developerlifecom).

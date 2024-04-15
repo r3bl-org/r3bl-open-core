@@ -90,6 +90,7 @@
     "PTAL",
     "punct",
     "qself",
+    "Rearchitect",
     "reedline",
     "Renderable",
     "renderop",
@@ -97,6 +98,7 @@
     "reqwest",
     "retval",
     "RRGGBB",
+    "runtimes",
     "rustflags",
     "rustfmt",
     "seco",
@@ -104,10 +106,12 @@
     "simplelog",
     "Srgb",
     "Stackoverflow",
+    "starttask",
     "stylesheet",
     "surrealdb",
     "syntect",
     "terminusdb",
+    "thingbuf",
     "Tilix",
     "TODONE",
     "todos",
@@ -123,6 +127,7 @@
     "unspecial",
     "unstaged",
     "withmutreturns",
+    "writeln",
     "Zoey"
   ]
 }
