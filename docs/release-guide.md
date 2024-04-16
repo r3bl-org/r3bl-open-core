@@ -38,6 +38,26 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 ## Example of full workflow
 
 ```sh
+cd core
+# Update cargo.toml version number manually
+# Update CHANGELOG.md
+cargo build; cargo test; cargo doc
+git add -A
+git commit -m "v0.9.13-core"
+git tag -a v0.9.13-core -m "v0.9.13-core"
+cargo publish
+cd ..
+
+cd macro
+# Update cargo.toml version number manually
+# Update CHANGELOG.md
+cargo build; cargo test; cargo doc
+git add -A
+git commit -m "v0.9.9-macro"
+git tag -a v0.9.9-macro -m "v0.9.9-macro"
+cargo publish
+cd ..
+
 cd tuify
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
@@ -53,8 +73,8 @@ cd tui
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.5.2-tui"
-git tag -a v0.5.2-tui -m "v0.5.2-tui"
+git commit -m "v0.5.3-tui"
+git tag -a v0.5.3-tui -m "v0.5.3-tui"
 cargo publish
 cd ..
 
@@ -68,25 +88,6 @@ git tag -a v0.0.11-cmdr -m "v0.0.11-cmdr"
 cargo publish
 cd ..
 
-cd macro
-# Update cargo.toml version number manually
-# Update CHANGELOG.md
-cargo build; cargo test; cargo doc
-git add -A
-git commit -m "v0.9.8-macro"
-git tag -a v0.9.8-macro -m "v0.9.8-macro"
-cargo publish
-cd ..
-
-cd core
-# Update cargo.toml version number manually
-# Update CHANGELOG.md
-cargo build; cargo test; cargo doc
-git add -A
-git commit -m "v0.9.13-core"
-git tag -a v0.9.13-core -m "v0.9.13-core"
-cargo publish
-cd ..
 
 cd terminal_async
 # Update cargo.toml version number manually

@@ -48,6 +48,7 @@
 - [r3bl_analytics_schema](#r3bl_analytics_schema)
   - [v0.0.1 2023-12-31](#v001-2023-12-31)
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
+  - [v0.9.9 2024-04-16](#v099-2024-04-16)
   - [v0.9.8 2023-12-22](#v098-2023-12-22)
   - [v0.9.7 2023-10-21](#v097-2023-10-21)
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
@@ -582,6 +583,12 @@
 
 ## `r3bl_rs_utils_macro`
 <a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>
+
+### v0.9.9 (2024-04-16)
+<a id="markdown-v0.9.9-2024-04-16" name="v0.9.9-2024-04-16"></a>
+
+- Updated:
+  - Use the latest `r3bl_rs_utils_core` version `0.9.13`.
 
 ### v0.9.8 (2023-12-22)
 <a id="markdown-v0.9.8-2023-12-22" name="v0.9.8-2023-12-22"></a>
