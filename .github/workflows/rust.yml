@@ -21,4 +21,4 @@ jobs:
       - name: install cargo-fmt
         run: rustup component add rustfmt
       - name: Run Nushell script
-        run: nu run all
+        run: nu run all-cicd

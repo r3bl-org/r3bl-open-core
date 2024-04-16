@@ -36,6 +36,7 @@ def main [...args: string] {
 
     match $command {
         "all" => {all}
+        "all-cicd" => {all-cicd}
         "build" => {build}
         "build-full" => {build-full}
         "clean" => {clean}
@@ -64,6 +65,7 @@ def print-help [command: string] {
         print $'Usage: (ansi magenta_bold)run(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi blue_bold)[args](ansi reset)'
         print $'(ansi green_bold)<command>(ansi reset) can be:'
         print $'    (ansi green)all(ansi reset)'
+        print $'    (ansi green)all-cicd(ansi reset)'
         print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)build-full(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
@@ -105,6 +107,19 @@ def all [] {
     docs
     audit-deps
     unmaintained
+    rustfmt
+}
+
+# Runs everything that all does, except for unmaintained.
+def all-cicd [] {
+    cargo install cargo-deny
+    # cargo install cargo-unmaintained
+    cargo build
+    test
+    clippy
+    docs
+    audit-deps
+    # unmaintained
     rustfmt
 }
 
