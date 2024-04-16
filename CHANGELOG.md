@@ -163,6 +163,8 @@
   - Change the names of enums to be more readable.
     - `IsTTYResult::IsTTY` -> `TTYResult::IsInteractive`.
     - `IsTTYResult::IsNotTTY` -> `TTYResult::IsNotInteractive`.
+  - Using latest deps for `r3bl_rs_utils_core` version `0.9.13`, and `r3bl_rs_utils_macro`
+    version `0.9.9`.
 
 ### v0.1.25 (2024-01-14)
 <a id="markdown-v0.1.25-2024-01-14" name="v0.1.25-2024-01-14"></a>
@@ -263,7 +265,8 @@
 <a id="markdown-v0.5.3-2024-04-15" name="v0.5.3-2024-04-15"></a>
 
 - Updated:
-  - Dependency changes inherited from `r3bl_rs_utils_core` version `0.9.13`.
+  - Dependency changes inherited from `r3bl_rs_utils_core` version `0.9.13`, and
+    `r3bl_rs_utils_macro` version `0.9.9`.
   - Lots of clippy fixes.
 
 ### v0.5.2 (2024-01-14)
