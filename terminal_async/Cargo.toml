@@ -20,11 +20,11 @@ license = "Apache-2.0"
 
 [dependencies]
 # Terminal output.
-crossterm = { version = "0.27.0", features = ["event-stream"] }                               # EventStream
-futures-util = "0.3.30"                                                                       # Needed for crossterm EventStream
-r3bl_tuify = { path = "/home/nazmul/github/r3bl-open-core/tuify", version = "0.1.25" }
-r3bl_tui = { path = "/home/nazmul/github/r3bl-open-core/tui", version = "0.5.2" }
-r3bl_rs_utils_core = { path = "/home/nazmul/github/r3bl-open-core/core", version = "0.9.12" }
+crossterm = { version = "0.27.0", features = ["event-stream"] } # EventStream
+futures-util = "0.3.30"                                         # Needed for crossterm EventStream
+r3bl_tuify = { path = "../tuify", version = "0.1.25" }
+r3bl_tui = { path = "../tui", version = "0.5.2" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.12" }
 
 # Unicode support.
 unicode-segmentation = "1.10"
