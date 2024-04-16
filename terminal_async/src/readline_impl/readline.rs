@@ -605,6 +605,7 @@ mod tests {
     use crate::StdMutex;
 
     use super::*;
+    use r3bl_tuify::{is_fully_uninteractive_terminal, TTYResult};
     use strip_ansi_escapes::strip;
     use tests::test_fixtures::{gen_input_stream, get_input_vec, StdoutMock};
 
@@ -619,6 +620,11 @@ mod tests {
         let stdout_mock = StdoutMock {
             buffer: Arc::new(StdMutex::new(output_buffer)),
         };
+
+        // This is for CI/CD.
+        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+            return;
+        }
 
         // We will get the `line_state` out of this to test.
         let (readline, _) = Readline::new(
@@ -661,6 +667,11 @@ mod tests {
             buffer: Arc::new(StdMutex::new(output_buffer)),
         };
 
+        // This is for CI/CD.
+        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+            return;
+        }
+
         // We will get the `line_state` out of this to test.
         let (mut readline, _) = Readline::new(
             prompt_str.into(),
@@ -690,6 +701,11 @@ mod tests {
         let stdout_mock = StdoutMock {
             buffer: Arc::new(StdMutex::new(output_buffer)),
         };
+
+        // This is for CI/CD.
+        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+            return;
+        }
 
         // We will get the `line_state` out of this to test.
         let (readline, shared_writer) = Readline::new(
@@ -727,6 +743,11 @@ mod tests {
         let stdout_mock = StdoutMock {
             buffer: Arc::new(StdMutex::new(output_buffer)),
         };
+
+        // This is for CI/CD.
+        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+            return;
+        }
 
         // We will get the `line_state` out of this to test.
         let (readline, shared_writer) = Readline::new(
