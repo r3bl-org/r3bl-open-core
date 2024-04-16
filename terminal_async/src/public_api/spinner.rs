@@ -228,6 +228,11 @@ mod tests {
         )
         .await;
 
+        // This is for CI/CD.
+        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+            return;
+        }
+
         let mut spinner = spinner.unwrap().unwrap();
 
         tokio::time::sleep(quantum * 5).await;
@@ -296,6 +301,11 @@ mod tests {
             shared_writer,
         )
         .await;
+
+        // This is for CI/CD.
+        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
+            return;
+        }
 
         let mut spinner = spinner.unwrap().unwrap();
 
