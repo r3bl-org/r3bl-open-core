@@ -88,7 +88,6 @@ git tag -a v0.0.11-cmdr -m "v0.0.11-cmdr"
 cargo publish
 cd ..
 
-
 cd terminal_async
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
