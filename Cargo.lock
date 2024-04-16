@@ -1639,7 +1639,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_rs_utils_core"
-version = "0.9.12"
+version = "0.9.13"
 dependencies = [
  "chrono",
  "get-size",

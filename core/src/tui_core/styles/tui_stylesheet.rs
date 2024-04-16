@@ -118,8 +118,8 @@ impl TuiStylesheet {
     }
 }
 
-/// Macro to make building [Stylesheet] easy. This returns a [CommonResult] because it checks to see
-/// that all [Style]s that are added have an `id`. If they don't, then an a [CommonError] is thrown.
+/// Macro to make building [TuiStylesheet] easy. This returns a [CommonResult] because it checks to see
+/// that all [TuiStyle]s that are added have an `id`. If they don't, then an a [CommonError] is thrown.
 /// This is to ensure that valid styles are added to a stylesheet. Without an `id`, they can't be
 /// retrieved after they're added here, rendering them useless.
 ///
@@ -171,8 +171,8 @@ macro_rules! tui_stylesheet {
 
 /// This trait exists to allow "pseudo operator overloading". Rust does not support operator
 /// overloading, and the method to add a single style has a different signature than the one to add
-/// a vector of styles. To get around this, the [TryAdd] trait is implemented for both [Style] and
-/// [`Vec<Style>`]. Then the [stylesheet!] macro can "pseudo overload" them.
+/// a vector of styles. To get around this, the [TryAdd] trait is implemented for both [TuiStyle] and
+/// [`Vec<Style>`]. Then the [tui_stylesheet!] macro can "pseudo overload" them.
 pub trait TryAdd<OtherType = Self> {
     fn try_add(&mut self, other: OtherType) -> CommonResult<()>;
 }
