@@ -1658,7 +1658,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_rs_utils_macro"
-version = "0.9.8"
+version = "0.9.9"
 dependencies = [
  "paste",
  "pretty_assertions",
@@ -1705,7 +1705,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_tui"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "chrono",
  "colorgrad",

@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_tui"
-version = "0.5.2"
+version = "0.5.3"
 edition = "2021"
 resolver = "2"
 description = "TUI library to build modern apps inspired by Elm, with Flexbox, CSS, editor component, emoji support, and more"
@@ -26,7 +26,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl-open-core.
-r3bl_rs_utils_core = { path = "../core", version = "0.9.12" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.13" }
 r3bl_rs_utils_macro = { path = "../macro", version = "0.9.8" }
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
 log = { version = "0.4.20", features = ["std"] }                # Logging.
