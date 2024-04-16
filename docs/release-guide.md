@@ -63,8 +63,8 @@ cd tuify
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc
 git add -A
-git commit -m "v0.1.25-tuify"
-git tag -a v0.1.25-tuify -m "v0.1.25-tuify"
+git commit -m "v0.1.26-tuify"
+git tag -a v0.1.26-tuify -m "v0.1.26-tuify"
 cargo publish
 cd ..
 
