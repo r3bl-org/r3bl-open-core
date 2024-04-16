@@ -1,11 +1,16 @@
+# https://embarkstudios.github.io/cargo-deny/checks/cfg.html
+# https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
+
 [licenses]
 allow = ["MIT", "Apache-2.0", "BSL-1.0", "ISC", "BSD-3-Clause", "MPL-2.0"]
 
-exceptions = [
-    { name = "unicode-ident", allow = [
-        "Unicode-DFS-2016",
-    ] },
-    { name = "is_ci", allow = [
-        "ISC",
-    ] },
-]
+[[licenses.exceptions]]
+name = "unicode-ident"
+allow = ["Unicode-DFS-2016"]
+
+[[licenses.exceptions]]
+name = "is_ci"
+allow = ["ISC"]
+
+[advisories]
+ignore = ["yaml-rust@0.4.5"]
