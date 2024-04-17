@@ -21,7 +21,6 @@
     "unifiedjs.vscode-mdx", // MDX.
     "ms-vscode.vscode-typescript-next", // Typescript Next.
     "mishkinf.goto-next-previous-member", // Go to Next/Previous Member.
-    "nazmulidris.copyrighter", // Copyrighter (see comment above).
     "github.copilot", // Github Copilot.
     "huntertran.auto-markdown-toc", // Auto Markdown TOC.
     "naumovs.color-highlight", // Color Highlight.
@@ -46,6 +45,8 @@
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "unifiedjs.vscode-mdx", // MDX.
+    "ms-vscode.vscode-typescript-next", // Typescript Next.
     "esbenp.prettier-vscode", // prettier.
     "unifiedjs.vscode-remark", // remark.
     "ccy.ayu-adaptive", // Ayu Adaptive theme.
