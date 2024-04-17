@@ -13,6 +13,9 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "pkief.material-icon-theme", // Material Icon Theme.
+    "divanvisagie.nord-native-theme", // Nord Native Theme.
+    "antfu.icons-carbon", // Carbon Icons.
     "teabyii.ayu", // Ayu Theme.
     "GitHub.github-vscode-theme", // Github Theme.
     "vadimcn.vscode-lldb", // LLDB. Debugger.

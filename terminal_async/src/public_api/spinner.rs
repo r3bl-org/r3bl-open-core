@@ -15,51 +15,27 @@
  *   limitations under the License.
  */
 
-use crate::{
-    LineControlSignal, SafeRawTerminal, SharedWriter, SpinnerRender, SpinnerStyle, TokioMutex,
-};
+use crate::{LineControlSignal, SafeRawTerminal, SharedWriter, SpinnerRender, SpinnerStyle};
 use crossterm::terminal;
-use miette::miette;
+use miette::IntoDiagnostic;
 use r3bl_tuify::{
     is_fully_uninteractive_terminal, is_stdout_piped, StdoutIsPipedResult, TTYResult,
 };
-use std::{sync::Arc, time::Duration};
-use tokio::{sync::Mutex, task::AbortHandle, time::interval};
+use std::time::Duration;
+use tokio::time::interval;
 
 pub struct Spinner {
     pub tick_delay: Duration,
 
     pub message: String,
 
-    /// This is populated when the task is started. And when the task is stopped, it is
-    /// set to [None].
-    pub abort_handle: Arc<Mutex<Option<AbortHandle>>>,
-
     pub style: SpinnerStyle,
 
     pub safe_output_terminal: SafeRawTerminal,
 
     pub shared_writer: SharedWriter,
-}
 
-mod abort_handle {
-    use super::*;
-
-    pub async fn is_unset(abort_handle: &Arc<Mutex<Option<AbortHandle>>>) -> bool {
-        abort_handle.lock().await.is_none()
-    }
-
-    pub async fn is_set(abort_handle: &Arc<Mutex<Option<AbortHandle>>>) -> bool {
-        abort_handle.lock().await.is_some()
-    }
-
-    pub async fn try_unset(abort_handle: &Arc<Mutex<Option<AbortHandle>>>) -> Option<AbortHandle> {
-        abort_handle.lock().await.take()
-    }
-
-    pub async fn set(abort_handle: &Arc<Mutex<Option<AbortHandle>>>, handle: AbortHandle) {
-        *abort_handle.lock().await = Some(handle);
-    }
+    pub shutdown_sender: tokio::sync::broadcast::Sender<bool>,
 }
 
 impl Spinner {
@@ -90,30 +66,26 @@ impl Spinner {
             return Ok(None);
         }
 
+        // Shutdown broadcast channel.
+        let (shutdown_sender, _) = tokio::sync::broadcast::channel::<bool>(1);
+
         // Only start the task if the terminal is fully interactive.
         let mut spinner = Spinner {
             message: spinner_message,
             tick_delay,
-            abort_handle: Arc::new(TokioMutex::new(None)),
             style,
             safe_output_terminal,
             shared_writer,
+            shutdown_sender,
         };
 
-        // Start task and get the abort_handle.
-        let abort_handle = spinner.try_start_task().await?;
-
-        // Save the abort_handle.
-        abort_handle::set(&spinner.abort_handle, abort_handle).await;
+        // Start task.
+        spinner.try_start_task().await?;
 
         Ok(Some(spinner))
     }
 
-    async fn try_start_task(&mut self) -> miette::Result<AbortHandle> {
-        if abort_handle::is_set(&self.abort_handle).await {
-            return Err(miette!("Task is already running"));
-        }
-
+    async fn try_start_task(&mut self) -> miette::Result<()> {
         // Pause the terminal.
         let _ = self
             .shared_writer
@@ -123,65 +95,63 @@ impl Spinner {
 
         let message = self.message.clone();
         let tick_delay = self.tick_delay;
-        let abort_handle = self.abort_handle.clone();
         let mut style = self.style.clone();
         let safe_output_terminal = self.safe_output_terminal.clone();
 
-        let join_handle = tokio::spawn(async move {
+        let mut shutdown_receiver = self.shutdown_sender.subscribe();
+
+        tokio::spawn(async move {
             let mut interval = interval(tick_delay);
+
             // Count is used to determine the output.
             let mut count = 0;
             let message_clone = message.clone();
 
             loop {
-                // Wait for the interval duration.
-                interval.tick().await;
+                tokio::select! {
+                    // Poll interval.
+                    _ = interval.tick() => {
+                        // Render and paint the output, based on style.
+                        let output = style.render_tick(&message_clone, count, get_terminal_display_width());
+                        let _ = style
+                            .print_tick(&output, &mut *safe_output_terminal.lock().await)
+                            .await;
+                        // Increment count to affect the output in the next iteration of this loop.
+                        count += 1;
+                    },
 
-                // If abort_handle is None (ie, `stop()` has been called), then break the
-                // loop.
-                if abort_handle::is_unset(&abort_handle).await {
-                    break;
+                    // Poll shutdown channel.
+                    _ = shutdown_receiver.recv() => {
+                        break;
+                    }
                 }
-
-                // Render and paint the output, based on style.
-                let output = style.render_tick(&message_clone, count, get_terminal_display_width());
-                let _ = style
-                    .print_tick(&output, &mut *safe_output_terminal.lock().await)
-                    .await;
-
-                // Increment count to affect the output in the next iteration of this loop.
-                count += 1;
             }
         });
 
-        Ok(join_handle.abort_handle())
+        Ok(())
     }
 
     pub async fn stop(&mut self, final_message: &str) -> miette::Result<()> {
-        // If task is running, abort it. And print "\n".
-        if let Some(abort_handle) = abort_handle::try_unset(&self.abort_handle).await {
-            // Abort the task.
-            abort_handle.abort();
+        // Shutdown the task.
+        self.shutdown_sender.send(true).into_diagnostic()?;
 
-            // Print the final message.
-            let final_output = self
-                .style
-                .render_final_tick(final_message, get_terminal_display_width());
-            self.style
-                .print_final_tick(
-                    &final_output,
-                    &mut *self.safe_output_terminal.clone().lock().await,
-                )
-                .await?;
+        // Print the final message.
+        let final_output = self
+            .style
+            .render_final_tick(final_message, get_terminal_display_width());
+        self.style
+            .print_final_tick(
+                &final_output,
+                &mut *self.safe_output_terminal.clone().lock().await,
+            )
+            .await?;
 
-            // Resume the terminal.
-            let _ = self
-                .shared_writer
-                .line_sender
-                .send(LineControlSignal::Resume)
-                .await;
-        }
-
+        // Resume the terminal.
+        let _ = self
+            .shared_writer
+            .line_sender
+            .send(LineControlSignal::Resume)
+            .await;
         Ok(())
     }
 }
@@ -195,11 +165,10 @@ fn get_terminal_display_width() -> usize {
 
 #[cfg(test)]
 mod tests {
-    use strip_ansi_escapes::strip;
-
-    use crate::{test_fixtures::StdoutMock, SpinnerColor, StdMutex};
-
     use super::*;
+    use crate::{test_fixtures::StdoutMock, SpinnerColor, StdMutex, TokioMutex};
+    use std::sync::Arc;
+    use strip_ansi_escapes::strip;
 
     #[tokio::test]
     async fn test_spinner_color() {
@@ -314,6 +283,7 @@ mod tests {
         spinner.stop("final message").await.unwrap();
 
         // This block ensures that the mutex guard is dropped correctly.
+        // spell-checker:disable
         {
             let output_buffer_data = stdout_mock.buffer.lock().unwrap();
             // let output_buffer_data = strip(output_buffer_data.to_vec());
@@ -328,6 +298,7 @@ mod tests {
             assert!(output_buffer_data
                 .contains("\u{1b}[39m\n\u{1b}[1A\u{1b}[1G\u{1b}[2Kfinal message\n"));
         }
+        // spell-checker:enable
 
         let mut line_control_signal_sink = vec![];
         loop {
