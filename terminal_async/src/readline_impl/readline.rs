@@ -30,10 +30,7 @@ use std::{
     sync::Arc,
 };
 use thiserror::Error;
-use tokio::{
-    sync::mpsc::{Receiver, Sender, UnboundedReceiver, UnboundedSender},
-    task::JoinHandle,
-};
+use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
 
 /// ### Mental model and overview
 ///
@@ -138,15 +135,14 @@ pub struct Readline {
     /// via [`SharedWriter`]s is not printed to the terminal.
     pub safe_is_paused: SafeBool,
 
-    /// Receiver end of the line channel, the sender end is in [`SharedWriter`], which does the
-    /// actual writing to the terminal. When this struct is dropped, this will be aborted.
-    pub monitor_line_receiver_task_join_handle: JoinHandle<()>,
-
-    /// [SharedWriter]s can typically send messages, but this allows [Readline] instance
-    /// to do the same.
-    pub line_sender: Sender<LineControlSignal>,
-
+    /// Collects lines that are written to the terminal while the terminal is paused.
     pub safe_is_paused_buffer: SafePauseBuffer,
+
+    /// Shutdown broadcast channel that is used to stop both:
+    /// 1. [`pause_and_resume_support::spawn_task_to_monitor_line_channel`].
+    /// 2. [`Readline::readline`] if it is currently running.
+    /// 3. Also see: [`Readline::close`].
+    pub shutdown_sender: tokio::sync::broadcast::Sender<bool>,
 }
 
 /// Error returned from [`readline()`][Readline::readline]. Such errors generally require
@@ -184,7 +180,6 @@ pub enum LineControlSignal {
     Flush,
     Pause,
     Resume,
-    Close,
 }
 
 /// Internal control flow for the `readline` method. This is used primarily to make testing
@@ -201,36 +196,46 @@ pub mod pause_and_resume_support {
 
     /// Receiver end of the channel, the sender end is in [`SharedWriter`], which does the
     /// actual writing to the terminal.
-    pub async fn spawn_task_to_monitor_line_receiver(
+    pub fn spawn_task_to_monitor_line_channel(
+        shutdown_sender: tokio::sync::broadcast::Sender<bool>,
         /* move */ mut line_receiver: Receiver<LineControlSignal>,
         safe_is_paused: SafeBool,
         safe_line_state: SafeLineState,
         safe_raw_terminal: SafeRawTerminal,
         safe_is_paused_buffer: SafePauseBuffer,
     ) -> tokio::task::JoinHandle<()> {
+        let mut shutdown_receiver = shutdown_sender.subscribe();
         tokio::spawn(async move {
             loop {
-                let maybe_line_control_signal = line_receiver.recv().await;
+                tokio::select! {
+                    // Poll line channel for events.
+                    maybe_line_control_signal = line_receiver.recv() => {
+                        let control_flow = poll_for_shared_writer_output(
+                            maybe_line_control_signal,
+                            safe_is_paused_buffer.clone(),
+                            safe_line_state.clone(),
+                            safe_raw_terminal.clone(),
+                            safe_is_paused.clone(),
+                        )
+                        .await;
 
-                let control_flow = poll_for_shared_writer_output(
-                    maybe_line_control_signal,
-                    safe_is_paused_buffer.clone(),
-                    safe_line_state.clone(),
-                    safe_raw_terminal.clone(),
-                    safe_is_paused.clone(),
-                )
-                .await;
+                        match control_flow {
+                            InternalControlFlow::ReturnError(_) => {
+                                line_receiver.close();
+                                break;
+                            }
+                            InternalControlFlow::Continue => {
+                                // continue.
+                            }
+                            _ => {
+                                unreachable!();
+                            }
+                        }
+                    }
 
-                match control_flow {
-                    InternalControlFlow::ReturnError(_) => {
-                        line_receiver.close();
+                    // Poll shutdown channel.
+                    _ = shutdown_receiver.recv() => {
                         break;
-                    }
-                    InternalControlFlow::Continue => {
-                        // continue.
-                    }
-                    _ => {
-                        unreachable!();
                     }
                 }
             }
@@ -323,10 +328,6 @@ pub mod pause_and_resume_support {
                     )
                     .await;
                 }
-
-                LineControlSignal::Close => {
-                    return InternalControlFlow::ReturnError(ReadlineError::Closed);
-                }
             },
             None => {
                 return InternalControlFlow::ReturnError(ReadlineError::Closed);
@@ -351,6 +352,10 @@ impl Readline {
         let line_channel = tokio::sync::mpsc::channel::<LineControlSignal>(CHANNEL_CAPACITY);
         let (line_sender, line_receiver) = line_channel;
 
+        // Shutdown channel.
+        let shutdown_channel = tokio::sync::broadcast::channel::<bool>(1);
+        let (shutdown_sender, _) = shutdown_channel;
+
         // Paused state.
         let safe_is_paused = Arc::new(TokioMutex::new(false));
 
@@ -371,15 +376,14 @@ impl Readline {
         let safe_is_paused_buffer = Arc::new(TokioMutex::new(is_paused_buffer));
 
         // Start task to process line_receiver.
-        let monitor_line_receiver_task_join_handle =
-            pause_and_resume_support::spawn_task_to_monitor_line_receiver(
-                line_receiver,
-                safe_is_paused.clone(),
-                safe_line_state.clone(),
-                safe_raw_terminal.clone(),
-                safe_is_paused_buffer.clone(),
-            )
-            .await;
+        pause_and_resume_support::spawn_task_to_monitor_line_channel(
+            shutdown_sender.clone(),
+            line_receiver,
+            safe_is_paused.clone(),
+            safe_line_state.clone(),
+            safe_raw_terminal.clone(),
+            safe_is_paused_buffer.clone(),
+        );
 
         // Create the instance with all the supplied components.
         let readline = Readline {
@@ -390,8 +394,7 @@ impl Readline {
             safe_is_paused: safe_is_paused.clone(),
             history_receiver,
             safe_history,
-            monitor_line_receiver_task_join_handle,
-            line_sender: line_sender.clone(),
+            shutdown_sender,
             safe_is_paused_buffer,
         };
 
@@ -466,6 +469,7 @@ impl Readline {
     /// Polling function for `readline`, manages all input and output. Returns either an
     /// [ReadlineEvent] or an [ReadlineError].
     pub async fn readline(&mut self) -> miette::Result<ReadlineEvent, ReadlineError> {
+        let mut shutdown_receiver = self.shutdown_sender.subscribe();
         loop {
             tokio::select! {
                 // Poll for events.
@@ -485,6 +489,11 @@ impl Readline {
                 // Poll for history updates.
                 maybe_line = self.history_receiver.recv() => {
                     self.safe_history.lock().await.update(maybe_line).await;
+                }
+
+                // Poll shutdown channel.
+                _ = shutdown_receiver.recv() => {
+                    break Err(ReadlineError::Closed);
                 }
             }
         }
@@ -534,22 +543,27 @@ pub mod readline_internal {
 /// Exit raw mode when the instance is dropped.
 impl Drop for Readline {
     /// There is no need to explicitly call [Readline::close()] if the instance is
-    /// dropped, since it will close the `line` channel and the task
-    /// [`Readline::monitor_line_receiver_task_join_handle`] that monitors it.
+    /// dropped, since it will close the shutdown channel and the task
+    /// 1. [`pause_and_resume_support::spawn_task_to_monitor_line_channel`].
+    /// 2. [`Readline::readline`] if it is currently running.
+    /// 3. See also: [`Readline::close`].
     fn drop(&mut self) {
+        let _ = self.shutdown_sender.send(true);
         let _ = disable_raw_mode();
-        self.monitor_line_receiver_task_join_handle.abort();
     }
 }
 
 impl Readline {
-    /// Call this to shutdown the [tokio::sync::mpsc::Receiver] and thus the channel
-    /// [tokio::sync::mpsc::channel]. Typically this happens when your CLI wants to exit,
-    /// due to some user input requesting this. This will result in any awaiting tasks in
-    /// various places to error out, which is the desired behavior, rather than just
-    /// hanging, waiting on events that will never happen.
+    /// Call this to shutdown:
+    /// 1. [`pause_and_resume_support::spawn_task_to_monitor_line_channel()`].
+    /// 2. [`Readline::readline()`] only if it is currently running.
+    ///
+    /// Typically this happens when your CLI wants to exit, due to some user input
+    /// requesting this. This will result in any awaiting tasks in various places to error
+    /// out, which is the desired behavior, rather than just hanging, waiting on events
+    /// that will never happen.
     pub async fn close(&mut self) {
-        let _ = self.line_sender.send(LineControlSignal::Close).await;
+        let _ = self.shutdown_sender.send(true);
     }
 }
 
