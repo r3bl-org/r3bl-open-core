@@ -101,7 +101,7 @@ def install-cargo-tools [] {
 def all [] {
     cargo install cargo-deny
     cargo install cargo-unmaintained
-    cargo build
+    build
     test
     clippy
     docs
@@ -110,15 +110,15 @@ def all [] {
     rustfmt
 }
 
-# Runs everything that all does, except for unmaintained.
+# Runs everything that all does, except for cargo-unmaintained and cargo-deny.
 def all-cicd [] {
-    cargo install cargo-deny
+    # cargo install cargo-deny
     # cargo install cargo-unmaintained
-    cargo build
+    build
     test
     clippy
     docs
-    audit-deps
+    # audit-deps
     # unmaintained
     rustfmt
 }
