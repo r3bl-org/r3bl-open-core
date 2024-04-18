@@ -305,10 +305,7 @@ fn show_tui(
 }
 
 fn convert_user_input_into_vec_of_strings(user_input: Option<Vec<String>>) -> Vec<String> {
-    match user_input {
-        Some(it) => it,
-        None => vec![],
-    }
+    user_input.unwrap_or_default()
 }
 
 /// More info: <https://docs.rs/execute/latest/execute/#run-a-command-string-in-the-current-shell>
