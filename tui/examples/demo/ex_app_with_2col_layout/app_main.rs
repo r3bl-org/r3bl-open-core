@@ -150,7 +150,7 @@ mod app_main_impl_app_trait {
                             row_count: window_size.row_count - 1), // Bottom row for for status bar.
                     })?;
 
-                    perform_layout::ContainerSurfaceRenderer { app: self }
+                    perform_layout::ContainerSurfaceRenderer { _app: self }
                         .render_in_surface(
                             &mut it,
                             global_data,
@@ -177,7 +177,7 @@ mod perform_layout {
     use super::*;
 
     pub struct ContainerSurfaceRenderer<'a> {
-        pub app: &'a mut AppMain,
+        pub _app: &'a mut AppMain,
     }
 
     impl SurfaceRender<State, AppSignal> for ContainerSurfaceRenderer<'_> {

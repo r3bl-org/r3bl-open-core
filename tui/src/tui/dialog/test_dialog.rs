@@ -26,11 +26,7 @@ pub mod mock_real_objects_for_dialog {
     pub fn make_global_data(window_size: Option<Size>) -> GlobalData<State, ()> {
         let (main_thread_channel_sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
         let state = create_state();
-        let window_size = if let Some(window_size) = window_size {
-            window_size
-        } else {
-            Default::default()
-        };
+        let window_size = window_size.unwrap_or_default();
         let maybe_saved_offscreen_buffer = Default::default();
         GlobalData {
             state,

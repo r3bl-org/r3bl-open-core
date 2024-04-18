@@ -1645,11 +1645,7 @@ pub mod mock_real_objects_for_editor {
         let (sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
 
         GlobalData {
-            window_size: if let Some(window_size) = window_size {
-                window_size
-            } else {
-                Default::default()
-            },
+            window_size: window_size.unwrap_or_default(),
             maybe_saved_offscreen_buffer: Default::default(),
             main_thread_channel_sender: sender,
             state: Default::default(),
