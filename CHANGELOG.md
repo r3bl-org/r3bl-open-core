@@ -624,6 +624,14 @@
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
 
+### v0.3.1 (2024-04-17)
+
+- Updated:
+  - Minor refactoring to remove the use of `JoinHandle::abort()` and replace it with a
+    tokio broadcast channel to signal tasks to stop. This is a more graceful, flexible,
+    and powerful way to stop tasks that are running in parallel. This change is applied to
+    `spinner.rs` and `readline.rs`. The public API remains exactly the same.
+
 ### v0.3.0 (2024-04-15)
 <a id="markdown-v0.3.0-2024-04-15" name="v0.3.0-2024-04-15"></a>
 
