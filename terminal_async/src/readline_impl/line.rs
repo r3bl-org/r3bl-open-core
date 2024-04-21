@@ -225,7 +225,7 @@ impl LineState {
         Ok(())
     }
 
-    pub async fn handle_event(
+    pub fn handle_event(
         &mut self,
         event: Event,
         term: &mut dyn Write,
@@ -419,7 +419,7 @@ impl LineState {
                 }
                 KeyCode::Up => {
                     // search for next history item, replace line if found.
-                    if let Some(line) = safe_history.lock().await.search_next() {
+                    if let Some(line) = safe_history.lock().unwrap().search_next() {
                         self.line.clear();
                         self.line += line;
                         self.clear(term)?;
@@ -429,7 +429,7 @@ impl LineState {
                 }
                 KeyCode::Down => {
                     // search for next history item, replace line if found.
-                    if let Some(line) = safe_history.lock().await.search_previous() {
+                    if let Some(line) = safe_history.lock().unwrap().search_previous() {
                         self.line.clear();
                         self.line += line;
                         self.clear(term)?;
@@ -477,7 +477,7 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{test_fixtures::StdoutMock, History, StdMutex, TokioMutex};
+    use crate::{test_fixtures::StdoutMock, History, StdMutex};
     use std::sync::Arc;
 
     #[tokio::test]
@@ -487,16 +487,18 @@ mod tests {
         let stdout_mock = StdoutMock {
             buffer: Arc::new(StdMutex::new(Vec::new())),
         };
-        let safe_output_terminal = Arc::new(TokioMutex::new(stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (history, _) = History::new();
-        let safe_history = Arc::new(TokioMutex::new(history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
 
-        let it = line
-            .handle_event(event, &mut *safe_output_terminal.lock().await, safe_history)
-            .await;
+        let it = line.handle_event(
+            event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            safe_history,
+        );
 
         assert!(matches!(it, Ok(None)));
 
@@ -510,16 +512,18 @@ mod tests {
         let stdout_mock = StdoutMock {
             buffer: Arc::new(StdMutex::new(Vec::new())),
         };
-        let safe_output_terminal = Arc::new(TokioMutex::new(stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (history, _) = History::new();
-        let safe_history = Arc::new(TokioMutex::new(history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
 
-        let it = line
-            .handle_event(event, &mut *safe_output_terminal.lock().await, safe_history)
-            .await;
+        let it = line.handle_event(
+            event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            safe_history,
+        );
 
         assert!(matches!(it, Ok(None)));
 
@@ -533,16 +537,18 @@ mod tests {
         let stdout_mock = StdoutMock {
             buffer: Arc::new(StdMutex::new(Vec::new())),
         };
-        let safe_output_terminal = Arc::new(TokioMutex::new(stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (history, _) = History::new();
-        let safe_history = Arc::new(TokioMutex::new(history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         let event = Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
 
-        let it = line
-            .handle_event(event, &mut *safe_output_terminal.lock().await, safe_history)
-            .await;
+        let it = line.handle_event(
+            event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            safe_history,
+        );
 
         assert!(matches!(it, Ok(None)));
 

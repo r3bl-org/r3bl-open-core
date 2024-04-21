@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{PinnedInputStream, Readline, ReadlineEvent, SharedWriter, TokioMutex};
+use crate::{PinnedInputStream, Readline, ReadlineEvent, SharedWriter, StdMutex};
 use crossterm::{event::EventStream, style::Stylize};
 use futures_util::FutureExt;
 use miette::IntoDiagnostic;
@@ -60,11 +60,10 @@ impl TerminalAsync {
             return Ok(None);
         }
 
-        let safe_raw_terminal = Arc::new(TokioMutex::new(stdout()));
+        let safe_raw_terminal = Arc::new(StdMutex::new(stdout()));
         let pinned_input_stream: PinnedInputStream = Box::pin(EventStream::new());
         let (readline, stdout) =
             Readline::new(prompt.to_owned(), safe_raw_terminal, pinned_input_stream)
-                .await
                 .into_diagnostic()?;
         Ok(Some(TerminalAsync {
             readline,
@@ -133,7 +132,7 @@ impl TerminalAsync {
     /// Close the underlying [Readline] instance. This will terminate all the tasks that
     /// are managing [SharedWriter] tasks. This is useful when you want to exit the CLI
     /// event loop, typically when the user requests it.
-    pub async fn close(&mut self) {
-        self.readline.close().await;
+    pub fn close(&mut self) {
+        self.readline.close();
     }
 }
