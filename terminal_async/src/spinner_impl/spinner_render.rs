@@ -31,18 +31,10 @@ use r3bl_tuify::clip_string_to_width_with_ellipsis;
 
 pub trait SpinnerRender {
     fn render_tick(&mut self, message: &str, count: usize, display_width: usize) -> String;
-    fn print_tick(
-        &self,
-        output: &str,
-        writer: &mut SendRawTerminal,
-    ) -> impl std::future::Future<Output = miette::Result<()>> + Send; /* this is in lieu of async marker on the fn */
+    fn print_tick(&self, output: &str, writer: &mut SendRawTerminal) -> miette::Result<()>;
 
     fn render_final_tick(&self, message: &str, display_width: usize) -> String;
-    fn print_final_tick(
-        &self,
-        output: &str,
-        writer: &mut SendRawTerminal,
-    ) -> impl std::future::Future<Output = miette::Result<()>> + Send; /* this is in lieu of async marker on the fn */
+    fn print_final_tick(&self, output: &str, writer: &mut SendRawTerminal) -> miette::Result<()>;
 }
 
 fn apply_color(output: &str, color: &mut SpinnerColor) -> String {
@@ -99,7 +91,7 @@ impl SpinnerRender for SpinnerStyle {
         }
     }
 
-    async fn print_tick(&self, output: &str, writer: &mut SendRawTerminal) -> miette::Result<()> {
+    fn print_tick(&self, output: &str, writer: &mut SendRawTerminal) -> miette::Result<()> {
         match self.template {
             SpinnerTemplate::Dots => {
                 // Print the output. And make sure to terminate w/ a newline, so that the
@@ -157,11 +149,7 @@ impl SpinnerRender for SpinnerStyle {
         }
     }
 
-    async fn print_final_tick(
-        &self,
-        output: &str,
-        writer: &mut SendRawTerminal,
-    ) -> miette::Result<()> {
+    fn print_final_tick(&self, output: &str, writer: &mut SendRawTerminal) -> miette::Result<()> {
         match self.template {
             SpinnerTemplate::Dots | SpinnerTemplate::Braille | SpinnerTemplate::Block => writer
                 .queue(MoveToColumn(0))

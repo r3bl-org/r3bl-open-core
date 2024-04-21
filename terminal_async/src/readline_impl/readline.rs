@@ -17,7 +17,7 @@
 
 use crate::{
     History, LineState, PauseBuffer, PinnedInputStream, SafeBool, SafeHistory, SafeLineState,
-    SafePauseBuffer, SafeRawTerminal, SharedWriter, Text, TokioMutex, CHANNEL_CAPACITY,
+    SafePauseBuffer, SafeRawTerminal, SharedWriter, StdMutex, Text, CHANNEL_CAPACITY,
 };
 use crossterm::{
     event::Event,
@@ -46,9 +46,8 @@ use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
 /// down, left, right, etc. While in this loop other tasks can send messages to the
 /// `Readline` task via the `line` channel, using the [`SharedWriter::line_sender`].
 ///
-/// When you create a new [`Readline`] instance, a task,
-/// [`Readline::monitor_line_receiver_task_join_handle`]], is started via
-/// [`pause_and_resume_support::spawn_task_to_monitor_line_receiver()`]. This task
+/// When you create a new [`Readline`] instance, a task, is started via
+/// [`pause_and_resume_support::spawn_task_to_monitor_line_channel()`]. This task
 /// monitors the `line` channel, and processes any messages that are sent to it. This
 /// allows the task to be paused, and resumed, and to flush the output from the
 /// [`SharedWriter`]s. When you [`Readline::close()`] the instance or drop it, this task
@@ -89,7 +88,7 @@ use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
 /// [`PauseBuffer`].
 ///
 /// This is possible, because while paused, the
-/// [`pause_and_resume_support::poll_for_shared_writer_output()`] method doesn't actually
+/// [`pause_and_resume_support::process_line_control_signal()`] method doesn't actually
 /// print anything to the display. When resumed, the
 /// [`pause_and_resume_support::flush_internal()`] method is called, which drains the
 /// [`PauseBuffer`] (if there are any messages in it, and prints them out) so nothing is
@@ -172,8 +171,7 @@ pub enum ReadlineEvent {
     Interrupted,
 }
 
-/// Signals that can be sent to the `line` channel, which is monitored by the
-/// [`Readline::monitor_line_receiver_task_join_handle`] task.
+/// Signals that can be sent to the `line` channel, which is monitored by the task.
 #[derive(Debug, PartialEq, Clone)]
 pub enum LineControlSignal {
     Line(Text),
@@ -210,14 +208,13 @@ pub mod pause_and_resume_support {
                 tokio::select! {
                     // Poll line channel for events.
                     maybe_line_control_signal = line_receiver.recv() => {
-                        let control_flow = poll_for_shared_writer_output(
+                        let control_flow = process_line_control_signal(
                             maybe_line_control_signal,
                             safe_is_paused_buffer.clone(),
                             safe_line_state.clone(),
                             safe_raw_terminal.clone(),
                             safe_is_paused.clone(),
-                        )
-                        .await;
+                        );
 
                         match control_flow {
                             InternalControlFlow::ReturnError(_) => {
@@ -243,31 +240,31 @@ pub mod pause_and_resume_support {
     }
 
     /// Flush all writers to terminal and erase the prompt string.
-    pub async fn flush_internal(
+    pub fn flush_internal(
         self_safe_is_paused_buffer: SafePauseBuffer,
         safe_is_paused: SafeBool,
         safe_line_state: SafeLineState,
         safe_raw_terminal: SafeRawTerminal,
     ) -> Result<(), ReadlineError> {
         // If paused, then return!
-        if *safe_is_paused.lock().await {
+        if *safe_is_paused.lock().unwrap() {
             return Ok(());
         }
 
-        let is_paused_buffer = &mut *self_safe_is_paused_buffer.lock().await;
+        let is_paused_buffer = &mut *self_safe_is_paused_buffer.lock().unwrap();
 
         while let Some(buf) = is_paused_buffer.pop_front() {
             safe_line_state
                 .lock()
-                .await
-                .print_data(&buf, &mut *safe_raw_terminal.lock().await)?;
+                .unwrap()
+                .print_data(&buf, &mut *safe_raw_terminal.lock().unwrap())?;
         }
 
         safe_line_state
             .lock()
-            .await
-            .clear_and_render(&mut *safe_raw_terminal.lock().await)?;
-        safe_raw_terminal.lock().await.flush()?;
+            .unwrap()
+            .clear_and_render(&mut *safe_raw_terminal.lock().unwrap())?;
+        safe_raw_terminal.lock().unwrap().flush()?;
 
         Ok(())
     }
@@ -275,7 +272,7 @@ pub mod pause_and_resume_support {
     /// Returns only the following:
     /// - [InternalControlFlow::Continue]
     /// - [InternalControlFlow::ReturnError]
-    pub async fn poll_for_shared_writer_output(
+    pub fn process_line_control_signal(
         maybe_line_control_signal: Option<LineControlSignal>,
         self_safe_is_paused_buffer: SafePauseBuffer,
         self_safe_line_state: SafeLineState,
@@ -286,20 +283,20 @@ pub mod pause_and_resume_support {
             Some(line_control_signal) => match line_control_signal {
                 LineControlSignal::Line(buf) => {
                     // If paused, then return!
-                    if *self_safe_is_paused.lock().await {
-                        let pause_buffer = &mut *self_safe_is_paused_buffer.lock().await;
+                    if *self_safe_is_paused.lock().unwrap() {
+                        let pause_buffer = &mut *self_safe_is_paused_buffer.lock().unwrap();
                         pause_buffer.push_back(buf);
                         return InternalControlFlow::Continue;
                     }
 
                     if let Err(err) = self_safe_line_state
                         .lock()
-                        .await
-                        .print_data(&buf, &mut *self_safe_raw_terminal.lock().await)
+                        .unwrap()
+                        .print_data(&buf, &mut *self_safe_raw_terminal.lock().unwrap())
                     {
                         return InternalControlFlow::ReturnError(err);
                     }
-                    if let Err(err) = self_safe_raw_terminal.lock().await.flush() {
+                    if let Err(err) = self_safe_raw_terminal.lock().unwrap().flush() {
                         return InternalControlFlow::ReturnError(err.into());
                     }
                 }
@@ -310,23 +307,21 @@ pub mod pause_and_resume_support {
                         self_safe_is_paused,
                         self_safe_line_state,
                         self_safe_raw_terminal,
-                    )
-                    .await;
+                    );
                 }
 
                 LineControlSignal::Pause => {
-                    *self_safe_is_paused.lock().await = true;
+                    *self_safe_is_paused.lock().unwrap() = true;
                 }
 
                 LineControlSignal::Resume => {
-                    *self_safe_is_paused.lock().await = false;
+                    *self_safe_is_paused.lock().unwrap() = false;
                     let _ = flush_internal(
                         self_safe_is_paused_buffer,
                         self_safe_is_paused,
                         self_safe_line_state,
                         self_safe_raw_terminal,
-                    )
-                    .await;
+                    );
                 }
             },
             None => {
@@ -343,7 +338,7 @@ impl Readline {
     /// behavior of this instance, you can use the following methods:
     /// - [Self::should_print_line_on]
     /// - [Self::set_max_history]
-    pub async fn new(
+    pub fn new(
         prompt: String,
         safe_raw_terminal: SafeRawTerminal,
         /* move */ pinned_input_stream: PinnedInputStream,
@@ -357,7 +352,7 @@ impl Readline {
         let (shutdown_sender, _) = shutdown_channel;
 
         // Paused state.
-        let safe_is_paused = Arc::new(TokioMutex::new(false));
+        let safe_is_paused = Arc::new(StdMutex::new(false));
 
         // Enable raw mode. Drop will disable raw mode.
         terminal::enable_raw_mode()?;
@@ -365,15 +360,15 @@ impl Readline {
         // History setup.
         let (history, history_receiver) = History::new();
         let history_sender = history.sender.clone();
-        let safe_history = Arc::new(TokioMutex::new(history));
+        let safe_history = Arc::new(StdMutex::new(history));
 
         // Line state.
         let line_state = LineState::new(prompt, terminal::size()?);
-        let safe_line_state = Arc::new(TokioMutex::new(line_state));
+        let safe_line_state = Arc::new(StdMutex::new(line_state));
 
         // Pause buffer.
         let is_paused_buffer = PauseBuffer::new();
-        let safe_is_paused_buffer = Arc::new(TokioMutex::new(is_paused_buffer));
+        let safe_is_paused_buffer = Arc::new(StdMutex::new(is_paused_buffer));
 
         // Start task to process line_receiver.
         pause_and_resume_support::spawn_task_to_monitor_line_channel(
@@ -402,14 +397,14 @@ impl Readline {
         readline
             .safe_line_state
             .lock()
-            .await
-            .render(&mut *readline.safe_raw_terminal.lock().await)?;
+            .unwrap()
+            .render(&mut *readline.safe_raw_terminal.lock().unwrap())?;
         readline
             .safe_raw_terminal
             .lock()
-            .await
+            .unwrap()
             .queue(terminal::EnableLineWrap)?;
-        readline.safe_raw_terminal.lock().await.flush()?;
+        readline.safe_raw_terminal.lock().unwrap().flush()?;
 
         // Create the shared writer.
         let shared_writer = SharedWriter {
@@ -422,31 +417,31 @@ impl Readline {
     }
 
     /// Change the prompt.
-    pub async fn update_prompt(&mut self, prompt: &str) -> Result<(), ReadlineError> {
+    pub fn update_prompt(&mut self, prompt: &str) -> Result<(), ReadlineError> {
         self.safe_line_state
             .lock()
-            .await
-            .update_prompt(prompt, &mut *self.safe_raw_terminal.lock().await)?;
+            .unwrap()
+            .update_prompt(prompt, &mut *self.safe_raw_terminal.lock().unwrap())?;
         Ok(())
     }
 
     /// Clear the screen.
-    pub async fn clear(&mut self) -> Result<(), ReadlineError> {
+    pub fn clear(&mut self) -> Result<(), ReadlineError> {
         self.safe_raw_terminal
             .lock()
-            .await
+            .unwrap()
             .queue(Clear(terminal::ClearType::All))?;
         self.safe_line_state
             .lock()
-            .await
-            .clear_and_render(&mut *self.safe_raw_terminal.lock().await)?;
-        self.safe_raw_terminal.lock().await.flush()?;
+            .unwrap()
+            .clear_and_render(&mut *self.safe_raw_terminal.lock().unwrap())?;
+        self.safe_raw_terminal.lock().unwrap().flush()?;
         Ok(())
     }
 
     /// Set maximum history length. The default length is [crate::HISTORY_SIZE_MAX].
-    pub async fn set_max_history(&mut self, max_size: usize) {
-        let mut history = self.safe_history.lock().await;
+    pub fn set_max_history(&mut self, max_size: usize) {
+        let mut history = self.safe_history.lock().unwrap();
         history.max_size = max_size;
         history.entries.truncate(max_size);
     }
@@ -460,8 +455,8 @@ impl Readline {
     /// `control_c` similarly controls the behavior for when the user presses Ctrl-C.
     ///
     /// The default value for both settings is `true`.
-    pub async fn should_print_line_on(&mut self, enter: bool, control_c: bool) {
-        let mut line_state = self.safe_line_state.lock().await;
+    pub fn should_print_line_on(&mut self, enter: bool, control_c: bool) {
+        let mut line_state = self.safe_line_state.lock().unwrap();
         line_state.should_print_line_on_enter = enter;
         line_state.should_print_line_on_control_c = control_c;
     }
@@ -477,9 +472,9 @@ impl Readline {
                     match readline_internal::process_event(
                         maybe_result_crossterm_event,
                         self.safe_line_state.clone(),
-                        &mut *self.safe_raw_terminal.lock().await,
+                        &mut *self.safe_raw_terminal.lock().unwrap(),
                         self.safe_history.clone()
-                    ).await {
+                    ) {
                         InternalControlFlow::ReturnOk(ok_value) => {return Ok(ok_value);},
                         InternalControlFlow::ReturnError(err_value) => {return Err(err_value);},
                         InternalControlFlow::Continue => {}
@@ -488,7 +483,7 @@ impl Readline {
 
                 // Poll for history updates.
                 maybe_line = self.history_receiver.recv() => {
-                    self.safe_history.lock().await.update(maybe_line).await;
+                    self.safe_history.lock().unwrap().update(maybe_line);
                 }
 
                 // Poll shutdown channel.
@@ -508,7 +503,7 @@ impl Readline {
 pub mod readline_internal {
     use super::*;
 
-    pub async fn process_event(
+    pub fn process_event(
         maybe_result_crossterm_event: Option<Result<Event, Error>>,
         self_line_state: SafeLineState,
         self_raw_terminal: &mut dyn Write,
@@ -517,10 +512,9 @@ pub mod readline_internal {
         if let Some(result_crossterm_event) = maybe_result_crossterm_event {
             match result_crossterm_event {
                 Ok(crossterm_event) => {
-                    let mut it = self_line_state.lock().await;
-                    let result_maybe_readline_event = it
-                        .handle_event(crossterm_event, self_raw_terminal, self_safe_history)
-                        .await;
+                    let mut it = self_line_state.lock().unwrap();
+                    let result_maybe_readline_event =
+                        it.handle_event(crossterm_event, self_raw_terminal, self_safe_history);
                     match result_maybe_readline_event {
                         Ok(maybe_readline_event) => {
                             if let Err(e) = self_raw_terminal.flush() {
@@ -562,7 +556,7 @@ impl Readline {
     /// requesting this. This will result in any awaiting tasks in various places to error
     /// out, which is the desired behavior, rather than just hanging, waiting on events
     /// that will never happen.
-    pub async fn close(&mut self) {
+    pub fn close(&mut self) {
         let _ = self.shutdown_sender.send(true);
     }
 }
@@ -643,27 +637,25 @@ mod tests {
         // We will get the `line_state` out of this to test.
         let (readline, _) = Readline::new(
             prompt_str.into(),
-            Arc::new(TokioMutex::new(stdout_mock.clone())),
+            Arc::new(StdMutex::new(stdout_mock.clone())),
             gen_input_stream(),
         )
-        .await
         .unwrap();
 
         let history = History::new();
-        let safe_history = Arc::new(TokioMutex::new(history.0));
+        let safe_history = Arc::new(StdMutex::new(history.0));
 
         // Simulate 'a'.
         let event = iter.next().unwrap();
         let control_flow = readline_internal::process_event(
             Some(Ok(event.clone())),
             readline.safe_line_state.clone(),
-            &mut *readline.safe_raw_terminal.lock().await,
+            &mut *readline.safe_raw_terminal.lock().unwrap(),
             safe_history.clone(),
-        )
-        .await;
+        );
 
         assert!(matches!(control_flow, InternalControlFlow::Continue));
-        assert_eq!(readline.safe_line_state.lock().await.line, "a");
+        assert_eq!(readline.safe_line_state.lock().unwrap().line, "a");
 
         let output_buffer_data = stdout_mock.buffer.lock().unwrap();
         let output_buffer_data = strip(output_buffer_data.to_vec());
@@ -689,16 +681,15 @@ mod tests {
         // We will get the `line_state` out of this to test.
         let (mut readline, _) = Readline::new(
             prompt_str.into(),
-            Arc::new(TokioMutex::new(stdout_mock.clone())),
+            Arc::new(StdMutex::new(stdout_mock.clone())),
             gen_input_stream(),
         )
-        .await
         .unwrap();
 
         let result = readline.readline().await;
         assert!(matches!(result, Ok(ReadlineEvent::Line(_))));
         pretty_assertions::assert_eq!(result.unwrap(), ReadlineEvent::Line("abc".to_string()));
-        pretty_assertions::assert_eq!(readline.safe_line_state.lock().await.line, "");
+        pretty_assertions::assert_eq!(readline.safe_line_state.lock().unwrap().line, "");
 
         let output_buffer_data = stdout_mock.buffer.lock().unwrap();
         let output_buffer_data = strip(output_buffer_data.to_vec());
@@ -724,10 +715,9 @@ mod tests {
         // We will get the `line_state` out of this to test.
         let (readline, shared_writer) = Readline::new(
             prompt_str.into(),
-            Arc::new(TokioMutex::new(stdout_mock.clone())),
+            Arc::new(StdMutex::new(stdout_mock.clone())),
             gen_input_stream(),
         )
-        .await
         .unwrap();
 
         shared_writer
@@ -737,7 +727,7 @@ mod tests {
             .unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(1)).await;
 
-        assert!(*readline.safe_is_paused.lock().await);
+        assert!(*readline.safe_is_paused.lock().unwrap());
 
         shared_writer
             .line_sender
@@ -746,7 +736,7 @@ mod tests {
             .unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(1)).await;
 
-        assert!(!(*readline.safe_is_paused.lock().await));
+        assert!(!(*readline.safe_is_paused.lock().unwrap()));
     }
 
     #[tokio::test]
@@ -766,10 +756,9 @@ mod tests {
         // We will get the `line_state` out of this to test.
         let (readline, shared_writer) = Readline::new(
             prompt_str.into(),
-            Arc::new(TokioMutex::new(stdout_mock.clone())),
+            Arc::new(StdMutex::new(stdout_mock.clone())),
             gen_input_stream(),
         )
-        .await
         .unwrap();
 
         shared_writer
@@ -779,7 +768,7 @@ mod tests {
             .unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(1)).await;
 
-        assert!(*readline.safe_is_paused.lock().await);
+        assert!(*readline.safe_is_paused.lock().unwrap());
 
         shared_writer
             .line_sender
@@ -788,7 +777,7 @@ mod tests {
             .unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(1)).await;
 
-        let pause_buffer = readline.safe_is_paused_buffer.lock().await;
+        let pause_buffer = readline.safe_is_paused_buffer.lock().unwrap().clone();
         assert_eq!(pause_buffer.len(), 1);
         assert_eq!(String::from_utf8_lossy(&pause_buffer[0]), "abc".to_string());
 
@@ -799,7 +788,7 @@ mod tests {
             .unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(1)).await;
 
-        assert!(!(*readline.safe_is_paused.lock().await));
+        assert!(!(*readline.safe_is_paused.lock().unwrap()));
     }
 }
 

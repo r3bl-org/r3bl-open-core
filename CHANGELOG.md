@@ -624,6 +624,19 @@
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
 
+### v0.4.0 (2024-04-21)
+
+- Changed:
+  - Remove use of `TokioMutex`. There are some dangers to being "cancel safe" when using
+    async Rust. This is outlined in the following:
+    [docs](https://docs.rs/tokio/latest/tokio/sync/struct.Mutex.html), and
+    [video](https://www.youtube.com/watch?v=1zOd52_tUWg&t=2088s). It is better to avoid
+    using a `TokioMutex` to check for cancellation and instead to use broadcast channel
+    for shutdown signals, just like the code already does. The changes made in this
+    release are related to removing the use of `TokioMutex` all together in favor of the
+    `StdMutex` since there is really no need to use it at all. And thus avoid any
+    potential of "cancel safe" errors cropping up!
+
 ### v0.3.1 (2024-04-17)
 
 - Updated:

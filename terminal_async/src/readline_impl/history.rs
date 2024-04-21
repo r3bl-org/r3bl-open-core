@@ -43,7 +43,7 @@ impl History {
 
 impl History {
     // Update history entries
-    pub async fn update(&mut self, maybe_line: Option<String>) {
+    pub fn update(&mut self, maybe_line: Option<String>) {
         // Receive a new line.
         if let Some(line) = maybe_line {
             // Don't add entry if last entry was same, or line was empty.
@@ -102,21 +102,21 @@ mod tests {
     async fn test_update() {
         let (mut history, _) = History::new();
         history.max_size = 2;
-        history.update(Some("test1".into())).await;
+        history.update(Some("test1".into()));
         assert_eq!(history.entries.front(), Some(&"test1".to_string()));
 
-        history.update(None).await;
+        history.update(None);
         assert_eq!(history.entries.front(), Some(&"test1".to_string()));
 
-        history.update(Some("test1".into())).await;
+        history.update(Some("test1".into()));
         assert_eq!(history.entries.front(), Some(&"test1".to_string()));
 
-        history.update(Some("test2".into())).await;
+        history.update(Some("test2".into()));
         assert_eq!(history.entries.front(), Some(&"test2".to_string()));
 
         assert_eq!(history.entries.len(), 2);
 
-        history.update(Some("test3".into())).await;
+        history.update(Some("test3".into()));
         assert_eq!(history.entries.len(), 2);
         assert!(history.entries.contains(&"test2".to_string()));
         assert!(history.entries.contains(&"test3".to_string()));
@@ -127,9 +127,9 @@ mod tests {
     async fn test_search_next() {
         let (mut history, _) = History::new();
         history.max_size = 2;
-        history.update(Some("test1".into())).await;
-        history.update(Some("test2".into())).await;
-        history.update(Some("test3".into())).await;
+        history.update(Some("test1".into()));
+        history.update(Some("test2".into()));
+        history.update(Some("test3".into()));
 
         assert_eq!(history.search_next(), Some("test3"));
         assert_eq!(history.search_next(), Some("test2"));
@@ -141,9 +141,9 @@ mod tests {
     async fn test_search_previous() {
         let (mut history, _) = History::new();
         history.max_size = 2;
-        history.update(Some("test1".into())).await;
-        history.update(Some("test2".into())).await;
-        history.update(Some("test3".into())).await;
+        history.update(Some("test1".into()));
+        history.update(Some("test2".into()));
+        history.update(Some("test3".into()));
 
         assert_eq!(history.search_previous(), None);
         assert_eq!(history.search_next(), Some("test3"));

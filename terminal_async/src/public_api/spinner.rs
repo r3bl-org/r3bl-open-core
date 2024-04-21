@@ -114,8 +114,7 @@ impl Spinner {
                         // Render and paint the output, based on style.
                         let output = style.render_tick(&message_clone, count, get_terminal_display_width());
                         let _ = style
-                            .print_tick(&output, &mut *safe_output_terminal.lock().await)
-                            .await;
+                            .print_tick(&output, &mut (*safe_output_terminal.lock().unwrap()));
                         // Increment count to affect the output in the next iteration of this loop.
                         count += 1;
                     },
@@ -139,12 +138,10 @@ impl Spinner {
         let final_output = self
             .style
             .render_final_tick(final_message, get_terminal_display_width());
-        self.style
-            .print_final_tick(
-                &final_output,
-                &mut *self.safe_output_terminal.clone().lock().await,
-            )
-            .await?;
+        self.style.print_final_tick(
+            &final_output,
+            &mut *self.safe_output_terminal.clone().lock().unwrap(),
+        )?;
 
         // Resume the terminal.
         let _ = self
@@ -166,7 +163,7 @@ fn get_terminal_display_width() -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{test_fixtures::StdoutMock, SpinnerColor, StdMutex, TokioMutex};
+    use crate::{test_fixtures::StdoutMock, SpinnerColor, StdMutex};
     use std::sync::Arc;
     use strip_ansi_escapes::strip;
 
@@ -175,7 +172,7 @@ mod tests {
         let stdout_mock = StdoutMock {
             buffer: Arc::new(StdMutex::new(Vec::new())),
         };
-        let safe_output_terminal = Arc::new(TokioMutex::new(stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let shared_writer = SharedWriter {
@@ -252,7 +249,7 @@ mod tests {
         let stdout_mock = StdoutMock {
             buffer: Arc::new(StdMutex::new(Vec::new())),
         };
-        let safe_output_terminal = Arc::new(TokioMutex::new(stdout_mock.clone()));
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let shared_writer = SharedWriter {
