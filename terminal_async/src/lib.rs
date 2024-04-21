@@ -252,19 +252,18 @@ use futures_core::Stream;
 use std::{collections::VecDeque, io::Error, pin::Pin, sync::Arc};
 
 pub type StdMutex<T> = std::sync::Mutex<T>;
-pub type TokioMutex<T> = tokio::sync::Mutex<T>;
 
 pub type SendRawTerminal = dyn std::io::Write + Send;
-pub type SafeRawTerminal = Arc<TokioMutex<SendRawTerminal>>;
+pub type SafeRawTerminal = Arc<StdMutex<SendRawTerminal>>;
 
-pub type SafeLineState = Arc<TokioMutex<LineState>>;
-pub type SafeHistory = Arc<TokioMutex<History>>;
+pub type SafeLineState = Arc<StdMutex<LineState>>;
+pub type SafeHistory = Arc<StdMutex<History>>;
 
-pub type SafeBool = Arc<TokioMutex<bool>>;
+pub type SafeBool = Arc<StdMutex<bool>>;
 pub type Text = Vec<u8>;
 
 pub type PauseBuffer = VecDeque<Text>;
-pub type SafePauseBuffer = Arc<TokioMutex<PauseBuffer>>;
+pub type SafePauseBuffer = Arc<StdMutex<PauseBuffer>>;
 
 pub type PinnedInputStream = Pin<Box<dyn Stream<Item = Result<Event, Error>>>>;
 

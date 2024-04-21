@@ -17,8 +17,10 @@
 
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
+use r3bl_terminal_async::StdMutex;
 use r3bl_terminal_async::{LineControlSignal, Spinner, SpinnerStyle};
 use r3bl_terminal_async::{Readline, ReadlineEvent, SharedWriter, TerminalAsync};
+use std::{io::stderr, sync::Arc};
 use std::{io::Write, ops::ControlFlow, time::Duration};
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
@@ -163,7 +165,7 @@ async fn main() -> miette::Result<()> {
                 Ok(readline_event) => {
                     let continuation = process_input_event::process_readline_event(
                         readline_event, &mut state, &mut terminal_async.clone_shared_writer(), &mut terminal_async.readline
-                    ).await?;
+                    )?;
                     if let ControlFlow::Break(_) = continuation { break }
                 },
                 Err(err) => {
@@ -222,7 +224,7 @@ mod process_input_event {
 
     use super::*;
 
-    pub async fn process_readline_event(
+    pub fn process_readline_event(
         readline_event: ReadlineEvent,
         state: &mut State,
         shared_writer: &mut SharedWriter,
@@ -230,7 +232,7 @@ mod process_input_event {
     ) -> miette::Result<ControlFlow<()>> {
         match readline_event {
             ReadlineEvent::Line(user_input) => {
-                process_user_input(user_input, state, shared_writer, readline).await
+                process_user_input(user_input, state, shared_writer, readline)
             }
             ReadlineEvent::Eof => {
                 writeln!(shared_writer, "{}", "Exiting due to Eof...".red().bold())
@@ -249,7 +251,7 @@ mod process_input_event {
         }
     }
 
-    async fn process_user_input(
+    fn process_user_input(
         user_input: String,
         state: &mut State,
         shared_writer: &mut SharedWriter,
@@ -270,7 +272,7 @@ mod process_input_event {
                 Command::Exit => {
                     writeln!(shared_writer, "{}", "Exiting due to exit command...".red())
                         .into_diagnostic()?;
-                    readline.close().await;
+                    readline.close();
                     return Ok(ControlFlow::Break(()));
                 }
                 Command::StartTask1 => {
@@ -296,11 +298,11 @@ mod process_input_event {
                 }
                 Command::StartPrintouts => {
                     writeln!(shared_writer, "Printouts started!").into_diagnostic()?;
-                    readline.should_print_line_on(true, true).await;
+                    readline.should_print_line_on(true, true);
                 }
                 Command::StopPrintouts => {
                     writeln!(shared_writer, "Printouts stopped!").into_diagnostic()?;
-                    readline.should_print_line_on(false, false).await;
+                    readline.should_print_line_on(false, false);
                 }
                 Command::Info => {
                     writeln!(shared_writer, "{}", get_info_message()).into_diagnostic()?;
@@ -339,10 +341,6 @@ mod process_input_event {
 }
 
 mod long_running_task {
-    use std::{io::stderr, sync::Arc};
-
-    use r3bl_terminal_async::TokioMutex;
-
     use super::*;
 
     // Spawn a task that uses the shared writer to print to stdout, and pauses the spinner
@@ -370,7 +368,7 @@ mod long_running_task {
                 ),
                 Duration::from_millis(100),
                 SpinnerStyle::default(),
-                Arc::new(TokioMutex::new(stderr())),
+                Arc::new(StdMutex::new(stderr())),
                 shared_writer_clone,
             )
             .await;

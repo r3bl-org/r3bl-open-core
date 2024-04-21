@@ -16,7 +16,7 @@
  */
 
 use r3bl_terminal_async::{
-    Spinner, SpinnerColor, SpinnerStyle, SpinnerTemplate, TerminalAsync, TokioMutex,
+    Spinner, SpinnerColor, SpinnerStyle, SpinnerTemplate, StdMutex, TerminalAsync,
     ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT,
 };
 use std::{io::stderr, time::Duration};
@@ -66,7 +66,7 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
         message_trying_to_connect.clone(),
         DELAY_UNIT,
         style,
-        Arc::new(TokioMutex::new(stderr())),
+        Arc::new(StdMutex::new(stderr())),
         shared_writer.clone(),
     )
     .await?;
