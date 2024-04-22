@@ -172,9 +172,13 @@ this (`cargo run --example terminal_async` and `cargo run --example spinner`).
 
 ### [`tracing_setup::init()`]
 
-This is a convenience method to setup Tokio [`tracing_subscriber`] with `stdout` as the output
-destination. This method also ensures that the [`SharedWriter`] is used for concurrent
-writes to `stdout`.
+This is a convenience method to setup Tokio [`tracing_subscriber`] with `stdout` as
+the output destination. This method also ensures that the [`SharedWriter`] is used for
+concurrent writes to `stdout`. You can also use the [`TracingConfig`] struct to
+customize the behavior of the tracing setup, by choosing whether to display output to
+`stdout`, `stderr`, or a [`SharedWriter`]. By default, both display and file logging
+are enabled. You can also customize the log level, and the file path and prefix for
+the log file.
 
 ## Video series on [developerlife.com](https://developerlife.com) [YT channel](https://www.youtube.com/@developerlifecom) on building this crate with Naz
 

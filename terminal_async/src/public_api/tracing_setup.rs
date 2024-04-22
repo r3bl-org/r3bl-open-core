@@ -18,7 +18,7 @@
 use crate::SharedWriter;
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
-use std::{io::stdout, path::PathBuf, str::FromStr};
+use std::{path::PathBuf, str::FromStr};
 use tracing::info;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 
@@ -33,23 +33,31 @@ pub struct TracingConfig {
     pub writers: Vec<tracing_writer_config::Writer>,
     pub level: tracing::Level,
     pub tracing_log_file_path_and_prefix: String,
-    /// If [Some], then use async writer for [tracing_writer_config::Writer::Stdout].
-    pub stdout_override: Option<SharedWriter>,
+    pub preferred_display: DisplayPreference,
+}
+
+#[derive(Clone)]
+pub enum DisplayPreference {
+    Stdout,
+    Stderr,
+    SharedWriter(SharedWriter),
 }
 
 mod tracing_config_impl {
     use super::*;
 
     impl TracingConfig {
-        pub fn new(stdout: Option<SharedWriter>) -> Self {
+        /// The default configuration for tracing. This will log to both the given
+        /// [DisplayPreference] and a file.
+        pub fn new(preferred_display: DisplayPreference) -> Self {
             Self {
                 writers: vec![
                     tracing_writer_config::Writer::File,
                     tracing_writer_config::Writer::Stdout,
                 ],
                 level: tracing::Level::DEBUG,
-                tracing_log_file_path_and_prefix: "tracing_log_file_debug".to_string(),
-                stdout_override: stdout,
+                tracing_log_file_path_and_prefix: "tracing_log_file_debug.log".to_string(),
+                preferred_display,
             }
         }
     }
@@ -57,9 +65,9 @@ mod tracing_config_impl {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum WriterConfig {
-    Stdout,
+    Display,
     File,
-    StdoutAndFile,
+    DisplayAndFile,
     None,
 }
 
@@ -68,9 +76,9 @@ impl From<&Vec<tracing_writer_config::Writer>> for WriterConfig {
         let contains_file_writer = writers.contains(&tracing_writer_config::Writer::File);
         let contains_stdout_writer = writers.contains(&tracing_writer_config::Writer::Stdout);
         match (contains_file_writer, contains_stdout_writer) {
-            (true, true) => WriterConfig::StdoutAndFile,
+            (true, true) => WriterConfig::DisplayAndFile,
             (true, false) => WriterConfig::File,
-            (false, true) => WriterConfig::Stdout,
+            (false, true) => WriterConfig::Display,
             (false, false) => WriterConfig::None,
         }
     }
@@ -90,7 +98,7 @@ pub fn init(tracing_config: TracingConfig) -> miette::Result<()> {
         writers,
         level,
         tracing_log_file_path_and_prefix,
-        stdout_override,
+        preferred_display,
     } = tracing_config;
 
     let writer_config = WriterConfig::from(&writers);
@@ -112,22 +120,31 @@ pub fn init(tracing_config: TracingConfig) -> miette::Result<()> {
 
     match writer_config {
         // Both file & stdout writer.
-        WriterConfig::StdoutAndFile => {
+        WriterConfig::DisplayAndFile => {
             let writer_log = init_impl::try_create_rolling_file_appender(
                 tracing_log_file_path_and_prefix.as_str(),
             )?
             .with_max_level(level);
 
-            match stdout_override {
-                Some(stdout_override) => {
+            match preferred_display {
+                DisplayPreference::Stdout => {
                     let writer_stdout =
-                        move || -> Box<dyn std::io::Write> { Box::new(stdout_override.clone()) };
+                        move || -> Box<dyn std::io::Write> { Box::new(std::io::stdout()) };
                     let both = writer_log.and(writer_stdout);
                     let subscriber = builder.with_writer(both).finish();
                     tracing::subscriber::set_global_default(subscriber).into_diagnostic()?;
                 }
-                None => {
-                    let both = writer_log.and(stdout);
+                DisplayPreference::Stderr => {
+                    let writer_stderr =
+                        move || -> Box<dyn std::io::Write> { Box::new(std::io::stderr()) };
+                    let both = writer_log.and(writer_stderr);
+                    let subscriber = builder.with_writer(both).finish();
+                    tracing::subscriber::set_global_default(subscriber).into_diagnostic()?;
+                }
+                DisplayPreference::SharedWriter(shared_writer) => {
+                    let writer_shared_writer =
+                        move || -> Box<dyn std::io::Write> { Box::new(shared_writer.clone()) };
+                    let both = writer_log.and(writer_shared_writer);
                     let subscriber = builder.with_writer(both).finish();
                     tracing::subscriber::set_global_default(subscriber).into_diagnostic()?;
                 }
@@ -143,15 +160,23 @@ pub fn init(tracing_config: TracingConfig) -> miette::Result<()> {
             tracing::subscriber::set_global_default(subscriber).into_diagnostic()?;
         }
         // Just stdout writer.
-        WriterConfig::Stdout => match stdout_override {
-            Some(stdout_override) => {
+        WriterConfig::Display => match preferred_display {
+            DisplayPreference::Stdout => {
                 let writer_stdout =
-                    move || -> Box<dyn std::io::Write> { Box::new(stdout_override.clone()) };
+                    move || -> Box<dyn std::io::Write> { Box::new(std::io::stdout()) };
                 let subscriber = builder.with_writer(writer_stdout).finish();
                 tracing::subscriber::set_global_default(subscriber).into_diagnostic()?;
             }
-            None => {
-                let subscriber = builder.with_writer(stdout).finish();
+            DisplayPreference::Stderr => {
+                let writer_stderr =
+                    move || -> Box<dyn std::io::Write> { Box::new(std::io::stderr()) };
+                let subscriber = builder.with_writer(writer_stderr).finish();
+                tracing::subscriber::set_global_default(subscriber).into_diagnostic()?;
+            }
+            DisplayPreference::SharedWriter(shared_writer) => {
+                let writer_stdout =
+                    move || -> Box<dyn std::io::Write> { Box::new(shared_writer.clone()) };
+                let subscriber = builder.with_writer(writer_stdout).finish();
                 tracing::subscriber::set_global_default(subscriber).into_diagnostic()?;
             }
         },
@@ -184,12 +209,12 @@ mod init_impl {
         let path = PathBuf::from(&path_str);
 
         let parent = path.parent().ok_or_else(|| {
-        miette::miette!(
-            format!("Can't access current folder {}. It might not exist, or don't have required permissions.", path.display())
-        )
-    })?;
+            miette::miette!(
+                format!("Can't access current folder {}. It might not exist, or don't have required permissions.", path.display())
+            )
+        })?;
 
-        let file_stem = path.file_stem().ok_or_else(|| {
+        let file_stem = path.file_name().ok_or_else(|| {
             miette::miette!(format!(
             "Can't access file name {}. It might not exist, or don't have required permissions.",
             path.display()

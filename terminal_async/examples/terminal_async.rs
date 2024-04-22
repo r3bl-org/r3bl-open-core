@@ -17,7 +17,7 @@
 
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
-use r3bl_terminal_async::StdMutex;
+use r3bl_terminal_async::{tracing_setup, DisplayPreference, StdMutex, TracingConfig};
 use r3bl_terminal_async::{LineControlSignal, Spinner, SpinnerStyle};
 use r3bl_terminal_async::{Readline, ReadlineEvent, SharedWriter, TerminalAsync};
 use std::{io::stderr, sync::Arc};
@@ -27,10 +27,6 @@ use strum_macros::{Display, EnumIter, EnumString};
 use tokio::select;
 use tokio::time::interval;
 use tracing::info;
-
-/// Load dependencies for this examples file.
-mod helpers;
-use helpers::tracing_setup::{self};
 
 /// More info:
 /// - <https://docs.rs/strum_macros/latest/strum_macros/derive.EnumString.html>
@@ -136,15 +132,16 @@ async fn main() -> miette::Result<()> {
     };
 
     // Pre-populate the readline's history with some entries.
-
     for command in Command::iter() {
         terminal_async
             .readline
             .add_history_entry(command.to_string());
     }
 
-    // Initialize tracing w/ the "async stdout".
-    tracing_setup::init(terminal_async.clone_shared_writer())?;
+    // Initialize tracing w/ the "async stdout" (SharedWriter), and file writer.
+    let display_preference = DisplayPreference::SharedWriter(terminal_async.shared_writer.clone());
+    let config = TracingConfig::new(display_preference);
+    tracing_setup::init(config)?;
 
     // Start tasks.
     let mut state = State::default();
@@ -277,8 +274,11 @@ mod process_input_event {
                 }
                 Command::StartTask1 => {
                     state.task_1_state.is_running = true;
-                    writeln!(shared_writer, "First task started! This prints to stdout.")
-                        .into_diagnostic()?;
+                    writeln!(
+                        shared_writer,
+                        "First task started! This prints to SharedWriter."
+                    )
+                    .into_diagnostic()?;
                 }
                 Command::StopTask1 => {
                     state.task_1_state.is_running = false;
@@ -288,7 +288,7 @@ mod process_input_event {
                     state.task_2_state.is_running = true;
                     writeln!(
                         shared_writer,
-                        "Second task started! This generates logs which print to stdout"
+                        "Second task started! This generates logs which print to DisplayPreference (SharedWriter) and file."
                     )
                     .into_diagnostic()?;
                 }
