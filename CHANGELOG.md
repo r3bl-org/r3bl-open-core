@@ -624,6 +624,18 @@
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
 
+### v0.5.0 (2024-04-22)
+
+- Changed:
+  - Refactor `TracingConfig`` with better expression of display preference:
+    - Require a `SharedWriter` for `TracingConfig` (no longer optional).
+    - Fix log filename bug (now file extensions are used when supplied).
+    - Redo `TracingConfig` with better expression of display preference (`stdin`,
+      `stdout`, `SharedWriter`).
+  - Update example `examples/terminal_async.rs` to use the `tracing_setup::init` and
+    provide a real `TracingConfig` struct, which outputs logs to display (`SharedWriter`)
+    and file.
+
 ### v0.4.0 (2024-04-21)
 
 - Changed:
