@@ -17,7 +17,7 @@
 
 use r3bl_tui::{ColorWheel, ColorWheelConfig, ColorWheelSpeed};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum SpinnerTemplate {
     Dots,
     Braille,

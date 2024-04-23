@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{LineControlSignal, SafeRawTerminal, SharedWriter, SpinnerRender, SpinnerStyle};
+use crate::{spinner_render, LineControlSignal, SafeRawTerminal, SharedWriter, SpinnerStyle};
 use crossterm::terminal;
 use miette::IntoDiagnostic;
 use r3bl_tuify::{
@@ -26,15 +26,10 @@ use tokio::time::interval;
 
 pub struct Spinner {
     pub tick_delay: Duration,
-
     pub message: String,
-
     pub style: SpinnerStyle,
-
     pub safe_output_terminal: SafeRawTerminal,
-
     pub shared_writer: SharedWriter,
-
     pub shutdown_sender: tokio::sync::broadcast::Sender<bool>,
 }
 
@@ -112,9 +107,17 @@ impl Spinner {
                     // Poll interval.
                     _ = interval.tick() => {
                         // Render and paint the output, based on style.
-                        let output = style.render_tick(&message_clone, count, get_terminal_display_width());
-                        let _ = style
-                            .print_tick(&output, &mut (*safe_output_terminal.lock().unwrap()));
+                        let output = spinner_render::render_tick(
+                            &mut style,
+                            &message_clone,
+                            count,
+                            get_terminal_display_width()
+                        );
+                        let _ = spinner_render::print_tick(
+                            &style,
+                            &output,
+                            &mut (*safe_output_terminal.lock().unwrap())
+                        );
                         // Increment count to affect the output in the next iteration of this loop.
                         count += 1;
                     },
@@ -135,10 +138,13 @@ impl Spinner {
         self.shutdown_sender.send(true).into_diagnostic()?;
 
         // Print the final message.
-        let final_output = self
-            .style
-            .render_final_tick(final_message, get_terminal_display_width());
-        self.style.print_final_tick(
+        let final_output = spinner_render::render_final_tick(
+            &self.style,
+            final_message,
+            get_terminal_display_width(),
+        );
+        spinner_render::print_final_tick(
+            &self.style,
             &final_output,
             &mut *self.safe_output_terminal.clone().lock().unwrap(),
         )?;

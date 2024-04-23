@@ -624,6 +624,13 @@
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
 
+### Next version
+
+- Changed:
+  - Simplify `SpinnerRenderer` so that it is no longer a trait. Replace with plain
+    functions receive a mutable ref to a `SpinnerStyle`. This trait just added more noise,
+    making it more difficult to grok what this code does.
+
 ### v0.5.0 (2024-04-22)
 
 - Changed:
