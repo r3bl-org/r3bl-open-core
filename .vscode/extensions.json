@@ -13,6 +13,8 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "mohammadbaqer.better-folding", // Zen folding.
+    "felicio.vscode-fold", // Fold.
     "pkief.material-icon-theme", // Material Icon Theme.
     "divanvisagie.nord-native-theme", // Nord Native Theme.
     "antfu.icons-carbon", // Carbon Icons.
