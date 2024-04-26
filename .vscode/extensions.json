@@ -13,15 +13,14 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "chrisjdavies.multi-highlight", // Multi Highlight.
+    "eamodio.gitlens", // GitLens.
+    "alefragnani.bookmarks", // Bookmarks.
     "pkief.material-icon-theme", // Material Icon Theme.
-    "divanvisagie.nord-native-theme", // Nord Native Theme.
     "antfu.icons-carbon", // Carbon Icons.
-    "teabyii.ayu", // Ayu Theme.
     "GitHub.github-vscode-theme", // Github Theme.
     "vadimcn.vscode-lldb", // LLDB. Debugger.
     "ms-vscode.cpptools", // C/C++. Debugger.
-    "Catppuccin.catppuccin-vsc", // Catppuccino Theme.
-    "unifiedjs.vscode-mdx", // MDX.
     "ms-vscode.vscode-typescript-next", // Typescript Next.
     "mishkinf.goto-next-previous-member", // Go to Next/Previous Member.
     "github.copilot", // Github Copilot.
@@ -43,11 +42,18 @@
     "serayuzgur.crates", // Crates.
     "eamodio.gitlens", // GitLens.
     "s-nlf-fh.glassit", // GlassIt.
-    "alefragnani.separators", // Suspected (in the past) that this makes VSCode main thread unresponsive after running for a few hours.
+    "alefragnani.separators", // Separators, Suspected (in the past) that this makes VSCode main thread unresponsive after running for a few hours.
     "bmalehorn.vscode-fish", // Fish.
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "unifiedjs.vscode-mdx", // MDX.
+    "Catppuccin.catppuccin-vsc", // Catppuccino Theme.
+    "teabyii.ayu", // Ayu Theme.
+    "divanvisagie.nord-native-theme", // Nord Native Theme.
+    "baincd.custom-auto-fold", // Custom Auto Fold (for copyright header).
+    "mohammadbaqer.better-folding", // Zen folding.
+    "felicio.vscode-fold", // Fold (conflicts with Zen folding).
     "unifiedjs.vscode-mdx", // MDX.
     "ms-vscode.vscode-typescript-next", // Typescript Next.
     "esbenp.prettier-vscode", // prettier.
