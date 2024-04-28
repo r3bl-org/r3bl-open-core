@@ -54,6 +54,10 @@
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
 - [r3bl_terminal_async](#r3bl_terminal_async)
+  - [v0.5.1 2024-04-28](#v051-2024-04-28)
+  - [v0.5.0 2024-04-22](#v050-2024-04-22)
+  - [v0.4.0 2024-04-21](#v040-2024-04-21)
+  - [v0.3.1 2024-04-17](#v031-2024-04-17)
   - [v0.3.0 2024-04-15](#v030-2024-04-15)
 - [r3bl_ansi_color](#r3bl_ansi_color)
   - [v0.6.9 2023-10-21](#v069-2023-10-21)
@@ -624,14 +628,28 @@
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
 
-### Next version
+### v0.5.1 (2024-04-28)
+<a id="markdown-v0.5.1-2024-04-28" name="v0.5.1-2024-04-28"></a>
 
 - Changed:
   - Simplify `SpinnerRenderer` so that it is no longer a trait. Replace with plain
     functions receive a mutable ref to a `SpinnerStyle`. This trait just added more noise,
     making it more difficult to grok what this code does.
+  - `SharedWriter` now silently ignores errors on `write()` for all cloned instances. Only
+    the very first instance will return an error. This is to prevent needless error
+    messages being displayed when using tokio tracing. This default behavior can easily be
+    overridden by setting the `silent_error` field to `false` in the `SharedWriter`
+    struct. Added tests for this as well.
+
+- Added:
+  - `ReadlineEvent::Resized` is a new variant that reports when the terminal has been
+    resized. This is a feature request from
+    [here](https://github.com/r3bl-org/r3bl-open-core/issues/321).
+  - `SharedWriter` now has a constructor `new(...)` so that it is easier to create a new
+    instance of it.
 
 ### v0.5.0 (2024-04-22)
+<a id="markdown-v0.5.0-2024-04-22" name="v0.5.0-2024-04-22"></a>
 
 - Changed:
   - Refactor `TracingConfig`` with better expression of display preference:
@@ -644,6 +662,7 @@
     and file.
 
 ### v0.4.0 (2024-04-21)
+<a id="markdown-v0.4.0-2024-04-21" name="v0.4.0-2024-04-21"></a>
 
 - Changed:
   - Remove use of `TokioMutex`. There are some dangers to being "cancel safe" when using
@@ -657,6 +676,7 @@
     potential of "cancel safe" errors cropping up!
 
 ### v0.3.1 (2024-04-17)
+<a id="markdown-v0.3.1-2024-04-17" name="v0.3.1-2024-04-17"></a>
 
 - Updated:
   - Minor refactoring to remove the use of `JoinHandle::abort()` and replace it with a

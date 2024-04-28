@@ -467,6 +467,7 @@ impl LineState {
             Event::Resize(x, y) => {
                 self.term_size = (x, y);
                 self.clear_and_render(term)?;
+                return Ok(Some(ReadlineEvent::Resized));
             }
             _ => {}
         }

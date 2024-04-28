@@ -141,6 +141,10 @@ pub fn init(tracing_config: TracingConfig) -> miette::Result<()> {
                     let subscriber = builder.with_writer(both).finish();
                     tracing::subscriber::set_global_default(subscriber).into_diagnostic()?;
                 }
+                // Cloning a `shared_writer` makes it fail silently. This means that the
+                // tokio subscriber won't complain with `[tracing-subscriber] Unable to
+                // write an event to the Writer for this Subscriber! Error: SharedWriter
+                // Receiver has closed` if the receiver end of the channel is closed.
                 DisplayPreference::SharedWriter(shared_writer) => {
                     let writer_shared_writer =
                         move || -> Box<dyn std::io::Write> { Box::new(shared_writer.clone()) };
@@ -173,6 +177,10 @@ pub fn init(tracing_config: TracingConfig) -> miette::Result<()> {
                 let subscriber = builder.with_writer(writer_stderr).finish();
                 tracing::subscriber::set_global_default(subscriber).into_diagnostic()?;
             }
+            // Cloning a `shared_writer` makes it fail silently. This means that the
+            // tokio subscriber won't complain with `[tracing-subscriber] Unable to
+            // write an event to the Writer for this Subscriber! Error: SharedWriter
+            // Receiver has closed` if the receiver end of the channel is closed.
             DisplayPreference::SharedWriter(shared_writer) => {
                 let writer_stdout =
                     move || -> Box<dyn std::io::Write> { Box::new(shared_writer.clone()) };
