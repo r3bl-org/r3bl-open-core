@@ -245,6 +245,10 @@ mod process_input_event {
                 .into_diagnostic()?;
                 Ok(ControlFlow::Break(()))
             }
+            ReadlineEvent::Resized => {
+                writeln!(shared_writer, "{}", "Terminal resized!".yellow()).into_diagnostic()?;
+                Ok(ControlFlow::Continue(()))
+            }
         }
     }
 
@@ -569,11 +573,8 @@ pub mod file_walker {
     #[tokio::test]
     async fn test_display_tree() -> miette::Result<()> {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
-        let mut shared_writer = SharedWriter {
-            buffer: Vec::new(),
-            line_sender,
-        };
-
+        let mut shared_writer = SharedWriter::new(line_sender);
+        
         let (path, _) = get_current_working_directory()?;
 
         display_tree(path, &mut shared_writer, false).await.unwrap();

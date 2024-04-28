@@ -181,10 +181,7 @@ mod tests {
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
-        let shared_writer = SharedWriter {
-            buffer: Vec::new(),
-            line_sender,
-        };
+        let shared_writer = SharedWriter::new(line_sender);
 
         let quantum = Duration::from_millis(100);
 
@@ -258,10 +255,7 @@ mod tests {
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
-        let shared_writer = SharedWriter {
-            buffer: Vec::new(),
-            line_sender,
-        };
+        let shared_writer = SharedWriter::new(line_sender);
 
         let quantum = Duration::from_millis(100);
 

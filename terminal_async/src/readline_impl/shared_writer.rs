@@ -35,6 +35,23 @@ pub struct SharedWriter {
     /// Sender end of the channel, the receiver end is in [`crate::Readline`], which does
     /// the actual printing to `stdout`.
     pub line_sender: tokio::sync::mpsc::Sender<LineControlSignal>,
+
+    /// This is set to `true` when this struct is cloned. Only the first instance of this
+    /// struct will report errors when [`std::io::Write::write()`] fails, due to the
+    /// receiver end of the channel being closed.
+    pub silent_error: bool,
+}
+
+impl SharedWriter {
+    /// Creates a new instance of `SharedWriter` with an empty buffer and a
+    /// [`tokio::sync::mpsc::Sender`] end of the channel.
+    pub fn new(line_sender: tokio::sync::mpsc::Sender<LineControlSignal>) -> Self {
+        Self {
+            buffer: Default::default(),
+            line_sender,
+            silent_error: false,
+        }
+    }
 }
 
 /// Custom [Clone] implementation for [`SharedWriter`]. This ensures that each new
@@ -44,8 +61,9 @@ pub struct SharedWriter {
 impl Clone for SharedWriter {
     fn clone(&self) -> Self {
         Self {
-            buffer: Vec::new(),
+            buffer: Default::default(),
             line_sender: self.line_sender.clone(),
+            silent_error: true,
         }
     }
 }
@@ -67,10 +85,12 @@ impl Write for SharedWriter {
                     self_buffer.clear();
                 }
                 Err(_) => {
-                    return Err(io::Error::new(
-                        io::ErrorKind::Other,
-                        "SharedWriter Receiver has closed",
-                    ));
+                    if !self.silent_error {
+                        return Err(io::Error::new(
+                            io::ErrorKind::Other,
+                            "SharedWriter Receiver has closed",
+                        ));
+                    }
                 }
             }
         };
@@ -90,10 +110,7 @@ mod tests {
     #[test]
     fn test_write() {
         let (line_sender, _) = tokio::sync::mpsc::channel(1_000);
-        let mut shared_writer = SharedWriter {
-            buffer: Vec::new(),
-            line_sender,
-        };
+        let mut shared_writer = SharedWriter::new(line_sender);
         shared_writer.write_all(b"Hello, World!").unwrap();
         assert_eq!(shared_writer.buffer, b"Hello, World!");
     }
@@ -101,15 +118,32 @@ mod tests {
     #[tokio::test]
     async fn test_writeln() {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
-        let mut shared_writer = SharedWriter {
-            buffer: Vec::new(),
-            line_sender,
-        };
+        let mut shared_writer = SharedWriter::new(line_sender);
         shared_writer.write_all(b"Hello, World!\n").unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
         let it = line_receiver.recv().await.unwrap();
         assert_eq!(it, LineControlSignal::Line(b"Hello, World!\n".to_vec()));
+    }
+
+    #[tokio::test]
+    async fn test_clone_silent_error() {
+        let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
+        let mut shared_writer = SharedWriter::new(line_sender);
+        assert!(!shared_writer.silent_error);
+
+        let mut cloned_writer = shared_writer.clone();
+        assert!(cloned_writer.silent_error);
+
+        cloned_writer.write_all(b"Hello, World!\n").unwrap();
+        assert!(cloned_writer.buffer.is_empty());
+
+        // Will not produce error.
+        line_receiver.close();
+        cloned_writer.write_all(b"Hello, World!\n").unwrap();
+
+        // Will produce error.
+        assert!(shared_writer.write_all(b"error\n").is_err());
     }
 }
