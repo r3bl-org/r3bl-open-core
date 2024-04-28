@@ -169,6 +169,9 @@ pub enum ReadlineEvent {
 
     /// The user pressed Ctrl-C.
     Interrupted,
+
+    /// The terminal was resized.
+    Resized,
 }
 
 /// Signals that can be sent to the `line` channel, which is monitored by the task.
@@ -407,10 +410,7 @@ impl Readline {
         readline.safe_raw_terminal.lock().unwrap().flush()?;
 
         // Create the shared writer.
-        let shared_writer = SharedWriter {
-            line_sender,
-            buffer: Vec::new(),
-        };
+        let shared_writer = SharedWriter::new(line_sender);
 
         // Return the instance and the shared writer.
         Ok((readline, shared_writer))

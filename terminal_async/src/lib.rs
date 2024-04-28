@@ -93,6 +93,14 @@
 //! echo "hello" | cargo run --examples terminal_async
 //! ```
 //!
+//! To learn more about how this crate itself was built, please checkout the `Build with
+//! Naz` video series on [developerlife.com](https://developerlife.com) [YT
+//! channel](https://www.youtube.com/@developerlifecom):
+//! - [Build with Naz, async readline and spinner for CLI in
+//!   Rust](https://www.youtube.com/watch?v=3vQJguti02I&list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
+//! - [Build with Naz, testing in
+//!   Rust](https://www.youtube.com/watch?v=Xt495QLrFFk&list=PLofhE49PEwmwLR_4Noa0dFOSPmSpIg_l8)
+//!
 //! ## Input Editing Behavior
 //!
 //! While entering text, the user can edit and navigate through the current
@@ -201,11 +209,11 @@
 //! - [Part 2: What?](https://youtu.be/3vQJguti02I)
 //! - [Part 3: Do the refactor and rename the crate](https://youtu.be/uxgyZzOmVIw)
 //! - [Part 4: Build the spinner](https://www.youtube.com/watch?v=fcb6rstRniI)
-//! - [Part 5: Add color gradient animation to
-//!   spinner](https://www.youtube.com/watch?v=_QjsGDds270)
+//! - [Part 5: Add color gradient animation to spinner](https://www.youtube.com/watch?v=_QjsGDds270)
+//! - [Part 6: Publish the crate and overview](https://youtu.be/X5wDVaZENOo)
 //! - [Testing playlist](https://www.youtube.com/watch?v=Xt495QLrFFk&list=PLofhE49PEwmwLR_4Noa0dFOSPmSpIg_l8)
-//!     - [Part 1: Intro](https://www.youtube.com/watch?v=Xt495QLrFFk)
-//!     - [Part 2: Deep dive](https://www.youtube.com/watch?v=4iM9t5dgvU4)
+//!   - [Part 1: Intro](https://www.youtube.com/watch?v=Xt495QLrFFk)
+//!   - [Part 2: Deep dive](https://www.youtube.com/watch?v=4iM9t5dgvU4)
 //! - Playlists
 //!   - [Build with Naz, async readline and spinner for CLI in Rust](https://www.youtube.com/watch?v=3vQJguti02I&list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
 //!   - [Build with Naz, testing in Rust](https://www.youtube.com/watch?v=Xt495QLrFFk&list=PLofhE49PEwmwLR_4Noa0dFOSPmSpIg_l8)
