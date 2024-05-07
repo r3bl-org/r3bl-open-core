@@ -574,7 +574,7 @@ pub mod file_walker {
     async fn test_display_tree() -> miette::Result<()> {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let mut shared_writer = SharedWriter::new(line_sender);
-        
+
         let (path, _) = get_current_working_directory()?;
 
         display_tree(path, &mut shared_writer, false).await.unwrap();

@@ -54,6 +54,7 @@
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
 - [r3bl_terminal_async](#r3bl_terminal_async)
+  - [v0.5.2 2020-05-06](#v052-2020-05-06)
   - [v0.5.1 2024-04-28](#v051-2024-04-28)
   - [v0.5.0 2024-04-22](#v050-2024-04-22)
   - [v0.4.0 2024-04-21](#v040-2024-04-21)
@@ -627,6 +628,19 @@
 
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
+
+### v0.5.2 (2020-05-06)
+<a id="markdown-v0.5.2-2020-05-06" name="v0.5.2-2020-05-06"></a>
+
+- Changed:
+   - Rewrite the `tracing_setup.rs` file so that it is easier to understand and maintain.
+     The creation of multiple layers in tracing is now streamlined with no code
+     redundancy. The `r3bl_terminal_async::tracing_writer_config::Writer` is renamed to
+     `r3bl_terminal_async::WriterArg`. This is minor change that should only affect `clap`
+     configuration in CLI programs that use this. Use the best practices from the tokio
+     tracing docs
+     [here](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/index.html#runtime-configuration-with-layers)
+     as inspiration for this change.
 
 ### v0.5.1 (2024-04-28)
 <a id="markdown-v0.5.1-2024-04-28" name="v0.5.1-2024-04-28"></a>

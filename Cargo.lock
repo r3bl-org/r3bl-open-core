@@ -1680,7 +1680,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_terminal_async"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "async-stream",
  "crossterm",
@@ -1698,6 +1698,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-appender",
+ "tracing-core",
  "tracing-subscriber",
  "unicode-segmentation",
  "unicode-width",
