@@ -124,17 +124,11 @@ pub mod writer_config_impl {
         }
     }
 
-    impl WriterConfig {
-        fn create_fmt<S>() -> tracing_subscriber::fmt::Layer<
-            S,
-            tracing_subscriber::fmt::format::DefaultFields,
-            tracing_subscriber::fmt::format::Format<tracing_subscriber::fmt::format::Compact, ()>,
-        >
-        where
-            S: tracing_core::Subscriber,
-            for<'a> S: LookupSpan<'a>,
-        {
-            tracing_subscriber::fmt::layer::<S>()
+    /// Avoid gnarly type annotations by using a macro to create the `fmt` layer.
+    #[macro_export]
+    macro_rules! create_fmt {
+        () => {
+            tracing_subscriber::fmt::layer()
                 .compact()
                 .without_time()
                 .with_thread_ids(true)
@@ -143,12 +137,14 @@ pub mod writer_config_impl {
                 .with_file(false)
                 .with_line_number(false)
                 .with_ansi(true)
-        }
+        };
+    }
 
-        /// This erases the concrete type of the writer, and returns a boxed layer. This is
-        /// useful for composition of layers. There's more info in the docs
+    impl WriterConfig {
+        /// This erases the concrete type of the writer, and returns a boxed layer. This
+        /// is useful for composition of layers. There's more info in the docs
         /// [here](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/index.html#runtime-configuration-with-layers).
-        pub fn layer_display<S>(
+        pub fn try_create_display_layer<S>(
             self,
             level_filter: LevelFilter,
             preferred_display: DisplayPreference,
@@ -158,7 +154,7 @@ pub mod writer_config_impl {
             for<'a> S: LookupSpan<'a>,
         {
             // Shared configuration regardless of where logs are output to.
-            let fmt_layer = Self::create_fmt::<S>();
+            let fmt_layer = create_fmt!();
 
             // Configure the writer based on the desired log target, and return it.
             Ok(match self {
@@ -186,7 +182,7 @@ pub mod writer_config_impl {
         /// This erases the concrete type of the writer, and returns a boxed layer. This is
         /// useful for composition of layers. There's more info in the docs
         /// [here](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/index.html#runtime-configuration-with-layers).
-        pub fn layer_file<S>(
+        pub fn try_create_file_layer<S>(
             self,
             level_filter: LevelFilter,
             tracing_log_file_path_and_prefix: String,
@@ -196,7 +192,7 @@ pub mod writer_config_impl {
             for<'a> S: LookupSpan<'a>,
         {
             // Shared configuration regardless of where logs are output to.
-            let fmt_layer = Self::create_fmt::<S>();
+            let fmt_layer = create_fmt!();
 
             // Configure the writer based on the desired log target, and return it.
             Ok(match self {
@@ -215,29 +211,34 @@ pub mod writer_config_impl {
 }
 
 pub fn init(tracing_config: TracingConfig) -> miette::Result<()> {
+    // Transform the `clap` crate's parsed command line arguments into a `WriterConfig`.
     let writer_config = match writer_config_impl::from(&tracing_config.writers) {
         Some(it) => it,
         None => return Ok(()),
     };
 
+    // Get the level filter from the tracing configuration.
     let level_filter = tracing_config.get_level_filter();
 
-    let layer_display =
-        writer_config.layer_display(level_filter, tracing_config.preferred_display.clone())?;
+    // Create the layers based on the writer configuration.
+    let layers = {
+        let mut return_it = vec![];
 
-    let layer_file = writer_config.layer_file(
-        level_filter,
-        tracing_config.tracing_log_file_path_and_prefix.clone(),
-    )?;
+        writer_config
+            .try_create_display_layer(level_filter, tracing_config.preferred_display.clone())?
+            .map(|layer| return_it.push(layer));
 
-    let mut layers = vec![];
-    if let Some(layer_display) = layer_display {
-        layers.push(layer_display);
-    }
-    if let Some(layer_file) = layer_file {
-        layers.push(layer_file);
-    }
+        writer_config
+            .try_create_file_layer(
+                level_filter,
+                tracing_config.tracing_log_file_path_and_prefix.clone(),
+            )?
+            .map(|layer| return_it.push(layer));
+        
+        return_it
+    };
 
+    // Initialize the tracing subscriber with the layers.
     tracing_subscriber::registry().with(layers).init();
 
     Ok(())
