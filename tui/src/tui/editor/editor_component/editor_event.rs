@@ -303,6 +303,24 @@ impl EditorEvent {
         );
     }
 
+    fn wrap_selected_text_with_delimiters(
+        editor_engine: &mut EditorEngine,
+        editor_buffer: &mut EditorBuffer,
+        open: &str,
+        close: &str,
+    ) {
+        if editor_buffer.get_selection_map().is_empty() {
+            return;
+        }
+
+        // The text is selected and we want to wrap it within delimiters.
+        EditorEngineInternalApi::wrap_selected_text_with_delimiters(
+            editor_buffer,
+            editor_engine,
+            open,
+            close,
+        );
+    }
     pub fn apply_editor_event(
         editor_engine: &mut EditorEngine,
         editor_buffer: &mut EditorBuffer,
@@ -319,14 +337,45 @@ impl EditorEvent {
             }
 
             EditorEvent::InsertChar(character) => {
-                Self::delete_text_if_selected(editor_engine, editor_buffer);
-                EditorEngineInternalApi::insert_str_at_caret(
-                    EditorArgsMut {
-                        editor_buffer,
-                        editor_engine,
-                    },
-                    &String::from(character),
-                )
+                let delimiters = vec![
+                    ('(', ')'),
+                    ('[', ']'),
+                    ('{', '}'),
+                    ('<', '>'),
+                    ('\"', '\"'),
+                    ('\'', '\''),
+                    ('`', '`'),
+                ];
+
+                if let Some((open, close)) =
+                    delimiters.iter().find(|&&(o, _)| o == character)
+                {
+                    if editor_buffer.get_selection_map().is_empty() {
+                        EditorEngineInternalApi::insert_str_at_caret(
+                            EditorArgsMut {
+                                editor_buffer,
+                                editor_engine,
+                            },
+                            &String::from(character),
+                        );
+                    } else {
+                        Self::wrap_selected_text_with_delimiters(
+                            editor_engine,
+                            editor_buffer,
+                            &open.to_string(),
+                            &close.to_string(),
+                        );
+                    }
+                } else {
+                    Self::delete_text_if_selected(editor_engine, editor_buffer);
+                    EditorEngineInternalApi::insert_str_at_caret(
+                        EditorArgsMut {
+                            editor_buffer,
+                            editor_engine,
+                        },
+                        &String::from(character),
+                    );
+                }
             }
 
             EditorEvent::InsertNewLine => {
