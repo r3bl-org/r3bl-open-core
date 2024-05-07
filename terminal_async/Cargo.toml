@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_terminal_async"
-version = "0.5.1"
+version = "0.5.2"
 edition = "2021"
 resolver = "2"
 description = "Async non-blocking read_line implemenation with multiline editor, with concurrent display output from tasks, and colorful animated spinners"
@@ -48,6 +48,7 @@ tokio = { version = "1.36.0", features = ["full", "tracing"] }
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 tracing-appender = "0.2.3"
+tracing-core = "0.1.32"
 
 # Async stream for DI and testing.
 futures-core = "0.3"
