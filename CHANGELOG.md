@@ -54,6 +54,7 @@
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
 - [r3bl_terminal_async](#r3bl_terminal_async)
+  - [Next release](#next-release)
   - [v0.5.2 2020-05-06](#v052-2020-05-06)
   - [v0.5.1 2024-04-28](#v051-2024-04-28)
   - [v0.5.0 2024-04-22](#v050-2024-04-22)
@@ -628,6 +629,14 @@
 
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
+
+### Next release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Added:
+  - Add `TerminalAsync::print_exit_message()` - This cleans the prompt so it doesn't
+    linger in the display output. This is intended to be used as the final display message
+    when the CLI exits.
 
 ### v0.5.2 (2020-05-06)
 <a id="markdown-v0.5.2-2020-05-06" name="v0.5.2-2020-05-06"></a>
