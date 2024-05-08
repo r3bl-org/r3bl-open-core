@@ -16,7 +16,12 @@
  */
 
 use crate::{PinnedInputStream, Readline, ReadlineEvent, SharedWriter, StdMutex};
-use crossterm::{event::EventStream, style::Stylize};
+use crossterm::{
+    cursor::MoveToColumn,
+    event::EventStream,
+    style::{Print, ResetColor, Stylize},
+    terminal::{Clear, ClearType},
+};
 use futures_util::FutureExt;
 use miette::IntoDiagnostic;
 use r3bl_tuify::{
@@ -134,5 +139,18 @@ impl TerminalAsync {
     /// event loop, typically when the user requests it.
     pub fn close(&mut self) {
         self.readline.close();
+    }
+
+    pub fn print_exit_message(message: &str) -> miette::Result<()> {
+        crossterm::queue!(
+            stdout(),
+            MoveToColumn(0),
+            ResetColor,
+            Clear(ClearType::CurrentLine),
+            Print(message),
+            Print("\n"),
+        )
+        .into_diagnostic()?;
+        Ok(())
     }
 }

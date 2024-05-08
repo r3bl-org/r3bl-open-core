@@ -224,17 +224,17 @@ pub fn init(tracing_config: TracingConfig) -> miette::Result<()> {
     let layers = {
         let mut return_it = vec![];
 
-        writer_config
+        let _ = writer_config
             .try_create_display_layer(level_filter, tracing_config.preferred_display.clone())?
             .map(|layer| return_it.push(layer));
 
-        writer_config
+        let _ = writer_config
             .try_create_file_layer(
                 level_filter,
                 tracing_config.tracing_log_file_path_and_prefix.clone(),
             )?
             .map(|layer| return_it.push(layer));
-        
+
         return_it
     };
 
