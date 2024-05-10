@@ -637,6 +637,24 @@
   - Add `TerminalAsync::print_exit_message()` - This cleans the prompt so it doesn't
     linger in the display output. This is intended to be used as the final display message
     when the CLI exits.
+  - For greater flexibility `tracing_setup.rs` `try_create_layers(..)` now returns a
+    `Vec<Layer>`. This allows for more flexibility in the future to add more layers to the
+    tracing setup, such as adding an OTel (OpenTelemetry) layer, or a Jaeger layer, etc.
+  - Add `jaeger_setup` module, to allow OTel layer to be added to the tracing setup. It
+    uses the latest version of Jaeger and OpenTelemetry. The docs in `tokio.rs`
+    [website](https://tokio.rs/tokio/topics/tracing-next-steps) (at the time of this
+    writing) are out of date and use version `0.16.0` of `opentelemetry-jaeger` crate who's
+    exporter component has already been deprecated and will be removed
+    [soon](https://github.com/open-telemetry/opentelemetry-specification/pull/2858/files).
+    Details are in [PR 326](https://github.com/r3bl-org/r3bl-open-core/pull/326). More
+    info in this [blog post](https://broch.tech/posts/rust-tracing-opentelemetry/).
+
+- Changed:
+  - `try_create_layers(..)` also adds a level filter layer to the layers it returns. This
+    is to ensure that the log level is set correctly for the log output, even if other
+    layers (like the OTel / Jaeger) layer are sandwiched later. This is a minor change
+    that should not affect the public API. Details are in [PR
+    326](https://github.com/r3bl-org/r3bl-open-core/pull/326).
 
 ### v0.5.2 (2020-05-06)
 <a id="markdown-v0.5.2-2020-05-06" name="v0.5.2-2020-05-06"></a>
