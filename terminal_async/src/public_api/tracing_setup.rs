@@ -52,13 +52,7 @@ mod tracing_config_impl {
         }
 
         pub fn get_level_filter(&self) -> LevelFilter {
-            match self.level {
-                tracing::Level::ERROR => LevelFilter::ERROR,
-                tracing::Level::WARN => LevelFilter::WARN,
-                tracing::Level::INFO => LevelFilter::INFO,
-                tracing::Level::DEBUG => LevelFilter::DEBUG,
-                tracing::Level::TRACE => LevelFilter::TRACE,
-            }
+            tracing_subscriber::filter::LevelFilter::from_level(self.level)
         }
     }
 }
@@ -210,19 +204,41 @@ pub mod writer_config_impl {
     }
 }
 
+/// Returns the layers. Once you have the layers, you can run the following:
+/// `init(..).map(|layers| tracing_subscriber::registry().with(layers).init());`
 pub fn init(tracing_config: TracingConfig) -> miette::Result<()> {
+    try_create_layers(tracing_config)
+        .map(|layers| tracing_subscriber::registry().with(layers).init())
+}
+
+/// Returns the layers. Once you have the layers, you can run the following:
+/// `create_layers(..).map(|layers| tracing_subscriber::registry().with(layers).init());`
+pub fn try_create_layers(
+    tracing_config: TracingConfig,
+) -> miette::Result<Option<Vec<Box<dyn Layer<tracing_subscriber::Registry> + Sync + Send>>>> {
     // Transform the `clap` crate's parsed command line arguments into a `WriterConfig`.
     let writer_config = match writer_config_impl::from(&tracing_config.writers) {
         Some(it) => it,
-        None => return Ok(()),
+        None => return Ok(None),
     };
 
-    // Get the level filter from the tracing configuration.
     let level_filter = tracing_config.get_level_filter();
 
     // Create the layers based on the writer configuration.
     let layers = {
-        let mut return_it = vec![];
+        let mut return_it: Vec<Box<dyn Layer<tracing_subscriber::Registry> + Sync + Send>> = vec![];
+
+        // Set the level filter from the tracing configuration. This is needed if you add more
+        // layers, like OpenTelemetry, which don't have a level filter.
+        return_it.push(Box::new(level_filter));
+        // The following is another way of setting the level filter, if you want to
+        // specify log level using env vars, as an override for the cli args.
+        // ```
+        // use tracing_subscriber::EnvFilter;
+        // layers.push(Box::new(
+        //     EnvFilter::from_default_env().add_directive(tracing_config.level),
+        // ));
+        // ``
 
         let _ = writer_config
             .try_create_display_layer(level_filter, tracing_config.preferred_display.clone())?
@@ -238,10 +254,8 @@ pub fn init(tracing_config: TracingConfig) -> miette::Result<()> {
         return_it
     };
 
-    // Initialize the tracing subscriber with the layers.
-    tracing_subscriber::registry().with(layers).init();
-
-    Ok(())
+    // Return the layers.
+    Ok(Some(layers))
 }
 
 mod rolling_file_appender_impl {
