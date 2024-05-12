@@ -4,7 +4,7 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
-  - [Next Release](#next-release)
+  - [v0.0.12 2024-05-12](#v0012-2024-05-12)
   - [v0.0.11 2024-01-14](#v0011-2024-01-14)
   - [v0.0.10 2024-01-02](#v0010-2024-01-02)
   - [v0.0.9 2023-12-31](#v009-2023-12-31)
@@ -89,16 +89,21 @@
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
 
-### Next Release
-<a id="markdown-next-release" name="next-release"></a>
+### v0.0.12 (2024-05-12)
+<a id="markdown-v0.0.12-2024-05-12" name="v0.0.12-2024-05-12"></a>
 
 - Changed:
-  - Use the latest deps:
-     - `r3bl_tui` version `0.5.3`.
-     - `r3bl_rs_utils_core` version `0.9.13`.
-- Fixed:
-  - TBD: markdown parser issues
-  - TBD: editor issues
+  - Use the latest deps of all the `r3bl_*` crates to fix breaking build when `cargo
+    install r3bl-cmdr` is run. Not sure how long this has been broken. Moving forwards,
+    this will be checked using a VM on every release. Update `release-guide.md`
+    instructions with this info.
+    - `r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }`
+    - `r3bl_rs_utils_core = { path = "../core", version = "0.9.13" }`
+    - `r3bl_rs_utils_macro = { path = "../macro", version = "0.9.9" }`
+    - `r3bl_tui = { path = "../tui", version = "0.5.3" }`
+    - `r3bl_tuify = { path = "../tuify", version = "0.1.26" }`
+  - Update the `UPDATE_IF_NOT_THIS_VERSION` to `0.0.12`. This is kept in sync w/ the
+    deployed backend `r3bl-base`.
 
 ### v0.0.11 (2024-01-14)
 <a id="markdown-v0.0.11-2024-01-14" name="v0.0.11-2024-01-14"></a>
