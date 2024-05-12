@@ -41,7 +41,7 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 cd core
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc
+cargo build; cargo test; cargo doc --no-deps
 git add -A
 git commit -m "v0.9.13-core"
 git tag -a v0.9.13-core -m "v0.9.13-core"
@@ -51,7 +51,7 @@ cd ..
 cd macro
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc
+cargo build; cargo test; cargo doc --no-deps
 git add -A
 git commit -m "v0.9.9-macro"
 git tag -a v0.9.9-macro -m "v0.9.9-macro"
@@ -61,7 +61,7 @@ cd ..
 cd tuify
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc
+cargo build; cargo test; cargo doc --no-deps
 git add -A
 git commit -m "v0.1.26-tuify"
 git tag -a v0.1.26-tuify -m "v0.1.26-tuify"
@@ -71,7 +71,7 @@ cd ..
 cd tui
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc
+cargo build; cargo test; cargo doc --no-deps
 git add -A
 git commit -m "v0.5.3-tui"
 git tag -a v0.5.3-tui -m "v0.5.3-tui"
@@ -81,17 +81,18 @@ cd ..
 cd cmdr
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc
+cargo build; cargo test; cargo doc --no-deps
 git add -A
-git commit -m "v0.0.11-cmdr"
-git tag -a v0.0.11-cmdr -m "v0.0.11-cmdr"
+git commit -m "v0.0.12-cmdr"
+git tag -a v0.0.12-cmdr -m "v0.0.12-cmdr"
 cargo publish
+# Run `cargo install r3bl-cmdr` in a clean machine (no preinstalled rustup or this binary) to test the installation.
 cd ..
 
 cd terminal_async
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc
+cargo build; cargo test; cargo doc --no-deps
 git add -A
 git commit -m "v0.5.2-terminal_async"
 git tag -a v0.5.2-terminal_async -m "v0.5.2-terminal_async"
@@ -101,7 +102,7 @@ cd ..
 cd analytics_schema
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc
+cargo build; cargo test; cargo doc --no-deps
 git add -A
 git commit -m "v0.0.1-analytics_schema"
 git tag -a v0.0.1-analytics_schema -m "v0.0.1-analytics_schema"
@@ -111,7 +112,7 @@ cd ..
 cd ansi_color
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc
+cargo build; cargo test; cargo doc --no-deps
 git add -A
 git commit -m "v0.6.9-ansi_color"
 git tag -a v0.6.9-ansi_color -m "v0.6.9-ansi_color"
@@ -121,7 +122,7 @@ cd ..
 cd simple_logger
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc
+cargo build; cargo test; cargo doc --no-deps
 git add -A
 git commit -m "v0.1.3-simple_logger"
 git tag -a v0.1.3-simple_logger -m "v0.1.3-simple_logger"
@@ -131,7 +132,7 @@ cd ..
 cd redux
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc
+cargo build; cargo test; cargo doc --no-deps
 git add -A
 git commit -m "v0.2.6-redux"
 git tag -a v0.2.6-redux -m "v0.2.6-redux"
@@ -141,7 +142,7 @@ cd ..
 cd utils
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc
+cargo build; cargo test; cargo doc --no-deps
 git add -A
 git commit -m "v0.9.15-public"
 git tag -a v0.9.15-public -m "v0.9.15-public"
