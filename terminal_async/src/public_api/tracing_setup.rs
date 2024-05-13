@@ -102,10 +102,10 @@ pub enum WriterConfig {
     DisplayAndFile,
 }
 
+type DynLayer<S> = dyn Layer<S> + Send + Sync + 'static;
+
 pub mod writer_config_impl {
     use super::*;
-
-    type DynLayer<S> = dyn Layer<S> + Send + Sync + 'static;
 
     pub fn from(writers: &[WriterArg]) -> Option<WriterConfig> {
         let contains_file_writer = writers.contains(&WriterArg::File);
@@ -215,7 +215,7 @@ pub fn init(tracing_config: TracingConfig) -> miette::Result<()> {
 /// `create_layers(..).map(|layers| tracing_subscriber::registry().with(layers).init());`
 pub fn try_create_layers(
     tracing_config: TracingConfig,
-) -> miette::Result<Option<Vec<Box<dyn Layer<tracing_subscriber::Registry> + Sync + Send>>>> {
+) -> miette::Result<Option<Vec<Box<DynLayer<tracing_subscriber::Registry>>>>> {
     // Transform the `clap` crate's parsed command line arguments into a `WriterConfig`.
     let writer_config = match writer_config_impl::from(&tracing_config.writers) {
         Some(it) => it,
@@ -226,7 +226,7 @@ pub fn try_create_layers(
 
     // Create the layers based on the writer configuration.
     let layers = {
-        let mut return_it: Vec<Box<dyn Layer<tracing_subscriber::Registry> + Sync + Send>> = vec![];
+        let mut return_it: Vec<Box<DynLayer<tracing_subscriber::Registry>>> = vec![];
 
         // Set the level filter from the tracing configuration. This is needed if you add more
         // layers, like OpenTelemetry, which don't have a level filter.
