@@ -4,6 +4,7 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
+  - [v0.0.13 2024-05-20](#v0013-2024-05-20)
   - [v0.0.12 2024-05-12](#v0012-2024-05-12)
   - [v0.0.11 2024-01-14](#v0011-2024-01-14)
   - [v0.0.10 2024-01-02](#v0010-2024-01-02)
@@ -21,6 +22,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [v0.5.4 2024-05-20](#v054-2024-05-20)
   - [v0.5.3 2024-04-15](#v053-2024-04-15)
   - [v0.5.2 2024-01-14](#v052-2024-01-14)
   - [v0.5.1 2024-01-09](#v051-2024-01-09)
@@ -88,6 +90,15 @@
 
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
+
+### v0.0.13 (2024-05-20)
+<a id="markdown-v0.0.13-2024-05-20" name="v0.0.13-2024-05-20"></a>
+
+- Changed:
+  - `Cargo.toml` now points to the correct documentation link on docs.rs.
+  - `README.md` now has the correct URL for the hero image (that will load on crates.io
+    and not just github.com).
+  - `lib.rs` has the same URL for the hero image as `README.md`.
 
 ### v0.0.12 (2024-05-12)
 <a id="markdown-v0.0.12-2024-05-12" name="v0.0.12-2024-05-12"></a>
@@ -271,6 +282,16 @@
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
+
+### v0.5.4 (2024-05-20)
+<a id="markdown-v0.5.4-2024-05-20" name="v0.5.4-2024-05-20"></a>
+
+- Updated:
+  - `README.md`
+    - Fix image loading problems on crates.io. The `README.md` is shown in crates.io, and
+      `lib.rs` is shown in docs.rs.
+    - Clean up the content in the `README.md` file, and make it current, and update
+      `lib.rs` to match.
 
 ### v0.5.3 (2024-04-15)
 <a id="markdown-v0.5.3-2024-04-15" name="v0.5.3-2024-04-15"></a>

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="r3bl-cmdr-eap.svg" height="148px">
+  <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/r3bl-cmdr-eap.svg?raw=true" height="148px">
 </p>
 
 # Suite of R3BL TUI apps focused on developer productivity

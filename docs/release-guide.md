@@ -81,6 +81,7 @@ cd ..
 cd cmdr
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
+# Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
 cargo build; cargo test; cargo doc --no-deps
 git add -A
 git commit -m "v0.0.12-cmdr"

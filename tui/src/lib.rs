@@ -15,43 +15,14 @@
  *   limitations under the License.
  */
 
-//! # Context
+//! # Why build the R3BL TUI library?
 //!
-//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg)
+//! <p align="center">
+//!  <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true" height="128px">
+//! </p>
 //!
-//! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
-//!
-//! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span
-//! style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363">
-//! </span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span
-//! style="color:#F51A6F">I</span><span style="color:#F31874"> </span><span
-//! style="color:#F11678">l</span><span style="color:#EF137C">i</span><span
-//! style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span
-//! style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span
-//! style="color:#E40A91">y</span><span style="color:#E10895"> </span><span
-//! style="color:#DE0799">&amp;</span><span style="color:#DB069E"> </span><span
-//! style="color:#D804A2">s</span><span style="color:#D503A6">u</span><span
-//! style="color:#D203AA">i</span><span style="color:#CF02AE">t</span><span
-//! style="color:#CB01B2">e</span><span style="color:#C801B6"> </span><span
-//! style="color:#C501B9">o</span><span style="color:#C101BD">f</span><span style="color:#BD01C1">
-//! </span><span style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span
-//! style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span style="color:#AA03D2">
-//! </span><span style="color:#A603D5">f</span><span style="color:#A204D8">o</span><span
-//! style="color:#9E06DB">c</span><span style="color:#9A07DE">u</span><span
-//! style="color:#9608E1">s</span><span style="color:#910AE3">e</span><span
-//! style="color:#8D0BE6">d</span><span style="color:#890DE8"> </span><span
-//! style="color:#850FEB">o</span><span style="color:#8111ED">n</span><span style="color:#7C13EF">
-//! </span><span style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span
-//! style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span
-//! style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span
-//! style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span
-//! style="color:#572CFC">r</span><span style="color:#532FFD"> </span><span
-//! style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span
-//! style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span
-//! style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span
-//! style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span
-//! style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span
-//! style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
+//! <!-- R3BL TUI library -->
+//! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363"> </span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span style="color:#F31874"> </span><span style="color:#F11678">l</span><span style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span style="color:#E40A91">y</span>
 //!
 //! We are working on building command line apps in Rust which have rich text user interfaces (TUI).
 //! We want to lean into the terminal as a place of productivity, and build all kinds of awesome
@@ -61,7 +32,7 @@
 //!    development w/ a twist: taking concepts that work really well for the frontend mobile and web
 //!    development world and re-imagining them for TUI & Rust.
 //!
-//!    - Taking inspiration from React, JSX, CSS, Redux, Elm, iced-rs, JetPack Compose,
+//!    - Taking inspiration from React, JSX, CSS, Elm, iced-rs, JetPack Compose,
 //!      but making things fast and Rusty and simple. For example, instead of using Redux
 //!      for complex state management and handling async middleware functions, we simply
 //!      using `tokio::mpsc` channels and allow tasks to send signals to the main thread to
@@ -78,39 +49,66 @@
 //!      routing, tiling layout, stacking layout, etc. so that we can manage a lot of TUI
 //!      apps (which are tightly integrated) that are running in the same process, in the
 //!      same window. So you can imagine that all these "app"s have shared application
-//!      state (that is in a Redux store). Each "app" may also have its own Redux store.
+//!      state. Each "app" may also have its own local application state.
 //!    - Here are some examples of the types of "app"s we plan to build (for which this
 //!      infrastructure acts as the open source engine):
 //!      1. Multi user text editors w/ syntax highlighting.
 //!      2. Integrations w/ github issues.
 //!      3. Integrations w/ calendar, email, contacts APIs.
 //!
-//! All the crates in the `r3bl-open-core` repo provide lots of useful functionality to
-//! help you build TUI (text user interface) apps, along w/ general niceties & ergonomics
-//! that all Rustaceans 🦀 can enjoy 🎉:
+//! All the crates in the `r3bl-open-core`
+//! [repo](https://github.com/r3bl-org/r3bl-open-core/) provide lots of useful
+//! functionality to help you build TUI (text user interface) apps, along w/ general
+//! niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
+//!
+//! <!-- TOC -->
+//!
+//! - [Learn more about how this library is built](#learn-more-about-how-this-library-is-built)
+//! - [Text User Interface engine for Rust](#text-user-interface-engine-for-rust)
+//! - [Examples to get you started](#examples-to-get-you-started)
+//!   - [Video of the demo in action](#video-of-the-demo-in-action)
+//!   - [Run the demo locally](#run-the-demo-locally)
+//!   - [Nu shell scripts to build, run, test etc.](#nu-shell-scripts-to-build-run-test-etc)
+//! - [How does layout, rendering, and event handling work in general?](#how-does-layout-rendering-and-event-handling-work-in-general)
+//! - [Switching from shared memory to message passing architecture after v0.3.10](#switching-from-shared-memory-to-message-passing-architecture-after-v0310)
+//! - [Life of an input event](#life-of-an-input-event)
+//! - [Life of a signal aka "out of band event"](#life-of-a-signal-aka-out-of-band-event)
+//! - [The window](#the-window)
+//! - [Layout and styling](#layout-and-styling)
+//! - [Component, ComponentRegistry, focus management, and event routing](#component-componentregistry-focus-management-and-event-routing)
+//! - [Input event specificity](#input-event-specificity)
+//! - [Rendering and painting](#rendering-and-painting)
+//!   - [Offscreen buffer](#offscreen-buffer)
+//!   - [Render pipeline](#render-pipeline)
+//!   - [First render](#first-render)
+//!   - [Subsequent render](#subsequent-render)
+//! - [How does the editor component work?](#how-does-the-editor-component-work)
+//!   - [Painting the caret](#painting-the-caret)
+//! - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
+//!   - [Two callback functions](#two-callback-functions)
+//!   - [How to use this dialog to make an HTTP request & pipe the results into a selection area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
+//!   - [How to make HTTP requests](#how-to-make-http-requests)
+//! - [Custom Markdown MD parsing and custom syntax highlighting](#custom-markdown-md-parsing-and-custom-syntax-highlighting)
+//! - [Grapheme support](#grapheme-support)
+//! - [Lolcat support](#lolcat-support)
+//! - [Issues, comments, feedback, and PRs](#issues-comments-feedback-and-prs)
+//!
+//! <!-- /TOC -->
 //!
 //! ## Learn more about how this library is built
 //! <a id="markdown-learn-more-about-how-this-library-is-built" name="learn-more-about-how-this-library-is-built"></a>
 //!
-//! 🦜 Here are some articles and videos (on
-//! [developerlife.com](https://developerlife.com)) about how this crate is made:
-//! 1. <https://developerlife.com/2022/02/24/rust-non-binary-tree/>
-//! 2. <https://developerlife.com/2022/03/12/rust-redux/>
-//! 3. <https://developerlife.com/2022/03/30/rust-proc-macro/>
-//! 4. <https://youtu.be/o2CVEikbEAQ>
-//! 5. <https://youtu.be/Ne5-MXxt97A>
-//!
-//!
-//! 🦀 You can also find all the Rust related content on developerlife.com
-//! [here](https://developerlife.com/category/Rust/).
+//! 🦀 Here are some articles and videos about how this crate is made:
+//! 1. [developerlife.com tutorials](https://developerlife.com/category/Rust/)
+//! 2. [YouTube channel for developerlife.com](https://www.youtube.com/@developerlifecom)
 //!
 //! # Text User Interface engine for Rust
 //!
 //! You can build fully async TUI (text user interface) apps with a modern API that brings
 //! the best of the web frontend development ideas to TUI apps written in Rust:
 //!
-//! 1. Reactive & unidirectional data flow architecture from frontend web development
-//!    (React, Redux).
+//! 1. Reactive & unidirectional data flow architecture from frontend development
+//!    (React, SolidJS, Elm, iced-rs, Jetpack Compose).
 //! 2. Responsive design w/ CSS, flexbox like concepts.
 //! 3. Declarative style of expressing styling and layouts.
 //!
@@ -184,7 +182,7 @@
 //!
 //! Here are some framework highlights:
 //!
-//! - An easy to use and approachable API that is inspired by React, JSX, CSS, and Redux.
+//! - An easy to use and approachable API that is inspired by React, JSX, CSS, Elm.
 //!   Lots of components and things are provided for you so you don't have to build them
 //!   from scratch. This is a full featured component library including:
 //!   - Elm like architecture w/ unidirectional data flow. The state is mutable. Async
@@ -226,8 +224,6 @@
 //!
 //! ![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
 //!
-
-//!
 //! ## How does layout, rendering, and event handling work in general?
 //! <a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>
 //!
@@ -258,7 +254,7 @@
 //!   - [GlobalData] which contains the following
 //!     - Global application state. This is mutable. Whenever an input event or signal is
 //!       processed the entire [App] gets re-rendered. This is the unidirectional data
-//!       flow architecture inspired by React and Redux, and Elm.
+//!       flow architecture inspired by React and Elm.
 //! - Your [App] trait impl is the main entry point for laying out the entire application.
 //!   Before the first render, the [App] is initialized (via a call to [App::app_init]), and
 //!   is responsible for creating all the [Component]s that it uses, and saving them to
@@ -475,7 +471,7 @@
 //!     like editors and viewers that maintains a cursor position between focus switches.
 //!
 //! Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent between
-//! re-renders. The Redux store is also persistent between re-renders.
+//! re-renders.
 //!
 //! ## Input event specificity
 //! <a id="markdown-input-event-specificity" name="input-event-specificity"></a>
@@ -833,6 +829,12 @@
 //!   component will produce the same generated colors over and over again.
 //! - If you want to change where the color wheel "begins", you have to change the speed, seed, and
 //!   delta of this [crate::lolcat::Lolcat] instance.
+//!
+//! ## Issues, comments, feedback, and PRs
+//! <a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
+//!
+//! Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
+//! And if you have any feature requests, feel free to add them there too 👍.
 
 // https://github.com/rust-lang/rust-clippy
 // https://rust-lang.github.io/rust-clippy/master/index.html

@@ -16,10 +16,10 @@
  */
 
 //! <p align="center">
-//!   <img src="r3bl-term.svg" height="128px">
+//! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/r3bl-cmdr-eap.svg?raw=true" height="148px">
 //! </p>
 //!
-//! # r3bl-cmdr: Suite of TUI apps focused on developer productivity
+//! # Suite of TUI apps focused on developer productivity
 //! <a id="markdown-r3bl-cmdr%3A-suite-of-tui-apps-focused-on-developer-productivity" name="r3bl-cmdr%3A-suite-of-tui-apps-focused-on-developer-productivity"></a>
 //!
 //! <!-- TOC -->
