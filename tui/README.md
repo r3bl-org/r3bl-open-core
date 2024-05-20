@@ -1,12 +1,12 @@
+# Why build the R3BL TUI library?
+<a id="markdown-why-r3bl-tui%3F" name="why-r3bl-tui%3F"></a>
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true" height="128px">
 </p>
 
-# Why build the R3BL TUI library?
-<a id="markdown-why-r3bl-tui%3F" name="why-r3bl-tui%3F"></a>
-
 <!-- R3BL TUI library -->
-<span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363"> </span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span style="color:#F31874"> </span><span style="color:#F11678">l</span><span style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span style="color:#E40A91">y</span>?
+<span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363"> </span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span style="color:#F31874"> </span><span style="color:#F11678">l</span><span style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span style="color:#E40A91">y</span>
 
 We are working on building command line apps in Rust which have rich text user interfaces (TUI). We
 want to lean into the terminal as a place of productivity, and build all kinds of awesome apps for

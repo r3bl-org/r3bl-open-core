@@ -2050,7 +2050,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_tui"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "chrono",
  "colorgrad",
