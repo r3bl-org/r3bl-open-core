@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_tui"
-version = "0.5.4"
+version = "0.5.5"
 edition = "2021"
 resolver = "2"
 description = "TUI library to build modern apps inspired by Elm, with Flexbox, CSS, editor component, emoji support, and more"

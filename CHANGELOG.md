@@ -283,6 +283,11 @@
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
+### v0.5.5 (2024-05-20)
+
+- Updated:
+  - Fix typos in `README.md`.
+
 ### v0.5.4 (2024-05-20)
 <a id="markdown-v0.5.4-2024-05-20" name="v0.5.4-2024-05-20"></a>
 
