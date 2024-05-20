@@ -81,13 +81,13 @@ cd ..
 cd cmdr
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-# Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
+# 1) Don't forget to update `r3bl-base` to have the same `UPDATE_IF_NOT_THIS_VERSION`
 cargo build; cargo test; cargo doc --no-deps
 git add -A
-git commit -m "v0.0.12-cmdr"
-git tag -a v0.0.12-cmdr -m "v0.0.12-cmdr"
+git commit -m "v0.0.13-cmdr"
+git tag -a v0.0.13-cmdr -m "v0.0.13-cmdr"
 cargo publish
-# Run `cargo install r3bl-cmdr` in a clean machine (no preinstalled rustup or this binary) to test the installation.
+# 2) Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
 cd ..
 
 cd terminal_async

@@ -99,6 +99,8 @@
   - `README.md` now has the correct URL for the hero image (that will load on crates.io
     and not just github.com).
   - `lib.rs` has the same URL for the hero image as `README.md`.
+  - Update `UPDATE_IF_NOT_THIS_VERSION` to `0.0.13`. This is kept in sync w/ the deployed
+    backend `r3bl-base`.
 
 ### v0.0.12 (2024-05-12)
 <a id="markdown-v0.0.12-2024-05-12" name="v0.0.12-2024-05-12"></a>
