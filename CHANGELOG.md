@@ -22,6 +22,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [v0.5.5 2024-05-20](#v055-2024-05-20)
   - [v0.5.4 2024-05-20](#v054-2024-05-20)
   - [v0.5.3 2024-04-15](#v053-2024-04-15)
   - [v0.5.2 2024-01-14](#v052-2024-01-14)
@@ -56,7 +57,7 @@
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
 - [r3bl_terminal_async](#r3bl_terminal_async)
-  - [Next release](#next-release)
+  - [v0.5.3 2024-05-22](#v053-2024-05-22)
   - [v0.5.2 2020-05-06](#v052-2020-05-06)
   - [v0.5.1 2024-04-28](#v051-2024-04-28)
   - [v0.5.0 2024-04-22](#v050-2024-04-22)
@@ -90,6 +91,11 @@
 
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
+
+### Next release
+
+- Changed:
+  - Use the latest release of the `r3bl_tui` crate version `0.5.5`.
 
 ### v0.0.13 (2024-05-20)
 <a id="markdown-v0.0.13-2024-05-20" name="v0.0.13-2024-05-20"></a>
@@ -286,6 +292,7 @@
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
 ### v0.5.5 (2024-05-20)
+<a id="markdown-v0.5.5-2024-05-20" name="v0.5.5-2024-05-20"></a>
 
 - Updated:
   - Fix typos in `README.md`.
@@ -663,10 +670,18 @@
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
 
-### Next release
-<a id="markdown-next-release" name="next-release"></a>
+### v0.5.3 (2024-05-22)
+<a id="markdown-v0.5.3-2024-05-22" name="v0.5.3-2024-05-22"></a>
+
+This release adds a new module for checking port availability on a host, and adds a new
+function to clean up the prompt when the CLI exits. It also adds a new module to allow for
+OpenTelemetry (OTel) tracing to be added to the tracing setup. This uses the latest
+version of Jaeger and OpenTelemetry.
 
 - Added:
+  - New module to check for port availability on a host called `port_availability`. This
+    is useful for checking if a port is available before starting a server (which is a
+    common use case for interactive CLI programs).
   - Add `TerminalAsync::print_exit_message()` - This cleans the prompt so it doesn't
     linger in the display output. This is intended to be used as the final display message
     when the CLI exits.
