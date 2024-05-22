@@ -15,6 +15,7 @@
  *   limitations under the License.
  */
 
+use crate::port_availability;
 use miette::IntoDiagnostic;
 use opentelemetry::{global, trace::TraceError, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
@@ -86,12 +87,9 @@ pub async fn is_jaeger_up(
     maybe_otel_collector_endpoint: Option<std::net::SocketAddr>,
 ) -> miette::Result<bool> {
     let socket_addr = get_socket_addr(maybe_otel_collector_endpoint)?;
-    let socket = tokio::net::TcpSocket::new_v4().into_diagnostic()?;
-    let result_socket_connect = socket.connect(socket_addr).await;
-
-    match result_socket_connect {
-        Ok(_) => Ok(true),
-        Err(_) => Ok(false),
+    match port_availability::check(socket_addr).await? {
+        port_availability::Status::Occupied => Ok(true),
+        port_availability::Status::Free => Ok(false),
     }
 }
 
