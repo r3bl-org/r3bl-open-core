@@ -95,8 +95,8 @@ cd terminal_async
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc --no-deps
 git add -A
-git commit -m "v0.5.2-terminal_async"
-git tag -a v0.5.2-terminal_async -m "v0.5.2-terminal_async"
+git commit -m "v0.5.3-terminal_async"
+git tag -a v0.5.3-terminal_async -m "v0.5.3-terminal_async"
 cargo publish
 cd ..
 
