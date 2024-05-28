@@ -217,7 +217,7 @@ mod tests {
     /// middleware spawns a new task that:
     /// 1. Adds `-4` to the `shared_vec`.
     /// 2. Then dispatches an action to `MyReducer` that resets the store w/
-    /// `[-100]`.
+    ///    `[-100]`.
     async fn run_mw_example_spawns(
         shared_vec: &Arc<RwLock<Vec<i32>>>,
         shared_store: &SharedStore<State, Action>,

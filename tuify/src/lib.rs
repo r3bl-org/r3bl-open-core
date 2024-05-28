@@ -294,12 +294,12 @@
 //!
 //! Here are the command line arguments that it accepts:
 //! 1. `-s` or `--selection-mode` - Allows you to select the selection mode. There are two
-//!   options: `single` and `multiple`.
+//!    options: `single` and `multiple`.
 //! 1. `-c` or `--command-to-run-with-selection` - Allows you to specify the command to
-//!   run with the selected item. For example `"echo foo \'%\'"` simply prints each
-//!   selected item.
+//!    run with the selected item. For example `"echo foo \'%\'"` simply prints each
+//!    selected item.
 //! 1. `-t` or `--tui-height` - Optionally allows you to set the height of the TUI. The
-//!   default is 5.
+//!    default is 5.
 //!
 //! ### Interactive user experience
 //! <a id="markdown-interactive-user-experience" name="interactive-user-experience"></a>
@@ -422,7 +422,7 @@
 //!      and prints help.
 //!
 //! > Due to how unix pipes are implemented, it is not possible to pipe the
-//! > `stdout` of this command to anything else. Unix pipes are nonblocking. So there is no
+//! > `stdout` of this command to anything else. Unix pipes are non-blocking. So there is no
 //! > way to stop the pipe "midway". This is why `rt` displays an error when the `stdout` is
 //! > piped out. It is not possible to pipe the `stdout` of `rt` to another command. Instead,
 //! > the `rt` binary simply takes a command that will run after the user has made their
