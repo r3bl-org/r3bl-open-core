@@ -63,8 +63,9 @@ use crate::{tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED, *};
 /// ```
 ///
 /// Decl macro docs:
-/// - <https://veykril.github.io/tlborm/decl-macros/macros-methodical.html#repetitions> HashMap
-/// docs:
+/// - <https://veykril.github.io/tlborm/decl-macros/macros-methodical.html#repetitions>
+///
+/// HashMap docs:
 /// - <https://doc.rust-lang.org/std/collections/struct.HashMap.html#examples>
 #[macro_export]
 macro_rules! render_pipeline {

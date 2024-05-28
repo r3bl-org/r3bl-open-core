@@ -494,19 +494,19 @@ pub mod file_walker {
     /// backtracking. DFS itself can be further divided into three types:
     ///
     /// 1) Pre-Order Traversal: In this traversal method, the root is visited first, then
-    /// the left subtree, and finally the right subtree.
+    ///    the left subtree, and finally the right subtree.
     ///
     /// 2) In-Order Traversal: In this traversal method, the left subtree is visited
-    /// first, then the root, and finally the right subtree. Note: This method is only for
-    /// binary trees.
+    ///    first, then the root, and finally the right subtree. Note: This method is only for
+    ///    binary trees.
     ///
     /// 3) Post-Order Traversal: In this traversal method, the left subtree is visited
-    /// first, then the right subtree, and finally the root. Breadth-First Search (BFS):
-    /// Also known as level-order traversal, this method visits all the nodes of a level
-    /// before going to the next level.
+    ///    first, then the right subtree, and finally the root. Breadth-First Search (BFS):
+    ///    Also known as level-order traversal, this method visits all the nodes of a level
+    ///    before going to the next level.
     ///
     /// 4) Spiral/Zigzag Order Traversal: This is a variant of BFS. In this traversal,
-    /// levels are visited in alternating left-to-right and right-to-left order.
+    ///    levels are visited in alternating left-to-right and right-to-left order.
     ///
     /// Remember, the "left" and "right" in these traversal methods are just for
     /// explanation purposes. In a non-binary tree, a node can have more than two
