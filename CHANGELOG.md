@@ -4,6 +4,7 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
+  - [Next release](#next-release)
   - [v0.0.13 2024-05-20](#v0013-2024-05-20)
   - [v0.0.12 2024-05-12](#v0012-2024-05-12)
   - [v0.0.11 2024-01-14](#v0011-2024-01-14)
@@ -93,9 +94,16 @@
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
 
 ### Next release
+<a id="markdown-next-release" name="next-release"></a>
 
 - Changed:
   - Use the latest release of the `r3bl_tui` crate version `0.5.5`.
+  - Clean up `main_event_loop` and get rid of needless `'static` in `AS` trait bound.
+  - Fix cargo clippy doc warnings.
+
+- Updated:
+  - Dependencies for `syntect`, `strum`, `strum-macros`, `reedline`, `serial_test` bumped
+    to their latest versions.
 
 ### v0.0.13 (2024-05-20)
 <a id="markdown-v0.0.13-2024-05-20" name="v0.0.13-2024-05-20"></a>
