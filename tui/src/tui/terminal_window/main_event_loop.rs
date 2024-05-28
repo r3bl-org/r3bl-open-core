@@ -54,7 +54,7 @@ impl TerminalWindow {
     ) -> CommonResult<()>
     where
         S: Debug + Default + Clone + Sync + Send,
-        AS: Debug + Default + Clone + Sync + Send + 'static,
+        AS: Debug + Default + Clone + Sync + Send,
     {
         throws!({
             // mpsc channel to send signals from the app to the main event loop (eg: for exit,
@@ -119,7 +119,7 @@ impl TerminalWindow {
                                         global_data,
                                         component_registry_map,
                                         has_focus,
-                                    );
+                                    ).await;
                                 },
                             }
                         }
@@ -149,7 +149,7 @@ impl TerminalWindow {
                                 &exit_keys,
                                 component_registry_map,
                                 has_focus,
-                            );
+                            ).await;
                         }
                     }
                 }
@@ -162,7 +162,7 @@ impl TerminalWindow {
         });
     }
 
-    fn actually_process_input_event<S, AS>(
+    async fn actually_process_input_event<S, AS>(
         global_data: &mut GlobalData<S, AS>,
         app: &mut BoxedSafeApp<S, AS>,
         input_event: InputEvent,
@@ -171,7 +171,7 @@ impl TerminalWindow {
         has_focus: &mut HasFocus,
     ) where
         S: Debug + Default + Clone + Sync + Send,
-        AS: Debug + Default + Clone + Sync + Send + 'static,
+        AS: Debug + Default + Clone + Sync + Send,
     {
         let result = app.app_handle_input_event(
             input_event,
@@ -188,7 +188,8 @@ impl TerminalWindow {
             global_data,
             component_registry_map,
             has_focus,
-        );
+        )
+        .await;
     }
 
     /// Before any app gets to process the `input_event`, perform special handling in case
@@ -216,7 +217,7 @@ impl TerminalWindow {
     }
 }
 
-fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
+async fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     result: CommonResult<EventPropagation>,
     maybe_input_event: Option<InputEvent>,
     exit_keys: &[InputEvent],
@@ -226,7 +227,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     has_focus: &mut HasFocus,
 ) where
     S: Debug + Default + Clone + Sync + Send,
-    AS: Debug + Default + Clone + Sync + Send + 'static,
+    AS: Debug + Default + Clone + Sync + Send,
 {
     let main_thread_channel_sender = global_data.main_thread_channel_sender.clone();
 
@@ -237,7 +238,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
                     let check_if_exit_keys_pressed =
                         DefaultInputEventHandler::no_consume(input_event, exit_keys);
                     if let Continuation::Exit = check_if_exit_keys_pressed {
-                        request_exit_by_sending_signal(main_thread_channel_sender);
+                        request_exit_by_sending_signal(main_thread_channel_sender).await;
                     };
                 }
             }
@@ -254,7 +255,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
             EventPropagation::Consumed => {}
 
             EventPropagation::ExitMainEventLoop => {
-                request_exit_by_sending_signal(main_thread_channel_sender);
+                request_exit_by_sending_signal(main_thread_channel_sender).await;
             }
         },
         Err(error) => {
@@ -263,19 +264,17 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     }
 }
 
-fn request_exit_by_sending_signal<AS>(
+async fn request_exit_by_sending_signal<AS>(
     channel_sender: mpsc::Sender<TerminalWindowMainThreadSignal<AS>>,
 ) where
-    AS: 'static + Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
 {
     // Exit keys were pressed.
     // Note: make sure to wrap the call to `send` in a `tokio::spawn()` so that it doesn't
     // block the calling thread. More info: <https://tokio.rs/tokio/tutorial/channels>.
-    tokio::spawn(async move {
-        let _ = channel_sender
-            .send(TerminalWindowMainThreadSignal::Exit)
-            .await;
-    });
+    let _ = channel_sender
+        .send(TerminalWindowMainThreadSignal::Exit)
+        .await;
 }
 
 struct AppManager<S, AS>
