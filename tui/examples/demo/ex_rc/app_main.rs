@@ -203,10 +203,8 @@ mod app_main_impl_app_trait {
                 mask: ModifierKeysMask::new().with_ctrl(),
             }) {
                 // Spawn previous slide action.
-                let main_thread_channel_sender_clone =
-                    global_data.main_thread_channel_sender.clone();
                 send_signal!(
-                    main_thread_channel_sender_clone,
+                    global_data.main_thread_channel_sender,
                     TerminalWindowMainThreadSignal::ApplyAction(AppSignal::PreviousSlide)
                 );
                 return Ok(EventPropagation::Consumed);
