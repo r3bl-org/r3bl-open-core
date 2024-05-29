@@ -121,19 +121,13 @@ mod app_main_impl_app_trait {
             component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
             has_focus: &mut HasFocus,
         ) -> CommonResult<EventPropagation> {
-            // Things from global scope.
-            let GlobalData {
-                main_thread_channel_sender,
-                ..
-            } = global_data;
-
             // Handle Ctrl + s.
             if input_event.matches_keypress(KeyPress::WithModifiers {
                 key: Key::Character('s'),
                 mask: ModifierKeysMask::new().with_ctrl(),
             }) {
                 send_signal!(
-                    main_thread_channel_sender,
+                    global_data.main_thread_channel_sender,
                     TerminalWindowMainThreadSignal::ApplyAction(AppSignal::SaveFile)
                 );
 

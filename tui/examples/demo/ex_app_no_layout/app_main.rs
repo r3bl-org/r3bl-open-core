@@ -283,12 +283,11 @@ mod app_main_impl_trait_app {
                 if let InputEvent::Keyboard(KeyPress::Plain { key }) = input_event {
                     // Check for + or - key.
                     if let Key::Character(typed_char) = key {
-                        let sender = global_data.main_thread_channel_sender.clone();
                         match typed_char {
                             '+' => {
                                 event_consumed = true;
                                 send_signal!(
-                                    sender,
+                                    global_data.main_thread_channel_sender,
                                     TerminalWindowMainThreadSignal::ApplyAction(
                                         AppSignal::Add,
                                     )
@@ -297,7 +296,7 @@ mod app_main_impl_trait_app {
                             '-' => {
                                 event_consumed = true;
                                 send_signal!(
-                                    sender,
+                                    global_data.main_thread_channel_sender,
                                     TerminalWindowMainThreadSignal::ApplyAction(
                                         AppSignal::Sub,
                                     )
@@ -314,12 +313,11 @@ mod app_main_impl_trait_app {
 
                     // Check for up or down arrow key.
                     if let Key::SpecialKey(special_key) = key {
-                        let sender = global_data.main_thread_channel_sender.clone();
                         match special_key {
                             SpecialKey::Up => {
                                 event_consumed = true;
                                 send_signal!(
-                                    sender,
+                                    global_data.main_thread_channel_sender,
                                     TerminalWindowMainThreadSignal::ApplyAction(
                                         AppSignal::Add,
                                     )
@@ -328,7 +326,7 @@ mod app_main_impl_trait_app {
                             SpecialKey::Down => {
                                 event_consumed = true;
                                 send_signal!(
-                                    sender,
+                                    global_data.main_thread_channel_sender,
                                     TerminalWindowMainThreadSignal::ApplyAction(
                                         AppSignal::Sub,
                                     )
