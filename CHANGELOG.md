@@ -23,6 +23,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [Next release](#next-release)
   - [v0.5.5 2024-05-20](#v055-2024-05-20)
   - [v0.5.4 2024-05-20](#v054-2024-05-20)
   - [v0.5.3 2024-04-15](#v053-2024-04-15)
@@ -298,6 +299,14 @@
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
+
+### Next release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Updated:
+  - Fix docs (for docs.rs and README.md for github and crates.io).
+  - Fix clippy warnings.
+  - Make minor refactors and cleanups.
 
 ### v0.5.5 (2024-05-20)
 <a id="markdown-v0.5.5-2024-05-20" name="v0.5.5-2024-05-20"></a>
