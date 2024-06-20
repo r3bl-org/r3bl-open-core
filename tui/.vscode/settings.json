@@ -1,0 +1,12 @@
+{
+  "copyrighter.author": "R3BL LLC",
+  "copyrighter.license": "Apache2",
+  "cSpell.words": [
+    "anychar",
+    "BOOKM",
+    "DELIMS",
+    "kcsv",
+    "rustfmt",
+    "strs"
+  ]
+}

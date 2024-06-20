@@ -38,7 +38,7 @@ pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine<'_>>> {
     // end.
     let (remainder, _) = opt(tag(NEW_LINE))(remainder)?;
 
-    let acc = split_by_newline(code);
+    let acc = split_by_new_line(code);
 
     return Ok((remainder, convert_into_code_block_lines(lang, acc)));
 }
@@ -86,7 +86,7 @@ fn parse_code_block_body_to_code_block_end(input: &str) -> IResult<&str, &str> {
 /// | ""             | `[] `                |
 /// | "foo\nbar\n"   | `["foo", "bar"] `    |
 /// | "\nfoo\nbar\n" | `["", "foo", "bar"]` |
-pub fn split_by_newline(input: &str) -> Vec<&str> {
+pub fn split_by_new_line(input: &str) -> Vec<&str> {
     let mut acc: Vec<&str> = input.split('\n').collect();
     if let Some(last_item) = acc.last() {
         if last_item.is_empty() {
@@ -239,11 +239,11 @@ mod tests {
 
     #[test]
     fn test_parse_codeblock_split_by_eol() {
-        assert_eq2!(split_by_newline("foobar\n"), vec!["foobar"]);
-        assert_eq2!(split_by_newline("\n"), vec![""]);
-        assert_eq2!(split_by_newline(""), Vec::<&str>::new());
-        assert_eq2!(split_by_newline("foo\nbar\n"), vec!["foo", "bar"]);
-        assert_eq2!(split_by_newline("\nfoo\nbar\n"), vec!["", "foo", "bar"]);
+        assert_eq2!(split_by_new_line("foobar\n"), vec!["foobar"]);
+        assert_eq2!(split_by_new_line("\n"), vec![""]);
+        assert_eq2!(split_by_new_line(""), Vec::<&str>::new());
+        assert_eq2!(split_by_new_line("foo\nbar\n"), vec!["foo", "bar"]);
+        assert_eq2!(split_by_new_line("\nfoo\nbar\n"), vec!["", "foo", "bar"]);
     }
 
     #[test]

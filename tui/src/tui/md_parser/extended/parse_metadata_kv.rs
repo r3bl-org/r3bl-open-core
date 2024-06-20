@@ -16,47 +16,46 @@
  */
 
 use constants::*;
-use nom::{branch::*,
-          bytes::complete::*,
-          character::complete::*,
-          combinator::*,
-          multi::*,
-          sequence::*,
-          IResult};
+use nom::{bytes::complete::*, combinator::*, sequence::*, IResult};
 
 use crate::*;
 
-/// - Parse input: `@title: Something`.
-/// - There may or may not be a newline at the end.
-#[rustfmt::skip]
-pub fn parse_kv_opt_eol<'a>(tag_name: &'a str, input: &'a str) -> IResult<&'a str, &'a str> {
+/// - Sample parse input: `@title: Something` or `@date: Else`.
+/// - There may or may not be a newline at the end. If there is, it is consumed.
+/// - Can't nest the `tag_name` within the `output`. So there can only be one `tag_name`
+///   in the `output`.
+pub fn parse_unique_kv_opt_eol<'a>(
+    tag_name: &'a str,
+    input: &'a str,
+) -> IResult<&'a str, &'a str> {
     let (remainder, title_text) = preceded(
         /* start */ tuple((tag(tag_name), tag(COLON), tag(SPACE))),
-        /* output */ alt((
-            is_not(NEW_LINE),
-            recognize(many1(anychar)),
-        )),
+        /* output */ take_text_until_new_line_or_end(),
     )(input)?;
 
-    // Can't nest titles. Early return in this case.
-    if title_text.contains(format!("{TITLE}{COLON}{SPACE}").as_str()) {
+    // Can't nest `tag_name` in `output`. Early return in this case.
+    let tag_fragment = format!("{tag_name}{COLON}{SPACE}");
+    if title_text.contains(tag_fragment.as_str())
+        | remainder.contains(tag_fragment.as_str())
+    {
         return Err(nom::Err::Error(nom::error::Error::new(
-            "Can't have more than one @title: expr.",
+            "Can't have more than one tag_name in kv expr.",
             nom::error::ErrorKind::Fail,
         )));
     }
 
-    // Special case: Early return when just a newline after the title prefix. Eg: `@title: \n..`.
-    if title_text.starts_with(NEW_LINE) {
-        if let Some(stripped) = title_text.strip_prefix(NEW_LINE) {
-            return Ok((stripped, ""));
-        }
-    }
-
-    // Normal case: if there is a newline, consume it since there may or may not be a newline at the
+    // If there is a newline, consume it since there may or may not be a newline at the
     // end.
     let (remainder, _) = opt(tag(NEW_LINE))(remainder)?;
-    Ok((remainder, title_text))
+
+    // Special case: Early return when something like `@title: ` or `@title: \n` is found.
+    if title_text.is_empty() {
+        Ok((remainder, ""))
+    }
+    // Normal case.
+    else {
+        Ok((remainder, title_text))
+    }
 }
 
 #[cfg(test)]
@@ -69,7 +68,7 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_not_quoted_no_eol() {
         let input = "@title: Something";
-        let (input, output) = parse_kv_opt_eol(TITLE, input).unwrap();
+        let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{}', output: '{}'",
             input.black().on_yellow(),
@@ -82,7 +81,7 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_not_quoted_with_eol() {
         let input = "@title: Something\n";
-        let (input, output) = parse_kv_opt_eol(TITLE, input).unwrap();
+        let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{}', output: '{}'",
             input.black().on_yellow(),
@@ -95,8 +94,31 @@ mod test_parse_title_no_eol {
     #[test]
     fn test_no_quoted_no_eol_nested_title() {
         let input = "@title: Something @title: Something";
-        let it = parse_kv_opt_eol(TITLE, input);
+        let it = parse_unique_kv_opt_eol(TITLE, input);
+
         assert_eq2!(it.is_err(), true);
+        if let Err(nom::Err::Error(ref e)) = it {
+            assert_eq2!(e.input, "Can't have more than one tag_name in kv expr.");
+            assert_eq2!(e.code, nom::error::ErrorKind::Fail);
+        }
+
+        println!(
+            "err: '{}'",
+            format!("{:?}", it.err().unwrap()).black().on_yellow()
+        );
+    }
+
+    #[test]
+    fn test_no_quoted_no_eol_multiple_title_tags() {
+        let input = "@title: Something\n@title: Else\n";
+        let it = parse_unique_kv_opt_eol(TITLE, input);
+
+        assert_eq2!(it.is_err(), true);
+        if let Err(nom::Err::Error(ref e)) = it {
+            assert_eq2!(e.input, "Can't have more than one tag_name in kv expr.");
+            assert_eq2!(e.code, nom::error::ErrorKind::Fail);
+        }
+
         println!(
             "err: '{}'",
             format!("{:?}", it.err().unwrap()).black().on_yellow()
@@ -107,7 +129,7 @@ mod test_parse_title_no_eol {
     fn test_no_quoted_with_eol_title_with_postfix_content_1() {
         let input = "@title: \nfoo\nbar";
         println!("input: '{}'", input.black().on_cyan());
-        let (input, output) = parse_kv_opt_eol(TITLE, input).unwrap();
+        let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{}'\noutput: '{}'",
             input.black().on_yellow(),
@@ -121,7 +143,7 @@ mod test_parse_title_no_eol {
     fn test_no_quoted_with_eol_title_with_postfix_content_2() {
         let input = "@title:  a\nfoo\nbar";
         println!("input: '{}'", input.black().on_cyan());
-        let (input, output) = parse_kv_opt_eol(TITLE, input).unwrap();
+        let (input, output) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "input: '{}'\noutput: '{}'",
             input.black().on_yellow(),
@@ -135,7 +157,7 @@ mod test_parse_title_no_eol {
     fn test_no_quoted_with_eol_title_with_postfix_content_3() {
         let input = "@title: \n\n# heading1\n## heading2";
         println!("❯ input: \n'{}'", input.black().on_cyan());
-        let (remainder, title) = parse_kv_opt_eol(TITLE, input).unwrap();
+        let (remainder, title) = parse_unique_kv_opt_eol(TITLE, input).unwrap();
         println!(
             "❯ remainder: \n'{}'\n❯ title: \n'{}'",
             remainder.black().on_yellow(),

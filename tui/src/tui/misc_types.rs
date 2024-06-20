@@ -157,7 +157,7 @@ pub mod list_of {
                 #[allow(unused_mut)]
                 let mut it = List::new();
                 $(
-                    it.items.push($item);
+                    it.inner.push($item);
                 )*
                 it
             }
@@ -168,17 +168,17 @@ pub mod list_of {
     /// `T`. Where `T` is any number of types in the tui crate.
     #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, GetSize)]
     pub struct List<T> {
-        pub items: Vec<T>,
+        pub inner: Vec<T>,
     }
 
     impl<T> List<T> {
         pub fn with_capacity(size: usize) -> Self {
             Self {
-                items: Vec::with_capacity(size),
+                inner: Vec::with_capacity(size),
             }
         }
 
-        pub fn new() -> Self { Self { items: Vec::new() } }
+        pub fn new() -> Self { Self { inner: Vec::new() } }
     }
 
     /// Add (other) item to list (self).
@@ -188,7 +188,7 @@ pub mod list_of {
 
     /// Add (other) list to list (self).
     impl<T> AddAssign<List<T>> for List<T> {
-        fn add_assign(&mut self, other_list: List<T>) { self.extend(other_list.items); }
+        fn add_assign(&mut self, other_list: List<T>) { self.extend(other_list.inner); }
     }
 
     /// Add (other) vec to list (self).
@@ -197,20 +197,20 @@ pub mod list_of {
     }
 
     impl<T> From<List<T>> for Vec<T> {
-        fn from(list: List<T>) -> Self { list.items }
+        fn from(list: List<T>) -> Self { list.inner }
     }
 
     impl<T> From<Vec<T>> for List<T> {
-        fn from(other: Vec<T>) -> Self { Self { items: other } }
+        fn from(other: Vec<T>) -> Self { Self { inner: other } }
     }
 
     impl<T> Deref for List<T> {
         type Target = Vec<T>;
-        fn deref(&self) -> &Self::Target { &self.items }
+        fn deref(&self) -> &Self::Target { &self.inner }
     }
 
     impl<T> DerefMut for List<T> {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.items }
+        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.inner }
     }
 }
 
@@ -233,7 +233,7 @@ mod cli_args {
             list
         }
 
-        fn as_str(my_vec: &[String]) -> Vec<&str> { List::from(my_vec).items }
+        fn as_str(my_vec: &[String]) -> Vec<&str> { List::from(my_vec).inner }
     }
 
     impl<'a> From<&'a [String]> for List<&'a str> {
@@ -248,7 +248,7 @@ mod cli_args {
         /// <https://users.rust-lang.org/t/is-this-the-best-way-to-go-from-vec-string-to-vec-str/37838>
         fn from(my_vec: &'a [String]) -> Self {
             let items = my_vec.iter().map(String::as_str).collect::<Vec<&str>>();
-            List { items }
+            List { inner: items }
         }
     }
 }

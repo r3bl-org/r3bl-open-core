@@ -29,6 +29,9 @@ pub const DEBUG_TUI_MOD: bool = true;
 /// Enable or disable MD parser debug logging. This makes the parser very slow when
 /// enabled.
 pub const DEBUG_MD_PARSER: bool = false;
+/// This is for running tests on the MD parser. No need to enable logging for this to
+/// work.
+pub const DEBUG_MD_PARSER_STDOUT: bool = false;
 
 /// Enable or disable syntax highlighting debug logging.
 pub const DEBUG_TUI_SYN_HI: bool = false;

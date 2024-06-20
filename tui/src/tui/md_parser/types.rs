@@ -19,7 +19,7 @@ use crate::{BulletKind, List};
 
 /// This corresponds to a single Markdown document, which is produced after a successful parse
 /// operation [crate::parse_markdown].
-pub type MdDocument<'a> = List<MdBlockElement<'a>>;
+pub type MdDocument<'a> = List<MdBlock<'a>>;
 
 /// Alias for [MdDocument].
 pub type Blocks<'a> = MdDocument<'a>;
@@ -40,13 +40,14 @@ pub struct HeadingData<'a> {
     pub text: &'a str,
 }
 
-/// A Markdown document once parsed is turned into a [Vec] of "blocks". A block is the top-level
-/// element of a Markdown document and roughly represents a single line of text.
+/// A Markdown document once parsed is turned into a [Vec] of "blocks".
+/// A block roughly represents a single line of text, and is the top-level
+/// entity of a Markdown document and roughly represents a single line of text.
 /// - It is the intermediate representation (IR) of a single line of text.
-/// - There are some exceptions such as smart lists and code blocks which represent multiple lines of
-///   text.
+/// - There are some exceptions such as smart lists and code blocks which
+///   represent multiple lines of text.
 #[derive(Clone, Debug, PartialEq)]
-pub enum MdBlockElement<'a> {
+pub enum MdBlock<'a> {
     Heading(HeadingData<'a>),
     SmartList((Lines<'a>, BulletKind, usize)),
     Text(MdLineFragments<'a>),
@@ -137,8 +138,8 @@ pub mod constants {
     pub const UNORDERED_LIST: &str = "-";
     pub const UNORDERED_LIST_PREFIX: &str = "- ";
     pub const ORDERED_LIST_PARTIAL_PREFIX: &str = ". ";
-    pub const BOLD: &str = "*";
-    pub const ITALIC: &str = "_";
+    pub const STAR: &str = "*";
+    pub const UNDERSCORE: &str = "_";
     pub const BACK_TICK: &str = "`";
     pub const LEFT_BRACKET: &str = "[";
     pub const RIGHT_BRACKET: &str = "]";
@@ -147,12 +148,14 @@ pub mod constants {
     pub const LEFT_IMAGE: &str = "![";
     pub const RIGHT_IMAGE: &str = "]";
     pub const NEW_LINE: &str = "\n";
+    pub const NEW_LINE_CHAR: char = '\n';
     pub const CODE_BLOCK_START_PARTIAL: &str = "```";
     pub const CODE_BLOCK_END: &str = "```";
     pub const CHECKED: &str = "[x]";
     pub const UNCHECKED: &str = "[ ]";
     pub const CHECKED_OUTPUT: &str = "┊✔┊";
     pub const UNCHECKED_OUTPUT: &str = "┊┈┊";
+    pub const EXCLAMATION: &str = "!";
 }
 
 #[derive(Debug, PartialEq, Clone)]

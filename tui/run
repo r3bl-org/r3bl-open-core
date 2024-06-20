@@ -42,13 +42,13 @@ def main [...args: string] {
         "watch-all-tests" => {watch-all-tests}
         "watch-one-test" => {watch-one-test $args}
         "watch-macro-expand-one-test" => {watch-macro-expand-one-test $args}
-        "docs" => {docs}
+        "doc" => {doc}
         "check" => {check}
         "check-watch" => {check-watch}
         "clippy" => {clippy}
         "clippy-watch" => {clippy-watch}
         "rustfmt" => {rustfmt}
-        "serve-docs" => {serve-docs}
+        "serve-doc" => {serve-doc}
         "help" => {print-help all}
         "log" => {log}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
@@ -108,7 +108,7 @@ def watch-one-test [args: list<string>] {
         # More info on cargo test: https://doc.rust-lang.org/cargo/commands/cargo-test.html
         # More info on cargo watch: https://github.com/watchexec/cargo-watch
         let command_string = "test -- --test-threads=1 --nocapture " + $test_name
-        cargo watch -x check -x $command_string -c -q -d 5
+        cargo watch -x check -x $command_string -c -q -d 1
     } else {
         print $'Can not run this command without (ansi red_bold)test_name(ansi reset)'
     }
@@ -151,7 +151,7 @@ def print-help [command: string] {
         print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)log(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
-        print $'    (ansi green)docs(ansi reset)'
+        print $'    (ansi green)doc(ansi reset)'
         print $'    (ansi green)examples(ansi reset)'
         print $'    (ansi green)release-examples(ansi reset)'
         # print $'    (ansi green)run-with-crash-reporting(ansi reset)'
@@ -160,7 +160,7 @@ def print-help [command: string] {
         print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
         print $'    (ansi green)watch-all-tests(ansi reset)'
         print $'    (ansi green)watch-macro-expand-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
-        print $'    (ansi green)serve-docs(ansi reset)'
+        print $'    (ansi green)serve-doc(ansi reset)'
         print $'    (ansi green)clippy(ansi reset)'
         print $'    (ansi green)clippy-watch(ansi reset)'
         print $'    (ansi green)rustfmt(ansi reset)'
@@ -211,11 +211,11 @@ def clippy-watch [] {
     cargo watch -x 'clippy --fix --allow-dirty --allow-staged' -c -q
 }
 
-def docs [] {
+def doc [] {
     cargo doc --no-deps --all-features
 }
 
-def serve-docs [] {
+def serve-doc [] {
     npm i -g serve
     serve ../target/doc
 }

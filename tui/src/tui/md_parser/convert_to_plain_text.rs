@@ -33,7 +33,7 @@ impl<'a> PrettyPrintDebug for MdDocument<'a> {
 
 impl<'a> PrettyPrintDebug for List<MdLineFragment<'a>> {
     fn pretty_print_debug(&self) -> String {
-        self.items
+        self.inner
             .iter()
             .map(|fragment| fragment.pretty_print_debug())
             .collect::<Vec<String>>()
@@ -41,18 +41,18 @@ impl<'a> PrettyPrintDebug for List<MdLineFragment<'a>> {
     }
 }
 
-impl<'a> PrettyPrintDebug for MdBlockElement<'a> {
+impl<'a> PrettyPrintDebug for MdBlock<'a> {
     fn pretty_print_debug(&self) -> String {
         match self {
-            MdBlockElement::Heading(heading_data) => {
+            MdBlock::Heading(heading_data) => {
                 format!(
                     "{}{}",
                     heading_data.heading_level.pretty_print_debug(),
                     heading_data.text,
                 )
             }
-            MdBlockElement::Text(fragments) => fragments.pretty_print_debug(),
-            MdBlockElement::CodeBlock(list_codeblock_line) => {
+            MdBlock::Text(fragments) => fragments.pretty_print_debug(),
+            MdBlock::CodeBlock(list_codeblock_line) => {
                 let line_count = list_codeblock_line.len();
                 let lang = {
                     list_codeblock_line
@@ -62,11 +62,11 @@ impl<'a> PrettyPrintDebug for MdBlockElement<'a> {
                 };
                 format!("code block, line count: {line_count}, lang: {lang}")
             }
-            MdBlockElement::Title(title) => format!("title: {}", title),
-            MdBlockElement::Tags(tags) => format!("tags: {}", tags.join(", ")),
-            MdBlockElement::Date(date) => format!("title: {}", date),
-            MdBlockElement::Authors(authors) => format!("tags: {}", authors.join(", ")),
-            MdBlockElement::SmartList((list_lines, _bullet_kind, _indent)) => format!(
+            MdBlock::Title(title) => format!("title: {}", title),
+            MdBlock::Tags(tags) => format!("tags: {}", tags.join(", ")),
+            MdBlock::Date(date) => format!("title: {}", date),
+            MdBlock::Authors(authors) => format!("tags: {}", authors.join(", ")),
+            MdBlock::SmartList((list_lines, _bullet_kind, _indent)) => format!(
                 "[  {}  ]",
                 list_lines
                     .iter()
@@ -110,8 +110,8 @@ impl PrettyPrintDebug for MdLineFragment<'_> {
                     "{LEFT_IMAGE}{alt_text}{RIGHT_IMAGE}{LEFT_PARENTHESIS}{url}{RIGHT_PARENTHESIS}"
                 )
             }
-            MdLineFragment::Bold(text) => format!("{BOLD}{text}{BOLD}"),
-            MdLineFragment::Italic(text) => format!("{ITALIC}{text}{ITALIC}"),
+            MdLineFragment::Bold(text) => format!("{STAR}{text}{STAR}"),
+            MdLineFragment::Italic(text) => format!("{UNDERSCORE}{text}{UNDERSCORE}"),
             MdLineFragment::InlineCode(text) => format!("{BACK_TICK}{text}{BACK_TICK}"),
             MdLineFragment::Checkbox(is_checked) => {
                 (if *is_checked { CHECKED } else { UNCHECKED }).to_string()

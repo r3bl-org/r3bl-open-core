@@ -1,0 +1,110 @@
+/*
+ *   Copyright (c) 2024 R3BL LLC
+ *   All rights reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
+//! For use with specialized parsers for: [UNDERSCORE], [STAR], and [BACK_TICK].
+//! See: [parse_fragment_plain_text_no_new_line()].
+//!
+//! To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
+//! in [parse_fragments_in_a_line].
+
+use constants::*;
+use crossterm::style::Stylize;
+use nom::{bytes::complete::*, combinator::*, multi::*, IResult};
+use r3bl_rs_utils_core::call_if_true;
+
+use crate::*;
+
+/// Returns tuple:
+/// 0. number of occurrences in the input, until the first "\n" or end of input.
+/// 1. does the input start with the delimiter?
+/// 2. is the input the delimiter?
+/// 3. the delimiter.
+pub fn count_delim_occurrences_until_eol<'i>(
+    input: &'i str,
+    delim: &'i str,
+) -> (usize, bool, bool, &'i str) {
+    // If the input has a "\n" then split it at the first "\n", only count the number
+    // of delims at the first part of the split.
+    let (first_part, _) = input.split_at(input.find(NEW_LINE).unwrap_or(input.len()));
+    let num_of_delim_occurrences = first_part.matches(delim).count();
+    (
+        num_of_delim_occurrences,
+        input.starts_with(delim),
+        input == delim,
+        delim,
+    )
+}
+
+/// See: [parse_fragment_plain_text_no_new_li
+/// ne1()].
+#[rustfmt::skip]
+pub fn take_starts_with_delim_no_new_line<'i>(
+    input: &'i str,
+    delim: &'i str,
+) -> IResult<&'i str, &'i str> {
+    // Check if there is a closing delim.
+    let (num_of_delim_occurrences, starts_with_delim, input_is_delim, _) =
+        count_delim_occurrences_until_eol(input, delim);
+
+    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+        println!(
+            "\n{} specialized parser: \ninput: {:?}, delim: {:?}",
+            "■■".green(),
+            input,
+            delim
+        );
+        println!(
+            "count: {}, starts_w: {}, input=delim: {}",
+            num_of_delim_occurrences, starts_with_delim, input_is_delim
+        );
+    });
+
+    if
+        // The input must start with the delim for this parser to run.
+        !starts_with_delim
+        ||
+        // If the input just contains a single delim, error out.
+        input_is_delim
+        ||
+        // If there is no closing delim, only a single opening delim, then error out. This
+        // forces the [parse_fragment_plain_text_no_new_line1()] to take care of this
+        // case.
+        num_of_delim_occurrences == 1
+    {
+        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+            println!("{} parser error out for input:{:?}", "⬢⬢".red(), input);
+        });
+        return Err(nom::Err::Error(nom::error::Error {
+            input,
+            code: nom::error::ErrorKind::Fail,
+        }));
+    }
+
+    // If there is a closing delim, then we can safely take the text between the delim.
+    if num_of_delim_occurrences > 1 {
+        return take_text_between_delims_err_on_new_line(input, delim, delim);
+    }
+
+    // Otherwise, we split the input at the first delim.
+    let (rem, output) = recognize(many1(tag(delim)))(input)?;
+
+    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+        println!("{}, rem: {:?}, output: {:?}", "▲▲".blue(), rem, output);
+    });
+
+    Ok((rem, output))
+}
