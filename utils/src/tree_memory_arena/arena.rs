@@ -130,6 +130,7 @@ where
     T: Debug + Clone + Send + Sync,
 {
     /// If no matching nodes can be found returns `None`.
+    #[allow(clippy::unwrap_in_result)]
     pub fn filter_all_nodes_by(&self, filter_fn: &FilterFn<T>) -> ResultUidList {
         if let Ok(map /* ReadGuarded<'_, ArenaMap<T>> */) = self.map.read() {
             let filtered_map = map

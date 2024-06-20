@@ -15,7 +15,13 @@
  *   limitations under the License.
  */
 
-use nom::{bytes::complete::*, combinator::*, sequence::*, IResult};
+use nom::{branch::*,
+          bytes::complete::*,
+          character::complete::*,
+          combinator::*,
+          multi::*,
+          sequence::*,
+          IResult};
 
 use crate::{constants::NEW_LINE, *};
 
@@ -31,10 +37,29 @@ pub fn parse_block_heading_opt_eol(input: &str) -> IResult<&str, HeadingData<'_>
 fn parse(input: &str) -> IResult<&str, HeadingData<'_>> {
     let (input, (level, text, _)) = tuple((
         parse_heading_tag,
-        parse_anychar_in_heading_no_new_line1,
+        parse_anychar_in_heading_no_new_line,
         opt(tag(NEW_LINE)),
     ))(input)?;
     Ok((input, HeadingData { heading_level: level, text }))
+}
+
+/// More info: <https://github.com/dimfeld/export-logseq-notes/blob/40f4d78546bec269ad25d99e779f58de64f4a505/src/parse_string.rs#L132>
+#[rustfmt::skip]
+pub fn parse_anychar_in_heading_no_new_line(input: &str) -> IResult<&str, &str> {
+    recognize(
+        many1( /* match at least 1 char */
+            preceded(
+                /* prefix is discarded, it doesn't match anything, only errors out for special chars */
+                not( /* error out if starts w/ special chars */
+                    alt((
+                        tag(NEW_LINE),
+                    ))
+                ),
+                /* output - keep char */
+                anychar,
+            )
+        )
+    )(input)
 }
 
 /// Matches one or more `#` chars, consumes it, and outputs [Level].
@@ -154,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_header_with_newline() {
+    fn test_parse_header_with_new_line() {
         assert_eq2!(
             parse_block_heading_opt_eol("# \n"),
             Err(NomErr::Error(Error {
@@ -165,7 +190,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_header_with_no_newline() {
+    fn test_parse_header_with_no_new_line() {
         assert_eq2!(
             parse_block_heading_opt_eol("# test"),
             Ok((
