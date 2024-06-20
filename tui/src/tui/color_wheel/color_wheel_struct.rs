@@ -494,7 +494,7 @@ impl ColorWheel {
 
         let mut acc_vec = vec![];
 
-        for TuiStyledText(style, unicode_string) in it.items {
+        for TuiStyledText(style, unicode_string) in it.inner {
             let maybe_src_color_fg = style.color_fg;
             let maybe_src_color_bg = style.color_bg;
 

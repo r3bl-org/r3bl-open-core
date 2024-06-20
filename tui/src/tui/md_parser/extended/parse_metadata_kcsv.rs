@@ -16,100 +16,95 @@
  */
 
 use constants::*;
-use nom::{branch::*,
-          bytes::complete::*,
-          character::complete::*,
-          combinator::*,
-          multi::*,
-          sequence::*,
-          IResult};
+use nom::{bytes::complete::*, combinator::*, sequence::*, IResult};
 
 use crate::*;
 
-/// - Parse input: `@tags: tag1, tag2, tag3`.
-/// - There may or may not be a newline at the end.
-#[rustfmt::skip]
-pub fn parse_csv_opt_eol<'a>(tag_name: &'a str, input: &'a str) -> IResult<&'a str, List<&'a str>> {
+/// - Sample parse input: `@tags: tag1, tag2, tag3`, `@tags: tag1, tag2, tag3\n`,
+///   or `@authors: me, myself, i`, `@authors: me, myself, i\n`.
+/// - There may or may not be a newline at the end. If there is, it is consumed.
+pub fn parse_csv_opt_eol<'a>(
+    tag_name: &'a str,
+    input: &'a str,
+) -> IResult<&'a str, List<&'a str>> {
     let (remainder, tags_text) = preceded(
         /* start */ tuple((tag(tag_name), tag(COLON), tag(SPACE))),
-        /* output */ alt((
-            is_not(NEW_LINE),
-            recognize(many1(anychar)),
-        )),
+        /* output */ take_text_until_new_line_or_end(),
     )(input)?;
 
-    // Special case: Early return when just a newline after the tags prefix. Eg: `@tags: \n..`.
-    if tags_text.starts_with(NEW_LINE) {
-        if let Some(stripped) = tags_text.strip_prefix(NEW_LINE) {
-            return Ok((stripped, list![]));
-        }
-    }
-
-    // At this point, `output` can have something like: `tag1, tag2, tag3`.
-    let (_, vec_tags_text) = parse_tag_list_comma_separated(tags_text)?;
-
-    // If there is a newline, consume it since there may or may not be a newline at the end.
+    // If there is a newline, consume it since there may or may not be a newline at
+    // the end.
     let (remainder, _) = opt(tag(NEW_LINE))(remainder)?;
 
-    return Ok((remainder, List::from(vec_tags_text)));
-
-    /// Parse input: `tag1, tag2, tag3`.
-    fn parse_tag_list_comma_separated(input: &str) -> IResult<&str, Vec<&str>> {
-        let acc: Vec<&str> = input.split(COMMA).collect();
-        let mut trimmed_acc: Vec<&str> = Vec::with_capacity(acc.len());
-
-        // Verify whitespace prefix rules.
-        match acc.len() {
-            0 => {
-                // Empty. Nothing to do here.
-            }
-            1 => {
-                // Only one item. Must not be prefixed with a space.
-                let only_item = &acc[0];
-                if only_item.starts_with(SPACE) {
-                    return Err(nom::Err::Error(nom::error::Error::new(
-                        "Only item must not start with space.",
-                        nom::error::ErrorKind::Fail,
-                    )));
-                }
-                else {
-                    trimmed_acc.push(only_item);
-                }
-            },
-            _ => {
-                // More than one item:
-                // 1. 1st item must not be prefixed with a space.
-                // 2. 2nd item onwards must be prefixed by at least 1 space, may have more.
-                let mut my_iter = acc.iter();
-
-                let first_item = my_iter.next().unwrap();
-
-                // First item must not be prefixed with a space.
-                if first_item.starts_with(SPACE) {
-                    return Err(nom::Err::Error(nom::error::Error::new(
-                        "First item must not start with space.",
-                        nom::error::ErrorKind::Fail,
-                    )));
-                }else {
-                    trimmed_acc.push(first_item);
-                }
-
-                // Rest of items must be prefixed with a space.
-                for rest_item in my_iter {
-                    if !rest_item.starts_with(SPACE) {
-                        return Err(nom::Err::Error(nom::error::Error::new(
-                            "Non-first item must start with space.",
-                            nom::error::ErrorKind::Fail,
-                        )));
-                    }
-                    // Can only trim 1 space from start of rest_item.
-                    trimmed_acc.push(&rest_item[1..]);
-                }
-            },
-        }
-
-        Ok((input, trimmed_acc))
+    // Special case: Early return when just a `@tags: ` or `@tags: \n` is found.
+    if tags_text.is_empty() {
+        Ok((remainder, list![]))
     }
+    // Normal case.
+    else {
+        // At this point, `output` can have something like: `tag1, tag2, tag3`.
+        let (_, vec_tags_text) = parse_comma_separated_list(tags_text)?;
+        Ok((remainder, List::from(vec_tags_text)))
+    }
+}
+
+/// | input                | rem     |  output                           |
+/// | -------------------- | ------- | --------------------------------- |
+/// | `"tag1, tag2, tag3"` | `""`    | `vec!(["tag1", "tag2", "tag3"])`  |
+fn parse_comma_separated_list(input: &str) -> IResult<&str, Vec<&str>> {
+    let acc: Vec<&str> = input.split(COMMA).collect();
+    let mut trimmed_acc: Vec<&str> = Vec::with_capacity(acc.len());
+
+    // Verify whitespace prefix rules.
+    match acc.len() {
+        0 => {
+            // Empty. Nothing to do here.
+        }
+        1 => {
+            // Only one item. Must not be prefixed with a space.
+            let only_item = &acc[0];
+            if only_item.starts_with(SPACE) {
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    "Only item must not start with space.",
+                    nom::error::ErrorKind::Fail,
+                )));
+            } else {
+                trimmed_acc.push(only_item);
+            }
+        }
+        _ => {
+            // More than one item:
+            // 1. 1st item must not be prefixed with a space.
+            // 2. 2nd item onwards must be prefixed by at least 1 space, may have more.
+            let mut my_iter = acc.iter();
+
+            let first_item = my_iter.next().unwrap();
+
+            // First item must not be prefixed with a space.
+            if first_item.starts_with(SPACE) {
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    "First item must not start with space.",
+                    nom::error::ErrorKind::Fail,
+                )));
+            } else {
+                trimmed_acc.push(first_item);
+            }
+
+            // Rest of items must be prefixed with a space.
+            for rest_item in my_iter {
+                if !rest_item.starts_with(SPACE) {
+                    return Err(nom::Err::Error(nom::error::Error::new(
+                        "Non-first item must start with space.",
+                        nom::error::ErrorKind::Fail,
+                    )));
+                }
+                // Can only trim 1 space from start of rest_item.
+                trimmed_acc.push(&rest_item[1..]);
+            }
+        }
+    }
+
+    Ok((input, trimmed_acc))
 }
 
 #[cfg(test)]
@@ -128,13 +123,13 @@ mod test_parse_tags_opt_eol {
 
     #[test]
     fn test_not_quoted_no_eol_err_whitespace() {
-        // First element mustn't have any space prefix.
+        // First fragment mustn't have any space prefix.
         assert_eq2!(
             parse_csv_opt_eol(TAGS, "@tags:  tag1, tag2, tag3").is_err(),
             true,
         );
 
-        // 2nd element onwards must have a single space prefix.
+        // 2nd fragment onwards must have a single space prefix.
         assert_eq2!(
             parse_csv_opt_eol(TAGS, "@tags: tag1,tag2, tag3").is_err(),
             true,
@@ -148,7 +143,7 @@ mod test_parse_tags_opt_eol {
             true,
         );
 
-        // It is ok to have more than 1 prefix space for 2nd element onwards.
+        // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         assert_eq2!(
             parse_csv_opt_eol(TAGS, "@tags: tag1, tag2,  tag3").unwrap(),
             ("", list!["tag1", "tag2", " tag3"]),
@@ -180,13 +175,13 @@ mod test_parse_tags_opt_eol {
 
     #[test]
     fn test_not_quoted_with_eol_whitespace() {
-        // First element mustn't have any space prefix.
+        // First fragment mustn't have any space prefix.
         assert_eq2!(
             parse_csv_opt_eol(TAGS, "@tags:  tag1, tag2, tag3\n").is_err(),
             true,
         );
 
-        // 2nd element onwards must have a single space prefix.
+        // 2nd fragment onwards must have a single space prefix.
         assert_eq2!(
             parse_csv_opt_eol(TAGS, "@tags: tag1,tag2, tag3\n").is_err(),
             true,
@@ -200,7 +195,7 @@ mod test_parse_tags_opt_eol {
             true,
         );
 
-        // It is ok to have more than 1 prefix space for 2nd element onwards.
+        // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         assert_eq2!(
             parse_csv_opt_eol(TAGS, "@tags: tag1, tag2,  tag3\n").unwrap(),
             ("", list!["tag1", "tag2", " tag3"]),
@@ -208,7 +203,7 @@ mod test_parse_tags_opt_eol {
     }
 
     #[test]
-    fn test_not_quoted_with_postfix_content_1() {
+    fn test_not_quoted_with_postfix_content() {
         let input = "@tags: \nfoo\nbar";
         let (input, output) = parse_csv_opt_eol(TAGS, input).unwrap();
         assert_eq2!(input, "foo\nbar");

@@ -52,7 +52,7 @@ pub fn parse_block_smart_list(
                     CheckboxParsePolicy::IgnoreCheckbox
                 }
             };
-            parse_block_markdown_text_opt_eol_with_checkbox_policy(
+            parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
                 line.content,
                 parse_checkbox_policy,
             )?
@@ -326,7 +326,7 @@ mod tests_parse_smart_lists_in_markdown {
         // remainder.console_log_bg();
 
         assert_eq2!(remainder, "");
-        md_doc.items.iter().zip(expected_output.iter()).for_each(
+        md_doc.inner.iter().zip(expected_output.iter()).for_each(
             |(element, test_str)| {
                 let lhs = element.pretty_print_debug();
                 let rhs = test_str.to_string();
@@ -366,7 +366,7 @@ mod tests_parse_smart_lists_in_markdown {
         // remainder.console_log_bg();
 
         assert_eq2!(remainder, "");
-        md_doc.items.iter().zip(expected_output.iter()).for_each(
+        md_doc.inner.iter().zip(expected_output.iter()).for_each(
             |(element, test_str)| {
                 let lhs = element.pretty_print_debug();
                 let rhs = test_str.to_string();
@@ -421,7 +421,7 @@ mod tests_parse_smart_lists_in_markdown {
         remainder.console_log_bg();
 
         assert_eq2!(remainder, "");
-        md_doc.items.iter().zip(expected_output.iter()).for_each(
+        md_doc.inner.iter().zip(expected_output.iter()).for_each(
             |(element, test_str)| {
                 let lhs = element.pretty_print_debug();
                 let rhs = test_str.to_string();
@@ -464,7 +464,7 @@ mod tests_parse_smart_lists_in_markdown {
         // remainder.console_log_bg();
 
         assert_eq2!(remainder, "");
-        md_doc.items.iter().zip(expected_output.iter()).for_each(
+        md_doc.inner.iter().zip(expected_output.iter()).for_each(
             |(element, test_str)| {
                 let lhs = element.pretty_print_debug();
                 let rhs = test_str.to_string();
@@ -836,9 +836,9 @@ mod tests_list_item_lines {
         );
     }
 
-    /// One line (with trailing newline): "- foo\n".
+    /// One line (with trailing new_line): "- foo\n".
     #[test]
-    fn test_one_line_trailing_newline() {
+    fn test_one_line_trailing_new_line() {
         let input = "- foo\n";
         let (remainder, actual) = parse_smart_list(input).unwrap();
         assert_eq2!(remainder, "");

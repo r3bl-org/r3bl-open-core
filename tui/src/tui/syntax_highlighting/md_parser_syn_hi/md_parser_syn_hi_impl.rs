@@ -105,7 +105,7 @@ impl PrettyPrintDebug for StyleUSSpanLines {
     fn pretty_print_debug(&self) -> String {
         let mut it = vec![];
 
-        for line in &self.items {
+        for line in &self.inner {
             it.push(line.pretty_print_debug())
         }
 
@@ -126,7 +126,7 @@ impl StyleUSSpanLines {
                 maybe_current_box_computed_style,
                 maybe_syntect_tuple,
             );
-            lines.items.extend(block_to_lines.items);
+            lines.inner.extend(block_to_lines.inner);
         }
         lines
     }
@@ -171,7 +171,7 @@ impl StyleUSSpanLines {
                     let mut acc_line_output = StyleUSSpanLine::default();
 
                     let maybe_lang =
-                        if let Some(code_block_line) = code_block_lines.items.first() {
+                        if let Some(code_block_line) = code_block_lines.inner.first() {
                             code_block_line.language
                         } else {
                             None
@@ -315,64 +315,64 @@ impl StyleUSSpanLines {
         acc_lines_output
     }
 
-    /// Each [MdBlockElement] needs to be translated into a line. The [MdBlockElement::CodeBlock] is
+    /// Each [MdBlock] needs to be translated into a line. The [MdBlock::CodeBlock] is
     /// the only block that needs to be translated into multiple lines. This is why the return type
     /// is a [StyleUSSpanLines] (and not a single line).
     pub fn from_block(
-        block: &MdBlockElement<'_>,
+        block: &MdBlock<'_>,
         maybe_current_box_computed_style: &Option<TuiStyle>,
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         let mut lines = StyleUSSpanLines::default();
 
         match block {
-            MdBlockElement::Title(title) => {
+            MdBlock::Title(title) => {
                 lines += StyleUSSpanLine::from_kvp(
                     TITLE,
                     title,
                     maybe_current_box_computed_style,
                 );
             }
-            MdBlockElement::Date(date) => {
+            MdBlock::Date(date) => {
                 lines += StyleUSSpanLine::from_kvp(
                     DATE,
                     date,
                     maybe_current_box_computed_style,
                 );
             }
-            MdBlockElement::Tags(tags) => {
+            MdBlock::Tags(tags) => {
                 lines += StyleUSSpanLine::from_csvp(
                     TAGS,
                     tags,
                     maybe_current_box_computed_style,
                 );
             }
-            MdBlockElement::Authors(authors) => {
+            MdBlock::Authors(authors) => {
                 lines += StyleUSSpanLine::from_csvp(
                     AUTHORS,
                     authors,
                     maybe_current_box_computed_style,
                 );
             }
-            MdBlockElement::Heading(heading_data) => {
+            MdBlock::Heading(heading_data) => {
                 lines.push(StyleUSSpanLine::from_heading_data(
                     heading_data,
                     maybe_current_box_computed_style,
                 ));
             }
-            MdBlockElement::Text(fragments_in_one_line) => {
+            MdBlock::Text(fragments_in_one_line) => {
                 lines.push(StyleUSSpanLine::from_fragments(
                     fragments_in_one_line,
                     maybe_current_box_computed_style,
                 ))
             }
-            MdBlockElement::SmartList((list_lines, _bullet_kind, _indent)) => {
+            MdBlock::SmartList((list_lines, _bullet_kind, _indent)) => {
                 lines += StyleUSSpanLines::from_block_smart_list(
                     list_lines,
                     maybe_current_box_computed_style,
                 );
             }
-            MdBlockElement::CodeBlock(code_block_lines) => {
+            MdBlock::CodeBlock(code_block_lines) => {
                 lines += StyleUSSpanLines::from_block_codeblock(
                     code_block_lines,
                     maybe_current_box_computed_style,
@@ -481,7 +481,7 @@ impl StyleUSSpan {
                     StyleUSSpan::new(
                         maybe_current_box_computed_style.unwrap_or_default()
                             + get_foreground_dim_style(),
-                        US::from(BOLD),
+                        US::from(STAR),
                     ),
                     StyleUSSpan::new(
                         maybe_current_box_computed_style.unwrap_or_default()
@@ -491,7 +491,7 @@ impl StyleUSSpan {
                     StyleUSSpan::new(
                         maybe_current_box_computed_style.unwrap_or_default()
                             + get_foreground_dim_style(),
-                        US::from(BOLD),
+                        US::from(STAR),
                     ),
                 ]
             }
@@ -500,7 +500,7 @@ impl StyleUSSpan {
                 StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_foreground_dim_style(),
-                    US::from(ITALIC),
+                    US::from(UNDERSCORE),
                 ),
                 StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
@@ -510,7 +510,7 @@ impl StyleUSSpan {
                 StyleUSSpan::new(
                     maybe_current_box_computed_style.unwrap_or_default()
                         + get_foreground_dim_style(),
-                    US::from(ITALIC),
+                    US::from(UNDERSCORE),
                 ),
             ],
 
@@ -566,7 +566,7 @@ impl StyleUSSpan {
 impl PrettyPrintDebug for StyleUSSpanLine {
     fn pretty_print_debug(&self) -> String {
         let mut it = vec![];
-        for span in &self.items {
+        for span in &self.inner {
             let StyleUSSpan { style, text } = span;
             let line_text = format!("fragment[ {:?} , {:?} ]", text.string, style);
             it.push(line_text);
@@ -588,7 +588,7 @@ impl StyleUSSpanLine {
             acc.extend(vec_spans);
         }
 
-        List { items: acc }
+        List { inner: acc }
     }
 
     /// This is a sample [HeadingData] that needs to be converted into a [StyleUSSpanLine].
@@ -633,8 +633,8 @@ impl StyleUSSpanLine {
             StyleUSSpanLine::from(styled_texts)
         };
 
-        line.items.push(heading_level_span);
-        line.items.extend(heading_text_span.items);
+        line.inner.push(heading_level_span);
+        line.inner.extend(heading_text_span.inner);
 
         line
     }
@@ -644,10 +644,10 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
     fn from(styled_texts: TuiStyledTexts) -> Self {
         let mut it = StyleUSSpanLine::default();
         // More info on `into_iter`: <https://users.rust-lang.org/t/move-value-from-an-iterator/46172>
-        for styled_text in styled_texts.items.into_iter() {
+        for styled_text in styled_texts.inner.into_iter() {
             let style = styled_text.get_style();
             let us = styled_text.get_text();
-            it.items.push(StyleUSSpan::new(*style, us.clone()));
+            it.inner.push(StyleUSSpan::new(*style, us.clone()));
         }
         it
     }
@@ -982,13 +982,13 @@ mod tests_style_us_span_lines_from {
         #[test]
         fn test_block_metadata_tags() -> Result<(), ()> {
             throws!({
-                let tags = MdBlockElement::Tags(list!["tag1", "tag2", "tag3"]);
+                let tags = MdBlock::Tags(list!["tag1", "tag2", "tag3"]);
                 let style = tui_style! {
                     color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                 };
                 let lines = StyleUSSpanLines::from_block(&tags, &Some(style), None);
-                let line_0 = &lines.items[0];
-                let mut iter = line_0.items.iter();
+                let line_0 = &lines.inner[0];
+                let mut iter = line_0.inner.iter();
 
                 // println!("{}", line_0..pretty_print_debug());
                 assert_eq2!(
@@ -1036,16 +1036,16 @@ mod tests_style_us_span_lines_from {
 
         #[test]
         fn test_block_metadata_title() {
-            let title = MdBlockElement::Title("Something");
+            let title = MdBlock::Title("Something");
             let style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
             let lines = StyleUSSpanLines::from_block(&title, &Some(style), None);
             // println!("{}", lines..pretty_print_debug());
 
-            let line_0 = &lines.items[0];
+            let line_0 = &lines.inner[0];
 
-            let span_0 = &line_0.items[0];
+            let span_0 = &line_0.inner[0];
             assert_eq2!(
                 span_0,
                 &StyleUSSpan::new(
@@ -1054,13 +1054,13 @@ mod tests_style_us_span_lines_from {
                 )
             );
 
-            let span_1 = &line_0.items[1];
+            let span_1 = &line_0.inner[1];
             assert_eq2!(
                 span_1,
                 &StyleUSSpan::new(style + get_foreground_dim_style(), US::from(": "),)
             );
 
-            let span_2 = &line_0.items[2];
+            let span_2 = &line_0.inner[2];
             assert_eq2!(
                 span_2,
                 &StyleUSSpan::new(
@@ -1072,7 +1072,7 @@ mod tests_style_us_span_lines_from {
 
         #[test]
         fn test_block_codeblock() {
-            let codeblock_block = MdBlockElement::CodeBlock(list!(
+            let codeblock_block = MdBlock::CodeBlock(list!(
                 CodeBlockLine {
                     language: Some("ts"),
                     content: CodeBlockLineContent::StartTag
@@ -1094,31 +1094,31 @@ mod tests_style_us_span_lines_from {
             let lines =
                 StyleUSSpanLines::from_block(&codeblock_block, &Some(style), None);
 
-            let line_0 = &lines.items[0];
+            let line_0 = &lines.inner[0];
             // println!("{}", line_0..pretty_print_debug());
             assert_eq2!(
-                line_0.items[0],
+                line_0.inner[0],
                 StyleUSSpan::new(style + get_foreground_dim_style(), US::from("```"),)
             );
             assert_eq2!(
-                line_0.items[1],
+                line_0.inner[1],
                 StyleUSSpan::new(style + get_code_block_lang_style(), US::from("ts"),)
             );
 
-            let line_1 = &lines.items[1];
+            let line_1 = &lines.inner[1];
             // println!("{}", line_1..pretty_print_debug());
             assert_eq2!(
-                line_1.items[0],
+                line_1.inner[0],
                 StyleUSSpan::new(
                     style + get_code_block_content_style(),
                     US::from("let a = 1;"),
                 )
             );
 
-            let line_2 = &lines.items[2];
+            let line_2 = &lines.inner[2];
             // println!("{}", line_2..pretty_print_debug());
             assert_eq2!(
-                line_2.items[0],
+                line_2.inner[0],
                 StyleUSSpan::new(style + get_foreground_dim_style(), US::from("```"),)
             );
         }
@@ -1138,17 +1138,17 @@ mod tests_style_us_span_lines_from {
                     let lines =
                         StyleUSSpanLines::from_block(ol_block_1, &Some(style), None);
 
-                    let line_0 = &lines.items[0];
+                    let line_0 = &lines.inner[0];
                     // println!("{}", line_0..pretty_print_debug());
                     assert_eq2!(
-                        line_0.items[0],
+                        line_0.inner[0],
                         StyleUSSpan::new(
                             style + get_list_bullet_style(),
                             US::from("100.│")
                         )
                     );
                     assert_eq2!(
-                        line_0.items[1],
+                        line_0.inner[1],
                         StyleUSSpan::new(style + get_foreground_style(), US::from("Foo"),)
                     );
                 }
@@ -1159,17 +1159,17 @@ mod tests_style_us_span_lines_from {
                     let lines =
                         StyleUSSpanLines::from_block(ol_block_2, &Some(style), None);
 
-                    let line_0 = &lines.items[0];
+                    let line_0 = &lines.inner[0];
                     // println!("{}", line_0..pretty_print_debug());
                     assert_eq2!(
-                        line_0.items[0],
+                        line_0.inner[0],
                         StyleUSSpan::new(
                             style + get_list_bullet_style(),
                             US::from("200.│")
                         )
                     );
                     assert_eq2!(
-                        line_0.items[1],
+                        line_0.inner[1],
                         StyleUSSpan::new(style + get_foreground_style(), US::from("Bar"),)
                     );
                 }
@@ -1190,13 +1190,13 @@ mod tests_style_us_span_lines_from {
                     let ul_block_0 = &doc[0];
                     let lines =
                         StyleUSSpanLines::from_block(ul_block_0, &Some(style), None);
-                    let line_0 = &lines.items[0];
+                    let line_0 = &lines.inner[0];
                     assert_eq2!(
-                        line_0.items[0],
+                        line_0.inner[0],
                         StyleUSSpan::new(style + get_list_bullet_style(), US::from("─┤"))
                     );
                     assert_eq2!(
-                        line_0.items[1],
+                        line_0.inner[1],
                         StyleUSSpan::new(style + get_foreground_style(), US::from("Foo"))
                     );
                 }
@@ -1206,13 +1206,13 @@ mod tests_style_us_span_lines_from {
                     let ul_block_1 = &doc[1];
                     let lines =
                         StyleUSSpanLines::from_block(ul_block_1, &Some(style), None);
-                    let line_0 = &lines.items[0];
+                    let line_0 = &lines.inner[0];
                     assert_eq2!(
-                        line_0.items[0],
+                        line_0.inner[0],
                         StyleUSSpan::new(style + get_list_bullet_style(), US::from("─┤"))
                     );
                     assert_eq2!(
-                        line_0.items[1],
+                        line_0.inner[1],
                         StyleUSSpan::new(style + get_foreground_style(), US::from("Bar"))
                     );
                 }
@@ -1221,7 +1221,7 @@ mod tests_style_us_span_lines_from {
 
         #[test]
         fn test_block_text() {
-            let text_block = MdBlockElement::Text(list![MdLineFragment::Plain("Foobar")]);
+            let text_block = MdBlock::Text(list![MdLineFragment::Plain("Foobar")]);
             let style = tui_style! {
                 color_bg: TuiColor::Basic(ANSIBasicColor::Red)
             };
@@ -1229,8 +1229,8 @@ mod tests_style_us_span_lines_from {
             let lines = StyleUSSpanLines::from_block(&text_block, &Some(style), None);
             // println!("{}", lines..pretty_print_debug());
 
-            let line_0 = &lines.items[0];
-            let span_0_in_line_0 = &line_0.items[0];
+            let line_0 = &lines.inner[0];
+            let span_0_in_line_0 = &line_0.inner[0];
             let StyleUSSpan { style, text } = span_0_in_line_0;
             assert_eq2!(text.string, "Foobar");
             assert_eq2!(style, &(*style + get_foreground_style()));
@@ -1238,7 +1238,7 @@ mod tests_style_us_span_lines_from {
 
         #[test]
         fn test_block_heading() {
-            let heading_block = MdBlockElement::Heading(HeadingData {
+            let heading_block = MdBlock::Heading(HeadingData {
                 heading_level: HeadingLevel { level: 1 },
                 text: "Foobar",
             });
@@ -1250,9 +1250,9 @@ mod tests_style_us_span_lines_from {
             // println!("{}", lines..pretty_print_debug());
 
             // There should just be 1 line.
-            assert_eq2!(lines.items.len(), 1);
-            let first_line = &lines.items[0];
-            let spans_in_line = &first_line.items;
+            assert_eq2!(lines.inner.len(), 1);
+            let first_line = &lines.inner[0];
+            let spans_in_line = &first_line.inner;
 
             // There should be 7 spans in the line.
             assert_eq2!(spans_in_line.len(), 7);

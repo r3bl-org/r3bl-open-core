@@ -15,41 +15,46 @@
  *   limitations under the License.
  */
 
-//! The main entry point (function) for this Markdown parsing module is [parser#parse_markdown]. It
-//! takes a string slice and returns a vector of [MdBlockElement]s.
+//! The main entry point (function) for this Markdown parsing module is
+//! [parse_markdown()].
+//! - It takes a string slice.
+//! - And returns a vector of [MdBlock]s.
 //!
-//! This module contains a fully functional Markdown parser. This parser supports standard Markdown
-//! syntax as well as some extensions that are added to make it work w/ R3BL products.
+//! This module contains a fully functional Markdown parser. This parser supports standard
+//! Markdown syntax as well as some extensions that are added to make it work w/ R3BL
+//! products.
 //!
 //! Here are some entry points into the codebase.
 //!
-//! 1. The main function [parse_markdown] that does the parsing of a string slice into a `Document`.
-//!    The tests are provided alongside the code itself. And you can follow along to see how other
-//!    smaller parsers are used to build up this big one that parses the whole of the Markdown
-//!    document.
-//! 2. The types [types] that are used to represent the Markdown document model [MdDocument],
-//!    [MdBlockElement], [MdLineFragment] and all the other intermediate types & enums required for
-//!    parsing.
-//! 3. All the parsers related to parsing metadata specific for R3BL applications which are not
-//!    standard Markdown can be found in [parse_metadata_kv] and [parse_metadata_kcsv].
-//! 4. All the parsers that are related to parsing the main "blocks" of Markdown, such as order
-//!    lists, unordered lists, code blocks, text blocks, heading blocks, can be found [block].
-//! 5. All the parsers that are related to parsing a single line of Markdown text, such as links,
-//!    bold, italic, etc. can be found [parse_element].
+//! 1. The main function [parse_markdown] that does the parsing of a string slice into a
+//!    [MdDocument]. The tests are provided alongside the code itself. And you can follow
+//!    along to see how other smaller parsers are used to build up this big one that
+//!    parses the whole of the Markdown document.
+//! 2. The types [types] that are used to represent the Markdown document model
+//!    [MdDocument], [MdBlock], [MdLineFragment] and all the other intermediate
+//!    types & enums required for parsing.
+//! 3. All the parsers related to parsing metadata specific for R3BL applications which
+//!    are not standard Markdown can be found in [parse_metadata_kv] and
+//!    [parse_metadata_kcsv].
+//! 4. All the parsers that are related to parsing the main "blocks" of Markdown, such as
+//!    order lists, unordered lists, code blocks, text blocks, heading blocks, can be
+//!    found [block].
+//! 5. All the parsers that are related to parsing a single line of Markdown text, such as
+//!    links, bold, italic, etc. can be found [mod@fragment].
 
 // External use.
+pub mod atomics;
 pub mod block;
 pub mod convert_to_plain_text;
-pub mod parse_element;
-pub mod parse_metadata_kcsv;
-pub mod parse_metadata_kv;
-pub mod parser;
+pub mod extended;
+pub mod fragment;
+pub mod parse_markdown;
 pub mod types;
 
+pub use atomics::*;
 pub use block::*;
 pub use convert_to_plain_text::*;
-pub use parse_element::*;
-pub use parse_metadata_kcsv::*;
-pub use parse_metadata_kv::*;
-pub use parser::*;
+pub use extended::*;
+pub use fragment::*;
+pub use parse_markdown::*;
 pub use types::*;
