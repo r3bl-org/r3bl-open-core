@@ -112,7 +112,15 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
             )),
         )(input);
         call_if_true!(DEBUG_MD_PARSER_STDOUT, {
-            println!("{} normal case :: {:?}", "▲▲".blue(), it);
+            println!(
+                "{} normal case :: {:?}",
+                if it.is_err() {
+                    "⬢⬢".red()
+                } else {
+                    "▲▲".blue()
+                },
+                it
+            );
         });
         return it;
     }
@@ -154,10 +162,17 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
     // parsers did not match the input.
     let it = take_till1(|it: char| it == NEW_LINE_CHAR)(input);
     call_if_true!(DEBUG_MD_PARSER_STDOUT, {
-        println!("{} edge case -> normal case :: {:?}", "▲▲".blue(), it);
+        println!(
+            "{} edge case -> normal case :: {:?}",
+            if it.is_err() {
+                "⬢⬢".red()
+            } else {
+                "▲▲".blue()
+            },
+            it
+        );
     });
-
-    return it;
+    it
 }
 
 /// This is a special set of chars called `set_1`. This is used to check if the input

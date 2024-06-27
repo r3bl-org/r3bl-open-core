@@ -16,7 +16,9 @@
  */
 
 use constants::*;
+use crossterm::style::Stylize;
 use nom::{branch::*, bytes::complete::*, combinator::*, multi::*, IResult};
+use r3bl_rs_utils_core::call_if_true;
 
 use crate::*;
 
@@ -39,8 +41,22 @@ pub fn parse_fragment_starts_with_backtick_err_on_new_line(
 ) -> IResult<&str, &str> {
     // Count the number of consecutive backticks. If there are more than 2 backticks,
     // return an error, since this could be a code block.
-    let (_, output) = recognize(many0(tag(BACK_TICK)))(input)?;
+    let it = recognize(many0(tag(BACK_TICK)))(input);
+    if it.is_err() {
+        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+            println!(
+                "\n{} specialized parser error out with backtick: \ninput: {:?}, delim: {:?}",
+                "⬢⬢".red(),
+                input,
+                BACK_TICK
+            );
+        });
+    }
+    let (_, output) = it?;
     if output.len() > 2 {
+        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+            println!("{} more than 2 backticks in input:{:?}", "⬢⬢".red(), input);
+        });
         return Err(nom::Err::Error(nom::error::Error {
             input: output,
             code: nom::error::ErrorKind::Tag,
@@ -53,44 +69,150 @@ pub fn parse_fragment_starts_with_backtick_err_on_new_line(
     )
 }
 
-#[rustfmt::skip]
-pub fn parse_fragment_starts_with_left_image_err_on_new_line(input: &str) -> IResult<&str, HyperlinkData<'_>> {
-    let (rem, part_between_image_tags) = take_text_between_delims_err_on_new_line(
-        input, LEFT_IMAGE, RIGHT_IMAGE)?;
-    let (rem, part_between_parenthesis) = take_text_between_delims_err_on_new_line(
-        rem, LEFT_PARENTHESIS, RIGHT_PARENTHESIS)?;
-    Ok((rem, HyperlinkData::from((part_between_image_tags, part_between_parenthesis))))
+pub fn parse_fragment_starts_with_left_image_err_on_new_line(
+    input: &str,
+) -> IResult<&str, HyperlinkData<'_>> {
+    // Parse the text between the image tags.
+    let result_first =
+        take_text_between_delims_err_on_new_line(input, LEFT_IMAGE, RIGHT_IMAGE);
+    if result_first.is_err() {
+        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+            println!(
+                    "\n{} specialized parser error out with image: \ninput: {:?}, delim: {:?}",
+                    "⬢⬢".red(),
+                    input,
+                    LEFT_IMAGE
+                );
+        });
+    }
+    let (rem, part_between_image_tags) = result_first?;
+
+    // Parse the text between the parenthesis.
+    let result_second = take_text_between_delims_err_on_new_line(
+        rem,
+        LEFT_PARENTHESIS,
+        RIGHT_PARENTHESIS,
+    );
+    if result_second.is_err() {
+        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+            println!(
+                    "\n{} specialized parser error out with image: \ninput: {:?}, delim: {:?}",
+                    "⬢⬢".red(),
+                    rem,
+                    LEFT_PARENTHESIS
+                );
+        });
+    }
+    let (rem, part_between_parenthesis) = result_second?;
+
+    let it = Ok((
+        rem,
+        HyperlinkData::from((part_between_image_tags, part_between_parenthesis)),
+    ));
+    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+        println!(
+            "{} specialized parser for image: {:?}",
+            if it.is_err() {
+                "⬢⬢".red()
+            } else {
+                "▲▲".blue()
+            },
+            it
+        );
+    });
+    it
 }
 
-#[rustfmt::skip]
 pub fn parse_fragment_starts_with_left_link_err_on_new_line(
     input: &str,
 ) -> IResult<&str, HyperlinkData<'_>> {
-    let (rem, part_between_brackets) = take_text_between_delims_err_on_new_line(
-        input, LEFT_BRACKET, RIGHT_BRACKET)?;
-    let (rem, part_between_parenthesis) = take_text_between_delims_err_on_new_line(
-        rem, LEFT_PARENTHESIS, RIGHT_PARENTHESIS)?;
-    Ok((rem, HyperlinkData::from((part_between_brackets, part_between_parenthesis))))
+    // Parse the text between the brackets.
+    let result_first =
+        take_text_between_delims_err_on_new_line(input, LEFT_BRACKET, RIGHT_BRACKET);
+    if result_first.is_err() {
+        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+            println!(
+                "\n{} specialized parser error out with link: \ninput: {:?}, delim: {:?}",
+                "⬢⬢".red(),
+                input,
+                LEFT_BRACKET
+            );
+        });
+    }
+    let (rem, part_between_brackets) = result_first?;
+
+    // Parse the text between the parenthesis.
+    let result_second = take_text_between_delims_err_on_new_line(
+        rem,
+        LEFT_PARENTHESIS,
+        RIGHT_PARENTHESIS,
+    );
+    if result_second.is_err() {
+        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+            println!(
+                "\n{} specialized parser error out with link: \ninput: {:?}, delim: {:?}",
+                "⬢⬢".red(),
+                rem,
+                LEFT_PARENTHESIS
+            );
+        });
+    }
+    let (rem, part_between_parenthesis) = result_second?;
+
+    let it = Ok((
+        rem,
+        HyperlinkData::from((part_between_brackets, part_between_parenthesis)),
+    ));
+    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+        println!(
+            "{} specialized parser for link: {:?}",
+            if it.is_err() {
+                "⬢⬢".red()
+            } else {
+                "▲▲".blue()
+            },
+            it
+        );
+    });
+    it
 }
 
 /// Checkboxes are tricky since they begin with "[" which is also used for hyperlinks and images.
 /// So some extra hint is need from the code calling this parser to let it know whether to parse
 /// a checkbox into plain text, or into a boolean.
-#[rustfmt::skip]
 pub fn parse_fragment_starts_with_checkbox_into_str(input: &str) -> IResult<&str, &str> {
-    alt((
-        recognize(tag(CHECKED)),
-        recognize(tag(UNCHECKED))
-    ))(input)
+    let it = alt((recognize(tag(CHECKED)), recognize(tag(UNCHECKED))))(input);
+    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+        println!(
+            "{} specialized parser for checkbox: {:?}",
+            if it.is_err() {
+                "⬢⬢".red()
+            } else {
+                "▲▲".blue()
+            },
+            it
+        );
+    });
+    it
 }
 
-#[rustfmt::skip]
 /// Checkboxes are tricky since they begin with "[" which is also used for hyperlinks and images.
 /// So some extra hint is need from the code calling this parser to let it know whether to parse
 /// a checkbox into plain text, or into a boolean.
-pub fn parse_fragment_starts_with_checkbox_checkbox_into_bool(input: &str) -> IResult<&str, bool> {
-    alt((
-        map(tag(CHECKED), |_| true),
-        map(tag(UNCHECKED), |_| false),
-    ))(input)
+pub fn parse_fragment_starts_with_checkbox_checkbox_into_bool(
+    input: &str,
+) -> IResult<&str, bool> {
+    let it = alt((map(tag(CHECKED), |_| true), map(tag(UNCHECKED), |_| false)))(input);
+    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+        println!(
+            "{} specialized parser for checkbox: {:?}",
+            if it.is_err() {
+                "⬢⬢".red()
+            } else {
+                "▲▲".blue()
+            },
+            it
+        );
+    });
+    it
 }

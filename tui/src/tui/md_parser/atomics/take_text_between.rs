@@ -16,7 +16,9 @@
  */
 
 use constants::*;
+use crossterm::style::Stylize;
 use nom::{bytes::complete::*, combinator::*, error::*, sequence::*, IResult};
+use r3bl_rs_utils_core::call_if_true;
 
 use crate::*;
 
@@ -27,14 +29,34 @@ pub fn take_text_between_delims_err_on_new_line<'input>(
     start_delim: &'input str,
     end_delim: &'input str,
 ) -> IResult<&'input str, &'input str> {
+    call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+        println!(
+            "\n{} specialized parser take text between delims err on new line: \ninput: {:?}, start_delim: {:?}, end_delim: {:?}",
+            "■■".green(),
+            input,
+            start_delim,
+            end_delim
+        );
+    });
+
     let it = take_text_between(start_delim, end_delim)(input);
+
     if let Ok((_, output)) = &it {
         if output.contains(NEW_LINE) {
+            call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+                println!("{} parser error out for input: {:?}", "⬢⬢".red(), input);
+            });
             return Err(nom::Err::Error(nom::error::Error {
                 input: output,
                 code: ErrorKind::CrLf,
             }));
         };
+    }
+
+    if it.is_err() {
+        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+            println!("{} parser error out for input: {:?}", "⬢⬢".red(), input);
+        });
     }
     it
 }

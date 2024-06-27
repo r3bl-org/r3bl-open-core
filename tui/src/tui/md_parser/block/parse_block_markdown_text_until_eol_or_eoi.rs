@@ -89,6 +89,8 @@ pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
     Ok((input, it))
 }
 
+// BOOKM: Great tests to understand how a single line of Markdown text is parsed
+
 #[cfg(test)]
 mod tests_parse_block_markdown_text_with_or_without_new_line {
     use r3bl_rs_utils_core::assert_eq2;

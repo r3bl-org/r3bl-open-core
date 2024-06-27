@@ -95,7 +95,7 @@ impl EditorBufferApi {
             ))
         );
 
-        // BOOKM: for reference, algo for left, right selection
+        // BOOKM: For reference, algo for left, right selection
         // Handle the movement of the caret and apply the appropriate changes to the range.
         match (
             range.locate_column(previous),
@@ -195,7 +195,7 @@ impl EditorBufferApi {
         }
     }
 
-    // BOOKM: implement multiline selection changes (up/down, and later page up/page down)
+    // BOOKM: Impl multiline selection changes (up/down, and later page up/page down)
     /// Precondition: there has to be at least 2 rows.
     fn handle_two_lines(
         editor_buffer: &mut EditorBuffer,
