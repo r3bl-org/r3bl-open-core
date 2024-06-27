@@ -767,8 +767,8 @@
 //! The code for parsing and syntax highlighting is in [try_parse_and_highlight].
 //!
 //! A custom Markdown parser is provided to provide some extensions over the standard
-//! Markdown syntax. The parser code is in the [parse_markdown] function. Here are some of
-//! the extensions:
+//! Markdown syntax. The parser code is in the [parse_markdown()] function. Here are some
+//! of the extensions:
 //! - Metadata title (eg: `@title: <title_text>`). Similar to front matter.
 //! - Metadata tags (eg: `@tags: <tag1>, <tag2>`).
 //! - Metadata authors (eg: `@authors: <author1>, <author2>`).

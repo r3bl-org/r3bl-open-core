@@ -17,8 +17,8 @@
 
 use crate::{BulletKind, List};
 
-/// This corresponds to a single Markdown document, which is produced after a successful parse
-/// operation [crate::parse_markdown].
+/// This corresponds to a single Markdown document, which is produced after a successful
+/// parse operation [crate::parse_markdown()].
 pub type MdDocument<'a> = List<MdBlock<'a>>;
 
 /// Alias for [MdDocument].
