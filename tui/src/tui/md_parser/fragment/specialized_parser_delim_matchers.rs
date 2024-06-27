@@ -62,8 +62,9 @@ pub fn take_starts_with_delim_no_new_line<'i>(
 
     call_if_true!(DEBUG_MD_PARSER_STDOUT, {
         println!(
-            "\n{} specialized parser: \ninput: {:?}, delim: {:?}",
+            "\n{} specialized parser {}: \ninput: {:?}, delim: {:?}",
             "■■".green(),
+            delim,
             input,
             delim
         );
@@ -86,7 +87,7 @@ pub fn take_starts_with_delim_no_new_line<'i>(
         num_of_delim_occurrences == 1
     {
         call_if_true!(DEBUG_MD_PARSER_STDOUT, {
-            println!("{} parser error out for input:{:?}", "⬢⬢".red(), input);
+            println!("{} parser error out for input: {:?}", "⬢⬢".red(), input);
         });
         return Err(nom::Err::Error(nom::error::Error {
             input,
@@ -96,7 +97,11 @@ pub fn take_starts_with_delim_no_new_line<'i>(
 
     // If there is a closing delim, then we can safely take the text between the delim.
     if num_of_delim_occurrences > 1 {
-        return take_text_between_delims_err_on_new_line(input, delim, delim);
+        let it = take_text_between_delims_err_on_new_line(input, delim, delim);
+        call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+            println!("{} it: {:?}", "▲▲".blue(), it);
+        });
+        return it;
     }
 
     // Otherwise, we split the input at the first delim.
