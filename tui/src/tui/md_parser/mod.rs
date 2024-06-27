@@ -26,7 +26,7 @@
 //!
 //! Here are some entry points into the codebase.
 //!
-//! 1. The main function [parse_markdown] that does the parsing of a string slice into a
+//! 1. The main function [parse_markdown()] that does the parsing of a string slice into a
 //!    [MdDocument]. The tests are provided alongside the code itself. And you can follow
 //!    along to see how other smaller parsers are used to build up this big one that
 //!    parses the whole of the Markdown document.
@@ -41,6 +41,112 @@
 //!    found [block].
 //! 5. All the parsers that are related to parsing a single line of Markdown text, such as
 //!    links, bold, italic, etc. can be found [mod@fragment].
+//!
+//! ## Architecture and parsing order
+//!
+//! This diagram showcases the order in which the parsers are called and how they are
+//! composed together to parse a Markdown document.
+//!
+//! <!--
+//! diagram:
+//! https://asciiflow.com/#/share/eJzdlL9qwzAQxl%2Fl0JRChhLo0Gz9M3Rop2YUCNUWsYgsGfkcxxhD6dyhQwh9ltKnyZNUtus0hAYrJaXQQyAZf%2F6d7rN0JdE8FmSsM6WGRPFCWDImJSULSsbnZ6MhJYVbjZoVigW6B0oSK42VWMB6%2BbxePv7T8UKpBojkNAJwlT5Bwm0qWMztLDS5HpxACTsR8wTQAEYCAmOtCHBX0aIacgvdTDHXxengG3331U8LWb0B3IWXygQzmHMrucZ9e4DPGlGiEmzOVSZcmb0xqeV99W3YfJoyJVP0ITu2k%2Fd617F5hpGx3viLVu7HDjkeYAlcO7n3vh%2Fqn8MiwUOpp8wkyIRR%2B9PctMJD2Kk7tujjy30tvHU6f3ZgQj9PrpywPYfe7O62sbr5sFxixIxtZpMh0yJ3Nek6%2B8S9%2F8q0h%2B114vpii71679jVMcgde6u%2FLv%2B6C%2F7eeG1cVCY%2FjnVdUFKR6gNnN4sV)
+//! -->
+//!
+//! ```text
+//! priority ┌────────────────────────────────────────────────────────────────────────┐
+//!   high   │ parse_markdown() {                map to the correct                   │
+//!     │    │   many0(                         ───────────────────►  MdBlock variant │
+//!     │    │     parse_title_value()                                  Title         │
+//!     │    │     parse_tags_list()                                    Tags          │
+//!     │    │     parse_authors_list()                                 Authors       │
+//!     │    │     parse_date_value()                                   Date          │
+//!     │    │     parse_block_heading_opt_eol()                        Heading       │
+//!     │    │     parse_block_smart_list()                             SmartList     │
+//!     │    │     parse_block_code()                                   CodeBlock     │
+//!     │    │     parse_block_markdown_text_with_or_without_new_line() Text          │
+//!     │    │   )                                                                    │
+//!     ▼    │ }                                                                      │
+//! priority └────────────────────────────────────────────────────────────────────────┘
+//!   low
+//! ```
+//! The parsing strategy in most cases is to parse the most specific thing first and then
+//! parse the more general thing later. We often use the existence of `\n` (or `eol`) to
+//! decide how far forwards we need to go into the input. And sometimes `\n` doesn't exist
+//! and we simply use the entire input (or end of input or `eoi`). You might see functions
+//! that have these suffixes in their names. Another term you might see is
+//! `with_or_without_new_line` which makes the parsing strategy explicit in the name.
+//!
+//! The nature of `nom` parsers is to simply error out when they don't match. And leave
+//! the `input` untouched, so that another parser have a go at it again. The nature of
+//! these parsing functions is kind of recursive in nature. So it's important identify
+//! edge and exit cases up front before diving into the parsing logic. You will see this
+//! used in parsers which look for something more specific, if its not found, they error
+//! out, and allow less specific parsers to have a go at it, and so on.
+//!
+//! ## The priority of parsers
+//!
+//! As we drill down into the implementation further, we see that the parsers are
+//! prioritized in the order of their specificity. The most specific parsers are called
+//! first and the least specific parsers are called last. This is done to ensure that the
+//! most specific parsers get a chance to parse the input first. And if they fail, then
+//! the less specific parsers get a chance to parse the input.
+//!
+//! <!--
+//! diagram:
+//! https://asciiflow.com/#/share/eJytlFFuwjAMhq8S5QkkHtD2MjhLJCsNBqK6CUpTUYaQpp2h4iB7RDtNT7I0sK1ABYNhVapdJ1%2F%2F2G7X3MgM%2BdgURANOcoWOj%2Fla8FLw8ejleSD4KnhPo2HwPJY%2BBIIvpMsRErIqhUy6dGKXBposLLWfg3XxbgsPBpdA2mCvz9bs3IQwjGXSrIa9juxtFlmM7bVp07wVpk7OMjQ%2Bh8J4TYCWGnVodRB0nRWsWVZX7%2F9VtvmNHkBrRXVV1dVbvd0xSf7OIh4TI3X7cSjkdwUh99KFOsYGF2aCLlfWIaBzYE27zx20cOILtMbv4LS05QtUWpJ%2BxclVWiJV6nUYzC5ipMXNLmdN3X6u7e4Kl3DqQWdy9pAzR1rY3CnzZpqao0oTW4ax9zZkXHu6u7r7%2BSfaMTaxlnr9SFPSq3kYODop4Sl1QVIffgzGnvf2ROO%2BL4cnFz%2FPiyb4hm%2B%2BAFpUbMk%3D)
+//! -->
+//!
+//! ```text
+//! parse_block_markdown_text_with_or_without_new_line() {
+//!   many0(
+//!     parse_inline_fragments_until_eol_or_eoi()
+//!        )   │
+//! }          │
+//!            └─► alt(
+//!                ▲ parse_fragment_starts_with_underscore_err_on_new_line()
+//!                │ parse_fragment_starts_with_star_err_on_new_line()
+//!   specialized  │ parse_fragment_starts_with_backtick_err_on_new_line()
+//!   parsers ────►│ parse_fragment_starts_with_left_image_err_on_new_line()
+//!                │ parse_fragment_starts_with_left_link_err_on_new_line()
+//!                │ parse_fragment_starts_with_checkbox_into_str()
+//!                ▼ parse_fragment_starts_with_checkbox_checkbox_into_bool()
+//!   catch all────► parse_fragment_plain_text_no_new_line()
+//!   parser       )
+//!
+//! ```
+//!
+//! The last one on the list in the diagram above is
+//! [parse_block_markdown_text_with_or_without_new_line()]. Let's zoom into this function
+//! and see how it is composed.
+//!
+//! ## The "catch all" parser, which is the most complicated, and the lowest priority
+//!
+//! The most complicated parser is the "catch all" parser or the "plain text" parser. This
+//! parser is the last one in the chain and it simply consumes the rest of the input and
+//! turns it into a `MdBlock::Text`. This parser is the most complicated because it has to
+//! deal with all the edge cases and exit cases that other parsers have not dealt with.
+//! Such as special characters like `` ` ``, `*`, `_`, etc. They are all listed here:
+//!
+//! - If the input does not start with a special char in this [get_sp_char_set_2()], then
+//!   this is the "Normal case". In this case the input is split at the first occurrence
+//!   of a special char in [get_sp_char_set_3()]. The "before" part is
+//!   [MdLineFragment::Plain] and the "after" part is parsed again by a more specific
+//!   parser.
+//! - If the input starts with a special char in this [get_sp_char_set_2()] and it is not
+//!   in the [get_sp_char_set_1()] with only 1 occurrence, then the behavior is different
+//!   "Edge case -> Normal case". Otherwise the behavior is "Edge case -> Special case".
+//!   - "Edge case -> Normal case" takes all the characters until `\n` or end of input and
+//!     turns it into a [MdLineFragment::Plain].
+//!   - "Edge case -> Special case" splits the `input` before and after the special char.
+//!     The "before" part is turned into a [MdLineFragment::Plain] and the "after" part is
+//!     parsed again by a more specific parser.
+//!
+//! The reason this parser gets called repeatedly is because it is the last one in the
+//! chain. Its the lowest priority parser called by
+//! [parse_inline_fragments_until_eol_or_eoi()], which itself is called:
+//! 1. Repeatedly in a loop by [parse_block_markdown_text_with_or_without_new_line()].
+//! 2. And by [parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()].
+//!
 
 // External use.
 pub mod atomics;

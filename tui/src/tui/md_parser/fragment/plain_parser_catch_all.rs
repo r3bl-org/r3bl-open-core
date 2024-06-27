@@ -78,84 +78,86 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
         println!("\n{} plain parser, input: {:?}", "██".magenta(), input);
     });
 
-    // # Edge case (catch all):
-    // If the input starts with any of these special characters, take till the first new
-    // line. Since the specialized parsers did not match the input.
-    if check_input_starts_with(input, &get_sp_char_set_2()).is_some() {
-        // # Edge case -> Special case:
-        // Check for single UNDERSCORE, STAR, BACK_TICK. until the first new line. This is
-        // to handle the case with
-        // [specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()] where
-        // there is no closing delim found.
-        if let Some(special_str) = check_input_starts_with(input, &get_sp_char_set_1()) {
-            let (count, _, _, _) =
-                specialized_parser_delim_matchers::count_delim_occurrences_until_eol(
-                    input,
-                    special_str,
-                );
-            if count == 1 {
-                // Split the input, by returning the first part as plain text, and the
-                // remainder as the input to be parsed by the specialized parsers.
-                let (rem, output) = recognize(many1(tag(special_str)))(input)?;
-                call_if_true!(DEBUG_MD_PARSER_STDOUT, {
-                    println!(
-                        "{} edge case -> special case :: rem: {:?}, output: {:?}",
-                        "▲▲".blue(),
-                        rem,
-                        output
-                    );
-                });
-                return Ok((rem, output));
-            }
-        }
+    if check_input_starts_with(input, &get_sp_char_set_2()).is_none() {
+        // # Normal case:
+        // If the input does not start with any of the special characters above,
+        // take till the first special character. And split the input there. This returns the
+        // chunk until the first special character as [MdLineFragment::Plain], and the
+        // remainder of the input gets a chance to be parsed by the specialized parsers. If
+        // they fail, then this function will be called again to parse the remainder, and the
+        // special case above will be triggered.
 
-        // # Edge case -> Normal case:
-        // Take till the first new line, as [MdLineFragment::Plain], since the specialized
-        // parsers did not match the input.
-        let it = take_till1(|it: char| it == NEW_LINE_CHAR)(input);
+        // `tag_tuple` replaces the following:
+        // `( tag(UNDERSCORE), tag(STAR), tag(BACK_TICK), tag(LEFT_IMAGE), tag(LEFT_BRACKET), tag(NEW_LINE) )`
+        let tag_vec = get_sp_char_set_3()
+            .into_iter()
+            .map(tag::<&str, &str, nom::error::Error<&str>>)
+            .collect::<Vec<_>>();
+        let tag_tuple = {
+            assert_eq!(tag_vec.len(), 6);
+            tuple6(&tag_vec)
+        };
+
+        let it = recognize(
+            /* match anychar up until any of the denied strings below is encountered */
+            many1(/* match at least 1 char */ preceded(
+                /* match anything that isn't in the denied strings list below */
+                /* prefix is discarded, it doesn't match anything, only errors out for denied strings */
+                not(
+                    /* error out if starts w/ denied strings below */
+                    alt(tag_tuple),
+                ),
+                /* output - keep char if it didn't error out above */
+                anychar,
+            )),
+        )(input);
         call_if_true!(DEBUG_MD_PARSER_STDOUT, {
-            println!("{} edge case -> normal case :: {:?}", "▲▲".blue(), it);
+            println!("{} normal case :: {:?}", "▲▲".blue(), it);
         });
-
         return it;
     }
 
-    // # Normal case:
-    // If the input does not start with any of the special characters above,
-    // take till the first special character. And split the input there. This returns the
-    // chunk until the first special character as [MdLineFragment::Plain], and the
-    // remainder of the input gets a chance to be parsed by the specialized parsers. If
-    // they fail, then this function will be called again to parse the remainder, and the
-    // special case above will be triggered.
+    // # Edge case (catch all):
+    // If the input starts with any of these special characters, take till the first new
+    // line. Since the specialized parsers did not match the input.
 
-    // `tag_tuple` replaces the following:
-    // `( tag(UNDERSCORE), tag(STAR), tag(BACK_TICK), tag(LEFT_IMAGE), tag(LEFT_BRACKET), tag(NEW_LINE) )`
-    let tag_vec = get_sp_char_set_3()
-        .into_iter()
-        .map(tag::<&str, &str, nom::error::Error<&str>>)
-        .collect::<Vec<_>>();
-    let tag_tuple = {
-        assert_eq!(tag_vec.len(), 6);
-        tuple6(&tag_vec)
-    };
+    // # Edge case -> Special case:
+    // Check for single UNDERSCORE, STAR, BACK_TICK. until the first new line. This is
+    // to handle the case with
+    // [specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()] where
+    // there is no closing delim found.
+    if let Some(special_str) = check_input_starts_with(input, &get_sp_char_set_1()) {
+        let (count, _, _, _) =
+            specialized_parser_delim_matchers::count_delim_occurrences_until_eol(
+                input,
+                special_str,
+            );
+        if count == 1 {
+            // Split the input, by returning the first part as plain text, and the
+            // remainder as the input to be parsed by the specialized parsers.
+            let (rem, output) = recognize(many1(tag(special_str)))(input)?;
+            call_if_true!(DEBUG_MD_PARSER_STDOUT, {
+                println!(
+                    "{} edge case -> special case :: rem: {:?}, output: {:?}",
+                    "▲▲".blue(),
+                    rem,
+                    output
+                );
+            });
+            return Ok((rem, output));
+        }
+        // Otherwise, fall back to the normal case below.
+    }
 
-    let it = recognize(
-        /* match anychar up until any of the denied strings below is encountered */
-        many1(/* match at least 1 char */ preceded(
-            /* match anything that isn't in the denied strings list below */
-            /* prefix is discarded, it doesn't match anything, only errors out for denied strings */
-            not(
-                /* error out if starts w/ denied strings below */
-                alt(tag_tuple),
-            ),
-            /* output - keep char if it didn't error out above */
-            anychar,
-        )),
-    )(input);
+    // # Edge case -> Normal case:
+    // Take till the first new line, as [MdLineFragment::Plain], since the specialized
+    // parsers did not match the input.
+    let it = take_till1(|it: char| it == NEW_LINE_CHAR)(input);
     call_if_true!(DEBUG_MD_PARSER_STDOUT, {
-        println!("{} normal case :: {:?}", "▲▲".blue(), it);
+        println!("{} edge case -> normal case :: {:?}", "▲▲".blue(), it);
     });
-    it
+
+    return it;
 }
 
 /// This is a special set of chars called `set_1`. This is used to check if the input
@@ -164,7 +166,7 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
 /// this parser's `Edge case -> Special case` will take care of it by splitting the input,
 /// and returning the first part as plain text, and the remainder as the input to be parsed
 /// by the specialized parsers.
-fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
+pub fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
 
 /// This is a special set of chars called `set_2`. This is used to detect the `Edge case
 /// -> Normal case` where the input starts with any of these special characters, and the
@@ -172,7 +174,7 @@ fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
 /// following are true:
 /// 1. input is in [get_sp_char_set_1()] and,
 /// 2. count is 1.
-fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
+pub fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
     get_sp_char_set_1()
         .iter()
         .chain([LEFT_IMAGE, LEFT_BRACKET].iter())
@@ -188,7 +190,7 @@ fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
 /// there. This returns the chunk until the first special character as
 /// [MdLineFragment::Plain], and the remainder of the input gets a chance to be parsed by
 /// the specialized parsers.
-fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
+pub fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
     get_sp_char_set_2()
         .iter()
         .chain([NEW_LINE].iter())
