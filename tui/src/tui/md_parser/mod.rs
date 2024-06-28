@@ -21,8 +21,8 @@
 //! - And returns a vector of [MdBlock]s.
 //!
 //! This module contains a fully functional Markdown parser. This parser supports standard
-//! Markdown syntax as well as some extensions that are added to make it work w/ R3BL
-//! products.
+//! Markdown syntax as well as some extensions that are added to make it work w/
+//! [R3BL](https://r3bl.com) products.
 //!
 //! Here are some entry points into the codebase.
 //!
@@ -30,17 +30,30 @@
 //!    [MdDocument]. The tests are provided alongside the code itself. And you can follow
 //!    along to see how other smaller parsers are used to build up this big one that
 //!    parses the whole of the Markdown document.
-//! 2. The types [types] that are used to represent the Markdown document model
-//!    [MdDocument], [MdBlock], [MdLineFragment] and all the other intermediate
-//!    types & enums required for parsing.
-//! 3. All the parsers related to parsing metadata specific for R3BL applications which
-//!    are not standard Markdown can be found in [parse_metadata_kv] and
-//!    [parse_metadata_kcsv].
+//! 2. The [mod@types] contain all the types that are used to represent the Markdown
+//!    document model, such as [MdDocument], [MdBlock], [MdLineFragment] and all the other
+//!    intermediate types & enums required for parsing.
+//! 3. All the parsers related to parsing metadata specific for [R3BL](https://r3bl.com)
+//!    applications which are not standard Markdown can be found in
+//!    [mod@parse_metadata_kv] and [mod@parse_metadata_kcsv].
 //! 4. All the parsers that are related to parsing the main "blocks" of Markdown, such as
 //!    order lists, unordered lists, code blocks, text blocks, heading blocks, can be
-//!    found [block].
+//!    found in [mod@block].
 //! 5. All the parsers that are related to parsing a single line of Markdown text, such as
 //!    links, bold, italic, etc. can be found [mod@fragment].
+//!
+//! ## Video and blog post on this
+//!
+//! You can read all about this parser in [this blog post on
+//! developerlife.com](https://developerlife.com/2024/06/28/md-parser-rust-from-r3bl-tui/).
+//! You can watch a [video](https://youtu.be/SbwvSHZRb1E) about this parser on the YouTube
+//! developerlife.com channel.
+//!
+//! To learn about nom fundamentals, here are some resources:
+//! - Tutorial on nom parsing on
+//!   [developerlife.com](https://developerlife.com/2023/02/20/guide-to-nom-parsing/).
+//! - Video on nom parsing on [YouTube developerlife.com
+//!   channel](https://youtu.be/v3tMwr_ysPg).
 //!
 //! ## Architecture and parsing order
 //!
@@ -98,21 +111,20 @@
 //!
 //! ```text
 //! parse_block_markdown_text_with_or_without_new_line() {
-//!   many0(
-//!     parse_inline_fragments_until_eol_or_eoi()
-//!        )   │
-//! }          │
-//!            └─► alt(
-//!                ▲ parse_fragment_starts_with_underscore_err_on_new_line()
-//!                │ parse_fragment_starts_with_star_err_on_new_line()
-//!   specialized  │ parse_fragment_starts_with_backtick_err_on_new_line()
-//!   parsers ────►│ parse_fragment_starts_with_left_image_err_on_new_line()
-//!                │ parse_fragment_starts_with_left_link_err_on_new_line()
-//!                │ parse_fragment_starts_with_checkbox_into_str()
-//!                ▼ parse_fragment_starts_with_checkbox_checkbox_into_bool()
-//!   catch all────► parse_fragment_plain_text_no_new_line()
-//!   parser       )
-//!
+//!     many0(
+//!       parse_inline_fragments_until_eol_or_eoi()
+//!         )   │
+//!   }         │                                                                 ──map to the correct──►
+//!             └─► alt(                                                          MdLineFragment variant
+//!                  ▲ parse_fragment_starts_with_underscore_err_on_new_line()      Italic
+//!                  │ parse_fragment_starts_with_star_err_on_new_line()            Bold
+//!     specialized  │ parse_fragment_starts_with_backtick_err_on_new_line()        InlineCode
+//!     parsers ────►│ parse_fragment_starts_with_left_image_err_on_new_line()      Image
+//!                  │ parse_fragment_starts_with_left_link_err_on_new_line()       Link
+//!                  │ parse_fragment_starts_with_checkbox_into_str()               Plain
+//!                  ▼ parse_fragment_starts_with_checkbox_checkbox_into_bool()     Checkbox
+//!     catch all────► parse_fragment_plain_text_no_new_line()                      Plain
+//!     parser       )
 //! ```
 //!
 //! The last one on the list in the diagram above is
@@ -146,7 +158,6 @@
 //! [parse_inline_fragments_until_eol_or_eoi()], which itself is called:
 //! 1. Repeatedly in a loop by [parse_block_markdown_text_with_or_without_new_line()].
 //! 2. And by [parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()].
-//!
 
 // External use.
 pub mod atomics;
