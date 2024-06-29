@@ -20,7 +20,7 @@ steps are applied to each crate (`simple_logger`, `ansi_color`, `core`, `macro`,
      remaining `Cargo.toml` in the other crates so that `run.nu build` runs.
    - Run `run.nu full-build` to make sure everything builds.
 3. Make a git commit eg `vX.Y.Z-$crate` where `$crate` is the name of the crate, and `vX.Y.Z` is the
-   [semver](https://semver.org/) version number. Eg: `git add -A ; git commit -m "vX.Y.Z-core"`.
+   [semver](https://semver.org/) version number. Eg: `git add -A ; git commit -S -m "vX.Y.Z-core"`.
 4. Make a git tag eg `vX.Y.Z-$crate` where `$crate` is the name of the crate, and `vX.Y.Z` is the
    [semver](https://semver.org/) version number. Eg: `git tag -a vX.Y.Z-core -m "vX.Y.Z-core"`.
 5. Update the `CHANGELOG.md` with all the new updates.
@@ -41,9 +41,9 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 cd core
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc --no-deps
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 git add -A
-git commit -m "v0.9.13-core"
+git commit -S -m "v0.9.13-core"
 git tag -a v0.9.13-core -m "v0.9.13-core"
 cargo publish
 cd ..
@@ -51,9 +51,9 @@ cd ..
 cd macro
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc --no-deps
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 git add -A
-git commit -m "v0.9.9-macro"
+git commit -S -m "v0.9.9-macro"
 git tag -a v0.9.9-macro -m "v0.9.9-macro"
 cargo publish
 cd ..
@@ -61,9 +61,9 @@ cd ..
 cd tuify
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc --no-deps
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 git add -A
-git commit -m "v0.1.26-tuify"
+git commit -S -m "v0.1.26-tuify"
 git tag -a v0.1.26-tuify -m "v0.1.26-tuify"
 cargo publish
 cd ..
@@ -71,10 +71,10 @@ cd ..
 cd tui
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc --no-deps
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 git add -A
-git commit -m "v0.5.5-tui"
-git tag -a v0.5.5-tui -m "v0.5.5-tui"
+git commit -S -m "v0.5.6-tui"
+git tag -a v0.5.6-tui -m "v0.5.6-tui"
 cargo publish
 cd ..
 
@@ -82,9 +82,9 @@ cd cmdr
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 # 1) Don't forget to update `r3bl-base` to have the same `UPDATE_IF_NOT_THIS_VERSION`
-cargo build; cargo test; cargo doc --no-deps
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 git add -A
-git commit -m "v0.0.13-cmdr"
+git commit -S -m "v0.0.13-cmdr"
 git tag -a v0.0.13-cmdr -m "v0.0.13-cmdr"
 cargo publish
 # 2) Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
@@ -93,9 +93,9 @@ cd ..
 cd terminal_async
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc --no-deps
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 git add -A
-git commit -m "v0.5.3-terminal_async"
+git commit -S -m "v0.5.3-terminal_async"
 git tag -a v0.5.3-terminal_async -m "v0.5.3-terminal_async"
 cargo publish
 cd ..
@@ -103,9 +103,9 @@ cd ..
 cd analytics_schema
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc --no-deps
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 git add -A
-git commit -m "v0.0.1-analytics_schema"
+git commit -S -m "v0.0.1-analytics_schema"
 git tag -a v0.0.1-analytics_schema -m "v0.0.1-analytics_schema"
 cargo publish
 cd ..
@@ -113,9 +113,9 @@ cd ..
 cd ansi_color
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc --no-deps
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 git add -A
-git commit -m "v0.6.9-ansi_color"
+git commit -S -m "v0.6.9-ansi_color"
 git tag -a v0.6.9-ansi_color -m "v0.6.9-ansi_color"
 cargo publish
 cd ..
@@ -123,9 +123,9 @@ cd ..
 cd simple_logger
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc --no-deps
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 git add -A
-git commit -m "v0.1.3-simple_logger"
+git commit -S -m "v0.1.3-simple_logger"
 git tag -a v0.1.3-simple_logger -m "v0.1.3-simple_logger"
 cargo publish
 cd ..
@@ -133,9 +133,9 @@ cd ..
 cd redux
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc --no-deps
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 git add -A
-git commit -m "v0.2.6-redux"
+git commit -S -m "v0.2.6-redux"
 git tag -a v0.2.6-redux -m "v0.2.6-redux"
 cargo publish
 cd ..
@@ -143,9 +143,9 @@ cd ..
 cd utils
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
-cargo build; cargo test; cargo doc --no-deps
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 git add -A
-git commit -m "v0.9.15-public"
+git commit -S -m "v0.9.15-public"
 git tag -a v0.9.15-public -m "v0.9.15-public"
 cargo publish
 cd ..
