@@ -23,7 +23,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
-  - [Next release](#next-release)
+  - [v0.5.6 2024-06-29](#v056-2024-06-29)
   - [v0.5.5 2024-05-20](#v055-2024-05-20)
   - [v0.5.4 2024-05-20](#v054-2024-05-20)
   - [v0.5.3 2024-04-15](#v053-2024-04-15)
@@ -300,8 +300,19 @@
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
-### Next release
-<a id="markdown-next-release" name="next-release"></a>
+### v0.5.6 (2024-06-29)
+<a id="markdown-v0.5.6-2024-06-29" name="v0.5.6-2024-06-29"></a>
+
+The biggest change in this release is the rewrite of the Markdown parser. This was done
+because the previous parser was not able to handle many corner cases in parsing complex
+fragments from a single line of text, which is common in Markdown. The new parser is
+exhaustively tested and is able to handle many more corner cases.
+
+- Fixed:
+  - Rewrite most of the Markdown parser and add exhaustive tests and lots of corner cases
+    which were not covered before. A lot of these issues were found by using the `edi`
+    binary target for a few weeks as a Markdown editor. Here's the
+    [PR](https://github.com/r3bl-org/r3bl-open-core/pull/332) with these fixes.
 
 - Updated:
   - Fix docs (for docs.rs and README.md for github and crates.io).
