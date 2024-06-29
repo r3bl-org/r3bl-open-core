@@ -4,7 +4,7 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
-  - [Next release](#next-release)
+  - [v0.0.14 2024-06-29](#v0014-2024-06-29)
   - [v0.0.13 2024-05-20](#v0013-2024-05-20)
   - [v0.0.12 2024-05-12](#v0012-2024-05-12)
   - [v0.0.11 2024-01-14](#v0011-2024-01-14)
@@ -94,13 +94,26 @@
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
 
-### Next release
-<a id="markdown-next-release" name="next-release"></a>
+### v0.0.14 (2024-06-29)
+<a id="markdown-v0.0.14-2024-06-29" name="v0.0.14-2024-06-29"></a>
+
+The most significant change in this release is the use of the latest release of the
+Markdown parser from `r3bl_tui`, which improves the editing experience of writing each
+individual line of Markdown text. Common edge cases that were not handled before are now
+handled correctly. And these are cases that come up quite frequently when editing Markdown
+in a text editor.
+
+- Fixed:
+  - Use the latest release of the `r3bl_tui` crate version `0.5.6` which fixes a lot of
+    common bugs with the Markdown parser. This are critical bug fixes that are needed for
+    the `edi` binary target, to make it a stable and usable Markdown editor for daily use.
 
 - Changed:
   - Use the latest release of the `r3bl_tui` crate version `0.5.5`.
   - Clean up `main_event_loop` and get rid of needless `'static` in `AS` trait bound.
   - Fix cargo clippy doc warnings.
+  - Update `UPDATE_IF_NOT_THIS_VERSION` to `0.0.14`. This is kept in sync w/ the deployed
+    backend `r3bl-base`.
 
 - Updated:
   - Dependencies for `syntect`, `strum`, `strum-macros`, `reedline`, `serial_test` bumped
