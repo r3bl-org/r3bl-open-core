@@ -84,8 +84,8 @@ cd cmdr
 # 1) Don't forget to update `r3bl-base` to have the same `UPDATE_IF_NOT_THIS_VERSION`
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 git add -A
-git commit -S -m "v0.0.13-cmdr"
-git tag -a v0.0.13-cmdr -m "v0.0.13-cmdr"
+git commit -S -m "v0.0.14-cmdr"
+git tag -a v0.0.14-cmdr -m "v0.0.14-cmdr"
 cargo publish
 # 2) Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
 cd ..
