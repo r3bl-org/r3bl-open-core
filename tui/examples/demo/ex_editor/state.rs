@@ -70,6 +70,8 @@ mod constructor {
 "1. line 1 of 2",
 "2. line 2 of 2",
 "",
+"This is _not italic [link](https://r3bl.com) not bold* etc.",
+"",
 "```ts",
 "let a=1;",
 "```",
