@@ -23,6 +23,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [Next release](#next-release)
   - [v0.5.6 2024-06-29](#v056-2024-06-29)
   - [v0.5.5 2024-05-20](#v055-2024-05-20)
   - [v0.5.4 2024-05-20](#v054-2024-05-20)
@@ -312,6 +313,13 @@ in a text editor.
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
+
+### Next release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Fixed:
+  - Fix a subtle bug with shutdown signal in the main event loop. [Fix to
+    #331](https://github.com/r3bl-org/r3bl-open-core/issues/331).
 
 ### v0.5.6 (2024-06-29)
 <a id="markdown-v0.5.6-2024-06-29" name="v0.5.6-2024-06-29"></a>
