@@ -318,8 +318,9 @@ in a text editor.
 <a id="markdown-next-release" name="next-release"></a>
 
 - Fixed:
-  - Fix a subtle bug with shutdown signal in the main event loop. [Fix to
-    #331](https://github.com/r3bl-org/r3bl-open-core/issues/331).
+  - Fix a subtle bug with shutdown signal in the main event loop.
+    [PR](https://github.com/r3bl-org/r3bl-open-core/pull/336/) to fix this
+    [issue](https://github.com/r3bl-org/r3bl-open-core/issues/331).
 
 ### v0.5.6 (2024-06-29)
 <a id="markdown-v0.5.6-2024-06-29" name="v0.5.6-2024-06-29"></a>
