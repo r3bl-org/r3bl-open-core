@@ -30,6 +30,7 @@ def main [...args: string] {
     let command = $args | get 0
 
     match $command {
+        "build-release-in-docker" => {build-release-in-docker}
         "build" => {build}
         "clean" => {clean}
         "install" => {install}
@@ -46,6 +47,35 @@ def main [...args: string] {
         "help" => {print-help all}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
     }
+}
+
+# https://www.nushell.sh/commands/docs/is-empty.html
+# https://www.nushell.sh/lang-guide/chapters/flow_control/if-else.html#if-else
+def build-release-in-docker [] {
+    cd docker
+
+    # Stop all running containers (if any).
+    let running_containers = (docker ps -aq)
+    $running_containers | each { |it|
+        if not ($it | is-empty) {
+            docker stop $it
+            docker system prune -af
+        }
+    }
+
+    # Clear all existing images.
+    let images = (docker image ls -q)
+    $images | each { |it|
+        if not ($it | is-empty) {
+            docker it rm -f $it
+        }
+    }
+
+    # Build and run the new docker image.
+    docker build -t r3bl-cmdr-install .
+    docker run r3bl-cmdr-install
+
+    cd ..
 }
 
 def log [] {
@@ -110,6 +140,7 @@ def print-help [command: string] {
     if $command == "all" {
         print $'Usage: (ansi blue_bold)run(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi yellow)[args](ansi reset)'
         print $'(ansi green_bold)<command>(ansi reset) can be:'
+        print $'    (ansi green)build-release-in-docker(ansi reset)'
         print $'    (ansi green)build(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)install(ansi reset)'
