@@ -88,6 +88,7 @@ git commit -S -m "v0.0.14-cmdr"
 git tag -a v0.0.14-cmdr -m "v0.0.14-cmdr"
 cargo publish
 # 2) Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
+# You can do this using `cd cmdr && nu run build-release-in-docker`
 cd ..
 
 cd terminal_async
