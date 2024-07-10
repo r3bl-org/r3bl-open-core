@@ -18,9 +18,7 @@
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::tui_style;
 use r3bl_tui::*;
-use tokio::{sync::mpsc::{self, Sender},
-            time,
-            time::Duration};
+use tokio::{sync::mpsc::Sender, time::Duration};
 
 use super::*;
 use crate::ENABLE_TRACE_EXAMPLES;
@@ -60,20 +58,30 @@ mod animator_task {
         const ANIMATION_INTERVAL_MSEC: u64 = 500;
 
         let (animator_kill_channel_sender, mut animator_kill_channel_receiver) =
-            mpsc::channel::<()>(1);
+            tokio::sync::mpsc::channel::<()>(1);
         let animator_kill_channel_sender_clone = animator_kill_channel_sender.clone();
 
         tokio::spawn(async move {
             // Give the app some time to actually render to offscreen buffer.
-            time::sleep(Duration::from_millis(ANIMATION_START_DELAY_MSEC)).await;
+            tokio::time::sleep(Duration::from_millis(ANIMATION_START_DELAY_MSEC)).await;
+
+            // Use an tokio::time::interval instead of tokio::time::sleep because we need
+            // to be able to re-use it, and call tick on it repeatedly.
+            let mut interval =
+                tokio::time::interval(Duration::from_millis(ANIMATION_INTERVAL_MSEC));
 
             loop {
                 tokio::select! {
+                    // Stop the animation.
+                    // This branch is cancel safe because recv is cancel safe.
                     _ = animator_kill_channel_receiver.recv() => {
                         break;
                     }
 
-                    _ = time::sleep(Duration::from_millis(ANIMATION_INTERVAL_MSEC)) => {
+                    // Trigger the animation by sending a signal (that mutates state, and
+                    // causes rerender).
+                    // This branch is cancel safe because tick is cancel safe.
+                    _ = interval.tick() => {
                         // Continue the animation.
 
                         // Wire into the timing telemetry.

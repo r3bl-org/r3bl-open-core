@@ -210,6 +210,7 @@ pub mod pause_and_resume_support {
             loop {
                 tokio::select! {
                     // Poll line channel for events.
+                    // This branch is cancel safe because recv is cancel safe.
                     maybe_line_control_signal = line_receiver.recv() => {
                         let control_flow = process_line_control_signal(
                             maybe_line_control_signal,
@@ -234,6 +235,7 @@ pub mod pause_and_resume_support {
                     }
 
                     // Poll shutdown channel.
+                    // This branch is cancel safe because recv is cancel safe.
                     _ = shutdown_receiver.recv() => {
                         break;
                     }
@@ -468,6 +470,11 @@ impl Readline {
         loop {
             tokio::select! {
                 // Poll for events.
+                // This branch is cancel safe because no state is declared inside the
+                // future in the following block.
+                // - All the state comes from other variables (self.*).
+                // - So if this future is dropped, then the item in the
+                //   pinned_input_stream isn't used and the state isn't modified.
                 maybe_result_crossterm_event = self.pinned_input_stream.next() => {
                     match readline_internal::process_event(
                         maybe_result_crossterm_event,
@@ -482,11 +489,13 @@ impl Readline {
                 },
 
                 // Poll for history updates.
+                // This branch is cancel safe because recv is cancel safe.
                 maybe_line = self.history_receiver.recv() => {
                     self.safe_history.lock().unwrap().update(maybe_line);
                 }
 
                 // Poll shutdown channel.
+                // This branch is cancel safe because recv is cancel safe.
                 _ = shutdown_receiver.recv() => {
                     break Err(ReadlineError::Closed);
                 }
