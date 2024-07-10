@@ -105,6 +105,7 @@ impl Spinner {
             loop {
                 tokio::select! {
                     // Poll interval.
+                    // This branch is cancel safe because tick is cancel safe.
                     _ = interval.tick() => {
                         // Render and paint the output, based on style.
                         let output = spinner_render::render_tick(
@@ -123,6 +124,7 @@ impl Spinner {
                     },
 
                     // Poll shutdown channel.
+                    // This branch is cancel safe because recv is cancel safe.
                     _ = shutdown_receiver.recv() => {
                         break;
                     }
