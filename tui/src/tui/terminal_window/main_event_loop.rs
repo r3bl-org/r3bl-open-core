@@ -93,6 +93,7 @@ impl TerminalWindow {
             loop {
                 tokio::select! {
                     // Handle signals on the channel.
+                    // This branch is cancel safe since recv is cancel safe.
                     maybe_signal = main_thread_channel_receiver.recv() => {
                         if let Some(ref signal) = maybe_signal {
                             match signal {
@@ -126,6 +127,11 @@ impl TerminalWindow {
                     }
 
                     // Handle input event.
+                    // This branch is cancel safe because no state is declared inside the
+                    // future in the following block.
+                    // - All the state comes from other variables (self.*).
+                    // - So if this future is dropped, then the item in the
+                    //   pinned_input_stream isn't used and the state isn't modified.
                     maybe_input_event = AsyncEventStream::try_to_get_input_event(async_event_stream) => {
                         if let Some(input_event) = maybe_input_event {
                             telemetry_global_static::set_start_ts();
