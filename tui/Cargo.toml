@@ -74,8 +74,14 @@ is-terminal = "0.4.9"
 copypasta-ext = "0.4.4"
 
 [dev-dependencies]
+# Async readline for running examples.
+r3bl_terminal_async = { path = "../terminal_async", version = "0.5.3" }
+
 # For assert_eq2! macro.
 pretty_assertions = "1.4.0"
-reedline = "0.32.0"
 textwrap = "0.16.0"
 serial_test = "3.1.1"
+
+# Enum to string generation.
+strum = "0.26"
+strum_macros = "0.26"
