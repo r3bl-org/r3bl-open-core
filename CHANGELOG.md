@@ -322,6 +322,11 @@ in a text editor.
     [PR](https://github.com/r3bl-org/r3bl-open-core/pull/336/) to fix this
     [issue](https://github.com/r3bl-org/r3bl-open-core/issues/331).
 
+- Updated:
+  - Drop dependency on `reedline`. Use `r3bl_terminal_async` instead to get async readline
+    capabilities. Update examples to use this new crate, and make example launcher easier
+    to maintain.
+
 ### v0.5.6 (2024-06-29)
 <a id="markdown-v0.5.6-2024-06-29" name="v0.5.6-2024-06-29"></a>
 
