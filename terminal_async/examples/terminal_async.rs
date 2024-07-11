@@ -126,9 +126,8 @@ async fn main() -> miette::Result<()> {
     let maybe_terminal_async = TerminalAsync::try_new("> ").await?;
 
     // If the terminal is not fully interactive, then return early.
-    let mut terminal_async = match maybe_terminal_async {
-        None => return Ok(()),
-        _ => maybe_terminal_async.unwrap(),
+    let Some(mut terminal_async) = maybe_terminal_async else {
+        return Ok(());
     };
 
     // Pre-populate the readline's history with some entries.
