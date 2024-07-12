@@ -749,9 +749,9 @@ events). And it tests output that is sent to `stdout` which it mocks.
 <a id="markdown-next-release" name="next-release"></a>
 
 This release migrates the test fixtures out of this crate and into a new top level crate
-in the `r3bl-open-core` monorepo called `r3bl_test_fixtures`. This is to make it easier to
-maintain and test the fixtures and allow all the other crates in this monorepo to use
-them.
+in the `r3bl-open-core` monorepo called `r3bl_test_fixtures`. This is to make it
+easier to maintain and test the fixtures and allow all the other crates in this monorepo
+to use them.
 
 - Changed:
   - Remove the test fixtures out of this crate and into a new top level crate in the
@@ -760,7 +760,7 @@ them.
     them.
 
 - Added:
-  - Add `r3bl_test_fixtures` as a `dev-dependency` to this crate.
+  - Add `r3bl_test_fixtures` version `0.0.1` as a `dev-dependency` to this crate.
 
 ### v0.5.3 (2024-05-22)
 <a id="markdown-v0.5.3-2024-05-22" name="v0.5.3-2024-05-22"></a>
