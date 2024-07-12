@@ -277,7 +277,8 @@ pub type Text = Vec<u8>;
 pub type PauseBuffer = VecDeque<Text>;
 pub type SafePauseBuffer = Arc<StdMutex<PauseBuffer>>;
 
-pub type PinnedInputStream = Pin<Box<dyn Stream<Item = Result<Event, Error>>>>;
+pub type CrosstermEventResult = Result<Event, Error>;
+pub type PinnedInputStream<T> = Pin<Box<dyn Stream<Item = T>>>;
 
 // Constants.
 pub const CHANNEL_CAPACITY: usize = 1_000;

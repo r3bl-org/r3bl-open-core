@@ -478,16 +478,16 @@ impl LineState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{test_fixtures::StdoutMock, History, StdMutex};
+    use crate::{History, StdMutex};
+    use r3bl_test_fixtures::StdoutMock;
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_add_char() {
         let mut line = LineState::new("foo".into(), (100, 100));
 
-        let stdout_mock = StdoutMock {
-            buffer: Arc::new(StdMutex::new(Vec::new())),
-        };
+        let stdout_mock = StdoutMock::default();
+
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (history, _) = History::new();
@@ -510,9 +510,8 @@ mod tests {
     async fn test_move_cursor() {
         let mut line = LineState::new("foo".into(), (100, 100));
 
-        let stdout_mock = StdoutMock {
-            buffer: Arc::new(StdMutex::new(Vec::new())),
-        };
+        let stdout_mock = StdoutMock::default();
+
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (history, _) = History::new();
@@ -535,9 +534,8 @@ mod tests {
     async fn test_search_next() {
         let mut line = LineState::new("foo".into(), (100, 100));
 
-        let stdout_mock = StdoutMock {
-            buffer: Arc::new(StdMutex::new(Vec::new())),
-        };
+        let stdout_mock = StdoutMock::default();
+
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (history, _) = History::new();
