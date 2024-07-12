@@ -171,15 +171,14 @@ fn get_terminal_display_width() -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{test_fixtures::StdoutMock, SpinnerColor, StdMutex};
+    use crate::{SpinnerColor, StdMutex};
+    use r3bl_test_fixtures::StdoutMock;
     use std::sync::Arc;
-    use strip_ansi_escapes::strip;
 
     #[tokio::test]
     async fn test_spinner_color() {
-        let stdout_mock = StdoutMock {
-            buffer: Arc::new(StdMutex::new(Vec::new())),
-        };
+        let stdout_mock = StdoutMock::default();
+
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
@@ -210,18 +209,13 @@ mod tests {
 
         spinner.stop("final message").await.unwrap();
 
-        // This block ensures that the mutex guard is dropped correctly.
-        {
-            let output_buffer_data = stdout_mock.buffer.lock().unwrap();
-            let output_buffer_data = strip(output_buffer_data.to_vec());
-            let output_buffer_data = String::from_utf8(output_buffer_data).expect("utf8");
-            // println!("{:?}", output_buffer_data);
-            assert!(output_buffer_data.contains("final message"));
-            assert_eq!(
-                output_buffer_data,
-                "⠁ message\n⠃ message\n⡇ message\n⠇ message\n⡎ message\nfinal message\n"
-            );
-        }
+        let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
+        // println!("{:?}", output_buffer_data);
+        assert!(output_buffer_data.contains("final message"));
+        assert_eq!(
+            output_buffer_data,
+            "⠁ message\n⠃ message\n⡇ message\n⠇ message\n⡎ message\nfinal message\n"
+        );
 
         let mut line_control_signal_sink = vec![];
         loop {
@@ -251,9 +245,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_spinner_no_color() {
-        let stdout_mock = StdoutMock {
-            buffer: Arc::new(StdMutex::new(Vec::new())),
-        };
+        let stdout_mock = StdoutMock::default();
+
         let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
 
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
@@ -281,22 +274,20 @@ mod tests {
 
         spinner.stop("final message").await.unwrap();
 
-        // This block ensures that the mutex guard is dropped correctly.
         // spell-checker:disable
-        {
-            let output_buffer_data = stdout_mock.buffer.lock().unwrap();
-            // let output_buffer_data = strip(output_buffer_data.to_vec());
-            let output_buffer_data = String::from_utf8(output_buffer_data.to_vec()).expect("utf8");
-            // println!("{:?}", output_buffer_data);
-            assert!(output_buffer_data.contains("final message"));
-            assert_ne!(
-                output_buffer_data,
-                "⠁ message\n⠃ message\n⡇ message\n⠇ message\n⡎ message\nfinal message\n"
-            );
-            assert!(output_buffer_data.contains("\u{1b}[1G\u{1b}[2K\u{1b}[38;2;18;194;233m⠁\u{1b}[39m \u{1b}[38;2;18;194;233mmessage"));
-            assert!(output_buffer_data
-                .contains("\u{1b}[39m\n\u{1b}[1A\u{1b}[1G\u{1b}[2Kfinal message\n"));
-        }
+        let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string();
+        // println!("{:?}", output_buffer_data);
+        assert!(output_buffer_data.contains("final message"));
+        assert_ne!(
+            output_buffer_data,
+            "⠁ message\n⠃ message\n⡇ message\n⠇ message\n⡎ message\nfinal message\n"
+        );
+        assert!(output_buffer_data.contains(
+            "\u{1b}[1G\u{1b}[2K\u{1b}[38;2;18;194;233m⠁\u{1b}[39m \u{1b}[38;2;18;194;233mmessage"
+        ));
+        assert!(
+            output_buffer_data.contains("\u{1b}[39m\n\u{1b}[1A\u{1b}[1G\u{1b}[2Kfinal message\n")
+        );
         // spell-checker:enable
 
         let mut line_control_signal_sink = vec![];

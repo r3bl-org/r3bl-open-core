@@ -2040,7 +2040,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_terminal_async"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "async-stream",
  "crossterm",
@@ -2053,9 +2053,9 @@ dependencies = [
  "opentelemetry_sdk",
  "pretty_assertions",
  "r3bl_rs_utils_core",
+ "r3bl_test_fixtures",
  "r3bl_tui",
  "r3bl_tuify",
- "strip-ansi-escapes",
  "strum 0.26.2",
  "strum_macros 0.26.2",
  "thiserror",
@@ -2067,6 +2067,26 @@ dependencies = [
  "tracing-subscriber",
  "unicode-segmentation",
  "unicode-width",
+]
+
+[[package]]
+name = "r3bl_test_fixtures"
+version = "0.0.1"
+dependencies = [
+ "async-stream",
+ "futures-core",
+ "futures-util",
+ "miette",
+ "pretty_assertions",
+ "strip-ansi-escapes",
+ "strum 0.26.2",
+ "strum_macros 0.26.2",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-appender",
+ "tracing-core",
+ "tracing-subscriber",
 ]
 
 [[package]]

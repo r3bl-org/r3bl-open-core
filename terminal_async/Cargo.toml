@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_terminal_async"
-version = "0.5.3"
+version = "0.5.4"
 edition = "2021"
 resolver = "2"
 description = "Async non-blocking read_line implemenation with multiline editor, with concurrent display output from tasks, and colorful animated spinners"
@@ -70,7 +70,11 @@ opentelemetry-semantic-conventions = "0.14.0"
 # Async stream for DI and testing.
 futures-core = "0.3"
 async-stream = "0.3.5"
-strip-ansi-escapes = "0.2.0"
+
+[dev-dependencies]
+# Testing.
+# r3bl-open-core.
+r3bl_test_fixtures = { path = "../test_fixtures", version = "0.0.1" }
 
 [features]
 default = ["emacs"]

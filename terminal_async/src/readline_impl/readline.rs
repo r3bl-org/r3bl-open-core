@@ -16,17 +16,17 @@
  */
 
 use crate::{
-    History, LineState, PauseBuffer, PinnedInputStream, SafeBool, SafeHistory, SafeLineState,
-    SafePauseBuffer, SafeRawTerminal, SharedWriter, StdMutex, Text, CHANNEL_CAPACITY,
+    CrosstermEventResult, History, LineState, PauseBuffer, PinnedInputStream, SafeBool,
+    SafeHistory, SafeLineState, SafePauseBuffer, SafeRawTerminal, SharedWriter, StdMutex, Text,
+    CHANNEL_CAPACITY,
 };
 use crossterm::{
-    event::Event,
     terminal::{self, disable_raw_mode, Clear},
     QueueableCommand,
 };
 use futures_util::StreamExt;
 use std::{
-    io::{self, Error, Write},
+    io::{self, Write},
     sync::Arc,
 };
 use thiserror::Error;
@@ -118,7 +118,7 @@ pub struct Readline {
     pub safe_raw_terminal: SafeRawTerminal,
 
     /// Stream of events.
-    pub pinned_input_stream: PinnedInputStream,
+    pub pinned_input_stream: PinnedInputStream<CrosstermEventResult>,
 
     /// Current line.
     pub safe_line_state: SafeLineState,
@@ -346,7 +346,7 @@ impl Readline {
     pub fn new(
         prompt: String,
         safe_raw_terminal: SafeRawTerminal,
-        /* move */ pinned_input_stream: PinnedInputStream,
+        /* move */ pinned_input_stream: PinnedInputStream<CrosstermEventResult>,
     ) -> Result<(Self, SharedWriter), ReadlineError> {
         // Line channel.
         let line_channel = tokio::sync::mpsc::channel::<LineControlSignal>(CHANNEL_CAPACITY);
@@ -513,7 +513,7 @@ pub mod readline_internal {
     use super::*;
 
     pub fn process_event(
-        maybe_result_crossterm_event: Option<Result<Event, Error>>,
+        maybe_result_crossterm_event: Option<CrosstermEventResult>,
         self_line_state: SafeLineState,
         self_raw_terminal: &mut dyn Write,
         self_safe_history: SafeHistory,
@@ -571,60 +571,43 @@ impl Readline {
 }
 
 #[cfg(test)]
-pub mod test_fixtures {
-    use crate::StdMutex;
-
+pub mod my_fixtures {
     use super::*;
-    use async_stream::stream;
-    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 
-    pub(super) fn gen_input_stream() -> PinnedInputStream {
-        let it = stream! {
-            for event in get_input_vec() {
-                yield Ok(event);
-            }
-        };
-        Box::pin(it)
-    }
-
-    pub(super) fn get_input_vec() -> Vec<Event> {
+    pub(super) fn get_input_vec() -> Vec<CrosstermEventResult> {
         vec![
             // a
-            Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE)),
+            Ok(Event::Key(KeyEvent::new(
+                KeyCode::Char('a'),
+                KeyModifiers::NONE,
+            ))),
             // b
-            Event::Key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE)),
+            Ok(Event::Key(KeyEvent::new(
+                KeyCode::Char('b'),
+                KeyModifiers::NONE,
+            ))),
             // c
-            Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::NONE)),
+            Ok(Event::Key(KeyEvent::new(
+                KeyCode::Char('c'),
+                KeyModifiers::NONE,
+            ))),
             // enter
-            Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            Ok(Event::Key(KeyEvent::new(
+                KeyCode::Enter,
+                KeyModifiers::NONE,
+            ))),
         ]
-    }
-
-    #[derive(Clone)]
-    pub struct StdoutMock {
-        pub buffer: Arc<StdMutex<Vec<u8>>>,
-    }
-
-    impl Write for StdoutMock {
-        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-            self.buffer.lock().unwrap().extend_from_slice(buf);
-            Ok(buf.len())
-        }
-
-        fn flush(&mut self) -> io::Result<()> {
-            Ok(())
-        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::StdMutex;
-
     use super::*;
+    use crate::StdMutex;
+    use r3bl_test_fixtures::{gen_input_stream, StdoutMock};
     use r3bl_tuify::{is_fully_uninteractive_terminal, TTYResult};
-    use strip_ansi_escapes::strip;
-    use tests::test_fixtures::{gen_input_stream, get_input_vec, StdoutMock};
+    use tests::my_fixtures::get_input_vec;
 
     #[tokio::test]
     async fn test_readline_internal_process_event_and_terminal_output() {
@@ -633,10 +616,7 @@ mod tests {
 
         let prompt_str = "> ";
 
-        let output_buffer = Vec::new();
-        let stdout_mock = StdoutMock {
-            buffer: Arc::new(StdMutex::new(output_buffer)),
-        };
+        let stdout_mock = StdoutMock::default();
 
         // This is for CI/CD.
         if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
@@ -647,7 +627,7 @@ mod tests {
         let (readline, _) = Readline::new(
             prompt_str.into(),
             Arc::new(StdMutex::new(stdout_mock.clone())),
-            gen_input_stream(),
+            gen_input_stream(get_input_vec()),
         )
         .unwrap();
 
@@ -655,7 +635,9 @@ mod tests {
         let safe_history = Arc::new(StdMutex::new(history.0));
 
         // Simulate 'a'.
-        let event = iter.next().unwrap();
+        let Some(Ok(event)) = iter.next() else {
+            panic!();
+        };
         let control_flow = readline_internal::process_event(
             Some(Ok(event.clone())),
             readline.safe_line_state.clone(),
@@ -666,9 +648,7 @@ mod tests {
         assert!(matches!(control_flow, InternalControlFlow::Continue));
         assert_eq!(readline.safe_line_state.lock().unwrap().line, "a");
 
-        let output_buffer_data = stdout_mock.buffer.lock().unwrap();
-        let output_buffer_data = strip(output_buffer_data.to_vec());
-        let output_buffer_data = String::from_utf8(output_buffer_data).expect("utf8");
+        let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
         // println!("\n`{}`\n", output_buffer_data);
         assert!(output_buffer_data.contains("> a"));
     }
@@ -677,10 +657,7 @@ mod tests {
     async fn test_readline() {
         let prompt_str = "> ";
 
-        let output_buffer = Vec::new();
-        let stdout_mock = StdoutMock {
-            buffer: Arc::new(StdMutex::new(output_buffer)),
-        };
+        let stdout_mock = StdoutMock::default();
 
         // This is for CI/CD.
         if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
@@ -691,7 +668,7 @@ mod tests {
         let (mut readline, _) = Readline::new(
             prompt_str.into(),
             Arc::new(StdMutex::new(stdout_mock.clone())),
-            gen_input_stream(),
+            gen_input_stream(get_input_vec()),
         )
         .unwrap();
 
@@ -700,9 +677,7 @@ mod tests {
         pretty_assertions::assert_eq!(result.unwrap(), ReadlineEvent::Line("abc".to_string()));
         pretty_assertions::assert_eq!(readline.safe_line_state.lock().unwrap().line, "");
 
-        let output_buffer_data = stdout_mock.buffer.lock().unwrap();
-        let output_buffer_data = strip(output_buffer_data.to_vec());
-        let output_buffer_data = String::from_utf8(output_buffer_data).expect("utf8");
+        let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
         // println!("\n`{}`\n", output_buffer_data);
         assert!(output_buffer_data.contains("> abc"));
     }
@@ -711,10 +686,7 @@ mod tests {
     async fn test_pause_resume() {
         let prompt_str = "> ";
 
-        let output_buffer = Vec::new();
-        let stdout_mock = StdoutMock {
-            buffer: Arc::new(StdMutex::new(output_buffer)),
-        };
+        let stdout_mock = StdoutMock::default();
 
         // This is for CI/CD.
         if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
@@ -725,7 +697,7 @@ mod tests {
         let (readline, shared_writer) = Readline::new(
             prompt_str.into(),
             Arc::new(StdMutex::new(stdout_mock.clone())),
-            gen_input_stream(),
+            gen_input_stream(get_input_vec()),
         )
         .unwrap();
 
@@ -752,10 +724,7 @@ mod tests {
     async fn test_pause_resume_with_output() {
         let prompt_str = "> ";
 
-        let output_buffer = Vec::new();
-        let stdout_mock = StdoutMock {
-            buffer: Arc::new(StdMutex::new(output_buffer)),
-        };
+        let stdout_mock = StdoutMock::default();
 
         // This is for CI/CD.
         if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
@@ -766,7 +735,7 @@ mod tests {
         let (readline, shared_writer) = Readline::new(
             prompt_str.into(),
             Arc::new(StdMutex::new(stdout_mock.clone())),
-            gen_input_stream(),
+            gen_input_stream(get_input_vec()),
         )
         .unwrap();
 
@@ -804,15 +773,18 @@ mod tests {
 #[cfg(test)]
 mod test_streams {
     use super::*;
-    use test_streams::test_fixtures::{gen_input_stream, get_input_vec};
+    use r3bl_test_fixtures::gen_input_stream;
+    use test_streams::my_fixtures::get_input_vec;
 
     #[tokio::test]
     async fn test_generate_event_stream_pinned() {
+        use futures_util::StreamExt;
+
         let mut count = 0;
-        let mut it = gen_input_stream();
+        let mut it = gen_input_stream(get_input_vec());
         while let Some(event) = it.next().await {
             let lhs = event.unwrap();
-            let rhs = get_input_vec()[count].clone();
+            let rhs = get_input_vec()[count].as_ref().unwrap().clone();
             assert_eq!(lhs, rhs);
             count += 1;
         }
