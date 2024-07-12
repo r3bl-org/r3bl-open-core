@@ -60,9 +60,9 @@
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
 - [r3bl_test_fixtures](#r3bl_test_fixtures)
-  - [Next release](#next-release)
+  - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_terminal_async](#r3bl_terminal_async)
-  - [Next release](#next-release)
+  - [v0.5.4 2024-07-12](#v054-2024-07-12)
   - [v0.5.3 2024-05-22](#v053-2024-05-22)
   - [v0.5.2 2020-05-06](#v052-2020-05-06)
   - [v0.5.1 2024-04-28](#v051-2024-04-28)
@@ -729,12 +729,15 @@ exhaustively tested and is able to handle many more corner cases.
 <a id="markdown-r3bl_test_fixtures" name="r3bl_test_fixtures"></a>
 
 ### v0.0.1 (2024-07-12)
-<a id="markdown-next-release" name="next-release"></a>
+<a id="markdown-v0.0.1-2024-07-12" name="v0.0.1-2024-07-12"></a>
 
 This is the first release of this crate. It is a top level crate in the `r3bl-open-core`
 that is meant to hold all the test fixtures for all the other crates in this monorepo. It
 primarily tests input events coming from user input via keyboard and mouse (eg: crossterm
-events). And it tests output that is sent to `stdout` which it mocks.
+events). And it tests output that is sent to `stdout` which it mocks. Here are all the
+links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures),
+[docs.rs](https://docs.rs/r3bl_test_fixtures),
+[GitHub](https://github.com/r3bl-org/r3bl-open-core/tree/main/test_fixtures).
 
 - Added:
   - Add a new top level crate in the `r3bl-open-core` monorepo called `r3bl_test_fixtures`.
@@ -746,12 +749,15 @@ events). And it tests output that is sent to `stdout` which it mocks.
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
 
 ### v0.5.4 (2024-07-12)
-<a id="markdown-next-release" name="next-release"></a>
+<a id="markdown-v0.5.4-2024-07-12" name="v0.5.4-2024-07-12"></a>
 
 This release migrates the test fixtures out of this crate and into a new top level crate
 in the `r3bl-open-core` monorepo called `r3bl_test_fixtures`. This is to make it
 easier to maintain and test the fixtures and allow all the other crates in this monorepo
-to use them.
+to use them. Here are all the links for this release:
+[crates.io](https://crates.io/crates/r3bl_terminal_async),
+[docs.rs](https://docs.rs/r3bl_terminal_async),
+[GitHub](https://github.com/r3bl-org/r3bl-open-core/tree/main/terminal_async).
 
 - Changed:
   - Remove the test fixtures out of this crate and into a new top level crate in the
