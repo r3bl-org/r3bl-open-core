@@ -59,7 +59,10 @@
   - [v0.9.7 2023-10-21](#v097-2023-10-21)
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
+- [r3bl_test_fixtures](#r3bl_test_fixtures)
+  - [Next release](#next-release)
 - [r3bl_terminal_async](#r3bl_terminal_async)
+  - [Next release](#next-release)
   - [v0.5.3 2024-05-22](#v053-2024-05-22)
   - [v0.5.2 2020-05-06](#v052-2020-05-06)
   - [v0.5.1 2024-04-28](#v051-2024-04-28)
@@ -722,8 +725,32 @@ exhaustively tested and is able to handle many more corner cases.
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
     `r3bl_rs_utils` repo workspace as `simple_logger`).
 
+## `r3bl_test_fixtures`
+<a id="markdown-r3bl_test_fixtures" name="r3bl_test_fixtures"></a>
+
+### Next release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Added:
+  - Add a new top level crate in the `r3bl-open-core` monorepo called `r3bl_test_fixtures`.
+    This is to make it easier to maintain and test the fixtures and allow all the other
+    crates in this monorepo to use them. These fixtures are migrated from `r3bl_terminal_async`
+    crate, where they were gestated, before being graduated for use by the entire monorepo.
+
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
+
+### Next release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Changed:
+  - Remove the test fixtures out of this crate and into a new top level crate in the
+    `r3bl-open-core` monorepo called `r3bl_test_fixtures`. This is to make it easier to
+    maintain and test the fixtures and allow all the other crates in this monorepo to use
+    them.
+
+- Added:
+  - Add `r3bl_test_fixtures` as a `dev-dependency` to this crate.
 
 ### v0.5.3 (2024-05-22)
 <a id="markdown-v0.5.3-2024-05-22" name="v0.5.3-2024-05-22"></a>

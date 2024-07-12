@@ -91,6 +91,16 @@ cargo publish
 # You can do this using `cd cmdr && nu run build-release-in-docker`
 cd ..
 
+cd test_fixtures
+# Update cargo.toml version number manually
+# Update CHANGELOG.md
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+git add -A
+git commit -S -m "v0.0.1-test_fixtures"
+git tag -a "v0.0.1-test_fixtures"
+cargo publish
+cd ..
+
 cd terminal_async
 # Update cargo.toml version number manually
 # Update CHANGELOG.md

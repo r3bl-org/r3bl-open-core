@@ -15,7 +15,9 @@
  *   limitations under the License.
  */
 
-use crate::{PinnedInputStream, Readline, ReadlineEvent, SharedWriter, StdMutex};
+use crate::{
+    CrosstermEventResult, PinnedInputStream, Readline, ReadlineEvent, SharedWriter, StdMutex,
+};
 use crossterm::{
     cursor::MoveToColumn,
     event::EventStream,
@@ -66,7 +68,8 @@ impl TerminalAsync {
         }
 
         let safe_raw_terminal = Arc::new(StdMutex::new(stdout()));
-        let pinned_input_stream: PinnedInputStream = Box::pin(EventStream::new());
+        let pinned_input_stream: PinnedInputStream<CrosstermEventResult> =
+            Box::pin(EventStream::new());
         let (readline, stdout) =
             Readline::new(prompt.to_owned(), safe_raw_terminal, pinned_input_stream)
                 .into_diagnostic()?;
