@@ -106,9 +106,10 @@ cd terminal_async
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo readme > README.md
 git add -A
-git commit -S -m "v0.5.3-terminal_async"
-git tag -a v0.5.3-terminal_async -m "v0.5.3-terminal_async"
+git commit -S -m "v0.5.4-terminal_async"
+git tag -a v0.5.4-terminal_async -m "v0.5.4-terminal_async"
 cargo publish
 cd ..
 
