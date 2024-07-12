@@ -59,3 +59,5 @@ async fn test_stdout_mock_no_strip_ansi() {
     );
 }
 ```
+
+License: Apache-2.0

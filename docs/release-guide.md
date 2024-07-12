@@ -95,6 +95,7 @@ cd test_fixtures
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo readme > README.md
 git add -A
 git commit -S -m "v0.0.1-test_fixtures"
 git tag -a "v0.0.1-test_fixtures"

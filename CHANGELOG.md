@@ -728,8 +728,13 @@ exhaustively tested and is able to handle many more corner cases.
 ## `r3bl_test_fixtures`
 <a id="markdown-r3bl_test_fixtures" name="r3bl_test_fixtures"></a>
 
-### Next release
+### v0.0.1 (2024-07-12)
 <a id="markdown-next-release" name="next-release"></a>
+
+This is the first release of this crate. It is a top level crate in the `r3bl-open-core`
+that is meant to hold all the test fixtures for all the other crates in this monorepo. It
+primarily tests input events coming from user input via keyboard and mouse (eg: crossterm
+events). And it tests output that is sent to `stdout` which it mocks.
 
 - Added:
   - Add a new top level crate in the `r3bl-open-core` monorepo called `r3bl_test_fixtures`.
@@ -740,8 +745,13 @@ exhaustively tested and is able to handle many more corner cases.
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
 
-### Next release
+### v0.5.4 (2024-07-12)
 <a id="markdown-next-release" name="next-release"></a>
+
+This release migrates the test fixtures out of this crate and into a new top level crate
+in the `r3bl-open-core` monorepo called `r3bl_test_fixtures`. This is to make it easier to
+maintain and test the fixtures and allow all the other crates in this monorepo to use
+them.
 
 - Changed:
   - Remove the test fixtures out of this crate and into a new top level crate in the
