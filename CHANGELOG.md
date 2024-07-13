@@ -60,6 +60,7 @@
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
 - [r3bl_test_fixtures](#r3bl_test_fixtures)
+  - [v0.0.2 2024-07-13](#v002-2024-07-13)
   - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_terminal_async](#r3bl_terminal_async)
   - [v0.5.4 2024-07-12](#v054-2024-07-12)
@@ -727,6 +728,26 @@ exhaustively tested and is able to handle many more corner cases.
 
 ## `r3bl_test_fixtures`
 <a id="markdown-r3bl_test_fixtures" name="r3bl_test_fixtures"></a>
+
+### v0.0.2 (2024-07-13)
+<a id="markdown-v0.0.2-2024-07-13" name="v0.0.2-2024-07-13"></a>
+
+This release adds a new function to create an async stream that yields results (from a
+vec) at a specified interval. This is useful for testing async functions that need to
+simulate a stream of events with a delay.
+
+- Added:
+  - Add `gen_input_stream_with_delay()` to create an async stream that yields results (from
+    a vec) at a specified interval. This is useful for testing async functions that need to
+    simulate a stream of events with a delay.
+  - Add more tests.
+
+- Misc:
+  - The
+    [async_cancel_safe](https://github.com/nazmulidris/rust-scratch/tree/main/async_cancel_safe)
+    example repo now uses this crate. Here's a
+    [tutorial](https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/)
+    about it.
 
 ### v0.0.1 (2024-07-12)
 <a id="markdown-v0.0.1-2024-07-12" name="v0.0.1-2024-07-12"></a>

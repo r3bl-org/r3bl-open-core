@@ -2071,7 +2071,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_test_fixtures"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "async-stream",
  "futures-core",

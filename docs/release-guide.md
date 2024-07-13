@@ -97,8 +97,8 @@ cd test_fixtures
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 cargo readme > README.md
 git add -A
-git commit -S -m "v0.0.1-test_fixtures"
-git tag -a "v0.0.1-test_fixtures"
+git commit -S -m "v0.0.2-test_fixtures"
+git tag -a "v0.0.2-test_fixtures" -m "v0.0.2-test_fixtures"
 cargo publish
 cd ..
 
