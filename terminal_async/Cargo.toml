@@ -74,7 +74,7 @@ async-stream = "0.3.5"
 [dev-dependencies]
 # Testing.
 # r3bl-open-core.
-r3bl_test_fixtures = { path = "../test_fixtures", version = "0.0.1" }
+r3bl_test_fixtures = { path = "../test_fixtures", version = "0.0.2" }
 
 [features]
 default = ["emacs"]

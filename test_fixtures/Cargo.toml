@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_test_fixtures"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 resolver = "2"
 description = "Test fixtures for the r3bl_* TUI and CLI crates"
