@@ -63,6 +63,7 @@
   - [v0.0.2 2024-07-13](#v002-2024-07-13)
   - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_terminal_async](#r3bl_terminal_async)
+  - [v0.5.5 2024-07-13](#v055-2024-07-13)
   - [v0.5.4 2024-07-12](#v054-2024-07-12)
   - [v0.5.3 2024-05-22](#v053-2024-05-22)
   - [v0.5.2 2020-05-06](#v052-2020-05-06)
@@ -768,6 +769,16 @@ links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures)
 
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
+
+### v0.5.5 (2024-07-13)
+<a id="markdown-v0.5.5-2024-07-13" name="v0.5.5-2024-07-13"></a>
+
+This minor release just updates the `r3bl_test_fixtures` crate to version `0.0.2` which
+adds a new function to create an async stream that yields results (from a vec) at a
+specified interval.
+
+- Changed:
+  - Bump depdenency on `r3bl_test_fixtures` to version `0.0.2`.
 
 ### v0.5.4 (2024-07-12)
 <a id="markdown-v0.5.4-2024-07-12" name="v0.5.4-2024-07-12"></a>

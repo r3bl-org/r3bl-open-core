@@ -108,8 +108,8 @@ cd terminal_async
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 cargo readme > README.md
 git add -A
-git commit -S -m "v0.5.4-terminal_async"
-git tag -a v0.5.4-terminal_async -m "v0.5.4-terminal_async"
+git commit -S -m "v0.5.5-terminal_async"
+git tag -a v0.5.5-terminal_async -m "v0.5.5-terminal_async"
 cargo publish
 cd ..
 
