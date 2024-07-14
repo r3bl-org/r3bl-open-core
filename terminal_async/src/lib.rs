@@ -247,6 +247,11 @@
 //!   `Thread::cancel()`](https://internals.rust-lang.org/t/thread-cancel-support/3056/16)
 //! - [Discussion: stdin, stdout redirection for spawned
 //!   processes](https://stackoverflow.com/questions/34611742/how-do-i-read-the-output-of-a-child-process-without-blocking-in-rust)
+//!
+//! # More info on Linux TTY
+//!
+//! - [TTY Demystified](https://www.linusakesson.net/programming/tty/)
+//! - [Deep dive into Unix shells, ptys, etc.](https://www.youtube.com/playlist?list=PLFAC320731F539902)
 
 // Attach sources.
 pub mod public_api;
