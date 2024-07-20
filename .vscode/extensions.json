@@ -39,11 +39,13 @@
     "github.vscode-pull-request-github", // Github Pull Requests and Issues.
     "streetsidesoftware.code-spell-checker", // Code Spell Checker.
     "TheNuProjectContributors.vscode-nushell-lang", // Nushell.
-    "serayuzgur.crates", // Crates.
+    "fill-labs.dependi", // crates.io.
     "eamodio.gitlens", // GitLens.
     "s-nlf-fh.glassit", // GlassIt.
     "alefragnani.separators", // Separators, Suspected (in the past) that this makes VSCode main thread unresponsive after running for a few hours.
     "bmalehorn.vscode-fish", // Fish.
+    "huynhduong.nvtokyo-theme", // Tokyo Night NV Theme.
+    "ms-azuretools.vscode-docker", // Docker.
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
