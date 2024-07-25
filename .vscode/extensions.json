@@ -13,6 +13,8 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "jvitorfrancisco.theme-acid-purple", // Acid Purple.
+    "Tr3bbe.purplehaze", // Purple Haze.
     "chrisjdavies.multi-highlight", // Multi Highlight.
     "eamodio.gitlens", // GitLens.
     "alefragnani.bookmarks", // Bookmarks.
