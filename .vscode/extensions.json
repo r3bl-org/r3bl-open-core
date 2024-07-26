@@ -13,6 +13,7 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "bierner.emojisense", // Emoji Sense.
     "jvitorfrancisco.theme-acid-purple", // Acid Purple.
     "Tr3bbe.purplehaze", // Purple Haze.
     "chrisjdavies.multi-highlight", // Multi Highlight.
@@ -63,7 +64,6 @@
     "esbenp.prettier-vscode", // prettier.
     "unifiedjs.vscode-remark", // remark.
     "ccy.ayu-adaptive", // Ayu Adaptive theme.
-    "bierner.emojisense",
     "owldarkertheme.owldarker-theme", // Owl Darker theme.
     "Compulim.vscode-clock",
     "nowsci.glassit-linux",
