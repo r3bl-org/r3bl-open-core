@@ -367,3 +367,19 @@ macro_rules! send_signal {
         });
     }};
 }
+
+/// Simple macro to create a [`Result`] with an [`Ok`] variant. It is just syntactic sugar
+/// that helps having to write `Ok(())`.
+/// - If no arg is passed in then it will return `Ok(())`.
+/// - If an arg is passed in then it will return `Ok($arg)`.
+#[macro_export]
+macro_rules! ok {
+    // No args.
+    () => {
+        Ok(())
+    };
+    // With arg.
+    ($value:expr) => {
+        Ok($value)
+    };
+}
