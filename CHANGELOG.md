@@ -597,6 +597,12 @@ exhaustively tested and is able to handle many more corner cases.
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
+### Next release
+
+- Added:
+  - New declarative macro `ok!()` that is just syntatic sugar for `Ok(())`. If you use
+    `ok!($expr)` then it will return `Ok($expr)`.
+
 ### v0.9.13 (2024-04-15)
 <a id="markdown-v0.9.13-2024-04-15" name="v0.9.13-2024-04-15"></a>
 
