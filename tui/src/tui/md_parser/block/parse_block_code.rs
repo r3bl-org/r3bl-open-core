@@ -78,7 +78,7 @@ fn parse_code_block_body_to_code_block_end(input: &str) -> IResult<&str, &str> {
 /// Split a string by newline. The idea is that a line is some text followed by a newline. An
 /// empty line is just a newline character.
 ///
-/// ## Examples:
+/// # Examples:
 /// | input          | output               |
 /// | -------------- | -------------------- |
 /// | "foobar\n"     | `["foobar"]`         |

@@ -36,7 +36,7 @@ pub struct Spinner {
 impl Spinner {
     /// Create a new instance of [Spinner].
     ///
-    /// ### Returns
+    /// # Returns
     /// 1. This will return an error if the task is already running.
     /// 2. If the terminal is not fully interactive then it will return [None], and won't
     ///    start the task. This is when the terminal is not considered fully interactive:
