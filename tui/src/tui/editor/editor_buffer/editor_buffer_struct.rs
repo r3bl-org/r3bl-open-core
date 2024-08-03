@@ -119,7 +119,7 @@ use crate::*;
 /// The col and row offset for scrolling if active. This is not marked pub in order to
 /// guard mutation. In order to access it, use [get_mut](EditorBuffer::get_mut).
 ///
-/// ### Vertical scrolling and viewport
+/// # Vertical scrolling and viewport
 ///
 /// ```text
 ///                    +0--------------------+
@@ -140,7 +140,7 @@ use crate::*;
 ///                    +---------------------+
 /// ```
 ///
-/// ### Horizontal scrolling and viewport
+/// # Horizontal scrolling and viewport
 ///
 /// ```text
 ///           <-   vp width   ->

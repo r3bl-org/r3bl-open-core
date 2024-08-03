@@ -21,7 +21,7 @@ use crate::*;
 /// - `text` - the text to print.
 /// - `style` - a list of [Style] to apply to the text.
 ///
-/// ## Example usage:
+/// # Example usage:
 ///
 /// ```rust
 /// use r3bl_ansi_color::*;

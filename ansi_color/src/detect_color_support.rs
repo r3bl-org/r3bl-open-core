@@ -52,7 +52,7 @@ pub mod global_color_support {
     /// Override the color support. Regardless of the value of the environment variables
     /// the value you set here will be used when you call [detect()].
     ///
-    /// ## Testing support
+    /// # Testing support
     ///
     /// The [serial_test](https://crates.io/crates/serial_test) crate is used to test this
     /// function. In any test in which this function is called, please use the `#[serial]`

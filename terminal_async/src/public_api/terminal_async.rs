@@ -43,7 +43,19 @@ pub struct TerminalAsync {
 impl TerminalAsync {
     /// Create a new instance of [TerminalAsync]. Example of `prompt` is `"> "`.
     ///
-    /// ### Returns
+    /// # Example
+    ///
+    /// ```
+    /// async fn foo() -> miette::Result<()> {
+    ///     use r3bl_terminal_async::TerminalAsync;
+    ///     let terminal_async = TerminalAsync::try_new("> ")
+    ///         .await?
+    ///         .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
+    ///     r3bl_rs_utils_core::ok!()
+    /// }
+    /// ```
+    ///
+    /// # Returns
     /// 1. If the terminal is not fully interactive then it will return [None], and won't
     ///    create the [Readline]. This is when the terminal is not considered fully
     ///    interactive:

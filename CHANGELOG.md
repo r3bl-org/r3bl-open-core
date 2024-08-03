@@ -41,6 +41,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
+  - [Next release](#next-release)
   - [v0.9.13 2024-04-15](#v0913-2024-04-15)
   - [v0.9.12 2024-01-07](#v0912-2024-01-07)
   - [v0.9.11 2024-01-02](#v0911-2024-01-02)
@@ -63,6 +64,7 @@
   - [v0.0.2 2024-07-13](#v002-2024-07-13)
   - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_terminal_async](#r3bl_terminal_async)
+  - [Next release](#next-release)
   - [v0.5.5 2024-07-13](#v055-2024-07-13)
   - [v0.5.4 2024-07-12](#v054-2024-07-12)
   - [v0.5.3 2024-05-22](#v053-2024-05-22)
@@ -598,6 +600,7 @@ exhaustively tested and is able to handle many more corner cases.
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
 ### Next release
+<a id="markdown-next-release" name="next-release"></a>
 
 - Added:
   - New declarative macro `ok!()` that is just syntatic sugar for `Ok(())`. If you use
@@ -776,6 +779,12 @@ links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures)
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
 
+### Next release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Added:
+  - Added better examples for how to use `TerminalAsync::try_new()` in Rust docs.
+
 ### v0.5.5 (2024-07-13)
 <a id="markdown-v0.5.5-2024-07-13" name="v0.5.5-2024-07-13"></a>
 
@@ -784,7 +793,7 @@ adds a new function to create an async stream that yields results (from a vec) a
 specified interval.
 
 - Changed:
-  - Bump depdenency on `r3bl_test_fixtures` to version `0.0.2`.
+  - Bump dependency on `r3bl_test_fixtures` to version `0.0.2`.
 
 ### v0.5.4 (2024-07-12)
 <a id="markdown-v0.5.4-2024-07-12" name="v0.5.4-2024-07-12"></a>

@@ -32,7 +32,7 @@ use std::{
 use thiserror::Error;
 use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
 
-/// ### Mental model and overview
+/// # Mental model and overview
 ///
 /// This is a replacement for a [std::io::BufRead::read_line] function. It is async. It
 /// supports other tasks concurrently writing to the terminal output (via
@@ -53,7 +53,7 @@ use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
 /// [`SharedWriter`]s. When you [`Readline::close()`] the instance or drop it, this task
 /// is aborted.
 ///
-/// ### Inputs and dependency injection
+/// # Inputs and dependency injection
 ///
 /// There are 2 main resources that must be passed into [`Self::new()`]:
 /// 1. [`PinnedInputStream`] - This trait represents an async stream of events. It is
@@ -65,7 +65,7 @@ use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
 ///    implemented by [`std::io::Stdout`]. This is used to write to the terminal. However
 ///    for testing you can provide your own implementation of this trait.
 ///
-/// ### Support for testing
+/// # Support for testing
 ///
 /// Almost all the fields of this struct contain `Safe` in their names. This is because
 /// they are wrapped in a `Mutex` and `Arc`, so that they can be shared between tasks.
@@ -76,7 +76,7 @@ use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
 /// come from, it is probably due to the requirement for every part of this system to be
 /// testable (easily).
 ///
-/// ### Pause and resume
+/// # Pause and resume
 ///
 /// When the terminal is paused, then any output from the [`SharedWriter`]s will not be
 /// printed to the terminal. This is useful when you want to display a spinner, or some
@@ -94,7 +94,7 @@ use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
 /// [`PauseBuffer`] (if there are any messages in it, and prints them out) so nothing is
 /// lost!
 ///
-/// ### Usage details
+/// # Usage details
 ///
 /// Struct for reading lines of input from a terminal while lines are output to the
 /// terminal concurrently.

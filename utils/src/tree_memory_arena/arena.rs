@@ -67,7 +67,7 @@ where
 ///
 /// # Examples
 ///
-/// ## Basic usage
+/// # Basic usage
 ///
 /// ```rust
 /// use r3bl_rs_utils::tree_memory_arena::{Arena, HasId, MTArena, ResultUidList};
@@ -80,7 +80,7 @@ where
 /// assert_eq!(node_1_id, 0);
 /// ```
 ///
-/// ## Get weak and strong references from the arena (tree), and tree walking
+/// # Get weak and strong references from the arena (tree), and tree walking
 ///
 /// ```rust
 /// use r3bl_rs_utils::tree_memory_arena::{Arena, HasId, MTArena, ResultUidList};

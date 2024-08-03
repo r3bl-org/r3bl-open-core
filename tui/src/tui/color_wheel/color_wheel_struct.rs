@@ -268,7 +268,7 @@ impl ColorWheel {
     /// 2. If `steps_override` is `None` then use the steps from the `ColorWheelConfig`.
     /// 3. If nothing is found in `ColorWheelConfig` then use `DEFAULT_STEPS`.
     ///
-    /// ## Errors
+    /// # Errors
     /// If the RGB color is invalid, then this method will panic.
     pub fn generate_color_wheel(
         &mut self,
@@ -527,7 +527,7 @@ impl ColorWheel {
     /// This method gives you fine grained control over the color wheel. It returns a
     /// gradient-colored string. It respects the [ColorSupport] restrictions for the terminal.
     ///
-    /// ## Colorization Policy
+    /// # Colorization Policy
     /// - [GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength]: The first time
     ///   this method is called it will generate a gradient w/ the number of steps. Subsequent calls
     ///   will use the same gradient and index **if** the number of steps is the same. However, if

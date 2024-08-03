@@ -123,7 +123,7 @@ macro_rules! render_ops {
 ///   [`RenderOp::PrintTextWithAttributes(..)`]]
 /// - etc.
 ///
-/// ## What is an atomic paint operation?
+/// # What is an atomic paint operation?
 /// 1. It moves the cursor using:
 ///     1. [`RenderOp::MoveCursorPositionAbs`]
 ///     2. [`RenderOp::MoveCursorPositionRelTo`]
@@ -144,7 +144,7 @@ macro_rules! render_ops {
 /// let iter = render_ops.iter();
 /// ```
 ///
-/// ## Paint optimization
+/// # Paint optimization
 /// Due to the compositor [OffscreenBuffer], there is no need to optimize the individual paint
 /// operations. You don't have to manage your own whitespace or doing clear before paint! 🎉 The
 /// compositor takes care of that for you!

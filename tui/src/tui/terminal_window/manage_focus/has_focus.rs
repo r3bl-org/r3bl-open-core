@@ -31,7 +31,7 @@ use crate::*;
 ///    [FlexBox] that had focus before the modal was activated is saved. When the modal is closed,
 ///    the `id` of the [FlexBox] that had focus before the modal was activated is restored.
 ///
-/// ## Modal `id`, which is used by modal dialog box
+/// # Modal `id`, which is used by modal dialog box
 ///
 /// 1. Only one modal can be active at any time.
 /// 2. When a modal is active, the `id` of the [FlexBox] that had focus before the modal was
