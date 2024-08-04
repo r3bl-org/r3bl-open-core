@@ -157,26 +157,46 @@ async fn main() -> miette::Result<()> {
             _ = interval_2_task.tick() => {
                 task_2::tick(&mut state, &mut terminal_async.clone_shared_writer())?;
             },
-            user_input = terminal_async.get_readline_event() => match user_input {
-                Ok(readline_event) => {
-                    let continuation = process_input_event::process_readline_event(
-                        readline_event, &mut state, &mut terminal_async.clone_shared_writer(), &mut terminal_async.readline
-                    )?;
-                    if let ControlFlow::Break(_) = continuation { break }
-                },
-                Err(err) => {
-                    let msg_1 = format!("Received err: {}", format!("{:?}",err).red());
-                    let msg_2 = format!("{}", "Exiting...".red());
-                    terminal_async.println(msg_1).await;
-                    terminal_async.println(msg_2).await;
-                    break;
-                },
+            result_readline_event = terminal_async.get_readline_event() => {
+                match result_readline_event {
+                    Ok(readline_event) => {
+                        match readline_event {
+                            // User input event.
+                            ReadlineEvent::Line(user_input) => {
+                                let mut_state = &mut state;
+                                let shared_writer = &mut terminal_async.clone_shared_writer();
+                                let readline = &mut terminal_async.readline;
+                                let control_flow = process_input_event::process(
+                                    user_input, mut_state, shared_writer, readline)?;
+                                if let ControlFlow::Break(_) = control_flow {
+                                    break;
+                                }
+                            }
+                            // Resize event.
+                            ReadlineEvent::Resized => {
+                                let shared_writer = &mut terminal_async.clone_shared_writer();
+                                writeln!(shared_writer, "{}", "Terminal resized!".yellow()).into_diagnostic()?;
+                            }
+                            // Ctrl+D, Ctrl+C.
+                            ReadlineEvent::Eof | ReadlineEvent::Interrupted => {
+                                break;
+                            }
+                        }
+                    },
+                    Err(err) => {
+                        let msg_1 = format!("Received err: {}", format!("{:?}",err).red());
+                        let msg_2 = format!("{}", "Exiting...".red());
+                        terminal_async.println(msg_1).await;
+                        terminal_async.println(msg_2).await;
+                        break;
+                    },
+                }
             }
         }
     }
 
-    // Flush all writers to stdout
-    let _ = terminal_async.flush().await;
+    // There's no need to close terminal_async or readline. Drop will take care of
+    // cleaning up (closing raw mode).
 
     Ok(())
 }
@@ -216,42 +236,10 @@ mod task_2 {
 }
 
 mod process_input_event {
+    use super::*;
     use std::str::FromStr;
 
-    use super::*;
-
-    pub fn process_readline_event(
-        readline_event: ReadlineEvent,
-        state: &mut State,
-        shared_writer: &mut SharedWriter,
-        readline: &mut Readline,
-    ) -> miette::Result<ControlFlow<()>> {
-        match readline_event {
-            ReadlineEvent::Line(user_input) => {
-                process_user_input(user_input, state, shared_writer, readline)
-            }
-            ReadlineEvent::Eof => {
-                writeln!(shared_writer, "{}", "Exiting due to Eof...".red().bold())
-                    .into_diagnostic()?;
-                Ok(ControlFlow::Break(()))
-            }
-            ReadlineEvent::Interrupted => {
-                writeln!(
-                    shared_writer,
-                    "{}",
-                    "Exiting due to ^C pressed...".red().bold()
-                )
-                .into_diagnostic()?;
-                Ok(ControlFlow::Break(()))
-            }
-            ReadlineEvent::Resized => {
-                writeln!(shared_writer, "{}", "Terminal resized!".yellow()).into_diagnostic()?;
-                Ok(ControlFlow::Continue(()))
-            }
-        }
-    }
-
-    fn process_user_input(
+    pub fn process(
         user_input: String,
         state: &mut State,
         shared_writer: &mut SharedWriter,
@@ -270,9 +258,6 @@ mod process_input_event {
             }
             Ok(command) => match command {
                 Command::Exit => {
-                    writeln!(shared_writer, "{}", "Exiting due to exit command...".red())
-                        .into_diagnostic()?;
-                    readline.close();
                     return Ok(ControlFlow::Break(()));
                 }
                 Command::StartTask1 => {
@@ -357,7 +342,7 @@ mod long_running_task {
         let mut tick_counter = 0;
         let max_tick_count = 30;
 
-        let line_sender = shared_writer.line_sender.clone();
+        let line_sender = shared_writer.line_channel_sender.clone();
         let task_name = task_name.to_string();
 
         let shared_writer_clone = shared_writer.clone();

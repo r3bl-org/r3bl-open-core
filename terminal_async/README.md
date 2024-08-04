@@ -10,17 +10,19 @@ beautiful, powerful, and interactive REPLs (read execute print loops) with ease.
 
 1. Because
    [`read_line()`](https://doc.rust-lang.org/std/io/struct.Stdin.html#method.read_line)
-   is blocking. And there is no way to terminate an OS thread that is blocking in Rust.
-   To do this you have to exit the process (who's thread is blocked in `read_line()`).
+   is blocking. And there is no way to terminate an OS thread that is blocking in
+   Rust. To do this you have to exit the process (who's thread is blocked in
+   `read_line()`).
 
     - There is no way to get `read_line()` unblocked once it is blocked.
-    - You can use [`process::exit()`](https://doc.rust-lang.org/std/process/fn.exit.html)
-      or [`panic!()`](https://doc.rust-lang.org/std/panic/index.html) to kill the entire
+    - You can use
+      [`process::exit()`](https://doc.rust-lang.org/std/process/fn.exit.html) or
+      [`panic!()`](https://doc.rust-lang.org/std/panic/index.html) to kill the entire
       process. This is not appealing.
     - Even if that task is wrapped in a [`thread::spawn()` or
       `thread::spawn_blocking()`](https://tokio.rs/tokio/tutorial/spawning), it isn't
-      possible to cancel or abort that thread, without cooperatively asking it to exit. To
-      see what this type of code looks like, take a look at
+      possible to cancel or abort that thread, without cooperatively asking it to
+      exit. To see what this type of code looks like, take a look at
       [this](https://github.com/nazmulidris/rust-scratch/blob/fcd730c4b17ed0b09ff2c1a7ac4dd5b4a0c66e49/tcp-api-server/src/client_task.rs#L275).
 
 2. Another annoyance is that when a thread is blocked in `read_line()`, and you have
@@ -88,8 +90,8 @@ channel](https://www.youtube.com/@developerlifecom):
 
 ### Input Editing Behavior
 
-While entering text, the user can edit and navigate through the current
-input line with the following key bindings:
+While entering text, the user can edit and navigate through the current input line
+with the following key bindings:
 
 - Works on all platforms supported by `crossterm`.
 - Full Unicode Support (Including Grapheme Clusters).
@@ -102,11 +104,9 @@ input line with the following key bindings:
 - Ctrl-L: Clear the screen.
 - Ctrl-Left / Ctrl-Right: Move to previous/next whitespace.
 - Home: Jump to the start of the line.
-    - When the "emacs" feature (on by default) is enabled, Ctrl-A has the
-      same effect.
+    - When the "emacs" feature (on by default) is enabled, Ctrl-A has the same effect.
 - End: Jump to the end of the line.
-    - When the "emacs" feature (on by default) is enabled, Ctrl-E has the
-      same effect.
+    - When the "emacs" feature (on by default) is enabled, Ctrl-E has the same effect.
 - Ctrl-C, Ctrl-D: Send an `Eof` event.
 - Ctrl-C: Send an `Interrupt` event.
 - Extensible design based on `crossterm`'s `event-stream` feature.
@@ -147,22 +147,23 @@ cargo run --example spinner
 - Terminal input is retrieved by calling [`Readline::readline()`], which returns each
   complete line of input once the user presses Enter.
 
-- Each [`Readline`] instance is associated with one or more [`SharedWriter`] instances.
-  Lines written to an associated [`SharedWriter`] are output to the raw terminal.
+- Each [`Readline`] instance is associated with one or more [`SharedWriter`]
+  instances. Lines written to an associated [`SharedWriter`] are output to the raw
+  terminal.
 
 - Call [`Readline::new()`] to create a [`Readline`] instance and associated
   [`SharedWriter`].
 
-- Call [`Readline::readline()`] (most likely in a loop) to receive a line
-  of input from the terminal.  The user entering the line can edit their
-  input using the key bindings listed under "Input Editing" below.
+- Call [`Readline::readline()`] (most likely in a loop) to receive a line of input
+  from the terminal.  The user entering the line can edit their input using the key
+  bindings listed under "Input Editing" below.
 
-- After receiving a line from the user, if you wish to add it to the
-  history (so that the user can retrieve it while editing a later line),
-  call [`Readline::add_history_entry()`].
+- After receiving a line from the user, if you wish to add it to the history (so that
+  the user can retrieve it while editing a later line), call
+  [`Readline::add_history_entry()`].
 
-- Lines written to the associated [`SharedWriter`] while `readline()` is in
-  progress will be output to the screen above the input line.
+- Lines written to the associated [`SharedWriter`] while `readline()` is in progress
+  will be output to the screen above the input line.
 
 - When done, call [`crate::pause_and_resume_support::flush_internal()`] to ensure that
   all lines written to the [`SharedWriter`] are output.
@@ -194,14 +195,18 @@ the log file.
 - [Part 2: What?](https://youtu.be/3vQJguti02I)
 - [Part 3: Do the refactor and rename the crate](https://youtu.be/uxgyZzOmVIw)
 - [Part 4: Build the spinner](https://www.youtube.com/watch?v=fcb6rstRniI)
-- [Part 5: Add color gradient animation to spinner](https://www.youtube.com/watch?v=_QjsGDds270)
+- [Part 5: Add color gradient animation to
+  spinner](https://www.youtube.com/watch?v=_QjsGDds270)
 - [Part 6: Publish the crate and overview](https://youtu.be/X5wDVaZENOo)
-- [Testing playlist](https://www.youtube.com/watch?v=Xt495QLrFFk&list=PLofhE49PEwmwLR_4Noa0dFOSPmSpIg_l8)
+- [Testing
+  playlist](https://www.youtube.com/watch?v=Xt495QLrFFk&list=PLofhE49PEwmwLR_4Noa0dFOSPmSpIg_l8)
   - [Part 1: Intro](https://www.youtube.com/watch?v=Xt495QLrFFk)
   - [Part 2: Deep dive](https://www.youtube.com/watch?v=4iM9t5dgvU4)
 - Playlists
-  - [Build with Naz, async readline and spinner for CLI in Rust](https://www.youtube.com/watch?v=3vQJguti02I&list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
-  - [Build with Naz, testing in Rust](https://www.youtube.com/watch?v=Xt495QLrFFk&list=PLofhE49PEwmwLR_4Noa0dFOSPmSpIg_l8)
+  - [Build with Naz, async readline and spinner for CLI in
+    Rust](https://www.youtube.com/watch?v=3vQJguti02I&list=PLofhE49PEwmwelPkhfiqdFQ9IXnmGdnSE)
+  - [Build with Naz, testing in
+    Rust](https://www.youtube.com/watch?v=Xt495QLrFFk&list=PLofhE49PEwmwLR_4Noa0dFOSPmSpIg_l8)
 
 ## Why another async readline crate?
 
@@ -236,6 +241,7 @@ been rewritten and re-architected. Here are some changes made to the code:
 ## More info on Linux TTY
 
 - [TTY Demystified](https://www.linusakesson.net/programming/tty/)
-- [Deep dive into Unix shells, ptys, etc.](https://www.youtube.com/playlist?list=PLFAC320731F539902)
+- [Deep dive into Unix shells, ptys,
+  etc.](https://www.youtube.com/playlist?list=PLFAC320731F539902)
 
 License: Apache-2.0

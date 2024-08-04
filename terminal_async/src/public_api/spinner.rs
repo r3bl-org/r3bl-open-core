@@ -84,7 +84,7 @@ impl Spinner {
         // Pause the terminal.
         let _ = self
             .shared_writer
-            .line_sender
+            .line_channel_sender
             .send(LineControlSignal::Pause)
             .await;
 
@@ -154,7 +154,7 @@ impl Spinner {
         // Resume the terminal.
         let _ = self
             .shared_writer
-            .line_sender
+            .line_channel_sender
             .send(LineControlSignal::Resume)
             .await;
         Ok(())
