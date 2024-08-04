@@ -34,7 +34,7 @@ pub struct SharedWriter {
 
     /// Sender end of the channel, the receiver end is in [`crate::Readline`], which does
     /// the actual printing to `stdout`.
-    pub line_sender: tokio::sync::mpsc::Sender<LineControlSignal>,
+    pub line_channel_sender: tokio::sync::mpsc::Sender<LineControlSignal>,
 
     /// This is set to `true` when this struct is cloned. Only the first instance of this
     /// struct will report errors when [`std::io::Write::write()`] fails, due to the
@@ -48,7 +48,7 @@ impl SharedWriter {
     pub fn new(line_sender: tokio::sync::mpsc::Sender<LineControlSignal>) -> Self {
         Self {
             buffer: Default::default(),
-            line_sender,
+            line_channel_sender: line_sender,
             silent_error: false,
         }
     }
@@ -62,7 +62,7 @@ impl Clone for SharedWriter {
     fn clone(&self) -> Self {
         Self {
             buffer: Default::default(),
-            line_sender: self.line_sender.clone(),
+            line_channel_sender: self.line_channel_sender.clone(),
             silent_error: true,
         }
     }
@@ -78,7 +78,7 @@ impl Write for SharedWriter {
         // If self_buffer ends with a newline, send it to the line_sender.
         if self_buffer.ends_with(b"\n") {
             match self
-                .line_sender
+                .line_channel_sender
                 .try_send(LineControlSignal::Line(self_buffer.clone()))
             {
                 Ok(_) => {
