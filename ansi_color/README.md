@@ -82,7 +82,7 @@ fn main() {
 ```
 
 Please a look at the
-[`main` example](https://github.com/r3bl-org/r3bl_ansi_color/blob/main/examples/main.rs) to get a
+[`main` example](https://github.com/r3bl-org/r3bl-open-core/blob/main/ansi_color/examples/main.rs) to get a
 better idea of how to use this crate.
 
 ## Build, run, test tasks
