@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +15,13 @@
  *   limitations under the License.
  */
 
-// Attach.
-pub mod file_logging;
-pub mod friendly_random_id;
-pub mod debug_file_logging;
+use std::{fs::OpenOptions, io::Write, path::Path};
 
-// Re-export.
-pub use file_logging::*;
-pub use friendly_random_id::*;
-pub use debug_file_logging::*;
+pub fn debug_file_log(file_path: &Path, message: &str) {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(file_path)
+        .unwrap();
+    file.write_all(message.as_bytes()).unwrap();
+}

@@ -65,7 +65,7 @@ impl LineState {
             term_size,
             current_column,
             should_print_line_on_enter: true,
-            should_print_line_on_control_c: true,
+            should_print_line_on_control_c: false,
             line: String::new(),
             line_cursor_grapheme: 0,
             cluster_buffer: String::new(),
@@ -152,18 +152,23 @@ impl LineState {
     }
 
     /// Render line.
-    pub fn render(&self, term: &mut dyn Write) -> io::Result<()> {
-        write!(term, "{}{}", self.prompt, self.line)?;
+    pub fn render_and_flush(&self, term: &mut dyn Write) -> io::Result<()> {
+        let output = format!("{}{}", self.prompt, self.line);
+
+        write!(term, "{}", output)?;
         let line_len = self.prompt.len() + UnicodeWidthStr::width(&self.line[..]);
         self.move_to_beginning(term, line_len as u16)?;
         self.move_from_beginning(term, self.current_column)?;
+
+        term.flush()?;
+
         Ok(())
     }
 
     /// Clear line and render.
     pub fn clear_and_render(&self, term: &mut dyn Write) -> io::Result<()> {
         self.clear(term)?;
-        self.render(term)?;
+        self.render_and_flush(term)?;
         Ok(())
     }
 
@@ -201,7 +206,7 @@ impl LineState {
 
         term.queue(cursor::MoveToColumn(0))?;
 
-        self.render(term)?;
+        self.render_and_flush(term)?;
         Ok(())
     }
 
@@ -220,12 +225,28 @@ impl LineState {
         self.prompt.push_str(prompt);
         // recalculates column
         self.move_cursor(0)?;
-        self.render(term)?;
+        self.render_and_flush(term)?;
         term.flush()?;
         Ok(())
     }
 
-    pub fn handle_event(
+    pub fn exit(&mut self, term: &mut dyn Write) -> Result<(), ReadlineError> {
+        self.line.clear();
+        self.clear(term)?;
+        self.render_new_line_from_beginning(term)?;
+        Ok(())
+    }
+
+    pub fn render_new_line_from_beginning(
+        &mut self,
+        term: &mut dyn Write,
+    ) -> Result<(), ReadlineError> {
+        self.move_cursor(-100000)?;
+        self.clear_and_render(term)?;
+        Ok(())
+    }
+
+    pub fn apply_event_and_render(
         &mut self,
         event: Event,
         term: &mut dyn Write,
@@ -241,8 +262,7 @@ impl LineState {
             }) => match code {
                 // End of transmission (CTRL-D)
                 KeyCode::Char('d') => {
-                    writeln!(term)?;
-                    self.clear(term)?;
+                    self.exit(term)?;
                     return Ok(Some(ReadlineEvent::Eof));
                 }
                 // End of text (CTRL-C)
@@ -250,10 +270,7 @@ impl LineState {
                     if self.should_print_line_on_control_c {
                         self.print(&format!("{}{}", self.prompt, self.line), term)?;
                     }
-
-                    self.line.clear();
-                    self.move_cursor(-10000)?;
-                    self.clear_and_render(term)?;
+                    self.exit(term)?;
                     return Ok(Some(ReadlineEvent::Interrupted));
                 }
                 // Clear all
@@ -360,7 +377,7 @@ impl LineState {
                 ..
             }) => match code {
                 KeyCode::Enter => {
-                    // Print line so you can see what commands you've typed
+                    // Print line so you can see what commands you've typed.
                     if self.should_print_line_on_enter {
                         self.print(&format!("{}{}\n", self.prompt, self.line), term)?;
                     }
@@ -368,9 +385,7 @@ impl LineState {
                     // Take line
                     let line = std::mem::take(&mut self.line);
 
-                    // Render new line from beginning
-                    self.move_cursor(-100000)?;
-                    self.clear_and_render(term)?;
+                    self.render_new_line_from_beginning(term)?;
 
                     // Return line
                     return Ok(Some(ReadlineEvent::Line(line)));
@@ -384,7 +399,7 @@ impl LineState {
                         self.line.replace_range(pos..len, "");
                         self.move_cursor(-1)?;
 
-                        self.render(term)?;
+                        self.render_and_flush(term)?;
                     }
                 }
                 KeyCode::Delete => {
@@ -394,7 +409,7 @@ impl LineState {
                         let len = pos + str.len();
                         self.line.replace_range(pos..len, "");
 
-                        self.render(term)?;
+                        self.render_and_flush(term)?;
                     }
                 }
                 KeyCode::Left => {
@@ -424,7 +439,7 @@ impl LineState {
                         self.line += line;
                         self.clear(term)?;
                         self.move_cursor(100000)?;
-                        self.render(term)?;
+                        self.render_and_flush(term)?;
                     }
                 }
                 KeyCode::Down => {
@@ -434,7 +449,7 @@ impl LineState {
                         self.line += line;
                         self.clear(term)?;
                         self.move_cursor(100000)?;
-                        self.render(term)?;
+                        self.render_and_flush(term)?;
                     }
                 }
                 // Add character to line and output
@@ -460,7 +475,7 @@ impl LineState {
                             }
                         }
                     }
-                    self.render(term)?;
+                    self.render_and_flush(term)?;
                 }
                 _ => {}
             },
@@ -495,7 +510,7 @@ mod tests {
 
         let event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
 
-        let it = line.handle_event(
+        let it = line.apply_event_and_render(
             event,
             &mut *safe_output_terminal.lock().unwrap(),
             safe_history,
@@ -519,7 +534,7 @@ mod tests {
 
         let event = Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
 
-        let it = line.handle_event(
+        let it = line.apply_event_and_render(
             event,
             &mut *safe_output_terminal.lock().unwrap(),
             safe_history,
@@ -543,7 +558,7 @@ mod tests {
 
         let event = Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
 
-        let it = line.handle_event(
+        let it = line.apply_event_and_render(
             event,
             &mut *safe_output_terminal.lock().unwrap(),
             safe_history,

@@ -128,7 +128,7 @@ impl TerminalAsync {
     pub async fn flush(&mut self) {
         let _ = self
             .shared_writer
-            .line_sender
+            .line_channel_sender
             .send(crate::LineControlSignal::Flush)
             .await;
     }
@@ -136,7 +136,7 @@ impl TerminalAsync {
     pub async fn pause(&mut self) {
         let _ = self
             .shared_writer
-            .line_sender
+            .line_channel_sender
             .send(crate::LineControlSignal::Pause)
             .await;
     }
@@ -144,16 +144,9 @@ impl TerminalAsync {
     pub async fn resume(&mut self) {
         let _ = self
             .shared_writer
-            .line_sender
+            .line_channel_sender
             .send(crate::LineControlSignal::Resume)
             .await;
-    }
-
-    /// Close the underlying [Readline] instance. This will terminate all the tasks that
-    /// are managing [SharedWriter] tasks. This is useful when you want to exit the CLI
-    /// event loop, typically when the user requests it.
-    pub fn close(&mut self) {
-        self.readline.close();
     }
 
     pub fn print_exit_message(message: &str) -> miette::Result<()> {

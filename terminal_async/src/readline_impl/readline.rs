@@ -30,7 +30,7 @@ use std::{
     sync::Arc,
 };
 use thiserror::Error;
-use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
 /// # Mental model and overview
 ///
@@ -47,11 +47,21 @@ use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
 /// `Readline` task via the `line` channel, using the [`SharedWriter::line_sender`].
 ///
 /// When you create a new [`Readline`] instance, a task, is started via
-/// [`pause_and_resume_support::spawn_task_to_monitor_line_channel()`]. This task
-/// monitors the `line` channel, and processes any messages that are sent to it. This
-/// allows the task to be paused, and resumed, and to flush the output from the
-/// [`SharedWriter`]s. When you [`Readline::close()`] the instance or drop it, this task
-/// is aborted.
+/// [`pause_and_resume_support::spawn_task_to_monitor_line_channel()`]. This task monitors
+/// the `line` channel, and processes any messages that are sent to it. This allows the
+/// task to be paused, and resumed, and to flush the output from the [`SharedWriter`]s.
+///
+/// # When to terminate the session
+///
+/// There is no `close()` function on [`Readline`]. You simply drop it. This will cause
+/// the the terminal to come out of raw mode. And all the buffers will be flushed.
+/// However, there are 2 ways to use this [`Readline::readline()`] in a loop or just as a
+/// one off. Each time this function is called, you have to `await` it to return the user
+/// input or `Interrupted` or `Eof` signal.
+///
+/// When creating a new [crate::TerminalAsync] instance, you can use this repeatedly
+/// before dropping it. This is because the [crate::SharedWriter] is cloned, and the
+/// terminal is kept in raw mode until the associated [crate::Readline] is dropped.
 ///
 /// # Inputs and dependency injection
 ///
@@ -136,12 +146,6 @@ pub struct Readline {
 
     /// Collects lines that are written to the terminal while the terminal is paused.
     pub safe_is_paused_buffer: SafePauseBuffer,
-
-    /// Shutdown broadcast channel that is used to stop both:
-    /// 1. [`pause_and_resume_support::spawn_task_to_monitor_line_channel`].
-    /// 2. [`Readline::readline`] if it is currently running.
-    /// 3. Also see: [`Readline::close`].
-    pub shutdown_sender: tokio::sync::broadcast::Sender<bool>,
 }
 
 /// Error returned from [`readline()`][Readline::readline]. Such errors generally require
@@ -186,8 +190,14 @@ pub enum LineControlSignal {
 /// Internal control flow for the `readline` method. This is used primarily to make testing
 /// easier.
 #[derive(Debug, PartialEq, Clone)]
-pub enum InternalControlFlow<T, E> {
+pub enum ControlFlowExtended<T, E> {
     ReturnOk(T),
+    ReturnError(E),
+    Continue,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ControlFlowLimited<E> {
     ReturnError(E),
     Continue,
 }
@@ -198,50 +208,104 @@ pub mod pause_and_resume_support {
     /// Receiver end of the channel, the sender end is in [`SharedWriter`], which does the
     /// actual writing to the terminal.
     pub fn spawn_task_to_monitor_line_channel(
-        shutdown_sender: tokio::sync::broadcast::Sender<bool>,
-        /* move */ mut line_receiver: Receiver<LineControlSignal>,
+        mut line_channel_receiver: mpsc::Receiver<LineControlSignal>, /* This is moved. */
         safe_is_paused: SafeBool,
         safe_line_state: SafeLineState,
         safe_raw_terminal: SafeRawTerminal,
         safe_is_paused_buffer: SafePauseBuffer,
     ) -> tokio::task::JoinHandle<()> {
-        let mut shutdown_receiver = shutdown_sender.subscribe();
         tokio::spawn(async move {
             loop {
                 tokio::select! {
-                    // Poll line channel for events.
+                    // Branch: Poll line channel for events.
                     // This branch is cancel safe because recv is cancel safe.
-                    maybe_line_control_signal = line_receiver.recv() => {
-                        let control_flow = process_line_control_signal(
-                            maybe_line_control_signal,
-                            safe_is_paused_buffer.clone(),
-                            safe_line_state.clone(),
-                            safe_raw_terminal.clone(),
-                            safe_is_paused.clone(),
-                        );
-
-                        match control_flow {
-                            InternalControlFlow::ReturnError(_) => {
-                                line_receiver.close();
-                                break;
-                            }
-                            InternalControlFlow::Continue => {
-                                // continue.
-                            }
-                            _ => {
-                                unreachable!();
+                    maybe_line_control_signal = line_channel_receiver.recv() => {
+                        // Channel is open.
+                        if let Some(maybe_line_control_signal) = maybe_line_control_signal {
+                            let control_flow = process_line_control_signal(
+                                maybe_line_control_signal,
+                                safe_is_paused_buffer.clone(),
+                                safe_line_state.clone(),
+                                safe_raw_terminal.clone(),
+                                safe_is_paused.clone(),
+                            );
+                            match control_flow {
+                                ControlFlowLimited::ReturnError(_) => {
+                                    // Initiate shutdown.
+                                    break;
+                                }
+                                ControlFlowLimited::Continue => {
+                                    // continue.
+                                }
                             }
                         }
-                    }
-
-                    // Poll shutdown channel.
-                    // This branch is cancel safe because recv is cancel safe.
-                    _ = shutdown_receiver.recv() => {
-                        break;
+                        // Channel is closed.
+                        else {
+                            // Initiate shutdown.
+                            break;
+                        }
                     }
                 }
             }
         })
+    }
+
+    /// Returns only the following:
+    /// - [InternalControlFlow::Continue]
+    /// - [InternalControlFlow::ReturnError]
+    pub fn process_line_control_signal(
+        line_control_signal: LineControlSignal,
+        self_safe_is_paused_buffer: SafePauseBuffer,
+        self_safe_line_state: SafeLineState,
+        self_safe_raw_terminal: SafeRawTerminal,
+        self_safe_is_paused: SafeBool,
+    ) -> ControlFlowLimited<ReadlineError> {
+        match line_control_signal {
+            LineControlSignal::Line(buf) => {
+                // If paused, then return!
+                if *self_safe_is_paused.lock().unwrap() {
+                    let pause_buffer = &mut *self_safe_is_paused_buffer.lock().unwrap();
+                    pause_buffer.push_back(buf);
+                    return ControlFlowLimited::Continue;
+                }
+
+                if let Err(err) = self_safe_line_state
+                    .lock()
+                    .unwrap()
+                    .print_data(&buf, &mut *self_safe_raw_terminal.lock().unwrap())
+                {
+                    return ControlFlowLimited::ReturnError(err);
+                }
+                if let Err(err) = self_safe_raw_terminal.lock().unwrap().flush() {
+                    return ControlFlowLimited::ReturnError(err.into());
+                }
+            }
+
+            LineControlSignal::Flush => {
+                let _ = flush_internal(
+                    self_safe_is_paused_buffer,
+                    self_safe_is_paused,
+                    self_safe_line_state,
+                    self_safe_raw_terminal,
+                );
+            }
+
+            LineControlSignal::Pause => {
+                *self_safe_is_paused.lock().unwrap() = true;
+            }
+
+            LineControlSignal::Resume => {
+                *self_safe_is_paused.lock().unwrap() = false;
+                let _ = flush_internal(
+                    self_safe_is_paused_buffer,
+                    self_safe_is_paused,
+                    self_safe_line_state,
+                    self_safe_raw_terminal,
+                );
+            }
+        }
+
+        ControlFlowLimited::Continue
     }
 
     /// Flush all writers to terminal and erase the prompt string.
@@ -273,68 +337,13 @@ pub mod pause_and_resume_support {
 
         Ok(())
     }
+}
 
-    /// Returns only the following:
-    /// - [InternalControlFlow::Continue]
-    /// - [InternalControlFlow::ReturnError]
-    pub fn process_line_control_signal(
-        maybe_line_control_signal: Option<LineControlSignal>,
-        self_safe_is_paused_buffer: SafePauseBuffer,
-        self_safe_line_state: SafeLineState,
-        self_safe_raw_terminal: SafeRawTerminal,
-        self_safe_is_paused: SafeBool,
-    ) -> InternalControlFlow<(), ReadlineError> {
-        match maybe_line_control_signal {
-            Some(line_control_signal) => match line_control_signal {
-                LineControlSignal::Line(buf) => {
-                    // If paused, then return!
-                    if *self_safe_is_paused.lock().unwrap() {
-                        let pause_buffer = &mut *self_safe_is_paused_buffer.lock().unwrap();
-                        pause_buffer.push_back(buf);
-                        return InternalControlFlow::Continue;
-                    }
-
-                    if let Err(err) = self_safe_line_state
-                        .lock()
-                        .unwrap()
-                        .print_data(&buf, &mut *self_safe_raw_terminal.lock().unwrap())
-                    {
-                        return InternalControlFlow::ReturnError(err);
-                    }
-                    if let Err(err) = self_safe_raw_terminal.lock().unwrap().flush() {
-                        return InternalControlFlow::ReturnError(err.into());
-                    }
-                }
-
-                LineControlSignal::Flush => {
-                    let _ = flush_internal(
-                        self_safe_is_paused_buffer,
-                        self_safe_is_paused,
-                        self_safe_line_state,
-                        self_safe_raw_terminal,
-                    );
-                }
-
-                LineControlSignal::Pause => {
-                    *self_safe_is_paused.lock().unwrap() = true;
-                }
-
-                LineControlSignal::Resume => {
-                    *self_safe_is_paused.lock().unwrap() = false;
-                    let _ = flush_internal(
-                        self_safe_is_paused_buffer,
-                        self_safe_is_paused,
-                        self_safe_line_state,
-                        self_safe_raw_terminal,
-                    );
-                }
-            },
-            None => {
-                return InternalControlFlow::ReturnError(ReadlineError::Closed);
-            }
-        }
-
-        InternalControlFlow::Continue
+impl Drop for Readline {
+    fn drop(&mut self) {
+        let term = &mut *self.safe_raw_terminal.lock().unwrap();
+        _ = self.safe_line_state.lock().unwrap().exit(term);
+        _ = disable_raw_mode();
     }
 }
 
@@ -349,12 +358,8 @@ impl Readline {
         /* move */ pinned_input_stream: PinnedInputStream<CrosstermEventResult>,
     ) -> Result<(Self, SharedWriter), ReadlineError> {
         // Line channel.
-        let line_channel = tokio::sync::mpsc::channel::<LineControlSignal>(CHANNEL_CAPACITY);
-        let (line_sender, line_receiver) = line_channel;
-
-        // Shutdown channel.
-        let shutdown_channel = tokio::sync::broadcast::channel::<bool>(1);
-        let (shutdown_sender, _) = shutdown_channel;
+        let line_channel = mpsc::channel::<LineControlSignal>(CHANNEL_CAPACITY);
+        let (line_channel_sender, line_channel_receiver) = line_channel;
 
         // Paused state.
         let safe_is_paused = Arc::new(StdMutex::new(false));
@@ -377,8 +382,7 @@ impl Readline {
 
         // Start task to process line_receiver.
         pause_and_resume_support::spawn_task_to_monitor_line_channel(
-            shutdown_sender.clone(),
-            line_receiver,
+            line_channel_receiver,
             safe_is_paused.clone(),
             safe_line_state.clone(),
             safe_raw_terminal.clone(),
@@ -394,7 +398,6 @@ impl Readline {
             safe_is_paused: safe_is_paused.clone(),
             history_receiver,
             safe_history,
-            shutdown_sender,
             safe_is_paused_buffer,
         };
 
@@ -403,7 +406,7 @@ impl Readline {
             .safe_line_state
             .lock()
             .unwrap()
-            .render(&mut *readline.safe_raw_terminal.lock().unwrap())?;
+            .render_and_flush(&mut *readline.safe_raw_terminal.lock().unwrap())?;
         readline
             .safe_raw_terminal
             .lock()
@@ -412,7 +415,7 @@ impl Readline {
         readline.safe_raw_terminal.lock().unwrap().flush()?;
 
         // Create the shared writer.
-        let shared_writer = SharedWriter::new(line_sender);
+        let shared_writer = SharedWriter::new(line_channel_sender);
 
         // Return the instance and the shared writer.
         Ok((readline, shared_writer))
@@ -453,20 +456,27 @@ impl Readline {
     /// If `enter` is true, then when the user presses "Enter", the prompt and the text
     /// they entered will remain on the screen, and the cursor will move to the next line.
     /// If `enter` is false, the prompt & input will be erased instead.
+    /// The default value for this is `true`.
     ///
     /// `control_c` similarly controls the behavior for when the user presses Ctrl-C.
-    ///
-    /// The default value for both settings is `true`.
+    /// The default value for this is `false`.
     pub fn should_print_line_on(&mut self, enter: bool, control_c: bool) {
         let mut line_state = self.safe_line_state.lock().unwrap();
         line_state.should_print_line_on_enter = enter;
         line_state.should_print_line_on_control_c = control_c;
     }
 
-    /// Polling function for `readline`, manages all input and output. Returns either an
-    /// [ReadlineEvent] or an [ReadlineError].
+    /// This function returns when <kdb>Ctrl+D</kbd>, <kdb>Ctrl+C</kbd>, or
+    /// <kdb>Enter</kbd> is pressed with some user input.
+    ///
+    /// Note that this function can be called repeatedly in a loop. It will return each
+    /// line of input as it is entered (and return / exit). The [crate::TerminalAsync] can
+    /// be re-used, since the [crate::SharedWriter] is cloned and the terminal is kept in
+    /// raw mode until the associated [crate::Readline] is dropped.
+    ///
+    /// Polling function for [`Self::readline`], manages all input and output. Returns
+    /// either an [ReadlineEvent] or an [ReadlineError].
     pub async fn readline(&mut self) -> miette::Result<ReadlineEvent, ReadlineError> {
-        let mut shutdown_receiver = self.shutdown_sender.subscribe();
         loop {
             tokio::select! {
                 // Poll for events.
@@ -476,15 +486,21 @@ impl Readline {
                 // - So if this future is dropped, then the item in the
                 //   pinned_input_stream isn't used and the state isn't modified.
                 maybe_result_crossterm_event = self.pinned_input_stream.next() => {
-                    match readline_internal::process_event(
-                        maybe_result_crossterm_event,
-                        self.safe_line_state.clone(),
-                        &mut *self.safe_raw_terminal.lock().unwrap(),
-                        self.safe_history.clone()
-                    ) {
-                        InternalControlFlow::ReturnOk(ok_value) => {return Ok(ok_value);},
-                        InternalControlFlow::ReturnError(err_value) => {return Err(err_value);},
-                        InternalControlFlow::Continue => {}
+                    if let Some(result_crossterm_event) = maybe_result_crossterm_event {
+                        match readline_internal::apply_event_to_line_state_and_render(
+                            result_crossterm_event,
+                            self.safe_line_state.clone(),
+                            &mut *self.safe_raw_terminal.lock().unwrap(),
+                            self.safe_history.clone()
+                        ) {
+                            ControlFlowExtended::ReturnOk(ok_value) => {
+                                return Ok(ok_value);
+                            },
+                            ControlFlowExtended::ReturnError(err_value) => {
+                                return Err(err_value);
+                            },
+                            ControlFlowExtended::Continue => {}
+                        }
                     }
                 },
 
@@ -492,12 +508,6 @@ impl Readline {
                 // This branch is cancel safe because recv is cancel safe.
                 maybe_line = self.history_receiver.recv() => {
                     self.safe_history.lock().unwrap().update(maybe_line);
-                }
-
-                // Poll shutdown channel.
-                // This branch is cancel safe because recv is cancel safe.
-                _ = shutdown_receiver.recv() => {
-                    break Err(ReadlineError::Closed);
                 }
             }
         }
@@ -512,61 +522,36 @@ impl Readline {
 pub mod readline_internal {
     use super::*;
 
-    pub fn process_event(
-        maybe_result_crossterm_event: Option<CrosstermEventResult>,
+    pub fn apply_event_to_line_state_and_render(
+        result_crossterm_event: CrosstermEventResult,
         self_line_state: SafeLineState,
         self_raw_terminal: &mut dyn Write,
         self_safe_history: SafeHistory,
-    ) -> InternalControlFlow<ReadlineEvent, ReadlineError> {
-        if let Some(result_crossterm_event) = maybe_result_crossterm_event {
-            match result_crossterm_event {
-                Ok(crossterm_event) => {
-                    let mut it = self_line_state.lock().unwrap();
-                    let result_maybe_readline_event =
-                        it.handle_event(crossterm_event, self_raw_terminal, self_safe_history);
-                    match result_maybe_readline_event {
-                        Ok(maybe_readline_event) => {
-                            if let Err(e) = self_raw_terminal.flush() {
-                                return InternalControlFlow::ReturnError(e.into());
-                            }
-                            if let Some(readline_event) = maybe_readline_event {
-                                return InternalControlFlow::ReturnOk(readline_event);
-                            }
+    ) -> ControlFlowExtended<ReadlineEvent, ReadlineError> {
+        match result_crossterm_event {
+            Ok(crossterm_event) => {
+                let mut line_state = self_line_state.lock().unwrap();
+
+                let result_maybe_readline_event = line_state.apply_event_and_render(
+                    crossterm_event,
+                    self_raw_terminal,
+                    self_safe_history,
+                );
+
+                match result_maybe_readline_event {
+                    Ok(maybe_readline_event) => {
+                        if let Some(readline_event) = maybe_readline_event {
+                            return ControlFlowExtended::ReturnOk(readline_event);
                         }
-                        Err(e) => return InternalControlFlow::ReturnError(e),
                     }
+                    Err(e) => return ControlFlowExtended::ReturnError(e),
                 }
-                Err(e) => return InternalControlFlow::ReturnError(e.into()),
             }
+
+            Err(e) => return ControlFlowExtended::ReturnError(e.into()),
         }
-        InternalControlFlow::Continue
-    }
-}
 
-/// Exit raw mode when the instance is dropped.
-impl Drop for Readline {
-    /// There is no need to explicitly call [Readline::close()] if the instance is
-    /// dropped, since it will close the shutdown channel and the task
-    /// 1. [`pause_and_resume_support::spawn_task_to_monitor_line_channel`].
-    /// 2. [`Readline::readline`] if it is currently running.
-    /// 3. See also: [`Readline::close`].
-    fn drop(&mut self) {
-        let _ = self.shutdown_sender.send(true);
-        let _ = disable_raw_mode();
-    }
-}
-
-impl Readline {
-    /// Call this to shutdown:
-    /// 1. [`pause_and_resume_support::spawn_task_to_monitor_line_channel()`].
-    /// 2. [`Readline::readline()`] only if it is currently running.
-    ///
-    /// Typically this happens when your CLI wants to exit, due to some user input
-    /// requesting this. This will result in any awaiting tasks in various places to error
-    /// out, which is the desired behavior, rather than just hanging, waiting on events
-    /// that will never happen.
-    pub fn close(&mut self) {
-        let _ = self.shutdown_sender.send(true);
+        ControlFlowExtended::Continue
     }
 }
 
@@ -638,14 +623,14 @@ mod tests {
         let Some(Ok(event)) = iter.next() else {
             panic!();
         };
-        let control_flow = readline_internal::process_event(
-            Some(Ok(event.clone())),
+        let control_flow = readline_internal::apply_event_to_line_state_and_render(
+            Ok(event.clone()),
             readline.safe_line_state.clone(),
             &mut *readline.safe_raw_terminal.lock().unwrap(),
             safe_history.clone(),
         );
 
-        assert!(matches!(control_flow, InternalControlFlow::Continue));
+        assert!(matches!(control_flow, ControlFlowExtended::Continue));
         assert_eq!(readline.safe_line_state.lock().unwrap().line, "a");
 
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
@@ -702,7 +687,7 @@ mod tests {
         .unwrap();
 
         shared_writer
-            .line_sender
+            .line_channel_sender
             .send(LineControlSignal::Pause)
             .await
             .unwrap();
@@ -711,7 +696,7 @@ mod tests {
         assert!(*readline.safe_is_paused.lock().unwrap());
 
         shared_writer
-            .line_sender
+            .line_channel_sender
             .send(LineControlSignal::Resume)
             .await
             .unwrap();
@@ -740,7 +725,7 @@ mod tests {
         .unwrap();
 
         shared_writer
-            .line_sender
+            .line_channel_sender
             .send(LineControlSignal::Pause)
             .await
             .unwrap();
@@ -749,7 +734,7 @@ mod tests {
         assert!(*readline.safe_is_paused.lock().unwrap());
 
         shared_writer
-            .line_sender
+            .line_channel_sender
             .send(LineControlSignal::Line("abc".into()))
             .await
             .unwrap();
@@ -760,7 +745,7 @@ mod tests {
         assert_eq!(String::from_utf8_lossy(&pause_buffer[0]), "abc".to_string());
 
         shared_writer
-            .line_sender
+            .line_channel_sender
             .send(LineControlSignal::Resume)
             .await
             .unwrap();
