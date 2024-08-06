@@ -330,6 +330,9 @@ in a text editor.
     [issue](https://github.com/r3bl-org/r3bl-open-core/issues/331).
 
 - Updated:
+  - Change the main examples launcher (which you can run using `nu run examples`) so that
+    it correctly handles raw mode transitions, and also correctly uses the
+    `r3bl_terminal_async` crate to ask the user for input (using "async readline").
   - Drop dependency on `reedline`. Use `r3bl_terminal_async` instead to get async readline
     capabilities. Update examples to use this new crate, and make example launcher easier
     to maintain.
@@ -603,7 +606,7 @@ exhaustively tested and is able to handle many more corner cases.
 <a id="markdown-next-release" name="next-release"></a>
 
 - Added:
-  - New declarative macro `ok!()` that is just syntatic sugar for `Ok(())`. If you use
+  - New declarative macro `ok!()` that is just syntactic sugar for `Ok(())`. If you use
     `ok!($expr)` then it will return `Ok($expr)`.
 
 ### v0.9.13 (2024-04-15)
