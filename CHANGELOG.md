@@ -783,7 +783,17 @@ links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures)
 <a id="markdown-next-release" name="next-release"></a>
 
 - Added:
-  - Added better examples for how to use `TerminalAsync::try_new()` in Rust docs.
+  - Add better examples for how to use `TerminalAsync::try_new()` in Rust docs.
+  - Add a new example `async_shell.rs` to demonstrate how to use `TerminalAsync` to create
+    an interactive shell (with `bash` under the covers) that can orchestrate a shell
+    asynchronously using
+    [`tokio::process`](https://docs.rs/tokio/latest/tokio/process/struct.Child.html).
+
+- Changed:
+  - Clean up the shutdown mechanism for `TerminalAsync` and `Readline` so that it is
+    automatic, and doesn't require the use of `close()` anymore. By simply dropping the
+    `Readline` instance, it will automatically clean up after itself (and correctly handle
+    raw mode entry and exit).
 
 ### v0.5.5 (2024-07-13)
 <a id="markdown-v0.5.5-2024-07-13" name="v0.5.5-2024-07-13"></a>

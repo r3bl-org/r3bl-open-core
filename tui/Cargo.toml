@@ -75,7 +75,7 @@ copypasta-ext = "0.4.4"
 
 [dev-dependencies]
 # Async readline for running examples.
-r3bl_terminal_async = { path = "../terminal_async", version = "0.5.3" }
+r3bl_terminal_async = { path = "../terminal_async" }
 
 # For assert_eq2! macro.
 pretty_assertions = "1.4.0"
