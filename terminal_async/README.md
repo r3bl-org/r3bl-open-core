@@ -116,6 +116,7 @@ with the following key bindings:
 ```bash
 cargo run --example terminal_async
 cargo run --example spinner
+cargo run --example shell_async
 ```
 
 ## How to use this crate
@@ -238,10 +239,8 @@ been rewritten and re-architected. Here are some changes made to the code:
 - [Discussion: stdin, stdout redirection for spawned
   processes](https://stackoverflow.com/questions/34611742/how-do-i-read-the-output-of-a-child-process-without-blocking-in-rust)
 
-## More info on Linux TTY
+## More info on Linux TTY and async Rust
 
-- [TTY Demystified](https://www.linusakesson.net/programming/tty/)
-- [Deep dive into Unix shells, ptys,
-  etc.](https://www.youtube.com/playlist?list=PLFAC320731F539902)
+- [Linux TTY and async Rust](https://github.com/nazmulidris/rust-scratch/blob/main/tty/README.md)
 
 License: Apache-2.0

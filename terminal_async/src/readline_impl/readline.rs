@@ -44,7 +44,8 @@ use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 /// When you call [Self::readline()] it enters an infinite loop. During which you can type
 /// things into the multiline editor, which also displays the prompt. You can press up,
 /// down, left, right, etc. While in this loop other tasks can send messages to the
-/// `Readline` task via the `line` channel, using the [`SharedWriter::line_sender`].
+/// `Readline` task via the `line` channel, using the
+/// [`SharedWriter::line_channel_sender`].
 ///
 /// When you create a new [`Readline`] instance, a task, is started via
 /// [`pause_and_resume_support::spawn_task_to_monitor_line_channel()`]. This task monitors
@@ -250,9 +251,6 @@ pub mod pause_and_resume_support {
         })
     }
 
-    /// Returns only the following:
-    /// - [InternalControlFlow::Continue]
-    /// - [InternalControlFlow::ReturnError]
     pub fn process_line_control_signal(
         line_control_signal: LineControlSignal,
         self_safe_is_paused_buffer: SafePauseBuffer,
@@ -466,8 +464,8 @@ impl Readline {
         line_state.should_print_line_on_control_c = control_c;
     }
 
-    /// This function returns when <kdb>Ctrl+D</kbd>, <kdb>Ctrl+C</kbd>, or
-    /// <kdb>Enter</kbd> is pressed with some user input.
+    /// This function returns when <kbd>Ctrl+D</kbd>, <kbd>Ctrl+C</kbd>, or
+    /// <kbd>Enter</kbd> is pressed with some user input.
     ///
     /// Note that this function can be called repeatedly in a loop. It will return each
     /// line of input as it is entered (and return / exit). The [crate::TerminalAsync] can

@@ -56,7 +56,7 @@ impl SharedWriter {
 
 /// Custom [Clone] implementation for [`SharedWriter`]. This ensures that each new
 /// instance gets its own buffer to write data into. And a [Clone] of the
-/// [Self::line_sender], so all the [`LineControlSignal`]s end up in the same `line`
+/// [Self::line_channel_sender], so all the [`LineControlSignal`]s end up in the same `line`
 /// [tokio::sync::mpsc::channel] that lives in the [`crate::Readline`] instance.
 impl Clone for SharedWriter {
     fn clone(&self) -> Self {
