@@ -45,12 +45,26 @@ impl TerminalAsync {
     ///
     /// # Example
     ///
+    /// Here's an example of how to use this method:
+    ///
     /// ```
     /// async fn foo() -> miette::Result<()> {
     ///     use r3bl_terminal_async::TerminalAsync;
     ///     let terminal_async = TerminalAsync::try_new("> ")
     ///         .await?
     ///         .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
+    ///     r3bl_rs_utils_core::ok!()
+    /// }
+    /// ```
+    ///
+    /// Another example:
+    ///
+    /// ```
+    /// async fn foo() -> miette::Result<()> {
+    ///     use r3bl_terminal_async::TerminalAsync;
+    ///     let Some(mut terminal_async) = TerminalAsync::try_new("> ").await? else {
+    ///         return Err(miette::miette!("Failed to create terminal"));
+    ///     };
     ///     r3bl_rs_utils_core::ok!()
     /// }
     /// ```

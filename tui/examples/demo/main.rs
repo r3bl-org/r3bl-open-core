@@ -40,33 +40,15 @@ use r3bl_rs_utils_core::*;
 use r3bl_terminal_async::*;
 use r3bl_tui::*;
 use strum::IntoEnumIterator;
-use strum_macros::{Display, EnumIter, EnumString};
+use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
 #[tokio::main]
 async fn main() -> CommonResult<()> {
     println!("{}", style_prompt(generate_help_msg().as_str()));
 
-    throws!({
-        loop {
-            match get_user_selection_from_terminal().await? {
-                Continuation::Exit => break,
-                Continuation::Result(user_selection) => {
-                    if run_user_selected_example(user_selection).await.is_err() {
-                        break;
-                    };
-                }
-                _ => {}
-            }
-        }
-    })
-}
-
-async fn get_user_selection_from_terminal() -> CommonResult<Continuation<String>> {
-    let maybe_terminal_async = TerminalAsync::try_new("> ").await?;
-
     // If the terminal is not fully interactive, then return early.
-    let Some(mut terminal_async) = maybe_terminal_async else {
-        return Ok(Continuation::Exit);
+    let Some(mut terminal_async) = TerminalAsync::try_new("> ").await? else {
+        return CommonError::new_err_with_only_msg("Terminal is not fully interactive");
     };
 
     // Pre-populate the readline's history with some entries.
@@ -77,13 +59,17 @@ async fn get_user_selection_from_terminal() -> CommonResult<Continuation<String>
     }
 
     loop {
-        let result_user_input = terminal_async.get_readline_event().await;
-        match result_user_input {
-            Ok(user_input) => match user_input {
-                ReadlineEvent::Line(input) => return Ok(Continuation::Result(input)),
-                ReadlineEvent::Eof => break,
-                ReadlineEvent::Interrupted => break,
-                _ => {}
+        let result_readline_event = terminal_async.get_readline_event().await;
+        match result_readline_event {
+            Ok(readline_event) => match readline_event {
+                ReadlineEvent::Line(input) => {
+                    if run_user_selected_example(input).await.is_err() {
+                        break;
+                    };
+                    crossterm::terminal::enable_raw_mode()?;
+                }
+                ReadlineEvent::Eof | ReadlineEvent::Interrupted => break,
+                ReadlineEvent::Resized => { /* continue */ }
             },
             Err(_) => {
                 break;
@@ -91,13 +77,20 @@ async fn get_user_selection_from_terminal() -> CommonResult<Continuation<String>
         }
     }
 
-    Ok(Continuation::Exit)
+    ok!()
 }
+
 /// You can type both "0" or "App with no layout" to run the first example. Here are some
 /// details:
 /// - `selection` is what the user types in the terminal, eg: "0" or "App with no layout".
 /// - result_command is the parsed command from the selection, eg:
 ///   [AutoCompleteCommand::NoLayout].
+///
+/// # Raw mode caveat
+///
+/// This function will take the terminal out of raw mode when it returns. This is because
+/// the examples below will use `r3bl_tui` which will put the terminal in raw mode, use
+/// alt screen, and then restore it all when it exits.
 async fn run_user_selected_example(selection: String) -> CommonResult<()> {
     let result_command /* Eg: Ok(Exit) */ =
         AutoCompleteCommand::from_str(&selection /* eg: "0" */);
@@ -130,7 +123,7 @@ async fn run_user_selected_example(selection: String) -> CommonResult<()> {
     }
 }
 
-#[derive(Debug, PartialEq, EnumString, EnumIter, Display)]
+#[derive(Debug, PartialEq, EnumString, EnumIter, Display, AsRefStr)]
 enum AutoCompleteCommand {
     #[strum(ascii_case_insensitive)]
     #[strum(to_string = "App with no layout")]
@@ -180,13 +173,12 @@ Type a number to run corresponding example:
   4. ⚾ {}
   5. 📔 {}
 
-or type Ctrl+C / Ctrl+D / '{}' to exit",
+or type Ctrl+C, Ctrl+D, 'exit', or 'x' to exit",
         AutoCompleteCommand::NoLayout,
         AutoCompleteCommand::OneColLayout,
         AutoCompleteCommand::TwoColLayout,
         AutoCompleteCommand::Editor,
         AutoCompleteCommand::Slides,
         AutoCompleteCommand::Commander,
-        AutoCompleteCommand::Exit,
     )
 }
