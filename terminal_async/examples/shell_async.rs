@@ -15,6 +15,10 @@
  *   limitations under the License.
  */
 
+// TODO: try and pause input when suspended
+// TODO: fix prompt size in terminal_async, which size the prompt with ansi stripped length
+// TODO: add a colorized prompt in this example
+
 use std::io::Write;
 
 use child_process_constructor::*;
@@ -68,9 +72,9 @@ use tokio::{
 /// # Run the binary
 ///
 /// ```text
-/// ┌────────────────────────────────────────┐
-/// │ > cargo run --bin async_command_exec_5 │
-/// └────────────────────────────────────────┘
+/// ┌───────────────────────────────────┐
+/// │ > cargo run --example shell_async │
+/// └───────────────────────────────────┘
 /// ```
 ///
 /// Type the following commands to have a go at this.
@@ -91,9 +95,9 @@ use tokio::{
 ///
 /// # Clean up any left over processes
 /// ```text
-/// ┌────────────────────────────────────────┐
-/// │ > killall -9 bash async_command_exec_5 │
-/// └────────────────────────────────────────┘
+/// ┌───────────────────────────────┐
+/// │ > killall -9 bash shell_async │
+/// └───────────────────────────────┘
 /// ```
 #[tokio::main]
 pub async fn main() -> miette::Result<()> {
