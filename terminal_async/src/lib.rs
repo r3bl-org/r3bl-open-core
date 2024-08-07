@@ -103,6 +103,35 @@
 //! - [Build with Naz, testing in
 //!   Rust](https://www.youtube.com/watch?v=Xt495QLrFFk&list=PLofhE49PEwmwLR_4Noa0dFOSPmSpIg_l8)
 //!
+//! ## Pause and resume support
+//!
+//! The pause and resume functionality is implemented using:
+//! - [LineState::is_paused] - Used to check if the line state is paused and affects
+//!   rendering and input.
+//! - [LineState::set_paused] - Use to set the paused state via the [SharedWriter] below.
+//!   This can't be called directly (outside the crate itself).
+//! - [SharedWriter::line_state_control_channel_sender] - Mechanism used to manipulate the
+//!   paused state.
+//!
+//! The [Readline::new] or [TerminalAsync::try_new] create a `line_channel` to send and
+//! receive [LineStateControlSignal].
+//! 1. The sender end of this channel is moved to the [SharedWriter]. So any
+//!    [SharedWriter] can be used to send [LineStateControlSignal]s to the channel, which
+//!    will be processed in the task started, just for this, in [Readline::new]. This is
+//!    the primary mechanism to switch between pause and resume. Some helper functions are
+//!    provided in [TerminalAsync::pause] and [TerminalAsync::resume], though you can just
+//!    send the signals directly to the channel's sender via the
+//!    [SharedWriter::line_state_control_channel_sender].
+//! 2. The receiver end of this [tokio::sync::mpsc::channel] is moved to the task that is
+//!    spawned by [Readline::new]. This is where the actual work is done when signals are
+//!    sent via the sender (described above).
+//!
+//! While the [Readline] is suspended, no input is possible, and only <kbd>Ctrl+C</kbd>
+//! and <kbd>Ctrl+D</kbd> are allowed to make it through, the rest of the keypresses are
+//! ignored.
+//!
+//! See [Readline] module docs for more implementation details on this.
+//!
 //! ## Input Editing Behavior
 //!
 //! While entering text, the user can edit and navigate through the current input line
@@ -181,8 +210,8 @@
 //! - Lines written to the associated [`SharedWriter`] while `readline()` is in progress
 //!   will be output to the screen above the input line.
 //!
-//! - When done, call [`crate::pause_and_resume_support::flush_internal()`] to ensure that
-//!   all lines written to the [`SharedWriter`] are output.
+//! - When done, call [`crate::pause_resume_support::flush_internal()`] to ensure that all
+//!   lines written to the [`SharedWriter`] are output.
 //!
 //! ## [`Spinner::try_start()`]
 //!
@@ -256,7 +285,8 @@
 //!
 //! # More info on Linux TTY and async Rust
 //!
-//! - [Linux TTY and async Rust](https://github.com/nazmulidris/rust-scratch/blob/main/tty/README.md)
+//! - [Linux TTY and async
+//!   Rust](https://github.com/nazmulidris/rust-scratch/blob/main/tty/README.md)
 
 // Attach sources.
 pub mod public_api;

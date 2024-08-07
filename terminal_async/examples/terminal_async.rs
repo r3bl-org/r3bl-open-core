@@ -18,7 +18,7 @@
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
 use r3bl_terminal_async::{tracing_setup, DisplayPreference, StdMutex, TracingConfig};
-use r3bl_terminal_async::{LineControlSignal, Spinner, SpinnerStyle};
+use r3bl_terminal_async::{LineStateControlSignal, Spinner, SpinnerStyle};
 use r3bl_terminal_async::{Readline, ReadlineEvent, SharedWriter, TerminalAsync};
 use std::{io::stderr, sync::Arc};
 use std::{io::Write, ops::ControlFlow, time::Duration};
@@ -342,7 +342,7 @@ mod long_running_task {
         let mut tick_counter = 0;
         let max_tick_count = 30;
 
-        let line_sender = shared_writer.line_channel_sender.clone();
+        let line_sender = shared_writer.line_state_control_channel_sender.clone();
         let task_name = task_name.to_string();
 
         let shared_writer_clone = shared_writer.clone();
@@ -374,7 +374,7 @@ mod long_running_task {
                 // Display a message at every tick.
                 let msg = format!("[{task_name}] - [{tick_counter}] interval went off while spinner was spinning!\n");
                 let _ = line_sender
-                    .send(LineControlSignal::Line(msg.into_bytes()))
+                    .send(LineStateControlSignal::Line(msg.into_bytes()))
                     .await;
             }
 
@@ -570,7 +570,7 @@ pub mod file_walker {
         loop {
             let it = line_receiver.try_recv().into_diagnostic();
             match it {
-                Ok(LineControlSignal::Line(it)) => {
+                Ok(LineStateControlSignal::Line(it)) => {
                     output_lines.push(String::from_utf8_lossy(&it).to_string());
                     print!("{}", String::from_utf8_lossy(&it));
                 }
