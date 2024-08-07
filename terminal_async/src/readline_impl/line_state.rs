@@ -24,11 +24,27 @@ use crossterm::{
     QueueableCommand,
 };
 
+use r3bl_rs_utils_core::ok;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 use crate::{ReadlineError, ReadlineEvent, SafeHistory};
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum LineStateLiveness {
+    Paused,
+    NotPaused,
+}
+
+impl LineStateLiveness {
+    pub fn is_paused(&self) -> bool {
+        matches!(self, LineStateLiveness::Paused)
+    }
+}
+
+/// This struct actually handles the line editing, and rendering. This works hand in hand
+/// with the [crate::Readline] to make sure that the line is rendered correctly, with
+/// pause and resume support.
 pub struct LineState {
     /// Unicode line.
     pub line: String,
@@ -54,6 +70,24 @@ pub struct LineState {
     pub last_line_completed: bool,
 
     pub term_size: (u16, u16),
+
+    /// This is the only place where this information is stored. Since pause and resume
+    /// ultimately only affect this struct.
+    pub is_paused: LineStateLiveness,
+}
+
+macro_rules! early_return_if_paused {
+    ($self:ident @None) => {
+        if matches!($self.is_paused, LineStateLiveness::Paused) {
+            return Ok(None);
+        }
+    };
+
+    ($self:ident @Unit) => {
+        if matches!($self.is_paused, LineStateLiveness::Paused) {
+            return Ok(());
+        }
+    };
 }
 
 impl LineState {
@@ -70,7 +104,32 @@ impl LineState {
             line_cursor_grapheme: 0,
             cluster_buffer: String::new(),
             last_line_length: 0,
+            is_paused: LineStateLiveness::NotPaused,
         }
+    }
+
+    /// Update the paused state which affects the following:
+    /// - Rendering the output from multiple [crate::SharedWriter]s. When paused nothing
+    ///   is rendered from them, and things like the [crate::Spinner] can be active.
+    /// - Handling user input while the [crate::Readline::readline] is awaiting user input
+    ///   (which is equivalent to awaiting [crate::TerminalAsync::get_readline_event]).
+    ///
+    /// This should not be called directly. Instead use the mechanism provided by the
+    /// [crate::SharedWriter::line_state_control_channel_sender]
+    /// [tokio::sync::mpsc::channel].
+    pub fn set_paused(
+        &mut self,
+        is_paused: LineStateLiveness,
+        term: &mut dyn Write,
+    ) -> io::Result<()> {
+        // Set the current value.
+        self.is_paused = is_paused;
+
+        // When going from paused -> unpaused, we need to clear and render the line.
+        if !is_paused.is_paused() {
+            self.clear_and_render_and_flush(term)?
+        }
+        ok!()
     }
 
     /// Gets the number of lines wrapped
@@ -146,6 +205,8 @@ impl LineState {
 
     /// Clear current line.
     pub fn clear(&self, term: &mut dyn Write) -> io::Result<()> {
+        early_return_if_paused!(self @Unit);
+
         self.move_to_beginning(term, self.current_column)?;
         term.queue(Clear(FromCursorDown))?;
         Ok(())
@@ -153,6 +214,8 @@ impl LineState {
 
     /// Render line.
     pub fn render_and_flush(&self, term: &mut dyn Write) -> io::Result<()> {
+        early_return_if_paused!(self @Unit);
+
         let output = format!("{}{}", self.prompt, self.line);
 
         write!(term, "{}", output)?;
@@ -166,7 +229,9 @@ impl LineState {
     }
 
     /// Clear line and render.
-    pub fn clear_and_render(&self, term: &mut dyn Write) -> io::Result<()> {
+    pub fn clear_and_render_and_flush(&self, term: &mut dyn Write) -> io::Result<()> {
+        early_return_if_paused!(self @Unit);
+
         self.clear(term)?;
         self.render_and_flush(term)?;
         Ok(())
@@ -211,6 +276,8 @@ impl LineState {
     }
 
     pub fn print(&mut self, string: &str, term: &mut dyn Write) -> Result<(), ReadlineError> {
+        early_return_if_paused!(self @Unit);
+
         self.print_data(string.as_bytes(), term)?;
         Ok(())
     }
@@ -241,8 +308,10 @@ impl LineState {
         &mut self,
         term: &mut dyn Write,
     ) -> Result<(), ReadlineError> {
+        early_return_if_paused!(self @Unit);
+
         self.move_cursor(-100000)?;
-        self.clear_and_render(term)?;
+        self.clear_and_render_and_flush(term)?;
         Ok(())
     }
 
@@ -267,7 +336,7 @@ impl LineState {
                 }
                 // End of text (CTRL-C)
                 KeyCode::Char('c') => {
-                    if self.should_print_line_on_control_c {
+                    if self.should_print_line_on_control_c && !self.is_paused.is_paused() {
                         self.print(&format!("{}{}", self.prompt, self.line), term)?;
                     }
                     self.exit(term)?;
@@ -275,20 +344,26 @@ impl LineState {
                 }
                 // Clear all
                 KeyCode::Char('l') => {
+                    early_return_if_paused!(self @None);
+
                     term.queue(Clear(All))?.queue(cursor::MoveTo(0, 0))?;
-                    self.clear_and_render(term)?;
+                    self.clear_and_render_and_flush(term)?;
                 }
                 // Clear to start
                 KeyCode::Char('u') => {
+                    early_return_if_paused!(self @None);
+
                     if let Some((pos, str)) = self.current_grapheme() {
                         let pos = pos + str.len();
                         self.line.drain(0..pos);
                         self.move_cursor(-100000)?;
-                        self.clear_and_render(term)?;
+                        self.clear_and_render_and_flush(term)?;
                     }
                 }
                 // Clear last word
                 KeyCode::Char('w') => {
+                    early_return_if_paused!(self @None);
+
                     let count = self.line.graphemes(true).count();
                     let skip_count = count - self.line_cursor_grapheme;
                     let start = self
@@ -311,11 +386,13 @@ impl LineState {
                     } else {
                         self.line.drain(start..);
                     }
-                    self.clear_and_render(term)?;
+                    self.clear_and_render_and_flush(term)?;
                 }
                 // Move to beginning
                 #[cfg(feature = "emacs")]
                 KeyCode::Char('a') => {
+                    early_return_if_paused!(self @None);
+
                     self.reset_cursor(term)?;
                     self.move_cursor(-100000)?;
                     self.set_cursor(term)?;
@@ -323,12 +400,16 @@ impl LineState {
                 // Move to end
                 #[cfg(feature = "emacs")]
                 KeyCode::Char('e') => {
+                    early_return_if_paused!(self @None);
+
                     self.reset_cursor(term)?;
                     self.move_cursor(100000)?;
                     self.set_cursor(term)?;
                 }
                 // Move cursor left to previous word
                 KeyCode::Left => {
+                    early_return_if_paused!(self @None);
+
                     self.reset_cursor(term)?;
                     let count = self.line.graphemes(true).count();
                     let skip_count = count - self.line_cursor_grapheme;
@@ -349,6 +430,8 @@ impl LineState {
                 }
                 // Move cursor right to next word
                 KeyCode::Right => {
+                    early_return_if_paused!(self @None);
+
                     self.reset_cursor(term)?;
                     if let Some((pos, _)) = self
                         .line
@@ -375,117 +458,124 @@ impl LineState {
                 modifiers: _,
                 kind: KeyEventKind::Press,
                 ..
-            }) => match code {
-                KeyCode::Enter => {
-                    // Print line so you can see what commands you've typed.
-                    if self.should_print_line_on_enter {
-                        self.print(&format!("{}{}\n", self.prompt, self.line), term)?;
+            }) => {
+                early_return_if_paused!(self @None);
+
+                match code {
+                    KeyCode::Enter => {
+                        // Print line so you can see what commands you've typed.
+                        if self.should_print_line_on_enter && !self.is_paused.is_paused() {
+                            self.print(&format!("{}{}\n", self.prompt, self.line), term)?;
+                        }
+
+                        // Take line
+                        let line = std::mem::take(&mut self.line);
+
+                        self.render_new_line_from_beginning(term)?;
+
+                        // Return line
+                        return Ok(Some(ReadlineEvent::Line(line)));
                     }
+                    // Delete character from line
+                    KeyCode::Backspace => {
+                        if let Some((pos, str)) = self.current_grapheme() {
+                            self.clear(term)?;
 
-                    // Take line
-                    let line = std::mem::take(&mut self.line);
+                            let len = pos + str.len();
+                            self.line.replace_range(pos..len, "");
+                            self.move_cursor(-1)?;
 
-                    self.render_new_line_from_beginning(term)?;
-
-                    // Return line
-                    return Ok(Some(ReadlineEvent::Line(line)));
-                }
-                // Delete character from line
-                KeyCode::Backspace => {
-                    if let Some((pos, str)) = self.current_grapheme() {
-                        self.clear(term)?;
-
-                        let len = pos + str.len();
-                        self.line.replace_range(pos..len, "");
-                        self.move_cursor(-1)?;
-
-                        self.render_and_flush(term)?;
-                    }
-                }
-                KeyCode::Delete => {
-                    if let Some((pos, str)) = self.next_grapheme() {
-                        self.clear(term)?;
-
-                        let len = pos + str.len();
-                        self.line.replace_range(pos..len, "");
-
-                        self.render_and_flush(term)?;
-                    }
-                }
-                KeyCode::Left => {
-                    self.reset_cursor(term)?;
-                    self.move_cursor(-1)?;
-                    self.set_cursor(term)?;
-                }
-                KeyCode::Right => {
-                    self.reset_cursor(term)?;
-                    self.move_cursor(1)?;
-                    self.set_cursor(term)?;
-                }
-                KeyCode::Home => {
-                    self.reset_cursor(term)?;
-                    self.move_cursor(-100000)?;
-                    self.set_cursor(term)?;
-                }
-                KeyCode::End => {
-                    self.reset_cursor(term)?;
-                    self.move_cursor(100000)?;
-                    self.set_cursor(term)?;
-                }
-                KeyCode::Up => {
-                    // search for next history item, replace line if found.
-                    if let Some(line) = safe_history.lock().unwrap().search_next() {
-                        self.line.clear();
-                        self.line += line;
-                        self.clear(term)?;
-                        self.move_cursor(100000)?;
-                        self.render_and_flush(term)?;
-                    }
-                }
-                KeyCode::Down => {
-                    // search for next history item, replace line if found.
-                    if let Some(line) = safe_history.lock().unwrap().search_previous() {
-                        self.line.clear();
-                        self.line += line;
-                        self.clear(term)?;
-                        self.move_cursor(100000)?;
-                        self.render_and_flush(term)?;
-                    }
-                }
-                // Add character to line and output
-                KeyCode::Char(c) => {
-                    self.clear(term)?;
-                    let prev_len = self.cluster_buffer.graphemes(true).count();
-                    self.cluster_buffer.push(c);
-                    let new_len = self.cluster_buffer.graphemes(true).count();
-
-                    let (g_pos, g_str) = self.current_grapheme().unwrap_or((0, ""));
-                    let pos = g_pos + g_str.len();
-
-                    self.line.insert(pos, c);
-
-                    if prev_len != new_len {
-                        self.move_cursor(1)?;
-                        if prev_len > 0 {
-                            if let Some((pos, str)) =
-                                self.cluster_buffer.grapheme_indices(true).next()
-                            {
-                                let len = str.len();
-                                self.cluster_buffer.replace_range(pos..len, "");
-                            }
+                            self.render_and_flush(term)?;
                         }
                     }
-                    self.render_and_flush(term)?;
+                    KeyCode::Delete => {
+                        if let Some((pos, str)) = self.next_grapheme() {
+                            self.clear(term)?;
+
+                            let len = pos + str.len();
+                            self.line.replace_range(pos..len, "");
+
+                            self.render_and_flush(term)?;
+                        }
+                    }
+                    KeyCode::Left => {
+                        self.reset_cursor(term)?;
+                        self.move_cursor(-1)?;
+                        self.set_cursor(term)?;
+                    }
+                    KeyCode::Right => {
+                        self.reset_cursor(term)?;
+                        self.move_cursor(1)?;
+                        self.set_cursor(term)?;
+                    }
+                    KeyCode::Home => {
+                        self.reset_cursor(term)?;
+                        self.move_cursor(-100000)?;
+                        self.set_cursor(term)?;
+                    }
+                    KeyCode::End => {
+                        self.reset_cursor(term)?;
+                        self.move_cursor(100000)?;
+                        self.set_cursor(term)?;
+                    }
+                    KeyCode::Up => {
+                        // search for next history item, replace line if found.
+                        if let Some(line) = safe_history.lock().unwrap().search_next() {
+                            self.line.clear();
+                            self.line += line;
+                            self.clear(term)?;
+                            self.move_cursor(100000)?;
+                            self.render_and_flush(term)?;
+                        }
+                    }
+                    KeyCode::Down => {
+                        // search for next history item, replace line if found.
+                        if let Some(line) = safe_history.lock().unwrap().search_previous() {
+                            self.line.clear();
+                            self.line += line;
+                            self.clear(term)?;
+                            self.move_cursor(100000)?;
+                            self.render_and_flush(term)?;
+                        }
+                    }
+                    // Add character to line and output
+                    KeyCode::Char(c) => {
+                        self.clear(term)?;
+                        let prev_len = self.cluster_buffer.graphemes(true).count();
+                        self.cluster_buffer.push(c);
+                        let new_len = self.cluster_buffer.graphemes(true).count();
+
+                        let (g_pos, g_str) = self.current_grapheme().unwrap_or((0, ""));
+                        let pos = g_pos + g_str.len();
+
+                        self.line.insert(pos, c);
+
+                        if prev_len != new_len {
+                            self.move_cursor(1)?;
+                            if prev_len > 0 {
+                                if let Some((pos, str)) =
+                                    self.cluster_buffer.grapheme_indices(true).next()
+                                {
+                                    let len = str.len();
+                                    self.cluster_buffer.replace_range(pos..len, "");
+                                }
+                            }
+                        }
+                        self.render_and_flush(term)?;
+                    }
+                    _ => {}
                 }
-                _ => {}
-            },
+            }
             Event::Resize(x, y) => {
+                early_return_if_paused!(self @None);
+
                 self.term_size = (x, y);
-                self.clear_and_render(term)?;
+                self.clear_and_render_and_flush(term)?;
                 return Ok(Some(ReadlineEvent::Resized));
             }
             _ => {}
         }
+
         Ok(None)
     }
 }

@@ -17,12 +17,12 @@
 
 // Attach.
 pub mod history;
-pub mod line;
+pub mod line_state;
 pub mod readline;
 pub mod shared_writer;
 
 // Re-export.
 pub use history::*;
-pub use line::*;
+pub use line_state::*;
 pub use readline::*;
 pub use shared_writer::*;
