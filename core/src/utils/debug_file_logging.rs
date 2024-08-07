@@ -17,7 +17,8 @@
 
 use std::{fs::OpenOptions, io::Write, path::Path};
 
-pub fn debug_file_log(file_path: &Path, message: &str) {
+pub fn debug_file_log(file_path: Option<&Path>, message: &str) {
+    let file_path = file_path.unwrap_or(Path::new("debug.log"));
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)

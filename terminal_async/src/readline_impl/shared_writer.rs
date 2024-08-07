@@ -15,18 +15,18 @@
  *   limitations under the License.
  */
 
-use crate::{LineControlSignal, Text};
+use crate::{LineStateControlSignal, Text};
 use std::io::{self, Write};
 
-/// Cloneable object that implements [`Write`] and allows for sending data
-/// to the terminal without messing up the [`crate::Readline`].
+/// Cloneable object that implements [`Write`] and allows for sending data to the terminal
+/// without messing up the [`crate::Readline`].
 ///
 /// A `SharedWriter` instance is obtained by calling [`crate::Readline::new()`], which
 /// also returns a [`crate::Readline`] instance associated with the writer.
 ///
 /// Data written to a `SharedWriter` is only output when a line feed (`'\n'`) has been
 /// written and either [`crate::Readline::readline()`] or
-/// [`crate::pause_and_resume_support::flush_internal()`] is executing on the associated
+/// [`crate::pause_resume_support::flush_internal()`] is executing on the associated
 /// `Readline` instance.
 pub struct SharedWriter {
     /// Holds the data to be written to the terminal.
@@ -34,7 +34,7 @@ pub struct SharedWriter {
 
     /// Sender end of the channel, the receiver end is in [`crate::Readline`], which does
     /// the actual printing to `stdout`.
-    pub line_channel_sender: tokio::sync::mpsc::Sender<LineControlSignal>,
+    pub line_state_control_channel_sender: tokio::sync::mpsc::Sender<LineStateControlSignal>,
 
     /// This is set to `true` when this struct is cloned. Only the first instance of this
     /// struct will report errors when [`std::io::Write::write()`] fails, due to the
@@ -45,10 +45,10 @@ pub struct SharedWriter {
 impl SharedWriter {
     /// Creates a new instance of `SharedWriter` with an empty buffer and a
     /// [`tokio::sync::mpsc::Sender`] end of the channel.
-    pub fn new(line_sender: tokio::sync::mpsc::Sender<LineControlSignal>) -> Self {
+    pub fn new(line_sender: tokio::sync::mpsc::Sender<LineStateControlSignal>) -> Self {
         Self {
             buffer: Default::default(),
-            line_channel_sender: line_sender,
+            line_state_control_channel_sender: line_sender,
             silent_error: false,
         }
     }
@@ -56,13 +56,14 @@ impl SharedWriter {
 
 /// Custom [Clone] implementation for [`SharedWriter`]. This ensures that each new
 /// instance gets its own buffer to write data into. And a [Clone] of the
-/// [Self::line_channel_sender], so all the [`LineControlSignal`]s end up in the same `line`
-/// [tokio::sync::mpsc::channel] that lives in the [`crate::Readline`] instance.
+/// [Self::line_state_control_channel_sender], so all the [`LineStateControlSignal`]s end
+/// up in the same `line` [tokio::sync::mpsc::channel] that lives in the
+/// [`crate::Readline`] instance.
 impl Clone for SharedWriter {
     fn clone(&self) -> Self {
         Self {
             buffer: Default::default(),
-            line_channel_sender: self.line_channel_sender.clone(),
+            line_state_control_channel_sender: self.line_state_control_channel_sender.clone(),
             silent_error: true,
         }
     }
@@ -78,8 +79,8 @@ impl Write for SharedWriter {
         // If self_buffer ends with a newline, send it to the line_sender.
         if self_buffer.ends_with(b"\n") {
             match self
-                .line_channel_sender
-                .try_send(LineControlSignal::Line(self_buffer.clone()))
+                .line_state_control_channel_sender
+                .try_send(LineStateControlSignal::Line(self_buffer.clone()))
             {
                 Ok(_) => {
                     self_buffer.clear();
@@ -124,7 +125,10 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
         let it = line_receiver.recv().await.unwrap();
-        assert_eq!(it, LineControlSignal::Line(b"Hello, World!\n".to_vec()));
+        assert_eq!(
+            it,
+            LineStateControlSignal::Line(b"Hello, World!\n".to_vec())
+        );
     }
 
     #[tokio::test]

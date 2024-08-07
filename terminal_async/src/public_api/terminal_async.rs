@@ -142,24 +142,24 @@ impl TerminalAsync {
     pub async fn flush(&mut self) {
         let _ = self
             .shared_writer
-            .line_channel_sender
-            .send(crate::LineControlSignal::Flush)
+            .line_state_control_channel_sender
+            .send(crate::LineStateControlSignal::Flush)
             .await;
     }
 
     pub async fn pause(&mut self) {
         let _ = self
             .shared_writer
-            .line_channel_sender
-            .send(crate::LineControlSignal::Pause)
+            .line_state_control_channel_sender
+            .send(crate::LineStateControlSignal::Pause)
             .await;
     }
 
     pub async fn resume(&mut self) {
         let _ = self
             .shared_writer
-            .line_channel_sender
-            .send(crate::LineControlSignal::Resume)
+            .line_state_control_channel_sender
+            .send(crate::LineStateControlSignal::Resume)
             .await;
     }
 

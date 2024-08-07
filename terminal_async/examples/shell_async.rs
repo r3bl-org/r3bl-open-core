@@ -15,7 +15,6 @@
  *   limitations under the License.
  */
 
-// TODO: try and pause input when suspended
 // TODO: fix prompt size in terminal_async, which size the prompt with ansi stripped length
 // TODO: add a colorized prompt in this example
 

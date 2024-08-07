@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{spinner_render, LineControlSignal, SafeRawTerminal, SharedWriter, SpinnerStyle};
+use crate::{spinner_render, LineStateControlSignal, SafeRawTerminal, SharedWriter, SpinnerStyle};
 use crossterm::terminal;
 use miette::IntoDiagnostic;
 use r3bl_tuify::{
@@ -84,8 +84,8 @@ impl Spinner {
         // Pause the terminal.
         let _ = self
             .shared_writer
-            .line_channel_sender
-            .send(LineControlSignal::Pause)
+            .line_state_control_channel_sender
+            .send(LineStateControlSignal::Pause)
             .await;
 
         let message = self.message.clone();
@@ -154,8 +154,8 @@ impl Spinner {
         // Resume the terminal.
         let _ = self
             .shared_writer
-            .line_channel_sender
-            .send(LineControlSignal::Resume)
+            .line_state_control_channel_sender
+            .send(LineStateControlSignal::Resume)
             .await;
         Ok(())
     }
@@ -237,8 +237,14 @@ mod tests {
         // println!("{:?}", line_control_signal_sink);
 
         assert_eq!(line_control_signal_sink.len(), 2);
-        assert_eq!(line_control_signal_sink[0], Ok(LineControlSignal::Pause));
-        assert_eq!(line_control_signal_sink[1], Ok(LineControlSignal::Resume));
+        assert_eq!(
+            line_control_signal_sink[0],
+            Ok(LineStateControlSignal::Pause)
+        );
+        assert_eq!(
+            line_control_signal_sink[1],
+            Ok(LineStateControlSignal::Resume)
+        );
 
         drop(line_receiver);
     }
@@ -310,8 +316,14 @@ mod tests {
         // println!("{:?}", line_control_signal_sink);
 
         assert_eq!(line_control_signal_sink.len(), 2);
-        assert_eq!(line_control_signal_sink[0], Ok(LineControlSignal::Pause));
-        assert_eq!(line_control_signal_sink[1], Ok(LineControlSignal::Resume));
+        assert_eq!(
+            line_control_signal_sink[0],
+            Ok(LineStateControlSignal::Pause)
+        );
+        assert_eq!(
+            line_control_signal_sink[1],
+            Ok(LineStateControlSignal::Resume)
+        );
 
         drop(line_receiver);
     }
