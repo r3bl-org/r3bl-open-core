@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_rs_utils_core"
-# TODO: update the version of this lib and publish (new ok! macro).
+# 00: update the version of this lib and publish (new ok! macro).
 version = "0.9.13"
 edition = "2021"
 resolver = "2"
