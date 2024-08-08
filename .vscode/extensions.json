@@ -13,6 +13,8 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "keksiqc.idx-monospace-theme", // IDX Monospace Theme.
+    "devgauravjatt.github-catppuccin-dark", // GitHub + Catppuccino Dark Theme.
     "bierner.emojisense", // Emoji Sense.
     "jvitorfrancisco.theme-acid-purple", // Acid Purple.
     "Tr3bbe.purplehaze", // Purple Haze.
