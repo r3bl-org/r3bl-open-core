@@ -129,6 +129,7 @@ impl LineState {
         if !is_paused.is_paused() {
             self.clear_and_render_and_flush(term)?
         }
+
         ok!()
     }
 
@@ -144,7 +145,8 @@ impl LineState {
         if move_up != 0 {
             term.queue(cursor::MoveUp(move_up))?;
         }
-        Ok(())
+
+        ok!()
     }
 
     /// Move from the start of the line to some position.
@@ -156,7 +158,7 @@ impl LineState {
         }
         term.queue(cursor::MoveRight(line_remaining_len))?;
 
-        Ok(())
+        ok!()
     }
 
     /// Move cursor by one unicode grapheme either left (negative) or right (positive).
@@ -174,7 +176,7 @@ impl LineState {
         self.current_column =
             (self.prompt.len() + UnicodeWidthStr::width(&self.line[0..pos])) as u16;
 
-        Ok(())
+        ok!()
     }
 
     fn current_grapheme(&self) -> Option<(usize, &str)> {
@@ -209,7 +211,8 @@ impl LineState {
 
         self.move_to_beginning(term, self.current_column)?;
         term.queue(Clear(FromCursorDown))?;
-        Ok(())
+
+        ok!()
     }
 
     /// Render line.
@@ -217,15 +220,13 @@ impl LineState {
         early_return_if_paused!(self @Unit);
 
         let output = format!("{}{}", self.prompt, self.line);
-
         write!(term, "{}", output)?;
         let line_len = self.prompt.len() + UnicodeWidthStr::width(&self.line[..]);
         self.move_to_beginning(term, line_len as u16)?;
         self.move_from_beginning(term, self.current_column)?;
-
         term.flush()?;
 
-        Ok(())
+        ok!()
     }
 
     /// Clear line and render.
@@ -234,10 +235,15 @@ impl LineState {
 
         self.clear(term)?;
         self.render_and_flush(term)?;
-        Ok(())
+
+        ok!()
     }
 
-    pub fn print_data(&mut self, data: &[u8], term: &mut dyn Write) -> Result<(), ReadlineError> {
+    pub fn print_data_and_flush(
+        &mut self,
+        data: &[u8],
+        term: &mut dyn Write,
+    ) -> Result<(), ReadlineError> {
         self.clear(term)?;
 
         // If last written data was not newline, restore the cursor
@@ -270,16 +276,21 @@ impl LineState {
         }
 
         term.queue(cursor::MoveToColumn(0))?;
-
         self.render_and_flush(term)?;
-        Ok(())
+
+        ok!()
     }
 
-    pub fn print(&mut self, string: &str, term: &mut dyn Write) -> Result<(), ReadlineError> {
+    pub fn print_and_flush(
+        &mut self,
+        string: &str,
+        term: &mut dyn Write,
+    ) -> Result<(), ReadlineError> {
         early_return_if_paused!(self @Unit);
 
-        self.print_data(string.as_bytes(), term)?;
-        Ok(())
+        self.print_data_and_flush(string.as_bytes(), term)?;
+
+        ok!()
     }
 
     pub fn update_prompt(
@@ -290,21 +301,24 @@ impl LineState {
         self.clear(term)?;
         self.prompt.clear();
         self.prompt.push_str(prompt);
+
         // recalculates column
         self.move_cursor(0)?;
         self.render_and_flush(term)?;
         term.flush()?;
-        Ok(())
+
+        ok!()
     }
 
     pub fn exit(&mut self, term: &mut dyn Write) -> Result<(), ReadlineError> {
         self.line.clear();
         self.clear(term)?;
-        self.render_new_line_from_beginning(term)?;
-        Ok(())
+        self.render_new_line_from_beginning_and_flush(term)?;
+
+        ok!()
     }
 
-    pub fn render_new_line_from_beginning(
+    pub fn render_new_line_from_beginning_and_flush(
         &mut self,
         term: &mut dyn Write,
     ) -> Result<(), ReadlineError> {
@@ -312,7 +326,8 @@ impl LineState {
 
         self.move_cursor(-100000)?;
         self.clear_and_render_and_flush(term)?;
-        Ok(())
+
+        ok!()
     }
 
     pub fn apply_event_and_render(
@@ -337,7 +352,7 @@ impl LineState {
                 // End of text (CTRL-C)
                 KeyCode::Char('c') => {
                     if self.should_print_line_on_control_c && !self.is_paused.is_paused() {
-                        self.print(&format!("{}{}", self.prompt, self.line), term)?;
+                        self.print_and_flush(&format!("{}{}", self.prompt, self.line), term)?;
                     }
                     self.exit(term)?;
                     return Ok(Some(ReadlineEvent::Interrupted));
@@ -386,6 +401,7 @@ impl LineState {
                     } else {
                         self.line.drain(start..);
                     }
+
                     self.clear_and_render_and_flush(term)?;
                 }
                 // Move to beginning
@@ -396,6 +412,8 @@ impl LineState {
                     self.reset_cursor(term)?;
                     self.move_cursor(-100000)?;
                     self.set_cursor(term)?;
+
+                    term.flush()?;
                 }
                 // Move to end
                 #[cfg(feature = "emacs")]
@@ -405,6 +423,8 @@ impl LineState {
                     self.reset_cursor(term)?;
                     self.move_cursor(100000)?;
                     self.set_cursor(term)?;
+
+                    term.flush()?;
                 }
                 // Move cursor left to previous word
                 KeyCode::Left => {
@@ -427,6 +447,8 @@ impl LineState {
                         self.move_cursor(-100000)?
                     }
                     self.set_cursor(term)?;
+
+                    term.flush()?;
                 }
                 // Move cursor right to next word
                 KeyCode::Right => {
@@ -446,6 +468,8 @@ impl LineState {
                         self.move_cursor(10000)?;
                     };
                     self.set_cursor(term)?;
+
+                    term.flush()?;
                 }
                 _ => {}
             },
@@ -465,13 +489,12 @@ impl LineState {
                     KeyCode::Enter => {
                         // Print line so you can see what commands you've typed.
                         if self.should_print_line_on_enter && !self.is_paused.is_paused() {
-                            self.print(&format!("{}{}\n", self.prompt, self.line), term)?;
+                            self.print_and_flush(&format!("{}{}\n", self.prompt, self.line), term)?;
                         }
 
                         // Take line
                         let line = std::mem::take(&mut self.line);
-
-                        self.render_new_line_from_beginning(term)?;
+                        self.render_new_line_from_beginning_and_flush(term)?;
 
                         // Return line
                         return Ok(Some(ReadlineEvent::Line(line)));
@@ -480,7 +503,6 @@ impl LineState {
                     KeyCode::Backspace => {
                         if let Some((pos, str)) = self.current_grapheme() {
                             self.clear(term)?;
-
                             let len = pos + str.len();
                             self.line.replace_range(pos..len, "");
                             self.move_cursor(-1)?;
@@ -491,7 +513,6 @@ impl LineState {
                     KeyCode::Delete => {
                         if let Some((pos, str)) = self.next_grapheme() {
                             self.clear(term)?;
-
                             let len = pos + str.len();
                             self.line.replace_range(pos..len, "");
 
@@ -502,21 +523,25 @@ impl LineState {
                         self.reset_cursor(term)?;
                         self.move_cursor(-1)?;
                         self.set_cursor(term)?;
+                        term.flush()?;
                     }
                     KeyCode::Right => {
                         self.reset_cursor(term)?;
                         self.move_cursor(1)?;
                         self.set_cursor(term)?;
+                        term.flush()?;
                     }
                     KeyCode::Home => {
                         self.reset_cursor(term)?;
                         self.move_cursor(-100000)?;
                         self.set_cursor(term)?;
+                        term.flush()?;
                     }
                     KeyCode::End => {
                         self.reset_cursor(term)?;
                         self.move_cursor(100000)?;
                         self.set_cursor(term)?;
+                        term.flush()?;
                     }
                     KeyCode::Up => {
                         // search for next history item, replace line if found.
@@ -561,6 +586,7 @@ impl LineState {
                                 }
                             }
                         }
+
                         self.render_and_flush(term)?;
                     }
                     _ => {}
@@ -571,6 +597,7 @@ impl LineState {
 
                 self.term_size = (x, y);
                 self.clear_and_render_and_flush(term)?;
+
                 return Ok(Some(ReadlineEvent::Resized));
             }
             _ => {}

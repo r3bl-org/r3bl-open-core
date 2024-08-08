@@ -15,13 +15,15 @@
  *   limitations under the License.
  */
 
-use crate::{spinner_render, LineStateControlSignal, SafeRawTerminal, SharedWriter, SpinnerStyle};
+use crate::{
+    spinner_render, LineStateControlSignal, SafeBool, SafeRawTerminal, SharedWriter, SpinnerStyle,
+    StdMutex,
+};
 use crossterm::terminal;
-use miette::IntoDiagnostic;
 use r3bl_tuify::{
     is_fully_uninteractive_terminal, is_stdout_piped, StdoutIsPipedResult, TTYResult,
 };
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use tokio::time::interval;
 
 pub struct Spinner {
@@ -30,7 +32,8 @@ pub struct Spinner {
     pub style: SpinnerStyle,
     pub safe_output_terminal: SafeRawTerminal,
     pub shared_writer: SharedWriter,
-    pub shutdown_sender: tokio::sync::broadcast::Sender<bool>,
+    pub shutdown_sender: tokio::sync::broadcast::Sender<()>,
+    safe_is_shutdown: SafeBool,
 }
 
 impl Spinner {
@@ -62,7 +65,7 @@ impl Spinner {
         }
 
         // Shutdown broadcast channel.
-        let (shutdown_sender, _) = tokio::sync::broadcast::channel::<bool>(1);
+        let (shutdown_sender, _) = tokio::sync::broadcast::channel::<()>(1);
 
         // Only start the task if the terminal is fully interactive.
         let mut spinner = Spinner {
@@ -72,6 +75,7 @@ impl Spinner {
             safe_output_terminal,
             shared_writer,
             shutdown_sender,
+            safe_is_shutdown: Arc::new(StdMutex::new(false)),
         };
 
         // Start task.
@@ -80,7 +84,24 @@ impl Spinner {
         Ok(Some(spinner))
     }
 
+    /// This is meant for the task that spawned this [Spinner] to check if it should
+    /// shutdown, due to:
+    /// 1. The user pressing `Ctrl-C` or `Ctrl-D`.
+    /// 2. Or the [Spinner::stop] got called.
+    pub fn is_shutdown(&self) -> bool {
+        *self.safe_is_shutdown.lock().unwrap()
+    }
+
     async fn try_start_task(&mut self) -> miette::Result<()> {
+        // Tell readline that spinner is active & register the spinner shutdown sender.
+        _ = self
+            .shared_writer
+            .line_state_control_channel_sender
+            .send(LineStateControlSignal::SpinnerActive(
+                self.shutdown_sender.clone(),
+            ))
+            .await;
+
         // Pause the terminal.
         let _ = self
             .shared_writer
@@ -94,6 +115,8 @@ impl Spinner {
         let safe_output_terminal = self.safe_output_terminal.clone();
 
         let mut shutdown_receiver = self.shutdown_sender.subscribe();
+
+        let self_safe_is_shutdown = self.safe_is_shutdown.clone();
 
         tokio::spawn(async move {
             let mut interval = interval(tick_delay);
@@ -126,6 +149,10 @@ impl Spinner {
                     // Poll shutdown channel.
                     // This branch is cancel safe because recv is cancel safe.
                     _ = shutdown_receiver.recv() => {
+                        // This spinner is now shutdown, so other task(s) using it will
+                        // know that this spinner has been shutdown by user interaction or
+                        // other means.
+                        *self_safe_is_shutdown.lock().unwrap() = true;
                         break;
                     }
                 }
@@ -136,8 +163,18 @@ impl Spinner {
     }
 
     pub async fn stop(&mut self, final_message: &str) -> miette::Result<()> {
-        // Shutdown the task.
-        self.shutdown_sender.send(true).into_diagnostic()?;
+        // Tell readline that spinner is inactive.
+        _ = self
+            .shared_writer
+            .line_state_control_channel_sender
+            .send(LineStateControlSignal::SpinnerInactive)
+            .await;
+
+        // Shutdown the task (if it hasn't already been shutdown).
+        if !*self.safe_is_shutdown.lock().unwrap() {
+            // Produces an error if the spinner is already shutdown.
+            _ = self.shutdown_sender.send(());
+        }
 
         // Print the final message.
         let final_output = spinner_render::render_final_tick(
@@ -157,6 +194,7 @@ impl Spinner {
             .line_state_control_channel_sender
             .send(LineStateControlSignal::Resume)
             .await;
+
         Ok(())
     }
 }
@@ -211,40 +249,46 @@ mod tests {
 
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
         // println!("{:?}", output_buffer_data);
+
         assert!(output_buffer_data.contains("final message"));
         assert_eq!(
             output_buffer_data,
             "⠁ message\n⠃ message\n⡇ message\n⠇ message\n⡎ message\nfinal message\n"
         );
 
-        let mut line_control_signal_sink = vec![];
-        loop {
-            let it = line_receiver.try_recv();
-            match it {
-                Ok(_) => {
-                    line_control_signal_sink.push(it.clone());
+        let line_control_signal_sink = {
+            let mut acc = vec![];
+            loop {
+                let it = line_receiver.try_recv();
+                match it {
+                    Ok(signal) => {
+                        acc.push(signal);
+                    }
+                    Err(error) => match error {
+                        tokio::sync::mpsc::error::TryRecvError::Empty => {
+                            break;
+                        }
+                        tokio::sync::mpsc::error::TryRecvError::Disconnected => {
+                            break;
+                        }
+                    },
                 }
-                Err(error) => match error {
-                    tokio::sync::mpsc::error::TryRecvError::Empty => {
-                        break;
-                    }
-                    tokio::sync::mpsc::error::TryRecvError::Disconnected => {
-                        break;
-                    }
-                },
             }
-        }
+            acc
+        };
         // println!("{:?}", line_control_signal_sink);
 
-        assert_eq!(line_control_signal_sink.len(), 2);
-        assert_eq!(
+        assert_eq!(line_control_signal_sink.len(), 4);
+        matches!(
             line_control_signal_sink[0],
-            Ok(LineStateControlSignal::Pause)
+            LineStateControlSignal::SpinnerActive(_)
         );
-        assert_eq!(
-            line_control_signal_sink[1],
-            Ok(LineStateControlSignal::Resume)
+        matches!(line_control_signal_sink[1], LineStateControlSignal::Pause);
+        matches!(
+            line_control_signal_sink[2],
+            LineStateControlSignal::SpinnerInactive
         );
+        matches!(line_control_signal_sink[3], LineStateControlSignal::Resume);
 
         drop(line_receiver);
     }
@@ -296,34 +340,39 @@ mod tests {
         );
         // spell-checker:enable
 
-        let mut line_control_signal_sink = vec![];
-        loop {
-            let it = line_receiver.try_recv();
-            match it {
-                Ok(_) => {
-                    line_control_signal_sink.push(it.clone());
+        let line_control_signal_sink = {
+            let mut acc = vec![];
+            loop {
+                let it = line_receiver.try_recv();
+                match it {
+                    Ok(signal) => {
+                        acc.push(signal);
+                    }
+                    Err(error) => match error {
+                        tokio::sync::mpsc::error::TryRecvError::Empty => {
+                            break;
+                        }
+                        tokio::sync::mpsc::error::TryRecvError::Disconnected => {
+                            break;
+                        }
+                    },
                 }
-                Err(error) => match error {
-                    tokio::sync::mpsc::error::TryRecvError::Empty => {
-                        break;
-                    }
-                    tokio::sync::mpsc::error::TryRecvError::Disconnected => {
-                        break;
-                    }
-                },
             }
-        }
+            acc
+        };
         // println!("{:?}", line_control_signal_sink);
 
-        assert_eq!(line_control_signal_sink.len(), 2);
-        assert_eq!(
+        assert_eq!(line_control_signal_sink.len(), 4);
+        matches!(
             line_control_signal_sink[0],
-            Ok(LineStateControlSignal::Pause)
+            LineStateControlSignal::SpinnerActive(_)
         );
-        assert_eq!(
-            line_control_signal_sink[1],
-            Ok(LineStateControlSignal::Resume)
+        matches!(line_control_signal_sink[1], LineStateControlSignal::Pause);
+        matches!(
+            line_control_signal_sink[2],
+            LineStateControlSignal::SpinnerInactive
         );
+        matches!(line_control_signal_sink[3], LineStateControlSignal::Resume);
 
         drop(line_receiver);
     }
