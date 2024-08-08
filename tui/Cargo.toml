@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_tui"
-# TODO: upgrade the version number below (update the dependents too)
+# 00: upgrade the version number below (update the dependents too)
 version = "0.5.6"
 edition = "2021"
 resolver = "2"
@@ -27,7 +27,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl-open-core.
-# TODO: use the latest version of this w/ `ok!` macro.
+# 00: use the latest version of this w/ `ok!` macro.
 r3bl_rs_utils_core = { path = "../core", version = "0.9.13" }
 r3bl_rs_utils_macro = { path = "../macro", version = "0.9.9" }
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
@@ -79,7 +79,7 @@ copypasta-ext = "0.4.4"
 
 [dev-dependencies]
 # Async readline for running examples.
-# TODO: add the latest version number below (for compiling on other machines)
+# 00: add the latest version number below (for compiling on other machines)
 r3bl_terminal_async = { path = "../terminal_async" }
 
 # For assert_eq2! macro.

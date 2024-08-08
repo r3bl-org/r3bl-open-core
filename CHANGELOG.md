@@ -789,11 +789,21 @@ The biggest change in this release is complete support for pause and resume. Now
 output is paused, input is also paused, with the exception of allowing <kbd>Ctrl+C</kbd>
 and <kbd>Ctrl+D</kbd> through.
 
+Another big change is how spinners now work. Once a spinner is started, <kbd>Ctrl+C</kbd>
+and <kbd>Ctrl+D</kbd> are directed to the spinner, to cancel it. Spinners can also be checked
+for completion or cancellation by long running tasks, to ensure that they exit as a response
+to user cancellation.
+
 - Added:
   - Add support to extend pause and resume functionality to the entire crate. Now, when
     the output is paused, for eg, when the spinner is running, then the input to the
     readline is also stopped, until output is resumed. This wasn't the case in the past,
     and it was possible to type and update the prompt while the output was paused.
+  - Add user cancellation support for spinners. Once a spinner is started,
+    <kbd>Ctrl+C</kbd> and <kbd>Ctrl+D</kbd> are directed to the spinner, to cancel it.
+    Spinners can also be checked for completion or cancellation by long running tasks, to
+    ensure that they exit as a response to user cancellation. Update the
+    `examples/terminal_async.rs` to show how to best use this new feature.
   - Add better examples for how to use `TerminalAsync::try_new()` in Rust docs.
   - Add a new example `async_shell.rs` to demonstrate how to use `TerminalAsync` to create
     an interactive shell (with `bash` under the covers) that can orchestrate a shell

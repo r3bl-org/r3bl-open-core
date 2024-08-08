@@ -300,6 +300,7 @@ mod process_input_event {
                         .into_diagnostic()?;
                     long_running_task::spawn_task_that_shows_spinner(
                         shared_writer,
+                        readline,
                         "Spinner task",
                         Duration::from_millis(100),
                     );
@@ -335,6 +336,7 @@ mod long_running_task {
     // at the start, and resumes it when it ends.
     pub fn spawn_task_that_shows_spinner(
         shared_writer: &mut SharedWriter,
+        readline: &mut Readline,
         task_name: &str,
         delay: Duration,
     ) {
@@ -347,8 +349,16 @@ mod long_running_task {
 
         let shared_writer_clone = shared_writer.clone();
 
+        if readline.safe_spinner_is_active.lock().unwrap().is_some() {
+            _ = writeln!(
+                shared_writer,
+                "{}",
+                "Spinner is already active, can't start another one"
+            );
+        }
+
         tokio::spawn(async move {
-            // Create a spinner.
+            // Try to create and start a spinner.
             let maybe_spinner = Spinner::try_start(
                 format!(
                     "{} - This is a sample indeterminate progress message",
@@ -362,6 +372,13 @@ mod long_running_task {
             .await;
 
             loop {
+                // Check for spinner shutdown (via interruption).
+                if let Ok(Some(ref spinner)) = maybe_spinner {
+                    if spinner.is_shutdown() {
+                        break;
+                    }
+                }
+
                 // Wait for the interval duration (one tick).
                 interval.tick().await;
 
@@ -378,6 +395,7 @@ mod long_running_task {
                     .await;
             }
 
+            // Don't forget to stop the spinner.
             if let Ok(Some(mut spinner)) = maybe_spinner {
                 let msg = format!("{} - Task ended. Resuming terminal and showing any output that was generated while spinner was active.", task_name);
                 let _ = spinner.stop(msg.as_str()).await;

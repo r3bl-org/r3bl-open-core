@@ -209,6 +209,12 @@ output from all the [`SharedWriter`] instances that are associated with one
 [`Readline`] instance. Both the `terminal_async.rs` and `spinner.rs` examples shows
 this (`cargo run --example terminal_async` and `cargo run --example spinner`).
 
+[`Spinner`]s also has cancellation support. Once a spinner is started,
+<kbd>Ctrl+C</kbd> and <kbd>Ctrl+D</kbd> are directed to the spinner, to cancel it.
+Spinners can also be checked for completion or cancellation by long running tasks, to
+ensure that they exit as a response to user cancellation. Take a look at the
+`examples/terminal_async.rs` file to get an understanding of how to use this API.
+
 ### [`tracing_setup::init()`]
 
 This is a convenience method to setup Tokio [`tracing_subscriber`] with `stdout` as

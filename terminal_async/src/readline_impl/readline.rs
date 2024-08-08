@@ -32,6 +32,18 @@ use std::{
 use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
+const CTRL_C: crossterm::event::Event =
+    crossterm::event::Event::Key(crossterm::event::KeyEvent::new(
+        crossterm::event::KeyCode::Char('c'),
+        crossterm::event::KeyModifiers::CONTROL,
+    ));
+
+const CTRL_D: crossterm::event::Event =
+    crossterm::event::Event::Key(crossterm::event::KeyEvent::new(
+        crossterm::event::KeyCode::Char('d'),
+        crossterm::event::KeyModifiers::CONTROL,
+    ));
+
 /// # Mental model and overview
 ///
 /// This is a replacement for a [std::io::BufRead::read_line] function. It is async. It
@@ -156,6 +168,14 @@ pub struct Readline {
 
     /// Collects lines that are written to the terminal while the terminal is paused.
     pub safe_is_paused_buffer: SafePauseBuffer,
+
+    /// - Is [Some] if a [crate::Spinner] is currently active. This works with the signal
+    ///   [LineStateControlSignal::SpinnerActive]; this is used to set the
+    ///   [crate::Spinner::shutdown_sender]. Also works with the
+    ///   [LineStateControlSignal::Pause] signal.
+    /// - Is [None] if no [crate::Spinner] is active. Also works with the
+    ///   [LineStateControlSignal::Resume] signal.
+    pub safe_spinner_is_active: Arc<StdMutex<Option<tokio::sync::broadcast::Sender<()>>>>,
 }
 
 /// Error returned from [`readline()`][Readline::readline]. Such errors generally require
@@ -189,12 +209,14 @@ pub enum ReadlineEvent {
 }
 
 /// Signals that can be sent to the `line` channel, which is monitored by the task.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum LineStateControlSignal {
     Line(Text),
     Flush,
     Pause,
     Resume,
+    SpinnerActive(tokio::sync::broadcast::Sender<()>),
+    SpinnerInactive,
 }
 
 /// Internal control flow for the `readline` method. This is used primarily to make testing
@@ -223,6 +245,7 @@ pub mod pause_resume_support {
         safe_line_state: SafeLineState,
         safe_raw_terminal: SafeRawTerminal,
         safe_is_paused_buffer: SafePauseBuffer,
+        safe_spinner_is_active: Arc<StdMutex<Option<tokio::sync::broadcast::Sender<()>>>>,
     ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             loop {
@@ -237,6 +260,7 @@ pub mod pause_resume_support {
                                 safe_is_paused_buffer.clone(),
                                 safe_line_state.clone(),
                                 safe_raw_terminal.clone(),
+                                safe_spinner_is_active.clone(),
                             );
                             match control_flow {
                                 ControlFlowLimited::ReturnError(_) => {
@@ -264,6 +288,7 @@ pub mod pause_resume_support {
         self_safe_is_paused_buffer: SafePauseBuffer,
         self_safe_line_state: SafeLineState,
         self_safe_raw_terminal: SafeRawTerminal,
+        self_safe_spinner_is_active: Arc<StdMutex<Option<tokio::sync::broadcast::Sender<()>>>>,
     ) -> ControlFlowLimited<ReadlineError> {
         match line_control_signal {
             // Handle a line of text from user input w/ support for pause & resume.
@@ -279,7 +304,7 @@ pub mod pause_resume_support {
 
                 // Print the line to the terminal.
                 let term = &mut *self_safe_raw_terminal.lock().unwrap();
-                if let Err(err) = line_state.print_data(&buf, term) {
+                if let Err(err) = line_state.print_data_and_flush(&buf, term) {
                     return ControlFlowLimited::ReturnError(err);
                 }
                 if let Err(err) = term.flush() {
@@ -322,6 +347,16 @@ pub mod pause_resume_support {
                 };
                 let _ = flush_internal(self_safe_is_paused_buffer, new_value, line_state, term);
             }
+            LineStateControlSignal::SpinnerActive(spinner_shutdown_sender) => {
+                // Handle spinner active signal & register the spinner shutdown sender.
+                let mut spinner_is_active = self_safe_spinner_is_active.lock().unwrap();
+                *spinner_is_active = Some(spinner_shutdown_sender);
+            }
+            LineStateControlSignal::SpinnerInactive => {
+                // Handle spinner inactive signal & remove the spinner shutdown sender.
+                let mut spinner_is_active = self_safe_spinner_is_active.lock().unwrap();
+                _ = spinner_is_active.take();
+            }
         }
 
         ControlFlowLimited::Continue
@@ -353,7 +388,7 @@ pub mod pause_resume_support {
             it.join("")
         };
 
-        line_state.print_data(is_paused_buffer.as_bytes(), term)?;
+        line_state.print_data_and_flush(is_paused_buffer.as_bytes(), term)?;
         line_state.clear_and_render_and_flush(term)?;
 
         Ok(())
@@ -401,11 +436,13 @@ impl Readline {
         let safe_is_paused_buffer = Arc::new(StdMutex::new(is_paused_buffer));
 
         // Start task to process line_receiver.
+        let safe_spinner_is_active = Arc::new(StdMutex::new(None));
         pause_resume_support::spawn_task_to_monitor_line_state_control_channel(
             line_state_control_channel_receiver,
             safe_line_state.clone(),
             safe_raw_terminal.clone(),
             safe_is_paused_buffer.clone(),
+            safe_spinner_is_active.clone(),
         );
 
         // Create the instance with all the supplied components.
@@ -417,6 +454,7 @@ impl Readline {
             history_receiver,
             safe_history,
             safe_is_paused_buffer,
+            safe_spinner_is_active,
         };
 
         // Print the prompt.
@@ -510,6 +548,7 @@ impl Readline {
                             self.safe_line_state.clone(),
                             &mut *self.safe_raw_terminal.lock().unwrap(),
                             self.safe_history.clone(),
+                            self.safe_spinner_is_active.clone(),
                         ) {
                             ControlFlowExtended::ReturnOk(ok_value) => {
                                 return Ok(ok_value);
@@ -539,17 +578,29 @@ impl Readline {
 
 pub mod readline_internal {
     use super::*;
-
     pub fn apply_event_to_line_state_and_render(
         result_crossterm_event: CrosstermEventResult,
         self_line_state: SafeLineState,
         self_raw_terminal: &mut dyn Write,
         self_safe_history: SafeHistory,
+        self_safe_is_spinner_active: Arc<StdMutex<Option<tokio::sync::broadcast::Sender<()>>>>,
     ) -> ControlFlowExtended<ReadlineEvent, ReadlineError> {
         match result_crossterm_event {
             Ok(crossterm_event) => {
                 let mut line_state = self_line_state.lock().unwrap();
 
+                // Intercept Ctrl+C or Ctrl+D here and send a signal to spinner (if it is
+                // active). And early return!
+                let is_spinner_active = self_safe_is_spinner_active.lock().unwrap().take();
+                if crossterm_event == CTRL_C || crossterm_event == CTRL_D {
+                    if let Some(spinner_shutdown_sender) = is_spinner_active {
+                        // Send signal to SharedWriter spinner shutdown channel.
+                        let _ = spinner_shutdown_sender.send(());
+                        return ControlFlowExtended::Continue;
+                    }
+                }
+
+                // Regular readline event handling.
                 let result_maybe_readline_event = line_state.apply_event_and_render(
                     crossterm_event,
                     self_raw_terminal,
@@ -634,6 +685,8 @@ mod test_readline {
         )
         .unwrap();
 
+        let safe_is_spinner_active = Arc::new(StdMutex::new(None));
+
         let history = History::new();
         let safe_history = Arc::new(StdMutex::new(history.0));
 
@@ -646,6 +699,7 @@ mod test_readline {
             readline.safe_line_state.clone(),
             &mut *readline.safe_raw_terminal.lock().unwrap(),
             safe_history.clone(),
+            safe_is_spinner_active.clone(),
         );
 
         assert!(matches!(control_flow, ControlFlowExtended::Continue));
