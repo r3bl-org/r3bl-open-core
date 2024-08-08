@@ -15,8 +15,8 @@
  *   limitations under the License.
  */
 
-// TODO: fix prompt size in terminal_async, which size the prompt with ansi stripped length
-// TODO: add a colorized prompt in this example
+// 00: 📌 fix prompt size in terminal_async, which size the prompt with ansi stripped length
+// 00: add a colorized prompt in this example
 
 use std::io::Write;
 
@@ -119,7 +119,12 @@ pub async fn main() -> miette::Result<()> {
         // New green thread.
         spawn_monitor_output_from_child(stdout, stderr, shared_writer, shutdown_sender.clone()),
         // Current thread.
-        monitor_user_input_to_child::main(stdin, terminal_async, child, shutdown_sender.clone(),)
+        monitor_user_input_to_child::start_event_loop(
+            stdin,
+            terminal_async,
+            child,
+            shutdown_sender.clone(),
+        )
     );
 
     ok!()
@@ -128,7 +133,7 @@ pub async fn main() -> miette::Result<()> {
 pub mod monitor_user_input_to_child {
     use super::*;
 
-    pub async fn main(
+    pub async fn start_event_loop(
         mut stdin: tokio::process::ChildStdin,
         mut terminal_async: TerminalAsync,
         child: Child,

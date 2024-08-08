@@ -125,10 +125,12 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
         let it = line_receiver.recv().await.unwrap();
-        assert_eq!(
-            it,
-            LineStateControlSignal::Line(b"Hello, World!\n".to_vec())
-        );
+
+        if let LineStateControlSignal::Line(bytes) = it {
+            assert_eq!(bytes, b"Hello, World!\n".to_vec());
+        } else {
+            panic!("Expected LineStateControlSignal::Line, got something else");
+        }
     }
 
     #[tokio::test]
