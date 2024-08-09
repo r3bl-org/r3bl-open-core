@@ -46,22 +46,22 @@ const CTRL_D: crossterm::event::Event =
 
 /// # Mental model and overview
 ///
-/// This is a replacement for a [std::io::BufRead::read_line] function. It is async. It
+/// This is a replacement for a [`std::io::BufRead::read_line`] function. It is async. It
 /// supports other tasks concurrently writing to the terminal output (via
-/// [SharedWriter]s). It also supports being paused so that [crate::Spinner] can display
-/// an indeterminate progress spinner. Then it can be resumed so that the user can type in
-/// the terminal. Upon resumption, any queued output from the [SharedWriter]s is printed
-/// out.
+/// [`SharedWriter`]s). It also supports being paused so that [`crate::Spinner`] can
+/// display an indeterminate progress spinner. Then it can be resumed so that the user can
+/// type in the terminal. Upon resumption, any queued output from the [`SharedWriter`]s is
+/// printed out.
 ///
-/// When you call [Self::readline()] it enters an infinite loop. During which you can type
-/// things into the multiline editor, which also displays the prompt. You can press up,
-/// down, left, right, etc. While in this loop other tasks can send messages to the
+/// When you call [`Self::readline()`] it enters an infinite loop. During which you can
+/// type things into the multiline editor, which also displays the prompt. You can press
+/// up, down, left, right, etc. While in this loop other tasks can send messages to the
 /// `Readline` task via the `line` channel, using the
 /// [`SharedWriter::line_state_control_channel_sender`].
 ///
 /// When you create a new [`Readline`] instance, a task, is started via
-/// [`pause_resume_support::spawn_task_to_monitor_line_state_control_channel()`]. This
-/// task monitors the `line` channel, and processes any messages that are sent to it. This
+/// [`manage_shared_writer_output::spawn_task_to_monitor_line_state_signals()`]. This task
+/// monitors the `line` channel, and processes any messages that are sent to it. This
 /// allows the task to be paused, and resumed, and to flush the output from the
 /// [`SharedWriter`]s.
 ///
@@ -73,9 +73,9 @@ const CTRL_D: crossterm::event::Event =
 /// one off. Each time this function is called, you have to `await` it to return the user
 /// input or `Interrupted` or `Eof` signal.
 ///
-/// When creating a new [crate::TerminalAsync] instance, you can use this repeatedly
-/// before dropping it. This is because the [crate::SharedWriter] is cloned, and the
-/// terminal is kept in raw mode until the associated [crate::Readline] is dropped.
+/// When creating a new [`crate::TerminalAsync`] instance, you can use this repeatedly
+/// before dropping it. This is because the [`crate::SharedWriter`] is cloned, and the
+/// terminal is kept in raw mode until the associated [`crate::Readline`] is dropped.
 ///
 /// # Inputs and dependency injection
 ///
@@ -108,26 +108,27 @@ const CTRL_D: crossterm::event::Event =
 /// to be accepted either. Only Ctrl+C, and Ctrl+D are accepted while paused. This ensures
 /// that the user can't enter any input while the terminal is paused. And output from a
 /// [`crate::Spinner`] won't clobber the output from the [`SharedWriter`]s or from the
-/// user input prompt while [crate::Readline::readline] (or
-/// [crate::TerminalAsync::get_readline_event]) is being awaited.
+/// user input prompt while [`crate::Readline::readline()`] (or
+/// [`crate::TerminalAsync::get_readline_event`]) is being awaited.
 ///
 /// When the terminal is resumed, then the output from the [`SharedWriter`]s will be
-/// printed to the terminal by the [`pause_resume_support::flush_internal()`] method,
-/// which drains a buffer that holds any output that was generated while paused, of type
-/// [`PauseBuffer`]. The user input prompt will be displayed again, and the user can enter
-/// input.
+/// printed to the terminal by the [`manage_shared_writer_output::flush_internal()`]
+/// method, which drains a buffer that holds any output that was generated while paused,
+/// of type [`PauseBuffer`]. The user input prompt will be displayed again, and the user
+/// can enter input.
 ///
 /// This is possible, because while paused, the
-/// [`pause_resume_support::process_line_control_signal()`] method doesn't actually print
-/// anything to the display. When resumed, the [`pause_resume_support::flush_internal()`]
-/// method is called, which drains the [`PauseBuffer`] (if there are any messages in it,
-/// and prints them out) so nothing is lost!
+/// [`manage_shared_writer_output::process_line_control_signal()`] method doesn't actually
+/// print anything to the display. When resumed, the
+/// [`manage_shared_writer_output::flush_internal()`] method is called, which drains the
+/// [`PauseBuffer`] (if there are any messages in it, and prints them out) so nothing is
+/// lost!
 ///
-/// See the [crate::LineState] for more information on exactly how the terminal is paused
+/// See the [`crate::LineState`] for more information on exactly how the terminal is paused
 /// and resumed, when it comes to accepting or rejecting user input, and rendering output
 /// or not.
 ///
-/// See the [crate::TerminalAsync] module docs for more information on the mental mode and
+/// See the [`crate::TerminalAsync`] module docs for more information on the mental mode and
 /// architecture of this.
 ///
 /// # Usage details
@@ -142,9 +143,9 @@ const CTRL_D: crossterm::event::Event =
 ///
 /// Lines written to an associated `SharedWriter` are output:
 /// 1. While retrieving input with [`readline()`][Readline::readline].
-/// 2. By calling [`pause_resume_support::flush_internal()`].
+/// 2. By calling [`manage_shared_writer_output::flush_internal()`].
 ///
-/// You can provide your own implementation of [SafeRawTerminal], via [dependency
+/// You can provide your own implementation of [`SafeRawTerminal`], via [dependency
 /// injection](https://developerlife.com/category/DI/), so that you can mock terminal
 /// output for testing. You can also extend this struct to adapt your own terminal output
 /// using this mechanism. Essentially anything that complies with `dyn std::io::Write +
@@ -234,14 +235,38 @@ pub enum ControlFlowLimited<E> {
     Continue,
 }
 
-pub mod pause_resume_support {
+/// # Task creation, shutdown and cleanup
+///
+/// The task spawned by
+/// [manage_shared_writer_output::spawn_task_to_monitor_line_state_signals()] doesn't need
+/// to be shutdown, since it will simply exit when the [`Readline`] instance is dropped.
+/// The loop awaits on the channel, and when the [`Readline`] instance is dropped, the
+/// channel is dropped as well, since the [tokio::sync::mpsc::channel()]'s
+/// [tokio::sync::mpsc::Sender] is dropped when the [`SharedWriter`] associated with the
+/// [`Readline`] is dropped.
+///
+/// # Support for buffering & writing output from [`SharedWriter`]s
+///
+/// - This module contains the logic for managing the `line_state_control_channel` that's
+///   created in [`Readline::new()`].
+/// - This channel is used to send signals *from* [`SharedWriter`]s *to*
+///   [`Readline::readline()`], to control the [`LineState`] of the terminal.
+/// - Note that [`Readline::readline()`] must be called in a loop while the user is
+///   interacting with the terminal, so that these signals can be processed.
+///
+/// # Buffering and output
+///
+/// When the terminal is paused, the output from the [`SharedWriter`]s is buffered in a
+/// [`PauseBuffer`]. When the terminal is resumed, the buffer is drained and the output is
+/// written to the terminal.
+pub mod manage_shared_writer_output {
     use super::*;
     use crate::{LineStateLiveness, SendRawTerminal};
 
-    /// Receiver end of the channel, the sender end is in [`SharedWriter`], which does the
-    /// actual writing to the terminal.
-    pub fn spawn_task_to_monitor_line_state_control_channel(
-        mut line_control_channel_receiver: mpsc::Receiver<LineStateControlSignal>, /* This is moved. */
+    /// - Receiver end of the channel, which does the actual writing to the terminal.
+    /// - The sender end of the channel is in [`SharedWriter`].
+    pub fn spawn_task_to_monitor_line_state_signals(
+        /* Move */ mut line_control_channel_receiver: mpsc::Receiver<LineStateControlSignal>,
         safe_line_state: SafeLineState,
         safe_raw_terminal: SafeRawTerminal,
         safe_is_paused_buffer: SafePauseBuffer,
@@ -249,40 +274,40 @@ pub mod pause_resume_support {
     ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             loop {
-                tokio::select! {
-                    // Branch: Poll line channel for events.
-                    // This branch is cancel safe because recv is cancel safe.
-                    maybe_line_control_signal = line_control_channel_receiver.recv() => {
-                        // Channel is open.
-                        if let Some(maybe_line_control_signal) = maybe_line_control_signal {
-                            let control_flow = process_line_control_signal(
-                                maybe_line_control_signal,
-                                safe_is_paused_buffer.clone(),
-                                safe_line_state.clone(),
-                                safe_raw_terminal.clone(),
-                                safe_spinner_is_active.clone(),
-                            );
-                            match control_flow {
-                                ControlFlowLimited::ReturnError(_) => {
-                                    // Initiate shutdown.
-                                    break;
-                                }
-                                ControlFlowLimited::Continue => {
-                                    // continue.
-                                }
-                            }
-                        }
-                        // Channel is closed.
-                        else {
+                // Poll line channel for events.
+                // This branch is cancel safe because recv is cancel safe.
+                let maybe_line_control_signal = line_control_channel_receiver.recv();
+
+                // Channel is open.
+                if let Some(maybe_line_control_signal) = maybe_line_control_signal.await {
+                    let control_flow = process_line_control_signal(
+                        maybe_line_control_signal,
+                        safe_is_paused_buffer.clone(),
+                        safe_line_state.clone(),
+                        safe_raw_terminal.clone(),
+                        safe_spinner_is_active.clone(),
+                    );
+                    match control_flow {
+                        ControlFlowLimited::ReturnError(_) => {
                             // Initiate shutdown.
                             break;
                         }
+                        ControlFlowLimited::Continue => {
+                            // continue.
+                        }
                     }
+                }
+                // Channel is closed.
+                else {
+                    // Initiate shutdown.
+                    break;
                 }
             }
         })
     }
 
+    /// Process a line control signal. And actually write the line or buffered lines to
+    /// the terminal.
     pub fn process_line_control_signal(
         line_control_signal: LineStateControlSignal,
         self_safe_is_paused_buffer: SafePauseBuffer,
@@ -437,7 +462,7 @@ impl Readline {
 
         // Start task to process line_receiver.
         let safe_spinner_is_active = Arc::new(StdMutex::new(None));
-        pause_resume_support::spawn_task_to_monitor_line_state_control_channel(
+        manage_shared_writer_output::spawn_task_to_monitor_line_state_signals(
             line_state_control_channel_receiver,
             safe_line_state.clone(),
             safe_raw_terminal.clone(),
@@ -864,7 +889,7 @@ mod test_streams {
 mod test_pause_and_resume_support {
     use super::*;
     use crate::LineStateLiveness;
-    use pause_resume_support::flush_internal;
+    use manage_shared_writer_output::flush_internal;
     use r3bl_test_fixtures::StdoutMock;
     use std::{collections::VecDeque, sync::Mutex};
 
