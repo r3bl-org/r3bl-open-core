@@ -215,6 +215,23 @@ Spinners can also be checked for completion or cancellation by long running task
 ensure that they exit as a response to user cancellation. Take a look at the
 `examples/terminal_async.rs` file to get an understanding of how to use this API.
 
+The third change is that `TerminalAsync::try_new()` now accepts prompts that can have
+ANSI escape sequences in them. Here's an example of this.
+
+```rust
+let prompt = {
+    let user = "naz";
+    let prompt_seg_1 = "╭".magenta().on_dark_grey().to_string();
+    let prompt_seg_2 = format!("┤{user}├").magenta().on_dark_grey().to_string();
+    let prompt_seg_3 = "╮".magenta().on_dark_grey().to_string();
+    format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3)
+};
+let maybe_terminal_async = TerminalAsync::try_new(prompt.as_str()).await?;
+let Some(mut terminal_async) = maybe_terminal_async else {
+    return Ok(());
+};
+```
+
 ### [`tracing_setup::init()`]
 
 This is a convenience method to setup Tokio [`tracing_subscriber`] with `stdout` as

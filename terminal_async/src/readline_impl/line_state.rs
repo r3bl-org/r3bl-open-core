@@ -92,7 +92,7 @@ macro_rules! early_return_if_paused {
 
 impl LineState {
     pub fn new(prompt: String, term_size: (u16, u16)) -> Self {
-        let current_column = prompt.len() as u16;
+        let current_column = strip_ansi_esc_seq_len(prompt.as_str()) as u16;
         Self {
             prompt,
             last_line_completed: true,
@@ -173,8 +173,9 @@ impl LineState {
         }
         let (pos, str) = self.current_grapheme().unwrap_or((0, ""));
         let pos = pos + str.len();
-        self.current_column =
-            (self.prompt.len() + UnicodeWidthStr::width(&self.line[0..pos])) as u16;
+
+        self.current_column = (strip_ansi_esc_seq_len(&self.prompt)
+            + UnicodeWidthStr::width(&self.line[0..pos])) as u16;
 
         ok!()
     }
@@ -215,15 +216,20 @@ impl LineState {
         ok!()
     }
 
-    /// Render line.
+    /// Render line (prompt + line) and flush.
     pub fn render_and_flush(&self, term: &mut dyn Write) -> io::Result<()> {
         early_return_if_paused!(self @Unit);
 
         let output = format!("{}{}", self.prompt, self.line);
         write!(term, "{}", output)?;
-        let line_len = self.prompt.len() + UnicodeWidthStr::width(&self.line[..]);
-        self.move_to_beginning(term, line_len as u16)?;
+
+        let prompt_len = strip_ansi_esc_seq_len(&self.prompt);
+        let line_len = UnicodeWidthStr::width(&self.line[..]);
+
+        let total_line_len = prompt_len + line_len;
+        self.move_to_beginning(term, total_line_len as u16)?;
         self.move_from_beginning(term, self.current_column)?;
+
         term.flush()?;
 
         ok!()
@@ -305,7 +311,6 @@ impl LineState {
         // recalculates column
         self.move_cursor(0)?;
         self.render_and_flush(term)?;
-        term.flush()?;
 
         ok!()
     }
@@ -685,4 +690,9 @@ mod tests {
 
         assert_eq!(line.line, "");
     }
+}
+
+fn strip_ansi_esc_seq_len(prompt: &str) -> usize {
+    let stripped_prompt = strip_ansi::strip_ansi(prompt);
+    UnicodeWidthStr::width(stripped_prompt.as_str())
 }

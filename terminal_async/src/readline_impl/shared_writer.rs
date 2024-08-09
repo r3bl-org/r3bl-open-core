@@ -15,19 +15,28 @@
  *   limitations under the License.
  */
 
+use r3bl_rs_utils_core::ok;
+
 use crate::{LineStateControlSignal, Text};
 use std::io::{self, Write};
 
 /// Cloneable object that implements [`Write`] and allows for sending data to the terminal
-/// without messing up the [`crate::Readline`].
+/// without messing up its associated [`crate::Readline`] instance.
 ///
-/// A `SharedWriter` instance is obtained by calling [`crate::Readline::new()`], which
-/// also returns a [`crate::Readline`] instance associated with the writer.
+/// # Create a new instance by creating a [`crate::Readline`] instance
 ///
-/// Data written to a `SharedWriter` is only output when a line feed (`'\n'`) has been
-/// written and either [`crate::Readline::readline()`] or
-/// [`crate::pause_resume_support::flush_internal()`] is executing on the associated
-/// `Readline` instance.
+/// - A [`crate::SharedWriter`] instance is obtained by calling
+///   [`crate::Readline::new()`].
+/// - This also returns a [`crate::Readline`] instance associated with the writer.
+///
+/// # Nothing is output without terminating with a newline, unless you call [SharedWriter::flush()]
+///
+/// Data written to a [`crate::SharedWriter`] is only output when a line feed (`'\n'`) has
+/// been written and either is executing on the associated [`crate::Readline`] instance:
+/// - [`crate::Readline::readline()`].
+/// - [`crate::manage_shared_writer_output::flush_internal()`].
+///
+/// If you want to output data without a newline, you can call [`SharedWriter::flush()`].
 pub struct SharedWriter {
     /// Holds the data to be written to the terminal.
     pub buffer: Text,
@@ -100,7 +109,24 @@ impl Write for SharedWriter {
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        Ok(())
+        match self
+            .line_state_control_channel_sender
+            .try_send(LineStateControlSignal::Line(self.buffer.clone()))
+        {
+            Ok(_) => {
+                self.buffer.clear();
+            }
+            Err(_) => {
+                if !self.silent_error {
+                    return Err(io::Error::new(
+                        io::ErrorKind::Other,
+                        "SharedWriter Receiver has closed",
+                    ));
+                }
+            }
+        }
+
+        ok!()
     }
 }
 
@@ -117,7 +143,24 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_writeln() {
+    async fn test_write_flush() {
+        let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
+        let mut shared_writer = SharedWriter::new(line_sender);
+
+        shared_writer.write_all(b"Hello, World!").unwrap();
+        shared_writer.flush().unwrap();
+        assert_eq!(shared_writer.buffer, b"");
+
+        let it = line_receiver.recv().await.unwrap();
+        if let LineStateControlSignal::Line(bytes) = it {
+            assert_eq!(bytes, b"Hello, World!".to_vec());
+        } else {
+            panic!("Expected LineStateControlSignal::Line, got something else");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_writeln_no_flush() {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let mut shared_writer = SharedWriter::new(line_sender);
         shared_writer.write_all(b"Hello, World!\n").unwrap();
@@ -125,7 +168,6 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
         let it = line_receiver.recv().await.unwrap();
-
         if let LineStateControlSignal::Line(bytes) = it {
             assert_eq!(bytes, b"Hello, World!\n".to_vec());
         } else {

@@ -15,9 +15,6 @@
  *   limitations under the License.
  */
 
-// 00: 📌 fix prompt size in terminal_async, which size the prompt with ansi stripped length
-// 00: add a colorized prompt in this example
-
 use std::io::Write;
 
 use child_process_constructor::*;
@@ -288,7 +285,13 @@ pub mod terminal_async_constructor {
     }
 
     pub async fn create_terminal_async(pid: u32) -> miette::Result<TerminalAsyncHandle> {
-        let prompt = format!("[{pid}] > ");
+        let prompt = {
+            let prompt_seg_1 = "╭".magenta().on_dark_grey().to_string();
+            let prompt_seg_2 = format!("┤{pid}├").magenta().on_dark_grey().to_string();
+            let prompt_seg_3 = "╮".magenta().on_dark_grey().to_string();
+            format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3)
+        };
+
         let terminal_async = TerminalAsync::try_new(prompt.as_str())
             .await?
             .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
