@@ -789,10 +789,13 @@ The biggest change in this release is complete support for pause and resume. Now
 output is paused, input is also paused, with the exception of allowing <kbd>Ctrl+C</kbd>
 and <kbd>Ctrl+D</kbd> through.
 
-Another big change is how spinners now work. Once a spinner is started, <kbd>Ctrl+C</kbd>
+The second big change is how spinners now work. Once a spinner is started, <kbd>Ctrl+C</kbd>
 and <kbd>Ctrl+D</kbd> are directed to the spinner, to cancel it. Spinners can also be checked
 for completion or cancellation by long running tasks, to ensure that they exit as a response
 to user cancellation.
+
+The third (and final) change is that `TerminalAsync::try_new()` now accepts prompts that
+can have ANSI escape sequences in them.
 
 - Added:
   - Add support to extend pause and resume functionality to the entire crate. Now, when

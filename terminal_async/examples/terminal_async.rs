@@ -18,8 +18,8 @@
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
 use r3bl_terminal_async::{tracing_setup, DisplayPreference, StdMutex, TracingConfig};
-use r3bl_terminal_async::{LineStateControlSignal, Spinner, SpinnerStyle};
 use r3bl_terminal_async::{Readline, ReadlineEvent, SharedWriter, TerminalAsync};
+use r3bl_terminal_async::{Spinner, SpinnerStyle};
 use std::{io::stderr, sync::Arc};
 use std::{io::Write, ops::ControlFlow, time::Duration};
 use strum::IntoEnumIterator;
@@ -123,7 +123,13 @@ impl Default for State {
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
-    let maybe_terminal_async = TerminalAsync::try_new("> ").await?;
+    let prompt = {
+        let prompt_seg_1 = "╭>╮".magenta().on_dark_grey().to_string();
+        let prompt_seg_2 = " ".to_string();
+        format!("{}{}", prompt_seg_1, prompt_seg_2)
+    };
+
+    let maybe_terminal_async = TerminalAsync::try_new(prompt.as_str()).await?;
 
     // If the terminal is not fully interactive, then return early.
     let Some(mut terminal_async) = maybe_terminal_async else {
@@ -344,10 +350,10 @@ mod long_running_task {
         let mut tick_counter = 0;
         let max_tick_count = 30;
 
-        let line_sender = shared_writer.line_state_control_channel_sender.clone();
         let task_name = task_name.to_string();
 
-        let shared_writer_clone = shared_writer.clone();
+        let shared_writer_clone_1 = shared_writer.clone();
+        let mut shared_writer_clone_2 = shared_writer.clone();
 
         if readline.safe_spinner_is_active.lock().unwrap().is_some() {
             _ = writeln!(
@@ -367,7 +373,7 @@ mod long_running_task {
                 Duration::from_millis(100),
                 SpinnerStyle::default(),
                 Arc::new(StdMutex::new(stderr())),
-                shared_writer_clone,
+                shared_writer_clone_1,
             )
             .await;
 
@@ -389,10 +395,10 @@ mod long_running_task {
                 }
 
                 // Display a message at every tick.
-                let msg = format!("[{task_name}] - [{tick_counter}] interval went off while spinner was spinning!\n");
-                let _ = line_sender
-                    .send(LineStateControlSignal::Line(msg.into_bytes()))
-                    .await;
+                let _ = write!(
+                    shared_writer_clone_2,
+                    "[{task_name}] - [{tick_counter}] interval went off while spinner was spinning!\n"
+                );
             }
 
             // Don't forget to stop the spinner.
