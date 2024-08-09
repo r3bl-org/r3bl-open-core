@@ -88,6 +88,35 @@ channel](https://www.youtube.com/@developerlifecom):
 - [Build with Naz, testing in
   Rust](https://www.youtube.com/watch?v=Xt495QLrFFk&list=PLofhE49PEwmwLR_4Noa0dFOSPmSpIg_l8)
 
+### Pause and resume support
+
+The pause and resume functionality is implemented using:
+- [LineState::is_paused] - Used to check if the line state is paused and affects
+  rendering and input.
+- [LineState::set_paused] - Use to set the paused state via the [SharedWriter] below.
+  This can't be called directly (outside the crate itself).
+- [SharedWriter::line_state_control_channel_sender] - Mechanism used to manipulate the
+  paused state.
+
+The [Readline::new] or [TerminalAsync::try_new] create a `line_channel` to send and
+receive [LineStateControlSignal].
+1. The sender end of this channel is moved to the [SharedWriter]. So any
+   [SharedWriter] can be used to send [LineStateControlSignal]s to the channel, which
+   will be processed in the task started, just for this, in [Readline::new]. This is
+   the primary mechanism to switch between pause and resume. Some helper functions are
+   provided in [TerminalAsync::pause] and [TerminalAsync::resume], though you can just
+   send the signals directly to the channel's sender via the
+   [SharedWriter::line_state_control_channel_sender].
+2. The receiver end of this [tokio::sync::mpsc::channel] is moved to the task that is
+   spawned by [Readline::new]. This is where the actual work is done when signals are
+   sent via the sender (described above).
+
+While the [Readline] is suspended, no input is possible, and only <kbd>Ctrl+C</kbd>
+and <kbd>Ctrl+D</kbd> are allowed to make it through, the rest of the keypresses are
+ignored.
+
+See [Readline] module docs for more implementation details on this.
+
 ### Input Editing Behavior
 
 While entering text, the user can edit and navigate through the current input line
@@ -166,8 +195,8 @@ cargo run --example shell_async
 - Lines written to the associated [`SharedWriter`] while `readline()` is in progress
   will be output to the screen above the input line.
 
-- When done, call [`crate::pause_and_resume_support::flush_internal()`] to ensure that
-  all lines written to the [`SharedWriter`] are output.
+- When done, call [`crate::pause_resume_support::flush_internal()`] to ensure that all
+  lines written to the [`SharedWriter`] are output.
 
 ### [`Spinner::try_start()`]
 
@@ -179,6 +208,12 @@ Neither will the spinner output clobber the output from other tasks. It suspends
 output from all the [`SharedWriter`] instances that are associated with one
 [`Readline`] instance. Both the `terminal_async.rs` and `spinner.rs` examples shows
 this (`cargo run --example terminal_async` and `cargo run --example spinner`).
+
+[`Spinner`]s also has cancellation support. Once a spinner is started,
+<kbd>Ctrl+C</kbd> and <kbd>Ctrl+D</kbd> are directed to the spinner, to cancel it.
+Spinners can also be checked for completion or cancellation by long running tasks, to
+ensure that they exit as a response to user cancellation. Take a look at the
+`examples/terminal_async.rs` file to get an understanding of how to use this API.
 
 ### [`tracing_setup::init()`]
 
@@ -241,6 +276,7 @@ been rewritten and re-architected. Here are some changes made to the code:
 
 ## More info on Linux TTY and async Rust
 
-- [Linux TTY and async Rust](https://github.com/nazmulidris/rust-scratch/blob/main/tty/README.md)
+- [Linux TTY and async
+  Rust](https://github.com/nazmulidris/rust-scratch/blob/main/tty/README.md)
 
 License: Apache-2.0

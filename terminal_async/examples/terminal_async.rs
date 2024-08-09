@@ -18,7 +18,7 @@
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
 use r3bl_terminal_async::{tracing_setup, DisplayPreference, StdMutex, TracingConfig};
-use r3bl_terminal_async::{LineControlSignal, Spinner, SpinnerStyle};
+use r3bl_terminal_async::{LineStateControlSignal, Spinner, SpinnerStyle};
 use r3bl_terminal_async::{Readline, ReadlineEvent, SharedWriter, TerminalAsync};
 use std::{io::stderr, sync::Arc};
 use std::{io::Write, ops::ControlFlow, time::Duration};
@@ -300,6 +300,7 @@ mod process_input_event {
                         .into_diagnostic()?;
                     long_running_task::spawn_task_that_shows_spinner(
                         shared_writer,
+                        readline,
                         "Spinner task",
                         Duration::from_millis(100),
                     );
@@ -335,6 +336,7 @@ mod long_running_task {
     // at the start, and resumes it when it ends.
     pub fn spawn_task_that_shows_spinner(
         shared_writer: &mut SharedWriter,
+        readline: &mut Readline,
         task_name: &str,
         delay: Duration,
     ) {
@@ -342,13 +344,21 @@ mod long_running_task {
         let mut tick_counter = 0;
         let max_tick_count = 30;
 
-        let line_sender = shared_writer.line_channel_sender.clone();
+        let line_sender = shared_writer.line_state_control_channel_sender.clone();
         let task_name = task_name.to_string();
 
         let shared_writer_clone = shared_writer.clone();
 
+        if readline.safe_spinner_is_active.lock().unwrap().is_some() {
+            _ = writeln!(
+                shared_writer,
+                "{}",
+                "Spinner is already active, can't start another one"
+            );
+        }
+
         tokio::spawn(async move {
-            // Create a spinner.
+            // Try to create and start a spinner.
             let maybe_spinner = Spinner::try_start(
                 format!(
                     "{} - This is a sample indeterminate progress message",
@@ -362,6 +372,13 @@ mod long_running_task {
             .await;
 
             loop {
+                // Check for spinner shutdown (via interruption).
+                if let Ok(Some(ref spinner)) = maybe_spinner {
+                    if spinner.is_shutdown() {
+                        break;
+                    }
+                }
+
                 // Wait for the interval duration (one tick).
                 interval.tick().await;
 
@@ -374,10 +391,11 @@ mod long_running_task {
                 // Display a message at every tick.
                 let msg = format!("[{task_name}] - [{tick_counter}] interval went off while spinner was spinning!\n");
                 let _ = line_sender
-                    .send(LineControlSignal::Line(msg.into_bytes()))
+                    .send(LineStateControlSignal::Line(msg.into_bytes()))
                     .await;
             }
 
+            // Don't forget to stop the spinner.
             if let Ok(Some(mut spinner)) = maybe_spinner {
                 let msg = format!("{} - Task ended. Resuming terminal and showing any output that was generated while spinner was active.", task_name);
                 let _ = spinner.stop(msg.as_str()).await;
@@ -570,7 +588,7 @@ pub mod file_walker {
         loop {
             let it = line_receiver.try_recv().into_diagnostic();
             match it {
-                Ok(LineControlSignal::Line(it)) => {
+                Ok(LineStateControlSignal::Line(it)) => {
                     output_lines.push(String::from_utf8_lossy(&it).to_string());
                     print!("{}", String::from_utf8_lossy(&it));
                 }
