@@ -195,8 +195,8 @@ cargo run --example shell_async
 - Lines written to the associated [`SharedWriter`] while `readline()` is in progress
   will be output to the screen above the input line.
 
-- When done, call [`crate::pause_resume_support::flush_internal()`] to ensure that all
-  lines written to the [`SharedWriter`] are output.
+- When done, call [`crate::manage_shared_writer_output::flush_internal()`] to ensure
+  that all lines written to the [`SharedWriter`] are output.
 
 ### [`Spinner::try_start()`]
 
@@ -215,21 +215,22 @@ Spinners can also be checked for completion or cancellation by long running task
 ensure that they exit as a response to user cancellation. Take a look at the
 `examples/terminal_async.rs` file to get an understanding of how to use this API.
 
-The third change is that `TerminalAsync::try_new()` now accepts prompts that can have
-ANSI escape sequences in them. Here's an example of this.
+The third change is that [`TerminalAsync::try_new()`] now accepts prompts that can
+have ANSI escape sequences in them. Here's an example of this.
 
 ```rust
-let prompt = {
-    let user = "naz";
-    let prompt_seg_1 = "╭".magenta().on_dark_grey().to_string();
-    let prompt_seg_2 = format!("┤{user}├").magenta().on_dark_grey().to_string();
-    let prompt_seg_3 = "╮".magenta().on_dark_grey().to_string();
-    format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3)
-};
-let maybe_terminal_async = TerminalAsync::try_new(prompt.as_str()).await?;
-let Some(mut terminal_async) = maybe_terminal_async else {
-    return Ok(());
-};
+    let prompt = {
+        let user = "naz";
+        let prompt_seg_1 = "╭".magenta().on_dark_grey().to_string();
+        let prompt_seg_2 = format!("┤{user}├").magenta().on_dark_grey().to_string();
+        let prompt_seg_3 = "╮".magenta().on_dark_grey().to_string();
+        format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3)
+    };
+    let maybe_terminal_async = TerminalAsync::try_new(prompt.as_str()).await?;
+    let Some(mut terminal_async) = maybe_terminal_async else {
+        return Err(miette::miette!("Failed to create terminal").into());
+    };
+    Ok(())
 ```
 
 ### [`tracing_setup::init()`]
@@ -269,8 +270,8 @@ been rewritten and re-architected. Here are some changes made to the code:
 - Rearchitect the entire crate from the ground up to operate in a totally different
   manner than the original. All the underlying mental models are different, and
   simpler. The main event loop is redone. And a task is used to monitor the line
-  channel for communication between multiple [SharedWriter]s and the [Readline], to
-  properly support pause and resume, and other control functions.
+  channel for communication between multiple [`SharedWriter`]s and the [`Readline`],
+  to properly support pause and resume, and other control functions.
 - Drop support for all async runtimes other than `tokio`. Rewrite all the code for
   this.
 - Drop crates like `pin-project`, `thingbuf` in favor of `tokio`. Rewrite all the code

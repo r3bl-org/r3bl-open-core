@@ -606,6 +606,9 @@ exhaustively tested and is able to handle many more corner cases.
 <a id="markdown-next-release" name="next-release"></a>
 
 - Added:
+  - New declarative macro `timed!()` that measures the time the given expression takes to
+    run using `time::Instant::now()`. If you use `timed!($expr)` then it will return a
+    tuple of `($expr, duration)`.
   - New declarative macro `ok!()` that is just syntactic sugar for `Ok(())`. If you use
     `ok!($expr)` then it will return `Ok($expr)`.
 
