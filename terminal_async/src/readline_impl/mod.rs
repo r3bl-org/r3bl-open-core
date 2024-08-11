@@ -16,12 +16,14 @@
  */
 
 // Attach.
+pub mod calc_str_len;
 pub mod history;
 pub mod line_state;
 pub mod readline;
 pub mod shared_writer;
 
 // Re-export.
+pub use calc_str_len::*;
 pub use history::*;
 pub use line_state::*;
 pub use readline::*;

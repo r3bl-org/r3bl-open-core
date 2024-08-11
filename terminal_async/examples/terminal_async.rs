@@ -358,7 +358,6 @@ mod long_running_task {
         if readline.safe_spinner_is_active.lock().unwrap().is_some() {
             _ = writeln!(
                 shared_writer,
-                "{}",
                 "Spinner is already active, can't start another one"
             );
         }
@@ -395,9 +394,9 @@ mod long_running_task {
                 }
 
                 // Display a message at every tick.
-                let _ = write!(
+                let _ = writeln!(
                     shared_writer_clone_2,
-                    "[{task_name}] - [{tick_counter}] interval went off while spinner was spinning!\n"
+                    "[{task_name}] - [{tick_counter}] interval went off while spinner was spinning!"
                 );
             }
 
