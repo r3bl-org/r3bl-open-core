@@ -383,3 +383,35 @@ macro_rules! ok {
         Ok($value)
     };
 }
+
+/// A decl macro that generates code to measure the performance of the block that it
+/// surrounds.
+///
+/// # Returns
+///
+/// If you use `timed!($expr)` then it will return a tuple of `($expr, duration)`.
+///
+/// # Example
+///
+/// ```
+/// use r3bl_rs_utils_core::timed;
+/// use sha2::{Digest, Sha256};
+/// let (retval, duration) = timed!({
+///     let prompt = "Hello, World!";
+///     let mut hasher = Sha256::new();
+///     hasher.update(prompt);
+///     let result = hasher.finalize();
+///     let mut bytes = [0u8; 4];
+///     bytes.copy_from_slice(&result.as_slice()[..4]);
+///     u32::from_le_bytes(bytes)
+/// });
+/// ```
+#[macro_export]
+macro_rules! timed {
+    ($block:block) => {{
+        let start = std::time::Instant::now();
+        let retval = $block;
+        let duration = start.elapsed();
+        (retval, duration)
+    }};
+}

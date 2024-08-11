@@ -15,20 +15,17 @@
  *   limitations under the License.
  */
 
-use std::io::{self, Write};
-
+use super::{MemoizedLenMap, StringLength};
+use crate::{ReadlineError, ReadlineEvent, SafeHistory};
 use crossterm::{
     cursor,
     event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
     terminal::{Clear, ClearType::*},
     QueueableCommand,
 };
-
 use r3bl_rs_utils_core::ok;
+use std::io::{self, Write};
 use unicode_segmentation::UnicodeSegmentation;
-use unicode_width::UnicodeWidthStr;
-
-use crate::{ReadlineError, ReadlineEvent, SafeHistory};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LineStateLiveness {
@@ -74,6 +71,9 @@ pub struct LineState {
     /// This is the only place where this information is stored. Since pause and resume
     /// ultimately only affect this struct.
     pub is_paused: LineStateLiveness,
+
+    /// Use to memoize the length of strings.
+    pub memoized_len_map: MemoizedLenMap,
 }
 
 macro_rules! early_return_if_paused {
@@ -92,7 +92,9 @@ macro_rules! early_return_if_paused {
 
 impl LineState {
     pub fn new(prompt: String, term_size: (u16, u16)) -> Self {
-        let current_column = strip_ansi_esc_seq_len(prompt.as_str()) as u16;
+        let mut memoized_len_map = MemoizedLenMap::new();
+        let current_column =
+            StringLength::StripAnsi.calculate(prompt.as_str(), &mut memoized_len_map);
         Self {
             prompt,
             last_line_completed: true,
@@ -105,6 +107,7 @@ impl LineState {
             cluster_buffer: String::new(),
             last_line_length: 0,
             is_paused: LineStateLiveness::NotPaused,
+            memoized_len_map,
         }
     }
 
@@ -174,8 +177,12 @@ impl LineState {
         let (pos, str) = self.current_grapheme().unwrap_or((0, ""));
         let pos = pos + str.len();
 
-        self.current_column = (strip_ansi_esc_seq_len(&self.prompt)
-            + UnicodeWidthStr::width(&self.line[0..pos])) as u16;
+        let prompt_len =
+            StringLength::StripAnsi.calculate(&self.prompt, &mut self.memoized_len_map);
+
+        let line_len = StringLength::Unicode.calculate(&self.line[0..pos], &mut self.memoized_len_map);
+
+        self.current_column = prompt_len + line_len;
 
         ok!()
     }
@@ -217,17 +224,19 @@ impl LineState {
     }
 
     /// Render line (prompt + line) and flush.
-    pub fn render_and_flush(&self, term: &mut dyn Write) -> io::Result<()> {
+    pub fn render_and_flush(&mut self, term: &mut dyn Write) -> io::Result<()> {
         early_return_if_paused!(self @Unit);
 
         let output = format!("{}{}", self.prompt, self.line);
         write!(term, "{}", output)?;
 
-        let prompt_len = strip_ansi_esc_seq_len(&self.prompt);
-        let line_len = UnicodeWidthStr::width(&self.line[..]);
+        let prompt_len = StringLength::StripAnsi.calculate(&self.prompt, &mut self.memoized_len_map);
+
+        let line_len = StringLength::Unicode.calculate(&self.line, &mut self.memoized_len_map);
 
         let total_line_len = prompt_len + line_len;
-        self.move_to_beginning(term, total_line_len as u16)?;
+
+        self.move_to_beginning(term, total_line_len)?;
         self.move_from_beginning(term, self.current_column)?;
 
         term.flush()?;
@@ -236,7 +245,7 @@ impl LineState {
     }
 
     /// Clear line and render.
-    pub fn clear_and_render_and_flush(&self, term: &mut dyn Write) -> io::Result<()> {
+    pub fn clear_and_render_and_flush(&mut self, term: &mut dyn Write) -> io::Result<()> {
         early_return_if_paused!(self @Unit);
 
         self.clear(term)?;
@@ -690,9 +699,4 @@ mod tests {
 
         assert_eq!(line.line, "");
     }
-}
-
-fn strip_ansi_esc_seq_len(prompt: &str) -> usize {
-    let stripped_prompt = strip_ansi::strip_ansi(prompt);
-    UnicodeWidthStr::width(stripped_prompt.as_str())
 }
