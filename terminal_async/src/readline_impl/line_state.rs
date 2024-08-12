@@ -15,7 +15,6 @@
  *   limitations under the License.
  */
 
-use super::{MemoizedLenMap, StringLength};
 use crate::{ReadlineError, ReadlineEvent, SafeHistory};
 use crossterm::{
     cursor,
@@ -23,7 +22,7 @@ use crossterm::{
     terminal::{Clear, ClearType::*},
     QueueableCommand,
 };
-use r3bl_rs_utils_core::ok;
+use r3bl_rs_utils_core::{ok, MemoizedLenMap, StringLength};
 use std::io::{self, Write};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -180,7 +179,8 @@ impl LineState {
         let prompt_len =
             StringLength::StripAnsi.calculate(&self.prompt, &mut self.memoized_len_map);
 
-        let line_len = StringLength::Unicode.calculate(&self.line[0..pos], &mut self.memoized_len_map);
+        let line_len =
+            StringLength::Unicode.calculate(&self.line[0..pos], &mut self.memoized_len_map);
 
         self.current_column = prompt_len + line_len;
 
@@ -230,7 +230,8 @@ impl LineState {
         let output = format!("{}{}", self.prompt, self.line);
         write!(term, "{}", output)?;
 
-        let prompt_len = StringLength::StripAnsi.calculate(&self.prompt, &mut self.memoized_len_map);
+        let prompt_len =
+            StringLength::StripAnsi.calculate(&self.prompt, &mut self.memoized_len_map);
 
         let line_len = StringLength::Unicode.calculate(&self.line, &mut self.memoized_len_map);
 
