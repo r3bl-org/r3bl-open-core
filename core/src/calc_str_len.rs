@@ -15,8 +15,9 @@
  *   limitations under the License.
  */
 
-use sha2::{Digest, Sha256};
 use std::collections::{hash_map::Entry, HashMap};
+
+use sha2::{Digest, Sha256};
 use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -107,7 +108,7 @@ impl StringLength {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use r3bl_rs_utils_core::timed;
+    use crate::timed;
 
     #[test]
     fn test_strip_ansi_esc_seq_len_cache_speedup() {
