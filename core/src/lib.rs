@@ -120,12 +120,14 @@ pub mod common;
 pub mod decl_macros;
 pub mod tui_core;
 pub mod utils;
+pub mod calc_str_len;
 
 // Re-export.
 pub use color_text::{color_text_default_styles::*, *};
 pub use common::*;
 pub use tui_core::*;
 pub use utils::*;
+pub use calc_str_len::*;
 
 // Tests.
 mod test_decl_macros;

@@ -606,6 +606,11 @@ exhaustively tested and is able to handle many more corner cases.
 <a id="markdown-next-release" name="next-release"></a>
 
 - Added:
+  - New enum `StringLength` that can be used to calculate the length of strings that have
+    ANSI escape sequences in them. It also uses `UnicodeWidth` to calculate the "display"
+    width of the (stripped) string. It also memoizes the result so that it is fast to
+    calculate the length of the same string multiple times. This is used in the
+    `r3bl_terminal_async` crate.
   - New declarative macro `timed!()` that measures the time the given expression takes to
     run using `time::Instant::now()`. If you use `timed!($expr)` then it will return a
     tuple of `($expr, duration)`.
@@ -798,7 +803,10 @@ for completion or cancellation by long running tasks, to ensure that they exit a
 to user cancellation.
 
 The third (and final) change is that `TerminalAsync::try_new()` now accepts prompts that
-can have ANSI escape sequences in them.
+can have ANSI escape sequences in them. By using `r3bl_rs_utils_core::StringLength` to
+calculate the display width of strings containing ANSI escape sequences (by memoizing the
+results of the calculations), the cost of repeatedly calculating this display width is
+almost eliminated.
 
 - Added:
   - Add support to extend pause and resume functionality to the entire crate. Now, when
