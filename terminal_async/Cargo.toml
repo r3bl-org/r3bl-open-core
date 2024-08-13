@@ -20,7 +20,7 @@ license = "Apache-2.0"
 
 [dependencies]
 # Terminal output.
-crossterm = { version = "0.27.0", features = ["event-stream"] } # EventStream
+crossterm = { version = "0.28.1", features = ["event-stream"] } # EventStream
 futures-util = "0.3.30"                                         # Needed for crossterm EventStream
 
 # r3bl-open-core.
@@ -29,22 +29,22 @@ r3bl_tui = { path = "../tui", version = "0.5.5" }
 r3bl_rs_utils_core = { path = "../core", version = "0.9.13" }
 
 # Unicode support.
-unicode-segmentation = "1.10"
-unicode-width = "0.1"
+unicode-segmentation = "1.11.0"
+unicode-width = "0.1.13"
 
 # Enum to string generation.
-strum = "0.26"
-strum_macros = "0.26"
+strum = "0.26.3"
+strum_macros = "0.26.4"
 
 # Error handling.
-thiserror = "1.0.58"
+thiserror = "1.0.63"
 miette = { version = "7.2.0", features = ["fancy"] }
 pretty_assertions = "1.4.0"
 
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
 # https://tokio.rs/tokio/topics/tracing-next-steps
-tokio = { version = "1.36.0", features = ["full", "tracing"] }
+tokio = { version = "1.39.2", features = ["full", "tracing"] }
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 tracing-appender = "0.2.3"
@@ -59,16 +59,15 @@ opentelemetry = { version = "0.22.0" }
 # Implements the OpenTelemetry APIs.
 opentelemetry_sdk = { version = "0.22.1", features = ["rt-tokio"] }
 # The OTel protocol (OTLP) implementation to export data to Jaeger or some other backend.
-opentelemetry-otlp = { version = "0.15.0", features = [
-  "tonic", # tonic is a gRPC crate.
-] }
+# tonic is a gRPC crate.
+opentelemetry-otlp = { version = "0.15.0", features = ["tonic"] }
 # Integration between the tracing crate and the opentelemetry crate.
 tracing-opentelemetry = "0.23.0"
 # Standardized naming patterns for OpenTelemetry things.
 opentelemetry-semantic-conventions = "0.14.0"
 
 # Async stream for DI and testing.
-futures-core = "0.3"
+futures-core = "0.3.30"
 async-stream = "0.3.5"
 
 [dev-dependencies]
