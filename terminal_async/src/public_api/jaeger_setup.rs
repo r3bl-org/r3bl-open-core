@@ -19,7 +19,7 @@ use crate::port_availability;
 use miette::IntoDiagnostic;
 use opentelemetry::{global, trace::TraceError, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_sdk::{runtime, trace as sdktrace, Resource};
+use opentelemetry_sdk::{runtime::Tokio, trace as sdktrace, Resource};
 use opentelemetry_semantic_conventions::resource::SERVICE_NAME;
 use std::str::FromStr;
 use tracing::Subscriber;
@@ -113,20 +113,22 @@ pub async fn is_jaeger_up(
 /// 3. <https://github.com/open-telemetry/opentelemetry-rust/blob/main/examples/tracing-jaeger/src/main.rs>
 /// 4. <https://www.jaegertracing.io/docs/1.57/getting-started/>
 fn try_init_exporter(service_name: &str) -> Result<opentelemetry_sdk::trace::Tracer, TraceError> {
+    let exporter = opentelemetry_otlp::new_exporter()
+        .tonic()
+        .with_endpoint(url());
+
+    let trace_config = sdktrace::config().with_resource(Resource::new(vec![KeyValue::new(
+        SERVICE_NAME,
+        service_name.to_string(),
+    )]));
+
+    let runtime = Tokio;
+
     opentelemetry_otlp::new_pipeline()
         .tracing()
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint(url()),
-        )
-        .with_trace_config(
-            sdktrace::config().with_resource(Resource::new(vec![KeyValue::new(
-                SERVICE_NAME,
-                service_name.to_string(),
-            )])),
-        )
-        .install_batch(runtime::Tokio)
+        .with_exporter(exporter)
+        .with_trace_config(trace_config)
+        .install_batch(runtime)
 }
 
 /// 1. This will try and create a Jaeger OTel layer, and if successful, it will return it.

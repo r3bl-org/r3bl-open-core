@@ -1,7 +1,6 @@
 [package]
 name = "r3bl_tui"
-# 00: upgrade the version number below (update the dependents too)
-version = "0.5.6"
+version = "0.5.7"
 edition = "2021"
 resolver = "2"
 description = "TUI library to build modern apps inspired by Elm, with Flexbox, CSS, editor component, emoji support, and more"
@@ -27,8 +26,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl-open-core.
-# 00: use the latest version of this w/ `ok!` macro.
-r3bl_rs_utils_core = { path = "../core", version = "0.9.13" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.14" }
 r3bl_rs_utils_macro = { path = "../macro", version = "0.9.9" }
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
 
@@ -45,7 +43,7 @@ rand = "0.8.5"
 tokio = { version = "1.33.0", features = ["full"] }
 
 # Crossterm & EventStream support.
-crossterm = { version = "0.27.0", features = ["event-stream"] }
+crossterm = { version = "0.28.1", features = ["event-stream"] }
 futures-util = "0.3.29"
 
 # https://github.com/serde-rs/serde.
@@ -66,7 +64,7 @@ syntect = "5.2.0"
 nom = "7.1.3"
 
 # color gradients.
-colorgrad = "0.6.2"
+colorgrad = "0.7.0"
 
 # Terminal.
 is-terminal = "0.4.9"
@@ -79,7 +77,6 @@ copypasta-ext = "0.4.4"
 
 [dev-dependencies]
 # Async readline for running examples.
-# 00: add the latest version number below (for compiling on other machines)
 r3bl_terminal_async = { path = "../terminal_async" }
 
 # For assert_eq2! macro.

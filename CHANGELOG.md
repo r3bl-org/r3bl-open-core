@@ -23,7 +23,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
-  - [Next release](#next-release)
+  - [v0.5.7 2024-08-13](#v057-2024-08-13)
   - [v0.5.6 2024-06-29](#v056-2024-06-29)
   - [v0.5.5 2024-05-20](#v055-2024-05-20)
   - [v0.5.4 2024-05-20](#v054-2024-05-20)
@@ -64,7 +64,7 @@
   - [v0.0.2 2024-07-13](#v002-2024-07-13)
   - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_terminal_async](#r3bl_terminal_async)
-  - [Next release](#next-release)
+  - [v0.5.6 2024-08-13](#v056-2024-08-13)
   - [v0.5.5 2024-07-13](#v055-2024-07-13)
   - [v0.5.4 2024-07-12](#v054-2024-07-12)
   - [v0.5.3 2024-05-22](#v053-2024-05-22)
@@ -321,13 +321,15 @@ in a text editor.
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
-### Next release
-<a id="markdown-next-release" name="next-release"></a>
+The biggest change in this release is rewriting the example runner using the latest
+`r3bl_terminal_async` crate, and dropping the use of `reedline` crate (which is no longer
+used to run the examples).
 
-- Fixed:
-  - Fix a subtle bug with shutdown signal in the main event loop.
-    [PR](https://github.com/r3bl-org/r3bl-open-core/pull/336/) to fix this
-    [issue](https://github.com/r3bl-org/r3bl-open-core/issues/331).
+`r3bl_terminal_async` is fully async and allows seamless creation of REPLs and shells. It
+also supports pause and resume for spinners, along with many other features.
+
+### v0.5.7 (2024-08-13)
+<a id="markdown-v0.5.7-2024-08-13" name="v0.5.7-2024-08-13"></a>
 
 - Updated:
   - Change the main examples launcher (which you can run using `nu run examples`) so that
@@ -336,6 +338,11 @@ in a text editor.
   - Drop dependency on `reedline`. Use `r3bl_terminal_async` instead to get async readline
     capabilities. Update examples to use this new crate, and make example launcher easier
     to maintain.
+
+- Fixed:
+  - Fix a minor and subtle bug with shutdown signal in the main event loop.
+    [PR](https://github.com/r3bl-org/r3bl-open-core/pull/336/) to fix this
+    [issue](https://github.com/r3bl-org/r3bl-open-core/issues/331).
 
 ### v0.5.6 (2024-06-29)
 <a id="markdown-v0.5.6-2024-06-29" name="v0.5.6-2024-06-29"></a>
@@ -796,8 +803,8 @@ links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures)
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
 
-### Next release
-<a id="markdown-next-release" name="next-release"></a>
+### v0.5.6 (2024-08-13)
+<a id="markdown-v0.5.6-2024-08-13" name="v0.5.6-2024-08-13"></a>
 
 The biggest change in this release is complete support for pause and resume. Now when the
 output is paused, input is also paused, with the exception of allowing <kbd>Ctrl+C</kbd>

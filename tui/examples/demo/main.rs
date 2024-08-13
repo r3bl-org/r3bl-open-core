@@ -44,8 +44,6 @@ use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
 #[tokio::main]
 async fn main() -> CommonResult<()> {
-    println!("{}", style_prompt(generate_help_msg().as_str()));
-
     // If the terminal is not fully interactive, then return early.
     let Some(mut terminal_async) = TerminalAsync::try_new("> ").await? else {
         return CommonError::new_err_with_only_msg("Terminal is not fully interactive");
@@ -58,12 +56,19 @@ async fn main() -> CommonResult<()> {
             .add_history_entry(command.to_string());
     }
 
+    terminal_async
+        .println(format!("{}", style_prompt(generate_help_msg().as_str())))
+        .await;
+
     loop {
         let result_readline_event = terminal_async.get_readline_event().await;
         match result_readline_event {
             Ok(readline_event) => match readline_event {
                 ReadlineEvent::Line(input) => {
-                    if run_user_selected_example(input).await.is_err() {
+                    if run_user_selected_example(input, &mut terminal_async)
+                        .await
+                        .is_err()
+                    {
                         break;
                     };
                     crossterm::terminal::enable_raw_mode()?;
@@ -91,7 +96,10 @@ async fn main() -> CommonResult<()> {
 /// This function will take the terminal out of raw mode when it returns. This is because
 /// the examples below will use `r3bl_tui` which will put the terminal in raw mode, use
 /// alt screen, and then restore it all when it exits.
-async fn run_user_selected_example(selection: String) -> CommonResult<()> {
+async fn run_user_selected_example(
+    selection: String,
+    terminal_async: &mut TerminalAsync,
+) -> CommonResult<()> {
     let result_command /* Eg: Ok(Exit) */ =
         AutoCompleteCommand::from_str(&selection /* eg: "0" */);
     match result_command {
@@ -117,7 +125,13 @@ async fn run_user_selected_example(selection: String) -> CommonResult<()> {
             AutoCompleteCommand::Exit => CommonError::new_err_with_only_msg("Exiting..."),
         },
         Err(_) => {
-            println!("{} {}", "Invalid selection:".blue(), selection.red().bold());
+            terminal_async
+                .println(format!(
+                    "{} {}",
+                    "Invalid selection:".blue(),
+                    selection.red().bold()
+                ))
+                .await;
             Ok(())
         }
     }

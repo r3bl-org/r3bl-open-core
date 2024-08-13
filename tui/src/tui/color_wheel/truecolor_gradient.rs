@@ -15,6 +15,7 @@
  *   limitations under the License.
  */
 
+use colorgrad::Gradient;
 use r3bl_rs_utils_core::{RgbValue, TuiColor};
 use rand::Rng;
 
@@ -62,27 +63,29 @@ pub fn generate_random_truecolor_gradient(steps: usize) -> Vec<TuiColor> {
 pub fn generate_truecolor_gradient(stops: &[String], steps: usize) -> Vec<TuiColor> {
     let colors = stops.iter().map(|s| s.as_str()).collect::<Vec<&str>>();
 
-    let result_gradient = colorgrad::CustomGradient::new()
+    let result_gradient = colorgrad::GradientBuilder::new()
         .html_colors(&colors)
-        .build();
+        .build::<colorgrad::LinearGradient>();
+
+    type Number = f32;
 
     match result_gradient {
         Ok(gradient) => {
-            let fractional_step: f64 = 1f64 / steps as f64;
+            let fractional_step: Number = (1 as Number) / steps as Number;
 
-            let mut it = vec![];
+            let mut acc = vec![];
 
             for step_count in 0..steps {
-                let color = gradient.at(fractional_step * step_count as f64);
+                let color = gradient.at(fractional_step * step_count as Number);
                 let color = color.to_rgba8();
-                it.push(TuiColor::Rgb(RgbValue {
+                acc.push(TuiColor::Rgb(RgbValue {
                     red: color[0],
                     green: color[1],
                     blue: color[2],
                 }));
             }
 
-            it
+            acc
         }
         Err(_) => {
             // Gradient w/ 10 stops going from red to green to blue.
