@@ -70,10 +70,10 @@ impl StringLength {
     /// | [StringLength::StripAnsi] | Yes    | 70x     |
     ///
     /* cspell:disable-next-line  */
-    /// Eg: For input: `"\u{1b}[31mfoo\u{1b}[0m";`
-    /// - the uncached time is 700µs
-    /// - the cached time is 10µs
-    ///
+    /// Eg: For input: `"\u{1b}[31mfoo\u{1b}[0m";` on a 13th Gen Intel® Core™ i5-13600K
+    /// machine with 64GB of RAM running Ubuntu 24.04, the execution times are:
+    /// - Uncached time is 700µs.
+    /// - Cached time is 10µs.
     pub fn calculate(&self, input: &str, memoized_len_map: &mut MemoizedLenMap) -> u16 {
         match self {
             // Do not memoize (slower to do this).
@@ -93,8 +93,12 @@ impl StringLength {
         }
     }
 
-    /// SHA256 produces a 256-bit (32-byte) hash value, typically rendered as a hexadecimal
-    /// number. However, here we are converting it to a u32.
+    /// [SHA256](sha2) produces a 256-bit (32-byte) hash value, typically rendered as a
+    /// hexadecimal number. However, here we are converting it to a u32. Here's an example
+    /// of how long it takes to run on `foo`: 25.695µs. To provide some perspective of how
+    /// long this is, it takes about the same time to run [StringLength::Unicode] on the
+    /// same input, on a 13th Gen Intel® Core™ i5-13600K machine with 64GB of RAM running
+    /// Ubuntu 24.04.
     pub fn calculate_sha256(text: &str) -> u32 {
         let mut hasher = Sha256::new();
         hasher.update(text);
@@ -109,6 +113,18 @@ impl StringLength {
 mod tests {
     use super::*;
     use crate::timed;
+
+    #[test]
+    fn test_sha256() {
+        let input = "foo";
+        let (hash, duration) = timed!({
+            let hash = StringLength::calculate_sha256(input);
+            assert_eq!(hash, 1806968364);
+            hash
+        });
+        println!("Execution time - string_length(Sha256): {:?}", duration);
+        assert_eq!(hash, 1806968364);
+    }
 
     #[test]
     fn test_strip_ansi_esc_seq_len_cache_speedup() {

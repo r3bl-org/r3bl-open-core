@@ -1,7 +1,7 @@
 [package]
 name = "r3bl_rs_utils_core"
 # 00: update the version of this lib and publish (new ok! macro).
-version = "0.9.13"
+version = "0.9.14"
 edition = "2021"
 resolver = "2"
 description = """
@@ -30,22 +30,22 @@ path = "src/lib.rs"
 # r3bl-open-core.
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }       # Convert between ansi and rgb.
 r3bl_simple_logger = { path = "../simple_logger", version = "0.1.3" } # For logging.
-log = { version = "0.4.20", features = ["std"] }                      # For logging.
+log = { version = "0.4.22", features = ["std"] }                      # For logging.
 
 # https://github.com/serde-rs/serde.
-serde = { version = "1.0.190", features = ["derive"] }
-serde_json = "1.0.107"
+serde = { version = "1.0.207", features = ["derive"] }
+serde_json = "1.0.124"
 
 # Unicode, grapheme clusters.
-unicode-width = "0.1.11"
-unicode-segmentation = "1.10.1"
+unicode-width = "0.1.13"
+unicode-segmentation = "1.11.0"
 
 # get-size.
 get-size = { version = "0.1.4", features = ["derive"] }
 
 # Time
-chrono = "0.4.31"
-time = "0.3.30"
+chrono = "0.4.38"
+time = "0.3.36"
 
 # nom parser combinator.
 nom = "7.1.3"
