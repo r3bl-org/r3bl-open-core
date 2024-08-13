@@ -576,33 +576,35 @@ pub mod file_walker {
 
         Ok(())
     }
+}
 
-    #[tokio::test]
-    async fn test_display_tree() -> miette::Result<()> {
-        let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
-        let mut shared_writer = SharedWriter::new(line_sender);
+#[tokio::test]
+async fn test_display_tree() -> miette::Result<()> {
+    let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
+    let mut shared_writer = SharedWriter::new(line_sender);
 
-        let (path, _) = get_current_working_directory()?;
+    let (path, _) = file_walker::get_current_working_directory()?;
 
-        display_tree(path, &mut shared_writer, false).await.unwrap();
+    file_walker::display_tree(path, &mut shared_writer, false)
+        .await
+        .unwrap();
 
-        assert_eq!(shared_writer.buffer.len(), 0);
+    assert_eq!(shared_writer.buffer.len(), 0);
 
-        // Print everything in line_receiver.
-        let mut output_lines = vec![];
-        loop {
-            let it = line_receiver.try_recv().into_diagnostic();
-            match it {
-                Ok(LineStateControlSignal::Line(it)) => {
-                    output_lines.push(String::from_utf8_lossy(&it).to_string());
-                    print!("{}", String::from_utf8_lossy(&it));
-                }
-                _ => break,
+    // Print everything in line_receiver.
+    let mut output_lines = vec![];
+    loop {
+        let it = line_receiver.try_recv().into_diagnostic();
+        match it {
+            Ok(r3bl_terminal_async::LineStateControlSignal::Line(it)) => {
+                output_lines.push(String::from_utf8_lossy(&it).to_string());
+                print!("{}", String::from_utf8_lossy(&it));
             }
+            _ => break,
         }
-
-        assert_ne!(output_lines.len(), 0);
-
-        Ok(())
     }
+
+    assert_ne!(output_lines.len(), 0);
+
+    Ok(())
 }

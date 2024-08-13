@@ -41,7 +41,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
-  - [Next release](#next-release)
+  - [v0.9.14 2024-08-13](#v0914-2024-08-13)
   - [v0.9.13 2024-04-15](#v0913-2024-04-15)
   - [v0.9.12 2024-01-07](#v0912-2024-01-07)
   - [v0.9.11 2024-01-02](#v0911-2024-01-02)
@@ -602,20 +602,26 @@ exhaustively tested and is able to handle many more corner cases.
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
-### Next release
-<a id="markdown-next-release" name="next-release"></a>
+The main additions to this release are the `StringLength` enum, the `timed!()` macro, and
+the `ok!()` macro.
+
+### v0.9.14 (2024-08-13)
+<a id="markdown-v0.9.14-2024-08-13" name="v0.9.14-2024-08-13"></a>
 
 - Added:
   - New enum `StringLength` that can be used to calculate the length of strings that have
     ANSI escape sequences in them. It also uses `UnicodeWidth` to calculate the "display"
     width of the (stripped) string. It also memoizes the result so that it is fast to
     calculate the length of the same string multiple times. This is used in the
-    `r3bl_terminal_async` crate.
+    `r3bl_terminal_async` crate. It also has a method to calculate the SHA256 hash of a
+    given `String`, and return it as a `u8`.
   - New declarative macro `timed!()` that measures the time the given expression takes to
     run using `time::Instant::now()`. If you use `timed!($expr)` then it will return a
     tuple of `($expr, duration)`.
   - New declarative macro `ok!()` that is just syntactic sugar for `Ok(())`. If you use
     `ok!($expr)` then it will return `Ok($expr)`.
+  - Here's the [PR](https://github.com/r3bl-org/r3bl-open-core/pull/349) with all the code
+    related to this release.
 
 ### v0.9.13 (2024-04-15)
 <a id="markdown-v0.9.13-2024-04-15" name="v0.9.13-2024-04-15"></a>
@@ -807,6 +813,9 @@ can have ANSI escape sequences in them. By using `r3bl_rs_utils_core::StringLeng
 calculate the display width of strings containing ANSI escape sequences (by memoizing the
 results of the calculations), the cost of repeatedly calculating this display width is
 almost eliminated.
+
+Here's the [PR](https://github.com/r3bl-org/r3bl-open-core/pull/349) with all the code
+related to this release.
 
 - Added:
   - Add support to extend pause and resume functionality to the entire crate. Now, when

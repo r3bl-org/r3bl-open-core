@@ -41,17 +41,24 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 cd core
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
+# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
+# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
+cargo readme > README.md
 git add -A
-git commit -S -m "v0.9.13-core"
-git tag -a v0.9.13-core -m "v0.9.13-core"
+git commit -S -m "v0.9.14-core"
+git tag -a v0.9.14-core -m "v0.9.14-core"
 cargo publish
+git push ; git push --tags # Push tags & commits
 cd ..
 
 cd macro
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
 git add -A
 git commit -S -m "v0.9.9-macro"
 git tag -a v0.9.9-macro -m "v0.9.9-macro"
@@ -62,6 +69,7 @@ cd tuify
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
 git add -A
 git commit -S -m "v0.1.26-tuify"
 git tag -a v0.1.26-tuify -m "v0.1.26-tuify"
@@ -71,11 +79,17 @@ cd ..
 cd tui
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
+# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
+# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
+cargo readme > README.md
 git add -A
 git commit -S -m "v0.5.6-tui"
 git tag -a v0.5.6-tui -m "v0.5.6-tui"
 cargo publish
+git push ; git push --tags # Push tags & commits
 cd ..
 
 cd cmdr
@@ -83,6 +97,7 @@ cd cmdr
 # Update CHANGELOG.md
 # 1) Don't forget to update `r3bl-base` to have the same `UPDATE_IF_NOT_THIS_VERSION`
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
 git add -A
 git commit -S -m "v0.0.14-cmdr"
 git tag -a v0.0.14-cmdr -m "v0.0.14-cmdr"
@@ -95,6 +110,7 @@ cd test_fixtures
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
 git commit -S -m "v0.0.2-test_fixtures"
@@ -105,18 +121,24 @@ cd ..
 cd terminal_async
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
+# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
+# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
 git commit -S -m "v0.5.5-terminal_async"
 git tag -a v0.5.5-terminal_async -m "v0.5.5-terminal_async"
 cargo publish
+git push ; git push --tags # Push tags & commits
 cd ..
 
 cd analytics_schema
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
 git add -A
 git commit -S -m "v0.0.1-analytics_schema"
 git tag -a v0.0.1-analytics_schema -m "v0.0.1-analytics_schema"
@@ -127,6 +149,7 @@ cd ansi_color
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
 git add -A
 git commit -S -m "v0.6.9-ansi_color"
 git tag -a v0.6.9-ansi_color -m "v0.6.9-ansi_color"
@@ -137,6 +160,7 @@ cd simple_logger
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
 git add -A
 git commit -S -m "v0.1.3-simple_logger"
 git tag -a v0.1.3-simple_logger -m "v0.1.3-simple_logger"
@@ -147,6 +171,7 @@ cd redux
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
 git add -A
 git commit -S -m "v0.2.6-redux"
 git tag -a v0.2.6-redux -m "v0.2.6-redux"
@@ -157,6 +182,7 @@ cd utils
 # Update cargo.toml version number manually
 # Update CHANGELOG.md
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
 git add -A
 git commit -S -m "v0.9.15-public"
 git tag -a v0.9.15-public -m "v0.9.15-public"
