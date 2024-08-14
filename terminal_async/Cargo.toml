@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_terminal_async"
-version = "0.5.5"
+version = "0.5.6"
 edition = "2021"
 resolver = "2"
 description = "Async non-blocking read_line implemenation with multiline editor, with concurrent display output from tasks, and colorful animated spinners"
@@ -24,9 +24,9 @@ crossterm = { version = "0.28.1", features = ["event-stream"] } # EventStream
 futures-util = "0.3.30"                                         # Needed for crossterm EventStream
 
 # r3bl-open-core.
+r3bl_rs_utils_core = { path = "../core", version = "0.9.14" }
+r3bl_tui = { path = "../tui", version = "0.5.7" }
 r3bl_tuify = { path = "../tuify", version = "0.1.26" }
-r3bl_tui = { path = "../tui", version = "0.5.5" }
-r3bl_rs_utils_core = { path = "../core", version = "0.9.13" }
 
 # Unicode support.
 unicode-segmentation = "1.11.0"
@@ -72,7 +72,7 @@ async-stream = "0.3.5"
 
 [dev-dependencies]
 # Testing - r3bl-open-core.
-r3bl_test_fixtures = { path = "../test_fixtures", version = "0.0.2" }
+r3bl_test_fixtures = { path = "../test_fixtures" }
 
 [features]
 default = ["emacs"]
