@@ -321,15 +321,15 @@ in a text editor.
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
+### v0.5.7 (2024-08-13)
+<a id="markdown-v0.5.7-2024-08-13" name="v0.5.7-2024-08-13"></a>
+
 The biggest change in this release is rewriting the example runner using the latest
 `r3bl_terminal_async` crate, and dropping the use of `reedline` crate (which is no longer
 used to run the examples).
 
 `r3bl_terminal_async` is fully async and allows seamless creation of REPLs and shells. It
 also supports pause and resume for spinners, along with many other features.
-
-### v0.5.7 (2024-08-13)
-<a id="markdown-v0.5.7-2024-08-13" name="v0.5.7-2024-08-13"></a>
 
 - Updated:
   - Change the main examples launcher (which you can run using `nu run examples`) so that
@@ -609,11 +609,11 @@ exhaustively tested and is able to handle many more corner cases.
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
 
-The main additions to this release are the `StringLength` enum, the `timed!()` macro, and
-the `ok!()` macro.
-
 ### v0.9.14 (2024-08-13)
 <a id="markdown-v0.9.14-2024-08-13" name="v0.9.14-2024-08-13"></a>
+
+The main additions to this release are the `StringLength` enum, the `timed!()` macro, and
+the `ok!()` macro.
 
 - Added:
   - New enum `StringLength` that can be used to calculate the length of strings that have
