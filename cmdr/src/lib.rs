@@ -22,6 +22,10 @@
 //! # Suite of TUI apps focused on developer productivity
 //! <a id="markdown-r3bl-cmdr%3A-suite-of-tui-apps-focused-on-developer-productivity" name="r3bl-cmdr%3A-suite-of-tui-apps-focused-on-developer-productivity"></a>
 //!
+//! Please check out the
+//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl-cmdr)
+//! to see how the library has evolved over time.
+//!
 //! <!-- TOC -->
 //!
 //! - [Install the apps on your system using cargo](#install-the-apps-on-your-system-using-cargo)

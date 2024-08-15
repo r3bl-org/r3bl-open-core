@@ -37,6 +37,10 @@
 //! Rust crate to generate formatted ANSI 256 (8-bit) and truecolor (24-bit) color output to stdout. On
 //! macOS, the default Terminal.app does not support truecolor, so ANSI 256 colors are used instead.
 //!
+//! Please check out the
+//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_ansi_color)
+//! to see how the library has evolved over time.
+//!
 //! > This crate performs its own detection of terminal color capability heuristically. And does not
 //! > use other crates to perform this function.
 //!

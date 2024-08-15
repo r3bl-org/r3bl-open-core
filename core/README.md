@@ -67,6 +67,10 @@ apps, along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 
    in Rust programming, ranging from things like colorizing `stdout`, `stderr` output to lazy
    value holders.
 
+Please check out the
+[changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_rs_utils_core)
+to see how the library has evolved over time.
+
 ### Learn more about how this library is built
 
 🦜 Here are some articles (on [developerlife.com](https://developerlife.com)) about how this

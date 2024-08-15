@@ -21,6 +21,10 @@
 //! colorful animated spinners ⌛🌈 for long running tasks. With it, you can create
 //! beautiful, powerful, and interactive REPLs (read execute print loops) with ease.
 //!
+//! Please check out the
+//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_terminal_async)
+//! to see how the library has evolved over time.
+//!
 //! # Why use this crate
 //!
 //! 1. Because
