@@ -26,6 +26,7 @@ the following command:
 cargo install r3bl-cmdr
 edi
 ```
+
 ## Partial TUI (async, partial raw mode) for async REPL and shell programs
 
 [`r3bl_terminal_async`](https://github.com/r3bl-org/r3bl-open-core/tree/main/terminal_async)

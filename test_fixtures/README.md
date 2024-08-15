@@ -11,6 +11,10 @@ be tested "end to end".
 1. The async stream fixtures are used to test the input stream of a TUI framework.
 2. The stdout fixtures are used to test the output of a TUI framework.
 
+Please check out the
+[changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_test_fixtures)
+to see how the library has evolved over time.
+
 ### async_stream_fixtures
 
 Here's an example of how create a stream of `T` from a `Vec<T>`.

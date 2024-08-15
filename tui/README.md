@@ -41,7 +41,11 @@ it.
 
 All the crates in the `r3bl-open-core` [repo](https://github.com/r3bl-org/r3bl-open-core/)
 provide lots of useful functionality to help you build TUI (text user interface) apps,
-along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
+along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
+
+Please check out the
+[changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tui) to
+see how the library has evolved over time.
 
 # r3bl_tui crate
 <a id="markdown-r3bl_tui-crate" name="r3bl_tui-crate"></a>

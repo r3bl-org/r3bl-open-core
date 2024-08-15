@@ -27,6 +27,10 @@
 //! 1. As a binary. This is useful if you want to use this crate as a command line tool.
 //!    The binary target is called `rt`.
 //!
+//! Please check out the
+//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tuify)
+//! to see how the library has evolved over time.
+//!
 //! ## How to use it as a library?
 //!
 //! Here's a demo of the library target of this crate in action.

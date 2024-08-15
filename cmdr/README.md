@@ -5,6 +5,10 @@
 # Suite of R3BL TUI apps focused on developer productivity
 <a id="markdown-suite-of-r3bl-tui-apps-focused-on-developer-productivity" name="suite-of-r3bl-tui-apps-focused-on-developer-productivity"></a>
 
+Please check out the
+[changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl-cmdr)
+to see how the library has evolved over time.
+
 <!-- TOC -->
 
 - [R3BL CMDR is comprised of two apps](#r3bl-cmdr-is-comprised-of-two-apps)
