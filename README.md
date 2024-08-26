@@ -1,4 +1,5 @@
 # r3bl-open-core
+<a id="markdown-r3bl-open-core" name="r3bl-open-core"></a>
 
 Welcome to this [monorepo](https://en.wikipedia.org/wiki/Monorepo). All the folders in
 this repo are separate Rust projects (crates) that are probably published to crates.io.
@@ -8,14 +9,32 @@ Here's the [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHAN
 for this monorepo or Rust workspace. This is a great place to start to get familiar with
 what has changed recently in each of the projects in this Rust workspace.
 
-# The workspace contains many TUI, CLI, TTY crates
+Table of contents:
+
+<!-- TOC -->
+
+- [This workspace contains many TUI, CLI, TTY crates](#this-workspace-contains-many-tui-cli-tty-crates)
+  - [Full TUI async, raw mode, full screen for immersive TUI apps](#full-tui-async-raw-mode-full-screen-for-immersive-tui-apps)
+  - [Partial TUI async, partial raw mode for async REPL and shell programs](#partial-tui-async-partial-raw-mode-for-async-repl-and-shell-programs)
+  - [Minimum TUI sync, blocking, partial raw mode for simple CLI programs with blocking interaction](#minimum-tui-sync-blocking-partial-raw-mode-for-simple-cli-programs-with-blocking-interaction)
+  - [Underlying crates](#underlying-crates)
+  - [Top level user facing crate](#top-level-user-facing-crate)
+- [How these crates are built, feedback](#how-these-crates-are-built-feedback)
+- [Building the workspace, CI/CD, and testing](#building-the-workspace-cicd-and-testing)
+- [Star History](#star-history)
+
+<!-- /TOC -->
+
+## This workspace contains many TUI, CLI, TTY crates
+<a id="markdown-this-workspace-contains-many-tui%2C-cli%2C-tty-crates" name="this-workspace-contains-many-tui%2C-cli%2C-tty-crates"></a>
 
 The following is a high level overview of each of the crates that constitute this Rust
 [workspace](https://github.com/r3bl-org/r3bl-open-core).
 
 There are crates that range from "full" TUI to "partial" TUI, and everything in the middle.
 
-## Full TUI (async, raw mode, full screen) for immersive TUI apps
+### Full TUI (async, raw mode, full screen) for immersive TUI apps
+<a id="markdown-full-tui-async%2C-raw-mode%2C-full-screen-for-immersive-tui-apps" name="full-tui-async%2C-raw-mode%2C-full-screen-for-immersive-tui-apps"></a>
 
 [`r3bl_tui`](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui) gives you raw mode
 "alternate screen" and "full screen" support, while being totally async. An example of
@@ -27,7 +46,8 @@ cargo install r3bl-cmdr
 edi
 ```
 
-## Partial TUI (async, partial raw mode) for async REPL and shell programs
+### Partial TUI (async, partial raw mode) for async REPL and shell programs
+<a id="markdown-partial-tui-async%2C-partial-raw-mode-for-async-repl-and-shell-programs" name="partial-tui-async%2C-partial-raw-mode-for-async-repl-and-shell-programs"></a>
 
 [`r3bl_terminal_async`](https://github.com/r3bl-org/r3bl-open-core/tree/main/terminal_async)
 gives you the ability to easily build your own async shell programs using "async readline
@@ -37,7 +57,8 @@ Here are examples of this:
 1. https://github.com/nazmulidris/rust-scratch/tree/main/tcp-api-server
 2. https://github.com/r3bl-org/r3bl-open-core/tree/main/terminal_async/examples
 
-## Minimum TUI (sync, blocking, partial raw mode) for simple CLI programs with blocking interaction
+### Minimum TUI (sync, blocking, partial raw mode) for simple CLI programs with blocking interaction
+<a id="markdown-minimum-tui-sync%2C-blocking%2C-partial-raw-mode-for-simple-cli-programs-with-blocking-interaction" name="minimum-tui-sync%2C-blocking%2C-partial-raw-mode-for-simple-cli-programs-with-blocking-interaction"></a>
 
 [`r3bl_tuify`](https://github.com/r3bl-org/r3bl-open-core/tree/main/tuify) gives you the
 ability to easily build your own CLI programs with blocking interaction. This is a great
@@ -50,7 +71,8 @@ cargo install r3bl-cmdr
 giti
 ```
 
-## Underlying crates
+### Underlying crates
+<a id="markdown-underlying-crates" name="underlying-crates"></a>
 
 There are many other underlying crates that are used to build these top level crates.
 Here's a short list of them:
@@ -73,7 +95,8 @@ Here's a short list of them:
   the more complex crates and you just need to output some styled text to the terminal,
   then this is the crate for you.
 
-## Top level user facing crate
+### Top level user facing crate
+<a id="markdown-top-level-user-facing-crate" name="top-level-user-facing-crate"></a>
 
 There's even a crate that only contains user facing apps that are built using these
 underlying crates. This is the
@@ -85,7 +108,17 @@ following command:
 cargo install r3bl-cmdr
 ```
 
-# Building the workspace, CI/CD, and testing
+## How these crates are built, feedback
+<a id="markdown-how-these-crates-are-built%2C-feedback" name="how-these-crates-are-built%2C-feedback"></a>
+
+If you want to know how these crates are built, please check out:
+1. Articles on [developerlife.com](https://developerlife.com).
+2. Videos on the developerlife.com [YouTube channel](https://www.youtube.com/@developerlifecom?sub_confirmation=1).
+
+If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
+
+## Building the workspace, CI/CD, and testing
+<a id="markdown-building-the-workspace%2C-ci%2Fcd%2C-and-testing" name="building-the-workspace%2C-ci%2Fcd%2C-and-testing"></a>
 
 There's a `nushell` script that you can use to run the CI/CD pipeline for this workspace,
 and more (local only operations). To get a list of these, you can view the `nushell`
@@ -130,3 +163,14 @@ Each crate that's contained in this workspace may also have its own `nushell` sc
 is also named `run`. This is a convention that is used in this workspace. You can run the
 `run` script in each of the crates to get a list of commands that are specific to that
 crate.
+
+## Star History
+<a id="markdown-star-history" name="star-history"></a>
+
+<a href="https://star-history.com/#r3bl-org/r3bl-open-core&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=r3bl-org/r3bl-open-core&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=r3bl-org/r3bl-open-core&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=r3bl-org/r3bl-open-core&type=Date" />
+ </picture>
+</a>
