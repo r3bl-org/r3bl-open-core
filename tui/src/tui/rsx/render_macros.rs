@@ -45,9 +45,10 @@ macro_rules! render_component_in_current_box {
     };
 }
 
-/// Render the component in the given box (which is not retrieved from the surface). This is usually
-/// to do "absolute positioned" rendering of components (like for a modal dialog box that paints on
-/// top of everything else in the window).
+/// Render the component in the given box (which is not retrieved from the surface).
+///
+/// This is usually to do "absolute positioned" rendering of components (like for a modal
+/// dialog box that paints on top of everything else in the window).
 #[macro_export]
 macro_rules! render_component_in_given_box {
     (

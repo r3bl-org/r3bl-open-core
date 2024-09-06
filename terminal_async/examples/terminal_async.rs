@@ -488,11 +488,13 @@ pub mod file_walker {
         })
     }
 
-    /// Walk the current working directory. Display a tree formatted view of the
-    /// sub-folders just like the `tree` command on Linux. This algorithm is a depth-first
-    /// search (DFS) algorithm, which relies on the [fs], which is a tree, to get a list
-    /// of folders (not files) contained in any given folder. There's no need to
-    /// explicitly construct a tree, since the [fs] is a non-binary tree.
+    /// Walk the current working directory.
+    ///
+    /// Display a tree formatted view of the sub-folders just like the `tree` command on
+    /// Linux. This algorithm is a depth-first search (DFS) algorithm, which relies on the
+    /// [fs], which is a tree, to get a list of folders (not files) contained in any given
+    /// folder. There's no need to explicitly construct a tree, since the [fs] is a
+    /// non-binary tree.
     ///
     /// The [fs::read_dir] function determines what the order of the traversal is.
     /// Non-binary trees, also known as N-ary trees, can be traversed in several ways.
@@ -504,13 +506,13 @@ pub mod file_walker {
     ///    the left subtree, and finally the right subtree.
     ///
     /// 2) In-Order Traversal: In this traversal method, the left subtree is visited
-    ///    first, then the root, and finally the right subtree. Note: This method is only for
-    ///    binary trees.
+    ///    first, then the root, and finally the right subtree. Note: This method is only
+    ///    for binary trees.
     ///
     /// 3) Post-Order Traversal: In this traversal method, the left subtree is visited
-    ///    first, then the right subtree, and finally the root. Breadth-First Search (BFS):
-    ///    Also known as level-order traversal, this method visits all the nodes of a level
-    ///    before going to the next level.
+    ///    first, then the right subtree, and finally the root. Breadth-First Search
+    ///    (BFS): Also known as level-order traversal, this method visits all the nodes of
+    ///    a level before going to the next level.
     ///
     /// 4) Spiral/Zigzag Order Traversal: This is a variant of BFS. In this traversal,
     ///    levels are visited in alternating left-to-right and right-to-left order.

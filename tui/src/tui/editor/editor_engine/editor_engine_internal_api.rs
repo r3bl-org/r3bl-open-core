@@ -17,7 +17,6 @@
 
 use std::{cmp::Ordering, mem::replace};
 
-use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::{Deserialize, Serialize};
 
@@ -2293,7 +2292,7 @@ mod scroll_editor_buffer {
 mod caret_location_enums {
     use super::*;
 
-    #[derive(Clone, Eq, PartialEq, Serialize, Deserialize, GetSize)]
+    #[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
     pub enum CaretColLocationInLine {
         /// Also covers state where there is no col, or only 1 col.
         AtStart,
@@ -2301,7 +2300,7 @@ mod caret_location_enums {
         InMiddle,
     }
 
-    #[derive(Clone, Eq, PartialEq, Serialize, Deserialize, GetSize)]
+    #[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
     pub enum CaretRowLocationInBuffer {
         /// Also covers state where there is no row, or only 1 row.
         AtTop,
@@ -2311,7 +2310,7 @@ mod caret_location_enums {
 }
 use caret_location_enums::*;
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Copy)]
 pub enum DeleteSelectionWith {
     Backspace,
     Delete,

@@ -50,8 +50,9 @@ def main [...args: string] {
         "rustfmt" => {rustfmt}
         "upgrade-deps" => {upgrade-deps}
         "serve-docs" => {serve-docs}
-        "help" => {print-help all}
         "audit-deps" => {audit-deps}
+        "unmaintained" => {unmaintained}
+        "help" => {print-help all}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
     }
 }
@@ -76,9 +77,11 @@ def print-help [command: string] {
         print $'    (ansi green)check-watch(ansi reset)'
         print $'    (ansi green)clippy(ansi reset)'
         print $'    (ansi green)clippy-watch(ansi reset)'
-        print $'    (ansi green)serve-docs(ansi reset)'
-        print $'    (ansi green)upgrade-deps(ansi reset)'
         print $'    (ansi green)rustfmt(ansi reset)'
+        print $'    (ansi green)upgrade-deps(ansi reset)'
+        print $'    (ansi green)serve-docs(ansi reset)'
+        print $'    (ansi green)audit-deps(ansi reset)'
+        print $'    (ansi green)unmaintained(ansi reset)'
         print $'    (ansi green)help(ansi reset)'
     } else {
         print $'Unknown command: (ansi red_bold)($command)(ansi reset)'

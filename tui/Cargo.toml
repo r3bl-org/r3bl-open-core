@@ -50,9 +50,6 @@ futures-util = "0.3.29"
 serde = { version = "1.0.190", features = ["derive"] }
 serde_json = "1.0.107"
 
-# get-size.
-get-size = { version = "0.1.4", features = ["derive"] }
-
 # strum.
 strum = "0.26.2"
 strum_macros = "0.26.2"
@@ -74,6 +71,9 @@ is-terminal = "0.4.9"
 
 # For clipboard.
 copypasta-ext = "0.4.4"
+
+# For size of variables in heap.
+size-of = "0.1.5"
 
 [dev-dependencies]
 # Async readline for running examples.

@@ -118,9 +118,11 @@ pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
 
 /// Creates a new
 /// [Style](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/tui_core/styles/style/struct.Style.html)
-/// declaratively. If `id` isn't supplied, then [u8::MAX](u8::MAX) is used. This represents the
-/// "style does not have an assigned id" case. Computed styles don't have an id and are set to
-/// [u8::MAX](u8::MAX) as well.
+/// declaratively.
+///
+/// - If `id` isn't supplied, then [u8::MAX](u8::MAX) is used.
+/// - This represents the "style does not have an assigned id" case. Computed styles don't
+///   have an id and are set to [u8::MAX](u8::MAX) as well.
 ///
 /// Here's a usage example.
 ///

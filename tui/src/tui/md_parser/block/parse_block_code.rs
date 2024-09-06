@@ -21,12 +21,15 @@ use nom::{branch::*, bytes::complete::*, combinator::*, sequence::*, IResult};
 use crate::*;
 
 /// Sample inputs:
-/// One line:                "```bash\npip install foobar\n```\n"
-/// No line:                 "```\n\n```\n"
-/// Multi line:              "```bash\npip install foobar\npip install foobar\n```\n"
-/// No language:             "```\npip install foobar\n```\n"
-/// No language, no line:    "```\n```\n"
-/// No language, multi line: "```\npip install foobar\npip install foobar\n```\n"
+///
+/// | Scenario                  | Sample input                                               |
+/// |---------------------------|------------------------------------------------------------|
+/// | One line                  | `"```bash\npip install foobar\n```\n"`                     |
+/// | No line                   | `"```\n\n```\n"`                                           |
+/// | Multi line                | `"```bash\npip install foobar\npip install foobar\n```\n"` |
+/// | No language               | `"```\npip install foobar\n```\n"`                         |
+/// | No language, no line      | `"```\n```\n"`                                             |
+/// | No language, multi line   | `"```\npip install foobar\npip install foobar\n```\n"`     |
 #[rustfmt::skip]
 pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine<'_>>> {
     let (remainder, (lang, code)) = tuple((

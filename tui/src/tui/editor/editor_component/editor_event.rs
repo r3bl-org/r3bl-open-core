@@ -18,7 +18,6 @@
 use std::fmt::Debug;
 
 use crossterm::style::Stylize;
-use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::{Deserialize, Serialize};
 
@@ -63,7 +62,7 @@ pub enum SelectionAction {
     Esc,
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, GetSize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CaretDirection {
     Up,
     Down,

@@ -34,19 +34,20 @@ pub type FragmentsInOneLine<'a> = MdLineFragments<'a>;
 /// Alias for [List] of [FragmentsInOneLine].
 pub type Lines<'a> = List<FragmentsInOneLine<'a>>;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, size_of::SizeOf)]
 pub struct HeadingData<'a> {
     pub heading_level: HeadingLevel,
     pub text: &'a str,
 }
 
 /// A Markdown document once parsed is turned into a [Vec] of "blocks".
-/// A block roughly represents a single line of text, and is the top-level
-/// entity of a Markdown document and roughly represents a single line of text.
+///
+/// A block roughly represents a single line of text, and is the top-level entity of a
+/// Markdown document and roughly represents a single line of text.
 /// - It is the intermediate representation (IR) of a single line of text.
-/// - There are some exceptions such as smart lists and code blocks which
-///   represent multiple lines of text.
-#[derive(Clone, Debug, PartialEq)]
+/// - There are some exceptions such as smart lists and code blocks which represent
+///   multiple lines of text.
+#[derive(Clone, Debug, PartialEq, size_of::SizeOf)]
 pub enum MdBlock<'a> {
     Heading(HeadingData<'a>),
     SmartList((Lines<'a>, BulletKind, usize)),
@@ -60,7 +61,7 @@ pub enum MdBlock<'a> {
 
 /// These are things that show up in a single line of Markdown text [MdLineFragments]. They do not
 /// include other Markdown blocks (like code blocks, lists, headings, etc).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, size_of::SizeOf)]
 pub enum MdLineFragment<'a> {
     UnorderedListBullet {
         indent: usize,
@@ -80,7 +81,7 @@ pub enum MdLineFragment<'a> {
     Checkbox(bool),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, size_of::SizeOf)]
 pub struct HyperlinkData<'a> {
     pub text: &'a str,
     pub url: &'a str,
@@ -98,7 +99,7 @@ mod hyperlink_data_impl {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, size_of::SizeOf)]
 pub struct HeadingLevel {
     pub level: usize,
 }
@@ -158,7 +159,7 @@ pub mod constants {
     pub const EXCLAMATION: &str = "!";
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, size_of::SizeOf)]
 pub struct CodeBlockLine<'a> {
     pub language: Option<&'a str>,
     pub content: CodeBlockLineContent<'a>,
@@ -167,7 +168,7 @@ pub struct CodeBlockLine<'a> {
 /// Alias for [List] of [CodeBlockLine].
 pub type CodeBlockLines<'a> = List<CodeBlockLine<'a>>;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, size_of::SizeOf)]
 pub enum CodeBlockLineContent<'a> {
     Text(&'a str),
     StartTag,

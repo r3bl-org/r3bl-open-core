@@ -15,11 +15,14 @@
  *   limitations under the License.
  */
 
-//! Functions that make it easy to unwrap a value safely. These functions are
-//! provided to improve the ergonomics of using wrapped values in Rust. Examples
-//! of wrapped values are `<Arc<RwLock<T>>`, and `<Option>`. These functions are
-//! inspired by Kotlin scope functions & TypeScript expression based language
-//! library which can be found [here on `r3bl-ts-utils`](https://github.com/r3bl-org/r3bl-ts-utils).
+//! Functions that make it easy to unwrap a value safely.
+//!
+//! These functions are provided to improve the ergonomics of using wrapped values in
+//! Rust. Examples of wrapped values are `<Arc<RwLock<T>>`, and `<Option>`.
+//!
+//! These functions are inspired by Kotlin scope functions & TypeScript expression based
+//! language library which can be found [here on
+//! `r3bl-ts-utils`](https://github.com/r3bl-org/r3bl-ts-utils).
 
 use std::{fmt::Debug,
           sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard}};

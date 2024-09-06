@@ -20,7 +20,7 @@ use r3bl_rs_utils_core::*;
 use crate::*;
 
 /// Use [tui_styled_text!] macro for easier construction.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, size_of::SizeOf)]
 pub struct TuiStyledText(pub TuiStyle, pub UnicodeString);
 
 /// Use [tui_styled_texts!] macro for easier construction.

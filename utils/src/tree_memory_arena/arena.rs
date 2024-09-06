@@ -32,9 +32,13 @@ use crate::utils::{call_if_some,
                    unwrap_arc_write_lock_and_call,
                    with_mut};
 
-/// This struct represents a node in a tree. It may have a parent. It can hold multiple children.
-/// And it has a payload. It also has an id that uniquely identifies it. An [`Arena`] or
-/// [`super::MTArena`] is used to hold nodes.
+/// This struct represents a node in a tree.
+///
+/// - It may have a parent.
+/// - It can hold multiple children.
+/// - And it has a payload.
+/// - It also has an id that uniquely identifies it. An [`Arena`] or [`super::MTArena`] is
+///   used to hold nodes.
 #[derive(Debug)]
 pub struct Node<T>
 where
@@ -56,16 +60,15 @@ where
     fn get_id(&self) -> usize { self.id.get_id() }
 }
 
-/// Data structure to store & manipulate a (non-binary) tree of data in memory. It can be used as
-/// the basis to implement a plethora of different data structures. The non-binary tree is just one
-/// example of what can be built using the underlying code.
+/// Data structure to store & manipulate a (non-binary) tree of data in memory.
+///
+/// It can be used as the basis to implement a plethora of different data structures. The
+/// non-binary tree is just one example of what can be built using the underlying code.
 ///
 /// 1. [Wikipedia definition of memory
 ///    arena](https://en.wikipedia.org/wiki/Region-based_memory_management)
 /// 2. You can learn more about how this library was built from this [developerlife.com
 ///    article](https://developerlife.com/2022/02/24/rust-non-binary-tree/).
-///
-/// # Examples
 ///
 /// # Basic usage
 ///
@@ -113,9 +116,10 @@ where
 ///   assert_eq!(node_list, vec![0]);
 /// }
 /// ```
-/// 📜 There are more complex ways of using [`Arena`] and [`super::MTArena`].
-/// Please look at these extensive integration tests that put them thru their
-/// paces [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
+///
+/// 📜 There are more complex ways of using [`Arena`] and [`super::MTArena`]. Please look
+/// at these extensive integration tests that put them thru their paces
+/// [here](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/tree_memory_arena_test.rs).
 #[derive(Debug)]
 pub struct Arena<T>
 where

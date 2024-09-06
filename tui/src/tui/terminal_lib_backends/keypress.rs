@@ -100,24 +100,27 @@ macro_rules! keypress {
     };
 }
 
-/// This is equivalent to [crossterm::event::KeyEvent] except that it is cleaned up semantically and
-/// impossible states are removed. It enables the tui framework to use a different backend other
-/// than crossterm in the future. Apps written using this framework use [KeyPress] and not
-/// [crossterm::event::KeyEvent]. See [convert_key_event] for more information on the conversion.
+/// This is equivalent to [crossterm::event::KeyEvent] except that it is cleaned up
+/// semantically and impossible states are removed.
+///
+/// It enables the TUI framework to use a different backend other than `crossterm` in the
+/// future. Apps written using this framework use [KeyPress] and not
+/// [crossterm::event::KeyEvent]. See [convert_key_event] for more information on the
+/// conversion.
 ///
 /// Please use the [keypress!] macro instead of directly constructing this struct.
 ///
 /// # Kitty keyboard protocol support limitations
 ///
-/// 1. `Keypress` explicitly matches on `KeyEventKind::Press` as of crossterm 0.25.0. It added a new
-///    field in KeyEvent, called
+/// 1. `Keypress` explicitly matches on `KeyEventKind::Press` as of crossterm 0.25.0. It
+///    added a new field in KeyEvent, called
 ///    [`kind`](https://github.com/crossterm-rs/crossterm/blob/10d1dc246dcd708b4902d53a542f732cba32ce99/src/event.rs#L645).
 ///    Currently in terminals that do NOT support [kitty keyboard
-///    protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), in other words most terminals,
-///    the `kind` is always `Press`. This is made explicit in the code.
+///    protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), in other words most
+///    terminals, the `kind` is always `Press`. This is made explicit in the code.
 ///
-/// 2. Also, the [KeyEvent]'s `state` is totally ignored in the conversion to [KeyPress]. The
-///    [KeyEventState] isn't even considered in the conversion code.
+/// 2. Also, the [KeyEvent]'s `state` is totally ignored in the conversion to [KeyPress].
+///    The [KeyEventState] isn't even considered in the conversion code.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub enum KeyPress {
     Plain { key: Key },

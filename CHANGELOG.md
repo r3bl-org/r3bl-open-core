@@ -23,6 +23,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [next-release](#next-release)
   - [v0.5.7 2024-08-13](#v057-2024-08-13)
   - [v0.5.6 2024-06-29](#v056-2024-06-29)
   - [v0.5.5 2024-05-20](#v055-2024-05-20)
@@ -41,6 +42,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
+  - [next-release](#next-release)
   - [v0.9.14 2024-08-13](#v0914-2024-08-13)
   - [v0.9.13 2024-04-15](#v0913-2024-04-15)
   - [v0.9.12 2024-01-07](#v0912-2024-01-07)
@@ -84,6 +86,7 @@
   - [v0.1.1 2023-10-17](#v011-2023-10-17)
   - [v0.1.0 2023-10-14](#v010-2023-10-14)
 - [r3bl_rs_utils_redux](#r3bl_rs_utils_redux)
+  - [next-release](#next-release)
   - [v0.2.6 2023-10-21](#v026-2023-10-21)
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
@@ -320,6 +323,21 @@ in a text editor.
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
+
+### next-release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Removed:
+  - Remove `get-size` crate from `Cargo.toml`. This was causing some [issues with
+    `RUSTSEC-2024-0370`](https://github.com/r3bl-org/r3bl-open-core/issues/359).
+
+- Added:
+   - Add `size-of` crate.
+    - This new crate is used to calculate the size of structs in bytes.
+    - Change the implementations of many structs in the following modules:
+      `editor_buffer`, `dialog_buffer`, `editor_component`, `editor_engine`,
+      `color_wheel`, `lolcat`, and following files: `offscreen_buffer.rs`,
+      `main_event_loop.rs`.
 
 ### v0.5.7 (2024-08-13)
 <a id="markdown-v0.5.7-2024-08-13" name="v0.5.7-2024-08-13"></a>
@@ -608,6 +626,22 @@ exhaustively tested and is able to handle many more corner cases.
 
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
+
+### next-release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Removed:
+  - Remove `get-size` crate from `Cargo.toml`. This was causing some [issues with
+    `RUSTSEC-2024-0370`](https://github.com/r3bl-org/r3bl-open-core/issues/359).
+
+- Added:
+   - Add `size-of` crate.
+    - This new crate is used to calculate the size of structs in bytes
+      (eg: `Vec<UnicodeString>` which is on the heap).
+    - Change the implementations of many structs in the following modules: `tui_core`.
+   - Add `common_math.rs` to `common` module, to make it easy to format numbers with
+     commas. This is useful for displaying size in bytes or kilobytes, etc. in log output
+     messages.
 
 ### v0.9.14 (2024-08-13)
 <a id="markdown-v0.9.14-2024-08-13" name="v0.9.14-2024-08-13"></a>
@@ -1060,6 +1094,13 @@ This is the first release of this crate.
 
 ## `r3bl_rs_utils_redux`
 <a id="markdown-r3bl_rs_utils_redux" name="r3bl_rs_utils_redux"></a>
+
+### next-release
+<a id="markdown-next-release" name="next-release"></a>
+
+- Removed:
+  - Remove `get-size` crate from `Cargo.toml`. This was causing some [issues with
+    `RUSTSEC-2024-0370`](https://github.com/r3bl-org/r3bl-open-core/issues/359).
 
 ### v0.2.6 (2023-10-21)
 <a id="markdown-v0.2.6-2023-10-21" name="v0.2.6-2023-10-21"></a>

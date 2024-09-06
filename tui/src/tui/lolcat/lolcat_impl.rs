@@ -18,7 +18,6 @@
 use std::fmt::{Debug, Display, Formatter, Result};
 
 pub use control_wheel_control::*;
-use get_size::GetSize;
 use is_terminal::IsTerminal;
 use r3bl_rs_utils_core::{RgbValue, TuiColor, TuiStyle, UnicodeString};
 use r3bl_rs_utils_macro::tui_style;
@@ -29,7 +28,7 @@ use crate::{tui_styled_text, ColorUtils, LolcatBuilder, TuiStyledText, TuiStyled
 
 /// Please use the [LolcatBuilder] to create this struct (lots of documentation is provided here).
 /// Please do not use this struct directly.
-#[derive(Clone, Copy, Serialize, Deserialize, PartialEq, GetSize)]
+#[derive(Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct Lolcat {
     pub color_wheel_control: ColorWheelControl,
     pub seed_delta: f64,
@@ -98,7 +97,7 @@ pub mod control_wheel_control {
     use super::*;
 
     /// A struct to contain info we need to print with every character.
-    #[derive(Debug, Clone, Copy, Serialize, Deserialize, GetSize)]
+    #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
     pub struct ColorWheelControl {
         pub seed: f64,
         pub spread: f64,
@@ -125,7 +124,7 @@ pub mod control_wheel_control {
         }
     }
 
-    #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, GetSize)]
+    #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
     pub enum ColorChangeSpeed {
         Rapid,
         Slow,

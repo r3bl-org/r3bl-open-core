@@ -177,9 +177,11 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line(
     it
 }
 
-/// Checkboxes are tricky since they begin with "[" which is also used for hyperlinks and images.
-/// So some extra hint is need from the code calling this parser to let it know whether to parse
-/// a checkbox into plain text, or into a boolean.
+/// Checkboxes are tricky since they begin with "[" which is also used for hyperlinks and
+/// images.
+///
+/// So some extra hint is need from the code calling this parser to let it know whether to
+/// parse a checkbox into plain text, or into a boolean.
 pub fn parse_fragment_starts_with_checkbox_into_str(input: &str) -> IResult<&str, &str> {
     let it = alt((recognize(tag(CHECKED)), recognize(tag(UNCHECKED))))(input);
     call_if_true!(DEBUG_MD_PARSER_STDOUT, {
@@ -196,9 +198,11 @@ pub fn parse_fragment_starts_with_checkbox_into_str(input: &str) -> IResult<&str
     it
 }
 
-/// Checkboxes are tricky since they begin with "[" which is also used for hyperlinks and images.
-/// So some extra hint is need from the code calling this parser to let it know whether to parse
-/// a checkbox into plain text, or into a boolean.
+/// Checkboxes are tricky since they begin with "[" which is also used for hyperlinks and
+/// images.
+///
+/// So some extra hint is need from the code calling this parser to let it know whether to
+/// parse a checkbox into plain text, or into a boolean.
 pub fn parse_fragment_starts_with_checkbox_checkbox_into_bool(
     input: &str,
 ) -> IResult<&str, bool> {

@@ -19,15 +19,15 @@ use core::fmt::Debug;
 use std::{fmt::{Display, Formatter},
           ops::{Add, AddAssign}};
 
-use get_size::GetSize;
 use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-/// Please use [tui_style!](crate::tui_style) proc macro to generate code for this struct. For the macro, if
-/// `id` isn't supplied, then [u8::MAX](u8::MAX) is used. This represents the "style does not have
-/// an assigned id" case. Computed styles don't have an id and are set to [u8::MAX](u8::MAX) as
-/// well.
+/// Please use [tui_style!](crate::tui_style) proc macro to generate code for this struct.
+///
+/// For the macro, if `id` isn't supplied, then [u8::MAX](u8::MAX) is used. This
+/// represents the "style does not have an assigned id" case. Computed styles don't have
+/// an id and are set to [u8::MAX](u8::MAX) as well.
 ///
 /// Here's an example.
 ///
@@ -60,7 +60,9 @@ use crate::*;
 ///
 /// Here are the [crossterm docs on
 /// attributes](https://docs.rs/crossterm/0.25.0/crossterm/style/enum.Attribute.html)
-#[derive(Copy, Default, Clone, PartialEq, Eq, Serialize, Deserialize, Hash, GetSize)]
+#[derive(
+    Copy, Default, Clone, PartialEq, Eq, Serialize, Deserialize, Hash, size_of::SizeOf,
+)]
 pub struct TuiStyle {
     pub id: u8,
     pub bold: bool,

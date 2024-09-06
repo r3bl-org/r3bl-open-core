@@ -306,9 +306,10 @@ pub mod report_analytics {
     }
 }
 
-/// If you want to trigger an update message to be displayed to the user, the value of
-/// `GET_LATEST_VERSION_ENDPOINT` needs to be different from the value of
-/// `UPDATE_IF_NOT_THIS_VERSION` in the `r3bl_base` repo.
+/// To trigger an update message to be displayed to the user here are the details:
+///
+/// - The value of `GET_LATEST_VERSION_ENDPOINT` needs to be different,
+/// - from the value of `UPDATE_IF_NOT_THIS_VERSION` in the `r3bl_base` repo.
 pub mod upgrade_check {
     use super::*;
 

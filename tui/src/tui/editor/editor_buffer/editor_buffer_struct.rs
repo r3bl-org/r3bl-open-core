@@ -18,7 +18,6 @@
 use std::{collections::HashMap,
           fmt::{Debug, Formatter, Result}};
 
-use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::*;
 
@@ -165,14 +164,14 @@ use crate::*;
 /// in the map represents a row of text in the buffer.
 /// - The row index is the key.
 /// - The value is the [SelectionRange].
-#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Default)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct EditorBuffer {
     pub editor_content: EditorContent,
     pub history: EditorBufferHistory,
     pub render_cache: HashMap<String, RenderOps>,
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Default)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Default, size_of::SizeOf)]
 pub struct EditorContent {
     pub lines: Vec<UnicodeString>,
     pub caret_display_position: Position,
@@ -182,7 +181,7 @@ pub struct EditorContent {
     pub selection_map: SelectionMap,
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, size_of::SizeOf)]
 pub struct EditorBufferHistory {
     versions: Vec<EditorContent>,
     current_index: isize,
@@ -744,6 +743,9 @@ pub mod access_and_mutate {
 }
 
 pub mod debug_format_helpers {
+    use common_math::format_with_commas;
+    use size_of::SizeOf as _;
+
     use super::*;
 
     impl Debug for EditorBuffer {
@@ -765,12 +767,12 @@ pub mod debug_format_helpers {
             write! {
                 f,
                 "\n\tEditorContent [                                 \n \
-                \t├ lines: {0}, size: {1}                            \n \
+                \t├ lines: {0}, size: {1} b                          \n \
                 \t├ selection_map: {4}                               \n \
                 \t└ ext: {2:?}, path:{6:?}, caret: {3:?}, scroll_offset: {5:?}   \n \
                 \t]",
                 /* 0 */ self.lines.len(),
-                /* 1 */ self.lines.get_heap_size(),
+                /* 1 */ format_with_commas(self.lines.size_of().total_bytes()),
                 /* 2 */ self.maybe_file_extension,
                 /* 3 */ self.caret_display_position,
                 /* 4 */ self.selection_map.to_formatted_string(),
@@ -785,11 +787,11 @@ pub mod debug_format_helpers {
             write! {
                 f,
                 "\n\tEditorBufferHistory [                           \n \
-                \t├ stack: {0}, size: {1}                            \n \
+                \t├ stack: {0}, size: {1} b                          \n \
                 \t└ index: {2}                                       \n \
                 \t]",
                 /* 0 */ self.versions.len(),
-                /* 1 */ self.versions.get_heap_size(),
+                /* 1 */ format_with_commas(self.versions.size_of().total_bytes()),
                 /* 2 */ self.current_index
             }
         }

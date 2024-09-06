@@ -18,16 +18,16 @@
 use std::{cmp::{self},
           fmt::{Debug, Display}};
 
-use get_size::GetSize;
 use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-/// Represents a range of characters in a line. The range is not inclusive of the item at
-/// the end index, which means that when you call
-/// [clip_to_range](UnicodeString::clip_to_range) the item at the end index will not be
-/// part of the result (this is shown in the example below). The indices are all display
-/// column indices, not logical ones.
+/// Represents a range of characters in a line.
+///
+/// The range is not inclusive of the item at the end index, which means that when you
+/// call [clip_to_range](UnicodeString::clip_to_range) the item at the end index will not
+/// be part of the result (this is shown in the example below). The indices are all
+/// display column indices, not logical ones.
 ///
 /// ```text
 /// 0 1 2 3 4 5 6 7 8 9
@@ -39,13 +39,13 @@ use crate::*;
 /// ```
 /// - `▓▓` = `😃`
 /// - [clip_to_range](UnicodeString::clip_to_range): "e😃"
-#[derive(Default, Clone, PartialEq, Serialize, Deserialize, GetSize, Copy)]
+#[derive(Default, Clone, PartialEq, Serialize, Deserialize, Copy, size_of::SizeOf)]
 pub struct SelectionRange {
     pub start_display_col_index: ChUnit,
     pub end_display_col_index: ChUnit,
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Copy, Debug)]
 pub enum ScrollOffsetColLocationInRange {
     Overflow,
     Underflow,
@@ -64,7 +64,7 @@ impl SelectionRange {
     }
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Copy, Debug)]
 pub enum CaretLocationInRange {
     Overflow,
     Underflow,
@@ -72,7 +72,7 @@ pub enum CaretLocationInRange {
 }
 
 /// Note this must derive [Eq]. More info [here](https://stackoverflow.com/a/68900245/2085356).
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, GetSize, Copy, Debug)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Copy, Debug, size_of::SizeOf)]
 pub enum CaretMovementDirection {
     Up,
     Down,

@@ -16,25 +16,27 @@
  */
 
 use crossterm::event::*;
-use get_size::GetSize;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, GetSize, PartialEq, Eq, Default)]
+#[derive(
+    Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default, size_of::SizeOf,
+)]
 pub struct ModifierKeysMask {
     pub shift_key_state: KeyState,
     pub ctrl_key_state: KeyState,
     pub alt_key_state: KeyState,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, GetSize, PartialEq, Eq, Default)]
+#[derive(
+    Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default, size_of::SizeOf,
+)]
 pub enum KeyState {
     Pressed,
     #[default]
     NotPressed,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, GetSize, PartialEq, Eq)]
-
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, size_of::SizeOf)]
 pub enum MatchResult {
     Matches,
     DoesNotMatch,

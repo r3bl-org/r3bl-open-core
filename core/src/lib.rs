@@ -119,19 +119,19 @@
 //! [here](https://doc.rust-lang.org/book/ch07-04-bringing-paths-into-scope-with-the-use-keyword.html?highlight=module%20re-export#re-exporting-names-with-pub-use).
 
 // Connect to source file.
+pub mod calc_str_len;
 pub mod color_text;
 pub mod common;
 pub mod decl_macros;
 pub mod tui_core;
 pub mod utils;
-pub mod calc_str_len;
 
 // Re-export.
+pub use calc_str_len::*;
 pub use color_text::{color_text_default_styles::*, *};
 pub use common::*;
 pub use tui_core::*;
 pub use utils::*;
-pub use calc_str_len::*;
 
 // Tests.
 mod test_decl_macros;

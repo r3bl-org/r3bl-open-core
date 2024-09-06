@@ -15,7 +15,6 @@
  *   limitations under the License.
  */
 
-use get_size::GetSize;
 use r3bl_ansi_color::{global_color_support, AnsiStyledText, ColorSupport};
 use r3bl_rs_utils_core::{ch,
                          AnsiValue,
@@ -45,7 +44,7 @@ use crate::{color_wheel_color_converter::convert_tui_color_into_r3bl_ansi_color,
 /// 2. The speed is how fast the color wheel will rotate.
 /// 3. The steps are the number of colors that will be generated. The larger this number is the
 ///    smoother the transition will be between each color. 100 is a good number to start with.
-#[derive(Serialize, Deserialize, Clone, PartialEq, GetSize, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum ColorWheelConfig {
     Rgb(
         /* stops */ Vec<String>,
@@ -132,13 +131,13 @@ impl ColorWheelConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, GetSize, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ColorWheelDirection {
     Forward,
     Reverse,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, GetSize, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ColorWheelSpeed {
     Slow = 10,
     Medium = 5,
@@ -171,7 +170,7 @@ pub struct ColorWheel {
     pub counter: ChUnit,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, GetSize, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Defaults {
     Steps = 50,
 }
@@ -224,14 +223,14 @@ impl ColorWheel {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, GetSize, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum GradientGenerationPolicy {
     RegenerateGradientAndIndexBasedOnTextLength,
     ReuseExistingGradientAndIndex,
     ReuseExistingGradientAndResetIndex,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, GetSize, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum TextColorizationPolicy {
     ColorEachCharacter(Option<TuiStyle>),
     ColorEachWord(Option<TuiStyle>),
