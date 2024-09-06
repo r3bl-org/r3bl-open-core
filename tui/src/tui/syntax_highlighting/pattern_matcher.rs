@@ -26,9 +26,10 @@ pub enum CharacterMatchResult {
     Skip,
 }
 
-/// Simple pattern matcher that matches a single character at a time. It is meant to be used to
-/// perform text clipping on a single line of text, so that the syntax highlighted version is
-/// clipped the same as the plain text version.
+/// Simple pattern matcher that matches a single character at a time.
+///
+/// It is meant to be used to perform text clipping on a single line of text, so that the
+/// syntax highlighted version is clipped the same as the plain text version.
 pub struct PatternMatcherStateMachine<'a> {
     pattern: &'a str,
     current_index: usize,

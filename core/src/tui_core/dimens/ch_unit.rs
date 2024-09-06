@@ -18,7 +18,6 @@
 use std::{fmt::{Debug, Display, Formatter},
           ops::Deref};
 
-use get_size::GetSize;
 use serde::{Deserialize, Serialize};
 
 use crate::*;
@@ -26,12 +25,13 @@ use crate::*;
 /// The backing field that is used to represent a [ChUnit] in memory.
 pub type ChUnitPrimitiveType = u16;
 
-/// Represents a character unit or "ch" unit. This is a unit of measurement that is used to
-/// represent the width or height of a character in a monospace font. The terminal displaying the
-/// Rust binary build using the tui library will ultimately determine the actual width and height
-/// of a character.
+/// Represents a character unit or "ch" unit.
 ///
-/// In order to create amounts of ch units, use the [ch!] macro.
+/// - This is a unit of measurement that is used to represent the width or height of a
+///   character in a monospace font.
+/// - The terminal displaying the Rust binary build using the tui library will ultimately
+///   determine the actual width and height of a character.
+/// - In order to create amounts of ch units, use the [ch!] macro.
 #[derive(
     Copy,
     Clone,
@@ -39,11 +39,11 @@ pub type ChUnitPrimitiveType = u16;
     PartialEq,
     Serialize,
     Deserialize,
-    GetSize,
     Ord,
     PartialOrd,
     Eq,
     Hash,
+    size_of::SizeOf,
 )]
 pub struct ChUnit {
     pub value: ChUnitPrimitiveType,

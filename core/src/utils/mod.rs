@@ -16,11 +16,11 @@
  */
 
 // Attach.
+pub mod debug_file_logging;
 pub mod file_logging;
 pub mod friendly_random_id;
-pub mod debug_file_logging;
 
 // Re-export.
+pub use debug_file_logging::*;
 pub use file_logging::*;
 pub use friendly_random_id::*;
-pub use debug_file_logging::*;

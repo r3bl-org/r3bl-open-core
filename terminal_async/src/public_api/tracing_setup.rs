@@ -66,8 +66,10 @@ pub enum WriterArg {
 }
 
 /// Handle converting parsed command line arguments (via `clap` crate) into a [WriterArg].
-/// Note - this is an intermediate representation (IR), which is ultimately converted into
-/// [WriterConfig] by [writer_config_impl::from] before it used in the rest of the system.
+///
+/// - This is an intermediate representation (IR),
+/// - which is ultimately converted into [WriterConfig] by [writer_config_impl::from]
+///   before it used in the rest of the system.
 pub mod writer_arg_impl {
     use super::*;
 

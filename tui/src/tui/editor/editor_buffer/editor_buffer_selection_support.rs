@@ -836,4 +836,3 @@ mod multiline_select_helpers {
         }
     }
 }
-

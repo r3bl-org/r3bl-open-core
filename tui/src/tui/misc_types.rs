@@ -142,7 +142,6 @@ pub mod global_constants {
 }
 
 pub mod list_of {
-    use get_size::GetSize;
     use serde::{Deserialize, Serialize};
 
     use super::*;
@@ -166,12 +165,20 @@ pub mod list_of {
 
     /// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for [List] of
     /// `T`. Where `T` is any number of types in the tui crate.
-    #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, GetSize)]
-    pub struct List<T> {
+    #[derive(
+        Debug, Clone, Default, PartialEq, Serialize, Deserialize, size_of::SizeOf,
+    )]
+    pub struct List<T>
+    where
+        T: size_of::SizeOf,
+    {
         pub inner: Vec<T>,
     }
 
-    impl<T> List<T> {
+    impl<T> List<T>
+    where
+        T: size_of::SizeOf,
+    {
         pub fn with_capacity(size: usize) -> Self {
             Self {
                 inner: Vec::with_capacity(size),
@@ -182,34 +189,55 @@ pub mod list_of {
     }
 
     /// Add (other) item to list (self).
-    impl<T> AddAssign<T> for List<T> {
+    impl<T> AddAssign<T> for List<T>
+    where
+        T: size_of::SizeOf,
+    {
         fn add_assign(&mut self, other_item: T) { self.push(other_item); }
     }
 
     /// Add (other) list to list (self).
-    impl<T> AddAssign<List<T>> for List<T> {
+    impl<T> AddAssign<List<T>> for List<T>
+    where
+        T: size_of::SizeOf,
+    {
         fn add_assign(&mut self, other_list: List<T>) { self.extend(other_list.inner); }
     }
 
     /// Add (other) vec to list (self).
-    impl<T> AddAssign<Vec<T>> for List<T> {
+    impl<T> AddAssign<Vec<T>> for List<T>
+    where
+        T: size_of::SizeOf,
+    {
         fn add_assign(&mut self, other_vec: Vec<T>) { self.extend(other_vec); }
     }
 
-    impl<T> From<List<T>> for Vec<T> {
+    impl<T> From<List<T>> for Vec<T>
+    where
+        T: size_of::SizeOf,
+    {
         fn from(list: List<T>) -> Self { list.inner }
     }
 
-    impl<T> From<Vec<T>> for List<T> {
+    impl<T> From<Vec<T>> for List<T>
+    where
+        T: size_of::SizeOf,
+    {
         fn from(other: Vec<T>) -> Self { Self { inner: other } }
     }
 
-    impl<T> Deref for List<T> {
+    impl<T> Deref for List<T>
+    where
+        T: size_of::SizeOf,
+    {
         type Target = Vec<T>;
         fn deref(&self) -> &Self::Target { &self.inner }
     }
 
-    impl<T> DerefMut for List<T> {
+    impl<T> DerefMut for List<T>
+    where
+        T: size_of::SizeOf,
+    {
         fn deref_mut(&mut self) -> &mut Self::Target { &mut self.inner }
     }
 }
@@ -312,10 +340,12 @@ mod pretty_print_traits {
 mod editor_component_traits {
     use super::*;
 
-    /// This marker trait is meant to be implemented by whatever state struct is being used to store
-    /// the editor buffer for this re-usable editor component. It is used in the `where` clause of
-    /// the [EditorComponent] to ensure that the generic type `S` implements this trait,
-    /// guaranteeing that it holds a hash map of [EditorBuffer]s w/ key of [FlexBoxId].
+    /// This marker trait is meant to be implemented by whatever state struct is being
+    /// used to store the editor buffer for this re-usable editor component.
+    ///
+    /// It is used in the `where` clause of the [EditorComponent] to ensure that the
+    /// generic type `S` implements this trait, guaranteeing that it holds a hash map of
+    /// [EditorBuffer]s w/ key of [FlexBoxId].
     pub trait HasEditorBuffers {
         fn get_mut_editor_buffer(&mut self, id: FlexBoxId) -> Option<&mut EditorBuffer>;
         fn insert_editor_buffer(&mut self, id: FlexBoxId, buffer: EditorBuffer);
@@ -328,10 +358,12 @@ pub mod dialog_component_traits {
 
     use super::*;
 
-    /// This marker trait is meant to be implemented by whatever state struct is being used to store the
-    /// dialog buffer for this re-usable editor component. It is used in the `where` clause of the
-    /// [DialogComponent] to ensure that the generic type `S` implements this trait, guaranteeing that
-    /// it holds a single [DialogBuffer].
+    /// This marker trait is meant to be implemented by whatever state struct is being
+    /// used to store the dialog buffer for this re-usable editor component.
+    ///
+    /// It is used in the `where` clause of the [DialogComponent] to ensure that the
+    /// generic type `S` implements this trait, guaranteeing that it holds a single
+    /// [DialogBuffer].
     pub trait HasDialogBuffers {
         fn get_mut_dialog_buffer(&mut self, id: FlexBoxId) -> Option<&mut DialogBuffer>;
     }

@@ -15,9 +15,11 @@
  *   limitations under the License.
  */
 
-//! All the code in this file is experimental. It is not used in the main codebase. It is
-//! used to test out new ideas and approaches with `nom` parsing. When some of these ideas
-//! graduate, they get moved to the main codebase.
+//! All the code in this file is experimental.
+//!
+//! - It is not used in the main codebase. It is used to test out new ideas and approaches
+//!   with `nom` parsing.
+//! - When some of these ideas graduate, they get moved to the main codebase.
 
 use constants::*;
 use nom::{character::complete::*, combinator::*, multi::*, IResult, Parser};

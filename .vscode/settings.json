@@ -114,6 +114,7 @@
     "runtimes",
     "rustflags",
     "rustfmt",
+    "RUSTSEC",
     "sdktrace",
     "seco",
     "secon",

@@ -18,7 +18,6 @@
 use std::{fmt::{self, Debug, Display},
           ops::SubAssign};
 
-use get_size::GetSize;
 use serde::*;
 
 use crate::*;
@@ -48,7 +47,9 @@ use crate::*;
 /// ```ignore
 /// let size: Size = size!(cols: 10, rows: 10);
 /// ```
-#[derive(Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Hash)]
+#[derive(
+    Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash, size_of::SizeOf,
+)]
 pub struct Size {
     pub col_count: ChUnit, // width = number of cols (y).
     pub row_count: ChUnit, // height = number of rows (x).

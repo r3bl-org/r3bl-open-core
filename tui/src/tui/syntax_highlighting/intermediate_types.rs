@@ -36,7 +36,7 @@ use crate::{constants::*, *};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple spans in a
 /// line of text.
-#[derive(Default, Clone, PartialEq, Eq, Debug)]
+#[derive(Default, Clone, PartialEq, Eq, Debug, size_of::SizeOf)]
 pub struct StyleUSSpan {
     pub style: TuiStyle,
     pub text: US,

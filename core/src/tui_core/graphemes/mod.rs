@@ -15,28 +15,31 @@
  *   limitations under the License.
  */
 
-//! A grapheme cluster is a user-perceived character. Rust uses `UTF-8` to represent text in
-//! `String`; so each character takes up 8 bits or one byte. Grapheme clusters can take up many more
-//! bytes, eg 4 bytes or 2 or 3, etc.
+//! A grapheme cluster is a user-perceived character.
+//!
+//! Rust uses `UTF-8` to represent text in `String`; so each character takes up 8 bits or
+//! one byte. Grapheme clusters can take up many more bytes, eg 4 bytes or 2 or 3, etc.
 //!
 //! Docs:
 //!
-//! - [Grapheme clusters](https://medium.com/flutter-community/working-with-unicode-and-grapheme-clusters-in-dart-b054faab5705)
+//! - [Grapheme
+//!   clusters](https://medium.com/flutter-community/working-with-unicode-and-grapheme-clusters-in-dart-b054faab5705)
 //! - [UTF-8 String](https://doc.rust-lang.org/book/ch08-02-strings.html)
 //!
-//! There is a discrepancy between how a `String` that contains grapheme clusters is represented in
-//! memory and how it is rendered in a terminal. When writing an TUI editor it is necessary to have
-//! a caret (cursor position) that the user can move by pressing up, down, left, right, etc. For
-//! left, this is assumed to move the caret or cursor one position to the left, regardless of how
-//! wide that character may be. Let's unpack that.
+//! There is a discrepancy between how a `String` that contains grapheme clusters is
+//! represented in memory and how it is rendered in a terminal. When writing an TUI editor
+//! it is necessary to have a caret (cursor position) that the user can move by pressing
+//! up, down, left, right, etc. For left, this is assumed to move the caret or cursor one
+//! position to the left, regardless of how wide that character may be. Let's unpack that.
 //!
-//! 1. If we use byte boundaries in the `String` we can move the cursor one byte to the left.
+//! 1. If we use byte boundaries in the `String` we can move the cursor one byte to the
+//!    left.
 //! 2. This falls apart when we have a grapheme cluster.
-//! 3. A grapheme cluster can take up more than one byte, and they don't fall cleanly into byte
-//!    boundaries.
+//! 3. A grapheme cluster can take up more than one byte, and they don't fall cleanly into
+//!    byte boundaries.
 //!
-//! To complicate things further, the size that a grapheme cluster takes up is
-//! not the same as its byte size in memory. Let's unpack that.
+//! To complicate things further, the size that a grapheme cluster takes up is not the
+//! same as its byte size in memory. Let's unpack that.
 //!
 //! | Character | Byte size | Grapheme cluster size | Compound |
 //! | --------- | --------- | --------------------- | -------- |
@@ -52,17 +55,18 @@
 //! 🏾‍ + 👨 + 🤝‍ + 👨 +  🏿 = 👨🏾‍🤝‍👨🏿
 //! ```
 //!
-//! Let's say you're browsing this source file in VSCode. The UTF-8 string this Rust source file is
-//! rendered by VSCode correctly. But this is not how it looks in a terminal. And the size of the
-//! string in memory isn't clear either from looking at the string in VSCode. It isn't apparent that
-//! you can't just index into the string at byte boundaries.
+//! Let's say you're browsing this source file in VSCode. The UTF-8 string this Rust
+//! source file is rendered by VSCode correctly. But this is not how it looks in a
+//! terminal. And the size of the string in memory isn't clear either from looking at the
+//! string in VSCode. It isn't apparent that you can't just index into the string at byte
+//! boundaries.
 //!
-//! To further complicate things, the output looks different on different terminals & OSes. The
-//! function `test_crossterm_grapheme_cluster_width_calc()` (shown below) uses crossterm commands to
-//! try and figure out what the width of a grapheme cluster is. When you run this in an SSH session
-//! to a macOS machine from Linux, it will work the same way it would locally on Linux. However, if
-//! you run the same program in locally via Terminal.app on macOS it works differently! So there are
-//! some serious issues.
+//! To further complicate things, the output looks different on different terminals &
+//! OSes. The function `test_crossterm_grapheme_cluster_width_calc()` (shown below) uses
+//! crossterm commands to try and figure out what the width of a grapheme cluster is. When
+//! you run this in an SSH session to a macOS machine from Linux, it will work the same
+//! way it would locally on Linux. However, if you run the same program in locally via
+//! Terminal.app on macOS it works differently! So there are some serious issues.
 //!
 //! ```ignore
 //! pub fn test_crossterm_grapheme_cluster_width_calc() -> Result<()> {
@@ -124,30 +128,34 @@
 //! }
 //! ```
 //!
-//! The basic problem arises from the fact that it isn't possible to treat the "logical" index into
-//! the string (which isn't byte boundary based) as a "display" (or "physical") index into the
-//! rendered output of the string in a terminal.
+//! The basic problem arises from the fact that it isn't possible to treat the "logical"
+//! index into the string (which isn't byte boundary based) as a "display" (or "physical")
+//! index into the rendered output of the string in a terminal.
 //!
-//! 1. Some parsing is necessary to get "logical" index into the string that is grapheme cluster
-//!    based (not byte boundary based).
-//!    - This is where [`unicode-segmentation`](https://crates.io/crates/unicode-segmentation) crate
+//! 1. Some parsing is necessary to get "logical" index into the string that is grapheme
+//!    cluster based (not byte boundary based).
+//!    - This is where
+//!      [`unicode-segmentation`](https://crates.io/crates/unicode-segmentation) crate
 //!      comes in and allows us to split our string into a vector of grapheme clusters.
-//! 2. Some translation is necessary to get from the "logical" index to the physical index and back
-//!    again. This is where we can apply one of the following approaches:
-//!    - We can use the [`unicode-width`](https://crates.io/crates/unicode-width) crate to calculate
-//!      the width of the grapheme cluster. This works on Linux, but doesn't work very well on macOS
-//!      & I haven't tested it on Windows. This crate will (on Linux) reliably tell us what the
-//!      displayed width of a grapheme cluster is.
-//!    - We can take the approach from the [`reedline`](https://crates.io/crates/reedline) crate's
+//! 2. Some translation is necessary to get from the "logical" index to the physical index
+//!    and back again. This is where we can apply one of the following approaches:
+//!    - We can use the [`unicode-width`](https://crates.io/crates/unicode-width) crate to
+//!      calculate the width of the grapheme cluster. This works on Linux, but doesn't
+//!      work very well on macOS & I haven't tested it on Windows. This crate will (on
+//!      Linux) reliably tell us what the displayed width of a grapheme cluster is.
+//!    - We can take the approach from the [`reedline`](https://crates.io/crates/reedline)
+//!      crate's
 //!      [`repaint_buffer()`](https://github.com/nazmulidris/reedline/blob/79e7d8da92cd5ae4f8e459f901189d7419c3adfd/src/painting/painter.rs#L129)
-//!      where we split the string based on the "logical" index into the vector of grapheme
-//!      clusters. And then we print the 1st part of the string, then call `SavePosition` to save
-//!      the cursor at this point, then print the 2nd part of the string, then call
-//!      `RestorePosition` to restore the cursor to where it "should" be.
+//!      where we split the string based on the "logical" index into the vector of
+//!      grapheme clusters. And then we print the 1st part of the string, then call
+//!      `SavePosition` to save the cursor at this point, then print the 2nd part of the
+//!      string, then call `RestorePosition` to restore the cursor to where it "should"
+//!      be.
 //!
-//! Please take a look at [crate::tui_core::graphemes::UnicodeString], specifically the methods in
-//! [crate::tui_core::graphemes::access]  for more details on how the conversion between "display"
-//! (or `display_col_index`) and "logical" (or `logical_index`) indices is done.
+//! Please take a look at [crate::tui_core::graphemes::UnicodeString], specifically the
+//! methods in [crate::tui_core::graphemes::access]  for more details on how the
+//! conversion between "display" (or `display_col_index`) and "logical" (or
+//! `logical_index`) indices is done.
 
 // Attach sources.
 pub mod access;

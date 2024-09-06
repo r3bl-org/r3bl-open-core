@@ -18,7 +18,6 @@
 use std::collections::HashMap;
 
 use crossterm::style::Stylize;
-use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::{Deserialize, Serialize};
 
@@ -28,7 +27,7 @@ use serde::{Deserialize, Serialize};
 /// Note that both column indices are:
 /// - [Scroll adjusted](crate::editor_buffer_struct::CaretKind::ScrollAdjusted).
 /// - And not [raw](crate::editor_buffer_struct::CaretKind::Raw).
-#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Default)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Default, size_of::SizeOf)]
 pub struct SelectionMap {
     pub map: HashMap<RowIndex, SelectionRange>,
     pub maybe_previous_direction: Option<CaretMovementDirection>,
@@ -216,7 +215,7 @@ pub mod selection_map_impl {
         }
     }
 
-    #[derive(Clone, PartialEq, Serialize, Deserialize, GetSize, Copy, Debug)]
+    #[derive(Clone, PartialEq, Serialize, Deserialize, Copy, Debug)]
     pub enum RowLocationInSelectionMap {
         Overflow,
         Contained,

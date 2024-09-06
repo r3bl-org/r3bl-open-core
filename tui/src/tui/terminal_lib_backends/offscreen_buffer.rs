@@ -18,24 +18,25 @@
 use std::{fmt::{self, Debug},
           ops::{Deref, DerefMut}};
 
-use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use serde::{Deserialize, Serialize};
 
 use crate::*;
 
-/// Represents a grid of cells where the row/column index maps to the terminal screen. This works
-/// regardless of the size of each cell. Cells can contain emoji who's display width is greater than
-/// one. This complicates things since a "😃" takes up 2 display widths.
+/// Represents a grid of cells where the row/column index maps to the terminal screen.
 ///
-/// Let's say one cell has a "😃" in it. The cell's display width is 2. The cell's byte size is 4.
-/// The next cell after it will have to contain nothing or void.
+/// This works regardless of the size of each cell. Cells can contain emoji who's display
+/// width is greater than one. This complicates things since a "😃" takes up 2 display
+/// widths.
 ///
-/// Why? This is because the col & row indices of the grid map to display col & row indices of the
-/// terminal screen. By inserting a [PixelChar::Void] pixel char in the next cell, we signal the
-/// rendering logic to skip it since it has already been painted. And this is different than a
-/// [PixelChar::Spacer] which has to be painted!
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash, GetSize)]
+/// Let's say one cell has a "😃" in it. The cell's display width is 2. The cell's byte
+/// size is 4. The next cell after it will have to contain nothing or void.
+///
+/// Why? This is because the col & row indices of the grid map to display col & row
+/// indices of the terminal screen. By inserting a [PixelChar::Void] pixel char in the
+/// next cell, we signal the rendering logic to skip it since it has already been painted.
+/// And this is different than a [PixelChar::Spacer] which has to be painted!
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub struct OffscreenBuffer {
     pub buffer: PixelCharLines,
     pub window_size: Size,
@@ -146,7 +147,7 @@ mod offscreen_buffer_impl {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, GetSize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub struct PixelCharLines {
     pub lines: Vec<PixelCharLine>,
 }
@@ -177,7 +178,7 @@ mod pixel_char_lines_impl {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, GetSize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub struct PixelCharLine {
     pub pixel_chars: Vec<PixelChar>,
 }
@@ -349,7 +350,7 @@ mod pixel_char_line_impl {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, GetSize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf)]
 pub enum PixelChar {
     Void,
     Spacer,

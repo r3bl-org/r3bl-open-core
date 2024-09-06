@@ -17,9 +17,9 @@
 
 use std::{fmt::Debug, marker::PhantomData};
 
-use get_size::GetSize;
 use r3bl_rs_utils_core::*;
 use r3bl_rs_utils_macro::*;
+use size_of::SizeOf;
 use tokio::sync::mpsc;
 
 use crate::*;
@@ -351,8 +351,9 @@ where
                                 global_data.maybe_saved_offscreen_buffer
                             {
                                 let msg_3 = format!(
-                                    "offscreen_buffer: {0:.2}kb",
-                                    offscreen_buffer.get_size() as f32 / 1000_f32
+                                    "offscreen_buffer: {0:.3}kb",
+                                    offscreen_buffer.size_of().total_bytes() as f64
+                                        / 1000_f64
                                 );
                                 log_info(format!("{msg_1}\n{msg_2}, {msg_3}"));
                             } else {

@@ -17,7 +17,6 @@
 
 use std::borrow::Cow;
 
-use get_size::GetSize;
 use r3bl_rs_utils_core::UnicodeString;
 use serde::{Deserialize, Serialize};
 
@@ -88,7 +87,7 @@ pub fn lolcat_each_char_in_unicode_string(
 ///   same generated colors over and over again.
 /// - If you want to change where the color wheel "begins", you have to change the speed, seed, and
 ///   delta of this [Lolcat] instance.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, GetSize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct LolcatBuilder {
     /// Rate at which the color changes when
     /// [colorize_to_styled_texts](Lolcat::colorize_to_styled_texts) is called.

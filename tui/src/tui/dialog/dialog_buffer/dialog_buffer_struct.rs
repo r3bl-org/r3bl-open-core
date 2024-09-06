@@ -17,7 +17,6 @@
 
 use std::fmt::{Debug, Formatter, Result};
 
-use get_size::GetSize;
 use r3bl_rs_utils_core::{ch, ChUnit};
 use serde::*;
 
@@ -28,7 +27,7 @@ use crate::*;
 ///
 /// Stores the data for a modal dialog. It contains the text content in an [EditorBuffer] and a
 /// title that is displayed.
-#[derive(Clone, PartialEq, Serialize, Deserialize, GetSize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct DialogBuffer {
     pub editor_buffer: EditorBuffer,
     pub title: String,

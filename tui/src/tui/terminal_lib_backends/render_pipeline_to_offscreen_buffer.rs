@@ -327,9 +327,11 @@ pub fn print_plain_text(
     Ok(new_pos)
 }
 
-/// Render plain to an offscreen buffer. This will modify the `my_offscreen_buffer` argument.  For
-/// plain text it supports counting [GraphemeClusterSegment]s. The display width of each segment is
-/// taken into account when filling the offscreen buffer.
+/// Render plain to an offscreen buffer.
+///
+/// This will modify the `my_offscreen_buffer` argument.  For plain text it supports
+/// counting [GraphemeClusterSegment]s. The display width of each segment is taken into
+/// account when filling the offscreen buffer.
 pub fn print_text_with_attributes(
     arg_text_ref: &str,
     maybe_style_ref: &Option<TuiStyle>,

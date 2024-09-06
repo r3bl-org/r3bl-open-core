@@ -17,14 +17,15 @@
 
 use std::ops::{Deref, DerefMut};
 
-use get_size::GetSize;
 use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::*;
 
 use crate::*;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Hash)]
+#[derive(
+    Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash, size_of::SizeOf,
+)]
 pub struct GraphemeClusterSegment {
     /// The actual grapheme cluster `&str`. Eg: "H", "📦", "🙏🏽".
     pub string: String,
@@ -63,7 +64,9 @@ mod grapheme_cluster_segment_impl {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, GetSize, Hash)]
+#[derive(
+    Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash, size_of::SizeOf,
+)]
 pub struct UnicodeString {
     pub string: String,
     pub vec_segment: Vec<GraphemeClusterSegment>,

@@ -21,14 +21,18 @@ use r3bl_rs_utils_core::*;
 
 use crate::*;
 
-/// An app is typically a holder for [ComponentRegistry]. It then lays out a bunch of [Component]s
-/// on its [Surface] which do all the work of rendering and input event handling. There are examples
-/// of structs that implement this train in the [examples
+/// An app is typically a holder for [ComponentRegistry].
+///
+/// It lays out a bunch of [Component]s on its [Surface] which do all the work of
+/// rendering and input event handling.
+///
+/// There are examples of structs that implement this train in the [examples
 /// module](https://github.com/r3bl-org/r3bl-open-core/blob/autocomplete/tui/examples/demo/ex_editor/app.rs).
 ///
 /// Notes:
 /// - Async trait docs: <https://doc.rust-lang.org/book/ch10-02-traits.html>
-/// - Limitations of linking to examples module: <https://users.rust-lang.org/t/how-to-link-to-examples/67918>
+/// - Limitations of linking to examples module:
+///   <https://users.rust-lang.org/t/how-to-link-to-examples/67918>
 pub trait App {
     /// State.
     type S: Debug + Default + Clone + Sync + Send;

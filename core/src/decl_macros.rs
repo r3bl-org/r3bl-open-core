@@ -107,11 +107,12 @@ macro_rules! call_if_true {
     }};
 }
 
-/// This is a really simple macro to make it effortless to use the color console
-/// logger. It takes a single identifier as an argument, or any number of them.
-/// It simply dumps an arrow symbol, followed by the identifier ([stringify]'d)
-/// along with the value that it contains (using the [Debug] formatter). All of
-/// the output is colorized for easy readability. You can use it like this.
+/// This is a really simple macro to make it effortless to use the color console logger.
+///
+/// It takes a single identifier as an argument, or any number of them. It simply dumps an
+/// arrow symbol, followed by the identifier ([stringify]'d) along with the value that it
+/// contains (using the [Debug] formatter). All of the output is colorized for easy
+/// readability. You can use it like this.
 ///
 /// ```rust
 /// use r3bl_rs_utils_core::debug;
@@ -122,8 +123,8 @@ macro_rules! call_if_true {
 /// debug!(my_string, my_number);
 /// ```
 ///
-/// You can also use it in these other forms for terminal raw mode output. This
-/// will dump the output to stderr.
+/// You can also use it in these other forms for terminal raw mode output. This will dump
+/// the output to stderr.
 ///
 /// ```ignore
 /// if let Err(err) = $cmd {
@@ -290,9 +291,10 @@ macro_rules! unwrap_option_or_run_fn_returning_err {
     };
 }
 
-/// Unwrap the `$option`, and if `None` then run the `$next` closure which must
-/// return a value that is set to `$option`. Basically a way to compute
-/// something lazily when it (the `Option`) is set to `None`.
+/// Basically a way to compute something lazily when it (the `Option`) is set to `None`.
+///
+/// Unwrap the `$option`, and if `None` then run the `$next` closure which must return a
+/// value that is set to `$option`.
 ///
 /// # Example
 ///
@@ -323,9 +325,11 @@ macro_rules! unwrap_option_or_compute_if_none {
     };
 }
 
-/// Similar to [`assert_eq!`] but automatically prints the left and right hand side variables if the
-/// assertion fails. Useful for debugging tests, since cargo would just print out the left and right
-/// values *w/out* providing information on *what variables* were being compared.
+/// Similar to [`assert_eq!`] but automatically prints the left and right hand side
+/// variables if the assertion fails.
+///
+/// Useful for debugging tests, since cargo would just print out the left and right values
+/// *w/out* providing information on *what variables* were being compared.
 #[macro_export]
 macro_rules! assert_eq2_og {
     ($left:expr, $right:expr $(,)?) => {

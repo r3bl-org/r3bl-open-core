@@ -26,10 +26,12 @@ use crate::*;
 
 pub const DEFAULT_HEIGHT: usize = 5;
 
-/// This function does the work of rendering the TUI. It takes a list of items, and returns
-/// the selected item or items (depending on the selection mode). If the user does not
-/// select anything, it returns `None`. The function also takes the maximum height and
-/// width of the display, and the selection mode (single select or multiple select).
+/// This function does the work of rendering the TUI.
+///
+/// It takes a list of items, and returns the selected item or items (depending on the
+/// selection mode). If the user does not select anything, it returns `None`. The function
+/// also takes the maximum height and width of the display, and the selection mode (single
+/// select or multiple select).
 ///
 /// If the terminal is *fully* uninteractive, it returns `None`. This is useful so that it
 /// won't block `cargo test` or when run in non-interactive CI/CD environments.

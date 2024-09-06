@@ -17,7 +17,6 @@
 
 use core::fmt::Debug;
 
-use get_size::GetSize;
 use serde::{Deserialize, Serialize};
 
 use crate::*;
@@ -117,7 +116,7 @@ macro_rules! color {
 ///   and
 ///   [`ColorSupport`](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/color_wheel/detect_color_support/enum.ColorSupport.html).
 /// - If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not be downgraded.
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Copy, Hash, GetSize)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Copy, Hash, size_of::SizeOf)]
 pub enum TuiColor {
     /// Resets the terminal color.
     Reset,
@@ -137,7 +136,7 @@ pub enum TuiColor {
     Ansi(AnsiValue),
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Copy, Hash, GetSize)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Copy, Hash, size_of::SizeOf)]
 pub enum ANSIBasicColor {
     /// Black color.
     Black,
@@ -188,14 +187,18 @@ pub enum ANSIBasicColor {
     DarkCyan,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, GetSize, Copy, Debug)]
+#[derive(
+    Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Copy, Debug, size_of::SizeOf,
+)]
 pub struct RgbValue {
     pub red: u8,
     pub green: u8,
     pub blue: u8,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, GetSize, Copy, Debug)]
+#[derive(
+    Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Copy, Debug, size_of::SizeOf,
+)]
 pub struct AnsiValue {
     pub color: u8,
 }

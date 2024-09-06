@@ -15,17 +15,19 @@
  *   limitations under the License.
  */
 
-//! This is the lowest priority parser called by [parse_inline_fragments_until_eol_or_eoi()].
+//! This is the lowest priority parser called by
+//! [parse_inline_fragments_until_eol_or_eoi()].
+//!
 //! It matches anything that is not a special character. This is used to parse plain text.
-//! It works with the specialized parsers in [parse_inline_fragments_until_eol_or_eoi()] such
-//! as:
+//! It works with the specialized parsers in [parse_inline_fragments_until_eol_or_eoi()]
+//! such as:
 //! - [parse_fragment_starts_with_underscore_err_on_new_line()],
 //! - [parse_fragment_starts_with_star_err_on_new_line()],
 //! - [parse_fragment_starts_with_backtick_err_on_new_line()], etc.
 //!
 //! It also works hand in hand with
-//! [specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()] which
-//! is used by the specialized parsers.
+//! [specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()] which is
+//! used by the specialized parsers.
 //!
 //! To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
 //! in [parse_fragments_in_a_line].
@@ -175,18 +177,20 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
     it
 }
 
-/// This is a special set of chars called `set_1`. This is used to check if the input
-/// starts with any of these special characters, which must have at least 2 occurrences
-/// for it to be parsed by the specialized parsers. If only 1 occurrence is found, then
-/// this parser's `Edge case -> Special case` will take care of it by splitting the input,
-/// and returning the first part as plain text, and the remainder as the input to be parsed
-/// by the specialized parsers.
+/// This is a special set of chars called `set_1`.
+///
+/// This is used to check if the input starts with any of these special characters, which
+/// must have at least 2 occurrences for it to be parsed by the specialized parsers. If
+/// only 1 occurrence is found, then this parser's `Edge case -> Special case` will take
+/// care of it by splitting the input, and returning the first part as plain text, and the
+/// remainder as the input to be parsed by the specialized parsers.
 pub fn get_sp_char_set_1<'a>() -> [&'a str; 3] { [UNDERSCORE, STAR, BACK_TICK] }
 
-/// This is a special set of chars called `set_2`. This is used to detect the `Edge case
-/// -> Normal case` where the input starts with any of these special characters, and the
-/// input is taken until the first new line, and return as plain text. Unless both of the
-/// following are true:
+/// This is a special set of chars called `set_2`.
+///
+/// This is used to detect the `Edge case -> Normal case` where the input starts with any
+/// of these special characters, and the input is taken until the first new line, and
+/// return as plain text. Unless both of the following are true:
 /// 1. input is in [get_sp_char_set_1()] and,
 /// 2. count is 1.
 pub fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
@@ -199,12 +203,13 @@ pub fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
         .unwrap()
 }
 
-/// This is a special set of chars called `set_3`. This is used to detect the `Normal
-/// case` where the input does not start with any of the special characters in
-/// [get_sp_char_set_2()]. The input is taken until the first special character, and split
-/// there. This returns the chunk until the first special character as
-/// [MdLineFragment::Plain], and the remainder of the input gets a chance to be parsed by
-/// the specialized parsers.
+/// This is a special set of chars called `set_3`.
+///
+/// This is used to detect the `Normal case` where the input does not start with any of
+/// the special characters in [get_sp_char_set_2()]. The input is taken until the first
+/// special character, and split there. This returns the chunk until the first special
+/// character as [MdLineFragment::Plain], and the remainder of the input gets a chance to
+/// be parsed by the specialized parsers.
 pub fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
     get_sp_char_set_2()
         .iter()

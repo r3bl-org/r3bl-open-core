@@ -15,10 +15,9 @@
  *   limitations under the License.
  */
 
-use get_size::GetSize;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Hash, Debug, GetSize)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Ansi256GradientIndex {
     GrayscaleMediumGrayToWhite = 0,
     DarkRedToDarkMagenta,

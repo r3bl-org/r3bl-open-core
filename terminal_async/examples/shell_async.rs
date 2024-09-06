@@ -15,90 +15,92 @@
  *   limitations under the License.
  */
 
+//! This program uses the `r3bl_terminal_async` crate to provide a prompt and get user
+//! input, pass that to the `stdin` of a `bash` child process, and then display the output
+//! from the child process in the terminal. The followings steps outline what the program
+//! does:
+//!
+//! # YouTube video of live coding this example
+//!
+//! Please watch the following video to see how this example was created.
+//! - [Build with Naz : Create an async shell in Rust](https://youtu.be/jXzFCDIJQag)
+//! - [YouTube channel](https://www.youtube.com/@developerlifecom?sub_confirmation=1)
+//!
+//! # Create some shared global variables
+//!
+//! - A broadcast channel to signal shutdown to the child process, and all the spawned
+//!   tasks.
+//! - [r3bl_terminal_async::TerminalAsync] to write to the terminal. This provides the
+//!   mechanism to collect user input and display output.
+//! - [tokio::process::Child] to spawn the child process (`bash`) and interact with it.
+//!   This child process lives as long as the `main` function and exits when the user
+//!   chooses to exit the program.
+//!   - The [tokio::process::Command] starts `bash`.
+//!   - Both `stdin` and `stdout` are piped using [std::process::Stdio::piped].
+//!
+//! # 🧵 The main event loop simply waits for the following (on the current thread)
+//!
+//! - Start a main event loop (on the current thread):
+//!   - The shutdown signal from the broadcast channel, and monitors the
+//!     [r3bl_terminal_async::TerminalAsync] for user input. It writes the user input to the
+//!     [tokio::process::ChildStdin].
+//!   - Any exit inputs (user types "exit" or "Ctrl+D") from the user are captured here and
+//!     sent to the shutdown broadcast channel. It also listens to the broadcast channel to
+//!     break out of the loop on shutdown.
+//!   - It [tokio::process::Child::kill]s the child process when it gets the exit signal.
+//!   - It does not monitor the terminal for user input or the child process for output.
+//!
+//! # 🚀 Spawn a new task to loop and read the output from the child process and display it
+//!
+//! - Spawn a task to loop:
+//!   - Read the [tokio::process::ChildStdout] and write it to the
+//!     [r3bl_terminal_async::SharedWriter].
+//!   - Also listen to the broadcast channel to break out of the loop on shutdown.
+//!
+//! # Run the binary
+//!
+//! ```text
+//! ┌───────────────────────────────────┐
+//! │ > cargo run --example shell_async │
+//! └───────────────────────────────────┘
+//! ```
+//!
+//! Type the following commands to have a go at this.
+//!
+//! ```text
+//! msg="hello nadia!"
+//! echo $msg
+//! ```
+//!
+//! You should see something like the following.
+//!
+//! ```text
+//! [1606192] > msg="hello nadia!"
+//! [1606192] > echo $msg
+//! hello nadia!
+//! [1606192] >
+//! ```
+//!
+//! # Clean up any left over processes
+//! ```text
+//! ┌───────────────────────────────┐
+//! │ > killall -9 bash shell_async │
+//! └───────────────────────────────┘
+//! ```
+//! This program uses the `r3bl_terminal_async` crate to provide a prompt and get user
+//! input, pass that to the `stdin` of a `bash` child process, and then display the output
+//! from the child process in the terminal.
+
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
 use r3bl_rs_utils_core::ok;
-use r3bl_terminal_async::ReadlineEvent::{Eof, Interrupted, Line};
+use r3bl_terminal_async::ReadlineEvent;
+use r3bl_terminal_async::ReadlineEvent::{Eof, Interrupted, Line, Resized};
 use r3bl_terminal_async::{SharedWriter, TerminalAsync};
 use std::io::Write as _;
 use tokio::io::AsyncBufReadExt as _;
 use tokio::io::AsyncWriteExt as _;
 
-/// This program uses the `r3bl_terminal_async` crate to provide a prompt and get user
-/// input, pass that to the `stdin` of a `bash` child process, and then display the output
-/// from the child process in the terminal. The followings steps outline what the program
-/// does:
-///
-/// # YouTube video of live coding this example
-///
-/// Please watch the following video to see how this example was created.
-/// - [Build with Naz : Create an async shell in Rust](https://youtu.be/jXzFCDIJQag)
-/// - [YouTube channel](https://www.youtube.com/@developerlifecom?sub_confirmation=1)
-///
-/// # Create some shared global variables
-///
-/// - A broadcast channel to signal shutdown to the child process, and all the spawned
-///   tasks.
-/// - [r3bl_terminal_async::TerminalAsync] to write to the terminal. This provides the
-///   mechanism to collect user input and display output.
-/// - [tokio::process::Child] to spawn the child process (`bash`) and interact with it.
-///   This child process lives as long as the `main` function and exits when the user
-///   chooses to exit the program.
-///   - The [tokio::process::Command] starts `bash`.
-///   - Both `stdin` and `stdout` are piped using [std::process::Stdio::piped].
-///
-/// # 🧵 The main event loop simply waits for the following (on the current thread)
-///
-/// - Start a main event loop (on the current thread):
-///   - The shutdown signal from the broadcast channel, and monitors the
-///     [r3bl_terminal_async::TerminalAsync] for user input. It writes the user input to the
-///     [tokio::process::ChildStdin].
-///   - Any exit inputs (user types "exit" or "Ctrl+D") from the user are captured here and
-///     sent to the shutdown broadcast channel. It also listens to the broadcast channel to
-///     break out of the loop on shutdown.
-///   - It [tokio::process::Child::kill]s the child process when it gets the exit signal.
-///   - It does not monitor the terminal for user input or the child process for output.
-///
-/// # 🚀 Spawn a new task to loop and read the output from the child process and display it
-///
-/// - Spawn a task to loop:
-///   - Read the [tokio::process::ChildStdout] and write it to the
-///     [r3bl_terminal_async::SharedWriter].
-///   - Also listen to the broadcast channel to break out of the loop on shutdown.
-///
-/// # Run the binary
-///
-/// ```text
-/// ┌───────────────────────────────────┐
-/// │ > cargo run --example shell_async │
-/// └───────────────────────────────────┘
-/// ```
-///
-/// Type the following commands to have a go at this.
-///
-/// ```text
-/// msg="hello nadia!"
-/// echo $msg
-/// ```
-///
-/// You should see something like the following.
-///
-/// ```text
-/// [1606192] > msg="hello nadia!"
-/// [1606192] > echo $msg
-/// hello nadia!
-/// [1606192] >
-/// ```
-///
-/// # Clean up any left over processes
-/// ```text
-/// ┌───────────────────────────────┐
-/// │ > killall -9 bash shell_async │
-/// └───────────────────────────────┘
-/// ```
-/// This program uses the `r3bl_terminal_async` crate to provide a prompt and get user
-/// input, pass that to the `stdin` of a `bash` child process, and then display the output
-/// from the child process in the terminal.
 #[tokio::main]
 async fn main() -> miette::Result<()> {
     // Create a broadcast channel for shutdown.
@@ -145,6 +147,36 @@ async fn main() -> miette::Result<()> {
 pub mod monitor_user_input_and_send_to_child {
     use super::*;
 
+    /// Determine the control flow of the program based on the [ReadlineEvent] received
+    /// from user input.
+    enum ControlFlow {
+        ShutdownKillChild,
+        ProcessLine(String),
+        Resized,
+    }
+
+    /// Convert a [miette::Result<ReadlineEvent>] to a [ControlFlow]. This leverages the
+    /// type system to make it simpler to reason about what to do with the user input.
+    impl From<miette::Result<ReadlineEvent>> for ControlFlow {
+        fn from(result_readline_event: miette::Result<ReadlineEvent>) -> Self {
+            match result_readline_event {
+                Ok(readline_event) => match readline_event {
+                    Line(input) => {
+                        let input = input.trim().to_string();
+                        if input == "exit" {
+                            ControlFlow::ShutdownKillChild
+                        } else {
+                            ControlFlow::ProcessLine(input)
+                        }
+                    }
+                    Eof | Interrupted => ControlFlow::ShutdownKillChild,
+                    Resized => ControlFlow::Resized,
+                },
+                _ => ControlFlow::ShutdownKillChild,
+            }
+        }
+    }
+
     pub async fn start_event_loop(
         mut stdin: tokio::process::ChildStdin,
         mut terminal_async: TerminalAsync,
@@ -164,43 +196,18 @@ pub mod monitor_user_input_and_send_to_child {
                 // Branch: Monitor terminal_async for user input. This is cancel safe as
                 // `get_readline_event()` is cancel safe.
                 result_readline_event = terminal_async.get_readline_event() => {
-                    match result_readline_event {
-                        Ok(readline_event) => {
-                            match readline_event {
-                                // User typed something & pressed enter.
-                                Line(input) => {
-                                    // Trim user input.
-                                    let input = input.trim().to_string();
-
-                                    // Check for the exit command.
-                                    if input == "exit" {
-                                        _= shutdown_sender.send(());
-                                        break;
-                                    }
-
-                                    // Write user input to the child process stdin.
-                                    let input = format!("{}\n", input);
-                                    _ = stdin.write_all(input.as_bytes()).await;
-                                    _ = stdin.flush().await;
-
-                                },
-                                // Ctrl+C or Ctrl+D.
-                                Eof | Interrupted => {
-                                    _ = child.kill().await;
-                                    _= shutdown_sender.send(());
-                                    break;
-                                }
-                                // Resized.
-                                _ => {}
-                            }
-                        },
-
-                        // Something went wrong with the terminal_async.
-                        Err(_) => {
+                    match ControlFlow::from(result_readline_event) {
+                        ControlFlow::ShutdownKillChild => {
                             _ = child.kill().await;
                             _= shutdown_sender.send(());
                             break;
                         }
+                        ControlFlow::ProcessLine(input) => {
+                            let input = format!("{}\n", input);
+                            _ = stdin.write_all(input.as_bytes()).await;
+                            _ = stdin.flush().await;
+                        }
+                        ControlFlow::Resized => {}
                     }
                 }
             }

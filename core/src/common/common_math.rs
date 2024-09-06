@@ -142,3 +142,56 @@ macro_rules! dec_unsigned {
         $arg_lhs = sub_unsigned!($arg_lhs, $arg_amount);
     };
 }
+
+/// Format a number with commas.
+pub fn format_with_commas(num: usize) -> String {
+    let num_str = num.to_string();
+    let mut result = String::new();
+
+    for (count, c) in num_str.chars().rev().enumerate() {
+        if count % 3 == 0 && count != 0 {
+            result.push(',');
+        }
+        result.push(c);
+    }
+
+    result.chars().rev().collect()
+}
+
+#[test]
+fn test_format_with_commas() {
+    // Test with a single-digit number.
+    {
+        let num = 5;
+        let result = format_with_commas(num);
+        assert_eq!(result, "5");
+    }
+
+    // Test with a two-digit number.
+    {
+        let num = 12;
+        let result = format_with_commas(num);
+        assert_eq!(result, "12");
+    }
+
+    // Test with a three-digit number.
+    {
+        let num = 123;
+        let result = format_with_commas(num);
+        assert_eq!(result, "123");
+    }
+
+    // Test with a six-digit number.
+    {
+        let num = 987654;
+        let result = format_with_commas(num);
+        assert_eq!(result, "987,654");
+    }
+
+    // Test with a nine-digit number.
+    {
+        let num = 123456789;
+        let result = format_with_commas(num);
+        assert_eq!(result, "123,456,789");
+    }
+}

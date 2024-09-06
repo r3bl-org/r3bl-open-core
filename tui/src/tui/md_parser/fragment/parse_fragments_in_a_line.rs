@@ -16,8 +16,10 @@
  */
 
 //! A single line of Markdown may have many fragments, eg: `**bold**`, `*italic*`,
-//! `[link](http://r3bl.com)`, etc. As opposed to markdown [block]s (like code block
-//! or smart lists) which may span multiple lines.
+//! `[link](http://r3bl.com)`, etc.
+//!
+//! As opposed to markdown [block]s (like code block or smart lists) which may span
+//! multiple lines.
 //!
 //! Fragments may be found in every single line of text. These parsers extract each
 //! fragment into either a string slice or some other intermediate representation.
