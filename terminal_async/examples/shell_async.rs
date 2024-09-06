@@ -15,24 +15,25 @@
  *   limitations under the License.
  */
 
-use std::io::Write;
-
-use child_process_constructor::*;
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
 use r3bl_rs_utils_core::ok;
-use r3bl_terminal_async::{ReadlineEvent, SharedWriter, TerminalAsync};
-use terminal_async_constructor::*;
-use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt},
-    process::Child,
-    sync::broadcast,
-};
+use r3bl_terminal_async::ReadlineEvent::{Eof, Interrupted, Line};
+use r3bl_terminal_async::{SharedWriter, TerminalAsync};
+use std::io::Write as _;
+use tokio::io::AsyncBufReadExt as _;
+use tokio::io::AsyncWriteExt as _;
 
 /// This program uses the `r3bl_terminal_async` crate to provide a prompt and get user
 /// input, pass that to the `stdin` of a `bash` child process, and then display the output
 /// from the child process in the terminal. The followings steps outline what the program
 /// does:
+///
+/// # YouTube video of live coding this example
+///
+/// Please watch the following video to see how this example was created.
+/// - [Build with Naz : Create an async shell in Rust](https://youtu.be/jXzFCDIJQag)
+/// - [YouTube channel](https://www.youtube.com/@developerlifecom?sub_confirmation=1)
 ///
 /// # Create some shared global variables
 ///
@@ -95,47 +96,61 @@ use tokio::{
 /// │ > killall -9 bash shell_async │
 /// └───────────────────────────────┘
 /// ```
+/// This program uses the `r3bl_terminal_async` crate to provide a prompt and get user
+/// input, pass that to the `stdin` of a `bash` child process, and then display the output
+/// from the child process in the terminal.
 #[tokio::main]
-pub async fn main() -> miette::Result<()> {
-    let (shutdown_sender, _) = broadcast::channel::<()>(1);
+async fn main() -> miette::Result<()> {
+    // Create a broadcast channel for shutdown.
+    let (shutdown_sender, _) = tokio::sync::broadcast::channel::<()>(1);
 
-    let ChildProcessHandle {
+    // Create a long-running `bash` child process using tokio::process::Command.
+    let child_process_constructor::ChildProcessHandle {
         pid,
         child,
-        stdout,
         stdin,
+        stdout,
         stderr,
-    } = create_child_process("bash")?;
+    } = child_process_constructor::new("bash")?;
 
-    let TerminalAsyncHandle {
+    // Create a `r3bl_terminal_async` instance.
+    let terminal_async_constructor::TerminalAsyncHandle {
         terminal_async,
         shared_writer,
-    } = create_terminal_async(pid).await?;
+    } = terminal_async_constructor::new(pid).await?;
 
+    // Create 2 tasks, join on them:
+    // 1. monitor the output from the child process.
+    // 2. monitor the input from the user (and relay it to the child process).
     _ = tokio::join!(
         // New green thread.
-        spawn_monitor_output_from_child(stdout, stderr, shared_writer, shutdown_sender.clone()),
+        monitor_child_output::spawn(
+            stdout,
+            stderr,
+            shared_writer.clone(),
+            shutdown_sender.clone()
+        ),
         // Current thread.
-        monitor_user_input_to_child::start_event_loop(
+        monitor_user_input_and_send_to_child::start_event_loop(
             stdin,
             terminal_async,
             child,
-            shutdown_sender.clone(),
+            shutdown_sender.clone()
         )
     );
 
     ok!()
 }
 
-pub mod monitor_user_input_to_child {
+pub mod monitor_user_input_and_send_to_child {
     use super::*;
 
     pub async fn start_event_loop(
         mut stdin: tokio::process::ChildStdin,
         mut terminal_async: TerminalAsync,
-        child: Child,
-        shutdown_sender: broadcast::Sender<()>,
-    ) -> miette::Result<()> {
+        mut child: tokio::process::Child,
+        shutdown_sender: tokio::sync::broadcast::Sender<()>,
+    ) {
         let mut shutdown_receiver = shutdown_sender.subscribe();
 
         loop {
@@ -143,137 +158,111 @@ pub mod monitor_user_input_to_child {
                 // Branch: Monitor shutdown signal. This is cancel safe as `recv()` is
                 // cancel safe.
                 _ = shutdown_receiver.recv() => {
-                    _ = perform_shutdown(child).await;
                     break;
-                },
+                }
+
                 // Branch: Monitor terminal_async for user input. This is cancel safe as
                 // `get_readline_event()` is cancel safe.
                 result_readline_event = terminal_async.get_readline_event() => {
-                    handle_user_input_event(
-                        result_readline_event,
-                        shutdown_sender.clone(),
-                        &mut stdin
-                    ).await
+                    match result_readline_event {
+                        Ok(readline_event) => {
+                            match readline_event {
+                                // User typed something & pressed enter.
+                                Line(input) => {
+                                    // Trim user input.
+                                    let input = input.trim().to_string();
+
+                                    // Check for the exit command.
+                                    if input == "exit" {
+                                        _= shutdown_sender.send(());
+                                        break;
+                                    }
+
+                                    // Write user input to the child process stdin.
+                                    let input = format!("{}\n", input);
+                                    _ = stdin.write_all(input.as_bytes()).await;
+                                    _ = stdin.flush().await;
+
+                                },
+                                // Ctrl+C or Ctrl+D.
+                                Eof | Interrupted => {
+                                    _ = child.kill().await;
+                                    _= shutdown_sender.send(());
+                                    break;
+                                }
+                                // Resized.
+                                _ => {}
+                            }
+                        },
+
+                        // Something went wrong with the terminal_async.
+                        Err(_) => {
+                            _ = child.kill().await;
+                            _= shutdown_sender.send(());
+                            break;
+                        }
+                    }
                 }
             }
         }
-
-        ok!()
-    }
-
-    enum EarlyReturn {
-        Yes,
-        YesAndShutdown,
-        No(String),
-    }
-
-    impl From<miette::Result<ReadlineEvent>> for EarlyReturn {
-        fn from(result_readline_event: miette::Result<ReadlineEvent>) -> Self {
-            match result_readline_event {
-                Ok(readline_event) => match readline_event {
-                    ReadlineEvent::Line(input) => EarlyReturn::No(input),
-                    ReadlineEvent::Resized => EarlyReturn::Yes,
-                    ReadlineEvent::Eof | ReadlineEvent::Interrupted => EarlyReturn::YesAndShutdown,
-                },
-                Err(_) => EarlyReturn::YesAndShutdown,
-            }
-        }
-    }
-
-    /// - If the user types a line, then write it to the child process.
-    /// - If this function needs to exit, then send a shutdown signal.
-    async fn handle_user_input_event(
-        result_readline_event: miette::Result<ReadlineEvent>,
-        shutdown_sender: broadcast::Sender<()>,
-        stdin: &mut tokio::process::ChildStdin,
-    ) {
-        // Early return check.
-        let input = match EarlyReturn::from(result_readline_event) {
-            EarlyReturn::No(line) => line,
-            // Just return.
-            EarlyReturn::Yes => return,
-            // Return and shutdown.
-            EarlyReturn::YesAndShutdown => {
-                let _ = shutdown_sender.send(());
-                return;
-            }
-        };
-
-        // Trim leading & trailing whitespace (including newlines).
-        let input = input.trim();
-
-        match input {
-            // Send a shutdown signal. Don't write this input to the child process.
-            "exit" => {
-                let _ = shutdown_sender.send(());
-            }
-            // Write the user input to the child process.
-            _ => {
-                let input = format!("{}\n", input);
-                _ = stdin.write_all(input.as_bytes()).await;
-                _ = stdin.flush().await;
-            }
-        }
-    }
-
-    /// Perform graceful shutdown tasks.
-    async fn perform_shutdown(mut child: Child) -> miette::Result<()> {
-        child.kill().await.into_diagnostic()?;
-
-        ok!()
     }
 }
 
-pub fn spawn_monitor_output_from_child(
-    stdout: tokio::process::ChildStdout,
-    stderr: tokio::process::ChildStderr,
-    mut shared_writer: r3bl_terminal_async::SharedWriter,
-    shutdown_sender: tokio::sync::broadcast::Sender<()>,
-) -> tokio::task::JoinHandle<()> {
-    tokio::spawn(async move {
-        let mut stdout_buf_reader = tokio::io::BufReader::new(stdout).lines();
-        let mut stderr_buf_reader = tokio::io::BufReader::new(stderr).lines();
+pub mod monitor_child_output {
+    use super::*;
+
+    pub async fn spawn(
+        stdout: tokio::process::ChildStdout,
+        stderr: tokio::process::ChildStderr,
+        mut shared_writer: SharedWriter,
+        shutdown_sender: tokio::sync::broadcast::Sender<()>,
+    ) -> tokio::task::JoinHandle<()> {
+        let mut stdout_lines = tokio::io::BufReader::new(stdout).lines();
+        let mut stderr_lines = tokio::io::BufReader::new(stderr).lines();
         let mut shutdown_receiver = shutdown_sender.subscribe();
 
-        loop {
-            tokio::select! {
+        tokio::spawn(async move {
+            loop {
                 // Branch: Monitor shutdown signal. This is cancel safe as `recv()` is
                 // cancel safe.
-                _ = shutdown_receiver.recv() => {
-                    break;
-                },
-                // Branch: Monitor stderr for output from the child process. This is
-                // cancel safe as `next_line()` is cancel safe.
-                result_line = stderr_buf_reader.next_line() => {
-                    match result_line {
-                        Ok(Some(line)) => {
-                            let line = line.to_string().red();
-                            _ = writeln!(shared_writer, "{}", line).into_diagnostic();
-                        },
-                        _ => {
-                            _ = shutdown_sender.send(()).into_diagnostic();
-                            break;
-                        },
-                    }
-                },
-                // Branch: Monitor stdout for output from the child process. This is
-                // cancel safe as `next_line()` is cancel safe.
-                result_line = stdout_buf_reader.next_line() => {
-                    match result_line {
-                        Ok(Some(line)) => {
-                            let line = line.to_string().green();
-                            _ = writeln!(shared_writer, "{}", line).into_diagnostic();
-                        },
-                        _ => {
-                            _ = shutdown_sender.send(()).into_diagnostic();
-                            break;
-                        },
+                tokio::select! {
+                    _ = shutdown_receiver.recv() => {
+                        break;
                     }
 
+                    // Branch: Monitor stdout for output from the child process. This is
+                    // cancel safe as `next_line()` is cancel safe.
+                    result_line = stdout_lines.next_line() => {
+                        match result_line {
+                            Ok(Some(line)) => {
+                                let line = line.to_string().green();
+                                _ = writeln!(shared_writer, "{}", line);
+                            },
+                            _ => {
+                                _ = shutdown_sender.send(());
+                                break;
+                            }
+                        }
+                    }
+
+                    // Branch: Monitor stderr for output from the child process. This is
+                    // cancel safe as `next_line()` is cancel safe.
+                    result_line = stderr_lines.next_line() => {
+                        match result_line {
+                            Ok(Some(line)) => {
+                                let line = line.to_string().red();
+                                _ = writeln!(shared_writer, "{}", line);
+                            }
+                            _ => {
+                                _= shutdown_sender.send(());
+                                break;
+                            }
+                        }
+                    },
                 }
             }
-        }
-    })
+        })
+    }
 }
 
 pub mod terminal_async_constructor {
@@ -284,7 +273,7 @@ pub mod terminal_async_constructor {
         pub shared_writer: SharedWriter,
     }
 
-    pub async fn create_terminal_async(pid: u32) -> miette::Result<TerminalAsyncHandle> {
+    pub async fn new(pid: u32) -> miette::Result<TerminalAsyncHandle> {
         let prompt = {
             let prompt_seg_1 = "╭".magenta().on_dark_grey().to_string();
             let prompt_seg_2 = format!("┤{pid}├").magenta().on_dark_grey().to_string();
@@ -292,13 +281,15 @@ pub mod terminal_async_constructor {
             format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3)
         };
 
-        let terminal_async = TerminalAsync::try_new(prompt.as_str())
-            .await?
-            .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
+        let Ok(Some(terminal_async)) = TerminalAsync::try_new(prompt.as_str()).await else {
+            miette::bail!("Failed to create TerminalAsync instance");
+        };
+
         let shared_writer = terminal_async.clone_shared_writer();
+
         ok!(TerminalAsyncHandle {
             terminal_async,
-            shared_writer,
+            shared_writer
         })
     }
 }
@@ -307,38 +298,42 @@ pub mod child_process_constructor {
     use super::*;
 
     pub struct ChildProcessHandle {
+        pub stdin: tokio::process::ChildStdin,
+        pub stdout: tokio::process::ChildStdout,
+        pub stderr: tokio::process::ChildStderr,
         pub pid: u32,
         pub child: tokio::process::Child,
-        pub stdout: tokio::process::ChildStdout,
-        pub stdin: tokio::process::ChildStdin,
-        pub stderr: tokio::process::ChildStderr,
     }
 
-    pub fn create_child_process(program: &str) -> miette::Result<ChildProcessHandle> {
-        let mut child = tokio::process::Command::new(program)
+    pub fn new(program: &str) -> miette::Result<ChildProcessHandle> {
+        let mut child: tokio::process::Child = tokio::process::Command::new(program)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
             .into_diagnostic()?;
 
-        let stdout = child
+        let stdout: tokio::process::ChildStdout = child
             .stdout
             .take()
-            .ok_or_else(|| miette::miette!("Failed to open stdout on child process"))?;
+            .ok_or_else(|| miette::miette!("Failed to open stdout of child process"))?;
 
-        let stdin = child
+        let stdin: tokio::process::ChildStdin = child
             .stdin
             .take()
-            .ok_or_else(|| miette::miette!("Failed to open stdin on child process"))?;
+            .ok_or_else(|| miette::miette!("Failed to open stdin of child process"))?;
 
-        let stderr = child
+        let stderr: tokio::process::ChildStderr = child
             .stderr
             .take()
-            .ok_or_else(|| miette::miette!("Failed to open stderr on child process"))?;
+            .ok_or_else(|| miette::miette!("Failed to open stderr of child process"))?;
 
-        Ok(ChildProcessHandle {
-            pid: child.id().unwrap_or(0),
+        let pid = child
+            .id()
+            .ok_or_else(|| miette::miette!("Failed to get PID of child process"))?;
+
+        ok!(ChildProcessHandle {
+            pid,
             child,
             stdin,
             stdout,
