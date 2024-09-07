@@ -1996,7 +1996,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_rs_utils_core"
-version = "0.9.14"
+version = "0.9.15"
 dependencies = [
  "chrono",
  "log",
