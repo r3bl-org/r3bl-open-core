@@ -172,8 +172,8 @@ cd redux
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 cargo publish --dry-run --allow-dirty
 git add -A
-git commit -S -m "v0.2.6-redux"
-git tag -a v0.2.6-redux -m "v0.2.6-redux"
+git commit -S -m "v0.2.7-redux"
+git tag -a v0.2.7-redux -m "v0.2.7-redux"
 cargo publish
 cd ..
 
