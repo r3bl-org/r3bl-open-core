@@ -26,9 +26,9 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl-open-core.
-r3bl_rs_utils_core = { path = "../core", version = "0.9.15" }
-r3bl_rs_utils_macro = { path = "../macro", version = "0.9.9" }
-r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
+r3bl_rs_utils_core = { path = "../core" }
+r3bl_rs_utils_macro = { path = "../macro" }
+r3bl_ansi_color = { path = "../ansi_color" }
 
 # Logging.
 log = { version = "0.4.22", features = ["std"] }
