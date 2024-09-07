@@ -26,4 +26,4 @@ time = { version = "0.3.36", features = ["formatting", "macros"] }
 termcolor = "1.4.1"
 
 # r3bl-open-core.
-r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
+r3bl_ansi_color = { path = "../ansi_color" }

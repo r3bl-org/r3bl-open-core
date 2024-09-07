@@ -43,12 +43,12 @@ path = "src/lib.rs"
 
 [dependencies]
 # R3BL crates (from this mono repo).
-r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
-r3bl_rs_utils_core = { path = "../core", version = "0.9.13" }
-r3bl_rs_utils_macro = { path = "../macro", version = "0.9.9" }
-r3bl_tui = { path = "../tui", version = "0.5.5" }
-r3bl_tuify = { path = "../tuify", version = "0.1.26" }
-r3bl_analytics_schema = { path = "../analytics_schema", version = "0.0.1" }
+r3bl_ansi_color = { path = "../ansi_color" }
+r3bl_rs_utils_core = { path = "../core" }
+r3bl_rs_utils_macro = { path = "../macro" }
+r3bl_tui = { path = "../tui" }
+r3bl_tuify = { path = "../tuify" }
+r3bl_analytics_schema = { path = "../analytics_schema" }
 log = { version = "0.4.22", features = ["std"] }
 
 # Tokio.
@@ -72,16 +72,16 @@ chrono = "0.4.38"
 rand = "0.8.5"
 
 # Crossterm styling.
-crossterm = { version = "0.27.0" }
+crossterm = { version = "0.28.1" }
 
 # Open URLs.
-open = "5"
+open = "5.3.0"
 
 # Save config files.
 dirs = "5.0.1"
 
 # Reedline.
-reedline = "0.32.0"
+reedline = "0.34.0"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

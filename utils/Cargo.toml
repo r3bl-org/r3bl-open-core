@@ -27,7 +27,7 @@ path = "./src/lib.rs"
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-r3bl_rs_utils_core = { path = "../core", version = "0.9.11" }
+r3bl_rs_utils_core = { path = "../core" }
 
 [dev-dependencies]
 # For assert_eq2! macro.

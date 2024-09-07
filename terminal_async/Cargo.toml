@@ -24,9 +24,9 @@ crossterm = { version = "0.28.1", features = ["event-stream"] } # EventStream
 futures-util = "0.3.30"                                         # Needed for crossterm EventStream
 
 # r3bl-open-core.
-r3bl_rs_utils_core = { path = "../core", version = "0.9.14" }
-r3bl_tui = { path = "../tui", version = "0.5.7" }
-r3bl_tuify = { path = "../tuify", version = "0.1.26" }
+r3bl_rs_utils_core = { path = "../core" }
+r3bl_tui = { path = "../tui" }
+r3bl_tuify = { path = "../tuify" }
 
 # Unicode support.
 unicode-segmentation = "1.11.0"
@@ -49,6 +49,10 @@ tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 tracing-appender = "0.2.3"
 tracing-core = "0.1.32"
+
+# ⚠️ NOTE ⚠️
+# DO NOT UPDATE TO THE LATEST VERSION OF THE FOLLOWING CRATES YET THERE ARE
+# SOME INCOMPATIBILITIES WITH THE LATEST VERSIONS (0.24.0, etc)
 
 # OTel, jaeger, tracing. Implements the types defined in the Otel spec
 # Run: `docker run -d -p16686:16686 -p4317:4317 -e COLLECTOR_OTLP_ENABLED=true jaegertracing/all-in-one:latest`

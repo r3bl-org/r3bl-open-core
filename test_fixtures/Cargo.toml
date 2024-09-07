@@ -20,14 +20,14 @@ license = "Apache-2.0"
 
 [dependencies]
 # Async stream for DI and testing.
-futures-core = "0.3"
+futures-core = "0.3.30"
 async-stream = "0.3.5"
 strip-ansi-escapes = "0.2.0"
 futures-util = "0.3.30"
 
 # Enum to string generation.
-strum = "0.26"
-strum_macros = "0.26"
+strum = "0.26.3"
+strum_macros = "0.26.4"
 
 # Error handling.
 thiserror = "1.0.63"
