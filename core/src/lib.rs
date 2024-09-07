@@ -15,9 +15,9 @@
  *   limitations under the License.
  */
 
-//! # Context
+//! # Why R3BL?
 //!
-//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg)
+//! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true" height="256px">
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
@@ -41,14 +41,22 @@
 //!    development w/ a twist: taking concepts that work really well for the frontend mobile and web
 //!    development world and re-imagining them for TUI & Rust.
 //!
-//!    - Taking things like React, JSX, CSS, and Redux, but making everything async (they can be run
-//!      in parallel & concurrent via Tokio).
+//!    - Taking inspiration from things like [React](https://react.dev/),
+//!      [SolidJS](https://www.solidjs.com/),
+//!      [Elm](https://guide.elm-lang.org/architecture/),
+//!      [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack
+//!      Compose](https://developer.android.com/compose),
+//!      [JSX](https://ui.dev/imperative-vs-declarative-programming),
+//!      [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can
+//!      be run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
 //!    - Even the thread running the main event loop doesn't block since it is async.
-//!    - Using proc macros to create DSLs to implement CSS & JSX.
+//!    - Using proc macros to create DSLs to implement something inspired by
+//!      [CSS](https://www.w3.org/TR/CSS/#css) &
+//!      [JSX](https://ui.dev/imperative-vs-declarative-programming).
 //!
 //! 2. 🌎 We are building apps to enhance developer productivity & workflows.
 //!
-//!    - The idea here is not to rebuild tmux in Rust (separate processes mux'd onto a single
+//!    - The idea here is not to rebuild `tmux` in Rust (separate processes mux'd onto a single
 //!      terminal window). Rather it is to build a set of integrated "apps" (or "tasks") that run in
 //!      the same process that renders to one terminal window.
 //!    - Inside of this terminal window, we can implement things like "app" switching, routing,
@@ -61,49 +69,35 @@
 //!      2. integrations w/ github issues
 //!      3. integrations w/ calendar, email, contacts APIs
 //!
-//! These crates provides lots of useful functionality to help you build TUI (text user interface)
-//! apps, along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
+//! All the crates in the `r3bl-open-core`
+//! [repo](https://github.com/r3bl-org/r3bl-open-core/) provide lots of useful
+//! functionality to help you build TUI (text user interface) apps, along w/ general
+//! niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
 //!
-//! 1. Loosely coupled & fully asynchronous [TUI
-//!    framework](https://docs.rs/r3bl_tui/latest/r3bl_tui/) to make it possible (and easy) to build
-//!    sophisticated TUIs (Text User Interface apps) in Rust that are inspired by React, Redux, CSS
-//!    and Flexbox.
-//! 2. Thread-safe & fully asynchronous [Redux](https://docs.rs/r3bl_redux/latest/r3bl_redux/)
-//!    crate (using Tokio to run subscribers and middleware in separate tasks). The reducer
-//!    functions are run sequentially.
-//! 3. Lots of [declarative macros](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/),
-//!    and [procedural macros](https://docs.rs/r3bl_rs_utils_macro/latest/r3bl_rs_utils_macro/)
-//!    (both function like and derive) to avoid having to write lots of boilerplate code for many
-//!    common (and complex) tasks. And even less noisy `Result` and `Error` types.
-//! 4. [Non binary tree data](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/) structure
-//!    inspired by memory arenas, that is thread safe and supports parallel tree walking.
-//! 5. Utility functions to improve
-//!    [ergonomics](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/) of commonly used patterns
-//!    in Rust programming, ranging from things like colorizing `stdout`, `stderr` output to lazy
-//!    value holders.
+//! # Table of contents
 //!
-//! Please check out the
-//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_rs_utils_core)
-//! to see how the library has evolved over time.
+//! <!-- TOC -->
 //!
-//! ## Learn more about how this library is built
+//! - [Introduction](#introduction)
+//! - [Changelog](#changelog)
+//! - [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
 //!
-//! 🦜 Here are some articles (on [developerlife.com](https://developerlife.com)) about how this
-//! crate is made:
-//! 1. <https://developerlife.com/2022/02/24/rust-non-binary-tree/>
-//! 2. <https://developerlife.com/2022/03/12/rust-redux/>
-//! 3. <https://developerlife.com/2022/03/30/rust-proc-macro/>
+//! <!-- /TOC -->
 //!
-//! 🦀 You can also find all the Rust related content on developerlife.com
-//! [here](https://developerlife.com/category/Rust/).
+//! # Introduction
+//! <a id="markdown-introduction" name="introduction"></a>
 //!
-//! # Other crates that depend on this crate
+//! This crate provides lots of low level functionality like Unicode strings (that support
+//! emoji), text styling, and more.
 //!
-//! This crate is a dependency of the following crates:
+//! It is a dependency of the following crates:
+//! 1. [`r3bl_tui`](https://crates.io/crates/r3bl_tui)
+//! 1. [`r3bl_tuify`](https://crates.io/crates/ir3bl_tuify)
+//! 1. [`r3bl_terminal_async`](https://crates.io/crates/r3bl_terminal_async)
+//! 1. [`r3bl_cmdr`](https://crates.io/crates/r3bl_cmdr)
 //! 1. [`r3bl_rs_utils_macro`](https://crates.io/crates/r3bl_rs_utils_macro) (procedural macros)
-//! 2. [`r3bl_tui`](https://crates.io/crates/r3bl_tui)
-//! 3. [`r3bl_redux`](https://crates.io/crates/r3bl_redux)
-//! 4. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils)
+//! 1. [`r3bl_redux`](https://crates.io/crates/r3bl_redux)
+//! 1. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils)
 //!
 //! Due to the [requirements of proc macros being in a separate
 //! crate](https://developerlife.com/2022/03/30/rust-proc-macro/#add-an-internal-or-core-crate),
@@ -112,11 +106,28 @@
 //! 2. Put the proc macros in a separate crate (`r3bl_rs_utils_macro`). This crate also depends on
 //!    the `r3bl_rs_utils_core` crate.
 //! 3. Finally, make the "public" crate (`r3bl_rs_utils`) depend on the other two.
+//!    However, this `r3bl_rs_utils` crate isn't really used anymore. It is possible to simply
+//!    add a dependency on the `r3bl_rs_utils_core` crate directly, and `r3bl_tui` for instance.
 //!
 //! As a way to hide this kind of layering from the users of the "main" `r3bl_rs_utils` crate, all
 //! the modules tend to be re-exported, making them available from the "main" or top-level crate;
 //! more info on this
 //! [here](https://doc.rust-lang.org/book/ch07-04-bringing-paths-into-scope-with-the-use-keyword.html?highlight=module%20re-export#re-exporting-names-with-pub-use).
+//!
+//! # Changelog
+//! <a id="markdown-changelog" name="changelog"></a>
+//!
+//! Please check out the
+//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_rs_utils_core)
+//! to see how the library has evolved over time.
+//!
+//! # Learn how these crates are built, provide feedback
+//! <a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
+//!
+//! To learn how we built this crate, please take a look at the following resources.
+//! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+//! - If you like consuming written content, here's our developer [site](https://developerlife.com/). Please consider subscribing to our [newsletter](https://developerlife.com/subscribe.html).
+//! - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 
 // Connect to source file.
 pub mod calc_str_len;

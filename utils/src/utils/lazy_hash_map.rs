@@ -56,20 +56,20 @@ use std::{collections::HashMap, hash::Hash};
 /// assert_eq!(a_flag, true);
 /// ```
 #[derive(Debug)]
-pub struct LazyMemoValues<F, T, V>
+pub struct LazyMemoValues<F, K, V>
 where
-    F: FnMut(&T) -> V,
-    T: Clone + Eq + Hash,
+    F: FnMut(&K) -> V,
+    K: Clone + Eq + Hash,
     V: Clone,
 {
     pub create_value_fn: F,
-    pub value_map: HashMap<T, V>,
+    pub value_map: HashMap<K, V>,
 }
 
-impl<F, T, V> LazyMemoValues<F, T, V>
+impl<F, K, V> LazyMemoValues<F, K, V>
 where
-    F: FnMut(&T) -> V,
-    T: Clone + Eq + Hash,
+    F: FnMut(&K) -> V,
+    K: Clone + Eq + Hash,
     V: Clone,
 {
     pub fn new(create_value_fn: F) -> Self {
@@ -79,7 +79,7 @@ where
         }
     }
 
-    pub fn get_ref(&mut self, arg: &T) -> &V {
+    pub fn get_ref(&mut self, arg: &K) -> &V {
         if !self.value_map.contains_key(arg) {
             let arg = arg.clone();
             let value = (self.create_value_fn)(&arg);
@@ -88,5 +88,5 @@ where
         self.value_map.get(arg).as_ref().unwrap()
     }
 
-    pub fn get_copy(&mut self, arg: &T) -> V { self.get_ref(arg).clone() }
+    pub fn get_copy(&mut self, arg: &K) -> V { self.get_ref(arg).clone() }
 }

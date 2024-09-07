@@ -176,7 +176,7 @@ mod exp_batch_2 {
         &'input str,
     ) -> Result<
         (&'input str, &'input str),
-        nom::Err<nom::error::Error<&str>>,
+        nom::Err<nom::error::Error<&'input str>>,
     > {
         recognize(many0(anychar.and_then(not_denied_chars(denied_chars))))
     }

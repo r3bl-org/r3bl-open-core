@@ -1,4 +1,4 @@
-# r3bl_rs_utils_macro
+# r3bl_analytics_schema
 
 ## Why R3BL?
 
@@ -73,30 +73,26 @@ niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
 ## Introduction
 <a id="markdown-introduction" name="introduction"></a>
 
-This crate is necessary since Rust requires procedural macros to be in their own
-crate, and this crate provides all the procedural macros for the
-[`r3bl-open-core`](https://github.com/r3bl-org/r3bl-open-core) mono repo, most notably
-[`tui_style!`].
-
-Due to the [requirements of proc macros being in a separate
-crate](https://developerlife.com/2022/03/30/rust-proc-macro/#add-an-internal-or-core-crate),
-this breakdown of one crate into multiple crates is necessary.
+This crate is a shared dependency of a few crates in the R3BL ecosystem. It describes
+data structures that are used to represent analytics data. These data structures are
+created with anonymity in mind, and purposefully avoid including any personally
+identifiable information (PII). Instead of adding privacy after the fact, these data
+structures don't really allow for PII to be included in the first place. The intention
+and philosophy behind these data structures is to be privacy-first, and provide a way
+for R3BL to understand which products need more care and attention first, to be able
+to deliver the best user experience to end users. And all the infrastructure supports
+opt-out of this anonymized telemetry data collection.
 
 Here are some other crates for which this crate is a dependency (run `rg
-"r3bl_rs_utils_macro" -g "Cargo.toml"` to get a list):
-1. [`r3bl_tui`](https://crates.io/crates/r3bl_tui) crate.
+"r3bl_analytics_schema" -g "Cargo.toml"` to get a list):
 1. [`r3bl-cmdr`](https://crates.io/crates/r3bl_cmdr) crate.
-1. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crate.
-
-Here's a guide to writing [procedural
-macros](https://developerlife.com/2022/03/30/rust-proc-macro/) on
-[developerlife.com](https://developerlife.com/category/Rust/).
+1. The analytics backend for R3BL which is closed source.
 
 ## Changelog
 <a id="markdown-changelog" name="changelog"></a>
 
 Please check out the
-[changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_rs_utils_macro)
+[changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_analytics_schema)
 to see how the library has evolved over time.
 
 ## Learn how these crates are built, provide feedback

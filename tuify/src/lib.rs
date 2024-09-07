@@ -15,23 +15,122 @@
  *   limitations under the License.
  */
 
-//! # r3bl-tuify
+//! # Why R3BL?
 //!
-//! r3bl_tuify is a Rust crate that allows you to add simple interactivity to your CLI app.
+//! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true" height="256px">
 //!
-//! r3bl_tuify crate can be used in two ways:
-//! 1. As a library. This is useful if you want to add simple interactivity to your CLI
+//! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
+//!
+//! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363">
+//! </span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span style="color:#F31874">
+//! </span><span style="color:#F11678">l</span><span style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span style="color:#E10895">
+//! </span><span style="color:#DE0799">&amp;</span><span style="color:#DB069E">
+//! </span><span style="color:#D804A2">s</span><span style="color:#D503A6">u</span><span style="color:#D203AA">i</span><span style="color:#CF02AE">t</span><span style="color:#CB01B2">e</span><span style="color:#C801B6">
+//! </span><span style="color:#C501B9">o</span><span style="color:#C101BD">f</span><span style="color:#BD01C1">
+//! </span><span style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span style="color:#AA03D2">
+//! </span><span style="color:#A603D5">f</span><span style="color:#A204D8">o</span><span style="color:#9E06DB">c</span><span style="color:#9A07DE">u</span><span style="color:#9608E1">s</span><span style="color:#910AE3">e</span><span style="color:#8D0BE6">d</span><span style="color:#890DE8">
+//! </span><span style="color:#850FEB">o</span><span style="color:#8111ED">n</span><span style="color:#7C13EF">
+//! </span><span style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span style="color:#572CFC">r</span><span style="color:#532FFD">
+//! </span><span style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
+//!
+//! We are working on building command line apps in Rust which have rich text user interfaces (TUI).
+//! We want to lean into the terminal as a place of productivity, and build all kinds of awesome
+//! apps for it.
+//!
+//! 1. 🔮 Instead of just building one app, we are building a library to enable any kind of rich TUI
+//!    development w/ a twist: taking concepts that work really well for the frontend mobile and web
+//!    development world and re-imagining them for TUI & Rust.
+//!
+//!    - Taking inspiration from things like [React](https://react.dev/),
+//!      [SolidJS](https://www.solidjs.com/),
+//!      [Elm](https://guide.elm-lang.org/architecture/),
+//!      [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack
+//!      Compose](https://developer.android.com/compose),
+//!      [JSX](https://ui.dev/imperative-vs-declarative-programming),
+//!      [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can
+//!      be run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
+//!    - Even the thread running the main event loop doesn't block since it is async.
+//!    - Using proc macros to create DSLs to implement something inspired by
+//!      [CSS](https://www.w3.org/TR/CSS/#css) &
+//!      [JSX](https://ui.dev/imperative-vs-declarative-programming).
+//!
+//! 2. 🌎 We are building apps to enhance developer productivity & workflows.
+//!
+//!    - The idea here is not to rebuild `tmux` in Rust (separate processes mux'd onto a
+//!      single terminal window). Rather it is to build a set of integrated "apps" (or
+//!      "tasks") that run in the same process that renders to one terminal window.
+//!    - Inside of this terminal window, we can implement things like "app" switching,
+//!      routing, tiling layout, stacking layout, etc. so that we can manage a lot of TUI
+//!      apps (which are tightly integrated) that are running in the same process, in the
+//!      same window. So you can imagine that all these "app"s have shared application
+//!      state. Each "app" may also have its own local application state.
+//!    - Here are some examples of the types of "app"s we plan to build (for which this
+//!      infrastructure acts as the open source engine):
+//!      1. Multi user text editors w/ syntax highlighting.
+//!      2. Integrations w/ github issues.
+//!      3. Integrations w/ calendar, email, contacts APIs.
+//!
+//! All the crates in the `r3bl-open-core`
+//! [repo](https://github.com/r3bl-org/r3bl-open-core/) provide lots of useful
+//! functionality to help you build TUI (text user interface) apps, along w/ general
+//! niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
+//!
+//! # Table of contents
+//!
+//! <!-- TOC -->
+//!
+//! - [Introduction](#introduction)
+//! - [Changelog](#changelog)
+//! - [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
+//! - [How to use it as a library?](#how-to-use-it-as-a-library)
+//! - [APIs](#apis)
+//!     - [select_from_list](#select_from_list)
+//!     - [select_from_list_with_multi_line_header](#select_from_list_with_multi_line_header)
+//! - [How to use it as a binary?](#how-to-use-it-as-a-binary)
+//!     - [Interactive user experience](#interactive-user-experience)
+//!     - [Paths](#paths)
+//! - [Style the components](#style-the-components)
+//!     - [Choose one of the 3 built-in styles](#choose-one-of-the-3-built-in-styles)
+//!     - [Create your style](#create-your-style)
+//! - [Build, run, test tasks](#build-run-test-tasks)
+//!     - [Prerequisites](#prerequisites)
+//!     - [Nushell scripts to build, run, test, etc.](#nu-shell-scripts-to-build-run-test-etc)
+//! - [References](#references)
+//!
+//! <!-- /TOC -->
+//!
+//! # Introduction
+//! <a id="markdown-introduction" name="introduction"></a>
+//!
+//! `r3bl_tuify` is a Rust crate that allows you to add simple interactivity to your CLI app.
+//!
+//! `r3bl_tuify` crate can be used in two ways:
+//!
+//! 1. **As a library**. This is useful if you want to add simple interactivity to your CLI
 //!    app written in Rust. You can see an example of this in the `examples` folder in the
 //!    `main_interactive.rs` file. You can run it using `cargo run --example
 //!    main_interactive`.
-//! 1. As a binary. This is useful if you want to use this crate as a command line tool.
+//!
+//! 1. **As a binary**. This is useful if you want to use this crate as a command line tool.
 //!    The binary target is called `rt`.
 //!
-//! Please check out the
-//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tuify)
-//! to see how the library has evolved over time.
+//! # Changelog
+//! <a id="markdown-changelog" name="changelog"></a>
 //!
-//! ## How to use it as a library?
+//! Please check out the
+//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tuify) to
+//! see how the library has evolved over time.
+//!
+//! # Learn how these crates are built, provide feedback
+//! <a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
+//!
+//! To learn how we built this crate, please take a look at the following resources.
+//! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+//! - If you like consuming written content, here's our developer [site](https://developerlife.com/). Please consider subscribing to our [newsletter](https://developerlife.com/subscribe.html).
+//! - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
+//!
+//! # How to use it as a library?
+//! <a id="markdown-how-to-use-it-as-a-library%3F" name="how-to-use-it-as-a-library%3F"></a>
 //!
 //! Here's a demo of the library target of this crate in action.
 //!
@@ -43,8 +142,8 @@
 //!
 //! ```toml
 //! [dependencies]
-//! r3bl_tuify = "0.1.24" # Get the latest version at the time you get this.
-//! r3bl_rs_utils_core = "0.9.11" # Get the latest version at the time you get this.
+//! r3bl_tuify = "*" # Get the latest version at the time you get this.
+//! r3bl_rs_utils_core = "*" # Get the latest version at the time you get this.
 //! ```
 //!
 //! The following example illustrates how you can use this as a library. The function that
@@ -93,7 +192,9 @@
 //!     Ok(())
 //! }
 //! ```
-//! ## APIs
+//!
+//! # APIs
+//! <a id="markdown-apis" name="apis"></a>
 //!
 //! We provide 2 APIs:
 //!
@@ -101,15 +202,13 @@
 //! - [`select_from_list_with_multi_line_header`]: Use this API if you want to display a list of items
 //!   with a multi line header.
 //!
-//! ### select_from_list
+//! ## select_from_list
 //!
 //! Use this API if you want to display a list of items with a single line header.
 //!
 //! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/0ae722bb-8cd1-47b1-a293-1a96e84d24d0)
 //!
-//! #### `select_from_list` signature:
-//!
-//! [select_from_list]
+//! [select_from_list] code example:
 //!
 //! ```rust
 //! use r3bl_rs_utils_core::*;
@@ -145,16 +244,14 @@
 //! }
 //! ```
 //!
-//! ### select_from_list_with_multi_line_header
+//! ## select_from_list_with_multi_line_header
 //!
 //! Use the `select_from_list_with_multi_line_header` API if you want to display a list of items with a
 //! multi line header. The first 5 lines are all part of the multi line header.
 //!
 //! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/2f82a42c-f720-4bcb-925d-0d5ad0b0a3c9)
 //!
-//! #### `select_from_list_with_multi_line_header` signature:
-//!
-//! [select_from_list_with_multi_line_header]
+//! [select_from_list_with_multi_line_header] code example:
 //!
 //! ```rust
 //! use std::{io::Result, vec};
@@ -283,7 +380,7 @@
 //! }
 //! ```
 //!
-//! ## How to use it as a binary?
+//! # How to use it as a binary?
 //! <a id="markdown-how-to-use-it-as-a-binary%3F" name="how-to-use-it-as-a-binary%3F"></a>
 //!
 //! Here's a demo of the binary target of this crate in action.
@@ -305,7 +402,7 @@
 //! 1. `-t` or `--tui-height` - Optionally allows you to set the height of the TUI. The
 //!    default is 5.
 //!
-//! ### Interactive user experience
+//! ## Interactive user experience
 //! <a id="markdown-interactive-user-experience" name="interactive-user-experience"></a>
 //!
 //! Typically a CLI app is not interactive. You can pass commands, subcommands, options, and
@@ -405,7 +502,8 @@
 //!        <source src="https://github.com/r3bl-org/r3bl-open-core/assets/2966499/d8d7d419-c85e-4c10-bea5-345aa31a92a3" type="video/mp4"/>
 //!      </video>
 //!
-//! ### Paths
+//! ## Paths
+//! <a id="markdown-paths" name="paths"></a>
 //!
 //! There are a lot of different execution paths that you can take with this relatively
 //! simple program. Here is a list.
@@ -432,19 +530,21 @@
 //! > the `rt` binary simply takes a command that will run after the user has made their
 //! > selection. Using the selected item(s) and applying them to this command.
 //!
-//! ## Style the components
+//! # Style the components
+//! <a id="markdown-style-the-components" name="style-the-components"></a>
 //!
-//! ### Choose one of the 3 built-in styles
+//! ## Choose one of the 3 built-in styles
+//! <a id="markdown-choose-one-of-the-3-built-in-styles" name="choose-one-of-the-3-built-in-styles"></a>
 //!
 //! Built-in styles are called `default`, `sea_foam_style`, and `hot_pink_style`. You can find them in the `style.rs` file (tuify/src/components/style.rs).
 //!
-//! ### default style
+//! Default style:
 //! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/eaf990a4-1c33-4783-9f39-82af42568183)
 //!
-//! ### sea_foam_style
+//! `sea_foam_style`:
 //! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/fc414f56-2f72-4d3a-86eb-bfd732b66bd1)
 //!
-//! ### hot_pink_style
+//! `hot_pink_style`:
 //! ![image](https://github.com/r3bl-org/r3bl-open-core/assets/22040032/06c155f9-11a9-416d-8056-cb4c741ac3d7)
 //!
 //! To use one of the built-in styles, simply pass it as an argument to the `select_from_list` function.
@@ -489,7 +589,8 @@
 //! }
 //! ```
 //!
-//! ### Create your style
+//! ## Create your style
+//! <a id="markdown-create-your-style" name="create-your-style"></a>
 //!
 //! To create your style, you need to create a `StyleSheet` struct and pass it as an argument to the `select_from_list` function.
 //!
@@ -550,9 +651,11 @@
 //! }
 //! ```
 //!
-//! ## Build, run, test tasks
+//! # Build, run, test tasks
+//! <a id="markdown-build%2C-run%2C-test-tasks" name="build%2C-run%2C-test-tasks"></a>
 //!
-//! ### Prerequisites
+//! ## Prerequisites
+//! <a id="markdown-prerequisites" name="prerequisites"></a>
 //!
 //! 🌠 For these to work you have to install the Rust toolchain, `nu`, `cargo-watch`,
 //! `bat`, and `flamegraph` on your system. Here are the instructions:
@@ -565,7 +668,8 @@
 //! 1. Install [`nu`](https://crates.io/crates/nu) shell on your system using `cargo install
 //!    nu`. It is available for Linux, macOS, and Windows.
 //!
-//! ### Nu shell scripts to build, run, test, etc.
+//! ## Nushell scripts to build, run, test, etc.
+//! <a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test%2C-etc." name="nu-shell-scripts-to-build%2C-run%2C-test%2C-etc."></a>
 //!
 //! Go to the `tuify` folder and run the commands below. These commands are defined in the `./run` folder.
 //!
@@ -605,27 +709,26 @@
 //! | `nu run install-cargo-tools`  | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`,and `flamegraph` will all be installed in one go) |
 //! | `nu run check-licenses`       | Use `cargo-deny` to audit all licenses used in the Rust workspace |
 //!
-//!
-//! ## References
+//! # References
 //!
 //! CLI UX guidelines:
 //!
-//! - <https://rust-cli-recommendations.sunshowers.io/handling-arguments.html>
-//! - <https://rust-cli-recommendations.sunshowers.io/configuration.html>
-//! - <https://rust-cli-recommendations.sunshowers.io/hierarchical-config.html>
-//! - <https://rust-cli-recommendations.sunshowers.io/hierarchical-config.html>
-//! - <https://docs.rs/clap/latest/clap/_derive/#overview>
-//! - <https://clig.dev/#foreword>
+//! - [Handling Arguments](https://rust-cli-recommendations.sunshowers.io/handling-arguments.html)
+//! - [Configuration](https://rust-cli-recommendations.sunshowers.io/configuration.html)
+//! - [Hierarchical Config](https://rust-cli-recommendations.sunshowers.io/hierarchical-config.html)
+//! - [Hierarchical Config](https://rust-cli-recommendations.sunshowers.io/hierarchical-config.html)
+//! - [Clap Derive Overview](https://docs.rs/clap/latest/clap/_derive/#overview)
+//! - [Command Line Interface Guidelines](https://clig.dev/#foreword)
 //!
 //! ANSI escape codes:
 //!
-//! - <https://notes.burke.libbey.me/ansi-escape-codes/>
-//! - <https://en.wikipedia.org/wiki/ANSI_escape_code>
-//! - <https://www.asciitable.com/>
-//! - <https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg>
-//! - <https://www.ditig.com/256-colors-cheat-sheet>
-//! - <https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences>
-//! - <https://www.compuphase.com/cmetric.htm>
+//! - [ANSI Escape Codes Notes](https://notes.burke.libbey.me/ansi-escape-codes/)
+//! - [ANSI Escape Code - Wikipedia](https://en.wikipedia.org/wiki/ANSI_escape_code)
+//! - [ASCII Table](https://www.asciitable.com/)
+//! - [Xterm 256 Color Chart](https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg)
+//! - [256 Colors Cheat Sheet](https://www.ditig.com/256-colors-cheat-sheet)
+//! - [List of ANSI Color Escape Sequences - Stack Overflow](https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences)
+//! - [Color Metric](https://www.compuphase.com/cmetric.htm)
 
 // https://github.com/rust-lang/rust-clippy
 // https://rust-lang.github.io/rust-clippy/master/index.html

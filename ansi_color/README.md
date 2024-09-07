@@ -1,30 +1,89 @@
-# r3bl_ansi_color crate
-<a id="markdown-r3bl_ansi_color-crate" name="r3bl_ansi_color-crate"></a>
+# r3bl_ansi_color
+
+## Why R3BL?
+
+<img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true" height="256px">
+
+<!-- R3BL TUI library & suite of apps focused on developer productivity -->
+
+<span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363">
+</span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span style="color:#F31874">
+</span><span style="color:#F11678">l</span><span style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span style="color:#E10895">
+</span><span style="color:#DE0799">&amp;</span><span style="color:#DB069E">
+</span><span style="color:#D804A2">s</span><span style="color:#D503A6">u</span><span style="color:#D203AA">i</span><span style="color:#CF02AE">t</span><span style="color:#CB01B2">e</span><span style="color:#C801B6">
+</span><span style="color:#C501B9">o</span><span style="color:#C101BD">f</span><span style="color:#BD01C1">
+</span><span style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span style="color:#AA03D2">
+</span><span style="color:#A603D5">f</span><span style="color:#A204D8">o</span><span style="color:#9E06DB">c</span><span style="color:#9A07DE">u</span><span style="color:#9608E1">s</span><span style="color:#910AE3">e</span><span style="color:#8D0BE6">d</span><span style="color:#890DE8">
+</span><span style="color:#850FEB">o</span><span style="color:#8111ED">n</span><span style="color:#7C13EF">
+</span><span style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span style="color:#572CFC">r</span><span style="color:#532FFD">
+</span><span style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
+
+We are working on building command line apps in Rust which have rich text user interfaces (TUI).
+We want to lean into the terminal as a place of productivity, and build all kinds of awesome
+apps for it.
+
+1. 🔮 Instead of just building one app, we are building a library to enable any kind of rich TUI
+   development w/ a twist: taking concepts that work really well for the frontend mobile and web
+   development world and re-imagining them for TUI & Rust.
+
+   - Taking inspiration from things like [React](https://react.dev/),
+     [SolidJS](https://www.solidjs.com/),
+     [Elm](https://guide.elm-lang.org/architecture/),
+     [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack
+     Compose](https://developer.android.com/compose),
+     [JSX](https://ui.dev/imperative-vs-declarative-programming),
+     [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can
+     be run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
+   - Even the thread running the main event loop doesn't block since it is async.
+   - Using proc macros to create DSLs to implement something inspired by
+     [CSS](https://www.w3.org/TR/CSS/#css) &
+     [JSX](https://ui.dev/imperative-vs-declarative-programming).
+
+2. 🌎 We are building apps to enhance developer productivity & workflows.
+
+   - The idea here is not to rebuild `tmux` in Rust (separate processes mux'd onto a
+     single terminal window). Rather it is to build a set of integrated "apps" (or
+     "tasks") that run in the same process that renders to one terminal window.
+   - Inside of this terminal window, we can implement things like "app" switching,
+     routing, tiling layout, stacking layout, etc. so that we can manage a lot of TUI
+     apps (which are tightly integrated) that are running in the same process, in the
+     same window. So you can imagine that all these "app"s have shared application
+     state. Each "app" may also have its own local application state.
+   - Here are some examples of the types of "app"s we plan to build (for which this
+     infrastructure acts as the open source engine):
+     1. Multi user text editors w/ syntax highlighting.
+     2. Integrations w/ github issues.
+     3. Integrations w/ calendar, email, contacts APIs.
+
+All the crates in the `r3bl-open-core`
+[repo](https://github.com/r3bl-org/r3bl-open-core/) provide lots of useful
+functionality to help you build TUI (text user interface) apps, along w/ general
+niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
+
+## Table of contents
 
 <!-- TOC -->
 
-- [What does it do?](#what-does-it-do)
-- [How to use it?](#how-to-use-it)
+- [Introduction](#introduction)
+- [Changelog](#changelog)
+- [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
+- [How to use it](#how-to-use-it)
 - [Build, run, test tasks](#build-run-test-tasks)
   - [Prerequisites](#prerequisites)
-  - [Commands to run](#commands-to-run)
+  - [Nushell commands](#nushell-commands)
 - [References](#references)
 - [Why make a new crate for this?](#why-make-a-new-crate-for-this)
 
 <!-- /TOC -->
 
-## What does it do?
-<a id="markdown-what-does-it-do%3F" name="what-does-it-do%3F"></a>
+## Introduction
+<a id="markdown-introduction" name="introduction"></a>
 
 Rust crate to generate formatted ANSI 256 (8-bit) and truecolor (24-bit) color output to stdout. On
 macOS, the default Terminal.app does not support truecolor, so ANSI 256 colors are used instead.
 
-Please check out the
-[changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_ansi_color)
-to see how the library has evolved over time.
-
-> This crate performs its own detection of terminal color capability heuristically. And does not
-> use other crates to perform this function.
+This crate performs its own detection of terminal color capability heuristically. And does not
+use other crates to perform this function.
 
 Here's a screenshot of running the `main` example on various operating systems:
 
@@ -38,114 +97,112 @@ Here's a screenshot of running the `main` example on various operating systems:
 
 | ![macOS screenshot Terminal app](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/ansi_color/docs/screenshot_macos_terminal_app.png?raw=true) |
 |:--:|
-| *Running on macOS Terminal app (note ANSI 256 runtime detection)* |
+| *Running on macOS terminal app (note ANSI 256 runtime detection)* |
 
 | ![macOS screenshot iTerm app](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/ansi_color/docs/screenshot_macos_iterm_app.png?raw=true) |
 |:--:|
 | *Running on macOS iTerm app (note Truecolor runtime detection)* |
 
-## How to use it?
-<a id="markdown-how-to-use-it%3F" name="how-to-use-it%3F"></a>
+## Changelog
+<a id="markdown-changelog" name="changelog"></a>
+
+Please check out the
+[changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_ansi_color)
+to see how the library has evolved over time.
+
+## Learn how these crates are built, provide feedback
+<a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
+
+To learn how we built this crate, please take a look at the following resources.
+- If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+- If you like consuming written content, here's our developer [site](https://developerlife.com/). Please consider subscribing to our [newsletter](https://developerlife.com/subscribe.html).
+- If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
+
+## How to use it
+<a id="markdown-how-to-use-it" name="how-to-use-it"></a>
 
 The main struct that we have to consider is `AnsiStyledText`. It has two fields:
 
 - `text` - the text to print.
 - `style` - a list of styles to apply to the text.
 
-
-To install the crate as a library, add the following to your `Cargo.toml` file:
-
-```toml
-[dependencies]
-r3bl_ansi_color = "0.6.9" # Get the latest version at the time you run this.
-```
-
 Here's an example.
 
 ```rust
-use r3bl_ansi_color::*;
+use r3bl_ansi_color::{AnsiStyledText, Style, Color};
 
-fn main() {
-  let styled_text = AnsiStyledText {
-      text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
-      style: &[
-          Style::Bold,
-          Style::Italic,
-          Style::Underline,
-          Style::Foreground(Color::Rgb(50, 50, 50)),
-          Style::Background(Color::Rgb(100, 200, 1)),
-      ],
-  };
-
-  // The AnsiStyledText struct implements the `Display` trait, so you can do this.
-  println!("{}", styled_text);
-
-  // Alternatively, you can do this too.
-  styled_text.println();
+AnsiStyledText {
+    text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
+    style: &[
+        Style::Bold,
+        Style::Italic,
+        Style::Underline,
+        Style::Foreground(Color::Rgb(50, 50, 50)),
+        Style::Background(Color::Rgb(100, 200, 1)),
+    ],
 }
+.println();
 ```
 
 Please a look at the
-[`main` example](https://github.com/r3bl-org/r3bl-open-core/blob/main/ansi_color/examples/main.rs) to get a
+[`main` example](https://github.com/r3bl-org/r3bl_ansi_color/blob/main/examples/main.rs) to get a
 better idea of how to use this crate.
 
 ## Build, run, test tasks
-<a id="markdown-build%2C-run%2C-test-tasks" name="build%2C-run%2C-test-tasks"></a>
+<a id="markdown-build-run-test-tasks" name="build-run-test-tasks"></a>
 
 ### Prerequisites
 <a id="markdown-prerequisites" name="prerequisites"></a>
 
-🌠 In order for these to work you have to install the Rust toolchain and the following
-crates `cargo-cache`, `cargo-watch`, `flamegraph`, and `nu` using these instructions:
+🌠 In order for these to work you have to install the Rust toolchain and `nu` and
+`cargo-watch`:
 
 1. Install the Rust toolchain using `rustup` by following the instructions
    [here](https://rustup.rs/).
-1. Install `cargo-cache` using `cargo install cargo-cache`.
 1. Install `cargo-watch` using `cargo install cargo-watch`.
 1. Install `flamegraph` using `cargo install flamegraph`.
-1. Install `nu` using `cargo install nu`.
+1. Install [`nu`](https://www.nushell.sh/) on your system using `cargo install nu`. It
+   is available for Linux, macOS, and Windows. And it is written in Rust.
 
-### Commands to run
-<a id="markdown-commands-to-run" name="commands-to-run"></a>
+### Nushell commands
+<a id="markdown-nushell-commands" name="nushell-commands"></a>
 
-The script to run is `run.nu`. It works on Linux, macOS, and Windows. Please make sure
-that the [pre-requisites](#prerequisites) are installed.
-
-- Build: `nu run.nu build`
-- Clean: `nu run.nu clean`
-- Run examples: `nu run.nu run`
-- Run examples with release flag: `nu run.nu run-release`
-- Run examples with flamegraph profiling: `nu run.nu run-flamegraph`
-- Run tests: `nu run.nu test`
-- Run clippy: `nu run.nu clippy`
-- Build docs: `nu run.nu docs`
-- Serve docs: `nu run.nu serve-docs`. This is only useful if you SSH into a remote machine via
-  VSCode (where you build and serve the docs) and want to view the docs in a browser on
-  your local machine.
-- Upgrade deps: `nu run.nu upgrade-deps`
-- Run rustfmt: `nu run.nu rustfmt`
+| Command                                 | Description                                                                                         |
+|-----------------------------------------|-----------------------------------------------------------------------------------------------------|
+| `nu run build`                          | Build the project                                                                                   |
+| `nu run clean`                          | Clean the project                                                                                   |
+| `nu run run`                            | Run examples                                                                                        |
+| `nu run run-release`                    | Run examples with release flag                                                                      |
+| `nu run run-flamegraph`                 | Run examples with flamegraph profiling                                                              |
+| `nu run test`                           | Run tests                                                                                           |
+| `nu run clippy`                         | Run clippy                                                                                          |
+| `nu run docs`                           | Build docs                                                                                          |
+| `nu run serve-docs`                     | Serve docs. Useful if you SSH into a remote machine via VSCode and want to view the docs locally     |
+| `nu run upgrade-deps`                   | Upgrade dependencies                                                                                |
+| `nu run rustfmt`                        | Run rustfmt                                                                                         |
 
 The following commands will watch for changes in the source folder and re-run:
 
-- Watch run: `nu run.nu watch-run`
-- Watch all test: `nu run.nu watch-all-tests`
-- Watch one test: `nu run.nu watch-one-test <test_name>`
-- Watch clippy: `nu run.nu watch-clippy`
-- Watch macro expansion for one test: `nu run.nu watch-macro-expansion-one-test <test_name>`
+| Command                                     | Description                                                                                         |
+|---------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| `nu run watch-run`                          | Watch run                                                                                           |
+| `nu run watch-all-tests`                    | Watch all tests                                                                                     |
+| `nu run watch-one-test <test_name>`         | Watch one test                                                                                      |
+| `nu run watch-clippy`                       | Watch clippy                                                                                        |
+| `nu run watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test                                                                  |
 
 ## References
 <a id="markdown-references" name="references"></a>
 
-- https://notes.burke.libbey.me/ansi-escape-codes/
-- https://en.wikipedia.org/wiki/ANSI_escape_code
-- https://www.asciitable.com/
-- https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg
-- https://www.ditig.com/256-colors-cheat-sheet
-- https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences
-- https://www.compuphase.com/cmetric.htm
+- [ANSI Escape Codes](https://notes.burke.libbey.me/ansi-escape-codes/)
+- [ASCII Table](https://www.asciitable.com/)
+- [Xterm 256color Chart](https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg)
+- [256 Colors Cheat Sheet](https://www.ditig.com/256-colors-cheat-sheet)
+- [List of ANSI Color Escape Sequences](https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences)
+- [Color Metric](https://www.compuphase.com/cmetric.htm)
 
 ## Why make a new crate for this?
-<a id="markdown-why-make-a-new-crate-for-this%3F" name="why-make-a-new-crate-for-this%3F"></a>
+<a id="markdown-why-make-a-new-crate-for-this" name="why-make-a-new-crate-for-this"></a>
 
 - There are a few crates on crates.io that do similar things but they don't amenable
   licenses.
@@ -154,14 +211,16 @@ The following commands will watch for changes in the source folder and re-run:
 - And there are other crates which don't correctly report that macOS Terminal.app does not
   support truecolor and only supports ANSI 256 color.
 
-Here are some links:
+Here are some relevant links:
 
-1. <https://github.com/rust-cli/concolor/issues/47>
-1. <https://docs.rs/anstream/latest/anstream/>
-1. <https://docs.rs/colorchoice/latest/colorchoice/>
-1. <https://docs.rs/colorchoice-clap/latest/colorchoice_clap/>
-1. <https://docs.rs/anstyle-query/latest/anstyle_query/fn.term_supports_ansi_color.html>
-1. <https://crates.io/crates/anstyle-query>
-1. <https://docs.rs/supports-color/2.0.0/supports_color/>
-1. <https://crates.io/crates/r3bl_ansi_color> (the source in `ansi_color` folder is this crate)
-1. <https://crates.io/crates/colored>
+1. [Issue 47: `concolor`](https://github.com/rust-cli/concolor/issues/47)
+1. [`anstream` documentation](https://docs.rs/anstream/latest/anstream/)
+1. [`colorchoice` documentation](https://docs.rs/colorchoice/latest/colorchoice/)
+1. [`colorchoice-clap` documentation](https://docs.rs/colorchoice-clap/latest/colorchoice_clap/)
+1. [`term_supports_ansi_color` function](https://docs.rs/anstyle-query/latest/anstyle_query/fn.term_supports_ansi_color.html)
+1. [`anstyle-query` crate](https://crates.io/crates/anstyle-query)
+1. [`supports-color` documentation](https://docs.rs/supports-color/2.0.0/supports_color/)
+1. [`r3bl_ansi_color` crate](https://crates.io/crates/r3bl_ansi_color) (the source in `ansi_color` folder is this crate)
+1. [`colored` crate](https://crates.io/crates/colored)
+
+License: Apache-2.0
