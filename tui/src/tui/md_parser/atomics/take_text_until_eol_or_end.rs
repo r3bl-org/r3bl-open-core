@@ -38,8 +38,8 @@ use crate::constants::*;
 /// | `"Hello, world!\n"` | `"\n"`         | `"Hello, world!"` |
 /// | `"Hello, world!"`   | `""`           | `"Hello, world!"` |
 #[rustfmt::skip]
-pub fn take_text_until_new_line_or_end<'i>() ->
-    impl FnMut(&'i str) -> Result<(&'i str, &'i str), nom::Err<nom::error::Error<&str>>>
+pub fn take_text_until_new_line_or_end<'input>() ->
+    impl FnMut(&'input str) -> Result<(&'input str, &'input str), nom::Err<nom::error::Error<&'input str>>>
 {
     recognize( /* match anychar up until a denied string below is encountered */
         many0( /* may match nothing */

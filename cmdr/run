@@ -2,7 +2,7 @@
 
 # From: https://github.com/r3bl-org/nu_script_template
 #
-# nu shell docs
+# nushell docs
 # - language fundamentals: https://www.nushell.sh/book/custom_commands.html#sub-commands
 #     - strings: https://www.nushell.sh/book/working_with_strings.html#string-interpolation
 #     - functions (aka commands, subcommands): https://www.nushell.sh/book/custom_commands.html

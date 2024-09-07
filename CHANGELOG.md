@@ -187,10 +187,10 @@ in a text editor.
   - Anonymized analytics reporting to prioritize feature development for `edi` and `giti`.
 
 - Changed:
-  - Replace the `run` command with `examples` in the `run` nu shell script. To run an
+  - Replace the `run` command with `examples` in the `run` nushell script. To run an
     example you use `nu run examples`. and provide instructions on the `run` script at the
     top level folder of this monorepo. Update `lib.rs` and `README.md` to reflect this
-    change. The behavior of the `run` nu shell script is more uniform across all crates in
+    change. The behavior of the `run` nushell script is more uniform across all crates in
     this repo.
 
 ### v0.0.8 (2023-12-22)
@@ -243,10 +243,10 @@ in a text editor.
 - Changed:
   - Rename `run.nu` to `run`. This simplifies commands to run it, eg: `nu run build`, or
     `./run build`.
-  - Replace the `run` command with `examples` in the `run` nu shell script. To run an
+  - Replace the `run` command with `examples` in the `run` nushell script. To run an
     example you use `nu run examples`. and provide instructions on the `run` script at the
     top level folder of this monorepo. Update `lib.rs` and `README.md` to reflect this
-    change. The behavior of the `run` nu shell script is more uniform across all crates in
+    change. The behavior of the `run` nushell script is more uniform across all crates in
     this repo.
 
 - Added:
@@ -430,10 +430,10 @@ exhaustively tested and is able to handle many more corner cases.
   - Rename `run.nu` to `run` in the `tui` folder. This simplifies commands to run it, eg:
     `nu run build`, or `./run build`.
   - Rename `run.nu` to `run` in the top level folder as well.
-  - Replace the `run` command with `examples` in the `run` nu shell script. To run an
+  - Replace the `run` command with `examples` in the `run` nushell script. To run an
     example you use `nu run examples`. and provide instructions on the `run` script at the
     top level folder of this monorepo. Update `lib.rs` and `README.md` to reflect this
-    change. The behavior of the `run` nu shell script is more uniform across all crates in
+    change. The behavior of the `run` nushell script is more uniform across all crates in
     this repo.
   - In `app.rs`, change `App` trait function `app_handle_signal()` to receive 2 new
     arguments: `component_registry_map`, and `has_focus`. This makes it similar to

@@ -19,7 +19,7 @@ Table of contents:
   - [Minimum TUI sync, blocking, partial raw mode for simple CLI programs with blocking interaction](#minimum-tui-sync-blocking-partial-raw-mode-for-simple-cli-programs-with-blocking-interaction)
   - [Underlying crates](#underlying-crates)
   - [Top level user facing crate](#top-level-user-facing-crate)
-- [How these crates are built, feedback](#how-these-crates-are-built-feedback)
+- [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
 - [Building the workspace, CI/CD, and testing](#building-the-workspace-cicd-and-testing)
 - [Star History](#star-history)
 
@@ -108,14 +108,13 @@ following command:
 cargo install r3bl-cmdr
 ```
 
-## How these crates are built, feedback
-<a id="markdown-how-these-crates-are-built%2C-feedback" name="how-these-crates-are-built%2C-feedback"></a>
+## Learn how these crates are built, provide feedback
+<a id="markdown-learn-how-these-crates-are-built%2C-provide-feedback" name="learn-how-these-crates-are-built%2C-provide-feedback"></a>
 
-If you want to know how these crates are built, please check out:
-1. Articles on [developerlife.com](https://developerlife.com).
-2. Videos on the developerlife.com [YouTube channel](https://www.youtube.com/@developerlifecom?sub_confirmation=1).
-
-If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
+To learn how we built this crate, please take a look at the following resources.
+- If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+- If you like consuming written content, here's our developer [site](https://developerlife.com/). Please consider subscribing to our [newsletter](https://developerlife.com/subscribe.html).
+- If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 
 ## Building the workspace, CI/CD, and testing
 <a id="markdown-building-the-workspace%2C-ci%2Fcd%2C-and-testing" name="building-the-workspace%2C-ci%2Fcd%2C-and-testing"></a>

@@ -15,9 +15,9 @@
  *   limitations under the License.
  */
 
-//! # Context
+//! # Why R3BL?
 //!
-//! ![](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg)
+//! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true" height="256px">
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
@@ -41,59 +41,58 @@
 //!    development w/ a twist: taking concepts that work really well for the frontend mobile and web
 //!    development world and re-imagining them for TUI & Rust.
 //!
-//!    - Taking things like React, JSX, CSS, and Redux, but making everything async (they can be run
-//!      in parallel & concurrent via Tokio).
+//!    - Taking inspiration from things like [React](https://react.dev/),
+//!      [SolidJS](https://www.solidjs.com/),
+//!      [Elm](https://guide.elm-lang.org/architecture/),
+//!      [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack
+//!      Compose](https://developer.android.com/compose),
+//!      [JSX](https://ui.dev/imperative-vs-declarative-programming),
+//!      [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can
+//!      be run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
 //!    - Even the thread running the main event loop doesn't block since it is async.
-//!    - Using proc macros to create DSLs to implement CSS & JSX.
+//!    - Using proc macros to create DSLs to implement something inspired by
+//!      [CSS](https://www.w3.org/TR/CSS/#css) &
+//!      [JSX](https://ui.dev/imperative-vs-declarative-programming).
 //!
 //! 2. 🌎 We are building apps to enhance developer productivity & workflows.
 //!
-//!    - The idea here is not to rebuild tmux in Rust (separate processes mux'd onto a single
-//!      terminal window). Rather it is to build a set of integrated "apps" (or "tasks") that run in
-//!      the same process that renders to one terminal window.
-//!    - Inside of this terminal window, we can implement things like "app" switching, routing,
-//!      tiling layout, stacking layout, etc. so that we can manage a lot of TUI apps (which are
-//!      tightly integrated) that are running in the same process, in the same window. So you can
-//!      imagine that all these "app"s have shared application state (that is in a Redux store).
-//!      Each "app" may also have its own Redux store.
-//!    - Here are some examples of the types of "app"s we want to build:
-//!      1. multi user text editors w/ syntax highlighting
-//!      2. integrations w/ github issues
-//!      3. integrations w/ calendar, email, contacts APIs
+//!    - The idea here is not to rebuild `tmux` in Rust (separate processes mux'd onto a
+//!      single terminal window). Rather it is to build a set of integrated "apps" (or
+//!      "tasks") that run in the same process that renders to one terminal window.
+//!    - Inside of this terminal window, we can implement things like "app" switching,
+//!      routing, tiling layout, stacking layout, etc. so that we can manage a lot of TUI
+//!      apps (which are tightly integrated) that are running in the same process, in the
+//!      same window. So you can imagine that all these "app"s have shared application
+//!      state. Each "app" may also have its own local application state.
+//!    - Here are some examples of the types of "app"s we plan to build (for which this
+//!      infrastructure acts as the open source engine):
+//!      1. Multi user text editors w/ syntax highlighting.
+//!      2. Integrations w/ github issues.
+//!      3. Integrations w/ calendar, email, contacts APIs.
 //!
-//! These crates provides lots of useful functionality to help you build TUI (text user interface)
-//! apps, along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉:
+//! All the crates in the `r3bl-open-core`
+//! [repo](https://github.com/r3bl-org/r3bl-open-core/) provide lots of useful
+//! functionality to help you build TUI (text user interface) apps, along w/ general
+//! niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
 //!
-//! 1. Loosely coupled & fully asynchronous [TUI
-//!    framework](https://docs.rs/r3bl_tui/latest/r3bl_tui/) to make it possible (and easy) to build
-//!    sophisticated TUIs (Text User Interface apps) in Rust that are inspired by React, Redux, CSS
-//!    and Flexbox.
-//! 2. Thread-safe & fully asynchronous [Redux](https://docs.rs/r3bl_redux/latest/r3bl_redux/)
-//!    crate (using Tokio to run subscribers and middleware in separate tasks). The reducer
-//!    functions are run sequentially.
-//! 3. Lots of [declarative macros](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/),
-//!    and [procedural macros](https://docs.rs/r3bl_rs_utils_macro/latest/r3bl_rs_utils_macro/)
-//!    (both function like and derive) to avoid having to write lots of boilerplate code for many
-//!    common (and complex) tasks. And even less noisy `Result` and `Error` types.
-//! 4. [Non binary tree data](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/) structure
-//!    inspired by memory arenas, that is thread safe and supports parallel tree walking.
-//! 5. Utility functions to improve
-//!    [ergonomics](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/) of commonly used patterns
-//!    in Rust programming, ranging from things like colorizing `stdout`, `stderr` output to lazy
-//!    value holders.
+//! # Table of contents
 //!
-//! ## Learn more about how this library is built
+//! <!-- TOC -->
 //!
-//! 🦜 Here are some articles (on [developerlife.com](https://developerlife.com)) about how this
-//! crate is made:
-//! 1. <https://developerlife.com/2022/02/24/rust-non-binary-tree/>
-//! 2. <https://developerlife.com/2022/03/12/rust-redux/>
-//! 3. <https://developerlife.com/2022/03/30/rust-proc-macro/>
+//! - [Introduction](#introduction)
+//! - [Changelog](#changelog)
+//! - [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
+//! - [Middlewares](#middlewares)
+//! - [Subscribers](#subscribers)
+//! - [Reducers](#reducers)
+//! - [Summary](#summary)
+//! - [Small example step by step](#small-example-step-by-step)
+//! - [Complete example in one go](#complete-example-in-one-go)
 //!
-//! 🦀 You can also find all the Rust related content on developerlife.com
-//! [here](https://developerlife.com/category/Rust/).
+//! <!-- /TOC -->
 //!
-//! # r3bl_redux
+//! # Introduction
+//! <a href="#markdown-introduction" name="introduction"></a>
 //!
 //! `Store` is thread safe and asynchronous (using Tokio). You have to implement `async` traits in
 //! order to use it, by defining your own reducer, subscriber, and middleware trait objects. You
@@ -117,7 +116,23 @@
 //! > 3. [Code example of TUI apps using
 //! >    Redux](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/demo).
 //!
-//! ## Middlewares
+//! # Changelog
+//! <a id="markdown-changelog" name="changelog"></a>
+//!
+//! Please check out the
+//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_redux)
+//! to see how the library has evolved over time.
+//!
+//! # Learn how these crates are built, provide feedback
+//! <a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
+//!
+//! To learn how we built this crate, please take a look at the following resources.
+//! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+//! - If you like consuming written content, here's our developer [site](https://developerlife.com/). Please consider subscribing to our [newsletter](https://developerlife.com/subscribe.html).
+//! - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
+//!
+//! # Middlewares
+//! <a id="markdown-middlewares" name="middlewares"></a>
 //!
 //! Your middleware (`async` trait implementations) will be run concurrently or in parallel via
 //! Tokio tasks. You get to choose which `async` trait to implement to do one or the other. And
@@ -136,13 +151,15 @@
 //!    [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
 //!    These are added to the store via a call to `add_middleware(...)`.
 //!
-//! ## Subscribers
+//! # Subscribers
+//! <a id="markdown-subscribers" name="subscribers"></a>
 //!
 //! The subscribers will be run asynchronously via Tokio tasks. They are all run together
 //! concurrently but not in parallel, using
 //! [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
 //!
-//! ## Reducers
+//! # Reducers
+//! <a id="markdown-reducers" name="reducers"></a>
 //!
 //! The reducer functions are also are `async` functions that are run in the tokio runtime. They're
 //! also run one after another in the order in which they're added.
@@ -177,7 +194,8 @@
 //!    - The `run()` method will be passed a `State` object as an argument.
 //!    - It returns nothing `()`.
 //!
-//! ## Summary
+//! # Summary
+//! <a id="markdown-summary" name="summary"></a>
 //!
 //! Here's the gist of how to make & use one of these:
 //!
@@ -198,6 +216,7 @@
 //!      `Box::new($YOUR_STRUCT))`.
 //!
 //! # Small example step by step
+//! <a id="markdown-small-example-step-by-step" name="small-example-step-by-step"></a>
 //!
 //! 💡 There are lots of examples in the
 //! [tests](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/test_redux.rs) for this
@@ -431,6 +450,7 @@
 //! ```
 //!
 //! # Complete example in one go
+//! <a id="markdown-complete-example-in-one-go" name="complete-example-in-one-go"></a>
 //!
 //! If you like to learn by example, below is a full example of using this Redux crate.
 //!

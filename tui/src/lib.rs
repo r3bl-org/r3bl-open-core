@@ -15,14 +15,23 @@
  *   limitations under the License.
  */
 
-//! # Why build the R3BL TUI library?
+//! # Why R3BL?
 //!
-//! <p align="center">
-//!  <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true" height="128px">
-//! </p>
+//! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true" height="256px">
 //!
-//! <!-- R3BL TUI library -->
-//! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363"> </span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span style="color:#F31874"> </span><span style="color:#F11678">l</span><span style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span style="color:#E40A91">y</span>
+//! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
+//!
+//! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363">
+//! </span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span style="color:#F31874">
+//! </span><span style="color:#F11678">l</span><span style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span style="color:#E10895">
+//! </span><span style="color:#DE0799">&amp;</span><span style="color:#DB069E">
+//! </span><span style="color:#D804A2">s</span><span style="color:#D503A6">u</span><span style="color:#D203AA">i</span><span style="color:#CF02AE">t</span><span style="color:#CB01B2">e</span><span style="color:#C801B6">
+//! </span><span style="color:#C501B9">o</span><span style="color:#C101BD">f</span><span style="color:#BD01C1">
+//! </span><span style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span style="color:#AA03D2">
+//! </span><span style="color:#A603D5">f</span><span style="color:#A204D8">o</span><span style="color:#9E06DB">c</span><span style="color:#9A07DE">u</span><span style="color:#9608E1">s</span><span style="color:#910AE3">e</span><span style="color:#8D0BE6">d</span><span style="color:#890DE8">
+//! </span><span style="color:#850FEB">o</span><span style="color:#8111ED">n</span><span style="color:#7C13EF">
+//! </span><span style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span style="color:#572CFC">r</span><span style="color:#532FFD">
+//! </span><span style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
 //!
 //! We are working on building command line apps in Rust which have rich text user interfaces (TUI).
 //! We want to lean into the terminal as a place of productivity, and build all kinds of awesome
@@ -32,17 +41,22 @@
 //!    development w/ a twist: taking concepts that work really well for the frontend mobile and web
 //!    development world and re-imagining them for TUI & Rust.
 //!
-//!    - Taking inspiration from React, JSX, CSS, Elm, iced-rs, JetPack Compose,
-//!      but making things fast and Rusty and simple. For example, instead of using Redux
-//!      for complex state management and handling async middleware functions, we simply
-//!      using `tokio::mpsc` channels and allow tasks to send signals to the main thread to
-//!      re-render or relay these signals to the appropriate app logic.
+//!    - Taking inspiration from things like [React](https://react.dev/),
+//!      [SolidJS](https://www.solidjs.com/),
+//!      [Elm](https://guide.elm-lang.org/architecture/),
+//!      [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack
+//!      Compose](https://developer.android.com/compose),
+//!      [JSX](https://ui.dev/imperative-vs-declarative-programming),
+//!      [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can
+//!      be run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
 //!    - Even the thread running the main event loop doesn't block since it is async.
-//!    - Using proc macros to create DSLs to implement CSS & JSX.
+//!    - Using proc macros to create DSLs to implement something inspired by
+//!      [CSS](https://www.w3.org/TR/CSS/#css) &
+//!      [JSX](https://ui.dev/imperative-vs-declarative-programming).
 //!
 //! 2. 🌎 We are building apps to enhance developer productivity & workflows.
 //!
-//!    - The idea here is not to rebuild tmux in Rust (separate processes mux'd onto a
+//!    - The idea here is not to rebuild `tmux` in Rust (separate processes mux'd onto a
 //!      single terminal window). Rather it is to build a set of integrated "apps" (or
 //!      "tasks") that run in the same process that renders to one terminal window.
 //!    - Inside of this terminal window, we can implement things like "app" switching,
@@ -61,73 +75,89 @@
 //! functionality to help you build TUI (text user interface) apps, along w/ general
 //! niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
 //!
-//! Please check out the
-//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tui) to
-//! see how the library has evolved over time.
+//! # Table of contents
 //!
 //! <!-- TOC -->
 //!
-//! - [Learn more about how this library is built](#learn-more-about-how-this-library-is-built)
-//! - [Text User Interface engine for Rust](#text-user-interface-engine-for-rust)
-//! - [Examples to get you started](#examples-to-get-you-started)
-//!   - [Video of the demo in action](#video-of-the-demo-in-action)
-//!   - [Run the demo locally](#run-the-demo-locally)
-//!   - [Nu shell scripts to build, run, test etc.](#nu-shell-scripts-to-build-run-test-etc)
-//! - [How does layout, rendering, and event handling work in general?](#how-does-layout-rendering-and-event-handling-work-in-general)
-//! - [Switching from shared memory to message passing architecture after v0.3.10](#switching-from-shared-memory-to-message-passing-architecture-after-v0310)
+//! - [Introduction](#introduction)
+//! - [Changelog](#changelog)
+//! - [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
+//! - [Run the demo locally](#run-the-demo-locally)
+//! - [Nushell scripts to build, run, test etc.](#nu-shell-scripts-to-build-run-test-etc)
+//!   - [Examples to get you started](#examples-to-get-you-started)
+//!     - [Video of the demo in action](#video-of-the-demo-in-action)
+//!   - [How does layout, rendering, and event handling work in general?](#how-does-layout-rendering-and-event-handling-work-in-general)
+//!   - [Switching from shared memory to message passing architecture after v0.3.10](#switching-from-shared-memory-to-message-passing-architecture-after-v0310)
 //! - [Life of an input event](#life-of-an-input-event)
-//! - [Life of a signal aka "out of band event"](#life-of-a-signal-aka-out-of-band-event)
+//!   - [Life of a signal aka “out of band event”](#life-of-a-signal-aka-out-of-band-event)
 //! - [The window](#the-window)
 //! - [Layout and styling](#layout-and-styling)
-//! - [Component, ComponentRegistry, focus management, and event routing](#component-componentregistry-focus-management-and-event-routing)
-//! - [Input event specificity](#input-event-specificity)
-//! - [Rendering and painting](#rendering-and-painting)
-//!   - [Offscreen buffer](#offscreen-buffer)
-//!   - [Render pipeline](#render-pipeline)
+//!   - [Component, ComponentRegistry, focus management, and event routing](#component-componentregistry-focus-management-and-event-routing)
+//!   - [Input event specificity](#input-event-specificity)
+//!   - [Rendering and painting](#rendering-and-painting)
+//!     - [Offscreen buffer](#offscreen-buffer)
+//!     - [Render pipeline](#render-pipeline)
 //!   - [First render](#first-render)
 //!   - [Subsequent render](#subsequent-render)
-//! - [How does the editor component work?](#how-does-the-editor-component-work)
-//!   - [Painting the caret](#painting-the-caret)
-//! - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
-//!   - [Two callback functions](#two-callback-functions)
-//!   - [How to use this dialog to make an HTTP request & pipe the results into a selection area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
-//!   - [How to make HTTP requests](#how-to-make-http-requests)
-//! - [Custom Markdown MD parsing and custom syntax highlighting](#custom-markdown-md-parsing-and-custom-syntax-highlighting)
+//!   - [How does the editor component work?](#how-does-the-editor-component-work)
+//!     - [Painting the caret](#painting-the-caret)
+//!   - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
+//!     - [Two callback functions](#two-callback-functions)
+//!     - [How to use this dialog to make an HTTP request & pipe the results into a selection area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
+//!     - [How to make HTTP requests](#how-to-make-http-requests)
+//!   - [Custom Markdown MD parsing and custom syntax highlighting](#custom-markdown-md-parsing-and-custom-syntax-highlighting)
 //! - [Grapheme support](#grapheme-support)
 //! - [Lolcat support](#lolcat-support)
-//! - [Issues, comments, feedback, and PRs](#issues-comments-feedback-and-prs)
+//! - [Issues and PRs](#issues-and-prs)
 //!
 //! <!-- /TOC -->
 //!
-//! ## Learn more about how this library is built
-//! <a id="markdown-learn-more-about-how-this-library-is-built" name="learn-more-about-how-this-library-is-built"></a>
-//!
-//! 🦀 Here are some articles and videos about how this crate is made:
-//! 1. [developerlife.com tutorials](https://developerlife.com/category/Rust/)
-//! 2. [YouTube channel for developerlife.com](https://www.youtube.com/@developerlifecom)
-//!
-//! # Text User Interface engine for Rust
+//! # Introduction
+//! <a id="markdown-introduction" name="introduction"></a>
 //!
 //! You can build fully async TUI (text user interface) apps with a modern API that brings
 //! the best of the web frontend development ideas to TUI apps written in Rust:
 //!
 //! 1. Reactive & unidirectional data flow architecture from frontend development
-//!    (React, SolidJS, Elm, iced-rs, Jetpack Compose).
-//! 2. Responsive design w/ CSS, flexbox like concepts.
-//! 3. Declarative style of expressing styling and layouts.
+//!    ([React](https://react.dev/), [SolidJS](https://www.solidjs.com/),
+//!    [Elm](https://guide.elm-lang.org/architecture/),
+//!    [iced-rs](https://docs.rs/iced/latest/iced/), [Jetpack
+//!    Compose](https://developer.android.com/compose)).
+//! 2. [Responsive
+//!    design](https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Responsive_Design)
+//!    w/ [CSS](https://www.w3.org/TR/CSS/#css),
+//!    [flexbox](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Basic_concepts_of_flexbox)
+//!    like concepts.
+//! 3. [Declarative style](https://ui.dev/imperative-vs-declarative-programming) of
+//!    expressing styling and layouts.
 //!
-//! And since this is using Rust and Tokio you get the advantages of concurrency and
-//! parallelism built-in. No more blocking the main thread for user input, for async
-//! middleware, or even rendering 🎉.
+//! And since this is using Rust and [Tokio](https://crates.io/crates/tokio) you get the
+//! advantages of concurrency and parallelism built-in. No more blocking the main thread
+//! for user input, for async middleware, or even rendering 🎉.
 //!
-//! > This framework is [loosely coupled and strongly
-//! > coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
-//! > meaning that you can pick and choose whatever pieces you would like to use w/out
-//! > having the cognitive load of having to grok all the things in the codebase. Its more
-//! > like a collection of mostly independent modules that work well w/ each other, but
-//! > know very little about each other.
+//! This framework is [loosely coupled and strongly
+//! coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
+//! meaning that you can pick and choose whatever pieces you would like to use w/out
+//! having the cognitive load of having to grok all the things in the codebase. Its more
+//! like a collection of mostly independent modules that work well w/ each other, but
+//! know very little about each other.
 //!
-//! ### Run the demo locally
+//! # Changelog
+//! <a id="markdown-changelog" name="changelog"></a>
+//!
+//! Please check out the
+//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tui) to
+//! see how the library has evolved over time.
+//!
+//! # Learn how these crates are built, provide feedback
+//! <a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
+//!
+//! To learn how we built this crate, please take a look at the following resources.
+//! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+//! - If you like consuming written content, here's our developer [site](https://developerlife.com/). Please consider subscribing to our [newsletter](https://developerlife.com/subscribe.html).
+//! - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
+//!
+//! # Run the demo locally
 //! <a id="markdown-run-the-demo-locally" name="run-the-demo-locally"></a>
 //!
 //! Once you've cloned [the repo](https://github.com/r3bl-org/r3bl-open-core) to a folder on your
@@ -146,7 +176,7 @@
 //! > The `run` script works on Linux, macOS, and Windows. On Linux and macOS, you can
 //! > simply run `./run` instead of `nu run`.
 //!
-//! ### Nu shell scripts to build, run, test etc.
+//! # Nushell scripts to build, run, test etc.
 //! <a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test-etc." name="nu-shell-scripts-to-build%2C-run%2C-test-etc."></a>
 //!
 //! | Command                                | Description                                       |
@@ -213,12 +243,12 @@
 //!   changes are smooth (check this out for yourself by running the examples). You can
 //!   even build your TUI in layers (like z-order in a browser's DOM).
 //!
-//! ## Examples to get you started
+//! # Examples to get you started
 //! <a id="markdown-examples-to-get-you-started" name="examples-to-get-you-started"></a>
 //!
 //! <!-- How to upload video: https://stackoverflow.com/a/68269430/2085356 -->
 //!
-//! ### Video of the demo in action
+//! ## Video of the demo in action
 //! <a id="markdown-video-of-the-demo-in-action" name="video-of-the-demo-in-action"></a>
 //!
 //! ![video-gif](https://user-images.githubusercontent.com/2966499/233799311-210b887e-0aa6-470a-bcea-ee8e0e3eb019.gif)
@@ -228,7 +258,7 @@
 //!
 //! ![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
 //!
-//! ## How does layout, rendering, and event handling work in general?
+//! # How does layout, rendering, and event handling work in general?
 //! <a id="markdown-how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F" name="how-does-layout%2C-rendering%2C-and-event-handling-work-in-general%3F"></a>
 //!
 //! ```text
@@ -277,7 +307,7 @@
 //!   [App] trait object. Typically this will then get routed to the [Component] that
 //!   currently has focus.
 //!
-//! ## Switching from shared memory to message passing architecture after v0.3.10
+//! # Switching from shared memory to message passing architecture after v0.3.10
 //!
 //! Versions of this crate <= `0.3.10` used shared memory to communicate between the
 //! background threads and the main thread. This was done using the async `Arc<RwLock<T>>`
@@ -381,7 +411,7 @@
 //! - [App::app_handle_input_event]
 //! - [Component::handle_event]
 //!
-//! ## Life of a signal (aka "out of band event")
+//! # Life of a signal (aka "out of band event")
 //! <a id="markdown-life-of-a-signal-aka-%22out-of-band-event%22" name="life-of-a-signal-aka-%22out-of-band-event%22"></a>
 //!
 //! This is great for input events which are generated by the user using their keyboard or
@@ -448,7 +478,7 @@
 //!     painted to the screen, for each render! Your app's state is mutable and is stored in the
 //!     [GlobalData] struct. You can handle out of band events as well using the signal mechanism.
 //!
-//! ## Component, ComponentRegistry, focus management, and event routing
+//! # Component, ComponentRegistry, focus management, and event routing
 //! <a id="markdown-component%2C-componentregistry%2C-focus-management%2C-and-event-routing" name="component%2C-componentregistry%2C-focus-management%2C-and-event-routing"></a>
 //!
 //!
@@ -477,7 +507,7 @@
 //! Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent between
 //! re-renders.
 //!
-//! ## Input event specificity
+//! # Input event specificity
 //! <a id="markdown-input-event-specificity" name="input-event-specificity"></a>
 //!
 //! [TerminalWindow] gives [App] first dibs when it comes to handling input events.
@@ -486,7 +516,7 @@
 //! default input event handler. And if nothing there matches this event, then it is simply
 //! dropped.
 //!
-//! ## Rendering and painting
+//! # Rendering and painting
 //! <a id="markdown-rendering-and-painting" name="rendering-and-painting"></a>
 //!
 //! The R3BL TUI engine uses a high performance compositor to render the UI to the terminal. This
@@ -496,7 +526,7 @@
 //! in a terminal screen. And the index maps directly to the position of the pixel in the terminal
 //! screen.
 //!
-//! ### Offscreen buffer
+//! ## Offscreen buffer
 //! <a id="markdown-offscreen-buffer" name="offscreen-buffer"></a>
 //!
 //! Here is an example of what a single row of rendered output might look like in a row of the
@@ -546,7 +576,7 @@
 //!    paint the screen via the diffing algorithm which is smart enough to "stack" styles that
 //!    appear beside each other for quicker rendering in terminals.
 //!
-//! ### Render pipeline
+//! ## Render pipeline
 //! <a id="markdown-render-pipeline" name="render-pipeline"></a>
 //!
 //! The following diagram provides a high level overview of how apps (that contain components,
@@ -614,9 +644,8 @@
 //! there is no flicker when the content of the screen changes. It also minimizes the amount of work
 //! that the terminal or terminal emulator has to do put the `PixelChar`s on the screen.
 //!
-//! ## How does the editor component work?
+//! # How does the editor component work?
 //! <a id="markdown-how-does-the-editor-component-work%3F" name="how-does-the-editor-component-work%3F"></a>
-//!
 //!
 //! The `EditorComponent` struct can hold data in its own memory, in addition to relying on the state.
 //!
@@ -651,46 +680,47 @@
 //!     - Can simply relay the arguments to `EditorEngine::render(state.editor_buffer)`
 //!     - Which will return a `RenderPipeline`.
 //!
-//! ### Painting the caret
+//! # Painting the caret
 //! <a id="markdown-painting-the-caret" name="painting-the-caret"></a>
 //!
+//! Definitions:
 //!
-//! > Definitions
-//! >
-//! > **`Caret`** - the block that is visually displayed in a terminal which represents the insertion
-//! > point for whatever is in focus. While only one insertion point is editable for the local user,
-//! > there may be multiple of them, in which case there has to be a way to distinguish a local caret
-//! > from a remote one (this can be done w/ bg color).
-//! >
-//! > **`Cursor`** - the global "thing" provided in terminals that shows by blinking usually where the
-//! > cursor is. This cursor is moved around and then paint operations are performed on various
-//! > different areas in a terminal window to paint the output of render operations.
+//! 1. **`Caret`** - the block that is visually displayed in a terminal which represents
+//!    the insertion point for whatever is in focus. While only one insertion point is
+//!    editable for the local user, there may be multiple of them, in which case there has
+//!    to be a way to distinguish a local caret from a remote one (this can be done w/ bg
+//!    color).
+//!
+//! 2. **`Cursor`** - the global "thing" provided in terminals that shows by blinking
+//!    usually where the cursor is. This cursor is moved around and then paint operations
+//!    are performed on various different areas in a terminal window to paint the output
+//!    of render operations.
 //!
 //! There are two ways of showing cursors which are quite different (each w/ very different
 //! constraints).
 //!
 //! 1. Using a global terminal cursor (we don't use this).
-//!
-//!    - Both [termion::cursor](https://docs.rs/termion/1.5.6/termion/cursor/index.html) and
-//!      [crossterm::cursor](https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html) support this.
-//!      The cursor has lots of effects like blink, etc.
-//!    - The downside is that there is one global cursor for any given terminal window. And this cursor
-//!      is constantly moved around in order to paint anything (eg:
+//!    - Both [termion::cursor](https://docs.rs/termion/1.5.6/termion/cursor/index.html)
+//!      and
+//!      [crossterm::cursor](https://docs.rs/crossterm/0.25.0/crossterm/cursor/index.html)
+//!      support this. The cursor has lots of effects like blink, etc.
+//!    - The downside is that there is one global cursor for any given terminal window.
+//!      And this cursor is constantly moved around in order to paint anything (eg:
 //!      `MoveTo(col, row), SetColor, PaintText(...)` sequence).
 //!
-//! 2. Paint the character at the cursor w/ the colors inverted (or some other bg color) giving the
-//!    visual effect of a cursor.
-//!    - This has the benefit that we can display multiple cursors in the app, since this is not global,
-//!      rather it is component specific. For the use case requiring google docs style multi user
-//!      editing where multiple cursors need to be shown, this approach can be used in order to
-//!      implement that. Each user for eg can get a different caret background color to differentiate
-//!      their caret from others.
-//!    - The downside is that it isn't possible to blink the cursor or have all the other "standard"
-//!      cursor features that are provided by the actual global cursor (discussed above).
+//! 2. Paint the character at the cursor w/ the colors inverted (or some other bg color)
+//!    giving the visual effect of a cursor.
+//!    - This has the benefit that we can display multiple cursors in the app, since this
+//!      is not global, rather it is component specific. For the use case requiring google
+//!      docs style multi user editing where multiple cursors need to be shown, this
+//!      approach can be used in order to implement that. Each user for eg can get a
+//!      different caret background color to differentiate their caret from others.
+//!    - The downside is that it isn't possible to blink the cursor or have all the other
+//!      "standard" cursor features that are provided by the actual global cursor
+//!      (discussed above).
 //!
-//! ## How do modal dialog boxes work?
+//! # How do modal dialog boxes work?
 //! <a id="markdown-how-do-modal-dialog-boxes-work%3F" name="how-do-modal-dialog-boxes-work%3F"></a>
-//!
 //!
 //! A modal dialog box is different than a normal reusable component. This is because:
 //!
@@ -732,7 +762,7 @@
 //!     may have other issues related to having both immutable and mutable borrows at the same time to
 //!     some portion of the component registry if one is not careful.
 //!
-//! ### Two callback functions
+//! ## Two callback functions
 //! <a id="markdown-two-callback-functions" name="two-callback-functions"></a>
 //!
 //!
@@ -743,9 +773,8 @@
 //! 2. `on_dialog_editors_changed_handler()` - this will be called if the user types something into the
 //!    editor.
 //!
-//! ### How to use this dialog to make an HTTP request & pipe the results into a selection area?
+//! ## How to use this dialog to make an HTTP request & pipe the results into a selection area?
 //! <a id="markdown-how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F" name="how-to-use-this-dialog-to-make-an-http-request-%26-pipe-the-results-into-a-selection-area%3F"></a>
-//!
 //!
 //! So far we have covered the use case for a simple modal dialog box. In order to provide
 //! auto-completion capabilities, via some kind of web service, there needs to be a slightly more
@@ -757,14 +786,13 @@
 //! different on the screen. Instead of being in the middle of the screen, it starts at the top of the
 //! screen. The callbacks are the same.
 //!
-//! ### How to make HTTP requests
+//! # How to make HTTP requests
 //! <a id="markdown-how-to-make-http-requests" name="how-to-make-http-requests"></a>
 //!
-//!
-//! Instead of using the `reqwest` crate, we should use the `hyper` crate (which is part of Tokio) and
-//! drop support for `reqwest` in all our crates.
-//!
-//! - <https://blessed.rs/crates#section-networking-subsection-http-foundations>
+//! Crates like `reqwest` and `hyper` (which is part of Tokio) will work. Here's a link
+//! that shows the pros and cons of using each:
+//! - [Rust Crates for Networking and HTTP
+//!   Foundations](https://blessed.rs/crates#section-networking-subsection-http-foundations)
 //!
 //! ## Custom Markdown (MD) parsing and custom syntax highlighting
 //!
@@ -833,8 +861,8 @@
 //! - If you want to change where the color wheel "begins", you have to change the speed, seed, and
 //!   delta of this [crate::lolcat::Lolcat] instance.
 //!
-//! ## Issues, comments, feedback, and PRs
-//! <a id="markdown-issues%2C-comments%2C-feedback%2C-and-prs" name="issues%2C-comments%2C-feedback%2C-and-prs"></a>
+//! # Issues and PRs
+//! <a id="issues-and-prs" name="issues-and-prs"></a>
 //!
 //! Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
 //! And if you have any feature requests, feel free to add them there too 👍.

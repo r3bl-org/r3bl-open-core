@@ -2,7 +2,7 @@
 
 # From: https://github.com/r3bl-org/nu_script_template
 #
-# nu shell docs
+# nushell docs
 # - language fundamentals: https://www.nushell.sh/book/custom_commands.html#sub-commands
 #     - strings: https://www.nushell.sh/book/working_with_strings.html#string-interpolation
 #     - functions (aka commands, subcommands): https://www.nushell.sh/book/custom_commands.html
@@ -19,8 +19,18 @@
 #     - thinking in nu: https://www.nushell.sh/book/thinking_in_nu.html
 
 let workspace_folders = [
-    "core", "macro", "redux", "tui", "tuify", "ansi_color", "simple_logger", "utils",
-    "cmdr", "analytics_schema", "terminal_async"
+    "core",
+    "tui",
+    "cmdr",
+    "terminal_async",
+    "test_fixtures"
+    "tuify",
+    "ansi_color",
+    "macro",
+    "analytics_schema",
+    "simple_logger",
+    "redux",
+    "utils",
 ]
 
 # Main entry point for the script.
@@ -184,6 +194,9 @@ def docs [] {
         cd $folder
         print $'(ansi magenta)≡ Running cargo doc in ($folder) .. ≡(ansi reset)'
         cargo doc --no-deps --all-features
+        # Output redirection in Nushell:
+        # https://stackoverflow.com/questions/76403457/how-to-redirect-stdout-to-a-file-in-nushell
+        cargo readme out> README.md
         cd ..
     }
 }
