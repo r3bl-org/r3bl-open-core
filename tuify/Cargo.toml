@@ -34,19 +34,19 @@ r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }
 r3bl_rs_utils_core = { path = "../core", version = "0.9.13" }
 
 # serde for JSON serialization.
-serde = { version = "1.0.190", features = ["derive"] }
-serde_json = "1.0.107"
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.128"
 
 # Terminal output.
 crossterm = "0.27.0"
 
 # Logging.
-is-terminal = "0.4.9"
-log = { version = "0.4.20", features = ["std"] }
+is-terminal = "0.4.13"
+log = { version = "0.4.22", features = ["std"] }
 
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
-clap = { version = "4.4.6", features = ["derive", "wrap_help"] }
+clap = { version = "4.5.17", features = ["derive", "wrap_help"] }
 reedline = "0.28.0"
 
 [dev-dependencies]
