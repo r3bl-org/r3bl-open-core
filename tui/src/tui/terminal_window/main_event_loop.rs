@@ -351,7 +351,7 @@ where
                                 global_data.maybe_saved_offscreen_buffer
                             {
                                 let msg_3 = format!(
-                                    "offscreen_buffer: {0:.3}kb",
+                                    "offscreen_buffer: {0:.3} kb",
                                     offscreen_buffer.size_of().total_bytes() as f64
                                         / 1000_f64
                                 );

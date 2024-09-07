@@ -44,7 +44,7 @@ pretty_assertions = "1.4.0"
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
 # https://tokio.rs/tokio/topics/tracing-next-steps
-tokio = { version = "1.39.2", features = ["full", "tracing"] }
+tokio = { version = "1.40.0", features = ["full", "tracing"] }
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 tracing-appender = "0.2.3"
