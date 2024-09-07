@@ -86,7 +86,7 @@
   - [v0.1.1 2023-10-17](#v011-2023-10-17)
   - [v0.1.0 2023-10-14](#v010-2023-10-14)
 - [r3bl_rs_utils_redux](#r3bl_rs_utils_redux)
-  - [v0.2.6 2024-09-07](#v026-2024-09-07)
+  - [v0.2.7 2024-09-07](#v027-2024-09-07)
   - [v0.2.6 2023-10-21](#v026-2023-10-21)
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
@@ -1101,8 +1101,8 @@ This is the first release of this crate.
 ## `r3bl_rs_utils_redux`
 <a id="markdown-r3bl_rs_utils_redux" name="r3bl_rs_utils_redux"></a>
 
-### v0.2.6 (2024-09-07)
-<a id="markdown-v0.2.6-2024-09-07" name="v0.2.6-2024-09-07"></a>
+### v0.2.7 (2024-09-07)
+<a id="markdown-v0.2.7-2024-09-07" name="v0.2.7-2024-09-07"></a>
 
 - Removed:
   - Remove `get-size` crate from `Cargo.toml`. This was causing some [issues with
