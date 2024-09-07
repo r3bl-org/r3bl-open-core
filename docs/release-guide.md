@@ -85,8 +85,8 @@ cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 cargo publish --dry-run --allow-dirty
 git add -A
-git commit -S -m "v0.5.7-tui"
-git tag -a v0.5.7-tui -m "v0.5.7-tui"
+git commit -S -m "v0.5.8-tui"
+git tag -a v0.5.8-tui -m "v0.5.8-tui"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
