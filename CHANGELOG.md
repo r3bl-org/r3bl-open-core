@@ -96,6 +96,7 @@
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_rs_utils](#r3bl_rs_utils)
+  - [v0.9.16 2024-09-12](#v0916-2024-09-12)
   - [v0.9.15 2023-12-22](#v0915-2023-12-22)
   - [v0.9.14 2023-10-29](#v0914-2023-10-29)
   - [v0.9.13 2023-10-29](#v0913-2023-10-29)
@@ -1181,6 +1182,13 @@ This is the first release of this crate.
 
 ## `r3bl_rs_utils`
 <a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
+
+### v0.9.16 (2024-09-12)
+<a id="markdown-v0.9.16-2024-09-12" name="v0.9.16-2024-09-12"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.9.15 (2023-12-22)
 <a id="markdown-v0.9.15-2023-12-22" name="v0.9.15-2023-12-22"></a>

@@ -4,7 +4,7 @@ description = "Misc utility functions for r3bl-open-core repo"
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
 keywords = ["non-binary-tree"]
 # When you change this, make sure to update `README.md` as well.
-version = "0.9.15"
+version = "0.9.16"
 edition = "2021"
 resolver = "2"
 readme = "README.md" # This is not included in cargo docs.
@@ -27,7 +27,7 @@ path = "./src/lib.rs"
 # [Nesting crates for procedural macros](https://stackoverflow.com/a/64288799/2085356)
 
 [dependencies]
-r3bl_rs_utils_core = { path = "../core" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.16" } # version is requried to publish to crates.io
 
 [dev-dependencies]
 # For assert_eq2! macro.
