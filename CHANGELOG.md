@@ -4,6 +4,7 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
+  - [v0.0.15 2024-09-12](#v0015-2024-09-12)
   - [v0.0.14 2024-06-29](#v0014-2024-06-29)
   - [v0.0.13 2024-05-20](#v0013-2024-05-20)
   - [v0.0.12 2024-05-12](#v0012-2024-05-12)
@@ -115,6 +116,15 @@
 
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
+
+### v0.0.15 (2024-09-12)
+<a id="markdown-v0.0.15-2024-09-12" name="v0.0.15-2024-09-12"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
+  - Update `UPDATE_IF_NOT_THIS_VERSION` to `0.0.15`. This is kept in sync w/ the deployed
+    backend `r3bl-base`.
 
 ### v0.0.14 (2024-06-29)
 <a id="markdown-v0.0.14-2024-06-29" name="v0.0.14-2024-06-29"></a>

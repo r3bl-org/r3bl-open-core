@@ -315,7 +315,7 @@ pub mod upgrade_check {
 
     static UPDATE_REQUIRED: AtomicBool = AtomicBool::new(false);
 
-    const UPDATE_IF_NOT_THIS_VERSION: &str = "0.0.14";
+    const UPDATE_IF_NOT_THIS_VERSION: &str = "0.0.15";
 
     const GET_LATEST_VERSION_ENDPOINT: &str =
         "https://r3bl-base.shuttleapp.rs/get_latest_version"; // "http://localhost:8000/get_latest_version"
