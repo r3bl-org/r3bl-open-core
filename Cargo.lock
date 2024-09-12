@@ -1975,7 +1975,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_simple_logger"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "log",
  "r3bl_ansi_color",

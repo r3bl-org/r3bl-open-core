@@ -39,7 +39,7 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 
 ```sh
 cd core
-# Update Cargo.toml version number manually
+# Update version in Cargo.toml and this file
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
@@ -55,7 +55,7 @@ git push ; git push --tags # Push tags & commits
 cd ..
 
 cd macro
-# Update Cargo.toml version number manually
+# Update version in Cargo.toml and this file
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
@@ -70,7 +70,7 @@ git push ; git push --tags # Push tags & commits
 cd ..
 
 cd tuify
-# Update Cargo.toml version number manually
+# Update version in Cargo.toml and this file
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
@@ -85,7 +85,7 @@ git push ; git push --tags # Push tags & commits
 cd ..
 
 cd tui
-# Update Cargo.toml version number manually
+# Update version in Cargo.toml and this file
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
@@ -101,7 +101,7 @@ git push ; git push --tags # Push tags & commits
 cd ..
 
 cd cmdr
-# Update Cargo.toml version number manually
+# Update version in Cargo.toml and this file
 # Update CHANGELOG.md
 # Don't forget to update `r3bl-base` to have the same `UPDATE_IF_NOT_THIS_VERSION`
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
@@ -119,7 +119,7 @@ git push ; git push --tags # Push tags & commits
 cd ..
 
 cd test_fixtures
-# Update Cargo.toml version number manually
+# Update version in Cargo.toml and this file
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
@@ -134,7 +134,7 @@ git push ; git push --tags # Push tags & commits
 cd ..
 
 cd terminal_async
-# Update Cargo.toml version number manually
+# Update version in Cargo.toml and this file
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
@@ -150,7 +150,7 @@ git push ; git push --tags # Push tags & commits
 cd ..
 
 cd analytics_schema
-# Update Cargo.toml version number manually
+# Update version in Cargo.toml and this file
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
@@ -165,7 +165,7 @@ git push ; git push --tags # Push tags & commits
 cd ..
 
 cd ansi_color
-# Update Cargo.toml version number manually
+# Update version in Cargo.toml and this file
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
@@ -181,22 +181,23 @@ git push ; git push --tags # Push tags & commits
 cd ..
 
 cd simple_logger
-# Update Cargo.toml version number manually
+# Update version in Cargo.toml and this file
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
-git commit -S -m "v0.1.3-simple_logger"
-git tag -a v0.1.3-simple_logger -m "v0.1.3-simple_logger"
+git commit -S -m "v0.1.4-simple_logger"
+git tag -a v0.1.4-simple_logger -m "v0.1.4-simple_logger"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
 
 cd redux
-# Update Cargo.toml version number manually
+# Update version in Cargo.toml and this file
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
@@ -211,7 +212,7 @@ git push ; git push --tags # Push tags & commits
 cd ..
 
 cd utils
-# Update Cargo.toml version number manually
+# Update version in Cargo.toml and this file
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
