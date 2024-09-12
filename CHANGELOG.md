@@ -42,6 +42,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
+  - [v0.9.16 2024-09-12](#v0916-2024-09-12)
   - [v0.9.15 2024-09-07](#v0915-2024-09-07)
   - [v0.9.14 2024-08-13](#v0914-2024-08-13)
   - [v0.9.13 2024-04-15](#v0913-2024-04-15)
@@ -623,14 +624,23 @@ exhaustively tested and is able to handle many more corner cases.
       emulator capabilities at runtime.
   - Provide for ANSI 256 color fallback for MacOS terminal app:
     [issue](https://github.com/r3bl-org/r3bl-open-core/issues/79)
-- Removed: <a id="markdown-removed%3A" name="removed%3A"></a>
+
+- Removed:
   - Removed lolcat example from demo.
+
 - Changed:
   - The first demo example (`ex_app_no_layout`) now has support for animation. It automatically
     increments the state every second and the gradient color wheel is updated accordingly.
 
 ## `r3bl_rs_utils_core`
 <a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
+
+### v0.9.16 (2024-09-12)
+<a id="markdown-v0.9.16-2024-09-12" name="v0.9.16-2024-09-12"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.9.15 (2024-09-07)
 <a id="markdown-v0.9.15-2024-09-07" name="v0.9.15-2024-09-07"></a>
