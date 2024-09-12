@@ -1,8 +1,11 @@
 [package]
 name = "r3bl_analytics_schema"
 description = "Support crate for r3bl-cmdr, r3bl-base."
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
+repository = "https://github.com/r3bl-org/r3bl-open-core/tree/main/analytics_schema"
+documentation = "https://docs.rs/analytics_schema"
+homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
