@@ -82,6 +82,7 @@
   - [v0.6.8 2023-10-16](#v068-2023-10-16)
   - [v0.6.7 2023-09-12](#v067-2023-09-12)
 - [r3bl_simple_logger](#r3bl_simple_logger)
+  - [v0.1.4 2024-09-12](#v014-2024-09-12)
   - [v0.1.3 2023-10-21](#v013-2023-10-21)
   - [v0.1.2 2023-10-21](#v012-2023-10-21)
   - [v0.1.1 2023-10-17](#v011-2023-10-17)
@@ -1071,6 +1072,13 @@ This is the first release of this crate.
 
 ## `r3bl_simple_logger`
 <a id="markdown-r3bl_simple_logger" name="r3bl_simple_logger"></a>
+
+### v0.1.4 (2024-09-12)
+<a id="markdown-v0.1.4-2024-09-12" name="v0.1.4-2024-09-12"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.1.3 (2023-10-21)
 <a id="markdown-v0.1.3-2023-10-21" name="v0.1.3-2023-10-21"></a>
