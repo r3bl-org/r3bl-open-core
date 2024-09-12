@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_tui"
-version = "0.5.8"
+version = "0.5.9"
 edition = "2021"
 resolver = "2"
 description = "TUI library to build modern apps inspired by Elm, with Flexbox, CSS, editor component, emoji support, and more"
@@ -26,9 +26,9 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl-open-core.
-r3bl_rs_utils_core = { path = "../core" }
-r3bl_rs_utils_macro = { path = "../macro" }
-r3bl_ansi_color = { path = "../ansi_color" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.16" }    # version is requried to publish to crates.io
+r3bl_rs_utils_macro = { path = "../macro", version = "0.9.10" }  # version is requried to publish to crates.io
+r3bl_ansi_color = { path = "../ansi_color", version = "0.6.10" } # version is requried to publish to crates.io
 
 # Logging.
 log = { version = "0.4.22", features = ["std"] }

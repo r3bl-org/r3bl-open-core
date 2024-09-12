@@ -95,8 +95,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
-git commit -S -m "v0.5.8-tui"
-git tag -a v0.5.8-tui -m "v0.5.8-tui"
+git commit -S -m "v0.5.9-tui"
+git tag -a v0.5.9-tui -m "v0.5.9-tui"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..

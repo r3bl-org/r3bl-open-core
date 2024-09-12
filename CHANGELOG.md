@@ -23,6 +23,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [v0.5.9 2024-09-12](#v059-2024-09-12)
   - [v0.5.8 2024-09-07](#v058-2024-09-07)
   - [v0.5.7 2024-08-13](#v057-2024-08-13)
   - [v0.5.6 2024-06-29](#v056-2024-06-29)
@@ -331,6 +332,13 @@ in a text editor.
 
 ## `r3bl_tui`
 <a id="markdown-r3bl_tui" name="r3bl_tui"></a>
+
+### v0.5.9 (2024-09-12)
+<a id="markdown-v0.5.9-2024-09-12" name="v0.5.9-2024-09-12"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.5.8 (2024-09-07)
 <a id="markdown-v0.5.8-2024-09-07" name="v0.5.8-2024-09-07"></a>
