@@ -210,8 +210,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
-git commit -S -m "v0.2.7-redux"
-git tag -a v0.2.7-redux -m "v0.2.7-redux"
+git commit -S -m "v0.2.8-redux"
+git tag -a v0.2.8-redux -m "v0.2.8-redux"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..

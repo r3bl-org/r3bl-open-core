@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_redux"
-version = "0.2.7"
+version = "0.2.8"
 edition = "2021"
 resolver = "2"
 description = "Redux library built using Tokio, concurrent & parallel"
@@ -26,8 +26,8 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl-open-core.
-r3bl_rs_utils_core = { path = "../core" }
-r3bl_rs_utils_macro = { path = "../macro" }
+r3bl_rs_utils_core = { path = "../core", version = "0.9.16" }   # version is requried to publish to crates.io
+r3bl_rs_utils_macro = { path = "../macro", version = "0.9.10" } # version is requried to publish to crates.io
 
 # Time
 chrono = "0.4.38"
