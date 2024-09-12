@@ -77,6 +77,7 @@
   - [v0.3.1 2024-04-17](#v031-2024-04-17)
   - [v0.3.0 2024-04-15](#v030-2024-04-15)
 - [r3bl_ansi_color](#r3bl_ansi_color)
+  - [v0.6.10 2024-09-12](#v0610-2024-09-12)
   - [v0.6.9 2023-10-21](#v069-2023-10-21)
   - [v0.6.8 2023-10-16](#v068-2023-10-16)
   - [v0.6.7 2023-09-12](#v067-2023-09-12)
@@ -1033,6 +1034,13 @@ This is the first release of this crate.
 
 ## `r3bl_ansi_color`
 <a id="markdown-r3bl_ansi_color" name="r3bl_ansi_color"></a>
+
+### v0.6.10 (2024-09-12)
+<a id="markdown-v0.6.10-2024-09-12" name="v0.6.10-2024-09-12"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.6.9 (2023-10-21)
 <a id="markdown-v0.6.9-2023-10-21" name="v0.6.9-2023-10-21"></a>
