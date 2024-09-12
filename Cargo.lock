@@ -1963,7 +1963,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_rs_utils_macro"
-version = "0.9.9"
+version = "0.9.10"
 dependencies = [
  "paste",
  "pretty_assertions",
