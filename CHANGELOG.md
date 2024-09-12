@@ -12,6 +12,7 @@
   - [v0.0.9 2023-12-31](#v009-2023-12-31)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
 - [r3bl_tuify](#r3bl_tuify)
+  - [v0.1.27 2024-09-12](#v0127-2024-09-12)
   - [v0.1.26 2024-04-15](#v0126-2024-04-15)
   - [v0.1.25 2024-01-14](#v0125-2024-01-14)
   - [v0.1.24 2023-12-31](#v0124-2023-12-31)
@@ -225,6 +226,13 @@ in a text editor.
 
 ## `r3bl_tuify`
 <a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
+
+### v0.1.27 (2024-09-12)
+<a id="markdown-v0.1.27-2024-09-12" name="v0.1.27-2024-09-12"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.1.26 (2024-04-15)
 <a id="markdown-v0.1.26-2024-04-15" name="v0.1.26-2024-04-15"></a>
