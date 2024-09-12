@@ -75,12 +75,13 @@ cd tuify
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
-git commit -S -m "v0.1.26-tuify"
-git tag -a v0.1.26-tuify -m "v0.1.26-tuify"
+git commit -S -m "v0.1.27-tuify"
+git tag -a v0.1.27-tuify -m "v0.1.27-tuify"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
