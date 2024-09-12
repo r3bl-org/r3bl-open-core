@@ -1895,7 +1895,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl_analytics_schema"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "serde",
  "serde_json",

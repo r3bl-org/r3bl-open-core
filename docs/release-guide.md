@@ -161,8 +161,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
-git commit -S -m "v0.0.1-analytics_schema"
-git tag -a v0.0.1-analytics_schema -m "v0.0.1-analytics_schema"
+git commit -S -m "v0.0.2-analytics_schema"
+git tag -a v0.0.2-analytics_schema -m "v0.0.2-analytics_schema"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..

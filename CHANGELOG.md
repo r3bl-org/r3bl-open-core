@@ -56,6 +56,7 @@
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
 - [r3bl_analytics_schema](#r3bl_analytics_schema)
+  - [v0.0.2 2024-09-12](#v002-2024-09-12)
   - [v0.0.1 2023-12-31](#v001-2023-12-31)
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
   - [v0.9.9 2024-04-16](#v099-2024-04-16)
@@ -769,6 +770,13 @@ the `ok!()` macro.
 
 ## `r3bl_analytics_schema`
 <a id="markdown-r3bl_analytics_schema" name="r3bl_analytics_schema"></a>
+
+### v0.0.2 (2024-09-12)
+<a id="markdown-v0.0.2-2024-09-12" name="v0.0.2-2024-09-12"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.0.1 (2023-12-31)
 <a id="markdown-v0.0.1-2023-12-31" name="v0.0.1-2023-12-31"></a>
