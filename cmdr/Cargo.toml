@@ -1,6 +1,6 @@
 [package]
 name = "r3bl-cmdr"
-version = "0.0.14"
+version = "0.0.15"
 readme = "README.md"
 edition = "2021"
 homepage = "https://r3bl.com"
@@ -43,12 +43,12 @@ path = "src/lib.rs"
 
 [dependencies]
 # R3BL crates (from this mono repo).
-r3bl_ansi_color = { path = "../ansi_color" }
-r3bl_rs_utils_core = { path = "../core" }
-r3bl_rs_utils_macro = { path = "../macro" }
-r3bl_tui = { path = "../tui" }
-r3bl_tuify = { path = "../tuify" }
-r3bl_analytics_schema = { path = "../analytics_schema" }
+r3bl_ansi_color = { path = "../ansi_color", version = "0.6.10" }            # version is requried to publish to crates.io
+r3bl_rs_utils_core = { path = "../core", version = "0.9.16" }               # version is requried to publish to crates.io
+r3bl_rs_utils_macro = { path = "../macro", version = "0.9.10" }             # version is requried to publish to crates.io
+r3bl_tui = { path = "../tui", version = "0.5.9" }                           # version is requried to publish to crates.io
+r3bl_tuify = { path = "../tuify", version = "0.1.27" }                      # version is requried to publish to crates.io
+r3bl_analytics_schema = { path = "../analytics_schema", version = "0.0.2" } # version is requried to publish to crates.io
 log = { version = "0.4.22", features = ["std"] }
 
 # Tokio.
