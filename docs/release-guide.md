@@ -147,8 +147,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
-git commit -S -m "v0.5.6-terminal_async"
-git tag -a v0.5.6-terminal_async -m "v0.5.5-terminal_async"
+git commit -S -m "v0.5.7-terminal_async"
+git tag -a v0.5.7-terminal_async -m "v0.5.7-terminal_async"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..

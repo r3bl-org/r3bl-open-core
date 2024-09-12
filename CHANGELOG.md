@@ -72,6 +72,7 @@
   - [v0.0.2 2024-07-13](#v002-2024-07-13)
   - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_terminal_async](#r3bl_terminal_async)
+  - [v0.5.7 2024-09-12](#v057-2024-09-12)
   - [v0.5.6 2024-08-13](#v056-2024-08-13)
   - [v0.5.5 2024-07-13](#v055-2024-07-13)
   - [v0.5.4 2024-07-12](#v054-2024-07-12)
@@ -896,6 +897,13 @@ links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures)
 
 ## `r3bl_terminal_async`
 <a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
+
+### v0.5.7 (2024-09-12)
+<a id="markdown-v0.5.7-2024-09-12" name="v0.5.7-2024-09-12"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.5.6 (2024-08-13)
 <a id="markdown-v0.5.6-2024-08-13" name="v0.5.6-2024-08-13"></a>
