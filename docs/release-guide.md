@@ -106,6 +106,7 @@ cd cmdr
 # Don't forget to update `r3bl-base` to have the same `UPDATE_IF_NOT_THIS_VERSION`
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
@@ -123,12 +124,13 @@ cd test_fixtures
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
-git commit -S -m "v0.0.2-test_fixtures"
-git tag -a "v0.0.2-test_fixtures" -m "v0.0.2-test_fixtures"
+git commit -S -m "v0.0.3-test_fixtures"
+git tag -a "v0.0.3-test_fixtures" -m "v0.0.3-test_fixtures"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
@@ -154,6 +156,7 @@ cd analytics_schema
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
@@ -201,6 +204,7 @@ cd redux
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
@@ -216,6 +220,7 @@ cd utils
 # Update CHANGELOG.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md

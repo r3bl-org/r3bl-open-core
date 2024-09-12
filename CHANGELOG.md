@@ -64,6 +64,7 @@
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
 - [r3bl_test_fixtures](#r3bl_test_fixtures)
+  - [v0.0.3 2024-09-12](#v003-2024-09-12)
   - [v0.0.2 2024-07-13](#v002-2024-07-13)
   - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_terminal_async](#r3bl_terminal_async)
@@ -814,6 +815,13 @@ the `ok!()` macro.
 
 ## `r3bl_test_fixtures`
 <a id="markdown-r3bl_test_fixtures" name="r3bl_test_fixtures"></a>
+
+### v0.0.3 (2024-09-12)
+<a id="markdown-v0.0.3-2024-09-12" name="v0.0.3-2024-09-12"></a>
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.0.2 (2024-07-13)
 <a id="markdown-v0.0.2-2024-07-13" name="v0.0.2-2024-07-13"></a>
