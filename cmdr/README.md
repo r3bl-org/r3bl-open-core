@@ -122,10 +122,9 @@ To learn how we built this crate, please take a look at the following resources.
 <!--
 giti branch video
 Source: https://github.com/nazmulidris/developerlife.com/issues/5
+Source mp4: https://github.com/nazmulidris/developerlife.com/assets/2966499/262f59d1-a95c-4af3-accf-c3d6cac6e586
 -->
-<video width="100%" controls>
-  <source src="https://github.com/nazmulidris/developerlife.com/assets/2966499/262f59d1-a95c-4af3-accf-c3d6cac6e586" type="video/mp4"/>
-</video>
+![giti video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/giti.gif?raw=true)
 
 To run from binary:
 - Run `cargo install r3bl-cmdr` (detailed instructions above). This will install `giti`
@@ -154,11 +153,9 @@ To run from source:
 <!--
 edi video
 Source: https://github.com/nazmulidris/developerlife.com/issues/6
+Source mp4: https://github.com/nazmulidris/developerlife.com/assets/2966499/f2c4b07d-b5a2-4f41-af7a-06d1b6660c41
 -->
-<video width="100%" controls>
-  <source src="https://github.com/nazmulidris/developerlife.com/assets/2966499/f2c4b07d-b5a2-4f41-af7a-06d1b6660c41" type="video/mp4"/>
-</video>
-
+![edi video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/edi.gif?raw=true)
 
 To run from binary:
 - Run `cargo install r3bl-cmdr` (detailed instructions above). This will install `giti`
