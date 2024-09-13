@@ -4,6 +4,7 @@ Date: 2022-11-06
 ---
 
 ## Cut a release and publish it to crates.io
+<a id="markdown-cut-a-release-and-publish-it-to-crates.io" name="cut-a-release-and-publish-it-to-crates.io"></a>
 
 This is a lengthy and repetitive process. The following steps have to be applied repeatedly to all
 the crates in the project.
@@ -36,6 +37,7 @@ are applied to each crate (`ansi_color`, `core`, `macro`, `redux`, `tui`, `tuify
 Finally, push the git commit and tag to the remote repo: `git push ; git push --tags`.
 
 ## Example of full workflow
+<a id="markdown-example-of-full-workflow" name="example-of-full-workflow"></a>
 
 ```sh
 cd core
@@ -77,18 +79,12 @@ cd tuify
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
-cargo readme > README.md
-git add -A
-git commit -S -m "v0.1.27-tuify"
-git tag -a v0.1.27-tuify -m "v0.1.27-tuify"
-cargo publish
-git push ; git push --tags # Push tags & commits
-cd ..
+<!-- TOC -->
 
-cd tui
-# Update version in Cargo.toml and this file
-# Update CHANGELOG.md
+- [Cut a release and publish it to crates.io](#cut-a-release-and-publish-it-to-cratesio)
+- [Example of full workflow](#example-of-full-workflow)
+
+<!-- /TOC -->G.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
@@ -113,8 +109,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo publish --dry-run --allow-dirty
 cargo readme > README.md
 git add -A
-git commit -S -m "v0.0.15-cmdr"
-git tag -a v0.0.15-cmdr -m "v0.0.15-cmdr"
+git commit -S -m "v0.0.16-cmdr"
+git tag -a v0.0.16-cmdr -m "v0.0.16-cmdr"
 cargo publish
 # 2) Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
 # You can do this using `cd cmdr && nu run build-release-in-docker`

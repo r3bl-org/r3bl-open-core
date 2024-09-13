@@ -1869,7 +1869,7 @@ dependencies = [
 
 [[package]]
 name = "r3bl-cmdr"
-version = "0.0.15"
+version = "0.0.16"
 dependencies = [
  "chrono",
  "clap",
