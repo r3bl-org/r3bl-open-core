@@ -4,6 +4,7 @@
 <!-- TOC -->
 
 - [r3bl-cmdr](#r3bl-cmdr)
+  - [v0.0.16 2024-09-13](#v0016-2024-09-13)
   - [v0.0.15 2024-09-12](#v0015-2024-09-12)
   - [v0.0.14 2024-06-29](#v0014-2024-06-29)
   - [v0.0.13 2024-05-20](#v0013-2024-05-20)
@@ -116,6 +117,14 @@
 
 ## `r3bl-cmdr`
 <a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
+
+### v0.0.16 (2024-09-13)
+<a id="markdown-v0.0.16-2024-09-13" name="v0.0.16-2024-09-13"></a>
+
+- Updated:
+  - Minor fix to documentation in `lib.rs` and `README.md` to use GIF instead of MP4 files
+    for the `edi` and `giti` videos. The MP4 files were not showing on docs.rs, crates.io,
+    or github.com.
 
 ### v0.0.15 (2024-09-12)
 <a id="markdown-v0.0.15-2024-09-12" name="v0.0.15-2024-09-12"></a>
