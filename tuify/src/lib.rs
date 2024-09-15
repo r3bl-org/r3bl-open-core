@@ -100,7 +100,6 @@
 //! <!-- /TOC -->
 //!
 //! # Introduction
-//! <a id="markdown-introduction" name="introduction"></a>
 //!
 //! `r3bl_tuify` is a Rust crate that allows you to add simple interactivity to your CLI app.
 //!
@@ -115,14 +114,12 @@
 //!    The binary target is called `rt`.
 //!
 //! # Changelog
-//! <a id="markdown-changelog" name="changelog"></a>
 //!
 //! Please check out the
 //! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tuify) to
 //! see how the library has evolved over time.
 //!
 //! # Learn how these crates are built, provide feedback
-//! <a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
 //!
 //! To learn how we built this crate, please take a look at the following resources.
 //! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
@@ -130,7 +127,6 @@
 //! - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 //!
 //! # How to use it as a library?
-//! <a id="markdown-how-to-use-it-as-a-library%3F" name="how-to-use-it-as-a-library%3F"></a>
 //!
 //! Here's a demo of the library target of this crate in action.
 //!
@@ -194,7 +190,6 @@
 //! ```
 //!
 //! # APIs
-//! <a id="markdown-apis" name="apis"></a>
 //!
 //! We provide 2 APIs:
 //!
@@ -381,7 +376,6 @@
 //! ```
 //!
 //! # How to use it as a binary?
-//! <a id="markdown-how-to-use-it-as-a-binary%3F" name="how-to-use-it-as-a-binary%3F"></a>
 //!
 //! Here's a demo of the binary target of this crate in action.
 //!
@@ -403,7 +397,6 @@
 //!    default is 5.
 //!
 //! ## Interactive user experience
-//! <a id="markdown-interactive-user-experience" name="interactive-user-experience"></a>
 //!
 //! Typically a CLI app is not interactive. You can pass commands, subcommands, options, and
 //! arguments to it, but if you get something wrong, then you get an error and have to start
@@ -503,7 +496,6 @@
 //!      </video>
 //!
 //! ## Paths
-//! <a id="markdown-paths" name="paths"></a>
 //!
 //! There are a lot of different execution paths that you can take with this relatively
 //! simple program. Here is a list.
@@ -531,10 +523,8 @@
 //! > selection. Using the selected item(s) and applying them to this command.
 //!
 //! # Style the components
-//! <a id="markdown-style-the-components" name="style-the-components"></a>
 //!
 //! ## Choose one of the 3 built-in styles
-//! <a id="markdown-choose-one-of-the-3-built-in-styles" name="choose-one-of-the-3-built-in-styles"></a>
 //!
 //! Built-in styles are called `default`, `sea_foam_style`, and `hot_pink_style`. You can find them in the `style.rs` file (tuify/src/components/style.rs).
 //!
@@ -590,7 +580,6 @@
 //! ```
 //!
 //! ## Create your style
-//! <a id="markdown-create-your-style" name="create-your-style"></a>
 //!
 //! To create your style, you need to create a `StyleSheet` struct and pass it as an argument to the `select_from_list` function.
 //!
@@ -652,10 +641,8 @@
 //! ```
 //!
 //! # Build, run, test tasks
-//! <a id="markdown-build%2C-run%2C-test-tasks" name="build%2C-run%2C-test-tasks"></a>
 //!
 //! ## Prerequisites
-//! <a id="markdown-prerequisites" name="prerequisites"></a>
 //!
 //! 🌠 For these to work you have to install the Rust toolchain, `nu`, `cargo-watch`,
 //! `bat`, and `flamegraph` on your system. Here are the instructions:
@@ -669,7 +656,6 @@
 //!    nu`. It is available for Linux, macOS, and Windows.
 //!
 //! ## Nushell scripts to build, run, test, etc.
-//! <a id="markdown-nu-shell-scripts-to-build%2C-run%2C-test%2C-etc." name="nu-shell-scripts-to-build%2C-run%2C-test%2C-etc."></a>
 //!
 //! Go to the `tuify` folder and run the commands below. These commands are defined in the `./run` folder.
 //!

@@ -117,14 +117,12 @@
 //! >    Redux](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples/demo).
 //!
 //! # Changelog
-//! <a id="markdown-changelog" name="changelog"></a>
 //!
 //! Please check out the
 //! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_redux)
 //! to see how the library has evolved over time.
 //!
 //! # Learn how these crates are built, provide feedback
-//! <a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
 //!
 //! To learn how we built this crate, please take a look at the following resources.
 //! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
@@ -132,7 +130,6 @@
 //! - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 //!
 //! # Middlewares
-//! <a id="markdown-middlewares" name="middlewares"></a>
 //!
 //! Your middleware (`async` trait implementations) will be run concurrently or in parallel via
 //! Tokio tasks. You get to choose which `async` trait to implement to do one or the other. And
@@ -152,14 +149,12 @@
 //!    These are added to the store via a call to `add_middleware(...)`.
 //!
 //! # Subscribers
-//! <a id="markdown-subscribers" name="subscribers"></a>
 //!
 //! The subscribers will be run asynchronously via Tokio tasks. They are all run together
 //! concurrently but not in parallel, using
 //! [`futures::join_all()`](https://docs.rs/futures/latest/futures/future/fn.join_all.html).
 //!
 //! # Reducers
-//! <a id="markdown-reducers" name="reducers"></a>
 //!
 //! The reducer functions are also are `async` functions that are run in the tokio runtime. They're
 //! also run one after another in the order in which they're added.
@@ -195,7 +190,6 @@
 //!    - It returns nothing `()`.
 //!
 //! # Summary
-//! <a id="markdown-summary" name="summary"></a>
 //!
 //! Here's the gist of how to make & use one of these:
 //!
@@ -216,7 +210,6 @@
 //!      `Box::new($YOUR_STRUCT))`.
 //!
 //! # Small example step by step
-//! <a id="markdown-small-example-step-by-step" name="small-example-step-by-step"></a>
 //!
 //! 💡 There are lots of examples in the
 //! [tests](https://github.com/r3bl-org/r3bl-rs-utils/blob/main/tests/test_redux.rs) for this
@@ -450,7 +443,6 @@
 //! ```
 //!
 //! # Complete example in one go
-//! <a id="markdown-complete-example-in-one-go" name="complete-example-in-one-go"></a>
 //!
 //! If you like to learn by example, below is a full example of using this Redux crate.
 //!
