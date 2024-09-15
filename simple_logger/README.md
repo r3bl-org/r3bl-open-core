@@ -72,7 +72,6 @@ niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
 <!-- /TOC -->
 
 ## Introduction
-<a id="markdown-introduction" name="introduction"></a>
 
 The simplest way to use this crate to log things and simply use the logging
 facilities, is to use the
@@ -86,14 +85,12 @@ this crate directly.
   `log_trace`, etc.
 
 ## Changelog
-<a id="markdown-changelog" name="changelog"></a>
 
 Please check out the
 [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_simple_logger)
 to see how the library has evolved over time.
 
 ## Learn how these crates are built, provide feedback
-<a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
 
 To learn how we built this crate, please take a look at the following resources.
 - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
@@ -101,7 +98,6 @@ To learn how we built this crate, please take a look at the following resources.
 - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 
 ## How to customize or change logging implementation
-<a id="markdown-how-to-customize-or-change-logging-implementation" name="how-to-customize-or-change-logging-implementation"></a>
 
 Under the hood the [`simplelog`](https://crates.io/crates/simplelog) crate is forked
 and modified for use here.

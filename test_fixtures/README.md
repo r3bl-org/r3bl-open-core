@@ -73,7 +73,6 @@ niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
 <!-- /TOC -->
 
 ## Introduction
-<a id="markdown-introduction" name="introduction"></a>
 
 This is a test fixtures library that provides reusable components for testing. It is
 meant to be used by all the crates in the `r3bl-open-core` monorepo. This crate is
@@ -91,14 +90,12 @@ Please check out the
 to see how the library has evolved over time.
 
 ## Changelog
-<a id="markdown-changelog" name="changelog"></a>
 
 Please check out the
 [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_test_fixtures) to
 see how the library has evolved over time.
 
 ## Learn how these crates are built, provide feedback
-<a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
 
 To learn how we built this crate, please take a look at the following resources.
 - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
@@ -106,7 +103,6 @@ To learn how we built this crate, please take a look at the following resources.
 - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 
 ## async_stream_fixtures
-<a id="markdown-async_stream_fixtures" name="async_stream_fixtures"></a>
 
 Here's an example of how create a stream of `T` from a `Vec<T>`.
 
@@ -152,7 +148,6 @@ async fn test_gen_input_stream_with_delay() {
 ```
 
 ## stdout_fixtures
-<a id="markdown-stdout_fixtures" name="stdout_fixtures"></a>
 
 Here's an example of how to use this.
 

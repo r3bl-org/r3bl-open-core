@@ -86,7 +86,6 @@
 //! <!-- /TOC -->
 //!
 //! # Introduction
-//! <a id="markdown-introduction" name="introduction"></a>
 //!
 //! This crate is necessary since Rust requires procedural macros to be in their own
 //! crate, and this crate provides all the procedural macros for the
@@ -108,14 +107,12 @@
 //! [developerlife.com](https://developerlife.com/category/Rust/).
 //!
 //! # Changelog
-//! <a id="markdown-changelog" name="changelog"></a>
 //!
 //! Please check out the
 //! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_rs_utils_macro)
 //! to see how the library has evolved over time.
 //!
 //! # Learn how these crates are built, provide feedback
-//! <a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
 //!
 //! To learn how we built this crate, please take a look at the following resources.
 //! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).

@@ -84,7 +84,6 @@ niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
 <!-- /TOC -->
 
 ## Introduction
-<a id="markdown-introduction" name="introduction"></a>
 
 The `r3bl_terminal_async` library lets your CLI program be asynchronous and
 interactive without blocking the main thread. Your spawned tasks can use it to
@@ -125,14 +124,12 @@ action:
 ![terminal_async_video](https://github.com/r3bl-org/r3bl-open-core/blob/main/terminal_async/docs/r3bl_terminal_async_clip_ffmpeg.gif?raw=true)
 
 ## Changelog
-<a id="markdown-changelog" name="changelog"></a>
 
 Please check out the
 [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_terminal_async)
 to see how the library has evolved over time.
 
 ## Learn how these crates are built, provide feedback
-<a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
 
 To learn how we built this crate, please take a look at the following resources.
 - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
@@ -140,7 +137,6 @@ To learn how we built this crate, please take a look at the following resources.
 - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 
 ## Features
-<a id="markdown-features" name="features"></a>
 
 1. Read user input from the terminal line by line, while your program concurrently
    writes lines to the same terminal. One [`Readline`] instance can be used to spawn
@@ -185,7 +181,6 @@ echo "hello" | cargo run --examples terminal_async
 ```
 
 ### Pause and resume support
-<a id="markdown-pause-and-resume-support" name="pause-and-resume-support"></a>
 
 The pause and resume functionality is implemented using:
 - [LineState::is_paused] - Used to check if the line state is paused and affects
@@ -215,7 +210,6 @@ ignored.
 See [Readline] module docs for more implementation details on this.
 
 ### Input Editing Behavior
-<a id="markdown-input-editing-behavior" name="input-editing-behavior"></a>
 
 While entering text, the user can edit and navigate through the current input line
 with the following key bindings:
@@ -239,7 +233,6 @@ with the following key bindings:
 - Extensible design based on `crossterm`'s `event-stream` feature.
 
 ## Examples
-<a id="markdown-examples" name="examples"></a>
 
 ```bash
 cargo run --example terminal_async
@@ -248,10 +241,8 @@ cargo run --example shell_async
 ```
 
 ## How to use this crate
-<a id="markdown-how-to-use-this-crate" name="how-to-use-this-crate"></a>
 
 ### [`TerminalAsync::try_new()`], which is the main entry point for most use cases
-<a id="markdown-%5Bterminalasync%3A%3Atry_new%5D%2C-which-is-the-main-entry-point-for-most-use-cases" name="%5Bterminalasync%3A%3Atry_new%5D%2C-which-is-the-main-entry-point-for-most-use-cases"></a>
 
 1. To read user input, call [`TerminalAsync::get_readline_event()`].
 2. You can call [`TerminalAsync::clone_shared_writer()`] to get a [`SharedWriter`]
@@ -267,7 +258,6 @@ cargo run --example shell_async
    cases you won't need to do this.
 
 ### [`Readline`] overview (please see the docs for this struct for details)
-<a id="markdown-%5Breadline%5D-overview-please-see-the-docs-for-this-struct-for-details" name="%5Breadline%5D-overview-please-see-the-docs-for-this-struct-for-details"></a>
 
 - Structure for reading lines of input from a terminal while lines are output to the
   terminal concurrently. It uses dependency injection, allowing you to supply
@@ -301,7 +291,6 @@ cargo run --example shell_async
   that all lines written to the [`SharedWriter`] are output.
 
 ### [`Spinner::try_start()`]
-<a id="markdown-%5Bspinner%3A%3Atry_start%5D" name="%5Bspinner%3A%3Atry_start%5D"></a>
 
 This displays an indeterminate spinner while waiting for a long-running task to
 complete. The intention with displaying this spinner is to give the user an indication
@@ -337,7 +326,6 @@ have ANSI escape sequences in them. Here's an example of this.
 ```
 
 ### [`tracing_setup::init()`]
-<a id="markdown-%5Btracing_setup%3A%3Ainit%5D" name="%5Btracing_setup%3A%3Ainit%5D"></a>
 
 This is a convenience method to setup Tokio [`tracing_subscriber`] with `stdout` as
 the output destination. This method also ensures that the [`SharedWriter`] is used for
@@ -348,7 +336,6 @@ are enabled. You can also customize the log level, and the file path and prefix 
 the log file.
 
 ## Build this crate with Naz on YouTube
-<a id="markdown-build-this-crate-with-naz-on-youtube" name="build-this-crate-with-naz-on-youtube"></a>
 
 Watch the following videos to learn more about how this crate was built:
 
@@ -371,7 +358,6 @@ The following playlists are relevant to this crate:
 - [Build with Naz, testing in Rust](https://www.youtube.com/watch?v=Xt495QLrFFk&list=PLofhE49PEwmwLR_4Noa0dFOSPmSpIg_l8)
 
 ## Why another async readline crate?
-<a id="markdown-why-another-async-readline-crate%3F" name="why-another-async-readline-crate%3F"></a>
 
 This crate & repo is forked from
 [rustyline-async](https://github.com/zyansheep/rustyline-async). However it has mostly

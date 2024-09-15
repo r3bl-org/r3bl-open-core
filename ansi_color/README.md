@@ -77,7 +77,6 @@ niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
 <!-- /TOC -->
 
 ## Introduction
-<a id="markdown-introduction" name="introduction"></a>
 
 Rust crate to generate formatted ANSI 256 (8-bit) and truecolor (24-bit) color output to stdout. On
 macOS, the default Terminal.app does not support truecolor, so ANSI 256 colors are used instead.
@@ -104,14 +103,12 @@ Here's a screenshot of running the `main` example on various operating systems:
 | *Running on macOS iTerm app (note Truecolor runtime detection)* |
 
 ## Changelog
-<a id="markdown-changelog" name="changelog"></a>
 
 Please check out the
 [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_ansi_color)
 to see how the library has evolved over time.
 
 ## Learn how these crates are built, provide feedback
-<a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
 
 To learn how we built this crate, please take a look at the following resources.
 - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
@@ -119,7 +116,6 @@ To learn how we built this crate, please take a look at the following resources.
 - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 
 ## How to use it
-<a id="markdown-how-to-use-it" name="how-to-use-it"></a>
 
 The main struct that we have to consider is `AnsiStyledText`. It has two fields:
 
@@ -149,10 +145,8 @@ Please a look at the
 better idea of how to use this crate.
 
 ## Build, run, test tasks
-<a id="markdown-build-run-test-tasks" name="build-run-test-tasks"></a>
 
 ### Prerequisites
-<a id="markdown-prerequisites" name="prerequisites"></a>
 
 🌠 In order for these to work you have to install the Rust toolchain and `nu` and
 `cargo-watch`:
@@ -165,7 +159,6 @@ better idea of how to use this crate.
    is available for Linux, macOS, and Windows. And it is written in Rust.
 
 ### Nushell commands
-<a id="markdown-nushell-commands" name="nushell-commands"></a>
 
 | Command                                 | Description                                                                                         |
 |-----------------------------------------|-----------------------------------------------------------------------------------------------------|
@@ -192,7 +185,6 @@ The following commands will watch for changes in the source folder and re-run:
 | `nu run watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test                                                                  |
 
 ## References
-<a id="markdown-references" name="references"></a>
 
 - [ANSI Escape Codes](https://notes.burke.libbey.me/ansi-escape-codes/)
 - [ASCII Table](https://www.asciitable.com/)
@@ -202,7 +194,6 @@ The following commands will watch for changes in the source folder and re-run:
 - [Color Metric](https://www.compuphase.com/cmetric.htm)
 
 ## Why make a new crate for this?
-<a id="markdown-why-make-a-new-crate-for-this" name="why-make-a-new-crate-for-this"></a>
 
 - There are a few crates on crates.io that do similar things but they don't amenable
   licenses.

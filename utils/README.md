@@ -69,7 +69,6 @@ niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
 - [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
 
 ## Introduction
-<a id="markdown-introduction" name="introduction"></a>
 
 This library contains some utilities that are useful for building TUI apps in Rust,
 like memory arena for non-binary trees.
@@ -83,14 +82,12 @@ spirit for TypeScript (for TUI apps on Node.js) called
 switched to Rust 🦀🎉.
 
 ## Changelog
-<a id="markdown-changelog" name="changelog"></a>
 
 Please check out the
 [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_rs_utils)
 to see how the library has evolved over time.
 
 ## Learn how these crates are built, provide feedback
-<a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
 
 To learn how we built this crate, please take a look at the following resources.
 - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
