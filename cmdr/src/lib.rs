@@ -91,7 +91,6 @@
 //! <!-- /TOC -->
 //!
 //! # Installation
-//! <a id="markdown-installation" name="installation"></a>
 //!
 //! The two apps, `edi` and `giti`, that comprise `r3bl-cmdr` will put a smile on your face and
 //! make you more productive. These apps are currently available as early access preview 🐣.
@@ -117,14 +116,12 @@
 //!    r3bl-open-core/cmdr && cargo install`.
 //!
 //! # Changelog
-//! <a id="markdown-changelog" name="changelog"></a>
 //!
 //! Please check out the
 //! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl-cmdr) to
 //! see how the library has evolved over time.
 //!
 //! # Learn how these crates are built, provide feedback
-//! <a id="markdown-learn-how-these-crates-are-built-provide-feedback" name="learn-how-these-crates-are-built-provide-feedback"></a>
 //!
 //! To learn how we built this crate, please take a look at the following resources.
 //! - If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
@@ -132,7 +129,6 @@
 //! - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 //!
 //! # Run `giti` binary target
-//! <a id="markdown-run-giti-binary-target" name="run-giti-binary-target"></a>
 //!
 //! <!--
 //! giti branch video
@@ -163,7 +159,6 @@
 //!   `giti -l branch delete`. To view this log output run `nu run log`.
 //!
 //! # Run `edi` binary target
-//! <a id="markdown-run-edi-binary-target" name="run-edi-binary-target"></a>
 //!
 //! <!--
 //! edi video
@@ -190,11 +185,8 @@
 //!   `edi -l README.md`. To view this log output run `nu run log`.
 //!
 //! # Build, run, test tasks
-//! <a id="markdown-build%2C-run%2C-test-tasks" name="build%2C-run%2C-test-tasks"></a>
 //!
 //! ## Prerequisites
-//! <a id="markdown-prerequisites" name="prerequisites"></a>
-//!
 //!
 //! 🌠 In order for these to work you have to install the Rust toolchain, `nu`, `cargo-watch`, `bat`,
 //! and `flamegraph` on your system. Here are the instructions:
@@ -208,7 +200,6 @@
 //!    available for Linux, macOS, and Windows.
 //!
 //! ## Nushell scripts to build, run, test etc.
-//! <a id="markdown-nushell-scripts-to-build-run-test-etc" name="nushell-scripts-to-build-run-test-etc"></a>
 //!
 //! | Command             | Description                                                                                                          |
 //! | ------------------- | -------------------------------------------------------------------------------------------------------------------- |
