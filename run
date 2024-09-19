@@ -217,12 +217,13 @@ def upgrade-deps [] {
 }
 
 def rustfmt [] {
-    for folder in $workspace_folders {
-        cd $folder
-        print $'(ansi magenta)≡ Running cargo fmt --all in ($folder) .. ≡(ansi reset)'
-        cargo fmt --all
-        cd ..
-    }
+    cargo fmt --all
+    # for folder in $workspace_folders {
+    #     cd $folder
+    #     print $'(ansi magenta)≡ Running cargo fmt --all in ($folder) .. ≡(ansi reset)'
+    #     cargo fmt --all
+    #     cd ..
+    # }
 }
 
 # More info: https://github.com/EmbarkStudios/cargo-deny
