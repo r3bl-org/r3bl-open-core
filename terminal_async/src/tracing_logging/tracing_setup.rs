@@ -18,14 +18,7 @@
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
 use super::WriterConfig;
-use crate::{tracing_logging::tracing_config::TracingConfig, SharedWriter};
-
-#[derive(Clone)]
-pub enum DisplayPreference {
-    Stdout,
-    Stderr,
-    SharedWriter(SharedWriter),
-}
+use crate::tracing_logging::tracing_config::TracingConfig;
 
 pub type DynLayer<S> = dyn Layer<S> + Send + Sync + 'static;
 
