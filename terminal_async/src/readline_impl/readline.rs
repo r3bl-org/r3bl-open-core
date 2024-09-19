@@ -15,22 +15,28 @@
  *   limitations under the License.
  */
 
-use crate::{
-    CrosstermEventResult, History, LineState, PauseBuffer, PinnedInputStream, SafeHistory,
-    SafeLineState, SafePauseBuffer, SafeRawTerminal, SharedWriter, StdMutex, Text,
-    CHANNEL_CAPACITY,
-};
-use crossterm::{
-    terminal::{self, disable_raw_mode, Clear},
-    QueueableCommand,
-};
+use std::{io::{self, Write},
+          sync::Arc};
+
+use crossterm::{terminal::{self, disable_raw_mode, Clear},
+                QueueableCommand};
 use futures_util::StreamExt;
-use std::{
-    io::{self, Write},
-    sync::Arc,
-};
 use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+
+use crate::{CrosstermEventResult,
+            History,
+            LineState,
+            PauseBuffer,
+            PinnedInputStream,
+            SafeHistory,
+            SafeLineState,
+            SafePauseBuffer,
+            SafeRawTerminal,
+            SharedWriter,
+            StdMutex,
+            Text,
+            CHANNEL_CAPACITY};
 
 const CTRL_C: crossterm::event::Event =
     crossterm::event::Event::Key(crossterm::event::KeyEvent::new(
@@ -266,7 +272,8 @@ pub mod manage_shared_writer_output {
     /// - Receiver end of the channel, which does the actual writing to the terminal.
     /// - The sender end of the channel is in [`SharedWriter`].
     pub fn spawn_task_to_monitor_line_state_signals(
-        /* Move */ mut line_control_channel_receiver: mpsc::Receiver<LineStateControlSignal>,
+        /* Move */
+        mut line_control_channel_receiver: mpsc::Receiver<LineStateControlSignal>,
         safe_line_state: SafeLineState,
         safe_raw_terminal: SafeRawTerminal,
         safe_is_paused_buffer: SafePauseBuffer,
@@ -313,7 +320,9 @@ pub mod manage_shared_writer_output {
         self_safe_is_paused_buffer: SafePauseBuffer,
         self_safe_line_state: SafeLineState,
         self_safe_raw_terminal: SafeRawTerminal,
-        self_safe_spinner_is_active: Arc<StdMutex<Option<tokio::sync::broadcast::Sender<()>>>>,
+        self_safe_spinner_is_active: Arc<
+            StdMutex<Option<tokio::sync::broadcast::Sender<()>>>,
+        >,
     ) -> ControlFlowLimited<ReadlineError> {
         match line_control_signal {
             // Handle a line of text from user input w/ support for pause & resume.
@@ -342,7 +351,12 @@ pub mod manage_shared_writer_output {
                 let is_paused = self_safe_line_state.lock().unwrap().is_paused;
                 let term = &mut *self_safe_raw_terminal.lock().unwrap();
                 let line_state = self_safe_line_state.lock().unwrap();
-                let _ = flush_internal(self_safe_is_paused_buffer, is_paused, line_state, term);
+                let _ = flush_internal(
+                    self_safe_is_paused_buffer,
+                    is_paused,
+                    line_state,
+                    term,
+                );
             }
 
             // Pause the terminal.
@@ -351,10 +365,9 @@ pub mod manage_shared_writer_output {
                 let term = &mut *self_safe_raw_terminal.lock().unwrap();
                 let mut line_state = self_safe_line_state.lock().unwrap();
                 if line_state.set_paused(new_value, term).is_err() {
-                    return ControlFlowLimited::ReturnError(ReadlineError::IO(io::Error::new(
-                        io::ErrorKind::Other,
-                        "failed to pause terminal",
-                    )));
+                    return ControlFlowLimited::ReturnError(ReadlineError::IO(
+                        io::Error::new(io::ErrorKind::Other, "failed to pause terminal"),
+                    ));
                 };
             }
 
@@ -365,12 +378,16 @@ pub mod manage_shared_writer_output {
                 let term = &mut *self_safe_raw_terminal.lock().unwrap();
                 // Resume the terminal.
                 if line_state.set_paused(new_value, term).is_err() {
-                    return ControlFlowLimited::ReturnError(ReadlineError::IO(io::Error::new(
-                        io::ErrorKind::Other,
-                        "failed to resume terminal",
-                    )));
+                    return ControlFlowLimited::ReturnError(ReadlineError::IO(
+                        io::Error::new(io::ErrorKind::Other, "failed to resume terminal"),
+                    ));
                 };
-                let _ = flush_internal(self_safe_is_paused_buffer, new_value, line_state, term);
+                let _ = flush_internal(
+                    self_safe_is_paused_buffer,
+                    new_value,
+                    line_state,
+                    term,
+                );
             }
             LineStateControlSignal::SpinnerActive(spinner_shutdown_sender) => {
                 // Handle spinner active signal & register the spinner shutdown sender.
@@ -440,7 +457,8 @@ impl Readline {
     ) -> Result<(Self, SharedWriter), ReadlineError> {
         // Line control channel - signals are send to this channel to control `LineState`.
         // A task is spawned to monitor this channel.
-        let line_state_control_channel = mpsc::channel::<LineStateControlSignal>(CHANNEL_CAPACITY);
+        let line_state_control_channel =
+            mpsc::channel::<LineStateControlSignal>(CHANNEL_CAPACITY);
         let (line_control_channel_sender, line_state_control_channel_receiver) =
             line_state_control_channel;
 
@@ -608,7 +626,9 @@ pub mod readline_internal {
         self_line_state: SafeLineState,
         self_raw_terminal: &mut dyn Write,
         self_safe_history: SafeHistory,
-        self_safe_is_spinner_active: Arc<StdMutex<Option<tokio::sync::broadcast::Sender<()>>>>,
+        self_safe_is_spinner_active: Arc<
+            StdMutex<Option<tokio::sync::broadcast::Sender<()>>>,
+        >,
     ) -> ControlFlowExtended<ReadlineEvent, ReadlineError> {
         match result_crossterm_event {
             Ok(crossterm_event) => {
@@ -616,7 +636,8 @@ pub mod readline_internal {
 
                 // Intercept Ctrl+C or Ctrl+D here and send a signal to spinner (if it is
                 // active). And early return!
-                let is_spinner_active = self_safe_is_spinner_active.lock().unwrap().take();
+                let is_spinner_active =
+                    self_safe_is_spinner_active.lock().unwrap().take();
                 if crossterm_event == CTRL_C || crossterm_event == CTRL_D {
                     if let Some(spinner_shutdown_sender) = is_spinner_active {
                         // Send signal to SharedWriter spinner shutdown channel.
@@ -651,8 +672,9 @@ pub mod readline_internal {
 
 #[cfg(test)]
 pub mod test_fixtures {
-    use super::*;
     use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+
+    use super::*;
 
     pub(super) fn get_input_vec() -> Vec<CrosstermEventResult> {
         vec![
@@ -682,11 +704,12 @@ pub mod test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use super::*;
-    use crate::{LineStateLiveness, StdMutex};
     use r3bl_test_fixtures::{gen_input_stream, StdoutMock};
     use r3bl_tuify::{is_fully_uninteractive_terminal, TTYResult};
     use test_fixtures::get_input_vec;
+
+    use super::*;
+    use crate::{LineStateLiveness, StdMutex};
 
     #[tokio::test]
     async fn test_readline_internal_process_event_and_terminal_output() {
@@ -756,7 +779,10 @@ mod test_readline {
 
         let result = readline.readline().await;
         assert!(matches!(result, Ok(ReadlineEvent::Line(_))));
-        pretty_assertions::assert_eq!(result.unwrap(), ReadlineEvent::Line("abc".to_string()));
+        pretty_assertions::assert_eq!(
+            result.unwrap(),
+            ReadlineEvent::Line("abc".to_string())
+        );
         pretty_assertions::assert_eq!(readline.safe_line_state.lock().unwrap().line, "");
 
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
@@ -866,9 +892,10 @@ mod test_readline {
 
 #[cfg(test)]
 mod test_streams {
-    use super::*;
     use r3bl_test_fixtures::gen_input_stream;
     use test_streams::test_fixtures::get_input_vec;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_generate_event_stream_pinned() {
@@ -887,16 +914,19 @@ mod test_streams {
 
 #[cfg(test)]
 mod test_pause_and_resume_support {
-    use super::*;
-    use crate::LineStateLiveness;
+    use std::{collections::VecDeque, sync::Mutex};
+
     use manage_shared_writer_output::flush_internal;
     use r3bl_test_fixtures::StdoutMock;
-    use std::{collections::VecDeque, sync::Mutex};
+
+    use super::*;
+    use crate::LineStateLiveness;
 
     #[test]
     fn test_flush_internal_paused() {
         // Create a mock `LineState` with initial data
-        let safe_line_state = Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
+        let safe_line_state =
+            Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
 
         // Create a mock `SafePauseBuffer` with some paused lines
         let mut pause_buffer = VecDeque::new();
@@ -928,7 +958,8 @@ mod test_pause_and_resume_support {
     #[test]
     fn test_flush_internal_not_paused() {
         // Create a mock `LineState` with initial data
-        let safe_line_state = Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
+        let safe_line_state =
+            Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
 
         // Create a mock `SafePauseBuffer` with some paused lines
         let mut pause_buffer = VecDeque::new();

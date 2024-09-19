@@ -91,15 +91,16 @@
 //! input, pass that to the `stdin` of a `bash` child process, and then display the output
 //! from the child process in the terminal.
 
+use std::io::Write as _;
+
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
 use r3bl_rs_utils_core::ok;
-use r3bl_terminal_async::ReadlineEvent;
-use r3bl_terminal_async::ReadlineEvent::{Eof, Interrupted, Line, Resized};
-use r3bl_terminal_async::{SharedWriter, TerminalAsync};
-use std::io::Write as _;
-use tokio::io::AsyncBufReadExt as _;
-use tokio::io::AsyncWriteExt as _;
+use r3bl_terminal_async::{ReadlineEvent,
+                          ReadlineEvent::{Eof, Interrupted, Line, Resized},
+                          SharedWriter,
+                          TerminalAsync};
+use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -288,7 +289,8 @@ pub mod terminal_async_constructor {
             format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3)
         };
 
-        let Ok(Some(terminal_async)) = TerminalAsync::try_new(prompt.as_str()).await else {
+        let Ok(Some(terminal_async)) = TerminalAsync::try_new(prompt.as_str()).await
+        else {
             miette::bail!("Failed to create TerminalAsync instance");
         };
 
