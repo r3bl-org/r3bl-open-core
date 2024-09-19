@@ -115,12 +115,12 @@ macro_rules! call_if_true {
 /// readability. You can use it like this.
 ///
 /// ```rust
-/// use r3bl_rs_utils_core::debug;
+/// use r3bl_rs_utils_core::console_log;
 ///
 /// let my_string = "Hello World!";
-/// debug!(my_string);
+/// console_log!(my_string);
 /// let my_number = 42;
-/// debug!(my_string, my_number);
+/// console_log!(my_string, my_number);
 /// ```
 ///
 /// You can also use it in these other forms for terminal raw mode output. This will dump
@@ -129,22 +129,22 @@ macro_rules! call_if_true {
 /// ```ignore
 /// if let Err(err) = $cmd {
 ///   let msg = format!("❌ Failed to {}", stringify!($cmd));
-///   debug!(ERROR_RAW &msg, err);
+///   console_log!(ERROR_RAW &msg, err);
 /// }
 /// ```
 ///
 /// This will dump the output to stdout.
 ///
 /// ```rust
-/// use r3bl_rs_utils_core::debug;
+/// use r3bl_rs_utils_core::console_log;
 ///
 /// let msg = format!("✅ Did the thing to {}", stringify!($name));
-/// debug!(OK_RAW &msg);
+/// console_log!(OK_RAW &msg);
 /// ```
 ///
 /// <https://danielkeep.github.io/tlborm/book/mbe-macro-rules.html#repetitions>
 #[macro_export]
-macro_rules! debug {
+macro_rules! console_log {
   (ERROR_RAW $msg:expr, $err:expr) => {{
     eprintln!(
       "{} {} {}\r",

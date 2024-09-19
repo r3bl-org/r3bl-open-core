@@ -102,7 +102,7 @@ mod tests {
             + style_red_fg
             + style_padding_another;
 
-        debug!(my_style);
+        console_log!(my_style);
 
         assert_eq2!(my_style.padding.unwrap(), ch!(3));
         assert_eq2!(
