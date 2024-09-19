@@ -23,7 +23,6 @@ use std::{io::{stderr, Write},
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
 use r3bl_terminal_async::{tracing_logging::tracing_config::TracingConfig,
-                          tracing_setup,
                           DisplayPreference,
                           Readline,
                           ReadlineEvent,
@@ -153,10 +152,10 @@ async fn main() -> miette::Result<()> {
     }
 
     // Initialize tracing w/ the "async stdout" (SharedWriter), and file writer.
-    let display_preference =
-        DisplayPreference::SharedWriter(terminal_async.shared_writer.clone());
-    let config = TracingConfig::new(display_preference);
-    tracing_setup::init(config)?;
+    r3bl_terminal_async::init_tracing(TracingConfig::new_file_and_display(
+        None,
+        DisplayPreference::SharedWriter(terminal_async.clone_shared_writer()),
+    ))?;
 
     // Start tasks.
     let mut state = State::default();
