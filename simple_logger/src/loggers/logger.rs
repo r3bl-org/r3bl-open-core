@@ -17,14 +17,17 @@
 
 //! Module providing the SimpleLogger Implementation
 
-use std::{
-    io::{stderr, stdout},
-    sync::Mutex,
-};
+use std::{io::{stderr, stdout},
+          sync::Mutex};
 
-use log::{
-    set_boxed_logger, set_max_level, Level, LevelFilter, Log, Metadata, Record, SetLoggerError,
-};
+use log::{set_boxed_logger,
+          set_max_level,
+          Level,
+          LevelFilter,
+          Log,
+          Metadata,
+          Record,
+          SetLoggerError};
 
 use super::logging::try_log;
 use crate::{Config, SharedLogger};
@@ -81,9 +84,7 @@ impl SimpleLogger {
 }
 
 impl Log for SimpleLogger {
-    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
-        metadata.level() <= self.level
-    }
+    fn enabled(&self, metadata: &Metadata<'_>) -> bool { metadata.level() <= self.level }
 
     fn log(&self, record: &Record<'_>) {
         if self.enabled(record.metadata()) {
@@ -111,15 +112,9 @@ impl Log for SimpleLogger {
 }
 
 impl SharedLogger for SimpleLogger {
-    fn level(&self) -> LevelFilter {
-        self.level
-    }
+    fn level(&self) -> LevelFilter { self.level }
 
-    fn config(&self) -> Option<&Config> {
-        Some(&self.config)
-    }
+    fn config(&self) -> Option<&Config> { Some(&self.config) }
 
-    fn as_log(self: Box<Self>) -> Box<dyn Log> {
-        Box::new(*self)
-    }
+    fn as_log(self: Box<Self>) -> Box<dyn Log> { Box::new(*self) }
 }

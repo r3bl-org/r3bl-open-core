@@ -77,9 +77,7 @@ impl CalculateResizeHint for State<'_> {
         self.clear_resize_hint();
     }
 
-    fn get_resize_hint(&self) -> Option<ResizeHint> {
-        self.resize_hint.clone()
-    }
+    fn get_resize_hint(&self) -> Option<ResizeHint> { self.resize_hint.clone() }
 
     fn set_resize_hint(&mut self, new_size: Size) {
         self.resize_hint = if let Some(old_size) = self.window_size {
@@ -107,9 +105,7 @@ impl CalculateResizeHint for State<'_> {
         }
     }
 
-    fn clear_resize_hint(&mut self) {
-        self.resize_hint = None;
-    }
+    fn clear_resize_hint(&mut self) { self.resize_hint = None; }
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
@@ -123,7 +119,10 @@ pub enum ResizeHint {
 impl State<'_> {
     /// This the row index that currently has keyboard focus.
     pub fn get_focused_index(&self) -> ChUnit {
-        get_scroll_adjusted_row_index(self.raw_caret_row_index, self.scroll_offset_row_index)
+        get_scroll_adjusted_row_index(
+            self.raw_caret_row_index,
+            self.scroll_offset_row_index,
+        )
     }
 
     pub fn locate_cursor_in_viewport(&self) -> CaretVerticalViewportLocation {

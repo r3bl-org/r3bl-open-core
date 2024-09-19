@@ -17,8 +17,9 @@
 
 use std::time::Duration;
 
-use super::*;
 use async_stream::stream;
+
+use super::*;
 
 pub fn gen_input_stream<T>(generator_vec: Vec<T>) -> PinnedInputStream<T>
 where
@@ -68,7 +69,8 @@ async fn test_gen_input_stream_with_delay() {
     // Start timer.
     let start_time = std::time::Instant::now();
 
-    let mut input_stream = gen_input_stream_with_delay(vec![1, 2, 3], Duration::from_millis(delay));
+    let mut input_stream =
+        gen_input_stream_with_delay(vec![1, 2, 3], Duration::from_millis(delay));
     for _ in 1..=3 {
         input_stream.next().await;
     }

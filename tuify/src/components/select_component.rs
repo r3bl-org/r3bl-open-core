@@ -36,9 +36,7 @@ const SINGLE_SELECT_IS_SELECTED: &str = "◉";
 const SINGLE_SELECT_IS_NOT_SELECTED: &str = "◌";
 
 impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
-    fn get_write(&mut self) -> &mut W {
-        &mut self.write
-    }
+    fn get_write(&mut self) -> &mut W { &mut self.write }
 
     // Header can be either a single line or a multi line.
     fn calculate_header_viewport_height(&self, state: &mut State<'_>) -> ChUnit {
@@ -70,12 +68,14 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
             let selected_style = self.style.selected_style;
             let single_line_header_style = self.style.header_style;
             let start_display_col_offset = 1;
-            let header_viewport_height: ChUnit = self.calculate_header_viewport_height(state);
+            let header_viewport_height: ChUnit =
+                self.calculate_header_viewport_height(state);
 
             // If there are more items than the max display height, then we only use max
             // display height. Otherwise we can shrink the display height to the number of
             // items.
-            let items_viewport_height: ChUnit = self.calculate_items_viewport_height(state);
+            let items_viewport_height: ChUnit =
+                self.calculate_items_viewport_height(state);
 
             let viewport_width: ChUnit = {
                 // Try to get the terminal width from state first (since it should be set
@@ -115,10 +115,14 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
 
             match state.get_header() {
                 Header::Single => {
-                    let mut header_text =
-                        format!("{}{}", " ".repeat(start_display_col_offset), state.header);
+                    let mut header_text = format!(
+                        "{}{}",
+                        " ".repeat(start_display_col_offset),
+                        state.header
+                    );
 
-                    header_text = clip_string_to_width_with_ellipsis(header_text, viewport_width);
+                    header_text =
+                        clip_string_to_width_with_ellipsis(header_text, viewport_width);
 
                     queue! {
                         writer,
@@ -163,7 +167,8 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                         'inner: for last_span in header_line.iter() {
                             let span_text = last_span.text;
                             let span_as_unicode_string = UnicodeString::from(span_text);
-                            let unicode_string_width = span_as_unicode_string.display_width;
+                            let unicode_string_width =
+                                span_as_unicode_string.display_width;
 
                             if unicode_string_width > available_space_col_count {
                                 // Clip the text to available space.
@@ -177,10 +182,13 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
 
                                 // If last item in the header, then fill the remaining
                                 // space with spaces.
-                                let maybe_header_line_last_span: Option<&AnsiStyledText<'_>> =
-                                    header_line.last();
+                                let maybe_header_line_last_span: Option<
+                                    &AnsiStyledText<'_>,
+                                > = header_line.last();
 
-                                if let Some(header_line_last_span) = maybe_header_line_last_span {
+                                if let Some(header_line_last_span) =
+                                    maybe_header_line_last_span
+                                {
                                     if last_span == header_line_last_span {
                                         // Because text is not clipped, we add back the 3 we subtracted
                                         // earlier for the "...".
@@ -207,7 +215,8 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                         .iter()
                         .zip(state.multi_line_header.iter());
                     zipped.for_each(|(clipped_text_vec, header_span_vec)| {
-                        let mut ansi_styled_text_vec: Vec<AnsiStyledText<'_>> = Vec::new();
+                        let mut ansi_styled_text_vec: Vec<AnsiStyledText<'_>> =
+                            Vec::new();
                         let zipped = clipped_text_vec.iter().zip(header_span_vec.iter());
                         zipped.for_each(|(clipped_text, header_span)| {
                             ansi_styled_text_vec.push(AnsiStyledText {
@@ -250,8 +259,10 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
 
             // Print each line in viewport.
             for viewport_row_index in 0..*items_viewport_height {
-                let data_row_index: usize = (data_row_index_start + viewport_row_index).into();
-                let caret_row_scroll_adj = ch!(viewport_row_index) + state.scroll_offset_row_index;
+                let data_row_index: usize =
+                    (data_row_index_start + viewport_row_index).into();
+                let caret_row_scroll_adj =
+                    ch!(viewport_row_index) + state.scroll_offset_row_index;
                 let data_item = &state.items[data_row_index];
 
                 // Invert colors for selected items.
@@ -310,7 +321,8 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
                 let data_item = format!("{row_prefix}{data_item}");
                 let data_item: String =
                     clip_string_to_width_with_ellipsis(data_item, viewport_width);
-                let data_item_display_width: ChUnit = UnicodeString::from(&data_item).display_width;
+                let data_item_display_width: ChUnit =
+                    UnicodeString::from(&data_item).display_width;
                 let padding_right = if data_item_display_width < viewport_width {
                     " ".repeat(ch!(@to_usize (viewport_width - data_item_display_width)))
                 } else {
@@ -367,7 +379,8 @@ pub fn clip_string_to_width_with_ellipsis(
     let available_space_col_count: ChUnit = viewport_width;
     if unicode_string_width > available_space_col_count {
         // Clip the text to available space.
-        let clipped_text = unicode_string.clip_to_width(ch!(0), available_space_col_count - 3);
+        let clipped_text =
+            unicode_string.clip_to_width(ch!(0), available_space_col_count - 3);
         let clipped_text = format!("{clipped_text}...");
         header_text = clipped_text;
     } else {
@@ -387,7 +400,8 @@ mod tests {
     #[test]
     fn test_clip_string_to_width_with_ellipsis() {
         let line = "This is a long line that needs to be clipped".to_string();
-        let clipped_line = clip_string_to_width_with_ellipsis(line.clone(), ChUnit::new(20));
+        let clipped_line =
+            clip_string_to_width_with_ellipsis(line.clone(), ChUnit::new(20));
         assert_eq!(clipped_line, "This is a long li...");
 
         let short_line = "This is a short line".to_string();
