@@ -15,19 +15,18 @@
  *   limitations under the License.
  */
 
-use std::{
-    io::{Error, Write},
-    thread,
-};
+use std::{io::{Error, Write},
+          thread};
 
 use log::{LevelFilter, Record};
 use r3bl_ansi_color::{AnsiStyledText, Color as RSColor, Style};
 use termcolor::Color;
 
-use crate::{
-    config::{TargetPadding, TimeFormat},
-    Config, LevelPadding, ThreadLogMode, ThreadPadding,
-};
+use crate::{config::{TargetPadding, TimeFormat},
+            Config,
+            LevelPadding,
+            ThreadLogMode,
+            ThreadPadding};
 
 pub fn termcolor_to_r3bl_ansi_color(color: &Color) -> Option<RSColor> {
     match color {
@@ -44,7 +43,11 @@ pub fn termcolor_to_r3bl_ansi_color(color: &Color) -> Option<RSColor> {
 }
 
 #[inline(always)]
-pub fn try_log<W>(config: &Config, record: &Record<'_>, write: &mut W) -> Result<(), Error>
+pub fn try_log<W>(
+    config: &Config,
+    record: &Record<'_>,
+    write: &mut W,
+) -> Result<(), Error>
 where
     W: Write + Sized,
 {
@@ -110,7 +113,11 @@ where
 }
 
 #[inline(always)]
-pub fn write_level<W>(record: &Record<'_>, write: &mut W, config: &Config) -> Result<(), Error>
+pub fn write_level<W>(
+    record: &Record<'_>,
+    write: &mut W,
+    config: &Config,
+) -> Result<(), Error>
 where
     W: Write + Sized,
 {
@@ -146,7 +153,11 @@ where
 }
 
 #[inline(always)]
-pub fn write_target<W>(record: &Record<'_>, write: &mut W, config: &Config) -> Result<(), Error>
+pub fn write_target<W>(
+    record: &Record<'_>,
+    write: &mut W,
+    config: &Config,
+) -> Result<(), Error>
 where
     W: Write + Sized,
 {

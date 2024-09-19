@@ -24,9 +24,7 @@ pub struct TestStringWriter {
 }
 
 impl Default for TestStringWriter {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
 
 impl TestStringWriter {
@@ -36,9 +34,7 @@ impl TestStringWriter {
         }
     }
 
-    pub fn get_buffer(&self) -> &str {
-        &self.buffer
-    }
+    pub fn get_buffer(&self) -> &str { &self.buffer }
 }
 
 impl Write for TestStringWriter {
@@ -53,9 +49,7 @@ impl Write for TestStringWriter {
         }
     }
 
-    fn flush(&mut self) -> Result<()> {
-        Ok(())
-    }
+    fn flush(&mut self) -> Result<()> { Ok(()) }
 }
 
 pub struct TestVecKeyPressReader {
@@ -92,12 +86,13 @@ pub fn contains_ansi_escape_sequence(text: &str) -> bool {
 
 #[test]
 fn test_is_ansi_escape_sequence() {
-    use r3bl_ansi_color::Color;
-    use r3bl_ansi_color::{AnsiStyledText, Style};
+    use r3bl_ansi_color::{AnsiStyledText, Color, Style};
     use r3bl_rs_utils_core::assert_eq2;
 
     assert_eq2!(
-        contains_ansi_escape_sequence("\x1b[31mThis is red text.\x1b[0m And this is normal text."),
+        contains_ansi_escape_sequence(
+            "\x1b[31mThis is red text.\x1b[0m And this is normal text."
+        ),
         true
     );
 

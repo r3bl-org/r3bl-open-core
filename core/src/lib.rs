@@ -128,16 +128,16 @@
 
 // Connect to source file.
 pub mod calc_str_len;
-pub mod console_log_impl;
 pub mod common;
+pub mod console_log_impl;
 pub mod decl_macros;
 pub mod tui_core;
 pub mod utils;
 
 // Re-export.
 pub use calc_str_len::*;
-pub use console_log_impl::{color_text_default_styles::*, *};
 pub use common::*;
+pub use console_log_impl::{color_text_default_styles::*, *};
 pub use tui_core::*;
 pub use utils::*;
 

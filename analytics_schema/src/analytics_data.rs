@@ -26,9 +26,7 @@ pub struct AnalyticsRecord {
 }
 
 impl Default for AnalyticsRecord {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
 
 impl AnalyticsRecord {

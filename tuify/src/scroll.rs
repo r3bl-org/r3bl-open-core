@@ -90,7 +90,8 @@ pub fn locate_cursor_in_viewport(
     display_height: ChUnit,
     items_size: ChUnit,
 ) -> CaretVerticalViewportLocation {
-    let abs_row_index = get_scroll_adjusted_row_index(raw_caret_row_index, scroll_offset_row_index);
+    let abs_row_index =
+        get_scroll_adjusted_row_index(raw_caret_row_index, scroll_offset_row_index);
 
     call_if_true!(DEVELOPMENT_MODE, {
         log_debug(format!(

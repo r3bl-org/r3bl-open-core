@@ -340,7 +340,9 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
     return_it
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default, Hash)]
+#[derive(
+    Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default, Hash,
+)]
 pub enum SelectionMode {
     /// Select only one option from list.
     #[default]
