@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-//! ANSI colorized text <https://github.com/ogham/rust-ansi-term> helper methods.
+//! ANSI colorized text <https://github.com/ogham/rust-ansi-term> helper methods. This is
+//! used by the [`crate::console_log!`] macro (in `decl_macro.rs`).
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style};
 

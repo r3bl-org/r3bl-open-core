@@ -129,17 +129,17 @@
 // Connect to source file.
 pub mod calc_str_len;
 pub mod common;
-pub mod console_log_impl;
 pub mod decl_macros;
+pub mod friendly_random_id;
+pub mod logging;
 pub mod tui_core;
-pub mod utils;
 
 // Re-export.
 pub use calc_str_len::*;
 pub use common::*;
-pub use console_log_impl::{color_text_default_styles::*, *};
+pub use friendly_random_id::*;
+pub use logging::*;
 pub use tui_core::*;
-pub use utils::*;
 
 // Tests.
 mod test_decl_macros;
