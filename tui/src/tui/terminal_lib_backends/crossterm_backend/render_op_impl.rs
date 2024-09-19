@@ -406,7 +406,7 @@ macro_rules! exec_render_op {
             );
             call_if_true! {
               DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-              debug!(ERROR_RAW &msg, logging_err)
+              console_log!(ERROR_RAW &msg, logging_err)
             };
         }
     }};

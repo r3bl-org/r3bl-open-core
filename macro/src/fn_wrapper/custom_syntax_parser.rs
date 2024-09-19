@@ -24,7 +24,7 @@
 use core::panic;
 
 use quote::{quote, ToTokens};
-use r3bl_rs_utils_core::debug;
+use r3bl_rs_utils_core::console_log;
 use syn::{parse::{Parse, ParseBuffer, ParseStream},
           parse2,
           parse_macro_input,
