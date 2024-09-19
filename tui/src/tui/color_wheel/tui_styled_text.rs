@@ -668,7 +668,7 @@ mod tests {
             let mut pipeline = render_pipeline!();
             pipeline.push(ZOrder::Normal, render_ops);
 
-            debug!(pipeline);
+            console_log!(pipeline);
             assert_eq2!(pipeline.len(), 1);
 
             let set: &Vec<RenderOps> = pipeline.get(&ZOrder::Normal).unwrap();

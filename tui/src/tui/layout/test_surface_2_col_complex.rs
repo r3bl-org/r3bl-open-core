@@ -125,7 +125,7 @@ mod tests {
                 assert_eq2!(layout_item.origin_pos, position!(col_index:0, row_index:0));
                 assert_eq2!(layout_item.bounds_size, size!(col_count:250, row_count:500));
 
-                debug!(layout_item);
+                console_log!(layout_item);
 
                 assert_eq2!(
                     layout_item.style_adjusted_origin_pos,

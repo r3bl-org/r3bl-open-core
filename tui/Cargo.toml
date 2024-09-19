@@ -76,7 +76,10 @@ copypasta-ext = "0.4.4"
 size-of = "0.1.5"
 
 [dev-dependencies]
-# Async readline for running examples.
+# - Async readline for running examples, with the source code checked out for
+#   r3bl-open-core repo.
+# - This is not a dependency for the library, and is not used when the library is
+#   published or used as a dependency.
 r3bl_terminal_async = { path = "../terminal_async" }
 
 # For assert_eq2! macro.

@@ -20,7 +20,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
 use r3bl_rs_utils::utils::LazyMemoValues;
-use r3bl_rs_utils_core::{assert_eq2, debug};
+use r3bl_rs_utils_core::{assert_eq2, console_log};
 
 #[test]
 fn test_lazy() {
@@ -29,8 +29,8 @@ fn test_lazy() {
     let mut a_variable = 123;
     let mut a_flag = false;
 
-    debug!(a_variable);
-    debug!(a_flag);
+    console_log!(a_variable);
+    console_log!(a_flag);
 
     let mut generate_value_fn = LazyMemoValues::new(|it| {
         arc_atomic_count.fetch_add(1, SeqCst);

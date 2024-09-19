@@ -1,5 +1,4 @@
 # Changelog
-<a id="markdown-changelog" name="changelog"></a>
 
 <!-- TOC -->
 
@@ -46,6 +45,7 @@
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
+  - [next release](#next-release)
   - [v0.9.16 2024-09-12](#v0916-2024-09-12)
   - [v0.9.15 2024-09-07](#v0915-2024-09-07)
   - [v0.9.14 2024-08-13](#v0914-2024-08-13)
@@ -116,10 +116,8 @@
 <!-- /TOC -->
 
 ## `r3bl-cmdr`
-<a id="markdown-r3bl-cmdr" name="r3bl-cmdr"></a>
 
 ### v0.0.16 (2024-09-13)
-<a id="markdown-v0.0.16-2024-09-13" name="v0.0.16-2024-09-13"></a>
 
 - Updated:
   - Minor fix to documentation in `lib.rs` and `README.md` to use GIF instead of MP4 files
@@ -127,7 +125,6 @@
     or github.com.
 
 ### v0.0.15 (2024-09-12)
-<a id="markdown-v0.0.15-2024-09-12" name="v0.0.15-2024-09-12"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
@@ -136,7 +133,6 @@
     backend `r3bl-base`.
 
 ### v0.0.14 (2024-06-29)
-<a id="markdown-v0.0.14-2024-06-29" name="v0.0.14-2024-06-29"></a>
 
 The most significant change in this release is the use of the latest release of the
 Markdown parser from `r3bl_tui`, which improves the editing experience of writing each
@@ -161,7 +157,6 @@ in a text editor.
     to their latest versions.
 
 ### v0.0.13 (2024-05-20)
-<a id="markdown-v0.0.13-2024-05-20" name="v0.0.13-2024-05-20"></a>
 
 - Changed:
   - `Cargo.toml` now points to the correct documentation link on docs.rs.
@@ -172,7 +167,6 @@ in a text editor.
     backend `r3bl-base`.
 
 ### v0.0.12 (2024-05-12)
-<a id="markdown-v0.0.12-2024-05-12" name="v0.0.12-2024-05-12"></a>
 
 - Changed:
   - Use the latest deps of all the `r3bl_*` crates to fix breaking build when `cargo
@@ -188,7 +182,6 @@ in a text editor.
     deployed backend `r3bl-base`.
 
 ### v0.0.11 (2024-01-14)
-<a id="markdown-v0.0.11-2024-01-14" name="v0.0.11-2024-01-14"></a>
 
 - Added:
   - `edi`, `giti`: Add checks to see if binary needs to be upgraded.
@@ -202,7 +195,6 @@ in a text editor.
   - Add `reedline` version `0.28.0` dependency in `Cargo.toml`.
 
 ### v0.0.10 (2024-01-02)
-<a id="markdown-v0.0.10-2024-01-02" name="v0.0.10-2024-01-02"></a>
 
 - Fixed:
   - Refactor & clean up the analytics client code.
@@ -211,7 +203,6 @@ in a text editor.
   - Use the latest `r3bl_rs_utils_core` version `0.9.11`.
 
 ### v0.0.9 (2023-12-31)
-<a id="markdown-v0.0.9-2023-12-31" name="v0.0.9-2023-12-31"></a>
 
 - Added:
   - Anonymized analytics reporting to prioritize feature development for `edi` and `giti`.
@@ -224,7 +215,6 @@ in a text editor.
     this repo.
 
 ### v0.0.8 (2023-12-22)
-<a id="markdown-v0.0.8-2023-12-22" name="v0.0.8-2023-12-22"></a>
 
 - Changed:
   - Rename `run.nu` to `run` and update `README.md` and `lib.rs` to reflect this change.
@@ -245,17 +235,14 @@ in a text editor.
   - Add binary target `rc` aka `r3bl-cmdr`.
 
 ## `r3bl_tuify`
-<a id="markdown-r3bl_tuify" name="r3bl_tuify"></a>
 
 ### v0.1.27 (2024-09-12)
-<a id="markdown-v0.1.27-2024-09-12" name="v0.1.27-2024-09-12"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
   - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.1.26 (2024-04-15)
-<a id="markdown-v0.1.26-2024-04-15" name="v0.1.26-2024-04-15"></a>
 
 - Updated:
   - Make `clip_string_to_width_with_ellipsis` pub so that other crates can use it (eg:
@@ -267,7 +254,6 @@ in a text editor.
     version `0.9.9`.
 
 ### v0.1.25 (2024-01-14)
-<a id="markdown-v0.1.25-2024-01-14" name="v0.1.25-2024-01-14"></a>
 
 - Updated:
   - Dependency updated `reedline` version `0.28.0`, `r3bl_rs_utils_core` version `0.9.12`.
@@ -275,7 +261,6 @@ in a text editor.
   - Add `tuify/src/constants.rs` with color constants.
 
 ### v0.1.24 (2023-12-31)
-<a id="markdown-v0.1.24-2023-12-31" name="v0.1.24-2023-12-31"></a>
 
 - Changed:
   - Rename `run.nu` to `run`. This simplifies commands to run it, eg: `nu run build`, or
@@ -296,13 +281,11 @@ in a text editor.
     width of the terminal window that is used.
 
 ### v0.1.23 (2023-12-22)
-<a id="markdown-v0.1.23-2023-12-22" name="v0.1.23-2023-12-22"></a>
 
 - Updated:
   - Update dependency on `r3bl_rs_utils_core` to `0.9.10`.
 
 ### v0.1.22 (2023-12-20)
-<a id="markdown-v0.1.22-2023-12-20" name="v0.1.22-2023-12-20"></a>
 
 - Updated:
   - Update dependency on `reedline` crate to `0.27.1`.
@@ -324,19 +307,16 @@ in a text editor.
     `stdout`).
 
 ### v0.1.21 (2023-10-21)
-<a id="markdown-v0.1.21-2023-10-21" name="v0.1.21-2023-10-21"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions.
 
 ### v0.1.20 (2023-10-21)
-<a id="markdown-v0.1.20-2023-10-21" name="v0.1.20-2023-10-21"></a>
 
 - Updated:
   - Bug fix: <https://github.com/r3bl-org/r3bl-open-core/issues/170>
 
 ### v0.1.19 (2023-10-17)
-<a id="markdown-v0.1.19-2023-10-17" name="v0.1.19-2023-10-17"></a>
 
 - Updated:
   - Use the latest `r3bl_rs_utils_core` crate due to
@@ -344,7 +324,6 @@ in a text editor.
     maintained anymore.
 
 ### v0.1.18 (2023-10-17)
-<a id="markdown-v0.1.18-2023-10-17" name="v0.1.18-2023-10-17"></a>
 
 - Updated:
   - Use the latest `r3bl_rs_utils_core` crate due to
@@ -352,24 +331,20 @@ in a text editor.
     maintained anymore.
 
 ### v0.1.17 (2023-10-14)
-<a id="markdown-v0.1.17-2023-10-14" name="v0.1.17-2023-10-14"></a>
 
 - Updated:
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
     `r3bl_rs_utils` repo workspace as `simple_logger`).
 
 ## `r3bl_tui`
-<a id="markdown-r3bl_tui" name="r3bl_tui"></a>
 
 ### v0.5.9 (2024-09-12)
-<a id="markdown-v0.5.9-2024-09-12" name="v0.5.9-2024-09-12"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
   - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.5.8 (2024-09-07)
-<a id="markdown-v0.5.8-2024-09-07" name="v0.5.8-2024-09-07"></a>
 
 - Removed:
   - Remove `get-size` crate from `Cargo.toml`. This was causing some [issues with
@@ -387,7 +362,6 @@ in a text editor.
   - Use the latest deps for all crates in `Cargo.toml` and `Cargo.lock`.
 
 ### v0.5.7 (2024-08-13)
-<a id="markdown-v0.5.7-2024-08-13" name="v0.5.7-2024-08-13"></a>
 
 The biggest change in this release is rewriting the example runner using the latest
 `r3bl_terminal_async` crate, and dropping the use of `reedline` crate (which is no longer
@@ -410,7 +384,6 @@ also supports pause and resume for spinners, along with many other features.
     [issue](https://github.com/r3bl-org/r3bl-open-core/issues/331).
 
 ### v0.5.6 (2024-06-29)
-<a id="markdown-v0.5.6-2024-06-29" name="v0.5.6-2024-06-29"></a>
 
 The biggest change in this release is the rewrite of the Markdown parser. This was done
 because the previous parser was not able to handle many corner cases in parsing complex
@@ -429,13 +402,11 @@ exhaustively tested and is able to handle many more corner cases.
   - Make minor refactors and cleanups.
 
 ### v0.5.5 (2024-05-20)
-<a id="markdown-v0.5.5-2024-05-20" name="v0.5.5-2024-05-20"></a>
 
 - Updated:
   - Fix typos in `README.md`.
 
 ### v0.5.4 (2024-05-20)
-<a id="markdown-v0.5.4-2024-05-20" name="v0.5.4-2024-05-20"></a>
 
 - Updated:
   - `README.md`
@@ -445,7 +416,6 @@ exhaustively tested and is able to handle many more corner cases.
       `lib.rs` to match.
 
 ### v0.5.3 (2024-04-15)
-<a id="markdown-v0.5.3-2024-04-15" name="v0.5.3-2024-04-15"></a>
 
 - Updated:
   - Dependency changes inherited from `r3bl_rs_utils_core` version `0.9.13`, and
@@ -453,13 +423,11 @@ exhaustively tested and is able to handle many more corner cases.
   - Lots of clippy fixes.
 
 ### v0.5.2 (2024-01-14)
-<a id="markdown-v0.5.2-2024-01-14" name="v0.5.2-2024-01-14"></a>
 
 - Updated:
   - Dependency updated `reedline` version `0.28.0`, `r3bl_rs_utils_core` version `0.9.12`.
 
 ### v0.5.1 (2024-01-09)
-<a id="markdown-v0.5.1-2024-01-09" name="v0.5.1-2024-01-09"></a>
 
 - Added:
   - Simple function `ColorWheel::lolcat_into_string()` that receives a string and
@@ -468,7 +436,6 @@ exhaustively tested and is able to handle many more corner cases.
     to use.
 
 ### v0.5.0 (2023-12-31)
-<a id="markdown-v0.5.0-2023-12-31" name="v0.5.0-2023-12-31"></a>
 
 - Changed:
   - Rename `run.nu` to `run` in the `tui` folder. This simplifies commands to run it, eg:
@@ -496,7 +463,6 @@ exhaustively tested and is able to handle many more corner cases.
   - Add tests to editor component for clipboard service.
 
 ### v0.4.0 (2023-12-22)
-<a id="markdown-v0.4.0-2023-12-22" name="v0.4.0-2023-12-22"></a>
 
 - Changed:
   - Drop the use of Redux for state management entirely. Replace this with mutable state.
@@ -543,7 +509,6 @@ exhaustively tested and is able to handle many more corner cases.
   - Update dependency on `r3bl_rs_utils_macro` to `0.9.8`.
 
 ### v0.3.10 (2023-10-29)
-<a id="markdown-v0.3.10-2023-10-29" name="v0.3.10-2023-10-29"></a>
 
 - Changed:
   - Replaced `arboard` crate with `copypasta-ext`.
@@ -556,7 +521,6 @@ exhaustively tested and is able to handle many more corner cases.
   - Support for select, copy, cut, paste, and delete have been added to the editor component.
 
 ### v0.3.9 (2023-10-29)
-<a id="markdown-v0.3.9-2023-10-29" name="v0.3.9-2023-10-29"></a>
 
 - Changed:
   - Dropped support for `clipboard` crate. Used `arboard` instead which is actively
@@ -566,7 +530,6 @@ exhaustively tested and is able to handle many more corner cases.
     <https://github.com/r3bl-org/r3bl-open-core/commit/3ba4ff821373361bedcd0b7185a4b6ba15b745c8>
 
 ### v0.3.7 (2023-10-21)
-<a id="markdown-v0.3.7-2023-10-21" name="v0.3.7-2023-10-21"></a>
 
 - Changed:
   - Dropped support for `palette` crate. Use `colorgrad` instead. More info here:
@@ -576,7 +539,6 @@ exhaustively tested and is able to handle many more corner cases.
   - Upgraded all deps to their latest versions.
 
 ### v0.3.6 (2023-10-17)
-<a id="markdown-v0.3.6-2023-10-17" name="v0.3.6-2023-10-17"></a>
 
 - Changed:
   - Switched to using `r3bl_ansi_color` to detect terminal color capabilities and color
@@ -591,7 +553,6 @@ exhaustively tested and is able to handle many more corner cases.
   - Needless dependencies on crates that are not used.
 
 ### v0.3.5 (2023-10-14)
-<a id="markdown-v0.3.5-2023-10-14" name="v0.3.5-2023-10-14"></a>
 
 - Added:
   - Support for selecting text using keyboard.
@@ -606,7 +567,6 @@ exhaustively tested and is able to handle many more corner cases.
       main thread that it should break out of its infinite loop.
 
 ### v0.3.3 (2023-04-20)
-<a id="markdown-v0.3.3-2023-04-20" name="v0.3.3-2023-04-20"></a>
 
 
 - Added:
@@ -644,14 +604,12 @@ exhaustively tested and is able to handle many more corner cases.
     using fg and bg colors to the console).
 
 ### v0.3.2 (2023-03-06)
-<a id="markdown-v0.3.2-2023-03-06" name="v0.3.2-2023-03-06"></a>
 
 
 - Fixed:
   - Bug when trying to render an app that's taller than the offscreen buffer / terminal height
 
 ### v0.3.1 (2023-03-06)
-<a id="markdown-v0.3.1-2023-03-06" name="v0.3.1-2023-03-06"></a>
 
 
 - Added:
@@ -674,17 +632,22 @@ exhaustively tested and is able to handle many more corner cases.
     increments the state every second and the gradient color wheel is updated accordingly.
 
 ## `r3bl_rs_utils_core`
-<a id="markdown-r3bl_rs_utils_core" name="r3bl_rs_utils_core"></a>
+
+### next release
+
+- Changed:
+   - Renamed the `debug!` macro, which is confusing, since it clashes with logging, to
+     `console_log!`. This macro is used in many places in the codebase for quick formatted
+     output to console (via `eprintln!`). The code to format the output is in the
+     `console_log_impl.rs` file.
 
 ### v0.9.16 (2024-09-12)
-<a id="markdown-v0.9.16-2024-09-12" name="v0.9.16-2024-09-12"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
   - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.9.15 (2024-09-07)
-<a id="markdown-v0.9.15-2024-09-07" name="v0.9.15-2024-09-07"></a>
 
 - Removed:
   - Remove `get-size` crate from `Cargo.toml`. This was causing some [issues with
@@ -703,7 +666,6 @@ exhaustively tested and is able to handle many more corner cases.
   - Use the latest deps for all crates in `Cargo.toml` and `Cargo.lock`.
 
 ### v0.9.14 (2024-08-13)
-<a id="markdown-v0.9.14-2024-08-13" name="v0.9.14-2024-08-13"></a>
 
 The main additions to this release are the `StringLength` enum, the `timed!()` macro, and
 the `ok!()` macro.
@@ -724,7 +686,6 @@ the `ok!()` macro.
     related to this release.
 
 ### v0.9.13 (2024-04-15)
-<a id="markdown-v0.9.13-2024-04-15" name="v0.9.13-2024-04-15"></a>
 
 - Changed:
   - Removed `syntect` dep.
@@ -732,20 +693,17 @@ the `ok!()` macro.
   - Lots of cargo clippy fixes.
 
 ### v0.9.12 (2024-01-07)
-<a id="markdown-v0.9.12-2024-01-07" name="v0.9.12-2024-01-07"></a>
 
 - Added:
   - Add `generate_friendly_random_id()` to generate human readable and friendly IDs.
 
 ### v0.9.11 (2024-01-02)
-<a id="markdown-v0.9.11-2024-01-02" name="v0.9.11-2024-01-02"></a>
 
 - Added:
   - Add more variants to the `CommonErrorType` enum: `ConfigFolderCountNotBeCreated`,
     `ConfigFolderPathCouldNotBeGenerated`.
 
 ### v0.9.10 (2023-12-22)
-<a id="markdown-v0.9.10-2023-12-22" name="v0.9.10-2023-12-22"></a>
 
 - Updated:
   - Upgrade all the deps to their latest versions: `serde` version `1.0.190`. Propagate
@@ -753,19 +711,16 @@ the `ok!()` macro.
     numbers: e.g. `tuify`, `macro`, `tui`, `cmdr`.
 
 ### v0.9.9 (2023-10-21)
-<a id="markdown-v0.9.9-2023-10-21" name="v0.9.9-2023-10-21"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions.
 
 ### v0.9.8 (2023-10-21)
-<a id="markdown-v0.9.8-2023-10-21" name="v0.9.8-2023-10-21"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions.
 
 ### v0.9.7 (2023-10-17)
-<a id="markdown-v0.9.7-2023-10-17" name="v0.9.7-2023-10-17"></a>
 
 - Updated:
   - Dependency on `simple_logger` updated due to this security advisory
@@ -773,7 +728,6 @@ the `ok!()` macro.
     drop `ansi_term`.
 
 ### v0.9.6 (2023-10-17)
-<a id="markdown-v0.9.6-2023-10-17" name="v0.9.6-2023-10-17"></a>
 
 - Removed:
   - Dependency on `ansi_term` is dropped due to this security advisory
@@ -785,7 +739,6 @@ the `ok!()` macro.
     facilities from the `r3bl_rs_utils_core` crate. Update docs there too.
 
 ### v0.9.5 (2023-10-14)
-<a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
 
 - Updated:
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
@@ -797,7 +750,6 @@ the `ok!()` macro.
     be downgraded.
 
 ### v0.9.1 (2023-03-06)
-<a id="markdown-v0.9.1-2023-03-06" name="v0.9.1-2023-03-06"></a>
 
 - Added:
   - First changelog entry.
@@ -808,52 +760,43 @@ the `ok!()` macro.
     the door for future support for GUI app (not just terminal emulators).
 
 ## `r3bl_analytics_schema`
-<a id="markdown-r3bl_analytics_schema" name="r3bl_analytics_schema"></a>
 
 ### v0.0.2 (2024-09-12)
-<a id="markdown-v0.0.2-2024-09-12" name="v0.0.2-2024-09-12"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
   - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.0.1 (2023-12-31)
-<a id="markdown-v0.0.1-2023-12-31" name="v0.0.1-2023-12-31"></a>
 
 - Added:
   - Initial support structs for use by `r3bl-base` and `r3bl-cmdr`.
 
 ## `r3bl_rs_utils_macro`
-<a id="markdown-r3bl_rs_utils_macro" name="r3bl_rs_utils_macro"></a>
 
 ### v0.9.10 (2024-09-12)
-<a id="markdown-v0.9.10-2024-09-12" name="v0.9.10-2024-09-12"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
   - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.9.9 (2024-04-16)
-<a id="markdown-v0.9.9-2024-04-16" name="v0.9.9-2024-04-16"></a>
 
 - Updated:
   - Use the latest `r3bl_rs_utils_core` version `0.9.13`.
 
 ### v0.9.8 (2023-12-22)
-<a id="markdown-v0.9.8-2023-12-22" name="v0.9.8-2023-12-22"></a>
 
 - Updated:
   - Use latest `r3bl_rs_utils_core` version `0.9.10`. Remove unused dependencies, and
     update to the latest ones.
 
 ### v0.9.7 (2023-10-21)
-<a id="markdown-v0.9.7-2023-10-21" name="v0.9.7-2023-10-21"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions.
 
 ### v0.9.6 (2023-10-17)
-<a id="markdown-v0.9.6-2023-10-17" name="v0.9.6-2023-10-17"></a>
 
 - Updated:
   - Update `r3bl_rs_utils_core` crate due to
@@ -861,24 +804,20 @@ the `ok!()` macro.
     maintained anymore.
 
 ### v0.9.5 (2023-10-14)
-<a id="markdown-v0.9.5-2023-10-14" name="v0.9.5-2023-10-14"></a>
 
 - Updated:
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
     `r3bl_rs_utils` repo workspace as `simple_logger`).
 
 ## `r3bl_test_fixtures`
-<a id="markdown-r3bl_test_fixtures" name="r3bl_test_fixtures"></a>
 
 ### v0.0.3 (2024-09-12)
-<a id="markdown-v0.0.3-2024-09-12" name="v0.0.3-2024-09-12"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
   - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.0.2 (2024-07-13)
-<a id="markdown-v0.0.2-2024-07-13" name="v0.0.2-2024-07-13"></a>
 
 This release adds a new function to create an async stream that yields results (from a
 vec) at a specified interval. This is useful for testing async functions that need to
@@ -898,7 +837,6 @@ simulate a stream of events with a delay.
     about it.
 
 ### v0.0.1 (2024-07-12)
-<a id="markdown-v0.0.1-2024-07-12" name="v0.0.1-2024-07-12"></a>
 
 This is the first release of this crate. It is a top level crate in the `r3bl-open-core`
 that is meant to hold all the test fixtures for all the other crates in this monorepo. It
@@ -915,17 +853,14 @@ links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures)
     crate, where they were gestated, before being graduated for use by the entire monorepo.
 
 ## `r3bl_terminal_async`
-<a id="markdown-r3bl_terminal_async" name="r3bl_terminal_async"></a>
 
 ### v0.5.7 (2024-09-12)
-<a id="markdown-v0.5.7-2024-09-12" name="v0.5.7-2024-09-12"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
   - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.5.6 (2024-08-13)
-<a id="markdown-v0.5.6-2024-08-13" name="v0.5.6-2024-08-13"></a>
 
 The biggest change in this release is complete support for pause and resume. Now when the
 output is paused, input is also paused, with the exception of allowing <kbd>Ctrl+C</kbd>
@@ -968,7 +903,6 @@ related to this release.
     raw mode entry and exit).
 
 ### v0.5.5 (2024-07-13)
-<a id="markdown-v0.5.5-2024-07-13" name="v0.5.5-2024-07-13"></a>
 
 This minor release just updates the `r3bl_test_fixtures` crate to version `0.0.2` which
 adds a new function to create an async stream that yields results (from a vec) at a
@@ -978,7 +912,6 @@ specified interval.
   - Bump dependency on `r3bl_test_fixtures` to version `0.0.2`.
 
 ### v0.5.4 (2024-07-12)
-<a id="markdown-v0.5.4-2024-07-12" name="v0.5.4-2024-07-12"></a>
 
 This release migrates the test fixtures out of this crate and into a new top level crate
 in the `r3bl-open-core` monorepo called `r3bl_test_fixtures`. This is to make it
@@ -998,7 +931,6 @@ to use them. Here are all the links for this release:
   - Add `r3bl_test_fixtures` version `0.0.1` as a `dev-dependency` to this crate.
 
 ### v0.5.3 (2024-05-22)
-<a id="markdown-v0.5.3-2024-05-22" name="v0.5.3-2024-05-22"></a>
 
 This release adds a new module for checking port availability on a host, and adds a new
 function to clean up the prompt when the CLI exits. It also adds a new module to allow for
@@ -1032,7 +964,6 @@ version of Jaeger and OpenTelemetry.
     326](https://github.com/r3bl-org/r3bl-open-core/pull/326).
 
 ### v0.5.2 (2020-05-06)
-<a id="markdown-v0.5.2-2020-05-06" name="v0.5.2-2020-05-06"></a>
 
 - Changed:
    - Rewrite the `tracing_setup.rs` file so that it is easier to understand and maintain.
@@ -1045,7 +976,6 @@ version of Jaeger and OpenTelemetry.
      as inspiration for this change.
 
 ### v0.5.1 (2024-04-28)
-<a id="markdown-v0.5.1-2024-04-28" name="v0.5.1-2024-04-28"></a>
 
 - Changed:
   - Simplify `SpinnerRenderer` so that it is no longer a trait. Replace with plain
@@ -1065,7 +995,6 @@ version of Jaeger and OpenTelemetry.
     instance of it.
 
 ### v0.5.0 (2024-04-22)
-<a id="markdown-v0.5.0-2024-04-22" name="v0.5.0-2024-04-22"></a>
 
 - Changed:
   - Refactor `TracingConfig`` with better expression of display preference:
@@ -1078,7 +1007,6 @@ version of Jaeger and OpenTelemetry.
     and file.
 
 ### v0.4.0 (2024-04-21)
-<a id="markdown-v0.4.0-2024-04-21" name="v0.4.0-2024-04-21"></a>
 
 - Changed:
   - Remove use of `TokioMutex`. There are some dangers to being "cancel safe" when using
@@ -1092,7 +1020,6 @@ version of Jaeger and OpenTelemetry.
     potential of "cancel safe" errors cropping up!
 
 ### v0.3.1 (2024-04-17)
-<a id="markdown-v0.3.1-2024-04-17" name="v0.3.1-2024-04-17"></a>
 
 - Updated:
   - Minor refactoring to remove the use of `JoinHandle::abort()` and replace it with a
@@ -1101,7 +1028,6 @@ version of Jaeger and OpenTelemetry.
     `spinner.rs` and `readline.rs`. The public API remains exactly the same.
 
 ### v0.3.0 (2024-04-15)
-<a id="markdown-v0.3.0-2024-04-15" name="v0.3.0-2024-04-15"></a>
 
 This is the first release of this crate.
 
@@ -1113,23 +1039,19 @@ This is the first release of this crate.
     powerful (multi) line editor and prompt.
 
 ## `r3bl_ansi_color`
-<a id="markdown-r3bl_ansi_color" name="r3bl_ansi_color"></a>
 
 ### v0.6.10 (2024-09-12)
-<a id="markdown-v0.6.10-2024-09-12" name="v0.6.10-2024-09-12"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
   - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.6.9 (2023-10-21)
-<a id="markdown-v0.6.9-2023-10-21" name="v0.6.9-2023-10-21"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions.
 
 ### v0.6.8 (2023-10-16)
-<a id="markdown-v0.6.8-2023-10-16" name="v0.6.8-2023-10-16"></a>
 
 - Added:
   - Support for `Grayscale` color output. This is in preparation of making the color
@@ -1141,7 +1063,6 @@ This is the first release of this crate.
     `AtomicI8`.
 
 ### v0.6.7 (2023-09-12)
-<a id="markdown-v0.6.7-2023-09-12" name="v0.6.7-2023-09-12"></a>
 
 - Added:
   - Tests.
@@ -1150,29 +1071,24 @@ This is the first release of this crate.
   - `justfile` is now replaced with `nu` script `run.nu`.
 
 ## `r3bl_simple_logger`
-<a id="markdown-r3bl_simple_logger" name="r3bl_simple_logger"></a>
 
 ### v0.1.4 (2024-09-12)
-<a id="markdown-v0.1.4-2024-09-12" name="v0.1.4-2024-09-12"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
   - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.1.3 (2023-10-21)
-<a id="markdown-v0.1.3-2023-10-21" name="v0.1.3-2023-10-21"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions.
 
 ### v0.1.2 (2023-10-21)
-<a id="markdown-v0.1.2-2023-10-21" name="v0.1.2-2023-10-21"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions.
 
 ### v0.1.1 (2023-10-17)
-<a id="markdown-v0.1.1-2023-10-17" name="v0.1.1-2023-10-17"></a>
 
 - Replaced:
   - Dependency on `ansi_term` is dropped due to this security advisory
@@ -1184,7 +1100,6 @@ This is the first release of this crate.
     facilities from the `r3bl_rs_utils_core` crate. Update docs there too.
 
 ### v0.1.0 (2023-10-14)
-<a id="markdown-v0.1.0-2023-10-14" name="v0.1.0-2023-10-14"></a>
 
 - Added:
   - First changelog entry. This crate is a fork of the
@@ -1194,17 +1109,14 @@ This is the first release of this crate.
     [issue](https://github.com/r3bl-org/r3bl-open-core/issues/160).
 
 ## `r3bl_rs_utils_redux`
-<a id="markdown-r3bl_rs_utils_redux" name="r3bl_rs_utils_redux"></a>
 
 ### v0.2.8 (2024-09-12)
-<a id="markdown-v0.2.8-2024-09-12" name="v0.2.8-2024-09-12"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
   - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.2.7 (2024-09-07)
-<a id="markdown-v0.2.7-2024-09-07" name="v0.2.7-2024-09-07"></a>
 
 - Removed:
   - Remove `get-size` crate from `Cargo.toml`. This was causing some [issues with
@@ -1214,13 +1126,11 @@ This is the first release of this crate.
   - Use the latest deps for all crates in `Cargo.toml` and `Cargo.lock`.
 
 ### v0.2.6 (2023-10-21)
-<a id="markdown-v0.2.6-2023-10-21" name="v0.2.6-2023-10-21"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions.
 
 ### v0.2.5 (2023-10-17)
-<a id="markdown-v0.2.5-2023-10-17" name="v0.2.5-2023-10-17"></a>
 
 - Updated:
   - Dependency on `r3bl_rs_utils_core` & `r3bl_rs_utils_macro` crates due to
@@ -1228,7 +1138,6 @@ This is the first release of this crate.
     maintained anymore.
 
 ### v0.2.4 (2023-10-14)
-<a id="markdown-v0.2.4-2023-10-14" name="v0.2.4-2023-10-14"></a>
 
 - Updated:
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
@@ -1240,17 +1149,14 @@ This is the first release of this crate.
   - Needless dependencies on crates that are not used.
 
 ## `r3bl_rs_utils`
-<a id="markdown-r3bl_rs_utils" name="r3bl_rs_utils"></a>
 
 ### v0.9.16 (2024-09-12)
-<a id="markdown-v0.9.16-2024-09-12" name="v0.9.16-2024-09-12"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
   - Improve docs in `lib.rs` and `README.md`.
 
 ### v0.9.15 (2023-12-22)
-<a id="markdown-v0.9.15-2023-12-22" name="v0.9.15-2023-12-22"></a>
 
 - Updated:
   - Add single dependency on `r3bl_rs_utils_core` version `0.9.10`.
@@ -1266,37 +1172,31 @@ This is the first release of this crate.
     workspace remains to link all the contained crates together for efficient builds.
 
 ### v0.9.14 (2023-10-29)
-<a id="markdown-v0.9.14-2023-10-29" name="v0.9.14-2023-10-29"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions (including `r3bl_tui` w/ latest copy, paste,
     cut, delete support).
 
 ### v0.9.13 (2023-10-29)
-<a id="markdown-v0.9.13-2023-10-29" name="v0.9.13-2023-10-29"></a>
 
 - Updated:
   - Upgraded `r3bl_tui` to latest version.
 
 ### v0.9.12 (2023-10-29)
-<a id="markdown-v0.9.12-2023-10-29" name="v0.9.12-2023-10-29"></a>
 
 - Forgot to update the r3bl_tui dependency in Cargo.toml.
 
 ### v0.9.11 (2023-10-28)
-<a id="markdown-v0.9.11-2023-10-28" name="v0.9.11-2023-10-28"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions.
 
 ### v0.9.10 (2023-10-21)
-<a id="markdown-v0.9.10-2023-10-21" name="v0.9.10-2023-10-21"></a>
 
 - Updated:
   - Upgrade all deps to their latest versions.
 
 ### v0.9.9
-<a id="markdown-v0.9.9" name="v0.9.9"></a>
 
 - Changes:
   - Use latest dependencies on the `r3bl_rs_utils` repo. Lots of needless dependencies
@@ -1306,7 +1206,6 @@ This is the first release of this crate.
 
 
 ## More info on changelogs
-<a id="markdown-more-info-on-changelogs" name="more-info-on-changelogs"></a>
 
 - https://keepachangelog.com/en/1.0.0/
 - https://co-pilot.dev/changelog
