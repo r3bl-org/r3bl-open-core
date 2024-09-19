@@ -22,7 +22,8 @@ use std::{io::{stderr, Write},
 
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
-use r3bl_terminal_async::{tracing_setup,
+use r3bl_terminal_async::{tracing_logging::tracing_config::TracingConfig,
+                          tracing_setup,
                           DisplayPreference,
                           Readline,
                           ReadlineEvent,
@@ -30,8 +31,7 @@ use r3bl_terminal_async::{tracing_setup,
                           Spinner,
                           SpinnerStyle,
                           StdMutex,
-                          TerminalAsync,
-                          TracingConfig};
+                          TerminalAsync};
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
 use tokio::{select, time::interval};
