@@ -432,11 +432,12 @@ pub use spinner_impl::*;
 pub use tracing_jaeger::*;
 pub use tracing_logging::*;
 
-// Type aliases.
+// External crates.
 use std::{collections::VecDeque, io::Error, pin::Pin, sync::Arc};
-
 use crossterm::event::Event;
 use futures_core::Stream;
+
+// Type aliases.
 
 pub type StdMutex<T> = std::sync::Mutex<T>;
 

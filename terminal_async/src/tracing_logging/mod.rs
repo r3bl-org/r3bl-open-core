@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2024 Nazmul Idris
+ *   Copyright (c) 2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,15 @@
  */
 
 // Attach sources.
+pub mod rolling_file_appender_impl;
+pub mod tracing_config;
 pub mod tracing_setup;
+pub mod writer_arg;
+pub mod writer_config;
 
 // Re-export.
+pub use rolling_file_appender_impl::*;
+pub use tracing_config::*;
 pub use tracing_setup::*;
+pub use writer_arg::*;
+pub use writer_config::*;
