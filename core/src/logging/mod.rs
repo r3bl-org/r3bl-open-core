@@ -16,11 +16,11 @@
  */
 
 // Attach.
-pub mod debug_file_logging;
-pub mod file_logging;
-pub mod friendly_random_id;
+pub mod console_log_impl;
+pub mod proper_logging_impl;
+pub mod simple_file_logging_impl;
 
 // Re-export.
-pub use debug_file_logging::*;
-pub use file_logging::*;
-pub use friendly_random_id::*;
+pub use console_log_impl::{color_text_default_styles::*, *};
+pub use proper_logging_impl::*;
+pub use simple_file_logging_impl::*;

@@ -62,6 +62,7 @@ niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
 
 ## Table of contents
 
+<!-- cspell:disable -->
 <!-- TOC -->
 
 - [Introduction](#introduction)
@@ -75,13 +76,14 @@ niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
   - [TerminalAsync::try_new, which is the main entry point for most use cases](#terminalasynctry_new-which-is-the-main-entry-point-for-most-use-cases)
   - [Readline overview please see the docs for this struct for details](#readline-overview-please-see-the-docs-for-this-struct-for-details)
   - [Spinner::try_start](#spinnertry_start)
-  - [tracing_setup::init](#tracing_setupinit)
+  - [init_tracing()](#init_tracing)
 - [Build this crate with Naz on YouTube](#build-this-crate-with-naz-on-youtube)
 - [Why another async readline crate?](#why-another-async-readline-crate)
   - [References for blocking and thread cancellation in Rust](#references-for-blocking-and-thread-cancellation-in-rust)
   - [Educational references for Linux TTY and async Rust](#educational-references-for-linux-tty-and-async-rust)
 
 <!-- /TOC -->
+<!-- cspell:enable -->
 
 ## Introduction
 
@@ -325,7 +327,7 @@ have ANSI escape sequences in them. Here's an example of this.
     Ok(())
 ```
 
-### [`tracing_setup::init()`]
+### [`init_tracing()`]
 
 This is a convenience method to setup Tokio [`tracing_subscriber`] with `stdout` as
 the output destination. This method also ensures that the [`SharedWriter`] is used for

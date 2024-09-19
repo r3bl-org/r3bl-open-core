@@ -126,6 +126,8 @@
     "stylesheet",
     "surrealdb",
     "syntect",
+    "tempdir",
+    "tempfile",
     "terminusdb",
     "thingbuf",
     "Tilix",

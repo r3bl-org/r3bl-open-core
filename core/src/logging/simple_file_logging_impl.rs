@@ -17,7 +17,13 @@
 
 use std::{fs::OpenOptions, io::Write, path::Path};
 
-pub fn debug_file_log(file_path: Option<&Path>, message: &str) {
+/// This is a simple function that logs a message to a file. This is meant to be used when
+/// there are no other logging facilities available.
+///
+/// # Arguments
+/// * `file_path` - The path to the file to log to. If `None`, the default path is `debug.log`.
+/// * `message` - The message to log.
+pub fn file_log(file_path: Option<&Path>, message: &str) {
     let file_path = file_path.unwrap_or(Path::new("debug.log"));
     let message = if message.ends_with('\n') {
         message.to_string()

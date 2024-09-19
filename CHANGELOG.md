@@ -74,7 +74,7 @@
   - [v0.0.2 2024-07-13](#v002-2024-07-13)
   - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_terminal_async](#r3bl_terminal_async)
-  - [next release](#next-release-1)
+  - [next release](#next-release)
   - [v0.5.7 2024-09-12](#v057-2024-09-12)
   - [v0.5.6 2024-08-13](#v056-2024-08-13)
   - [v0.5.5 2024-07-13](#v055-2024-07-13)
@@ -857,9 +857,28 @@ links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures)
 
 ### next release
 
+This is a major version upgrade and potentially a breaking change if you use the tracing
+modules in this crate.
+
+- Added:
+  - Add tests to ensure that the tracing module works as expected. This includes using the
+    `assert_cmd` trait to test the output of a test binary that is run as a subprocess.
+    Ensure that stdout and stderr are captured and can be tested for correctness. Also
+    ensure that `SharedWriter` works as expected. Also ensure that file log output works
+    as expected.
+
 - Changed:
   - Refactor the tracing and Jaeger related code into 2 separate modules. This is laying
     the groundwork for these modules to be moved into `r3bl_rs_utils_core` crate.
+    Radically simplify the tracing configuration design and init mechanisms, so they are
+    easy to understand, use, and maintain.
+
+- Deleted:
+  - Move the Jaeger tracing module to the `tcp-api-server` crate in the
+    `https://github.comnazmulidris/rust-scratch/` repo. This wasn't really used
+    anywhere else.
+  - Move the tracing module into the `core` folder (`r3bl_rs_utils_core` crate) in the
+    mono repo.
 
 ### v0.5.7 (2024-09-12)
 

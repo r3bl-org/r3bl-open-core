@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn test_strip_ansi_esc_seq_len_cache_speedup() {
-        /* cspell: disable-next-line */
+        /* cspell:disable-next-line */
         let input = "\u{1b}[31mfoo\u{1b}[0m";
         let memoized_len_map = &mut MemoizedLenMap::new();
 
