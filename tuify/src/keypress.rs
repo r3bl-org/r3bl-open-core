@@ -15,7 +15,13 @@
  *   limitations under the License.
  */
 
-use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+use crossterm::event::{read,
+                       Event,
+                       KeyCode,
+                       KeyEvent,
+                       KeyEventKind,
+                       KeyEventState,
+                       KeyModifiers};
 use r3bl_rs_utils_core::*;
 
 use crate::DEVELOPMENT_MODE;
@@ -40,9 +46,7 @@ pub enum KeyPress {
 
 pub struct CrosstermKeyPressReader {}
 impl KeyPressReader for CrosstermKeyPressReader {
-    fn read_key_press(&mut self) -> KeyPress {
-        read_key_press()
-    }
+    fn read_key_press(&mut self) -> KeyPress { read_key_press() }
 }
 
 fn read_key_press() -> KeyPress {
@@ -64,10 +68,12 @@ fn read_key_press_unix() -> KeyPress {
             });
 
             match event {
-                crossterm::event::Event::Resize(width, height) => KeyPress::Resize(Size {
-                    col_count: ch!(width),
-                    row_count: ch!(height),
-                }),
+                crossterm::event::Event::Resize(width, height) => {
+                    KeyPress::Resize(Size {
+                        col_count: ch!(width),
+                        row_count: ch!(height),
+                    })
+                }
                 crossterm::event::Event::Key(KeyEvent {
                     modifiers: KeyModifiers::CONTROL,
                     code: KeyCode::Char('c'),

@@ -15,13 +15,12 @@
  *   limitations under the License.
  */
 
+use std::{io::{Result, Write},
+          sync::Arc};
+
 use strip_ansi_escapes::strip;
 
 use super::*;
-use std::{
-    io::{Result, Write},
-    sync::Arc,
-};
 
 /// You can safely clone this struct, since it only contains an `Arc<StdMutex<Vec<u8>>>`. The
 /// inner `buffer` will not be cloned, just the [Arc] will be cloned.
@@ -39,9 +38,7 @@ impl Default for StdoutMock {
 }
 
 impl StdoutMock {
-    pub fn get_copy_of_buffer(&self) -> Vec<u8> {
-        self.buffer.lock().unwrap().clone()
-    }
+    pub fn get_copy_of_buffer(&self) -> Vec<u8> { self.buffer.lock().unwrap().clone() }
 
     pub fn get_copy_of_buffer_as_string(&self) -> String {
         let buffer_data = self.buffer.lock().unwrap();
@@ -61,9 +58,7 @@ impl Write for StdoutMock {
         Ok(buf.len())
     }
 
-    fn flush(&mut self) -> Result<()> {
-        Ok(())
-    }
+    fn flush(&mut self) -> Result<()> { Ok(()) }
 }
 
 #[tokio::test]
@@ -76,7 +71,10 @@ async fn test_stdout_mock_no_strip_ansi() {
     stdout_mock.write_all(normal_text.as_bytes()).unwrap();
     stdout_mock.flush().unwrap();
 
-    pretty_assertions::assert_eq!(stdout_mock.get_copy_of_buffer_as_string(), normal_text);
+    pretty_assertions::assert_eq!(
+        stdout_mock.get_copy_of_buffer_as_string(),
+        normal_text
+    );
     pretty_assertions::assert_eq!(
         stdout_mock_clone.get_copy_of_buffer_as_string(),
         normal_text

@@ -193,8 +193,9 @@
 //! }
 //! ```
 
-use futures_core::Stream;
 use std::pin::Pin;
+
+use futures_core::Stream;
 
 // Type aliases.
 pub type StdMutex<T> = std::sync::Mutex<T>;

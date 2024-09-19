@@ -19,10 +19,13 @@ use std::{io::Result, vec};
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
 use r3bl_rs_utils_core::*;
-use r3bl_tuify::{
-    components::style::StyleSheet, get_size, get_terminal_width, select_from_list,
-    select_from_list_with_multi_line_header, SelectionMode, DEVELOPMENT_MODE,
-};
+use r3bl_tuify::{components::style::StyleSheet,
+                 get_size,
+                 get_terminal_width,
+                 select_from_list,
+                 select_from_list_with_multi_line_header,
+                 SelectionMode,
+                 DEVELOPMENT_MODE};
 mod single_select_quiz_game;
 use single_select_quiz_game::main as single_select_quiz_game;
 
@@ -48,9 +51,12 @@ fn main() -> Result<()> {
         const MULTIPLE_SELECT_SINGLE_ITEM: &str = "Multiple select, single item";
         const MULTIPLE_SELECT_13_ITEMS_VPH_5: &str =
             "Multiple select, 13 items, viewport height = 5";
-        const MULTIPLE_SELECT_2_ITEMS_VPH_5: &str = "Multiple select, 2 items, viewport height = 5";
-        const SINGLE_SELECT_13_ITEMS_VPH_5: &str = "Single select, 13 items, viewport height = 5";
-        const SINGLE_SELECT_2_ITEMS_VPH_5: &str = "Single select, 2 items, viewport height = 5";
+        const MULTIPLE_SELECT_2_ITEMS_VPH_5: &str =
+            "Multiple select, 2 items, viewport height = 5";
+        const SINGLE_SELECT_13_ITEMS_VPH_5: &str =
+            "Single select, 13 items, viewport height = 5";
+        const SINGLE_SELECT_2_ITEMS_VPH_5: &str =
+            "Single select, 2 items, viewport height = 5";
         const SINGLE_SELECT_QUIZ_GAME: &str = "Single select, quiz game";
 
         // Add tuify to select which example to run.
