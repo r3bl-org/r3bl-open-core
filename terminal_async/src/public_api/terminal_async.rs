@@ -15,25 +15,28 @@
  *   limitations under the License.
  */
 
-use crate::{
-    CrosstermEventResult, PinnedInputStream, Readline, ReadlineEvent, SharedWriter, StdMutex,
-};
-use crossterm::{
-    cursor::MoveToColumn,
-    event::EventStream,
-    style::{Print, ResetColor, Stylize},
-    terminal::{Clear, ClearType},
-};
+use std::{io::{stdout, Write},
+          sync::Arc};
+
+use crossterm::{cursor::MoveToColumn,
+                event::EventStream,
+                style::{Print, ResetColor, Stylize},
+                terminal::{Clear, ClearType}};
 use futures_util::FutureExt;
 use miette::IntoDiagnostic;
-use r3bl_tuify::{
-    is_fully_uninteractive_terminal, is_stdin_piped, is_stdout_piped, StdinIsPipedResult,
-    StdoutIsPipedResult, TTYResult,
-};
-use std::{
-    io::{stdout, Write},
-    sync::Arc,
-};
+use r3bl_tuify::{is_fully_uninteractive_terminal,
+                 is_stdin_piped,
+                 is_stdout_piped,
+                 StdinIsPipedResult,
+                 StdoutIsPipedResult,
+                 TTYResult};
+
+use crate::{CrosstermEventResult,
+            PinnedInputStream,
+            Readline,
+            ReadlineEvent,
+            SharedWriter,
+            StdMutex};
 
 pub struct TerminalAsync {
     pub readline: Readline,
@@ -105,9 +108,7 @@ impl TerminalAsync {
         }))
     }
 
-    pub fn clone_shared_writer(&self) -> SharedWriter {
-        self.shared_writer.clone()
-    }
+    pub fn clone_shared_writer(&self) -> SharedWriter { self.shared_writer.clone() }
 
     /// Replacement for [std::io::Stdin::read_line()] (this is async and non blocking).
     pub async fn get_readline_event(&mut self) -> miette::Result<ReadlineEvent> {

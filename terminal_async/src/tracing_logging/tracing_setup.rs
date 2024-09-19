@@ -15,12 +15,15 @@
  *   limitations under the License.
  */
 
-use crate::SharedWriter;
 use std::{io, path::PathBuf, str::FromStr};
+
 use tracing_core::LevelFilter;
-use tracing_subscriber::{
-    layer::SubscriberExt, registry::LookupSpan, util::SubscriberInitExt, Layer,
-};
+use tracing_subscriber::{layer::SubscriberExt,
+                         registry::LookupSpan,
+                         util::SubscriberInitExt,
+                         Layer};
+
+use crate::SharedWriter;
 
 /// Fields:
 /// - `writers`: Vec<[WriterArg]> - Zero or more writers to use for
@@ -46,7 +49,8 @@ mod tracing_config_impl {
             Self {
                 writers: vec![WriterArg::File, WriterArg::Stdout],
                 level: tracing::Level::DEBUG,
-                tracing_log_file_path_and_prefix: "tracing_log_file_debug.log".to_string(),
+                tracing_log_file_path_and_prefix: "tracing_log_file_debug.log"
+                    .to_string(),
                 preferred_display,
             }
         }
@@ -154,23 +158,26 @@ pub mod writer_config_impl {
 
             // Configure the writer based on the desired log target, and return it.
             Ok(match self {
-                WriterConfig::DisplayAndFile | WriterConfig::Display => match preferred_display {
-                    DisplayPreference::Stdout => Some(Box::new(
-                        fmt_layer.with_writer(io::stdout).with_filter(level_filter),
-                    )),
-                    DisplayPreference::Stderr => Some(Box::new(
-                        fmt_layer.with_writer(io::stderr).with_filter(level_filter),
-                    )),
-                    DisplayPreference::SharedWriter(shared_writer) => {
-                        let tracing_writer =
-                            move || -> Box<dyn std::io::Write> { Box::new(shared_writer.clone()) };
-                        Some(Box::new(
-                            fmt_layer
-                                .with_writer(tracing_writer)
-                                .with_filter(level_filter),
-                        ))
+                WriterConfig::DisplayAndFile | WriterConfig::Display => {
+                    match preferred_display {
+                        DisplayPreference::Stdout => Some(Box::new(
+                            fmt_layer.with_writer(io::stdout).with_filter(level_filter),
+                        )),
+                        DisplayPreference::Stderr => Some(Box::new(
+                            fmt_layer.with_writer(io::stderr).with_filter(level_filter),
+                        )),
+                        DisplayPreference::SharedWriter(shared_writer) => {
+                            let tracing_writer = move || -> Box<dyn std::io::Write> {
+                                Box::new(shared_writer.clone())
+                            };
+                            Some(Box::new(
+                                fmt_layer
+                                    .with_writer(tracing_writer)
+                                    .with_filter(level_filter),
+                            ))
+                        }
                     }
-                },
+                }
                 _ => None,
             })
         }
@@ -206,14 +213,16 @@ pub mod writer_config_impl {
     }
 }
 
-/// Returns the layers. Once you have the layers, you can run the following:
-/// `init(..).map(|layers| tracing_subscriber::registry().with(layers).init());`
+/// Simply initialize the tracing system with the provided [TracingConfig].
 pub fn init(tracing_config: TracingConfig) -> miette::Result<()> {
     try_create_layers(tracing_config)
         .map(|layers| tracing_subscriber::registry().with(layers).init())
 }
 
-/// Returns the layers. Once you have the layers, you can run the following:
+/// Returns the layers. This does not initialize the tracing system. Don't forget to do
+/// this manually, by calling `init` on the returned layers.
+///
+/// For example, once you have the layers, you can run the following:
 /// `create_layers(..).map(|layers| tracing_subscriber::registry().with(layers).init());`
 pub fn try_create_layers(
     tracing_config: TracingConfig,
@@ -243,7 +252,10 @@ pub fn try_create_layers(
         // ``
 
         let _ = writer_config
-            .try_create_display_layer(level_filter, tracing_config.preferred_display.clone())?
+            .try_create_display_layer(
+                level_filter,
+                tracing_config.preferred_display.clone(),
+            )?
             .map(|layer| return_it.push(layer));
 
         let _ = writer_config

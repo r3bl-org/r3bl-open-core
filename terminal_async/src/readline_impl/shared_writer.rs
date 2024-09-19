@@ -15,10 +15,11 @@
  *   limitations under the License.
  */
 
+use std::io::{self, Write};
+
 use r3bl_rs_utils_core::ok;
 
 use crate::{LineStateControlSignal, Text};
-use std::io::{self, Write};
 
 /// Cloneable object that implements [`Write`] and allows for sending data to the terminal
 /// without messing up its associated [`crate::Readline`] instance.
@@ -43,7 +44,8 @@ pub struct SharedWriter {
 
     /// Sender end of the channel, the receiver end is in [`crate::Readline`], which does
     /// the actual printing to `stdout`.
-    pub line_state_control_channel_sender: tokio::sync::mpsc::Sender<LineStateControlSignal>,
+    pub line_state_control_channel_sender:
+        tokio::sync::mpsc::Sender<LineStateControlSignal>,
 
     /// This is set to `true` when this struct is cloned. Only the first instance of this
     /// struct will report errors when [`std::io::Write::write()`] fails, due to the
@@ -72,7 +74,9 @@ impl Clone for SharedWriter {
     fn clone(&self) -> Self {
         Self {
             buffer: Default::default(),
-            line_state_control_channel_sender: self.line_state_control_channel_sender.clone(),
+            line_state_control_channel_sender: self
+                .line_state_control_channel_sender
+                .clone(),
             silent_error: true,
         }
     }

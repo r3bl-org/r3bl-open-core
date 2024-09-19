@@ -15,28 +15,26 @@
  *   limitations under the License.
  */
 
-use crate::port_availability;
+use std::str::FromStr;
+
 use miette::IntoDiagnostic;
 use opentelemetry::{global, trace::TraceError, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{runtime::Tokio, trace as sdktrace, Resource};
 use opentelemetry_semantic_conventions::resource::SERVICE_NAME;
-use std::str::FromStr;
 use tracing::Subscriber;
 use tracing_subscriber::registry::LookupSpan;
+
+use crate::port_availability;
 
 /// Hostname for Jaeger.
 const HOST: &str = "127.0.0.1";
 /// gRPC port for Jaeger.
 const PORT: u16 = 4317;
 
-pub fn tcp_addr() -> String {
-    format!("{}:{}", HOST, PORT)
-}
+pub fn tcp_addr() -> String { format!("{}:{}", HOST, PORT) }
 
-pub fn url() -> String {
-    format!("http://{}:{}", HOST, PORT)
-}
+pub fn url() -> String { format!("http://{}:{}", HOST, PORT) }
 
 pub fn get_socket_addr(
     maybe_otel_collector_endpoint: Option<std::net::SocketAddr>,
@@ -112,15 +110,18 @@ pub async fn is_jaeger_up(
 /// 2. <https://broch.tech/posts/rust-tracing-opentelemetry/>
 /// 3. <https://github.com/open-telemetry/opentelemetry-rust/blob/main/examples/tracing-jaeger/src/main.rs>
 /// 4. <https://www.jaegertracing.io/docs/1.57/getting-started/>
-fn try_init_exporter(service_name: &str) -> Result<opentelemetry_sdk::trace::Tracer, TraceError> {
+fn try_init_exporter(
+    service_name: &str,
+) -> Result<opentelemetry_sdk::trace::Tracer, TraceError> {
     let exporter = opentelemetry_otlp::new_exporter()
         .tonic()
         .with_endpoint(url());
 
-    let trace_config = sdktrace::config().with_resource(Resource::new(vec![KeyValue::new(
-        SERVICE_NAME,
-        service_name.to_string(),
-    )]));
+    let trace_config =
+        sdktrace::config().with_resource(Resource::new(vec![KeyValue::new(
+            SERVICE_NAME,
+            service_name.to_string(),
+        )]));
 
     let runtime = Tokio;
 
@@ -158,7 +159,5 @@ where
 pub struct DropTracer;
 
 impl Drop for DropTracer {
-    fn drop(&mut self) {
-        global::shutdown_tracer_provider();
-    }
+    fn drop(&mut self) { global::shutdown_tracer_provider(); }
 }

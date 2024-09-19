@@ -15,19 +15,22 @@
  *   limitations under the License.
  */
 
-use crate::{spinner_render::style::style, SendRawTerminal, SpinnerColor, SpinnerTemplate};
-use crate::{SpinnerStyle, BLOCK_DOTS, BRAILLE_DOTS};
-use crossterm::{
-    cursor::{MoveToColumn, MoveUp},
-    style::{self, Print, Stylize},
-    terminal::{Clear, ClearType},
-    QueueableCommand,
-};
+use crossterm::{cursor::{MoveToColumn, MoveUp},
+                style::{self, Print, Stylize},
+                terminal::{Clear, ClearType},
+                QueueableCommand};
 use miette::IntoDiagnostic;
-use r3bl_rs_utils_core::ch;
-use r3bl_rs_utils_core::ChUnit;
+use r3bl_rs_utils_core::{ch, ChUnit};
 use r3bl_tui::convert_from_tui_color_to_crossterm_color;
 use r3bl_tuify::clip_string_to_width_with_ellipsis;
+
+use crate::{spinner_render::style::style,
+            SendRawTerminal,
+            SpinnerColor,
+            SpinnerStyle,
+            SpinnerTemplate,
+            BLOCK_DOTS,
+            BRAILLE_DOTS};
 
 pub fn render_tick(
     style: &mut SpinnerStyle,
@@ -146,13 +149,15 @@ pub fn print_final_tick(
     writer: &mut SendRawTerminal,
 ) -> miette::Result<()> {
     match style.template {
-        SpinnerTemplate::Dots | SpinnerTemplate::Braille | SpinnerTemplate::Block => writer
-            .queue(MoveToColumn(0))
-            .into_diagnostic()?
-            .queue(Print(Clear(ClearType::CurrentLine)))
-            .into_diagnostic()?
-            .queue(Print(format!("{}\n", output)))
-            .into_diagnostic()?,
+        SpinnerTemplate::Dots | SpinnerTemplate::Braille | SpinnerTemplate::Block => {
+            writer
+                .queue(MoveToColumn(0))
+                .into_diagnostic()?
+                .queue(Print(Clear(ClearType::CurrentLine)))
+                .into_diagnostic()?
+                .queue(Print(format!("{}\n", output)))
+                .into_diagnostic()?
+        }
     };
 
     writer.flush().into_diagnostic()?;
