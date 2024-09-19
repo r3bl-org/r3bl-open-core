@@ -77,6 +77,7 @@
 //!
 //! # Table of contents
 //!
+// cspell:disable
 //! <!-- TOC -->
 //!
 //! - [Introduction](#introduction)
@@ -97,6 +98,7 @@
 //!   - [Educational references for Linux TTY and async Rust](#educational-references-for-linux-tty-and-async-rust)
 //!
 //! <!-- /TOC -->
+//! // cspell:ena ble
 //!
 //! # Introduction
 //!
