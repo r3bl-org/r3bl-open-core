@@ -414,20 +414,29 @@
 //! - [Linux TTY and async Rust - Article on developerlife.com](https://developerlife.com/2024/08/20/tty-linux-async-rust/)
 //! - [Linux TTY and async Rust - Playlist on developerlife.com YT channel](https://www.youtube.com/watch?v=bolScvh4x7I&list=PLofhE49PEwmw3MKOU1Kn3xbP4FRQR4Mb3)
 
+// Skip rustfmt for rest of file.
+// https://stackoverflow.com/a/75910283/2085356
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 // Attach sources.
 pub mod public_api;
 pub mod readline_impl;
 pub mod spinner_impl;
+pub mod tracing_jaeger;
+pub mod tracing_logging;
 
 // Re-export the public API.
 pub use public_api::*;
 pub use readline_impl::*;
 pub use spinner_impl::*;
+pub use tracing_jaeger::*;
+pub use tracing_logging::*;
 
 // Type aliases.
+use std::{collections::VecDeque, io::Error, pin::Pin, sync::Arc};
+
 use crossterm::event::Event;
 use futures_core::Stream;
-use std::{collections::VecDeque, io::Error, pin::Pin, sync::Arc};
 
 pub type StdMutex<T> = std::sync::Mutex<T>;
 

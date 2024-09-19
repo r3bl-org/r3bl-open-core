@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2024 R3BL LLC
+ *   Copyright (c) 2024 Nazmul Idris
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,9 +16,9 @@
  */
 
 // Attach sources.
-pub mod spinner;
-pub mod terminal_async;
+pub mod jaeger_setup;
+pub mod port_availability;
 
 // Re-export.
-pub use spinner::*;
-pub use terminal_async::*;
+pub use jaeger_setup::*;
+pub use port_availability::*;

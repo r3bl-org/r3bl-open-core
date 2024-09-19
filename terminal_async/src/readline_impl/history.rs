@@ -15,9 +15,11 @@
  *   limitations under the License.
  */
 
-use crate::HISTORY_SIZE_MAX;
 use std::collections::VecDeque;
+
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+
+use crate::HISTORY_SIZE_MAX;
 
 pub struct History {
     pub entries: VecDeque<String>,

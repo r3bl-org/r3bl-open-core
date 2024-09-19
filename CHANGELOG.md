@@ -74,6 +74,7 @@
   - [v0.0.2 2024-07-13](#v002-2024-07-13)
   - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_terminal_async](#r3bl_terminal_async)
+  - [next release](#next-release-1)
   - [v0.5.7 2024-09-12](#v057-2024-09-12)
   - [v0.5.6 2024-08-13](#v056-2024-08-13)
   - [v0.5.5 2024-07-13](#v055-2024-07-13)
@@ -853,6 +854,12 @@ links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures)
     crate, where they were gestated, before being graduated for use by the entire monorepo.
 
 ## `r3bl_terminal_async`
+
+### next release
+
+- Changed:
+  - Refactor the tracing and Jaeger related code into 2 separate modules. This is laying
+    the groundwork for these modules to be moved into `r3bl_rs_utils_core` crate.
 
 ### v0.5.7 (2024-09-12)
 
