@@ -15,9 +15,11 @@
  *   limitations under the License.
  */
 
+use std::fmt::Debug;
+
 use tracing_core::LevelFilter;
 
-use crate::{tracing_logging::writer_arg::WriterArg, DisplayPreference};
+use crate::{tracing_logging::writer_arg::WriterArg, SharedWriter};
 
 /// Fields:
 /// - `writers`: Vec<[WriterArg]> - Zero or more writers to use for
@@ -25,12 +27,29 @@ use crate::{tracing_logging::writer_arg::WriterArg, DisplayPreference};
 /// - `level`: [tracing::Level] - The log level to use for tracing.
 /// - `tracing_log_file_path_and_prefix`: [String] - The file path and prefix to use for
 ///   the log file. Eg: `/tmp/tcp_api_server` or `tcp_api_server`.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TracingConfig {
     pub writer_args: Vec<WriterArg>,
     pub level: tracing::Level,
     pub tracing_log_file_path_and_prefix: String,
     pub preferred_display: DisplayPreference,
+}
+
+#[derive(Clone)]
+pub enum DisplayPreference {
+    Stdout,
+    Stderr,
+    SharedWriter(SharedWriter),
+}
+
+impl Debug for DisplayPreference {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DisplayPreference::Stdout => write!(f, "Stdout"),
+            DisplayPreference::Stderr => write!(f, "Stderr"),
+            DisplayPreference::SharedWriter(_) => write!(f, "SharedWriter"),
+        }
+    }
 }
 
 impl TracingConfig {

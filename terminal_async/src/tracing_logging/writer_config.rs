@@ -18,6 +18,7 @@
 use tracing_core::LevelFilter;
 use tracing_subscriber::{registry::LookupSpan, Layer};
 
+use super::DisplayPreference;
 use crate::{tracing_logging::{rolling_file_appender_impl, writer_arg::WriterArg},
             tracing_setup::*};
 
