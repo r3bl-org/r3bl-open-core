@@ -259,8 +259,9 @@ mod test_tracing_bin_stdio {
 
 #[cfg(test)]
 mod test_tracing_shared_writer_output {
+    use r3bl_rs_utils_core::{LineStateControlSignal, SharedWriter};
+
     use super::*;
-    use crate::{LineStateControlSignal, SharedWriter};
 
     const EXPECTED: [&str; 4] = ["error", "warn", "info", "debug"];
 

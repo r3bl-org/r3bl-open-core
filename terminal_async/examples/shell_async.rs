@@ -95,10 +95,9 @@ use std::io::Write as _;
 
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
-use r3bl_rs_utils_core::ok;
+use r3bl_rs_utils_core::{ok, SharedWriter};
 use r3bl_terminal_async::{ReadlineEvent,
                           ReadlineEvent::{Eof, Interrupted, Line, Resized},
-                          SharedWriter,
                           TerminalAsync};
 use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _};
 

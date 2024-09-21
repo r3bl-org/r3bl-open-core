@@ -18,19 +18,14 @@
 use std::{sync::Arc, time::Duration};
 
 use crossterm::terminal;
+use r3bl_rs_utils_core::{LineStateControlSignal, SharedWriter};
 use r3bl_tuify::{is_fully_uninteractive_terminal,
                  is_stdout_piped,
                  StdoutIsPipedResult,
                  TTYResult};
 use tokio::time::interval;
 
-use crate::{spinner_render,
-            LineStateControlSignal,
-            SafeBool,
-            SafeRawTerminal,
-            SharedWriter,
-            SpinnerStyle,
-            StdMutex};
+use crate::{spinner_render, SafeBool, SafeRawTerminal, SpinnerStyle, StdMutex};
 
 pub struct Spinner {
     pub tick_delay: Duration,

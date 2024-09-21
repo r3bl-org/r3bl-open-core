@@ -22,11 +22,11 @@ use std::{io::{stderr, Write},
 
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
+use r3bl_rs_utils_core::SharedWriter;
 use r3bl_terminal_async::{tracing_logging::tracing_config::TracingConfig,
                           DisplayPreference,
                           Readline,
                           ReadlineEvent,
-                          SharedWriter,
                           Spinner,
                           SpinnerStyle,
                           StdMutex,

@@ -17,33 +17,38 @@
 
 use std::io::{self, Write};
 
-use r3bl_rs_utils_core::ok;
+use crate::ok;
 
-use crate::{LineStateControlSignal, Text};
+pub type Text = Vec<u8>;
 
 /// Cloneable object that implements [`Write`] and allows for sending data to the terminal
-/// without messing up its associated [`crate::Readline`] instance.
+/// without messing up its associated `Readline` instance (in the `r3bl_terminal_async`
+/// crate).
 ///
-/// # Create a new instance by creating a [`crate::Readline`] instance
+/// # Create a new instance by creating a `Readline` instance
 ///
-/// - A [`crate::SharedWriter`] instance is obtained by calling
-///   [`crate::Readline::new()`].
-/// - This also returns a [`crate::Readline`] instance associated with the writer.
+/// - A [`crate::SharedWriter`] instance is obtained by calling `Readline::new()` (in the
+///   `r3bl_terminal_async` crate).
+/// - It also returns a `Readline` instance associated with the writer.
 ///
 /// # Nothing is output without terminating with a newline, unless you call [SharedWriter::flush()]
 ///
+/// This is the nature of buffered writing in POSIX. It isn't really specific to this
+/// crate.
+///
 /// Data written to a [`crate::SharedWriter`] is only output when a line feed (`'\n'`) has
-/// been written and either is executing on the associated [`crate::Readline`] instance:
-/// - [`crate::Readline::readline()`].
-/// - [`crate::manage_shared_writer_output::flush_internal()`].
+/// been written and either is executing on the associated `Readline` instance both in
+/// `readline.rs`:
+/// - `Readline::readline()`.
+/// - `manage_shared_writer_output::flush_internal()`.
 ///
 /// If you want to output data without a newline, you can call [`SharedWriter::flush()`].
 pub struct SharedWriter {
     /// Holds the data to be written to the terminal.
     pub buffer: Text,
 
-    /// Sender end of the channel, the receiver end is in [`crate::Readline`], which does
-    /// the actual printing to `stdout`.
+    /// Sender end of the channel, the receiver end is in `Readline` (in the
+    /// `r3bl_terminal_async` crate), which does the actual printing to `stdout`.
     pub line_state_control_channel_sender:
         tokio::sync::mpsc::Sender<LineStateControlSignal>,
 
@@ -51,6 +56,17 @@ pub struct SharedWriter {
     /// struct will report errors when [`std::io::Write::write()`] fails, due to the
     /// receiver end of the channel being closed.
     pub silent_error: bool,
+}
+
+/// Signals that can be sent to the `line` channel, which is monitored by the task.
+#[derive(Debug, Clone)]
+pub enum LineStateControlSignal {
+    Line(Text),
+    Flush,
+    Pause,
+    Resume,
+    SpinnerActive(tokio::sync::broadcast::Sender<()>),
+    SpinnerInactive,
 }
 
 impl SharedWriter {
@@ -69,7 +85,7 @@ impl SharedWriter {
 /// instance gets its own buffer to write data into. And a [Clone] of the
 /// [Self::line_state_control_channel_sender], so all the [`LineStateControlSignal`]s end
 /// up in the same `line` [tokio::sync::mpsc::channel] that lives in the
-/// [`crate::Readline`] instance.
+/// `Readline` instance (in the `r3bl_terminal_async` crate).
 impl Clone for SharedWriter {
     fn clone(&self) -> Self {
         Self {
