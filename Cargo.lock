@@ -2023,6 +2023,11 @@ dependencies = [
  "size-of",
  "strip-ansi",
  "time",
+ "tokio",
+ "tracing",
+ "tracing-appender",
+ "tracing-core",
+ "tracing-subscriber",
  "unicode-segmentation",
  "unicode-width",
 ]

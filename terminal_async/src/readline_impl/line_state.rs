@@ -109,13 +109,14 @@ impl LineState {
     }
 
     /// Update the paused state which affects the following:
-    /// - Rendering the output from multiple [crate::SharedWriter]s. When paused nothing
-    ///   is rendered from them, and things like the [crate::Spinner] can be active.
+    /// - Rendering the output from multiple [r3bl_rs_utils_core::SharedWriter]s. When
+    ///   paused nothing is rendered from them, and things like the [crate::Spinner] can
+    ///   be active.
     /// - Handling user input while the [crate::Readline::readline] is awaiting user input
     ///   (which is equivalent to awaiting [crate::TerminalAsync::get_readline_event]).
     ///
     /// This should not be called directly. Instead use the mechanism provided by the
-    /// [crate::SharedWriter::line_state_control_channel_sender]
+    /// [r3bl_rs_utils_core::SharedWriter::line_state_control_channel_sender]
     /// [tokio::sync::mpsc::channel].
     pub fn set_paused(
         &mut self,
