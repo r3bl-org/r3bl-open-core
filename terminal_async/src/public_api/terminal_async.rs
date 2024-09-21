@@ -24,6 +24,7 @@ use crossterm::{cursor::MoveToColumn,
                 terminal::{Clear, ClearType}};
 use futures_util::FutureExt;
 use miette::IntoDiagnostic;
+use r3bl_rs_utils_core::{LineStateControlSignal, SharedWriter};
 use r3bl_tuify::{is_fully_uninteractive_terminal,
                  is_stdin_piped,
                  is_stdout_piped,
@@ -31,12 +32,7 @@ use r3bl_tuify::{is_fully_uninteractive_terminal,
                  StdoutIsPipedResult,
                  TTYResult};
 
-use crate::{CrosstermEventResult,
-            PinnedInputStream,
-            Readline,
-            ReadlineEvent,
-            SharedWriter,
-            StdMutex};
+use crate::{CrosstermEventResult, PinnedInputStream, Readline, ReadlineEvent, StdMutex};
 
 pub struct TerminalAsync {
     pub readline: Readline,
@@ -144,7 +140,7 @@ impl TerminalAsync {
         let _ = self
             .shared_writer
             .line_state_control_channel_sender
-            .send(crate::LineStateControlSignal::Flush)
+            .send(LineStateControlSignal::Flush)
             .await;
     }
 
@@ -152,7 +148,7 @@ impl TerminalAsync {
         let _ = self
             .shared_writer
             .line_state_control_channel_sender
-            .send(crate::LineStateControlSignal::Pause)
+            .send(LineStateControlSignal::Pause)
             .await;
     }
 
@@ -160,7 +156,7 @@ impl TerminalAsync {
         let _ = self
             .shared_writer
             .line_state_control_channel_sender
-            .send(crate::LineStateControlSignal::Resume)
+            .send(LineStateControlSignal::Resume)
             .await;
     }
 

@@ -21,21 +21,22 @@ use std::{io::{self, Write},
 use crossterm::{terminal::{self, disable_raw_mode, Clear},
                 QueueableCommand};
 use futures_util::StreamExt;
+use r3bl_rs_utils_core::{LineStateControlSignal, SharedWriter};
 use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
 use crate::{CrosstermEventResult,
             History,
             LineState,
+            LineStateLiveness,
             PauseBuffer,
             PinnedInputStream,
             SafeHistory,
             SafeLineState,
             SafePauseBuffer,
             SafeRawTerminal,
-            SharedWriter,
+            SendRawTerminal,
             StdMutex,
-            Text,
             CHANNEL_CAPACITY};
 
 const CTRL_C: crossterm::event::Event =
@@ -80,8 +81,9 @@ const CTRL_D: crossterm::event::Event =
 /// input or `Interrupted` or `Eof` signal.
 ///
 /// When creating a new [`crate::TerminalAsync`] instance, you can use this repeatedly
-/// before dropping it. This is because the [`crate::SharedWriter`] is cloned, and the
-/// terminal is kept in raw mode until the associated [`crate::Readline`] is dropped.
+/// before dropping it. This is because the [`r3bl_rs_utils_core::SharedWriter`] is
+/// cloned, and the terminal is kept in raw mode until the associated [`crate::Readline`]
+/// is dropped.
 ///
 /// # Inputs and dependency injection
 ///
@@ -130,12 +132,12 @@ const CTRL_D: crossterm::event::Event =
 /// [`PauseBuffer`] (if there are any messages in it, and prints them out) so nothing is
 /// lost!
 ///
-/// See the [`crate::LineState`] for more information on exactly how the terminal is paused
-/// and resumed, when it comes to accepting or rejecting user input, and rendering output
-/// or not.
+/// See the [`crate::LineState`] for more information on exactly how the terminal is
+/// paused and resumed, when it comes to accepting or rejecting user input, and rendering
+/// output or not.
 ///
-/// See the [`crate::TerminalAsync`] module docs for more information on the mental mode and
-/// architecture of this.
+/// See the [`crate::TerminalAsync`] module docs for more information on the mental mode
+/// and architecture of this.
 ///
 /// # Usage details
 ///
@@ -154,7 +156,7 @@ const CTRL_D: crossterm::event::Event =
 /// You can provide your own implementation of [`SafeRawTerminal`], via [dependency
 /// injection](https://developerlife.com/category/DI/), so that you can mock terminal
 /// output for testing. You can also extend this struct to adapt your own terminal output
-/// using this mechanism. Essentially anything that complies with `dyn std::io::Write +
+/// using this mechanism. Essentially anything that compiles with `dyn std::io::Write +
 /// Send` trait bounds can be used.
 pub struct Readline {
     /// Raw terminal implementation, you can supply this via dependency injection.
@@ -215,17 +217,6 @@ pub enum ReadlineEvent {
     Resized,
 }
 
-/// Signals that can be sent to the `line` channel, which is monitored by the task.
-#[derive(Debug, Clone)]
-pub enum LineStateControlSignal {
-    Line(Text),
-    Flush,
-    Pause,
-    Resume,
-    SpinnerActive(tokio::sync::broadcast::Sender<()>),
-    SpinnerInactive,
-}
-
 /// Internal control flow for the `readline` method. This is used primarily to make testing
 /// easier.
 #[derive(Debug, PartialEq, Clone)]
@@ -267,7 +258,6 @@ pub enum ControlFlowLimited<E> {
 /// written to the terminal.
 pub mod manage_shared_writer_output {
     use super::*;
-    use crate::{LineStateLiveness, SendRawTerminal};
 
     /// - Receiver end of the channel, which does the actual writing to the terminal.
     /// - The sender end of the channel is in [`SharedWriter`].
@@ -570,8 +560,8 @@ impl Readline {
     ///
     /// Note that this function can be called repeatedly in a loop. It will return each
     /// line of input as it is entered (and return / exit). The [crate::TerminalAsync] can
-    /// be re-used, since the [crate::SharedWriter] is cloned and the terminal is kept in
-    /// raw mode until the associated [crate::Readline] is dropped.
+    /// be re-used, since the [r3bl_rs_utils_core::SharedWriter] is cloned and the
+    /// terminal is kept in raw mode until the associated [crate::Readline] is dropped.
     ///
     /// Polling function for [`Self::readline`], manages all input and output. Returns
     /// either an [ReadlineEvent] or an [ReadlineError].
