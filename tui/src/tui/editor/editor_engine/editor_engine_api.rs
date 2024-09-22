@@ -516,7 +516,7 @@ mod syn_hi_r3bl_path {
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
         let styled_texts: TuiStyledTexts =
             line.clip(scroll_offset_col, max_display_col_count);
-        styled_texts.render_into(render_ops);
+        render_tui_styled_texts_into(&styled_texts, render_ops);
         render_ops.push(RenderOp::ResetColor);
     }
 }
@@ -607,7 +607,7 @@ mod syn_hi_syntect_path {
             );
         let styled_texts: TuiStyledTexts =
             list.clip(scroll_offset_col, max_display_col_count);
-        styled_texts.render_into(render_ops);
+        render_tui_styled_texts_into(&styled_texts, render_ops);
         render_ops.push(RenderOp::ResetColor);
     }
 

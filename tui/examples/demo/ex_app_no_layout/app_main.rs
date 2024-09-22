@@ -218,12 +218,12 @@ mod app_main_impl_trait_app {
                             ))
                         };
 
-                        let st = data.lolcat_fg.colorize_into_styled_texts(
+                        let texts = data.lolcat_fg.colorize_into_styled_texts(
                             &unicode_string,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(None),
                         );
-                        st.render_into(&mut it);
+                        render_tui_styled_texts_into(&texts, &mut it);
 
                         row += 1;
                     }
@@ -241,12 +241,12 @@ mod app_main_impl_trait_app {
                             ))
                         };
 
-                        let st = data.lolcat_bg.colorize_into_styled_texts(
+                        let texts = data.lolcat_bg.colorize_into_styled_texts(
                             &unicode_string,
                             GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                             TextColorizationPolicy::ColorEachCharacter(None),
                         );
-                        st.render_into(&mut it);
+                        render_tui_styled_texts_into(&texts, &mut it);
 
                         row += 1;
                     }
@@ -510,7 +510,7 @@ mod status_bar {
 
         let mut render_ops = render_ops!();
         render_ops.push(RenderOp::MoveCursorPositionAbs(center));
-        styled_texts.render_into(&mut render_ops);
+        render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }
 }

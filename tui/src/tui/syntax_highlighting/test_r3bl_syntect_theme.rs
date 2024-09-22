@@ -73,7 +73,7 @@ mod syntect {
 
             let styled_texts = TuiStyledTexts::from(vec_styled_str);
             line_idx += 1;
-            for (col_idx, styled_text) in styled_texts.iter().enumerate() {
+            for (col_idx, styled_text) in styled_texts.inner.iter().enumerate() {
                 println!("[L#:{line_idx} => C#:{col_idx}] {styled_text:#?}");
             }
             vec_styled_texts.push(styled_texts);
