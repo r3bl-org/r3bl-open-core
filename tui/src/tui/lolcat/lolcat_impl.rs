@@ -19,12 +19,18 @@ use std::fmt::{Debug, Display, Formatter, Result};
 
 pub use control_wheel_control::*;
 use is_terminal::IsTerminal;
-use r3bl_rs_utils_core::{RgbValue, TuiColor, TuiStyle, UnicodeString};
+use r3bl_rs_utils_core::{tui_styled_text,
+                         RgbValue,
+                         TuiColor,
+                         TuiStyle,
+                         TuiStyledText,
+                         TuiStyledTexts,
+                         UnicodeString};
 use r3bl_rs_utils_macro::tui_style;
 use rand::random;
 use serde::{Deserialize, Serialize};
 
-use crate::{tui_styled_text, ColorUtils, LolcatBuilder, TuiStyledText, TuiStyledTexts};
+use crate::{ColorUtils, LolcatBuilder};
 
 /// Please use the [LolcatBuilder] to create this struct (lots of documentation is provided here).
 /// Please do not use this struct directly.

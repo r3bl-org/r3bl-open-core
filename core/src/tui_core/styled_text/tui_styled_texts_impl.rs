@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2023 R3BL LLC
+ *   Copyright (c) 2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,63 +17,14 @@
 
 use std::ops::{AddAssign, Index};
 
-use r3bl_rs_utils_core::{ChUnit,
-                         ConvertToPlainText,
-                         PrettyPrintDebug,
-                         TuiStyle,
-                         UnicodeString};
-
-/// Macro to make building [TuiStyledText] easy.
-///
-/// Here's an example.
-/// ```rust
-/// use r3bl_rs_utils_core::*;
-/// use r3bl_tui::*;
-///
-/// let style = TuiStyle::default();
-/// let st = tui_styled_text!(@style: style, @text: "Hello World");
-/// ```
-#[macro_export]
-macro_rules! tui_styled_text {
-    (
-        @style: $style_arg: expr,
-        @text: $text_arg: expr
-        $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
-    ) => {
-        TuiStyledText::new($style_arg, $text_arg.to_string())
-    };
-}
-
-/// Use [tui_styled_text!] macro for easier construction.
-#[derive(Debug, Clone, Default, size_of::SizeOf)]
-pub struct TuiStyledText {
-    pub style: TuiStyle,
-    pub text: UnicodeString,
-}
-
-mod tui_styled_text_impl {
-    use super::*;
-
-    impl TuiStyledText {
-        pub fn new(style: TuiStyle, text: String) -> Self {
-            TuiStyledText {
-                style,
-                text: UnicodeString::from(text),
-            }
-        }
-
-        pub fn get_text(&self) -> &UnicodeString { &self.text }
-
-        pub fn get_style(&self) -> &TuiStyle { &self.style }
-    }
-}
+use super::TuiStyledText;
+use crate::{ChUnit, ConvertToPlainText, PrettyPrintDebug, UnicodeString};
 
 /// Macro to make building [`TuiStyledTexts`] easy.
 ///
 /// Here's an example.
 /// ```rust
 /// use r3bl_rs_utils_core::*;
-/// use r3bl_tui::*;
 ///
 /// let mut st_vec = tui_styled_texts! {
 ///   tui_styled_text! {
@@ -109,7 +60,7 @@ pub struct TuiStyledTexts {
     pub inner: Vec<TuiStyledText>,
 }
 
-mod tui_styled_texts_impl_ops {
+mod impl_ops {
     use super::*;
 
     impl TuiStyledTexts {
@@ -133,7 +84,7 @@ mod tui_styled_texts_impl_ops {
     }
 }
 
-mod tui_styled_texts_impl_display {
+mod impl_display {
     use super::*;
 
     impl ConvertToPlainText for TuiStyledTexts {
@@ -151,7 +102,7 @@ mod tui_styled_texts_impl_display {
     }
 }
 
-mod tui_styled_texts_impl_debug {
+mod impl_debug {
     use super::*;
 
     impl PrettyPrintDebug for TuiStyledTexts {
@@ -172,19 +123,20 @@ mod tui_styled_texts_impl_debug {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::{assert_eq2,
-                             ch,
-                             throws,
-                             throws_with_return,
-                             tui_stylesheet,
-                             ChUnit,
-                             CommonResult,
-                             RgbValue,
-                             TuiColor,
-                             TuiStyle,
-                             TuiStylesheet};
-
-    use crate::{TuiStyledText, TuiStyledTexts};
+    use super::*;
+    use crate::{assert_eq2,
+                ch,
+                throws,
+                throws_with_return,
+                tui_styled_text,
+                tui_stylesheet,
+                ChUnit,
+                CommonResult,
+                RgbValue,
+                TryAdd,
+                TuiColor,
+                TuiStyle,
+                TuiStylesheet};
 
     #[test]
     fn test_create_styled_text_with_dsl() -> CommonResult<()> {

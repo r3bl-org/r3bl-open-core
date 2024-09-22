@@ -15,20 +15,20 @@
  *   limitations under the License.
  */
 
-//! This module contains the intermediate types that are used in the process of converting source to
-//! syntax highlighted text.
+//! This module contains the intermediate types that are used in the process of converting
+//! source to syntax highlighted text.
 //!
 //! These types are used for both:
 //! 1. Syntect parser.
-//! 2. md_parser_syn_hi, which is a custom R3BL highlighter for md_parser (custom R3BL Markdown
-//!    parser).
+//! 2. md_parser_syn_hi, which is a custom R3BL highlighter for md_parser (custom R3BL
+//!    Markdown parser).
 //!
 //! In both cases:
-//! 1. The source document comes from an [crate::editor] component which is a [Vec] of [US] (unicode
-//!    strings).
-//! 2. This intermediate type is [clipped](StyleUSSpanLine::clip) to the visible area of the editor
-//!    component (based on scroll state in viewport). And finally that is converted to a
-//!    [crate::TuiStyledTexts].
+//! 1. The source document comes from an [crate::editor] component which is a [Vec] of
+//!    [US] (unicode strings).
+//! 2. This intermediate type is [clipped](StyleUSSpanLine::clip) to the visible area of
+//!    the editor component (based on scroll state in viewport). And finally that is
+//!    converted to a [r3bl_rs_utils_core::TuiStyledTexts].
 
 use r3bl_rs_utils_core::*;
 

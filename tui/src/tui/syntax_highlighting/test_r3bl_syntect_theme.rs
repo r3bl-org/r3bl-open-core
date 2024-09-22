@@ -17,7 +17,7 @@
 
 #[cfg(test)]
 mod syntect {
-    use r3bl_rs_utils_core::throws;
+    use r3bl_rs_utils_core::{throws, TuiStyledTexts};
 
     use crate::*;
 
@@ -71,7 +71,9 @@ mod syntect {
             // let escaped = as_24_bit_terminal_escaped(&vec_styled_str[..], false);
             // print!("{}", escaped);
 
-            let styled_texts = TuiStyledTexts::from(vec_styled_str);
+            let styled_texts: TuiStyledTexts =
+                convert_span_line_from_syntect_to_tui_styled_texts(&vec_styled_str);
+
             line_idx += 1;
             for (col_idx, styled_text) in styled_texts.inner.iter().enumerate() {
                 println!("[L#:{line_idx} => C#:{col_idx}] {styled_text:#?}");

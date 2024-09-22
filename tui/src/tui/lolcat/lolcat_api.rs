@@ -17,10 +17,10 @@
 
 use std::borrow::Cow;
 
-use r3bl_rs_utils_core::UnicodeString;
+use r3bl_rs_utils_core::{TuiStyledTexts, UnicodeString};
 use serde::{Deserialize, Serialize};
 
-use crate::{ColorChangeSpeed, Lolcat, TuiStyledTexts};
+use crate::{ColorChangeSpeed, Lolcat};
 
 pub fn colorize_to_styled_texts(
     lolcat: &mut Lolcat,

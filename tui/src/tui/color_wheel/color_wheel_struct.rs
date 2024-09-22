@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2023 R3BL LLC
+ *   Copyright (c) 2023-2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,15 @@
 
 use r3bl_ansi_color::{global_color_support, AnsiStyledText, ColorSupport};
 use r3bl_rs_utils_core::{ch,
+                         tui_styled_text,
                          AnsiValue,
                          ChUnit,
                          GraphemeClusterSegment,
                          RgbValue,
                          TuiColor,
                          TuiStyle,
+                         TuiStyledText,
+                         TuiStyledTexts,
                          UnicodeString};
 use serde::{Deserialize, Serialize};
 
@@ -30,13 +33,10 @@ use crate::{color_wheel_color_converter::convert_tui_color_into_r3bl_ansi_color,
             generate_random_truecolor_gradient,
             generate_truecolor_gradient,
             get_gradient_array_for,
-            tui_styled_text,
             Ansi256GradientIndex,
             ColorUtils,
             Lolcat,
             LolcatBuilder,
-            TuiStyledText,
-            TuiStyledTexts,
             SPACER};
 
 /// For RGB colors:
