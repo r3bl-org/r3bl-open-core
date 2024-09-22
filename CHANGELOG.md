@@ -25,6 +25,7 @@
   - [v0.1.18 2023-10-17](#v0118-2023-10-17)
   - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
+  - [next release](#next-release)
   - [v0.5.9 2024-09-12](#v059-2024-09-12)
   - [v0.5.8 2024-09-07](#v058-2024-09-07)
   - [v0.5.7 2024-08-13](#v057-2024-08-13)
@@ -339,6 +340,12 @@ in a text editor.
 
 ## `r3bl_tui`
 
+### next release
+
+- Changed:
+  - Refactor lots of styling related code in preparation for the move to `core`. This will
+    make it easier to maintain and test the codebase, and clean up the dependencies.
+
 ### v0.5.9 (2024-09-12)
 
 - Updated:
@@ -637,10 +644,12 @@ exhaustively tested and is able to handle many more corner cases.
 ### next release
 
 - Changed:
-   - Renamed the `debug!` macro, which is confusing, since it clashes with logging, to
-     `console_log!`. This macro is used in many places in the codebase for quick formatted
-     output to console (via `eprintln!`). The code to format the output is in the
-     `console_log_impl.rs` file.
+  - Renamed the `debug!` macro, which is confusing, since it clashes with logging, to
+    `console_log!`. This macro is used in many places in the codebase for quick formatted
+    output to console (via `eprintln!`). The code to format the output is in the
+    `console_log_impl.rs` file.
+  - Reorganize the `src` folder to make sure that there aren't any top level files, and that
+    everything is in a module. This is to make it easier to add new modules in the future.
 
 ### v0.9.16 (2024-09-12)
 
