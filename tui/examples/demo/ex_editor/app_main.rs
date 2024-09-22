@@ -783,7 +783,7 @@ mod status_bar {
 
         let mut render_ops = render_ops!();
         render_ops.push(RenderOp::MoveCursorPositionAbs(center));
-        styled_texts.render_into(&mut render_ops);
+        render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }
 }

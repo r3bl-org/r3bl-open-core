@@ -606,13 +606,12 @@ mod internal_impl {
         // If lolcat is enabled, then colorize the text.
         if let Some(style) = maybe_style {
             if style.lolcat {
-                color_wheel
-                    .colorize_into_styled_texts(
-                        &UnicodeString::from(text),
-                        GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-                        TextColorizationPolicy::ColorEachCharacter(*maybe_style),
-                    )
-                    .render_into(ops);
+                let texts = color_wheel.colorize_into_styled_texts(
+                    &UnicodeString::from(text),
+                    GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                    TextColorizationPolicy::ColorEachCharacter(*maybe_style),
+                );
+                render_tui_styled_texts_into(&texts, ops);
                 return;
             }
         }
