@@ -16,11 +16,11 @@
  */
 
 // Attach source files.
-mod color_utils;
+pub mod color_wheel_control;
 pub mod lolcat_api;
-mod lolcat_impl;
+pub mod lolcat_impl;
 
 // Re-export.
-pub use color_utils::*;
+pub use color_wheel_control::*;
 pub use lolcat_api::*;
 pub use lolcat_impl::*;

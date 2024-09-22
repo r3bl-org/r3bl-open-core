@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,16 +15,17 @@
  *   limitations under the License.
  */
 
-// Attach sources.
-pub mod convert_syntect_to_styled_text;
-pub mod intermediate_types;
-pub mod md_parser_syn_hi;
-pub mod pattern_matcher;
-pub mod r3bl_syntect_theme;
+#[macro_export]
+macro_rules! format_option {
+    ($opt:expr) => {
+        match ($opt) {
+            Some(v) => v,
+            None => &FormatMsg::None,
+        }
+    };
+}
 
-// Re-export
-pub use convert_syntect_to_styled_text::*;
-pub use intermediate_types::*;
-pub use md_parser_syn_hi::*;
-pub use pattern_matcher::*;
-pub use r3bl_syntect_theme::*;
+#[derive(Clone, Copy, Debug)]
+pub enum FormatMsg {
+    None,
+}

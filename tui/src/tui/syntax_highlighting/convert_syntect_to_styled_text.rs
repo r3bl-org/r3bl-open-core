@@ -109,6 +109,86 @@ pub fn convert_span_line_from_syntect_to_tui_styled_texts(
 }
 
 #[cfg(test)]
+mod tests_simple_md_highlight {
+    use r3bl_rs_utils_core::{assert_eq2, color, ConvertToPlainText, TuiStyledTexts};
+    use syntect::{easy::*, highlighting::*, parsing::*, util::*};
+
+    use crate::{convert_span_line_from_syntect_to_tui_styled_texts,
+                try_load_r3bl_theme};
+
+    #[test]
+    fn simple_md_highlight() {
+        // Generate MD content.
+        let md_content = {
+            #[cfg(target_os = "windows")]
+            {
+                let mut it = include_str!("test_assets/valid-content.md").to_string();
+                it = it.replace("\r\n", "\n");
+                it
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                include_str!("test_assets/valid-content.md").to_string()
+            }
+        };
+
+        // Load these once at the start of your program.
+        let syntax_set = SyntaxSet::load_defaults_newlines();
+        let theme = try_load_r3bl_theme().unwrap();
+
+        // Prepare Markdown syntax highlighting.q
+        let md_syntax = syntax_set.find_syntax_by_extension("md").unwrap();
+        let mut highlight_lines = HighlightLines::new(md_syntax, &theme);
+
+        let mut line_idx = 0;
+        let mut vec_styled_texts = vec![];
+
+        for line in /* LinesWithEndings enables use of newlines mode. */
+            LinesWithEndings::from(md_content.as_str())
+        {
+            let vec_styled_str: Vec<(Style, &str)> =
+                highlight_lines.highlight_line(line, &syntax_set).unwrap();
+
+            // // To pretty print the output, use the following:
+            // let escaped = as_24_bit_terminal_escaped(&vec_styled_str[..], false);
+            // print!("{}", escaped);
+
+            let styled_texts: TuiStyledTexts =
+                convert_span_line_from_syntect_to_tui_styled_texts(&vec_styled_str);
+
+            line_idx += 1;
+            for (col_idx, styled_text) in styled_texts.inner.iter().enumerate() {
+                println!("[L#:{line_idx} => C#:{col_idx}] {styled_text:#?}");
+            }
+            vec_styled_texts.push(styled_texts);
+        }
+
+        // 42 lines.
+        assert_eq2!(vec_styled_texts.len(), 42);
+
+        // Interrogate first line.
+        {
+            let line = &vec_styled_texts[0];
+            assert_eq2!(line.len(), 4);
+            assert_eq2!(line.to_plain_text_us(), "# My Heading\n".into());
+            let col1 = &line[0];
+            assert_eq2!(col1.get_style().bold, true);
+            let col3 = &line[2];
+            assert_eq2!(col3.get_style().color_fg.unwrap(), color!(46, 206, 43));
+        }
+
+        // Interrogate last line.
+        {
+            let line = &vec_styled_texts[41];
+            assert_eq2!(line.len(), 1);
+            assert_eq2!(line.to_plain_text_us(), "--- END ---\n".into());
+            let col1 = &line[0];
+            assert_eq2!(col1.get_style().color_fg.unwrap(), color!(193, 179, 208));
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests_convert_span_line_and_highlighted_line {
     use r3bl_rs_utils_core::{assert_eq2,
                              RgbValue,

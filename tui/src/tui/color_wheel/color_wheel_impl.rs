@@ -26,18 +26,17 @@ use r3bl_rs_utils_core::{ch,
                          TuiStyle,
                          TuiStyledText,
                          TuiStyledTexts,
-                         UnicodeString};
+                         UnicodeString,
+                         SPACER};
 use serde::{Deserialize, Serialize};
 
-use crate::{color_wheel_color_converter::convert_tui_color_into_r3bl_ansi_color,
+use super::{color_wheel_color_converter::convert_tui_color_into_r3bl_ansi_color,
             generate_random_truecolor_gradient,
             generate_truecolor_gradient,
             get_gradient_array_for,
             Ansi256GradientIndex,
-            ColorUtils,
-            Lolcat,
-            LolcatBuilder,
-            SPACER};
+            ColorUtils};
+use crate::{Lolcat, LolcatBuilder};
 
 /// For RGB colors:
 /// 1. The stops are the colors that will be used to create the gradient.
@@ -772,7 +771,7 @@ pub mod color_wheel_color_converter {
     mod color_converter_tests {
         use r3bl_rs_utils_core::{ANSIBasicColor, AnsiValue, RgbValue, TuiColor};
 
-        use crate::color_wheel_struct::color_wheel_color_converter;
+        use crate::color_wheel_impl::color_wheel_color_converter;
 
         #[test]
         fn test_convert_tui_color_into_r3bl_ansi_color_rgb() {
