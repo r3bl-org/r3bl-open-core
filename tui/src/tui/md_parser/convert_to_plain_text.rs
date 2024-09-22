@@ -15,8 +15,10 @@
  *   limitations under the License.
  */
 
-//! This module is responsible for converting all the [MdLineFragment] into plain text w/out any
-//! formatting.
+//! This module is responsible for converting all the [MdLineFragment] into plain text
+//! w/out any formatting.
+
+use r3bl_rs_utils_core::PrettyPrintDebug;
 
 use super::*;
 use crate::{constants::*, *};

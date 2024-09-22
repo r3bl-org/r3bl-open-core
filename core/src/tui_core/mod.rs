@@ -19,12 +19,14 @@
 //! "main" [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crate.
 
 // Attach sources.
+pub mod constants;
 pub mod dimens;
 pub mod graphemes;
 pub mod styled_text;
 pub mod styles;
 
 // Re-export.
+pub use constants::*;
 pub use dimens::*;
 pub use graphemes::*;
 pub use styled_text::*;
