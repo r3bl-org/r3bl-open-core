@@ -2011,6 +2011,8 @@ name = "r3bl_rs_utils_core"
 version = "0.9.16"
 dependencies = [
  "chrono",
+ "crossterm 0.28.1",
+ "futures-util",
  "log",
  "nom",
  "pretty_assertions",
