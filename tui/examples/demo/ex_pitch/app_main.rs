@@ -325,31 +325,31 @@ mod status_bar {
         window_size: Size,
         state: &State,
     ) {
-        let mut it = tui_styled_texts! {
+        let mut texts = tui_styled_texts! {
             tui_styled_text! { @style:tui_style!(attrib: [dim, bold]) ,      @text: "Exit 👋 : "},
             tui_styled_text! { @style:tui_style!(attrib: [dim, underline]) , @text: "Ctrl + q"},
         };
 
         if state.current_slide_index < FILE_CONTENT_ARRAY.len() - 1 {
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: " ┊ "};
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: "Next 👉 : "};
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + n"};
+            texts += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: " ┊ "};
+            texts += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: "Next 👉 : "};
+            texts += tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + n"};
         }
 
         if state.current_slide_index > 0 {
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: " ┊ "};
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: "Prev 👈 : "};
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + p"};
+            texts += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: " ┊ "};
+            texts += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: "Prev 👈 : "};
+            texts += tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + p"};
         }
 
-        let display_width = it.display_width();
+        let display_width = texts.display_width();
         let col_center: ChUnit = (window_size.col_count - display_width) / 2;
         let row_bottom: ChUnit = window_size.row_count - 1;
         let center: Position = position!(col_index: col_center, row_index: row_bottom);
 
         let mut render_ops = render_ops!();
         render_ops.push(RenderOp::MoveCursorPositionAbs(center));
-        it.render_into(&mut render_ops);
+        render_tui_styled_texts_into(&texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }
 }

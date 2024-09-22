@@ -105,7 +105,7 @@ macro_rules! render_ops {
       /* Start a repetition. */
       $(
         /* Each repeat will contain the following statement, with $arg_render_op replaced. */
-        $arg_styled_texts.render_into(&mut $arg_render_ops);
+        render_tui_styled_texts_into(&$arg_styled_texts, &mut $arg_render_ops);
       )*
     }
   };

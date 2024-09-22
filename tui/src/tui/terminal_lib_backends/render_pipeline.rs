@@ -137,7 +137,7 @@ macro_rules! render_pipeline {
         => $arg_styled_texts: expr
       ) => {
         let mut render_ops = RenderOps::default();
-        $arg_styled_texts.render_into(&mut render_ops);
+        render_tui_styled_texts_into(&$arg_styled_texts, &mut render_ops);
         $arg_pipeline.push($arg_z_order, render_ops);
       };
 }
