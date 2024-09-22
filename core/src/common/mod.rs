@@ -19,10 +19,12 @@
 pub mod common_enums;
 pub mod common_math;
 pub mod common_result_and_error;
+pub mod pretty_print;
 pub mod shared_writer;
 
 // Re-export.
 pub use common_enums::*;
 pub use common_math::*;
 pub use common_result_and_error::*;
+pub use pretty_print::*;
 pub use shared_writer::*;

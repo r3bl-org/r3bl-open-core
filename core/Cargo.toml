@@ -63,6 +63,10 @@ tracing-subscriber = "0.3.18"
 tracing-appender = "0.2.3"
 tracing-core = "0.1.32"
 
+# Terminal output.
+crossterm = { version = "0.28.1", features = ["event-stream"] } # EventStream
+futures-util = "0.3.30"                                         # Needed for crossterm EventStream
+
 [dev-dependencies]
 # for assert_eq! macro
 pretty_assertions = "1.4.0"
