@@ -127,19 +127,17 @@
 //! - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 
 // Connect to source file.
-pub mod calc_str_len;
 pub mod common;
 pub mod decl_macros;
-pub mod friendly_random_id;
 pub mod logging;
+pub mod misc;
+pub mod terminal_io;
 pub mod tui_core;
 
 // Re-export.
-pub use calc_str_len::*;
 pub use common::*;
-pub use friendly_random_id::*;
+pub use decl_macros::*;
 pub use logging::*;
+pub use misc::*;
+pub use terminal_io::*;
 pub use tui_core::*;
-
-// Tests.
-mod test_decl_macros;
