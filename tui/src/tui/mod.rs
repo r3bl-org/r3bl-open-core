@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2023 R3BL LLC
+ *   Copyright (c) 2023-2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -81,5 +81,4 @@ pub use terminal_window::*;
 
 // Tests.
 mod test_make_style_macro;
-mod test_style;
 mod test_tui_serde;

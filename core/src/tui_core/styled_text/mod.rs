@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2023 R3BL LLC
+ *   Copyright (c) 2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +15,10 @@
  *   limitations under the License.
  */
 
-// Attach.
-pub mod ansi_256_color_gradients;
-pub mod color_wheel_struct;
-pub mod truecolor_gradient;
+// Attach sources.
+pub mod tui_styled_text_impl;
+pub mod tui_styled_texts_impl;
 
 // Re-export.
-pub use ansi_256_color_gradients::*;
-pub use color_wheel_struct::*;
-pub use truecolor_gradient::*;
+pub use tui_styled_text_impl::*;
+pub use tui_styled_texts_impl::*;

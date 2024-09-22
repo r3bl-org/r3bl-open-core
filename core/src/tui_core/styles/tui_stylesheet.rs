@@ -162,8 +162,6 @@ macro_rules! tui_stylesheet {
         $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
     ) => {
     {
-        use r3bl_rs_utils_core::TryAdd;
-        use r3bl_rs_utils_core::TuiStylesheet;
         let mut stylesheet = TuiStylesheet::new();
             $(
                 stylesheet.try_add($style)?;

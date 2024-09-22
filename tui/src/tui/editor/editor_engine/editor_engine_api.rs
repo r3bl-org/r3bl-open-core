@@ -602,7 +602,7 @@ mod syn_hi_syntect_path {
     ) {
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
         let list: List<StyleUSSpan> =
-            syntect_to_styled_text_conversion::from_syntect_to_tui(
+            convert_syntect_to_styled_text::convert_highlighted_line_from_syntect_to_tui(
                 syntect_highlighted_line,
             );
         let styled_texts: TuiStyledTexts =

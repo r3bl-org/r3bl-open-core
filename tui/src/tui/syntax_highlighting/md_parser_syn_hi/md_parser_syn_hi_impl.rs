@@ -193,7 +193,7 @@ impl StyleUSSpanLines {
                                 .ok()?;
 
                             let line_converted_to_tui: List<StyleUSSpan> =
-                                syntect_to_styled_text_conversion::from_syntect_to_tui(
+                                convert_syntect_to_styled_text::convert_highlighted_line_from_syntect_to_tui(
                                     syntect_highlighted_line,
                                 );
 
