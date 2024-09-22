@@ -2118,7 +2118,6 @@ dependencies = [
  "copypasta-ext",
  "crossterm 0.28.1",
  "futures-util",
- "is-terminal",
  "log",
  "nom",
  "pretty_assertions",

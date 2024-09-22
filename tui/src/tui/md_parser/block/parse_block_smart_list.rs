@@ -291,7 +291,7 @@ mod tests_parse_block_smart_list {
 /// Tests things that are final output (and not at the IR level).
 #[cfg(test)]
 mod tests_parse_smart_lists_in_markdown {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_rs_utils_core::{assert_eq2, ConsoleLogInColor, PrettyPrintDebug};
 
     use super::*;
 
