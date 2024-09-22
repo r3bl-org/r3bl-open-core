@@ -21,9 +21,11 @@
 // Attach sources.
 pub mod dimens;
 pub mod graphemes;
+pub mod styled_text;
 pub mod styles;
 
 // Re-export.
 pub use dimens::*;
 pub use graphemes::*;
+pub use styled_text::*;
 pub use styles::*;

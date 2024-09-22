@@ -15,7 +15,9 @@
  *   limitations under the License.
  */
 
-use crate::{RenderOp, RenderOps, TuiStyledTexts};
+use r3bl_rs_utils_core::TuiStyledTexts;
+
+use crate::{RenderOp, RenderOps};
 
 pub fn render_tui_styled_texts_into(texts: &TuiStyledTexts, render_ops: &mut RenderOps) {
     for styled_text in texts.inner.iter() {
@@ -37,23 +39,21 @@ mod tests {
                              console_log,
                              throws,
                              throws_with_return,
+                             tui_styled_text,
+                             tui_styled_texts,
                              tui_stylesheet,
                              ChUnit,
                              CommonResult,
                              RgbValue,
+                             TryAdd,
                              TuiColor,
                              TuiStyle,
+                             TuiStyledText,
                              TuiStylesheet};
     use r3bl_rs_utils_macro::tui_style;
 
     use super::*;
-    use crate::{render_ops,
-                render_pipeline,
-                tui_styled_text,
-                tui_styled_texts,
-                RenderPipeline,
-                TuiStyledText,
-                ZOrder};
+    use crate::{render_ops, render_pipeline, RenderPipeline, ZOrder};
 
     #[test]
     fn test_styled_text_renders_correctly() -> CommonResult<()> {
