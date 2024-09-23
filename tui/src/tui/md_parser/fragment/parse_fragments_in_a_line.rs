@@ -28,7 +28,7 @@
 //! the tests in this file.
 
 use crossterm::style::Stylize;
-use nom::{branch::*, combinator::*, IResult};
+use nom::{branch::alt, combinator::map, IResult};
 use r3bl_rs_utils_core::{call_if_true, log_debug};
 
 use crate::{parse_fragment_plain_text_no_new_line,

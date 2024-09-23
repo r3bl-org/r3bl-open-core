@@ -23,7 +23,7 @@
 //! in [crate::parse_fragments_in_a_line].
 
 use crossterm::style::Stylize;
-use nom::{bytes::complete::*, combinator::*, multi::*, IResult};
+use nom::{bytes::complete::tag, combinator::recognize, multi::many1, IResult};
 use r3bl_rs_utils_core::call_if_true;
 
 use crate::{constants::NEW_LINE,

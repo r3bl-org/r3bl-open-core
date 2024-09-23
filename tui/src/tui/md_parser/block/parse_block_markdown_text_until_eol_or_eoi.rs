@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use nom::{bytes::complete::*, multi::*, sequence::*, IResult};
+use nom::{bytes::complete::tag, multi::many0, sequence::terminated, IResult};
 
 use crate::{constants::NEW_LINE,
             parse_inline_fragments_until_eol_or_eoi,

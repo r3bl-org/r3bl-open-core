@@ -16,7 +16,11 @@
  */
 
 use crossterm::style::Stylize;
-use nom::{branch::*, bytes::complete::*, combinator::*, multi::*, IResult};
+use nom::{branch::alt,
+          bytes::complete::tag,
+          combinator::{map, recognize},
+          multi::many0,
+          IResult};
 use r3bl_rs_utils_core::call_if_true;
 
 use super::specialized_parser_delim_matchers;

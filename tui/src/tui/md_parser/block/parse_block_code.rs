@@ -15,7 +15,11 @@
  *   limitations under the License.
  */
 
-use nom::{branch::*, bytes::complete::*, combinator::*, sequence::*, IResult};
+use nom::{branch::alt,
+          bytes::complete::{is_not, tag, take_until},
+          combinator::{map, opt},
+          sequence::{preceded, terminated, tuple},
+          IResult};
 
 use crate::{constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE},
             CodeBlockLine,

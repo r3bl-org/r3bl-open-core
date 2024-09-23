@@ -33,12 +33,12 @@
 //! in [crate::parse_fragments_in_a_line].
 
 use crossterm::style::Stylize;
-use nom::{branch::*,
-          bytes::complete::*,
-          character::complete::*,
-          combinator::*,
-          multi::*,
-          sequence::*,
+use nom::{branch::alt,
+          bytes::complete::{tag, take_till1},
+          character::complete::anychar,
+          combinator::{not, recognize},
+          multi::many1,
+          sequence::preceded,
           IResult};
 use r3bl_rs_utils_core::call_if_true;
 

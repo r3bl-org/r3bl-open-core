@@ -16,7 +16,11 @@
  */
 
 use crossterm::style::Stylize;
-use nom::{bytes::complete::*, combinator::*, error::*, sequence::*, IResult};
+use nom::{bytes::complete::{tag, take_until},
+          combinator::map,
+          error::ErrorKind,
+          sequence::tuple,
+          IResult};
 use r3bl_rs_utils_core::call_if_true;
 
 use crate::{constants::NEW_LINE, DEBUG_MD_PARSER_STDOUT};

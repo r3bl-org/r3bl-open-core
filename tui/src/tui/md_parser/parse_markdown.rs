@@ -15,29 +15,39 @@
  *   limitations under the License.
  */
 
-use nom::{branch::*, combinator::*, multi::*, IResult};
+use nom::{branch::alt, combinator::map, multi::many0, IResult};
 
-use crate::{constants::*, *};
+use crate::{constants::{AUTHORS, DATE, TAGS, TITLE},
+            parse_block_code,
+            parse_block_heading_opt_eol,
+            parse_block_markdown_text_with_or_without_new_line,
+            parse_block_smart_list,
+            parse_csv_opt_eol,
+            parse_unique_kv_opt_eol,
+            List,
+            MdBlock,
+            MdDocument};
 
 // BOOKM: Main Markdown parser entry point
 
 /// This is the main parser entry point, aka, the root parser. It takes a string slice and
 /// if it can be parsed, returns a [MdDocument] that represents the parsed Markdown.
 ///
-/// 1. [MdLineFragments] roughly corresponds to a line of parsed text.
+/// 1. [crate::MdLineFragments] roughly corresponds to a line of parsed text.
 /// 2. [MdDocument] contains all the blocks that are parsed from a Markdown string slice.
 ///
 /// Each item in this [MdDocument] corresponds to a block of Markdown [MdBlock], which can
 /// be one of the following variants:
-/// 1. Metadata title. The parsers in [parse_metadata_kv] file handle this.
-/// 2. Metadata tags. The parsers in [parse_metadata_kcsv] file handle this.
-/// 3. Heading (which contains a [HeadingLevel] & [MdLineFragments]).
-/// 4. Smart ordered & unordered list (which itself contains a [Vec] of [MdLineFragments].
-///    The parsers in [mod@parse_block_smart_list] file handle this.
+/// 1. Metadata title. The parsers in [crate::parse_metadata_kv] file handle this.
+/// 2. Metadata tags. The parsers in [crate::parse_metadata_kcsv] file handle this.
+/// 3. Heading (which contains a [crate::HeadingLevel] & [crate::MdLineFragments]).
+/// 4. Smart ordered & unordered list (which itself contains a [Vec] of
+///    [crate::MdLineFragments]. The parsers in [mod@parse_block_smart_list] file handle
+///    this.
 /// 5. Code block (which contains string slices of the language & code). The parsers in
 ///    [mod@parse_block_code] file handle this.
-/// 6. line (which contains a [MdLineFragments]). The parsers in [mod@fragment] handle
-///    this.
+/// 6. line (which contains a [crate::MdLineFragments]). The parsers in
+///    [mod@crate::fragment] handle this.
 #[rustfmt::skip]
 pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument<'_>> {
     let (input, output) = many0(
@@ -81,9 +91,17 @@ fn parse_date_value(input: &str) -> IResult<&str, &str> {
 #[cfg(test)]
 mod tests {
     use crossterm::style::Stylize;
-    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
+    use crate::{convert_into_code_block_lines,
+                list,
+                BulletKind,
+                HeadingData,
+                HeadingLevel,
+                HyperlinkData,
+                MdBlock,
+                MdLineFragment};
 
     #[test]
     fn test_no_line() {

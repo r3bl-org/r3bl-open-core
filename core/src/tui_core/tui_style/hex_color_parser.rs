@@ -20,9 +20,14 @@
 
 use std::num::ParseIntError;
 
-use nom::{bytes::complete::*, combinator::*, error::*, sequence::*, IResult, Parser};
+use nom::{bytes::complete::{tag, take_while_m_n},
+          combinator::map_res,
+          error::{FromExternalError, ParseError},
+          sequence::tuple,
+          IResult,
+          Parser};
 
-use crate::*;
+use crate::RgbValue;
 
 /// Parse function that generate an [RgbValue] struct from a valid hex color string.
 pub fn parse_hex_color(input: &str) -> IResult<&str, RgbValue> {

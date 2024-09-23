@@ -15,14 +15,14 @@
  *   limitations under the License.
  */
 
-use nom::{branch::*,
-          bytes::complete::*,
-          character::complete::*,
-          combinator::*,
-          multi::*,
-          sequence::*};
+use nom::{branch::alt,
+          bytes::complete::tag,
+          character::complete::anychar,
+          combinator::{not, recognize},
+          multi::many0,
+          sequence::preceded};
 
-use crate::constants::*;
+use crate::constants::NEW_LINE;
 
 /// Take text until an optional EOL character is found, or end of input is reached. If an
 /// EOL character is found:
