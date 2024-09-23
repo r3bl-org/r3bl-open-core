@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-use constants::*;
 use nom::{bytes::complete::*, combinator::*, sequence::*, IResult};
 
-use crate::*;
+use crate::{constants::{COLON, NEW_LINE, SPACE},
+            take_text_until_new_line_or_end};
 
 /// - Sample parse input: `@title: Something` or `@date: Else`.
 /// - There may or may not be a newline at the end. If there is, it is consumed.
@@ -64,6 +64,7 @@ mod test_parse_title_no_eol {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
+    use crate::constants::TITLE;
 
     #[test]
     fn test_not_quoted_no_eol() {

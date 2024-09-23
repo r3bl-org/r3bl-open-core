@@ -17,10 +17,8 @@
 
 use std::fmt::{Debug, Display};
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{Position, RequestedSizePercent, Size, TuiStyle};
 use serde::{Deserialize, Serialize};
-
-use crate::*;
 
 /// Direction of the layout of the box.
 #[non_exhaustive]
@@ -91,6 +89,7 @@ pub struct FlexBox {
 
 mod flex_box_impl {
     use super::*;
+    use crate::{format_option, FormatMsg};
 
     impl FlexBox {
         pub fn get_computed_style(&self) -> Option<TuiStyle> { self.maybe_computed_style }
@@ -134,6 +133,7 @@ pub struct PartialFlexBox {
 
 mod partial_flex_box_impl {
     use super::*;
+    use crate::{format_option, FormatMsg};
 
     impl PartialFlexBox {
         pub fn get_computed_style(&self) -> Option<TuiStyle> { self.maybe_computed_style }

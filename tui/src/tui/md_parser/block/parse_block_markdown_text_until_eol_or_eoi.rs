@@ -15,11 +15,12 @@
  *   limitations under the License.
  */
 
-use constants::*;
 use nom::{bytes::complete::*, multi::*, sequence::*, IResult};
-use CheckboxParsePolicy::*;
 
-use crate::*;
+use crate::{constants::NEW_LINE,
+            parse_inline_fragments_until_eol_or_eoi,
+            List,
+            MdLineFragments};
 
 pub fn parse_block_markdown_text_with_or_without_new_line(
     input: &str,
@@ -31,7 +32,7 @@ pub fn parse_block_markdown_text_with_or_without_new_line(
     }
 }
 
-/// Parse a single line of markdown text [FragmentsInOneLine] terminated by EOL.
+/// Parse a single line of markdown text [crate::FragmentsInOneLine] terminated by EOL.
 #[rustfmt::skip]
 fn parse_block_markdown_text_with_new_line(
     input: &str,
@@ -40,7 +41,7 @@ fn parse_block_markdown_text_with_new_line(
         terminated(
             /* output */
             many0(
-                |it| parse_inline_fragments_until_eol_or_eoi( it, IgnoreCheckbox)
+                |it| parse_inline_fragments_until_eol_or_eoi( it, CheckboxParsePolicy::IgnoreCheckbox)
             ),
             /* ends with (discarded) */
             tag(NEW_LINE),
@@ -50,7 +51,7 @@ fn parse_block_markdown_text_with_new_line(
     Ok((input, it))
 }
 
-/// Parse a single line of markdown text [FragmentsInOneLine] not terminated by EOL.
+/// Parse a single line of markdown text [crate::FragmentsInOneLine] not terminated by EOL.
 #[rustfmt::skip]
 fn parse_block_markdown_text_without_new_line(input: &str) -> IResult<&str, MdLineFragments<'_>> {
     // Nothing to parse, early return.
@@ -62,7 +63,7 @@ fn parse_block_markdown_text_without_new_line(input: &str) -> IResult<&str, MdLi
     }
 
     let (input, output) = many0(
-        |it| parse_inline_fragments_until_eol_or_eoi(it, IgnoreCheckbox)
+        |it| parse_inline_fragments_until_eol_or_eoi(it, CheckboxParsePolicy::IgnoreCheckbox)
     )(input)?;
 
     let it = List::from(output);
@@ -75,7 +76,7 @@ pub enum CheckboxParsePolicy {
     ParseCheckbox,
 }
 
-/// Parse a markdown text [FragmentsInOneLine] in the input (no EOL required).
+/// Parse a markdown text [crate::FragmentsInOneLine] in the input (no EOL required).
 #[rustfmt::skip]
 pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
     input: &str,
@@ -96,6 +97,7 @@ mod tests_parse_block_markdown_text_with_or_without_new_line {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
+    use crate::{list, HyperlinkData, MdLineFragment};
 
     #[test]
     fn test_parse_hyperlink_markdown_text_1() {
@@ -197,6 +199,7 @@ mod tests_parse_block_markdown_text_with_new_line {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
+    use crate::{list, MdLineFragment};
 
     #[test]
     fn test_parse_multiple_plain_text_fragments_in_single_line() {
@@ -282,6 +285,7 @@ mod tests_parse_block_markdown_text_opt_eol_with_checkbox_policy {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
+    use crate::{list, MdLineFragment};
 
     #[test]
     fn test_ignore_checkbox_empty_string() {

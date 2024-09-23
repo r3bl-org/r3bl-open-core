@@ -18,9 +18,9 @@
 use std::{fmt::{self, Debug},
           ops::Deref};
 
-use serde::*;
+use serde::{Deserialize, Serialize};
 
-use crate::*;
+use crate::{ch, ChUnit, ChUnitPrimitiveType};
 
 /// Represents an integer value between 0 and 100 (inclusive).
 #[derive(Copy, Clone, PartialEq, Eq, Default, Serialize, Deserialize, Hash)]

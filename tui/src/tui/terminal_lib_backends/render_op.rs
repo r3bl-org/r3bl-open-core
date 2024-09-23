@@ -16,13 +16,16 @@
  */
 
 use std::{fmt::{Debug, Formatter, Result},
-          ops::{Deref, DerefMut}};
+          ops::{AddAssign, Deref, DerefMut}};
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{Position, Size, TuiColor, TuiStyle};
 use serde::{Deserialize, Serialize};
 
 use super::TERMINAL_LIB_BACKEND;
-use crate::*;
+use crate::{CrosstermDebugFormatRenderOp,
+            PaintRenderOp,
+            RenderOpImplCrossterm,
+            TerminalLibBackend};
 
 /// Here's an example. Refer to [RenderOps] for more details.
 ///
@@ -113,23 +116,23 @@ macro_rules! render_ops {
 
 /// For ease of use, please use the [render_ops!] macro.
 ///
-/// It is a collection of *atomic* paint operations (aka [`RenderOps`] at various [`ZOrder`]s); each
-/// [`RenderOps`] is made up of a [vec] of [`RenderOp`]. It contains `Map<ZOrder, Vec<RenderOps>>`,
-/// eg:
-/// - [`ZOrder::Normal`] => vec![[`RenderOp::ResetColor`], [`RenderOp::MoveCursorPositionAbs(..)`],
-///   [`RenderOp::PrintTextWithAttributes(..)`]]
-/// - [`ZOrder::Glass`] => vec![[`RenderOp::ResetColor`], [`RenderOp::MoveCursorPositionAbs(..)`],
-///   [`RenderOp::PrintTextWithAttributes(..)`]]
+/// It is a collection of *atomic* paint operations (aka [`RenderOps`] at various
+/// [`super::ZOrder`]s); each [`RenderOps`] is made up of a [vec] of [`RenderOp`]. It
+/// contains `Map<ZOrder, Vec<RenderOps>>`, eg:
+/// - [`super::ZOrder::Normal`] => vec![[`RenderOp::ResetColor`],
+///   [`RenderOp::MoveCursorPositionAbs`], [`RenderOp::PaintTextWithAttributes`]]
+/// - [`super::ZOrder::Glass`] => vec![[`RenderOp::ResetColor`],
+///   [`RenderOp::MoveCursorPositionAbs`], [`RenderOp::PaintTextWithAttributes`]]
 /// - etc.
 ///
 /// # What is an atomic paint operation?
 /// 1. It moves the cursor using:
 ///     1. [`RenderOp::MoveCursorPositionAbs`]
 ///     2. [`RenderOp::MoveCursorPositionRelTo`]
-/// 2.  And it does not assume that the cursor is in the correct position from some other previously
-///     executed operation!
-/// 3. So there are no side effects when re-ordering or omitting painting an atomic paint operation
-///    (eg in the case where it has already been painted before).
+/// 2.  And it does not assume that the cursor is in the correct position from some other
+///     previously executed operation!
+/// 3. So there are no side effects when re-ordering or omitting painting an atomic paint
+///    operation (eg in the case where it has already been painted before).
 ///
 /// Here's an example. Consider using the macro for convenience (see [render_ops!]).
 ///
@@ -144,9 +147,9 @@ macro_rules! render_ops {
 /// ```
 ///
 /// # Paint optimization
-/// Due to the compositor [OffscreenBuffer], there is no need to optimize the individual paint
-/// operations. You don't have to manage your own whitespace or doing clear before paint! 🎉 The
-/// compositor takes care of that for you!
+/// Due to the compositor [super::OffscreenBuffer], there is no need to optimize the
+/// individual paint operations. You don't have to manage your own whitespace or doing
+/// clear before paint! 🎉 The compositor takes care of that for you!
 #[derive(
     Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf,
 )]
@@ -160,8 +163,6 @@ pub struct RenderOpsLocalData {
 }
 
 pub mod render_ops_impl {
-    use std::ops::AddAssign;
-
     use super::*;
 
     impl RenderOps {
@@ -237,9 +238,9 @@ pub enum RenderOp {
 
     ExitRawMode,
 
-    /// This is always painted on top. [Position] is the absolute column and row on the terminal
-    /// screen. This uses [sanitize_and_save_abs_position] to clean up the given
-    /// [Position].
+    /// This is always painted on top. [Position] is the absolute column and row on the
+    /// terminal screen. This uses [super::sanitize_and_save_abs_position] to clean up the
+    /// given [Position].
     MoveCursorPositionAbs(/* absolute position */ Position),
 
     /// This is always painted on top. 1st [Position] is the origin column and row, and the 2nd
@@ -265,8 +266,8 @@ pub enum RenderOp {
     /// apply attributes, use [RenderOp::PaintTextWithAttributes] instead.
     ApplyColors(Option<TuiStyle>),
 
-    /// Translate [TuiStyle] into *only* attributes for crossterm (bold, italic, underline,
-    /// strikethrough, etc) and not colors. If you need to apply color, use
+    /// Translate [TuiStyle] into *only* attributes for crossterm (bold, italic,
+    /// underline, strikethrough, etc) and not colors. If you need to apply color, use
     /// [RenderOp::ApplyColors] instead.
     ///
     /// 1. If the [String] argument is plain text (no ANSI sequences) then it will be
@@ -278,10 +279,11 @@ pub enum RenderOp {
     PaintTextWithAttributes(String, Option<TuiStyle>),
 
     /// This is **not** meant for use directly by apps. It is to be used only by the
-    /// [OffscreenBuffer]. This operation skips the checks for content width padding & clipping, and
-    /// window bounds clipping. These are not needed when the compositor is painting an offscreen
-    /// buffer, since when the offscreen buffer was created the two render ops above were used which
-    /// already handle the clipping and padding.
+    /// [super::OffscreenBuffer]. This operation skips the checks for content width
+    /// padding & clipping, and window bounds clipping. These are not needed when the
+    /// compositor is painting an offscreen buffer, since when the offscreen buffer was
+    /// created the two render ops above were used which already handle the clipping and
+    /// padding.
     CompositorNoClipTruncPaintTextWithAttributes(String, Option<TuiStyle>),
 
     /// For [Default] impl.
@@ -296,8 +298,9 @@ mod render_op_impl {
     }
 
     impl Debug for RenderOp {
-        /// When [RenderPipeline] is printed as debug, each [RenderOp] is printed using this method. Also
-        /// [exec_render_op!] does not use this; it has its own way of logging output.
+        /// When [crate::RenderPipeline] is printed as debug, each [RenderOp] is printed
+        /// using this method. Also [crate::exec_render_op!] does not use this; it has its
+        /// own way of logging output.
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {

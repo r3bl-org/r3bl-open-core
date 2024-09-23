@@ -19,7 +19,25 @@ use std::fmt::Debug;
 
 use r3bl_rs_utils_core::*;
 
-use crate::*;
+use crate::{Component,
+            DialogEngine,
+            DialogEngineApi,
+            DialogEngineApplyResponse,
+            DialogEngineArgs,
+            DialogEngineConfigOptions,
+            EditorEngineConfig,
+            EventPropagation,
+            FlexBox,
+            FlexBoxId,
+            GlobalData,
+            HasDialogBuffers,
+            HasFocus,
+            InputEvent,
+            OnDialogEditorChangeFn,
+            OnDialogPressFn,
+            RenderPipeline,
+            SurfaceBounds,
+            DEBUG_TUI_MOD};
 
 /// This is a shim which allows the reusable [DialogEngine] to be used in the context of
 /// [Component]. The main methods here simply pass thru all their arguments to the
@@ -41,7 +59,8 @@ where
 {
     pub id: FlexBoxId,
     pub dialog_engine: DialogEngine,
-    /// Make sure to dispatch actions to handle the user's dialog choice [DialogChoice].
+    /// Make sure to dispatch actions to handle the user's dialog choice
+    /// [crate::DialogChoice].
     pub on_dialog_press_handler: Option<OnDialogPressFn<S, AS>>,
     /// Make sure to dispatch an action to update the dialog buffer's editor buffer.
     pub on_dialog_editor_change_handler: Option<OnDialogEditorChangeFn<S, AS>>,
@@ -109,11 +128,11 @@ where
     /// [DialogEngineApi::apply_event](DialogEngineApi::apply_event) w/ all the necessary
     /// arguments:
     /// - Global scope: [GlobalData] containing the app's state.
-    /// - User input (from [main_event_loop]): [InputEvent].
+    /// - User input (from [crate::main_event_loop]): [InputEvent].
     /// - Has focus: [HasFocus] containing whether the current box has focus.
     ///
-    /// Usually a component must have focus in order for the [App] to
-    /// [route_event_to_focused_component](ComponentRegistry::route_event_to_focused_component)
+    /// Usually a component must have focus in order for the [crate::App] to
+    /// [route_event_to_focused_component](crate::ComponentRegistry::route_event_to_focused_component)
     /// in the first place.
     fn handle_event(
         &mut self,

@@ -15,11 +15,11 @@
  *   limitations under the License.
  */
 
-use crossterm::event::*;
-use r3bl_rs_utils_core::*;
+use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
+use r3bl_rs_utils_core::{position, Position};
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use super::{convert_key_modifiers, ModifierKeysMask};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub struct MouseInput {

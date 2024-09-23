@@ -20,10 +20,15 @@
 //! [here](https://www.ditig.com/256-colors-cheat-sheet).
 
 use r3bl_ansi_color::{global_color_support, ColorSupport};
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{ANSIBasicColor,
+                         Ansi256GradientIndex,
+                         AnsiValue,
+                         RgbValue,
+                         TuiColor,
+                         TuiStyle};
 use r3bl_rs_utils_macro::tui_style;
 
-use crate::*;
+use crate::{ColorWheel, ColorWheelConfig, ColorWheelSpeed, HeadingData};
 
 /// This style is for any selected range in the document.
 pub fn get_selection_style() -> TuiStyle {

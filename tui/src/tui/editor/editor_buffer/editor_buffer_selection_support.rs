@@ -18,10 +18,18 @@
 use std::cmp;
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true,
+                         ch,
+                         log_debug,
+                         position,
+                         CaretLocationInRange,
+                         CaretMovementDirection,
+                         ChUnit,
+                         Position,
+                         SelectionRange};
 
-use self::selection_map_impl::{DirectionChangeResult, RowLocationInSelectionMap::*};
-use crate::*;
+use super::{selection_map::selection_map_impl::RowLocationInSelectionMap, EditorBuffer};
+use crate::{selection_map_impl::DirectionChangeResult, DEBUG_TUI_COPY_PASTE};
 
 pub struct EditorBufferApi;
 impl EditorBufferApi {
@@ -272,8 +280,8 @@ impl EditorBufferApi {
             // DirectionIsTheSame: No selection, then Shift+Down.
             // DirectionHasChanged: No selection -> Shift+Down -> Shift+Up -> Shift+Down.
             (
-                /* previous_caret */ Overflow,
-                /* current_caret */ Overflow,
+                /* previous_caret */ RowLocationInSelectionMap::Overflow,
+                /* current_caret */ RowLocationInSelectionMap::Overflow,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -285,8 +293,8 @@ impl EditorBufferApi {
             ),
             // DirectionHasChanged: No selection -> Shift+Up -> Shift+Down -> Shift+Up.
             (
-                /* previous_caret */ Overflow,
-                /* current_caret */ Overflow,
+                /* previous_caret */ RowLocationInSelectionMap::Overflow,
+                /* current_caret  */ RowLocationInSelectionMap::Overflow,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -299,8 +307,8 @@ impl EditorBufferApi {
             // DirectionIsTheSame: Previous selection with Shift+Down, then Shift+Down.
             // DirectionHasChanged: No selection -> Shift+Left/Right -> Shift+Down.
             (
-                /* previous_caret */ Contained,
-                /* current_caret */ Overflow,
+                /* previous_caret */ RowLocationInSelectionMap::Contained,
+                /* current_caret  */ RowLocationInSelectionMap::Overflow,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -312,8 +320,8 @@ impl EditorBufferApi {
             ),
             // Position caret below empty line, Shift+Up, Shift+Up, Shift+Up, Shift+Down.
             (
-                /* previous_caret */ Overflow,
-                /* current_caret */ Contained,
+                /* previous_caret */ RowLocationInSelectionMap::Overflow,
+                /* current_caret  */ RowLocationInSelectionMap::Contained,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame,
             ) => multiline_select_helpers::continue_select_down(
@@ -325,8 +333,8 @@ impl EditorBufferApi {
             // DirectionIsTheSame: Previous selection with Shift+Up, then Shift+Up.
             // DirectionHasChanged: // No selection -> Shift+Left/Right -> Shift+Up.
             (
-                /* previous_caret */ Contained,
-                /* current_caret */ Overflow,
+                /* previous_caret */ RowLocationInSelectionMap::Contained,
+                /* current_caret  */ RowLocationInSelectionMap::Overflow,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -338,8 +346,8 @@ impl EditorBufferApi {
             ),
             // Position caret above empty line, Shift+Down, Shift+Down, Shift+Down, Shift+Up.
             (
-                /* previous_caret */ Overflow,
-                /* current_caret */ Contained,
+                /* previous_caret */ RowLocationInSelectionMap::Overflow,
+                /* current_caret  */ RowLocationInSelectionMap::Contained,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame,
             ) => multiline_select_helpers::continue_select_up(
@@ -351,8 +359,8 @@ impl EditorBufferApi {
             // DirectionHasChanged: Previous selection with Shift+Down, then Shift+Up.
             // DirectionIsTheSame: Previous selection with Shift+Down, then Shift+Up, then Shift+Up.
             (
-                /* previous_caret */ Contained,
-                /* current_caret */ Contained,
+                /* previous_caret */ RowLocationInSelectionMap::Contained,
+                /* current_caret  */ RowLocationInSelectionMap::Contained,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionHasChanged
                 | DirectionChangeResult::DirectionIsTheSame,
@@ -365,8 +373,8 @@ impl EditorBufferApi {
             // DirectionHasChanged: Previous selection with Shift+Up, then Shift+Up, then Shift+Down.
             // DirectionIsTheSame: Previous selection with Shift+Up, then Shift+Down, then Shift+Down.
             (
-                /* previous_caret */ Contained,
-                /* current_caret */ Contained,
+                /* previous_caret */ RowLocationInSelectionMap::Contained,
+                /* current_caret  */ RowLocationInSelectionMap::Contained,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionHasChanged
                 | DirectionChangeResult::DirectionIsTheSame,
@@ -562,6 +570,8 @@ impl EditorBufferApi {
 }
 
 mod multiline_select_helpers {
+    use r3bl_rs_utils_core::Position;
+
     use super::*;
 
     /// No existing selection, up, no direction change:

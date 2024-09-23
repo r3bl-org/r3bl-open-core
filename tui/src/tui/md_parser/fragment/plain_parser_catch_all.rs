@@ -16,23 +16,22 @@
  */
 
 //! This is the lowest priority parser called by
-//! [parse_inline_fragments_until_eol_or_eoi()].
+//! [crate::parse_inline_fragments_until_eol_or_eoi()].
 //!
 //! It matches anything that is not a special character. This is used to parse plain text.
-//! It works with the specialized parsers in [parse_inline_fragments_until_eol_or_eoi()]
+//! It works with the specialized parsers in [crate::parse_inline_fragments_until_eol_or_eoi()]
 //! such as:
-//! - [parse_fragment_starts_with_underscore_err_on_new_line()],
-//! - [parse_fragment_starts_with_star_err_on_new_line()],
-//! - [parse_fragment_starts_with_backtick_err_on_new_line()], etc.
+//! - [crate::parse_fragment_starts_with_underscore_err_on_new_line()],
+//! - [crate::parse_fragment_starts_with_star_err_on_new_line()],
+//! - [crate::parse_fragment_starts_with_backtick_err_on_new_line()], etc.
 //!
 //! It also works hand in hand with
 //! [specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()] which is
 //! used by the specialized parsers.
 //!
 //! To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
-//! in [parse_fragments_in_a_line].
+//! in [crate::parse_fragments_in_a_line].
 
-use constants::*;
 use crossterm::style::Stylize;
 use nom::{branch::*,
           bytes::complete::*,
@@ -43,14 +42,22 @@ use nom::{branch::*,
           IResult};
 use r3bl_rs_utils_core::call_if_true;
 
-use crate::*;
+use crate::{constants::{BACK_TICK,
+                        LEFT_BRACKET,
+                        LEFT_IMAGE,
+                        NEW_LINE,
+                        NEW_LINE_CHAR,
+                        STAR,
+                        UNDERSCORE},
+            specialized_parser_delim_matchers,
+            DEBUG_MD_PARSER_STDOUT};
 
 // BOOKM: Lowest priority parser for "plain text" Markdown fragment
 
 /// This is the lowest priority parser called by
-/// [parse_inline_fragments_until_eol_or_eoi()], which itself is called:
-/// 1. Repeatedly in a loop by [parse_block_markdown_text_with_or_without_new_line()].
-/// 2. And by [parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()].
+/// [crate::parse_inline_fragments_until_eol_or_eoi()], which itself is called:
+/// 1. Repeatedly in a loop by [crate::parse_block_markdown_text_with_or_without_new_line()].
+/// 2. And by [crate::parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line()].
 ///
 /// It will match anything that is not a special character. This is used to parse plain
 /// text.
@@ -62,8 +69,8 @@ use crate::*;
 ///
 /// This gives the other more specialized parsers a chance to address these special
 /// characters (like italic, bold, links, etc.), when this function is called repeatedly:
-/// - By [parse_block_markdown_text_with_or_without_new_line()],
-/// - Which repeatedly calls [parse_inline_fragments_until_eol_or_eoi()]. This function
+/// - By [crate::parse_block_markdown_text_with_or_without_new_line()],
+/// - Which repeatedly calls [crate::parse_inline_fragments_until_eol_or_eoi()]. This function
 ///   actually runs the specialized parsers.
 /// - Which calls this function repeatedly (if the specialized parsers don't match & error
 ///   out). This serves as a "catch all" parser.
@@ -208,8 +215,8 @@ pub fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
 /// This is used to detect the `Normal case` where the input does not start with any of
 /// the special characters in [get_sp_char_set_2()]. The input is taken until the first
 /// special character, and split there. This returns the chunk until the first special
-/// character as [MdLineFragment::Plain], and the remainder of the input gets a chance to
-/// be parsed by the specialized parsers.
+/// character as [crate::MdLineFragment::Plain], and the remainder of the input gets a
+/// chance to be parsed by the specialized parsers.
 pub fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
     get_sp_char_set_2()
         .iter()

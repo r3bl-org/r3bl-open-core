@@ -18,9 +18,9 @@
 use std::{error::Error,
           fmt::{Display, Result}};
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::CommonResult;
 
-use crate::*;
+use super::FlexBox;
 
 /// Main error struct.
 /// <https://learning-rust.github.io/docs/e7.custom_error_types.html>

@@ -18,10 +18,20 @@
 use std::{fmt::{self, Debug},
           ops::{Deref, DerefMut}};
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{ch,
+                         position,
+                         style_dim_underline,
+                         style_error,
+                         style_primary,
+                         GraphemeClusterSegment,
+                         Position,
+                         Size,
+                         TuiColor,
+                         TuiStyle};
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use super::{FlushKind, RenderOps};
+use crate::List;
 
 /// Represents a grid of cells where the row/column index maps to the terminal screen.
 ///
@@ -422,6 +432,7 @@ pub trait OffscreenBufferPaint {
 
 #[cfg(test)]
 mod tests {
+    use r3bl_rs_utils_core::{assert_eq2, color, size, ANSIBasicColor};
     use r3bl_rs_utils_macro::tui_style;
 
     use super::*;

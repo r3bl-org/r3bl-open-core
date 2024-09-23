@@ -15,18 +15,20 @@
  *   limitations under the License.
  */
 
-//! For use with specialized parsers for: [UNDERSCORE], [STAR], and [BACK_TICK].
-//! See: [parse_fragment_plain_text_no_new_line()].
+//! For use with specialized parsers for: [crate::constants::UNDERSCORE],
+//! [crate::constants::STAR], and [crate::constants::BACK_TICK]. See:
+//! [crate::parse_fragment_plain_text_no_new_line()].
 //!
 //! To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
-//! in [parse_fragments_in_a_line].
+//! in [crate::parse_fragments_in_a_line].
 
-use constants::*;
 use crossterm::style::Stylize;
 use nom::{bytes::complete::*, combinator::*, multi::*, IResult};
 use r3bl_rs_utils_core::call_if_true;
 
-use crate::*;
+use crate::{constants::NEW_LINE,
+            take_text_between_delims_err_on_new_line,
+            DEBUG_MD_PARSER_STDOUT};
 
 /// Returns tuple:
 /// 0. number of occurrences in the input, until the first "\n" or end of input.

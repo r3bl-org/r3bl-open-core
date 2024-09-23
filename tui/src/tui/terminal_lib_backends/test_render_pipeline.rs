@@ -17,9 +17,14 @@
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::assert_eq2;
 
-    use crate::*;
+    use crate::{render_ops,
+                render_pipeline,
+                RenderOp,
+                RenderOps,
+                RenderPipeline,
+                ZOrder};
 
     #[test]
     fn render_ops_macro() {

@@ -20,11 +20,13 @@ use std::fmt::Debug;
 use r3bl_rs_utils_core::*;
 use tokio::sync::mpsc::Sender;
 
-use crate::*;
+use crate::{EditorEngine, FlexBoxId, TerminalWindowMainThreadSignal};
 
 #[derive(Debug)]
 /// This is a shim which allows the reusable [EditorEngine] to be used in the context of
-/// [Component] and [App]. The main methods here simply pass thru all their
+/// [crate::Component] and [crate::App].
+///
+/// The main methods here simply pass thru all their
 /// arguments to the [EditorEngine].
 pub struct EditorComponent<S, AS>
 where
@@ -51,7 +53,20 @@ pub type OnEditorBufferChangeFn<A> =
 
 pub mod editor_component_impl_component_trait {
     use super::*;
-    use crate::editor_buffer_clipboard_support::system_clipboard_service_provider::SystemClipboard;
+    use crate::{editor_buffer_clipboard_support::system_clipboard_service_provider::SystemClipboard,
+                Component,
+                EditorBuffer,
+                EditorEngineApi,
+                EditorEngineApplyEventResult,
+                EventPropagation,
+                FlexBox,
+                GlobalData,
+                HasEditorBuffers,
+                HasFocus,
+                InputEvent,
+                RenderPipeline,
+                SurfaceBounds,
+                DEFAULT_SYN_HI_FILE_EXT};
 
     fn get_existing_mut_editor_buffer_from_state_or_create_new_one<S>(
         mut_state: &mut S,
@@ -116,13 +131,14 @@ pub mod editor_component_impl_component_trait {
             )
         }
 
-        /// This shim simply calls [EditorEngineApi::apply_event](EditorEngineApi::apply_event) w/
-        /// all the necessary arguments:
+        /// This shim simply calls
+        /// [EditorEngineApi::apply_event](EditorEngineApi::apply_event) w/ all the
+        /// necessary arguments:
         /// - Global scope: [GlobalData] (containing app state).
-        /// - User input (from [main_event_loop]): [InputEvent].
+        /// - User input (from [crate::main_event_loop]): [InputEvent].
         ///
-        /// Usually a component must have focus in order for the [App] to
-        /// [route_event_to_focused_component](ComponentRegistry::route_event_to_focused_component)
+        /// Usually a component must have focus in order for the [crate::App] to
+        /// [route_event_to_focused_component](crate::ComponentRegistry::route_event_to_focused_component)
         /// in the first place.
         fn handle_event(
             &mut self,
@@ -179,6 +195,7 @@ pub mod editor_component_impl_component_trait {
 
 pub mod constructor {
     use super::*;
+    use crate::{BoxedSafeComponent, EditorEngineConfig, HasEditorBuffers};
 
     impl<S, AS> EditorComponent<S, AS>
     where

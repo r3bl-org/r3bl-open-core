@@ -63,11 +63,12 @@
 //!     - <https://github.com/crossterm-rs/crossterm/wiki/Upgrade-from-0.13-to-0.14#111-new-event-api>
 //!     - <https://github.com/crossterm-rs/crossterm/blob/master/examples/event-stream-tokio.rs>
 
-use crossterm::event::*;
+use crossterm::event::EventStream;
 use futures_util::{FutureExt, StreamExt};
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true, log_error};
 
-use crate::*;
+use super::InputEvent;
+use crate::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
 
 pub struct AsyncEventStream {
     event_stream: EventStream,
