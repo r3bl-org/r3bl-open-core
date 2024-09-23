@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,21 +15,14 @@
  *   limitations under the License.
  */
 
-//! All the modules in the `r3bl_rs_utils_core` crate are in support of the `tui` module in the
-//! "main" [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crate.
+use serde::{Deserialize, Serialize};
 
-// Attach sources.
-pub mod color_wheel_core;
-pub mod constants;
-pub mod dimens;
-pub mod graphemes;
-pub mod tui_styled_text;
-pub mod tui_style;
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum Defaults {
+    Steps = 50,
+}
 
-// Re-export.
-pub use color_wheel_core::*;
-pub use constants::*;
-pub use dimens::*;
-pub use graphemes::*;
-pub use tui_styled_text::*;
-pub use tui_style::*;
+/// More info: <https://www.colorhexa.com/>
+pub const DEFAULT_GRADIENT_STOPS: [&str; 3] = [
+    /* cyan */ "#00ffff", /* magenta */ "#ff00ff", /* blue */ "#0000ff",
+];

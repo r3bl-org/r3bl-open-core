@@ -69,7 +69,7 @@ impl Display for ColorChangeSpeed {
 }
 
 impl From<ColorChangeSpeed> for f64 {
-    /// The float is added to seed in [crate::Lolcat] after every iteration. If
+    /// The float is added to seed in [Lolcat] after every iteration. If
     /// the number is `Rapid` then the changes in color between new lines is
     /// quite abrupt. If it is `Slow` then the changes are much much smoother.
     /// And so this is the default.

@@ -18,6 +18,8 @@
 use std::fmt::{Debug, Formatter, Result};
 
 use r3bl_rs_utils_core::{tui_styled_text,
+                         ColorUtils,
+                         ColorWheelControl,
                          RgbValue,
                          TuiColor,
                          TuiStyle,
@@ -26,7 +28,7 @@ use r3bl_rs_utils_core::{tui_styled_text,
                          UnicodeString};
 use serde::{Deserialize, Serialize};
 
-pub use super::*;
+use super::LolcatBuilder;
 
 /// Please use the [LolcatBuilder] to create this struct (lots of documentation is provided here).
 /// Please do not use this struct directly.

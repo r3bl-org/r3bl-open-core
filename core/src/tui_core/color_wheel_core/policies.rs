@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,14 +15,19 @@
  *   limitations under the License.
  */
 
-// Attach sources.
-pub mod hex_color_parser;
-pub mod tui_color;
-pub mod tui_style;
-pub mod tui_stylesheet;
+use serde::{Deserialize, Serialize};
 
-// Re-export.
-pub use hex_color_parser::*;
-pub use tui_color::*;
-pub use tui_style::*;
-pub use tui_stylesheet::*;
+use crate::TuiStyle;
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum GradientGenerationPolicy {
+    RegenerateGradientAndIndexBasedOnTextLength,
+    ReuseExistingGradientAndIndex,
+    ReuseExistingGradientAndResetIndex,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum TextColorizationPolicy {
+    ColorEachCharacter(Option<TuiStyle>),
+    ColorEachWord(Option<TuiStyle>),
+}
