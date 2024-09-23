@@ -21,7 +21,11 @@
 //!   with `nom` parsing.
 //! - When some of these ideas graduate, they get moved to the main codebase.
 
-use nom::{character::complete::*, combinator::*, multi::*, IResult, Parser};
+use nom::{character::complete::anychar,
+          combinator::recognize,
+          multi::many0,
+          IResult,
+          Parser};
 
 use crate::constants::NEW_LINE_CHAR;
 

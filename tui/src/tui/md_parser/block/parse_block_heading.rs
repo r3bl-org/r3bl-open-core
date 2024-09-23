@@ -15,18 +15,20 @@
  *   limitations under the License.
  */
 
-use nom::{branch::*,
-          bytes::complete::*,
-          character::complete::*,
-          combinator::*,
-          multi::*,
-          sequence::*,
+use nom::{branch::alt,
+          bytes::complete::{tag, take_while1},
+          character::complete::anychar,
+          combinator::{map, not, opt, recognize},
+          multi::many1,
+          sequence::{preceded, terminated, tuple},
           IResult};
 
-use crate::{constants::NEW_LINE, *};
+use crate::{constants::{self, NEW_LINE},
+            HeadingData,
+            HeadingLevel};
 
 /// This matches the heading tag and text until EOL. Outputs a tuple of [HeadingLevel] and
-/// [FragmentsInOneLine].
+/// [crate::FragmentsInOneLine].
 #[rustfmt::skip]
 pub fn parse_block_heading_opt_eol(input: &str) -> IResult<&str, HeadingData<'_>> {
     let (remainder, output) = parse(input)?;
