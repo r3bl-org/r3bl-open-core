@@ -15,10 +15,23 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{size,
+                         throws,
+                         CommonResult,
+                         Position,
+                         RequestedSizePercent,
+                         Size,
+                         TuiStyle,
+                         TuiStylesheet};
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use super::{FlexBox,
+            FlexBoxProps,
+            LayoutDirection,
+            LayoutManagement,
+            PerformPositioningAndSizing,
+            SurfaceProps};
+use crate::{unwrap_or_err, LayoutError, LayoutErrorType, RenderPipeline};
 
 /// Represents a rectangular area of the terminal screen, and not necessarily the full terminal
 /// screen.

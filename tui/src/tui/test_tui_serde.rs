@@ -19,7 +19,7 @@
 mod tests {
     use r3bl_rs_utils_core::*;
 
-    use crate::*;
+    use crate::{render_pipeline, RenderOp, RenderOps, RenderPipeline, ZOrder};
 
     #[test]
     fn test_serde_tui_color_simple() {

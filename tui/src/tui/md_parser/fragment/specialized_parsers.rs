@@ -15,12 +15,25 @@
  *   limitations under the License.
  */
 
-use constants::*;
 use crossterm::style::Stylize;
 use nom::{branch::*, bytes::complete::*, combinator::*, multi::*, IResult};
 use r3bl_rs_utils_core::call_if_true;
 
-use crate::*;
+use super::specialized_parser_delim_matchers;
+use crate::{constants::{BACK_TICK,
+                        CHECKED,
+                        LEFT_BRACKET,
+                        LEFT_IMAGE,
+                        LEFT_PARENTHESIS,
+                        RIGHT_BRACKET,
+                        RIGHT_IMAGE,
+                        RIGHT_PARENTHESIS,
+                        STAR,
+                        UNCHECKED,
+                        UNDERSCORE},
+            take_text_between_delims_err_on_new_line,
+            HyperlinkData,
+            DEBUG_MD_PARSER_STDOUT};
 
 pub fn parse_fragment_starts_with_underscore_err_on_new_line(
     input: &str,

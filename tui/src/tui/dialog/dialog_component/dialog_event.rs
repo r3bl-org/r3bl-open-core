@@ -17,11 +17,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::*;
-
-/// By providing a conversion from [InputEvent] to [DialogEvent] it becomes easier to write event
-/// handlers that consume [InputEvent] and then process events in [DialogComponent] and
-/// [DialogEngine].
+/// Provide a conversion from [crate::InputEvent] to [DialogEvent].
+///
+/// This makes it easier to write event handlers that consume [crate::InputEvent] and then
+/// process events in [crate::DialogComponent] and [crate::DialogEngine].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DialogEvent {
     EnterPressed,
@@ -31,6 +30,7 @@ pub enum DialogEvent {
 
 mod dialog_event_impl {
     use super::*;
+    use crate::{InputEvent, Key, KeyPress, SpecialKey};
 
     impl DialogEvent {
         /// Tries to convert the given [InputEvent] into a [DialogEvent].
@@ -67,7 +67,7 @@ mod dialog_event_impl {
 mod test_dialog_event {
     use r3bl_rs_utils_core::*;
 
-    use crate::*;
+    use crate::{keypress, DialogEvent, InputEvent, Key, KeyPress, SpecialKey};
 
     #[test]
     fn dialog_event_handles_enter() {

@@ -14,8 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-use constants::*;
 use nom::{branch::alt,
           bytes::complete::{is_not, tag},
           character::complete::{anychar, digit1, space0},
@@ -24,7 +22,20 @@ use nom::{branch::alt,
           sequence::{preceded, terminated, tuple},
           IResult};
 
-use crate::*;
+use super::{parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line,
+            CheckboxParsePolicy};
+use crate::{constants::{CHECKED,
+                        LIST_PREFIX_BASE_WIDTH,
+                        NEW_LINE,
+                        ORDERED_LIST_PARTIAL_PREFIX,
+                        SPACE,
+                        SPACE_CHAR,
+                        UNCHECKED,
+                        UNORDERED_LIST_PREFIX},
+            list,
+            Lines,
+            List,
+            MdLineFragment};
 
 /// Public API for parsing a smart list block in markdown.
 pub fn parse_block_smart_list(
@@ -293,7 +304,7 @@ mod tests_parse_block_smart_list {
 mod tests_parse_smart_lists_in_markdown {
     use r3bl_rs_utils_core::{assert_eq2, ConsoleLogInColor, PrettyPrintDebug};
 
-    use super::*;
+    use crate::{parse_markdown, MdDocument};
 
     #[test]
     fn test_parse_valid_md_ol_with_indent() {

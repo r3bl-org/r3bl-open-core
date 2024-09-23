@@ -17,10 +17,16 @@
 
 #[cfg(test)]
 mod tests {
-    use crossterm::event::*;
-    use r3bl_rs_utils_core::*;
+    use crossterm::event::{KeyCode, KeyModifiers};
+    use r3bl_rs_utils_core::{assert_eq2, throws};
 
-    use crate::*;
+    use crate::{crossterm_keyevent,
+                keypress,
+                FunctionKey,
+                Key,
+                KeyPress,
+                ModifierKeysMask,
+                SpecialKey};
 
     #[test]
     fn test_keypress_character_key() {
@@ -93,8 +99,7 @@ mod tests {
         throws!({
             // "x"
             {
-                let key_event =
-                    keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::NONE);
+                let key_event = crossterm_keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::NONE);
                 let keypress: KeyPress = key_event.try_into()?;
                 assert_eq2!(
                     keypress,
@@ -106,8 +111,7 @@ mod tests {
 
             // "Ctrl + x"
             {
-                let key_event =
-                    keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::CONTROL);
+                let key_event = crossterm_keyevent!(code: KeyCode::Char('x'), modifiers: KeyModifiers::CONTROL);
                 let converted_keypress: KeyPress = key_event.try_into()?;
                 assert_eq2!(
                     converted_keypress,
@@ -120,7 +124,7 @@ mod tests {
 
             // "Ctrl + Alt + x"
             {
-                let key_event = keyevent!(
+                let key_event = crossterm_keyevent!(
                   code: KeyCode::Char('x'),
                   modifiers: KeyModifiers::CONTROL | KeyModifiers::ALT
                 );

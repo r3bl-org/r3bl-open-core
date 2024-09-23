@@ -17,27 +17,28 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::*;
-use serde::*;
+use r3bl_rs_utils_core::ChUnit;
+use serde::{Deserialize, Serialize};
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
-use crate::*;
+use crate::{load_default_theme, try_load_r3bl_theme, PartialFlexBox};
 
 /// Do not create this struct directly. Please use [new()](EditorEngine::new) instead.
 ///
 /// Holds data related to rendering in between render calls.
-/// 1. This is not stored in the [EditorBuffer] struct, which lives in the app's state.
-///    The state provides the underlying document or buffer struct that holds the actual
-///    document.
-/// 2. Rather, this struct is stored in the [EditorComponent] struct, which lives inside
-///    of the [App].
+/// 1. This is not stored in the [crate::EditorBuffer] struct, which lives in the app's
+///    state. The state provides the underlying document or buffer struct that holds the
+///    actual document.
+/// 2. Rather, this struct is stored in the [crate::EditorComponent] struct, which lives
+///    inside of the [crate::App].
 ///
 /// In order to change the document, you can use the
-/// [EditorEngineApi::apply_event](EditorEngineApi::apply_event) method which takes [InputEvent] and
-/// tries to convert it to an [EditorEvent] and then execute them against this buffer.
+/// [EditorEngineApi::apply_event](crate::EditorEngineApi::apply_event) method which takes
+/// [crate::InputEvent] and tries to convert it to an [crate::EditorEvent] and then execute them
+/// against this buffer.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct EditorEngine {
-    /// Set by [EditorEngineApi::render_engine](EditorEngineApi::render_engine).
+    /// Set by [EditorEngineApi::render_engine](crate::EditorEngineApi::render_engine).
     pub current_box: PartialFlexBox,
     pub config_options: EditorEngineConfig,
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
