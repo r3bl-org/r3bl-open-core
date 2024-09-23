@@ -22,8 +22,10 @@ use r3bl_rs_utils_core::{log_error,
                          CommonError,
                          CommonErrorType,
                          CommonResult,
+                         GradientGenerationPolicy,
+                         TextColorizationPolicy,
                          UnicodeString};
-use r3bl_tui::{ColorWheel, GradientGenerationPolicy, TextColorizationPolicy};
+use r3bl_tui::ColorWheel;
 use r3bl_tuify::SLATE_GRAY;
 
 use crate::{giti::ui_strings::UIStrings::*, upgrade_check};

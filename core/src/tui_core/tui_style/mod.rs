@@ -15,21 +15,14 @@
  *   limitations under the License.
  */
 
-//! All the modules in the `r3bl_rs_utils_core` crate are in support of the `tui` module in the
-//! "main" [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crate.
-
 // Attach sources.
-pub mod color_wheel_core;
-pub mod constants;
-pub mod dimens;
-pub mod graphemes;
-pub mod tui_styled_text;
-pub mod tui_style;
+pub mod hex_color_parser;
+pub mod tui_color;
+pub mod tui_style_impl;
+pub mod tui_stylesheet;
 
 // Re-export.
-pub use color_wheel_core::*;
-pub use constants::*;
-pub use dimens::*;
-pub use graphemes::*;
-pub use tui_styled_text::*;
-pub use tui_style::*;
+pub use hex_color_parser::*;
+pub use tui_color::*;
+pub use tui_style_impl::*;
+pub use tui_stylesheet::*;

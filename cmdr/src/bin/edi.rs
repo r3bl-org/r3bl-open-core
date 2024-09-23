@@ -24,8 +24,10 @@ use r3bl_rs_utils_core::{call_if_true,
                          throws,
                          try_to_set_log_level,
                          CommonResult,
+                         GradientGenerationPolicy,
+                         TextColorizationPolicy,
                          UnicodeString};
-use r3bl_tui::{ColorWheel, GradientGenerationPolicy, TextColorizationPolicy};
+use r3bl_tui::ColorWheel;
 
 use crate::clap_config::CLIArg;
 

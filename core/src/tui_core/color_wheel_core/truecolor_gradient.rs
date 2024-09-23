@@ -16,8 +16,9 @@
  */
 
 use colorgrad::Gradient;
-use r3bl_rs_utils_core::{RgbValue, TuiColor};
 use rand::Rng;
+
+use crate::{RgbValue, TuiColor};
 
 /// # Arguments
 /// * `steps` - The number of steps to take between each color stop.
@@ -117,9 +118,9 @@ pub fn generate_truecolor_gradient(stops: &[String], steps: usize) -> Vec<TuiCol
 #[cfg(test)]
 mod tests {
     use r3bl_ansi_color::{AnsiStyledText, Style};
-    use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
+    use crate::assert_eq2;
 
     #[test]
     fn test_generate_random_truecolor_gradient() {

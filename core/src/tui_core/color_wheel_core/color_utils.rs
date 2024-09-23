@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::ColorWheelControl;
+use super::ColorWheelControl;
 
 pub struct ColorUtils;
 
