@@ -18,20 +18,46 @@
 use std::{borrow::Cow,
           io::{stderr, stdout, Write}};
 
-use crossterm::{cursor::*,
-                event::*,
+use crossterm::{self,
+                cursor::{Hide, MoveTo, Show},
+                event::{DisableMouseCapture, EnableMouseCapture},
                 queue,
-                style::{Attribute, *},
-                terminal::{self, *}};
-use r3bl_rs_utils_core::*;
+                style::{Attribute,
+                        Print,
+                        ResetColor,
+                        SetAttribute,
+                        SetBackgroundColor,
+                        SetForegroundColor},
+                terminal::{self,
+                           Clear,
+                           ClearType,
+                           EnterAlternateScreen,
+                           LeaveAlternateScreen}};
+use r3bl_rs_utils_core::{call_if_true,
+                         console_log,
+                         log_error,
+                         log_info,
+                         throws,
+                         CommonResult,
+                         Position,
+                         Size,
+                         TuiColor,
+                         TuiStyle,
+                         UnicodeString};
 
-use crate::*;
+use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color,
+            exec_render_op,
+            sanitize_and_save_abs_position,
+            Flush,
+            PaintRenderOp,
+            RenderOp,
+            RenderOpsLocalData};
 
 /// Struct representing the implementation of [RenderOp] for crossterm terminal backend. This empty
 /// struct is needed since the [Flush] trait needs to be implemented.
 pub struct RenderOpImplCrossterm;
 
-mod render_op_impl_crossterm_impl_trait_paint_render_op {
+mod impl_trait_paint_render_op {
     use super::*;
 
     impl PaintRenderOp for RenderOpImplCrossterm {
@@ -104,7 +130,7 @@ mod render_op_impl_crossterm_impl_trait_paint_render_op {
     }
 }
 
-pub mod render_op_impl_crossterm_impl_trait_flush {
+pub mod impl_trait_flush {
     use super::*;
 
     impl Flush for RenderOpImplCrossterm {
@@ -128,7 +154,7 @@ pub mod render_op_impl_crossterm_impl_trait_flush {
     }
 }
 
-mod render_op_impl_crossterm_impl {
+mod impl_self {
     use super::*;
 
     impl RenderOpImplCrossterm {
@@ -166,7 +192,7 @@ mod render_op_impl_crossterm_impl {
               ),
               "ExitRawMode -> Show, LeaveAlternateScreen, DisableMouseCapture"
             };
-            render_op_impl_crossterm_impl_trait_flush::flush();
+            impl_trait_flush::flush();
             exec_render_op! {terminal::disable_raw_mode(), "ExitRawMode -> disable_raw_mode()"}
             *skip_flush = true;
         }
@@ -186,15 +212,12 @@ mod render_op_impl_crossterm_impl {
               ),
             "EnterRawMode -> EnableMouseCapture, EnterAlternateScreen, MoveTo(0,0), Clear(ClearType::All), Hide"
             }
-            render_op_impl_crossterm_impl_trait_flush::flush();
+            impl_trait_flush::flush();
             *skip_flush = true;
         }
 
         pub fn set_fg_color(color: &TuiColor) {
-            let color =
-                crossterm_color_converter::convert_from_tui_color_to_crossterm_color(
-                    *color,
-                );
+            let color = convert_from_tui_color_to_crossterm_color(*color);
             exec_render_op!(
                 queue!(stdout(), SetForegroundColor(color)),
                 format!("SetFgColor({color:?})")
@@ -203,9 +226,7 @@ mod render_op_impl_crossterm_impl {
 
         pub fn set_bg_color(color: &TuiColor) {
             let color: crossterm::style::Color =
-                crossterm_color_converter::convert_from_tui_color_to_crossterm_color(
-                    *color,
-                );
+                convert_from_tui_color_to_crossterm_color(*color);
             exec_render_op!(
                 queue!(stdout(), SetBackgroundColor(color)),
                 format!("SetBgColor({color:?})")
@@ -372,9 +393,10 @@ macro_rules! exec_render_op {
         $arg_cmd: expr,
         $arg_log_msg: expr
     ) => {{
-        // Generate a new function that returns [CommonResult]. This needs to be called. The only
-        // purpose of this generated method is to handle errors that may result from calling log! macro
-        // when there are issues accessing the log file for whatever reason.
+        // Generate a new function that returns [CommonResult]. This needs to be called.
+        // The only purpose of this generated method is to handle errors that may result
+        // from calling log! macro when there are issues accessing the log file for
+        // whatever reason.
         use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
 
         let _fn_wrap_for_logging_err = || -> CommonResult<()> {

@@ -18,9 +18,10 @@
 use std::{fmt::{self, Debug, Display},
           ops::SubAssign};
 
-use serde::*;
+use serde::{Deserialize, Serialize};
 
-use crate::*;
+use super::ChUnit;
+use crate::{ch, sub_unsigned};
 
 /// Here is a visual representation of how position and sizing works for the
 /// layout engine.
@@ -126,7 +127,7 @@ macro_rules! size {
         col_count: $arg_col:expr,
         row_count: $arg_row:expr
     ) => {
-        Size {
+        $crate::Size {
             col_count: $arg_col.into(),
             row_count: $arg_row.into(),
         }

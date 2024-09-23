@@ -65,43 +65,43 @@ use crate::{convert_key_modifiers, MediaKey, ModifierKeyEnum, SpecialKeyExt};
 macro_rules! keypress {
     // @char
     (@char $arg_char : expr) => {
-        KeyPress::Plain {
-            key: Key::Character($arg_char),
+        $crate::KeyPress::Plain {
+            key: $crate::Key::Character($arg_char),
         }
     };
 
     (@char $arg_modifiers : expr, $arg_char : expr) => {
-        KeyPress::WithModifiers {
+        $crate::KeyPress::WithModifiers {
             mask: $arg_modifiers,
-            key: Key::Character($arg_char),
+            key: $crate::Key::Character($arg_char),
         }
     };
 
     // @special
     (@special $arg_special : expr) => {
-        KeyPress::Plain {
-            key: Key::SpecialKey($arg_special),
+        $crate::KeyPress::Plain {
+            key: $crate::Key::SpecialKey($arg_special),
         }
     };
 
     (@special $arg_modifiers : expr, $arg_special : expr) => {
-        KeyPress::WithModifiers {
+        $crate::KeyPress::WithModifiers {
             mask: $arg_modifiers,
-            key: Key::SpecialKey($arg_special),
+            key: $crate::Key::SpecialKey($arg_special),
         }
     };
 
     // @fn
     (@fn $arg_function : expr) => {
-        KeyPress::Plain {
-            key: Key::FunctionKey($arg_function),
+        $crate::KeyPress::Plain {
+            key: $crate::Key::FunctionKey($arg_function),
         }
     };
 
     (@fn $arg_modifiers : expr, $arg_function : expr) => {
-        KeyPress::WithModifiers {
+        $crate::KeyPress::WithModifiers {
             mask: $arg_modifiers,
-            key: Key::FunctionKey($arg_function),
+            key: $crate::Key::FunctionKey($arg_function),
         }
     };
 }

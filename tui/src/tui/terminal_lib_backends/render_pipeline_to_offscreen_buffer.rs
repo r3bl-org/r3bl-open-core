@@ -365,13 +365,11 @@ mod tests {
                              color,
                              position,
                              size,
-                             ANSIBasicColor,
-                             Position,
-                             Size};
+                             ANSIBasicColor};
     use r3bl_rs_utils_macro::tui_style;
 
     use super::*;
-    use crate::{render_pipeline, RenderOps};
+    use crate::render_pipeline;
 
     #[test]
     fn test_print_plain_text_render_path_reuse_buffer() {

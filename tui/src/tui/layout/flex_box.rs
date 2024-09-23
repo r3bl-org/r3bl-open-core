@@ -89,7 +89,7 @@ pub struct FlexBox {
 
 mod flex_box_impl {
     use super::*;
-    use crate::{format_option, FormatMsg};
+    use crate::format_option;
 
     impl FlexBox {
         pub fn get_computed_style(&self) -> Option<TuiStyle> { self.maybe_computed_style }
@@ -133,7 +133,7 @@ pub struct PartialFlexBox {
 
 mod partial_flex_box_impl {
     use super::*;
-    use crate::{format_option, FormatMsg};
+    use crate::format_option;
 
     impl PartialFlexBox {
         pub fn get_computed_style(&self) -> Option<TuiStyle> { self.maybe_computed_style }

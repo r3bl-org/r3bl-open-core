@@ -68,7 +68,7 @@ macro_rules! surface {
     (
         stylesheet: $arg_stylesheet : expr
     ) => {
-        Surface {
+        $crate::Surface {
             stylesheet: $arg_stylesheet,
             ..Default::default()
         }
@@ -79,7 +79,7 @@ macro_rules! surface {
         box_size:   $arg_box_size   : expr,
         stylesheet: $arg_stylesheet : expr
     ) => {
-        Surface {
+        $crate::Surface {
             origin_pos: $arg_origin_pos,
             box_size: $arg_box_size,
             stylesheet: $arg_stylesheet,

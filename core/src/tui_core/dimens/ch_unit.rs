@@ -75,18 +75,18 @@ impl ChUnit {
 macro_rules! ch {
     // Returns ChUnit.
     ($arg: expr) => {{
-        let ch_value: ChUnit = $arg.into();
+        let ch_value: $crate::ChUnit = $arg.into();
         ch_value
     }};
     // Returns ChUnit +=1.
     ($arg: expr, @inc) => {{
-        let mut ch_value: ChUnit = $arg.into();
+        let mut ch_value: $crate::ChUnit = $arg.into();
         ch_value += 1;
         ch_value
     }};
     // Returns ChUnit -=1.
     ($arg: expr, @dec) => {{
-        let mut ch_value: ChUnit = $arg.into();
+        let mut ch_value: $crate::ChUnit = $arg.into();
         ch_value -= 1;
         ch_value
     }};
