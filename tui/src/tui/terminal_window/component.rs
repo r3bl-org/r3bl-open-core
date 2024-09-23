@@ -17,11 +17,12 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::CommonResult;
 
-use crate::*;
+use super::{ComponentRegistryMap, EventPropagation, GlobalData, HasFocus};
+use crate::{FlexBox, FlexBoxId, InputEvent, RenderPipeline, Surface, SurfaceBounds};
 
-/// See [App].
+/// See [crate::App].
 pub trait Component<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
@@ -67,20 +68,21 @@ where
         has_focus: &mut HasFocus,
     ) -> CommonResult<RenderPipeline>;
 
-    /// If this component has focus [HasFocus] then this method will be called to handle input event
-    /// that is meant for it.
+    /// If this component has focus [HasFocus] then this method will be called to handle
+    /// input event that is meant for it.
     ///
     /// More granularly, here is the journey:
     /// 1. This method might end up calling on an underlying engine function & pass the
     ///    `input_event` & state (from the redux store) to it.
-    ///    - Engines tend to have a corresponding `apply_event` method which returns a new result or
-    ///      response type, eg: [DialogEngineApplyResponse] or [EditorEngineApplyEventResult].
-    /// 2. Then the response or result is used to run a callback function that was passed in when
-    ///    the component was created (which will then end up dispatching an action to the redux
-    ///    store).
+    ///    - Engines tend to have a corresponding `apply_event` method which returns a new
+    ///      result or response type, eg: [crate::DialogEngineApplyResponse] or
+    ///      [crate::EditorEngineApplyEventResult].
+    /// 2. Then the response or result is used to run a callback function that was passed
+    ///    in when the component was created (which will then end up dispatching an action
+    ///    to the redux store).
     /// 3. Finally an [EventPropagation] is returned to let the caller know whether the
-    ///    `input_event` was consumed or not & whether it should re-render (outside of a redux store
-    ///    state change).
+    ///    `input_event` was consumed or not & whether it should re-render (outside of a
+    ///    redux store state change).
     fn handle_event(
         &mut self,
         global_data: &mut GlobalData<S, AS>,
