@@ -27,7 +27,7 @@ macro_rules! list {
      ) => {
          {
              #[allow(unused_mut)]
-             let mut it = List::new();
+             let mut it = $crate::List::new();
              $(
                  it.inner.push($item);
              )*

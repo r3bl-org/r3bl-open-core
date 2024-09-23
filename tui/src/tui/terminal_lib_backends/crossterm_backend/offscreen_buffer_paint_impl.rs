@@ -20,7 +20,6 @@ use r3bl_rs_utils_core::{call_if_true,
                          log_info,
                          position,
                          ChUnit,
-                         Position,
                          Size,
                          TuiStyle,
                          UnicodeString,
@@ -304,7 +303,7 @@ mod render_helpers {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::{assert_eq2, color, size, ANSIBasicColor, Size, TuiStyle};
+    use r3bl_rs_utils_core::{assert_eq2, color, size, ANSIBasicColor, TuiStyle};
     use r3bl_rs_utils_macro::tui_style;
 
     use super::*;

@@ -21,7 +21,7 @@ use branch_checkout_formatting::{add_spaces_to_end_of_string,
                                  display_correct_message_after_user_tried_to_checkout,
                                  get_formatted_modified_files};
 use r3bl_ansi_color::{AnsiStyledText, Style};
-use r3bl_rs_utils_core::{ch, ChUnit, CommonResult, UnicodeString};
+use r3bl_rs_utils_core::{ch, CommonResult, UnicodeString};
 use r3bl_tuify::{get_terminal_width,
                  select_from_list_with_multi_line_header,
                  SelectionMode,

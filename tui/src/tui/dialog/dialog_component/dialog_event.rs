@@ -67,7 +67,7 @@ mod dialog_event_impl {
 mod test_dialog_event {
     use r3bl_rs_utils_core::*;
 
-    use crate::{keypress, DialogEvent, InputEvent, Key, KeyPress, SpecialKey};
+    use crate::{keypress, DialogEvent, InputEvent, SpecialKey};
 
     #[test]
     fn dialog_event_handles_enter() {

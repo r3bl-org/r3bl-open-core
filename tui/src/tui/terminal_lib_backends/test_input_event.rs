@@ -26,7 +26,6 @@ mod tests {
                 keypress,
                 InputEvent,
                 Key,
-                KeyPress,
                 ModifierKeysMask};
 
     #[test]

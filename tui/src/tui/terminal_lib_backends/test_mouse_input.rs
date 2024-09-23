@@ -18,7 +18,7 @@
 #[cfg(test)]
 mod tests {
     use crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
-    use r3bl_rs_utils_core::{assert_eq2, position, Position};
+    use r3bl_rs_utils_core::{assert_eq2, position};
 
     use crate::{Button, ModifierKeysMask, MouseInput, MouseInputKind};
 

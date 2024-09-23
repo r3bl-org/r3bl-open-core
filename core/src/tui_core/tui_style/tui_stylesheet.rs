@@ -162,7 +162,8 @@ macro_rules! tui_stylesheet {
         $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
     ) => {
     {
-        let mut stylesheet = TuiStylesheet::new();
+        use $crate::TryAdd as _;
+        let mut stylesheet = $crate::TuiStylesheet::new();
             $(
                 stylesheet.try_add($style)?;
             )*

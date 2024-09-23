@@ -109,7 +109,7 @@ macro_rules! percent {
     (
         $arg_val: expr
     ) => {
-        Percent::try_from($arg_val)
+        $crate::Percent::try_from($arg_val)
     };
 }
 
@@ -119,7 +119,7 @@ macro_rules! requested_size_percent {
         width:  $arg_width: expr,
         height: $arg_height: expr
     ) => {
-        RequestedSizePercent {
+        $crate::RequestedSizePercent {
             width_pc: percent!($arg_width)?,
             height_pc: percent!($arg_height)?,
         }

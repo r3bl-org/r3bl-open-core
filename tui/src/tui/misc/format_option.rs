@@ -27,7 +27,7 @@ macro_rules! format_option {
     ($opt:expr) => {
         match ($opt) {
             Some(v) => v,
-            None => &FormatMsg::None,
+            None => &$crate::FormatMsg::None,
         }
     };
 }

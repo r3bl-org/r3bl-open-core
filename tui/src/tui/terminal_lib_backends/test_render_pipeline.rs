@@ -22,7 +22,6 @@ mod tests {
     use crate::{render_ops,
                 render_pipeline,
                 RenderOp,
-                RenderOps,
                 RenderPipeline,
                 ZOrder};
 

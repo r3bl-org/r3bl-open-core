@@ -45,7 +45,7 @@ macro_rules! tui_styled_texts {
     ) =>
     {
         {
-            let mut styled_texts: TuiStyledTexts = Default::default();
+            let mut styled_texts: $crate::TuiStyledTexts = Default::default();
             $(
                 styled_texts += $styled_text_arg;
             )*
@@ -130,10 +130,8 @@ mod tests {
                 throws_with_return,
                 tui_styled_text,
                 tui_stylesheet,
-                ChUnit,
                 CommonResult,
                 RgbValue,
-                TryAdd,
                 TuiColor,
                 TuiStyle,
                 TuiStylesheet};

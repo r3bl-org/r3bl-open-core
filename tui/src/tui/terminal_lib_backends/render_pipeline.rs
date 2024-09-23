@@ -71,7 +71,7 @@ use crate::{tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED, *};
 macro_rules! render_pipeline {
     // No args. Returns a new
     () => {
-        RenderPipeline::default()
+        $crate::RenderPipeline::default()
     };
 
     // @new: Create a new pipeline & return it. If any RenderOp ($arg_render_op)* are passed, then add it
@@ -88,13 +88,13 @@ macro_rules! render_pipeline {
     ) => {
         /* Enclose the expansion in a block so that we can use multiple statements. */
         {
-        let mut render_ops = RenderOps::default();
+        let mut render_ops = $crate::RenderOps::default();
         /* Start a repetition. */
         $(
             /* Each repeat will contain the following statement, with $arg_render_op replaced. */
             render_ops.push($arg_render_op);
         )*
-        let mut render_pipeline = RenderPipeline::default();
+        let mut render_pipeline = $crate::RenderPipeline::default();
         render_pipeline.push($arg_z_order, render_ops);
         render_pipeline
         }
@@ -107,7 +107,7 @@ macro_rules! render_pipeline {
         at $arg_z_order: expr
         => $($arg_render_op: expr),+
     ) => {
-        let mut render_ops = RenderOps::default();
+        let mut render_ops = $crate::RenderOps::default();
         $(
         /* Each repeat will contain the following statement, with $arg_render_op replaced. */
         render_ops.push($arg_render_op);
@@ -121,7 +121,7 @@ macro_rules! render_pipeline {
         @join_and_drop
         $($arg_other_pipeline: expr),+
     ) => {{
-        let mut pipeline = render_pipeline!();
+        let mut pipeline = $crate::render_pipeline!();
         $(
         /* Each repeat will contain the following statement, with $arg_other_pipeline replaced. */
         pipeline.join_into($arg_other_pipeline);
@@ -136,8 +136,8 @@ macro_rules! render_pipeline {
         at $arg_z_order: expr
         => $arg_styled_texts: expr
       ) => {
-        let mut render_ops = RenderOps::default();
-        render_tui_styled_texts_into(&$arg_styled_texts, &mut render_ops);
+        let mut render_ops = $crate::RenderOps::default();
+        $crate::render_tui_styled_texts_into(&$arg_styled_texts, &mut render_ops);
         $arg_pipeline.push($arg_z_order, render_ops);
       };
 }

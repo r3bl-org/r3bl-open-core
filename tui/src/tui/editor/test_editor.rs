@@ -1632,7 +1632,7 @@ mod test_editor_ops {
 pub mod mock_real_objects_for_editor {
     use std::fmt::Debug;
 
-    use r3bl_rs_utils_core::{position, size, Position, Size};
+    use r3bl_rs_utils_core::{position, size, Size};
     use tokio::sync::mpsc;
 
     use crate::{EditorEngine, FlexBox, GlobalData, PartialFlexBox, CHANNEL_WIDTH};
@@ -1724,7 +1724,7 @@ pub mod assert {
 mod selection_tests {
     use std::collections::HashMap;
 
-    use r3bl_rs_utils_core::{assert_eq2, ch, SelectionRange, ChUnit};
+    use r3bl_rs_utils_core::{assert_eq2, ch, SelectionRange};
 
     use super::mock_real_objects_for_editor;
     use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
