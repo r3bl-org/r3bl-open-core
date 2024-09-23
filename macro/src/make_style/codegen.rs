@@ -76,7 +76,7 @@ pub(crate) fn code_gen(
     };
 
     quote! {
-      TuiStyle {
+      r3bl_rs_utils_core::TuiStyle {
         id: #id,
         bold: #has_attrib_bold,
         italic: #has_attrib_italic,

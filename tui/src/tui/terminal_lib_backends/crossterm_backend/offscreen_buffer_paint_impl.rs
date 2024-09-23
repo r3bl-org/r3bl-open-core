@@ -26,7 +26,7 @@ use r3bl_rs_utils_core::{call_if_true,
                          SPACER};
 
 use crate::{render_ops,
-            Flush,
+            Flush as _,
             FlushKind,
             OffscreenBuffer,
             OffscreenBufferPaint,
@@ -303,7 +303,7 @@ mod render_helpers {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::{assert_eq2, color, size, ANSIBasicColor, TuiStyle};
+    use r3bl_rs_utils_core::{assert_eq2, color, size, ANSIBasicColor};
     use r3bl_rs_utils_macro::tui_style;
 
     use super::*;

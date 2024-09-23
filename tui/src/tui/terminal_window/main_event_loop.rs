@@ -17,12 +17,43 @@
 
 use std::{fmt::Debug, marker::PhantomData};
 
-use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::*;
+use r3bl_rs_utils_core::{call_if_true,
+                         ch,
+                         log_error,
+                         log_info,
+                         position,
+                         throws,
+                         Ansi256GradientIndex,
+                         CommonResult,
+                         GradientGenerationPolicy,
+                         Size,
+                         TextColorizationPolicy,
+                         TooSmallToDisplayResult,
+                         UnicodeString};
+use r3bl_rs_utils_macro::tui_style;
 use size_of::SizeOf;
 use tokio::sync::mpsc;
 
-use crate::*;
+use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation};
+use crate::{render_pipeline,
+            telemetry_global_static,
+            AsyncEventStream,
+            ColorWheel,
+            ColorWheelConfig,
+            ColorWheelSpeed,
+            ComponentRegistryMap,
+            FlexBoxId,
+            Flush as _,
+            FlushKind,
+            GlobalData,
+            HasFocus,
+            InputEvent,
+            MinSize,
+            RawMode,
+            RenderOp,
+            RenderPipeline,
+            ZOrder,
+            DEBUG_TUI_MOD};
 
 pub struct TerminalWindow;
 
@@ -43,10 +74,10 @@ where
 
 impl TerminalWindow {
     /// This is the main event loop for the entire application. It is responsible for
-    /// handling all input events, and dispatching them to the [App] for processing. It is
-    /// also responsible for rendering the [App] after each input event. It is also
-    /// responsible for handling all signals sent from the [App] to the main event loop
-    /// (eg: exit, re-render, apply action, etc).
+    /// handling all input events, and dispatching them to the [crate::App] for
+    /// processing. It is also responsible for rendering the [crate::App] after each input
+    /// event. It is also responsible for handling all signals sent from the [crate::App]
+    /// to the main event loop (eg: exit, re-render, apply action, etc).
     pub async fn main_event_loop<S, AS>(
         mut app: BoxedSafeApp<S, AS>,
         exit_keys: Vec<InputEvent>,

@@ -17,14 +17,19 @@
 
 use std::fmt::{Debug, Formatter};
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true, log_info, CommonResult, Size};
 use tokio::sync::mpsc::Sender;
 
-use crate::*;
+use super::TerminalWindowMainThreadSignal;
+use crate::{terminal_lib_operations,
+            OffscreenBuffer,
+            DEBUG_TUI_COMPOSITOR,
+            DEBUG_TUI_MOD};
 
-/// This is a global data structure that holds state for the entire application [App] and
-/// the terminal window [TerminalWindow] itself. These are global state values for the
-/// entire application:
+/// This is a global data structure that holds state for the entire application
+/// [crate::App] and the terminal window [crate::TerminalWindow] itself.
+///
+/// These are global state values for the entire application:
 /// - The `window_size` holds the [Size] of the terminal window.
 /// - The `maybe_saved_offscreen_buffer` holds the last rendered [OffscreenBuffer].
 /// - The `main_thread_channel_sender` is used to send [TerminalWindowMainThreadSignal]s
@@ -40,7 +45,7 @@ where
     pub state: S,
 }
 
-mod global_data_impl {
+mod impl_self {
     use super::*;
 
     impl<S, AS> Debug for GlobalData<S, AS>
