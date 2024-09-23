@@ -2,29 +2,53 @@
 
 ## Why R3BL?
 
-<img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true" height="256px">
+<img
+src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true"
+height="256px">
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
-<span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span style="color:#F92363">
-</span><span style="color:#F82067">T</span><span style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span style="color:#F31874">
-</span><span style="color:#F11678">l</span><span style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span style="color:#E10895">
-</span><span style="color:#DE0799">&amp;</span><span style="color:#DB069E">
-</span><span style="color:#D804A2">s</span><span style="color:#D503A6">u</span><span style="color:#D203AA">i</span><span style="color:#CF02AE">t</span><span style="color:#CB01B2">e</span><span style="color:#C801B6">
-</span><span style="color:#C501B9">o</span><span style="color:#C101BD">f</span><span style="color:#BD01C1">
-</span><span style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span style="color:#AA03D2">
-</span><span style="color:#A603D5">f</span><span style="color:#A204D8">o</span><span style="color:#9E06DB">c</span><span style="color:#9A07DE">u</span><span style="color:#9608E1">s</span><span style="color:#910AE3">e</span><span style="color:#8D0BE6">d</span><span style="color:#890DE8">
-</span><span style="color:#850FEB">o</span><span style="color:#8111ED">n</span><span style="color:#7C13EF">
-</span><span style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span style="color:#572CFC">r</span><span style="color:#532FFD">
-</span><span style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
+<span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span
+style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span
+style="color:#F92363"> </span><span style="color:#F82067">T</span><span
+style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span
+style="color:#F31874"> </span><span style="color:#F11678">l</span><span
+style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span
+style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span
+style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span
+style="color:#E10895"> </span><span style="color:#DE0799">&amp;</span><span
+style="color:#DB069E"> </span><span style="color:#D804A2">s</span><span
+style="color:#D503A6">u</span><span style="color:#D203AA">i</span><span
+style="color:#CF02AE">t</span><span style="color:#CB01B2">e</span><span
+style="color:#C801B6"> </span><span style="color:#C501B9">o</span><span
+style="color:#C101BD">f</span><span style="color:#BD01C1"> </span><span
+style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span
+style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span
+style="color:#AA03D2"> </span><span style="color:#A603D5">f</span><span
+style="color:#A204D8">o</span><span style="color:#9E06DB">c</span><span
+style="color:#9A07DE">u</span><span style="color:#9608E1">s</span><span
+style="color:#910AE3">e</span><span style="color:#8D0BE6">d</span><span
+style="color:#890DE8"> </span><span style="color:#850FEB">o</span><span
+style="color:#8111ED">n</span><span style="color:#7C13EF"> </span><span
+style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span
+style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span
+style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span
+style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span
+style="color:#572CFC">r</span><span style="color:#532FFD"> </span><span
+style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span
+style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span
+style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span
+style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span
+style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span
+style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
 
-We are working on building command line apps in Rust which have rich text user interfaces (TUI).
-We want to lean into the terminal as a place of productivity, and build all kinds of awesome
-apps for it.
+We are working on building command line apps in Rust which have rich text user
+interfaces (TUI). We want to lean into the terminal as a place of productivity, and
+build all kinds of awesome apps for it.
 
-1. 🔮 Instead of just building one app, we are building a library to enable any kind of rich TUI
-   development w/ a twist: taking concepts that work really well for the frontend mobile and web
-   development world and re-imagining them for TUI & Rust.
+1. 🔮 Instead of just building one app, we are building a library to enable any kind
+   of rich TUI development w/ a twist: taking concepts that work really well for the
+   frontend mobile and web development world and re-imagining them for TUI & Rust.
 
    - Taking inspiration from things like [React](https://react.dev/),
      [SolidJS](https://www.solidjs.com/),
@@ -66,18 +90,23 @@ niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
 
 - [Introduction](#introduction)
 - [Changelog](#changelog)
-- [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
+- [Learn how these crates are built, provide
+  feedback](#learn-how-these-crates-are-built-provide-feedback)
 - [Run the demo locally](#run-the-demo-locally)
 - [Nushell scripts to build, run, test etc.](#nu-shell-scripts-to-build-run-test-etc)
   - [Examples to get you started](#examples-to-get-you-started)
     - [Video of the demo in action](#video-of-the-demo-in-action)
-  - [How does layout, rendering, and event handling work in general?](#how-does-layout-rendering-and-event-handling-work-in-general)
-  - [Switching from shared memory to message passing architecture after v0.3.10](#switching-from-shared-memory-to-message-passing-architecture-after-v0310)
+  - [How does layout, rendering, and event handling work in
+    general?](#how-does-layout-rendering-and-event-handling-work-in-general)
+  - [Switching from shared memory to message passing architecture after
+    v0.3.10](#switching-from-shared-memory-to-message-passing-architecture-after-v0310)
 - [Life of an input event](#life-of-an-input-event)
-  - [Life of a signal aka “out of band event”](#life-of-a-signal-aka-out-of-band-event)
+  - [Life of a signal aka “out of band
+    event”](#life-of-a-signal-aka-out-of-band-event)
 - [The window](#the-window)
 - [Layout and styling](#layout-and-styling)
-  - [Component, ComponentRegistry, focus management, and event routing](#component-componentregistry-focus-management-and-event-routing)
+  - [Component, ComponentRegistry, focus management, and event
+    routing](#component-componentregistry-focus-management-and-event-routing)
   - [Input event specificity](#input-event-specificity)
   - [Rendering and painting](#rendering-and-painting)
     - [Offscreen buffer](#offscreen-buffer)
@@ -88,9 +117,12 @@ niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
     - [Painting the caret](#painting-the-caret)
   - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
     - [Two callback functions](#two-callback-functions)
-    - [How to use this dialog to make an HTTP request & pipe the results into a selection area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
+    - [How to use this dialog to make an HTTP request & pipe the results into a
+      selection
+      area?](#how-to-use-this-dialog-to-make-an-http-request--pipe-the-results-into-a-selection-area)
     - [How to make HTTP requests](#how-to-make-http-requests)
-  - [Custom Markdown MD parsing and custom syntax highlighting](#custom-markdown-md-parsing-and-custom-syntax-highlighting)
+  - [Custom Markdown MD parsing and custom syntax
+    highlighting](#custom-markdown-md-parsing-and-custom-syntax-highlighting)
 - [Grapheme support](#grapheme-support)
 - [Lolcat support](#lolcat-support)
 - [Issues and PRs](#issues-and-prs)
@@ -123,34 +155,40 @@ This framework is [loosely coupled and strongly
 coherent](https://developerlife.com/2015/11/05/loosely-coupled-strongly-coherent/)
 meaning that you can pick and choose whatever pieces you would like to use w/out
 having the cognitive load of having to grok all the things in the codebase. Its more
-like a collection of mostly independent modules that work well w/ each other, but
-know very little about each other.
+like a collection of mostly independent modules that work well w/ each other, but know
+very little about each other.
 
 ## Changelog
 
 Please check out the
-[changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tui) to
-see how the library has evolved over time.
+[changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_tui)
+to see how the library has evolved over time.
 
 ## Learn how these crates are built, provide feedback
 
 To learn how we built this crate, please take a look at the following resources.
-- If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom). Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
-- If you like consuming written content, here's our developer [site](https://developerlife.com/). Please consider subscribing to our [newsletter](https://developerlife.com/subscribe.html).
-- If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
+- If you like consuming video content, here's our [YT
+  channel](https://www.youtube.com/@developerlifecom). Please consider
+  [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+- If you like consuming written content, here's our developer
+  [site](https://developerlife.com/). Please consider subscribing to our
+  [newsletter](https://developerlife.com/subscribe.html).
+- If you have questions, please join our [discord
+  server](https://discord.gg/8M2ePAevaM).
 
 ## Run the demo locally
 
-Once you've cloned [the repo](https://github.com/r3bl-org/r3bl-open-core) to a folder on your
-computer, you can run the examples you see in the video with the following commands:
+Once you've cloned [the repo](https://github.com/r3bl-org/r3bl-open-core) to a folder
+on your computer, you can run the examples you see in the video with the following
+commands:
 
 ```sh
 cd tui/examples
 cargo run --release --example demo
 ```
 
-These examples cover the entire surface area of the TUI API. You can also take a look at
-the tests in the source (`tui/src/`) as well. A single [`nu`
+These examples cover the entire surface area of the TUI API. You can also take a look
+at the tests in the source (`tui/src/`) as well. A single [`nu`
 shell](https://www.nushell.sh/) script `run` in **the `tui` sub folder** in the repo
 allows you to easily build, run, test, and do so much more with the repo.
 
@@ -196,9 +234,9 @@ interactive mode, where the user will be prompted for input.
 
 Here are some framework highlights:
 
-- An easy to use and approachable API that is inspired by React, JSX, CSS, Elm.
-  Lots of components and things are provided for you so you don't have to build them
-  from scratch. This is a full featured component library including:
+- An easy to use and approachable API that is inspired by React, JSX, CSS, Elm. Lots
+  of components and things are provided for you so you don't have to build them from
+  scratch. This is a full featured component library including:
   - Elm like architecture w/ unidirectional data flow. The state is mutable. Async
     middleware functions are supported, and they communicate w/ the main thread and
     the [App] using an async `tokio::mpsc` channel and signals.
@@ -253,13 +291,14 @@ app built using this TUI engine.
 ```
 <!-- https://asciiflow.com/#/share/eJzNkE0KwjAQha9SZiEK4kIUsTtR1I0b19mMdaqFdFKSFK0iXkI8jHgaT2JcqPUHoS7E4REmJN97k6yBMSbwOZWyChIz0uDDWsBSgN9utKoCMtfVW03XWVpatxFw2h3%2FVkKwW73ClUNjjLimzTfo51tfKx8xkGqCsocWC1ruDxd%2BEfFULTwTreg2V95%2BiKavgvTd6y%2FnKgxNoIl4O0nDkPQz3lVxopjYjmkWGauzESY53Fi0tL3Wa3onSbzS3aRsKg%2FpwRyZSXqGeOqyX%2FAffH%2FRuqF%2FKwEb2JwB17oGMg%3D%3D) -->
 
-- The main struct for building a TUI app is your struct which implements the [App] trait.
-- The main event loop takes an [App] trait object and starts listening for input events. It
-  enters raw mode, and paints to an alternate screen buffer, leaving your original scroll back
-  buffer and history intact. When you exit this TUI app, it will return your terminal to where
-  you'd left off.
-- The [main_event_loop] is where many global structs live which are shared across the lifetime
-  of your app. These include the following:
+- The main struct for building a TUI app is your struct which implements the [App]
+  trait.
+- The main event loop takes an [App] trait object and starts listening for input
+  events. It enters raw mode, and paints to an alternate screen buffer, leaving your
+  original scroll back buffer and history intact. When you exit this TUI app, it will
+  return your terminal to where you'd left off.
+- The [main_event_loop] is where many global structs live which are shared across the
+  lifetime of your app. These include the following:
   - [HasFocus]
   - [ComponentRegistryMap]
   - [GlobalData] which contains the following
@@ -267,9 +306,9 @@ app built using this TUI engine.
       processed the entire [App] gets re-rendered. This is the unidirectional data
       flow architecture inspired by React and Elm.
 - Your [App] trait impl is the main entry point for laying out the entire application.
-  Before the first render, the [App] is initialized (via a call to [App::app_init]), and
-  is responsible for creating all the [Component]s that it uses, and saving them to
-  the [ComponentRegistryMap].
+  Before the first render, the [App] is initialized (via a call to [App::app_init]),
+  and is responsible for creating all the [Component]s that it uses, and saving them
+  to the [ComponentRegistryMap].
   - State is stored in many places. Globally at the [GlobalData] level, and also in
     [App], and also in [Component].
 - This sets everything up so that [App::app_render], [App::app_handle_input_event],
@@ -277,8 +316,8 @@ app built using this TUI engine.
 - The [App::app_render] method is responsible for creating the layout by using
   [Surface] and [FlexBox] to arrange whatever [Component]'s are in the
   [ComponentRegistryMap].
-- The [App::app_handle_input_event] method is responsible for handling events that
-  are sent to the [App] trait when user input is detected from the keyboard or mouse.
+- The [App::app_handle_input_event] method is responsible for handling events that are
+  sent to the [App] trait when user input is detected from the keyboard or mouse.
   Similarly the [App::app_handle_signal] deals with signals that are sent from
   background threads (Tokio tasks) to the main thread, which then get routed to the
   [App] trait object. Typically this will then get routed to the [Component] that
@@ -289,36 +328,38 @@ app built using this TUI engine.
 Versions of this crate <= `0.3.10` used shared memory to communicate between the
 background threads and the main thread. This was done using the async `Arc<RwLock<T>>`
 from tokio. The state storage, mutation, subscription (on change handlers) were all
-managed by the [`r3bl_redux`](https://github.com/r3bl-org/r3bl-open-core/tree/main/redux)
-crate. The use of the Redux pattern, inspired by React, brought with it a lot of overhead
-both mentally and in terms of performance (since state changes needed to be cloned every
+managed by the
+[`r3bl_redux`](https://github.com/r3bl-org/r3bl-open-core/tree/main/redux) crate. The
+use of the Redux pattern, inspired by React, brought with it a lot of overhead both
+mentally and in terms of performance (since state changes needed to be cloned every
 time a change was made, and `memcpy` or `clone` is expensive).
 
 Versions > `0.3.10` use message passing to communicate between the background threads
-using the `tokio::mpsc` channel (also async). This is a much easier and more performant
-model given the nature of the engine and the use cases it has to handle. It also has the
-benefit of providing an easy way to attach protocol servers in the future over various
-transport layers (eg: TCP, IPC, etc.); these protocol servers can be used to manage a
-connection between a process running the engine, and other processes running on the same
-host or on other hosts, in order to handle use cases like synchronizing rendered output,
-or state.
+using the `tokio::mpsc` channel (also async). This is a much easier and more
+performant model given the nature of the engine and the use cases it has to handle. It
+also has the benefit of providing an easy way to attach protocol servers in the future
+over various transport layers (eg: TCP, IPC, etc.); these protocol servers can be used
+to manage a connection between a process running the engine, and other processes
+running on the same host or on other hosts, in order to handle use cases like
+synchronizing rendered output, or state.
 
-> Here are some papers outlining the differences between message passing and shared memory
-> for communication between threads.
+> Here are some papers outlining the differences between message passing and shared
+> memory for communication between threads.
 >
 > 1. <https://rits.github-pages.ucl.ac.uk/intro-hpchtc/morea/lesson2/reading4.html>
 > 2. <https://www.javatpoint.com/shared-memory-vs-message-passing-in-operating-system>
 
 ## Life of an input event
 
-There is a clear separation of concerns in this module. To illustrate what goes where, and how
-things work let's look at an example that puts the main event loop front and center & deals w/
-how the system handles an input event (key press or mouse).
+There is a clear separation of concerns in this module. To illustrate what goes where,
+and how things work let's look at an example that puts the main event loop front and
+center & deals w/ how the system handles an input event (key press or mouse).
 
-- The diagram below shows an app that has 3 [Component]s for (flexbox like) layout & (CSS like)
-  styling.
+- The diagram below shows an app that has 3 [Component]s for (flexbox like) layout &
+  (CSS like) styling.
 - Let's say that you run this app (by hypothetically executing `cargo run`).
-- And then you click or type something in the terminal window that you're running this app in.
+- And then you click or type something in the terminal window that you're running this
+  app in.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -361,30 +402,33 @@ how the system handles an input event (key press or mouse).
 ```
 <!-- https://asciiflow.com/#/share/eJzdls9OwjAcx1%2Fll565wEEiiQdjPHAwJv6JB7ZDtQWabF3TdgohZC9h9iAeiU%2FDk1gcY8AAXbdh5JdfmkGbT7%2Ff7te1E8SxT1GHh57XQB4eU4k6aOKgkYM65%2B2zhoPG5qnVbpsnTUfa%2FHDQ%2FP3z5NNxuGm7HJ4xJ8C4CDXQV8o12MUKGWVhicohAbrf%2Bpbi4xn0Hqj0GcfeE%2BMkeHOtwdeblufxx2pIGb35npS%2FA9u7CnwRcCPkjg6Y0nJ8g4ULSgeSqh%2BxUe9SCLdwBcSzbFpXAdbQVBok5YTKX7upaZGOgN23KMDIRROGWEE%2FeAlVBdNUqX9tA2QvL5Gcd1NmooNCa3HQKo8%2FEEWwhPZx6GlTBJx4y81QGpr2pN%2BXirRmPcfJosKsY4U8%2BTQ2k%2FxzJWUsmPbWnNBBP7lPYCFAsYE5oAu%2B7kpqBsAcieUh94mBpc3FJ2tx0lqhtv%2B3VFQTZkfGs0dBsKaR0qYtDE3Dx4xHeigpJpGka7eLIpBsmJXB2jD5NdtTIEWre89IC8y2vvUrX9W77p%2Bmg6Zo%2BgU42osD) -->
 
-Let's trace the journey through the diagram when an input even is generated by the user (eg: a
-key press, or mouse event). When the app is started via `cargo run` it sets up a main loop, and
-lays out all the 3 components, sizes, positions, and then paints them. Then it asynchronously
-listens for input events (no threads are blocked). When the user types something, this input is
-processed by the main loop of [TerminalWindow].
+Let's trace the journey through the diagram when an input even is generated by the
+user (eg: a key press, or mouse event). When the app is started via `cargo run` it
+sets up a main loop, and lays out all the 3 components, sizes, positions, and then
+paints them. Then it asynchronously listens for input events (no threads are blocked).
+When the user types something, this input is processed by the main loop of
+[TerminalWindow].
 
 1. The [Component] that is in [FlexBox] w/ `id=1` currently has focus.
-2. When an input event comes in from the user (key press or mouse input) it is routed to the
-   [App] first, before [TerminalWindow] looks at the event.
-3. The specificity of the event handler in [App] is higher than the default input handler in
-   [TerminalWindow]. Further, the specificity of the [Component] that currently has focus is the
-   highest. In other words, the input event gets routed by the [App] to the [Component] that
-   currently has focus ([Component] id=1 in our example).
-4. Since it is not guaranteed that some [Component] will have focus, this input event can then
-   be handled by [App], and if not, then by [TerminalWindow]'s default handler. If the default
-   handler doesn't process it, then it is simply ignored.
-5. In this journey, as the input event is moved between all these different entities, each
-   entity decides whether it wants to handle the input event or not. If it does, then it returns
-   an enum indicating that the event has been consumed, else, it returns an enum that indicates
-   the event should be propagated.
+2. When an input event comes in from the user (key press or mouse input) it is routed
+   to the [App] first, before [TerminalWindow] looks at the event.
+3. The specificity of the event handler in [App] is higher than the default input
+   handler in [TerminalWindow]. Further, the specificity of the [Component] that
+   currently has focus is the highest. In other words, the input event gets routed by
+   the [App] to the [Component] that currently has focus ([Component] id=1 in our
+   example).
+4. Since it is not guaranteed that some [Component] will have focus, this input event
+   can then be handled by [App], and if not, then by [TerminalWindow]'s default
+   handler. If the default handler doesn't process it, then it is simply ignored.
+5. In this journey, as the input event is moved between all these different entities,
+   each entity decides whether it wants to handle the input event or not. If it does,
+   then it returns an enum indicating that the event has been consumed, else, it
+   returns an enum that indicates the event should be propagated.
 
 An input event is processed by the main thread in the main event loop. This is a
-synchronous operation and thus it is safe to mutate state directly in this code path. This
-is why there is no sophisticated locking in place. You can mutate the state directly in
+synchronous operation and thus it is safe to mutate state directly in this code path.
+This is why there is no sophisticated locking in place. You can mutate the state
+directly in
 - [App::app_handle_input_event]
 - [Component::handle_event]
 
@@ -398,16 +442,17 @@ example, if you want to make an HTTP request, you don't want to block the main t
 In these cases you can use a `tokio::mpsc` channel to send a signal from a background
 thread to the main thread. This is how you can handle "out of band" events or signals.
 
-To provide support for these "out of band" events or signals, the [App] trait has a method
-called [App::app_handle_signal]. This is where you can handle signals that are sent from
-background threads. One of the arguments to this associated function is a `signal`. This
-signal needs to contain all the data that is needed for a state mutation to occur on the
-main thread. So the background thread has the responsibility of doing some work (eg:
-making an HTTP request), getting some information as a result, and then packaging that
-information into a `signal` and sending it to the main thread. The main thread then
-handles this signal by calling the [App::app_handle_signal] method. This method can then
-mutate the state of the [App] and return an [EventPropagation] enum indicating whether the
-main thread should repaint the UI or not.
+To provide support for these "out of band" events or signals, the [App] trait has a
+method called [App::app_handle_signal]. This is where you can handle signals that are
+sent from background threads. One of the arguments to this associated function is a
+`signal`. This signal needs to contain all the data that is needed for a state
+mutation to occur on the main thread. So the background thread has the responsibility
+of doing some work (eg: making an HTTP request), getting some information as a result,
+and then packaging that information into a `signal` and sending it to the main thread.
+The main thread then handles this signal by calling the [App::app_handle_signal]
+method. This method can then mutate the state of the [App] and return an
+[EventPropagation] enum indicating whether the main thread should repaint the UI or
+not.
 
 So far we have covered what happens when the [App] receives a signal. Who sends this
 signal? Who actually creates the `tokio::spawn` task that sends this signal? This can
@@ -417,40 +462,45 @@ task. However, only the [App] can receive the signal and do something with it, w
 is usually apply the signal to update the state and then tell the main thread to
 repaint the UI.
 
-Now that we have seen this whirlwind overview of the life of an input event, let's look at
-the details in each of the sections below.
+Now that we have seen this whirlwind overview of the life of an input event, let's
+look at the details in each of the sections below.
 
 
 ## The window
 
 The main building blocks of a TUI app are:
-1. [TerminalWindow] - You can think of this as the main "window" of the app. All the content of
-   your app is painted inside of this "window". And the "window" conceptually maps to the screen
-   that is contained inside your terminal emulator program (eg: tilix, Terminal.app, etc). Your
-   TUI app will end up taking up 100% of the screen space of this terminal emulator. It will
-   also enter raw mode, and paint to an alternate screen buffer, leaving your original scroll
-   back buffer and history intact. When you exit this TUI app, it will return your terminal to
-   where you'd left off. You don't write this code, this is something that you use.
-2. [App] - This is where you write your code. You pass in a [App] to the [TerminalWindow] to
-   bootstrap your TUI app. You can just use [App] to build your app, if it is a simple one & you
-   don't really need any sophisticated layout or styling. But if you want layout and styling,
-   now we have to deal with [FlexBox], [Component], and [r3bl_rs_utils_core::TuiStyle].
+1. [TerminalWindow] - You can think of this as the main "window" of the app. All the
+   content of your app is painted inside of this "window". And the "window"
+   conceptually maps to the screen that is contained inside your terminal emulator
+   program (eg: tilix, Terminal.app, etc). Your TUI app will end up taking up 100% of
+   the screen space of this terminal emulator. It will also enter raw mode, and paint
+   to an alternate screen buffer, leaving your original scroll back buffer and history
+   intact. When you exit this TUI app, it will return your terminal to where you'd
+   left off. You don't write this code, this is something that you use.
+2. [App] - This is where you write your code. You pass in a [App] to the
+   [TerminalWindow] to bootstrap your TUI app. You can just use [App] to build your
+   app, if it is a simple one & you don't really need any sophisticated layout or
+   styling. But if you want layout and styling, now we have to deal with [FlexBox],
+   [Component], and [r3bl_rs_utils_core::TuiStyle].
 
 ## Layout and styling
 
-Inside of your [App] if you want to use flexbox like layout and CSS like styling you can think of
-composing your code in the following way:
+Inside of your [App] if you want to use flexbox like layout and CSS like styling you
+can think of composing your code in the following way:
 
-1.  [App] is like a box or container. You can attach styles and an id here. The id has to be unique,
-    and you can reference as many styles as you want from your stylesheet. Yes, cascading styles are
-    supported! 👏 You can put boxes inside of boxes. You can make a container box and inside of that
-    you can add other boxes (you can give them a direction and even relative sizing out of 100%).
-2.  As you approach the "leaf" nodes of your layout, you will find [Component] trait objects. These
-    are black boxes which are sized, positioned, and painted _relative_ to their parent box. They
-    get to handle input events and render [RenderOp]s into a [RenderPipeline]. This is kind of like
-    virtual DOM in React. This queue of commands is collected from all the components and ultimately
-    painted to the screen, for each render! Your app's state is mutable and is stored in the
-    [GlobalData] struct. You can handle out of band events as well using the signal mechanism.
+1.  [App] is like a box or container. You can attach styles and an id here. The id has
+    to be unique, and you can reference as many styles as you want from your
+    stylesheet. Yes, cascading styles are supported! 👏 You can put boxes inside of
+    boxes. You can make a container box and inside of that you can add other boxes
+    (you can give them a direction and even relative sizing out of 100%).
+2.  As you approach the "leaf" nodes of your layout, you will find [Component] trait
+    objects. These are black boxes which are sized, positioned, and painted _relative_
+    to their parent box. They get to handle input events and render [RenderOp]s into a
+    [RenderPipeline]. This is kind of like virtual DOM in React. This queue of
+    commands is collected from all the components and ultimately painted to the
+    screen, for each render! Your app's state is mutable and is stored in the
+    [GlobalData] struct. You can handle out of band events as well using the signal
+    mechanism.
 
 ## Component, ComponentRegistry, focus management, and event routing
 
@@ -464,44 +514,46 @@ pub struct AppMain {
 }
 ```
 
-As we look at [Component] & [App] more closely we will find a curious thing [ComponentRegistry]
-(that is managed by the [App]). The reason this exists is for input event routing. The input events
-are routed to the [Component] that currently has focus.
+As we look at [Component] & [App] more closely we will find a curious thing
+[ComponentRegistry] (that is managed by the [App]). The reason this exists is for
+input event routing. The input events are routed to the [Component] that currently has
+focus.
 
 The [HasFocus] struct takes care of this. This provides 2 things:
 
 1.  It holds an `id` of a [FlexBox] / [Component] that has focus.
-2.  It also holds a map that holds a [r3bl_rs_utils_core::Position] for each `id`. This is used to represent a
-    cursor (whatever that means to your app & component). This cursor is maintained for each `id`.
-    This allows a separate cursor for each [Component] that has focus. This is needed to build apps
-    like editors and viewers that maintains a cursor position between focus switches.
+2.  It also holds a map that holds a [r3bl_rs_utils_core::Position] for each `id`.
+    This is used to represent a cursor (whatever that means to your app & component).
+    This cursor is maintained for each `id`. This allows a separate cursor for each
+    [Component] that has focus. This is needed to build apps like editors and viewers
+    that maintains a cursor position between focus switches.
 
-Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent between
-re-renders.
+Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent
+between re-renders.
 
 ## Input event specificity
 
 [TerminalWindow] gives [App] first dibs when it comes to handling input events.
-[ComponentRegistry::route_event_to_focused_component] can be used to route events directly
-to components that have focus. If it punts handling this event, it will be handled by the
-default input event handler. And if nothing there matches this event, then it is simply
-dropped.
+[ComponentRegistry::route_event_to_focused_component] can be used to route events
+directly to components that have focus. If it punts handling this event, it will be
+handled by the default input event handler. And if nothing there matches this event,
+then it is simply dropped.
 
 ## Rendering and painting
 
-The R3BL TUI engine uses a high performance compositor to render the UI to the terminal. This
-ensures that only "pixels" that have changed are painted to the terminal. This is done by
-creating a concept of `PixelChar` which represents a single "pixel" in the terminal screen at a
-given col and row index position. There are only as many `PixelChar`s as there are rows and cols
-in a terminal screen. And the index maps directly to the position of the pixel in the terminal
-screen.
+The R3BL TUI engine uses a high performance compositor to render the UI to the
+terminal. This ensures that only "pixels" that have changed are painted to the
+terminal. This is done by creating a concept of `PixelChar` which represents a single
+"pixel" in the terminal screen at a given col and row index position. There are only
+as many `PixelChar`s as there are rows and cols in a terminal screen. And the index
+maps directly to the position of the pixel in the terminal screen.
 
 ### Offscreen buffer
 
-Here is an example of what a single row of rendered output might look like in a row of the
-`OffscreenBuffer`. This diagram shows each `PixelChar` in `row_index: 1` of the
-`OffscreenBuffer`. In this example, there are 80 columns in the terminal screen. This actual log
-output generated by the TUI engine when logging is enabled.
+Here is an example of what a single row of rendered output might look like in a row of
+the `OffscreenBuffer`. This diagram shows each `PixelChar` in `row_index: 1` of the
+`OffscreenBuffer`. In this example, there are 80 columns in the terminal screen. This
+actual log output generated by the TUI engine when logging is enabled.
 
 ```
 row_index: 1
@@ -521,34 +573,38 @@ row_index: 1
 078 S ░░░░░░░╳░░░░░░░░079 S ░░░░░░░╳░░░░░░░░080 S ░░░░░░░╳░░░░░░░░spacer [ 0, 16-80 ]
 ```
 
-When `RenderOps` are executed and used to create an `OffscreenBuffer` that maps to the size of
-the terminal window, clipping is performed automatically. This means that it isn't possible to
-move the caret outside of the bounds of the viewport (terminal window size). And it isn't
-possible to paint text that is larger than the size of the offscreen buffer. The buffer really
-represents the current state of the viewport. Scrolling has to be handled by the component
-itself (an example of this is the editor component).
+When `RenderOps` are executed and used to create an `OffscreenBuffer` that maps to the
+size of the terminal window, clipping is performed automatically. This means that it
+isn't possible to move the caret outside of the bounds of the viewport (terminal
+window size). And it isn't possible to paint text that is larger than the size of the
+offscreen buffer. The buffer really represents the current state of the viewport.
+Scrolling has to be handled by the component itself (an example of this is the editor
+component).
 
 Each `PixelChar` can be one of 4 things:
 
-1. **Space**. This is just an empty space. There is no flickering in the TUI engine. When a new
-   offscreen buffer is created, it is fulled w/ spaces. Then components paint over the spaces.
-   Then the diffing algorithm only paints over the pixels that have changed. You don't have to
-   worry about clearing the screen and painting, which typically will cause flickering in
-   terminals. You also don't have to worry about printing empty spaces over areas that you would
-   like to clear between renders. All of this handled by the TUI engine.
-2. **Void**. This is a special pixel that is used to indicate that the pixel should be ignored.
-   It is used to indicate a wide emoji is to the left somewhere. Most terminals don't support
-   emojis, so there's a discrepancy between the display width of the character and its index in
-   the string.
-3. **Plain text**. This is a normal pixel which wraps a single character that maybe a grapheme
-   cluster segment. Styling information is encoded in each `PixelChar::PlainText` and is used to
-   paint the screen via the diffing algorithm which is smart enough to "stack" styles that
-   appear beside each other for quicker rendering in terminals.
+1. **Space**. This is just an empty space. There is no flickering in the TUI engine.
+   When a new offscreen buffer is created, it is fulled w/ spaces. Then components
+   paint over the spaces. Then the diffing algorithm only paints over the pixels that
+   have changed. You don't have to worry about clearing the screen and painting, which
+   typically will cause flickering in terminals. You also don't have to worry about
+   printing empty spaces over areas that you would like to clear between renders. All
+   of this handled by the TUI engine.
+2. **Void**. This is a special pixel that is used to indicate that the pixel should be
+   ignored. It is used to indicate a wide emoji is to the left somewhere. Most
+   terminals don't support emojis, so there's a discrepancy between the display width
+   of the character and its index in the string.
+3. **Plain text**. This is a normal pixel which wraps a single character that maybe a
+   grapheme cluster segment. Styling information is encoded in each
+   `PixelChar::PlainText` and is used to paint the screen via the diffing algorithm
+   which is smart enough to "stack" styles that appear beside each other for quicker
+   rendering in terminals.
 
 ### Render pipeline
 
-The following diagram provides a high level overview of how apps (that contain components,
-which may contain components, and so on) are rendered to the terminal screen.
+The following diagram provides a high level overview of how apps (that contain
+components, which may contain components, and so on) are rendered to the terminal
+screen.
 
 ```
 ┌──────────────────────────────────┐
@@ -571,27 +627,28 @@ which may contain components, and so on) are rendered to the terminal screen.
 ```
 <!-- https://asciiflow.com/#/share/eJyrVspLzE1VssorzcnRUcpJrEwtUrJSqo5RqohRsrK0MNaJUaoEsozMTYGsktSKEiAnRunRlD10QzExeUBSwTk%2FryQxMy%2B1SAEHQCglCBBKSXKJAonKUawBeiBHwRDhAAW4oBGSIKoWNDcrYBUkUgulETFtl0JQal5KalFAZkFqDjAicMYUKS4nJaJoaCgdkjExgUkLH9PK2Gl7FLRBJFWMpUqo0ilL4wpirOIklEg4BP3T0oqTi1JT85xK09IgpR%2FcXLohUv1M2MM49FIhFSjVKtUCAEVNQq0%3D) -->
 
-Each component produces a `RenderPipeline`, which is a map of `ZOrder` and `Vec<RenderOps>`.
-`RenderOps` are the instructions that are grouped together, such as move the caret to a
-position, set a color, and paint some text.
+Each component produces a `RenderPipeline`, which is a map of `ZOrder` and
+`Vec<RenderOps>`. `RenderOps` are the instructions that are grouped together, such as
+move the caret to a position, set a color, and paint some text.
 
-Inside of each `RenderOps` the caret is stateful, meaning that the caret position is remembered
-after each `RenderOp` is executed. However, once a new `RenderOps` is executed, the caret
-position reset just for that `RenderOps`. Caret position is not stored globally. You should read
-more about "atomic paint operations" in the `RenderOp` documentation.
+Inside of each `RenderOps` the caret is stateful, meaning that the caret position is
+remembered after each `RenderOp` is executed. However, once a new `RenderOps` is
+executed, the caret position reset just for that `RenderOps`. Caret position is not
+stored globally. You should read more about "atomic paint operations" in the
+`RenderOp` documentation.
 
-Once a set of these `RenderPipeline`s have been generated, typically after the user enters some
-input event, and that produces a new state which then has to be rendered, they are combined and
-painted into an `OffscreenBuffer`.
+Once a set of these `RenderPipeline`s have been generated, typically after the user
+enters some input event, and that produces a new state which then has to be rendered,
+they are combined and painted into an `OffscreenBuffer`.
 
 ### First render
 
-The `paint.rs` file contains the `paint` function, which is the entry point for all rendering.
-Once the first render occurs, the `OffscreenBuffer` that is generated is saved to
-`GlobalSharedState`. The following table shows the various tasks that have to be performed in
-order to render to an `OffscreenBuffer`. There is a different code path that is taken for ANSI
-text and plain text (which includes `StyledText` which is just plain text with a color). Syntax
-highlighted text is also just `StyledText`.
+The `paint.rs` file contains the `paint` function, which is the entry point for all
+rendering. Once the first render occurs, the `OffscreenBuffer` that is generated is
+saved to `GlobalSharedState`. The following table shows the various tasks that have to
+be performed in order to render to an `OffscreenBuffer`. There is a different code
+path that is taken for ANSI text and plain text (which includes `StyledText` which is
+just plain text with a color). Syntax highlighted text is also just `StyledText`.
 
 | UTF-8 | Task                                                                                                    |
 | ----- | ------------------------------------------------------------------------------------------------------- |
@@ -599,49 +656,57 @@ highlighted text is also just `StyledText`.
 | Y     | paint each `PixelChar` in `List<List<PixelChar>>` to stdout using `OffscreenBufferPainterImplCrossterm` |
 | Y     | save the `List<List<PixelChar>>` to `GlobalSharedState`                                                 |
 
-Currently only `crossterm` is supported for actually painting to the terminal. But this process
-is really simple making it very easy to swap out other terminal libraries such as `termion`, or
-even a GUI backend, or some other custom output driver.
+Currently only `crossterm` is supported for actually painting to the terminal. But
+this process is really simple making it very easy to swap out other terminal libraries
+such as `termion`, or even a GUI backend, or some other custom output driver.
 
 ### Subsequent render
 
-Since the `OffscreenBuffer` is cached in `GlobalSharedState` a diff to be performed for
-subsequent renders. And only those diff chunks are painted to the screen. This ensures that
-there is no flicker when the content of the screen changes. It also minimizes the amount of work
-that the terminal or terminal emulator has to do put the `PixelChar`s on the screen.
+Since the `OffscreenBuffer` is cached in `GlobalSharedState` a diff to be performed
+for subsequent renders. And only those diff chunks are painted to the screen. This
+ensures that there is no flicker when the content of the screen changes. It also
+minimizes the amount of work that the terminal or terminal emulator has to do put the
+`PixelChar`s on the screen.
 
 ## How does the editor component work?
 
-The `EditorComponent` struct can hold data in its own memory, in addition to relying on the state.
+The `EditorComponent` struct can hold data in its own memory, in addition to relying
+on the state.
 
-- It has an `EditorEngine` which holds syntax highlighting information, and configuration options
-  for the editor (such as multiline mode enabled or not, syntax highlighting enabled or not, etc.).
-  Note that this information lives outside of the state.
+- It has an `EditorEngine` which holds syntax highlighting information, and
+  configuration options for the editor (such as multiline mode enabled or not, syntax
+  highlighting enabled or not, etc.). Note that this information lives outside of the
+  state.
 - It also implements the `Component<S, AS>` trait.
-- However, for the reusable editor component we need the data representing the document being edited
-  to be stored in the state (`EditorBuffer`) and not inside of the `EditorComponent` itself.
-  - This is why the state must implement the trait `HasEditorBuffers` which is where the document
-    data is stored (the key is the id of the flex box in which the editor component is placed).
-  - The `EditorBuffer` contains the text content in a `Vec` of `UnicodeString`. Where each line is
-    represented by a `UnicodeString`. It also contains the scroll offset, caret position, and file
-    extension for syntax highlighting.
+- However, for the reusable editor component we need the data representing the
+  document being edited to be stored in the state (`EditorBuffer`) and not inside of
+  the `EditorComponent` itself.
+  - This is why the state must implement the trait `HasEditorBuffers` which is where
+    the document data is stored (the key is the id of the flex box in which the editor
+    component is placed).
+  - The `EditorBuffer` contains the text content in a `Vec` of `UnicodeString`. Where
+    each line is represented by a `UnicodeString`. It also contains the scroll offset,
+    caret position, and file extension for syntax highlighting.
 
 In other words,
 
 1.  `EditorEngine` -> **This goes in `EditorComponent`**
     - Contains the logic to process keypresses and modify an editor buffer.
 2.  `EditorBuffer` -> **This goes in the `State`**
-    - Contains the data that represents the document being edited. This contains the caret
-      (insertion point) position and scroll position. And in the future can contain lots of other
-      information such as undo / redo history, etc.
+    - Contains the data that represents the document being edited. This contains the
+      caret (insertion point) position and scroll position. And in the future can
+      contain lots of other information such as undo / redo history, etc.
 
 Here are the connection points w/ the impl of `Component<S, AS>` in `EditorComponent`:
 
-1.  `handle_event(global_data: &mut GlobalData<S, AS>, input_event: InputEvent, has_focus: &mut HasFocus)`
-    - Can simply relay the arguments to `EditorEngine::apply(state.editor_buffer, input_event)`
-      which will return another `EditorBuffer`.
-    - Return value can be dispatched to the store via an action `UpdateEditorBuffer(EditorBuffer)`.
-2.  `render(global_data: &mut GlobalData<S, AS>, current_box: FlexBox, surface_bounds: SurfaceBounds, has_focus: &mut HasFocus,)`
+1.  `handle_event(global_data: &mut GlobalData<S, AS>, input_event: InputEvent,
+    has_focus: &mut HasFocus)`
+    - Can simply relay the arguments to `EditorEngine::apply(state.editor_buffer,
+      input_event)` which will return another `EditorBuffer`.
+    - Return value can be dispatched to the store via an action
+      `UpdateEditorBuffer(EditorBuffer)`.
+2.  `render(global_data: &mut GlobalData<S, AS>, current_box: FlexBox, surface_bounds:
+    SurfaceBounds, has_focus: &mut HasFocus,)`
     - Can simply relay the arguments to `EditorEngine::render(state.editor_buffer)`
     - Which will return a `RenderPipeline`.
 
@@ -660,8 +725,8 @@ Definitions:
    are performed on various different areas in a terminal window to paint the output
    of render operations.
 
-There are two ways of showing cursors which are quite different (each w/ very different
-constraints).
+There are two ways of showing cursors which are quite different (each w/ very
+different constraints).
 
 1. Using a global terminal cursor (we don't use this).
    - Both [termion::cursor](https://docs.rs/termion/1.5.6/termion/cursor/index.html)
@@ -687,64 +752,68 @@ constraints).
 
 A modal dialog box is different than a normal reusable component. This is because:
 
-1. It paints on top of the entire screen (in front of all other components, in ZOrder::Glass, and
-   outside of any layouts using `FlexBox`es).
-2. Is "activated" by a keyboard shortcut (hidden otherwise). Once activated, the user can accept or
-   cancel the dialog box. And this results in a callback being called w/ the result.
+1. It paints on top of the entire screen (in front of all other components, in
+   ZOrder::Glass, and outside of any layouts using `FlexBox`es).
+2. Is "activated" by a keyboard shortcut (hidden otherwise). Once activated, the user
+   can accept or cancel the dialog box. And this results in a callback being called w/
+   the result.
 
 So this activation trigger must be done at the `App` trait impl level (in the
 `app_handle_event()` method). Also, when this trigger is detected it has to:
 
-1. When a trigger is detected, send a signal via the channel sender (out of band) so that
-   it will show when that signal is processed.
+1. When a trigger is detected, send a signal via the channel sender (out of band) so
+   that it will show when that signal is processed.
 2. When the signal is handled, set the focus to the dialog box, and return a
-   `EventPropagation::ConsumedRerender` which will re-render the UI w/ the dialog box on
-   top.
+   `EventPropagation::ConsumedRerender` which will re-render the UI w/ the dialog box
+   on top.
 
-There is a question about where does the response from the user (once a dialog is shown) go? This
-seems as though it would be different in nature from an `EditorComponent` but it is the same. Here's
-why:
+There is a question about where does the response from the user (once a dialog is
+shown) go? This seems as though it would be different in nature from an
+`EditorComponent` but it is the same. Here's why:
 
-- The `EditorComponent` is always updating its buffer based on user input, and there's no "handler"
-  for when the user performs some action on the editor. The editor needs to save all the changes to
-  the buffer to the state. This requires the trait bound `HasEditorBuffers` to be implemented by the
-  state.
-- The dialog box seems different in that you would think that it doesn't always updating its state
-  and that the only time we really care about what state the dialog box has is when the user has
-  accepted something they've typed into the dialog box and this needs to be sent to the callback
-  function that was passed in when the component was created. However, due to the reactive nature of
-  the TUI engine, even before the callback is called (due to the user accepting or cancelling),
-  while the user is typing things into the dialog box, it has to be updating the state, otherwise,
-  re-rendering the dialog box won't be triggered and the user won't see what they're typing. This
-  means that even intermediate information needs to be recorded into the state via the
-  `HasDialogBuffers` trait bound. This will hold stale data once the dialog is dismissed or
-  accepted, but that's ok since the title and text should always be set before it is shown.
+- The `EditorComponent` is always updating its buffer based on user input, and there's
+  no "handler" for when the user performs some action on the editor. The editor needs
+  to save all the changes to the buffer to the state. This requires the trait bound
+  `HasEditorBuffers` to be implemented by the state.
+- The dialog box seems different in that you would think that it doesn't always
+  updating its state and that the only time we really care about what state the dialog
+  box has is when the user has accepted something they've typed into the dialog box
+  and this needs to be sent to the callback function that was passed in when the
+  component was created. However, due to the reactive nature of the TUI engine, even
+  before the callback is called (due to the user accepting or cancelling), while the
+  user is typing things into the dialog box, it has to be updating the state,
+  otherwise, re-rendering the dialog box won't be triggered and the user won't see
+  what they're typing. This means that even intermediate information needs to be
+  recorded into the state via the `HasDialogBuffers` trait bound. This will hold stale
+  data once the dialog is dismissed or accepted, but that's ok since the title and
+  text should always be set before it is shown.
   - **Note**: it might be possible to save this type of intermediate data in
-    `ComponentRegistry::user_data`. And it is possible for `handle_event()` to return a
-    `EventPropagation::ConsumedRerender` to make sure that changes are re-rendered. This approach
-    may have other issues related to having both immutable and mutable borrows at the same time to
-    some portion of the component registry if one is not careful.
+    `ComponentRegistry::user_data`. And it is possible for `handle_event()` to return
+    a `EventPropagation::ConsumedRerender` to make sure that changes are re-rendered.
+    This approach may have other issues related to having both immutable and mutable
+    borrows at the same time to some portion of the component registry if one is not
+    careful.
 
 ### Two callback functions
 
 When creating a new dialog box component, two callback functions are passed in:
 
-1. `on_dialog_press_handler()` - this will be called if the user choose no, or yes (w/ their typed
-   text).
-2. `on_dialog_editors_changed_handler()` - this will be called if the user types something into the
-   editor.
+1. `on_dialog_press_handler()` - this will be called if the user choose no, or yes (w/
+   their typed text).
+2. `on_dialog_editors_changed_handler()` - this will be called if the user types
+   something into the editor.
 
 ### How to use this dialog to make an HTTP request & pipe the results into a selection area?
 
 So far we have covered the use case for a simple modal dialog box. In order to provide
-auto-completion capabilities, via some kind of web service, there needs to be a slightly more
-complex version of this. This is where the `DialogEngineConfigOptions` struct comes in. It allows us
-to create a dialog component and engine to be configured w/ the appropriate mode - simple or
-autocomplete.
+auto-completion capabilities, via some kind of web service, there needs to be a
+slightly more complex version of this. This is where the `DialogEngineConfigOptions`
+struct comes in. It allows us to create a dialog component and engine to be configured
+w/ the appropriate mode - simple or autocomplete.
 
-In autocomplete mode, an extra "results panel" is displayed, and the layout of the dialog is
-different on the screen. Instead of being in the middle of the screen, it starts at the top of the
-screen. The callbacks are the same.
+In autocomplete mode, an extra "results panel" is displayed, and the layout of the
+dialog is different on the screen. Instead of being in the middle of the screen, it
+starts at the top of the screen. The callbacks are the same.
 
 ## How to make HTTP requests
 
@@ -769,23 +838,22 @@ Some other changes are adding support for smart lists. These are lists that span
 multiple lines of text. And indentation levels are tracked. This information is used
 to render the list items in a way that is visually appealing.
 - The code for parsing smart lists is in [parse_smart_list].
-- The code for syntax highlighting is in
-  [StyleUSSpanLines::from_document].
+- The code for syntax highlighting is in [StyleUSSpanLines::from_document].
 
 Also, `syntect` crate is still used by the editor component
 [EditorEngineApi::render_engine] to syntax highlight the text inside code blocks of
 Markdown documents.
 
-An alternative approach to doing this was considered using the crate `markdown-rs`, but we
-decided to implement our own parser using
-[`nom`](https://developerlife.com/2023/02/20/guide-to-nom-parsing/) since it was streaming
-and used less CPU and memory.
+An alternative approach to doing this was considered using the crate `markdown-rs`,
+but we decided to implement our own parser using
+[`nom`](https://developerlife.com/2023/02/20/guide-to-nom-parsing/) since it was
+streaming and used less CPU and memory.
 
 ## Grapheme support
 
 Unicode is supported (to an extent). There are some caveats. The
-[r3bl_rs_utils_core::UnicodeString] struct has lots of great information on this graphemes and
-what is supported and what is not.
+[r3bl_rs_utils_core::UnicodeString] struct has lots of great information on this
+graphemes and what is supported and what is not.
 
 ## Lolcat support
 
@@ -809,18 +877,20 @@ let st = lolcat_mut.colorize_to_styled_texts(&unicode_string);
 lolcat.next_color();
 ```
 
-This [crate::lolcat::Lolcat] that is returned by `build()` is safe to re-use.
+This [crate::Lolcat] that is returned by `build()` is safe to re-use.
 - The colors it cycles through are "stable" meaning that once constructed via the
-  [builder](crate::lolcat::LolcatBuilder) (which sets the speed, seed, and delta
-  that determine where the color wheel starts when it is used). For eg, when used in a dialog
-  box component that re-uses the instance, repeated calls to the `render()` function of this
-  component will produce the same generated colors over and over again.
-- If you want to change where the color wheel "begins", you have to change the speed, seed, and
-  delta of this [crate::lolcat::Lolcat] instance.
+  [builder](crate::LolcatBuilder) (which sets the speed, seed, and delta that
+  determine where the color wheel starts when it is used). For eg, when used in a
+  dialog box component that re-uses the instance, repeated calls to the `render()`
+  function of this component will produce the same generated colors over and over
+  again.
+- If you want to change where the color wheel "begins", you have to change the speed,
+  seed, and delta of this [crate::Lolcat] instance.
 
 ## Issues and PRs
 
-Please report any issues to the [issue tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues).
-And if you have any feature requests, feel free to add them there too 👍.
+Please report any issues to the [issue
+tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues). And if you have any
+feature requests, feel free to add them there too 👍.
 
 License: Apache-2.0
