@@ -42,10 +42,8 @@ mod tests {
                              tui_styled_text,
                              tui_styled_texts,
                              tui_stylesheet,
-                             ChUnit,
                              CommonResult,
                              RgbValue,
-                             TryAdd,
                              TuiColor,
                              TuiStyle,
                              TuiStyledText,
@@ -53,7 +51,7 @@ mod tests {
     use r3bl_rs_utils_macro::tui_style;
 
     use super::*;
-    use crate::{render_ops, render_pipeline, RenderPipeline, ZOrder};
+    use crate::{render_ops, render_pipeline, ZOrder};
 
     #[test]
     fn test_styled_text_renders_correctly() -> CommonResult<()> {
