@@ -233,6 +233,7 @@ pub fn log_error(arg: String) {
 /// - Log
 ///   - [`CombinedLogger`], [`WriteLogger`], [`ConfigBuilder`]
 /// - `format_description!`: <https://time-rs.github.io/book/api/format-description.html>
+#[allow(static_mut_refs)]
 fn init_file_logger_once() -> CommonResult<()> {
     unsafe {
         if LOG_LEVEL == LevelFilter::Off {

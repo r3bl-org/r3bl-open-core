@@ -58,23 +58,24 @@ pub mod global_color_support {
     /// function. In any test in which this function is called, please use the `#[serial]`
     /// attribute to annotate that test. Otherwise there will be flakiness in the test results
     /// (tests are run in parallel using many threads).
-    #[allow(clippy::result_unit_err)]
+    #[allow(clippy::result_unit_err, static_mut_refs)]
     pub fn set_override(value: ColorSupport) {
         let it = i8::from(value);
-        unsafe { COLOR_SUPPORT_GLOBAL.store(it, Ordering::SeqCst) }
+        unsafe { COLOR_SUPPORT_GLOBAL.store(it, Ordering::Release) }
     }
 
+    #[allow(static_mut_refs)]
     pub fn clear_override() {
-        unsafe { COLOR_SUPPORT_GLOBAL.store(NOT_SET_VALUE, Ordering::SeqCst) };
+        unsafe { COLOR_SUPPORT_GLOBAL.store(NOT_SET_VALUE, Ordering::Release) };
     }
 
     /// Get the color support override value.
     /// - If the value has been set using [global_color_support::set_override], then that
     ///   value will be returned.
     /// - Otherwise, an error will be returned.
-    #[allow(clippy::result_unit_err)]
+    #[allow(clippy::result_unit_err, static_mut_refs)]
     pub fn try_get_override() -> Result<ColorSupport, ()> {
-        let it = unsafe { COLOR_SUPPORT_GLOBAL.load(Ordering::SeqCst) };
+        let it = unsafe { COLOR_SUPPORT_GLOBAL.load(Ordering::Acquire) };
         ColorSupport::try_from(it)
     }
 }

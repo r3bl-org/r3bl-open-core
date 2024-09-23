@@ -47,6 +47,7 @@ pub mod telemetry_global_static {
     pub static mut AVG_RESPONSE_TIME_MICROS: AtomicI64 = AtomicI64::new(NOT_SET_VALUE);
 
     /// Save the current time to the static mutable variable [START_TS_MICROS].
+    #[allow(static_mut_refs)]
     pub fn set_start_ts() {
         let current_ts_ms = Utc::now().timestamp_micros();
         unsafe {
@@ -56,6 +57,7 @@ pub mod telemetry_global_static {
 
     /// Get the saved time from the static mutable variable [START_TS_MICROS]. In order for this to
     /// return [Some] value, you must have already called [set_start_ts].
+    #[allow(static_mut_refs)]
     fn get_start_ts() -> Option<i64> {
         let start_ts_ms = unsafe { START_TS_MICROS.load(Ordering::Acquire) };
         if start_ts_ms == NOT_SET_VALUE {
@@ -67,6 +69,7 @@ pub mod telemetry_global_static {
 
     /// Save the current time to the static mutable variable [END_TS_MICROS]. And update the average
     /// response time.
+    #[allow(static_mut_refs)]
     pub fn set_end_ts() {
         let current_ts_ms = Utc::now().timestamp_micros();
         unsafe {
@@ -94,6 +97,7 @@ pub mod telemetry_global_static {
     /// Get the saved average response time from the static mutable variable
     /// [AVG_RESPONSE_TIME_MICROS]. In order for this to return [Some] value, you must have already
     /// called [set_end_ts].
+    #[allow(static_mut_refs)]
     pub fn get_avg_response_time_micros() -> String {
         let avg_response_time_micros =
             unsafe { AVG_RESPONSE_TIME_MICROS.load(Ordering::Acquire) };
@@ -148,6 +152,7 @@ pub mod is_vscode_term_global_static {
         }
     }
 
+    #[allow(static_mut_refs)]
     pub fn get_is_vscode_term() -> VSCodeTerm {
         let existing_value = unsafe { IS_VSCODE_TERM.load(Ordering::Acquire) };
 
