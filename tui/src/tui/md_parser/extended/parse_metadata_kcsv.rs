@@ -15,7 +15,10 @@
  *   limitations under the License.
  */
 
-use nom::{bytes::complete::*, combinator::*, sequence::*, IResult};
+use nom::{bytes::complete::tag,
+          combinator::opt,
+          sequence::{preceded, tuple},
+          IResult};
 
 use crate::{constants::{COLON, COMMA, NEW_LINE, SPACE},
             list,
