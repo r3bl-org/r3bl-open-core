@@ -24,11 +24,9 @@ use r3bl_rs_utils_core::{tui_styled_text,
                          TuiStyledText,
                          TuiStyledTexts,
                          UnicodeString};
-use r3bl_rs_utils_macro::tui_style;
 use serde::{Deserialize, Serialize};
 
 pub use super::*;
-use crate::ColorUtils;
 
 /// Please use the [LolcatBuilder] to create this struct (lots of documentation is provided here).
 /// Please do not use this struct directly.
@@ -70,14 +68,31 @@ impl Lolcat {
             let derived_from_new_color = ColorUtils::calc_fg_color(new_color);
 
             let style = if self.color_wheel_control.background_mode {
-                tui_style! (
-                    color_fg: TuiColor::Rgb(RgbValue::from_u8(derived_from_new_color.0, derived_from_new_color.1, derived_from_new_color.2))
-                    color_bg: TuiColor::Rgb(RgbValue::from_u8(new_color.0, new_color.1, new_color.2))
-                )
+                TuiStyle {
+                    color_fg: TuiColor::Rgb(RgbValue::from_u8(
+                        derived_from_new_color.0,
+                        derived_from_new_color.1,
+                        derived_from_new_color.2,
+                    ))
+                    .into(),
+                    color_bg: TuiColor::Rgb(RgbValue::from_u8(
+                        new_color.0,
+                        new_color.1,
+                        new_color.2,
+                    ))
+                    .into(),
+                    ..Default::default()
+                }
             } else {
-                tui_style! (
-                    color_fg: TuiColor::Rgb(RgbValue::from_u8(new_color.0, new_color.1, new_color.2))
-                )
+                TuiStyle {
+                    color_fg: TuiColor::Rgb(RgbValue::from_u8(
+                        new_color.0,
+                        new_color.1,
+                        new_color.2,
+                    ))
+                    .into(),
+                    ..Default::default()
+                }
             };
 
             acc += tui_styled_text!(
