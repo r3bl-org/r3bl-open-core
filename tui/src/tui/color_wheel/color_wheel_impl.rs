@@ -73,12 +73,13 @@ impl Default for ColorWheel {
 }
 
 impl ColorWheel {
-    /// This will lazily create a color wheel. It does not compute the gradient and memoize it when
-    /// this function is called.
+    /// This will lazily create a color wheel. It does not compute the gradient and
+    /// memoize it when this function is called.
     ///
-    /// 1. The heavy lifting is done when [generate_color_wheel](ColorWheel::generate_color_wheel)
-    ///    is called.
-    /// 2. When you use [colorize_into_styled_texts](ColorWheel::colorize_into_styled_texts) it will
+    /// 1. The heavy lifting is done when
+    ///    [generate_color_wheel](ColorWheel::generate_color_wheel) is called.
+    /// 2. When you use
+    ///    [colorize_into_styled_texts](ColorWheel::colorize_into_styled_texts) it will
     ///    also also call this method.
     ///
     /// # Arguments
@@ -86,7 +87,7 @@ impl ColorWheel {
     ///    important. However, at the very least, one Truecolor config & one ANSI 256
     ///    config should be provided. The fallback is always grayscale. See
     ///    [ColorWheelConfig::narrow_config_based_on_color_support],
-    ///    [global_color_support::detect] for more info.
+    ///    [r3bl_ansi_color::global_color_support::detect] for more info.
     pub fn new(configs: Vec<ColorWheelConfig>) -> Self {
         Self {
             configs,
@@ -391,17 +392,20 @@ impl ColorWheel {
     }
 
     /// This method gives you fine grained control over the color wheel. It returns a
-    /// gradient-colored string. It respects the [ColorSupport] restrictions for the terminal.
+    /// gradient-colored string. It respects the [r3bl_ansi_color::ColorSupport]
+    /// restrictions for the terminal.
     ///
     /// # Colorization Policy
-    /// - [GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength]: The first time
-    ///   this method is called it will generate a gradient w/ the number of steps. Subsequent calls
-    ///   will use the same gradient and index **if** the number of steps is the same. However, if
-    ///   the number of steps are different, then a new gradient will be generated & the index
-    ///   reset.
-    /// - [GradientGenerationPolicy::ReuseExistingGradientAndIndex]: The first time this method is
-    ///   called it will generate a gradient w/ the number of steps. Subsequent calls will use the
-    ///   same gradient and index.
+    ///
+    /// - [GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength]:
+    ///   The first time this method is called it will generate a gradient w/ the number
+    ///   of steps. Subsequent calls will use the same gradient and index **if** the
+    ///   number of steps is the same. However, if the number of steps are different,
+    ///   then a new gradient will be generated & the index reset.
+    ///
+    /// - [GradientGenerationPolicy::ReuseExistingGradientAndIndex]:
+    ///   The first time this method is called it will generate a gradient w/ the number
+    ///   of steps. Subsequent calls will use the same gradient and index.
     pub fn colorize_into_styled_texts(
         &mut self,
         text: &UnicodeString,

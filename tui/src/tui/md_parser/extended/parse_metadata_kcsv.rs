@@ -15,10 +15,12 @@
  *   limitations under the License.
  */
 
-use constants::*;
 use nom::{bytes::complete::*, combinator::*, sequence::*, IResult};
 
-use crate::*;
+use crate::{constants::{COLON, COMMA, NEW_LINE, SPACE},
+            list,
+            take_text_until_new_line_or_end,
+            List};
 
 /// - Sample parse input: `@tags: tag1, tag2, tag3`, `@tags: tag1, tag2, tag3\n`,
 ///   or `@authors: me, myself, i`, `@authors: me, myself, i\n`.
@@ -112,6 +114,7 @@ mod test_parse_tags_opt_eol {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
+    use crate::constants::TAGS;
 
     #[test]
     fn test_not_quoted_no_eol() {

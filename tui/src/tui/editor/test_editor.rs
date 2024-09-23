@@ -1632,10 +1632,10 @@ mod test_editor_ops {
 pub mod mock_real_objects_for_editor {
     use std::fmt::Debug;
 
-    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::{position, size, Position, Size};
     use tokio::sync::mpsc;
 
-    use crate::*;
+    use crate::{EditorEngine, FlexBox, GlobalData, PartialFlexBox, CHANNEL_WIDTH};
 
     pub fn make_global_data<S, AS>(window_size: Option<Size>) -> GlobalData<S, AS>
     where
@@ -1681,9 +1681,9 @@ pub mod mock_real_objects_for_editor {
 
 #[cfg(test)]
 pub mod assert {
-    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::{assert_eq2, UnicodeStringSegmentSliceResult};
 
-    use crate::*;
+    use crate::{EditorBuffer, EditorEngine, EditorEngineInternalApi};
 
     pub fn none_is_at_caret(buffer: &EditorBuffer, engine: &EditorEngine) {
         assert_eq2!(
@@ -1724,11 +1724,15 @@ pub mod assert {
 mod selection_tests {
     use std::collections::HashMap;
 
-    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::{assert_eq2, ch, SelectionRange, ChUnit};
 
-    use super::*;
+    use super::mock_real_objects_for_editor;
     use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
-                *};
+                CaretDirection,
+                EditorBuffer,
+                EditorEvent,
+                SelectionAction,
+                DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]
     fn test_text_selection() {
@@ -1954,12 +1958,10 @@ mod selection_tests {
 
 #[cfg(test)]
 mod clipboard_tests {
+    use r3bl_rs_utils_core::{assert_eq2, UnicodeString};
 
-    use r3bl_rs_utils_core::*;
-
-    use super::*;
-    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
-                *};
+    use super::mock_real_objects_for_editor;
+    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard, CaretDirection, EditorBuffer, EditorEvent, SelectionAction, DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]
     fn test_copy() {

@@ -18,29 +18,39 @@
 //! A single line of Markdown may have many fragments, eg: `**bold**`, `*italic*`,
 //! `[link](http://r3bl.com)`, etc.
 //!
-//! As opposed to markdown [block]s (like code block or smart lists) which may span
+//! As opposed to markdown [crate::block]s (like code block or smart lists) which may span
 //! multiple lines.
 //!
 //! Fragments may be found in every single line of text. These parsers extract each
 //! fragment into either a string slice or some other intermediate representation.
 //!
-//! To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
-//! in this file.
+//! To see this in action, set the [crate::DEBUG_MD_PARSER_STDOUT] to true, and run all
+//! the tests in this file.
 
 use crossterm::style::Stylize;
 use nom::{branch::*, combinator::*, IResult};
 use r3bl_rs_utils_core::{call_if_true, log_debug};
 
-use crate::*;
+use crate::{parse_fragment_plain_text_no_new_line,
+            parse_fragment_starts_with_backtick_err_on_new_line,
+            parse_fragment_starts_with_checkbox_checkbox_into_bool,
+            parse_fragment_starts_with_checkbox_into_str,
+            parse_fragment_starts_with_left_image_err_on_new_line,
+            parse_fragment_starts_with_left_link_err_on_new_line,
+            parse_fragment_starts_with_star_err_on_new_line,
+            parse_fragment_starts_with_underscore_err_on_new_line,
+            CheckboxParsePolicy,
+            MdLineFragment,
+            DEBUG_MD_PARSER};
 
 // BOOKM: Parser for a single line of markdown
 
 /// Parse a single chunk of Markdown text (found in a single line of text) into a
-/// [MdLineFragment]. If there is no [constants::NEW_LINE] character, then parse the
-/// entire input.
+/// [MdLineFragment]. If there is no [crate::constants::NEW_LINE] character, then parse
+/// the entire input.
 ///
 /// Here's an example of the runtime iterations that may occur, which repeatedly run by
-/// [parse_block_markdown_text_with_or_without_new_line()]:
+/// [crate::parse_block_markdown_text_with_or_without_new_line()]:
 ///
 /// ```txt
 /// input: "foo *bar* _baz_ [link](url) ![image](url)"
@@ -51,8 +61,8 @@ use crate::*;
 /// etc.
 /// ```
 ///
-/// To see this in action, set the [DEBUG_MD_PARSER_STDOUT] to true, and run all the tests
-/// in this file.
+/// To see this in action, set the [crate::DEBUG_MD_PARSER_STDOUT] to true, and run all
+/// the tests in this file.
 #[rustfmt::skip]
 pub fn parse_inline_fragments_until_eol_or_eoi(
     input: &str,
@@ -101,6 +111,7 @@ mod tests_parse_fragment {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
+    use crate::HyperlinkData;
 
     #[test]
     fn test_parse_plain_text_no_new_line1() {

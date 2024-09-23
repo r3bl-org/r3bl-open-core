@@ -15,10 +15,12 @@
  *   limitations under the License.
  */
 
-use constants::*;
 use nom::{branch::*, bytes::complete::*, combinator::*, sequence::*, IResult};
 
-use crate::*;
+use crate::{constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE},
+            CodeBlockLine,
+            CodeBlockLineContent,
+            List};
 
 /// Sample inputs:
 ///
@@ -135,6 +137,7 @@ mod tests {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
+    use crate::list;
 
     #[test]
     fn test_parse_codeblock_trailing_extra() {

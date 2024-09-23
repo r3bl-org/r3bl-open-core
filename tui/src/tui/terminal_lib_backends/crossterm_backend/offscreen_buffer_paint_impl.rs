@@ -15,9 +15,28 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true,
+                         ch,
+                         log_info,
+                         position,
+                         ChUnit,
+                         Position,
+                         Size,
+                         TuiStyle,
+                         UnicodeString,
+                         SPACER};
 
-use crate::*;
+use crate::{render_ops,
+            Flush,
+            FlushKind,
+            OffscreenBuffer,
+            OffscreenBufferPaint,
+            PixelChar,
+            PixelCharDiffChunks,
+            RenderOp,
+            RenderOps,
+            DEBUG_TUI_COMPOSITOR,
+            DEBUG_TUI_SHOW_PIPELINE};
 
 pub struct OffscreenBufferPaintImplCrossterm;
 
@@ -285,10 +304,11 @@ mod render_helpers {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::*;
-    use r3bl_rs_utils_macro::*;
+    use r3bl_rs_utils_core::{assert_eq2, color, size, ANSIBasicColor, Size, TuiStyle};
+    use r3bl_rs_utils_macro::tui_style;
 
     use super::*;
+    use crate::render_pipeline_to_offscreen_buffer::print_text_with_attributes;
 
     /// Helper function to make an `OffscreenBuffer`.
     fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
@@ -309,7 +329,7 @@ mod tests {
         my_offscreen_buffer.my_fg_color = Some(color!(@green));
         my_offscreen_buffer.my_bg_color = Some(color!(@blue));
         let maybe_max_display_col_count: Option<ChUnit> = Some(10.into());
-        render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+        print_text_with_attributes(
             text,
             &maybe_style,
             &mut my_offscreen_buffer,

@@ -15,6 +15,13 @@
  *   limitations under the License.
  */
 
+/// This macro is used to format an option. If the option is [Some], it will return the
+/// value. It is meant for use with [std::fmt::Formatter::debug_struct].
+///
+/// When using this, make sure to import [FormatMsg] as well, like this:
+/// ```rust
+/// use r3bl_rs_utils_tui::{format_option, FormatMsg};
+/// ```
 #[macro_export]
 macro_rules! format_option {
     ($opt:expr) => {

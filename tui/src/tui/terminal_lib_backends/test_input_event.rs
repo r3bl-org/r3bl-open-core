@@ -17,24 +17,31 @@
 
 #[cfg(test)]
 mod tests {
-    use crossterm::event::*;
-    use r3bl_rs_utils_core::*;
+    use crossterm::event::{KeyCode, KeyModifiers};
+    use r3bl_rs_utils_core::{assert_eq2, throws};
 
-    use crate::*;
+    use crate::{convert_key_event,
+                convert_key_modifiers,
+                crossterm_keyevent,
+                keypress,
+                InputEvent,
+                Key,
+                KeyPress,
+                ModifierKeysMask};
 
     #[test]
     fn test_convert_key_event_into_input_event() -> Result<(), ()> {
         throws!({
             // Crossterm KeyEvents.
-            let x = keyevent! {
+            let x = crossterm_keyevent! {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::NONE
             };
-            let caps_x = keyevent! {
+            let caps_x = crossterm_keyevent! {
               code: KeyCode::Char('X'),
               modifiers: KeyModifiers::SHIFT
             };
-            let ctrl_x = keyevent! {
+            let ctrl_x = crossterm_keyevent! {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::CONTROL
             };
@@ -57,7 +64,7 @@ mod tests {
             let x = InputEvent::Keyboard(keypress! { @char 'x' });
             let caps_x = InputEvent::Keyboard(keypress! {@char 'X'});
             let ctrl_x = InputEvent::Keyboard(
-                keyevent! {
+                crossterm_keyevent! {
                   code: KeyCode::Char('x'),
                   modifiers: KeyModifiers::CONTROL
                 }
@@ -65,7 +72,7 @@ mod tests {
             );
             let events_to_match_against = [x, caps_x, ctrl_x];
 
-            let key_event = keyevent! {
+            let key_event = crossterm_keyevent! {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::SHIFT
             }; // "Shift + x"
@@ -81,7 +88,7 @@ mod tests {
     fn test_copy_modifiers_from_key_event() {
         // "x"
         {
-            let key_event = keyevent! {
+            let key_event = crossterm_keyevent! {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::NONE
             };
@@ -90,7 +97,7 @@ mod tests {
         }
         // "Ctrl + x"
         {
-            let key_event = keyevent! {
+            let key_event = crossterm_keyevent! {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::CONTROL
             };
@@ -100,7 +107,7 @@ mod tests {
         }
         // "Ctrl + Shift + X"
         {
-            let key_event = keyevent! {
+            let key_event = crossterm_keyevent! {
               code: KeyCode::Char('X'),
               modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT
             };
@@ -113,7 +120,7 @@ mod tests {
         }
         // "Ctrl + Shift + Alt + X"
         {
-            let key_event = keyevent! {
+            let key_event = crossterm_keyevent! {
               code: KeyCode::Char('X'),
               modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT | KeyModifiers::ALT
             };
@@ -130,7 +137,7 @@ mod tests {
     fn test_copy_code_from_key_event() {
         // "x"
         {
-            let key_event = keyevent! {
+            let key_event = crossterm_keyevent! {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::NONE
             };
@@ -140,7 +147,7 @@ mod tests {
         }
         // "Ctrl + x"
         {
-            let key_event = keyevent! {
+            let key_event = crossterm_keyevent! {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::CONTROL
             };
@@ -150,7 +157,7 @@ mod tests {
         }
         // "Ctrl + Shift + x"
         {
-            let key_event = keyevent! {
+            let key_event = crossterm_keyevent! {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT
             };
@@ -160,7 +167,7 @@ mod tests {
         }
         // "Ctrl + Shift + Alt + x"
         {
-            let key_event = keyevent! {
+            let key_event = crossterm_keyevent! {
               code: KeyCode::Char('x'),
               modifiers: KeyModifiers::CONTROL | KeyModifiers::SHIFT | KeyModifiers::ALT
             };

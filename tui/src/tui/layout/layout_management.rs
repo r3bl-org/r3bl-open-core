@@ -15,9 +15,9 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{CommonResult, Position, RequestedSizePercent, Size, TuiStyle};
 
-use crate::*;
+use super::{FlexBox, FlexBoxId, LayoutDirection};
 
 /// Public API interface to create nested & responsive layout based UIs.
 pub trait LayoutManagement {
@@ -45,7 +45,7 @@ pub trait PerformPositioningAndSizing {
 
     fn no_boxes_added(&self) -> bool;
 
-    /// Add the first [FlexBox] to the [Surface].
+    /// Add the first [FlexBox] to the [crate::Surface].
     /// 1. This one is explicitly sized.
     /// 2. there can be only one.
     fn add_root_box(&mut self, props: FlexBoxProps) -> CommonResult<()>;
@@ -63,7 +63,7 @@ pub struct FlexBoxProps {
     pub maybe_styles: Option<Vec<TuiStyle>>,
 }
 
-/// Properties that are needed to create a [Surface].
+/// Properties that are needed to create a [crate::Surface].
 #[derive(Clone, Debug, Default)]
 pub struct SurfaceProps {
     pub pos: Position,

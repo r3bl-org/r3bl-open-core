@@ -15,10 +15,16 @@
  *   limitations under the License.
  */
 
-use crossterm::event::*;
+use crossterm::event::{KeyCode,
+                       KeyEvent,
+                       KeyEventKind,
+                       KeyModifiers,
+                       MediaKeyCode,
+                       ModifierKeyCode};
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use super::{Enhanced, ModifierKeysMask};
+use crate::{convert_key_modifiers, MediaKey, ModifierKeyEnum, SpecialKeyExt};
 
 /// Examples.
 ///
@@ -120,7 +126,7 @@ macro_rules! keypress {
 ///    terminals, the `kind` is always `Press`. This is made explicit in the code.
 ///
 /// 2. Also, the [KeyEvent]'s `state` is totally ignored in the conversion to [KeyPress].
-///    The [KeyEventState] isn't even considered in the conversion code.
+///    The [crossterm::event::KeyEventState] isn't even considered in the conversion code.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Copy)]
 pub enum KeyPress {
     Plain { key: Key },
@@ -137,9 +143,9 @@ pub enum Key {
     Character(char),
     SpecialKey(SpecialKey),
     FunctionKey(FunctionKey),
-    /// See [`PushKeyboardEnhancementFlags`] for more details on [kitty keyboard
-    /// protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/) and the terminals on which this
-    /// is currently supported:
+    /// See [`crossterm::event::PushKeyboardEnhancementFlags`] for more details on [kitty
+    /// keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/) and the
+    /// terminals on which this is currently supported:
     /// * [kitty terminal](https://sw.kovidgoyal.net/kitty/)
     /// * [foot terminal](https://codeberg.org/dnkl/foot/issues/319)
     /// * [WezTerm
@@ -326,14 +332,15 @@ pub mod convert_key_event {
         }
     }
 
-    /// Macro to insulate this library from changes in crossterm [KeyEvent] constructor & fields.
+    /// Macro to insulate this library from changes in crossterm
+    /// [crossterm::event::KeyEvent] constructor & fields.
     #[macro_export]
-    macro_rules! keyevent {
+    macro_rules! crossterm_keyevent {
         (
             code: $arg_key_code: expr,
             modifiers: $arg_key_modifiers: expr
         ) => {
-            KeyEvent::new($arg_key_code, $arg_key_modifiers)
+            crossterm::event::KeyEvent::new($arg_key_code, $arg_key_modifiers)
         };
     }
 

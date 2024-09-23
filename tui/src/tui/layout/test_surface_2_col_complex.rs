@@ -16,10 +16,39 @@
  */
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::{assert_eq2,
+                             ch,
+                             console_log,
+                             get_tui_styles,
+                             percent,
+                             position,
+                             requested_size_percent,
+                             size,
+                             throws,
+                             throws_with_return,
+                             tui_stylesheet,
+                             ChUnit,
+                             CommonResult,
+                             Percent,
+                             Position,
+                             RequestedSizePercent,
+                             RgbValue,
+                             Size,
+                             TryAdd,
+                             TuiColor,
+                             TuiStyle,
+                             TuiStylesheet};
     use r3bl_rs_utils_macro::tui_style;
 
-    use crate::*;
+    use crate::{box_end,
+                box_props,
+                box_start,
+                FlexBoxId,
+                FlexBoxProps,
+                LayoutDirection,
+                LayoutManagement,
+                Surface,
+                SurfaceProps};
 
     #[test]
     fn test_surface_2_col_complex() -> CommonResult<()> {

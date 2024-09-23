@@ -15,17 +15,30 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true,
+                         ch,
+                         log_debug,
+                         ChUnit,
+                         CommonError,
+                         CommonErrorType,
+                         CommonResult,
+                         GraphemeClusterSegment,
+                         Position,
+                         Size,
+                         TuiStyle,
+                         UnicodeString,
+                         UnicodeStringExt,
+                         SPACER};
 
-use super::*;
-use crate::*;
+use super::{sanitize_and_save_abs_position, OffscreenBuffer, RenderOp, RenderPipeline};
+use crate::{PixelChar, RenderOpsLocalData, ZOrder, DEBUG_TUI_COMPOSITOR};
 
 impl RenderPipeline {
     /// Convert the render pipeline to an offscreen buffer.
     /// 1. This does not require any specific implementation of crossterm or termion.
     /// 2. This is the intermediate representation (IR) of a [RenderPipeline]. In order to turn
     ///    this IR into actual paint commands for the terminal, you must use the
-    ///    [OffscreenBufferPaint] trait implementations.
+    ///    [super::OffscreenBufferPaint] trait implementations.
     pub fn convert(&self, window_size: Size) -> OffscreenBuffer {
         let mut my_offscreen_buffer =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
@@ -348,9 +361,17 @@ pub fn print_text_with_attributes(
 
 #[cfg(test)]
 mod tests {
+    use r3bl_rs_utils_core::{assert_eq2,
+                             color,
+                             position,
+                             size,
+                             ANSIBasicColor,
+                             Position,
+                             Size};
     use r3bl_rs_utils_macro::tui_style;
 
     use super::*;
+    use crate::{render_pipeline, RenderOps};
 
     #[test]
     fn test_print_plain_text_render_path_reuse_buffer() {
@@ -373,7 +394,7 @@ mod tests {
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
             let maybe_max_display_col_count = Some(10.into());
 
-            render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            print_text_with_attributes(
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
@@ -436,7 +457,7 @@ mod tests {
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
             let maybe_max_display_col_count = Some(10.into());
 
-            render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            print_text_with_attributes(
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
@@ -498,7 +519,7 @@ mod tests {
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
             let maybe_max_display_col_count = Some(10.into());
 
-            render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            print_text_with_attributes(
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
@@ -563,7 +584,7 @@ mod tests {
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
             let maybe_max_display_col_count = Some(10.into());
 
-            render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            print_text_with_attributes(
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
@@ -618,7 +639,7 @@ mod tests {
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
             let maybe_max_display_col_count = Some(10.into());
 
-            render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            print_text_with_attributes(
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
@@ -682,7 +703,7 @@ mod tests {
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
             let maybe_max_display_col_count = Some(10.into());
 
-            render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            print_text_with_attributes(
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,

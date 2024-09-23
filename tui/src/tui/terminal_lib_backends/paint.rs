@@ -17,18 +17,37 @@
 
 use std::fmt::Debug;
 
-pub use paint_exports::*;
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true, log_info, Position, Size};
 
-use super::*;
-use crate::*;
+use super::{FlushKind, RenderOp, RenderOpsLocalData, RenderPipeline};
+use crate::{GlobalData,
+            OffscreenBuffer,
+            OffscreenBufferDiffResult,
+            OffscreenBufferPaint,
+            OffscreenBufferPaintImplCrossterm,
+            PixelCharDiffChunks,
+            TerminalLibBackend,
+            DEBUG_TUI_MOD,
+            DEBUG_TUI_SHOW_PIPELINE_EXPANDED,
+            TERMINAL_LIB_BACKEND};
 
-/// Paint the render pipeline. The render pipeline contains a list of [RenderOps] for each [ZOrder].
-/// This function is responsible for:
-/// 1. Actually executing those [RenderOps] in the correct order.
-/// 2. And routing the execution to the correct backend specified in [TERMINAL_LIB_BACKEND].
+pub trait PaintRenderOp {
+    fn paint(
+        &mut self,
+        skip_flush: &mut bool,
+        render_op: &RenderOp,
+        window_size: Size,
+        local_data: &mut RenderOpsLocalData,
+    );
+}
+
+/// Paint the render pipeline. The render pipeline contains a list of [crate::RenderOps]
+/// for each [crate::ZOrder]. This function is responsible for:
+/// 1. Actually executing those [crate::RenderOps] in the correct order.
+/// 2. And routing the execution to the correct backend specified in
+///    [TERMINAL_LIB_BACKEND].
 ///
-/// See [RenderOps] for more details of "atomic paint operations".
+/// See [crate::RenderOps] for more details of "atomic paint operations".
 pub fn paint<S, AS>(
     pipeline: &RenderPipeline,
     flush_kind: FlushKind,
@@ -139,19 +158,5 @@ pub fn sanitize_and_save_abs_position(
             );
             log_info(msg);
         });
-    }
-}
-
-pub mod paint_exports {
-    use super::*;
-
-    pub trait PaintRenderOp {
-        fn paint(
-            &mut self,
-            skip_flush: &mut bool,
-            render_op: &RenderOp,
-            window_size: Size,
-            local_data: &mut RenderOpsLocalData,
-        );
     }
 }

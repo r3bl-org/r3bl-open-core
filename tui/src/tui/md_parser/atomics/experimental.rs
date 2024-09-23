@@ -21,14 +21,12 @@
 //!   with `nom` parsing.
 //! - When some of these ideas graduate, they get moved to the main codebase.
 
-use constants::*;
 use nom::{character::complete::*, combinator::*, multi::*, IResult, Parser};
 
-use crate::*;
+use crate::constants::NEW_LINE_CHAR;
 
 #[allow(dead_code)]
 mod common_batch {
-
     /// For use with [nom::Parser::and_then]. If any of the input characters are in
     /// `denied_chars`, an error is returned.
     pub fn not_denied_chars<'input>(

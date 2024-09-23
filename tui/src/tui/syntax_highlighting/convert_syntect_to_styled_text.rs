@@ -15,10 +15,12 @@
  *   limitations under the License.
  */
 
-//! This module contains code for converting between syntect styled texts and tui styled texts.
+//! This module contains code for converting between syntect styled texts and tui styled
+//! texts.
 //!
-//! A [Vec] or [List] of styled text represents a single line of text in an editor component, which
-//! is the output of a syntax highlighter (that takes plain text and returns the styled text).
+//! A [Vec] or [crate::List] of styled text represents a single line of text in an editor
+//! component, which is the output of a syntax highlighter (that takes plain text and
+//! returns the styled text).
 //!
 //! There is a major difference in doing this conversion which is:
 //! - tui styled texts are styled unicode strings,
@@ -36,7 +38,8 @@ use r3bl_rs_utils_core::{tui_styled_text,
                          TuiStyledTexts};
 use syntect::parsing::SyntaxSet;
 
-use crate::*;
+use super::{StyleUSSpan, StyleUSSpanLine};
+use crate::aliases::US;
 
 // Type aliases for syntect types.
 
