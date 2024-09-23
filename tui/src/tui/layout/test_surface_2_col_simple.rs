@@ -30,7 +30,6 @@ mod tests {
                              CommonResult,
                              RgbValue,
                              TuiColor,
-                             TuiStyle,
                              TuiStylesheet};
     use r3bl_rs_utils_macro::tui_style;
 
