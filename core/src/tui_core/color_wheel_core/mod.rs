@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,21 +15,20 @@
  *   limitations under the License.
  */
 
-//! All the modules in the `r3bl_rs_utils_core` crate are in support of the `tui` module in the
-//! "main" [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crate.
-
 // Attach sources.
-pub mod color_wheel_core;
-pub mod constants;
-pub mod dimens;
-pub mod graphemes;
-pub mod tui_styled_text;
-pub mod tui_style;
+pub mod ansi_256_color_gradients;
+pub mod color_wheel_control;
+pub mod color_utils;
+pub mod truecolor_gradient;
+pub mod converter;
+pub mod policies;
+pub mod defaults;
 
 // Re-export.
-pub use color_wheel_core::*;
-pub use constants::*;
-pub use dimens::*;
-pub use graphemes::*;
-pub use tui_styled_text::*;
-pub use tui_style::*;
+pub use ansi_256_color_gradients::*;
+pub use color_wheel_control::*;
+pub use color_utils::*;
+pub use truecolor_gradient::*;
+pub use converter::*;
+pub use policies::*;
+pub use defaults::*;

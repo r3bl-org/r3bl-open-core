@@ -16,19 +16,13 @@
  */
 
 // Attach.
-pub mod ansi_256_color_gradients;
-pub mod color_utils;
-pub mod color_wheel_control;
 pub mod color_wheel_impl;
+pub mod config;
 pub mod lolcat_api;
 pub mod lolcat_impl;
-pub mod truecolor_gradient;
 
 // Re-export.
-pub use ansi_256_color_gradients::*;
-pub use color_utils::*;
-pub use color_wheel_control::*;
 pub use color_wheel_impl::*;
+pub use config::*;
 pub use lolcat_api::*;
 pub use lolcat_impl::*;
-pub use truecolor_gradient::*;

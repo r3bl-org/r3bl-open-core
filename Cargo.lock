@@ -2011,6 +2011,7 @@ name = "r3bl_rs_utils_core"
 version = "0.9.16"
 dependencies = [
  "chrono",
+ "colorgrad",
  "crossterm 0.28.1",
  "futures-util",
  "log",
@@ -2114,7 +2115,6 @@ name = "r3bl_tui"
 version = "0.5.9"
 dependencies = [
  "chrono",
- "colorgrad",
  "copypasta-ext",
  "crossterm 0.28.1",
  "futures-util",

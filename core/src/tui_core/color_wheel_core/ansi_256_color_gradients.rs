@@ -82,9 +82,8 @@ pub fn get_gradient_array_for(
 
 #[cfg(test)]
 mod ansi_256_gradients_test {
-    use r3bl_rs_utils_core::assert_eq2;
-
     use super::*;
+    use crate::assert_eq2;
 
     #[test]
     fn test() {
