@@ -35,8 +35,9 @@ use super::{color_wheel_color_converter::convert_tui_color_into_r3bl_ansi_color,
             generate_truecolor_gradient,
             get_gradient_array_for,
             Ansi256GradientIndex,
-            ColorUtils};
-use crate::{Lolcat, LolcatBuilder};
+            ColorUtils,
+            Lolcat,
+            LolcatBuilder};
 
 /// For RGB colors:
 /// 1. The stops are the colors that will be used to create the gradient.
