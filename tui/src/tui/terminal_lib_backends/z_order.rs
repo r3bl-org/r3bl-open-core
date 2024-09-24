@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 R3BL LLC
+ *   Copyright (c) 2024 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,16 +15,24 @@
  *   limitations under the License.
  */
 
-// Attach.
-pub mod editor_buffer;
-pub mod editor_component;
-pub mod editor_engine;
+use std::fmt::Debug;
 
-// Re-export.
-pub use editor_buffer::*;
-pub use editor_component::*;
-pub use editor_engine::*;
+use serde::{Deserialize, Serialize};
 
-// Tests.
-pub mod test_editor;
-pub mod test_fixtures;
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum ZOrder {
+    Normal,
+    High,
+    Glass,
+}
+
+impl ZOrder {
+    /// Contains the priority that is used to paint the different groups of [RenderOp] items.
+    pub fn get_render_order() -> [ZOrder; 3] {
+        [ZOrder::Normal, ZOrder::High, ZOrder::Glass]
+    }
+}
+
+impl Default for ZOrder {
+    fn default() -> Self { Self::Normal }
+}

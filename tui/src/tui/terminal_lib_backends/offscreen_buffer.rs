@@ -278,6 +278,8 @@ mod pixel_char_line_impl {
             let mut it: Vec<String> = vec![];
 
             mod helpers {
+                use std::primitive::usize;
+
                 pub enum Peek {
                     NextItemContinuesRange,
                     NextItemDoesNotContinueRange,
@@ -311,24 +313,35 @@ mod pixel_char_line_impl {
             }
 
             // Main loop.
-            pub use helpers::*;
             for (i, value) in values.iter().enumerate() {
                 match (
-                    peek_does_next_item_continues_range(values, i),
-                    does_current_range_exist(&current_range),
+                    helpers::peek_does_next_item_continues_range(values, i),
+                    helpers::does_current_range_exist(&current_range),
                 ) {
-                    (Peek::NextItemContinuesRange, CurrentRange::DoesNotExist) => {
+                    (
+                        helpers::Peek::NextItemContinuesRange,
+                        helpers::CurrentRange::DoesNotExist,
+                    ) => {
                         current_range.push(*value); // Start new current range.
                     }
-                    (Peek::NextItemDoesNotContinueRange, CurrentRange::DoesNotExist) => {
+                    (
+                        helpers::Peek::NextItemDoesNotContinueRange,
+                        helpers::CurrentRange::DoesNotExist,
+                    ) => {
                         it.push(format!("{value}"));
                     }
                     // The next value continues the current range.
-                    (Peek::NextItemContinuesRange, CurrentRange::Exists) => {
+                    (
+                        helpers::Peek::NextItemContinuesRange,
+                        helpers::CurrentRange::Exists,
+                    ) => {
                         current_range.push(*value);
                     }
                     // The next value does not continue the current range.
-                    (Peek::NextItemDoesNotContinueRange, CurrentRange::Exists) => {
+                    (
+                        helpers::Peek::NextItemDoesNotContinueRange,
+                        helpers::CurrentRange::Exists,
+                    ) => {
                         current_range.push(*value);
                         it.push(format!(
                             "{}-{}",

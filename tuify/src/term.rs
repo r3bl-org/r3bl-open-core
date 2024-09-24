@@ -15,11 +15,10 @@
  *   limitations under the License.
  */
 
-use std::io;
+use std::io::{self, IsTerminal as _};
 
-use crossterm::terminal::*;
-use is_terminal::IsTerminal;
-use r3bl_rs_utils_core::*;
+use crossterm::terminal::size;
+use r3bl_rs_utils_core::{ch, size::Size};
 
 pub const DEFAULT_WIDTH: usize = 80;
 
@@ -65,6 +64,7 @@ pub fn is_stdin_piped() -> StdinIsPipedResult {
 /// If you run `cargo run | grep foo` the following will return true.
 /// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
 pub fn is_stdout_piped() -> StdoutIsPipedResult {
+    use std::io::IsTerminal as _;
     if !std::io::stdout().is_terminal() {
         StdoutIsPipedResult::StdoutIsPiped
     } else {

@@ -17,6 +17,9 @@
 
 use std::fmt::{Display, Formatter};
 
+use crossterm::event::{Event::{self, FocusGained, FocusLost, Key, Mouse, Resize},
+                       KeyEvent,
+                       MouseEvent};
 use r3bl_rs_utils_core::{size, Size};
 use serde::{Deserialize, Serialize};
 
@@ -81,10 +84,6 @@ mod helpers {
 }
 
 pub(crate) mod converters {
-    use crossterm::event::{Event::{self, FocusGained, FocusLost, Key, Mouse, Resize},
-                           KeyEvent,
-                           MouseEvent};
-
     use super::*;
 
     impl TryFrom<Event> for InputEvent {

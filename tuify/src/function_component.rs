@@ -15,10 +15,12 @@
  *   limitations under the License.
  */
 
-use std::io::*;
+use std::io::{Result, Write};
 
-use crossterm::{cursor::*, queue, terminal::*};
-use r3bl_rs_utils_core::*;
+use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
+                queue,
+                terminal::{Clear, ClearType}};
+use r3bl_rs_utils_core::{call_if_true, log_debug, throws, ChUnit, Size};
 
 use crate::{ResizeHint, DEVELOPMENT_MODE};
 

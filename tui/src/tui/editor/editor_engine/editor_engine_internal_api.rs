@@ -17,10 +17,25 @@
 
 use std::{cmp::Ordering, mem::replace};
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{ch,
+                         position,
+                         ChUnit,
+                         Position,
+                         UnicodeString,
+                         UnicodeStringSegmentSliceResult};
 use serde::{Deserialize, Serialize};
 
-use crate::{editor_buffer_clipboard_support::ClipboardService, *};
+use crate::{editor_buffer_clipboard_support,
+            editor_buffer_clipboard_support::ClipboardService,
+            CaretDirection,
+            CaretKind,
+            EditorArgs,
+            EditorArgsMut,
+            EditorBuffer,
+            EditorBufferApi,
+            EditorEngine,
+            LineMode,
+            ScrollOffset};
 
 /// Functions that implement the editor engine.
 pub struct EditorEngineInternalApi;

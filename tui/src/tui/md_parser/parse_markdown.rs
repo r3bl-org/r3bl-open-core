@@ -100,7 +100,6 @@ mod tests {
                 HeadingData,
                 HeadingLevel,
                 HyperlinkData,
-                MdBlock,
                 MdLineFragment};
 
     #[test]

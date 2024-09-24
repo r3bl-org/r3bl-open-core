@@ -17,7 +17,9 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true,
+                         common::{CommonError, CommonErrorType, CommonResult},
+                         log_debug};
 
 use crate::{Component,
             DialogEngine,

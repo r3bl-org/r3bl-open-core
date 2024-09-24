@@ -17,14 +17,20 @@
 
 // Attach source files.
 pub mod flex_box;
+pub mod flex_box_id;
 pub mod layout_error;
-pub mod layout_management;
+pub mod layout_and_positioning_traits;
+pub mod partial_flex_box;
+pub mod props;
 pub mod surface;
 
 // Re-export the public items.
 pub use flex_box::*;
+pub use flex_box_id::*;
 pub use layout_error::*;
-pub use layout_management::*;
+pub use layout_and_positioning_traits::*;
+pub use partial_flex_box::*;
+pub use props::*;
 pub use surface::*;
 
 // Tests.

@@ -17,10 +17,53 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{ch,
+                         percent,
+                         position,
+                         size,
+                         throws_with_return,
+                         CommonError,
+                         CommonErrorType,
+                         CommonResult,
+                         GradientGenerationPolicy,
+                         Position,
+                         Size,
+                         TextColorizationPolicy,
+                         TuiStyle,
+                         UnicodeString,
+                         SPACER};
 
 use crate::{editor_buffer_clipboard_support::system_clipboard_service_provider::SystemClipboard,
-            *};
+            render_ops,
+            render_pipeline,
+            render_tui_styled_texts_into,
+            BorderGlyphCharacter,
+            ColorWheel,
+            DialogBuffer,
+            DialogChoice,
+            DialogEngine,
+            DialogEngineArgs,
+            DialogEngineConfigOptions,
+            DialogEngineMode,
+            DialogEvent,
+            EditorEngineApi,
+            EditorEngineApplyEventResult,
+            EventPropagation,
+            FlexBox,
+            FlexBoxId,
+            GlobalData,
+            HasDialogBuffers,
+            InputEvent,
+            Key,
+            KeyPress,
+            MinSize,
+            PartialFlexBox,
+            RenderOp,
+            RenderOps,
+            RenderPipeline,
+            SpecialKey,
+            SurfaceBounds,
+            ZOrder};
 
 #[derive(Debug)]
 pub enum DialogEngineApplyResponse {
@@ -837,10 +880,11 @@ mod internal_impl {
 
 #[cfg(test)]
 mod test_dialog_engine_api_render_engine {
-    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
-    use crate::test_dialog::mock_real_objects_for_dialog::{self, make_global_data};
+    use crate::{test_dialog::mock_real_objects_for_dialog::{self, make_global_data},
+                HasFocus};
 
     #[test]
     fn render_engine_with_no_dialog_buffer_in_state() {
@@ -886,9 +930,10 @@ mod test_dialog_engine_api_render_engine {
 mod test_dialog_api_make_flex_box_for_dialog {
     use std::error::Error;
 
-    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::assert_eq2;
 
-    use crate::{dialog_engine_api::internal_impl, *};
+    use super::*;
+    use crate::{dialog_engine_api::internal_impl, Surface};
 
     /// More info on `is` and downcasting:
     /// - https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any
@@ -1053,10 +1098,10 @@ mod test_dialog_api_make_flex_box_for_dialog {
 
 #[cfg(test)]
 mod test_dialog_engine_api_apply_event {
-    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
-    use crate::test_dialog::mock_real_objects_for_dialog;
+    use crate::{keypress, test_dialog::mock_real_objects_for_dialog};
 
     #[test]
     fn apply_event_esc() {

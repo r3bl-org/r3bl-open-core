@@ -21,14 +21,22 @@
 use std::{io::{stdin, BufRead, Result},
           process::Command};
 
-#[allow(unused_imports)]
-use clap::{Args, CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum};
+use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::*;
-use r3bl_tuify::*;
+use r3bl_rs_utils_core::{call_if_true, log_debug, throws, try_to_set_log_level};
+use r3bl_tuify::{get_size,
+                 get_terminal_width,
+                 is_stdin_piped,
+                 is_stdout_piped,
+                 select_from_list,
+                 SelectionMode,
+                 StdinIsPipedResult,
+                 StdoutIsPipedResult,
+                 StyleSheet,
+                 DEVELOPMENT_MODE};
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
-use StdinIsPipedResult::*;
-use StdoutIsPipedResult::*;
+use StdinIsPipedResult::{StdinIsNotPiped, StdinIsPiped};
+use StdoutIsPipedResult::{StdoutIsNotPiped, StdoutIsPiped};
 
 const SELECTED_ITEM_SYMBOL: char = '%';
 

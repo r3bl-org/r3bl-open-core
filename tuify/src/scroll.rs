@@ -61,7 +61,7 @@
 //! ```
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true, ch, log_debug, ChUnit};
 
 use crate::DEVELOPMENT_MODE;
 
@@ -130,6 +130,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
+
     #[test]
     fn test_get_scroll_adjusted_row_index() {
         assert_eq!(get_scroll_adjusted_row_index(ch!(0), ch!(0)), ch!(0));

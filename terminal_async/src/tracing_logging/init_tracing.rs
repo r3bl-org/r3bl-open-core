@@ -172,7 +172,6 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
-    use crate::tracing_logging::tracing_config::DisplayPreference;
 
     #[test]
     fn test_try_create_display_layer() {

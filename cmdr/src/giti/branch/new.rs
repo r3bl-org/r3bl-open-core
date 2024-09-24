@@ -30,7 +30,11 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                    clap_config::BranchSubcommand,
                    report_unknown_error_and_propagate,
                    CommandSuccessfulResponse,
-                   UIStrings::*}};
+                   UIStrings::{BranchAlreadyExists,
+                               CreatedAndSwitchedToNewBranch,
+                               EnterBranchNameYouWantToCreate,
+                               FailedToCreateAndSwitchToBranch,
+                               NoNewBranchWasCreated}}};
 
 pub fn try_make_new_branch(
     maybe_branch_name: Option<String>,

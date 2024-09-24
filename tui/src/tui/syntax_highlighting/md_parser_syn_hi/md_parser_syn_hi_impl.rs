@@ -17,11 +17,66 @@
 
 //! This module is responsible for converting a [MdDocument] into a [StyleUSSpanLines].
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{CommonError,
+                         CommonErrorType,
+                         CommonResult,
+                         GradientGenerationPolicy,
+                         PrettyPrintDebug,
+                         TextColorizationPolicy,
+                         TuiStyle,
+                         TuiStyledTexts,
+                         UnicodeString};
 use r3bl_rs_utils_macro::tui_style;
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
-use crate::{constants::*, *};
+use crate::{constants::{AUTHORS,
+                        BACK_TICK,
+                        CHECKED_OUTPUT,
+                        CODE_BLOCK_START_PARTIAL,
+                        DATE,
+                        LEFT_BRACKET,
+                        LEFT_IMAGE,
+                        LEFT_PARENTHESIS,
+                        RIGHT_BRACKET,
+                        RIGHT_IMAGE,
+                        RIGHT_PARENTHESIS,
+                        STAR,
+                        TAGS,
+                        TITLE,
+                        UNCHECKED_OUTPUT,
+                        UNDERSCORE},
+            convert_syntect_to_styled_text,
+            generate_ordered_list_item_bullet,
+            generate_unordered_list_item_bullet,
+            get_bold_style,
+            get_checkbox_checked_style,
+            get_checkbox_unchecked_style,
+            get_code_block_content_style,
+            get_code_block_lang_style,
+            get_foreground_dim_style,
+            get_foreground_style,
+            get_inline_code_style,
+            get_italic_style,
+            get_link_text_style,
+            get_link_url_style,
+            get_list_bullet_style,
+            parse_markdown,
+            try_get_syntax_ref,
+            CodeBlockLineContent,
+            CodeBlockLines,
+            ColorWheel,
+            FragmentsInOneLine,
+            HeadingData,
+            HyperlinkData,
+            Lines,
+            List,
+            MdBlock,
+            MdDocument,
+            MdLineFragment,
+            StyleUSSpan,
+            StyleUSSpanLine,
+            StyleUSSpanLines,
+            US};
 
 /// This is the main function that the [editor] uses this in order to display the markdown to the
 /// user.It is responsible for converting:
@@ -61,6 +116,7 @@ pub fn try_parse_and_highlight(
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
     use crossterm::style::Stylize;
+    use r3bl_rs_utils_core::{assert_eq2, throws, ANSIBasicColor, TuiColor};
 
     use super::*;
 
@@ -655,9 +711,18 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
+    use crossterm::style::Stylize;
+    use r3bl_rs_utils_core::{assert_eq2, throws, ANSIBasicColor, TuiColor};
     use r3bl_rs_utils_macro::tui_style;
 
     use super::*;
+    use crate::{get_metadata_tags_marker_style,
+                get_metadata_tags_values_style,
+                get_metadata_title_marker_style,
+                get_metadata_title_value_style,
+                list,
+                CodeBlockLine,
+                HeadingLevel};
 
     /// Test each [MdLineFragment] variant is converted by
     /// [StyleUSSpan::from_fragment](StyleUSSpan::from_fragment).
@@ -975,8 +1040,6 @@ mod tests_style_us_span_lines_from {
     /// Test each variant of [MdBlockElement] is converted by
     /// [StyleUSSpanLines::from_block](StyleUSSpanLines::from_block).
     mod from_block {
-        use crossterm::style::Stylize;
-
         use super::*;
 
         #[test]
