@@ -25,18 +25,7 @@
 //! - <https://en.wikipedia.org/wiki/8-bit_color>
 //! - <https://github.com/Qix-/color-convert/>
 
-pub trait TransformColor {
-    /// Returns a [RgbColor] representation of the `self` color.
-    fn as_rgb(&self) -> RgbColor;
-
-    /// Returns the index of a color in 256-color ANSI palette approximating the `self`
-    /// color.
-    fn as_ansi256(&self) -> Ansi256Color;
-
-    /// Returns the index of a color in 256-color ANSI palette approximating the `self`
-    /// color as grayscale.
-    fn as_grayscale(&self) -> Ansi256Color;
-}
+use crate::{convert_rgb_into_ansi256, Ansi256Color, RgbColor, TransformColor};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Color {
@@ -44,164 +33,38 @@ pub enum Color {
     Ansi256(u8),
 }
 
-mod color_impl {
-    use crate::*;
-
-    impl TransformColor for Color {
-        fn as_rgb(&self) -> RgbColor {
-            match self {
-                Color::Rgb(r, g, b) => RgbColor {
-                    red: *r,
-                    green: *g,
-                    blue: *b,
-                },
-                Color::Ansi256(index) => Ansi256Color { index: *index }.as_rgb(),
-            }
-        }
-
-        fn as_ansi256(&self) -> Ansi256Color {
-            match self {
-                Color::Rgb(red, green, blue) => convert_rgb_into_ansi256(RgbColor {
-                    red: *red,
-                    green: *green,
-                    blue: *blue,
-                }),
-                Color::Ansi256(index) => Ansi256Color { index: *index },
-            }
-        }
-
-        fn as_grayscale(&self) -> Ansi256Color {
-            match self {
-                Color::Rgb(red, green, blue) => convert_rgb_into_ansi256(RgbColor {
-                    red: *red,
-                    green: *green,
-                    blue: *blue,
-                })
-                .as_grayscale(),
-                Color::Ansi256(index) => Ansi256Color { index: *index }.as_grayscale(),
-            }
+impl TransformColor for Color {
+    fn as_rgb(&self) -> RgbColor {
+        match self {
+            Color::Rgb(r, g, b) => RgbColor {
+                red: *r,
+                green: *g,
+                blue: *b,
+            },
+            Color::Ansi256(index) => Ansi256Color { index: *index }.as_rgb(),
         }
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct RgbColor {
-    pub red: u8,
-    pub green: u8,
-    pub blue: u8,
-}
-
-mod rgb_color_impl {
-    use super::{RgbColor, TransformColor};
-    use crate::{convert_rgb_into_ansi256, Ansi256Color};
-
-    impl TransformColor for RgbColor {
-        fn as_rgb(&self) -> RgbColor { *self }
-
-        fn as_ansi256(&self) -> Ansi256Color { convert_rgb_into_ansi256(*self) }
-
-        fn as_grayscale(&self) -> Ansi256Color {
-            convert_rgb_into_ansi256(*self).as_grayscale()
+    fn as_ansi256(&self) -> Ansi256Color {
+        match self {
+            Color::Rgb(red, green, blue) => convert_rgb_into_ansi256(RgbColor {
+                red: *red,
+                green: *green,
+                blue: *blue,
+            }),
+            Color::Ansi256(index) => Ansi256Color { index: *index },
         }
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Ansi256Color {
-    pub index: u8,
-}
-
-mod ansi_color_impl {
-    use crate::{color_utils,
-                constants::ANSI_COLOR_PALETTE,
-                Ansi256Color,
-                Color,
-                RgbColor,
-                TransformColor};
-
-    impl TransformColor for Ansi256Color {
-        fn as_grayscale(&self) -> Ansi256Color {
-            let index = self.index as usize;
-            let rgb = ANSI_COLOR_PALETTE[index];
-            let rgb = RgbColor::from(rgb);
-            let gray = color_utils::convert_grayscale((rgb.red, rgb.green, rgb.blue));
-            Color::Rgb(gray.0, gray.1, gray.2).as_ansi256()
+    fn as_grayscale(&self) -> Ansi256Color {
+        match self {
+            Color::Rgb(red, green, blue) => convert_rgb_into_ansi256(RgbColor {
+                red: *red,
+                green: *green,
+                blue: *blue,
+            })
+            .as_grayscale(),
+            Color::Ansi256(index) => Ansi256Color { index: *index }.as_grayscale(),
         }
-
-        fn as_rgb(&self) -> RgbColor {
-            let index = self.index as usize;
-            ANSI_COLOR_PALETTE[index].into()
-        }
-
-        fn as_ansi256(&self) -> Ansi256Color { *self }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use test_case::test_case;
-
-    use super::*;
-
-    #[test_case(0, 0, 0)]
-    #[test_case(255, 125, 0)]
-    #[test_case(255, 255, 255)]
-    fn test_color_as_rgb(red: u8, green: u8, blue: u8) {
-        let rgb_color = Color::Rgb(red, green, blue);
-        assert_eq!(rgb_color.as_rgb(), RgbColor { red, green, blue });
-    }
-
-    #[test_case(Color::Rgb(255, 255, 255), 231)]
-    #[test_case(Color::Rgb(255, 128, 0), 208)]
-    fn test_color_as_ansi256(rgb_color: crate::Color, index: u8) {
-        let expected_ansi = Ansi256Color { index };
-        assert_eq!(rgb_color.as_ansi256(), expected_ansi);
-    }
-
-    #[test_case(RgbColor{red: 0, green: 0, blue: 0})]
-    #[test_case(RgbColor{red: 0, green: 128, blue: 255})]
-    #[test_case(RgbColor{red: 255, green: 255, blue: 255})]
-    fn test_rgb_color_as_rgb(rgb_color: RgbColor) {
-        assert_eq!(rgb_color.as_rgb(), rgb_color);
-    }
-
-    #[test_case(Ansi256Color{index: 42}, RgbColor{red: 0, green: 215, blue: 135})]
-    fn test_ansi256_color_as_rgb(ansi_color: Ansi256Color, rgb_color: RgbColor) {
-        assert_eq!(ansi_color.as_rgb(), rgb_color);
-    }
-
-    #[test_case(RgbColor{red: 0, green: 0, blue: 0}, 16)]
-    #[test_case(RgbColor{red: 0, green: 128, blue: 255}, 33)]
-    fn test_rgb_color_as_ansi256(rgb_color: RgbColor, index: u8) {
-        let expected_ansi = Ansi256Color { index };
-        assert_eq!(rgb_color.as_ansi256(), expected_ansi);
-    }
-
-    #[test_case(Color::Rgb(0, 0, 0), 16)]
-    #[test_case(Color::Rgb(255, 128, 0), 249)]
-    fn test_color_as_grayscale(rgb_color: crate::Color, index: u8) {
-        let expected_gray = Ansi256Color { index };
-        assert_eq!(rgb_color.as_grayscale(), expected_gray);
-    }
-
-    #[test_case(RgbColor{red: 0, green: 128, blue: 255}, 245)]
-    #[test_case(RgbColor{red: 128, green: 128, blue: 128}, 244)]
-    fn test_rgb_color_as_grayscale(rgb_color: RgbColor, index: u8) {
-        let expected_gray = Ansi256Color { index };
-        assert_eq!(rgb_color.as_grayscale(), expected_gray);
-    }
-
-    #[test_case(RgbColor{red: 0, green: 0, blue: 0}, 16)]
-    #[test_case(RgbColor{red: 0, green: 128, blue: 255}, 33)]
-    fn test_ansi256_color_as_ansi256(rgb_color: RgbColor, index: u8) {
-        let expected_ansi = Ansi256Color { index };
-        assert_eq!(rgb_color.as_ansi256(), expected_ansi);
-    }
-
-    #[test_case(RgbColor{red: 0, green: 128, blue: 255}, 245)]
-    #[test_case(RgbColor{red: 255, green: 255, blue: 255}, 231)]
-    fn test_ansi256_color_as_grayscale(rgb_color: RgbColor, index: u8) {
-        let expected_gray = Ansi256Color { index };
-        assert_eq!(rgb_color.as_grayscale(), expected_gray);
     }
 }

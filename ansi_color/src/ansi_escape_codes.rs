@@ -41,7 +41,7 @@ pub enum SgrCode {
 pub mod sgr_code_impl {
     use std::fmt::{Display, Formatter, Result};
 
-    use crate::*;
+    use super::SgrCode;
 
     impl Display for SgrCode {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
