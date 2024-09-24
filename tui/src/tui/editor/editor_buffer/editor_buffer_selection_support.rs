@@ -28,8 +28,8 @@ use r3bl_rs_utils_core::{call_if_true,
                          Position,
                          SelectionRange};
 
-use super::{selection_map::selection_map_impl::RowLocationInSelectionMap, EditorBuffer};
-use crate::{selection_map_impl::DirectionChangeResult, DEBUG_TUI_COPY_PASTE};
+use super::{selection_map::RowLocationInSelectionMap, EditorBuffer};
+use crate::{DirectionChangeResult, DEBUG_TUI_COPY_PASTE};
 
 pub struct EditorBufferApi;
 impl EditorBufferApi {

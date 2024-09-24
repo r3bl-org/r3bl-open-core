@@ -20,8 +20,29 @@
 
 use r3bl_rs_utils_core::PrettyPrintDebug;
 
-use super::*;
-use crate::{constants::*, *};
+use crate::{constants::{BACK_TICK,
+                        CHECKED,
+                        HEADING_CHAR,
+                        LEFT_BRACKET,
+                        LEFT_IMAGE,
+                        LEFT_PARENTHESIS,
+                        LIST_SPACE_DISPLAY,
+                        LIST_SPACE_END_DISPLAY_FIRST_LINE,
+                        LIST_SPACE_END_DISPLAY_REST_LINE,
+                        PERIOD,
+                        RIGHT_BRACKET,
+                        RIGHT_IMAGE,
+                        RIGHT_PARENTHESIS,
+                        SPACE,
+                        STAR,
+                        UNCHECKED,
+                        UNDERSCORE},
+            HeadingLevel,
+            HyperlinkData,
+            List,
+            MdBlock,
+            MdDocument,
+            MdLineFragment};
 
 impl<'a> PrettyPrintDebug for MdDocument<'a> {
     fn pretty_print_debug(&self) -> String {
@@ -173,7 +194,7 @@ pub fn generate_unordered_list_item_bullet(
 
 #[cfg(test)]
 mod to_plain_text_tests {
-    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;
 

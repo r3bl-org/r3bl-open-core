@@ -113,6 +113,8 @@ macro_rules! percent {
     };
 }
 
+/// This must be called from a block that returns a `Result` type. Since the `?` operator
+/// is used here.
 #[macro_export]
 macro_rules! requested_size_percent {
     (
@@ -120,8 +122,8 @@ macro_rules! requested_size_percent {
         height: $arg_height: expr
     ) => {
         $crate::RequestedSizePercent {
-            width_pc: percent!($arg_width)?,
-            height_pc: percent!($arg_height)?,
+            width_pc: $crate::percent!($arg_width)?,
+            height_pc: $crate::percent!($arg_height)?,
         }
     };
 }

@@ -20,7 +20,7 @@ use std::process::Command;
 use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_rs_utils_core::CommonResult;
 use r3bl_tuify::{select_from_list_with_multi_line_header, SelectionMode, StyleSheet};
-use try_delete_branch_user_choice::Selection::{self, *};
+use try_delete_branch_user_choice::Selection::{self, Delete, ExitProgram};
 
 use crate::{color_constants::DefaultColors::{FrozenBlue,
                                              GuardsRed,
@@ -31,7 +31,17 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                    giti_ui_templates::report_unknown_error_and_propagate,
                    multi_select_instruction_header,
                    single_select_instruction_header,
-                   ui_strings::UIStrings::*,
+                   ui_strings::UIStrings::{ConfirmDeletingMultipleBranches,
+                                           ConfirmDeletingOneBranch,
+                                           CurrentBranch,
+                                           Deleted,
+                                           Exit,
+                                           FailedToDeleteBranch,
+                                           FailedToDeleteBranches,
+                                           FailedToRunCommandToDeleteBranches,
+                                           PleaseSelectBranchesYouWantToDelete,
+                                           YesDeleteBranch,
+                                           YesDeleteBranches},
                    CommandSuccessfulResponse},
             report_analytics,
             AnalyticsAction};

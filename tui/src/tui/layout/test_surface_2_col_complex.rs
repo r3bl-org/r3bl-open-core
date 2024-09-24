@@ -20,7 +20,6 @@ mod tests {
                              ch,
                              console_log,
                              get_tui_styles,
-                             percent,
                              position,
                              requested_size_percent,
                              size,

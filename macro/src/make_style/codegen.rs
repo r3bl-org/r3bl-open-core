@@ -15,10 +15,13 @@
  *   limitations under the License.
  */
 
-use quote::*;
-use r3bl_rs_utils_core::*;
+use quote::quote;
+use r3bl_rs_utils_core::ChUnitPrimitiveType;
 
-use super::*;
+use super::{
+    Attrib,
+    StyleMetadata,
+};
 
 pub(crate) fn code_gen(
     StyleMetadata {

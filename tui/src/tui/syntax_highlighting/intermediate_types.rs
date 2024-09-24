@@ -30,9 +30,23 @@
 //!    the editor component (based on scroll state in viewport). And finally that is
 //!    converted to a [r3bl_rs_utils_core::TuiStyledTexts].
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{ch,
+                         tui_styled_text,
+                         ChUnit,
+                         TuiStyle,
+                         TuiStyledText,
+                         TuiStyledTexts};
 
-use crate::{constants::*, *};
+use crate::{constants::{COLON, COMMA, SPACE},
+            get_foreground_dim_style,
+            get_metadata_tags_marker_style,
+            get_metadata_tags_values_style,
+            get_metadata_title_marker_style,
+            get_metadata_title_value_style,
+            CharacterMatchResult,
+            List,
+            PatternMatcherStateMachine,
+            US};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple spans in a
 /// line of text.
@@ -42,12 +56,8 @@ pub struct StyleUSSpan {
     pub text: US,
 }
 
-mod style_us_span_impl {
-    use super::*;
-
-    impl StyleUSSpan {
-        pub fn new(style: TuiStyle, text: US) -> Self { Self { style, text } }
-    }
+impl StyleUSSpan {
+    pub fn new(style: TuiStyle, text: US) -> Self { Self { style, text } }
 }
 
 /// A line of text is made up of multiple [StyleUSSpan]s.
@@ -247,12 +257,18 @@ mod convert {
 /// Make sure that the code to clip styled text to a range [ start_col .. end_col ] works. The
 /// list of styled unicode string represents a single line of text in an editor component.
 #[cfg(test)]
-mod clip_styled_texts {
+mod tests_clip_styled_texts {
+    use r3bl_rs_utils_core::{assert_eq2,
+                             ConvertToPlainText,
+                             RgbValue,
+                             TuiColor,
+                             UnicodeString};
     use r3bl_rs_utils_macro::tui_style;
 
     use super::*;
+    use crate::{list, List};
 
-    mod helpers {
+    mod fixtures {
         use super::*;
 
         pub fn get_s1() -> TuiStyle {
@@ -305,7 +321,7 @@ mod clip_styled_texts {
     /// ```
     #[test]
     fn list_1_range_2_5() {
-        use helpers::*;
+        use fixtures::*;
 
         assert_eq2!(get_list().len(), 3);
 
@@ -356,7 +372,7 @@ mod clip_styled_texts {
     /// ```
     #[test]
     fn list_1_range_0_3() {
-        use helpers::*;
+        use fixtures::*;
 
         assert_eq2!(get_list().len(), 3);
 
@@ -366,7 +382,7 @@ mod clip_styled_texts {
 
         // Equivalent no highlight version.
         {
-            let line = TuiStyledTexts::from(helpers::get_list())
+            let line = TuiStyledTexts::from(fixtures::get_list())
                 .to_plain_text_us()
                 .string;
             let line = UnicodeString::from(line);
@@ -380,7 +396,7 @@ mod clip_styled_texts {
         // clip version.
         {
             let clipped =
-                helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
+                fixtures::get_list().clip(scroll_offset_col_index, max_display_col_count);
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 1);
             let left = clipped.to_plain_text_us().string;
@@ -411,7 +427,7 @@ mod clip_styled_texts {
     /// ```
     #[test]
     fn list_1_range_0_5() {
-        use helpers::*;
+        use fixtures::*;
 
         assert_eq2!(get_list().len(), 3);
 
@@ -421,7 +437,7 @@ mod clip_styled_texts {
 
         // Equivalent no highlight version.
         {
-            let line = TuiStyledTexts::from(helpers::get_list())
+            let line = TuiStyledTexts::from(fixtures::get_list())
                 .to_plain_text_us()
                 .string;
             let line = UnicodeString::from(line);
@@ -435,7 +451,7 @@ mod clip_styled_texts {
         // clip version.
         {
             let clipped =
-                helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
+                fixtures::get_list().clip(scroll_offset_col_index, max_display_col_count);
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 1);
             let lhs = clipped.to_plain_text_us().string;
@@ -466,7 +482,7 @@ mod clip_styled_texts {
     /// ```
     #[test]
     fn list_1_range_2_8() {
-        use helpers::*;
+        use fixtures::*;
 
         assert_eq2!(get_list().len(), 3);
 
@@ -476,7 +492,7 @@ mod clip_styled_texts {
 
         // Expected no highlight version.
         {
-            let line = TuiStyledTexts::from(helpers::get_list())
+            let line = TuiStyledTexts::from(fixtures::get_list())
                 .to_plain_text_us()
                 .string;
             let line = UnicodeString::from(line);
@@ -490,7 +506,7 @@ mod clip_styled_texts {
         // clip version.
         {
             let clipped =
-                helpers::get_list().clip(scroll_offset_col_index, max_display_col_count);
+                fixtures::get_list().clip(scroll_offset_col_index, max_display_col_count);
             // println!("{}", clipped.pretty_print_debug());
             assert_eq2!(clipped.len(), 3);
             let left = clipped.to_plain_text_us().string;
@@ -501,7 +517,7 @@ mod clip_styled_texts {
 
     #[test]
     fn list_2() {
-        use helpers::*;
+        use fixtures::*;
 
         fn get_list() -> List<StyleUSSpan> {
             list! {
@@ -555,7 +571,7 @@ mod clip_styled_texts {
 
     #[test]
     fn list_3() {
-        use helpers::*;
+        use fixtures::*;
 
         fn get_list() -> List<StyleUSSpan> {
             list! {

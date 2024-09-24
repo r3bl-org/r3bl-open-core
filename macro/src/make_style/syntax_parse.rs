@@ -15,12 +15,24 @@
  *   limitations under the License.
  */
 
-use quote::*;
-use r3bl_rs_utils_core::*;
-use syn::{parse::*, Expr::Verbatim, *};
+use quote::quote;
+use r3bl_rs_utils_core::{call_if_true, ch, throws, ChUnit, ChUnitPrimitiveType};
+use syn::{parse::{Parse, ParseStream},
+          Expr,
+          Expr::Verbatim,
+          ExprArray,
+          ExprPath,
+          LitBool,
+          LitInt,
+          Path,
+          PathSegment,
+          Token};
 
-use super::*;
+use super::{Attrib, StyleMetadata, DEBUG_MAKE_STYLE_MOD};
 use crate::utils::IdentExt;
+
+/// Type alias for [syn::Result].
+type SynResult<T> = std::result::Result<T, syn::Error>;
 
 /// Here's a sample syntax to parse.
 ///
@@ -40,7 +52,7 @@ use crate::utils::IdentExt;
 /// 2. Rgb value.
 /// 3. Variable holding either of the above.
 impl Parse for StyleMetadata {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream) -> SynResult<Self> {
         let mut metadata = StyleMetadata {
             id: Verbatim(quote! { u8::MAX }),
             attrib_vec: Vec::new(),
@@ -80,7 +92,7 @@ pub(crate) mod custom_keywords {
 }
 
 // Parse id (optional).
-fn parse_optional_id(input: &ParseStream, metadata: &mut StyleMetadata) -> Result<()> {
+fn parse_optional_id(input: &ParseStream, metadata: &mut StyleMetadata) -> SynResult<()> {
     throws!({
         let lookahead = input.lookahead1();
 
@@ -99,7 +111,7 @@ fn parse_optional_id(input: &ParseStream, metadata: &mut StyleMetadata) -> Resul
 fn parse_optional_lolcat(
     input: &ParseStream,
     metadata: &mut StyleMetadata,
-) -> Result<()> {
+) -> SynResult<()> {
     throws!({
         let lookahead = input.lookahead1();
 
@@ -121,7 +133,7 @@ fn parse_optional_lolcat(
 fn parse_optional_attrib(
     input: &ParseStream,
     metadata: &mut StyleMetadata,
-) -> Result<()> {
+) -> SynResult<()> {
     throws!({
         let lookahead = input.lookahead1();
         if lookahead.peek(custom_keywords::attrib) {
@@ -167,7 +179,7 @@ fn parse_optional_attrib(
 fn parse_optional_padding(
     input: &ParseStream,
     metadata: &mut StyleMetadata,
-) -> Result<()> {
+) -> SynResult<()> {
     throws!({
         let lookahead = input.lookahead1();
 
@@ -193,7 +205,7 @@ fn parse_optional_padding(
 fn parse_optional_color_fg(
     input: &ParseStream,
     metadata: &mut StyleMetadata,
-) -> Result<()> {
+) -> SynResult<()> {
     throws!({
         let lookahead = input.lookahead1();
 
@@ -214,7 +226,7 @@ fn parse_optional_color_fg(
 fn parse_optional_color_bg(
     input: &ParseStream,
     metadata: &mut StyleMetadata,
-) -> Result<()> {
+) -> SynResult<()> {
     throws!({
         let lookahead = input.lookahead1();
 

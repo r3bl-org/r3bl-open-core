@@ -15,8 +15,8 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
-use syn::*;
+use r3bl_rs_utils_core::ch_unit::ChUnit;
+use syn::{Expr, LitBool};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Attrib {

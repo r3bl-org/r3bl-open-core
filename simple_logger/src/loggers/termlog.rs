@@ -30,7 +30,15 @@ use log::{set_boxed_logger,
           SetLoggerError};
 use termcolor::{BufferedStandardStream, ColorChoice};
 
-use super::logging::*;
+use super::logging::{should_skip,
+                     write_args,
+                     write_level,
+                     write_location,
+                     write_module,
+                     write_target,
+                     write_thread_id,
+                     write_thread_name,
+                     write_time};
 use crate::{Config, SharedLogger, ThreadLogMode};
 
 struct OutputStreams {

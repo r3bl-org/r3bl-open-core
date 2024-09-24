@@ -15,11 +15,22 @@
  *   limitations under the License.
  */
 
-use std::{collections::HashMap, ffi::OsStr, fmt::*, path::Path};
+use std::{collections::HashMap,
+          ffi::OsStr,
+          fmt::{Debug, Display, Formatter, Result},
+          path::Path};
 
-use r3bl_tui::*;
+use crossterm::style::Stylize;
+use r3bl_rs_utils_core::{call_if_true, log_debug, log_error};
+use r3bl_tui::{DialogBuffer,
+               EditorBuffer,
+               FlexBoxId,
+               HasDialogBuffers,
+               HasEditorBuffers,
+               DEBUG_TUI_MOD,
+               DEFAULT_SYN_HI_FILE_EXT};
 
-use crate::edi::Id;
+use crate::{edi::Id, report_analytics, AnalyticsAction};
 
 #[derive(Clone, PartialEq)]
 pub struct State {
@@ -32,44 +43,45 @@ mod state_tests {
     use r3bl_rs_utils_core::friendly_random_id;
     use r3bl_tui::FlexBoxId;
 
+    use super::*;
     use crate::edi::Id;
 
     #[test]
     fn test_file_extension() {
         let file_path = Some("foo.rs".to_string());
-        let file_ext = super::file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "rs");
 
         let file_path = Some("foo".to_string());
-        let file_ext = super::file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "md");
 
         let file_path = Some("foo.".to_string());
-        let file_ext = super::file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "md");
 
         let file_path = Some("foo.bar.rs".to_string());
-        let file_ext = super::file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "rs");
 
         let file_path = Some("foo.bar".to_string());
-        let file_ext = super::file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "bar");
 
         let file_path = Some("foo.bar.".to_string());
-        let file_ext = super::file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "md");
 
         let file_path = Some("foo.bar.baz".to_string());
-        let file_ext = super::file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "baz");
 
         let file_path = Some("foo.bar.baz.".to_string());
-        let file_ext = super::file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "md");
 
         let file_path = None;
-        let file_ext = super::file_utils::get_file_extension(&file_path);
+        let file_ext = file_utils::get_file_extension(&file_path);
         assert_eq!(file_ext, "md");
     }
 
@@ -86,7 +98,7 @@ mod state_tests {
         let content = "This is a test.\nThis is only a test.";
         std::fs::write(filename.clone(), content).unwrap();
 
-        let content = super::file_utils::get_content(&Some(filename.clone()));
+        let content = file_utils::get_content(&Some(filename.clone()));
         assert_eq!(content.len(), 2);
 
         // Delete the file.
@@ -108,7 +120,7 @@ mod state_tests {
         std::fs::write(filename.clone(), content).unwrap();
 
         // Create a state.
-        let state = super::constructor::new(&maybe_file_path);
+        let state = constructor::new(&maybe_file_path);
 
         // Check the state.
         assert_eq!(state.editor_buffers.len(), 1);
@@ -188,11 +200,7 @@ pub mod constructor {
 }
 
 pub mod file_utils {
-    use crossterm::style::Stylize;
-    use r3bl_rs_utils_core::{call_if_true, log_debug, log_error};
-
     use super::*;
-    use crate::{report_analytics, AnalyticsAction};
 
     pub fn get_file_extension(maybe_file_path: &Option<String>) -> String {
         if let Some(file_path) = maybe_file_path {

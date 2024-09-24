@@ -15,9 +15,9 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{CommonResult, Position, RequestedSizePercent, Size, TuiStyle};
+use r3bl_rs_utils_core::{CommonResult, Position, Size};
 
-use super::{FlexBox, FlexBoxId, LayoutDirection};
+use super::{FlexBox, FlexBoxProps, SurfaceProps};
 
 /// Public API interface to create nested & responsive layout based UIs.
 pub trait LayoutManagement {
@@ -52,20 +52,4 @@ pub trait PerformPositioningAndSizing {
 
     /// Add non-root [FlexBox].
     fn add_non_root_box(&mut self, props: FlexBoxProps) -> CommonResult<()>;
-}
-
-/// Properties that are needed to create a [FlexBox].
-#[derive(Clone, Debug, Default)]
-pub struct FlexBoxProps {
-    pub id: FlexBoxId,
-    pub dir: LayoutDirection,
-    pub requested_size_percent: RequestedSizePercent,
-    pub maybe_styles: Option<Vec<TuiStyle>>,
-}
-
-/// Properties that are needed to create a [crate::Surface].
-#[derive(Clone, Debug, Default)]
-pub struct SurfaceProps {
-    pub pos: Position,
-    pub size: Size,
 }

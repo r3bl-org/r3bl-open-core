@@ -28,7 +28,11 @@ use r3bl_rs_utils_core::{log_error,
 use r3bl_tui::ColorWheel;
 use r3bl_tuify::SLATE_GRAY;
 
-use crate::{giti::ui_strings::UIStrings::*, upgrade_check};
+use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
+                                          GoodbyeThanksForUsingGiti,
+                                          GoodbyeThanksForUsingGitiUsername,
+                                          PleaseStarUs},
+            upgrade_check};
 
 pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
     let up_and_down = AnsiStyledText {

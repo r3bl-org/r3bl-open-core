@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{size, CommonResult, Size};
 
 /// Interrogate crossterm [crossterm::terminal::size()] to get the size of the terminal window.
 pub fn lookup_size() -> CommonResult<Size> {

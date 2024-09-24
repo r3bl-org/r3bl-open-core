@@ -20,7 +20,7 @@ use std::{io::{Result, Write},
 
 use strip_ansi_escapes::strip;
 
-use super::*;
+use super::StdMutex;
 
 /// You can safely clone this struct, since it only contains an `Arc<StdMutex<Vec<u8>>>`. The
 /// inner `buffer` will not be cloned, just the [Arc] will be cloned.

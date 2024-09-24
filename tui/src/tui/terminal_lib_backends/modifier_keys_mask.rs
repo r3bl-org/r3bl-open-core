@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crossterm::event::*;
+use crossterm::event::KeyModifiers;
 use serde::{Deserialize, Serialize};
 
 #[derive(
@@ -168,7 +168,7 @@ impl From<KeyModifiers> for ModifierKeysMask {
 }
 
 #[cfg(test)]
-mod rs_modifier_keys_mask_tests {
+mod tests_modifier_keys_mask {
     use r3bl_rs_utils_core::assert_eq2;
 
     use super::*;

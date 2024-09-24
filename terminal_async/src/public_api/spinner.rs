@@ -211,7 +211,13 @@ mod tests {
 
     use r3bl_test_fixtures::StdoutMock;
 
-    use super::*;
+    use super::{is_fully_uninteractive_terminal,
+                Duration,
+                LineStateControlSignal,
+                SharedWriter,
+                Spinner,
+                SpinnerStyle,
+                TTYResult};
     use crate::{SpinnerColor, StdMutex};
 
     #[tokio::test]

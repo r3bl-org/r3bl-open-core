@@ -17,7 +17,10 @@
 
 use syn::parse_macro_input;
 
-use super::*;
+use super::{
+    code_gen,
+    StyleMetadata,
+};
 
 pub fn fn_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let style_metadata: StyleMetadata = parse_macro_input!(input);

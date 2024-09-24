@@ -17,10 +17,28 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{throws_with_return, CommonResult};
 use tokio::sync::mpsc::Sender;
 
-use crate::{EditorEngine, FlexBoxId, TerminalWindowMainThreadSignal};
+use crate::{editor_buffer_clipboard_support::system_clipboard_service_provider::SystemClipboard,
+            BoxedSafeComponent,
+            Component,
+            EditorBuffer,
+            EditorEngine,
+            EditorEngineApi,
+            EditorEngineApplyEventResult,
+            EditorEngineConfig,
+            EventPropagation,
+            FlexBox,
+            FlexBoxId,
+            GlobalData,
+            HasEditorBuffers,
+            HasFocus,
+            InputEvent,
+            RenderPipeline,
+            SurfaceBounds,
+            TerminalWindowMainThreadSignal,
+            DEFAULT_SYN_HI_FILE_EXT};
 
 #[derive(Debug)]
 /// This is a shim which allows the reusable [EditorEngine] to be used in the context of
@@ -53,20 +71,6 @@ pub type OnEditorBufferChangeFn<A> =
 
 pub mod editor_component_impl_component_trait {
     use super::*;
-    use crate::{editor_buffer_clipboard_support::system_clipboard_service_provider::SystemClipboard,
-                Component,
-                EditorBuffer,
-                EditorEngineApi,
-                EditorEngineApplyEventResult,
-                EventPropagation,
-                FlexBox,
-                GlobalData,
-                HasEditorBuffers,
-                HasFocus,
-                InputEvent,
-                RenderPipeline,
-                SurfaceBounds,
-                DEFAULT_SYN_HI_FILE_EXT};
 
     fn get_existing_mut_editor_buffer_from_state_or_create_new_one<S>(
         mut_state: &mut S,
@@ -195,7 +199,6 @@ pub mod editor_component_impl_component_trait {
 
 pub mod constructor {
     use super::*;
-    use crate::{BoxedSafeComponent, EditorEngineConfig, HasEditorBuffers};
 
     impl<S, AS> EditorComponent<S, AS>
     where

@@ -611,6 +611,7 @@ impl Readline {
 
 pub mod readline_internal {
     use super::*;
+
     pub fn apply_event_to_line_state_and_render(
         result_crossterm_event: CrosstermEventResult,
         self_line_state: SafeLineState,

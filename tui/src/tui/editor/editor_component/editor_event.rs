@@ -18,10 +18,24 @@
 use std::fmt::Debug;
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true, log_debug, Size};
 use serde::{Deserialize, Serialize};
 
-use crate::{editor_buffer_clipboard_support::ClipboardService, *};
+use crate::{editor_buffer::EditorBuffer,
+            editor_buffer_clipboard_support::ClipboardService,
+            history,
+            DeleteSelectionWith,
+            EditorArgsMut,
+            EditorEngine,
+            EditorEngineInternalApi,
+            InputEvent,
+            Key,
+            KeyPress,
+            KeyState,
+            ModifierKeysMask,
+            SelectMode,
+            SpecialKey,
+            DEBUG_TUI_COPY_PASTE};
 
 /// Events that can be applied to the [EditorEngine] to modify an [EditorBuffer].
 ///

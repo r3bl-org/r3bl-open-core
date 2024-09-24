@@ -114,7 +114,10 @@ pub fn convert_span_line_from_syntect_to_tui_styled_texts(
 #[cfg(test)]
 mod tests_simple_md_highlight {
     use r3bl_rs_utils_core::{assert_eq2, color, ConvertToPlainText, TuiStyledTexts};
-    use syntect::{easy::*, highlighting::*, parsing::*, util::*};
+    use syntect::{easy::HighlightLines,
+                  highlighting::Style,
+                  parsing::SyntaxSet,
+                  util::LinesWithEndings};
 
     use crate::{convert_span_line_from_syntect_to_tui_styled_texts,
                 try_load_r3bl_theme};
@@ -334,7 +337,20 @@ mod tests_convert_span_line_and_highlighted_line {
 
 #[cfg(test)]
 mod tests_convert_style_and_color {
-    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::{assert_eq2,
+                             ch,
+                             color,
+                             console_log,
+                             get_tui_style,
+                             get_tui_styles,
+                             throws,
+                             tui_stylesheet,
+                             ANSIBasicColor,
+                             CommonResult,
+                             RgbValue,
+                             TuiColor,
+                             TuiStyle,
+                             TuiStylesheet};
     use r3bl_rs_utils_macro::tui_style;
 
     use crate::convert_style_from_syntect_to_tui;

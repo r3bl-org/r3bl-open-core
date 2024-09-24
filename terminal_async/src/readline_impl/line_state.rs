@@ -19,7 +19,8 @@ use std::io::{self, Write};
 
 use crossterm::{cursor,
                 event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
-                terminal::{Clear, ClearType::*},
+                terminal::{Clear,
+                           ClearType::{All, FromCursorDown}},
                 QueueableCommand};
 use r3bl_rs_utils_core::{ok, MemoizedLenMap, StringLength};
 use unicode_segmentation::UnicodeSegmentation;

@@ -17,7 +17,14 @@
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::{assert_eq2,
+                             position,
+                             size,
+                             ANSIBasicColor,
+                             Position,
+                             RgbValue,
+                             Size,
+                             TuiColor};
 
     use crate::{render_pipeline, RenderOp, RenderPipeline, ZOrder};
 

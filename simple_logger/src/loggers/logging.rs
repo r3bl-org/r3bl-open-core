@@ -94,7 +94,8 @@ pub fn write_time<W>(write: &mut W, config: &Config) -> Result<(), Error>
 where
     W: Write + Sized,
 {
-    use time::{error::Format, format_description::well_known::*};
+    use time::{error::Format,
+               format_description::well_known::{Rfc2822, Rfc3339}};
 
     let time = time::OffsetDateTime::now_utc().to_offset(config.time_offset);
     let res = match config.time_format {

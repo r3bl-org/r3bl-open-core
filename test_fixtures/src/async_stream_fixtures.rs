@@ -19,7 +19,7 @@ use std::time::Duration;
 
 use async_stream::stream;
 
-use super::*;
+use super::PinnedInputStream;
 
 pub fn gen_input_stream<T>(generator_vec: Vec<T>) -> PinnedInputStream<T>
 where

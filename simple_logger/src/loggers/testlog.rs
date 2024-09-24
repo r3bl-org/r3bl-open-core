@@ -138,7 +138,10 @@ pub fn log(config: &Config, record: &Record<'_>) {
 
 #[inline(always)]
 pub fn write_time(config: &Config) {
-    use time::format_description::well_known::*;
+    use time::format_description::well_known::{
+        Rfc2822,
+        Rfc3339,
+    };
 
     let time = time::OffsetDateTime::now_utc().to_offset(config.time_offset);
     let res = match config.time_format {
