@@ -17,7 +17,7 @@
 
 use std::borrow::Cow;
 
-use crate::*;
+use crate::UnicodeString;
 
 // Convert to UnicodeString
 impl From<&str> for UnicodeString {

@@ -17,7 +17,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use super::TuiStyle;
+use crate::{throws, CommonError, CommonResult};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct TuiStylesheet {
@@ -28,7 +29,7 @@ pub struct TuiStylesheet {
 macro_rules! get_tui_style {
     (
         @from_result: $arg_stylesheet_result : expr, // Eg: from: stylesheet,
-        $arg_style_name : expr                      // Eg: "style1"
+        $arg_style_name : expr                       // Eg: "style1"
     ) => {
         if let Ok(ref it) = $arg_stylesheet_result {
             it.find_style_by_id($arg_style_name)
@@ -39,7 +40,7 @@ macro_rules! get_tui_style {
 
     (
         @from: $arg_stylesheet : expr, // Eg: from: stylesheet,
-        $arg_style_name : expr        // Eg: "style1"
+        $arg_style_name : expr         // Eg: "style1"
     ) => {
         $arg_stylesheet.find_style_by_id($arg_style_name)
     };
@@ -49,7 +50,7 @@ macro_rules! get_tui_style {
 macro_rules! get_tui_styles {
     (
         @from_result: $arg_stylesheet_result : expr, // Eg: from: stylesheet,
-        [$($args:tt)*]                              // Eg: ["style1", "style2"]
+        [$($args:tt)*]                               // Eg: ["style1", "style2"]
     ) => {
         if let Ok(ref it) = $arg_stylesheet_result {
             it.find_styles_by_ids(vec![$($args)*])
@@ -60,7 +61,7 @@ macro_rules! get_tui_styles {
 
     (
         @from: $arg_stylesheet : expr, // Eg: from: stylesheet,
-        [$($args:tt)*]                // Eg: ["style1", "style2"]
+        [$($args:tt)*]                 // Eg: ["style1", "style2"]
     ) => {
         $arg_stylesheet.find_styles_by_ids(vec![$($args)*])
     };
