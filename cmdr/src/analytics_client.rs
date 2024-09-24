@@ -15,14 +15,15 @@
  *   limitations under the License.
  */
 
-use std::{fs,
+use std::{fmt::{Display, Formatter},
+          fs,
           fs::File,
           io::{BufReader, Read, Write},
           path::PathBuf,
           sync::atomic::AtomicBool};
 
 use crossterm::style::Stylize;
-use dirs::*;
+use dirs::config_dir;
 use r3bl_analytics_schema::AnalyticsEvent;
 use r3bl_rs_utils_core::{call_if_true,
                          friendly_random_id,
@@ -32,7 +33,8 @@ use r3bl_rs_utils_core::{call_if_true,
                          CommonError,
                          CommonErrorType,
                          CommonResult};
-use reqwest::{Client, Response};
+
+use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AnalyticsAction {
@@ -66,8 +68,6 @@ impl std::fmt::Display for AnalyticsAction {
 }
 
 pub mod config_folder {
-    use std::fmt::{Display, Formatter, Result};
-
     use super::*;
     use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
@@ -77,7 +77,7 @@ pub mod config_folder {
     }
 
     impl Display for ConfigPaths {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             let path = match self {
                 ConfigPaths::R3BLTopLevelFolderName => "r3bl-cmdr",
                 ConfigPaths::ProxyMachineIdFile => "id",
@@ -172,7 +172,6 @@ pub mod file_io {
 
 pub mod proxy_machine_id {
     use super::*;
-    use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
     /// Read the file contents from [config_folder::get_id_file_path] and return it as a
     /// string if it exists and can be read.
@@ -357,10 +356,14 @@ pub mod upgrade_check {
 }
 
 pub mod http_client {
+    use reqwest::{Client, Response};
+
     use super::*;
     use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
-    pub async fn make_get_request(url: &str) -> Result<Response, reqwest::Error> {
+    pub async fn make_get_request(
+        url: &str,
+    ) -> core::result::Result<Response, reqwest::Error> {
         let client = Client::new();
         let response = client.get(url).send().await?;
         if response.status().is_success() {
@@ -387,7 +390,7 @@ pub mod http_client {
     pub async fn make_post_request(
         url: &str,
         data: &serde_json::Value,
-    ) -> Result<Response, reqwest::Error> {
+    ) -> core::result::Result<Response, reqwest::Error> {
         let client = Client::new();
         let response = client.post(url).json(data).send().await?;
         if response.status().is_success() {
