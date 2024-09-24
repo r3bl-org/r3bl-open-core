@@ -21,7 +21,8 @@ use std::{fmt::{Display, Formatter},
 
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use super::TuiColor;
+use crate::{ch, ChUnit};
 
 /// Please use [tui_style!](crate::tui_style) proc macro to generate code for this struct.
 ///
@@ -293,6 +294,7 @@ mod style_impl {
 #[cfg(test)]
 mod test_style {
     use super::*;
+    use crate::{assert_eq2, color, ANSIBasicColor};
 
     #[test]
     fn test_all_fields_in_style() {

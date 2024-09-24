@@ -20,9 +20,19 @@ use std::io::stdout;
 use clap::ValueEnum;
 use crossterm::style::Stylize;
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true, ch, log_debug, Size};
 
-use crate::*;
+use crate::{enter_event_loop,
+            get_size,
+            CalculateResizeHint,
+            CaretVerticalViewportLocation,
+            CrosstermKeyPressReader,
+            EventLoopResult,
+            KeyPress,
+            SelectComponent,
+            State,
+            StyleSheet,
+            DEVELOPMENT_MODE};
 
 pub const DEFAULT_HEIGHT: usize = 5;
 
@@ -353,7 +363,13 @@ pub enum SelectionMode {
 
 #[cfg(test)]
 mod test_select_from_list {
+    use r3bl_rs_utils_core::assert_eq2;
+
     use super::*;
+    use crate::{is_fully_uninteractive_terminal,
+                TTYResult,
+                TestStringWriter,
+                TestVecKeyPressReader};
 
     fn create_state<'a>() -> State<'a> {
         State {

@@ -18,9 +18,9 @@
 use std::{fmt::{self, Debug, Display},
           ops::{Add, AddAssign, Mul}};
 
-use serde::*;
+use serde::{Deserialize, Serialize};
 
-use crate::*;
+use crate::{ch, ChUnit, Size};
 
 /// Here is a visual representation of how position and sizing works for the
 /// layout engine.

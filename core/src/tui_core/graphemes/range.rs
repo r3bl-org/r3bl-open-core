@@ -20,7 +20,7 @@ use std::{cmp::{self},
 
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use crate::{ChUnit, Position};
 
 /// Represents a range of characters in a line.
 ///
@@ -84,6 +84,7 @@ pub enum CaretMovementDirection {
 #[cfg(test)]
 mod tests_range {
     use super::*;
+    use crate::{assert_eq2, ch};
 
     /// ```text
     /// 0 1 2 3 4 5 6 7 8 9

@@ -15,13 +15,30 @@
  *   limitations under the License.
  */
 
-use std::io::*;
+use std::io::{Result, Write};
 
-use crossterm::{cursor::*, queue, style::*, terminal::*};
+use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
+                queue,
+                style::{Attribute,
+                        Print,
+                        ResetColor,
+                        SetBackgroundColor,
+                        SetForegroundColor,
+                        Stylize},
+                terminal::{Clear, ClearType}};
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true, ch, log_debug, throws, ChUnit, UnicodeString};
 
-use crate::*;
+use crate::{apply_style,
+            get_crossterm_color_based_on_terminal_capabilities,
+            get_terminal_width,
+            set_attribute,
+            FunctionComponent,
+            Header,
+            SelectionMode,
+            State,
+            StyleSheet,
+            DEVELOPMENT_MODE};
 
 pub struct SelectComponent<W: Write> {
     pub write: W,
@@ -396,6 +413,7 @@ mod tests {
     use serial_test::serial;
 
     use super::*;
+    use crate::TestStringWriter;
 
     #[test]
     fn test_clip_string_to_width_with_ellipsis() {

@@ -17,7 +17,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::{ch, percent, position, size, Percent, Position};
 
     #[test]
     fn test_add_box_size_to_pos() {

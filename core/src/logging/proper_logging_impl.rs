@@ -40,10 +40,10 @@
 use std::{fs::File, sync::Once};
 
 use chrono::Local;
-use r3bl_simple_logger::*;
+use r3bl_simple_logger::{format_description, Config, ConfigBuilder, CombinedLogger, LevelFilter, WriteLogger};
 use time::UtcOffset;
 
-use crate::*;
+use crate::{CommonError, CommonErrorType, CommonResult};
 
 pub static mut LOG_LEVEL: LevelFilter = LevelFilter::Off;
 pub static mut FILE_PATH: &str = "log.txt";
