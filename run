@@ -63,6 +63,8 @@ def main [...args: string] {
         "audit-deps" => {audit-deps}
         "unmaintained" => {unmaintained}
         "help" => {print-help all}
+        "ramdisk-create" => {ramdisk-create}
+        "ramdisk-delete" => {ramdisk-delete}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
     }
 }
@@ -92,10 +94,40 @@ def print-help [command: string] {
         print $'    (ansi green)serve-docs(ansi reset)'
         print $'    (ansi green)audit-deps(ansi reset)'
         print $'    (ansi green)unmaintained(ansi reset)'
+        print $'    (ansi green)ramdisk-create(ansi reset)'
+        print $'    (ansi green)ramdisk-delete(ansi reset)'
         print $'    (ansi green)help(ansi reset)'
     } else {
         print $'Unknown command: (ansi red_bold)($command)(ansi reset)'
     }
+}
+
+# https://thelinuxcode.com/create-ramdisk-linux/
+def ramdisk-create [] {
+    # Use findmnt -t tmpfs target_foo to check if the ramdisk is mounted.
+    if (findmnt -t tmpfs target | is-empty) {
+        print $'(ansi green_bold)Ramdisk is not mounted. Creating ramdisk...(ansi reset)'
+    } else {
+        print $'(ansi blue_bold)Ramdisk is already mounted.(ansi reset)'
+        return
+    }
+
+    rm -rf target/
+    sudo mkdir -p target/
+    sudo mount -t tmpfs -o size=8g,noatime,nodiratime tmpfs target/
+}
+
+# https://thelinuxcode.com/create-ramdisk-linux/
+def ramdisk-delete [] {
+    if (findmnt -t tmpfs target | is-empty) {
+        print $'(ansi blue_bold)Ramdisk is not mounted. Nothing to do...(ansi reset)'
+        return
+    } else {
+        print $'(ansi green_bold)Ramdisk is mounted. Deleting it...(ansi reset)'
+    }
+
+    sudo umount target/
+    sudo rmdir target/
 }
 
 def install-cargo-tools [] {
