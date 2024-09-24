@@ -174,7 +174,7 @@ mod helpers {
     use super::*;
 
     pub fn is_a_tty(stream: Stream) -> bool {
-        use is_terminal::*;
+        use std::io::IsTerminal as _;
         match stream {
             Stream::Stdout => std::io::stdout().is_terminal(),
             Stream::Stderr => std::io::stderr().is_terminal(),

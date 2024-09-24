@@ -1972,7 +1972,6 @@ dependencies = [
 name = "r3bl_ansi_color"
 version = "0.6.10"
 dependencies = [
- "is-terminal",
  "is_ci",
  "pretty_assertions",
  "serial_test",
