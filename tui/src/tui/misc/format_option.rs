@@ -20,7 +20,7 @@
 ///
 /// When using this, make sure to import [FormatMsg] as well, like this:
 /// ```rust
-/// use r3bl_rs_utils_tui::{format_option, FormatMsg};
+/// use r3bl_tui::{format_option, FormatMsg};
 /// ```
 #[macro_export]
 macro_rules! format_option {
