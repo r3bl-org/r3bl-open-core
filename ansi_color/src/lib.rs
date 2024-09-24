@@ -239,11 +239,17 @@
 pub mod ansi_escape_codes;
 pub mod ansi_styled_text;
 pub mod color;
+pub mod rgb_color;
+pub mod ansi256_color;
 pub mod convert;
 pub mod detect_color_support;
+pub mod transform_color;
 
 pub use ansi_escape_codes::*;
 pub use ansi_styled_text::*;
 pub use color::*;
+pub use rgb_color::*;
+pub use ansi256_color::*;
 pub use convert::*;
 pub use detect_color_support::*;
+pub use transform_color::*;
