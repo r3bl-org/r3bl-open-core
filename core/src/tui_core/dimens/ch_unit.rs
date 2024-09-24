@@ -20,7 +20,7 @@ use std::{fmt::{Debug, Display, Formatter},
 
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use crate::{add_unsigned, mul_unsigned, sub_unsigned};
 
 /// The backing field that is used to represent a [ChUnit] in memory.
 pub type ChUnitPrimitiveType = u16;

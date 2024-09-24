@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-use crate::*;
+use crate::{ChUnit, UnicodeString};
 
-/// We need a [String] (since we're returning a slice of a temporary [UnicodeString] that is
-/// dropped by the function that creates it, not as a result of mutation).
+/// We need a [String] (since we're returning a slice of a temporary [UnicodeString] that
+/// is dropped by the function that creates it, not as a result of mutation).
 #[derive(Debug, PartialEq, Eq)]
 pub struct UnicodeStringSegmentSliceResult {
     pub unicode_string_seg: UnicodeString,

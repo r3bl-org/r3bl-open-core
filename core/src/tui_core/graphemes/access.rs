@@ -17,7 +17,13 @@
 
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-use crate::*;
+use crate::{ch,
+            ChUnit,
+            GraphemeClusterSegment,
+            SelectionRange,
+            Size,
+            UnicodeString,
+            UnicodeStringSegmentSliceResult};
 
 impl UnicodeString {
     /// If any segment in `self.vec_segment` has a `display_col_offset` greater than 1

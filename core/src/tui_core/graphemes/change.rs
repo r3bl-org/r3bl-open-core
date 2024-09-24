@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::*;
+use crate::{ch, ChUnit, UnicodeString};
 
 impl UnicodeString {
     /// Returns a new ([UnicodeString], [ChUnit]) tuple. Does not modify

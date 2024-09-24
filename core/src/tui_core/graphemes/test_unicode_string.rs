@@ -17,7 +17,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::{assert_eq2, ch, ChUnit, GraphemeClusterSegment, UnicodeString};
 
     const TEST_STRING: &str = "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿.";
 

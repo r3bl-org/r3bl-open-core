@@ -16,9 +16,13 @@
  */
 
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{ChUnit, Size};
 
-use crate::*;
+use crate::{get_scroll_adjusted_row_index,
+            locate_cursor_in_viewport,
+            CalculateResizeHint,
+            CaretVerticalViewportLocation,
+            SelectionMode};
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct State<'a> {
@@ -54,21 +58,28 @@ impl State<'_> {
     }
 }
 
-#[test]
-fn test_header_enum() {
-    let mut state = State {
-        multi_line_header: vec![vec![AnsiStyledText {
-            text: "line1",
-            style: &[],
-        }]],
-        ..Default::default()
-    };
-    let lhs = state.get_header();
-    let rhs = Header::Multiple;
-    assert_eq2!(lhs, rhs);
+#[cfg(test)]
+mod tests {
+    use r3bl_rs_utils_core::assert_eq2;
 
-    state.multi_line_header = vec![];
-    assert_eq2!(state.get_header(), Header::Single);
+    use super::*;
+
+    #[test]
+    fn test_header_enum() {
+        let mut state = State {
+            multi_line_header: vec![vec![AnsiStyledText {
+                text: "line1",
+                style: &[],
+            }]],
+            ..Default::default()
+        };
+        let lhs = state.get_header();
+        let rhs = Header::Multiple;
+        assert_eq2!(lhs, rhs);
+
+        state.multi_line_header = vec![];
+        assert_eq2!(state.get_header(), Header::Single);
+    }
 }
 
 impl CalculateResizeHint for State<'_> {

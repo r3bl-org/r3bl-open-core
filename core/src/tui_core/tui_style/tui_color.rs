@@ -19,7 +19,8 @@ use core::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use super::parse_hex_color;
+use crate::common::{CommonError, CommonErrorType, CommonResult};
 
 #[macro_export]
 macro_rules! color {
@@ -245,6 +246,7 @@ mod convert_rgb_ansi_values {
     #[cfg(test)]
     mod test_conversions_between_ansi_and_rgb_values {
         use super::*;
+        use crate::assert_eq2;
 
         #[test]
         fn test_ansi_to_rgb() {

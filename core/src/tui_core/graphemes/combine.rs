@@ -17,7 +17,7 @@
 
 use std::ops::Add;
 
-use crate::*;
+use crate::UnicodeString;
 
 impl Add<&str> for UnicodeString {
     type Output = Self;
