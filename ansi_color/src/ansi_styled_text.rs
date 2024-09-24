@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::*;
+use crate::Color;
 
 /// The main struct that we have to consider is `AnsiStyledText`. It has two fields:
 /// - `text` - the text to print.
@@ -180,7 +180,7 @@ mod display_trait_impl {
         use pretty_assertions::assert_eq;
         use serial_test::serial;
 
-        use crate::*;
+        use crate::{global_color_support, AnsiStyledText, Color, ColorSupport, Style};
 
         #[serial]
         #[test]
