@@ -38,8 +38,17 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
             giti::{clap_config::BranchSubcommand,
                    report_unknown_error_and_propagate,
                    single_select_instruction_header,
-                   ui_strings::UIStrings::*,
+                   ui_strings::UIStrings::{AlreadyOnCurrentBranch,
+                                           BranchDoesNotExist,
+                                           FailedToSwitchToBranch,
+                                           ModifiedFileOnCurrentBranch,
+                                           ModifiedFilesOnCurrentBranch,
+                                           NoBranchGotCheckedOut,
+                                           PleaseCommitChangesBeforeSwitchingBranches,
+                                           SelectBranchToSwitchTo,
+                                           SwitchedToBranch},
                    CommandSuccessfulResponse}};
+
 pub fn try_checkout_branch(
     maybe_branch_name: Option<String>,
 ) -> CommonResult<CommandSuccessfulResponse> {

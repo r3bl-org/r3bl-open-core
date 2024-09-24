@@ -16,12 +16,60 @@
  */
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true,
+                         ch,
+                         log_debug,
+                         position,
+                         throws,
+                         throws_with_return,
+                         ANSIBasicColor,
+                         ChUnit,
+                         CommonResult,
+                         PrettyPrintDebug,
+                         ScrollOffsetColLocationInRange,
+                         SelectionRange,
+                         Size,
+                         TuiColor,
+                         TuiStyledTexts,
+                         UnicodeString,
+                         UnicodeStringSegmentSliceResult};
 use r3bl_rs_utils_macro::tui_style;
 use syntect::easy::HighlightLines;
 
-use super::*;
-use crate::{editor_buffer_clipboard_support::ClipboardService, *};
+use crate::{cache,
+            convert_syntect_to_styled_text,
+            editor_buffer_clipboard_support::ClipboardService,
+            get_selection_style,
+            history,
+            render_ops,
+            render_pipeline,
+            render_tui_styled_texts_into,
+            try_get_syntax_ref,
+            try_parse_and_highlight,
+            CaretKind,
+            EditMode,
+            EditorBuffer,
+            EditorEngine,
+            EditorEngineInternalApi,
+            EditorEvent,
+            FlexBox,
+            HasFocus,
+            InputEvent,
+            Key,
+            KeyPress,
+            List,
+            RenderArgs,
+            RenderOp,
+            RenderOps,
+            RenderPipeline,
+            SpecialKey,
+            StyleUSSpan,
+            SyntaxHighlightMode,
+            ZOrder,
+            DEBUG_TUI_COPY_PASTE,
+            DEBUG_TUI_MOD,
+            DEBUG_TUI_SYN_HI,
+            DEFAULT_CURSOR_CHAR};
 
 pub struct EditorEngineApi;
 
@@ -718,7 +766,10 @@ mod no_syn_hi_path {
 mod test_cache {
     use std::collections::HashMap;
 
+    use r3bl_rs_utils_core::assert_eq2;
+
     use super::*;
+    use crate::ScrollOffset;
 
     #[test]
     fn test_render_content() {

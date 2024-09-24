@@ -15,15 +15,14 @@
  *   limitations under the License.
  */
 
+// Attach sources & re-export.
 pub mod select_component;
-
 pub use select_component::*;
 
+// Attach sources & re-export.
 pub mod style;
-
 pub use style::*;
 
-#[macro_use]
+// Attach sources & re-export.
 pub mod apply_style_macro;
-
 pub use apply_style_macro::*;

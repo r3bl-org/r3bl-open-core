@@ -20,7 +20,7 @@ mod tests {
     use std::sync::Arc;
 
     use async_trait::async_trait;
-    use r3bl_rs_utils_core::*;
+    use r3bl_rs_utils_core::assert_eq2;
     use tokio::{sync::RwLock, task::JoinHandle};
 
     use crate::{redux::{AsyncMiddleware,

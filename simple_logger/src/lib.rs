@@ -145,9 +145,8 @@
 mod config;
 mod loggers;
 
-pub use log::*;
+pub use log::{Level, LevelFilter, Log, Metadata, Record, SetLoggerError};
 pub use termcolor::{Color, ColorChoice};
-
 pub use self::{config::{format_description,
                         Config,
                         ConfigBuilder,

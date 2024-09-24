@@ -21,7 +21,16 @@
 use clap::Parser;
 use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_cmdr::{color_constants::DefaultColors::{FrozenBlue, GuardsRed, MoonlightBlue},
-                giti::{clap_config::*, *},
+                giti::{get_giti_command_subcommand_names,
+                       giti_ui_templates,
+                       single_select_instruction_header,
+                       try_checkout_branch,
+                       try_delete_branch,
+                       try_make_new_branch,
+                       BranchSubcommand,
+                       CLIArg,
+                       CLICommand,
+                       CommandSuccessfulResponse},
                 report_analytics,
                 upgrade_check,
                 AnalyticsAction};

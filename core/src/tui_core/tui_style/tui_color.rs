@@ -17,6 +17,7 @@
 
 use core::fmt::Debug;
 
+use r3bl_ansi_color::TransformColor;
 use serde::{Deserialize, Serialize};
 
 use super::parse_hex_color;
@@ -213,8 +214,6 @@ impl Default for RgbValue {
 }
 
 mod convert_rgb_ansi_values {
-    use r3bl_ansi_color::TransformColor;
-
     use super::*;
 
     impl From<RgbValue> for AnsiValue {

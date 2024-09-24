@@ -21,7 +21,13 @@ pub mod mock_real_objects_for_dialog {
     use r3bl_rs_utils_core::Size;
     use tokio::sync::mpsc;
 
-    use crate::{test_editor::mock_real_objects_for_editor, *};
+    use crate::{test_fixtures::mock_real_objects_for_editor,
+                DialogBuffer,
+                DialogEngine,
+                FlexBoxId,
+                GlobalData,
+                HasDialogBuffers,
+                CHANNEL_WIDTH};
 
     pub fn make_global_data(window_size: Option<Size>) -> GlobalData<State, ()> {
         let (main_thread_channel_sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);

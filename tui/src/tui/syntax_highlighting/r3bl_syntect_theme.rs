@@ -17,7 +17,9 @@
 
 use std::io::{BufReader, Cursor};
 
-use syntect::highlighting::*;
+use syntect::highlighting::{
+    Theme, ThemeSet,
+};
 
 pub fn try_load_r3bl_theme() -> std::io::Result<Theme> {
     // Load bytes from file asset.

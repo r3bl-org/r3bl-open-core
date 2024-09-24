@@ -18,7 +18,7 @@
 use std::fmt::{Debug, Formatter, Result};
 
 use r3bl_rs_utils_core::{ch, ChUnit};
-use serde::*;
+use serde::{Deserialize, Serialize};
 
 use crate::{format_option, EditorBuffer, DEFAULT_SYN_HI_FILE_EXT};
 

@@ -17,10 +17,17 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::*;
-use serde::*;
+use r3bl_rs_utils_core::{ch, size, Ansi256GradientIndex, ChUnit, Size, TuiStyle};
+use serde::{Deserialize, Serialize};
 
-use crate::{lookup_size, ColorWheel, ColorWheelConfig, ColorWheelSpeed, EditorEngine, EditorEngineConfig, PartialFlexBox, SurfaceBounds};
+use crate::{lookup_size,
+            ColorWheel,
+            ColorWheelConfig,
+            ColorWheelSpeed,
+            EditorEngine,
+            EditorEngineConfig,
+            PartialFlexBox,
+            SurfaceBounds};
 
 /// Please do not construct this struct directly, and use [new](DialogEngine::new)
 /// instead.
@@ -119,9 +126,8 @@ pub struct DialogEngineConfigOptions {
 }
 
 mod dialog_engine_config_options_impl {
-    use crate::DisplayConstants;
-
     use super::*;
+    use crate::DisplayConstants;
 
     impl Default for DialogEngineConfigOptions {
         fn default() -> Self {

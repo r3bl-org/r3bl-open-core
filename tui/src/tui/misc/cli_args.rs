@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use super::*;
+use super::List;
 
 /// Helper trait and impl to convert [std::env::Args] to a [`Vec<String>`] after removing the first
 /// item (which is the path to the executable).
