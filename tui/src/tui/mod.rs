@@ -53,7 +53,6 @@ pub const DEBUG_TUI_SHOW_TERMINAL_BACKEND: bool = false;
 
 // Attach sources.
 pub mod animator;
-pub mod color_wheel;
 pub mod dialog;
 pub mod editor;
 pub mod global_constants;
@@ -67,7 +66,6 @@ pub mod terminal_window;
 
 // Re-export.
 pub use animator::*;
-pub use color_wheel::*;
 pub use dialog::*;
 pub use editor::*;
 pub use global_constants::*;

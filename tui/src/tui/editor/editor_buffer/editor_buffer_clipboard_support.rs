@@ -20,9 +20,8 @@ use std::error::Error;
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::{call_if_true, ch, log_debug, UnicodeString};
 
-use crate::{EditorArgsMut, EditorEngineInternalApi, DEBUG_TUI_COPY_PASTE};
-
 use super::EditorBuffer;
+use crate::{EditorArgsMut, EditorEngineInternalApi, DEBUG_TUI_COPY_PASTE};
 
 type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 

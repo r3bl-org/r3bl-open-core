@@ -342,9 +342,24 @@ in a text editor.
 
 ### next release
 
+This is a major release that does not include any new functionality, but is a radical
+reorganization of the crates. The reason for paying down this technical debt now is to
+ensure that the codebase is easier to maintain and understand, and easier to add new
+features to in the future. The separation of concerns is now much clearer, and they
+reflect how the functionality is used in the real world.
+
 - Changed:
   - Refactor lots of styling related code in preparation for the move to `core`. This will
     make it easier to maintain and test the codebase, and clean up the dependencies.
+
+- Removed:
+  - Move the `color_wheel` module into `r3bl_rs_utils_core` crate. This is to ensure that
+    it is possible to import just color wheel and lolcat related functionality without
+    having to import the entire `r3bl_tui` crate. And de-tangles the dependency tree,
+    making it easier to maintain. The reason they ended up in `r3bl_tui` in the first
+    place is because it was easier to develop them there, but since then, lots of other
+    consumers of this functionality have emerged, including crates that are created by
+    "3rd party developers" (people not R3BL and not part of `r3bl-open-core` repo).
 
 ### v0.5.9 (2024-09-12)
 
@@ -643,6 +658,12 @@ exhaustively tested and is able to handle many more corner cases.
 
 ### next release
 
+This is a major release that does not include any new functionality, but is a radical
+reorganization of the crates. The reason for paying down this technical debt now is to
+ensure that the codebase is easier to maintain and understand, and easier to add new
+features to in the future. The separation of concerns is now much clearer, and they
+reflect how the functionality is used in the real world.
+
 - Changed:
   - Renamed the `debug!` macro, which is confusing, since it clashes with logging, to
     `console_log!`. This macro is used in many places in the codebase for quick formatted
@@ -650,6 +671,15 @@ exhaustively tested and is able to handle many more corner cases.
     `console_log_impl.rs` file.
   - Reorganize the `src` folder to make sure that there aren't any top level files, and that
     everything is in a module. This is to make it easier to add new modules in the future.
+
+- Added:
+  - Move the `color_wheel` module into `r3bl_rs_utils_core` crate. This is to ensure that
+    it is possible to import just color wheel and lolcat related functionality without
+    having to import the entire `r3bl_tui` crate. And de-tangles the dependency tree,
+    making it easier to maintain. The reason they ended up in `r3bl_tui` in the first
+    place is because it was easier to develop them there, but since then, lots of other
+    consumers of this functionality have emerged, including crates that are created by
+    "3rd party developers" (people not R3BL and not part of `r3bl-open-core` repo).
 
 ### v0.9.16 (2024-09-12)
 

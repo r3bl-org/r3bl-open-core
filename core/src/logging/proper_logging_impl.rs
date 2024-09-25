@@ -40,7 +40,12 @@
 use std::{fs::File, sync::Once};
 
 use chrono::Local;
-use r3bl_simple_logger::{format_description, Config, ConfigBuilder, CombinedLogger, LevelFilter, WriteLogger};
+use r3bl_simple_logger::{format_description,
+                         CombinedLogger,
+                         Config,
+                         ConfigBuilder,
+                         LevelFilter,
+                         WriteLogger};
 use time::UtcOffset;
 
 use crate::{CommonError, CommonErrorType, CommonResult};

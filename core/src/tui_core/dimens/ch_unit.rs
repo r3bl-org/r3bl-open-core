@@ -31,7 +31,7 @@ pub type ChUnitPrimitiveType = u16;
 ///   character in a monospace font.
 /// - The terminal displaying the Rust binary build using the tui library will ultimately
 ///   determine the actual width and height of a character.
-/// - In order to create amounts of ch units, use the [ch!] macro.
+/// - In order to create amounts of ch units, use the [crate::ch!] macro.
 #[derive(
     Copy,
     Clone,

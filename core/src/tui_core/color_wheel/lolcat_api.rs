@@ -17,10 +17,10 @@
 
 use std::borrow::Cow;
 
-use r3bl_rs_utils_core::{ColorChangeSpeed, TuiStyledTexts, UnicodeString};
 use serde::{Deserialize, Serialize};
 
 use super::Lolcat;
+use crate::{ColorChangeSpeed, TuiStyledTexts, UnicodeString};
 
 pub fn colorize_to_styled_texts(
     lolcat: &mut Lolcat,
@@ -63,7 +63,6 @@ pub fn lolcat_each_char_in_unicode_string(
 ///
 /// ```rust
 /// use r3bl_rs_utils_core::*;
-/// use r3bl_tui::*;
 ///
 /// let mut lolcat = LolcatBuilder::new()
 ///   .set_color_change_speed(ColorChangeSpeed::Rapid)
