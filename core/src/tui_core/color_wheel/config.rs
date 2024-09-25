@@ -16,10 +16,10 @@
  */
 
 use r3bl_ansi_color::{global_color_support, ColorSupport};
-use r3bl_rs_utils_core::{Ansi256GradientIndex, TuiColor};
 use serde::{Deserialize, Serialize};
 
 use super::{Lolcat, LolcatBuilder};
+use crate::{Ansi256GradientIndex, TuiColor};
 
 /// For RGB colors:
 /// 1. The stops are the colors that will be used to create the gradient.

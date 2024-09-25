@@ -16,28 +16,6 @@
  */
 
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_rs_utils_core::{ch,
-                         convert_tui_color_into_r3bl_ansi_color,
-                         generate_random_truecolor_gradient,
-                         generate_truecolor_gradient,
-                         get_gradient_array_for,
-                         tui_styled_text,
-                         Ansi256GradientIndex,
-                         AnsiValue,
-                         ChUnit,
-                         ColorUtils,
-                         Defaults,
-                         GradientGenerationPolicy,
-                         GraphemeClusterSegment,
-                         RgbValue,
-                         TextColorizationPolicy,
-                         TuiColor,
-                         TuiStyle,
-                         TuiStyledText,
-                         TuiStyledTexts,
-                         UnicodeString,
-                         DEFAULT_GRADIENT_STOPS,
-                         SPACER};
 use serde::{Deserialize, Serialize};
 
 use super::{ColorWheelConfig,
@@ -45,6 +23,28 @@ use super::{ColorWheelConfig,
             ColorWheelSpeed,
             GradientKind,
             GradientLengthKind};
+use crate::{ch,
+            convert_tui_color_into_r3bl_ansi_color,
+            generate_random_truecolor_gradient,
+            generate_truecolor_gradient,
+            get_gradient_array_for,
+            tui_styled_text,
+            Ansi256GradientIndex,
+            AnsiValue,
+            ChUnit,
+            ColorUtils,
+            Defaults,
+            GradientGenerationPolicy,
+            GraphemeClusterSegment,
+            RgbValue,
+            TextColorizationPolicy,
+            TuiColor,
+            TuiStyle,
+            TuiStyledText,
+            TuiStyledTexts,
+            UnicodeString,
+            DEFAULT_GRADIENT_STOPS,
+            SPACER};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ColorWheel {
@@ -422,7 +422,7 @@ impl ColorWheel {
         text: &UnicodeString,
     ) -> TuiStyledTexts {
         mod inner {
-            use r3bl_rs_utils_core::{TuiColor, TuiStyle};
+            use super::*;
 
             // Inner function.
             pub fn gen_style_fg_color_for(
@@ -603,10 +603,10 @@ impl ColorWheel {
 #[cfg(test)]
 mod tests_color_wheel_rgb {
     use r3bl_ansi_color::{global_color_support, ColorSupport};
-    use r3bl_rs_utils_core::assert_eq2;
     use serial_test::serial;
 
     use super::*;
+    use crate::assert_eq2;
 
     mod test_helpers {
         use super::*;

@@ -17,18 +17,18 @@
 
 use std::fmt::{Debug, Formatter, Result};
 
-use r3bl_rs_utils_core::{tui_styled_text,
-                         ColorUtils,
-                         ColorWheelControl,
-                         RgbValue,
-                         TuiColor,
-                         TuiStyle,
-                         TuiStyledText,
-                         TuiStyledTexts,
-                         UnicodeString};
 use serde::{Deserialize, Serialize};
 
 use super::LolcatBuilder;
+use crate::{tui_styled_text,
+            ColorUtils,
+            ColorWheelControl,
+            RgbValue,
+            TuiColor,
+            TuiStyle,
+            TuiStyledText,
+            TuiStyledTexts,
+            UnicodeString};
 
 /// Please use the [LolcatBuilder] to create this struct (lots of documentation is provided here).
 /// Please do not use this struct directly.
