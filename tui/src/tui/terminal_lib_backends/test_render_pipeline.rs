@@ -19,11 +19,7 @@
 mod tests {
     use r3bl_rs_utils_core::assert_eq2;
 
-    use crate::{render_ops,
-                render_pipeline,
-                RenderOp,
-                RenderPipeline,
-                ZOrder};
+    use crate::{render_ops, render_pipeline, RenderOp, RenderPipeline, ZOrder};
 
     #[test]
     fn render_ops_macro() {

@@ -29,6 +29,7 @@ use r3bl_rs_utils_core::{CommonError,
 use r3bl_rs_utils_macro::tui_style;
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
+use super::create_color_wheel_from_heading_data;
 use crate::{constants::{AUTHORS,
                         BACK_TICK,
                         CHECKED_OUTPUT,
@@ -64,7 +65,6 @@ use crate::{constants::{AUTHORS,
             try_get_syntax_ref,
             CodeBlockLineContent,
             CodeBlockLines,
-            ColorWheel,
             FragmentsInOneLine,
             HeadingData,
             HyperlinkData,
@@ -663,7 +663,7 @@ impl StyleUSSpanLine {
         heading_data: &HeadingData<'_>,
         maybe_current_box_computed_style: &Option<TuiStyle>,
     ) -> Self {
-        let mut color_wheel = ColorWheel::from_heading_data(heading_data);
+        let mut color_wheel = create_color_wheel_from_heading_data(heading_data);
         let mut line = StyleUSSpanLine::default();
 
         let heading_level_span: StyleUSSpan = {

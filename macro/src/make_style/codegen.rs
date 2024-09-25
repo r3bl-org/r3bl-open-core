@@ -18,10 +18,7 @@
 use quote::quote;
 use r3bl_rs_utils_core::ChUnitPrimitiveType;
 
-use super::{
-    Attrib,
-    StyleMetadata,
-};
+use super::{Attrib, StyleMetadata};
 
 pub(crate) fn code_gen(
     StyleMetadata {

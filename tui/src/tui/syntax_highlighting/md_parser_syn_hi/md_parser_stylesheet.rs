@@ -23,12 +23,15 @@ use r3bl_ansi_color::{global_color_support, ColorSupport};
 use r3bl_rs_utils_core::{ANSIBasicColor,
                          Ansi256GradientIndex,
                          AnsiValue,
+                         ColorWheel,
+                         ColorWheelConfig,
+                         ColorWheelSpeed,
                          RgbValue,
                          TuiColor,
                          TuiStyle};
 use r3bl_rs_utils_macro::tui_style;
 
-use crate::{ColorWheel, ColorWheelConfig, ColorWheelSpeed, HeadingData};
+use crate::HeadingData;
 
 /// This style is for any selected range in the document.
 pub fn get_selection_style() -> TuiStyle {
@@ -251,76 +254,73 @@ const SPEED: ColorWheelSpeed = ColorWheelSpeed::Medium;
 const ANSI_SPEED: ColorWheelSpeed = ColorWheelSpeed::Slow;
 const STEPS: usize = 20;
 
-impl ColorWheel {
-    /// Currently unique coloring of up to 6 heading levels are supported.
-    /// More info on gradients: <https://uigradients.com/>.
-    pub fn from_heading_data(heading_data: &HeadingData<'_>) -> Self {
-        match heading_data.heading_level.level {
-            1 => ColorWheel::new(vec![
-                ColorWheelConfig::Rgb(
-                    Vec::from(["#01fa22", "#00eef2"].map(String::from)),
-                    SPEED,
-                    STEPS,
-                ),
-                ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::LightYellowToWhite,
-                    ANSI_SPEED,
-                ),
-            ]),
+/// Currently unique coloring of up to 6 heading levels are supported.
+/// More info on gradients: <https://uigradients.com/>.
+pub fn create_color_wheel_from_heading_data(
+    heading_data: &HeadingData<'_>,
+) -> ColorWheel {
+    match heading_data.heading_level.level {
+        1 => ColorWheel::new(vec![
+            ColorWheelConfig::Rgb(
+                Vec::from(["#01fa22", "#00eef2"].map(String::from)),
+                SPEED,
+                STEPS,
+            ),
+            ColorWheelConfig::Ansi256(
+                Ansi256GradientIndex::LightYellowToWhite,
+                ANSI_SPEED,
+            ),
+        ]),
 
-            2 => ColorWheel::new(vec![
-                ColorWheelConfig::Rgb(
-                    Vec::from(["#fff200", "#de211b"].map(String::from)),
-                    SPEED,
-                    STEPS,
-                ),
-                ColorWheelConfig::Ansi256(Ansi256GradientIndex::GreenToBlue, ANSI_SPEED),
-            ]),
+        2 => ColorWheel::new(vec![
+            ColorWheelConfig::Rgb(
+                Vec::from(["#fff200", "#de211b"].map(String::from)),
+                SPEED,
+                STEPS,
+            ),
+            ColorWheelConfig::Ansi256(Ansi256GradientIndex::GreenToBlue, ANSI_SPEED),
+        ]),
 
-            3 => ColorWheel::new(vec![
-                ColorWheelConfig::Rgb(
-                    Vec::from(["#00dbde", "#fc00ff"].map(String::from)),
-                    SPEED,
-                    STEPS,
-                ),
-                ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::OrangeToNeonPink,
-                    ANSI_SPEED,
-                ),
-            ]),
+        3 => ColorWheel::new(vec![
+            ColorWheelConfig::Rgb(
+                Vec::from(["#00dbde", "#fc00ff"].map(String::from)),
+                SPEED,
+                STEPS,
+            ),
+            ColorWheelConfig::Ansi256(Ansi256GradientIndex::OrangeToNeonPink, ANSI_SPEED),
+        ]),
 
-            4 => ColorWheel::new(vec![
-                ColorWheelConfig::Rgb(
-                    Vec::from(["#ff28a9", "#bd60eb"].map(String::from)),
-                    SPEED,
-                    STEPS,
-                ),
-                ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::LightOrangeToLightPurple,
-                    ANSI_SPEED,
-                ),
-            ]),
+        4 => ColorWheel::new(vec![
+            ColorWheelConfig::Rgb(
+                Vec::from(["#ff28a9", "#bd60eb"].map(String::from)),
+                SPEED,
+                STEPS,
+            ),
+            ColorWheelConfig::Ansi256(
+                Ansi256GradientIndex::LightOrangeToLightPurple,
+                ANSI_SPEED,
+            ),
+        ]),
 
-            5 => ColorWheel::new(vec![
-                ColorWheelConfig::Rgb(
-                    Vec::from(["#ff6a00", "#ee0979"].map(String::from)),
-                    SPEED,
-                    STEPS,
-                ),
-                ColorWheelConfig::Ansi256(Ansi256GradientIndex::RustToPurple, ANSI_SPEED),
-            ]),
+        5 => ColorWheel::new(vec![
+            ColorWheelConfig::Rgb(
+                Vec::from(["#ff6a00", "#ee0979"].map(String::from)),
+                SPEED,
+                STEPS,
+            ),
+            ColorWheelConfig::Ansi256(Ansi256GradientIndex::RustToPurple, ANSI_SPEED),
+        ]),
 
-            _ => ColorWheel::new(vec![
-                ColorWheelConfig::Rgb(
-                    Vec::from(["#8470ba", "#12c2e9"].map(String::from)),
-                    SPEED,
-                    STEPS,
-                ),
-                ColorWheelConfig::Ansi256(
-                    Ansi256GradientIndex::DarkOliveGreenToDarkLavender,
-                    ANSI_SPEED,
-                ),
-            ]),
-        }
+        _ => ColorWheel::new(vec![
+            ColorWheelConfig::Rgb(
+                Vec::from(["#8470ba", "#12c2e9"].map(String::from)),
+                SPEED,
+                STEPS,
+            ),
+            ColorWheelConfig::Ansi256(
+                Ansi256GradientIndex::DarkOliveGreenToDarkLavender,
+                ANSI_SPEED,
+            ),
+        ]),
     }
 }

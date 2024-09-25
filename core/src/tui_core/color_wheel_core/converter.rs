@@ -47,9 +47,8 @@ pub fn convert_tui_color_into_r3bl_ansi_color(color: TuiColor) -> r3bl_ansi_colo
 
 #[cfg(test)]
 mod tests_color_converter {
-    use crate::{ANSIBasicColor, AnsiValue, RgbValue, TuiColor};
-
     use super::*;
+    use crate::{ANSIBasicColor, AnsiValue, RgbValue, TuiColor};
 
     #[test]
     fn test_convert_tui_color_into_r3bl_ansi_color_rgb() {

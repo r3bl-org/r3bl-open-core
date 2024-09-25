@@ -25,7 +25,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct FlexBoxId(pub u8);
 
-
 impl From<FlexBoxId> for u8 {
     fn from(id: FlexBoxId) -> Self { id.0 }
 }
