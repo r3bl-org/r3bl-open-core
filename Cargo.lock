@@ -1992,11 +1992,13 @@ dependencies = [
 name = "r3bl_rs_utils_core"
 version = "0.9.16"
 dependencies = [
+ "assert_cmd",
  "chrono",
  "colorgrad",
  "crossterm 0.28.1",
  "futures-util",
  "log",
+ "miette",
  "nom",
  "pretty_assertions",
  "r3bl_ansi_color",
@@ -2008,6 +2010,8 @@ dependencies = [
  "sha2",
  "size-of",
  "strip-ansi",
+ "tempfile",
+ "thiserror",
  "time",
  "tokio",
  "tracing",
@@ -2044,7 +2048,6 @@ dependencies = [
 name = "r3bl_terminal_async"
 version = "0.5.7"
 dependencies = [
- "assert_cmd",
  "async-stream",
  "crossterm 0.28.1",
  "futures-core",
@@ -2061,7 +2064,6 @@ dependencies = [
  "r3bl_tuify",
  "strum",
  "strum_macros",
- "tempfile",
  "thiserror",
  "tokio",
  "tracing",

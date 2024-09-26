@@ -27,7 +27,8 @@ pub enum ZOrder {
 }
 
 impl ZOrder {
-    /// Contains the priority that is used to paint the different groups of [RenderOp] items.
+    /// Contains the priority that is used to paint the different groups of
+    /// [crate::RenderOp] items.
     pub fn get_render_order() -> [ZOrder; 3] {
         [ZOrder::Normal, ZOrder::High, ZOrder::Glass]
     }

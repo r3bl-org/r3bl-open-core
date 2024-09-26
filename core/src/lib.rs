@@ -132,6 +132,7 @@ pub mod decl_macros;
 pub mod logging;
 pub mod misc;
 pub mod terminal_io;
+pub mod tracing_logging;
 pub mod tui_core;
 
 // Re-export.
@@ -140,4 +141,5 @@ pub use decl_macros::*;
 pub use logging::*;
 pub use misc::*;
 pub use terminal_io::*;
+pub use tracing_logging::*;
 pub use tui_core::*;

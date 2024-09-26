@@ -877,15 +877,15 @@ let st = lolcat_mut.colorize_to_styled_texts(&unicode_string);
 lolcat.next_color();
 ```
 
-This [crate::Lolcat] that is returned by `build()` is safe to re-use.
+This [r3bl_rs_utils_core::Lolcat] that is returned by `build()` is safe to re-use.
 - The colors it cycles through are "stable" meaning that once constructed via the
-  [builder](crate::LolcatBuilder) (which sets the speed, seed, and delta that
-  determine where the color wheel starts when it is used). For eg, when used in a
+  [builder](r3bl_rs_utils_core::LolcatBuilder) (which sets the speed, seed, and delta
+  that determine where the color wheel starts when it is used). For eg, when used in a
   dialog box component that re-uses the instance, repeated calls to the `render()`
   function of this component will produce the same generated colors over and over
   again.
 - If you want to change where the color wheel "begins", you have to change the speed,
-  seed, and delta of this [crate::Lolcat] instance.
+  seed, and delta of this [r3bl_rs_utils_core::Lolcat] instance.
 
 ## Issues and PRs
 

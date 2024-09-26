@@ -15,6 +15,16 @@
  *   limitations under the License.
  */
 
+//! # [init_tracing]
+//!
+//! This is a convenience method to setup Tokio [`tracing_subscriber`] with `stdout` as
+//! the output destination. This method also ensures that the [`crate::SharedWriter`] is
+//! used for concurrent writes to `stdout`. You can also use the [`TracingConfig`] struct
+//! to customize the behavior of the tracing setup, by choosing whether to display output
+//! to `stdout`, `stderr`, or a [`crate::SharedWriter`]. By default, both display and file
+//! logging are enabled. You can also customize the log level, and the file path and
+//! prefix for the log file.
+
 use tracing_core::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt,
                          registry::LookupSpan,
@@ -258,9 +268,8 @@ mod test_tracing_bin_stdio {
 
 #[cfg(test)]
 mod test_tracing_shared_writer_output {
-    use r3bl_rs_utils_core::{LineStateControlSignal, SharedWriter};
-
     use super::*;
+    use crate::{LineStateControlSignal, SharedWriter};
 
     const EXPECTED: [&str; 4] = ["error", "warn", "info", "debug"];
 

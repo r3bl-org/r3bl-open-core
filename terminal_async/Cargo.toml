@@ -78,15 +78,6 @@ async-stream = "0.3.5"
 # Testing - r3bl-open-core.
 r3bl_test_fixtures = { path = "../test_fixtures" }
 
-# Testing - temp files and folders.
-tempfile = "3.12.0"
-
-# Bin targets for testing stdout and stderr.
-assert_cmd = "2.0.16"
-[[bin]]
-name = "tracing_test_bin"
-path = "src/bin/tracing_test_bin.rs"
-
 [features]
 default = ["emacs"]
 emacs = []

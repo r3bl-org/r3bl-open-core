@@ -78,10 +78,10 @@ use crate::{constants::{AUTHORS,
             StyleUSSpanLines,
             US};
 
-/// This is the main function that the [editor] uses this in order to display the markdown to the
-/// user.It is responsible for converting:
-/// - from a &[Vec] of [US] which comes from the [editor],
-/// - into a [StyleUSSpanLines], which the [editor] will clip & render.
+/// This is the main function that the [crate::editor] uses this in order to display the
+/// markdown to the user.It is responsible for converting:
+/// - from a &[Vec] of [US] which comes from the [crate::editor],
+/// - into a [StyleUSSpanLines], which the [crate::editor] will clip & render.
 ///
 /// # Arguments
 /// - `editor_text` - The text that the user has typed into the editor.

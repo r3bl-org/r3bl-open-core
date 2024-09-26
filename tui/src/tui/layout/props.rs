@@ -19,7 +19,7 @@ use r3bl_rs_utils_core::{Position, RequestedSizePercent, Size, TuiStyle};
 
 use super::{FlexBoxId, LayoutDirection};
 
-/// Properties that are needed to create a [FlexBox].
+/// Properties that are needed to create a [crate::FlexBox].
 #[derive(Clone, Debug, Default)]
 pub struct FlexBoxProps {
     pub id: FlexBoxId,

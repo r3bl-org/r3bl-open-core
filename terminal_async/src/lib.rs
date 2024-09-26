@@ -118,7 +118,6 @@
 //!   - [Readline overview please see the docs for this struct for
 //!     details](#readline-overview-please-see-the-docs-for-this-struct-for-details)
 //!   - [Spinner::try_start](#spinnertry_start)
-//!   - [init_tracing()](#init_tracing)
 //! - [Build this crate with Naz on YouTube](#build-this-crate-with-naz-on-youtube)
 //! - [Why another async readline crate?](#why-another-async-readline-crate)
 //!   - [References for blocking and thread cancellation in
@@ -384,17 +383,6 @@
 //! # }
 //! ```
 //!
-//! ## [`init_tracing()`]
-//!
-//! This is a convenience method to setup Tokio [`tracing_subscriber`] with `stdout` as
-//! the output destination. This method also ensures that the
-//! [`r3bl_rs_utils_core::SharedWriter`] is used for concurrent writes to `stdout`. You
-//! can also use the [`TracingConfig`] struct to customize the behavior of the tracing
-//! setup, by choosing whether to display output to `stdout`, `stderr`, or a
-//! [`r3bl_rs_utils_core::SharedWriter`]. By default, both display and file logging are
-//! enabled. You can also customize the log level, and the file path and prefix for the
-//! log file.
-//!
 //! # Build this crate with Naz on YouTube
 //!
 //! Watch the following videos to learn more about how this crate was built:
@@ -471,14 +459,12 @@ pub mod public_api;
 pub mod readline_impl;
 pub mod spinner_impl;
 pub mod tracing_jaeger;
-pub mod tracing_logging;
 
 // Re-export the public API.
 pub use public_api::*;
 pub use readline_impl::*;
 pub use spinner_impl::*;
 pub use tracing_jaeger::*;
-pub use tracing_logging::*;
 
 // External crates.
 use std::{collections::VecDeque, io::Error, pin::Pin, sync::Arc};
