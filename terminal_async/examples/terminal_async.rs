@@ -22,10 +22,10 @@ use std::{io::{stderr, Write},
 
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
-use r3bl_rs_utils_core::SharedWriter;
-use r3bl_terminal_async::{tracing_logging::tracing_config::TracingConfig,
-                          DisplayPreference,
-                          Readline,
+use r3bl_rs_utils_core::{tracing_logging::tracing_config::TracingConfig,
+                         DisplayPreference,
+                         SharedWriter};
+use r3bl_terminal_async::{Readline,
                           ReadlineEvent,
                           Spinner,
                           SpinnerStyle,
@@ -152,7 +152,7 @@ async fn main() -> miette::Result<()> {
     }
 
     // Initialize tracing w/ the "async stdout" (SharedWriter), and file writer.
-    r3bl_terminal_async::init_tracing(TracingConfig::new_file_and_display(
+    r3bl_rs_utils_core::init_tracing(TracingConfig::new_file_and_display(
         None,
         DisplayPreference::SharedWriter(terminal_async.clone_shared_writer()),
     ))?;
