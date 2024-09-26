@@ -25,6 +25,7 @@
 //! logging are enabled. You can also customize the log level, and the file path and
 //! prefix for the log file.
 
+use tracing::dispatcher;
 use tracing_core::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt,
                          registry::LookupSpan,
@@ -53,10 +54,28 @@ macro_rules! create_fmt {
 /// Type alias for a boxed layer.
 pub type DynLayer<S> = dyn Layer<S> + Send + Sync + 'static;
 
-/// Simply initialize the tracing system with the provided [TracingConfig].
+/// Simply initialize the tracing system with the provided [TracingConfig]. This will set
+/// the global default subscriber, which once set, can't be unset or changed.
+///
+/// Documentation:
+/// - [Global default tracing
+///   subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_global_default.html)
 pub fn init_tracing(tracing_config: TracingConfig) -> miette::Result<()> {
     try_create_layers(tracing_config)
         .map(|layers| tracing_subscriber::registry().with(layers).init())
+}
+
+/// Use this in tests, since this will not set the global default subscriber. This is a
+/// thread local subscriber.
+///
+/// Documentation:
+/// - [Thread local tracing
+///   subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_default.html)
+pub fn init_tracing_thread_local(
+    tracing_config: TracingConfig,
+) -> miette::Result<dispatcher::DefaultGuard> {
+    try_create_layers(tracing_config)
+        .map(|layers| tracing_subscriber::registry().with(layers).set_default())
 }
 
 /// Returns the layers. This does not initialize the tracing system. Don't forget to do
@@ -279,7 +298,7 @@ mod test_tracing_shared_writer_output {
 
         // Create a new tracing layer with stdout.
         let display_pref = DisplayPreference::SharedWriter(SharedWriter::new(sender));
-        init_tracing(TracingConfig {
+        let default_guard = init_tracing_thread_local(TracingConfig {
             writer_config: WriterConfig::Display(display_pref),
             level: tracing::Level::DEBUG,
         })
@@ -302,8 +321,12 @@ mod test_tracing_shared_writer_output {
         }
         let output = output.join("\n");
 
+        println!("output: {}", output);
+
         for it in EXPECTED.iter() {
             assert!(output.contains(it));
         }
+
+        drop(default_guard);
     }
 }
