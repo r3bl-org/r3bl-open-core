@@ -75,6 +75,17 @@ thiserror = "1.0.63"
 miette = { version = "7.2.0", features = ["fancy"] }
 pretty_assertions = "1.4.0"
 
+# Enum to string generation.
+strum = "0.26.3"
+strum_macros = "0.26.4"
+
+# Convert Rust structs to and from binary representation.
+bincode = { version = "1.3.3" }
+
+# Key Value store that can be used to store JSON or bincode encoded values. `kv` is built
+# on top of `sled` which currently does not support access across multiple processes.
+kv = { version = "0.24.0", features = ["json-value", "bincode-value"] }
+
 [dev-dependencies]
 # for assert_eq! macro
 pretty_assertions = "1.4.0"

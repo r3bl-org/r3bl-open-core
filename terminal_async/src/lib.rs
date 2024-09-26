@@ -458,13 +458,11 @@
 pub mod public_api;
 pub mod readline_impl;
 pub mod spinner_impl;
-pub mod tracing_jaeger;
 
 // Re-export the public API.
 pub use public_api::*;
 pub use readline_impl::*;
 pub use spinner_impl::*;
-pub use tracing_jaeger::*;
 
 // External crates.
 use std::{collections::VecDeque, io::Error, pin::Pin, sync::Arc};
