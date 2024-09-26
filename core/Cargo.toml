@@ -70,7 +70,21 @@ futures-util = "0.3.30"                                         # Needed for cro
 # Color gradients.
 colorgrad = "0.7.0"
 
+# Error handling.
+thiserror = "1.0.63"
+miette = { version = "7.2.0", features = ["fancy"] }
+pretty_assertions = "1.4.0"
+
 [dev-dependencies]
 # for assert_eq! macro
 pretty_assertions = "1.4.0"
 serial_test = "3.1.1"
+
+# Testing - temp files and folders.
+tempfile = "3.12.0"
+
+# Bin targets for testing stdout and stderr.
+assert_cmd = "2.0.16"
+[[bin]]
+name = "tracing_test_bin"
+path = "src/bin/tracing_test_bin.rs"

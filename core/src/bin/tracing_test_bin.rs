@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_terminal_async::{init_tracing, DisplayPreference, TracingConfig, WriterConfig};
+use r3bl_rs_utils_core::{init_tracing, DisplayPreference, TracingConfig, WriterConfig};
 
 /// `assert_cmd` : <https://docs.rs/assert_cmd/latest/assert_cmd/index.html>
 ///

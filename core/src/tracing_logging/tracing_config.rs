@@ -17,8 +17,9 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::SharedWriter;
 use tracing_core::LevelFilter;
+
+use crate::SharedWriter;
 
 /// Configure the tracing logging to suit your needs. You can display the logs to a:
 /// 1. file,
