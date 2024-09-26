@@ -134,6 +134,7 @@ pub mod misc;
 pub mod terminal_io;
 pub mod tracing_logging;
 pub mod tui_core;
+pub mod storage;
 
 // Re-export.
 pub use common::*;
@@ -143,3 +144,4 @@ pub use misc::*;
 pub use terminal_io::*;
 pub use tracing_logging::*;
 pub use tui_core::*;
+pub use storage::*;

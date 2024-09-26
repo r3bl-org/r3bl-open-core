@@ -15,7 +15,10 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{init_tracing, DisplayPreference, TracingConfig, WriterConfig};
+use r3bl_rs_utils_core::{init_tracing_thread_local,
+                         DisplayPreference,
+                         TracingConfig,
+                         WriterConfig};
 
 /// `assert_cmd` : <https://docs.rs/assert_cmd/latest/assert_cmd/index.html>
 ///
@@ -34,7 +37,7 @@ fn main() {
     };
 
     // Create a new tracing layer with stdout.
-    init_tracing(TracingConfig {
+    let default_guard = init_tracing_thread_local(TracingConfig {
         writer_config: WriterConfig::Display(display_preference),
         level: tracing::Level::DEBUG,
     })
@@ -46,4 +49,6 @@ fn main() {
     tracing::info!("info");
     tracing::debug!("debug");
     tracing::trace!("trace");
+
+    drop(default_guard);
 }

@@ -680,6 +680,14 @@ reflect how the functionality is used in the real world.
     place is because it was easier to develop them there, but since then, lots of other
     consumers of this functionality have emerged, including crates that are created by
     "3rd party developers" (people not R3BL and not part of `r3bl-open-core` repo).
+  - Move the `kv.rs` module into `storage` from the
+    `nazmulidris/rust-scratch/tcp-api-server` repo. This provides an in-memory /
+    in-process key value store that is built on top of `sled`. This eliminates the need to
+    use files to save / load data.
+  - Move the `miette_setup_global_report_handler.rs` from the
+    `nazmulidris/rust-scratch/tcp-api-server` repo. This allows customization of the
+    miette global report handler at the process level. Useful for apps that need to
+    override the default report handler formatting.
 
 ### v0.9.16 (2024-09-12)
 
@@ -914,8 +922,8 @@ modules in this crate.
 
 - Deleted:
   - Move the Jaeger tracing module to the `tcp-api-server` crate in the
-    `https://github.comnazmulidris/rust-scratch/` repo. This wasn't really used
-    anywhere else.
+    `https://github.comnazmulidris/rust-scratch/` repo. This wasn't really used anywhere
+    else. Also remove all the OpenTelemetry related dependencies from this crate.
   - Move the tracing module into the `core` folder (`r3bl_rs_utils_core` crate) in the
     mono repo.
 

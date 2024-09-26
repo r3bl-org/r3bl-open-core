@@ -19,8 +19,10 @@
 pub mod common_enums;
 pub mod common_math;
 pub mod common_result_and_error;
+pub mod miette_setup_global_report_handler;
 
 // Re-export.
 pub use common_enums::*;
 pub use common_math::*;
 pub use common_result_and_error::*;
+pub use miette_setup_global_report_handler::*;
