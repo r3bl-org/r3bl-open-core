@@ -49,7 +49,7 @@ pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine<'_>>> {
 
     let acc = split_by_new_line(code);
 
-    return Ok((remainder, convert_into_code_block_lines(lang, acc)));
+    Ok((remainder, convert_into_code_block_lines(lang, acc)))
 }
 
 #[rustfmt::skip]

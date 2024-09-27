@@ -29,7 +29,6 @@ pub const FILE_CONTENT_ARRAY: [&str; 3] = [
 #[derive(Default, Clone, Debug)]
 #[allow(dead_code)]
 #[non_exhaustive]
-
 pub enum AppSignal {
     #[default]
     Noop,

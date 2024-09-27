@@ -93,6 +93,7 @@
   - [v0.6.8 2023-10-16](#v068-2023-10-16)
   - [v0.6.7 2023-09-12](#v067-2023-09-12)
 - [r3bl_simple_logger](#r3bl_simple_logger)
+  - [Archived 2024-09-27](#archived-2024-09-27)
   - [v0.1.4 2024-09-12](#v014-2024-09-12)
   - [v0.1.3 2023-10-21](#v013-2023-10-21)
   - [v0.1.2 2023-10-21](#v012-2023-10-21)
@@ -672,7 +673,15 @@ reflect how the functionality is used in the real world.
   - Reorganize the `src` folder to make sure that there aren't any top level files, and that
     everything is in a module. This is to make it easier to add new modules in the future.
 
+- Removed:
+  - The dependency on `r3bl_simple_logger` has been removed and that entire crate has been
+    archived. You can read the details in its [CHANGELOG entry](#archived-2024-09-27).
+    Tokio tracing is now used under the covers.
+
 - Added:
+  - The actual logging API is left as is, and a new variant is also included, so you are
+    free to choose to keep using the old API, or directly using tokio tracing, or a mix of
+    both! See `logging_api.rs` for more details.
   - Move the `color_wheel` module into `r3bl_rs_utils_core` crate. This is to ensure that
     it is possible to import just color wheel and lolcat related functionality without
     having to import the entire `r3bl_tui` crate. And de-tangles the dependency tree,
@@ -1144,6 +1153,13 @@ This is the first release of this crate.
   - `justfile` is now replaced with `nu` script `run.nu`.
 
 ## `r3bl_simple_logger`
+
+### Archived (2024-09-27)
+
+This crate has been moved into the
+[r3bl-open-core-archive](https://github.com/r3bl-org/r3bl-open-core-archive) repo for
+archival purposes. It is no longer maintained. This crate was only added to this mono repo
+since it had become unmaintained. We now use tokio tracing, so this is no longer required.
 
 ### v0.1.4 (2024-09-12)
 

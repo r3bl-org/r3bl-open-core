@@ -703,6 +703,7 @@ mod test_readline {
     use crate::{LineStateLiveness, StdMutex};
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_readline_internal_process_event_and_terminal_output() {
         let vec = get_input_vec();
         let mut iter = vec.iter();
@@ -750,6 +751,7 @@ mod test_readline {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_readline() {
         let prompt_str = "> ";
 
@@ -782,6 +784,7 @@ mod test_readline {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_pause_resume() {
         let prompt_str = "> ";
 
@@ -826,6 +829,7 @@ mod test_readline {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_pause_resume_with_output() {
         let prompt_str = "> ";
 
@@ -889,6 +893,7 @@ mod test_streams {
     use super::*;
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_generate_event_stream_pinned() {
         use futures_util::StreamExt;
 

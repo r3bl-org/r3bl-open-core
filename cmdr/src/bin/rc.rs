@@ -19,6 +19,7 @@ use r3bl_cmdr::rc::run_app;
 use r3bl_rs_utils_core::{throws, CommonResult};
 
 #[tokio::main]
+#[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
     throws!({
         run_app().await?;

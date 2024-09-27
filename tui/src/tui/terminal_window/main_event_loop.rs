@@ -193,8 +193,7 @@ impl TerminalWindow {
             } // End loop.
 
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = "\nmain_event_loop -> Shutdown 🛑".to_string();
-                log_info(msg);
+                tracing::info!("main_event_loop -> Shutdown 🛑");
             });
         });
     }
@@ -369,26 +368,20 @@ where
                     call_if_true!(DEBUG_TUI_MOD, {
                         {
                             let state = &global_data.state;
-                            let msg_1 = format!("🎨 MySubscriber::paint() ok ✅: \n window_size: {window_size:?}\n state: {state:?}");
-                            let msg_2 = {
-                                format!(
-                                    "🌍⏳ SPEED: {:?}",
-                                    telemetry_global_static::get_avg_response_time_micros(
-                                    ),
-                                )
-                            };
+                            tracing::info!("🎨 MySubscriber::paint() ok ✅: \n window_size: {window_size:?}\n state: {state:?}");
+                            tracing::info!(
+                                "🌍⏳ SPEED: {:?}",
+                                telemetry_global_static::get_avg_response_time_micros(),
+                            );
 
                             if let Some(ref offscreen_buffer) =
                                 global_data.maybe_saved_offscreen_buffer
                             {
-                                let msg_3 = format!(
+                                tracing::info!(
                                     "offscreen_buffer: {0:.3} kb",
                                     offscreen_buffer.size_of().total_bytes() as f64
                                         / 1000_f64
                                 );
-                                log_info(format!("{msg_1}\n{msg_2}, {msg_3}"));
-                            } else {
-                                log_info(format!("{msg_1}\n{msg_2}"));
                             }
                         }
                     });

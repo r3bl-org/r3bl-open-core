@@ -33,11 +33,23 @@ use crate::SharedWriter;
 ///
 /// Fields:
 /// - `writer_config`: [WriterConfig] to choose where to write the logs.
-/// - `level`: [tracing::Level] - The log level to use for tracing.
+/// - `level`: [LevelFilter] - The log level to use for tracing.
 #[derive(Debug)]
 pub struct TracingConfig {
     pub writer_config: WriterConfig,
-    pub level: tracing::Level,
+    pub level_filter: LevelFilter,
+    pub scope: TracingScope,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum TracingScope {
+    /// Thread local is use in tests, where each test should have its own log file or
+    /// stdout, etc. This is set per thread. So you can have more than one, assuming you
+    /// have more than one thread.
+    ThreadLocal,
+    /// Global scope is used in production, for an app that needs to log to a file or
+    /// stdout, etc. Once set, this can't be unset or changed.
+    Global,
 }
 
 /// - `tracing_log_file_path_and_prefix`: [String] is the file path and prefix to use for
@@ -81,33 +93,34 @@ impl TracingConfig {
         preferred_display: DisplayPreference,
     ) -> Self {
         Self {
+            scope: TracingScope::Global,
             writer_config: WriterConfig::DisplayAndFile(
                 preferred_display,
                 filename.unwrap_or_else(|| "tracing_log_file_debug.log".to_string()),
             ),
-            level: tracing::Level::DEBUG,
+            level_filter: LevelFilter::from_level(tracing::Level::DEBUG),
         }
     }
 
     pub fn new_display(preferred_display: DisplayPreference) -> Self {
         Self {
+            scope: TracingScope::Global,
             writer_config: WriterConfig::Display(preferred_display),
-            level: tracing::Level::DEBUG,
+            level_filter: LevelFilter::from_level(tracing::Level::DEBUG),
         }
     }
 
     pub fn new_file(filename: Option<String>) -> Self {
         Self {
+            scope: TracingScope::Global,
             writer_config: WriterConfig::File(
                 filename.unwrap_or_else(|| "tracing_log_file_debug.log".to_string()),
             ),
-            level: tracing::Level::DEBUG,
+            level_filter: LevelFilter::from_level(tracing::Level::DEBUG),
         }
     }
 
     pub fn get_writer_config(&self) -> WriterConfig { self.writer_config.clone() }
 
-    pub fn get_level_filter(&self) -> LevelFilter {
-        tracing_subscriber::filter::LevelFilter::from_level(self.level)
-    }
+    pub fn get_level_filter(&self) -> LevelFilter { self.level_filter }
 }

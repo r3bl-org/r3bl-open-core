@@ -15,9 +15,12 @@
  *   limitations under the License.
  */
 
-//! Use module is standalone, you can use it in any project that needs to create an
-//! embedded key/value store that stores keys that are of whatever type you choose, and
-//! values that are whatever type you choose.
+//! Use module is standalone, you can use it in any project that needs an in process or
+//! embedded key/value store.
+//!
+//! You can use it to store keys that are of whatever type you choose, and values that are
+//! whatever type you choose.
+//!
 //! - It is a wrapper around the [kv] crate, to make it trivially simple to use. There are
 //!   only 4 functions that allow you access to the capabilities of the key/value embedded
 //!   store.

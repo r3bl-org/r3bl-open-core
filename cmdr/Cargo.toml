@@ -51,9 +51,6 @@ r3bl_tuify = { path = "../tuify", version = "0.1.27" }                      # ve
 r3bl_analytics_schema = { path = "../analytics_schema", version = "0.0.2" } # version is requried to publish to crates.io
 log = { version = "0.4.22", features = ["std"] }
 
-# Tokio.
-tokio = { version = "1.40.0", features = ["full"] }
-
 # Reqwest (HTTP client).
 reqwest = { version = "0.12.7", features = ["json"] }
 
@@ -82,6 +79,15 @@ dirs = "5.0.1"
 
 # Reedline.
 reedline = "0.34.0"
+
+# Tokio / Tracing / Logging.
+# https://tokio.rs/tokio/topics/tracing
+# https://tokio.rs/tokio/topics/tracing-next-steps
+tokio = { version = "1.40.0", features = ["full", "tracing"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+tracing-appender = "0.2.3"
+tracing-core = "0.1.32"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

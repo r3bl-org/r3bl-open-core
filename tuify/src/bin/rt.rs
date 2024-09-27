@@ -100,7 +100,7 @@ fn main() -> Result<()> {
         let enable_logging = DEVELOPMENT_MODE | cli_args.global_opts.enable_logging;
 
         call_if_true!(enable_logging, {
-            try_to_set_log_level(log::LevelFilter::Debug).ok();
+            try_to_set_log_level(tracing_core::LevelFilter::DEBUG).ok();
             log_debug("Start logging...".to_string());
             log_debug(format!("terminal window size: {:?}", get_size()?).to_string());
             log_debug(format!("cli_args {:?}", cli_args));

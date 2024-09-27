@@ -43,6 +43,7 @@ use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
 #[tokio::main]
+#[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
     // If the terminal is not fully interactive, then return early.
     let Some(mut terminal_async) = TerminalAsync::try_new("> ").await? else {
@@ -59,6 +60,13 @@ async fn main() -> CommonResult<()> {
     terminal_async
         .println(format!("{}", style_prompt(generate_help_msg().as_str())))
         .await;
+
+    // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
+    if ENABLE_TRACE_EXAMPLES | DEBUG_TUI_MOD {
+        try_to_set_log_level(tracing_core::LevelFilter::DEBUG).ok();
+    } else {
+        try_to_set_log_level(tracing_core::LevelFilter::OFF).ok();
+    }
 
     loop {
         let result_readline_event = terminal_async.get_readline_event().await;
