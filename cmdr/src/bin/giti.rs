@@ -43,6 +43,7 @@ use r3bl_rs_utils_core::{call_if_true,
 use r3bl_tuify::{select_from_list_with_multi_line_header, SelectionMode, StyleSheet};
 
 #[tokio::main]
+#[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
     throws!({
         // If no args are passed, the following line will fail, and help will be printed
@@ -51,7 +52,7 @@ async fn main() -> CommonResult<()> {
 
         let enable_logging = cli_arg.global_options.enable_logging;
         call_if_true!(enable_logging, {
-            try_to_set_log_level(log::LevelFilter::Debug).ok();
+            try_to_set_log_level(tracing_core::LevelFilter::DEBUG).ok();
             log_debug("Start logging...".to_string());
             log_debug(format!("cli_args {:?}", cli_arg));
         });
@@ -72,7 +73,7 @@ async fn main() -> CommonResult<()> {
         call_if_true!(enable_logging, {
             log_debug("Stop logging...".to_string());
         });
-    });
+    })
 }
 
 pub fn launch_giti(cli_arg: CLIArg) {

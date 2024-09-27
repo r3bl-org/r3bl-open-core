@@ -231,7 +231,6 @@ macro_rules! with {
 ///   }
 /// }
 /// ```
-
 #[macro_export]
 macro_rules! with_mut {
     ($eval:expr, as $id:ident, run $code:block) => {

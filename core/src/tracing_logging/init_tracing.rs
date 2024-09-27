@@ -32,17 +32,19 @@ use tracing_subscriber::{layer::SubscriberExt,
                          util::SubscriberInitExt,
                          Layer};
 
-use super::{DisplayPreference, WriterConfig};
+use super::{DisplayPreference, TracingScope, WriterConfig};
 use crate::tracing_logging::{rolling_file_appender_impl, tracing_config::TracingConfig};
 
-/// Avoid gnarly type annotations by using a macro to create the `fmt` layer.
+/// Avoid gnarly type annotations by using a macro to create the `fmt` layer. Note that
+/// [tracing_subscriber::fmt::format::Pretty] and
+/// [tracing_subscriber::fmt::format::Compact] are mutually exclusive.
 #[macro_export]
 macro_rules! create_fmt {
     () => {
         tracing_subscriber::fmt::layer()
             .compact()
             .without_time()
-            .with_thread_ids(true)
+            .with_thread_ids(false)
             .with_thread_names(false)
             .with_target(false)
             .with_file(false)
@@ -55,27 +57,38 @@ macro_rules! create_fmt {
 pub type DynLayer<S> = dyn Layer<S> + Send + Sync + 'static;
 
 /// Simply initialize the tracing system with the provided [TracingConfig]. This will set
-/// the global default subscriber, which once set, can't be unset or changed.
+/// either (depending on its [TracingScope]):
+/// 1. Global default subscriber, which once set, can't be unset or changed.
+///    - This is great for apps.
+///    - Docs for [Global default tracing
+///      subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_global_default.html)
+/// 2. Thread local subscriber, which is thread local, and you can assign different ones
+///    to different threads.
+///    - This is great for tests.
+///    - Docs for [Thread local tracing
+///      subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_default.html)
 ///
-/// Documentation:
-/// - [Global default tracing
-///   subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_global_default.html)
-pub fn init_tracing(tracing_config: TracingConfig) -> miette::Result<()> {
-    try_create_layers(tracing_config)
-        .map(|layers| tracing_subscriber::registry().with(layers).init())
-}
-
-/// Use this in tests, since this will not set the global default subscriber. This is a
-/// thread local subscriber.
-///
-/// Documentation:
-/// - [Thread local tracing
-///   subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_default.html)
-pub fn init_tracing_thread_local(
+/// # Return
+/// 1. If you set the [TracingScope] to [TracingScope::ThreadLocal], then this function
+///    will return a [tracing::dispatcher::DefaultGuard]. You should drop this guard when
+///    you're done with the tracing system. This will reset the tracing system to its
+///    previous state for that thread.
+/// 2. If you set the [TracingScope] to [TracingScope::Global], then this function will
+///    return [`None`].
+pub fn init_tracing(
     tracing_config: TracingConfig,
-) -> miette::Result<dispatcher::DefaultGuard> {
-    try_create_layers(tracing_config)
-        .map(|layers| tracing_subscriber::registry().with(layers).set_default())
+) -> miette::Result<Option<dispatcher::DefaultGuard>> {
+    let scope = tracing_config.scope;
+    try_create_layers(tracing_config).map(|layers| match scope {
+        TracingScope::Global => {
+            tracing_subscriber::registry().with(layers).init();
+            None
+        }
+        TracingScope::ThreadLocal => {
+            let it = tracing_subscriber::registry().with(layers).set_default();
+            Some(it)
+        }
+    })
 }
 
 /// Returns the layers. This does not initialize the tracing system. Don't forget to do
@@ -236,12 +249,16 @@ mod tests {
         let file_path = file_path.to_str().unwrap().to_string();
 
         let tracing_config = TracingConfig {
-            writer_config: WriterConfig::File(file_path.clone()),
-            level: tracing::Level::DEBUG,
+            scope: TracingScope::ThreadLocal,
+            writer_config: WriterConfig::DisplayAndFile(
+                DisplayPreference::Stdout,
+                file_path.clone(),
+            ),
+            level_filter: LevelFilter::DEBUG,
         };
 
         let layers = try_create_layers(tracing_config).unwrap().unwrap();
-        assert_eq!(layers.len(), 2);
+        assert_eq!(layers.len(), 3);
         assert!(std::path::Path::new(&file_path).exists());
     }
 }
@@ -293,15 +310,18 @@ mod test_tracing_shared_writer_output {
     const EXPECTED: [&str; 4] = ["error", "warn", "info", "debug"];
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_shared_writer_output() {
         let (sender, mut receiver) = tokio::sync::mpsc::channel(1_000);
 
         // Create a new tracing layer with stdout.
         let display_pref = DisplayPreference::SharedWriter(SharedWriter::new(sender));
-        let default_guard = init_tracing_thread_local(TracingConfig {
+        let default_guard = init_tracing(TracingConfig {
+            scope: TracingScope::ThreadLocal,
             writer_config: WriterConfig::Display(display_pref),
-            level: tracing::Level::DEBUG,
+            level_filter: LevelFilter::DEBUG,
         })
+        .unwrap()
         .unwrap();
 
         // Log some messages.
@@ -327,6 +347,6 @@ mod test_tracing_shared_writer_output {
             assert!(output.contains(it));
         }
 
-        drop(default_guard);
+        drop(default_guard)
     }
 }

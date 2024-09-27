@@ -32,7 +32,7 @@ use single_select_quiz_game::main as single_select_quiz_game;
 fn main() -> Result<()> {
     throws!({
         call_if_true!(DEVELOPMENT_MODE, {
-            try_to_set_log_level(log::LevelFilter::Debug).ok();
+            try_to_set_log_level(tracing_core::LevelFilter::DEBUG).ok();
             log_debug("Start logging...".to_string());
             log_debug(format!("terminal window size: {:?}", get_size()?).to_string());
         });

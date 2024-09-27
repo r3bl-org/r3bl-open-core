@@ -49,9 +49,11 @@
 use miette::MietteHandlerOpts;
 use tracing::debug;
 
-/// The [miette::ErrorHook] is lazily evaluated, so the terminal width will be calculated
-/// just at the time of the global error handler being used. So if an error never occurs,
-/// then the terminal width will never be calculated. This is the desired behavior.
+/// The [miette::ErrorHook] is lazily evaluated.
+///
+/// The terminal width will be calculated just at the time of the global error handler
+/// being used. So if an error never occurs, then the terminal width will never be
+/// calculated. This is the desired behavior.
 pub fn setup_default_miette_global_report_handler(issues_url: &'static str) {
     miette::set_hook(Box::new(|_report| {
         let terminal_width = {

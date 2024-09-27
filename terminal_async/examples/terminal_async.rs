@@ -130,6 +130,7 @@ impl Default for State {
 }
 
 #[tokio::main]
+#[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
     let prompt = {
         let prompt_seg_1 = "╭>╮".magenta().on_dark_grey().to_string();

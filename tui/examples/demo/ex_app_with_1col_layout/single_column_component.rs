@@ -221,7 +221,7 @@ mod single_column_component_impl_component_trait {
 
                 // Log pipeline.
                 call_if_true!(DEBUG_TUI_MOD, {
-                    let msg = format!(
+                    tracing::info!(
                         "\
                 🦜 ColumnComponent::render ->
                   - current_box: {current_box:?},
@@ -230,7 +230,6 @@ mod single_column_component_impl_component_trait {
                   - content_pos: {content_cursor_pos:?},
                   - render_pipeline: {pipeline:?}"
                     );
-                    log_info(msg);
                 });
 
                 // Return the pipeline.

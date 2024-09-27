@@ -17,7 +17,7 @@
 
 use std::fmt::{Debug, Formatter};
 
-use r3bl_rs_utils_core::{call_if_true, log_info, CommonResult, Size};
+use r3bl_rs_utils_core::{call_if_true, CommonResult, Size};
 use tokio::sync::mpsc::Sender;
 
 use super::TerminalWindowMainThreadSignal;
@@ -104,8 +104,7 @@ mod impl_self {
         pub fn get_size(&self) -> Size { self.window_size }
 
         pub fn dump_to_log(&self, msg: &str) {
-            let log_msg = format!("{msg} -> {self:?}");
-            call_if_true!(DEBUG_TUI_MOD, log_info(log_msg));
+            call_if_true!(DEBUG_TUI_MOD, tracing::info!("{msg} -> {self:?}"));
         }
     }
 }

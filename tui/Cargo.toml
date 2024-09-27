@@ -39,9 +39,6 @@ chrono = "0.4.38"
 # Misc
 rand = "0.8.5"
 
-# Async
-tokio = { version = "1.40.0", features = ["full"] }
-
 # Crossterm & EventStream support.
 crossterm = { version = "0.28.1", features = ["event-stream"] }
 futures-util = "0.3.30"
@@ -68,6 +65,15 @@ copypasta-ext = "0.4.4"
 
 # For size of variables in heap.
 size-of = "0.1.5"
+
+# Tokio / Tracing / Logging.
+# https://tokio.rs/tokio/topics/tracing
+# https://tokio.rs/tokio/topics/tracing-next-steps
+tokio = { version = "1.40.0", features = ["full", "tracing"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+tracing-appender = "0.2.3"
+tracing-core = "0.1.32"
 
 [dev-dependencies]
 # - Async readline for running examples, with the source code checked out for

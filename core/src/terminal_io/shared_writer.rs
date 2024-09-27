@@ -163,6 +163,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_write_flush() {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let mut shared_writer = SharedWriter::new(line_sender);
@@ -180,6 +181,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_writeln_no_flush() {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let mut shared_writer = SharedWriter::new(line_sender);
@@ -196,6 +198,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_clone_silent_error() {
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
         let mut shared_writer = SharedWriter::new(line_sender);

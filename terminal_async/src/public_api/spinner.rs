@@ -221,6 +221,7 @@ mod tests {
     use crate::{SpinnerColor, StdMutex};
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_spinner_color() {
         let stdout_mock = StdoutMock::default();
 
@@ -301,6 +302,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_spinner_no_color() {
         let stdout_mock = StdoutMock::default();
 

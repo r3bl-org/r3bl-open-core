@@ -642,6 +642,7 @@ mod tests {
     use crate::{History, StdMutex};
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_add_char() {
         let mut line = LineState::new("foo".into(), (100, 100));
 
@@ -666,6 +667,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_move_cursor() {
         let mut line = LineState::new("foo".into(), (100, 100));
 
@@ -690,6 +692,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_search_next() {
         let mut line = LineState::new("foo".into(), (100, 100));
 

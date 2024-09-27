@@ -2,7 +2,6 @@
 [workspace]
 members = [
   "ansi_color",
-  "simple_logger",
   "core",
   "tuify",
   "macro",

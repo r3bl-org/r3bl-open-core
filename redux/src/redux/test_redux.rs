@@ -71,6 +71,7 @@ mod tests {
     /// ╰──────────────────────────────────────────────────────╯
     /// ```
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_redux_store_works_for_main_use_cases() {
         // This shared object is used to collect results from the subscriber &
         // middleware & reducer functions & test it later.

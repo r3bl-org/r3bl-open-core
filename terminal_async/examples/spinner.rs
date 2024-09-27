@@ -31,6 +31,7 @@ use r3bl_terminal_async::{Spinner,
 use tokio::{time::Instant, try_join};
 
 #[tokio::main]
+#[allow(clippy::needless_return)]
 pub async fn main() -> miette::Result<()> {
     println!("-------------> Example with concurrent output: Braille <-------------");
     example_with_concurrent_output(SpinnerStyle {
