@@ -232,7 +232,7 @@ mod column_render_component_impl_component_trait {
 
                 // Log pipeline.
                 call_if_true!(DEBUG_TUI_MOD, {
-                    let msg = format!(
+                    tracing::info!(
                         "\
                     🦜 ColumnComponent::render ->
                       - current_box: {:?},
@@ -246,7 +246,6 @@ mod column_render_component_impl_component_trait {
                         position!(col_index: col, row_index: row),
                         pipeline
                     );
-                    log_info(msg);
                 });
 
                 // Return the pipeline.

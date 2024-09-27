@@ -50,6 +50,7 @@ where
 }
 
 #[tokio::test]
+#[allow(clippy::needless_return)]
 async fn test_gen_input_stream() {
     use futures_util::StreamExt;
 
@@ -61,6 +62,7 @@ async fn test_gen_input_stream() {
 }
 
 #[tokio::test]
+#[allow(clippy::needless_return)]
 async fn test_gen_input_stream_with_delay() {
     use futures_util::StreamExt;
 

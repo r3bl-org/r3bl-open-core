@@ -102,6 +102,7 @@ use r3bl_terminal_async::{ReadlineEvent,
 use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _};
 
 #[tokio::main]
+#[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
     // Create a broadcast channel for shutdown.
     let (shutdown_sender, _) = tokio::sync::broadcast::channel::<()>(1);

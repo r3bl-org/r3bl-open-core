@@ -32,6 +32,7 @@ use r3bl_rs_utils_core::{call_if_true,
 use crate::clap_config::CLIArg;
 
 #[tokio::main]
+#[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
     throws!({
         // Parse CLI args.
@@ -40,7 +41,7 @@ async fn main() -> CommonResult<()> {
         // Start logging.
         let enable_logging = cli_arg.global_options.enable_logging;
         call_if_true!(enable_logging, {
-            try_to_set_log_level(log::LevelFilter::Debug).ok();
+            try_to_set_log_level(tracing_core::LevelFilter::DEBUG).ok();
             log_debug("Start logging...".to_string());
             log_debug(format!("cli_args {:?}", cli_arg));
         });

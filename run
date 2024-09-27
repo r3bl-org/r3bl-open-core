@@ -28,7 +28,6 @@ let workspace_folders = [
     "ansi_color",
     "macro",
     "analytics_schema",
-    "simple_logger",
     "redux",
     "utils",
 ]
