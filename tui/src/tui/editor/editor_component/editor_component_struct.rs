@@ -20,8 +20,7 @@ use std::fmt::Debug;
 use r3bl_rs_utils_core::{throws_with_return, CommonResult};
 use tokio::sync::mpsc::Sender;
 
-use crate::{editor_buffer_clipboard_support::system_clipboard_service_provider::SystemClipboard,
-            BoxedSafeComponent,
+use crate::{BoxedSafeComponent,
             Component,
             EditorBuffer,
             EditorEngine,
@@ -37,6 +36,7 @@ use crate::{editor_buffer_clipboard_support::system_clipboard_service_provider::
             InputEvent,
             RenderPipeline,
             SurfaceBounds,
+            SystemClipboard,
             TerminalWindowMainThreadSignal,
             DEFAULT_SYN_HI_FILE_EXT};
 

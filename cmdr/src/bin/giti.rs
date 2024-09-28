@@ -35,7 +35,6 @@ use r3bl_cmdr::{color_constants::DefaultColors::{FrozenBlue, GuardsRed, Moonligh
                 upgrade_check,
                 AnalyticsAction};
 use r3bl_rs_utils_core::{call_if_true,
-                         log_debug,
                          throws,
                          try_initialize_global_logging,
                          CommonResult};
@@ -52,8 +51,7 @@ async fn main() -> CommonResult<()> {
         let enable_logging = cli_arg.global_options.enable_logging;
         call_if_true!(enable_logging, {
             try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
-            log_debug("Start logging...".to_string());
-            log_debug(format!("cli_args {:?}", cli_arg));
+            tracing::debug!("Start logging... cli_args {:?}", cli_arg);
         });
 
         // Check analytics reporting.
@@ -70,7 +68,7 @@ async fn main() -> CommonResult<()> {
         launch_giti(cli_arg);
 
         call_if_true!(enable_logging, {
-            log_debug("Stop logging...".to_string());
+            tracing::debug!("Stop logging...");
         });
     })
 }

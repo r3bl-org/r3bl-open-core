@@ -20,7 +20,7 @@ use std::io::stdout;
 use clap::ValueEnum;
 use crossterm::style::Stylize;
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_rs_utils_core::{call_if_true, ch, log_debug, Size};
+use r3bl_rs_utils_core::{call_if_true, ch, Size};
 
 use crate::{enter_event_loop,
             get_size,
@@ -151,13 +151,9 @@ fn sanitize_height(items: &[String], requested_height: usize) -> usize {
 
 fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResult {
     call_if_true!(DEVELOPMENT_MODE, {
-        log_debug(
-            format!(
-                "🔆🔆🔆 *before* keypress: locate_cursor_in_viewport(): {:?}",
-                state.locate_cursor_in_viewport()
-            )
-            .magenta()
-            .to_string(),
+        tracing::debug!(
+            "🔆🔆🔆 *before* keypress: locate_cursor_in_viewport(): {}",
+            format!("{:?}", state.locate_cursor_in_viewport()).magenta()
         );
     });
 
@@ -170,11 +166,11 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
             row_count,
         }) => {
             call_if_true!(DEVELOPMENT_MODE, {
-                let msg = format!(
+                tracing::debug!(
                     "\n🍎🍎🍎\nNew size width:{} x height:{}",
-                    col_count, row_count
+                    format!("{col_count}").green(),
+                    format!("{row_count}").green(),
                 );
-                log_debug(msg.red().to_string());
             });
             state.set_resize_hint(Size {
                 col_count,
@@ -186,7 +182,7 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
         // Down.
         KeyPress::Down => {
             call_if_true!(DEVELOPMENT_MODE, {
-                log_debug("Down".black().bold().on_green().to_string());
+                tracing::debug!("Down");
             });
             let caret_location = state.locate_cursor_in_viewport();
             match caret_location {
@@ -208,10 +204,9 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
                 }
             }
             call_if_true!(DEVELOPMENT_MODE, {
-                log_debug(
-                    format!("enter_event_loop()::state: {:?}", state)
-                        .blue()
-                        .to_string(),
+                tracing::debug!(
+                    "enter_event_loop()::state: {}",
+                    format!("{state:?}").blue()
                 );
             });
 
@@ -221,7 +216,7 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
         // Up.
         KeyPress::Up => {
             call_if_true!(DEVELOPMENT_MODE, {
-                log_debug("Up".black().bold().on_green().to_string());
+                tracing::debug!("Up");
             });
 
             match state.locate_cursor_in_viewport() {
@@ -252,10 +247,9 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
         // Enter on multi-select.
         KeyPress::Enter if selection_mode == SelectionMode::Multiple => {
             call_if_true!(DEVELOPMENT_MODE, {
-                log_debug(
-                    format!("Enter: {:?}", state.selected_items)
-                        .green()
-                        .to_string(),
+                tracing::debug!(
+                    "Enter: {}",
+                    format!("{:?}", state.selected_items).green()
                 );
             });
             if state.selected_items.is_empty() {
@@ -268,10 +262,9 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
         // Enter.
         KeyPress::Enter => {
             call_if_true!(DEVELOPMENT_MODE, {
-                log_debug(
-                    format!("Enter: {}", state.get_focused_index())
-                        .green()
-                        .to_string(),
+                tracing::debug!(
+                    "Enter: {}",
+                    format!("{:?}", state.get_focused_index()).green()
                 );
             });
             let selection_index: usize = ch!(@to_usize state.get_focused_index());
@@ -285,7 +278,7 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
         // Escape or Ctrl + c.
         KeyPress::Esc | KeyPress::CtrlC => {
             call_if_true!(DEVELOPMENT_MODE, {
-                log_debug("Esc".red().to_string());
+                tracing::debug!("Esc");
             });
             EventLoopResult::ExitWithoutResult
         }
@@ -293,10 +286,9 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
         // Space on multi-select.
         KeyPress::Space if selection_mode == SelectionMode::Multiple => {
             call_if_true!(DEVELOPMENT_MODE, {
-                log_debug(
-                    format!("Space: {}", state.get_focused_index())
-                        .magenta()
-                        .to_string(),
+                tracing::debug!(
+                    "Space: {}",
+                    format!("{:?}", state.get_focused_index()).magenta()
                 );
             });
             let selection_index: usize = ch!(@to_usize state.get_focused_index());
@@ -322,7 +314,7 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
         // Noop, default behavior on Space
         KeyPress::Noop | KeyPress::Space => {
             call_if_true!(DEVELOPMENT_MODE, {
-                log_debug("Noop".yellow().to_string());
+                tracing::debug!("Noop");
             });
             EventLoopResult::Continue
         }
@@ -330,20 +322,16 @@ fn keypress_handler(state: &mut State<'_>, key_press: KeyPress) -> EventLoopResu
         // Error.
         KeyPress::Error => {
             call_if_true!(DEVELOPMENT_MODE, {
-                log_debug("Exit with error".red().to_string());
+                tracing::debug!("Exit with error");
             });
             EventLoopResult::ExitWithError
         }
     };
 
     call_if_true!(DEVELOPMENT_MODE, {
-        log_debug(
-            format!(
-                "👉 *after* keypress: locate_cursor_in_viewport(): {:?}",
-                state.locate_cursor_in_viewport()
-            )
-            .blue()
-            .to_string(),
+        tracing::debug!(
+            "👉 *after* keypress: locate_cursor_in_viewport(): {}",
+            format!("{:?}", state.locate_cursor_in_viewport()).blue()
         );
     });
 

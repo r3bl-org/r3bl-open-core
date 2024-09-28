@@ -22,7 +22,6 @@ use common_math::format_with_commas;
 use r3bl_rs_utils_core::{call_if_true,
                          ch,
                          common_math,
-                         log_debug,
                          position,
                          ChUnit,
                          Position,
@@ -243,12 +242,12 @@ pub mod history {
         // Normal history insertion.
         editor_buffer.history.push_content(content_copy);
 
-        if DEBUG_TUI_COPY_PASTE {
-            log_debug(format!(
+        call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            tracing::debug!(
                 "🍎🍎🍎 add_content_to_undo_stack editor_buffer: {:?}",
                 editor_buffer
-            ));
-        }
+            );
+        });
     }
 
     pub fn undo(editor_buffer: &mut EditorBuffer) {
@@ -261,9 +260,9 @@ pub mod history {
             editor_buffer.editor_content.caret_display_position = retain_caret_position;
         }
 
-        if DEBUG_TUI_COPY_PASTE {
-            log_debug(format!("🍎🍎🍎 undo editor_buffer: {:?}", editor_buffer));
-        }
+        call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            tracing::debug!("🍎🍎🍎 undo editor_buffer: {:?}", editor_buffer);
+        });
     }
 
     pub fn redo(editor_buffer: &mut EditorBuffer) {
@@ -274,9 +273,9 @@ pub mod history {
             editor_buffer.editor_content = content;
         }
 
-        if DEBUG_TUI_COPY_PASTE {
-            log_debug(format!("🍎🍎🍎 redo editor_buffer: {:?}", editor_buffer));
-        }
+        call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            tracing::debug!("🍎🍎🍎 redo editor_buffer: {:?}", editor_buffer);
+        });
     }
 
     impl EditorBufferHistory {
@@ -546,11 +545,9 @@ mod constructor {
         ) -> Self {
             // Potentially do any other initialization here.
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!(
-                    "🪙 {}",
-                    "construct EditorBuffer { lines, caret, lolcat, file_extension }"
+                tracing::debug!(
+                    "🪙 construct EditorBuffer [ lines, caret, lolcat, file_extension ]"
                 );
-                log_debug(msg);
             });
 
             Self {

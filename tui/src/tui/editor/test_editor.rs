@@ -19,7 +19,7 @@
 mod test_config_options {
     use r3bl_rs_utils_core::{assert_eq2, position, UnicodeString};
 
-    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
+    use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
                 test_fixtures::mock_real_objects_for_editor,
                 CaretDirection,
                 CaretKind,
@@ -145,7 +145,7 @@ mod test_config_options {
 mod test_editor_ops {
     use r3bl_rs_utils_core::{assert_eq2, ch, position, size, UnicodeString};
 
-    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
+    use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
                 test_fixtures::{assert, mock_real_objects_for_editor},
                 CaretDirection,
                 CaretKind,
@@ -1649,7 +1649,7 @@ mod selection_tests {
 
     use r3bl_rs_utils_core::{assert_eq2, ch, SelectionRange};
 
-    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
+    use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
                 test_fixtures::mock_real_objects_for_editor,
                 CaretDirection,
                 EditorBuffer,
@@ -1883,7 +1883,7 @@ mod selection_tests {
 mod clipboard_tests {
     use r3bl_rs_utils_core::{assert_eq2, UnicodeString};
 
-    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
+    use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
                 test_fixtures::mock_real_objects_for_editor,
                 CaretDirection,
                 EditorBuffer,

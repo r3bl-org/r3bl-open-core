@@ -23,10 +23,7 @@ use std::{io::{stdin, BufRead, Result},
 
 use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{call_if_true,
-                         log_debug,
-                         throws,
-                         try_initialize_global_logging};
+use r3bl_rs_utils_core::{call_if_true, throws, try_initialize_global_logging};
 use r3bl_tuify::{get_size,
                  get_terminal_width,
                  is_stdin_piped,
@@ -104,9 +101,8 @@ fn main() -> Result<()> {
 
         call_if_true!(enable_logging, {
             try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
-            log_debug("Start logging...".to_string());
-            log_debug(format!("terminal window size: {:?}", get_size()?).to_string());
-            log_debug(format!("cli_args {:?}", cli_args));
+            tracing::debug!("Start logging... terminal window size: {:?}", get_size()?);
+            tracing::debug!("cli_args {cli_args:?}")
         });
 
         match cli_args.command {
@@ -158,7 +154,7 @@ fn main() -> Result<()> {
             }
         }
         call_if_true!(enable_logging, {
-            log_debug("Stop logging...".to_string());
+            tracing::debug!("Stop logging...");
         });
     });
 }
@@ -205,7 +201,7 @@ fn show_tui(
         .collect::<Vec<String>>();
 
     call_if_true!(enable_logging, {
-        log_debug(format!("lines: {:?}", lines));
+        tracing::debug!("lines: {lines:?}");
     });
 
     // Early return, nothing to do. No content found in stdin.
@@ -303,11 +299,7 @@ fn show_tui(
     };
 
     call_if_true!(enable_logging, {
-        log_debug(
-            format!("selected_items: {:?}", selected_items)
-                .cyan()
-                .to_string(),
-        );
+        tracing::debug!("selected_items: {}", format!("{selected_items:?}").cyan());
     });
 
     for selected_item in selected_items {
@@ -402,13 +394,9 @@ fn get_possible_values_for_subcommand_and_option(
                     .collect::<Vec<_>>();
 
                 call_if_true!(DEVELOPMENT_MODE, {
-                    log_debug(
-                        format!(
-                            "{subcommand}, {option} - possible_values: {:?}",
-                            possible_values
-                        )
-                        .green()
-                        .to_string(),
+                    tracing::debug!(
+                        "{subcommand}, {option} - possible_values: {}",
+                        format!("{possible_values:?}").green()
                     );
                 });
 

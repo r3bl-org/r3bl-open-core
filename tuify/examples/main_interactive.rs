@@ -18,10 +18,7 @@
 use std::{io::Result, vec};
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
-use r3bl_rs_utils_core::{call_if_true,
-                         log_debug,
-                         throws,
-                         try_initialize_global_logging};
+use r3bl_rs_utils_core::{call_if_true, throws, try_initialize_global_logging};
 use r3bl_tuify::{components::style::StyleSheet,
                  get_size,
                  get_terminal_width,
@@ -36,8 +33,7 @@ fn main() -> Result<()> {
     throws!({
         call_if_true!(DEVELOPMENT_MODE, {
             try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
-            log_debug("Start logging...".to_string());
-            log_debug(format!("terminal window size: {:?}", get_size()?).to_string());
+            tracing::debug!("Start logging... terminal window size: {:?}", get_size()?)
         });
 
         // Get display size.
@@ -136,7 +132,7 @@ fn main() -> Result<()> {
         }
 
         call_if_true!(DEVELOPMENT_MODE, {
-            log_debug("Stop logging...".to_string());
+            tracing::debug!("Stop logging...");
         });
     });
 }
@@ -222,7 +218,7 @@ fn single_line_header() {
         None => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
-        log_debug(format!("user_input: {:?}", user_input).to_string());
+        tracing::debug!("user_input: {user_input:?}");
     });
 }
 
@@ -302,7 +298,7 @@ fn multiple_select_13_items_vph_5(
         None => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
-        log_debug(format!("user_input: {:?}", user_input).to_string());
+        tracing::debug!("user_input: {user_input:?}");
     });
 }
 
@@ -341,7 +337,7 @@ fn multiple_select_2_items_vph_5(
         None => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
-        log_debug(format!("user_input: {:?}", user_input).to_string());
+        tracing::debug!("user_input: {user_input:?}");
     });
 }
 
@@ -383,7 +379,7 @@ fn single_select_13_items_vph_5(
         None => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
-        log_debug(format!("user_input: {:?}", user_input).to_string());
+        tracing::debug!("user_input: {user_input:?}");
     });
 }
 
@@ -421,7 +417,7 @@ fn single_select_2_items_vph_5(
         None => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
-        log_debug(format!("user_input: {:?}", user_input).to_string());
+        tracing::debug!("user_input: {user_input:?}");
     });
 }
 
