@@ -20,7 +20,6 @@ use r3bl_rs_utils_core::{call_if_true,
                          get_tui_style,
                          get_tui_styles,
                          log_debug,
-                         log_error,
                          position,
                          requested_size_percent,
                          send_signal,
@@ -336,7 +335,7 @@ mod modal_dialogs {
                         err_msg: msg,
                     }) = err.downcast_ref::<CommonError>()
                     {
-                        log_error(format!("📣 Error activating simple modal: {msg:?}"));
+                        tracing::error!("📣 Error activating simple modal: {msg:?}");
                     }
                     ModalActivateResult::No
                 }
@@ -365,9 +364,9 @@ mod modal_dialogs {
                         err_msg: msg,
                     }) = err.downcast_ref::<CommonError>()
                     {
-                        log_error(format!(
+                        tracing::error!(
                             "📣 Error activating autocomplete modal: {msg:?}"
-                        ));
+                        );
                     }
                     ModalActivateResult::No
                 }

@@ -65,7 +65,7 @@
 
 use crossterm::event::EventStream;
 use futures_util::{FutureExt, StreamExt};
-use r3bl_rs_utils_core::{call_if_true, log_error};
+use r3bl_rs_utils_core::call_if_true;
 
 use super::InputEvent;
 use crate::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
@@ -94,8 +94,7 @@ impl AsyncEventStream {
                     Ok(input_event) => Some(input_event),
                     Err(e) => {
                         call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, {
-                            let msg = format!("Error: {e:?}");
-                            log_error(msg);
+                            tracing::error!("Error: {e:?}");
                         });
                         None
                     }
@@ -103,8 +102,7 @@ impl AsyncEventStream {
             }
             Some(Err(e)) => {
                 call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, {
-                    let msg = format!("Error: {e:?}");
-                    log_error(msg);
+                    tracing::error!("Error: {e:?}");
                 });
                 None
             }

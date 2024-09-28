@@ -36,7 +36,6 @@ use r3bl_cmdr::{color_constants::DefaultColors::{FrozenBlue, GuardsRed, Moonligh
                 AnalyticsAction};
 use r3bl_rs_utils_core::{call_if_true,
                          log_debug,
-                         log_error,
                          throws,
                          try_initialize_global_logging,
                          CommonResult};
@@ -110,7 +109,7 @@ pub fn launch_giti(cli_arg: CLIArg) {
                 " Could not run giti due to the following problem.\n{:#?}",
                 error
             );
-            log_error(err_msg.clone());
+            tracing::error!(err_msg);
             AnsiStyledText {
                 text: &err_msg.to_string(),
                 style: &[Style::Foreground(GuardsRed.as_ansi_color())],

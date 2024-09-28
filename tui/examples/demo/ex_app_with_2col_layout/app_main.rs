@@ -18,7 +18,6 @@
 use r3bl_rs_utils_core::{call_if_true,
                          ch,
                          get_tui_styles,
-                         log_error,
                          position,
                          requested_size_percent,
                          size,
@@ -353,7 +352,7 @@ mod handle_focus {
                 has_focus.set_id(FlexBoxId::from(Id::Column2 as u8))
             }
         } else {
-            log_error("No focus id has been set, and it should be set!".to_string());
+            tracing::error!("No focus id has been set, and it should be set!");
         }
     }
 }
