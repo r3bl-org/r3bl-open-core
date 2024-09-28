@@ -38,7 +38,7 @@ const LOG_FILE_NAME: &str = "log.txt";
 /// [tracing_core::LevelFilter::OFF], then logging won't be enabled. It won't matter if
 /// you call any of the other logging functions in this module, or directly use the
 /// [tracing::info!], [tracing::debug!], etc. macros.
-pub fn try_to_set_log_level(
+pub fn try_initialize_global_logging(
     level_filter: tracing_core::LevelFilter,
 ) -> miette::Result<()> {
     // Early return if the level filter is off.
@@ -56,22 +56,12 @@ pub fn try_to_set_log_level(
     ok!()
 }
 
-pub fn log_info(arg: String) {
-    tracing::info!(arg);
-}
-
+// TODO: remove all usages of this
 pub fn log_debug(arg: String) {
     tracing::debug!(arg);
 }
 
-pub fn log_warn(arg: String) {
-    tracing::warn!(arg);
-}
-
-pub fn log_trace(arg: String) {
-    tracing::trace!(arg);
-}
-
+// TODO: remove all usages of this
 pub fn log_error(arg: String) {
     tracing::error!(arg);
 }

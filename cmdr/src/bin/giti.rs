@@ -38,7 +38,7 @@ use r3bl_rs_utils_core::{call_if_true,
                          log_debug,
                          log_error,
                          throws,
-                         try_to_set_log_level,
+                         try_initialize_global_logging,
                          CommonResult};
 use r3bl_tuify::{select_from_list_with_multi_line_header, SelectionMode, StyleSheet};
 
@@ -52,7 +52,7 @@ async fn main() -> CommonResult<()> {
 
         let enable_logging = cli_arg.global_options.enable_logging;
         call_if_true!(enable_logging, {
-            try_to_set_log_level(tracing_core::LevelFilter::DEBUG).ok();
+            try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
             log_debug("Start logging...".to_string());
             log_debug(format!("cli_args {:?}", cli_arg));
         });

@@ -36,7 +36,7 @@ mod ex_rc;
 use std::str::FromStr;
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{logging::try_to_set_log_level,
+use r3bl_rs_utils_core::{logging::try_initialize_global_logging,
                          ok,
                          style_prompt,
                          throws,
@@ -68,9 +68,9 @@ async fn main() -> CommonResult<()> {
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
     if ENABLE_TRACE_EXAMPLES | DEBUG_TUI_MOD {
-        try_to_set_log_level(tracing_core::LevelFilter::DEBUG).ok();
+        try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
     } else {
-        try_to_set_log_level(tracing_core::LevelFilter::OFF).ok();
+        try_initialize_global_logging(tracing_core::LevelFilter::OFF).ok();
     }
 
     loop {

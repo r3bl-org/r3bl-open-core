@@ -16,10 +16,7 @@
  */
 
 use std::fmt::Debug;
-use crate::ex_pitch::state::state_mutator;
-use tokio::sync::mpsc::Sender;
 
-use crate::ex_pitch::state::FILE_CONTENT_ARRAY;
 use r3bl_rs_utils_core::{call_if_true,
                          ch,
                          get_tui_styles,
@@ -73,8 +70,9 @@ use r3bl_tui::{box_end,
                TerminalWindowMainThreadSignal,
                ZOrder,
                DEBUG_TUI_MOD};
+use tokio::sync::mpsc::Sender;
 
-use crate::ex_pitch::state::{AppSignal, State};
+use crate::ex_pitch::state::{state_mutator, AppSignal, State, FILE_CONTENT_ARRAY};
 
 /// Constants for the ids.
 #[repr(u8)]
