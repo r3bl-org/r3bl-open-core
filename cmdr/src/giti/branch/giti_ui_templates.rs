@@ -18,8 +18,7 @@
 use std::{env::var, process::Command};
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style};
-use r3bl_rs_utils_core::{log_error,
-                         ColorWheel,
+use r3bl_rs_utils_core::{ColorWheel,
                          CommonError,
                          CommonErrorType,
                          CommonResult,
@@ -154,6 +153,6 @@ pub fn report_unknown_error_and_propagate<T>(
     }
     .to_string();
 
-    log_error(error_msg.clone());
+    tracing::error!(error_msg);
     CommonError::new::<T>(CommonErrorType::CommandExecutionError, &error_msg)
 }

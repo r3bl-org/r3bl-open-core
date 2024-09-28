@@ -19,7 +19,6 @@ use std::{fmt::Debug, marker::PhantomData};
 
 use r3bl_rs_utils_core::{call_if_true,
                          ch,
-                         log_error,
                          position,
                          throws,
                          Ansi256GradientIndex,
@@ -292,7 +291,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
             }
         },
         Err(error) => {
-            log_error(format!("main_event_loop -> handle_result_generated_by_app_after_handling_action. Error: {error}"));
+            tracing::error!("main_event_loop -> handle_result_generated_by_app_after_handling_action. Error: {error}");
         }
     }
 }
@@ -353,8 +352,7 @@ where
                     telemetry_global_static::set_end_ts();
 
                     call_if_true!(DEBUG_TUI_MOD, {
-                        let msg = format!("MySubscriber::render() error ❌: {error}");
-                        log_error(msg);
+                        tracing::error!("MySubscriber::render() error ❌: {error}");
                     });
                 }
                 Ok(render_pipeline) => {

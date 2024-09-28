@@ -21,7 +21,7 @@ use std::{collections::HashMap,
           path::Path};
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{call_if_true, log_debug, log_error};
+use r3bl_rs_utils_core::call_if_true;
 use r3bl_tui::{DialogBuffer,
                EditorBuffer,
                FlexBoxId,
@@ -223,17 +223,19 @@ pub mod file_utils {
             let result_file_read = std::fs::read_to_string(file_path);
             match result_file_read {
                 Ok(content) => {
-                    let msg = format!("Successfully read file: {file_path:?}")
-                        .green()
-                        .to_string();
                     call_if_true!(DEBUG_TUI_MOD, {
-                        log_debug(format!("\n💾💾💾✅ {}", msg));
+                        tracing::debug!(
+                            "\n💾💾💾✅ Successfully read file: {}",
+                            format!("{file_path:?}").green()
+                        );
                     });
                     return content.lines().map(|s| s.to_string()).collect();
                 }
                 Err(error) => {
-                    let msg = format!("Failed to read file: {error:?}").red().to_string();
-                    log_error(format!("\n💾💾💾❌ {}", msg));
+                    tracing::error!(
+                        "\n💾💾💾❌ Failed to read file: {}",
+                        format!("{error:?}").red()
+                    );
                 }
             }
         }
@@ -251,16 +253,18 @@ pub mod file_utils {
             let result_file_write = std::fs::write(file_path.clone(), content);
             match result_file_write {
                 Ok(_) => {
-                    let msg = format!("Successfully saved file: {file_path:?}")
-                        .green()
-                        .to_string();
                     call_if_true!(DEBUG_TUI_MOD, {
-                        log_debug(format!("\n💾💾💾❌ {}", msg));
+                        tracing::debug!(
+                            "\n💾💾💾❌ Successfully saved file: {}",
+                            format!("{file_path:?}").green()
+                        );
                     });
                 }
                 Err(error) => {
-                    let msg = format!("Failed to save file: {error:?}").red().to_string();
-                    log_error(format!("\n💾💾💾✅ {}", msg));
+                    tracing::error!(
+                        "\n💾💾💾✅ Failed to save file: {}",
+                        format!("{error:?}").red()
+                    );
                 }
             }
         });

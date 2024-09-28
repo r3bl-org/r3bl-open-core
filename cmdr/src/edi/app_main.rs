@@ -23,7 +23,6 @@ use r3bl_rs_utils_core::{call_if_true,
                          get_tui_style,
                          get_tui_styles,
                          log_debug,
-                         log_error,
                          position,
                          requested_size_percent,
                          send_signal,
@@ -225,10 +224,9 @@ mod app_main_impl_app_trait {
                         });
                     }
                     Err(err) => {
-                        log_error(
-                            format!("\n📣 Error opening feedback link: {err:?}")
-                                .red()
-                                .to_string(),
+                        tracing::error!(
+                            "\n📣 Error opening feedback link: {}",
+                            format!("{err:?}").red()
                         );
                     }
                 }
@@ -308,9 +306,7 @@ mod app_main_impl_app_trait {
                             err_msg: msg,
                         }) = err.downcast_ref::<CommonError>()
                         {
-                            log_error(format!(
-                                "📣 Error activating simple modal: {msg:?}"
-                            ));
+                            tracing::error!("📣 Error activating simple modal: {msg:?}")
                         }
                     };
 
