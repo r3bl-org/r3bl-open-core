@@ -55,8 +55,3 @@ pub fn try_initialize_global_logging(
 
     ok!()
 }
-
-// TODO: remove all usages of this
-pub fn log_debug(arg: String) {
-    tracing::debug!(arg);
-}

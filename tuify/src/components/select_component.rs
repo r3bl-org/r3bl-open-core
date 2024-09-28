@@ -27,7 +27,7 @@ use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                         Stylize},
                 terminal::{Clear, ClearType}};
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_rs_utils_core::{call_if_true, ch, log_debug, throws, ChUnit, UnicodeString};
+use r3bl_rs_utils_core::{call_if_true, ch, throws, ChUnit, UnicodeString};
 
 use crate::{apply_style,
             get_crossterm_color_based_on_terminal_capabilities,
@@ -114,14 +114,14 @@ impl<W: Write> FunctionComponent<W, State<'_>> for SelectComponent<W> {
             };
 
             call_if_true!(DEVELOPMENT_MODE, {
-                log_debug(
-                      format!(
-                          "🍎🍎🍎\n render()::state: \n\t[raw_caret_row_index: {}, scroll_offset_row_index: {}], \n\theader_viewport_height: {}, items_viewport_height:{}, viewport_width:{}",
-                          state.raw_caret_row_index, state.scroll_offset_row_index, header_viewport_height, items_viewport_height, viewport_width
-                      )
-                      .blue()
-                      .to_string(),
-                  );
+                tracing::debug!(
+                    "🍎🍎🍎\n render()::state: \n\t[raw_caret_row_index: {}, scroll_offset_row_index: {}], \n\theader_viewport_height: {}, items_viewport_height:{}, viewport_width:{}",
+                    format!("{}", state.raw_caret_row_index).blue(),
+                    format!("{}", state.scroll_offset_row_index).blue(),
+                    format!("{}", header_viewport_height).blue(),
+                    format!("{}", items_viewport_height).blue(),
+                    format!("{}", viewport_width).blue()
+                );
             });
 
             self.allocate_viewport_height_space(state)?;

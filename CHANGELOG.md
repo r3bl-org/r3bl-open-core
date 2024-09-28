@@ -665,23 +665,25 @@ ensure that the codebase is easier to maintain and understand, and easier to add
 features to in the future. The separation of concerns is now much clearer, and they
 reflect how the functionality is used in the real world.
 
+- Removed:
+  - Remove the dependency on `r3bl_simple_logger` and archive it. You can read the details
+    in its [CHANGELOG entry](#archived-2024-09-27). Tokio tracing is now used under the
+    covers.
+  - Remove all the functions like `log_debug`, `log_info`, etc. and favor directly using
+    tokio tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
+
 - Changed:
-  - Renamed the `debug!` macro, which is confusing, since it clashes with logging, to
+  - Rename the `debug!` macro, which is confusing, since it clashes with logging, to
     `console_log!`. This macro is used in many places in the codebase for quick formatted
     output to console (via `eprintln!`). The code to format the output is in the
     `console_log_impl.rs` file.
   - Reorganize the `src` folder to make sure that there aren't any top level files, and that
     everything is in a module. This is to make it easier to add new modules in the future.
 
-- Removed:
-  - The dependency on `r3bl_simple_logger` has been removed and that entire crate has been
-    archived. You can read the details in its [CHANGELOG entry](#archived-2024-09-27).
-    Tokio tracing is now used under the covers.
-
 - Added:
-  - The actual logging API is left as is, and a new variant is also included, so you are
-    free to choose to keep using the old API, or directly using tokio tracing, or a mix of
-    both! See `logging_api.rs` for more details.
+  - Simplify the actual logging API into a single function, and allow use of tokio
+    tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
+    `logging_api.rs` for more details.
   - Move the `color_wheel` module into `r3bl_rs_utils_core` crate. This is to ensure that
     it is possible to import just color wheel and lolcat related functionality without
     having to import the entire `r3bl_tui` crate. And de-tangles the dependency tree,

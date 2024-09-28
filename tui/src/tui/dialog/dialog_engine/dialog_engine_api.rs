@@ -34,8 +34,7 @@ use r3bl_rs_utils_core::{ch,
                          UnicodeString,
                          SPACER};
 
-use crate::{editor_buffer_clipboard_support::system_clipboard_service_provider::SystemClipboard,
-            render_ops,
+use crate::{render_ops,
             render_pipeline,
             render_tui_styled_texts_into,
             BorderGlyphCharacter,
@@ -63,6 +62,7 @@ use crate::{editor_buffer_clipboard_support::system_clipboard_service_provider::
             RenderPipeline,
             SpecialKey,
             SurfaceBounds,
+            SystemClipboard,
             ZOrder};
 
 #[derive(Debug)]

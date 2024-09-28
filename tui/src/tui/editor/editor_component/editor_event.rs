@@ -18,7 +18,7 @@
 use std::fmt::Debug;
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{call_if_true, log_debug, Size};
+use r3bl_rs_utils_core::{call_if_true, Size};
 use serde::{Deserialize, Serialize};
 
 use crate::{editor_buffer::EditorBuffer,
@@ -89,10 +89,10 @@ impl TryFrom<InputEvent> for EditorEvent {
 
     fn try_from(input_event: InputEvent) -> Result<Self, Self::Error> {
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
-            log_debug(format!(
+            tracing::debug!(
                 "\n🐥🐥🐥  EditorEvent::try_from: {}",
-                format!("{}", input_event).red().on_white()
-            ));
+                format!("{input_event}").red().on_white()
+            );
         });
 
         match input_event {

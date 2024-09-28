@@ -29,7 +29,7 @@
 
 use crossterm::style::Stylize;
 use nom::{branch::alt, combinator::map, IResult};
-use r3bl_rs_utils_core::{call_if_true, log_debug};
+use r3bl_rs_utils_core::call_if_true;
 
 use crate::{parse_fragment_plain_text_no_new_line,
             parse_fragment_starts_with_backtick_err_on_new_line,
@@ -94,10 +94,14 @@ pub fn parse_inline_fragments_until_eol_or_eoi(
     };
 
     call_if_true!(DEBUG_MD_PARSER, {
-        log_debug(format!("\n📣📣📣\n input: {:?}", input).green().to_string());
+        tracing::debug!("\n📣📣📣\n input: {}", format!("{input:?}").green());
         match it {
-            Ok(ref element) => log_debug(format!("✅✅✅ OK {:#?}", element).magenta().to_string()),
-            Err(ref error) => log_debug(format!("🟥🟥🟥 NO {:#?}", error)),
+            Ok(ref element) => {
+                tracing::debug!("✅✅✅ OK {}", format!("{element:#?}").magenta());
+            },
+            Err(ref error) => {
+                tracing::debug!("🟥🟥🟥 NO {}", format!("{error:#?}").red());
+            },
         }
     });
 
