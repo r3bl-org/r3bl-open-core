@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::{cmp::Ordering, mem::replace};
+use std::{cmp::Ordering, collections::HashMap, mem::replace};
 
 use r3bl_rs_utils_core::{ch,
                          position,
@@ -1097,8 +1097,6 @@ mod content_get {
 }
 
 mod content_mut {
-    use std::collections::HashMap;
-
     use super::*;
 
     pub fn insert_str_at_caret(args: EditorArgsMut<'_>, chunk: &str) {

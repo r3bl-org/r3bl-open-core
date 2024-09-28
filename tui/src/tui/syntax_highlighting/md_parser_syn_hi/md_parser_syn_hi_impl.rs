@@ -27,7 +27,7 @@ use r3bl_rs_utils_core::{CommonError,
                          TuiStyledTexts,
                          UnicodeString};
 use r3bl_rs_utils_macro::tui_style;
-use syntect::{highlighting::Theme, parsing::SyntaxSet};
+use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 
 use super::create_color_wheel_from_heading_data;
 use crate::{constants::{AUTHORS,
@@ -211,8 +211,6 @@ impl StyleUSSpanLines {
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         mod inner {
-            use syntect::easy::HighlightLines;
-
             use super::*;
 
             pub fn try_use_syntect(

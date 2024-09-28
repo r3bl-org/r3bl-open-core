@@ -29,6 +29,7 @@ use r3bl_rs_utils_core::{ch,
 use serde::{Deserialize, Serialize};
 
 use crate::{lookup_size,
+            DisplayConstants,
             EditorEngine,
             EditorEngineConfig,
             PartialFlexBox,
@@ -132,7 +133,6 @@ pub struct DialogEngineConfigOptions {
 
 mod dialog_engine_config_options_impl {
     use super::*;
-    use crate::DisplayConstants;
 
     impl Default for DialogEngineConfigOptions {
         fn default() -> Self {
