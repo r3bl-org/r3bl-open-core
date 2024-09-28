@@ -17,7 +17,6 @@
 
 use r3bl_rs_utils_core::{call_if_true,
                          ch,
-                         log_debug,
                          ChUnit,
                          CommonError,
                          CommonErrorType,
@@ -61,8 +60,7 @@ impl RenderPipeline {
         }
 
         call_if_true!(DEBUG_TUI_COMPOSITOR, {
-            let msg = format!("offscreen_buffer: \n🌟🌟🌟\n{my_offscreen_buffer:#?}");
-            log_debug(msg);
+            tracing::debug!("offscreen_buffer: \n🌟🌟🌟\n{my_offscreen_buffer:#?}");
         });
 
         my_offscreen_buffer
@@ -175,7 +173,7 @@ pub fn print_plain_text(
     }
 
     call_if_true!(DEBUG_TUI_COMPOSITOR, {
-        let msg = format!(
+        tracing::debug!(
             "\n🚀🚀🚀 print_plain_text():
             insertion at: display_row_index: {}, display_col_index: {}, window_size: {:?},
             text: '{}',
@@ -186,7 +184,6 @@ pub fn print_plain_text(
             text.string,
             text.display_width
         );
-        log_debug(msg);
     });
 
     // Try to get the line at `row_index`.
@@ -233,15 +230,13 @@ pub fn print_plain_text(
     call_if_true!(
         DEBUG_TUI_COMPOSITOR,
         if maybe_style.is_some() {
-            let msg = format!(
+            tracing::debug!(
                 "\n🔴🔴🔴\n[row: {display_row_index}, col: {display_col_index}] - style: {maybe_style:?}",
             );
-            log_debug(msg);
         } else {
-            let msg = format!(
+            tracing::debug!(
                 "\n🟣🟣🟣\n[row: {display_row_index}, col: {display_col_index}] - style: None",
             );
-            log_debug(msg);
         }
     );
 

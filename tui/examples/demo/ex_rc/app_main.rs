@@ -21,7 +21,6 @@ use chrono::{DateTime, Local};
 use r3bl_rs_utils_core::{call_if_true,
                          ch,
                          get_tui_styles,
-                         log_debug,
                          position,
                          requested_size_percent,
                          send_signal,
@@ -189,8 +188,7 @@ mod constructor {
     impl Default for AppMain {
         fn default() -> Self {
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("🪙 {}", "construct ex_rc::AppWithLayout");
-                log_debug(msg);
+                tracing::debug!("🪙 construct ex_rc::AppWithLayout");
             });
             Self {
                 data: AppData {
@@ -431,8 +429,7 @@ mod populate_component_registry {
         has_focus.set_id(id);
         call_if_true!(DEBUG_TUI_MOD, {
             {
-                let msg = format!("🪙 {} = {:?}", "init has_focus", has_focus.get_id());
-                log_debug(msg);
+                tracing::debug!("🪙 init has_focus = {:?}", has_focus.get_id());
             }
         });
     }
@@ -466,8 +463,7 @@ mod populate_component_registry {
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!("🪙 {}", "construct EditorComponent { on_buffer_change }");
-            log_debug(msg);
+            tracing::debug!("🪙 construct EditorComponent [ on_buffer_change ]");
         });
     }
 }

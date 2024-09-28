@@ -18,12 +18,12 @@
 use std::error::Error;
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{call_if_true, ch, log_debug, UnicodeString};
+use r3bl_rs_utils_core::{call_if_true, ch, UnicodeString};
 
 use super::EditorBuffer;
 use crate::{EditorArgsMut, EditorEngineInternalApi, DEBUG_TUI_COPY_PASTE};
 
-type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
+pub type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 
 /// Abstraction for the clipboard service for dependency injection. This trait is
 /// implemented by both a test clipboard service and a system clipboard service.
@@ -62,15 +62,10 @@ pub fn copy_to_clipboard(
         clipboard_service_provider.try_to_put_content_into_clipboard(vec_str.join("\n"));
     if let Err(error) = result {
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
-            log_debug(
-                format!(
-                    "\n📋📋📋 Failed to copy selected text to clipboard: {0}",
-                    /* 0 */
-                    format!("{error}").white(),
-                )
-                .on_dark_red()
-                .to_string(),
-            )
+            tracing::debug!(
+                "\n📋📋📋 Failed to copy selected text to clipboard: {}",
+                format!("{error}").white().on_dark_red(),
+            );
         });
     }
 }
@@ -117,97 +112,20 @@ pub fn paste_from_clipboard(
             }
 
             call_if_true!(DEBUG_TUI_COPY_PASTE, {
-                log_debug(
-                    format!(
-                        "\n📋📋📋 Text was pasted from clipboard: \n{0}",
-                        /* 0 */
-                        clipboard_text.clone().dark_red()
-                    )
-                    .black()
-                    .on_green()
-                    .to_string(),
-                )
+                tracing::debug!(
+                    "\n📋📋📋 Text was pasted from clipboard: \n{}",
+                    clipboard_text.to_string().black().on_green()
+                );
             });
         }
 
         Err(error) => {
             call_if_true!(DEBUG_TUI_COPY_PASTE, {
-                log_debug(
-                    format!(
-                        "\n📋📋📋 Failed to paste the text from clipboard: {0}",
-                        /* 0 */
-                        format!("{error}").white(),
-                    )
-                    .on_dark_red()
-                    .to_string(),
-                )
+                tracing::debug!(
+                    "\n📋📋📋 Failed to paste the text from clipboard: {}",
+                    format!("{error}").white().on_dark_red(),
+                );
             });
-        }
-    }
-}
-
-pub mod test_clipboard_service_provider {
-    use super::{ClipboardResult, ClipboardService};
-
-    #[derive(Debug, Default)]
-    pub struct TestClipboard {
-        pub content: String,
-    }
-
-    impl ClipboardService for TestClipboard {
-        fn try_to_put_content_into_clipboard(
-            &mut self,
-            content: String,
-        ) -> ClipboardResult<()> {
-            self.content = content;
-            Ok(())
-        }
-
-        fn try_to_get_content_from_clipboard(&mut self) -> ClipboardResult<String> {
-            Ok(self.content.clone())
-        }
-    }
-}
-
-pub mod system_clipboard_service_provider {
-    use copypasta_ext::{copypasta::ClipboardProvider, x11_fork::ClipboardContext};
-    use crossterm::style::Stylize;
-    use r3bl_rs_utils_core::{call_if_true, log_debug, throws};
-
-    use super::{ClipboardResult, ClipboardService};
-    use crate::DEBUG_TUI_COPY_PASTE;
-
-    pub struct SystemClipboard;
-
-    impl ClipboardService for SystemClipboard {
-        fn try_to_put_content_into_clipboard(
-            &mut self,
-            content: String,
-        ) -> ClipboardResult<()> {
-            throws!({
-                let mut ctx = ClipboardContext::new()?;
-                ctx.set_contents(content.clone())?;
-
-                call_if_true!(DEBUG_TUI_COPY_PASTE, {
-                    log_debug(
-                        format!(
-                            "\n📋📋📋 Selected Text was copied to clipboard: \n{0}",
-                            /* 0 */
-                            content.dark_red()
-                        )
-                        .black()
-                        .on_green()
-                        .to_string(),
-                    )
-                });
-            })
-        }
-
-        fn try_to_get_content_from_clipboard(&mut self) -> ClipboardResult<String> {
-            let mut ctx = ClipboardContext::new()?;
-            let content = ctx.get_contents()?;
-
-            Ok(content)
         }
     }
 }

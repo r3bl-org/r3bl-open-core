@@ -22,7 +22,6 @@ use r3bl_rs_utils_core::{call_if_true,
                          ch,
                          get_tui_style,
                          get_tui_styles,
-                         log_debug,
                          position,
                          requested_size_percent,
                          send_signal,
@@ -151,8 +150,7 @@ mod app_main_constructor {
     impl Default for AppMain {
         fn default() -> Self {
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("🪙 {}", "construct edi::AppMain");
-                log_debug(msg);
+                tracing::debug!("🪙 construct edi::AppMain");
             });
             Self
         }
@@ -216,10 +214,9 @@ mod app_main_impl_app_trait {
                 match result_open {
                     Ok(_) => {
                         call_if_true!(DEBUG_TUI_MOD, {
-                            log_debug(
-                                format!("\n📣 Opened feedback link: {link_url:?}")
-                                    .green()
-                                    .to_string(),
+                            tracing::debug!(
+                                "\n📣 Opened feedback link: {}",
+                                format!("{link_url:?}").green()
                             );
                         });
                     }
@@ -407,8 +404,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
             );
 
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("📣 activate modal simple: {:?}", has_focus);
-                log_debug(msg);
+                tracing::debug!("📣 activate modal simple: {:?}", has_focus);
             });
         });
     }
@@ -464,10 +460,8 @@ mod modal_dialog_ask_for_filename_to_save_file {
                         let user_input_file_path = text.trim().to_string();
                         if !user_input_file_path.is_empty() {
                             call_if_true!(DEBUG_TUI_MOD, {
-                                let msg = format!("\n💾💾💾 About to save the new buffer with given filename: {user_input_file_path:?}")
-                                    .magenta()
-                                    .to_string();
-                                log_debug(msg);
+                                tracing::debug!("\n💾💾💾 About to save the new buffer with given filename: {}",
+                                format!("{user_input_file_path:?}").magenta());
                             });
 
                             let maybe_editor_buffer = state.get_mut_editor_buffer(
@@ -526,11 +520,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
         );
 
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!(
-                "🪙 {}",
-                "construct DialogComponent (simple) { on_dialog_press }"
-            );
-            log_debug(msg);
+            tracing::debug!("🪙 construct DialogComponent (simple) [ on_dialog_press ]",);
         });
     }
 }
@@ -606,10 +596,7 @@ mod populate_component_registry {
         has_focus.set_id(id);
 
         call_if_true!(DEBUG_TUI_MOD, {
-            {
-                let msg = format!("🪙 {} = {:?}", "init has_focus", has_focus.get_id());
-                log_debug(msg);
-            }
+            tracing::debug!("🪙 {} = {:?}", "init has_focus", has_focus.get_id());
         });
     }
 
@@ -638,8 +625,7 @@ mod populate_component_registry {
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!("🪙 {}", "construct EditorComponent { on_buffer_change }");
-            log_debug(msg);
+            tracing::debug!("🪙 construct EditorComponent [ on_buffer_change ]");
         });
     }
 }

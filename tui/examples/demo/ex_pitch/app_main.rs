@@ -20,7 +20,6 @@ use std::fmt::Debug;
 use r3bl_rs_utils_core::{call_if_true,
                          ch,
                          get_tui_styles,
-                         log_debug,
                          position,
                          requested_size_percent,
                          send_signal,
@@ -103,8 +102,7 @@ mod constructor {
     impl Default for AppMain {
         fn default() -> Self {
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("🪙 {}", "construct ex_pitch::AppWithLayout");
-                log_debug(msg);
+                tracing::debug!("🪙 construct ex_pitch::AppWithLayout");
             });
             Self
         }
@@ -303,10 +301,7 @@ mod populate_component_registry {
         // Switch focus to the editor component if focus is not set.
         has_focus.set_id(id);
         call_if_true!(DEBUG_TUI_MOD, {
-            {
-                let msg = format!("🪙 {} = {:?}", "init has_focus", has_focus.get_id());
-                log_debug(msg);
-            }
+            tracing::debug!("🪙 init has_focus = {:?}", has_focus.get_id());
         });
     }
 
@@ -339,8 +334,7 @@ mod populate_component_registry {
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!("🪙 {}", "construct EditorComponent { on_buffer_change }");
-            log_debug(msg);
+            tracing::debug!("🪙 construct EditorComponent [ on_buffer_change ]");
         });
     }
 }

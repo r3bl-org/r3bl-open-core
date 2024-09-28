@@ -20,7 +20,7 @@ use std::io::{Result, Write};
 use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
                 queue,
                 terminal::{Clear, ClearType}};
-use r3bl_rs_utils_core::{call_if_true, log_debug, throws, ChUnit, Size};
+use r3bl_rs_utils_core::{call_if_true, throws, ChUnit, Size};
 
 use crate::{ResizeHint, DEVELOPMENT_MODE};
 
@@ -64,10 +64,7 @@ pub trait FunctionComponent<W: Write, S: CalculateResizeHint> {
     fn clear_viewport_for_resize(&mut self, state: &mut S) -> Result<()> {
         throws!({
             call_if_true!(DEVELOPMENT_MODE, {
-                log_debug(format!(
-                    "\n🥑🥑🥑\nresize hint: {:?}",
-                    state.get_resize_hint()
-                ));
+                tracing::debug!("\n🥑🥑🥑\nresize hint: {:?}", state.get_resize_hint());
             });
 
             let viewport_height = match state.get_resize_hint() {
