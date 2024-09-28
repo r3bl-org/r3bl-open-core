@@ -27,8 +27,6 @@ use dirs::config_dir;
 use r3bl_analytics_schema::AnalyticsEvent;
 use r3bl_rs_utils_core::{call_if_true,
                          friendly_random_id,
-                         log_debug,
-                         log_error,
                          CommonError,
                          CommonErrorType,
                          CommonResult};
@@ -112,21 +110,17 @@ pub mod config_folder {
                 match result_create_dir_all {
                     Ok(_) => {
                         call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
-                            log_debug(
-                                format!(
-                                    "Successfully created config folder: {config_folder_path:?}"
-                                )
-                                .green()
-                                .to_string(),
+                            tracing::debug!(
+                                "Successfully created config folder: {}",
+                                format!("{config_folder_path:?}").green()
                             );
                         });
                         Ok(config_folder_path)
                     }
                     Err(error) => {
-                        log_error(
-                            format!("Could not create config folder.\n{error:?}",)
-                                .red()
-                                .to_string(),
+                        tracing::error!(
+                            "Could not create config folder.\n{}",
+                            format!("{error:?}").red()
                         );
                         CommonError::new_err_with_only_type(
                             CommonErrorType::ConfigFolderCountNotBeCreated,
@@ -135,13 +129,9 @@ pub mod config_folder {
                 }
             }
             None => {
-                log_error(
-                    format!(
-                        "Could not get config folder.\n{:?}",
-                        try_get_config_folder_path(),
-                    )
-                    .red()
-                    .to_string(),
+                tracing::error!(
+                    "Could not get config folder.\n{}",
+                    format!("{:?}", try_get_config_folder_path()).red()
                 );
                 CommonError::new_err_with_only_type(
                     CommonErrorType::ConfigFolderPathCouldNotBeGenerated,
@@ -183,10 +173,9 @@ pub mod proxy_machine_id {
                 match result {
                     Ok(contents) => {
                         call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
-                            log_debug(
-                                format!("Successfully read proxy machine ID from file: {contents:?}")
-                                .green()
-                                .to_string(),
+                            tracing::debug!(
+                                "Successfully read proxy machine ID from file: {}",
+                                format!("{contents:?}").green()
                             );
                         });
                         contents
@@ -203,23 +192,17 @@ pub mod proxy_machine_id {
                                 );
 
                                 call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
-                                    log_debug(
-                                        format!(
-                                            "Successfully wrote proxy machine ID to file: {new_id:?}"
-                                        )
-                                        .green()
-                                        .to_string(),
+                                    tracing::debug!(
+                                        "Successfully wrote proxy machine ID to file: {}",
+                                        format!("{new_id:?}").green()
                                     );
                                 });
                             }
                             Err(error) => {
-                                log_error(
-                                        format!(
-                                            "Could not write proxy machine ID to file.\n{error:?}",
-                                        )
-                                        .red()
-                                        .to_string(),
-                                    );
+                                tracing::error!(
+                                    "Could not write proxy machine ID to file.\n{}",
+                                    format!("{error:?}").red()
+                                );
                             }
                         }
                         new_id
@@ -268,35 +251,23 @@ pub mod report_analytics {
                     .await;
                     match result {
                         Ok(_) => {
-                            log_debug(
-                                 format!(
-                                     "Successfully reported analytics event to r3bl-base.\n{:#?}",
-                                     json
-                                 )
-                                 .green()
-                                 .to_string(),
-                             );
+                            tracing::debug!(
+                                "Successfully reported analytics event to r3bl-base.\n{}",
+                                format!("{json:#?}").green()
+                            );
                         }
                         Err(error) => {
-                            log_error(
-                                 format!(
-                                     "Could not report analytics event to r3bl-base.\n{:#?}",
-                                     error
-                                 )
-                                 .red()
-                                 .to_string(),
-                             );
+                            tracing::error!(
+                                "Could not report analytics event to r3bl-base.\n{}",
+                                format!("{error:#?}").red()
+                            );
                         }
                     }
                 }
                 Err(error) => {
-                    log_error(
-                        format!(
-                            "Could not report analytics event to r3bl-base.\n{:#?}",
-                            error
-                        )
-                        .red()
-                        .to_string(),
+                    tracing::error!(
+                        "Could not report analytics event to r3bl-base.\n{}",
+                        format!("{error:#?}").red()
                     );
                 }
             }
@@ -357,20 +328,15 @@ pub mod http_client {
         if response.status().is_success() {
             // Handle successful response.
             call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
-                log_debug(
-                    format!("GET request succeeded: {response:#?}",)
-                        .green()
-                        .to_string(),
+                tracing::debug!(
+                    "GET request succeeded: {}",
+                    format!("{response:#?}").green()
                 );
             });
             Ok(response)
         } else {
             // Handle error response.
-            log_error(
-                format!("GET request failed: {response:#?}",)
-                    .red()
-                    .to_string(),
-            );
+            tracing::error!("GET request failed: {}", format!("{response:#?}").red());
             response.error_for_status()
         }
     }
@@ -384,20 +350,15 @@ pub mod http_client {
         if response.status().is_success() {
             // Handle successful response.
             call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
-                log_debug(
-                    format!("POST request succeeded: {response:#?}",)
-                        .green()
-                        .to_string(),
+                tracing::debug!(
+                    "POST request succeeded: {}",
+                    format!("{response:#?}").green()
                 );
             });
             Ok(response)
         } else {
             // Handle error response.
-            log_error(
-                format!("POST request failed: {response:#?}",)
-                    .red()
-                    .to_string(),
-            );
+            tracing::error!("POST request failed: {}", format!("{response:#?}").red());
             response.error_for_status()
         }
     }

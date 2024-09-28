@@ -22,7 +22,7 @@ use crossterm::event::{read,
                        KeyEventKind,
                        KeyEventState,
                        KeyModifiers};
-use r3bl_rs_utils_core::{call_if_true, ch, log_debug, log_error, Size};
+use r3bl_rs_utils_core::{call_if_true, ch, log_debug, Size};
 
 use crate::DEVELOPMENT_MODE;
 
@@ -94,7 +94,7 @@ fn read_key_press_unix() -> KeyPress {
             }
         }
         Err(err) => {
-            log_error(format!("ERROR getting event: {:?}", err).to_string());
+            tracing::error!("ERROR getting event: {err:?}");
             KeyPress::Error
         }
     }
@@ -172,7 +172,7 @@ fn read_key_press_windows() -> KeyPress {
             }
         }
         Err(err) => {
-            log_error(format!("ERROR getting event: {:?}", err).to_string());
+            tracing::error!("ERROR getting event: {err:?}");
             KeyPress::Error
         }
     }
