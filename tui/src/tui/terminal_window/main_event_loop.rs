@@ -20,7 +20,6 @@ use std::{fmt::Debug, marker::PhantomData};
 use r3bl_rs_utils_core::{call_if_true,
                          ch,
                          log_error,
-                         log_info,
                          position,
                          throws,
                          Ansi256GradientIndex,
@@ -169,8 +168,7 @@ impl TerminalWindow {
 
                             call_if_true!(DEBUG_TUI_MOD, {
                                 if let InputEvent::Keyboard(_)= input_event {
-                                    let msg = format!("main_event_loop -> Tick: ⏰ {input_event}");
-                                    log_info(msg);
+                                    tracing::info!("main_event_loop -> Tick: ⏰ {input_event}");
                                 }
                             });
 

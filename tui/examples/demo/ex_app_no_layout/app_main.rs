@@ -15,12 +15,52 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true,
+                         ch,
+                         position,
+                         send_signal,
+                         throws_with_return,
+                         tui_styled_text,
+                         tui_styled_texts,
+                         Ansi256GradientIndex,
+                         ChUnit,
+                         ColorChangeSpeed,
+                         ColorWheel,
+                         ColorWheelConfig,
+                         ColorWheelSpeed,
+                         CommonResult,
+                         GradientGenerationPolicy,
+                         GradientLengthKind,
+                         LolcatBuilder,
+                         Position,
+                         Size,
+                         TextColorizationPolicy,
+                         TuiStyledText,
+                         UnicodeString,
+                         DEFAULT_GRADIENT_STOPS};
 use r3bl_rs_utils_macro::tui_style;
-use r3bl_tui::*;
+use r3bl_tui::{render_ops,
+               render_pipeline,
+               render_tui_styled_texts_into,
+               telemetry_global_static,
+               Animator,
+               App,
+               BoxedSafeApp,
+               ComponentRegistryMap,
+               EventPropagation,
+               GlobalData,
+               HasFocus,
+               InputEvent,
+               Key,
+               KeyPress,
+               RenderOp,
+               RenderPipeline,
+               SpecialKey,
+               TerminalWindowMainThreadSignal,
+               ZOrder};
 use tokio::{sync::mpsc::Sender, time::Duration};
 
-use super::*;
+use super::{AppSignal, State};
 use crate::ENABLE_TRACE_EXAMPLES;
 
 #[derive(Default)]
@@ -280,10 +320,9 @@ mod app_main_impl_trait_app {
 
             throws_with_return!({
                 call_if_true!(ENABLE_TRACE_EXAMPLES, {
-                    let msg = format!(
+                    tracing::info!(
                         "⛵ AppNoLayout::handle_event -> input_event: {input_event}"
                     );
-                    log_info(msg)
                 });
 
                 let mut event_consumed = false;

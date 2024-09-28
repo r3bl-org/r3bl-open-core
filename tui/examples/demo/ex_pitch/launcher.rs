@@ -15,10 +15,11 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
-use r3bl_tui::*;
+use r3bl_rs_utils_core::{throws,
+                         CommonResult};
+use r3bl_tui::{keypress, InputEvent, ModifierKeysMask, TerminalWindow};
 
-use super::*;
+use super::{state::State, AppMain};
 
 pub async fn run_app() -> CommonResult<()> {
     throws!({
@@ -31,7 +32,6 @@ pub async fn run_app() -> CommonResult<()> {
         )];
 
         // Create a window.
-        TerminalWindow::main_event_loop(app, exit_keys, self::state::State::default())
-            .await?
+        TerminalWindow::main_event_loop(app, exit_keys, State::default()).await?
     });
 }

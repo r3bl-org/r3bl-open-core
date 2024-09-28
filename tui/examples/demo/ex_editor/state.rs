@@ -15,9 +15,15 @@
  *   limitations under the License.
  */
 
-use std::{collections::HashMap, fmt::*};
+use std::{collections::HashMap,
+          fmt::{Debug, Display, Formatter, Result}};
 
-use r3bl_tui::*;
+use r3bl_tui::{DialogBuffer,
+               EditorBuffer,
+               FlexBoxId,
+               HasDialogBuffers,
+               HasEditorBuffers,
+               DEFAULT_SYN_HI_FILE_EXT};
 
 use crate::ex_editor::Id;
 

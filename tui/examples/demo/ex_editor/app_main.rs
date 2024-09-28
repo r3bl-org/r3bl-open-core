@@ -15,11 +15,78 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true,
+                         ch,
+                         get_tui_style,
+                         get_tui_styles,
+                         log_debug,
+                         log_error,
+                         position,
+                         requested_size_percent,
+                         send_signal,
+                         size,
+                         throws,
+                         throws_with_return,
+                         tui_styled_text,
+                         tui_styled_texts,
+                         tui_stylesheet,
+                         ANSIBasicColor,
+                         ChUnit,
+                         CommonError,
+                         CommonResult,
+                         Position,
+                         Size,
+                         TuiColor,
+                         TuiStyledText,
+                         TuiStylesheet};
 use r3bl_rs_utils_macro::tui_style;
-use r3bl_tui::*;
+use r3bl_tui::{box_end,
+               box_props,
+               box_start,
+               render_component_in_current_box,
+               render_component_in_given_box,
+               render_ops,
+               render_tui_styled_texts_into,
+               surface,
+               App,
+               BoxedSafeApp,
+               ComponentRegistry,
+               ComponentRegistryMap,
+               DialogBuffer,
+               DialogChoice,
+               DialogComponent,
+               DialogEngineConfigOptions,
+               DialogEngineMode,
+               EditMode,
+               EditorBuffer,
+               EditorComponent,
+               EditorEngineConfig,
+               EventPropagation,
+               FlexBox,
+               FlexBoxId,
+               GlobalData,
+               HasEditorBuffers,
+               HasFocus,
+               InputEvent,
+               Key,
+               KeyPress,
+               LayoutDirection,
+               LayoutManagement,
+               LineMode,
+               ModifierKeysMask,
+               PerformPositioningAndSizing,
+               RenderOp,
+               RenderPipeline,
+               Surface,
+               SurfaceProps,
+               SurfaceRender,
+               SyntaxHighlightMode,
+               TerminalWindowMainThreadSignal,
+               ZOrder,
+               DEBUG_TUI_MOD};
+use tokio::sync::mpsc::Sender;
 
-use super::*;
+use super::{AppSignal, State};
 
 /// Constants for the ids.
 #[repr(u8)]
@@ -486,8 +553,6 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use tokio::sync::mpsc::Sender;
-
     use super::*;
 
     pub fn create_components(

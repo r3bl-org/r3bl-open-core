@@ -15,8 +15,8 @@
  *   limitations under the License.
  */
 
-use super::*;
-use crate::*;
+use super::{AppMain, State};
+use crate::{keypress, throws, CommonResult, InputEvent, TerminalWindow};
 
 pub async fn run_app() -> CommonResult<()> {
     throws!({

@@ -17,8 +17,17 @@
 
 use std::{fmt::Display, io::Result};
 
-use r3bl_ansi_color::*;
-use r3bl_tuify::*;
+use r3bl_ansi_color::{
+    self,
+    Color,
+    AnsiStyledText,
+};
+use r3bl_tuify::{
+    get_terminal_width,
+    select_from_list,
+    SelectionMode,
+    StyleSheet,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]

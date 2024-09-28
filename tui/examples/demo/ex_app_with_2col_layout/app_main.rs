@@ -15,11 +15,60 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true,
+                         ch,
+                         get_tui_styles,
+                         log_error,
+                         position,
+                         requested_size_percent,
+                         size,
+                         throws,
+                         throws_with_return,
+                         tui_styled_text,
+                         tui_styled_texts,
+                         tui_stylesheet,
+                         ChUnit,
+                         CommonResult,
+                         ContainsResult,
+                         Position,
+                         RgbValue,
+                         Size,
+                         TuiColor,
+                         TuiStyledText,
+                         TuiStylesheet};
 use r3bl_rs_utils_macro::tui_style;
-use r3bl_tui::*;
+use r3bl_tui::{box_end,
+               box_props,
+               box_start,
+               render_component_in_current_box,
+               render_ops,
+               render_tui_styled_texts_into,
+               surface,
+               App,
+               BoxedSafeApp,
+               ComponentRegistry,
+               ComponentRegistryMap,
+               Continuation,
+               EventPropagation,
+               FlexBoxId,
+               GlobalData,
+               HasFocus,
+               InputEvent,
+               Key,
+               KeyPress,
+               LayoutDirection,
+               LayoutManagement,
+               PerformPositioningAndSizing,
+               RenderOp,
+               RenderPipeline,
+               SpecialKey,
+               Surface,
+               SurfaceProps,
+               SurfaceRender,
+               ZOrder,
+               DEBUG_TUI_MOD};
 
-use super::*;
+use super::{AppSignal, ColumnComponent, State};
 
 // Constants for the ids.
 #[repr(u8)]
@@ -258,8 +307,7 @@ mod handle_focus {
 
         fn debug_log_has_focus(src: String, has_focus: &HasFocus) {
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("👀 {src} -> focus change & rerender: {has_focus:?}");
-                log_info(msg)
+                tracing::info!("👀 {src} -> focus change & rerender: {has_focus:?}");
             });
         }
 

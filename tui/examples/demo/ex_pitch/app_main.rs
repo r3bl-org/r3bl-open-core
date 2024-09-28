@@ -16,10 +16,63 @@
  */
 
 use std::fmt::Debug;
+use crate::ex_pitch::state::state_mutator;
+use tokio::sync::mpsc::Sender;
 
-use r3bl_rs_utils_core::*;
+use crate::ex_pitch::state::FILE_CONTENT_ARRAY;
+use r3bl_rs_utils_core::{call_if_true,
+                         ch,
+                         get_tui_styles,
+                         log_debug,
+                         position,
+                         requested_size_percent,
+                         send_signal,
+                         size,
+                         throws,
+                         throws_with_return,
+                         tui_styled_text,
+                         tui_styled_texts,
+                         tui_stylesheet,
+                         ChUnit,
+                         CommonResult,
+                         Position,
+                         Size,
+                         TuiStyledText,
+                         TuiStylesheet};
 use r3bl_rs_utils_macro::tui_style;
-use r3bl_tui::*;
+use r3bl_tui::{box_end,
+               box_props,
+               box_start,
+               render_component_in_current_box,
+               render_ops,
+               render_tui_styled_texts_into,
+               surface,
+               App,
+               BoxedSafeApp,
+               ComponentRegistry,
+               ComponentRegistryMap,
+               EditMode,
+               EditorComponent,
+               EditorEngineConfig,
+               EventPropagation,
+               FlexBoxId,
+               GlobalData,
+               HasFocus,
+               InputEvent,
+               Key,
+               KeyPress,
+               LayoutDirection,
+               LayoutManagement,
+               ModifierKeysMask,
+               PerformPositioningAndSizing,
+               RenderOp,
+               RenderPipeline,
+               Surface,
+               SurfaceProps,
+               SurfaceRender,
+               TerminalWindowMainThreadSignal,
+               ZOrder,
+               DEBUG_TUI_MOD};
 
 use crate::ex_pitch::state::{AppSignal, State};
 
@@ -70,7 +123,6 @@ mod constructor {
 
 mod app_main_impl_app_trait {
     use super::*;
-    use crate::ex_pitch::state::state_mutator;
 
     impl App for AppMain {
         type S = State;
@@ -241,8 +293,6 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use tokio::sync::mpsc::Sender;
-
     use super::*;
 
     pub fn create_components(
@@ -317,7 +367,6 @@ mod stylesheet {
 
 mod status_bar {
     use super::*;
-    use crate::ex_pitch::state::FILE_CONTENT_ARRAY;
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(
