@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_ansi_color::*;
+use r3bl_ansi_color::{global_color_support, AnsiStyledText, Color, ColorSupport, Style};
 
 fn main() {
     // Print a string w/ ANSI color codes.

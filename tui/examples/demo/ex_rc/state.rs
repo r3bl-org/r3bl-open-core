@@ -18,7 +18,9 @@
 use std::{collections::HashMap,
           fmt::{Debug, Display, Formatter, Result}};
 
-use r3bl_tui::*;
+use r3bl_tui::{EditorBuffer, FlexBoxId, HasEditorBuffers, DEFAULT_SYN_HI_FILE_EXT};
+
+use crate::ex_rc::Id;
 
 pub const FILE_CONTENT_ARRAY: [&str; 3] = [
     include_str!("slide1.md"),
@@ -52,7 +54,6 @@ pub struct State {
 
 pub mod state_mutator {
     use super::*;
-    use crate::ex_rc::Id;
 
     pub fn next_slide(state: &mut State) {
         if state.current_slide_index < FILE_CONTENT_ARRAY.len() - 1 {
