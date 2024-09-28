@@ -18,6 +18,7 @@
 use std::env::var;
 
 use clap::Parser;
+use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_cmdr::{edi::launcher, report_analytics, upgrade_check, AnalyticsAction};
 use r3bl_rs_utils_core::{call_if_true,
                          log_debug,
@@ -28,6 +29,7 @@ use r3bl_rs_utils_core::{call_if_true,
                          GradientGenerationPolicy,
                          TextColorizationPolicy,
                          UnicodeString};
+use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, LIZARD_GREEN, SLATE_GRAY};
 
 use crate::clap_config::CLIArg;
 
@@ -97,13 +99,6 @@ async fn main() -> CommonResult<()> {
 }
 
 pub mod edi_ui_templates {
-    use r3bl_ansi_color::{AnsiStyledText, Style};
-    use r3bl_tuify::{select_from_list,
-                     SelectionMode,
-                     StyleSheet,
-                     LIZARD_GREEN,
-                     SLATE_GRAY};
-
     use super::*;
 
     pub fn handle_multiple_files_not_supported_yet(cli_arg: CLIArg) -> Option<String> {

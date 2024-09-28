@@ -32,6 +32,7 @@ use r3bl_rs_utils_core::{call_if_true,
                          CommonError,
                          CommonErrorType,
                          CommonResult};
+use reqwest::{Client, Response};
 
 use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
@@ -68,7 +69,6 @@ impl std::fmt::Display for AnalyticsAction {
 
 pub mod config_folder {
     use super::*;
-    use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
     pub enum ConfigPaths {
         R3BLTopLevelFolderName,
@@ -347,10 +347,7 @@ pub mod upgrade_check {
 }
 
 pub mod http_client {
-    use reqwest::{Client, Response};
-
     use super::*;
-    use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
     pub async fn make_get_request(
         url: &str,

@@ -381,8 +381,8 @@ mod perform_paint {
     }
 }
 
-/// Given a crossterm command, this will run it and [log_error] or [log_info] the [Result] that is
-/// returned.
+/// Given a crossterm command, this will run it and [tracing::error!] or [tracing::info!]
+/// the [Result] that is returned.
 ///
 /// Paste docs: <https://github.com/dtolnay/paste>
 #[macro_export]

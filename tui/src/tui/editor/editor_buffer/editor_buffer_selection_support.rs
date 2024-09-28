@@ -570,8 +570,6 @@ impl EditorBufferApi {
 }
 
 mod multiline_select_helpers {
-    use r3bl_rs_utils_core::Position;
-
     use super::*;
 
     /// No existing selection, up, no direction change:
