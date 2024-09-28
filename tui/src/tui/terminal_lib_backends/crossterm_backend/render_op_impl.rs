@@ -35,8 +35,6 @@ use crossterm::{self,
                            LeaveAlternateScreen}};
 use r3bl_rs_utils_core::{call_if_true,
                          console_log,
-                         log_error,
-                         log_info,
                          throws,
                          CommonResult,
                          Position,
@@ -406,13 +404,13 @@ macro_rules! exec_render_op {
                     let msg = format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
                     call_if_true!(
                         DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                        log_error(msg)
+                        tracing::error!(msg)
                     );
                 } else {
                     let msg = format!("crossterm: ✅ {} successfully", $arg_log_msg);
                     call_if_true! {
                       DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                      log_info(msg)
+                      tracing::info!(msg)
                     };
                 }
             })

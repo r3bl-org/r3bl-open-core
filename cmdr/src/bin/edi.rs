@@ -22,7 +22,7 @@ use r3bl_cmdr::{edi::launcher, report_analytics, upgrade_check, AnalyticsAction}
 use r3bl_rs_utils_core::{call_if_true,
                          log_debug,
                          throws,
-                         try_to_set_log_level,
+                         try_initialize_global_logging,
                          ColorWheel,
                          CommonResult,
                          GradientGenerationPolicy,
@@ -41,7 +41,7 @@ async fn main() -> CommonResult<()> {
         // Start logging.
         let enable_logging = cli_arg.global_options.enable_logging;
         call_if_true!(enable_logging, {
-            try_to_set_log_level(tracing_core::LevelFilter::DEBUG).ok();
+            try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
             log_debug("Start logging...".to_string());
             log_debug(format!("cli_args {:?}", cli_arg));
         });

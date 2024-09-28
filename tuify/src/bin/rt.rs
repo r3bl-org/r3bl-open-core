@@ -23,7 +23,7 @@ use std::{io::{stdin, BufRead, Result},
 
 use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{call_if_true, log_debug, throws, try_to_set_log_level};
+use r3bl_rs_utils_core::{call_if_true, log_debug, throws, try_initialize_global_logging};
 use r3bl_tuify::{get_size,
                  get_terminal_width,
                  is_stdin_piped,
@@ -100,7 +100,7 @@ fn main() -> Result<()> {
         let enable_logging = DEVELOPMENT_MODE | cli_args.global_opts.enable_logging;
 
         call_if_true!(enable_logging, {
-            try_to_set_log_level(tracing_core::LevelFilter::DEBUG).ok();
+            try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
             log_debug("Start logging...".to_string());
             log_debug(format!("terminal window size: {:?}", get_size()?).to_string());
             log_debug(format!("cli_args {:?}", cli_args));
