@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+use std::fmt::{Display, Formatter, Result};
+
 use crossterm::style::Stylize;
 use r3bl_rs_utils_core::{call_if_true,
                          ch,
@@ -106,8 +108,6 @@ pub enum AppSignal {
 }
 
 mod impl_app_signal {
-    use std::fmt::{Display, Formatter, Result};
-
     use super::*;
 
     impl Display for AppSignal {
@@ -169,8 +169,6 @@ mod app_main_constructor {
 }
 
 mod app_main_impl_app_trait {
-    use r3bl_tui::LayoutManagement;
-
     use super::*;
 
     impl App for AppMain {

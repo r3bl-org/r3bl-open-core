@@ -15,15 +15,12 @@
  *   limitations under the License.
  */
 
-/// This is the global `DEBUG` const. It is possible to create local (module scoped) `DEBUG` const.
-/// However, you would have to use that symbol explicitly in the relevant module, eg:
+/// This is the global `DEBUG` const. It is possible to create local (module scoped)
+/// `DEBUG` const. However, you would have to use that symbol explicitly in the relevant
+/// module, eg:
 /// - `use $crate::terminal_lib_backends::DEBUG_TUI...;`
 ///
-/// If set to `true`:
-/// 1. Enables file logging for entire module.
-/// 2. If a call to [r3bl_rs_utils_core::log_info], [r3bl_rs_utils_core::log_debug],
-///    [r3bl_rs_utils_core::log_warn], [r3bl_rs_utils_core::log_trace],
-///    [r3bl_rs_utils_core::log_error] fails, then it will print the error to stderr.
+/// If set to `true` it enables file logging for entire module.
 pub const DEBUG_TUI_MOD: bool = true;
 
 /// Enable or disable MD parser debug logging. This makes the parser very slow when

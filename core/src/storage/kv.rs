@@ -50,25 +50,26 @@
 //!
 //! In my testing, I've run multiple processes that write to the key/value store at the
 //! same time, and it works as expected. Even with multiple processes writing to the
-//! store, the iterator [Bucket::iter] can be used to read the current state of the db, as
-//! expected.
+//! store, the iterator [kv::Bucket::iter] can be used to read the current state of the
+//! db, as expected.
 
 use std::fmt::{Debug, Display};
 
 use crossterm::style::Stylize;
-use kv::*;
+use kv::{Bincode, Config, Store};
 use miette::{Context, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, instrument};
 
 /// Convenience type alias for the [kv::Bucket] type.
-/// 1. A [Bucket] is created from a [Store].
-/// 2. A [Bucket] is given a name, and there may be many [Bucket]s in a [Store].
-/// 3. A [Bucket] provides typed access to a section of the key/value store [kv].
+/// 1. A [kv::Bucket] is created from a [Store].
+/// 2. A [kv::Bucket] is given a name, and there may be many [kv::Bucket]s in a [Store].
+/// 3. A [kv::Bucket] provides typed access to a section of the key/value store [kv].
 ///
-/// The [Bucket] stores the following key/value pairs.
+/// The [kv::Bucket] stores the following key/value pairs.
 /// - `KeyT`: The generic type `<KeyT>`. This will not be serialized or deserialized. This
-///   also has a trait bound on [Key]. See [insert_into_bucket] for an example of this.
+///   also has a trait bound on [kv::Key]. See [insert_into_bucket] for an example of
+///   this.
 /// - `ValueT`: This type makes it concrete that [Bincode] will be used to serialize and
 ///   deserialize the data from the generic type `<ValueT>`, which has trait bounds on
 ///   [Serialize], [Deserialize]. See [insert_into_bucket] for an example of this.
@@ -132,8 +133,8 @@ pub fn load_or_create_store(
     Ok(store)
 }
 
-/// A [Bucket] provides typed access to a section of the key/value [Store]. It has a
-/// lifetime, since the [Bucket] is created from a [Store].
+/// A [kv::Bucket] provides typed access to a section of the key/value [kv::Store]. It has
+/// a lifetime, since the [kv::Bucket] is created from a [kv::Store].
 #[instrument(fields(store = ?store.path(), buckets = ?store.buckets()))]
 pub fn load_or_create_bucket_from_store<
     'a,
