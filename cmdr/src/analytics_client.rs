@@ -29,7 +29,6 @@ use r3bl_rs_utils_core::{call_if_true,
                          friendly_random_id,
                          log_debug,
                          log_error,
-                         log_info,
                          CommonError,
                          CommonErrorType,
                          CommonResult};
@@ -329,24 +328,16 @@ pub mod upgrade_check {
             if let Ok(response) = result {
                 if let Ok(body_text) = response.text().await {
                     let latest_version = body_text.trim().to_string();
-                    log_info(
-                        format!(
-                            "\n📦📦📦\nLatest version of cmdr is: {}",
-                            latest_version
-                        )
-                        .magenta()
-                        .to_string(),
+                    tracing::info!(
+                        "\n📦📦📦\nLatest version of cmdr is: {}",
+                        latest_version.clone().magenta()
                     );
                     let current_version = UPDATE_IF_NOT_THIS_VERSION.to_string();
                     if latest_version != current_version {
                         UPDATE_REQUIRED.store(true, std::sync::atomic::Ordering::Relaxed);
-                        log_info(
-                            format!(
-                                "\n💿💿💿\nThere is a new version of cmdr available: {latest_version}",
-                                latest_version = latest_version
-                            )
-                            .magenta()
-                            .to_string(),
+                        tracing::info!(
+                            "\n💿💿💿\nThere is a new version of cmdr available: {}",
+                            latest_version.clone().magenta()
                         );
                     }
                 }

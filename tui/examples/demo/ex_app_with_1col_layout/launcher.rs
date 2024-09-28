@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
-use r3bl_tui::*;
+use r3bl_rs_utils_core::{throws, CommonResult};
+use r3bl_tui::{keypress, InputEvent, TerminalWindow};
 
-use super::*;
+use super::{AppMain, State};
 
 pub async fn run_app() -> CommonResult<()> {
     throws!({

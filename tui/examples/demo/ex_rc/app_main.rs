@@ -18,12 +18,76 @@
 use std::fmt::Debug;
 
 use chrono::{DateTime, Local};
-use r3bl_rs_utils_core::*;
+use r3bl_rs_utils_core::{call_if_true,
+                         ch,
+                         get_tui_styles,
+                         log_debug,
+                         position,
+                         requested_size_percent,
+                         send_signal,
+                         size,
+                         throws,
+                         throws_with_return,
+                         tui_styled_text,
+                         tui_styled_texts,
+                         tui_stylesheet,
+                         ANSIBasicColor,
+                         Ansi256GradientIndex,
+                         ChUnit,
+                         ColorChangeSpeed,
+                         ColorWheel,
+                         ColorWheelConfig,
+                         ColorWheelSpeed,
+                         CommonResult,
+                         GradientGenerationPolicy,
+                         LolcatBuilder,
+                         Position,
+                         Size,
+                         TextColorizationPolicy,
+                         TuiColor,
+                         TuiStyledText,
+                         TuiStylesheet,
+                         UnicodeString};
 use r3bl_rs_utils_macro::tui_style;
-use r3bl_tui::*;
+use r3bl_tui::{box_end,
+               box_props,
+               box_start,
+               render_component_in_current_box,
+               render_ops,
+               render_tui_styled_texts_into,
+               surface,
+               telemetry_global_static,
+               Animator,
+               App,
+               BoxedSafeApp,
+               ComponentRegistry,
+               ComponentRegistryMap,
+               EditMode,
+               EditorComponent,
+               EditorEngineConfig,
+               EventPropagation,
+               FlexBoxId,
+               GlobalData,
+               HasFocus,
+               InputEvent,
+               Key,
+               KeyPress,
+               LayoutDirection,
+               LayoutManagement,
+               ModifierKeysMask,
+               PerformPositioningAndSizing,
+               RenderOp,
+               RenderPipeline,
+               Surface,
+               SurfaceProps,
+               SurfaceRender,
+               TerminalWindowMainThreadSignal,
+               ZOrder,
+               DEBUG_TUI_MOD};
 use tokio::{sync::mpsc::Sender, time::Duration};
 
-use super::*;
+use super::{state_mutator, AppSignal, State, FILE_CONTENT_ARRAY};
+use crate::ex_rc::app_main::animator_task::start_animator_task;
 
 /// Constants for the ids.
 #[repr(u8)]
@@ -148,7 +212,6 @@ mod constructor {
 
 mod app_main_impl_app_trait {
     use super::*;
-    use crate::ex_rc::app_main::animator_task::start_animator_task;
 
     impl App for AppMain {
         type S = State;

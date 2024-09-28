@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::{call_if_true, log_info, Position, Size};
+use r3bl_rs_utils_core::{call_if_true, Position, Size};
 
 use super::{FlushKind, RenderOp, RenderOpsLocalData, RenderPipeline};
 use crate::{GlobalData,
@@ -143,20 +143,18 @@ pub fn sanitize_and_save_abs_position(
     fn debug(orig_pos: Position, sanitized_pos: Position) {
         call_if_true!(DEBUG_TUI_MOD, {
             if sanitized_pos != orig_pos {
-                let msg = format!(
+                tracing::info!(
                     "pipeline : 📍🗜️ Attempt to set cursor position {orig_pos:?} \
                     outside of terminal window; clamping to nearest edge of window {sanitized_pos:?}"
                 );
-                log_info(msg);
             }
         });
 
         call_if_true!(DEBUG_TUI_SHOW_PIPELINE_EXPANDED, {
-            let msg = format!(
+            tracing::info!(
                 "pipeline : 📍 Save the cursor position {sanitized_pos:?} \
                 to SharedGlobalData"
             );
-            log_info(msg);
         });
     }
 }

@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::*;
+use std::fmt::{Display, Formatter, Result};
 
 #[derive(Default, Clone, Debug)]
 #[non_exhaustive]
