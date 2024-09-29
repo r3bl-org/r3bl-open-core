@@ -5,7 +5,7 @@ edition = "2021"
 resolver = "2"
 description = """
 Helper crate for r3bl_tui and r3bl_tuify crates.
-Used by workspace in https://crates.io/crates/r3bl_rs_utils.
+Used by workspace in https://github.com/r3bl-org/r3bl-open-core.
 """
 # Email address(es) has to be verified at https://crates.io/me/
 authors = [

@@ -17,6 +17,7 @@
 
 //! This module is responsible for converting a [MdDocument] into a [StyleUSSpanLines].
 
+use r3bl_macro::tui_style;
 use r3bl_rs_utils_core::{CommonError,
                          CommonErrorType,
                          CommonResult,
@@ -26,7 +27,6 @@ use r3bl_rs_utils_core::{CommonError,
                          TuiStyle,
                          TuiStyledTexts,
                          UnicodeString};
-use r3bl_rs_utils_macro::tui_style;
 use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 
 use super::create_color_wheel_from_heading_data;
@@ -710,8 +710,8 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
     use crossterm::style::Stylize;
+    use r3bl_macro::tui_style;
     use r3bl_rs_utils_core::{assert_eq2, throws, ANSIBasicColor, TuiColor};
-    use r3bl_rs_utils_macro::tui_style;
 
     use super::*;
     use crate::{get_metadata_tags_marker_style,

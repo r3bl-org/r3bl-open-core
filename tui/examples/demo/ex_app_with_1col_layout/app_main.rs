@@ -15,6 +15,7 @@
  *   limitations under the License.
  */
 
+use r3bl_macro::tui_style;
 use r3bl_rs_utils_core::{ch,
                          get_tui_styles,
                          position,
@@ -34,7 +35,6 @@ use r3bl_rs_utils_core::{ch,
                          TuiColor,
                          TuiStyledText,
                          TuiStylesheet};
-use r3bl_rs_utils_macro::tui_style;
 use r3bl_tui::{box_end,
                box_props,
                box_start,

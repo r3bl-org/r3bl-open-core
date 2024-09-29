@@ -329,7 +329,7 @@ Versions of this crate <= `0.3.10` used shared memory to communicate between the
 background threads and the main thread. This was done using the async `Arc<RwLock<T>>`
 from tokio. The state storage, mutation, subscription (on change handlers) were all
 managed by the
-[`r3bl_redux`](https://github.com/r3bl-org/r3bl-open-core/tree/main/redux) crate. The
+[`r3bl_redux`](https://github.com/r3bl-org/r3bl-open-core-archive/tree/main/redux) crate. The
 use of the Redux pattern, inspired by React, brought with it a lot of overhead both
 mentally and in terms of performance (since state changes needed to be cloned every
 time a change was made, and `memcpy` or `clone` is expensive).

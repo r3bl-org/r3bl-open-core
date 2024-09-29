@@ -29,7 +29,7 @@ use r3bl_rs_utils_core::{ANSIBasicColor,
                          RgbValue,
                          TuiColor,
                          TuiStyle};
-use r3bl_rs_utils_macro::tui_style;
+use r3bl_macro::tui_style;
 
 use crate::HeadingData;
 

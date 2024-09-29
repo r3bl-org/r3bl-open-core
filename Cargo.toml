@@ -2,15 +2,15 @@
 [workspace]
 # Make sure to keep these in sync with `run` nushell script `workspace_folders`.
 members = [
-  "ansi_color",
   "core",
-  "tuify",
   "macro",
-  "tui",
-  "cmdr",
-  "analytics_schema",
   "terminal_async",
+  "tui",
+  "tuify",
+  "cmdr",
   "test_fixtures",
+  "analytics_schema",
+  "ansi_color",
 ]
 resolver = "2"
 

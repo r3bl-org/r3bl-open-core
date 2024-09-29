@@ -1,4 +1,4 @@
-# r3bl_rs_utils_macro
+# r3bl_macro
 
 ## Why R3BL?
 
@@ -82,10 +82,9 @@ crate](https://developerlife.com/2022/03/30/rust-proc-macro/#add-an-internal-or-
 this breakdown of one crate into multiple crates is necessary.
 
 Here are some other crates for which this crate is a dependency (run `rg
-"r3bl_rs_utils_macro" -g "Cargo.toml"` to get a list):
+"r3bl_macro" -g "Cargo.toml"` to get a list):
 1. [`r3bl_tui`](https://crates.io/crates/r3bl_tui) crate.
 1. [`r3bl-cmdr`](https://crates.io/crates/r3bl_cmdr) crate.
-1. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crate.
 
 Here's a guide to writing [procedural
 macros](https://developerlife.com/2022/03/30/rust-proc-macro/) on
@@ -94,7 +93,7 @@ macros](https://developerlife.com/2022/03/30/rust-proc-macro/) on
 ## Changelog
 
 Please check out the
-[changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_rs_utils_macro)
+[changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_macro)
 to see how the library has evolved over time.
 
 ## Learn how these crates are built, provide feedback

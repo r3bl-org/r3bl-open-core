@@ -79,23 +79,18 @@ It is a dependency of the following crates:
 1. [`r3bl_tuify`](https://crates.io/crates/ir3bl_tuify)
 1. [`r3bl_terminal_async`](https://crates.io/crates/r3bl_terminal_async)
 1. [`r3bl_cmdr`](https://crates.io/crates/r3bl_cmdr)
-1. [`r3bl_rs_utils_macro`](https://crates.io/crates/r3bl_rs_utils_macro) (procedural macros)
-1. [`r3bl_redux`](https://crates.io/crates/r3bl_redux)
-1. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils)
+1. [`r3bl_macro`](https://crates.io/crates/r3bl_macro) (procedural macros)
 
 Due to the [requirements of proc macros being in a separate
 crate](https://developerlife.com/2022/03/30/rust-proc-macro/#add-an-internal-or-core-crate),
 this breakdown of one crate into multiple crates is necessary:
 1. Put some code in a separate crate (`r3bl_rs_utils_core`) that is used by other crates.
-2. Put the proc macros in a separate crate (`r3bl_rs_utils_macro`). This crate also depends on
+2. Put the proc macros in a separate crate (`r3bl_macro`). This crate also depends on
    the `r3bl_rs_utils_core` crate.
-3. Finally, make the "public" crate (`r3bl_rs_utils`) depend on the other two.
-   However, this `r3bl_rs_utils` crate isn't really used anymore. It is possible to simply
-   add a dependency on the `r3bl_rs_utils_core` crate directly, and `r3bl_tui` for instance.
+3. Finally, make your crate depend on the other two.
 
-As a way to hide this kind of layering from the users of the "main" `r3bl_rs_utils` crate, all
-the modules tend to be re-exported, making them available from the "main" or top-level crate;
-more info on this
+All the modules tend to be re-exported, making them available from the "main" or
+top-level crate; more info on this
 [here](https://doc.rust-lang.org/book/ch07-04-bringing-paths-into-scope-with-the-use-keyword.html?highlight=module%20re-export#re-exporting-names-with-pub-use).
 
 ## Changelog

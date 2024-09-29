@@ -263,7 +263,7 @@ mod tests_clip_styled_texts {
                              RgbValue,
                              TuiColor,
                              UnicodeString};
-    use r3bl_rs_utils_macro::tui_style;
+    use r3bl_macro::tui_style;
 
     use super::*;
     use crate::{list, List};

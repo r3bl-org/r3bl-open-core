@@ -28,7 +28,7 @@
 #[cfg(test)]
 mod tests {
     use r3bl_rs_utils_core::{assert_eq2, ch, color, with, ANSIBasicColor, TuiStyle};
-    use r3bl_rs_utils_macro::tui_style;
+    use r3bl_macro::tui_style;
 
     #[test]
     fn test_syntax_expansion() {
