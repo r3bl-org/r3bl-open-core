@@ -38,7 +38,7 @@ use r3bl_rs_utils_core::{call_if_true,
                          TuiStyledText,
                          UnicodeString,
                          DEFAULT_GRADIENT_STOPS};
-use r3bl_rs_utils_macro::tui_style;
+use r3bl_macro::tui_style;
 use r3bl_tui::{render_ops,
                render_pipeline,
                render_tui_styled_texts_into,

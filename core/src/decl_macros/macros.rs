@@ -92,9 +92,9 @@ macro_rules! throws_with_return {
 ///   DEBUG,
 ///   eprintln!(
 ///     "{} {} {}\r",
-///     r3bl_rs_utils::style_error("▶"),
-///     r3bl_rs_utils::style_prompt($msg),
-///     r3bl_rs_utils::style_dimmed(&format!("{:#?}", $err))
+///     r3bl_rs_utils_core::style_error("▶"),
+///     r3bl_rs_utils_core::style_prompt($msg),
+///     r3bl_rs_utils_core::style_dimmed(&format!("{:#?}", $err))
 ///   )
 /// );
 /// ```
@@ -298,7 +298,7 @@ macro_rules! unwrap_option_or_run_fn_returning_err {
 /// # Example
 ///
 /// ```ignore
-/// use r3bl_rs_utils::unwrap_option_or_compute_if_none;
+/// use r3bl_rs_utils_core::unwrap_option_or_compute_if_none;
 ///
 /// #[test]
 /// fn test_unwrap_option_or_compute_if_none() {

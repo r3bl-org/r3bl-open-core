@@ -302,7 +302,7 @@ mod render_helpers {
 #[cfg(test)]
 mod tests {
     use r3bl_rs_utils_core::{assert_eq2, color, size, ANSIBasicColor};
-    use r3bl_rs_utils_macro::tui_style;
+    use r3bl_macro::tui_style;
 
     use super::*;
     use crate::render_pipeline_to_offscreen_buffer::print_text_with_attributes;

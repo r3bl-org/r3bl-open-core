@@ -35,7 +35,7 @@ use r3bl_rs_utils_core::{call_if_true,
                          TuiColor,
                          TuiStyledText,
                          TuiStylesheet};
-use r3bl_rs_utils_macro::tui_style;
+use r3bl_macro::tui_style;
 use r3bl_tui::{box_end,
                box_props,
                box_start,
