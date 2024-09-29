@@ -835,6 +835,15 @@ the `ok!()` macro.
 
 ## `r3bl_rs_utils_macro`
 
+### next release
+
+The modules and functions in this crate which are used (by other crates in this monorepo)
+are left unchanged. Only the unused modules and functions are moved to the
+`r3bl-open-core-archive` repo.
+
+Deleted:
+  - Move all the unused modules and functions to the `r3bl-open-core-archive` repo.
+
 ### v0.9.10 (2024-09-12)
 
 - Updated:
