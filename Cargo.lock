@@ -138,17 +138,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-trait"
-version = "0.1.82"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a27b8a3a6e1a44fa4c8baf1f653e4172e81486d4941f2237e20dc2d0cf4ddff1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.77",
-]
-
-[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1766,25 +1755,6 @@ dependencies = [
  "pretty_assertions",
  "serial_test",
  "test-case",
-]
-
-[[package]]
-name = "r3bl_redux"
-version = "0.2.8"
-dependencies = [
- "async-trait",
- "chrono",
- "crossterm 0.28.1",
- "futures",
- "futures-util",
- "pretty_assertions",
- "r3bl_rs_utils_core",
- "r3bl_rs_utils_macro",
- "rand",
- "serde",
- "serde_json",
- "time",
- "tokio",
 ]
 
 [[package]]
