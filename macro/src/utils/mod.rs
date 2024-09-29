@@ -15,11 +15,20 @@
  *   limitations under the License.
  */
 
+// Attach sources.
+#[allow(dead_code)]
 pub mod data_ext;
+
+#[allow(dead_code)]
 pub mod ident_ext;
+
+#[allow(dead_code)]
 pub mod syn_parser_helpers;
+
+#[allow(dead_code)]
 pub mod type_ext;
 
 // Re-export.
 pub use ident_ext::*;
+#[allow(unused_imports)]
 pub use type_ext::*;
