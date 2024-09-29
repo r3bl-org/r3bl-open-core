@@ -263,8 +263,12 @@ mod tests {
     }
 }
 
-/// This test works with the binary under test, which is `tracing_stdout_test_bin`.
-/// That binary takes 1 string argument: "stdout" or "stderr".
+/// This test works with the binary under test, which is `tracing_stdout_test_bin`. That
+/// binary takes 1 string argument: "stdout" or "stderr".
+///
+/// If tests in this module fail, then make sure that the binary under test has been, in
+/// fact, built. So, make sure to run `cargo build && cargo test` rather than just `cargo
+/// test`.`
 ///
 /// See: `tracing_stdout_test_bin.rs`
 #[cfg(test)]

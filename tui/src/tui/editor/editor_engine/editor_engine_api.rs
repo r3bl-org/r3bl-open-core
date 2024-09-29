@@ -32,7 +32,7 @@ use r3bl_rs_utils_core::{call_if_true,
                          TuiStyledTexts,
                          UnicodeString,
                          UnicodeStringSegmentSliceResult};
-use r3bl_rs_utils_macro::tui_style;
+use r3bl_macro::tui_style;
 use syntect::easy::HighlightLines;
 
 use crate::{cache,

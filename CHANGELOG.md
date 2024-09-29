@@ -63,7 +63,10 @@
 - [r3bl_analytics_schema](#r3bl_analytics_schema)
   - [v0.0.2 2024-09-12](#v002-2024-09-12)
   - [v0.0.1 2023-12-31](#v001-2023-12-31)
+- [r3bl_macro](#r3bl_macro)
+  - [next-release-macro](#next-release-macro)
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
+  - [Rename to `r3bl_macro`](#rename-to-r3bl_macro)
   - [v0.9.10 2024-09-12](#v0910-2024-09-12)
   - [v0.9.9 2024-04-16](#v099-2024-04-16)
   - [v0.9.8 2023-12-22](#v098-2023-12-22)
@@ -99,7 +102,7 @@
   - [v0.1.2 2023-10-21](#v012-2023-10-21)
   - [v0.1.1 2023-10-17](#v011-2023-10-17)
   - [v0.1.0 2023-10-14](#v010-2023-10-14)
-- [r3bl_rs_utils_redux](#r3bl_rs_utils_redux)
+- [r3bl_redux](#r3bl_redux)
   - [Archived 2024-09-29](#archived-2024-09-29)
   - [v0.2.8 2024-09-12](#v028-2024-09-12)
   - [v0.2.7 2024-09-07](#v027-2024-09-07)
@@ -833,16 +836,24 @@ the `ok!()` macro.
 - Added:
   - Initial support structs for use by `r3bl-base` and `r3bl-cmdr`.
 
-## `r3bl_rs_utils_macro`
+## `r3bl_macro`
 
-### next release
+### next-release-macro
 
 The modules and functions in this crate which are used (by other crates in this monorepo)
 are left unchanged. Only the unused modules and functions are moved to the
-`r3bl-open-core-archive` repo.
+[`r3bl-open-core-archive`](https://github.com/r3bl-open-core-archive) repo.
 
 Deleted:
-  - Move all the unused modules and functions to the `r3bl-open-core-archive` repo.
+  - Move all the unused modules and functions to the
+    [`r3bl-open-core-archive`](https://github.com/r3bl-open-core-archive) repo.
+
+## `r3bl_rs_utils_macro`
+
+### Rename to `r3bl_macro`
+
+This crate is now renamed to `r3bl_macro` to make it consistent with the naming for all
+crates in this repo. Please look at the [`r3bl_macro`](#r3bl_macro) for more details.
 
 ### v0.9.10 (2024-09-12)
 
@@ -1210,7 +1221,7 @@ since it had become unmaintained. We now use tokio tracing, so this is no longer
     upstream repos that added `r3bl_tuify` as a dependency. Here's a link to the related
     [issue](https://github.com/r3bl-org/r3bl-open-core/issues/160).
 
-## `r3bl_rs_utils_redux`
+## `r3bl_redux`
 
 ### Archived (2024-09-29)
 

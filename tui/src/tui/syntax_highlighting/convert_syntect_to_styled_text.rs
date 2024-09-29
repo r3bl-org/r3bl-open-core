@@ -351,7 +351,7 @@ mod tests_convert_style_and_color {
                              TuiColor,
                              TuiStyle,
                              TuiStylesheet};
-    use r3bl_rs_utils_macro::tui_style;
+    use r3bl_macro::tui_style;
 
     use crate::convert_style_from_syntect_to_tui;
 

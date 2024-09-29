@@ -31,7 +31,7 @@ use r3bl_rs_utils_core::{call_if_true,
                          TextColorizationPolicy,
                          TooSmallToDisplayResult,
                          UnicodeString};
-use r3bl_rs_utils_macro::tui_style;
+use r3bl_macro::tui_style;
 use size_of::SizeOf;
 use tokio::sync::mpsc;
 

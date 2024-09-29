@@ -76,11 +76,12 @@ pub struct TuiStyle {
     pub computed: bool,
     pub color_fg: Option<TuiColor>,
     pub color_bg: Option<TuiColor>,
-    /// The semantics of this are the same as CSS. The padding is space that is taken up inside a
-    /// `FlexBox`. This does not affect the size or position of a `FlexBox`, it only applies to the
-    /// contents inside of that `FlexBox`.
+    /// The semantics of this are the same as CSS. The padding is space that is taken up
+    /// inside a `FlexBox`. This does not affect the size or position of a `FlexBox`, it
+    /// only applies to the contents inside of that `FlexBox`.
     ///
-    /// [`FlexBox` docs](https://docs.rs/r3bl_rs_utils/latest/r3bl_rs_utils/tui/layout/flex_box/struct.FlexBox.html).
+    /// [`FlexBox`
+    /// docs](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/layout/flex_box/struct.FlexBox.html).
     pub padding: Option<ChUnit>,
     pub lolcat: bool,
 }

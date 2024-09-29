@@ -23,7 +23,6 @@ use std::cmp::Ordering::Less;
 
 use crate::{Ansi256Color, RgbColor};
 
-/// This is copied from <https://github.com/main/r3bl_rs_utils/blob/grayscale/tui/src/tui/lolcat/color_utils.rs>
 pub mod color_utils {
     pub fn linear_to_srgb(intensity: f64) -> f64 {
         if intensity <= 0.003_130_8 {
