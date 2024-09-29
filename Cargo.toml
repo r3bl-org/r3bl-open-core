@@ -7,7 +7,6 @@ members = [
   "tuify",
   "macro",
   "tui",
-  "utils",
   "cmdr",
   "analytics_schema",
   "terminal_async",
