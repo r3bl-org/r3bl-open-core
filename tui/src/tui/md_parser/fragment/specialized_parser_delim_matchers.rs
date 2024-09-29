@@ -24,7 +24,7 @@
 
 use crossterm::style::Stylize;
 use nom::{bytes::complete::tag, combinator::recognize, multi::many1, IResult};
-use r3bl_rs_utils_core::call_if_true;
+use r3bl_core::call_if_true;
 
 use crate::{constants::NEW_LINE,
             take_text_between_delims_err_on_new_line,

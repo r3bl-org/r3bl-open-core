@@ -128,7 +128,7 @@ impl TuiStylesheet {
 ///
 /// Here's an example.
 /// ```
-/// use r3bl_rs_utils_core::{ch, ChUnit, TuiColor, RgbValue, TuiStyle, TryAdd, tui_stylesheet, CommonResult, throws_with_return, TuiStylesheet};
+/// use r3bl_core::{ch, ChUnit, TuiColor, RgbValue, TuiStyle, TryAdd, tui_stylesheet, CommonResult, throws_with_return, TuiStylesheet};
 /// fn create_tui_stylesheet() -> CommonResult<TuiStylesheet> {
 ///   throws_with_return!({
 ///     tui_stylesheet! {

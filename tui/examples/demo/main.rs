@@ -36,12 +36,12 @@ mod ex_rc;
 use std::str::FromStr;
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{logging::try_initialize_global_logging,
-                         ok,
-                         style_prompt,
-                         throws,
-                         CommonError,
-                         CommonResult};
+use r3bl_core::{logging::try_initialize_global_logging,
+                ok,
+                style_prompt,
+                throws,
+                CommonError,
+                CommonResult};
 use r3bl_terminal_async::{ReadlineEvent, TerminalAsync};
 use r3bl_tui::{keypress, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
 use strum::IntoEnumIterator;

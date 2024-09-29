@@ -40,7 +40,7 @@ use nom::{branch::alt,
           multi::many1,
           sequence::preceded,
           IResult};
-use r3bl_rs_utils_core::call_if_true;
+use r3bl_core::call_if_true;
 
 use crate::{constants::{BACK_TICK,
                         LEFT_BRACKET,

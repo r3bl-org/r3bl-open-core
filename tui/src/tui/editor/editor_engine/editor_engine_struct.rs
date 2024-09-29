@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::ChUnit;
+use r3bl_core::ChUnit;
 use serde::{Deserialize, Serialize};
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 

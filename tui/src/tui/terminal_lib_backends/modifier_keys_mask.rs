@@ -169,7 +169,7 @@ impl From<KeyModifiers> for ModifierKeysMask {
 
 #[cfg(test)]
 mod tests_modifier_keys_mask {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 

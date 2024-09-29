@@ -15,14 +15,14 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{size,
-                         throws,
-                         CommonResult,
-                         Position,
-                         RequestedSizePercent,
-                         Size,
-                         TuiStyle,
-                         TuiStylesheet};
+use r3bl_core::{size,
+                throws,
+                CommonResult,
+                Position,
+                RequestedSizePercent,
+                Size,
+                TuiStyle,
+                TuiStylesheet};
 use serde::{Deserialize, Serialize};
 
 use super::{FlexBox,

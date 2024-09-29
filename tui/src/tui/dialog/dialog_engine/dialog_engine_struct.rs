@@ -17,15 +17,15 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::{ch,
-                         size,
-                         Ansi256GradientIndex,
-                         ChUnit,
-                         ColorWheel,
-                         ColorWheelConfig,
-                         ColorWheelSpeed,
-                         Size,
-                         TuiStyle};
+use r3bl_core::{ch,
+                size,
+                Ansi256GradientIndex,
+                ChUnit,
+                ColorWheel,
+                ColorWheelConfig,
+                ColorWheelSpeed,
+                Size,
+                TuiStyle};
 use serde::{Deserialize, Serialize};
 
 use crate::{lookup_size,

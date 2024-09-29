@@ -61,7 +61,7 @@
 //! ```
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{call_if_true, ch, ChUnit};
+use r3bl_core::{call_if_true, ch, ChUnit};
 
 use crate::DEVELOPMENT_MODE;
 

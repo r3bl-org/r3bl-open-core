@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::{throws_with_return, CommonResult};
+use r3bl_core::{throws_with_return, CommonResult};
 use tokio::sync::mpsc::Sender;
 
 use crate::{BoxedSafeComponent,

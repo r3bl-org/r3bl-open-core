@@ -21,7 +21,7 @@ use std::{io::{self, Write},
 use crossterm::{terminal::{self, disable_raw_mode, Clear},
                 QueueableCommand};
 use futures_util::StreamExt;
-use r3bl_rs_utils_core::{LineStateControlSignal, SharedWriter};
+use r3bl_core::{LineStateControlSignal, SharedWriter};
 use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
@@ -81,7 +81,7 @@ const CTRL_D: crossterm::event::Event =
 /// input or `Interrupted` or `Eof` signal.
 ///
 /// When creating a new [`crate::TerminalAsync`] instance, you can use this repeatedly
-/// before dropping it. This is because the [`r3bl_rs_utils_core::SharedWriter`] is
+/// before dropping it. This is because the [`r3bl_core::SharedWriter`] is
 /// cloned, and the terminal is kept in raw mode until the associated [`crate::Readline`]
 /// is dropped.
 ///
@@ -560,7 +560,7 @@ impl Readline {
     ///
     /// Note that this function can be called repeatedly in a loop. It will return each
     /// line of input as it is entered (and return / exit). The [crate::TerminalAsync] can
-    /// be re-used, since the [r3bl_rs_utils_core::SharedWriter] is cloned and the
+    /// be re-used, since the [r3bl_core::SharedWriter] is cloned and the
     /// terminal is kept in raw mode until the associated [crate::Readline] is dropped.
     ///
     /// Polling function for [`Self::readline`], manages all input and output. Returns

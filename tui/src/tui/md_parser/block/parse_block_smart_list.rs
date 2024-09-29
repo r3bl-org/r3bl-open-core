@@ -104,7 +104,7 @@ pub fn parse_block_smart_list(
 /// Tests things that are final output (and not at the IR level).
 #[cfg(test)]
 mod tests_parse_block_smart_list {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 
@@ -302,7 +302,7 @@ mod tests_parse_block_smart_list {
 /// Tests things that are final output (and not at the IR level).
 #[cfg(test)]
 mod tests_parse_smart_lists_in_markdown {
-    use r3bl_rs_utils_core::{assert_eq2, ConsoleLogInColor, PrettyPrintDebug};
+    use r3bl_core::{assert_eq2, ConsoleLogInColor, PrettyPrintDebug};
 
     use crate::{parse_markdown, MdDocument};
 
@@ -726,7 +726,7 @@ pub fn parse_smart_list_content_lines<'a>(
 
 #[cfg(test)]
 mod tests_parse_list_item {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 
@@ -827,7 +827,7 @@ mod tests_parse_list_item {
 
 #[cfg(test)]
 mod tests_list_item_lines {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 
@@ -941,7 +941,7 @@ mod tests_list_item_lines {
 
 #[cfg(test)]
 mod tests_bullet_kinds {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 
@@ -965,7 +965,7 @@ mod tests_bullet_kinds {
 
 #[cfg(test)]
 mod tests_parse_indents {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 

@@ -20,15 +20,15 @@
 //! [here](https://www.ditig.com/256-colors-cheat-sheet).
 
 use r3bl_ansi_color::{global_color_support, ColorSupport};
-use r3bl_rs_utils_core::{ANSIBasicColor,
-                         Ansi256GradientIndex,
-                         AnsiValue,
-                         ColorWheel,
-                         ColorWheelConfig,
-                         ColorWheelSpeed,
-                         RgbValue,
-                         TuiColor,
-                         TuiStyle};
+use r3bl_core::{ANSIBasicColor,
+                Ansi256GradientIndex,
+                AnsiValue,
+                ColorWheel,
+                ColorWheelConfig,
+                ColorWheelSpeed,
+                RgbValue,
+                TuiColor,
+                TuiStyle};
 use r3bl_macro::tui_style;
 
 use crate::HeadingData;

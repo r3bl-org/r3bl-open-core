@@ -20,7 +20,7 @@ use std::fmt::{Display, Formatter};
 use crossterm::event::{Event::{self, FocusGained, FocusLost, Key, Mouse, Resize},
                        KeyEvent,
                        MouseEvent};
-use r3bl_rs_utils_core::{size, Size};
+use r3bl_core::{size, Size};
 use serde::{Deserialize, Serialize};
 
 use super::{KeyPress, MouseInput};

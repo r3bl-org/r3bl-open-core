@@ -29,7 +29,7 @@
 
 use crossterm::style::Stylize;
 use nom::{branch::alt, combinator::map, IResult};
-use r3bl_rs_utils_core::call_if_true;
+use r3bl_core::call_if_true;
 
 use crate::{parse_fragment_plain_text_no_new_line,
             parse_fragment_starts_with_backtick_err_on_new_line,
@@ -112,7 +112,7 @@ pub fn parse_inline_fragments_until_eol_or_eoi(
 mod tests_parse_fragment {
     use nom::{error::{Error, ErrorKind},
               Err as NomErr};
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::HyperlinkData;

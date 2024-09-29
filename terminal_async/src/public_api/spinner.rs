@@ -18,7 +18,7 @@
 use std::{sync::Arc, time::Duration};
 
 use crossterm::terminal;
-use r3bl_rs_utils_core::{LineStateControlSignal, SharedWriter};
+use r3bl_core::{LineStateControlSignal, SharedWriter};
 use r3bl_tuify::{is_fully_uninteractive_terminal,
                  is_stdout_piped,
                  StdoutIsPipedResult,

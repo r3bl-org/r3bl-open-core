@@ -18,7 +18,7 @@
 use std::fmt::Debug;
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{call_if_true, Size};
+use r3bl_core::{call_if_true, Size};
 use serde::{Deserialize, Serialize};
 
 use crate::{editor_buffer::EditorBuffer,

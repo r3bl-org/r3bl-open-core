@@ -18,7 +18,7 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
-use r3bl_rs_utils_core::{Position, Size, TuiColor, TuiStyle};
+use r3bl_core::{Position, Size, TuiColor, TuiStyle};
 use serde::{Deserialize, Serialize};
 
 use super::TERMINAL_LIB_BACKEND;

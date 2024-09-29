@@ -124,7 +124,7 @@ To install the crate as a library, add the following to your `Cargo.toml` file:
 ```toml
 [dependencies]
 r3bl_tuify = "*" # Get the latest version at the time you get this.
-r3bl_rs_utils_core = "*" # Get the latest version at the time you get this.
+r3bl_core = "*" # Get the latest version at the time you get this.
 ```
 
 The following example illustrates how you can use this as a library. The function that
@@ -139,7 +139,7 @@ of the terminal color output limitations of each. For eg, it uses Windows API on
 keyboard input. And on macOS Terminal.app it restricts color output to a 256 color palette.
 
 ```rust
-use r3bl_rs_utils_core::*;
+use r3bl_core::*;
 use r3bl_tuify::*;
 use std::io::Result;
 
@@ -191,7 +191,7 @@ Use this API if you want to display a list of items with a single line header.
 [select_from_list] code example:
 
 ```rust
-use r3bl_rs_utils_core::*;
+use r3bl_core::*;
 use r3bl_tuify::*;
 use std::io::Result;
 
@@ -237,7 +237,7 @@ multi line header. The first 5 lines are all part of the multi line header.
 use std::{io::Result, vec};
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
-use r3bl_rs_utils_core::*;
+use r3bl_core::*;
 use r3bl_tuify::{
     components::style::StyleSheet,
     select_from_list_with_multi_line_header,
@@ -525,7 +525,7 @@ Default style:
 To use one of the built-in styles, simply pass it as an argument to the `select_from_list` function.
 
 ```rust
-use r3bl_rs_utils_core::*;
+use r3bl_core::*;
 use r3bl_tuify::*;
 use std::io::Result;
 

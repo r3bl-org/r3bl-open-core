@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{throws, CommonResult};
+use r3bl_core::{throws, CommonResult};
 use r3bl_tui::{keypress, InputEvent, ModifierKeysMask, TerminalWindow};
 
 use crate::edi::{constructor, AppMain};

@@ -15,14 +15,14 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{call_if_true,
-                         ch,
-                         position,
-                         ChUnit,
-                         Size,
-                         TuiStyle,
-                         UnicodeString,
-                         SPACER};
+use r3bl_core::{call_if_true,
+                ch,
+                position,
+                ChUnit,
+                Size,
+                TuiStyle,
+                UnicodeString,
+                SPACER};
 
 use crate::{render_ops,
             Flush as _,
@@ -301,7 +301,7 @@ mod render_helpers {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::{assert_eq2, color, size, ANSIBasicColor};
+    use r3bl_core::{assert_eq2, color, size, ANSIBasicColor};
     use r3bl_macro::tui_style;
 
     use super::*;

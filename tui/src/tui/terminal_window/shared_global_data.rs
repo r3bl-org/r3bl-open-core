@@ -17,7 +17,7 @@
 
 use std::fmt::{Debug, Formatter};
 
-use r3bl_rs_utils_core::{call_if_true, CommonResult, Size};
+use r3bl_core::{call_if_true, CommonResult, Size};
 use tokio::sync::mpsc::Sender;
 
 use super::TerminalWindowMainThreadSignal;

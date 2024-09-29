@@ -77,7 +77,7 @@ giti
 There are many other underlying crates that are used to build these top level crates.
 Here's a short list of them:
 
-- [`r3bl_rs_utils_core`](https://github.com/r3bl-org/r3bl-open-core/tree/main/core)
+- [`r3bl_core`](https://github.com/r3bl-org/r3bl-open-core/tree/main/core)
   contains lots of low level utilities that are used in the other crates. This includes
   things like declarative macros, colors, styles, unicode support, etc. Over time, if some
   code is created in a "higher level" crate, and it's useful in other crates, it's moved

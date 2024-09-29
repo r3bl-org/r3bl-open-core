@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::{Position, Size, TuiStyle};
+use r3bl_core::{Position, Size, TuiStyle};
 use serde::{Deserialize, Serialize};
 
 use super::{FlexBox, FlexBoxId};
@@ -90,7 +90,7 @@ impl From<&FlexBox> for PartialFlexBox {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::{position, size};
+    use r3bl_core::{position, size};
 
     use super::*;
 

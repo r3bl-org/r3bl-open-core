@@ -17,7 +17,7 @@
 
 #[cfg(test)]
 mod test_config_options {
-    use r3bl_rs_utils_core::{assert_eq2, position, UnicodeString};
+    use r3bl_core::{assert_eq2, position, UnicodeString};
 
     use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
                 test_fixtures::mock_real_objects_for_editor,
@@ -143,7 +143,7 @@ mod test_config_options {
 
 #[cfg(test)]
 mod test_editor_ops {
-    use r3bl_rs_utils_core::{assert_eq2, ch, position, size, UnicodeString};
+    use r3bl_core::{assert_eq2, ch, position, size, UnicodeString};
 
     use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
                 test_fixtures::{assert, mock_real_objects_for_editor},
@@ -1647,7 +1647,7 @@ mod test_editor_ops {
 mod selection_tests {
     use std::collections::HashMap;
 
-    use r3bl_rs_utils_core::{assert_eq2, ch, SelectionRange};
+    use r3bl_core::{assert_eq2, ch, SelectionRange};
 
     use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
                 test_fixtures::mock_real_objects_for_editor,
@@ -1881,7 +1881,7 @@ mod selection_tests {
 
 #[cfg(test)]
 mod clipboard_tests {
-    use r3bl_rs_utils_core::{assert_eq2, UnicodeString};
+    use r3bl_core::{assert_eq2, UnicodeString};
 
     use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
                 test_fixtures::mock_real_objects_for_editor,

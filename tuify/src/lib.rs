@@ -139,7 +139,7 @@
 //! ```toml
 //! [dependencies]
 //! r3bl_tuify = "*" # Get the latest version at the time you get this.
-//! r3bl_rs_utils_core = "*" # Get the latest version at the time you get this.
+//! r3bl_core = "*" # Get the latest version at the time you get this.
 //! ```
 //!
 //! The following example illustrates how you can use this as a library. The function that
@@ -154,7 +154,7 @@
 //! keyboard input. And on macOS Terminal.app it restricts color output to a 256 color palette.
 //!
 //! ```rust
-//! use r3bl_rs_utils_core::*;
+//! use r3bl_core::*;
 //! use r3bl_tuify::*;
 //! use std::io::Result;
 //!
@@ -206,7 +206,7 @@
 //! [select_from_list] code example:
 //!
 //! ```rust
-//! use r3bl_rs_utils_core::*;
+//! use r3bl_core::*;
 //! use r3bl_tuify::*;
 //! use std::io::Result;
 //!
@@ -252,7 +252,7 @@
 //! use std::{io::Result, vec};
 //!
 //! use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
-//! use r3bl_rs_utils_core::*;
+//! use r3bl_core::*;
 //! use r3bl_tuify::{
 //!     components::style::StyleSheet,
 //!     select_from_list_with_multi_line_header,
@@ -540,7 +540,7 @@
 //! To use one of the built-in styles, simply pass it as an argument to the `select_from_list` function.
 //!
 //! ```rust
-//! use r3bl_rs_utils_core::*;
+//! use r3bl_core::*;
 //! use r3bl_tuify::*;
 //! use std::io::Result;
 //!

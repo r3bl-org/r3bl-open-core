@@ -66,7 +66,7 @@ mod dialog_event_impl {
 
 #[cfg(test)]
 mod test_dialog_event {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::keypress;

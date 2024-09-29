@@ -19,7 +19,7 @@ use std::{env::{args, Args},
           path::PathBuf};
 
 use clap::{CommandFactory, Parser};
-use r3bl_rs_utils_core::{call_if_true, throws, CommonResult};
+use r3bl_core::{call_if_true, throws, CommonResult};
 use r3bl_tui::ArgsToStrings;
 use serde_json::json;
 use tokio::io::{stdin, AsyncBufReadExt, AsyncRead, BufReader};

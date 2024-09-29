@@ -17,22 +17,22 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::{ch,
-                         percent,
-                         position,
-                         size,
-                         throws_with_return,
-                         ColorWheel,
-                         CommonError,
-                         CommonErrorType,
-                         CommonResult,
-                         GradientGenerationPolicy,
-                         Position,
-                         Size,
-                         TextColorizationPolicy,
-                         TuiStyle,
-                         UnicodeString,
-                         SPACER};
+use r3bl_core::{ch,
+                percent,
+                position,
+                size,
+                throws_with_return,
+                ColorWheel,
+                CommonError,
+                CommonErrorType,
+                CommonResult,
+                GradientGenerationPolicy,
+                Position,
+                Size,
+                TextColorizationPolicy,
+                TuiStyle,
+                UnicodeString,
+                SPACER};
 
 use crate::{render_ops,
             render_pipeline,
@@ -880,7 +880,7 @@ mod internal_impl {
 
 #[cfg(test)]
 mod test_dialog_engine_api_render_engine {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::{test_dialog::mock_real_objects_for_dialog::{self, make_global_data},
@@ -930,7 +930,7 @@ mod test_dialog_engine_api_render_engine {
 mod test_dialog_api_make_flex_box_for_dialog {
     use std::error::Error;
 
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::{dialog_engine_api::internal_impl, Surface};
@@ -1098,7 +1098,7 @@ mod test_dialog_api_make_flex_box_for_dialog {
 
 #[cfg(test)]
 mod test_dialog_engine_api_apply_event {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::{keypress, test_dialog::mock_real_objects_for_dialog};
