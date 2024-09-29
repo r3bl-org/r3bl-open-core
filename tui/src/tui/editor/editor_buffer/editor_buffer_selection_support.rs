@@ -18,14 +18,14 @@
 use std::cmp;
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{call_if_true,
-                         ch,
-                         position,
-                         CaretLocationInRange,
-                         CaretMovementDirection,
-                         ChUnit,
-                         Position,
-                         SelectionRange};
+use r3bl_core::{call_if_true,
+                ch,
+                position,
+                CaretLocationInRange,
+                CaretMovementDirection,
+                ChUnit,
+                Position,
+                SelectionRange};
 
 use super::{selection_map::RowLocationInSelectionMap, EditorBuffer};
 use crate::{DirectionChangeResult, DEBUG_TUI_COPY_PASTE};

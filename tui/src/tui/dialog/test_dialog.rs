@@ -18,7 +18,7 @@
 pub mod mock_real_objects_for_dialog {
     use std::{collections::HashMap, fmt::Debug};
 
-    use r3bl_rs_utils_core::Size;
+    use r3bl_core::Size;
     use tokio::sync::mpsc;
 
     use crate::{test_fixtures::mock_real_objects_for_editor,

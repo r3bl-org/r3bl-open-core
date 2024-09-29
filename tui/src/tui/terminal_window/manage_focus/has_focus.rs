@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::{throws, CommonError, CommonResult};
+use r3bl_core::{throws, CommonError, CommonResult};
 
 use crate::{FlexBox, FlexBoxId};
 
@@ -138,7 +138,7 @@ impl HasFocus {
 
 #[cfg(test)]
 mod has_focus_tests {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 

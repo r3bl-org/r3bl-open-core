@@ -20,14 +20,14 @@ use std::env::var;
 use clap::Parser;
 use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_cmdr::{edi::launcher, report_analytics, upgrade_check, AnalyticsAction};
-use r3bl_rs_utils_core::{call_if_true,
-                         throws,
-                         try_initialize_global_logging,
-                         ColorWheel,
-                         CommonResult,
-                         GradientGenerationPolicy,
-                         TextColorizationPolicy,
-                         UnicodeString};
+use r3bl_core::{call_if_true,
+                throws,
+                try_initialize_global_logging,
+                ColorWheel,
+                CommonResult,
+                GradientGenerationPolicy,
+                TextColorizationPolicy,
+                UnicodeString};
 use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, LIZARD_GREEN, SLATE_GRAY};
 
 use crate::clap_config::CLIArg;

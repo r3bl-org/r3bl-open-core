@@ -1,5 +1,5 @@
 [package]
-name = "r3bl_rs_utils_core"
+name = "r3bl_core"
 version = "0.9.16"
 edition = "2021"
 resolver = "2"
@@ -13,12 +13,12 @@ authors = [
   "Nadia Idris <nadia@developerlife.com>",
 ]
 repository = "https://github.com/r3bl-org/r3bl-open-core/tree/main/core"
-documentation = "https://docs.rs/r3bl_rs_utils_core/"
+documentation = "https://docs.rs/r3bl_core/"
 homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
 [lib]
-name = "r3bl_rs_utils_core"
+name = "r3bl_core"
 path = "src/lib.rs"
 
 # Documentation for crate layout.

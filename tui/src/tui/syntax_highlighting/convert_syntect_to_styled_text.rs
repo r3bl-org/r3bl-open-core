@@ -30,12 +30,12 @@
 //! 1. Convert the syntect [SyntectStyleStrSpanLine] into a [StyleUSSpanLine].
 //! 2. Then convert [StyleUSSpanLine] into a [TuiStyledTexts].
 
-use r3bl_rs_utils_core::{tui_styled_text,
-                         RgbValue,
-                         TuiColor,
-                         TuiStyle,
-                         TuiStyledText,
-                         TuiStyledTexts};
+use r3bl_core::{tui_styled_text,
+                RgbValue,
+                TuiColor,
+                TuiStyle,
+                TuiStyledText,
+                TuiStyledTexts};
 use syntect::parsing::SyntaxSet;
 
 use super::{StyleUSSpan, StyleUSSpanLine};
@@ -113,7 +113,7 @@ pub fn convert_span_line_from_syntect_to_tui_styled_texts(
 
 #[cfg(test)]
 mod tests_simple_md_highlight {
-    use r3bl_rs_utils_core::{assert_eq2, color, ConvertToPlainText, TuiStyledTexts};
+    use r3bl_core::{assert_eq2, color, ConvertToPlainText, TuiStyledTexts};
     use syntect::{easy::HighlightLines,
                   highlighting::Style,
                   parsing::SyntaxSet,
@@ -196,11 +196,7 @@ mod tests_simple_md_highlight {
 
 #[cfg(test)]
 mod tests_convert_span_line_and_highlighted_line {
-    use r3bl_rs_utils_core::{assert_eq2,
-                             RgbValue,
-                             TuiColor,
-                             TuiStyledTexts,
-                             UnicodeString};
+    use r3bl_core::{assert_eq2, RgbValue, TuiColor, TuiStyledTexts, UnicodeString};
 
     use crate::convert_span_line_from_syntect_to_tui_styled_texts;
 
@@ -337,20 +333,20 @@ mod tests_convert_span_line_and_highlighted_line {
 
 #[cfg(test)]
 mod tests_convert_style_and_color {
-    use r3bl_rs_utils_core::{assert_eq2,
-                             ch,
-                             color,
-                             console_log,
-                             get_tui_style,
-                             get_tui_styles,
-                             throws,
-                             tui_stylesheet,
-                             ANSIBasicColor,
-                             CommonResult,
-                             RgbValue,
-                             TuiColor,
-                             TuiStyle,
-                             TuiStylesheet};
+    use r3bl_core::{assert_eq2,
+                    ch,
+                    color,
+                    console_log,
+                    get_tui_style,
+                    get_tui_styles,
+                    throws,
+                    tui_stylesheet,
+                    ANSIBasicColor,
+                    CommonResult,
+                    RgbValue,
+                    TuiColor,
+                    TuiStyle,
+                    TuiStylesheet};
     use r3bl_macro::tui_style;
 
     use crate::convert_style_from_syntect_to_tui;

@@ -21,7 +21,7 @@ use nom::{branch::alt,
           combinator::{map, recognize},
           multi::many0,
           IResult};
-use r3bl_rs_utils_core::call_if_true;
+use r3bl_core::call_if_true;
 
 use super::specialized_parser_delim_matchers;
 use crate::{constants::{BACK_TICK,

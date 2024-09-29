@@ -90,7 +90,7 @@ mod exp_batch_1 {
     #[cfg(test)]
     pub mod new_nom_parser_code {
         use crossterm::style::Stylize;
-        use r3bl_rs_utils_core::assert_eq2;
+        use r3bl_core::assert_eq2;
 
         use super::*;
 
@@ -186,7 +186,7 @@ mod exp_batch_2 {
     #[cfg(test)]
     mod test_text_until_opt_eol {
         use crossterm::style::Stylize;
-        use r3bl_rs_utils_core::assert_eq2;
+        use r3bl_core::assert_eq2;
 
         use super::*;
 

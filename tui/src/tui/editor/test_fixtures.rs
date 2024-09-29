@@ -18,7 +18,7 @@
 pub mod mock_real_objects_for_editor {
     use std::fmt::Debug;
 
-    use r3bl_rs_utils_core::{position, size, Size};
+    use r3bl_core::{position, size, Size};
     use tokio::sync::mpsc;
 
     use crate::{EditorEngine, FlexBox, GlobalData, PartialFlexBox, CHANNEL_WIDTH};
@@ -67,7 +67,7 @@ pub mod mock_real_objects_for_editor {
 
 #[cfg(test)]
 pub mod assert {
-    use r3bl_rs_utils_core::{assert_eq2, UnicodeStringSegmentSliceResult};
+    use r3bl_core::{assert_eq2, UnicodeStringSegmentSliceResult};
 
     use crate::{EditorBuffer, EditorEngine, EditorEngineInternalApi};
 

@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{CommonResult, Position, Size};
+use r3bl_core::{CommonResult, Position, Size};
 
 use super::{FlexBox, FlexBoxProps, SurfaceProps};
 

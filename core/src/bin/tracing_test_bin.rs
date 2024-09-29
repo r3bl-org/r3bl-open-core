@@ -15,11 +15,11 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{init_tracing,
-                         DisplayPreference,
-                         TracingConfig,
-                         TracingScope,
-                         WriterConfig};
+use r3bl_core::{init_tracing,
+                DisplayPreference,
+                TracingConfig,
+                TracingScope,
+                WriterConfig};
 use tracing_core::LevelFilter;
 
 /// `assert_cmd` : <https://docs.rs/assert_cmd/latest/assert_cmd/index.html>

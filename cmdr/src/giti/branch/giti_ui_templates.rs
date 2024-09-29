@@ -18,13 +18,13 @@
 use std::{env::var, process::Command};
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style};
-use r3bl_rs_utils_core::{ColorWheel,
-                         CommonError,
-                         CommonErrorType,
-                         CommonResult,
-                         GradientGenerationPolicy,
-                         TextColorizationPolicy,
-                         UnicodeString};
+use r3bl_core::{ColorWheel,
+                CommonError,
+                CommonErrorType,
+                CommonResult,
+                GradientGenerationPolicy,
+                TextColorizationPolicy,
+                UnicodeString};
 use r3bl_tuify::SLATE_GRAY;
 
 use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,

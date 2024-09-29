@@ -17,12 +17,12 @@
 
 use std::{cmp::Ordering, collections::HashMap, mem::replace};
 
-use r3bl_rs_utils_core::{ch,
-                         position,
-                         ChUnit,
-                         Position,
-                         UnicodeString,
-                         UnicodeStringSegmentSliceResult};
+use r3bl_core::{ch,
+                position,
+                ChUnit,
+                Position,
+                UnicodeString,
+                UnicodeStringSegmentSliceResult};
 use serde::{Deserialize, Serialize};
 
 use crate::{editor_buffer_clipboard_support,

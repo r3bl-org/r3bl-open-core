@@ -16,7 +16,7 @@
  */
 
 use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
-use r3bl_rs_utils_core::{position, Position};
+use r3bl_core::{position, Position};
 use serde::{Deserialize, Serialize};
 
 use super::{convert_key_modifiers, ModifierKeysMask};

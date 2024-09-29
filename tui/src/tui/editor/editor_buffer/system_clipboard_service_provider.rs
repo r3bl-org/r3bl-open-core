@@ -17,7 +17,7 @@
 
 use copypasta_ext::{copypasta::ClipboardProvider, x11_fork::ClipboardContext};
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{call_if_true, throws};
+use r3bl_core::{call_if_true, throws};
 
 use super::{ClipboardResult, ClipboardService};
 use crate::DEBUG_TUI_COPY_PASTE;

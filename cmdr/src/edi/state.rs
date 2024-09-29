@@ -21,7 +21,7 @@ use std::{collections::HashMap,
           path::Path};
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::call_if_true;
+use r3bl_core::call_if_true;
 use r3bl_tui::{DialogBuffer,
                EditorBuffer,
                FlexBoxId,
@@ -40,7 +40,7 @@ pub struct State {
 
 #[cfg(test)]
 mod state_tests {
-    use r3bl_rs_utils_core::friendly_random_id;
+    use r3bl_core::friendly_random_id;
     use r3bl_tui::FlexBoxId;
 
     use super::*;

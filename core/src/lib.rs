@@ -99,9 +99,9 @@
 //! Due to the [requirements of proc macros being in a separate
 //! crate](https://developerlife.com/2022/03/30/rust-proc-macro/#add-an-internal-or-core-crate),
 //! this breakdown of one crate into multiple crates is necessary:
-//! 1. Put some code in a separate crate (`r3bl_rs_utils_core`) that is used by other crates.
+//! 1. Put some code in a separate crate (`r3bl_core`) that is used by other crates.
 //! 2. Put the proc macros in a separate crate (`r3bl_macro`). This crate also depends on
-//!    the `r3bl_rs_utils_core` crate.
+//!    the `r3bl_core` crate.
 //! 3. Finally, make your crate depend on the other two.
 //!
 //! All the modules tend to be re-exported, making them available from the "main" or
@@ -111,7 +111,7 @@
 //! # Changelog
 //!
 //! Please check out the
-//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_rs_utils_core)
+//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_core)
 //! to see how the library has evolved over time.
 //!
 //! # Learn how these crates are built, provide feedback

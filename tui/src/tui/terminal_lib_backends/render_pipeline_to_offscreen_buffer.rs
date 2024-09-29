@@ -15,19 +15,19 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{call_if_true,
-                         ch,
-                         ChUnit,
-                         CommonError,
-                         CommonErrorType,
-                         CommonResult,
-                         GraphemeClusterSegment,
-                         Position,
-                         Size,
-                         TuiStyle,
-                         UnicodeString,
-                         UnicodeStringExt,
-                         SPACER};
+use r3bl_core::{call_if_true,
+                ch,
+                ChUnit,
+                CommonError,
+                CommonErrorType,
+                CommonResult,
+                GraphemeClusterSegment,
+                Position,
+                Size,
+                TuiStyle,
+                UnicodeString,
+                UnicodeStringExt,
+                SPACER};
 
 use super::{sanitize_and_save_abs_position, OffscreenBuffer, RenderOp, RenderPipeline};
 use crate::{PixelChar, RenderOpsLocalData, ZOrder, DEBUG_TUI_COMPOSITOR};
@@ -356,7 +356,7 @@ pub fn print_text_with_attributes(
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::{assert_eq2, color, position, size, ANSIBasicColor};
+    use r3bl_core::{assert_eq2, color, position, size, ANSIBasicColor};
     use r3bl_macro::tui_style;
 
     use super::*;

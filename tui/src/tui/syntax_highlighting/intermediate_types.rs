@@ -28,14 +28,9 @@
 //!    [US] (unicode strings).
 //! 2. This intermediate type is [clipped](StyleUSSpanLine::clip) to the visible area of
 //!    the editor component (based on scroll state in viewport). And finally that is
-//!    converted to a [r3bl_rs_utils_core::TuiStyledTexts].
+//!    converted to a [r3bl_core::TuiStyledTexts].
 
-use r3bl_rs_utils_core::{ch,
-                         tui_styled_text,
-                         ChUnit,
-                         TuiStyle,
-                         TuiStyledText,
-                         TuiStyledTexts};
+use r3bl_core::{ch, tui_styled_text, ChUnit, TuiStyle, TuiStyledText, TuiStyledTexts};
 
 use crate::{constants::{COLON, COMMA, SPACE},
             get_foreground_dim_style,
@@ -258,11 +253,7 @@ mod convert {
 /// list of styled unicode string represents a single line of text in an editor component.
 #[cfg(test)]
 mod tests_clip_styled_texts {
-    use r3bl_rs_utils_core::{assert_eq2,
-                             ConvertToPlainText,
-                             RgbValue,
-                             TuiColor,
-                             UnicodeString};
+    use r3bl_core::{assert_eq2, ConvertToPlainText, RgbValue, TuiColor, UnicodeString};
     use r3bl_macro::tui_style;
 
     use super::*;

@@ -15,19 +15,19 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{call_if_true,
-                         ch,
-                         position,
-                         send_signal,
-                         throws_with_return,
-                         Ansi256GradientIndex,
-                         ColorWheel,
-                         ColorWheelConfig,
-                         ColorWheelSpeed,
-                         CommonResult,
-                         GradientGenerationPolicy,
-                         TextColorizationPolicy,
-                         UnicodeString};
+use r3bl_core::{call_if_true,
+                ch,
+                position,
+                send_signal,
+                throws_with_return,
+                Ansi256GradientIndex,
+                ColorWheel,
+                ColorWheelConfig,
+                ColorWheelSpeed,
+                CommonResult,
+                GradientGenerationPolicy,
+                TextColorizationPolicy,
+                UnicodeString};
 use r3bl_tui::{render_ops,
                render_pipeline,
                BoxedSafeComponent,

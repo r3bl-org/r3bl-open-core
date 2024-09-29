@@ -138,7 +138,7 @@ pub fn convert_into_code_block_lines<'input>(
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::list;

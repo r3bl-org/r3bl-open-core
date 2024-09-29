@@ -16,7 +16,7 @@
  */
 
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_rs_utils_core::{ChUnit, Size};
+use r3bl_core::{ChUnit, Size};
 
 use crate::{get_scroll_adjusted_row_index,
             locate_cursor_in_viewport,
@@ -60,7 +60,7 @@ impl State<'_> {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 

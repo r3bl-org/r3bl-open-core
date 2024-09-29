@@ -65,7 +65,7 @@
 
 use crossterm::event::EventStream;
 use futures_util::{FutureExt, StreamExt};
-use r3bl_rs_utils_core::call_if_true;
+use r3bl_core::call_if_true;
 
 use super::InputEvent;
 use crate::DEBUG_TUI_SHOW_TERMINAL_BACKEND;

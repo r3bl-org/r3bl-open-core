@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{Position, RequestedSizePercent, Size, TuiStyle};
+use r3bl_core::{Position, RequestedSizePercent, Size, TuiStyle};
 
 use super::{FlexBoxId, LayoutDirection};
 
@@ -37,7 +37,7 @@ pub struct SurfaceProps {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::{ok, position, requested_size_percent, size, CommonResult};
+    use r3bl_core::{ok, position, requested_size_percent, size, CommonResult};
 
     use super::*;
     use crate::tui::layout::{FlexBoxId, LayoutDirection};

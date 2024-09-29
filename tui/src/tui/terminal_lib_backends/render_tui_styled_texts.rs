@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::TuiStyledTexts;
+use r3bl_core::TuiStyledTexts;
 
 use crate::{RenderOp, RenderOps};
 
@@ -34,19 +34,19 @@ pub fn render_tui_styled_texts_into(texts: &TuiStyledTexts, render_ops: &mut Ren
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::{assert_eq2,
-                             ch,
-                             console_log,
-                             throws,
-                             throws_with_return,
-                             tui_styled_text,
-                             tui_styled_texts,
-                             tui_stylesheet,
-                             CommonResult,
-                             RgbValue,
-                             TuiColor,
-                             TuiStyledText,
-                             TuiStylesheet};
+    use r3bl_core::{assert_eq2,
+                    ch,
+                    console_log,
+                    throws,
+                    throws_with_return,
+                    tui_styled_text,
+                    tui_styled_texts,
+                    tui_stylesheet,
+                    CommonResult,
+                    RgbValue,
+                    TuiColor,
+                    TuiStyledText,
+                    TuiStylesheet};
     use r3bl_macro::tui_style;
 
     use super::*;

@@ -94,7 +94,7 @@ pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
 
 #[cfg(test)]
 mod tests_parse_block_markdown_text_with_or_without_new_line {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::{list, HyperlinkData, MdLineFragment};
@@ -196,7 +196,7 @@ mod tests_parse_block_markdown_text_with_or_without_new_line {
 
 #[cfg(test)]
 mod tests_parse_block_markdown_text_with_new_line {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::{list, MdLineFragment};
@@ -282,7 +282,7 @@ mod tests_parse_block_markdown_text_with_new_line {
 
 #[cfg(test)]
 mod tests_parse_block_markdown_text_opt_eol_with_checkbox_policy {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::{list, MdLineFragment};

@@ -87,7 +87,7 @@ pub fn contains_ansi_escape_sequence(text: &str) -> bool {
 #[test]
 fn test_is_ansi_escape_sequence() {
     use r3bl_ansi_color::{AnsiStyledText, Color, Style};
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     assert_eq2!(
         contains_ansi_escape_sequence(

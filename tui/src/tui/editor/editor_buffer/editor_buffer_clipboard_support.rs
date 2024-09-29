@@ -18,7 +18,7 @@
 use std::error::Error;
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{call_if_true, ch, UnicodeString};
+use r3bl_core::{call_if_true, ch, UnicodeString};
 
 use super::EditorBuffer;
 use crate::{EditorArgsMut, EditorEngineInternalApi, DEBUG_TUI_COPY_PASTE};

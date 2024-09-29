@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{Position, UnicodeString};
+use r3bl_core::{Position, UnicodeString};
 
 pub type ScrollOffset = Position;
 pub type US = UnicodeString;

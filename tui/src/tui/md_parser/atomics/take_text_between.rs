@@ -21,7 +21,7 @@ use nom::{bytes::complete::{tag, take_until},
           error::ErrorKind,
           sequence::tuple,
           IResult};
-use r3bl_rs_utils_core::call_if_true;
+use r3bl_core::call_if_true;
 
 use crate::{constants::NEW_LINE, DEBUG_MD_PARSER_STDOUT};
 
@@ -82,7 +82,7 @@ fn take_text_between<'input>(
 mod tests_parse_take_between {
     use nom::{error::{Error, ErrorKind},
               Err as NomErr};
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 

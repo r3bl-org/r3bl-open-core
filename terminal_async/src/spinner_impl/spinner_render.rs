@@ -20,7 +20,7 @@ use crossterm::{cursor::{MoveToColumn, MoveUp},
                 terminal::{Clear, ClearType},
                 QueueableCommand};
 use miette::IntoDiagnostic;
-use r3bl_rs_utils_core::ch;
+use r3bl_core::ch;
 use r3bl_tui::convert_from_tui_color_to_crossterm_color;
 use r3bl_tuify::clip_string_to_width_with_ellipsis;
 

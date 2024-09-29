@@ -91,7 +91,7 @@ fn parse_date_value(input: &str) -> IResult<&str, &str> {
 #[cfg(test)]
 mod tests {
     use crossterm::style::Stylize;
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::{convert_into_code_block_lines,

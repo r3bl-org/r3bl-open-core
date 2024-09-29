@@ -18,7 +18,7 @@
 use std::{error::Error,
           fmt::{Display, Result}};
 
-use r3bl_rs_utils_core::CommonResult;
+use r3bl_core::CommonResult;
 
 use super::FlexBox;
 

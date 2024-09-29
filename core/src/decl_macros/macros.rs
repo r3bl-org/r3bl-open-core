@@ -20,7 +20,7 @@
 ///
 /// Here's an example.
 /// ```ignore
-/// use r3bl_rs_utils_core::CommonResult;
+/// use r3bl_core::CommonResult;
 ///
 /// fn test_simple_2_col_layout() -> CommonResult<()> {
 ///   throws! {
@@ -36,7 +36,7 @@
 ///
 /// Here's another example.
 /// ```ignore
-/// use r3bl_rs_utils_core::{CommonResult, throws};
+/// use r3bl_core::{CommonResult, throws};
 ///
 /// fn test_simple_2_col_layout() -> CommonResult<()> {
 ///   throws!({
@@ -92,9 +92,9 @@ macro_rules! throws_with_return {
 ///   DEBUG,
 ///   eprintln!(
 ///     "{} {} {}\r",
-///     r3bl_rs_utils_core::style_error("▶"),
-///     r3bl_rs_utils_core::style_prompt($msg),
-///     r3bl_rs_utils_core::style_dimmed(&format!("{:#?}", $err))
+///     r3bl_core::style_error("▶"),
+///     r3bl_core::style_prompt($msg),
+///     r3bl_core::style_dimmed(&format!("{:#?}", $err))
 ///   )
 /// );
 /// ```
@@ -115,7 +115,7 @@ macro_rules! call_if_true {
 /// readability. You can use it like this.
 ///
 /// ```rust
-/// use r3bl_rs_utils_core::console_log;
+/// use r3bl_core::console_log;
 ///
 /// let my_string = "Hello World!";
 /// console_log!(my_string);
@@ -136,7 +136,7 @@ macro_rules! call_if_true {
 /// This will dump the output to stdout.
 ///
 /// ```rust
-/// use r3bl_rs_utils_core::console_log;
+/// use r3bl_core::console_log;
 ///
 /// let msg = format!("✅ Did the thing to {}", stringify!($name));
 /// console_log!(OK_RAW &msg);
@@ -148,17 +148,17 @@ macro_rules! console_log {
   (ERROR_RAW $msg:expr, $err:expr) => {{
     eprintln!(
       "{} {} {}\r",
-      r3bl_rs_utils_core::style_error("▶"),
-      r3bl_rs_utils_core::style_prompt($msg),
-      r3bl_rs_utils_core::style_underline(&format!("{:#?}", $err))
+      r3bl_core::style_error("▶"),
+      r3bl_core::style_prompt($msg),
+      r3bl_core::style_underline(&format!("{:#?}", $err))
     );
   }};
 
   (OK_RAW $msg:expr) => {{
     println!(
       "{} {}\r",
-      r3bl_rs_utils_core::style_error("▶"),
-      r3bl_rs_utils_core::style_prompt($msg)
+      r3bl_core::style_error("▶"),
+      r3bl_core::style_prompt($msg)
     );
   }};
 
@@ -177,9 +177,9 @@ macro_rules! console_log {
         /* Each repeat will contain the following statement, with $element replaced. */
         println!(
           "{} {} = {}",
-          r3bl_rs_utils_core::style_error("▶"),
-          r3bl_rs_utils_core::style_prompt(stringify!($element)),
-          r3bl_rs_utils_core::style_underline(&format!("{:#?}", $element))
+          r3bl_core::style_error("▶"),
+          r3bl_core::style_prompt(stringify!($element)),
+          r3bl_core::style_underline(&format!("{:#?}", $element))
         );
       )*
   }};
@@ -298,7 +298,7 @@ macro_rules! unwrap_option_or_run_fn_returning_err {
 /// # Example
 ///
 /// ```ignore
-/// use r3bl_rs_utils_core::unwrap_option_or_compute_if_none;
+/// use r3bl_core::unwrap_option_or_compute_if_none;
 ///
 /// #[test]
 /// fn test_unwrap_option_or_compute_if_none() {
@@ -397,7 +397,7 @@ macro_rules! ok {
 /// # Example
 ///
 /// ```
-/// use r3bl_rs_utils_core::timed;
+/// use r3bl_core::timed;
 /// use sha2::{Digest, Sha256};
 /// let (retval, duration) = timed!({
 ///     let prompt = "Hello, World!";

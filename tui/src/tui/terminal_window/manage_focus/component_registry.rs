@@ -17,7 +17,7 @@
 
 use std::{collections::HashMap, fmt::Debug, marker::PhantomData};
 
-use r3bl_rs_utils_core::{CommonResult, ContainsResult};
+use r3bl_core::{CommonResult, ContainsResult};
 
 use super::HasFocus;
 use crate::{BoxedSafeComponent, EventPropagation, FlexBoxId, GlobalData, InputEvent};

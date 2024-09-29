@@ -2,7 +2,10 @@
 
 <!-- TOC -->
 
+Active crates
+
 - [r3bl-cmdr](#r3bl-cmdr)
+  - [next release](#next-release-cmdr)
   - [v0.0.16 2024-09-13](#v0016-2024-09-13)
   - [v0.0.15 2024-09-12](#v0015-2024-09-12)
   - [v0.0.14 2024-06-29](#v0014-2024-06-29)
@@ -12,20 +15,8 @@
   - [v0.0.10 2024-01-02](#v0010-2024-01-02)
   - [v0.0.9 2023-12-31](#v009-2023-12-31)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
-- [r3bl_tuify](#r3bl_tuify)
-  - [v0.1.27 2024-09-12](#v0127-2024-09-12)
-  - [v0.1.26 2024-04-15](#v0126-2024-04-15)
-  - [v0.1.25 2024-01-14](#v0125-2024-01-14)
-  - [v0.1.24 2023-12-31](#v0124-2023-12-31)
-  - [v0.1.23 2023-12-22](#v0123-2023-12-22)
-  - [v0.1.22 2023-12-20](#v0122-2023-12-20)
-  - [v0.1.21 2023-10-21](#v0121-2023-10-21)
-  - [v0.1.20 2023-10-21](#v0120-2023-10-21)
-  - [v0.1.19 2023-10-17](#v0119-2023-10-17)
-  - [v0.1.18 2023-10-17](#v0118-2023-10-17)
-  - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
-  - [next release](#next-release)
+  - [next release](#next-release-tui)
   - [v0.5.9 2024-09-12](#v059-2024-09-12)
   - [v0.5.8 2024-09-07](#v058-2024-09-07)
   - [v0.5.7 2024-08-13](#v057-2024-08-13)
@@ -45,40 +36,25 @@
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
-- [r3bl_rs_utils_core](#r3bl_rs_utils_core)
-  - [next release](#next-release)
-  - [v0.9.16 2024-09-12](#v0916-2024-09-12)
-  - [v0.9.15 2024-09-07](#v0915-2024-09-07)
-  - [v0.9.14 2024-08-13](#v0914-2024-08-13)
-  - [v0.9.13 2024-04-15](#v0913-2024-04-15)
-  - [v0.9.12 2024-01-07](#v0912-2024-01-07)
-  - [v0.9.11 2024-01-02](#v0911-2024-01-02)
-  - [v0.9.10 2023-12-22](#v0910-2023-12-22)
-  - [v0.9.9 2023-10-21](#v099-2023-10-21)
-  - [v0.9.8 2023-10-21](#v098-2023-10-21)
-  - [v0.9.7 2023-10-17](#v097-2023-10-17)
-  - [v0.9.6 2023-10-17](#v096-2023-10-17)
-  - [v0.9.5 2023-10-14](#v095-2023-10-14)
-  - [v0.9.1 2023-03-06](#v091-2023-03-06)
-- [r3bl_analytics_schema](#r3bl_analytics_schema)
-  - [v0.0.2 2024-09-12](#v002-2024-09-12)
-  - [v0.0.1 2023-12-31](#v001-2023-12-31)
+- [r3bl_tuify](#r3bl_tuify)
+  - [next release](#next-release-tuify)
+  - [v0.1.27 2024-09-12](#v0127-2024-09-12)
+  - [v0.1.26 2024-04-15](#v0126-2024-04-15)
+  - [v0.1.25 2024-01-14](#v0125-2024-01-14)
+  - [v0.1.24 2023-12-31](#v0124-2023-12-31)
+  - [v0.1.23 2023-12-22](#v0123-2023-12-22)
+  - [v0.1.22 2023-12-20](#v0122-2023-12-20)
+  - [v0.1.21 2023-10-21](#v0121-2023-10-21)
+  - [v0.1.20 2023-10-21](#v0120-2023-10-21)
+  - [v0.1.19 2023-10-17](#v0119-2023-10-17)
+  - [v0.1.18 2023-10-17](#v0118-2023-10-17)
+  - [v0.1.17 2023-10-14](#v0117-2023-10-14)
+- [r3bl_core](#r3bl_core)
+  - [next release](#next-release-core)
 - [r3bl_macro](#r3bl_macro)
   - [next-release-macro](#next-release-macro)
-- [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
-  - [Rename to `r3bl_macro`](#rename-to-r3bl_macro)
-  - [v0.9.10 2024-09-12](#v0910-2024-09-12)
-  - [v0.9.9 2024-04-16](#v099-2024-04-16)
-  - [v0.9.8 2023-12-22](#v098-2023-12-22)
-  - [v0.9.7 2023-10-21](#v097-2023-10-21)
-  - [v0.9.6 2023-10-17](#v096-2023-10-17)
-  - [v0.9.5 2023-10-14](#v095-2023-10-14)
-- [r3bl_test_fixtures](#r3bl_test_fixtures)
-  - [v0.0.3 2024-09-12](#v003-2024-09-12)
-  - [v0.0.2 2024-07-13](#v002-2024-07-13)
-  - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_terminal_async](#r3bl_terminal_async)
-  - [next release](#next-release)
+  - [next release](#next-release-terminal-async)
   - [v0.5.7 2024-09-12](#v057-2024-09-12)
   - [v0.5.6 2024-08-13](#v056-2024-08-13)
   - [v0.5.5 2024-07-13](#v055-2024-07-13)
@@ -95,6 +71,42 @@
   - [v0.6.9 2023-10-21](#v069-2023-10-21)
   - [v0.6.8 2023-10-16](#v068-2023-10-16)
   - [v0.6.7 2023-09-12](#v067-2023-09-12)
+- [r3bl_test_fixtures](#r3bl_test_fixtures)
+  - [v0.0.3 2024-09-12](#v003-2024-09-12)
+  - [v0.0.2 2024-07-13](#v002-2024-07-13)
+  - [v0.0.1 2024-07-12](#v001-2024-07-12)
+- [r3bl_analytics_schema](#r3bl_analytics_schema)
+  - [v0.0.2 2024-09-12](#v002-2024-09-12)
+  - [v0.0.1 2023-12-31](#v001-2023-12-31)
+
+Renamed crates (actively maintained, just known by a different name now)
+
+- [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
+  - [Rename to `r3bl_macro`](#rename-to-r3bl_macro)
+  - [v0.9.10 2024-09-12](#v0910-2024-09-12)
+  - [v0.9.9 2024-04-16](#v099-2024-04-16)
+  - [v0.9.8 2023-12-22](#v098-2023-12-22)
+  - [v0.9.7 2023-10-21](#v097-2023-10-21)
+  - [v0.9.6 2023-10-17](#v096-2023-10-17)
+  - [v0.9.5 2023-10-14](#v095-2023-10-14)
+- [r3bl_rs_utils_core](#r3bl_rs_utils_core)
+  - [Rename to `r3bl_core`](#rename-to-r3bl_core)
+  - [v0.9.16 2024-09-12](#v0916-2024-09-12)
+  - [v0.9.15 2024-09-07](#v0915-2024-09-07)
+  - [v0.9.14 2024-08-13](#v0914-2024-08-13)
+  - [v0.9.13 2024-04-15](#v0913-2024-04-15)
+  - [v0.9.12 2024-01-07](#v0912-2024-01-07)
+  - [v0.9.11 2024-01-02](#v0911-2024-01-02)
+  - [v0.9.10 2023-12-22](#v0910-2023-12-22)
+  - [v0.9.9 2023-10-21](#v099-2023-10-21)
+  - [v0.9.8 2023-10-21](#v098-2023-10-21)
+  - [v0.9.7 2023-10-17](#v097-2023-10-17)
+  - [v0.9.6 2023-10-17](#v096-2023-10-17)
+  - [v0.9.5 2023-10-14](#v095-2023-10-14)
+  - [v0.9.1 2023-03-06](#v091-2023-03-06)
+
+Archived crates (no longer actively maintained)
+
 - [r3bl_simple_logger](#r3bl_simple_logger)
   - [Archived 2024-09-27](#archived-2024-09-27)
   - [v0.1.4 2024-09-12](#v014-2024-09-12)
@@ -123,7 +135,16 @@
 
 <!-- /TOC -->
 
+<!-- Active crates -->
+
 ## `r3bl-cmdr`
+
+### next-release-cmdr
+
+- Updated:
+  - This release just uses the latest deps from `r3bl-open-core` repo, since so many
+    crates have been reorganized and renamed. The functionality has not changed at all,
+    just the imports.
 
 ### v0.0.16 (2024-09-13)
 
@@ -244,6 +265,13 @@ in a text editor.
 
 ## `r3bl_tuify`
 
+### next-release-tuify
+
+- Updated:
+  - This release just uses the latest deps from `r3bl-open-core` repo, since so many
+    crates have been reorganized and renamed. The functionality has not changed at all,
+    just the imports.
+
 ### v0.1.27 (2024-09-12)
 
 - Updated:
@@ -346,7 +374,7 @@ in a text editor.
 
 ## `r3bl_tui`
 
-### next release
+### next-release-tui
 
 This is a major release that does not include any new functionality, but is a radical
 reorganization of the crates. The reason for paying down this technical debt now is to
@@ -359,13 +387,13 @@ reflect how the functionality is used in the real world.
     make it easier to maintain and test the codebase, and clean up the dependencies.
 
 - Removed:
-  - Move the `color_wheel` module into `r3bl_rs_utils_core` crate. This is to ensure that
-    it is possible to import just color wheel and lolcat related functionality without
-    having to import the entire `r3bl_tui` crate. And de-tangles the dependency tree,
-    making it easier to maintain. The reason they ended up in `r3bl_tui` in the first
-    place is because it was easier to develop them there, but since then, lots of other
-    consumers of this functionality have emerged, including crates that are created by
-    "3rd party developers" (people not R3BL and not part of `r3bl-open-core` repo).
+  - Move the `color_wheel` module into `r3bl_core` crate. This is to ensure that it is
+    possible to import just color wheel and lolcat related functionality without having to
+    import the entire `r3bl_tui` crate. And de-tangles the dependency tree, making it
+    easier to maintain. The reason they ended up in `r3bl_tui` in the first place is
+    because it was easier to develop them there, but since then, lots of other consumers
+    of this functionality have emerged, including crates that are created by "3rd party
+    developers" (people not R3BL and not part of `r3bl-open-core` repo).
 
 ### v0.5.9 (2024-09-12)
 
@@ -597,7 +625,6 @@ exhaustively tested and is able to handle many more corner cases.
 
 ### v0.3.3 (2023-04-20)
 
-
 - Added:
   - Add `ColorSupport` as a way to detect terminal emulator capabilities at runtime. This uses the
     [`concolor_query`](https://docs.rs/concolor-query/latest/concolor_query/) crate to detect
@@ -660,15 +687,23 @@ exhaustively tested and is able to handle many more corner cases.
   - The first demo example (`ex_app_no_layout`) now has support for animation. It automatically
     increments the state every second and the gradient color wheel is updated accordingly.
 
-## `r3bl_rs_utils_core`
+## `r3bl_core`
 
-### next release
+### next-release-core
 
 This is a major release that does not include any new functionality, but is a radical
-reorganization of the crates. The reason for paying down this technical debt now is to
-ensure that the codebase is easier to maintain and understand, and easier to add new
-features to in the future. The separation of concerns is now much clearer, and they
-reflect how the functionality is used in the real world.
+reorganization & rename of the crate, it used to be
+[`r3bl_rs_utils_core`](#rename-to-r3bl_core).
+
+The `r3bl-open-core` repo was started in `2022-02-23`, about 1 year, 7 months, and 11 days
+ago, (which you can get using `curl https://api.github.com/repos/r3bl-org/r3bl-open-core |
+jq .created_at`). We have learned many lessons since then after writing about 125K lines
+of Rust code.
+
+And it is time to pay down the accrued technical debt, to ensure that the codebase is
+easier to maintain and understand, and easier to add new features to in the future. The
+separation of concerns is now much clearer, and they reflect how the functionality is used
+in the real world.
 
 - Removed:
   - Remove the dependency on `r3bl_simple_logger` and archive it. You can read the details
@@ -689,139 +724,22 @@ reflect how the functionality is used in the real world.
   - Simplify the actual logging API into a single function, and allow use of tokio
     tracing, macros for for logging, eg: `tracing::debug!`, `tracing::info!`, etc. See
     `logging_api.rs` for more details.
-  - Move the `color_wheel` module into `r3bl_rs_utils_core` crate. This is to ensure that
-    it is possible to import just color wheel and lolcat related functionality without
-    having to import the entire `r3bl_tui` crate. And de-tangles the dependency tree,
-    making it easier to maintain. The reason they ended up in `r3bl_tui` in the first
-    place is because it was easier to develop them there, but since then, lots of other
-    consumers of this functionality have emerged, including crates that are created by
-    "3rd party developers" (people not R3BL and not part of `r3bl-open-core` repo).
+  - Move the `color_wheel` module into `r3bl_core` crate. This is to ensure that it is
+    possible to import just color wheel and lolcat related functionality without having to
+    import the entire `r3bl_tui` crate. And de-tangles the dependency tree, making it
+    easier to maintain. The reason they ended up in `r3bl_tui` in the first place is
+    because it was easier to develop them there, but since then, lots of other consumers
+    of this functionality have emerged, including crates that are created by "3rd party
+    developers" (people not R3BL and not part of `r3bl-open-core` repo).
   - Move the `kv.rs` module into `storage` from the
     `nazmulidris/rust-scratch/tcp-api-server` repo. This provides an in-memory /
-    in-process key value store that is built on top of `sled`. This eliminates the need to
-    use files to save / load data.
+    in-process key value store that is built on top of
+    [`sled`](https://docs.rs/sled/latest/sled/). This eliminates the need to use files to
+    save / load data.
   - Move the `miette_setup_global_report_handler.rs` from the
-    `nazmulidris/rust-scratch/tcp-api-server` repo. This allows customization of the
-    miette global report handler at the process level. Useful for apps that need to
-    override the default report handler formatting.
-
-### v0.9.16 (2024-09-12)
-
-- Updated:
-  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
-  - Improve docs in `lib.rs` and `README.md`.
-
-### v0.9.15 (2024-09-07)
-
-- Removed:
-  - Remove `get-size` crate from `Cargo.toml`. This was causing some [issues with
-    `RUSTSEC-2024-0370`](https://github.com/r3bl-org/r3bl-open-core/issues/359).
-
-- Added:
-   - Add `size-of` crate.
-    - This new crate is used to calculate the size of structs in bytes
-      (eg: `Vec<UnicodeString>` which is on the heap).
-    - Change the implementations of many structs in the following modules: `tui_core`.
-   - Add `common_math.rs` to `common` module, to make it easy to format numbers with
-     commas. This is useful for displaying size in bytes or kilobytes, etc. in log output
-     messages.
-
-- Updated:
-  - Use the latest deps for all crates in `Cargo.toml` and `Cargo.lock`.
-
-### v0.9.14 (2024-08-13)
-
-The main additions to this release are the `StringLength` enum, the `timed!()` macro, and
-the `ok!()` macro.
-
-- Added:
-  - New enum `StringLength` that can be used to calculate the length of strings that have
-    ANSI escape sequences in them. It also uses `UnicodeWidth` to calculate the "display"
-    width of the (stripped) string. It also memoizes the result so that it is fast to
-    calculate the length of the same string multiple times. This is used in the
-    `r3bl_terminal_async` crate. It also has a method to calculate the SHA256 hash of a
-    given `String`, and return it as a `u8`.
-  - New declarative macro `timed!()` that measures the time the given expression takes to
-    run using `time::Instant::now()`. If you use `timed!($expr)` then it will return a
-    tuple of `($expr, duration)`.
-  - New declarative macro `ok!()` that is just syntactic sugar for `Ok(())`. If you use
-    `ok!($expr)` then it will return `Ok($expr)`.
-  - Here's the [PR](https://github.com/r3bl-org/r3bl-open-core/pull/349) with all the code
-    related to this release.
-
-### v0.9.13 (2024-04-15)
-
-- Changed:
-  - Removed `syntect` dep.
-  - Rename `Style` to `TuiStyle`.
-  - Lots of cargo clippy fixes.
-
-### v0.9.12 (2024-01-07)
-
-- Added:
-  - Add `generate_friendly_random_id()` to generate human readable and friendly IDs.
-
-### v0.9.11 (2024-01-02)
-
-- Added:
-  - Add more variants to the `CommonErrorType` enum: `ConfigFolderCountNotBeCreated`,
-    `ConfigFolderPathCouldNotBeGenerated`.
-
-### v0.9.10 (2023-12-22)
-
-- Updated:
-  - Upgrade all the deps to their latest versions: `serde` version `1.0.190`. Propagate
-    this to all the other crates in the `r3bl-open-core` repo, and bump their version
-    numbers: e.g. `tuify`, `macro`, `tui`, `cmdr`.
-
-### v0.9.9 (2023-10-21)
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.9.8 (2023-10-21)
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.9.7 (2023-10-17)
-
-- Updated:
-  - Dependency on `simple_logger` updated due to this security advisory
-    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. `simple_logger` itself had to
-    drop `ansi_term`.
-
-### v0.9.6 (2023-10-17)
-
-- Removed:
-  - Dependency on `ansi_term` is dropped due to this security advisory
-    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. Flagged when running CI/CD
-    job on Ockam [repo](https://github.com/build-trust/ockam).
-
-- Updated:
-  - Documentation for `r3bl_simple_logger` crate. And how to think about it vs. using log
-    facilities from the `r3bl_rs_utils_core` crate. Update docs there too.
-
-### v0.9.5 (2023-10-14)
-
-- Updated:
-  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
-    `r3bl_rs_utils` repo workspace as `simple_logger`).
-  - `TuiColor` has a few new variants. They can be `RgbValue`, `AnsiValue`, or `ANSIBasicColor`. It
-    is safe to use just `RgbValue` since the library will degrade gracefully to ANSI 256 or
-    grayscale based on terminal emulator capabilities at runtime (provided by `to_crossterm_color()`
-    and `ColorSupport`). If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not
-    be downgraded.
-
-### v0.9.1 (2023-03-06)
-
-- Added:
-  - First changelog entry.
-  - Move lolcat into `tui_core` crate.
-- Removed:
-  - ANSI escape sequences are no longer used internally in any intermediate format used by the TUI
-    engine. It is reserved exclusively for output to stdout using (for now) crossterm. This opens
-    the door for future support for GUI app (not just terminal emulators).
+    [`nazmulidris/rust-scratch/tcp-api-server`](https://github.com/nazmulidris/rust-scratch/)
+    repo. This allows customization of the miette global report handler at the process
+    level. Useful for apps that need to override the default report handler formatting.
 
 ## `r3bl_analytics_schema`
 
@@ -840,55 +758,15 @@ the `ok!()` macro.
 
 ### next-release-macro
 
-The modules and functions in this crate which are used (by other crates in this monorepo)
-are left unchanged. Only the unused modules and functions are moved to the
-[`r3bl-open-core-archive`](https://github.com/r3bl-open-core-archive) repo.
+Changed:
+  - The name of this repo used to be [`r3bl_rs_utils_macro`](#rename-to-r3bl_macro).
+  - The modules and functions in this crate which are used (by other crates in this monorepo)
+    are left unchanged. Only the unused modules and functions are moved to the
+    [`r3bl-open-core-archive`](https://github.com/r3bl-open-core-archive) repo.
 
 Deleted:
   - Move all the unused modules and functions to the
     [`r3bl-open-core-archive`](https://github.com/r3bl-open-core-archive) repo.
-
-## `r3bl_rs_utils_macro`
-
-### Rename to `r3bl_macro`
-
-This crate is now renamed to `r3bl_macro` to make it consistent with the naming for all
-crates in this repo. Please look at the [`r3bl_macro`](#r3bl_macro) for more details.
-
-### v0.9.10 (2024-09-12)
-
-- Updated:
-  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
-  - Improve docs in `lib.rs` and `README.md`.
-
-### v0.9.9 (2024-04-16)
-
-- Updated:
-  - Use the latest `r3bl_rs_utils_core` version `0.9.13`.
-
-### v0.9.8 (2023-12-22)
-
-- Updated:
-  - Use latest `r3bl_rs_utils_core` version `0.9.10`. Remove unused dependencies, and
-    update to the latest ones.
-
-### v0.9.7 (2023-10-21)
-
-- Updated:
-  - Upgrade all deps to their latest versions.
-
-### v0.9.6 (2023-10-17)
-
-- Updated:
-  - Update `r3bl_rs_utils_core` crate due to
-    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
-    maintained anymore.
-
-### v0.9.5 (2023-10-14)
-
-- Updated:
-  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
-    `r3bl_rs_utils` repo workspace as `simple_logger`).
 
 ## `r3bl_test_fixtures`
 
@@ -935,7 +813,7 @@ links for this release: [crates.io](https://crates.io/crates/r3bl_test_fixtures)
 
 ## `r3bl_terminal_async`
 
-### next release
+### next-release-terminal-async
 
 This is a major version upgrade and potentially a breaking change if you use the tracing
 modules in this crate.
@@ -949,16 +827,16 @@ modules in this crate.
 
 - Changed:
   - Refactor the tracing and Jaeger related code into 2 separate modules. This is laying
-    the groundwork for these modules to be moved into `r3bl_rs_utils_core` crate.
+    the groundwork for these modules to be moved into `r3bl_core` crate.
     Radically simplify the tracing configuration design and init mechanisms, so they are
     easy to understand, use, and maintain.
 
 - Deleted:
   - Move the Jaeger tracing module to the `tcp-api-server` crate in the
-    `https://github.comnazmulidris/rust-scratch/` repo. This wasn't really used anywhere
-    else. Also remove all the OpenTelemetry related dependencies from this crate.
-  - Move the tracing module into the `core` folder (`r3bl_rs_utils_core` crate) in the
-    mono repo.
+    [`rust-scratch`](https://github.comnazmulidris/rust-scratch/) repo. This wasn't really
+    used anywhere else. Also remove all the OpenTelemetry related dependencies from this
+    crate.
+  - Move the tracing module into the `r3bl_core` crate, in the mono repo.
 
 ### v0.5.7 (2024-09-12)
 
@@ -1176,6 +1054,177 @@ This is the first release of this crate.
 - Replaced:
   - `justfile` is now replaced with `nu` script `run.nu`.
 
+<!-- Renamed section -->
+
+## `r3bl_rs_utils_macro`
+
+### Rename to `r3bl_macro`
+
+This crate is now renamed to `r3bl_macro` to make it consistent with the naming for all
+crates in this repo. Please look at the [`r3bl_macro`](#r3bl_macro) for more details.
+
+### v0.9.10 (2024-09-12)
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
+
+### v0.9.9 (2024-04-16)
+
+- Updated:
+  - Use the latest `r3bl_rs_utils_core` version `0.9.13`.
+
+### v0.9.8 (2023-12-22)
+
+- Updated:
+  - Use latest `r3bl_rs_utils_core` version `0.9.10`. Remove unused dependencies, and
+    update to the latest ones.
+
+### v0.9.7 (2023-10-21)
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.9.6 (2023-10-17)
+
+- Updated:
+  - Update `r3bl_rs_utils_core` crate due to
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>, and `ansi_term` not being
+    maintained anymore.
+
+### v0.9.5 (2023-10-14)
+
+- Updated:
+  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
+    `r3bl_rs_utils` repo workspace as `simple_logger`).
+
+## `r3bl_rs_utils_core`
+
+### Rename to `r3bl_core`
+
+This crate is now renamed to `r3bl_core` to make it consistent with the naming for all
+crates in this repo. Please look at the [`r3bl_core`](#r3bl_core) for more details.
+
+### v0.9.16 (2024-09-12)
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
+
+### v0.9.15 (2024-09-07)
+
+- Removed:
+  - Remove `get-size` crate from `Cargo.toml`. This was causing some [issues with
+    `RUSTSEC-2024-0370`](https://github.com/r3bl-org/r3bl-open-core/issues/359).
+
+- Added:
+   - Add `size-of` crate.
+    - This new crate is used to calculate the size of structs in bytes
+      (eg: `Vec<UnicodeString>` which is on the heap).
+    - Change the implementations of many structs in the following modules: `tui_core`.
+   - Add `common_math.rs` to `common` module, to make it easy to format numbers with
+     commas. This is useful for displaying size in bytes or kilobytes, etc. in log output
+     messages.
+
+- Updated:
+  - Use the latest deps for all crates in `Cargo.toml` and `Cargo.lock`.
+
+### v0.9.14 (2024-08-13)
+
+The main additions to this release are the `StringLength` enum, the `timed!()` macro, and
+the `ok!()` macro.
+
+- Added:
+  - New enum `StringLength` that can be used to calculate the length of strings that have
+    ANSI escape sequences in them. It also uses `UnicodeWidth` to calculate the "display"
+    width of the (stripped) string. It also memoizes the result so that it is fast to
+    calculate the length of the same string multiple times. This is used in the
+    `r3bl_terminal_async` crate. It also has a method to calculate the SHA256 hash of a
+    given `String`, and return it as a `u8`.
+  - New declarative macro `timed!()` that measures the time the given expression takes to
+    run using `time::Instant::now()`. If you use `timed!($expr)` then it will return a
+    tuple of `($expr, duration)`.
+  - New declarative macro `ok!()` that is just syntactic sugar for `Ok(())`. If you use
+    `ok!($expr)` then it will return `Ok($expr)`.
+  - Here's the [PR](https://github.com/r3bl-org/r3bl-open-core/pull/349) with all the code
+    related to this release.
+
+### v0.9.13 (2024-04-15)
+
+- Changed:
+  - Removed `syntect` dep.
+  - Rename `Style` to `TuiStyle`.
+  - Lots of cargo clippy fixes.
+
+### v0.9.12 (2024-01-07)
+
+- Added:
+  - Add `generate_friendly_random_id()` to generate human readable and friendly IDs.
+
+### v0.9.11 (2024-01-02)
+
+- Added:
+  - Add more variants to the `CommonErrorType` enum: `ConfigFolderCountNotBeCreated`,
+    `ConfigFolderPathCouldNotBeGenerated`.
+
+### v0.9.10 (2023-12-22)
+
+- Updated:
+  - Upgrade all the deps to their latest versions: `serde` version `1.0.190`. Propagate
+    this to all the other crates in the `r3bl-open-core` repo, and bump their version
+    numbers: e.g. `tuify`, `macro`, `tui`, `cmdr`.
+
+### v0.9.9 (2023-10-21)
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.9.8 (2023-10-21)
+
+- Updated:
+  - Upgrade all deps to their latest versions.
+
+### v0.9.7 (2023-10-17)
+
+- Updated:
+  - Dependency on `simple_logger` updated due to this security advisory
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. `simple_logger` itself had to
+    drop `ansi_term`.
+
+### v0.9.6 (2023-10-17)
+
+- Removed:
+  - Dependency on `ansi_term` is dropped due to this security advisory
+    <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. Flagged when running CI/CD
+    job on Ockam [repo](https://github.com/build-trust/ockam).
+
+- Updated:
+  - Documentation for `r3bl_simple_logger` crate. And how to think about it vs. using log
+    facilities from the `r3bl_rs_utils_core` crate. Update docs there too.
+
+### v0.9.5 (2023-10-14)
+
+- Updated:
+  - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the
+    `r3bl_rs_utils` repo workspace as `simple_logger`).
+  - `TuiColor` has a few new variants. They can be `RgbValue`, `AnsiValue`, or `ANSIBasicColor`. It
+    is safe to use just `RgbValue` since the library will degrade gracefully to ANSI 256 or
+    grayscale based on terminal emulator capabilities at runtime (provided by `to_crossterm_color()`
+    and `ColorSupport`). If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not
+    be downgraded.
+
+### v0.9.1 (2023-03-06)
+
+- Added:
+  - First changelog entry.
+  - Move lolcat into `tui_core` crate.
+- Removed:
+  - ANSI escape sequences are no longer used internally in any intermediate format used by the TUI
+    engine. It is reserved exclusively for output to stdout using (for now) crossterm. This opens
+    the door for future support for GUI app (not just terminal emulators).
+
+<!-- Archived section -->
+
 ## `r3bl_simple_logger`
 
 ### Archived (2024-09-27)
@@ -1330,6 +1379,7 @@ archival purposes. It is no longer maintained.
   - Drop `ansi_term` dependency due to security advisory
     <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>.
 
+<!-- Info on changelogs -->
 
 ## More info on changelogs
 

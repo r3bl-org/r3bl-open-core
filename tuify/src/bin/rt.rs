@@ -23,7 +23,7 @@ use std::{io::{stdin, BufRead, Result},
 
 use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{call_if_true, throws, try_initialize_global_logging};
+use r3bl_core::{call_if_true, throws, try_initialize_global_logging};
 use r3bl_tuify::{get_size,
                  get_terminal_width,
                  is_stdin_piped,

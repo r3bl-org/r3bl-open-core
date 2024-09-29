@@ -18,7 +18,7 @@
 use std::process::Command;
 
 use r3bl_ansi_color::{AnsiStyledText, Style};
-use r3bl_rs_utils_core::CommonResult;
+use r3bl_core::CommonResult;
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 
 use crate::{color_constants::DefaultColors::{FrozenBlue,

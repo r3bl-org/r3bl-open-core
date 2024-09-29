@@ -64,7 +64,7 @@ pub fn parse_unique_kv_opt_eol<'a>(
 #[cfg(test)]
 mod test_parse_title_no_eol {
     use crossterm::style::Stylize;
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::constants::TITLE;

@@ -25,11 +25,11 @@ use std::{fmt::{Display, Formatter},
 use crossterm::style::Stylize;
 use dirs::config_dir;
 use r3bl_analytics_schema::AnalyticsEvent;
-use r3bl_rs_utils_core::{call_if_true,
-                         friendly_random_id,
-                         CommonError,
-                         CommonErrorType,
-                         CommonResult};
+use r3bl_core::{call_if_true,
+                friendly_random_id,
+                CommonError,
+                CommonErrorType,
+                CommonResult};
 use reqwest::{Client, Response};
 
 use crate::DEBUG_ANALYTICS_CLIENT_MOD;

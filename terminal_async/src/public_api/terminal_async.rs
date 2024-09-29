@@ -24,7 +24,7 @@ use crossterm::{cursor::MoveToColumn,
                 terminal::{Clear, ClearType}};
 use futures_util::FutureExt;
 use miette::IntoDiagnostic;
-use r3bl_rs_utils_core::{LineStateControlSignal, SharedWriter};
+use r3bl_core::{LineStateControlSignal, SharedWriter};
 use r3bl_tuify::{is_fully_uninteractive_terminal,
                  is_stdin_piped,
                  is_stdout_piped,
@@ -52,7 +52,7 @@ impl TerminalAsync {
     ///     let terminal_async = TerminalAsync::try_new("> ")
     ///         .await?
     ///         .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
-    ///     r3bl_rs_utils_core::ok!()
+    ///     r3bl_core::ok!()
     /// }
     /// ```
     ///
@@ -64,7 +64,7 @@ impl TerminalAsync {
     ///     let Some(mut terminal_async) = TerminalAsync::try_new("> ").await? else {
     ///         return Err(miette::miette!("Failed to create terminal"));
     ///     };
-    ///     r3bl_rs_utils_core::ok!()
+    ///     r3bl_core::ok!()
     /// }
     /// ```
     ///

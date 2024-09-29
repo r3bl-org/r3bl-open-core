@@ -21,7 +21,7 @@ use crate::{TuiStyle, UnicodeString};
 ///
 /// Here's an example.
 /// ```rust
-/// use r3bl_rs_utils_core::*;
+/// use r3bl_core::*;
 ///
 /// let style = TuiStyle::default();
 /// let st = tui_styled_text!(@style: style, @text: "Hello World");

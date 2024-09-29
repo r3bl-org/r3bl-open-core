@@ -56,7 +56,7 @@ impl ChUnit {
 /// Creates a new [ChUnit] amount.
 ///
 /// ```rust
-/// use r3bl_rs_utils_core::*;
+/// use r3bl_core::*;
 /// let width_col = ch!(10);
 /// let height_row = ch!(5, @inc);
 /// let height_row = ch!(5, @inc);
@@ -65,7 +65,7 @@ impl ChUnit {
 /// You can also convert a [ChUnit] amount into a [usize] primitive.
 ///
 /// ```rust
-/// use r3bl_rs_utils_core::*;
+/// use r3bl_core::*;
 /// let width_col = ch!(10);
 /// let width_col_usize: usize = ch!(@to_usize width_col);
 /// let width_col_usize: usize = ch!(@to_usize width_col, @inc);

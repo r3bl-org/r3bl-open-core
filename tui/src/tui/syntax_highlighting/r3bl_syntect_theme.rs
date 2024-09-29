@@ -47,7 +47,7 @@ pub fn load_default_theme() -> Theme {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::throws;
+    use r3bl_core::throws;
 
     use crate::try_load_r3bl_theme;
 

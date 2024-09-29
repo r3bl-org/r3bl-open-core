@@ -1700,8 +1700,8 @@ dependencies = [
  "pretty_assertions",
  "r3bl_analytics_schema",
  "r3bl_ansi_color",
+ "r3bl_core",
  "r3bl_macro",
- "r3bl_rs_utils_core",
  "r3bl_tui",
  "r3bl_tuify",
  "rand",
@@ -1737,19 +1737,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "r3bl_macro"
-version = "0.9.10"
-dependencies = [
- "paste",
- "pretty_assertions",
- "proc-macro2",
- "quote",
- "r3bl_rs_utils_core",
- "syn 2.0.77",
-]
-
-[[package]]
-name = "r3bl_rs_utils_core"
+name = "r3bl_core"
 version = "0.9.16"
 dependencies = [
  "assert_cmd",
@@ -1786,6 +1774,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "r3bl_macro"
+version = "0.9.10"
+dependencies = [
+ "paste",
+ "pretty_assertions",
+ "proc-macro2",
+ "quote",
+ "r3bl_core",
+ "syn 2.0.77",
+]
+
+[[package]]
 name = "r3bl_terminal_async"
 version = "0.5.7"
 dependencies = [
@@ -1795,7 +1795,7 @@ dependencies = [
  "futures-util",
  "miette",
  "pretty_assertions",
- "r3bl_rs_utils_core",
+ "r3bl_core",
  "r3bl_test_fixtures",
  "r3bl_tui",
  "r3bl_tuify",
@@ -1843,8 +1843,8 @@ dependencies = [
  "nom",
  "pretty_assertions",
  "r3bl_ansi_color",
+ "r3bl_core",
  "r3bl_macro",
- "r3bl_rs_utils_core",
  "r3bl_terminal_async",
  "rand",
  "serde",
@@ -1871,7 +1871,7 @@ dependencies = [
  "log",
  "pretty_assertions",
  "r3bl_ansi_color",
- "r3bl_rs_utils_core",
+ "r3bl_core",
  "reedline",
  "serde",
  "serde_json",

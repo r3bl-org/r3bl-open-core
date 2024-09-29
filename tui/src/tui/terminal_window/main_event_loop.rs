@@ -17,20 +17,20 @@
 
 use std::{fmt::Debug, marker::PhantomData};
 
-use r3bl_rs_utils_core::{call_if_true,
-                         ch,
-                         position,
-                         throws,
-                         Ansi256GradientIndex,
-                         ColorWheel,
-                         ColorWheelConfig,
-                         ColorWheelSpeed,
-                         CommonResult,
-                         GradientGenerationPolicy,
-                         Size,
-                         TextColorizationPolicy,
-                         TooSmallToDisplayResult,
-                         UnicodeString};
+use r3bl_core::{call_if_true,
+                ch,
+                position,
+                throws,
+                Ansi256GradientIndex,
+                ColorWheel,
+                ColorWheelConfig,
+                ColorWheelSpeed,
+                CommonResult,
+                GradientGenerationPolicy,
+                Size,
+                TextColorizationPolicy,
+                TooSmallToDisplayResult,
+                UnicodeString};
 use r3bl_macro::tui_style;
 use size_of::SizeOf;
 use tokio::sync::mpsc;

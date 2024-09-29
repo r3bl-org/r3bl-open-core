@@ -20,7 +20,7 @@ use std::io::{Result, Write};
 use crossterm::{cursor::{MoveToNextLine, MoveToPreviousLine},
                 queue,
                 terminal::{Clear, ClearType}};
-use r3bl_rs_utils_core::{call_if_true, throws, ChUnit, Size};
+use r3bl_core::{call_if_true, throws, ChUnit, Size};
 
 use crate::{ResizeHint, DEVELOPMENT_MODE};
 

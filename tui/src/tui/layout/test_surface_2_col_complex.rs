@@ -16,20 +16,20 @@
  */
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::{assert_eq2,
-                             ch,
-                             console_log,
-                             get_tui_styles,
-                             position,
-                             requested_size_percent,
-                             size,
-                             throws,
-                             throws_with_return,
-                             tui_stylesheet,
-                             CommonResult,
-                             RgbValue,
-                             TuiColor,
-                             TuiStylesheet};
+    use r3bl_core::{assert_eq2,
+                    ch,
+                    console_log,
+                    get_tui_styles,
+                    position,
+                    requested_size_percent,
+                    size,
+                    throws,
+                    throws_with_return,
+                    tui_stylesheet,
+                    CommonResult,
+                    RgbValue,
+                    TuiColor,
+                    TuiStylesheet};
     use r3bl_macro::tui_style;
 
     use crate::{box_end,

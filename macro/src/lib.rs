@@ -125,7 +125,7 @@ mod utils;
 use proc_macro::TokenStream;
 
 /// Creates a new
-/// [Style](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/tui_core/styles/style/struct.Style.html)
+/// [Style](https://docs.rs/r3bl_core/latest/r3bl_core/tui_core/styles/style/struct.Style.html)
 /// declaratively.
 ///
 /// - If `id` isn't supplied, then [u8::MAX](u8::MAX) is used.
@@ -136,7 +136,7 @@ use proc_macro::TokenStream;
 ///
 /// ```rust
 /// use r3bl_macro::{tui_style};
-/// use r3bl_rs_utils_core::{TuiStyle, TuiColor, RgbValue};
+/// use r3bl_core::{TuiStyle, TuiColor, RgbValue};
 /// let _ = tui_style!(attrib: [dim]);
 /// ```
 ///

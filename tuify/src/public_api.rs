@@ -20,7 +20,7 @@ use std::io::stdout;
 use clap::ValueEnum;
 use crossterm::style::Stylize;
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_rs_utils_core::{call_if_true, ch, Size};
+use r3bl_core::{call_if_true, ch, Size};
 
 use crate::{enter_event_loop,
             get_size,
@@ -351,7 +351,7 @@ pub enum SelectionMode {
 
 #[cfg(test)]
 mod test_select_from_list {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::{is_fully_uninteractive_terminal,

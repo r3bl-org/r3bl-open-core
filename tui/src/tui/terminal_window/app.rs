@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::CommonResult;
+use r3bl_core::CommonResult;
 
 use super::{ComponentRegistryMap, EventPropagation, GlobalData, HasFocus};
 use crate::{InputEvent, RenderPipeline};

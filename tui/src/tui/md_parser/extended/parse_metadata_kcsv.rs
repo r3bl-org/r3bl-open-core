@@ -114,7 +114,7 @@ fn parse_comma_separated_list(input: &str) -> IResult<&str, Vec<&str>> {
 
 #[cfg(test)]
 mod test_parse_tags_opt_eol {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::constants::TAGS;

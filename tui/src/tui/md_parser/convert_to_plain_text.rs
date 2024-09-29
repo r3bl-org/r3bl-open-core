@@ -18,7 +18,7 @@
 //! This module is responsible for converting all the [MdLineFragment] into plain text
 //! w/out any formatting.
 
-use r3bl_rs_utils_core::PrettyPrintDebug;
+use r3bl_core::PrettyPrintDebug;
 
 use crate::{constants::{BACK_TICK,
                         CHECKED,
@@ -194,7 +194,7 @@ pub fn generate_unordered_list_item_bullet(
 
 #[cfg(test)]
 mod to_plain_text_tests {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 

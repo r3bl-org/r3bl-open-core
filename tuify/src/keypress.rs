@@ -22,7 +22,7 @@ use crossterm::event::{read,
                        KeyEventKind,
                        KeyEventState,
                        KeyModifiers};
-use r3bl_rs_utils_core::{call_if_true, ch, Size};
+use r3bl_core::{call_if_true, ch, Size};
 
 use crate::DEVELOPMENT_MODE;
 

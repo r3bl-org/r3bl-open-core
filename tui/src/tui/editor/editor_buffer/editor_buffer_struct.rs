@@ -19,14 +19,14 @@ use std::{collections::HashMap,
           fmt::{Debug, Formatter, Result}};
 
 use common_math::format_with_commas;
-use r3bl_rs_utils_core::{call_if_true,
-                         ch,
-                         common_math,
-                         position,
-                         ChUnit,
-                         Position,
-                         Size,
-                         UnicodeString};
+use r3bl_core::{call_if_true,
+                ch,
+                common_math,
+                position,
+                ChUnit,
+                Position,
+                Size,
+                UnicodeString};
 use serde::{Deserialize, Serialize};
 use size_of::SizeOf as _;
 
@@ -95,9 +95,9 @@ use crate::{EditorEngine,
 /// ## `caret_display_position`
 ///
 /// This is the "display" (or `display_col_index`) and not "logical" (or `logical_index`)
-/// position (both are defined in [r3bl_rs_utils_core::tui_core::graphemes]). Please take
-/// a look at [r3bl_rs_utils_core::tui_core::graphemes::UnicodeString], specifically the
-/// methods in [r3bl_rs_utils_core::tui_core::graphemes::access] for more details on how
+/// position (both are defined in [r3bl_core::tui_core::graphemes]). Please take
+/// a look at [r3bl_core::tui_core::graphemes::UnicodeString], specifically the
+/// methods in [r3bl_core::tui_core::graphemes::access] for more details on how
 /// the conversion between "display" and "logical" indices is done.
 ///
 /// 1. It represents the current caret position (relative to the
@@ -181,7 +181,7 @@ use crate::{EditorEngine,
 /// The [SelectionMap] is used to keep track of the selections in the buffer. Each entry
 /// in the map represents a row of text in the buffer.
 /// - The row index is the key.
-/// - The value is the [r3bl_rs_utils_core::SelectionRange].
+/// - The value is the [r3bl_core::SelectionRange].
 #[derive(Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct EditorBuffer {
     pub editor_content: EditorContent,
@@ -373,7 +373,7 @@ pub mod history {
 
 #[cfg(test)]
 mod history_tests {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 
