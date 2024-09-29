@@ -16,7 +16,7 @@
  */
 
 use r3bl_cmdr::rc::run_app;
-use r3bl_rs_utils_core::{throws, CommonResult};
+use r3bl_core::{throws, CommonResult};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]

@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::{Position, RequestedSizePercent, Size, TuiStyle};
+use r3bl_core::{Position, RequestedSizePercent, Size, TuiStyle};
 use serde::{Deserialize, Serialize};
 
 use super::FlexBoxId;
@@ -78,7 +78,7 @@ impl Debug for FlexBox {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::{ok, position, requested_size_percent, size, CommonResult};
+    use r3bl_core::{ok, position, requested_size_percent, size, CommonResult};
 
     use super::*;
 

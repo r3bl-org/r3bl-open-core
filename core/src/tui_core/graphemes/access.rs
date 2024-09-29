@@ -78,11 +78,11 @@ impl UnicodeString {
     /// skipped.
     ///
     /// ```rust
-    /// use r3bl_rs_utils_core::UnicodeString;
-    /// use r3bl_rs_utils_core::ChUnit;
+    /// use r3bl_core::UnicodeString;
+    /// use r3bl_core::ChUnit;
     ///
-    /// let col_count:r3bl_rs_utils_core::ChUnit = 2.into();
-    /// let display_cols:r3bl_rs_utils_core::ChUnit = 5.into();
+    /// let col_count:r3bl_core::ChUnit = 2.into();
+    /// let display_cols:r3bl_core::ChUnit = 5.into();
     /// let expected_clipped_string = "rst s";
     /// let line = "first second";
     /// let line = UnicodeString::from(line);
@@ -127,11 +127,11 @@ impl UnicodeString {
     ///
     /// Example.
     /// ```rust
-    /// use r3bl_rs_utils_core::UnicodeString;
-    /// use r3bl_rs_utils_core::ChUnit;
+    /// use r3bl_core::UnicodeString;
+    /// use r3bl_core::ChUnit;
     ///
-    /// let scroll_offset_col:r3bl_rs_utils_core::ChUnit = 0.into();
-    /// let display_cols:r3bl_rs_utils_core::ChUnit = 3.into();
+    /// let scroll_offset_col:r3bl_core::ChUnit = 0.into();
+    /// let display_cols:r3bl_core::ChUnit = 3.into();
     /// let expected_clipped_string = "fir";
     /// let line = "first second";
     /// let line = UnicodeString::from(line);

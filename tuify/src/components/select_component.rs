@@ -27,7 +27,7 @@ use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                         Stylize},
                 terminal::{Clear, ClearType}};
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_rs_utils_core::{call_if_true, ch, throws, ChUnit, UnicodeString};
+use r3bl_core::{call_if_true, ch, throws, ChUnit, UnicodeString};
 
 use crate::{apply_style,
             get_crossterm_color_based_on_terminal_capabilities,

@@ -18,7 +18,7 @@
 use std::process::Command;
 
 use r3bl_ansi_color::{AnsiStyledText, Style};
-use r3bl_rs_utils_core::CommonResult;
+use r3bl_core::CommonResult;
 use r3bl_tuify::{select_from_list_with_multi_line_header, SelectionMode, StyleSheet};
 use try_delete_branch_user_choice::Selection::{self, Delete, ExitProgram};
 

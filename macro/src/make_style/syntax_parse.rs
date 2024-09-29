@@ -16,7 +16,7 @@
  */
 
 use quote::quote;
-use r3bl_rs_utils_core::{call_if_true, ch, throws, ChUnit, ChUnitPrimitiveType};
+use r3bl_core::{call_if_true, ch, throws, ChUnit, ChUnitPrimitiveType};
 use syn::{parse::{Parse, ParseStream},
           Expr,
           Expr::Verbatim,

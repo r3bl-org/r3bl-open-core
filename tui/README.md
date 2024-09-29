@@ -457,7 +457,7 @@ not.
 So far we have covered what happens when the [App] receives a signal. Who sends this
 signal? Who actually creates the `tokio::spawn` task that sends this signal? This can
 happen anywhere in the [App] and [Component]. Any code that has access to [GlobalData]
-can use the [r3bl_rs_utils_core::send_signal!] macro to send a signal in a background
+can use the [r3bl_core::send_signal!] macro to send a signal in a background
 task. However, only the [App] can receive the signal and do something with it, which
 is usually apply the signal to update the state and then tell the main thread to
 repaint the UI.
@@ -481,7 +481,7 @@ The main building blocks of a TUI app are:
    [TerminalWindow] to bootstrap your TUI app. You can just use [App] to build your
    app, if it is a simple one & you don't really need any sophisticated layout or
    styling. But if you want layout and styling, now we have to deal with [FlexBox],
-   [Component], and [r3bl_rs_utils_core::TuiStyle].
+   [Component], and [r3bl_core::TuiStyle].
 
 ## Layout and styling
 
@@ -522,7 +522,7 @@ focus.
 The [HasFocus] struct takes care of this. This provides 2 things:
 
 1.  It holds an `id` of a [FlexBox] / [Component] that has focus.
-2.  It also holds a map that holds a [r3bl_rs_utils_core::Position] for each `id`.
+2.  It also holds a map that holds a [r3bl_core::Position] for each `id`.
     This is used to represent a cursor (whatever that means to your app & component).
     This cursor is maintained for each `id`. This allows a separate cursor for each
     [Component] that has focus. This is needed to build apps like editors and viewers
@@ -852,7 +852,7 @@ streaming and used less CPU and memory.
 ## Grapheme support
 
 Unicode is supported (to an extent). There are some caveats. The
-[r3bl_rs_utils_core::UnicodeString] struct has lots of great information on this
+[r3bl_core::UnicodeString] struct has lots of great information on this
 graphemes and what is supported and what is not.
 
 ## Lolcat support
@@ -860,7 +860,7 @@ graphemes and what is supported and what is not.
 An implementation of lolcat color wheel is provided. Here's an example.
 
 ```rust
-use r3bl_rs_utils_core::*;
+use r3bl_core::*;
 use r3bl_tui::*;
 
 let mut lolcat = LolcatBuilder::new()
@@ -877,15 +877,15 @@ let st = lolcat_mut.colorize_to_styled_texts(&unicode_string);
 lolcat.next_color();
 ```
 
-This [r3bl_rs_utils_core::Lolcat] that is returned by `build()` is safe to re-use.
+This [r3bl_core::Lolcat] that is returned by `build()` is safe to re-use.
 - The colors it cycles through are "stable" meaning that once constructed via the
-  [builder](r3bl_rs_utils_core::LolcatBuilder) (which sets the speed, seed, and delta
+  [builder](r3bl_core::LolcatBuilder) (which sets the speed, seed, and delta
   that determine where the color wheel starts when it is used). For eg, when used in a
   dialog box component that re-uses the instance, repeated calls to the `render()`
   function of this component will produce the same generated colors over and over
   again.
 - If you want to change where the color wheel "begins", you have to change the speed,
-  seed, and delta of this [r3bl_rs_utils_core::Lolcat] instance.
+  seed, and delta of this [r3bl_core::Lolcat] instance.
 
 ## Issues and PRs
 

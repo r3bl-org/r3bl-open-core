@@ -18,7 +18,7 @@
 use std::{io::Result, vec};
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
-use r3bl_rs_utils_core::{call_if_true, throws, try_initialize_global_logging};
+use r3bl_core::{call_if_true, throws, try_initialize_global_logging};
 use r3bl_tuify::{components::style::StyleSheet,
                  get_size,
                  get_terminal_width,

@@ -95,7 +95,7 @@ use std::io::Write as _;
 
 use crossterm::style::Stylize;
 use miette::IntoDiagnostic;
-use r3bl_rs_utils_core::{ok, SharedWriter};
+use r3bl_core::{ok, SharedWriter};
 use r3bl_terminal_async::{ReadlineEvent,
                           ReadlineEvent::{Eof, Interrupted, Line, Resized},
                           TerminalAsync};

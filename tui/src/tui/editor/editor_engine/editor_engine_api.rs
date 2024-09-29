@@ -16,22 +16,22 @@
  */
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::{call_if_true,
-                         ch,
-                         position,
-                         throws,
-                         throws_with_return,
-                         ANSIBasicColor,
-                         ChUnit,
-                         CommonResult,
-                         PrettyPrintDebug,
-                         ScrollOffsetColLocationInRange,
-                         SelectionRange,
-                         Size,
-                         TuiColor,
-                         TuiStyledTexts,
-                         UnicodeString,
-                         UnicodeStringSegmentSliceResult};
+use r3bl_core::{call_if_true,
+                ch,
+                position,
+                throws,
+                throws_with_return,
+                ANSIBasicColor,
+                ChUnit,
+                CommonResult,
+                PrettyPrintDebug,
+                ScrollOffsetColLocationInRange,
+                SelectionRange,
+                Size,
+                TuiColor,
+                TuiStyledTexts,
+                UnicodeString,
+                UnicodeStringSegmentSliceResult};
 use r3bl_macro::tui_style;
 use syntect::easy::HighlightLines;
 
@@ -763,7 +763,7 @@ mod no_syn_hi_path {
 mod test_cache {
     use std::collections::HashMap;
 
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::ScrollOffset;

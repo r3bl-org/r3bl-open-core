@@ -34,10 +34,7 @@ use r3bl_cmdr::{color_constants::DefaultColors::{FrozenBlue, GuardsRed, Moonligh
                 report_analytics,
                 upgrade_check,
                 AnalyticsAction};
-use r3bl_rs_utils_core::{call_if_true,
-                         throws,
-                         try_initialize_global_logging,
-                         CommonResult};
+use r3bl_core::{call_if_true, throws, try_initialize_global_logging, CommonResult};
 use r3bl_tuify::{select_from_list_with_multi_line_header, SelectionMode, StyleSheet};
 
 #[tokio::main]

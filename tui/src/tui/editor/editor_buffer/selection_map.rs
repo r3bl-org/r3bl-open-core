@@ -19,12 +19,7 @@ use std::{collections::HashMap,
           fmt::{Debug, Display}};
 
 use crossterm::style::{StyledContent, Stylize};
-use r3bl_rs_utils_core::{ch,
-                         position,
-                         CaretMovementDirection,
-                         ChUnit,
-                         Position,
-                         SelectionRange};
+use r3bl_core::{ch, position, CaretMovementDirection, ChUnit, Position, SelectionRange};
 use serde::{Deserialize, Serialize};
 
 use crate::{DeleteSelectionWith, EditorBuffer};
@@ -45,7 +40,7 @@ pub type RowIndex = ChUnit;
 
 #[test]
 fn test_selection_map_direction_change() {
-    use r3bl_rs_utils_core::{assert_eq2, CaretMovementDirection};
+    use r3bl_core::{assert_eq2, CaretMovementDirection};
 
     use super::*;
 

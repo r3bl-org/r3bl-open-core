@@ -60,7 +60,7 @@ pub fn take_text_until_new_line_or_end<'input>() ->
 #[cfg(test)]
 mod test_text_until_opt_eol {
     use crossterm::style::Stylize;
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 

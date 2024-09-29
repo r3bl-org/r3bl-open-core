@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{ColorWheel, ColorWheelConfig, ColorWheelSpeed};
+use r3bl_core::{ColorWheel, ColorWheelConfig, ColorWheelSpeed};
 
 #[derive(Debug, Clone, Copy)]
 pub enum SpinnerTemplate {

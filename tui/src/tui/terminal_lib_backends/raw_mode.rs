@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::Size;
+use r3bl_core::Size;
 
 use super::{RenderOp, RenderOps, RenderOpsLocalData};
 
