@@ -29,7 +29,6 @@ let workspace_folders = [
     "ansi_color",
     "macro",
     "analytics_schema",
-    "utils",
 ]
 
 # Main entry point for the script.

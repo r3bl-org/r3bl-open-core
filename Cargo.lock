@@ -1758,14 +1758,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "r3bl_rs_utils"
-version = "0.9.16"
-dependencies = [
- "pretty_assertions",
- "r3bl_rs_utils_core",
-]
-
-[[package]]
 name = "r3bl_rs_utils_core"
 version = "0.9.16"
 dependencies = [

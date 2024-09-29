@@ -100,12 +100,14 @@
   - [v0.1.1 2023-10-17](#v011-2023-10-17)
   - [v0.1.0 2023-10-14](#v010-2023-10-14)
 - [r3bl_rs_utils_redux](#r3bl_rs_utils_redux)
+  - [Archived 2024-09-29](#archived-2024-09-29)
   - [v0.2.8 2024-09-12](#v028-2024-09-12)
   - [v0.2.7 2024-09-07](#v027-2024-09-07)
   - [v0.2.6 2023-10-21](#v026-2023-10-21)
   - [v0.2.5 2023-10-17](#v025-2023-10-17)
   - [v0.2.4 2023-10-14](#v024-2023-10-14)
 - [r3bl_rs_utils](#r3bl_rs_utils)
+  - [Archived 2024-09-30](#archived-2024-09-30)
   - [v0.9.16 2024-09-12](#v0916-2024-09-12)
   - [v0.9.15 2023-12-22](#v0915-2023-12-22)
   - [v0.9.14 2023-10-29](#v0914-2023-10-29)
@@ -1247,6 +1249,12 @@ engine in 2024, in favor of "Elm style" or "signals" based architecture.
   - Needless dependencies on crates that are not used.
 
 ## `r3bl_rs_utils`
+
+### Archived (2024-09-30)
+
+This crate has been moved into the
+[r3bl-open-core-archive](https://github.com/r3bl-org/r3bl-open-core-archive) repo for
+archival purposes. It is no longer maintained.
 
 ### v0.9.16 (2024-09-12)
 
