@@ -1201,6 +1201,13 @@ since it had become unmaintained. We now use tokio tracing, so this is no longer
 
 ## `r3bl_rs_utils_redux`
 
+### Archived (2024-09-29)
+
+This crate has been moved into the
+[r3bl-open-core-archive](https://github.com/r3bl-org/r3bl-open-core-archive) repo for
+archival purposes. It is no longer maintained. The redux pattern was removed from the TUI
+engine in 2024, in favor of "Elm style" or "signals" based architecture.
+
 ### v0.2.8 (2024-09-12)
 
 - Updated:

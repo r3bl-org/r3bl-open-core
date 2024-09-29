@@ -1,11 +1,11 @@
 # https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html#creating-the-second-package-in-the-workspace
 [workspace]
+# Make sure to keep these in sync with `run` nushell script `workspace_folders`.
 members = [
   "ansi_color",
   "core",
   "tuify",
   "macro",
-  "redux",
   "tui",
   "utils",
   "cmdr",

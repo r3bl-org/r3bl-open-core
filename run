@@ -18,6 +18,7 @@
 #     - coming from bash: https://www.nushell.sh/book/coming_from_bash.html
 #     - thinking in nu: https://www.nushell.sh/book/thinking_in_nu.html
 
+# Make sure to keep this in sync with `Cargo.toml` workspace members.
 let workspace_folders = [
     "core",
     "tui",
@@ -28,7 +29,6 @@ let workspace_folders = [
     "ansi_color",
     "macro",
     "analytics_schema",
-    "redux",
     "utils",
 ]
 
