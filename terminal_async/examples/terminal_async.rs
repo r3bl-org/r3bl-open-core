@@ -15,21 +15,25 @@
  *   limitations under the License.
  */
 
-use std::{io::{stderr, Write},
+use std::{fs,
+          io::{stderr, Write},
           ops::ControlFlow,
+          path::{self, PathBuf},
+          str::FromStr as _,
           sync::Arc,
           time::Duration};
 
 use crossterm::style::Stylize as _;
-use miette::IntoDiagnostic as _;
+use miette::{miette, IntoDiagnostic as _};
 use r3bl_core::{tracing_logging::tracing_config::TracingConfig,
                 DisplayPreference,
-                SharedWriter};
+                SendRawTerminal,
+                SharedWriter,
+                StdMutex};
 use r3bl_terminal_async::{Readline,
                           ReadlineEvent,
                           Spinner,
                           SpinnerStyle,
-                          StdMutex,
                           TerminalAsync};
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
@@ -252,8 +256,6 @@ mod task_2 {
 }
 
 mod process_input_event {
-    use std::str::FromStr;
-
     use super::*;
 
     pub fn process(
@@ -426,12 +428,6 @@ mod long_running_task {
 }
 
 pub mod file_walker {
-    use std::{fs,
-              path::{self, PathBuf}};
-
-    use miette::miette;
-    use r3bl_terminal_async::SendRawTerminal;
-
     use super::*;
 
     pub const FOLDER_DELIM: &str = std::path::MAIN_SEPARATOR_STR;

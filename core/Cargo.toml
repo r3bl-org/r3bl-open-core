@@ -85,6 +85,10 @@ bincode = { version = "1.3.3" }
 # on top of `sled` which currently does not support access across multiple processes.
 kv = { version = "0.24.0", features = ["json-value", "bincode-value"] }
 
+# Async stream for DI and testing.
+futures-core = "0.3.30"
+async-stream = "0.3.5"
+
 [dev-dependencies]
 # for assert_eq! macro
 pretty_assertions = "1.4.0"
