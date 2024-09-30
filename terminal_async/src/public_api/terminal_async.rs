@@ -22,8 +22,8 @@ use crossterm::{cursor::MoveToColumn,
                 event::EventStream,
                 style::{Print, ResetColor, Stylize},
                 terminal::{Clear, ClearType}};
-use futures_util::FutureExt;
-use miette::IntoDiagnostic;
+use futures_util::FutureExt as _;
+use miette::IntoDiagnostic as _;
 use r3bl_core::{LineStateControlSignal, SharedWriter};
 use r3bl_tuify::{is_fully_uninteractive_terminal,
                  is_stdin_piped,

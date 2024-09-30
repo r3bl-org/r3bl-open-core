@@ -2,10 +2,8 @@
 
 <!-- TOC -->
 
-Active crates
-
 - [r3bl-cmdr](#r3bl-cmdr)
-  - [next release](#next-release-cmdr)
+  - [next-release-cmdr](#next-release-cmdr)
   - [v0.0.16 2024-09-13](#v0016-2024-09-13)
   - [v0.0.15 2024-09-12](#v0015-2024-09-12)
   - [v0.0.14 2024-06-29](#v0014-2024-06-29)
@@ -15,8 +13,21 @@ Active crates
   - [v0.0.10 2024-01-02](#v0010-2024-01-02)
   - [v0.0.9 2023-12-31](#v009-2023-12-31)
   - [v0.0.8 2023-12-22](#v008-2023-12-22)
+- [r3bl_tuify](#r3bl_tuify)
+  - [next-release-tuify](#next-release-tuify)
+  - [v0.1.27 2024-09-12](#v0127-2024-09-12)
+  - [v0.1.26 2024-04-15](#v0126-2024-04-15)
+  - [v0.1.25 2024-01-14](#v0125-2024-01-14)
+  - [v0.1.24 2023-12-31](#v0124-2023-12-31)
+  - [v0.1.23 2023-12-22](#v0123-2023-12-22)
+  - [v0.1.22 2023-12-20](#v0122-2023-12-20)
+  - [v0.1.21 2023-10-21](#v0121-2023-10-21)
+  - [v0.1.20 2023-10-21](#v0120-2023-10-21)
+  - [v0.1.19 2023-10-17](#v0119-2023-10-17)
+  - [v0.1.18 2023-10-17](#v0118-2023-10-17)
+  - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_tui](#r3bl_tui)
-  - [next release](#next-release-tui)
+  - [next-release-tui](#next-release-tui)
   - [v0.5.9 2024-09-12](#v059-2024-09-12)
   - [v0.5.8 2024-09-07](#v058-2024-09-07)
   - [v0.5.7 2024-08-13](#v057-2024-08-13)
@@ -36,25 +47,19 @@ Active crates
   - [v0.3.3 2023-04-20](#v033-2023-04-20)
   - [v0.3.2 2023-03-06](#v032-2023-03-06)
   - [v0.3.1 2023-03-06](#v031-2023-03-06)
-- [r3bl_tuify](#r3bl_tuify)
-  - [next release](#next-release-tuify)
-  - [v0.1.27 2024-09-12](#v0127-2024-09-12)
-  - [v0.1.26 2024-04-15](#v0126-2024-04-15)
-  - [v0.1.25 2024-01-14](#v0125-2024-01-14)
-  - [v0.1.24 2023-12-31](#v0124-2023-12-31)
-  - [v0.1.23 2023-12-22](#v0123-2023-12-22)
-  - [v0.1.22 2023-12-20](#v0122-2023-12-20)
-  - [v0.1.21 2023-10-21](#v0121-2023-10-21)
-  - [v0.1.20 2023-10-21](#v0120-2023-10-21)
-  - [v0.1.19 2023-10-17](#v0119-2023-10-17)
-  - [v0.1.18 2023-10-17](#v0118-2023-10-17)
-  - [v0.1.17 2023-10-14](#v0117-2023-10-14)
 - [r3bl_core](#r3bl_core)
-  - [next release](#next-release-core)
+  - [next-release-core](#next-release-core)
+- [r3bl_analytics_schema](#r3bl_analytics_schema)
+  - [v0.0.2 2024-09-12](#v002-2024-09-12)
+  - [v0.0.1 2023-12-31](#v001-2023-12-31)
 - [r3bl_macro](#r3bl_macro)
   - [next-release-macro](#next-release-macro)
+- [r3bl_test_fixtures](#r3bl_test_fixtures)
+  - [v0.0.3 2024-09-12](#v003-2024-09-12)
+  - [v0.0.2 2024-07-13](#v002-2024-07-13)
+  - [v0.0.1 2024-07-12](#v001-2024-07-12)
 - [r3bl_terminal_async](#r3bl_terminal_async)
-  - [next release](#next-release-terminal-async)
+  - [next-release-terminal-async](#next-release-terminal-async)
   - [v0.5.7 2024-09-12](#v057-2024-09-12)
   - [v0.5.6 2024-08-13](#v056-2024-08-13)
   - [v0.5.5 2024-07-13](#v055-2024-07-13)
@@ -71,18 +76,8 @@ Active crates
   - [v0.6.9 2023-10-21](#v069-2023-10-21)
   - [v0.6.8 2023-10-16](#v068-2023-10-16)
   - [v0.6.7 2023-09-12](#v067-2023-09-12)
-- [r3bl_test_fixtures](#r3bl_test_fixtures)
-  - [v0.0.3 2024-09-12](#v003-2024-09-12)
-  - [v0.0.2 2024-07-13](#v002-2024-07-13)
-  - [v0.0.1 2024-07-12](#v001-2024-07-12)
-- [r3bl_analytics_schema](#r3bl_analytics_schema)
-  - [v0.0.2 2024-09-12](#v002-2024-09-12)
-  - [v0.0.1 2023-12-31](#v001-2023-12-31)
-
-Renamed crates (actively maintained, just known by a different name now)
-
 - [r3bl_rs_utils_macro](#r3bl_rs_utils_macro)
-  - [Rename to `r3bl_macro`](#rename-to-r3bl_macro)
+  - [Rename to r3bl_macro](#rename-to-r3bl_macro)
   - [v0.9.10 2024-09-12](#v0910-2024-09-12)
   - [v0.9.9 2024-04-16](#v099-2024-04-16)
   - [v0.9.8 2023-12-22](#v098-2023-12-22)
@@ -90,7 +85,7 @@ Renamed crates (actively maintained, just known by a different name now)
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
 - [r3bl_rs_utils_core](#r3bl_rs_utils_core)
-  - [Rename to `r3bl_core`](#rename-to-r3bl_core)
+  - [Rename to r3bl_core](#rename-to-r3bl_core)
   - [v0.9.16 2024-09-12](#v0916-2024-09-12)
   - [v0.9.15 2024-09-07](#v0915-2024-09-07)
   - [v0.9.14 2024-08-13](#v0914-2024-08-13)
@@ -104,9 +99,6 @@ Renamed crates (actively maintained, just known by a different name now)
   - [v0.9.6 2023-10-17](#v096-2023-10-17)
   - [v0.9.5 2023-10-14](#v095-2023-10-14)
   - [v0.9.1 2023-03-06](#v091-2023-03-06)
-
-Archived crates (no longer actively maintained)
-
 - [r3bl_simple_logger](#r3bl_simple_logger)
   - [Archived 2024-09-27](#archived-2024-09-27)
   - [v0.1.4 2024-09-12](#v014-2024-09-12)
@@ -757,6 +749,20 @@ in the real world.
 ## `r3bl_macro`
 
 ### next-release-macro
+
+This is a major release that does not include any new functionality, but is a radical
+reorganization & rename of the crate, it used to be
+[`r3bl_rs_utils_macro`](#rename-to-r3bl_macro).
+
+The `r3bl-open-core` repo was started in `2022-02-23`, about 1 year, 7 months, and 11 days
+ago, (which you can get using `curl https://api.github.com/repos/r3bl-org/r3bl-open-core |
+jq .created_at`). We have learned many lessons since then after writing about 125K lines
+of Rust code.
+
+And it is time to pay down the accrued technical debt, to ensure that the codebase is
+easier to maintain and understand, and easier to add new features to in the future. The
+separation of concerns is now much clearer, and they reflect how the functionality is used
+in the real world.
 
 Changed:
   - The name of this repo used to be [`r3bl_rs_utils_macro`](#rename-to-r3bl_macro).

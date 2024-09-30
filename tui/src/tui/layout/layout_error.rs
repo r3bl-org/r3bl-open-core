@@ -27,8 +27,8 @@ use super::FlexBox;
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct LayoutError {
-    err_type: LayoutErrorType,
-    msg: Option<String>,
+    pub error_type: LayoutErrorType,
+    pub error_message: Option<String>,
 }
 
 /// Specific types of errors.
@@ -56,19 +56,25 @@ impl Display for LayoutError {
 
 /// Implement constructor that is compatible w/ [`CommonResult<T>`].
 impl LayoutError {
-    pub fn new_err<T>(err_type: LayoutErrorType) -> CommonResult<T> {
-        Err(LayoutError::new(err_type, None))
+    /// Only [LayoutError::error_type] available, and no [LayoutError::error_message].
+    pub fn new_error_result_with_only_type<T>(
+        err_type: LayoutErrorType,
+    ) -> CommonResult<T> {
+        core::result::Result::Err(miette::miette!(LayoutError {
+            error_type: err_type,
+            error_message: None,
+        }))
     }
 
-    pub fn new_err_with_msg<T>(
+    /// Both [LayoutError::error_type] and [LayoutError::error_message] available.
+    pub fn new_error_result<T>(
         err_type: LayoutErrorType,
         msg: String,
     ) -> CommonResult<T> {
-        Err(LayoutError::new(err_type, Some(msg)))
-    }
-
-    pub fn new(err_type: LayoutErrorType, msg: Option<String>) -> Box<Self> {
-        Box::new(LayoutError { err_type, msg })
+        core::result::Result::Err(miette::miette!(LayoutError {
+            error_type: err_type,
+            error_message: Some(msg),
+        }))
     }
 
     pub fn format_msg_with_stack_len(stack_of_boxes: &[FlexBox], msg: &str) -> String {
@@ -84,21 +90,21 @@ macro_rules! unwrap_or_err {
     ($option:expr, $err_type:expr) => {
         match $option {
             Some(value) => value,
-            None => return $crate::LayoutError::new_err($err_type),
+            None => return $crate::LayoutError::new_error_result_with_only_type($err_type),
         }
     };
 
     ($option:expr, $err_type:expr, $msg:expr) => {
         match $option {
             Some(value) => value,
-            None => return $crate::LayoutError::new_err_with_msg($err_type, $msg.to_string()),
+            None => return $crate::LayoutError::new_error_result($err_type, $msg.to_string()),
         }
     };
 
     ($option:expr, $err_type:expr, $msg:expr, $($arg:tt)*) => {
         match $option {
             Some(value) => value,
-            None => return $crate::LayoutError::new_err_with_msg($err_type, format!($msg, $($arg)*)),
+            None => return $crate::LayoutError::new_error_result($err_type, format!($msg, $($arg)*)),
         }
     };
 }

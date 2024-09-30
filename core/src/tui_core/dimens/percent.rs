@@ -20,7 +20,7 @@ use std::{fmt::{self, Debug},
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ch, ChUnit, ChUnitPrimitiveType};
+use crate::{ch, ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType};
 
 /// Represents an integer value between 0 and 100 (inclusive).
 #[derive(Copy, Clone, PartialEq, Eq, Default, Serialize, Deserialize, Hash)]
@@ -48,22 +48,28 @@ impl Debug for Percent {
 
 /// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>
 impl TryFrom<ChUnitPrimitiveType> for Percent {
-    type Error = String;
-    fn try_from(arg: ChUnitPrimitiveType) -> Result<Self, Self::Error> {
+    type Error = miette::Error;
+    fn try_from(arg: ChUnitPrimitiveType) -> miette::Result<Percent> {
         match Percent::try_and_convert(arg) {
             Some(percent) => Ok(percent),
-            None => Err("Invalid percentage value".to_string()),
+            None => CommonError::new_error_result(
+                CommonErrorType::ValueOutOfRange,
+                "Invalid percentage value",
+            ),
         }
     }
 }
 
 /// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>
 impl TryFrom<i32> for Percent {
-    type Error = String;
-    fn try_from(arg: i32) -> Result<Self, Self::Error> {
+    type Error = miette::Error;
+    fn try_from(arg: i32) -> miette::Result<Percent> {
         match Percent::try_and_convert(arg as u16) {
             Some(percent) => Ok(percent),
-            None => Err("Invalid percentage value".to_string()),
+            None => CommonError::new_error_result(
+                CommonErrorType::ValueOutOfRange,
+                "Invalid percentage value",
+            ),
         }
     }
 }

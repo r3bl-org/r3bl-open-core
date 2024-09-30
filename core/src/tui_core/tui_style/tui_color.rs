@@ -280,7 +280,7 @@ mod rgb_values_impl {
         pub fn try_from_hex_color(input: &str) -> CommonResult<RgbValue> {
             match parse_hex_color(input) {
                 Ok((_, color)) => Ok(color),
-                Err(_) => CommonError::new_err_with_only_type(
+                Err(_) => CommonError::new_error_result_with_only_type(
                     CommonErrorType::InvalidHexColorFormat,
                 ),
             }
@@ -387,9 +387,9 @@ mod rgb_values_impl {
                     }
                 }
 
-                _ => {
-                    CommonError::new_err_with_only_type(CommonErrorType::InvalidRgbColor)
-                }
+                _ => CommonError::new_error_result_with_only_type(
+                    CommonErrorType::InvalidRgbColor,
+                ),
             }
         }
     }

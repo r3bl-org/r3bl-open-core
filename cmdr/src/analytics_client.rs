@@ -22,8 +22,9 @@ use std::{fmt::{Display, Formatter},
           path::PathBuf,
           sync::atomic::AtomicBool};
 
-use crossterm::style::Stylize;
+use crossterm::style::Stylize as _;
 use dirs::config_dir;
+use miette::IntoDiagnostic as _;
 use r3bl_analytics_schema::AnalyticsEvent;
 use r3bl_core::{call_if_true,
                 friendly_random_id,
@@ -122,7 +123,7 @@ pub mod config_folder {
                             "Could not create config folder.\n{}",
                             format!("{error:?}").red()
                         );
-                        CommonError::new_err_with_only_type(
+                        CommonError::new_error_result_with_only_type(
                             CommonErrorType::ConfigFolderCountNotBeCreated,
                         )
                     }
@@ -133,7 +134,7 @@ pub mod config_folder {
                     "Could not get config folder.\n{}",
                     format!("{:?}", try_get_config_folder_path()).red()
                 );
-                CommonError::new_err_with_only_type(
+                CommonError::new_error_result_with_only_type(
                     CommonErrorType::ConfigFolderPathCouldNotBeGenerated,
                 )
             }
@@ -145,16 +146,16 @@ pub mod file_io {
     use super::*;
 
     pub fn try_read_file_contents(path: &PathBuf) -> CommonResult<String> {
-        let file = File::open(path)?;
+        let file = File::open(path).into_diagnostic()?;
         let mut reader = BufReader::new(file);
         let mut contents = String::new();
-        let _ = reader.read_to_string(&mut contents)?;
+        let _ = reader.read_to_string(&mut contents).into_diagnostic()?;
         Ok(contents)
     }
 
     pub fn try_write_file_contents(path: &PathBuf, contents: &str) -> CommonResult<()> {
-        let mut file = File::create(path)?;
-        file.write_all(contents.as_bytes())?;
+        let mut file = File::create(path).into_diagnostic()?;
+        file.write_all(contents.as_bytes()).into_diagnostic()?;
         Ok(())
     }
 }

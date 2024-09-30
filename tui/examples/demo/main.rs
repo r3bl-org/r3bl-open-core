@@ -33,9 +33,10 @@ mod ex_pitch;
 mod ex_rc;
 
 // Use other crates.
-use std::str::FromStr;
+use std::str::FromStr as _;
 
-use crossterm::style::Stylize;
+use crossterm::style::Stylize as _;
+use miette::IntoDiagnostic as _;
 use r3bl_core::{logging::try_initialize_global_logging,
                 ok,
                 style_prompt,
@@ -44,7 +45,7 @@ use r3bl_core::{logging::try_initialize_global_logging,
                 CommonResult};
 use r3bl_terminal_async::{ReadlineEvent, TerminalAsync};
 use r3bl_tui::{keypress, InputEvent, TerminalWindow, DEBUG_TUI_MOD};
-use strum::IntoEnumIterator;
+use strum::IntoEnumIterator as _;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
 #[tokio::main]
@@ -52,7 +53,9 @@ use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 async fn main() -> CommonResult<()> {
     // If the terminal is not fully interactive, then return early.
     let Some(mut terminal_async) = TerminalAsync::try_new("> ").await? else {
-        return CommonError::new_err_with_only_msg("Terminal is not fully interactive");
+        return CommonError::new_error_result_with_only_msg(
+            "Terminal is not fully interactive",
+        );
     };
 
     // Pre-populate the readline's history with some entries.
@@ -84,7 +87,7 @@ async fn main() -> CommonResult<()> {
                     {
                         break;
                     };
-                    crossterm::terminal::enable_raw_mode()?;
+                    crossterm::terminal::enable_raw_mode().into_diagnostic()?;
                 }
                 ReadlineEvent::Eof | ReadlineEvent::Interrupted => break,
                 ReadlineEvent::Resized => { /* continue */ }
@@ -135,7 +138,9 @@ async fn run_user_selected_example(
             AutoCompleteCommand::Commander => {
                 throws!(ex_rc::launcher::run_app().await?)
             }
-            AutoCompleteCommand::Exit => CommonError::new_err_with_only_msg("Exiting..."),
+            AutoCompleteCommand::Exit => {
+                CommonError::new_error_result_with_only_msg("Exiting...")
+            }
         },
         Err(_) => {
             terminal_async
