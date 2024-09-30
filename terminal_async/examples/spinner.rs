@@ -19,11 +19,11 @@ use std::{io::{stderr, Write},
           sync::Arc,
           time::Duration};
 
+use r3bl_core::StdMutex;
 use r3bl_terminal_async::{Spinner,
                           SpinnerColor,
                           SpinnerStyle,
                           SpinnerTemplate,
-                          StdMutex,
                           TerminalAsync,
                           ARTIFICIAL_UI_DELAY,
                           DELAY_MS,

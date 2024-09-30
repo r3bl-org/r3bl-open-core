@@ -1743,10 +1743,12 @@ name = "r3bl_core"
 version = "0.9.16"
 dependencies = [
  "assert_cmd",
+ "async-stream",
  "bincode",
  "chrono",
  "colorgrad",
  "crossterm 0.28.1",
+ "futures-core",
  "futures-util",
  "kv",
  "log",

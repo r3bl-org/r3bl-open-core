@@ -465,17 +465,12 @@ pub use readline_impl::*;
 pub use spinner_impl::*;
 
 // External crates.
-use std::{collections::VecDeque, io::Error, pin::Pin, sync::Arc};
-use crossterm::event::Event;
-use futures_core::Stream;
+use std::{collections::VecDeque, sync::Arc};
+
+// r3bl-open-core crates.
+use r3bl_core::{StdMutex, SendRawTerminal, SafeRawTerminal};
 
 // Type aliases.
-
-pub type StdMutex<T> = std::sync::Mutex<T>;
-
-pub type SendRawTerminal = dyn std::io::Write + Send;
-pub type SafeRawTerminal = Arc<StdMutex<SendRawTerminal>>;
-
 pub type SafeLineState = Arc<StdMutex<LineState>>;
 pub type SafeHistory = Arc<StdMutex<History>>;
 
@@ -483,9 +478,6 @@ pub type SafeBool = Arc<StdMutex<bool>>;
 
 pub type PauseBuffer = VecDeque<r3bl_core::Text>;
 pub type SafePauseBuffer = Arc<StdMutex<PauseBuffer>>;
-
-pub type CrosstermEventResult = Result<Event, Error>;
-pub type PinnedInputStream<T> = Pin<Box<dyn Stream<Item = T>>>;
 
 // Constants.
 pub const CHANNEL_CAPACITY: usize = 1_000;

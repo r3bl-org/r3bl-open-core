@@ -21,16 +21,17 @@ use std::{io::{self, Write},
 use crossterm::{terminal::{self, disable_raw_mode, Clear},
                 QueueableCommand};
 use futures_util::StreamExt;
-use r3bl_core::{LineStateControlSignal, SharedWriter};
+use r3bl_core::{CrosstermEventResult,
+                LineStateControlSignal,
+                PinnedInputStream,
+                SharedWriter};
 use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
-use crate::{CrosstermEventResult,
-            History,
+use crate::{History,
             LineState,
             LineStateLiveness,
             PauseBuffer,
-            PinnedInputStream,
             SafeHistory,
             SafeLineState,
             SafePauseBuffer,
