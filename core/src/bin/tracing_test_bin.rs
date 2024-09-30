@@ -15,11 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::{init_tracing,
-                DisplayPreference,
-                TracingConfig,
-                TracingScope,
-                WriterConfig};
+use r3bl_core::{DisplayPreference, TracingConfig, WriterConfig};
 use tracing_core::LevelFilter;
 
 /// `assert_cmd` : <https://docs.rs/assert_cmd/latest/assert_cmd/index.html>
@@ -39,12 +35,11 @@ fn main() {
     };
 
     // Create a new tracing layer with stdout.
-    let default_guard = init_tracing(TracingConfig {
-        scope: TracingScope::ThreadLocal,
+    let default_guard = TracingConfig {
         writer_config: WriterConfig::Display(display_preference),
         level_filter: LevelFilter::DEBUG,
-    })
-    .unwrap()
+    }
+    .install_thread_local()
     .unwrap();
 
     // Log some messages.
