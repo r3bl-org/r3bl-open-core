@@ -15,11 +15,12 @@
  *   limitations under the License.
  */
 
+use miette::IntoDiagnostic as _;
 use r3bl_core::{size, CommonResult, Size};
 
 /// Interrogate crossterm [crossterm::terminal::size()] to get the size of the terminal window.
 pub fn lookup_size() -> CommonResult<Size> {
-    let (col, row) = crossterm::terminal::size()?;
+    let (col, row) = crossterm::terminal::size().into_diagnostic()?;
     let size: Size = size!(col_count: col, row_count: row);
     Ok(size)
 }

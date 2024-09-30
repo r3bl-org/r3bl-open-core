@@ -73,7 +73,9 @@ impl TuiStylesheet {
     pub fn add_style(&mut self, style: TuiStyle) -> CommonResult<()> {
         throws!({
             if style.id == u8::MAX {
-                return CommonError::new_err_with_only_msg("Style id must be defined");
+                return CommonError::new_error_result_with_only_msg(
+                    "Style id must be defined",
+                );
             }
             self.styles.push(style);
         });

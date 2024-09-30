@@ -307,7 +307,7 @@ mod internal_impl {
         if window_size.col_count < ch!(MinSize::Col as u8)
             || window_size.row_count < ch!(MinSize::Row as u8)
         {
-            return CommonError::new(
+            return CommonError::new_error_result(
                 CommonErrorType::DisplaySizeTooSmall,
                 &format!(
                     "Window size is too small. Min size is {} cols x {} rows",
@@ -421,7 +421,7 @@ mod internal_impl {
             match it {
                 Some(it) => it,
                 None => {
-                    return CommonError::new(
+                    return CommonError::new_error_result(
                         CommonErrorType::NotFound,
                         &format!(
                             "Dialog buffer does not exist for component id:{}",
@@ -928,8 +928,6 @@ mod test_dialog_engine_api_render_engine {
 
 #[cfg(test)]
 mod test_dialog_api_make_flex_box_for_dialog {
-    use std::error::Error;
-
     use r3bl_core::assert_eq2;
 
     use super::*;
@@ -963,15 +961,16 @@ mod test_dialog_api_make_flex_box_for_dialog {
         ));
 
         // Assert that a general `CommonError` is returned.
-        let my_err: Box<dyn Error + Send + Sync> = result_flex_box.err().unwrap();
+        let my_err = result_flex_box.err().unwrap();
+        // More info on downcast_ref::<T>(): https://gemini.google.com/app/fd537ea573f1d1fb
         assert_eq2!(my_err.is::<CommonError>(), true);
 
         // Assert that this specific error is returned.
         let result = matches!(
             my_err.downcast_ref::<CommonError>(),
             Some(CommonError {
-                err_type: CommonErrorType::DisplaySizeTooSmall,
-                err_msg: _,
+                error_type: CommonErrorType::DisplaySizeTooSmall,
+                error_message: _,
             })
         );
 
@@ -1006,15 +1005,16 @@ mod test_dialog_api_make_flex_box_for_dialog {
         ));
 
         // Assert that a general `CommonError` is returned.
-        let my_err: Box<dyn Error + Send + Sync> = result_flex_box.err().unwrap();
+        let my_err = result_flex_box.err().unwrap();
+        // More info on downcast_ref::<T>(): https://gemini.google.com/app/fd537ea573f1d1fb
         assert_eq2!(my_err.is::<CommonError>(), true);
 
         // Assert that this specific error is returned.
         let result = matches!(
             my_err.downcast_ref::<CommonError>(),
             Some(CommonError {
-                err_type: CommonErrorType::DisplaySizeTooSmall,
-                err_msg: _,
+                error_type: CommonErrorType::DisplaySizeTooSmall,
+                error_message: _,
             })
         );
 

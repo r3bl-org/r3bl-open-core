@@ -98,7 +98,7 @@ impl HasFocus {
             // Must have a non modal id already set.
             if !self.is_set() {
                 let msg = "Modal id can only be set if id is already set. id is not set.";
-                return CommonError::new_err_with_only_msg(msg);
+                return CommonError::new_error_result_with_only_msg(msg);
             }
 
             // Must not have a modal id already set.
@@ -111,7 +111,7 @@ impl HasFocus {
                     },
                     id
                 );
-                return CommonError::new_err_with_only_msg(&msg);
+                return CommonError::new_error_result_with_only_msg(&msg);
             }
 
             // Ok to set modal id.
@@ -186,7 +186,9 @@ mod has_focus_tests {
         assert_eq2!(my_err_box.is::<CommonError>(), true);
 
         let my_err = my_err_box.downcast_ref::<CommonError>().unwrap();
-        let CommonError { err_msg: msg, .. } = my_err;
+        let CommonError {
+            error_message: msg, ..
+        } = my_err;
         assert_eq2!(
             msg.as_ref().unwrap(),
             "Modal id can only be set if id is already set. id is not set."
