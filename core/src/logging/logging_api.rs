@@ -17,18 +17,13 @@
 
 //! This is just a shim (thin wrapper) around the [crate::tracing_logging] module.
 //!
-//! You can use the functions in this module or just use the
-//! [crate::tracing_logging::init_tracing()] function directly, along with using
-//! [tracing::info!], [tracing::debug!], etc. macros.
+//! You can use the functions in this module or just use the [mod@crate::init_tracing]
+//! functions directly, along with using [tracing::info!], [tracing::debug!], etc. macros.
 //!
 //! This file is here as a convenience for backward compatibility w/ the old logging
 //! system.
 
-use crate::{init_tracing,
-            ok,
-            tracing_logging::TracingScope,
-            TracingConfig,
-            WriterConfig};
+use crate::{ok, TracingConfig, WriterConfig};
 
 const LOG_FILE_NAME: &str = "log.txt";
 
@@ -38,6 +33,14 @@ const LOG_FILE_NAME: &str = "log.txt";
 /// [tracing_core::LevelFilter::OFF], then logging won't be enabled. It won't matter if
 /// you call any of the other logging functions in this module, or directly use the
 /// [tracing::info!], [tracing::debug!], etc. macros.
+///
+/// This is a convenience method to setup Tokio [`tracing_subscriber`] with `stdout` as
+/// the output destination. This method also ensures that the [`crate::SharedWriter`] is
+/// used for concurrent writes to `stdout`. You can also use the [`TracingConfig`] struct
+/// to customize the behavior of the tracing setup, by choosing whether to display output
+/// to `stdout`, `stderr`, or a [`crate::SharedWriter`]. By default, both display and file
+/// logging are enabled. You can also customize the log level, and the file path and
+/// prefix for the log file.
 pub fn try_initialize_global_logging(
     level_filter: tracing_core::LevelFilter,
 ) -> miette::Result<()> {
@@ -47,11 +50,11 @@ pub fn try_initialize_global_logging(
     }
 
     // Try to initialize the tracing system w/ (rolling) file log output.
-    init_tracing(TracingConfig {
-        scope: TracingScope::Global,
+    TracingConfig {
         level_filter,
         writer_config: WriterConfig::File(LOG_FILE_NAME.to_string()),
-    })?;
+    }
+    .install_global()?;
 
     ok!()
 }
