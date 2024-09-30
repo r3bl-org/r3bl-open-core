@@ -15,24 +15,10 @@
  *   limitations under the License.
  */
 
-//! # [init_tracing]
-//!
-//! This is a convenience method to setup Tokio [`tracing_subscriber`] with `stdout` as
-//! the output destination. This method also ensures that the [`crate::SharedWriter`] is
-//! used for concurrent writes to `stdout`. You can also use the [`TracingConfig`] struct
-//! to customize the behavior of the tracing setup, by choosing whether to display output
-//! to `stdout`, `stderr`, or a [`crate::SharedWriter`]. By default, both display and file
-//! logging are enabled. You can also customize the log level, and the file path and
-//! prefix for the log file.
-
-use tracing::dispatcher;
 use tracing_core::LevelFilter;
-use tracing_subscriber::{layer::SubscriberExt,
-                         registry::LookupSpan,
-                         util::SubscriberInitExt,
-                         Layer};
+use tracing_subscriber::{registry::LookupSpan, Layer};
 
-use super::{DisplayPreference, TracingScope, WriterConfig};
+use super::{DisplayPreference, WriterConfig};
 use crate::tracing_logging::{rolling_file_appender_impl, tracing_config::TracingConfig};
 
 /// Avoid gnarly type annotations by using a macro to create the `fmt` layer. Note that
@@ -55,41 +41,6 @@ macro_rules! create_fmt {
 
 /// Type alias for a boxed layer.
 pub type DynLayer<S> = dyn Layer<S> + Send + Sync + 'static;
-
-/// Simply initialize the tracing system with the provided [TracingConfig]. This will set
-/// either (depending on its [TracingScope]):
-/// 1. Global default subscriber, which once set, can't be unset or changed.
-///    - This is great for apps.
-///    - Docs for [Global default tracing
-///      subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_global_default.html)
-/// 2. Thread local subscriber, which is thread local, and you can assign different ones
-///    to different threads.
-///    - This is great for tests.
-///    - Docs for [Thread local tracing
-///      subscriber](https://docs.rs/tracing/latest/tracing/subscriber/fn.set_default.html)
-///
-/// # Return
-/// 1. If you set the [TracingScope] to [TracingScope::ThreadLocal], then this function
-///    will return a [tracing::dispatcher::DefaultGuard]. You should drop this guard when
-///    you're done with the tracing system. This will reset the tracing system to its
-///    previous state for that thread.
-/// 2. If you set the [TracingScope] to [TracingScope::Global], then this function will
-///    return [`None`].
-pub fn init_tracing(
-    tracing_config: TracingConfig,
-) -> miette::Result<Option<dispatcher::DefaultGuard>> {
-    let scope = tracing_config.scope;
-    try_create_layers(tracing_config).map(|layers| match scope {
-        TracingScope::Global => {
-            tracing_subscriber::registry().with(layers).init();
-            None
-        }
-        TracingScope::ThreadLocal => {
-            let it = tracing_subscriber::registry().with(layers).set_default();
-            Some(it)
-        }
-    })
-}
 
 /// Returns the layers. This does not initialize the tracing system. Don't forget to do
 /// this manually, by calling `init` on the returned layers.
@@ -249,7 +200,6 @@ mod tests {
         let file_path = file_path.to_str().unwrap().to_string();
 
         let tracing_config = TracingConfig {
-            scope: TracingScope::ThreadLocal,
             writer_config: WriterConfig::DisplayAndFile(
                 DisplayPreference::Stdout,
                 file_path.clone(),
@@ -320,12 +270,11 @@ mod test_tracing_shared_writer_output {
 
         // Create a new tracing layer with stdout.
         let display_pref = DisplayPreference::SharedWriter(SharedWriter::new(sender));
-        let default_guard = init_tracing(TracingConfig {
-            scope: TracingScope::ThreadLocal,
+        let default_guard = TracingConfig {
             writer_config: WriterConfig::Display(display_pref),
             level_filter: LevelFilter::DEBUG,
-        })
-        .unwrap()
+        }
+        .install_thread_local()
         .unwrap();
 
         // Log some messages.

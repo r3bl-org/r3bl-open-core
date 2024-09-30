@@ -157,10 +157,11 @@ async fn main() -> miette::Result<()> {
     }
 
     // Initialize tracing w/ the "async stdout" (SharedWriter), and file writer.
-    r3bl_core::init_tracing(TracingConfig::new_file_and_display(
+    TracingConfig::new_file_and_display(
         None,
         DisplayPreference::SharedWriter(terminal_async.clone_shared_writer()),
-    ))?;
+    )
+    .install_global()?;
 
     // Start tasks.
     let mut state = State::default();
