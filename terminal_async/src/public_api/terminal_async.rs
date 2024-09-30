@@ -24,7 +24,10 @@ use crossterm::{cursor::MoveToColumn,
                 terminal::{Clear, ClearType}};
 use futures_util::FutureExt as _;
 use miette::IntoDiagnostic as _;
-use r3bl_core::{LineStateControlSignal, SharedWriter};
+use r3bl_core::{CrosstermEventResult,
+                LineStateControlSignal,
+                PinnedInputStream,
+                SharedWriter};
 use r3bl_tuify::{is_fully_uninteractive_terminal,
                  is_stdin_piped,
                  is_stdout_piped,
@@ -32,7 +35,7 @@ use r3bl_tuify::{is_fully_uninteractive_terminal,
                  StdoutIsPipedResult,
                  TTYResult};
 
-use crate::{CrosstermEventResult, PinnedInputStream, Readline, ReadlineEvent, StdMutex};
+use crate::{Readline, ReadlineEvent, StdMutex};
 
 pub struct TerminalAsync {
     pub readline: Readline,
