@@ -109,7 +109,9 @@ pub fn try_parse_and_highlight(
             maybe_current_box_computed_style,
             maybe_syntect_tuple,
         )),
-        Err(_) => CommonError::new_err_with_only_type(CommonErrorType::ParsingError),
+        Err(_) => {
+            CommonError::new_error_result_with_only_type(CommonErrorType::ParsingError)
+        }
     }
 }
 
@@ -709,7 +711,8 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
-    use crossterm::style::Stylize;
+    use crossterm::style::Stylize as _;
+    use miette::IntoDiagnostic as _;
     use r3bl_core::{assert_eq2, throws, ANSIBasicColor, TuiColor};
     use r3bl_macro::tui_style;
 
@@ -1190,7 +1193,8 @@ mod tests_style_us_span_lines_from {
                 let style = tui_style! {
                     color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                 };
-                let (remainder, doc) = parse_markdown("100. Foo\n200. Bar\n")?;
+                let (remainder, doc) =
+                    parse_markdown("100. Foo\n200. Bar\n").into_diagnostic()?;
                 assert_eq2!(remainder, "");
 
                 let ol_block_1 = &doc[0];
@@ -1243,7 +1247,7 @@ mod tests_style_us_span_lines_from {
                 let style = tui_style! {
                     color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                 };
-                let (_, doc) = parse_markdown("- Foo\n- Bar\n")?;
+                let (_, doc) = parse_markdown("- Foo\n- Bar\n").into_diagnostic()?;
                 println!("{}", format!("{:#?}", doc).cyan());
 
                 // First smart list.

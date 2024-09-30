@@ -96,7 +96,7 @@ impl LayoutManagement for Surface {
         throws!({
             // Expect stack to be empty!
             if !self.no_boxes_added() {
-                LayoutError::new_err_with_msg(
+                LayoutError::new_error_result(
                     LayoutErrorType::MismatchedSurfaceStart,
                     LayoutError::format_msg_with_stack_len(
                         &self.stack_of_boxes,
@@ -113,7 +113,7 @@ impl LayoutManagement for Surface {
         throws!({
             // Expect stack to be empty!
             if !self.no_boxes_added() {
-                LayoutError::new_err_with_msg(
+                LayoutError::new_error_result(
                     LayoutErrorType::MismatchedSurfaceEnd,
                     LayoutError::format_msg_with_stack_len(
                         &self.stack_of_boxes,
@@ -137,7 +137,7 @@ impl LayoutManagement for Surface {
         throws!({
             // Expect stack not to be empty!
             if self.no_boxes_added() {
-                LayoutError::new_err_with_msg(
+                LayoutError::new_error_result(
                     LayoutErrorType::MismatchedBoxEnd,
                     LayoutError::format_msg_with_stack_len(
                         &self.stack_of_boxes,
@@ -155,12 +155,16 @@ impl PerformPositioningAndSizing for Surface {
     fn current_box(&mut self) -> CommonResult<&mut FlexBox> {
         // Expect stack of boxes not to be empty!
         if self.no_boxes_added() {
-            LayoutError::new_err(LayoutErrorType::StackOfBoxesShouldNotBeEmpty)?
+            LayoutError::new_error_result_with_only_type(
+                LayoutErrorType::StackOfBoxesShouldNotBeEmpty,
+            )?
         }
         if let Some(it) = self.stack_of_boxes.last_mut() {
             Ok(it)
         } else {
-            LayoutError::new_err(LayoutErrorType::StackOfBoxesShouldNotBeEmpty)?
+            LayoutError::new_error_result_with_only_type(
+                LayoutErrorType::StackOfBoxesShouldNotBeEmpty,
+            )?
         }
     }
 

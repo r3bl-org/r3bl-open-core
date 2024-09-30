@@ -190,7 +190,9 @@ pub fn print_plain_text(
     let mut line_copy = {
         if my_offscreen_buffer.buffer.get(display_row_index).is_none() {
             // Clip vertically.
-            CommonError::new_err_with_only_type(CommonErrorType::DisplaySizeTooSmall)
+            CommonError::new_error_result_with_only_type(
+                CommonErrorType::DisplaySizeTooSmall,
+            )
         } else {
             let line_copy = my_offscreen_buffer
                 .buffer

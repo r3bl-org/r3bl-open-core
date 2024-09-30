@@ -329,8 +329,8 @@ mod modal_dialogs {
                 Ok(_) => ModalActivateResult::Yes,
                 Err(err) => {
                     if let Some(CommonError {
-                        err_type: _,
-                        err_msg: msg,
+                        error_type: _,
+                        error_message: msg,
                     }) = err.downcast_ref::<CommonError>()
                     {
                         tracing::error!("📣 Error activating simple modal: {msg:?}");
@@ -358,8 +358,8 @@ mod modal_dialogs {
                 Ok(_) => ModalActivateResult::Yes,
                 Err(err) => {
                     if let Some(CommonError {
-                        err_type: _,
-                        err_msg: msg,
+                        error_type: _,
+                        error_message: msg,
                     }) = err.downcast_ref::<CommonError>()
                     {
                         tracing::error!(

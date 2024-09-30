@@ -299,8 +299,8 @@ mod app_main_impl_app_trait {
                         state,
                     ) {
                         if let Some(CommonError {
-                            err_type: _,
-                            err_msg: msg,
+                            error_type: _,
+                            error_message: msg,
                         }) = err.downcast_ref::<CommonError>()
                         {
                             tracing::error!("📣 Error activating simple modal: {msg:?}")

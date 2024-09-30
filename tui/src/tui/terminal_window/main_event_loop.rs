@@ -32,7 +32,7 @@ use r3bl_core::{call_if_true,
                 TooSmallToDisplayResult,
                 UnicodeString};
 use r3bl_macro::tui_style;
-use size_of::SizeOf;
+use size_of::SizeOf as _;
 use tokio::sync::mpsc;
 
 use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation};

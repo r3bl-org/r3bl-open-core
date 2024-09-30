@@ -20,8 +20,8 @@ use std::{io::{stderr, Write},
           sync::Arc,
           time::Duration};
 
-use crossterm::style::Stylize;
-use miette::IntoDiagnostic;
+use crossterm::style::Stylize as _;
+use miette::IntoDiagnostic as _;
 use r3bl_core::{tracing_logging::tracing_config::TracingConfig,
                 DisplayPreference,
                 SharedWriter};

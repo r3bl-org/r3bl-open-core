@@ -218,7 +218,7 @@ where
                     "🐝 DialogComponent::handle_event: dialog_buffer is None for id: {:?}",
                     id
                 );
-                CommonError::new(CommonErrorType::NotFound, &msg)
+                CommonError::new_error_result(CommonErrorType::NotFound, &msg)
             }
         }
     }
