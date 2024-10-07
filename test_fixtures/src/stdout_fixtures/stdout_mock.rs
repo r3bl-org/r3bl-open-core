@@ -21,8 +21,13 @@ use std::{io::{Result, Write},
 use r3bl_core::StdMutex;
 use strip_ansi_escapes::strip;
 
-/// You can safely clone this struct, since it only contains an `Arc<StdMutex<Vec<u8>>>`. The
-/// inner `buffer` will not be cloned, just the [Arc] will be cloned.
+/// You can safely clone this struct, since it only contains an `Arc<StdMutex<Vec<u8>>>`.
+/// The inner `buffer` will not be cloned, just the [Arc] will be cloned.
+///
+/// The main constructors are:
+/// - [StdoutMock::default]
+/// - [StdoutMock::new]
+/// - [StdoutMock::new_output_device]
 #[derive(Clone)]
 pub struct StdoutMock {
     pub buffer: Arc<StdMutex<Vec<u8>>>,
@@ -34,6 +39,10 @@ impl Default for StdoutMock {
             buffer: Arc::new(StdMutex::new(Vec::new())),
         }
     }
+}
+
+impl StdoutMock {
+    pub fn new() -> Self { Self::default() }
 }
 
 impl StdoutMock {

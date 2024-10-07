@@ -18,7 +18,7 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
-use r3bl_core::{Position, Size, TuiColor, TuiStyle};
+use r3bl_core::{LockedOutputDevice, Position, Size, TuiColor, TuiStyle};
 use serde::{Deserialize, Serialize};
 
 use super::TERMINAL_LIB_BACKEND;
@@ -166,7 +166,12 @@ pub mod render_ops_impl {
     use super::*;
 
     impl RenderOps {
-        pub fn execute_all(&self, skip_flush: &mut bool, window_size: Size) {
+        pub fn execute_all(
+            &self,
+            skip_flush: &mut bool,
+            window_size: Size,
+            locked_output_device: LockedOutputDevice<'_>,
+        ) {
             let mut local_data = RenderOpsLocalData::default();
             for render_op in self.list.iter() {
                 RenderOps::route_paint_render_op_to_backend(
@@ -174,6 +179,7 @@ pub mod render_ops_impl {
                     skip_flush,
                     render_op,
                     window_size,
+                    locked_output_device,
                 );
             }
         }
@@ -183,6 +189,7 @@ pub mod render_ops_impl {
             skip_flush: &mut bool,
             render_op: &RenderOp,
             window_size: Size,
+            locked_output_device: LockedOutputDevice<'_>,
         ) {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
@@ -191,6 +198,7 @@ pub mod render_ops_impl {
                         render_op,
                         window_size,
                         local_data,
+                        locked_output_device,
                     );
                 }
                 TerminalLibBackend::Termion => todo!(), // FUTURE: implement PaintRenderOp trait for termion
@@ -316,19 +324,19 @@ mod render_op_impl_trait_flush {
     use super::*;
 
     impl Flush for RenderOp {
-        fn flush(&mut self) {
+        fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    RenderOpImplCrossterm {}.flush();
+                    RenderOpImplCrossterm {}.flush(locked_output_device);
                 }
                 TerminalLibBackend::Termion => todo!(), // FUTURE: implement flush for termion
             }
         }
 
-        fn clear_before_flush(&mut self) {
+        fn clear_before_flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    RenderOpImplCrossterm {}.clear_before_flush();
+                    RenderOpImplCrossterm {}.clear_before_flush(locked_output_device);
                 }
                 TerminalLibBackend::Termion => todo!(), // FUTURE: implement clear_before_flush for termion
             }
@@ -343,8 +351,9 @@ pub enum FlushKind {
 }
 
 pub trait Flush {
-    fn flush(&mut self);
-    fn clear_before_flush(&mut self);
+    fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>);
+
+    fn clear_before_flush(&mut self, locked_output_device: LockedOutputDevice<'_>);
 }
 
 pub trait DebugFormatRenderOp {

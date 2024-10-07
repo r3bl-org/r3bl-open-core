@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_core::{call_if_true, Position, Size};
+use r3bl_core::{call_if_true, LockedOutputDevice, Position, Size};
 
 use super::{FlushKind, RenderOp, RenderOpsLocalData, RenderPipeline};
 use crate::{GlobalData,
@@ -38,6 +38,7 @@ pub trait PaintRenderOp {
         render_op: &RenderOp,
         window_size: Size,
         local_data: &mut RenderOpsLocalData,
+        locked_output_device: LockedOutputDevice<'_>,
     );
 }
 
@@ -52,6 +53,7 @@ pub fn paint<S, AS>(
     pipeline: &RenderPipeline,
     flush_kind: FlushKind,
     global_data: &mut GlobalData<S, AS>,
+    locked_output_device: LockedOutputDevice<'_>,
 ) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
@@ -64,16 +66,26 @@ pub fn paint<S, AS>(
 
     match maybe_saved_offscreen_buffer {
         None => {
-            perform_full_paint(&offscreen_buffer, flush_kind, window_size);
+            perform_full_paint(
+                &offscreen_buffer,
+                flush_kind,
+                window_size,
+                locked_output_device,
+            );
         }
         Some(saved_offscreen_buffer) => {
             // Compare offscreen buffers & paint only the diff.
             match saved_offscreen_buffer.diff(&offscreen_buffer) {
                 OffscreenBufferDiffResult::NotComparable => {
-                    perform_full_paint(&offscreen_buffer, flush_kind, window_size);
+                    perform_full_paint(
+                        &offscreen_buffer,
+                        flush_kind,
+                        window_size,
+                        locked_output_device,
+                    );
                 }
                 OffscreenBufferDiffResult::Comparable(ref diff_chunks) => {
-                    perform_diff_paint(diff_chunks, window_size);
+                    perform_diff_paint(diff_chunks, window_size, locked_output_device);
                 }
             }
         }
@@ -81,12 +93,16 @@ pub fn paint<S, AS>(
 
     global_data.maybe_saved_offscreen_buffer = Some(offscreen_buffer);
 
-    fn perform_diff_paint(diff_chunks: &PixelCharDiffChunks, window_size: Size) {
+    fn perform_diff_paint(
+        diff_chunks: &PixelCharDiffChunks,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+    ) {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
                 let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
                 let render_ops = crossterm_impl.render_diff(diff_chunks);
-                crossterm_impl.paint_diff(render_ops, window_size);
+                crossterm_impl.paint_diff(render_ops, window_size, locked_output_device);
             }
             TerminalLibBackend::Termion => todo!(), // FUTURE: implement OffscreenBufferPaint trait for termion
         }
@@ -96,12 +112,18 @@ pub fn paint<S, AS>(
         offscreen_buffer: &OffscreenBuffer,
         flush_kind: FlushKind,
         window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
     ) {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
                 let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
                 let render_ops = crossterm_impl.render(offscreen_buffer);
-                crossterm_impl.paint(render_ops, flush_kind, window_size);
+                crossterm_impl.paint(
+                    render_ops,
+                    flush_kind,
+                    window_size,
+                    locked_output_device,
+                );
             }
             TerminalLibBackend::Termion => todo!(), // FUTURE: implement OffscreenBufferPaint trait for termion
         }

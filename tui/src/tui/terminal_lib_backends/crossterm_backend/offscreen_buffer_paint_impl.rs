@@ -19,6 +19,7 @@ use r3bl_core::{call_if_true,
                 ch,
                 position,
                 ChUnit,
+                LockedOutputDevice,
                 Size,
                 TuiStyle,
                 UnicodeString,
@@ -39,19 +40,25 @@ use crate::{render_ops,
 pub struct OffscreenBufferPaintImplCrossterm;
 
 impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
-    fn paint(&mut self, render_ops: RenderOps, flush_kind: FlushKind, window_size: Size) {
+    fn paint(
+        &mut self,
+        render_ops: RenderOps,
+        flush_kind: FlushKind,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+    ) {
         let mut skip_flush = false;
 
         if let FlushKind::ClearBeforeFlush = flush_kind {
-            RenderOp::default().clear_before_flush();
+            RenderOp::default().clear_before_flush(locked_output_device);
         }
 
         // Execute each RenderOp.
-        render_ops.execute_all(&mut skip_flush, window_size);
+        render_ops.execute_all(&mut skip_flush, window_size, locked_output_device);
 
         // Flush everything to the terminal.
         if !skip_flush {
-            RenderOp::default().flush()
+            RenderOp::default().flush(locked_output_device)
         };
 
         // Debug output.
@@ -62,15 +69,20 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         });
     }
 
-    fn paint_diff(&mut self, render_ops: RenderOps, window_size: Size) {
+    fn paint_diff(
+        &mut self,
+        render_ops: RenderOps,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+    ) {
         let mut skip_flush = false;
 
         // Execute each RenderOp.
-        render_ops.execute_all(&mut skip_flush, window_size);
+        render_ops.execute_all(&mut skip_flush, window_size, locked_output_device);
 
         // Flush everything to the terminal.
         if !skip_flush {
-            RenderOp::default().flush()
+            RenderOp::default().flush(locked_output_device)
         };
 
         // Debug output.

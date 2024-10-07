@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_core::Size;
+use r3bl_core::{LockedOutputDevice, Size};
 
 use super::{RenderOp, RenderOps, RenderOpsLocalData};
 
@@ -25,23 +25,25 @@ use super::{RenderOp, RenderOps, RenderOpsLocalData};
 pub struct RawMode;
 
 impl RawMode {
-    pub fn start(window_size: Size) {
+    pub fn start(window_size: Size, locked_output_device: LockedOutputDevice<'_>) {
         let mut skip_flush = false;
         RenderOps::route_paint_render_op_to_backend(
             &mut RenderOpsLocalData::default(),
             &mut skip_flush,
             &RenderOp::EnterRawMode,
             window_size,
+            locked_output_device,
         );
     }
 
-    pub fn end(window_size: Size) {
+    pub fn end(window_size: Size, locked_output_device: LockedOutputDevice<'_>) {
         let mut skip_flush = false;
         RenderOps::route_paint_render_op_to_backend(
             &mut RenderOpsLocalData::default(),
             &mut skip_flush,
             &RenderOp::ExitRawMode,
             window_size,
+            locked_output_device,
         );
     }
 }

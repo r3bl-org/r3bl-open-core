@@ -20,6 +20,7 @@ use std::{fmt::Debug, marker::PhantomData};
 use r3bl_core::{call_if_true,
                 ch,
                 ok,
+                output_device_as_mut,
                 position,
                 throws,
                 Ansi256GradientIndex,
@@ -29,6 +30,7 @@ use r3bl_core::{call_if_true,
                 CommonResult,
                 GradientGenerationPolicy,
                 InputDevice,
+                LockedOutputDevice,
                 OutputDevice,
                 Size,
                 TextColorizationPolicy,
@@ -89,7 +91,10 @@ where
     let global_data_ref = &mut global_data;
 
     // Start raw mode.
-    RawMode::start(global_data_ref.window_size);
+    RawMode::start(
+        global_data_ref.window_size,
+        output_device_as_mut!(output_device),
+    );
 
     let app = &mut app;
 
@@ -102,7 +107,13 @@ where
 
     // Init the app, and perform first render.
     app.app_init(component_registry_map, has_focus);
-    AppManager::render_app(app, global_data_ref, component_registry_map, has_focus)?;
+    AppManager::render_app(
+        app,
+        global_data_ref,
+        component_registry_map,
+        has_focus,
+        output_device_as_mut!(output_device),
+    )?;
 
     global_data_ref.dump_to_log("main_event_loop -> Startup 🚀");
 
@@ -116,7 +127,10 @@ where
                     match signal {
                         TerminalWindowMainThreadSignal::Exit => {
                             // 🐒 Actually exit the main loop!
-                            RawMode::end(global_data_ref.window_size);
+                            RawMode::end(
+                                global_data_ref.window_size,
+                                output_device_as_mut!(output_device)
+                            );
                             break;
                         },
                         TerminalWindowMainThreadSignal::Render(_) => {
@@ -125,6 +139,7 @@ where
                                 global_data_ref,
                                 component_registry_map,
                                 has_focus,
+                                output_device_as_mut!(output_device),
                             )?;
                         },
                         TerminalWindowMainThreadSignal::ApplyAction(action) => {
@@ -137,6 +152,7 @@ where
                                 global_data_ref,
                                 component_registry_map,
                                 has_focus,
+                                output_device_as_mut!(output_device),
                             );
                         },
                     }
@@ -162,7 +178,9 @@ where
                     handle_resize_if_applicable(input_event,
                         global_data_ref, app,
                         component_registry_map,
-                        has_focus);
+                        has_focus,
+                        output_device_as_mut!(output_device),
+                    );
 
                     actually_process_input_event(
                         global_data_ref,
@@ -171,6 +189,7 @@ where
                         &exit_keys,
                         component_registry_map,
                         has_focus,
+                        output_device_as_mut!(output_device),
                     );
                 }
             }
@@ -191,6 +210,7 @@ fn actually_process_input_event<S, AS>(
     exit_keys: &[InputEvent],
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
     has_focus: &mut HasFocus,
+    locked_output_device: LockedOutputDevice<'_>,
 ) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
@@ -210,6 +230,7 @@ fn actually_process_input_event<S, AS>(
         global_data,
         component_registry_map,
         has_focus,
+        locked_output_device,
     );
 }
 
@@ -221,6 +242,7 @@ pub fn handle_resize_if_applicable<S, AS>(
     app: &mut BoxedSafeApp<S, AS>,
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
     has_focus: &mut HasFocus,
+    locked_output_device: LockedOutputDevice<'_>,
 ) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
@@ -228,8 +250,13 @@ pub fn handle_resize_if_applicable<S, AS>(
     if let InputEvent::Resize(new_size) = input_event {
         global_data.set_size(new_size);
         global_data.maybe_saved_offscreen_buffer = None;
-        let _ =
-            AppManager::render_app(app, global_data, component_registry_map, has_focus);
+        let _ = AppManager::render_app(
+            app,
+            global_data,
+            component_registry_map,
+            has_focus,
+            locked_output_device,
+        );
     }
 }
 
@@ -241,6 +268,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     global_data: &mut GlobalData<S, AS>,
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
     has_focus: &mut HasFocus,
+    locked_output_device: LockedOutputDevice<'_>,
 ) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
@@ -265,6 +293,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
                     global_data,
                     component_registry_map,
                     has_focus,
+                    locked_output_device,
                 );
             }
 
@@ -313,6 +342,7 @@ where
         global_data: &mut GlobalData<S, AS>,
         component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
+        locked_output_device: LockedOutputDevice<'_>,
     ) -> CommonResult<()> {
         throws!({
             let window_size = global_data.window_size;
@@ -331,7 +361,7 @@ where
 
             match render_result {
                 Err(error) => {
-                    RenderOp::default().flush();
+                    RenderOp::default().flush(locked_output_device);
 
                     telemetry_global_static::set_end_ts();
 
@@ -340,7 +370,11 @@ where
                     });
                 }
                 Ok(render_pipeline) => {
-                    render_pipeline.paint(FlushKind::ClearBeforeFlush, global_data);
+                    render_pipeline.paint(
+                        FlushKind::ClearBeforeFlush,
+                        global_data,
+                        locked_output_device,
+                    );
 
                     telemetry_global_static::set_end_ts();
 
