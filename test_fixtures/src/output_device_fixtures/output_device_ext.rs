@@ -21,8 +21,12 @@ use r3bl_core::{OutputDevice, StdMutex};
 
 use crate::StdoutMock;
 
-impl StdoutMock {
-    pub fn new_output_device() -> (OutputDevice, StdoutMock) {
+pub trait OutputDeviceExt {
+    fn new_mock() -> (OutputDevice, StdoutMock);
+}
+
+impl OutputDeviceExt for OutputDevice {
+    fn new_mock() -> (OutputDevice, StdoutMock) {
         let stdout_mock = StdoutMock::default();
         let this = OutputDevice {
             resource: Arc::new(StdMutex::new(stdout_mock.clone())),
@@ -33,13 +37,13 @@ impl StdoutMock {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_core::{output_device_as_mut, LockedOutputDevice};
+    use r3bl_core::{output_device_as_mut, LockedOutputDevice, OutputDevice};
 
-    use crate::StdoutMock;
+    use super::OutputDeviceExt;
 
     #[test]
     fn test_output_device() {
-        let (device, mock) = StdoutMock::new_output_device();
+        let (device, mock) = OutputDevice::new_mock();
         let mut_ref: LockedOutputDevice<'_> = output_device_as_mut!(device);
         let _ = mut_ref.write_all(b"Hello, world!\n");
         assert_eq!(
