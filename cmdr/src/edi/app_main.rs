@@ -43,7 +43,6 @@ use r3bl_core::{call_if_true,
                 Size,
                 TextColorizationPolicy,
                 TuiColor,
-                TuiStyledText,
                 TuiStyledTexts,
                 TuiStylesheet,
                 UnicodeString};

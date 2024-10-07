@@ -39,6 +39,7 @@ pub trait PaintRenderOp {
         window_size: Size,
         local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
     );
 }
 
@@ -54,6 +55,7 @@ pub fn paint<S, AS>(
     flush_kind: FlushKind,
     global_data: &mut GlobalData<S, AS>,
     locked_output_device: LockedOutputDevice<'_>,
+    is_mock: bool,
 ) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
@@ -71,6 +73,7 @@ pub fn paint<S, AS>(
                 flush_kind,
                 window_size,
                 locked_output_device,
+                is_mock,
             );
         }
         Some(saved_offscreen_buffer) => {
@@ -82,10 +85,16 @@ pub fn paint<S, AS>(
                         flush_kind,
                         window_size,
                         locked_output_device,
+                        is_mock,
                     );
                 }
                 OffscreenBufferDiffResult::Comparable(ref diff_chunks) => {
-                    perform_diff_paint(diff_chunks, window_size, locked_output_device);
+                    perform_diff_paint(
+                        diff_chunks,
+                        window_size,
+                        locked_output_device,
+                        is_mock,
+                    );
                 }
             }
         }
@@ -97,12 +106,18 @@ pub fn paint<S, AS>(
         diff_chunks: &PixelCharDiffChunks,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
     ) {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
                 let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
                 let render_ops = crossterm_impl.render_diff(diff_chunks);
-                crossterm_impl.paint_diff(render_ops, window_size, locked_output_device);
+                crossterm_impl.paint_diff(
+                    render_ops,
+                    window_size,
+                    locked_output_device,
+                    is_mock,
+                );
             }
             TerminalLibBackend::Termion => todo!(), // FUTURE: implement OffscreenBufferPaint trait for termion
         }
@@ -113,6 +128,7 @@ pub fn paint<S, AS>(
         flush_kind: FlushKind,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
     ) {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
@@ -123,6 +139,7 @@ pub fn paint<S, AS>(
                     flush_kind,
                     window_size,
                     locked_output_device,
+                    is_mock,
                 );
             }
             TerminalLibBackend::Termion => todo!(), // FUTURE: implement OffscreenBufferPaint trait for termion

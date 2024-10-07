@@ -217,11 +217,12 @@ impl RenderPipeline {
         flush_kind: FlushKind,
         global_data: &mut GlobalData<S, AS>,
         locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
     ) where
         S: Debug + Default + Clone + Sync + Send,
         AS: Debug + Default + Clone + Sync + Send,
     {
-        paint(self, flush_kind, global_data, locked_output_device);
+        paint(self, flush_kind, global_data, locked_output_device, is_mock);
         // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
     }
 

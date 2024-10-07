@@ -46,6 +46,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         flush_kind: FlushKind,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
     ) {
         let mut skip_flush = false;
 
@@ -54,7 +55,12 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         }
 
         // Execute each RenderOp.
-        render_ops.execute_all(&mut skip_flush, window_size, locked_output_device);
+        render_ops.execute_all(
+            &mut skip_flush,
+            window_size,
+            locked_output_device,
+            is_mock,
+        );
 
         // Flush everything to the terminal.
         if !skip_flush {
@@ -74,11 +80,17 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         render_ops: RenderOps,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
     ) {
         let mut skip_flush = false;
 
         // Execute each RenderOp.
-        render_ops.execute_all(&mut skip_flush, window_size, locked_output_device);
+        render_ops.execute_all(
+            &mut skip_flush,
+            window_size,
+            locked_output_device,
+            is_mock,
+        );
 
         // Flush everything to the terminal.
         if !skip_flush {

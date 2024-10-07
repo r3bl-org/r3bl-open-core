@@ -369,11 +369,31 @@ in a text editor.
 
 ### next-release-tui
 
-This is a major release that does not include any new functionality, but is a radical
+This is a major release that not only includes new functionality, but is a radical
 reorganization of the crates. The reason for paying down this technical debt now is to
 ensure that the codebase is easier to maintain and understand, and easier to add new
 features to in the future. The separation of concerns is now much clearer, and they
 reflect how the functionality is used in the real world.
+
+Another huge change is the method signature of `main_event_loop()`. This is a breaking
+change, and it uses dependency injection, to provide an input device, output device,
+state, and app to the function! This allows for new types of applications to be built,
+which can carry state around between "applets".
+
+- Added:
+  - Provide a totally new interface for the `main_event_loop()` that allows for more
+    flexibility in how the event loop is run, using dependency injection. This is a
+    breaking change, but it is needed to make the codebase more maintainable and possible
+    to test end to end. This new change introduces the concept of providing some
+    dependencies to the function itself in order to use it: state, input device, output
+    device, and app. The function now returns these dependencies as well, so that they can
+    be used to create a running pipeline of small "applets" where all of these
+    dependencies are passed around, allowing a new generation of experiences to be built,
+    that are not monolithic, but are composable and testable.
+  - End to end test for the `main_event_loop_impl()` which tests everything in the TUI
+    engine! 🎉 This feature has taken about 2 years and 7 months to implement
+    (`2024-10-07`)! This repo was created in `2022-02-23`, which you can get using
+    `curl https://api.github.com/repos/r3bl-org/r3bl-open-core | jq .created_at`.
 
 - Changed:
   - Refactor lots of styling related code in preparation for the move to `core`. This will
@@ -387,17 +407,6 @@ reflect how the functionality is used in the real world.
     because it was easier to develop them there, but since then, lots of other consumers
     of this functionality have emerged, including crates that are created by "3rd party
     developers" (people not R3BL and not part of `r3bl-open-core` repo).
-
-- Added:
-  - Provide a totally new interface for the `main_event_loop()` that allows for more
-    flexibility in how the event loop is run, using dependency injection. This is a
-    breaking change, but it is needed to make the codebase more maintainable and possible
-    to test end to end. This new change introduces the concept of providing some
-    dependencies to the function itself in order to use it: state, input device, output
-    device, and app. The function now returns these dependencies as well, so that they can
-    be used to create a running pipeline of small "applets" where all of these
-    dependencies are passed around, allowing a new generation of experiences to be built,
-    that are not monolithic, but are composable and testable.
 
 ### v0.5.9 (2024-09-12)
 
@@ -699,7 +708,7 @@ This is a major release that does not include any new functionality, but is a ra
 reorganization & rename of the crate, it used to be
 [`r3bl_rs_utils_core`](#rename-to-r3bl_core).
 
-The `r3bl-open-core` repo was started in `2022-02-23`, about 1 year, 7 months, and 11 days
+The `r3bl-open-core` repo was started in `2022-02-23`, about 2 years, 7 months
 ago, (which you can get using `curl https://api.github.com/repos/r3bl-org/r3bl-open-core |
 jq .created_at`). We have learned many lessons since then after writing about 125K lines
 of Rust code.

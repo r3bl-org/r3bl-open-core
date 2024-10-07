@@ -15,19 +15,34 @@
  *   limitations under the License.
  */
 
+use std::time::Duration;
+
 use r3bl_core::{CrosstermEventResult, InputDevice};
 
-use super::gen_input_stream;
+use super::{gen_input_stream, gen_input_stream_with_delay};
 
 pub trait InputDeviceExt {
     fn new_mock(generator_vec: Vec<CrosstermEventResult>) -> InputDevice;
+
+    fn new_mock_with_delay(
+        generator_vec: Vec<CrosstermEventResult>,
+        delay: Duration,
+    ) -> InputDevice;
 }
 
 impl InputDeviceExt for InputDevice {
     fn new_mock(generator_vec: Vec<CrosstermEventResult>) -> InputDevice {
-        let input_device = InputDevice {
+        InputDevice {
             resource: gen_input_stream(generator_vec),
-        };
-        return input_device;
+        }
+    }
+
+    fn new_mock_with_delay(
+        generator_vec: Vec<CrosstermEventResult>,
+        delay: Duration,
+    ) -> InputDevice {
+        InputDevice {
+            resource: gen_input_stream_with_delay(generator_vec, delay),
+        }
     }
 }
