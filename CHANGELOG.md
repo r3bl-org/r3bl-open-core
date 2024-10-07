@@ -55,6 +55,7 @@
 - [r3bl_macro](#r3bl_macro)
   - [next-release-macro](#next-release-macro)
 - [r3bl_test_fixtures](#r3bl_test_fixtures)
+  - [next-release-test-fixtures](#next-release-test-fixtures)
   - [v0.0.3 2024-09-12](#v003-2024-09-12)
   - [v0.0.2 2024-07-13](#v002-2024-07-13)
   - [v0.0.1 2024-07-12](#v001-2024-07-12)
@@ -386,6 +387,17 @@ reflect how the functionality is used in the real world.
     because it was easier to develop them there, but since then, lots of other consumers
     of this functionality have emerged, including crates that are created by "3rd party
     developers" (people not R3BL and not part of `r3bl-open-core` repo).
+
+- Added:
+  - Provide a totally new interface for the `main_event_loop()` that allows for more
+    flexibility in how the event loop is run, using dependency injection. This is a
+    breaking change, but it is needed to make the codebase more maintainable and possible
+    to test end to end. This new change introduces the concept of providing some
+    dependencies to the function itself in order to use it: state, input device, output
+    device, and app. The function now returns these dependencies as well, so that they can
+    be used to create a running pipeline of small "applets" where all of these
+    dependencies are passed around, allowing a new generation of experiences to be built,
+    that are not monolithic, but are composable and testable.
 
 ### v0.5.9 (2024-09-12)
 
@@ -732,6 +744,12 @@ in the real world.
     [`nazmulidris/rust-scratch/tcp-api-server`](https://github.com/nazmulidris/rust-scratch/)
     repo. This allows customization of the miette global report handler at the process
     level. Useful for apps that need to override the default report handler formatting.
+  - Add `OutputDevice` that abstracts away the output device (eg: `stdout`, `stderr`,
+    `SharedWriter`, etc.). This is useful for end to end testing, and adapting to a variety of
+    different input and output devices (in the future).
+  - Add `InputDevice` that abstracts away the input device (eg: `stdin`). This is useful
+    for end to end testing. This is useful for end to end testing, and adapting to a
+    variety of different input and output devices (in the future).
 
 ## `r3bl_analytics_schema`
 
@@ -775,6 +793,16 @@ Deleted:
     [`r3bl-open-core-archive`](https://github.com/r3bl-open-core-archive) repo.
 
 ## `r3bl_test_fixtures`
+
+### next-release-test-fixtures
+
+- Changed:
+  - Some type aliases were defined here redundantly, since they were also defined in
+    `r3bl_core` crate. Remove these duplicate types and add a dependency to `r3bl_core`
+    crate.
+
+- Added:
+  - Add constructor and tests for `OutputDevice` struct for `StdoutMock`.
 
 ### v0.0.3 (2024-09-12)
 
@@ -836,6 +864,11 @@ modules in this crate.
     the groundwork for these modules to be moved into `r3bl_core` crate.
     Radically simplify the tracing configuration design and init mechanisms, so they are
     easy to understand, use, and maintain.
+  - Introduce the use of `InputDevice` and `OutputDevice` to make it consistent with
+    `r3bl_tui` crate on how DI is used to provide input and output devices. The input
+    device provides a way to get user input events from stdin (or from a test fixture).
+    The output device provides a way to output to stdout (or to a test fixture). Replace
+    the use of type aliases with the actual structs from `r3bl_core` crate.
 
 - Deleted:
   - Move the Jaeger tracing module to the `tcp-api-server` crate in the

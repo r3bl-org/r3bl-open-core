@@ -17,23 +17,23 @@
 
 use std::fmt::{Debug, Formatter};
 
-use r3bl_core::{call_if_true, CommonResult, Size};
+use r3bl_core::{call_if_true, CommonResult, OutputDevice, Size};
 use tokio::sync::mpsc::Sender;
 
 use super::TerminalWindowMainThreadSignal;
-use crate::{terminal_lib_operations,
-            OffscreenBuffer,
-            DEBUG_TUI_COMPOSITOR,
-            DEBUG_TUI_MOD};
+use crate::{OffscreenBuffer, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD};
 
 /// This is a global data structure that holds state for the entire application
 /// [crate::App] and the terminal window [crate::TerminalWindow] itself.
 ///
-/// These are global state values for the entire application:
+/// # Fields
 /// - The `window_size` holds the [Size] of the terminal window.
 /// - The `maybe_saved_offscreen_buffer` holds the last rendered [OffscreenBuffer].
 /// - The `main_thread_channel_sender` is used to send [TerminalWindowMainThreadSignal]s
 /// - The `state` holds the application's state.
+/// - The `output_device` is the terminal's output device (anything that implements
+///   [r3bl_core::SafeRawTerminal] which can be [std::io::stdout] or
+///   [r3bl_core::SharedWriter], etc.`).
 pub struct GlobalData<S, AS>
 where
     S: Debug + Default + Clone + Sync + Send,
@@ -43,68 +43,66 @@ where
     pub maybe_saved_offscreen_buffer: Option<OffscreenBuffer>,
     pub main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
     pub state: S,
+    pub output_device: OutputDevice,
 }
 
-mod impl_self {
-    use super::*;
+impl<S, AS> Debug for GlobalData<S, AS>
+where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let vec_lines = {
+            let mut it = vec![];
+            it.push(format!("window_size: {0:?}", self.window_size));
+            it.push(match &self.maybe_saved_offscreen_buffer {
+                None => "no saved offscreen buffer".to_string(),
+                Some(ref offscreen_buffer) => match DEBUG_TUI_COMPOSITOR {
+                    false => "offscreen buffer saved from previous render".to_string(),
+                    true => offscreen_buffer.pretty_print(),
+                },
+            });
+            it
+        };
+        write!(f, "\nGlobalData\n  - {}", vec_lines.join("\n  - "))
+    }
+}
 
-    impl<S, AS> Debug for GlobalData<S, AS>
+impl<S, AS> GlobalData<S, AS>
+where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
+{
+    pub fn try_to_create_instance(
+        main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
+        state: S,
+        initial_size: Size,
+        output_device: OutputDevice,
+    ) -> CommonResult<GlobalData<S, AS>>
     where
-        S: Debug + Default + Clone + Sync + Send,
         AS: Debug + Default + Clone + Sync + Send,
     {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            let vec_lines = {
-                let mut it = vec![];
-                it.push(format!("window_size: {0:?}", self.window_size));
-                it.push(match &self.maybe_saved_offscreen_buffer {
-                    None => "no saved offscreen buffer".to_string(),
-                    Some(ref offscreen_buffer) => match DEBUG_TUI_COMPOSITOR {
-                        false => {
-                            "offscreen buffer saved from previous render".to_string()
-                        }
-                        true => offscreen_buffer.pretty_print(),
-                    },
-                });
-                it
-            };
-            write!(f, "\nGlobalData\n  - {}", vec_lines.join("\n  - "))
-        }
+        let mut it = GlobalData {
+            window_size: Default::default(),
+            maybe_saved_offscreen_buffer: Default::default(),
+            state,
+            main_thread_channel_sender,
+            output_device,
+        };
+
+        it.set_size(initial_size);
+
+        Ok(it)
     }
 
-    impl<S, AS> GlobalData<S, AS>
-    where
-        S: Debug + Default + Clone + Sync + Send,
-        AS: Debug + Default + Clone + Sync + Send,
-    {
-        pub fn try_to_create_instance(
-            main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
-            state: S,
-        ) -> CommonResult<GlobalData<S, AS>>
-        where
-            AS: Debug + Default + Clone + Sync + Send,
-        {
-            let mut it = GlobalData {
-                window_size: Default::default(),
-                maybe_saved_offscreen_buffer: Default::default(),
-                state,
-                main_thread_channel_sender,
-            };
+    pub fn set_size(&mut self, new_size: Size) {
+        self.window_size = new_size;
+        self.dump_to_log("main_event_loop -> Resize");
+    }
 
-            it.set_size(terminal_lib_operations::lookup_size()?);
+    pub fn get_size(&self) -> Size { self.window_size }
 
-            Ok(it)
-        }
-
-        pub fn set_size(&mut self, new_size: Size) {
-            self.window_size = new_size;
-            self.dump_to_log("main_event_loop -> Resize");
-        }
-
-        pub fn get_size(&self) -> Size { self.window_size }
-
-        pub fn dump_to_log(&self, msg: &str) {
-            call_if_true!(DEBUG_TUI_MOD, tracing::info!("{msg} -> {self:?}"));
-        }
+    pub fn dump_to_log(&self, msg: &str) {
+        call_if_true!(DEBUG_TUI_MOD, tracing::info!("{msg} -> {self:?}"));
     }
 }

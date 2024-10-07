@@ -50,6 +50,7 @@ def main [...args: string] {
         "clean" => {clean}
         "install-cargo-tools" => {install-cargo-tools}
         "test" => {test}
+        "watch-all-tests" => {watch-all-tests}
         "docs" => {docs}
         "check" => {check}
         "check-watch" => {check-watch}
@@ -82,6 +83,7 @@ def print-help [command: string] {
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)install-cargo-tools(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
+        print $'    (ansi green)watch-all-tests(ansi reset)'
         print $'    (ansi green)docs(ansi reset)'
         print $'    (ansi green)check(ansi reset)'
         print $'    (ansi green)check-watch(ansi reset)'
@@ -98,6 +100,12 @@ def print-help [command: string] {
     } else {
         print $'Unknown command: (ansi red_bold)($command)(ansi reset)'
     }
+}
+
+def watch-all-tests [] {
+    cargo watch -x 'test --workspace --quiet --color always -- --test-threads 4' -c -q --delay 2
+    # cargo watch -x 'test --workspace' -c -q --delay 2
+    # cargo watch --exec check --exec 'test --quiet --color always -- --test-threads 4' --clear --quiet --delay 2
 }
 
 # https://thelinuxcode.com/create-ramdisk-linux/

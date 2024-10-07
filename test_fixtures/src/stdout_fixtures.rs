@@ -18,9 +18,8 @@
 use std::{io::{Result, Write},
           sync::Arc};
 
+use r3bl_core::StdMutex;
 use strip_ansi_escapes::strip;
-
-use super::StdMutex;
 
 /// You can safely clone this struct, since it only contains an `Arc<StdMutex<Vec<u8>>>`. The
 /// inner `buffer` will not be cloned, just the [Arc] will be cloned.
