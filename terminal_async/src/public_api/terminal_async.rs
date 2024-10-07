@@ -15,19 +15,14 @@
  *   limitations under the License.
  */
 
-use std::{io::{stdout, Write},
-          sync::Arc};
+use std::io::{stdout, Write};
 
 use crossterm::{cursor::MoveToColumn,
-                event::EventStream,
                 style::{Print, ResetColor, Stylize},
                 terminal::{Clear, ClearType}};
 use futures_util::FutureExt as _;
 use miette::IntoDiagnostic as _;
-use r3bl_core::{CrosstermEventResult,
-                LineStateControlSignal,
-                PinnedInputStream,
-                SharedWriter};
+use r3bl_core::{InputDevice, LineStateControlSignal, OutputDevice, SharedWriter};
 use r3bl_tuify::{is_fully_uninteractive_terminal,
                  is_stdin_piped,
                  is_stdout_piped,
@@ -35,7 +30,7 @@ use r3bl_tuify::{is_fully_uninteractive_terminal,
                  StdoutIsPipedResult,
                  TTYResult};
 
-use crate::{Readline, ReadlineEvent, StdMutex};
+use crate::{Readline, ReadlineEvent};
 
 pub struct TerminalAsync {
     pub readline: Readline,
@@ -95,12 +90,13 @@ impl TerminalAsync {
             return Ok(None);
         }
 
-        let safe_raw_terminal = Arc::new(StdMutex::new(stdout()));
-        let pinned_input_stream: PinnedInputStream<CrosstermEventResult> =
-            Box::pin(EventStream::new());
+        let output_device = OutputDevice::new_stdout();
+        let input_device = InputDevice::new_event_stream();
+
         let (readline, stdout) =
-            Readline::new(prompt.to_owned(), safe_raw_terminal, pinned_input_stream)
+            Readline::new(prompt.to_owned(), output_device, input_device)
                 .into_diagnostic()?;
+
         Ok(Some(TerminalAsync {
             readline,
             shared_writer: stdout,

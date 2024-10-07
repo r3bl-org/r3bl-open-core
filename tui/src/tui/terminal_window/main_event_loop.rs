@@ -19,6 +19,7 @@ use std::{fmt::Debug, marker::PhantomData};
 
 use r3bl_core::{call_if_true,
                 ch,
+                ok,
                 position,
                 throws,
                 Ansi256GradientIndex,
@@ -27,6 +28,8 @@ use r3bl_core::{call_if_true,
                 ColorWheelSpeed,
                 CommonResult,
                 GradientGenerationPolicy,
+                InputDevice,
+                OutputDevice,
                 Size,
                 TextColorizationPolicy,
                 TooSmallToDisplayResult,
@@ -38,214 +41,195 @@ use tokio::sync::mpsc;
 use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation};
 use crate::{render_pipeline,
             telemetry_global_static,
-            AsyncEventStream,
             ComponentRegistryMap,
-            FlexBoxId,
             Flush as _,
             FlushKind,
             GlobalData,
             HasFocus,
+            InputDeviceExt,
             InputEvent,
             MinSize,
             RawMode,
             RenderOp,
             RenderPipeline,
+            TerminalWindowMainThreadSignal,
             ZOrder,
             DEBUG_TUI_MOD};
 
-pub struct TerminalWindow;
-
 pub const CHANNEL_WIDTH: usize = 1_000;
 
-#[derive(Debug)]
-pub enum TerminalWindowMainThreadSignal<AS>
+pub async fn main_event_loop_impl<S, AS>(
+    mut app: BoxedSafeApp<S, AS>,
+    exit_keys: Vec<InputEvent>,
+    state: S,
+    initial_size: Size,
+    mut input_device: InputDevice,
+    output_device: OutputDevice,
+) -> CommonResult<(
+    /* global_data */ GlobalData<S, AS>,
+    /* event stream */ InputDevice,
+    /* stdout */ OutputDevice,
+)>
 where
-    AS: Debug + Default + Clone + Sync + Send,
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send + 'static,
 {
-    /// Exit the main event loop.
-    Exit,
-    /// Render the app.
-    Render(Option<FlexBoxId>),
-    /// Apply an action to the app.
-    ApplyAction(AS),
-}
+    // mpsc channel to send signals from the app to the main event loop (eg: for exit,
+    // re-render, apply action, etc).
+    let (main_thread_channel_sender, mut main_thread_channel_receiver) =
+        mpsc::channel::<TerminalWindowMainThreadSignal<AS>>(CHANNEL_WIDTH);
 
-impl TerminalWindow {
-    /// This is the main event loop for the entire application. It is responsible for
-    /// handling all input events, and dispatching them to the [crate::App] for
-    /// processing. It is also responsible for rendering the [crate::App] after each input
-    /// event. It is also responsible for handling all signals sent from the [crate::App]
-    /// to the main event loop (eg: exit, re-render, apply action, etc).
-    pub async fn main_event_loop<S, AS>(
-        mut app: BoxedSafeApp<S, AS>,
-        exit_keys: Vec<InputEvent>,
-        state: S,
-    ) -> CommonResult<()>
-    where
-        S: Debug + Default + Clone + Sync + Send,
-        AS: Debug + Default + Clone + Sync + Send + 'static,
-    {
-        throws!({
-            // mpsc channel to send signals from the app to the main event loop (eg: for exit,
-            // re-render, apply action, etc).
-            let (main_thread_channel_sender, mut main_thread_channel_receiver) =
-                mpsc::channel::<TerminalWindowMainThreadSignal<AS>>(CHANNEL_WIDTH);
+    // Initialize the terminal window data struct.
+    let mut global_data = GlobalData::try_to_create_instance(
+        main_thread_channel_sender.clone(),
+        state,
+        initial_size,
+        output_device.clone(),
+    )?;
+    let global_data_ref = &mut global_data;
 
-            // Initialize the terminal window data struct.
-            let global_data = &mut GlobalData::try_to_create_instance(
-                main_thread_channel_sender.clone(),
-                state,
-            )?;
+    // Start raw mode.
+    RawMode::start(global_data_ref.window_size);
 
-            // Start raw mode.
-            RawMode::start(global_data.window_size);
+    let app = &mut app;
 
-            // Create a new event stream (async).
-            let async_event_stream = &mut AsyncEventStream::default();
+    // This map is used to cache [Component]s that have been created and are meant to be reused between
+    // multiple renders.
+    // 1. It is entirely up to the [App] on how this [ComponentRegistryMap] is used.
+    // 2. The methods provided allow components to be added to the map.
+    let component_registry_map = &mut ComponentRegistryMap::default();
+    let has_focus = &mut HasFocus::default();
 
-            let app = &mut app;
+    // Init the app, and perform first render.
+    app.app_init(component_registry_map, has_focus);
+    AppManager::render_app(app, global_data_ref, component_registry_map, has_focus)?;
 
-            // This map is used to cache [Component]s that have been created and are meant to be reused between
-            // multiple renders.
-            // 1. It is entirely up to the [App] on how this [ComponentRegistryMap] is used.
-            // 2. The methods provided allow components to be added to the map.
-            let component_registry_map = &mut ComponentRegistryMap::default();
-            let has_focus = &mut HasFocus::default();
+    global_data_ref.dump_to_log("main_event_loop -> Startup 🚀");
 
-            // Init the app, and perform first render.
-            app.app_init(component_registry_map, has_focus);
-            AppManager::render_app(app, global_data, component_registry_map, has_focus)?;
-
-            global_data.dump_to_log("main_event_loop -> Startup 🚀");
-
-            // Main event loop.
-            loop {
-                tokio::select! {
-                    // Handle signals on the channel.
-                    // This branch is cancel safe since recv is cancel safe.
-                    maybe_signal = main_thread_channel_receiver.recv() => {
-                        if let Some(ref signal) = maybe_signal {
-                            match signal {
-                                TerminalWindowMainThreadSignal::Exit => {
-                                    // 🐒 Actually exit the main loop!
-                                    RawMode::end(global_data.window_size);
-                                    break;
-                                },
-                                TerminalWindowMainThreadSignal::Render(_) => {
-                                    AppManager::render_app(
-                                        app,
-                                        global_data,
-                                        component_registry_map,
-                                        has_focus,
-                                    )?;
-                                },
-                                TerminalWindowMainThreadSignal::ApplyAction(action) => {
-                                    let result = app.app_handle_signal(action, global_data, component_registry_map, has_focus);
-                                    handle_result_generated_by_app_after_handling_action_or_input_event(
-                                        result,
-                                        None,
-                                        &exit_keys,
-                                        app,
-                                        global_data,
-                                        component_registry_map,
-                                        has_focus,
-                                    );
-                                },
-                            }
-                        }
-                    }
-
-                    // Handle input event.
-                    // This branch is cancel safe because no state is declared inside the
-                    // future in the following block.
-                    // - All the state comes from other variables (self.*).
-                    // - So if this future is dropped, then the item in the
-                    //   pinned_input_stream isn't used and the state isn't modified.
-                    maybe_input_event = AsyncEventStream::try_to_get_input_event(async_event_stream) => {
-                        if let Some(input_event) = maybe_input_event {
-                            telemetry_global_static::set_start_ts();
-
-                            call_if_true!(DEBUG_TUI_MOD, {
-                                if let InputEvent::Keyboard(_)= input_event {
-                                    tracing::info!("main_event_loop -> Tick: ⏰ {input_event}");
-                                }
-                            });
-
-                            Self::handle_resize_if_applicable(input_event,
-                                global_data, app,
-                                component_registry_map,
-                                has_focus);
-
-                            Self::actually_process_input_event(
-                                global_data,
+    // Main event loop.
+    loop {
+        tokio::select! {
+            // Handle signals on the channel.
+            // This branch is cancel safe since recv is cancel safe.
+            maybe_signal = main_thread_channel_receiver.recv() => {
+                if let Some(ref signal) = maybe_signal {
+                    match signal {
+                        TerminalWindowMainThreadSignal::Exit => {
+                            // 🐒 Actually exit the main loop!
+                            RawMode::end(global_data_ref.window_size);
+                            break;
+                        },
+                        TerminalWindowMainThreadSignal::Render(_) => {
+                            AppManager::render_app(
                                 app,
-                                input_event,
+                                global_data_ref,
+                                component_registry_map,
+                                has_focus,
+                            )?;
+                        },
+                        TerminalWindowMainThreadSignal::ApplyAction(action) => {
+                            let result = app.app_handle_signal(action, global_data_ref, component_registry_map, has_focus);
+                            handle_result_generated_by_app_after_handling_action_or_input_event(
+                                result,
+                                None,
                                 &exit_keys,
+                                app,
+                                global_data_ref,
                                 component_registry_map,
                                 has_focus,
                             );
-                        }
+                        },
                     }
                 }
-            } // End loop.
+            }
 
-            call_if_true!(DEBUG_TUI_MOD, {
-                tracing::info!("main_event_loop -> Shutdown 🛑");
-            });
-        });
-    }
+            // Handle input event.
+            // This branch is cancel safe because no state is declared inside the
+            // future in the following block.
+            // - All the state comes from other variables (self.*).
+            // - So if this future is dropped, then the item in the
+            //   pinned_input_stream isn't used and the state isn't modified.
+            maybe_input_event = input_device.next_input_event() => {
+                if let Some(input_event) = maybe_input_event {
+                    telemetry_global_static::set_start_ts();
 
-    fn actually_process_input_event<S, AS>(
-        global_data: &mut GlobalData<S, AS>,
-        app: &mut BoxedSafeApp<S, AS>,
-        input_event: InputEvent,
-        exit_keys: &[InputEvent],
-        component_registry_map: &mut ComponentRegistryMap<S, AS>,
-        has_focus: &mut HasFocus,
-    ) where
-        S: Debug + Default + Clone + Sync + Send,
-        AS: Debug + Default + Clone + Sync + Send + 'static,
-    {
-        let result = app.app_handle_input_event(
-            input_event,
-            global_data,
-            component_registry_map,
-            has_focus,
-        );
+                    call_if_true!(DEBUG_TUI_MOD, {
+                        if let InputEvent::Keyboard(_)= input_event {
+                            tracing::info!("main_event_loop -> Tick: ⏰ {input_event}");
+                        }
+                    });
 
-        handle_result_generated_by_app_after_handling_action_or_input_event(
-            result,
-            Some(input_event),
-            exit_keys,
-            app,
-            global_data,
-            component_registry_map,
-            has_focus,
-        );
-    }
+                    handle_resize_if_applicable(input_event,
+                        global_data_ref, app,
+                        component_registry_map,
+                        has_focus);
 
-    /// Before any app gets to process the `input_event`, perform special handling in case
-    /// it is a resize event.
-    pub fn handle_resize_if_applicable<S, AS>(
-        input_event: InputEvent,
-        global_data: &mut GlobalData<S, AS>,
-        app: &mut BoxedSafeApp<S, AS>,
-        component_registry_map: &mut ComponentRegistryMap<S, AS>,
-        has_focus: &mut HasFocus,
-    ) where
-        S: Debug + Default + Clone + Sync + Send,
-        AS: Debug + Default + Clone + Sync + Send,
-    {
-        if let InputEvent::Resize(new_size) = input_event {
-            global_data.set_size(new_size);
-            global_data.maybe_saved_offscreen_buffer = None;
-            let _ = AppManager::render_app(
-                app,
-                global_data,
-                component_registry_map,
-                has_focus,
-            );
+                    actually_process_input_event(
+                        global_data_ref,
+                        app,
+                        input_event,
+                        &exit_keys,
+                        component_registry_map,
+                        has_focus,
+                    );
+                }
+            }
         }
+    } // End loop.
+
+    call_if_true!(DEBUG_TUI_MOD, {
+        tracing::info!("main_event_loop -> Shutdown 🛑");
+    });
+
+    ok!((global_data, input_device, output_device))
+}
+
+fn actually_process_input_event<S, AS>(
+    global_data: &mut GlobalData<S, AS>,
+    app: &mut BoxedSafeApp<S, AS>,
+    input_event: InputEvent,
+    exit_keys: &[InputEvent],
+    component_registry_map: &mut ComponentRegistryMap<S, AS>,
+    has_focus: &mut HasFocus,
+) where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send + 'static,
+{
+    let result = app.app_handle_input_event(
+        input_event,
+        global_data,
+        component_registry_map,
+        has_focus,
+    );
+
+    handle_result_generated_by_app_after_handling_action_or_input_event(
+        result,
+        Some(input_event),
+        exit_keys,
+        app,
+        global_data,
+        component_registry_map,
+        has_focus,
+    );
+}
+
+/// Before any app gets to process the `input_event`, perform special handling in case
+/// it is a resize event.
+pub fn handle_resize_if_applicable<S, AS>(
+    input_event: InputEvent,
+    global_data: &mut GlobalData<S, AS>,
+    app: &mut BoxedSafeApp<S, AS>,
+    component_registry_map: &mut ComponentRegistryMap<S, AS>,
+    has_focus: &mut HasFocus,
+) where
+    S: Debug + Default + Clone + Sync + Send,
+    AS: Debug + Default + Clone + Sync + Send,
+{
+    if let InputEvent::Resize(new_size) = input_event {
+        global_data.set_size(new_size);
+        global_data.maybe_saved_offscreen_buffer = None;
+        let _ =
+            AppManager::render_app(app, global_data, component_registry_map, has_focus);
     }
 }
 
@@ -430,3 +414,5 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
 
     pipeline
 }
+
+// 00: add a test for main_event_loop_impl & return GlobalState

@@ -55,10 +55,10 @@ pub enum TerminalLibBackend {
 pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
 
 // Attach source files.
-pub mod async_event_stream_ext;
 pub mod crossterm_backend;
 pub mod crossterm_color_converter;
 pub mod enhanced_keys;
+pub mod input_device_ext;
 pub mod input_event;
 pub mod keypress;
 pub mod modifier_keys_mask;
@@ -75,10 +75,10 @@ pub mod termion_backend;
 pub mod z_order;
 
 // Re-export.
-pub use async_event_stream_ext::*;
 pub use crossterm_backend::*;
 pub use crossterm_color_converter::*;
 pub use enhanced_keys::*;
+pub use input_device_ext::*;
 pub use input_event::*;
 pub use keypress::*;
 pub use modifier_keys_mask::*;

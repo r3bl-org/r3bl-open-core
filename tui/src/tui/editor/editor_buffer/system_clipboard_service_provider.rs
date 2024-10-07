@@ -36,7 +36,7 @@ impl ClipboardService for SystemClipboard {
             call_if_true!(DEBUG_TUI_COPY_PASTE, {
                 tracing::debug!(
                     "\n📋📋📋 Selected Text was copied to clipboard: \n{}",
-                    format!("{content}").black().on_green(),
+                    content.to_string().black().on_green(),
                 );
             });
         })

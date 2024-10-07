@@ -15,10 +15,12 @@
  *   limitations under the License.
  */
 
+#[cfg(test)]
 pub mod mock_real_objects_for_dialog {
     use std::{collections::HashMap, fmt::Debug};
 
     use r3bl_core::Size;
+    use r3bl_test_fixtures::StdoutMock;
     use tokio::sync::mpsc;
 
     use crate::{test_fixtures::mock_real_objects_for_editor,
@@ -29,17 +31,24 @@ pub mod mock_real_objects_for_dialog {
                 HasDialogBuffers,
                 CHANNEL_WIDTH};
 
-    pub fn make_global_data(window_size: Option<Size>) -> GlobalData<State, ()> {
+    pub fn make_global_data(
+        window_size: Option<Size>,
+    ) -> (GlobalData<State, ()>, StdoutMock) {
         let (main_thread_channel_sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
         let state = create_state();
         let window_size = window_size.unwrap_or_default();
         let maybe_saved_offscreen_buffer = Default::default();
-        GlobalData {
+        let (output_device, stdout_mock) = StdoutMock::new_output_device();
+
+        let global_data = GlobalData {
             state,
             window_size,
             maybe_saved_offscreen_buffer,
             main_thread_channel_sender,
-        }
+            output_device,
+        };
+
+        (global_data, stdout_mock)
     }
 
     #[derive(Clone, PartialEq, Default, Debug)]

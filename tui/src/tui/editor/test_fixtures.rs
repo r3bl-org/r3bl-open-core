@@ -15,27 +15,35 @@
  *   limitations under the License.
  */
 
+#[cfg(test)]
 pub mod mock_real_objects_for_editor {
     use std::fmt::Debug;
 
     use r3bl_core::{position, size, Size};
+    use r3bl_test_fixtures::StdoutMock;
     use tokio::sync::mpsc;
 
     use crate::{EditorEngine, FlexBox, GlobalData, PartialFlexBox, CHANNEL_WIDTH};
 
-    pub fn make_global_data<S, AS>(window_size: Option<Size>) -> GlobalData<S, AS>
+    pub fn make_global_data<S, AS>(
+        window_size: Option<Size>,
+    ) -> (GlobalData<S, AS>, StdoutMock)
     where
         S: Debug + Default + Clone + Sync + Send,
         AS: Debug + Default + Clone + Sync + Send,
     {
         let (sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
+        let (output_device, stdout_mock) = StdoutMock::new_output_device();
 
-        GlobalData {
+        let global_data = GlobalData {
             window_size: window_size.unwrap_or_default(),
             maybe_saved_offscreen_buffer: Default::default(),
             main_thread_channel_sender: sender,
             state: Default::default(),
-        }
+            output_device,
+        };
+
+        (global_data, stdout_mock)
     }
 
     pub fn make_editor_engine_with_bounds(size: Size) -> EditorEngine {
