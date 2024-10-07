@@ -15,28 +15,23 @@
  *   limitations under the License.
  */
 
-use std::{borrow::Cow,
-          io::{stderr, stdout, Write}};
+use std::borrow::Cow;
 
 use crossterm::{self,
                 cursor::{Hide, MoveTo, Show},
                 event::{DisableMouseCapture, EnableMouseCapture},
-                queue,
                 style::{Attribute,
                         Print,
                         ResetColor,
                         SetAttribute,
                         SetBackgroundColor,
                         SetForegroundColor},
-                terminal::{self,
-                           Clear,
+                terminal::{Clear,
                            ClearType,
                            EnterAlternateScreen,
                            LeaveAlternateScreen}};
 use r3bl_core::{call_if_true,
-                console_log,
-                throws,
-                CommonResult,
+                LockedOutputDevice,
                 Position,
                 Size,
                 TuiColor,
@@ -44,15 +39,17 @@ use r3bl_core::{call_if_true,
                 UnicodeString};
 
 use crate::{crossterm_color_converter::convert_from_tui_color_to_crossterm_color,
-            exec_render_op,
+            disable_raw_mode_now,
+            flush_now,
+            queue_render_op,
             sanitize_and_save_abs_position,
             Flush,
             PaintRenderOp,
             RenderOp,
             RenderOpsLocalData};
 
-/// Struct representing the implementation of [RenderOp] for crossterm terminal backend. This empty
-/// struct is needed since the [Flush] trait needs to be implemented.
+/// Struct representing the implementation of [RenderOp] for crossterm terminal backend.
+/// This empty struct is needed since the [Flush] trait needs to be implemented.
 pub struct RenderOpImplCrossterm;
 
 mod impl_trait_paint_render_op {
@@ -65,20 +62,28 @@ mod impl_trait_paint_render_op {
             command_ref: &RenderOp,
             window_size: Size,
             local_data: &mut RenderOpsLocalData,
+            locked_output_device: LockedOutputDevice<'_>,
         ) {
             match command_ref {
                 RenderOp::Noop => {}
                 RenderOp::EnterRawMode => {
-                    RenderOpImplCrossterm::raw_mode_enter(skip_flush, window_size);
+                    RenderOpImplCrossterm::raw_mode_enter(
+                        skip_flush,
+                        locked_output_device,
+                    );
                 }
                 RenderOp::ExitRawMode => {
-                    RenderOpImplCrossterm::raw_mode_exit(skip_flush);
+                    RenderOpImplCrossterm::raw_mode_exit(
+                        skip_flush,
+                        locked_output_device,
+                    );
                 }
                 RenderOp::MoveCursorPositionAbs(abs_pos) => {
                     RenderOpImplCrossterm::move_cursor_position_abs(
                         *abs_pos,
                         window_size,
                         local_data,
+                        locked_output_device,
                     );
                 }
                 RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
@@ -87,25 +92,27 @@ mod impl_trait_paint_render_op {
                         *content_rel_pos,
                         window_size,
                         local_data,
+                        locked_output_device,
                     );
                 }
                 RenderOp::ClearScreen => {
-                    exec_render_op!(
-                        queue!(stdout(), Clear(ClearType::All)),
-                        "ClearScreen"
+                    queue_render_op!(
+                        locked_output_device,
+                        "ClearScreen",
+                        Clear(ClearType::All),
                     )
                 }
                 RenderOp::SetFgColor(color) => {
-                    RenderOpImplCrossterm::set_fg_color(color);
+                    RenderOpImplCrossterm::set_fg_color(*color, locked_output_device);
                 }
                 RenderOp::SetBgColor(color) => {
-                    RenderOpImplCrossterm::set_bg_color(color);
+                    RenderOpImplCrossterm::set_bg_color(*color, locked_output_device);
                 }
                 RenderOp::ResetColor => {
-                    exec_render_op!(queue!(stdout(), ResetColor), "ResetColor")
+                    queue_render_op!(locked_output_device, "ResetColor", ResetColor)
                 }
                 RenderOp::ApplyColors(style) => {
-                    RenderOpImplCrossterm::apply_colors(style);
+                    RenderOpImplCrossterm::apply_colors(style, locked_output_device);
                 }
                 RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                     text,
@@ -116,6 +123,7 @@ mod impl_trait_paint_render_op {
                         maybe_style,
                         window_size,
                         local_data,
+                        locked_output_device,
                     );
                 }
                 RenderOp::PaintTextWithAttributes(_text, _maybe_style) => {
@@ -132,28 +140,24 @@ pub mod impl_trait_flush {
     use super::*;
 
     impl Flush for RenderOpImplCrossterm {
-        fn flush(&mut self) { flush(); }
-        fn clear_before_flush(&mut self) { clear_before_flush(); }
-    }
-
-    fn clear_before_flush() {
-        exec_render_op! {
-          queue!(stdout(),
-            ResetColor,
-            Clear(ClearType::All),
-          ),
-        "flush() -> after ResetColor, Clear"
+        fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
+            flush_now!(locked_output_device, "flush() -> output_device");
         }
-    }
 
-    pub fn flush() {
-        exec_render_op!(stdout().flush(), "flush() -> stdout");
-        exec_render_op!(stderr().flush(), "flush() -> stderr");
+        fn clear_before_flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
+            crate::queue_render_op!(
+                locked_output_device,
+                "flush() -> after ResetColor, Clear",
+                ResetColor,
+                Clear(ClearType::All),
+            );
+        }
     }
 }
 
 mod impl_self {
     use super::*;
+    use crate::enable_raw_mode_now;
 
     impl RenderOpImplCrossterm {
         pub fn move_cursor_position_rel_to(
@@ -161,73 +165,99 @@ mod impl_self {
             content_rel_pos: Position,
             window_size: Size,
             local_data: &mut RenderOpsLocalData,
+            locked_output_device: LockedOutputDevice<'_>,
         ) {
             let new_abs_pos = box_origin_pos + content_rel_pos;
-            Self::move_cursor_position_abs(new_abs_pos, window_size, local_data);
+            Self::move_cursor_position_abs(
+                new_abs_pos,
+                window_size,
+                local_data,
+                locked_output_device,
+            );
         }
 
         pub fn move_cursor_position_abs(
             abs_pos: Position,
             window_size: Size,
             local_data: &mut RenderOpsLocalData,
+            locked_output_device: LockedOutputDevice<'_>,
         ) {
             let Position {
                 col_index: col,
                 row_index: row,
             } = sanitize_and_save_abs_position(abs_pos, window_size, local_data);
-            exec_render_op!(
-                queue!(stdout(), MoveTo(*col, *row)),
-                format!("MoveCursorPosition(col: {}, row: {})", *col, *row)
+
+            queue_render_op!(
+                locked_output_device,
+                format!("MoveCursorPosition(col: {}, row: {})", *col, *row),
+                MoveTo(*col, *row)
             )
         }
 
-        pub fn raw_mode_exit(skip_flush: &mut bool) {
-            exec_render_op! {
-              queue!(stdout(),
+        pub fn raw_mode_exit(
+            skip_flush: &mut bool,
+            locked_output_device: LockedOutputDevice<'_>,
+        ) {
+            queue_render_op!(
+                locked_output_device,
+                "ExitRawMode -> Show, LeaveAlternateScreen, DisableMouseCapture",
                 Show,
                 LeaveAlternateScreen,
                 DisableMouseCapture
-              ),
-              "ExitRawMode -> Show, LeaveAlternateScreen, DisableMouseCapture"
-            };
-            impl_trait_flush::flush();
-            exec_render_op! {terminal::disable_raw_mode(), "ExitRawMode -> disable_raw_mode()"}
+            );
+
+            flush_now!(locked_output_device, "ExitRawMode -> flush()");
+
+            disable_raw_mode_now!("ExitRawMode -> disable_raw_mode()");
+
             *skip_flush = true;
         }
 
-        pub fn raw_mode_enter(skip_flush: &mut bool, _: Size) {
-            exec_render_op! {
-              terminal::enable_raw_mode(),
-              "EnterRawMode -> enable_raw_mode()"
-            };
-            exec_render_op! {
-              queue!(stdout(),
+        pub fn raw_mode_enter(
+            skip_flush: &mut bool,
+            locked_output_device: LockedOutputDevice<'_>,
+        ) {
+            enable_raw_mode_now!("EnterRawMode -> enable_raw_mode()");
+
+            queue_render_op!(
+                locked_output_device,
+                "EnterRawMode -> EnableMouseCapture, EnterAlternateScreen, MoveTo(0,0), Clear(ClearType::All), Hide",
                 EnableMouseCapture,
                 EnterAlternateScreen,
                 MoveTo(0,0),
                 Clear(ClearType::All),
                 Hide,
-              ),
-            "EnterRawMode -> EnableMouseCapture, EnterAlternateScreen, MoveTo(0,0), Clear(ClearType::All), Hide"
-            }
-            impl_trait_flush::flush();
+            );
+
+            flush_now!(locked_output_device, "EnterRawMode -> flush()");
+
             *skip_flush = true;
         }
 
-        pub fn set_fg_color(color: &TuiColor) {
-            let color = convert_from_tui_color_to_crossterm_color(*color);
-            exec_render_op!(
-                queue!(stdout(), SetForegroundColor(color)),
-                format!("SetFgColor({color:?})")
-            )
+        pub fn set_fg_color(
+            color: TuiColor,
+            locked_output_device: LockedOutputDevice<'_>,
+        ) {
+            let color = convert_from_tui_color_to_crossterm_color(color);
+
+            queue_render_op!(
+                locked_output_device,
+                format!("SetFgColor({color:?})"),
+                SetForegroundColor(color),
+            );
         }
 
-        pub fn set_bg_color(color: &TuiColor) {
+        pub fn set_bg_color(
+            color: TuiColor,
+            locked_output_device: LockedOutputDevice<'_>,
+        ) {
             let color: crossterm::style::Color =
-                convert_from_tui_color_to_crossterm_color(*color);
-            exec_render_op!(
-                queue!(stdout(), SetBackgroundColor(color)),
-                format!("SetBgColor({color:?})")
+                convert_from_tui_color_to_crossterm_color(color);
+
+            queue_render_op!(
+                locked_output_device,
+                format!("SetBgColor({color:?})"),
+                SetBackgroundColor(color),
             )
         }
 
@@ -236,8 +266,9 @@ mod impl_self {
             maybe_style: &Option<TuiStyle>,
             window_size: Size,
             local_data: &mut RenderOpsLocalData,
+            locked_output_device: LockedOutputDevice<'_>,
         ) {
-            use perform_paint::*;
+            use perform_paint::{paint_style_and_text, PaintArgs};
 
             // Gen log_msg.
             let log_msg = Cow::from(format!("\"{text_arg}\""));
@@ -254,31 +285,43 @@ mod impl_self {
             let needs_reset = Cow::Owned(false);
 
             // Paint plain_text.
-            paint_style_and_text(&mut paint_args, needs_reset, local_data);
+            paint_style_and_text(
+                &mut paint_args,
+                needs_reset,
+                local_data,
+                locked_output_device,
+            );
         }
 
         /// Use [crossterm::style::Color] to set crossterm Colors.
         /// Docs: <https://docs.rs/crossterm/latest/crossterm/style/index.html#colors>
-        pub fn apply_colors(maybe_style: &Option<TuiStyle>) {
+        pub fn apply_colors(
+            maybe_style: &Option<TuiStyle>,
+            locked_output_device: LockedOutputDevice<'_>,
+        ) {
             if let Some(style) = maybe_style {
                 // Handle background color.
                 if let Some(tui_color_bg) = style.color_bg {
                     let color_bg: crossterm::style::Color =
                         crate::convert_from_tui_color_to_crossterm_color(tui_color_bg);
-                    exec_render_op!(
-                        queue!(stdout(), SetBackgroundColor(color_bg)),
-                        format!("ApplyColors -> SetBgColor({color_bg:?})")
-                    )
+
+                    queue_render_op!(
+                        locked_output_device,
+                        format!("ApplyColors -> SetBgColor({color_bg:?})"),
+                        SetBackgroundColor(color_bg),
+                    );
                 }
 
                 // Handle foreground color.
                 if let Some(tui_color_fg) = style.color_fg {
                     let color_fg: crossterm::style::Color =
                         crate::convert_from_tui_color_to_crossterm_color(tui_color_fg);
-                    exec_render_op!(
-                        queue!(stdout(), SetForegroundColor(color_fg)),
-                        format!("ApplyColors -> SetFgColor({color_fg:?})")
-                    )
+
+                    queue_render_op!(
+                        locked_output_device,
+                        format!("ApplyColors -> SetFgColor({color_fg:?})"),
+                        SetForegroundColor(color_fg),
+                    );
                 }
             }
         }
@@ -328,31 +371,38 @@ mod perform_paint {
         paint_args: &mut PaintArgs<'_>,
         mut needs_reset: Cow<'_, bool>,
         local_data: &mut RenderOpsLocalData,
+        locked_output_device: LockedOutputDevice<'_>,
     ) {
         let PaintArgs { maybe_style, .. } = paint_args;
 
         if let Some(style) = maybe_style {
             let attrib_vec = style_to_attribute(style);
             attrib_vec.iter().for_each(|attr| {
-                exec_render_op!(
-                    queue!(stdout(), SetAttribute(*attr)),
-                    format!("PaintWithAttributes -> SetAttribute({attr:?})")
+                queue_render_op!(
+                    locked_output_device,
+                    format!("PaintWithAttributes -> SetAttribute({attr:?})"),
+                    SetAttribute(*attr),
                 );
                 needs_reset = Cow::Owned(true);
             });
         }
 
-        paint_text(paint_args, local_data);
+        paint_text(paint_args, local_data, locked_output_device);
 
         if *needs_reset {
-            exec_render_op!(
-                queue!(stdout(), SetAttribute(Attribute::Reset)),
-                format!("PaintWithAttributes -> SetAttribute(Reset))")
+            queue_render_op!(
+                locked_output_device,
+                format!("PaintWithAttributes -> SetAttribute(Reset))"),
+                SetAttribute(Attribute::Reset),
             );
         }
     }
 
-    pub fn paint_text(paint_args: &PaintArgs<'_>, local_data: &mut RenderOpsLocalData) {
+    pub fn paint_text(
+        paint_args: &PaintArgs<'_>,
+        local_data: &mut RenderOpsLocalData,
+        locked_output_device: LockedOutputDevice<'_>,
+    ) {
         let PaintArgs {
             text,
             log_msg,
@@ -367,9 +417,10 @@ mod perform_paint {
         {
             let text = Cow::Borrowed(text);
             let log_msg: &str = log_msg;
-            exec_render_op!(
-                queue!(stdout(), Print(&text)),
-                format!("Print( {} {log_msg})", &text)
+            queue_render_op!(
+                locked_output_device,
+                format!("Print( {} {log_msg})", &text),
+                Print(&text),
             );
         };
 
@@ -381,53 +432,119 @@ mod perform_paint {
     }
 }
 
-/// Given a crossterm command, this will run it and [tracing::error!] or [tracing::info!]
-/// the [Result] that is returned.
+/// Given a crossterm command, or commands, queue each one, and depending on what the
+/// [Result] is produced, run [tracing::error!] or [tracing::info!].
 ///
 /// Paste docs: <https://github.com/dtolnay/paste>
+///
+/// Usage example:
+/// ```
+/// use r3bl_test_fixtures::StdoutMock;
+/// use r3bl_tui::queue_render_op;
+/// use r3bl_core::{output_device_as_mut, call_if_true};
+/// use crossterm::terminal::*;
+/// use crossterm::style::*;
+///
+/// let (output_device, _) = StdoutMock::new_output_device();
+/// let writer = output_device_as_mut!(output_device);
+/// queue_render_op!(
+///     writer,
+///     "flush() -> after ResetColor, Clear",
+///     ResetColor,
+///     Clear(ClearType::All),
+/// );
+/// ```
 #[macro_export]
-macro_rules! exec_render_op {
-    (
-        $arg_cmd: expr,
-        $arg_log_msg: expr
-    ) => {{
-        // Generate a new function that returns [CommonResult]. This needs to be called.
-        // The only purpose of this generated method is to handle errors that may result
-        // from calling log! macro when there are issues accessing the log file for
-        // whatever reason.
+macro_rules! queue_render_op {
+    ($writer: expr, $arg_log_msg: expr $(, $command: expr)* $(,)?) => {{
         use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
-
-        let _fn_wrap_for_logging_err = || -> CommonResult<()> {
-            throws!({
-                // Execute the command.
-                if let Err(err) = $arg_cmd {
-                    let msg = format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
-                    call_if_true!(
-                        DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                        tracing::error!(msg)
-                    );
-                } else {
+        use r3bl_core::call_if_true;
+        use ::crossterm::QueueableCommand;
+        $(
+            match QueueableCommand::queue($writer, $command) {
+                Ok(_) => {
                     let msg = format!("crossterm: ✅ {} successfully", $arg_log_msg);
                     call_if_true! {
-                      DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-                      tracing::info!(msg)
+                        DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+                        tracing::info!(msg)
                     };
                 }
-            })
-        };
-
-        // Call this generated function. It will fail if there are problems w/ log!(). In this case, if
-        // `DEBUG_TUI_SHOW_TERMINAL_BACKEND` is true, then it will dump the error to stderr.
-        if let Err(logging_err) = _fn_wrap_for_logging_err() {
-            let msg = format!(
-                "❌ Failed to log exec output of {}, {}",
-                stringify!($arg_cmd),
-                $arg_log_msg
-            );
-            call_if_true! {
-              DEBUG_TUI_SHOW_TERMINAL_BACKEND,
-              console_log!(ERROR_RAW &msg, logging_err)
+                Err(err) => {
+                    let msg =
+                        format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
+                    call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
+                }
             };
+        )*
+    }}
+}
+
+#[macro_export]
+macro_rules! flush_now {
+    ($writer: expr, $arg_log_msg: expr) => {{
+        use r3bl_core::call_if_true;
+        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
+        match $writer.flush() {
+            Ok(_) => {
+                let msg = format!("crossterm: ✅ {} successfully", $arg_log_msg);
+                call_if_true! {
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+                    tracing::info!(msg)
+                };
+            }
+            Err(err) => {
+                let msg =
+                    format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
+                call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
+            }
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! disable_raw_mode_now {
+    (
+        $arg_log_msg: expr
+    ) => {{
+        use r3bl_core::call_if_true;
+        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
+        match crossterm::terminal::disable_raw_mode() {
+            Ok(_) => {
+                let msg = format!("crossterm: ✅ {} successfully", $arg_log_msg);
+                call_if_true! {
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+                    tracing::info!(msg)
+                };
+            }
+            Err(err) => {
+                let msg =
+                    format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
+                call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
+            }
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! enable_raw_mode_now {
+    (
+        $arg_log_msg: expr
+    ) => {{
+        use r3bl_core::call_if_true;
+        use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
+        match crossterm::terminal::enable_raw_mode() {
+            Ok(_) => {
+                let msg = format!("crossterm: ✅ {} successfully", $arg_log_msg);
+                call_if_true! {
+                    DEBUG_TUI_SHOW_TERMINAL_BACKEND,
+                    tracing::info!(msg)
+                };
+            }
+            Err(err) => {
+                let msg =
+                    format!("crossterm: ❌ Failed to {} due to {}", $arg_log_msg, err);
+                call_if_true!(DEBUG_TUI_SHOW_TERMINAL_BACKEND, tracing::error!(msg));
+            }
         }
     }};
 }

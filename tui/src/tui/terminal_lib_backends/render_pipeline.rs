@@ -19,6 +19,7 @@ use std::{collections::{hash_map::Entry, HashMap},
           fmt::Debug,
           ops::{AddAssign, Deref, DerefMut}};
 
+use r3bl_core::LockedOutputDevice;
 use serde::{Deserialize, Serialize};
 
 use super::{paint::paint, render_op::RenderOp, ZOrder};
@@ -211,12 +212,16 @@ impl RenderPipeline {
         Some(vec_render_op)
     }
 
-    pub fn paint<S, AS>(&self, flush_kind: FlushKind, global_data: &mut GlobalData<S, AS>)
-    where
+    pub fn paint<S, AS>(
+        &self,
+        flush_kind: FlushKind,
+        global_data: &mut GlobalData<S, AS>,
+        locked_output_device: LockedOutputDevice<'_>,
+    ) where
         S: Debug + Default + Clone + Sync + Send,
         AS: Debug + Default + Clone + Sync + Send,
     {
-        paint(self, flush_kind, global_data);
+        paint(self, flush_kind, global_data, locked_output_device);
         // FUTURE: support termion, along w/ crossterm, by providing another impl of this fn #24
     }
 

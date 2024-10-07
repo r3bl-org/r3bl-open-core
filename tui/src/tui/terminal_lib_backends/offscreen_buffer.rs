@@ -24,6 +24,7 @@ use r3bl_core::{ch,
                 style_error,
                 style_primary,
                 GraphemeClusterSegment,
+                LockedOutputDevice,
                 Position,
                 Size,
                 TuiColor,
@@ -438,9 +439,20 @@ pub trait OffscreenBufferPaint {
 
     fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOps;
 
-    fn paint(&mut self, render_ops: RenderOps, flush_kind: FlushKind, window_size: Size);
+    fn paint(
+        &mut self,
+        render_ops: RenderOps,
+        flush_kind: FlushKind,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+    );
 
-    fn paint_diff(&mut self, render_ops: RenderOps, window_size: Size);
+    fn paint_diff(
+        &mut self,
+        render_ops: RenderOps,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+    );
 }
 
 #[cfg(test)]
