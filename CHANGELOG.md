@@ -745,11 +745,13 @@ in the real world.
     repo. This allows customization of the miette global report handler at the process
     level. Useful for apps that need to override the default report handler formatting.
   - Add `OutputDevice` that abstracts away the output device (eg: `stdout`, `stderr`,
-    `SharedWriter`, etc.). This is useful for end to end testing, and adapting to a variety of
-    different input and output devices (in the future).
+    `SharedWriter`, etc.). This is useful for end to end testing, and adapting to a
+    variety of different input and output devices (in the future). Support for this is
+    provided in [`r3bl_test_fixtures`](#r3bl_test_fixtures).
   - Add `InputDevice` that abstracts away the input device (eg: `stdin`). This is useful
     for end to end testing. This is useful for end to end testing, and adapting to a
-    variety of different input and output devices (in the future).
+    variety of different input and output devices (in the future). Support for this is
+    provided in [`r3bl_test_fixtures`](#r3bl_test_fixtures).
 
 ## `r3bl_analytics_schema`
 
@@ -802,7 +804,12 @@ Deleted:
     crate.
 
 - Added:
-  - Add constructor and tests for `OutputDevice` struct for `StdoutMock`.
+  - Add ability for `StdoutMock` to be turned into an `OutputDevice` struct for mocks that
+    are needed in tests. This is done via the `OutputDeviceExt` trait that is implemented
+    for `OutputDevice`, which adds this method: `OutputDevice::new_mock()`.
+  - Add ability for `mod@async_input_stream` to be turned into an `InputDevice` struct for
+    mocks that are needed in tests. This is done via the `InputDeviceExt` trait that is implemented
+    for `InputDevice`, which adds this method: `InputDevice::new_mock(vec![])`.
 
 ### v0.0.3 (2024-09-12)
 

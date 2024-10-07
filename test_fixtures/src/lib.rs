@@ -194,9 +194,9 @@
 //! ```
 
 // Attach sources.
-pub mod async_stream_fixtures;
-pub mod stdout_fixtures;
+pub mod input_device_fixtures;
+pub mod output_device_fixtures;
 
 // Re-export.
-pub use async_stream_fixtures::*;
-pub use stdout_fixtures::*;
+pub use input_device_fixtures::*;
+pub use output_device_fixtures::*;
