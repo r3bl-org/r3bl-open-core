@@ -33,7 +33,6 @@ use r3bl_core::{call_if_true,
                 CommonResult,
                 Position,
                 Size,
-                TuiStyledText,
                 TuiStylesheet};
 use r3bl_macro::tui_style;
 use r3bl_tui::{box_end,

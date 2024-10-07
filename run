@@ -140,18 +140,20 @@ def install-cargo-tools [] {
     cargo install bacon
     cargo install cargo-workspaces
     cargo install cargo-cache
-    cargo install cargo-watch
+    cargo install cargo-watch # cargo-watch is no longer maintained (as of Oct 2024). Move away from this.
     cargo install flamegraph
     cargo install cargo-outdated
     cargo install cargo-update
     cargo install cargo-deny
     cargo install cargo-unmaintained
     cargo install cargo-expand
+    cargo install cargo-readme
 }
 
 def all [] {
     cargo install cargo-deny
     cargo install cargo-unmaintained
+    cargo install cargo-readme
     build
     test
     clippy
@@ -165,6 +167,7 @@ def all [] {
 def all-cicd [] {
     # cargo install cargo-deny
     # cargo install cargo-unmaintained
+    cargo install cargo-readme
     build
     test
     clippy

@@ -43,12 +43,14 @@ macro_rules! output_device_as_mut {
 #[derive(Clone)]
 pub struct OutputDevice {
     pub resource: SafeRawTerminal,
+    pub is_mock: bool,
 }
 
 impl OutputDevice {
     pub fn new_stdout() -> Self {
         Self {
             resource: Arc::new(StdMutex::new(std::io::stdout())),
+            is_mock: false,
         }
     }
 }
@@ -70,5 +72,25 @@ impl OutputDevice {
     /// other threads from accessing it simultaneously.
     pub fn lock(&self) -> std::sync::MutexGuard<'_, SendRawTerminal> {
         self.resource.lock().unwrap()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{output_device_as_mut, LockedOutputDevice};
+
+    #[test]
+    fn test_stdout_output_device() {
+        let output_device = OutputDevice::new_stdout();
+        let mut_ref: LockedOutputDevice<'_> = output_device_as_mut!(output_device);
+        let _ = mut_ref.write_all(b"Hello, world!\n");
+        assert!(!output_device.is_mock);
+    }
+
+    #[test]
+    fn test_stdout_output_device_is_not_mock() {
+        let device = OutputDevice::new_stdout();
+        assert!(!device.is_mock);
     }
 }

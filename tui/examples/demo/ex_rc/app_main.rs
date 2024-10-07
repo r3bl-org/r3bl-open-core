@@ -44,7 +44,6 @@ use r3bl_core::{call_if_true,
                 Size,
                 TextColorizationPolicy,
                 TuiColor,
-                TuiStyledText,
                 TuiStylesheet,
                 UnicodeString};
 use r3bl_macro::tui_style;

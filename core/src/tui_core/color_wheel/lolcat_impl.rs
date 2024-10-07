@@ -26,7 +26,6 @@ use crate::{tui_styled_text,
             RgbValue,
             TuiColor,
             TuiStyle,
-            TuiStyledText,
             TuiStyledTexts,
             UnicodeString};
 

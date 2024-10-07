@@ -25,7 +25,11 @@ use super::{RenderOp, RenderOps, RenderOpsLocalData};
 pub struct RawMode;
 
 impl RawMode {
-    pub fn start(window_size: Size, locked_output_device: LockedOutputDevice<'_>) {
+    pub fn start(
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    ) {
         let mut skip_flush = false;
         RenderOps::route_paint_render_op_to_backend(
             &mut RenderOpsLocalData::default(),
@@ -33,10 +37,15 @@ impl RawMode {
             &RenderOp::EnterRawMode,
             window_size,
             locked_output_device,
+            is_mock,
         );
     }
 
-    pub fn end(window_size: Size, locked_output_device: LockedOutputDevice<'_>) {
+    pub fn end(
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    ) {
         let mut skip_flush = false;
         RenderOps::route_paint_render_op_to_backend(
             &mut RenderOpsLocalData::default(),
@@ -44,6 +53,7 @@ impl RawMode {
             &RenderOp::ExitRawMode,
             window_size,
             locked_output_device,
+            is_mock,
         );
     }
 }

@@ -693,10 +693,8 @@ pub mod test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use r3bl_test_fixtures::{gen_input_stream,
-                             output_device_ext::OutputDeviceExt as _,
-                             InputDeviceExt as _,
-                             StdoutMock};
+    use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _,
+                             InputDeviceExt as _};
     use r3bl_tuify::{is_fully_uninteractive_terminal, TTYResult};
     use test_fixtures::get_input_vec;
 

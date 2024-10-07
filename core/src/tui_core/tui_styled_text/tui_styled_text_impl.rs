@@ -33,7 +33,7 @@ macro_rules! tui_styled_text {
         @text: $text_arg: expr
         $(,)* /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
     ) => {
-        TuiStyledText::new($style_arg, $text_arg.to_string())
+        $crate::TuiStyledText::new($style_arg, $text_arg.to_string())
     };
 }
 

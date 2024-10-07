@@ -94,6 +94,7 @@ where
     RawMode::start(
         global_data_ref.window_size,
         output_device_as_mut!(output_device),
+        output_device.is_mock,
     );
 
     let app = &mut app;
@@ -113,6 +114,7 @@ where
         component_registry_map,
         has_focus,
         output_device_as_mut!(output_device),
+        output_device.is_mock,
     )?;
 
     global_data_ref.dump_to_log("main_event_loop -> Startup 🚀");
@@ -129,7 +131,8 @@ where
                             // 🐒 Actually exit the main loop!
                             RawMode::end(
                                 global_data_ref.window_size,
-                                output_device_as_mut!(output_device)
+                                output_device_as_mut!(output_device),
+                                output_device.is_mock,
                             );
                             break;
                         },
@@ -140,6 +143,7 @@ where
                                 component_registry_map,
                                 has_focus,
                                 output_device_as_mut!(output_device),
+                                output_device.is_mock,
                             )?;
                         },
                         TerminalWindowMainThreadSignal::ApplyAction(action) => {
@@ -153,6 +157,7 @@ where
                                 component_registry_map,
                                 has_focus,
                                 output_device_as_mut!(output_device),
+                                output_device.is_mock,
                             );
                         },
                     }
@@ -180,6 +185,7 @@ where
                         component_registry_map,
                         has_focus,
                         output_device_as_mut!(output_device),
+                        output_device.is_mock,
                     );
 
                     actually_process_input_event(
@@ -190,7 +196,13 @@ where
                         component_registry_map,
                         has_focus,
                         output_device_as_mut!(output_device),
+                        output_device.is_mock,
                     );
+                } else {
+                    // There are no events in the stream, so exit. This happens in test
+                    // environments with InputDevice::new_mock_with_delay() or
+                    // InputDevice::new_mock().
+                    break;
                 }
             }
         }
@@ -203,6 +215,7 @@ where
     ok!((global_data, input_device, output_device))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn actually_process_input_event<S, AS>(
     global_data: &mut GlobalData<S, AS>,
     app: &mut BoxedSafeApp<S, AS>,
@@ -211,6 +224,7 @@ fn actually_process_input_event<S, AS>(
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
     has_focus: &mut HasFocus,
     locked_output_device: LockedOutputDevice<'_>,
+    is_mock: bool,
 ) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
@@ -231,6 +245,7 @@ fn actually_process_input_event<S, AS>(
         component_registry_map,
         has_focus,
         locked_output_device,
+        is_mock,
     );
 }
 
@@ -243,6 +258,7 @@ pub fn handle_resize_if_applicable<S, AS>(
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
     has_focus: &mut HasFocus,
     locked_output_device: LockedOutputDevice<'_>,
+    is_mock: bool,
 ) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
@@ -256,10 +272,12 @@ pub fn handle_resize_if_applicable<S, AS>(
             component_registry_map,
             has_focus,
             locked_output_device,
+            is_mock,
         );
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     result: CommonResult<EventPropagation>,
     maybe_input_event: Option<InputEvent>,
@@ -269,6 +287,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
     component_registry_map: &mut ComponentRegistryMap<S, AS>,
     has_focus: &mut HasFocus,
     locked_output_device: LockedOutputDevice<'_>,
+    is_mock: bool,
 ) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send + 'static,
@@ -294,6 +313,7 @@ fn handle_result_generated_by_app_after_handling_action_or_input_event<S, AS>(
                     component_registry_map,
                     has_focus,
                     locked_output_device,
+                    is_mock,
                 );
             }
 
@@ -343,6 +363,7 @@ where
         component_registry_map: &mut ComponentRegistryMap<S, AS>,
         has_focus: &mut HasFocus,
         locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
     ) -> CommonResult<()> {
         throws!({
             let window_size = global_data.window_size;
@@ -374,6 +395,7 @@ where
                         FlushKind::ClearBeforeFlush,
                         global_data,
                         locked_output_device,
+                        is_mock,
                     );
 
                     telemetry_global_static::set_end_ts();
@@ -449,4 +471,457 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
     pipeline
 }
 
-// 00: add a test for main_event_loop_impl & return GlobalState
+#[cfg(test)]
+mod tests {
+    use std::{fmt::{Display, Formatter},
+              time::Duration};
+
+    use crossterm::tty::IsTty as _;
+    use position::Position;
+    use r3bl_core::{assert_eq2,
+                    ch,
+                    color,
+                    ok,
+                    position,
+                    send_signal,
+                    size,
+                    throws_with_return,
+                    tui_styled_text,
+                    tui_styled_texts,
+                    ChUnit,
+                    ColorWheel,
+                    ColorWheelConfig,
+                    ColorWheelSpeed,
+                    CommonResult,
+                    CrosstermEventResult,
+                    GradientGenerationPolicy,
+                    GradientLengthKind,
+                    GraphemeClusterSegment,
+                    InputDevice,
+                    OutputDevice,
+                    TextColorizationPolicy,
+                    TuiStyle,
+                    UnicodeString,
+                    DEFAULT_GRADIENT_STOPS};
+    use r3bl_macro::tui_style;
+    use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, InputDeviceExt};
+    use size::Size;
+    use state::{AppSignal, State};
+
+    use crate::{keypress,
+                main_event_loop_impl,
+                render_ops,
+                render_pipeline,
+                render_tui_styled_texts_into,
+                App,
+                ComponentRegistryMap,
+                EventPropagation,
+                GlobalData,
+                HasFocus,
+                InputEvent,
+                Key,
+                KeyPress,
+                PixelChar,
+                RenderOp,
+                RenderPipeline,
+                SpecialKey,
+                TerminalWindowMainThreadSignal,
+                ZOrder};
+
+    #[tokio::test]
+    #[allow(clippy::needless_return)]
+    async fn test_main_event_loop_impl() -> CommonResult<()> {
+        // Enable tracing to debug this test.
+        // let _guard = TracingConfig {
+        //     writer_config: tracing_logging::WriterConfig::Display(
+        //         DisplayPreference::Stdout,
+        //     ),
+        //     level_filter: tracing::Level::DEBUG.into(),
+        // }
+        // .install_thread_local()?;
+
+        // Create an App (renders & responds to user input).
+        let app = Box::<AppMain>::default();
+
+        // Exit if these keys are pressed.
+        let exit_keys: Vec<InputEvent> =
+            vec![InputEvent::Keyboard(keypress! { @char 'x' })];
+
+        // Simulated key inputs.
+        let generator_vec: Vec<CrosstermEventResult> = vec![
+            Ok(crossterm::event::Event::Key(
+                crossterm::event::KeyEvent::new(
+                    crossterm::event::KeyCode::Up,
+                    crossterm::event::KeyModifiers::empty(),
+                ),
+            )),
+            Ok(crossterm::event::Event::Key(
+                crossterm::event::KeyEvent::new(
+                    crossterm::event::KeyCode::Up,
+                    crossterm::event::KeyModifiers::empty(),
+                ),
+            )),
+            Ok(crossterm::event::Event::Key(
+                crossterm::event::KeyEvent::new(
+                    crossterm::event::KeyCode::Char('x'),
+                    crossterm::event::KeyModifiers::empty(),
+                ),
+            )),
+        ];
+
+        // Create a window.
+        let initial_size = size!(col_count: 65, row_count: 11);
+        let input_device =
+            InputDevice::new_mock_with_delay(generator_vec, Duration::from_millis(10));
+        let (output_device, stdout_mock) = OutputDevice::new_mock();
+        let state = State::default();
+
+        let (global_data, _, _) = main_event_loop_impl(
+            app,
+            exit_keys,
+            state,
+            initial_size,
+            input_device,
+            output_device,
+        )
+        .await?;
+
+        // Make assertions.
+
+        assert_eq!(global_data.state.counter, 2);
+        assert!(stdout_mock
+            .get_copy_of_buffer_as_string_strip_ansi()
+            .contains("State{counter:2}"));
+
+        // println!(
+        //     "global_data.offscreen_buffer: {:?}",
+        //     global_data.maybe_saved_offscreen_buffer
+        // );
+
+        let my_offscreen_buffer = global_data.maybe_saved_offscreen_buffer.unwrap();
+
+        // This is for CI/CD. It does not support truecolor, and degrades to ANSI 256 colors
+        if !std::io::stdin().is_tty() {
+            // Check pixel char at 4 x 7.
+            {
+                let PixelChar::PlainText {
+                    content,
+                    maybe_style: _,
+                } = my_offscreen_buffer.buffer[4][7].clone()
+                else {
+                    panic!(
+                        "Expected PixelChar::PlainText, got: {:?}",
+                        my_offscreen_buffer.buffer[4][7]
+                    );
+                };
+                assert_eq2!(content, GraphemeClusterSegment::from("S"));
+            }
+
+            // Check pixel char at 10 x 7.
+            {
+                let PixelChar::PlainText {
+                    content,
+                    maybe_style: _,
+                } = my_offscreen_buffer.buffer[10][7].clone()
+                else {
+                    panic!(
+                        "Expected PixelChar::PlainText, got: {:?}",
+                        my_offscreen_buffer.buffer[10][7]
+                    );
+                };
+                assert_eq2!(content, GraphemeClusterSegment::from("H"));
+            }
+        }
+        // This is for local development. It supports truecolor.
+        else {
+            // Check pixel char at 4 x 7.
+            {
+                assert_eq2!(
+                    PixelChar::PlainText {
+                        content: GraphemeClusterSegment::from("S"),
+                        maybe_style: Some(TuiStyle {
+                            color_fg: Some(color!(102, 0, 255)),
+                            ..Default::default()
+                        }),
+                    },
+                    my_offscreen_buffer.buffer[4][7].clone()
+                );
+            }
+
+            // Check pixel char at 10 x 7.
+            {
+                assert_eq2!(
+                    PixelChar::PlainText {
+                        content: GraphemeClusterSegment::from("H"),
+                        maybe_style: Some(TuiStyle {
+                            id: u8::MAX,
+                            dim: true,
+                            ..Default::default()
+                        }),
+                    },
+                    my_offscreen_buffer.buffer[10][7].clone()
+                );
+            }
+        }
+
+        ok!()
+    }
+
+    mod state {
+        use super::*;
+
+        /// Action.
+        #[derive(Default, Clone, Debug)]
+        #[non_exhaustive]
+        #[allow(dead_code)]
+        pub enum AppSignal {
+            Add,
+            Sub,
+            Clear,
+            #[default]
+            Noop,
+        }
+
+        impl Display for AppSignal {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{self:?}")
+            }
+        }
+
+        /// State.
+        #[derive(Clone, PartialEq, Eq, Debug, Default)]
+        pub struct State {
+            pub counter: isize,
+        }
+
+        impl Display for State {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                write!(f, "State {{ counter: {:?} }}", self.counter)
+            }
+        }
+    }
+
+    #[derive(Default)]
+    pub struct AppMain {
+        pub data: AppData,
+    }
+
+    #[derive(Default)]
+    pub struct AppData {
+        pub color_wheel_rgb: ColorWheel,
+    }
+
+    mod app_main_impl_trait_app {
+        use super::*;
+
+        impl App for AppMain {
+            type S = State;
+            type AS = AppSignal;
+
+            fn app_render(
+                &mut self,
+                global_data: &mut GlobalData<State, AppSignal>,
+                _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+                _has_focus: &mut HasFocus,
+            ) -> CommonResult<RenderPipeline> {
+                throws_with_return!({
+                    let state_str = format!("{}", global_data.state);
+                    let data = &mut self.data;
+
+                    let sample_line_of_text =
+                        format!("{state_str}, gradient: [index: X, len: Y]");
+                    let content_size_col = ChUnit::from(sample_line_of_text.len());
+                    let window_size = global_data.window_size;
+
+                    let col = (window_size.col_count - content_size_col) / 2;
+                    let mut row = (window_size.row_count - ch!(2)) / 2;
+
+                    let mut pipeline = render_pipeline!();
+
+                    pipeline.push(ZOrder::Normal, {
+                        let mut it = render_ops! {
+                            @new
+                            RenderOp::ResetColor,
+                        };
+
+                        // Render using color_wheel_rgb.
+                        it += RenderOp::MoveCursorPositionAbs(position!(
+                            col_index: col,
+                            row_index: row
+                        ));
+
+                        let unicode_string = {
+                            let index = data.color_wheel_rgb.get_index();
+                            let len = match data.color_wheel_rgb.get_gradient_len() {
+                                GradientLengthKind::ColorWheel(len) => len,
+                                _ => 0,
+                            };
+                            UnicodeString::from(format!(
+                                "{state_str}, gradient: [index: {index}, len: {len}]"
+                            ))
+                        };
+
+                        render_ops!(
+                            @render_styled_texts_into it
+                            =>
+                            data.color_wheel_rgb.colorize_into_styled_texts(
+                                &unicode_string,
+                                GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                                TextColorizationPolicy::ColorEachWord(None),
+                            )
+                        );
+
+                        row += 1;
+
+                        it
+                    });
+
+                    status_bar::create_status_bar_message(&mut pipeline, window_size);
+
+                    pipeline
+                });
+            }
+
+            fn app_handle_input_event(
+                &mut self,
+                input_event: InputEvent,
+                global_data: &mut GlobalData<State, AppSignal>,
+                _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+                _has_focus: &mut HasFocus,
+            ) -> CommonResult<EventPropagation> {
+                throws_with_return!({
+                    let mut event_consumed = false;
+
+                    if let InputEvent::Keyboard(KeyPress::Plain { key }) = input_event {
+                        // Check for + or - key.
+                        if let Key::Character(typed_char) = key {
+                            match typed_char {
+                                '+' => {
+                                    event_consumed = true;
+                                    send_signal!(
+                                        global_data.main_thread_channel_sender,
+                                        TerminalWindowMainThreadSignal::ApplyAction(
+                                            AppSignal::Add,
+                                        )
+                                    );
+                                }
+                                '-' => {
+                                    event_consumed = true;
+                                    send_signal!(
+                                        global_data.main_thread_channel_sender,
+                                        TerminalWindowMainThreadSignal::ApplyAction(
+                                            AppSignal::Sub,
+                                        )
+                                    );
+                                }
+                                _ => {}
+                            }
+                        }
+
+                        // Check for up or down arrow key.
+                        if let Key::SpecialKey(special_key) = key {
+                            match special_key {
+                                SpecialKey::Up => {
+                                    event_consumed = true;
+                                    send_signal!(
+                                        global_data.main_thread_channel_sender,
+                                        TerminalWindowMainThreadSignal::ApplyAction(
+                                            AppSignal::Add,
+                                        )
+                                    );
+                                }
+                                SpecialKey::Down => {
+                                    event_consumed = true;
+                                    send_signal!(
+                                        global_data.main_thread_channel_sender,
+                                        TerminalWindowMainThreadSignal::ApplyAction(
+                                            AppSignal::Sub,
+                                        )
+                                    );
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+
+                    if event_consumed {
+                        EventPropagation::ConsumedRender
+                    } else {
+                        EventPropagation::Propagate
+                    }
+                });
+            }
+
+            fn app_handle_signal(
+                &mut self,
+                action: &AppSignal,
+                global_data: &mut GlobalData<State, AppSignal>,
+                _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+                _has_focus: &mut HasFocus,
+            ) -> CommonResult<EventPropagation> {
+                throws_with_return!({
+                    let GlobalData { state, .. } = global_data;
+
+                    match action {
+                        AppSignal::Add => {
+                            state.counter += 1;
+                        }
+
+                        AppSignal::Sub => {
+                            state.counter -= 1;
+                        }
+
+                        AppSignal::Clear => {
+                            state.counter = 0;
+                        }
+
+                        _ => {}
+                    }
+
+                    EventPropagation::ConsumedRender
+                });
+            }
+
+            fn app_init(
+                &mut self,
+                _component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
+                _has_focus: &mut HasFocus,
+            ) {
+                let data = &mut self.data;
+
+                data.color_wheel_rgb = ColorWheel::new(vec![ColorWheelConfig::Rgb(
+                    Vec::from(DEFAULT_GRADIENT_STOPS.map(String::from)),
+                    ColorWheelSpeed::Fast,
+                    25,
+                )]);
+            }
+        }
+    }
+
+    mod status_bar {
+        use super::*;
+
+        /// Shows helpful messages at the bottom row of the screen.
+        pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {
+            let styled_texts = tui_styled_texts! {
+                tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: "Hints:"},
+                tui_styled_text!{ @style: tui_style!(attrib: [bold])      , @text: " x : Exit ⛔ "},
+                tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},
+                tui_styled_text!{ @style: tui_style!(attrib: [underline]) , @text: " ↑ / + : inc "},
+                tui_styled_text!{ @style: tui_style!(attrib: [dim])       , @text: " … "},
+                tui_styled_text!{ @style: tui_style!(attrib: [underline]) , @text: " ↓ / - : dec "},
+            };
+
+            let display_width = styled_texts.display_width();
+            let col_center: ChUnit = (size.col_count - display_width) / 2;
+            let row_bottom: ChUnit = size.row_count - 1;
+            let center: Position =
+                position!(col_index: col_center, row_index: row_bottom);
+
+            let mut render_ops = render_ops!();
+            render_ops.push(RenderOp::MoveCursorPositionAbs(center));
+            render_tui_styled_texts_into(&styled_texts, &mut render_ops);
+            pipeline.push(ZOrder::Normal, render_ops);
+        }
+    }
+}

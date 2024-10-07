@@ -171,6 +171,7 @@ pub mod render_ops_impl {
             skip_flush: &mut bool,
             window_size: Size,
             locked_output_device: LockedOutputDevice<'_>,
+            is_mock: bool,
         ) {
             let mut local_data = RenderOpsLocalData::default();
             for render_op in self.list.iter() {
@@ -180,6 +181,7 @@ pub mod render_ops_impl {
                     render_op,
                     window_size,
                     locked_output_device,
+                    is_mock,
                 );
             }
         }
@@ -190,6 +192,7 @@ pub mod render_ops_impl {
             render_op: &RenderOp,
             window_size: Size,
             locked_output_device: LockedOutputDevice<'_>,
+            is_mock: bool,
         ) {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
@@ -199,6 +202,7 @@ pub mod render_ops_impl {
                         window_size,
                         local_data,
                         locked_output_device,
+                        is_mock,
                     );
                 }
                 TerminalLibBackend::Termion => todo!(), // FUTURE: implement PaintRenderOp trait for termion
@@ -307,7 +311,7 @@ mod render_op_impl {
 
     impl Debug for RenderOp {
         /// When [crate::RenderPipeline] is printed as debug, each [RenderOp] is printed
-        /// using this method. Also [crate::exec_render_op!] does not use this; it has its
+        /// using this method. Also [crate::queue_render_op!] does not use this; it has its
         /// own way of logging output.
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             match TERMINAL_LIB_BACKEND {

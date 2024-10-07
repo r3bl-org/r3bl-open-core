@@ -445,6 +445,7 @@ pub trait OffscreenBufferPaint {
         flush_kind: FlushKind,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
     );
 
     fn paint_diff(
@@ -452,6 +453,7 @@ pub trait OffscreenBufferPaint {
         render_ops: RenderOps,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
     );
 }
 

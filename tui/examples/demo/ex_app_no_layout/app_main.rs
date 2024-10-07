@@ -35,7 +35,6 @@ use r3bl_core::{call_if_true,
                 Position,
                 Size,
                 TextColorizationPolicy,
-                TuiStyledText,
                 UnicodeString,
                 DEFAULT_GRADIENT_STOPS};
 use r3bl_macro::tui_style;

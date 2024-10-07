@@ -20,6 +20,9 @@ use std::time::Duration;
 use async_stream::stream;
 use r3bl_core::PinnedInputStream;
 
+/// The main constructors are:
+/// - [super::InputDeviceExt::new_mock()]
+/// - [super::InputDeviceExt::new_mock_with_delay()]
 pub fn gen_input_stream<T>(generator_vec: Vec<T>) -> PinnedInputStream<T>
 where
     T: Send + Sync + 'static,
