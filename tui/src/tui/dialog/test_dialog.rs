@@ -19,8 +19,8 @@
 pub mod mock_real_objects_for_dialog {
     use std::{collections::HashMap, fmt::Debug};
 
-    use r3bl_core::Size;
-    use r3bl_test_fixtures::StdoutMock;
+    use r3bl_core::{OutputDevice, Size};
+    use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, StdoutMock};
     use tokio::sync::mpsc;
 
     use crate::{test_fixtures::mock_real_objects_for_editor,
@@ -38,7 +38,7 @@ pub mod mock_real_objects_for_dialog {
         let state = create_state();
         let window_size = window_size.unwrap_or_default();
         let maybe_saved_offscreen_buffer = Default::default();
-        let (output_device, stdout_mock) = StdoutMock::new_output_device();
+        let (output_device, stdout_mock) = OutputDevice::new_mock();
 
         let global_data = GlobalData {
             state,

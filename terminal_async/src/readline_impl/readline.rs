@@ -693,7 +693,10 @@ pub mod test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use r3bl_test_fixtures::{gen_input_stream, StdoutMock};
+    use r3bl_test_fixtures::{gen_input_stream,
+                             output_device_ext::OutputDeviceExt as _,
+                             InputDeviceExt as _,
+                             StdoutMock};
     use r3bl_tuify::{is_fully_uninteractive_terminal, TTYResult};
     use test_fixtures::get_input_vec;
 
@@ -714,10 +717,8 @@ mod test_readline {
         }
 
         // We will get the `line_state` out of this to test.
-        let (output_device, stdout_mock) = StdoutMock::new_output_device();
-        let input_device = InputDevice {
-            resource: gen_input_stream(get_input_vec()),
-        };
+        let (output_device, stdout_mock) = OutputDevice::new_mock();
+        let input_device = InputDevice::new_mock(get_input_vec());
         let (readline, _) = Readline::new(
             prompt_str.into(),
             output_device.clone(),
@@ -761,10 +762,8 @@ mod test_readline {
         }
 
         // We will get the `line_state` out of this to test.
-        let (output_device, stdout_mock) = StdoutMock::new_output_device();
-        let input_device = InputDevice {
-            resource: gen_input_stream(get_input_vec()),
-        };
+        let (output_device, stdout_mock) = OutputDevice::new_mock();
+        let input_device = InputDevice::new_mock(get_input_vec());
         let (mut readline, _) = Readline::new(
             prompt_str.into(),
             output_device.clone(),
@@ -796,10 +795,8 @@ mod test_readline {
         }
 
         // We will get the `line_state` out of this to test.
-        let (output_device, _) = StdoutMock::new_output_device();
-        let input_device = InputDevice {
-            resource: gen_input_stream(get_input_vec()),
-        };
+        let (output_device, _) = OutputDevice::new_mock();
+        let input_device = InputDevice::new_mock(get_input_vec());
         let (readline, shared_writer) = Readline::new(
             prompt_str.into(),
             output_device.clone(),
@@ -843,10 +840,8 @@ mod test_readline {
         }
 
         // We will get the `line_state` out of this to test.
-        let (output_device, _) = StdoutMock::new_output_device();
-        let input_device = InputDevice {
-            resource: gen_input_stream(get_input_vec()),
-        };
+        let (output_device, _) = OutputDevice::new_mock();
+        let input_device = InputDevice::new_mock(get_input_vec());
         let (readline, shared_writer) = Readline::new(
             prompt_str.into(),
             output_device.clone(),

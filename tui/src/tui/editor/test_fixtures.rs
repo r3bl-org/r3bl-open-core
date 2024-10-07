@@ -19,8 +19,8 @@
 pub mod mock_real_objects_for_editor {
     use std::fmt::Debug;
 
-    use r3bl_core::{position, size, Size};
-    use r3bl_test_fixtures::StdoutMock;
+    use r3bl_core::{position, size, OutputDevice, Size};
+    use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, StdoutMock};
     use tokio::sync::mpsc;
 
     use crate::{EditorEngine, FlexBox, GlobalData, PartialFlexBox, CHANNEL_WIDTH};
@@ -33,7 +33,7 @@ pub mod mock_real_objects_for_editor {
         AS: Debug + Default + Clone + Sync + Send,
     {
         let (sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
-        let (output_device, stdout_mock) = StdoutMock::new_output_device();
+        let (output_device, stdout_mock) = OutputDevice::new_mock();
 
         let global_data = GlobalData {
             window_size: window_size.unwrap_or_default(),
