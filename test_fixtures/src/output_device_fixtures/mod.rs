@@ -20,4 +20,5 @@ pub mod output_device_ext;
 pub mod stdout_mock;
 
 // Re-export.
+pub use output_device_ext::*;
 pub use stdout_mock::*;

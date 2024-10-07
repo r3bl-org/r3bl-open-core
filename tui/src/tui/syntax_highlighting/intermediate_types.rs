@@ -30,7 +30,7 @@
 //!    the editor component (based on scroll state in viewport). And finally that is
 //!    converted to a [r3bl_core::TuiStyledTexts].
 
-use r3bl_core::{ch, tui_styled_text, ChUnit, TuiStyle, TuiStyledText, TuiStyledTexts};
+use r3bl_core::{ch, tui_styled_text, ChUnit, TuiStyle, TuiStyledTexts};
 
 use crate::{constants::{COLON, COMMA, SPACE},
             get_foreground_dim_style,

@@ -63,6 +63,7 @@ mod impl_trait_paint_render_op {
             window_size: Size,
             local_data: &mut RenderOpsLocalData,
             locked_output_device: LockedOutputDevice<'_>,
+            is_mock: bool,
         ) {
             match command_ref {
                 RenderOp::Noop => {}
@@ -70,12 +71,14 @@ mod impl_trait_paint_render_op {
                     RenderOpImplCrossterm::raw_mode_enter(
                         skip_flush,
                         locked_output_device,
+                        is_mock,
                     );
                 }
                 RenderOp::ExitRawMode => {
                     RenderOpImplCrossterm::raw_mode_exit(
                         skip_flush,
                         locked_output_device,
+                        is_mock,
                     );
                 }
                 RenderOp::MoveCursorPositionAbs(abs_pos) => {
@@ -197,6 +200,7 @@ mod impl_self {
         pub fn raw_mode_exit(
             skip_flush: &mut bool,
             locked_output_device: LockedOutputDevice<'_>,
+            is_mock: bool,
         ) {
             queue_render_op!(
                 locked_output_device,
@@ -208,7 +212,7 @@ mod impl_self {
 
             flush_now!(locked_output_device, "ExitRawMode -> flush()");
 
-            disable_raw_mode_now!("ExitRawMode -> disable_raw_mode()");
+            disable_raw_mode_now!(is_mock, "ExitRawMode -> disable_raw_mode()");
 
             *skip_flush = true;
         }
@@ -216,8 +220,9 @@ mod impl_self {
         pub fn raw_mode_enter(
             skip_flush: &mut bool,
             locked_output_device: LockedOutputDevice<'_>,
+            is_mock: bool,
         ) {
-            enable_raw_mode_now!("EnterRawMode -> enable_raw_mode()");
+            enable_raw_mode_now!(is_mock, "EnterRawMode -> enable_raw_mode()");
 
             queue_render_op!(
                 locked_output_device,
@@ -229,7 +234,9 @@ mod impl_self {
                 Hide,
             );
 
-            flush_now!(locked_output_device, "EnterRawMode -> flush()");
+            if !is_mock {
+                flush_now!(locked_output_device, "EnterRawMode -> flush()");
+            }
 
             *skip_flush = true;
         }
@@ -439,13 +446,14 @@ mod perform_paint {
 ///
 /// Usage example:
 /// ```
-/// use r3bl_test_fixtures::StdoutMock;
+/// use r3bl_core::OutputDevice;
+/// use r3bl_test_fixtures::OutputDeviceExt;
 /// use r3bl_tui::queue_render_op;
 /// use r3bl_core::{output_device_as_mut, call_if_true};
 /// use crossterm::terminal::*;
 /// use crossterm::style::*;
 ///
-/// let (output_device, _) = StdoutMock::new_output_device();
+/// let (output_device, _) = OutputDevice::new_mock();
 /// let writer = output_device_as_mut!(output_device);
 /// queue_render_op!(
 ///     writer,
@@ -504,8 +512,12 @@ macro_rules! flush_now {
 #[macro_export]
 macro_rules! disable_raw_mode_now {
     (
+        $arg_is_mock: expr,
         $arg_log_msg: expr
     ) => {{
+        if $arg_is_mock {
+            return;
+        }
         use r3bl_core::call_if_true;
         use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
         match crossterm::terminal::disable_raw_mode() {
@@ -528,8 +540,12 @@ macro_rules! disable_raw_mode_now {
 #[macro_export]
 macro_rules! enable_raw_mode_now {
     (
+        $arg_is_mock: expr,
         $arg_log_msg: expr
     ) => {{
+        if $arg_is_mock {
+            return;
+        }
         use r3bl_core::call_if_true;
         use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
         match crossterm::terminal::enable_raw_mode() {

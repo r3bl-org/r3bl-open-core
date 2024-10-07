@@ -27,7 +27,7 @@ use strip_ansi_escapes::strip;
 /// The main constructors are:
 /// - [StdoutMock::default]
 /// - [StdoutMock::new]
-/// - [StdoutMock::new_output_device]
+/// - [super::OutputDeviceExt::new_mock()]
 #[derive(Clone)]
 pub struct StdoutMock {
     pub buffer: Arc<StdMutex<Vec<u8>>>,

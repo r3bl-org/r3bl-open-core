@@ -30,12 +30,7 @@
 //! 1. Convert the syntect [SyntectStyleStrSpanLine] into a [StyleUSSpanLine].
 //! 2. Then convert [StyleUSSpanLine] into a [TuiStyledTexts].
 
-use r3bl_core::{tui_styled_text,
-                RgbValue,
-                TuiColor,
-                TuiStyle,
-                TuiStyledText,
-                TuiStyledTexts};
+use r3bl_core::{tui_styled_text, RgbValue, TuiColor, TuiStyle, TuiStyledTexts};
 use syntect::parsing::SyntaxSet;
 
 use super::{StyleUSSpan, StyleUSSpanLine};
