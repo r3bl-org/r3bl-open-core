@@ -195,7 +195,6 @@
 
 // Attach sources.
 pub mod async_stream_fixtures;
-pub mod output_device_fixtures;
 pub mod stdout_fixtures;
 
 // Re-export.
