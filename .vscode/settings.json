@@ -148,6 +148,7 @@
     "uninteractive",
     "unspecial",
     "unstaged",
+    "wgpu",
     "withmutreturns",
     "writeln",
     "Zoey"

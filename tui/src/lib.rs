@@ -115,6 +115,7 @@
 //!     general?](#how-does-layout-rendering-and-event-handling-work-in-general)
 //!   - [Switching from shared memory to message passing architecture after
 //!     v0.3.10](#switching-from-shared-memory-to-message-passing-architecture-after-v0310)
+//! - [Input and output devices](#input-and-output-devices)
 //! - [Life of an input event](#life-of-an-input-event)
 //!   - [Life of a signal aka “out of band
 //!     event”](#life-of-a-signal-aka-out-of-band-event)
@@ -344,10 +345,10 @@
 //! background threads and the main thread. This was done using the async `Arc<RwLock<T>>`
 //! from tokio. The state storage, mutation, subscription (on change handlers) were all
 //! managed by the
-//! [`r3bl_redux`](https://github.com/r3bl-org/r3bl-open-core-archive/tree/main/redux) crate. The
-//! use of the Redux pattern, inspired by React, brought with it a lot of overhead both
-//! mentally and in terms of performance (since state changes needed to be cloned every
-//! time a change was made, and `memcpy` or `clone` is expensive).
+//! [`r3bl_redux`](https://github.com/r3bl-org/r3bl-open-core-archive/tree/main/redux)
+//! crate. The use of the Redux pattern, inspired by React, brought with it a lot of
+//! overhead both mentally and in terms of performance (since state changes needed to be
+//! cloned every time a change was made, and `memcpy` or `clone` is expensive).
 //!
 //! Versions > `0.3.10` use message passing to communicate between the background threads
 //! using the `tokio::mpsc` channel (also async). This is a much easier and more
@@ -363,6 +364,28 @@
 //! >
 //! > 1. <https://rits.github-pages.ucl.ac.uk/intro-hpchtc/morea/lesson2/reading4.html>
 //! > 2. <https://www.javatpoint.com/shared-memory-vs-message-passing-in-operating-system>
+//!
+//! # Input and output devices
+//!
+//! [Dependency injection](https://developerlife.com/category/DI) is used to inject the
+//! required resources into the `main_event_loop` function. This allows for easy testing
+//! and for modularity and extensibility in the codebase. The `r3bl_terminal_async` crate
+//! shares the same infrastructure for input and output devices. In fact the
+//! [r3bl_core::InputDevice] and [r3bl_core::OutputDevice] structs are in the `r3bl_core`
+//! crate.
+//!
+//! 1. The advantage of this approach is that for testing, test fixtures can be used to
+//!    perform end to end testing of the TUI.
+//! 2. This also facilitates some other interesting capabilities, such as preserving all
+//!    the state for an application and make it span multiple applets (smaller apps, and
+//!    their components). This makes the entire UI composable, and removes the monolithic
+//!    approaches to building complex UI and large apps that may be comprised of many
+//!    reusable components and applets.
+//! 3. It is easy to swap out implementations of input and output devices away from
+//!    `stdin` and `stdout` while preserving all the existing code and functionality. This
+//!    can produce some interesting headless apps in the future, where the UI might be
+//!    delegated to a window using [eGUI](https://github.com/emilk/egui) or
+//!    [iced-rs](https://iced.rs/) or [wgpu](https://wgpu.rs/).
 //!
 //! # Life of an input event
 //!
@@ -472,14 +495,13 @@
 //! So far we have covered what happens when the [App] receives a signal. Who sends this
 //! signal? Who actually creates the `tokio::spawn` task that sends this signal? This can
 //! happen anywhere in the [App] and [Component]. Any code that has access to [GlobalData]
-//! can use the [r3bl_core::send_signal!] macro to send a signal in a background
-//! task. However, only the [App] can receive the signal and do something with it, which
-//! is usually apply the signal to update the state and then tell the main thread to
-//! repaint the UI.
+//! can use the [r3bl_core::send_signal!] macro to send a signal in a background task.
+//! However, only the [App] can receive the signal and do something with it, which is
+//! usually apply the signal to update the state and then tell the main thread to repaint
+//! the UI.
 //!
 //! Now that we have seen this whirlwind overview of the life of an input event, let's
 //! look at the details in each of the sections below.
-//!
 //!
 //! # The window
 //!
@@ -537,11 +559,11 @@
 //! The [HasFocus] struct takes care of this. This provides 2 things:
 //!
 //! 1.  It holds an `id` of a [FlexBox] / [Component] that has focus.
-//! 2.  It also holds a map that holds a [r3bl_core::Position] for each `id`.
-//!     This is used to represent a cursor (whatever that means to your app & component).
-//!     This cursor is maintained for each `id`. This allows a separate cursor for each
-//!     [Component] that has focus. This is needed to build apps like editors and viewers
-//!     that maintains a cursor position between focus switches.
+//! 2.  It also holds a map that holds a [r3bl_core::Position] for each `id`. This is used
+//!     to represent a cursor (whatever that means to your app & component). This cursor
+//!     is maintained for each `id`. This allows a separate cursor for each [Component]
+//!     that has focus. This is needed to build apps like editors and viewers that
+//!     maintains a cursor position between focus switches.
 //!
 //! Another thing to keep in mind is that the [App] and [TerminalWindow] is persistent
 //! between re-renders.
@@ -867,8 +889,8 @@
 //! # Grapheme support
 //!
 //! Unicode is supported (to an extent). There are some caveats. The
-//! [r3bl_core::UnicodeString] struct has lots of great information on this
-//! graphemes and what is supported and what is not.
+//! [r3bl_core::UnicodeString] struct has lots of great information on this graphemes and
+//! what is supported and what is not.
 //!
 //! # Lolcat support
 //!
@@ -894,8 +916,8 @@
 //!
 //! This [r3bl_core::Lolcat] that is returned by `build()` is safe to re-use.
 //! - The colors it cycles through are "stable" meaning that once constructed via the
-//!   [builder](r3bl_core::LolcatBuilder) (which sets the speed, seed, and delta
-//!   that determine where the color wheel starts when it is used). For eg, when used in a
+//!   [builder](r3bl_core::LolcatBuilder) (which sets the speed, seed, and delta that
+//!   determine where the color wheel starts when it is used). For eg, when used in a
 //!   dialog box component that re-uses the instance, repeated calls to the `render()`
 //!   function of this component will produce the same generated colors over and over
 //!   again.

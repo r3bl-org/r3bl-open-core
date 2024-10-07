@@ -193,16 +193,9 @@
 //! }
 //! ```
 
-use std::pin::Pin;
-
-use futures_core::Stream;
-
-// Type aliases.
-pub type StdMutex<T> = std::sync::Mutex<T>;
-pub type PinnedInputStream<T> = Pin<Box<dyn Stream<Item = T>>>;
-
 // Attach sources.
 pub mod async_stream_fixtures;
+pub mod output_device_fixtures;
 pub mod stdout_fixtures;
 
 // Re-export.

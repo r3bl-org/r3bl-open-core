@@ -44,7 +44,7 @@ use crate::{constants::{BACK_TICK,
             MdDocument,
             MdLineFragment};
 
-impl<'a> PrettyPrintDebug for MdDocument<'a> {
+impl PrettyPrintDebug for MdDocument<'_> {
     fn pretty_print_debug(&self) -> String {
         let mut it = vec![];
         for (index, block) in self.iter().enumerate() {
@@ -54,7 +54,7 @@ impl<'a> PrettyPrintDebug for MdDocument<'a> {
     }
 }
 
-impl<'a> PrettyPrintDebug for List<MdLineFragment<'a>> {
+impl PrettyPrintDebug for List<MdLineFragment<'_>> {
     fn pretty_print_debug(&self) -> String {
         self.inner
             .iter()
@@ -64,7 +64,7 @@ impl<'a> PrettyPrintDebug for List<MdLineFragment<'a>> {
     }
 }
 
-impl<'a> PrettyPrintDebug for MdBlock<'a> {
+impl PrettyPrintDebug for MdBlock<'_> {
     fn pretty_print_debug(&self) -> String {
         match self {
             MdBlock::Heading(heading_data) => {

@@ -892,7 +892,7 @@ mod test_dialog_engine_api_render_engine {
         let window_size = size!( col_count: 70, row_count: 15 );
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let global_data = &mut {
-            let mut it = make_global_data(Some(window_size));
+            let (mut it, _) = make_global_data(Some(window_size));
             it.state.dialog_buffers.clear();
             it
         };
@@ -911,7 +911,10 @@ mod test_dialog_engine_api_render_engine {
         let self_id: FlexBoxId = FlexBoxId::from(0);
         let window_size = size!( col_count: 70, row_count: 15 );
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
-        let global_data = &mut make_global_data(Some(window_size));
+        let global_data = &mut {
+            let (it, _) = make_global_data(Some(window_size));
+            it
+        };
         let has_focus = &mut HasFocus::default();
         let args = DialogEngineArgs {
             self_id,

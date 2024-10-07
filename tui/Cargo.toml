@@ -86,6 +86,7 @@ pretty_assertions = "1.4.0"
 # - This is not a dependency for the library, and is not used when the library is
 #   published or used as a dependency.
 r3bl_terminal_async = { path = "../terminal_async" }
+r3bl_test_fixtures = { path = "../test_fixtures" }
 
 # For assert_eq2! macro.
 pretty_assertions = "1.4.0"
