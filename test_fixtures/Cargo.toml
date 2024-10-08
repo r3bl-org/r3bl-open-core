@@ -19,6 +19,8 @@ homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
 [dependencies]
+r3bl_core = { path = "../core", version = "0.9.16" }
+
 # Async stream for DI and testing.
 futures-core = "0.3.30"
 async-stream = "0.3.5"

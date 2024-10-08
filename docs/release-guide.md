@@ -9,13 +9,13 @@ Date: 2022-11-06
 This is a lengthy and repetitive process. The following steps have to be applied repeatedly to all
 the crates in the project.
 
-Starting at the root folder of the project, eg `~/github/r3bl_rs_utils/`, the following
+Starting at the root folder of the project, eg `~/github/r3bl-open-core/`, the following
 steps are applied to each crate (`simple_logger`, `ansi_color`, `core`, `macro`, `redux`,
 `tui`, `tuify`, `analytics_schema` and "public" / self):
 
 1. Update the version in `Cargo.toml`.
 2. Make sure to run the "Crates: Update all dependencies of the Cargo.toml" action in VSCode for
-   each `Cargo.toml` file in the `~/github/r3bl_rs_utils/` folder. You can run `run.nu upgrade-deps`
+   each `Cargo.toml` file in the `~/github/r3bl-open-core/` folder. You can run `run.nu upgrade-deps`
    to see which crates need to be updated.
    - This will update all the dependencies in all the crates in addition to updating all the
      remaining `Cargo.toml` in the other crates so that `run.nu build` runs.
@@ -27,7 +27,7 @@ steps are applied to each crate (`simple_logger`, `ansi_color`, `core`, `macro`,
 5. Update the `CHANGELOG.md` with all the new updates.
 
 Once this phase is complete, then it is time to perform a dry run and then publish to crates.io.
-Again starting at the root folder of the project, eg `~/github/r3bl_rs_utils/`, the following steps
+Again starting at the root folder of the project, eg `~/github/r3bl-open-core/`, the following steps
 are applied to each crate (`ansi_color`, `core`, `macro`, `redux`, `tui`, `tuify`, and self):
 
 1. Run `cargo publish --dry-run` in the crate folder. This will perform a dry run of publishing the

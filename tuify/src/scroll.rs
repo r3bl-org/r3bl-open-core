@@ -61,7 +61,7 @@
 //! ```
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::*;
+use r3bl_core::{call_if_true, ch, ChUnit};
 
 use crate::DEVELOPMENT_MODE;
 
@@ -90,13 +90,18 @@ pub fn locate_cursor_in_viewport(
     display_height: ChUnit,
     items_size: ChUnit,
 ) -> CaretVerticalViewportLocation {
-    let abs_row_index = get_scroll_adjusted_row_index(raw_caret_row_index, scroll_offset_row_index);
+    let abs_row_index =
+        get_scroll_adjusted_row_index(raw_caret_row_index, scroll_offset_row_index);
 
     call_if_true!(DEVELOPMENT_MODE, {
-        log_debug(format!(
+        tracing::debug!(
             "locate_cursor_in_viewport(): raw_caret_row_index: {}, scroll_offset_row_index: {}, abs_row_index: {}, display_height: {}, items_size: {}",
-            raw_caret_row_index, scroll_offset_row_index, abs_row_index, display_height, items_size
-        ).green().to_string());
+            format!("{raw_caret_row_index}").green(),
+            format!("{scroll_offset_row_index}").green(),
+            format!("{abs_row_index}").green(),
+            format!("{display_height}").green(),
+            format!("{items_size}").green()
+        );
     });
 
     // Note the ordering of the statements below matters.
@@ -129,6 +134,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
+
     #[test]
     fn test_get_scroll_adjusted_row_index() {
         assert_eq!(get_scroll_adjusted_row_index(ch!(0), ch!(0)), ch!(0));

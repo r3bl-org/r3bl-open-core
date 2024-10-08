@@ -19,50 +19,10 @@ use std::ops::{Deref, DerefMut};
 
 use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
-use unicode_width::*;
+use unicode_width::UnicodeWidthChar;
 
-use crate::*;
-
-#[derive(
-    Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash, size_of::SizeOf,
-)]
-pub struct GraphemeClusterSegment {
-    /// The actual grapheme cluster `&str`. Eg: "H", "📦", "🙏🏽".
-    pub string: String,
-    /// The byte offset (in the original string) of the start of the `grapheme_cluster`.
-    pub byte_offset: usize,
-    /// Display width of the `string` via [`unicode_width::UnicodeWidthChar`].
-    pub unicode_width: ChUnit,
-    /// The index of this entry in the `grapheme_cluster_segment_vec`.
-    pub logical_index: usize,
-    /// The number of bytes the `string` takes up in memory.
-    pub byte_size: usize,
-    /// Display col at which this grapheme cluster starts.
-    pub display_col_offset: ChUnit,
-}
-
-mod grapheme_cluster_segment_impl {
-    use super::*;
-
-    impl GraphemeClusterSegment {
-        /// Convert [&str] to [GraphemeClusterSegment]. This is used to create a new [String] after the
-        /// [UnicodeString] is modified.
-        pub fn new(chunk: &str) -> GraphemeClusterSegment {
-            let my_string: String = chunk.to_string();
-            let unicode_string = UnicodeString::from(my_string);
-            let result = unicode_string.vec_segment.first().unwrap().clone();
-            result
-        }
-    }
-
-    impl From<&str> for GraphemeClusterSegment {
-        fn from(s: &str) -> Self { GraphemeClusterSegment::new(s) }
-    }
-
-    impl From<String> for GraphemeClusterSegment {
-        fn from(s: String) -> Self { GraphemeClusterSegment::new(&s) }
-    }
-}
+use super::GraphemeClusterSegment;
+use crate::{ch, ChUnit};
 
 #[derive(
     Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Hash, size_of::SizeOf,

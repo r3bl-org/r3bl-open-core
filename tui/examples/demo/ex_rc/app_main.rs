@@ -18,12 +18,74 @@
 use std::fmt::Debug;
 
 use chrono::{DateTime, Local};
-use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::tui_style;
-use r3bl_tui::*;
+use r3bl_core::{call_if_true,
+                ch,
+                get_tui_styles,
+                position,
+                requested_size_percent,
+                send_signal,
+                size,
+                throws,
+                throws_with_return,
+                tui_styled_text,
+                tui_styled_texts,
+                tui_stylesheet,
+                ANSIBasicColor,
+                Ansi256GradientIndex,
+                ChUnit,
+                ColorChangeSpeed,
+                ColorWheel,
+                ColorWheelConfig,
+                ColorWheelSpeed,
+                CommonResult,
+                GradientGenerationPolicy,
+                LolcatBuilder,
+                Position,
+                Size,
+                TextColorizationPolicy,
+                TuiColor,
+                TuiStylesheet,
+                UnicodeString};
+use r3bl_macro::tui_style;
+use r3bl_tui::{box_end,
+               box_props,
+               box_start,
+               render_component_in_current_box,
+               render_ops,
+               render_tui_styled_texts_into,
+               surface,
+               telemetry_global_static,
+               Animator,
+               App,
+               BoxedSafeApp,
+               ComponentRegistry,
+               ComponentRegistryMap,
+               EditMode,
+               EditorComponent,
+               EditorEngineConfig,
+               EventPropagation,
+               FlexBoxId,
+               GlobalData,
+               HasFocus,
+               InputEvent,
+               Key,
+               KeyPress,
+               LayoutDirection,
+               LayoutManagement,
+               ModifierKeysMask,
+               PerformPositioningAndSizing,
+               RenderOp,
+               RenderPipeline,
+               Surface,
+               SurfaceProps,
+               SurfaceRender,
+               TerminalWindowMainThreadSignal,
+               ZOrder,
+               DEBUG_TUI_MOD};
 use tokio::{sync::mpsc::Sender, time::Duration};
 
-use super::*;
+use super::{state_mutator, AppSignal, State, FILE_CONTENT_ARRAY};
+use crate::ex_rc::app_main::animator_task::start_animator_task;
 
 /// Constants for the ids.
 #[repr(u8)]
@@ -125,8 +187,7 @@ mod constructor {
     impl Default for AppMain {
         fn default() -> Self {
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("🪙 {}", "construct ex_rc::AppWithLayout");
-                log_debug(msg);
+                tracing::debug!("🪙 construct ex_rc::AppWithLayout");
             });
             Self {
                 data: AppData {
@@ -148,7 +209,6 @@ mod constructor {
 
 mod app_main_impl_app_trait {
     use super::*;
-    use crate::ex_rc::app_main::animator_task::start_animator_task;
 
     impl App for AppMain {
         type S = State;
@@ -368,8 +428,7 @@ mod populate_component_registry {
         has_focus.set_id(id);
         call_if_true!(DEBUG_TUI_MOD, {
             {
-                let msg = format!("🪙 {} = {:?}", "init has_focus", has_focus.get_id());
-                log_debug(msg);
+                tracing::debug!("🪙 init has_focus = {:?}", has_focus.get_id());
             }
         });
     }
@@ -403,8 +462,7 @@ mod populate_component_registry {
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!("🪙 {}", "construct EditorComponent { on_buffer_change }");
-            log_debug(msg);
+            tracing::debug!("🪙 construct EditorComponent [ on_buffer_change ]");
         });
     }
 }
@@ -438,7 +496,7 @@ mod status_bar {
         window_size: Size,
         state: &State,
     ) {
-        let mut it = tui_styled_texts!();
+        let mut texts = tui_styled_texts!();
 
         let lolcat_st = {
             let date_time: DateTime<Local> = Local::now();
@@ -454,31 +512,31 @@ mod status_bar {
             )
         };
 
-        it += lolcat_st;
+        texts += lolcat_st;
 
-        it += tui_styled_text! { @style:tui_style!(attrib: [dim, bold]) ,      @text: " Exit 👋 : "};
-        it += tui_styled_text! { @style:tui_style!(attrib: [dim, underline]) , @text: "Ctrl + q"};
+        texts += tui_styled_text! { @style:tui_style!(attrib: [dim, bold]) ,      @text: " Exit 👋 : "};
+        texts += tui_styled_text! { @style:tui_style!(attrib: [dim, underline]) , @text: "Ctrl + q"};
 
         if state.current_slide_index < FILE_CONTENT_ARRAY.len() - 1 {
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: " ┊ "};
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: "Next 👉 : "};
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + n"};
+            texts += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: " ┊ "};
+            texts += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: "Next 👉 : "};
+            texts += tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + n"};
         }
 
         if state.current_slide_index > 0 {
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: " ┊ "};
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: "Prev 👈 : "};
-            it += tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + p"};
+            texts += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: " ┊ "};
+            texts += tui_styled_text! { @style: tui_style!(attrib: [dim, bold]) ,      @text: "Prev 👈 : "};
+            texts += tui_styled_text! { @style: tui_style!(attrib: [dim, underline]) , @text: "Ctrl + p"};
         }
 
-        let display_width = it.display_width();
+        let display_width = texts.display_width();
         let col_center: ChUnit = (window_size.col_count - display_width) / 2;
         let row_bottom: ChUnit = window_size.row_count - 1;
         let center: Position = position!(col_index: col_center, row_index: row_bottom);
 
         let mut render_ops = render_ops!();
         render_ops.push(RenderOp::MoveCursorPositionAbs(center));
-        it.render_into(&mut render_ops);
+        render_tui_styled_texts_into(&texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }
 }

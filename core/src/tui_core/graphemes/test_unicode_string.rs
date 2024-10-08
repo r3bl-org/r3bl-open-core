@@ -17,7 +17,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::{assert_eq2, ch, ChUnit, GraphemeClusterSegment, UnicodeString};
 
     const TEST_STRING: &str = "Hi 😃 📦 🙏🏽 👨🏾‍🤝‍👨🏿.";
 
@@ -95,46 +95,16 @@ mod tests {
         assert_eq2!(u_s.at_display_col_index(11.into()).unwrap().string, "🙏🏽");
         assert_eq2!(u_s.at_display_col_index(12.into()).unwrap().string, "🙏🏽");
         assert_eq2!(u_s.at_display_col_index(13.into()).unwrap().string, " ");
-        assert_eq2!(
-            u_s.at_display_col_index(14.into()).unwrap().string,
-            "👨🏾‍🤝‍👨🏿"
-        );
-        assert_eq2!(
-            u_s.at_display_col_index(15.into()).unwrap().string,
-            "👨🏾‍🤝‍👨🏿"
-        );
-        assert_eq2!(
-            u_s.at_display_col_index(16.into()).unwrap().string,
-            "👨🏾‍🤝‍👨🏿"
-        );
-        assert_eq2!(
-            u_s.at_display_col_index(17.into()).unwrap().string,
-            "👨🏾‍🤝‍👨🏿"
-        );
-        assert_eq2!(
-            u_s.at_display_col_index(18.into()).unwrap().string,
-            "👨🏾‍🤝‍👨🏿"
-        );
-        assert_eq2!(
-            u_s.at_display_col_index(19.into()).unwrap().string,
-            "👨🏾‍🤝‍👨🏿"
-        );
-        assert_eq2!(
-            u_s.at_display_col_index(20.into()).unwrap().string,
-            "👨🏾‍🤝‍👨🏿"
-        );
-        assert_eq2!(
-            u_s.at_display_col_index(21.into()).unwrap().string,
-            "👨🏾‍🤝‍👨🏿"
-        );
-        assert_eq2!(
-            u_s.at_display_col_index(22.into()).unwrap().string,
-            "👨🏾‍🤝‍👨🏿"
-        );
-        assert_eq2!(
-            u_s.at_display_col_index(23.into()).unwrap().string,
-            "👨🏾‍🤝‍👨🏿"
-        );
+        assert_eq2!(u_s.at_display_col_index(14.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+        assert_eq2!(u_s.at_display_col_index(15.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+        assert_eq2!(u_s.at_display_col_index(16.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+        assert_eq2!(u_s.at_display_col_index(17.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+        assert_eq2!(u_s.at_display_col_index(18.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+        assert_eq2!(u_s.at_display_col_index(19.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+        assert_eq2!(u_s.at_display_col_index(20.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+        assert_eq2!(u_s.at_display_col_index(21.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+        assert_eq2!(u_s.at_display_col_index(22.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
+        assert_eq2!(u_s.at_display_col_index(23.into()).unwrap().string, "👨🏾‍🤝‍👨🏿");
         assert_eq2!(u_s.at_display_col_index(24.into()).unwrap().string, ".");
 
         // Spot check convert logical index to display column.

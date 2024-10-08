@@ -97,10 +97,9 @@
 //! this breakdown of one crate into multiple crates is necessary.
 //!
 //! Here are some other crates for which this crate is a dependency (run `rg
-//! "r3bl_rs_utils_macro" -g "Cargo.toml"` to get a list):
+//! "r3bl_macro" -g "Cargo.toml"` to get a list):
 //! 1. [`r3bl_tui`](https://crates.io/crates/r3bl_tui) crate.
 //! 1. [`r3bl-cmdr`](https://crates.io/crates/r3bl_cmdr) crate.
-//! 1. [`r3bl_rs_utils`](https://crates.io/crates/r3bl_rs_utils) crate.
 //!
 //! Here's a guide to writing [procedural
 //! macros](https://developerlife.com/2022/03/30/rust-proc-macro/) on
@@ -109,7 +108,7 @@
 //! # Changelog
 //!
 //! Please check out the
-//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_rs_utils_macro)
+//! [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md#r3bl_macro)
 //! to see how the library has evolved over time.
 //!
 //! # Learn how these crates are built, provide feedback
@@ -121,21 +120,12 @@
 
 extern crate proc_macro;
 
-mod builder;
-mod fn_wrapper;
 mod make_style;
-mod manager_of_things;
 mod utils;
-use fn_wrapper::{make_safe_async, make_shareable};
 use proc_macro::TokenStream;
 
-#[proc_macro_derive(Builder)]
-pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
-    builder::derive_proc_macro_impl(input)
-}
-
 /// Creates a new
-/// [Style](https://docs.rs/r3bl_rs_utils_core/latest/r3bl_rs_utils_core/tui_core/styles/style/struct.Style.html)
+/// [Style](https://docs.rs/r3bl_core/latest/r3bl_core/tui_core/styles/style/struct.Style.html)
 /// declaratively.
 ///
 /// - If `id` isn't supplied, then [u8::MAX](u8::MAX) is used.
@@ -145,8 +135,8 @@ pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
 /// Here's a usage example.
 ///
 /// ```rust
-/// use r3bl_rs_utils_macro::{tui_style};
-/// use r3bl_rs_utils_core::{TuiStyle, TuiColor, RgbValue};
+/// use r3bl_macro::{tui_style};
+/// use r3bl_core::{TuiStyle, TuiColor, RgbValue};
 /// let _ = tui_style!(attrib: [dim]);
 /// ```
 ///
@@ -159,24 +149,4 @@ pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn tui_style(input: TokenStream) -> TokenStream {
     make_style::fn_proc_macro_impl(input)
-}
-
-#[proc_macro]
-pub fn make_struct_safe_to_share_and_mutate(input: TokenStream) -> TokenStream {
-    manager_of_things::fn_proc_macro_impl(input)
-}
-
-#[deprecated(
-    since = "0.7.12",
-    note = "please use [`AsyncMiddleware`] or [`AsyncSubscriber`] instead"
-)]
-#[proc_macro]
-pub fn make_safe_async_fn_wrapper(input: TokenStream) -> TokenStream {
-    make_safe_async::fn_proc_macro_impl(input)
-}
-
-#[deprecated(since = "0.7.12", note = "please use [`AsyncReducer`] instead")]
-#[proc_macro]
-pub fn make_shareable_fn_wrapper(input: TokenStream) -> TokenStream {
-    make_shareable::fn_proc_macro_impl(input)
 }

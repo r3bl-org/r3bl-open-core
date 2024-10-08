@@ -36,7 +36,7 @@ macro_rules! box_start {
         styles:                 [$($args:tt)*]                      // Eg: [ "style1" , "style2" ]
         $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
     ) => {
-        $arg_surface.box_start(box_props! {
+      $arg_surface.box_start(box_props! {
             id:                     $arg_id,
             dir:                    $arg_dir,
             requested_size_percent: $arg_requested_size_percent,
@@ -56,7 +56,7 @@ macro_rules! box_props {
                                                                 //     ["style1", "style2"] };
     $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
   ) => {
-    FlexBoxProps {
+    $crate::FlexBoxProps {
       id: $arg_id,
       dir: $arg_dir,
       requested_size_percent: $arg_requested_size_percent,
@@ -71,7 +71,7 @@ macro_rules! box_props {
     maybe_styles:           [$($args:tt)*]                      // Eg: [style!{...} , style!{...}]
     $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
   ) => {
-    FlexBoxProps {
+    $crate::FlexBoxProps {
       id: $arg_id,
       dir: $arg_dir,
       requested_size_percent: $arg_requested_size_percent,
@@ -85,7 +85,7 @@ macro_rules! box_props {
     requested_size_percent: $arg_requested_size_percent : expr, // Eg: (50, 100).try_into()?,
     $(,)*                   /* Optional trailing comma https://stackoverflow.com/a/43143459/2085356. */
   ) => {
-    FlexBoxProps {
+    $crate::FlexBoxProps {
       id: $arg_id,
       dir: $arg_dir,
       requested_size_percent: $arg_requested_size_percent,
@@ -154,7 +154,7 @@ macro_rules! box_start_with_surface_renderer {
 
     $arg_renderer
       .render_in_surface(
-        GlobalScopeArgs {
+        $crate::GlobalScopeArgs {
           shared_global_data: $arg_shared_global_data,
           shared_store:       $arg_shared_store,
           state:              $arg_state,

@@ -15,11 +15,21 @@
  *   limitations under the License.
  */
 
-use std::{error::Error,
-          fmt::{Display, Result as FmtResult},
-          result::Result as OGResult};
+//! For more information on error types, see:
+//!
+//! 1. [Article](https://developerlife.com/2024/06/10/rust-miette-error-handling/)
+//! 2. [Video](https://youtu.be/TmLF7vI8lKk)
 
-/// Type alias to make it easy to work with [`Result`]s. Works hand in hand w/ [CommonError].
+use std::{error::Error,
+          fmt::{Display, Formatter, Result}};
+
+/// Type alias to make it easy to work with:
+/// 1. [`core::result::Result`]
+/// 2. [miette::Result] and [miette::Report], which are [std::error::Error] wrappers.
+///
+/// - It is basically `miette::Result<T, miette::Report>`.
+/// - Works hand in hand w/ [CommonError] and any other type of error.
+///
 /// Here's an example.
 /// ```ignore
 /// pub fn try_from_pair(pair: Pair) -> CommonResult<(Percent, Percent)> {
@@ -35,7 +45,7 @@ use std::{error::Error,
 ///   }
 /// }
 /// ```
-pub type CommonResult<T> = OGResult<T, Box<dyn Error + Send + Sync>>;
+pub type CommonResult<T> = miette::Result<T>;
 
 /// Common error struct. Read custom error docs
 /// [here](https://learning-rust.github.io/docs/e7.custom_error_types.html).
@@ -57,18 +67,18 @@ pub type CommonResult<T> = OGResult<T, Box<dyn Error + Send + Sync>>;
 /// ```
 #[derive(Debug, Clone)]
 pub struct CommonError {
-    pub err_type: CommonErrorType,
-    pub err_msg: Option<String>,
+    pub error_type: CommonErrorType,
+    pub error_message: Option<String>,
 }
 
 /// Some common errors that can occur.
 #[non_exhaustive]
 #[derive(Default, Debug, Clone, Copy)]
 pub enum CommonErrorType {
-    ExitLoop,
-    DisplaySizeTooSmall,
     #[default]
     General,
+    ExitLoop,
+    DisplaySizeTooSmall,
     InvalidArguments,
     InvalidResult,
     InvalidState,
@@ -91,45 +101,37 @@ pub enum CommonErrorType {
 /// Implement [`Error`] trait.
 impl Error for CommonError {}
 
-/// Implement [`Display`] trait (needed by [`Error`] trait).
+/// Implement [`Display`] trait (needed by [`Error`] trait). This is the same as the
+/// [`Debug`] implementation (which is derived above).
 impl Display for CommonError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> FmtResult { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result { write!(f, "{self:?}") }
 }
 
 impl CommonError {
-    /// Constructor that is compatible w/ [`CommonResult`].
+    /// Both [CommonError::error_type] and [CommonError::error_message] available.
     #[allow(clippy::all)]
-    pub fn new<T>(err_type: CommonErrorType, msg: &str) -> CommonResult<T> {
-        Self::from_err(CommonError {
-            err_type,
-            err_msg: msg.to_string().into(),
-        })
+    pub fn new_error_result<T>(err_type: CommonErrorType, msg: &str) -> CommonResult<T> {
+        Err(miette::miette!(CommonError {
+            error_type: err_type,
+            error_message: Some(msg.to_string()),
+        }))
     }
 
-    /// Constructor that is compatible w/ [`CommonResult`].
-    pub fn new_err_with_only_type<T>(err_type: CommonErrorType) -> CommonResult<T> {
-        CommonError::from_err_type_and_msg(err_type, None)
-    }
-
-    /// Constructor that is compatible w/ [`CommonResult`].
-    pub fn new_err_with_only_msg<T>(msg: &str) -> CommonResult<T> {
-        CommonError::from_err_type_and_msg(
-            CommonErrorType::General,
-            Some(msg.to_string()),
-        )
-    }
-
-    /// Private helper method.
-    fn from_err_type_and_msg<T>(
+    /// Only [CommonError::error_type] available, and no [CommonError::error_message].
+    pub fn new_error_result_with_only_type<T>(
         err_type: CommonErrorType,
-        msg: Option<String>,
     ) -> CommonResult<T> {
-        Self::from_err(CommonError {
-            err_type,
-            err_msg: msg,
-        })
+        Err(miette::miette!(CommonError {
+            error_type: err_type,
+            error_message: None,
+        }))
     }
 
-    /// Private helper method.
-    fn from_err<T>(err: CommonError) -> CommonResult<T> { Err(Box::new(err)) }
+    /// Only [CommonError::error_message] available, and no [CommonError::error_type].
+    pub fn new_error_result_with_only_msg<T>(msg: &str) -> CommonResult<T> {
+        Err(miette::miette!(CommonError {
+            error_type: CommonErrorType::default(),
+            error_message: Some(msg.to_string()),
+        }))
+    }
 }

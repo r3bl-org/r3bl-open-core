@@ -18,10 +18,28 @@
 use std::{collections::HashMap,
           fmt::{Debug, Formatter, Result}};
 
-use r3bl_rs_utils_core::*;
-use serde::*;
+use common_math::format_with_commas;
+use r3bl_core::{call_if_true,
+                ch,
+                common_math,
+                position,
+                ChUnit,
+                Position,
+                Size,
+                UnicodeString};
+use serde::{Deserialize, Serialize};
+use size_of::SizeOf as _;
 
-use crate::*;
+use super::SelectionMap;
+use crate::{EditorEngine,
+            EditorEngineApi,
+            HasFocus,
+            RenderArgs,
+            RenderOps,
+            ScrollOffset,
+            DEBUG_TUI_COPY_PASTE,
+            DEBUG_TUI_MOD,
+            DEFAULT_SYN_HI_FILE_EXT};
 
 /// Stores the data for a single editor buffer. Please do not construct this struct
 /// directly and use [new_empty](EditorBuffer::new_empty) instead.
@@ -32,18 +50,18 @@ use crate::*;
 ///
 /// # Modifying the buffer
 ///
-/// [InputEvent] is converted into an [EditorEvent] (by
+/// [crate::InputEvent] is converted into an [crate::EditorEvent] (by
 /// [EditorEngineApi]::[apply_event](EditorEngineApi::apply_event)), which is then used to
 /// modify the [EditorBuffer] via:
-/// 1. [EditorEvent::apply_editor_event](EditorEvent::apply_editor_event)
-/// 2. [EditorEvent::apply_editor_events](EditorEvent::apply_editor_events)
+/// 1. [EditorEvent::apply_editor_event](crate::EditorEvent::apply_editor_event)
+/// 2. [EditorEvent::apply_editor_events](crate::EditorEvent::apply_editor_events)
 ///
-/// In order for the commands to be executed, the functions in [EditorEngineInternalApi]
-/// are used.
+/// In order for the commands to be executed, the functions in
+/// [crate::EditorEngineInternalApi] are used.
 ///
 /// These functions take any one of the following args:
-/// 1. [EditorArgsMut]
-/// 2. [EditorArgs]
+/// 1. [crate::EditorArgsMut]
+/// 2. [crate::EditorArgs]
 /// 3. [EditorBuffer] and [EditorEngine]
 ///
 /// # Accessing and mutating the fields (w/ validation)
@@ -53,7 +71,7 @@ use crate::*;
 /// [get_mut](EditorBuffer::get_mut) method, which returns a tuple w/ mutable references
 /// to the fields. This rather strange design allows for all mutations to be tracked
 /// easily and allows for validation operations to be applied post mutation (by
-/// [validate_editor_buffer_change::apply_change]).
+/// [crate::validate_editor_buffer_change::apply_change]).
 ///
 /// # Different kinds of caret positions
 ///
@@ -77,14 +95,14 @@ use crate::*;
 /// ## `caret_display_position`
 ///
 /// This is the "display" (or `display_col_index`) and not "logical" (or `logical_index`)
-/// position (both are defined in [tui_core::graphemes]). Please take a look at
-/// [tui_core::graphemes::UnicodeString], specifically the methods in
-/// [tui_core::graphemes::access] for more details on how the conversion between "display"
-/// and "logical" indices is done.
+/// position (both are defined in [r3bl_core::tui_core::graphemes]). Please take
+/// a look at [r3bl_core::tui_core::graphemes::UnicodeString], specifically the
+/// methods in [r3bl_core::tui_core::graphemes::access] for more details on how
+/// the conversion between "display" and "logical" indices is done.
 ///
 /// 1. It represents the current caret position (relative to the
-///    [style_adjusted_origin_pos](FlexBox::style_adjusted_origin_pos) of the enclosing
-///    [FlexBox]).
+///    [style_adjusted_origin_pos](crate::FlexBox::style_adjusted_origin_pos) of the
+///    enclosing [crate::FlexBox]).
 /// 2. It works w/ [crate::RenderOp::MoveCursorPositionRelTo] as well.
 ///
 /// > 💡 For the diagrams below, the caret is where `▴` and `▸` intersects.
@@ -163,7 +181,7 @@ use crate::*;
 /// The [SelectionMap] is used to keep track of the selections in the buffer. Each entry
 /// in the map represents a row of text in the buffer.
 /// - The row index is the key.
-/// - The value is the [SelectionRange].
+/// - The value is the [r3bl_core::SelectionRange].
 #[derive(Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct EditorBuffer {
     pub editor_content: EditorContent,
@@ -224,12 +242,12 @@ pub mod history {
         // Normal history insertion.
         editor_buffer.history.push_content(content_copy);
 
-        if DEBUG_TUI_COPY_PASTE {
-            log_debug(format!(
+        call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            tracing::debug!(
                 "🍎🍎🍎 add_content_to_undo_stack editor_buffer: {:?}",
                 editor_buffer
-            ));
-        }
+            );
+        });
     }
 
     pub fn undo(editor_buffer: &mut EditorBuffer) {
@@ -242,9 +260,9 @@ pub mod history {
             editor_buffer.editor_content.caret_display_position = retain_caret_position;
         }
 
-        if DEBUG_TUI_COPY_PASTE {
-            log_debug(format!("🍎🍎🍎 undo editor_buffer: {:?}", editor_buffer));
-        }
+        call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            tracing::debug!("🍎🍎🍎 undo editor_buffer: {:?}", editor_buffer);
+        });
     }
 
     pub fn redo(editor_buffer: &mut EditorBuffer) {
@@ -255,9 +273,9 @@ pub mod history {
             editor_buffer.editor_content = content;
         }
 
-        if DEBUG_TUI_COPY_PASTE {
-            log_debug(format!("🍎🍎🍎 redo editor_buffer: {:?}", editor_buffer));
-        }
+        call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            tracing::debug!("🍎🍎🍎 redo editor_buffer: {:?}", editor_buffer);
+        });
     }
 
     impl EditorBufferHistory {
@@ -355,6 +373,8 @@ pub mod history {
 
 #[cfg(test)]
 mod history_tests {
+    use r3bl_core::assert_eq2;
+
     use super::*;
 
     #[test]
@@ -525,11 +545,9 @@ mod constructor {
         ) -> Self {
             // Potentially do any other initialization here.
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!(
-                    "🪙 {}",
-                    "construct EditorBuffer { lines, caret, lolcat, file_extension }"
+                tracing::debug!(
+                    "🪙 construct EditorBuffer [ lines, caret, lolcat, file_extension ]"
                 );
-                log_debug(msg);
             });
 
             Self {
@@ -743,9 +761,6 @@ pub mod access_and_mutate {
 }
 
 pub mod debug_format_helpers {
-    use common_math::format_with_commas;
-    use size_of::SizeOf as _;
-
     use super::*;
 
     impl Debug for EditorBuffer {

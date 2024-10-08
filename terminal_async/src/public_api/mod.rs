@@ -15,14 +15,10 @@
  *   limitations under the License.
  */
 
-pub mod jaeger_setup;
-pub mod port_availability;
+// Attach sources.
 pub mod spinner;
 pub mod terminal_async;
-pub mod tracing_setup;
 
-pub use jaeger_setup::*;
-pub use port_availability::*;
+// Re-export.
 pub use spinner::*;
 pub use terminal_async::*;
-pub use tracing_setup::*;

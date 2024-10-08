@@ -15,12 +15,15 @@
  *   limitations under the License.
  */
 
-use constants::*;
 use crossterm::style::Stylize;
-use nom::{bytes::complete::*, combinator::*, error::*, sequence::*, IResult};
-use r3bl_rs_utils_core::call_if_true;
+use nom::{bytes::complete::{tag, take_until},
+          combinator::map,
+          error::ErrorKind,
+          sequence::tuple,
+          IResult};
+use r3bl_core::call_if_true;
 
-use crate::*;
+use crate::{constants::NEW_LINE, DEBUG_MD_PARSER_STDOUT};
 
 /// Takes the text between the start and end delimiters. Will error out if this text
 /// contains a new line.
@@ -79,7 +82,7 @@ fn take_text_between<'input>(
 mod tests_parse_take_between {
     use nom::{error::{Error, ErrorKind},
               Err as NomErr};
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 

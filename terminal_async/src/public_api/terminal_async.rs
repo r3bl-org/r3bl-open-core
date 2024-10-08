@@ -15,25 +15,22 @@
  *   limitations under the License.
  */
 
-use crate::{
-    CrosstermEventResult, PinnedInputStream, Readline, ReadlineEvent, SharedWriter, StdMutex,
-};
-use crossterm::{
-    cursor::MoveToColumn,
-    event::EventStream,
-    style::{Print, ResetColor, Stylize},
-    terminal::{Clear, ClearType},
-};
-use futures_util::FutureExt;
-use miette::IntoDiagnostic;
-use r3bl_tuify::{
-    is_fully_uninteractive_terminal, is_stdin_piped, is_stdout_piped, StdinIsPipedResult,
-    StdoutIsPipedResult, TTYResult,
-};
-use std::{
-    io::{stdout, Write},
-    sync::Arc,
-};
+use std::io::{stdout, Write};
+
+use crossterm::{cursor::MoveToColumn,
+                style::{Print, ResetColor, Stylize},
+                terminal::{Clear, ClearType}};
+use futures_util::FutureExt as _;
+use miette::IntoDiagnostic as _;
+use r3bl_core::{InputDevice, LineStateControlSignal, OutputDevice, SharedWriter};
+use r3bl_tuify::{is_fully_uninteractive_terminal,
+                 is_stdin_piped,
+                 is_stdout_piped,
+                 StdinIsPipedResult,
+                 StdoutIsPipedResult,
+                 TTYResult};
+
+use crate::{Readline, ReadlineEvent};
 
 pub struct TerminalAsync {
     pub readline: Readline,
@@ -53,7 +50,7 @@ impl TerminalAsync {
     ///     let terminal_async = TerminalAsync::try_new("> ")
     ///         .await?
     ///         .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
-    ///     r3bl_rs_utils_core::ok!()
+    ///     r3bl_core::ok!()
     /// }
     /// ```
     ///
@@ -65,7 +62,7 @@ impl TerminalAsync {
     ///     let Some(mut terminal_async) = TerminalAsync::try_new("> ").await? else {
     ///         return Err(miette::miette!("Failed to create terminal"));
     ///     };
-    ///     r3bl_rs_utils_core::ok!()
+    ///     r3bl_core::ok!()
     /// }
     /// ```
     ///
@@ -93,21 +90,20 @@ impl TerminalAsync {
             return Ok(None);
         }
 
-        let safe_raw_terminal = Arc::new(StdMutex::new(stdout()));
-        let pinned_input_stream: PinnedInputStream<CrosstermEventResult> =
-            Box::pin(EventStream::new());
+        let output_device = OutputDevice::new_stdout();
+        let input_device = InputDevice::new_event_stream();
+
         let (readline, stdout) =
-            Readline::new(prompt.to_owned(), safe_raw_terminal, pinned_input_stream)
+            Readline::new(prompt.to_owned(), output_device, input_device)
                 .into_diagnostic()?;
+
         Ok(Some(TerminalAsync {
             readline,
             shared_writer: stdout,
         }))
     }
 
-    pub fn clone_shared_writer(&self) -> SharedWriter {
-        self.shared_writer.clone()
-    }
+    pub fn clone_shared_writer(&self) -> SharedWriter { self.shared_writer.clone() }
 
     /// Replacement for [std::io::Stdin::read_line()] (this is async and non blocking).
     pub async fn get_readline_event(&mut self) -> miette::Result<ReadlineEvent> {
@@ -143,7 +139,7 @@ impl TerminalAsync {
         let _ = self
             .shared_writer
             .line_state_control_channel_sender
-            .send(crate::LineStateControlSignal::Flush)
+            .send(LineStateControlSignal::Flush)
             .await;
     }
 
@@ -151,7 +147,7 @@ impl TerminalAsync {
         let _ = self
             .shared_writer
             .line_state_control_channel_sender
-            .send(crate::LineStateControlSignal::Pause)
+            .send(LineStateControlSignal::Pause)
             .await;
     }
 
@@ -159,7 +155,7 @@ impl TerminalAsync {
         let _ = self
             .shared_writer
             .line_state_control_channel_sender
-            .send(crate::LineStateControlSignal::Resume)
+            .send(LineStateControlSignal::Resume)
             .await;
     }
 

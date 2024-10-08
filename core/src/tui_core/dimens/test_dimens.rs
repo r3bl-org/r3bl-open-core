@@ -17,7 +17,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::{ch, percent, position, size, Percent, Position};
 
     #[test]
     fn test_add_box_size_to_pos() {
@@ -52,7 +52,7 @@ mod tests {
 
     #[test]
     fn test_percent_works_as_expected() {
-        let maybe_pc_100: Result<Percent, String> = percent!(100i32);
+        let maybe_pc_100 = percent!(100i32);
         if let Ok(pc_100) = maybe_pc_100 {
             assert_eq!(*pc_100, 100);
             let result = pc_100.calc_percentage(ch!(500));

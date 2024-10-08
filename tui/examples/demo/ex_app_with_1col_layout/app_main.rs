@@ -15,11 +15,52 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::tui_style;
-use r3bl_tui::*;
+use r3bl_core::{ch,
+                get_tui_styles,
+                position,
+                requested_size_percent,
+                size,
+                throws,
+                throws_with_return,
+                tui_styled_text,
+                tui_styled_texts,
+                tui_stylesheet,
+                ChUnit,
+                CommonResult,
+                ContainsResult,
+                Position,
+                RgbValue,
+                Size,
+                TuiColor,
+                TuiStylesheet};
+use r3bl_macro::tui_style;
+use r3bl_tui::{box_end,
+               box_props,
+               box_start,
+               render_component_in_current_box,
+               render_ops,
+               render_tui_styled_texts_into,
+               surface,
+               App,
+               BoxedSafeApp,
+               ComponentRegistry,
+               ComponentRegistryMap,
+               EventPropagation,
+               FlexBoxId,
+               GlobalData,
+               HasFocus,
+               InputEvent,
+               LayoutDirection,
+               LayoutManagement,
+               PerformPositioningAndSizing,
+               RenderOp,
+               RenderPipeline,
+               Surface,
+               SurfaceProps,
+               SurfaceRender,
+               ZOrder};
 
-use super::*;
+use super::{AppSignal, SingleColumnComponent, State};
 
 // Constants for the ids.
 #[repr(u8)]
@@ -267,7 +308,7 @@ mod status_bar {
 
         let mut render_ops = render_ops!();
         render_ops.push(RenderOp::MoveCursorPositionAbs(center));
-        styled_texts.render_into(&mut render_ops);
+        render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }
 }

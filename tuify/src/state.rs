@@ -16,9 +16,13 @@
  */
 
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_rs_utils_core::*;
+use r3bl_core::{ChUnit, Size};
 
-use crate::*;
+use crate::{get_scroll_adjusted_row_index,
+            locate_cursor_in_viewport,
+            CalculateResizeHint,
+            CaretVerticalViewportLocation,
+            SelectionMode};
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct State<'a> {
@@ -54,21 +58,28 @@ impl State<'_> {
     }
 }
 
-#[test]
-fn test_header_enum() {
-    let mut state = State {
-        multi_line_header: vec![vec![AnsiStyledText {
-            text: "line1",
-            style: &[],
-        }]],
-        ..Default::default()
-    };
-    let lhs = state.get_header();
-    let rhs = Header::Multiple;
-    assert_eq2!(lhs, rhs);
+#[cfg(test)]
+mod tests {
+    use r3bl_core::assert_eq2;
 
-    state.multi_line_header = vec![];
-    assert_eq2!(state.get_header(), Header::Single);
+    use super::*;
+
+    #[test]
+    fn test_header_enum() {
+        let mut state = State {
+            multi_line_header: vec![vec![AnsiStyledText {
+                text: "line1",
+                style: &[],
+            }]],
+            ..Default::default()
+        };
+        let lhs = state.get_header();
+        let rhs = Header::Multiple;
+        assert_eq2!(lhs, rhs);
+
+        state.multi_line_header = vec![];
+        assert_eq2!(state.get_header(), Header::Single);
+    }
 }
 
 impl CalculateResizeHint for State<'_> {
@@ -77,9 +88,7 @@ impl CalculateResizeHint for State<'_> {
         self.clear_resize_hint();
     }
 
-    fn get_resize_hint(&self) -> Option<ResizeHint> {
-        self.resize_hint.clone()
-    }
+    fn get_resize_hint(&self) -> Option<ResizeHint> { self.resize_hint.clone() }
 
     fn set_resize_hint(&mut self, new_size: Size) {
         self.resize_hint = if let Some(old_size) = self.window_size {
@@ -107,9 +116,7 @@ impl CalculateResizeHint for State<'_> {
         }
     }
 
-    fn clear_resize_hint(&mut self) {
-        self.resize_hint = None;
-    }
+    fn clear_resize_hint(&mut self) { self.resize_hint = None; }
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
@@ -123,7 +130,10 @@ pub enum ResizeHint {
 impl State<'_> {
     /// This the row index that currently has keyboard focus.
     pub fn get_focused_index(&self) -> ChUnit {
-        get_scroll_adjusted_row_index(self.raw_caret_row_index, self.scroll_offset_row_index)
+        get_scroll_adjusted_row_index(
+            self.raw_caret_row_index,
+            self.scroll_offset_row_index,
+        )
     }
 
     pub fn locate_cursor_in_viewport(&self) -> CaretVerticalViewportLocation {

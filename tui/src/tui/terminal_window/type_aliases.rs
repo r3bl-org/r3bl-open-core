@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::*;
+use super::{App, Component};
 
 // App.
 pub type SafeApp<S, AS> = dyn App<S = S, AS = AS> + Send + Sync;

@@ -15,18 +15,11 @@
  *   limitations under the License.
  */
 
-use super::*;
-use crate::*;
+use super::{AppMain, State};
+use crate::{keypress, throws, CommonResult, InputEvent, TerminalWindow};
 
 pub async fn run_app() -> CommonResult<()> {
     throws!({
-        // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
-        if ENABLE_TRACE_EXAMPLES {
-            try_to_set_log_level(log::LevelFilter::Debug).ok();
-        } else {
-            try_to_set_log_level(log::LevelFilter::Off).ok();
-        }
-
         // Create an App (renders & responds to user input).
         let app = AppMain::new_boxed();
 
@@ -35,6 +28,6 @@ pub async fn run_app() -> CommonResult<()> {
             vec![InputEvent::Keyboard(keypress! { @char 'x' })];
 
         // Create a window.
-        TerminalWindow::main_event_loop(app, exit_keys, State::default()).await?
+        _ = TerminalWindow::main_event_loop(app, exit_keys, State::default()).await?
     });
 }

@@ -15,13 +15,36 @@
  *   limitations under the License.
  */
 
-//! This module is responsible for converting all the [MdLineFragment] into plain text w/out any
-//! formatting.
+//! This module is responsible for converting all the [MdLineFragment] into plain text
+//! w/out any formatting.
 
-use super::*;
-use crate::{constants::*, *};
+use r3bl_core::PrettyPrintDebug;
 
-impl<'a> PrettyPrintDebug for MdDocument<'a> {
+use crate::{constants::{BACK_TICK,
+                        CHECKED,
+                        HEADING_CHAR,
+                        LEFT_BRACKET,
+                        LEFT_IMAGE,
+                        LEFT_PARENTHESIS,
+                        LIST_SPACE_DISPLAY,
+                        LIST_SPACE_END_DISPLAY_FIRST_LINE,
+                        LIST_SPACE_END_DISPLAY_REST_LINE,
+                        PERIOD,
+                        RIGHT_BRACKET,
+                        RIGHT_IMAGE,
+                        RIGHT_PARENTHESIS,
+                        SPACE,
+                        STAR,
+                        UNCHECKED,
+                        UNDERSCORE},
+            HeadingLevel,
+            HyperlinkData,
+            List,
+            MdBlock,
+            MdDocument,
+            MdLineFragment};
+
+impl PrettyPrintDebug for MdDocument<'_> {
     fn pretty_print_debug(&self) -> String {
         let mut it = vec![];
         for (index, block) in self.iter().enumerate() {
@@ -31,7 +54,7 @@ impl<'a> PrettyPrintDebug for MdDocument<'a> {
     }
 }
 
-impl<'a> PrettyPrintDebug for List<MdLineFragment<'a>> {
+impl PrettyPrintDebug for List<MdLineFragment<'_>> {
     fn pretty_print_debug(&self) -> String {
         self.inner
             .iter()
@@ -41,7 +64,7 @@ impl<'a> PrettyPrintDebug for List<MdLineFragment<'a>> {
     }
 }
 
-impl<'a> PrettyPrintDebug for MdBlock<'a> {
+impl PrettyPrintDebug for MdBlock<'_> {
     fn pretty_print_debug(&self) -> String {
         match self {
             MdBlock::Heading(heading_data) => {
@@ -171,7 +194,7 @@ pub fn generate_unordered_list_item_bullet(
 
 #[cfg(test)]
 mod to_plain_text_tests {
-    use r3bl_rs_utils_core::*;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 

@@ -18,20 +18,22 @@
 use std::{io::Result, vec};
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
-use r3bl_rs_utils_core::*;
-use r3bl_tuify::{
-    components::style::StyleSheet, get_size, get_terminal_width, select_from_list,
-    select_from_list_with_multi_line_header, SelectionMode, DEVELOPMENT_MODE,
-};
+use r3bl_core::{call_if_true, throws, try_initialize_global_logging};
+use r3bl_tuify::{components::style::StyleSheet,
+                 get_size,
+                 get_terminal_width,
+                 select_from_list,
+                 select_from_list_with_multi_line_header,
+                 SelectionMode,
+                 DEVELOPMENT_MODE};
 mod single_select_quiz_game;
 use single_select_quiz_game::main as single_select_quiz_game;
 
 fn main() -> Result<()> {
     throws!({
         call_if_true!(DEVELOPMENT_MODE, {
-            try_to_set_log_level(log::LevelFilter::Debug).ok();
-            log_debug("Start logging...".to_string());
-            log_debug(format!("terminal window size: {:?}", get_size()?).to_string());
+            try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
+            tracing::debug!("Start logging... terminal window size: {:?}", get_size()?)
         });
 
         // Get display size.
@@ -48,9 +50,12 @@ fn main() -> Result<()> {
         const MULTIPLE_SELECT_SINGLE_ITEM: &str = "Multiple select, single item";
         const MULTIPLE_SELECT_13_ITEMS_VPH_5: &str =
             "Multiple select, 13 items, viewport height = 5";
-        const MULTIPLE_SELECT_2_ITEMS_VPH_5: &str = "Multiple select, 2 items, viewport height = 5";
-        const SINGLE_SELECT_13_ITEMS_VPH_5: &str = "Single select, 13 items, viewport height = 5";
-        const SINGLE_SELECT_2_ITEMS_VPH_5: &str = "Single select, 2 items, viewport height = 5";
+        const MULTIPLE_SELECT_2_ITEMS_VPH_5: &str =
+            "Multiple select, 2 items, viewport height = 5";
+        const SINGLE_SELECT_13_ITEMS_VPH_5: &str =
+            "Single select, 13 items, viewport height = 5";
+        const SINGLE_SELECT_2_ITEMS_VPH_5: &str =
+            "Single select, 2 items, viewport height = 5";
         const SINGLE_SELECT_QUIZ_GAME: &str = "Single select, quiz game";
 
         // Add tuify to select which example to run.
@@ -127,7 +132,7 @@ fn main() -> Result<()> {
         }
 
         call_if_true!(DEVELOPMENT_MODE, {
-            log_debug("Stop logging...".to_string());
+            tracing::debug!("Stop logging...");
         });
     });
 }
@@ -213,7 +218,7 @@ fn single_line_header() {
         None => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
-        log_debug(format!("user_input: {:?}", user_input).to_string());
+        tracing::debug!("user_input: {user_input:?}");
     });
 }
 
@@ -293,7 +298,7 @@ fn multiple_select_13_items_vph_5(
         None => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
-        log_debug(format!("user_input: {:?}", user_input).to_string());
+        tracing::debug!("user_input: {user_input:?}");
     });
 }
 
@@ -332,7 +337,7 @@ fn multiple_select_2_items_vph_5(
         None => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
-        log_debug(format!("user_input: {:?}", user_input).to_string());
+        tracing::debug!("user_input: {user_input:?}");
     });
 }
 
@@ -374,7 +379,7 @@ fn single_select_13_items_vph_5(
         None => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
-        log_debug(format!("user_input: {:?}", user_input).to_string());
+        tracing::debug!("user_input: {user_input:?}");
     });
 }
 
@@ -412,7 +417,7 @@ fn single_select_2_items_vph_5(
         None => println!("User did not select anything"),
     }
     call_if_true!(DEVELOPMENT_MODE, {
-        log_debug(format!("user_input: {:?}", user_input).to_string());
+        tracing::debug!("user_input: {user_input:?}");
     });
 }
 

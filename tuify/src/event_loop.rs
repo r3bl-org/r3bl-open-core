@@ -14,11 +14,18 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use std::io::*;
+use std::io::{Result, Write};
 
-use crossterm::{cursor::*, execute, terminal::*};
+use crossterm::{cursor::{Hide, Show},
+                execute,
+                terminal::{disable_raw_mode, enable_raw_mode}};
 
-use crate::*;
+use crate::{is_fully_uninteractive_terminal,
+            CalculateResizeHint,
+            FunctionComponent,
+            KeyPress,
+            KeyPressReader,
+            TTYResult};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EventLoopResult {

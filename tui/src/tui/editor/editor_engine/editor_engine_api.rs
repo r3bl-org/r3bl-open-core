@@ -16,12 +16,59 @@
  */
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::tui_style;
+use r3bl_core::{call_if_true,
+                ch,
+                position,
+                throws,
+                throws_with_return,
+                ANSIBasicColor,
+                ChUnit,
+                CommonResult,
+                PrettyPrintDebug,
+                ScrollOffsetColLocationInRange,
+                SelectionRange,
+                Size,
+                TuiColor,
+                TuiStyledTexts,
+                UnicodeString,
+                UnicodeStringSegmentSliceResult};
+use r3bl_macro::tui_style;
 use syntect::easy::HighlightLines;
 
-use super::*;
-use crate::{editor_buffer_clipboard_support::ClipboardService, *};
+use crate::{cache,
+            convert_syntect_to_styled_text,
+            editor_buffer_clipboard_support::ClipboardService,
+            get_selection_style,
+            history,
+            render_ops,
+            render_pipeline,
+            render_tui_styled_texts_into,
+            try_get_syntax_ref,
+            try_parse_and_highlight,
+            CaretKind,
+            EditMode,
+            EditorBuffer,
+            EditorEngine,
+            EditorEngineInternalApi,
+            EditorEvent,
+            FlexBox,
+            HasFocus,
+            InputEvent,
+            Key,
+            KeyPress,
+            List,
+            RenderArgs,
+            RenderOp,
+            RenderOps,
+            RenderPipeline,
+            SpecialKey,
+            StyleUSSpan,
+            SyntaxHighlightMode,
+            ZOrder,
+            DEBUG_TUI_COPY_PASTE,
+            DEBUG_TUI_MOD,
+            DEBUG_TUI_SYN_HI,
+            DEFAULT_CURSOR_CHAR};
 
 pub struct EditorEngineApi;
 
@@ -193,9 +240,8 @@ impl EditorEngineApi {
 
         // BOOKM: Render using syntect first, then custom MD parser.
 
-        call_if_true!(
-            DEBUG_TUI_MOD,
-            log_debug(format!(
+        call_if_true!(DEBUG_TUI_MOD, {
+            tracing::debug!(
                 "\n🍉🍉🍉\n\t{0}\n\t{1}\n\t{2}\n🍉🍉🍉",
                 /* 0 */
                 format!(
@@ -218,8 +264,8 @@ impl EditorEngineApi {
                 )
                 .to_string()
                 .green(),
-            ))
-        );
+            )
+        });
 
         match editor_buffer.is_file_extension_default() {
             // Render using custom MD parser.
@@ -283,15 +329,14 @@ impl EditorEngineApi {
                     }
                 };
 
-                call_if_true!(
-                    DEBUG_TUI_COPY_PASTE,
-                    log_debug(format!(
-                        "\n🍉🍉🍉 selection_str_slice: \n\t{0}, \n\trange: {1}, \n\tscroll_offset: {2}",
-                        /* 0 */ selection.to_string().black().on_white(),
-                        /* 1 */ range_of_display_col_indices,
-                        /* 2 */ scroll_offset,
-                    ))
-                );
+                call_if_true!(DEBUG_TUI_COPY_PASTE, {
+                    tracing::debug!(
+                            "\n🍉🍉🍉 selection_str_slice: \n\t{0}, \n\trange: {1}, \n\tscroll_offset: {2}",
+                            /* 0 */ selection.to_string().black().on_white(),
+                            /* 1 */ range_of_display_col_indices,
+                            /* 2 */ scroll_offset,
+                        )
+                });
 
                 let position = {
                     // Convert scroll adjusted to raw.
@@ -470,13 +515,13 @@ mod syn_hi_r3bl_path {
             )?;
 
             call_if_true!(DEBUG_TUI_SYN_HI, {
-                log_debug(format!(
+                tracing::debug!(
                     "\n🎯🎯🎯\neditor_buffer.lines.len(): {} vs md_document.lines.len(): {}\n{}\n{}🎯🎯🎯",
                     editor_buffer.get_lines().len().to_string().cyan(),
                     lines.len().to_string().yellow(),
                     editor_buffer.get_as_string_with_comma_instead_of_newlines().cyan(),
                     lines.pretty_print_debug().yellow(),
-                ));
+                )
             });
 
             for (row_index, line) in lines
@@ -516,7 +561,7 @@ mod syn_hi_r3bl_path {
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
         let styled_texts: TuiStyledTexts =
             line.clip(scroll_offset_col, max_display_col_count);
-        styled_texts.render_into(render_ops);
+        render_tui_styled_texts_into(&styled_texts, render_ops);
         render_ops.push(RenderOp::ResetColor);
     }
 }
@@ -602,12 +647,12 @@ mod syn_hi_syntect_path {
     ) {
         let scroll_offset_col = editor_buffer.get_scroll_offset().col_index;
         let list: List<StyleUSSpan> =
-            syntect_to_styled_text_conversion::from_syntect_to_tui(
+            convert_syntect_to_styled_text::convert_highlighted_line_from_syntect_to_tui(
                 syntect_highlighted_line,
             );
         let styled_texts: TuiStyledTexts =
             list.clip(scroll_offset_col, max_display_col_count);
-        styled_texts.render_into(render_ops);
+        render_tui_styled_texts_into(&styled_texts, render_ops);
         render_ops.push(RenderOp::ResetColor);
     }
 
@@ -718,7 +763,10 @@ mod no_syn_hi_path {
 mod test_cache {
     use std::collections::HashMap;
 
+    use r3bl_core::assert_eq2;
+
     use super::*;
+    use crate::ScrollOffset;
 
     #[test]
     fn test_render_content() {

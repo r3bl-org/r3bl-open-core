@@ -26,13 +26,13 @@ macro_rules! render_component_in_current_box {
         global_data:         $arg_global_data             : expr,   // Eg: global_data
         has_focus:           $arg_has_focus               : expr    // Eg: has_focus
     ) => {
-        let maybe_component_ref = ComponentRegistry::try_to_get_component_by_id(
+        let maybe_component_ref = $crate::ComponentRegistry::try_to_get_component_by_id(
             $arg_component_registry_map,
             $arg_component_id,
         );
 
         if let Some(component_ref) = maybe_component_ref {
-            let surface_bounds = SurfaceBounds::from(&*($arg_surface));
+            let surface_bounds = $crate::SurfaceBounds::from(&*($arg_surface));
             let current_box = $arg_surface.current_box()?;
             let queue = component_ref.render(
                 $arg_global_data,
@@ -59,14 +59,14 @@ macro_rules! render_component_in_given_box {
         global_data:  $arg_global_data              : expr, // Eg: global_data
         has_focus:    $arg_has_focus                : expr  // Eg: has_focus
      ) => {{
-        let maybe_component_ref = ComponentRegistry::try_to_get_component_by_id(
+        let maybe_component_ref = $crate::ComponentRegistry::try_to_get_component_by_id(
             $arg_component_registry_map,
             $arg_component_id,
         );
 
         if let Some(component_ref) = maybe_component_ref {
-            let surface_bounds = SurfaceBounds::from(&*($arg_surface));
-            let queue: RenderPipeline = component_ref.render(
+            let surface_bounds = $crate::SurfaceBounds::from(&*($arg_surface));
+            let queue: $crate::RenderPipeline = component_ref.render(
                 $arg_global_data,
                 $arg_box,
                 surface_bounds,

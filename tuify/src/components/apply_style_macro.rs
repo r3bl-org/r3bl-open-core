@@ -15,10 +15,12 @@
  *   limitations under the License.
  */
 
-use crossterm::style::*;
+use crossterm::style::{Attribute, Color, SetAttribute};
 use r3bl_ansi_color::{global_color_support, ColorSupport, TransformColor};
 
-pub fn get_crossterm_color_based_on_terminal_capabilities(color: r3bl_ansi_color::Color) -> Color {
+pub fn get_crossterm_color_based_on_terminal_capabilities(
+    color: r3bl_ansi_color::Color,
+) -> Color {
     let detect_color_support = global_color_support::detect();
     match detect_color_support {
         ColorSupport::Truecolor => {

@@ -15,12 +15,81 @@
  *   limitations under the License.
  */
 
-use std::fmt::*;
+use std::fmt::{Display, Formatter, Result};
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::tui_style;
-use r3bl_tui::*;
+use r3bl_core::{call_if_true,
+                ch,
+                get_tui_style,
+                get_tui_styles,
+                position,
+                requested_size_percent,
+                send_signal,
+                size,
+                throws,
+                throws_with_return,
+                tui_styled_text,
+                tui_stylesheet,
+                ANSIBasicColor,
+                Ansi256GradientIndex,
+                ChUnit,
+                ColorWheel,
+                ColorWheelConfig,
+                ColorWheelSpeed,
+                CommonError,
+                CommonResult,
+                GradientGenerationPolicy,
+                Position,
+                Size,
+                TextColorizationPolicy,
+                TuiColor,
+                TuiStyledTexts,
+                TuiStylesheet,
+                UnicodeString};
+use r3bl_macro::tui_style;
+use r3bl_tui::{box_end,
+               box_props,
+               box_start,
+               render_component_in_current_box,
+               render_component_in_given_box,
+               render_ops,
+               render_tui_styled_texts_into,
+               surface,
+               App,
+               BoxedSafeApp,
+               ComponentRegistry,
+               ComponentRegistryMap,
+               DialogBuffer,
+               DialogChoice,
+               DialogComponent,
+               DialogEngineConfigOptions,
+               DialogEngineMode,
+               EditMode,
+               EditorComponent,
+               EditorEngineConfig,
+               EventPropagation,
+               FlexBox,
+               FlexBoxId,
+               GlobalData,
+               HasEditorBuffers,
+               HasFocus,
+               InputEvent,
+               Key,
+               KeyPress,
+               LayoutDirection,
+               LayoutManagement,
+               LineMode,
+               ModifierKeysMask,
+               PerformPositioningAndSizing,
+               RenderOp,
+               RenderPipeline,
+               Surface,
+               SurfaceProps,
+               SurfaceRender,
+               SyntaxHighlightMode,
+               TerminalWindowMainThreadSignal,
+               ZOrder,
+               DEBUG_TUI_MOD};
 use tokio::sync::mpsc::Sender;
 
 use crate::edi::{file_utils, State};
@@ -80,8 +149,7 @@ mod app_main_constructor {
     impl Default for AppMain {
         fn default() -> Self {
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("🪙 {}", "construct edi::AppMain");
-                log_debug(msg);
+                tracing::debug!("🪙 construct edi::AppMain");
             });
             Self
         }
@@ -145,18 +213,16 @@ mod app_main_impl_app_trait {
                 match result_open {
                     Ok(_) => {
                         call_if_true!(DEBUG_TUI_MOD, {
-                            log_debug(
-                                format!("\n📣 Opened feedback link: {link_url:?}")
-                                    .green()
-                                    .to_string(),
+                            tracing::debug!(
+                                "\n📣 Opened feedback link: {}",
+                                format!("{link_url:?}").green()
                             );
                         });
                     }
                     Err(err) => {
-                        log_error(
-                            format!("\n📣 Error opening feedback link: {err:?}")
-                                .red()
-                                .to_string(),
+                        tracing::error!(
+                            "\n📣 Error opening feedback link: {}",
+                            format!("{err:?}").red()
                         );
                     }
                 }
@@ -232,13 +298,11 @@ mod app_main_impl_app_trait {
                         state,
                     ) {
                         if let Some(CommonError {
-                            err_type: _,
-                            err_msg: msg,
+                            error_type: _,
+                            error_message: msg,
                         }) = err.downcast_ref::<CommonError>()
                         {
-                            log_error(format!(
-                                "📣 Error activating simple modal: {msg:?}"
-                            ));
+                            tracing::error!("📣 Error activating simple modal: {msg:?}")
                         }
                     };
 
@@ -339,8 +403,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
             );
 
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("📣 activate modal simple: {:?}", has_focus);
-                log_debug(msg);
+                tracing::debug!("📣 activate modal simple: {:?}", has_focus);
             });
         });
     }
@@ -396,10 +459,8 @@ mod modal_dialog_ask_for_filename_to_save_file {
                         let user_input_file_path = text.trim().to_string();
                         if !user_input_file_path.is_empty() {
                             call_if_true!(DEBUG_TUI_MOD, {
-                                let msg = format!("\n💾💾💾 About to save the new buffer with given filename: {user_input_file_path:?}")
-                                    .magenta()
-                                    .to_string();
-                                log_debug(msg);
+                                tracing::debug!("\n💾💾💾 About to save the new buffer with given filename: {}",
+                                format!("{user_input_file_path:?}").magenta());
                             });
 
                             let maybe_editor_buffer = state.get_mut_editor_buffer(
@@ -458,11 +519,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
         );
 
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!(
-                "🪙 {}",
-                "construct DialogComponent (simple) { on_dialog_press }"
-            );
-            log_debug(msg);
+            tracing::debug!("🪙 construct DialogComponent (simple) [ on_dialog_press ]",);
         });
     }
 }
@@ -538,10 +595,7 @@ mod populate_component_registry {
         has_focus.set_id(id);
 
         call_if_true!(DEBUG_TUI_MOD, {
-            {
-                let msg = format!("🪙 {} = {:?}", "init has_focus", has_focus.get_id());
-                log_debug(msg);
-            }
+            tracing::debug!("🪙 {} = {:?}", "init has_focus", has_focus.get_id());
         });
     }
 
@@ -570,8 +624,7 @@ mod populate_component_registry {
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!("🪙 {}", "construct EditorComponent { on_buffer_change }");
-            log_debug(msg);
+            tracing::debug!("🪙 construct EditorComponent [ on_buffer_change ]");
         });
     }
 }
@@ -670,7 +723,7 @@ mod status_bar {
 
         let mut render_ops = render_ops!();
         render_ops.push(RenderOp::MoveCursorPositionAbs(center));
-        styled_texts.render_into(&mut render_ops);
+        render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }
 }

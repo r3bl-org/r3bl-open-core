@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="EMPTY_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/analytics_schema/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/ansi_color/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/ansi_color/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/cmdr/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/core/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/macro/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/redux/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/simple_logger/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/simple_logger/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/terminal_async/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/terminal_async/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tui/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tui/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tuify/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tuify/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/utils/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/utils/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/test_fixtures/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

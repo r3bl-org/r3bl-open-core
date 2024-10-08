@@ -15,10 +15,40 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
-use r3bl_tui::*;
+use r3bl_core::{call_if_true,
+                ch,
+                position,
+                send_signal,
+                throws_with_return,
+                Ansi256GradientIndex,
+                ColorWheel,
+                ColorWheelConfig,
+                ColorWheelSpeed,
+                CommonResult,
+                GradientGenerationPolicy,
+                TextColorizationPolicy,
+                UnicodeString};
+use r3bl_tui::{render_ops,
+               render_pipeline,
+               BoxedSafeComponent,
+               Component,
+               EventPropagation,
+               FlexBox,
+               FlexBoxId,
+               GlobalData,
+               HasFocus,
+               InputEvent,
+               Key,
+               KeyPress,
+               RenderOp,
+               RenderPipeline,
+               SpecialKey,
+               SurfaceBounds,
+               TerminalWindowMainThreadSignal,
+               ZOrder,
+               DEBUG_TUI_MOD};
 
-use super::*;
+use super::{AppSignal, State};
 
 #[derive(Debug, Clone, Default)]
 pub struct SingleColumnComponent {
@@ -221,7 +251,7 @@ mod single_column_component_impl_component_trait {
 
                 // Log pipeline.
                 call_if_true!(DEBUG_TUI_MOD, {
-                    let msg = format!(
+                    tracing::info!(
                         "\
                 🦜 ColumnComponent::render ->
                   - current_box: {current_box:?},
@@ -230,7 +260,6 @@ mod single_column_component_impl_component_trait {
                   - content_pos: {content_cursor_pos:?},
                   - render_pipeline: {pipeline:?}"
                     );
-                    log_info(msg);
                 });
 
                 // Return the pipeline.

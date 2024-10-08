@@ -15,8 +15,8 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{throws, CommonResult};
-use r3bl_tui::*;
+use r3bl_core::{throws, CommonResult};
+use r3bl_tui::{keypress, InputEvent, ModifierKeysMask, TerminalWindow};
 
 use crate::edi::{constructor, AppMain};
 
@@ -34,6 +34,6 @@ pub async fn run_app(maybe_file_path: Option<String>) -> CommonResult<()> {
         )];
 
         // Create a window.
-        TerminalWindow::main_event_loop(app, exit_keys, state).await?;
+        _ = TerminalWindow::main_event_loop(app, exit_keys, state).await?;
     })
 }

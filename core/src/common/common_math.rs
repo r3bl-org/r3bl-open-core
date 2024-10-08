@@ -18,7 +18,7 @@
 /// Safely subtracts two unsigned numbers and returns the result. Does not panic.
 ///
 /// ```rust
-/// use r3bl_rs_utils_core::*;
+/// use r3bl_core::*;
 /// let a: u16 = 10;
 /// let b: u16 = 15;
 /// let c: u16 = sub_unsigned!(a, b);
@@ -38,7 +38,7 @@ macro_rules! sub_unsigned {
 /// Safely adds two unsigned numbers and returns the result. Does not panic.
 ///
 /// ```rust
-/// use r3bl_rs_utils_core::*;
+/// use r3bl_core::*;
 /// let a: u16 = 10;
 /// let b: u16 = 15;
 /// let c: u16 = add_unsigned!(a, b);
@@ -81,7 +81,7 @@ macro_rules! mul_unsigned {
 /// Safely increments an unsigned number. Does not panic.
 ///
 /// ```rust
-/// use r3bl_rs_utils_core::*;
+/// use r3bl_core::*;
 /// let mut my_u16: u16 = 0;
 ///
 /// inc_unsigned!(my_u16);
@@ -120,7 +120,7 @@ macro_rules! inc_unsigned {
 /// Safely decrements an unsigned number. Does not panic.
 ///
 /// ```rust
-/// use r3bl_rs_utils_core::*;
+/// use r3bl_core::*;
 /// let mut my_u16: u16 = 10;
 ///
 /// dec_unsigned!(my_u16);

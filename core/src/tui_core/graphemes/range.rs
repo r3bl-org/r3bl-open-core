@@ -20,14 +20,14 @@ use std::{cmp::{self},
 
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use crate::{ChUnit, Position};
 
 /// Represents a range of characters in a line.
 ///
 /// The range is not inclusive of the item at the end index, which means that when you
-/// call [clip_to_range](UnicodeString::clip_to_range) the item at the end index will not
-/// be part of the result (this is shown in the example below). The indices are all
-/// display column indices, not logical ones.
+/// call [clip_to_range](crate::UnicodeString::clip_to_range) the item at the end index
+/// will not be part of the result (this is shown in the example below). The indices are
+/// all display column indices, not logical ones.
 ///
 /// ```text
 /// 0 1 2 3 4 5 6 7 8 9
@@ -38,7 +38,7 @@ use crate::*;
 /// start_display_col_index
 /// ```
 /// - `▓▓` = `😃`
-/// - [clip_to_range](UnicodeString::clip_to_range): "e😃"
+/// - [clip_to_range](crate::UnicodeString::clip_to_range): "e😃"
 #[derive(Default, Clone, PartialEq, Serialize, Deserialize, Copy, size_of::SizeOf)]
 pub struct SelectionRange {
     pub start_display_col_index: ChUnit,
@@ -84,6 +84,7 @@ pub enum CaretMovementDirection {
 #[cfg(test)]
 mod tests_range {
     use super::*;
+    use crate::{assert_eq2, ch};
 
     /// ```text
     /// 0 1 2 3 4 5 6 7 8 9
@@ -162,7 +163,7 @@ impl SelectionRange {
     ///   │     4 = end_display_col_index
     ///   1 = start_display_col_index
     /// ```
-    /// - [UnicodeString::clip_to_range](UnicodeString::clip_to_range): "ell"
+    /// - [UnicodeString::clip_to_range](crate::UnicodeString::clip_to_range): "ell"
     pub fn locate_column(&self, caret_display_col_index: ChUnit) -> CaretLocationInRange {
         if caret_display_col_index < self.start_display_col_index {
             CaretLocationInRange::Underflow

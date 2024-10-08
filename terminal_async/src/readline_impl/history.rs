@@ -15,9 +15,11 @@
  *   limitations under the License.
  */
 
-use crate::HISTORY_SIZE_MAX;
 use std::collections::VecDeque;
+
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+
+use crate::HISTORY_SIZE_MAX;
 
 pub struct History {
     pub entries: VecDeque<String>,
@@ -99,6 +101,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_update() {
         let (mut history, _) = History::new();
         history.max_size = 2;
@@ -124,6 +127,7 @@ mod tests {
 
     // write tests for search_next and search_previous
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_search_next() {
         let (mut history, _) = History::new();
         history.max_size = 2;
@@ -138,6 +142,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_search_previous() {
         let (mut history, _) = History::new();
         history.max_size = 2;

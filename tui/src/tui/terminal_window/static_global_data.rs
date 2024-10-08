@@ -30,6 +30,10 @@ const NOT_SET_VALUE: i64 = -1;
 /// [r3bl_ansi_color::global_color_support::detect] value. It is not always possible to
 /// accurately detect the color support of the terminal. So this gives the app a way to
 /// set it to whatever the user wants (for example).
+///
+/// # Changing atomic ordering
+///
+/// <https://emschwartz.me/understanding-memory-ordering-in-rust/>
 pub mod telemetry_global_static {
     use super::*;
 
@@ -43,17 +47,19 @@ pub mod telemetry_global_static {
     pub static mut AVG_RESPONSE_TIME_MICROS: AtomicI64 = AtomicI64::new(NOT_SET_VALUE);
 
     /// Save the current time to the static mutable variable [START_TS_MICROS].
+    #[allow(static_mut_refs)]
     pub fn set_start_ts() {
         let current_ts_ms = Utc::now().timestamp_micros();
         unsafe {
-            START_TS_MICROS.store(current_ts_ms, Ordering::SeqCst);
+            START_TS_MICROS.store(current_ts_ms, Ordering::Release);
         };
     }
 
     /// Get the saved time from the static mutable variable [START_TS_MICROS]. In order for this to
     /// return [Some] value, you must have already called [set_start_ts].
+    #[allow(static_mut_refs)]
     fn get_start_ts() -> Option<i64> {
-        let start_ts_ms = unsafe { START_TS_MICROS.load(Ordering::SeqCst) };
+        let start_ts_ms = unsafe { START_TS_MICROS.load(Ordering::Acquire) };
         if start_ts_ms == NOT_SET_VALUE {
             None
         } else {
@@ -63,25 +69,26 @@ pub mod telemetry_global_static {
 
     /// Save the current time to the static mutable variable [END_TS_MICROS]. And update the average
     /// response time.
+    #[allow(static_mut_refs)]
     pub fn set_end_ts() {
         let current_ts_ms = Utc::now().timestamp_micros();
         unsafe {
-            END_TS_MICROS.store(current_ts_ms, Ordering::SeqCst);
+            END_TS_MICROS.store(current_ts_ms, Ordering::Release);
         };
 
         if let Some(start_ts) = get_start_ts() {
             let elapsed_ms = current_ts_ms - start_ts;
             let saved_avg_response_time =
-                unsafe { AVG_RESPONSE_TIME_MICROS.load(Ordering::SeqCst) };
+                unsafe { AVG_RESPONSE_TIME_MICROS.load(Ordering::Acquire) };
             if saved_avg_response_time == NOT_SET_VALUE {
                 unsafe {
-                    AVG_RESPONSE_TIME_MICROS.store(elapsed_ms, Ordering::SeqCst);
+                    AVG_RESPONSE_TIME_MICROS.store(elapsed_ms, Ordering::Release);
                 };
             } else {
                 let new_avg_response_time = (saved_avg_response_time + elapsed_ms) / 2;
                 unsafe {
                     AVG_RESPONSE_TIME_MICROS
-                        .store(new_avg_response_time, Ordering::SeqCst);
+                        .store(new_avg_response_time, Ordering::Release);
                 };
             }
         }
@@ -90,9 +97,10 @@ pub mod telemetry_global_static {
     /// Get the saved average response time from the static mutable variable
     /// [AVG_RESPONSE_TIME_MICROS]. In order for this to return [Some] value, you must have already
     /// called [set_end_ts].
+    #[allow(static_mut_refs)]
     pub fn get_avg_response_time_micros() -> String {
         let avg_response_time_micros =
-            unsafe { AVG_RESPONSE_TIME_MICROS.load(Ordering::SeqCst) };
+            unsafe { AVG_RESPONSE_TIME_MICROS.load(Ordering::Acquire) };
         if avg_response_time_micros == NOT_SET_VALUE {
             "Not set.".to_string()
         } else {
@@ -144,15 +152,16 @@ pub mod is_vscode_term_global_static {
         }
     }
 
+    #[allow(static_mut_refs)]
     pub fn get_is_vscode_term() -> VSCodeTerm {
-        let existing_value = unsafe { IS_VSCODE_TERM.load(Ordering::SeqCst) };
+        let existing_value = unsafe { IS_VSCODE_TERM.load(Ordering::Acquire) };
 
         match existing_value == NOT_SET_VALUE {
             // If not set, then calculate new value, save it, return it.
             true => {
                 let vscode_term = detect_whether_is_vscode_term_from_env();
                 unsafe {
-                    IS_VSCODE_TERM.store(i64::from(vscode_term), Ordering::SeqCst);
+                    IS_VSCODE_TERM.store(i64::from(vscode_term), Ordering::Release);
                 }
                 vscode_term
             }

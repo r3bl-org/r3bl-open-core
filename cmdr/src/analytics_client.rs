@@ -15,24 +15,25 @@
  *   limitations under the License.
  */
 
-use std::{fs,
+use std::{fmt::{Display, Formatter},
+          fs,
           fs::File,
           io::{BufReader, Read, Write},
           path::PathBuf,
           sync::atomic::AtomicBool};
 
-use crossterm::style::Stylize;
-use dirs::*;
+use crossterm::style::Stylize as _;
+use dirs::config_dir;
+use miette::IntoDiagnostic as _;
 use r3bl_analytics_schema::AnalyticsEvent;
-use r3bl_rs_utils_core::{call_if_true,
-                         friendly_random_id,
-                         log_debug,
-                         log_error,
-                         log_info,
-                         CommonError,
-                         CommonErrorType,
-                         CommonResult};
+use r3bl_core::{call_if_true,
+                friendly_random_id,
+                CommonError,
+                CommonErrorType,
+                CommonResult};
 use reqwest::{Client, Response};
+
+use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AnalyticsAction {
@@ -66,10 +67,7 @@ impl std::fmt::Display for AnalyticsAction {
 }
 
 pub mod config_folder {
-    use std::fmt::{Display, Formatter, Result};
-
     use super::*;
-    use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
     pub enum ConfigPaths {
         R3BLTopLevelFolderName,
@@ -77,7 +75,7 @@ pub mod config_folder {
     }
 
     impl Display for ConfigPaths {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             let path = match self {
                 ConfigPaths::R3BLTopLevelFolderName => "r3bl-cmdr",
                 ConfigPaths::ProxyMachineIdFile => "id",
@@ -113,38 +111,30 @@ pub mod config_folder {
                 match result_create_dir_all {
                     Ok(_) => {
                         call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
-                            log_debug(
-                                format!(
-                                    "Successfully created config folder: {config_folder_path:?}"
-                                )
-                                .green()
-                                .to_string(),
+                            tracing::debug!(
+                                "Successfully created config folder: {}",
+                                format!("{config_folder_path:?}").green()
                             );
                         });
                         Ok(config_folder_path)
                     }
                     Err(error) => {
-                        log_error(
-                            format!("Could not create config folder.\n{error:?}",)
-                                .red()
-                                .to_string(),
+                        tracing::error!(
+                            "Could not create config folder.\n{}",
+                            format!("{error:?}").red()
                         );
-                        CommonError::new_err_with_only_type(
+                        CommonError::new_error_result_with_only_type(
                             CommonErrorType::ConfigFolderCountNotBeCreated,
                         )
                     }
                 }
             }
             None => {
-                log_error(
-                    format!(
-                        "Could not get config folder.\n{:?}",
-                        try_get_config_folder_path(),
-                    )
-                    .red()
-                    .to_string(),
+                tracing::error!(
+                    "Could not get config folder.\n{}",
+                    format!("{:?}", try_get_config_folder_path()).red()
                 );
-                CommonError::new_err_with_only_type(
+                CommonError::new_error_result_with_only_type(
                     CommonErrorType::ConfigFolderPathCouldNotBeGenerated,
                 )
             }
@@ -156,23 +146,22 @@ pub mod file_io {
     use super::*;
 
     pub fn try_read_file_contents(path: &PathBuf) -> CommonResult<String> {
-        let file = File::open(path)?;
+        let file = File::open(path).into_diagnostic()?;
         let mut reader = BufReader::new(file);
         let mut contents = String::new();
-        let _ = reader.read_to_string(&mut contents)?;
+        let _ = reader.read_to_string(&mut contents).into_diagnostic()?;
         Ok(contents)
     }
 
     pub fn try_write_file_contents(path: &PathBuf, contents: &str) -> CommonResult<()> {
-        let mut file = File::create(path)?;
-        file.write_all(contents.as_bytes())?;
+        let mut file = File::create(path).into_diagnostic()?;
+        file.write_all(contents.as_bytes()).into_diagnostic()?;
         Ok(())
     }
 }
 
 pub mod proxy_machine_id {
     use super::*;
-    use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
     /// Read the file contents from [config_folder::get_id_file_path] and return it as a
     /// string if it exists and can be read.
@@ -185,10 +174,9 @@ pub mod proxy_machine_id {
                 match result {
                     Ok(contents) => {
                         call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
-                            log_debug(
-                                format!("Successfully read proxy machine ID from file: {contents:?}")
-                                .green()
-                                .to_string(),
+                            tracing::debug!(
+                                "Successfully read proxy machine ID from file: {}",
+                                format!("{contents:?}").green()
                             );
                         });
                         contents
@@ -205,23 +193,17 @@ pub mod proxy_machine_id {
                                 );
 
                                 call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
-                                    log_debug(
-                                        format!(
-                                            "Successfully wrote proxy machine ID to file: {new_id:?}"
-                                        )
-                                        .green()
-                                        .to_string(),
+                                    tracing::debug!(
+                                        "Successfully wrote proxy machine ID to file: {}",
+                                        format!("{new_id:?}").green()
                                     );
                                 });
                             }
                             Err(error) => {
-                                log_error(
-                                        format!(
-                                            "Could not write proxy machine ID to file.\n{error:?}",
-                                        )
-                                        .red()
-                                        .to_string(),
-                                    );
+                                tracing::error!(
+                                    "Could not write proxy machine ID to file.\n{}",
+                                    format!("{error:?}").red()
+                                );
                             }
                         }
                         new_id
@@ -270,35 +252,23 @@ pub mod report_analytics {
                     .await;
                     match result {
                         Ok(_) => {
-                            log_debug(
-                                 format!(
-                                     "Successfully reported analytics event to r3bl-base.\n{:#?}",
-                                     json
-                                 )
-                                 .green()
-                                 .to_string(),
-                             );
+                            tracing::debug!(
+                                "Successfully reported analytics event to r3bl-base.\n{}",
+                                format!("{json:#?}").green()
+                            );
                         }
                         Err(error) => {
-                            log_error(
-                                 format!(
-                                     "Could not report analytics event to r3bl-base.\n{:#?}",
-                                     error
-                                 )
-                                 .red()
-                                 .to_string(),
-                             );
+                            tracing::error!(
+                                "Could not report analytics event to r3bl-base.\n{}",
+                                format!("{error:#?}").red()
+                            );
                         }
                     }
                 }
                 Err(error) => {
-                    log_error(
-                        format!(
-                            "Could not report analytics event to r3bl-base.\n{:#?}",
-                            error
-                        )
-                        .red()
-                        .to_string(),
+                    tracing::error!(
+                        "Could not report analytics event to r3bl-base.\n{}",
+                        format!("{error:#?}").red()
                     );
                 }
             }
@@ -330,24 +300,16 @@ pub mod upgrade_check {
             if let Ok(response) = result {
                 if let Ok(body_text) = response.text().await {
                     let latest_version = body_text.trim().to_string();
-                    log_info(
-                        format!(
-                            "\n📦📦📦\nLatest version of cmdr is: {}",
-                            latest_version
-                        )
-                        .magenta()
-                        .to_string(),
+                    tracing::info!(
+                        "\n📦📦📦\nLatest version of cmdr is: {}",
+                        latest_version.clone().magenta()
                     );
                     let current_version = UPDATE_IF_NOT_THIS_VERSION.to_string();
                     if latest_version != current_version {
                         UPDATE_REQUIRED.store(true, std::sync::atomic::Ordering::Relaxed);
-                        log_info(
-                            format!(
-                                "\n💿💿💿\nThere is a new version of cmdr available: {latest_version}",
-                                latest_version = latest_version
-                            )
-                            .magenta()
-                            .to_string(),
+                        tracing::info!(
+                            "\n💿💿💿\nThere is a new version of cmdr available: {}",
+                            latest_version.clone().magenta()
                         );
                     }
                 }
@@ -358,28 +320,24 @@ pub mod upgrade_check {
 
 pub mod http_client {
     use super::*;
-    use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
-    pub async fn make_get_request(url: &str) -> Result<Response, reqwest::Error> {
+    pub async fn make_get_request(
+        url: &str,
+    ) -> core::result::Result<Response, reqwest::Error> {
         let client = Client::new();
         let response = client.get(url).send().await?;
         if response.status().is_success() {
             // Handle successful response.
             call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
-                log_debug(
-                    format!("GET request succeeded: {response:#?}",)
-                        .green()
-                        .to_string(),
+                tracing::debug!(
+                    "GET request succeeded: {}",
+                    format!("{response:#?}").green()
                 );
             });
             Ok(response)
         } else {
             // Handle error response.
-            log_error(
-                format!("GET request failed: {response:#?}",)
-                    .red()
-                    .to_string(),
-            );
+            tracing::error!("GET request failed: {}", format!("{response:#?}").red());
             response.error_for_status()
         }
     }
@@ -387,26 +345,21 @@ pub mod http_client {
     pub async fn make_post_request(
         url: &str,
         data: &serde_json::Value,
-    ) -> Result<Response, reqwest::Error> {
+    ) -> core::result::Result<Response, reqwest::Error> {
         let client = Client::new();
         let response = client.post(url).json(data).send().await?;
         if response.status().is_success() {
             // Handle successful response.
             call_if_true!(DEBUG_ANALYTICS_CLIENT_MOD, {
-                log_debug(
-                    format!("POST request succeeded: {response:#?}",)
-                        .green()
-                        .to_string(),
+                tracing::debug!(
+                    "POST request succeeded: {}",
+                    format!("{response:#?}").green()
                 );
             });
             Ok(response)
         } else {
             // Handle error response.
-            log_error(
-                format!("POST request failed: {response:#?}",)
-                    .red()
-                    .to_string(),
-            );
+            tracing::error!("POST request failed: {}", format!("{response:#?}").red());
             response.error_for_status()
         }
     }

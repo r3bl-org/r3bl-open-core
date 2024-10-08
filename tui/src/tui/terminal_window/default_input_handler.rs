@@ -15,7 +15,8 @@
  *   limitations under the License.
  */
 
-use crate::*;
+use super::Continuation;
+use crate::InputEvent;
 
 pub struct DefaultInputEventHandler;
 

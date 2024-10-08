@@ -17,10 +17,30 @@
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::*;
-    use r3bl_rs_utils_macro::tui_style;
+    use r3bl_core::{assert_eq2,
+                    ch,
+                    get_tui_styles,
+                    position,
+                    requested_size_percent,
+                    size,
+                    throws,
+                    throws_with_return,
+                    tui_stylesheet,
+                    CommonResult,
+                    RgbValue,
+                    TuiColor,
+                    TuiStylesheet};
+    use r3bl_macro::tui_style;
 
-    use crate::*;
+    use crate::{box_end,
+                box_props,
+                box_start,
+                FlexBoxId,
+                FlexBoxProps,
+                LayoutDirection,
+                LayoutManagement,
+                Surface,
+                SurfaceProps};
 
     #[test]
     fn test_surface_2_col_simple() -> CommonResult<()> {

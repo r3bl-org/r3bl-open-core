@@ -15,8 +15,14 @@
  *   limitations under the License.
  */
 
-use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
-use r3bl_rs_utils_core::*;
+use crossterm::event::{read,
+                       Event,
+                       KeyCode,
+                       KeyEvent,
+                       KeyEventKind,
+                       KeyEventState,
+                       KeyModifiers};
+use r3bl_core::{call_if_true, ch, Size};
 
 use crate::DEVELOPMENT_MODE;
 
@@ -40,9 +46,7 @@ pub enum KeyPress {
 
 pub struct CrosstermKeyPressReader {}
 impl KeyPressReader for CrosstermKeyPressReader {
-    fn read_key_press(&mut self) -> KeyPress {
-        read_key_press()
-    }
+    fn read_key_press(&mut self) -> KeyPress { read_key_press() }
 }
 
 fn read_key_press() -> KeyPress {
@@ -60,14 +64,16 @@ fn read_key_press_unix() -> KeyPress {
     match result_event {
         Ok(event) => {
             call_if_true!(DEVELOPMENT_MODE, {
-                log_debug(format!("got event: {:?}", event).to_string());
+                tracing::debug!("got event: {event:?}");
             });
 
             match event {
-                crossterm::event::Event::Resize(width, height) => KeyPress::Resize(Size {
-                    col_count: ch!(width),
-                    row_count: ch!(height),
-                }),
+                crossterm::event::Event::Resize(width, height) => {
+                    KeyPress::Resize(Size {
+                        col_count: ch!(width),
+                        row_count: ch!(height),
+                    })
+                }
                 crossterm::event::Event::Key(KeyEvent {
                     modifiers: KeyModifiers::CONTROL,
                     code: KeyCode::Char('c'),
@@ -88,7 +94,7 @@ fn read_key_press_unix() -> KeyPress {
             }
         }
         Err(err) => {
-            log_error(format!("ERROR getting event: {:?}", err).to_string());
+            tracing::error!("ERROR getting event: {err:?}");
             KeyPress::Error
         }
     }
@@ -103,7 +109,7 @@ fn read_key_press_windows() -> KeyPress {
     match result_event {
         Ok(event) => {
             call_if_true!(DEVELOPMENT_MODE, {
-                log_debug(format!("got event: {:?}", event).to_string());
+                tracing::debug!("got event: {event:?}");
             });
 
             match event {
@@ -166,7 +172,7 @@ fn read_key_press_windows() -> KeyPress {
             }
         }
         Err(err) => {
-            log_error(format!("ERROR getting event: {:?}", err).to_string());
+            tracing::error!("ERROR getting event: {err:?}");
             KeyPress::Error
         }
     }

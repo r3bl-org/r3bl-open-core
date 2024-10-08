@@ -18,9 +18,9 @@
 use std::{fmt::{self, Debug},
           ops::Deref};
 
-use serde::*;
+use serde::{Deserialize, Serialize};
 
-use crate::*;
+use crate::{ch, ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType};
 
 /// Represents an integer value between 0 and 100 (inclusive).
 #[derive(Copy, Clone, PartialEq, Eq, Default, Serialize, Deserialize, Hash)]
@@ -48,22 +48,28 @@ impl Debug for Percent {
 
 /// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>
 impl TryFrom<ChUnitPrimitiveType> for Percent {
-    type Error = String;
-    fn try_from(arg: ChUnitPrimitiveType) -> Result<Self, Self::Error> {
+    type Error = miette::Error;
+    fn try_from(arg: ChUnitPrimitiveType) -> miette::Result<Percent> {
         match Percent::try_and_convert(arg) {
             Some(percent) => Ok(percent),
-            None => Err("Invalid percentage value".to_string()),
+            None => CommonError::new_error_result(
+                CommonErrorType::ValueOutOfRange,
+                "Invalid percentage value",
+            ),
         }
     }
 }
 
 /// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>
 impl TryFrom<i32> for Percent {
-    type Error = String;
-    fn try_from(arg: i32) -> Result<Self, Self::Error> {
+    type Error = miette::Error;
+    fn try_from(arg: i32) -> miette::Result<Percent> {
         match Percent::try_and_convert(arg as u16) {
             Some(percent) => Ok(percent),
-            None => Err("Invalid percentage value".to_string()),
+            None => CommonError::new_error_result(
+                CommonErrorType::ValueOutOfRange,
+                "Invalid percentage value",
+            ),
         }
     }
 }
@@ -109,19 +115,21 @@ macro_rules! percent {
     (
         $arg_val: expr
     ) => {
-        Percent::try_from($arg_val)
+        $crate::Percent::try_from($arg_val)
     };
 }
 
+/// This must be called from a block that returns a `Result` type. Since the `?` operator
+/// is used here.
 #[macro_export]
 macro_rules! requested_size_percent {
     (
         width:  $arg_width: expr,
         height: $arg_height: expr
     ) => {
-        RequestedSizePercent {
-            width_pc: percent!($arg_width)?,
-            height_pc: percent!($arg_height)?,
+        $crate::RequestedSizePercent {
+            width_pc: $crate::percent!($arg_width)?,
+            height_pc: $crate::percent!($arg_height)?,
         }
     };
 }

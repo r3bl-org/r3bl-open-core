@@ -15,14 +15,14 @@
  *   limitations under the License.
  */
 
-use nom::{branch::*,
-          bytes::complete::*,
-          character::complete::*,
-          combinator::*,
-          multi::*,
-          sequence::*};
+use nom::{branch::alt,
+          bytes::complete::tag,
+          character::complete::anychar,
+          combinator::{not, recognize},
+          multi::many0,
+          sequence::preceded};
 
-use crate::constants::*;
+use crate::constants::NEW_LINE;
 
 /// Take text until an optional EOL character is found, or end of input is reached. If an
 /// EOL character is found:
@@ -60,7 +60,7 @@ pub fn take_text_until_new_line_or_end<'input>() ->
 #[cfg(test)]
 mod test_text_until_opt_eol {
     use crossterm::style::Stylize;
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
 

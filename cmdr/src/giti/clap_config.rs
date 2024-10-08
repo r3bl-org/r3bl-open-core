@@ -40,7 +40,6 @@ pub fn get_giti_command_subcommand_names(arg: CLICommand) -> Vec<String> {
     help_template = "{about}\nVersion: {bin} {version} 💻\n\nUSAGE 📓:\n  giti [\x1b[32mCommand\x1b[0m] [\x1b[34mOptions\x1b[0m]\n\n{all-args}\n",
     subcommand_help_heading("Command")
 )]
-
 /// More info:
 /// - <https://docs.rs/clap/latest/clap/_derive/#overview>
 /// - <https://developerlife.com/2023/09/17/tuify-clap/>

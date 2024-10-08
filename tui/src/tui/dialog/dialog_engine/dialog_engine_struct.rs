@@ -17,20 +17,34 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::*;
-use serde::*;
+use r3bl_core::{ch,
+                size,
+                Ansi256GradientIndex,
+                ChUnit,
+                ColorWheel,
+                ColorWheelConfig,
+                ColorWheelSpeed,
+                Size,
+                TuiStyle};
+use serde::{Deserialize, Serialize};
 
-use crate::*;
+use crate::{lookup_size,
+            DisplayConstants,
+            EditorEngine,
+            EditorEngineConfig,
+            PartialFlexBox,
+            SurfaceBounds};
 
-/// Please do not construct this struct directly, and use [new](DialogEngine::new) instead.
+/// Please do not construct this struct directly, and use [new](DialogEngine::new)
+/// instead.
 ///
 /// Holds data related to rendering in between render calls. This is not stored in the
-/// [DialogBuffer] struct, which lives in the app's state. The store provides the
+/// [crate::DialogBuffer] struct, which lives in the app's state. The store provides the
 /// underlying document or buffer struct that holds the actual document.
 ///
 /// In order to change the document, you can use the
-/// [DialogEngineApi::apply_event](DialogEngineApi::apply_event) method which takes [InputEvent] and
-/// tries to execute it against this buffer.
+/// [DialogEngineApi::apply_event](crate::DialogEngineApi::apply_event) method which takes
+/// [crate::InputEvent] and tries to execute it against this buffer.
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct DialogEngine {
     pub dialog_options: DialogEngineConfigOptions,
@@ -38,17 +52,17 @@ pub struct DialogEngine {
     /// This [ColorWheel] is used to render the dialog box. It is created when
     /// [new()](DialogEngine::new) is called.
     /// - The colors it cycles through are "stable" meaning that once constructed via the
-    ///   [ColorWheel::new()](ColorWheel::new) (which sets the options that determine where the
-    ///   color wheel starts when it is used). For eg, between repeated calls to
-    ///   [DialogEngineApi::render_engine](DialogEngineApi::render_engine) which uses the same
-    ///   [ColorWheel] instance, the generated colors will be the same.
+    ///   [ColorWheel::new()](ColorWheel::new) (which sets the options that determine
+    ///   where the color wheel starts when it is used). For eg, between repeated calls to
+    ///   [DialogEngineApi::render_engine](crate::DialogEngineApi::render_engine) which
+    ///   uses the same [ColorWheel] instance, the generated colors will be the same.
     /// - If you want to change where the color wheel "begins", you have to change
     ///   [ColorWheelConfig] options used to create this instance.
     pub color_wheel: ColorWheel,
     /// This is evaluated and saved when
-    /// [DialogEngineApi::render_engine](DialogEngineApi::render_engine) is called. The dialog box
-    /// is rendered outside of any layout [FlexBox] or [Surface], so it just paints itself to the
-    /// screen on top of everything else.
+    /// [DialogEngineApi::render_engine](crate::DialogEngineApi::render_engine) is called. The
+    /// dialog box is rendered outside of any layout [crate::FlexBox] or [crate::Surface],
+    /// so it just paints itself to the screen on top of everything else.
     pub maybe_flex_box: Option<(
         /* window size: */ Size,
         /* mode: */ DialogEngineMode,

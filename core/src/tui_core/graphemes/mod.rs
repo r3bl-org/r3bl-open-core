@@ -162,12 +162,14 @@ pub mod access;
 pub mod change;
 pub mod combine;
 pub mod convert;
+pub mod grapheme_cluster_segment;
 pub mod range;
 pub mod result_types;
 pub mod unicode_string;
 
 // Re-export.
 pub use convert::*;
+pub use grapheme_cluster_segment::*;
 pub use range::*;
 pub use result_types::*;
 pub use unicode_string::*;

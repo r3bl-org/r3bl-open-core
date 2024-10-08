@@ -15,15 +15,23 @@
  *   limitations under the License.
  */
 
-use r3bl_terminal_async::{
-    Spinner, SpinnerColor, SpinnerStyle, SpinnerTemplate, StdMutex, TerminalAsync,
-    ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT,
-};
-use std::{io::stderr, time::Duration};
-use std::{io::Write, sync::Arc};
+use std::{io::{stderr, Write},
+          sync::Arc,
+          time::Duration};
+
+use r3bl_core::StdMutex;
+use r3bl_terminal_async::{Spinner,
+                          SpinnerColor,
+                          SpinnerStyle,
+                          SpinnerTemplate,
+                          TerminalAsync,
+                          ARTIFICIAL_UI_DELAY,
+                          DELAY_MS,
+                          DELAY_UNIT};
 use tokio::{time::Instant, try_join};
 
 #[tokio::main]
+#[allow(clippy::needless_return)]
 pub async fn main() -> miette::Result<()> {
     println!("-------------> Example with concurrent output: Braille <-------------");
     example_with_concurrent_output(SpinnerStyle {

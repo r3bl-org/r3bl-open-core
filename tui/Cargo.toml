@@ -26,8 +26,8 @@ path = "src/lib.rs"
 
 [dependencies]
 # r3bl-open-core.
-r3bl_rs_utils_core = { path = "../core", version = "0.9.16" }    # version is requried to publish to crates.io
-r3bl_rs_utils_macro = { path = "../macro", version = "0.9.10" }  # version is requried to publish to crates.io
+r3bl_core = { path = "../core", version = "0.9.16" }             # version is requried to publish to crates.io
+r3bl_macro = { path = "../macro", version = "0.9.10" }           # version is requried to publish to crates.io
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.10" } # version is requried to publish to crates.io
 
 # Logging.
@@ -38,9 +38,6 @@ chrono = "0.4.38"
 
 # Misc
 rand = "0.8.5"
-
-# Async
-tokio = { version = "1.40.0", features = ["full"] }
 
 # Crossterm & EventStream support.
 crossterm = { version = "0.28.1", features = ["event-stream"] }
@@ -60,12 +57,6 @@ syntect = "5.2.0"
 # nom parser combinator.
 nom = "7.1.3"
 
-# color gradients.
-colorgrad = "0.7.0"
-
-# Terminal.
-is-terminal = "0.4.13"
-
 # For examples.
 # http://xion.io/post/code/rust-examples.html
 
@@ -75,9 +66,27 @@ copypasta-ext = "0.4.4"
 # For size of variables in heap.
 size-of = "0.1.5"
 
+# Tokio / Tracing / Logging.
+# https://tokio.rs/tokio/topics/tracing
+# https://tokio.rs/tokio/topics/tracing-next-steps
+tokio = { version = "1.40.0", features = ["full", "tracing"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+tracing-appender = "0.2.3"
+tracing-core = "0.1.32"
+
+# Error handling.
+thiserror = "1.0.63"
+miette = { version = "7.2.0", features = ["fancy"] }
+pretty_assertions = "1.4.0"
+
 [dev-dependencies]
-# Async readline for running examples.
+# - Async readline for running examples, with the source code checked out for
+#   r3bl-open-core repo.
+# - This is not a dependency for the library, and is not used when the library is
+#   published or used as a dependency.
 r3bl_terminal_async = { path = "../terminal_async" }
+r3bl_test_fixtures = { path = "../test_fixtures" }
 
 # For assert_eq2! macro.
 pretty_assertions = "1.4.0"

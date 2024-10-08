@@ -18,10 +18,21 @@
 use std::{fmt::{self, Debug},
           ops::{Deref, DerefMut}};
 
-use r3bl_rs_utils_core::*;
+use r3bl_core::{ch,
+                position,
+                style_dim_underline,
+                style_error,
+                style_primary,
+                GraphemeClusterSegment,
+                LockedOutputDevice,
+                Position,
+                Size,
+                TuiColor,
+                TuiStyle};
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use super::{FlushKind, RenderOps};
+use crate::List;
 
 /// Represents a grid of cells where the row/column index maps to the terminal screen.
 ///
@@ -268,6 +279,8 @@ mod pixel_char_line_impl {
             let mut it: Vec<String> = vec![];
 
             mod helpers {
+                use std::primitive::usize;
+
                 pub enum Peek {
                     NextItemContinuesRange,
                     NextItemDoesNotContinueRange,
@@ -301,24 +314,35 @@ mod pixel_char_line_impl {
             }
 
             // Main loop.
-            pub use helpers::*;
             for (i, value) in values.iter().enumerate() {
                 match (
-                    peek_does_next_item_continues_range(values, i),
-                    does_current_range_exist(&current_range),
+                    helpers::peek_does_next_item_continues_range(values, i),
+                    helpers::does_current_range_exist(&current_range),
                 ) {
-                    (Peek::NextItemContinuesRange, CurrentRange::DoesNotExist) => {
+                    (
+                        helpers::Peek::NextItemContinuesRange,
+                        helpers::CurrentRange::DoesNotExist,
+                    ) => {
                         current_range.push(*value); // Start new current range.
                     }
-                    (Peek::NextItemDoesNotContinueRange, CurrentRange::DoesNotExist) => {
+                    (
+                        helpers::Peek::NextItemDoesNotContinueRange,
+                        helpers::CurrentRange::DoesNotExist,
+                    ) => {
                         it.push(format!("{value}"));
                     }
                     // The next value continues the current range.
-                    (Peek::NextItemContinuesRange, CurrentRange::Exists) => {
+                    (
+                        helpers::Peek::NextItemContinuesRange,
+                        helpers::CurrentRange::Exists,
+                    ) => {
                         current_range.push(*value);
                     }
                     // The next value does not continue the current range.
-                    (Peek::NextItemDoesNotContinueRange, CurrentRange::Exists) => {
+                    (
+                        helpers::Peek::NextItemDoesNotContinueRange,
+                        helpers::CurrentRange::Exists,
+                    ) => {
                         current_range.push(*value);
                         it.push(format!(
                             "{}-{}",
@@ -415,14 +439,28 @@ pub trait OffscreenBufferPaint {
 
     fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOps;
 
-    fn paint(&mut self, render_ops: RenderOps, flush_kind: FlushKind, window_size: Size);
+    fn paint(
+        &mut self,
+        render_ops: RenderOps,
+        flush_kind: FlushKind,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    );
 
-    fn paint_diff(&mut self, render_ops: RenderOps, window_size: Size);
+    fn paint_diff(
+        &mut self,
+        render_ops: RenderOps,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    );
 }
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_macro::tui_style;
+    use r3bl_core::{assert_eq2, color, size, ANSIBasicColor};
+    use r3bl_macro::tui_style;
 
     use super::*;
 

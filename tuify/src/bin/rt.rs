@@ -18,19 +18,25 @@
 //! For more information on how to use CLAP and Tuify, please read this tutorial:
 //! <https://developerlife.com/2023/09/17/tuify-clap/>
 
-use std::{
-    io::{stdin, BufRead, Result},
-    process::Command,
-};
+use std::{io::{stdin, BufRead, Result},
+          process::Command};
 
-#[allow(unused_imports)]
-use clap::{Args, CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum};
+use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::*;
-use r3bl_tuify::*;
+use r3bl_core::{call_if_true, throws, try_initialize_global_logging};
+use r3bl_tuify::{get_size,
+                 get_terminal_width,
+                 is_stdin_piped,
+                 is_stdout_piped,
+                 select_from_list,
+                 SelectionMode,
+                 StdinIsPipedResult,
+                 StdoutIsPipedResult,
+                 StyleSheet,
+                 DEVELOPMENT_MODE};
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
-use StdinIsPipedResult::*;
-use StdoutIsPipedResult::*;
+use StdinIsPipedResult::{StdinIsNotPiped, StdinIsPiped};
+use StdoutIsPipedResult::{StdoutIsNotPiped, StdoutIsPiped};
 
 const SELECTED_ITEM_SYMBOL: char = '%';
 
@@ -94,10 +100,9 @@ fn main() -> Result<()> {
         let enable_logging = DEVELOPMENT_MODE | cli_args.global_opts.enable_logging;
 
         call_if_true!(enable_logging, {
-            try_to_set_log_level(log::LevelFilter::Debug).ok();
-            log_debug("Start logging...".to_string());
-            log_debug(format!("terminal window size: {:?}", get_size()?).to_string());
-            log_debug(format!("cli_args {:?}", cli_args));
+            try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
+            tracing::debug!("Start logging... terminal window size: {:?}", get_size()?);
+            tracing::debug!("cli_args {cli_args:?}")
         });
 
         match cli_args.command {
@@ -149,7 +154,7 @@ fn main() -> Result<()> {
             }
         }
         call_if_true!(enable_logging, {
-            log_debug("Stop logging...".to_string());
+            tracing::debug!("Stop logging...");
         });
     });
 }
@@ -196,7 +201,7 @@ fn show_tui(
         .collect::<Vec<String>>();
 
     call_if_true!(enable_logging, {
-        log_debug(format!("lines: {:?}", lines));
+        tracing::debug!("lines: {lines:?}");
     });
 
     // Early return, nothing to do. No content found in stdin.
@@ -213,7 +218,10 @@ fn show_tui(
         selection_mode
     } else {
         let possible_values_for_selection_mode =
-            get_possible_values_for_subcommand_and_option("select-from-list", "selection-mode");
+            get_possible_values_for_subcommand_and_option(
+                "select-from-list",
+                "selection-mode",
+            );
         print_help_for_subcommand_and_option("select-from-list", "selection-mode").ok();
 
         let user_selection = select_from_list(
@@ -242,39 +250,40 @@ fn show_tui(
     };
 
     // Handle `command-to-run-with-each-selection` is not passed in.
-    let command_to_run_with_each_selection = match maybe_command_to_run_with_each_selection {
-        Some(it) => it,
-        None => {
-            print_help_for_subcommand_and_option(
-                "select-from-list",
-                "command-to-run-with-each-selection",
-            )
-            .ok();
-            let mut line_editor = Reedline::create();
-            let prompt = DefaultPrompt {
-                left_prompt: DefaultPromptSegment::Basic(
-                    "Enter command to run w/ each selection `%`: ".to_string(),
-                ),
-                right_prompt: DefaultPromptSegment::Empty,
-            };
+    let command_to_run_with_each_selection =
+        match maybe_command_to_run_with_each_selection {
+            Some(it) => it,
+            None => {
+                print_help_for_subcommand_and_option(
+                    "select-from-list",
+                    "command-to-run-with-each-selection",
+                )
+                .ok();
+                let mut line_editor = Reedline::create();
+                let prompt = DefaultPrompt {
+                    left_prompt: DefaultPromptSegment::Basic(
+                        "Enter command to run w/ each selection `%`: ".to_string(),
+                    ),
+                    right_prompt: DefaultPromptSegment::Empty,
+                };
 
-            let sig = line_editor.read_line(&prompt);
-            match sig {
-                Ok(Signal::Success(buffer)) => {
-                    if buffer.is_empty() {
+                let sig = line_editor.read_line(&prompt);
+                match sig {
+                    Ok(Signal::Success(buffer)) => {
+                        if buffer.is_empty() {
+                            print_help_for("select-from-list").ok();
+                            return;
+                        }
+                        println!("Command to run w/ each selection: {}", buffer);
+                        buffer
+                    }
+                    _ => {
                         print_help_for("select-from-list").ok();
                         return;
                     }
-                    println!("Command to run w/ each selection: {}", buffer);
-                    buffer
-                }
-                _ => {
-                    print_help_for("select-from-list").ok();
-                    return;
                 }
             }
-        }
-    };
+        };
 
     // Actually get input from the user.
     let selected_items = {
@@ -290,21 +299,19 @@ fn show_tui(
     };
 
     call_if_true!(enable_logging, {
-        log_debug(
-            format!("selected_items: {:?}", selected_items)
-                .cyan()
-                .to_string(),
-        );
+        tracing::debug!("selected_items: {}", format!("{selected_items:?}").cyan());
     });
 
     for selected_item in selected_items {
-        let actual_command_to_run =
-            &command_to_run_with_each_selection.replace(SELECTED_ITEM_SYMBOL, &selected_item);
+        let actual_command_to_run = &command_to_run_with_each_selection
+            .replace(SELECTED_ITEM_SYMBOL, &selected_item);
         execute_command(actual_command_to_run);
     }
 }
 
-fn convert_user_input_into_vec_of_strings(user_input: Option<Vec<String>>) -> Vec<String> {
+fn convert_user_input_into_vec_of_strings(
+    user_input: Option<Vec<String>>,
+) -> Vec<String> {
     user_input.unwrap_or_default()
 }
 
@@ -371,7 +378,10 @@ fn print_help_for_subcommand_and_option(subcommand: &str, option: &str) -> Resul
     });
 }
 
-fn get_possible_values_for_subcommand_and_option(subcommand: &str, option: &str) -> Vec<String> {
+fn get_possible_values_for_subcommand_and_option(
+    subcommand: &str,
+    option: &str,
+) -> Vec<String> {
     let app_args_binding = AppArgs::command();
 
     if let Some(it) = app_args_binding.find_subcommand(subcommand) {
@@ -384,13 +394,9 @@ fn get_possible_values_for_subcommand_and_option(subcommand: &str, option: &str)
                     .collect::<Vec<_>>();
 
                 call_if_true!(DEVELOPMENT_MODE, {
-                    log_debug(
-                        format!(
-                            "{subcommand}, {option} - possible_values: {:?}",
-                            possible_values
-                        )
-                        .green()
-                        .to_string(),
+                    tracing::debug!(
+                        "{subcommand}, {option} - possible_values: {}",
+                        format!("{possible_values:?}").green()
                     );
                 });
 
