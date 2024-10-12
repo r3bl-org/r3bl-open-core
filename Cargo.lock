@@ -1799,6 +1799,7 @@ dependencies = [
  "futures-util",
  "miette",
  "pretty_assertions",
+ "r3bl_ansi_color",
  "r3bl_core",
  "r3bl_test_fixtures",
  "r3bl_tui",

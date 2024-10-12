@@ -350,7 +350,8 @@ pub enum SelectionMode {
 
 #[cfg(test)]
 mod test_select_from_list {
-    use r3bl_core::{assert_eq2, is_fully_uninteractive_terminal, TTYResult};
+    use r3bl_ansi_color::{is_fully_uninteractive_terminal, TTYResult};
+    use r3bl_core::assert_eq2;
 
     use super::*;
     use crate::{TestStringWriter, TestVecKeyPressReader};
