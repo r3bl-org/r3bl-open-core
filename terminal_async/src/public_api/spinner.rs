@@ -18,12 +18,11 @@
 use std::{sync::Arc, time::Duration};
 
 use crossterm::terminal;
-use r3bl_core::{is_fully_uninteractive_terminal,
-                is_stdout_piped,
-                LineStateControlSignal,
-                SharedWriter,
-                StdoutIsPipedResult,
-                TTYResult};
+use r3bl_ansi_color::{is_fully_uninteractive_terminal,
+                      is_stdout_piped,
+                      StdoutIsPipedResult,
+                      TTYResult};
+use r3bl_core::{LineStateControlSignal, SharedWriter};
 use tokio::time::interval;
 
 use crate::{spinner_render, SafeBool, SafeRawTerminal, SpinnerStyle, StdMutex};

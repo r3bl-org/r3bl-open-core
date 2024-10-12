@@ -693,7 +693,7 @@ pub mod test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use r3bl_core::{is_fully_uninteractive_terminal, TTYResult};
+    use r3bl_ansi_color::{is_fully_uninteractive_terminal, TTYResult};
     use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _,
                              InputDeviceExt as _};
     use test_fixtures::get_input_vec;

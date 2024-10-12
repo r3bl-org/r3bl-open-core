@@ -477,10 +477,10 @@ mod tests {
               time::Duration};
 
     use position::Position;
+    use r3bl_ansi_color::{is_fully_uninteractive_terminal, TTYResult};
     use r3bl_core::{assert_eq2,
                     ch,
                     color,
-                    is_fully_uninteractive_terminal,
                     ok,
                     position,
                     send_signal,
@@ -499,7 +499,6 @@ mod tests {
                     GraphemeClusterSegment,
                     InputDevice,
                     OutputDevice,
-                    TTYResult,
                     TextColorizationPolicy,
                     TuiStyle,
                     UnicodeString,
