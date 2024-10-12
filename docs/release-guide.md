@@ -40,6 +40,22 @@ Finally, push the git commit and tag to the remote repo: `git push ; git push --
 <a id="markdown-example-of-full-workflow" name="example-of-full-workflow"></a>
 
 ```sh
+cd ansi_color
+# Update version in Cargo.toml and this file
+# Update CHANGELOG.md
+# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
+# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo publish --dry-run --allow-dirty
+cargo readme > README.md
+git add -A
+git commit -S -m "v0.6.10-ansi_color"
+git tag -a v0.6.10-ansi_color -m "v0.6.10-ansi_color"
+cargo publish
+git push ; git push --tags # Push tags & commits
+cd ..
+
 cd core
 # Update version in Cargo.toml and this file
 # Update CHANGELOG.md
@@ -79,12 +95,6 @@ cd tuify
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-<!-- TOC -->
-
-- [Cut a release and publish it to crates.io](#cut-a-release-and-publish-it-to-cratesio)
-- [Example of full workflow](#example-of-full-workflow)
-
-<!-- /TOC -->G.md
 # Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
 # - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
@@ -165,22 +175,14 @@ cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
 
-cd ansi_color
-# Update version in Cargo.toml and this file
-# Update CHANGELOG.md
-# Run "Dependi: Update All dependencies to the latest version" in vscode w/ the Cargo.toml file open
-# - instead of using `cargo-edit` https://github.com/killercup/cargo-edit and the `cargo upgrade` command
-cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
-cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo publish --dry-run --allow-dirty
-cargo readme > README.md
-git add -A
-git commit -S -m "v0.6.10-ansi_color"
-git tag -a v0.6.10-ansi_color -m "v0.6.10-ansi_color"
-cargo publish
-git push ; git push --tags # Push tags & commits
-cd ..
+# Finally, push the git commit and tag to the remote repo
+git tag -l --sort=-creatordate # Check the tags
+git push ; git push --tags
+```
 
+## Deprecated workflow for crates moved to [r3bl-open-core-archive](https://github.com/r3bl-org/r3bl-open-core-archive) repo
+
+```sh
 cd simple_logger
 # Update version in Cargo.toml and this file
 # Update CHANGELOG.md

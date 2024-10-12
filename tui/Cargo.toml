@@ -30,9 +30,6 @@ r3bl_core = { path = "../core", version = "0.9.16" }             # version is re
 r3bl_macro = { path = "../macro", version = "0.9.10" }           # version is requried to publish to crates.io
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.10" } # version is requried to publish to crates.io
 
-# Logging.
-log = { version = "0.4.22", features = ["std"] }
-
 # Time
 chrono = "0.4.38"
 

@@ -28,7 +28,6 @@ path = "src/lib.rs"
 [dependencies]
 # r3bl-open-core.
 r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" } # Convert between ansi and rgb.
-log = { version = "0.4.22", features = ["std"] }                # For logging.
 
 # https://github.com/serde-rs/serde.
 serde = { version = "1.0.210", features = ["derive"] }

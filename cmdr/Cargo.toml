@@ -49,7 +49,6 @@ r3bl_macro = { path = "../macro", version = "0.9.10" }                      # ve
 r3bl_tui = { path = "../tui", version = "0.5.9" }                           # version is requried to publish to crates.io
 r3bl_tuify = { path = "../tuify", version = "0.1.27" }                      # version is requried to publish to crates.io
 r3bl_analytics_schema = { path = "../analytics_schema", version = "0.0.2" } # version is requried to publish to crates.io
-log = { version = "0.4.22", features = ["std"] }
 
 # Reqwest (HTTP client).
 reqwest = { version = "0.12.7", features = ["json"] }
