@@ -23,17 +23,16 @@ use std::{io::{stdin, BufRead, Result},
 
 use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use crossterm::style::Stylize;
-use r3bl_core::{call_if_true, throws, try_initialize_global_logging};
-use r3bl_tuify::{get_size,
-                 get_terminal_width,
-                 is_stdin_piped,
-                 is_stdout_piped,
-                 select_from_list,
-                 SelectionMode,
-                 StdinIsPipedResult,
-                 StdoutIsPipedResult,
-                 StyleSheet,
-                 DEVELOPMENT_MODE};
+use r3bl_core::{call_if_true,
+                get_size,
+                get_terminal_width,
+                is_stdin_piped,
+                is_stdout_piped,
+                throws,
+                try_initialize_global_logging,
+                StdinIsPipedResult,
+                StdoutIsPipedResult};
+use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, DEVELOPMENT_MODE};
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 use StdinIsPipedResult::{StdinIsNotPiped, StdinIsPiped};
 use StdoutIsPipedResult::{StdoutIsNotPiped, StdoutIsPiped};

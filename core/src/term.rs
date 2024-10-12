@@ -18,7 +18,8 @@
 use std::io::{self, IsTerminal as _};
 
 use crossterm::terminal::size;
-use r3bl_core::{ch, size::Size};
+
+use crate::{ch, size::Size};
 
 pub const DEFAULT_WIDTH: usize = 80;
 
