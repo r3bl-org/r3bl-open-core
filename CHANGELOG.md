@@ -265,11 +265,11 @@ in a text editor.
     crates have been reorganized and renamed. The functionality has not changed at all,
     just the imports.
 
-- Moved:
-  - Move `term.rs` into `r3bl_core` where it belongs. This module provides a simple API to
-    detect whether the current process is running in an interactive TTY or not. Under the
-    covers the `crossterm` crate is used to detect this. This API simply provides an
-    ergonomic `enum` instead of returning a `bool` result.
+- Removed:
+  - Move some of `term.rs` into:
+    - `r3bl_core` - The functions to get the terminal window size and width.
+    - `r3bl_ansi_color` - The functions to detect whether the current process is running
+      in an interactive TTY or not.
 
 ### v0.1.27 (2024-09-12)
 
@@ -768,11 +768,8 @@ in the real world.
     variety of different input and output devices (in the future). Support for this is
     provided in [`r3bl_test_fixtures`](#r3bl_test_fixtures).
     - Moved:
-  - Move `term.rs` into `r3bl_core` where it belongs. This module provides a simple API to
-    detect whether the current process is running in an interactive TTY or not. Under the
-    covers the `crossterm` crate is used to detect this. This API simply provides an
-    ergonomic `enum` instead of returning a `bool` result.
-
+  - Move some code from `r3bl_tuify`'s `term.rs` into `r3bl_core`. This module provides a
+    simple API to detect the size of a terminal window and its width.
 
 ## `r3bl_analytics_schema`
 
@@ -1090,6 +1087,14 @@ This is the first release of this crate.
     powerful (multi) line editor and prompt.
 
 ## `r3bl_ansi_color`
+
+### next-release-ansi-color
+
+- Added:
+  - Move code from `r3bl_core`'s `term.rs` to detect whether `stdin`, `stdout`, `stderr`
+    is interactive. This has a dependency on the standard library, and not `crossterm`
+    anymore. The API exposed here is ergonomic, and returns an `enum` rather than `bool`,
+    which make it easier to use and understand.
 
 ### v0.6.10 (2024-09-12)
 

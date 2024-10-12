@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::io::{self, IsTerminal as _};
+use std::io::{self};
 
 use crossterm::terminal::size;
 
@@ -38,73 +38,4 @@ pub fn get_size() -> io::Result<Size> {
         col_count: columns.into(),
         row_count: rows.into(),
     })
-}
-
-#[derive(Debug)]
-pub enum StdinIsPipedResult {
-    StdinIsPiped,
-    StdinIsNotPiped,
-}
-
-#[derive(Debug)]
-pub enum StdoutIsPipedResult {
-    StdoutIsPiped,
-    StdoutIsNotPiped,
-}
-
-/// If you run `echo "test" | cargo run` the following will return true.
-/// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
-pub fn is_stdin_piped() -> StdinIsPipedResult {
-    if !std::io::stdin().is_terminal() {
-        StdinIsPipedResult::StdinIsPiped
-    } else {
-        StdinIsPipedResult::StdinIsNotPiped
-    }
-}
-
-/// If you run `cargo run | grep foo` the following will return true.
-/// More info: <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
-pub fn is_stdout_piped() -> StdoutIsPipedResult {
-    use std::io::IsTerminal as _;
-    if !std::io::stdout().is_terminal() {
-        StdoutIsPipedResult::StdoutIsPiped
-    } else {
-        StdoutIsPipedResult::StdoutIsNotPiped
-    }
-}
-
-#[derive(Debug)]
-pub enum TTYResult {
-    IsInteractive,
-    IsNotInteractive,
-}
-
-/// Returns [TTYResult::IsInteractive] if stdin, stdout, and stderr are *all* fully
-/// interactive.
-///
-/// There are situations where some can be interactive and others not, such as when piping
-/// is active.
-pub fn is_fully_interactive_terminal() -> TTYResult {
-    use crossterm::tty::IsTty;
-    let is_tty: bool = std::io::stdin().is_tty();
-    match is_tty {
-        true => TTYResult::IsInteractive,
-        false => TTYResult::IsNotInteractive,
-    }
-}
-
-/// Returns [TTYResult::IsNotInteractive] if stdin, stdout, and stderr are *all* fully
-/// uninteractive. This happens when `cargo test` runs.
-///
-/// There are situations where some can be interactive and others not, such as when piping
-/// is active.
-pub fn is_fully_uninteractive_terminal() -> TTYResult {
-    use crossterm::tty::IsTty;
-    let stdin_is_tty: bool = std::io::stdin().is_tty();
-    let stdout_is_tty: bool = std::io::stdout().is_tty();
-    let stderr_is_tty: bool = std::io::stderr().is_tty();
-    match !stdin_is_tty && !stdout_is_tty && !stderr_is_tty {
-        true => TTYResult::IsNotInteractive,
-        false => TTYResult::IsInteractive,
-    }
 }

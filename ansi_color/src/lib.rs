@@ -218,7 +218,7 @@
 //!   support truecolor and only supports ANSI 256 color.
 //!
 //! Here are some relevant links:
-//!
+//! <!-- cspell:disable -->
 //! 1. [Issue 47: `concolor`](https://github.com/rust-cli/concolor/issues/47)
 //! 1. [`anstream` documentation](https://docs.rs/anstream/latest/anstream/)
 //! 1. [`colorchoice` documentation](https://docs.rs/colorchoice/latest/colorchoice/)
@@ -228,6 +228,7 @@
 //! 1. [`supports-color` documentation](https://docs.rs/supports-color/2.0.0/supports_color/)
 //! 1. [`r3bl_ansi_color` crate](https://crates.io/crates/r3bl_ansi_color) (the source in `ansi_color` folder is this crate)
 //! 1. [`colored` crate](https://crates.io/crates/colored)
+//! <!-- cspell:enable -->
 
 // https://github.com/rust-lang/rust-clippy
 // https://rust-lang.github.io/rust-clippy/master/index.html
@@ -243,6 +244,7 @@ pub mod color;
 pub mod convert;
 pub mod detect_color_support;
 pub mod rgb_color;
+pub mod term;
 pub mod transform_color;
 
 pub use ansi256_color::*;
@@ -252,4 +254,5 @@ pub use color::*;
 pub use convert::*;
 pub use detect_color_support::*;
 pub use rgb_color::*;
+pub use term::*;
 pub use transform_color::*;
