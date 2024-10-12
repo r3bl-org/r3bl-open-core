@@ -20,10 +20,9 @@ use std::io::stdout;
 use clap::ValueEnum;
 use crossterm::style::Stylize;
 use r3bl_ansi_color::AnsiStyledText;
-use r3bl_core::{call_if_true, ch, Size};
+use r3bl_core::{call_if_true, ch, get_size, Size};
 
 use crate::{enter_event_loop,
-            get_size,
             CalculateResizeHint,
             CaretVerticalViewportLocation,
             CrosstermKeyPressReader,
@@ -351,13 +350,10 @@ pub enum SelectionMode {
 
 #[cfg(test)]
 mod test_select_from_list {
-    use r3bl_core::assert_eq2;
+    use r3bl_core::{assert_eq2, is_fully_uninteractive_terminal, TTYResult};
 
     use super::*;
-    use crate::{is_fully_uninteractive_terminal,
-                TTYResult,
-                TestStringWriter,
-                TestVecKeyPressReader};
+    use crate::{TestStringWriter, TestVecKeyPressReader};
 
     fn create_state<'a>() -> State<'a> {
         State {

@@ -730,7 +730,6 @@ pub mod keypress;
 pub mod public_api;
 pub mod scroll;
 pub mod state;
-pub mod term;
 pub mod test_utils;
 
 pub use components::*;
@@ -741,7 +740,6 @@ pub use keypress::*;
 pub use public_api::*;
 pub use scroll::*;
 pub use state::*;
-pub use term::*;
 pub use test_utils::*;
 
 /// Enable file logging. You can use `tail -f log.txt` to watch the logs.

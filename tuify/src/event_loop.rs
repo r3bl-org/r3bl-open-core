@@ -19,13 +19,9 @@ use std::io::{Result, Write};
 use crossterm::{cursor::{Hide, Show},
                 execute,
                 terminal::{disable_raw_mode, enable_raw_mode}};
+use r3bl_core::{is_fully_uninteractive_terminal, TTYResult};
 
-use crate::{is_fully_uninteractive_terminal,
-            CalculateResizeHint,
-            FunctionComponent,
-            KeyPress,
-            KeyPressReader,
-            TTYResult};
+use crate::{CalculateResizeHint, FunctionComponent, KeyPress, KeyPressReader};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EventLoopResult {
