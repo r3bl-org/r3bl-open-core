@@ -40,9 +40,6 @@ serde_json = "1.0.128"
 # Terminal output.
 crossterm = "0.28.1"
 
-# Logging.
-log = { version = "0.4.22", features = ["std"] }
-
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
 clap = { version = "4.5.17", features = ["derive", "wrap_help"] }
