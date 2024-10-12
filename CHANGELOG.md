@@ -265,6 +265,12 @@ in a text editor.
     crates have been reorganized and renamed. The functionality has not changed at all,
     just the imports.
 
+- Moved:
+  - Move `term.rs` into `r3bl_core` where it belongs. This module provides a simple API to
+    detect whether the current process is running in an interactive TTY or not. Under the
+    covers the `crossterm` crate is used to detect this. This API simply provides an
+    ergonomic `enum` instead of returning a `bool` result.
+
 ### v0.1.27 (2024-09-12)
 
 - Updated:
@@ -761,6 +767,12 @@ in the real world.
     for end to end testing. This is useful for end to end testing, and adapting to a
     variety of different input and output devices (in the future). Support for this is
     provided in [`r3bl_test_fixtures`](#r3bl_test_fixtures).
+    - Moved:
+  - Move `term.rs` into `r3bl_core` where it belongs. This module provides a simple API to
+    detect whether the current process is running in an interactive TTY or not. Under the
+    covers the `crossterm` crate is used to detect this. This API simply provides an
+    ergonomic `enum` instead of returning a `bool` result.
+
 
 ## `r3bl_analytics_schema`
 

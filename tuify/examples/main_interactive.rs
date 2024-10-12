@@ -18,10 +18,12 @@
 use std::{io::Result, vec};
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style as RStyle};
-use r3bl_core::{call_if_true, throws, try_initialize_global_logging};
+use r3bl_core::{call_if_true,
+                get_size,
+                get_terminal_width,
+                throws,
+                try_initialize_global_logging};
 use r3bl_tuify::{components::style::StyleSheet,
-                 get_size,
-                 get_terminal_width,
                  select_from_list,
                  select_from_list_with_multi_line_header,
                  SelectionMode,

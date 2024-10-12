@@ -18,7 +18,8 @@
 use std::{fmt::Display, io::Result};
 
 use r3bl_ansi_color::{self, AnsiStyledText, Color};
-use r3bl_tuify::{get_terminal_width, select_from_list, SelectionMode, StyleSheet};
+use r3bl_core::get_terminal_width;
+use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]

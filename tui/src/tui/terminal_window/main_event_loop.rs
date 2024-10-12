@@ -476,11 +476,11 @@ mod tests {
     use std::{fmt::{Display, Formatter},
               time::Duration};
 
-    use crossterm::tty::IsTty as _;
     use position::Position;
     use r3bl_core::{assert_eq2,
                     ch,
                     color,
+                    is_fully_uninteractive_terminal,
                     ok,
                     position,
                     send_signal,
@@ -499,6 +499,7 @@ mod tests {
                     GraphemeClusterSegment,
                     InputDevice,
                     OutputDevice,
+                    TTYResult,
                     TextColorizationPolicy,
                     TuiStyle,
                     UnicodeString,
@@ -600,8 +601,8 @@ mod tests {
 
         let my_offscreen_buffer = global_data.maybe_saved_offscreen_buffer.unwrap();
 
-        // This is for CI/CD. It does not support truecolor, and degrades to ANSI 256 colors
-        if !std::io::stdin().is_tty() {
+        // This is for CI/CD environment. It does not support truecolor, and degrades to ANSI 256 colors
+        if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
             // Check pixel char at 4 x 7.
             {
                 let PixelChar::PlainText {
@@ -632,7 +633,7 @@ mod tests {
                 assert_eq2!(content, GraphemeClusterSegment::from("H"));
             }
         }
-        // This is for local development. It supports truecolor.
+        // This is for local development environment. It supports truecolor.
         else {
             // Check pixel char at 4 x 7.
             {
