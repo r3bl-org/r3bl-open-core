@@ -13,6 +13,7 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "mutantdino.resourcemonitor", // Resource Monitor.
     "compulim.vscode-clock", // Clock.
     "keksiqc.idx-monospace-theme", // IDX Monospace Theme.
     "devgauravjatt.github-catppuccin-dark", // GitHub + Catppuccino Dark Theme.
