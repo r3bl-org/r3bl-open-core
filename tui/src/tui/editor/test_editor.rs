@@ -17,11 +17,19 @@
 
 #[cfg(test)]
 mod test_config_options {
-    use r3bl_rs_utils_core::*;
+    use r3bl_core::{assert_eq2, position, UnicodeString};
 
-    use super::*;
-    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
-                *};
+    use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
+                test_fixtures::mock_real_objects_for_editor,
+                CaretDirection,
+                CaretKind,
+                EditorBuffer,
+                EditorEngine,
+                EditorEngineConfig,
+                EditorEngineInternalApi,
+                EditorEvent,
+                LineMode,
+                DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]
     fn test_multiline_true() {
@@ -135,11 +143,17 @@ mod test_config_options {
 
 #[cfg(test)]
 mod test_editor_ops {
-    use r3bl_rs_utils_core::*;
+    use r3bl_core::{assert_eq2, ch, position, size, UnicodeString};
 
-    use super::*;
-    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
-                *};
+    use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
+                test_fixtures::{assert, mock_real_objects_for_editor},
+                CaretDirection,
+                CaretKind,
+                EditorArgsMut,
+                EditorBuffer,
+                EditorEngineInternalApi,
+                EditorEvent,
+                DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]
     fn editor_delete() {
@@ -1629,106 +1643,19 @@ mod test_editor_ops {
     }
 }
 
-pub mod mock_real_objects_for_editor {
-    use std::fmt::Debug;
-
-    use r3bl_rs_utils_core::*;
-    use tokio::sync::mpsc;
-
-    use crate::*;
-
-    pub fn make_global_data<S, AS>(window_size: Option<Size>) -> GlobalData<S, AS>
-    where
-        S: Debug + Default + Clone + Sync + Send,
-        AS: Debug + Default + Clone + Sync + Send,
-    {
-        let (sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
-
-        GlobalData {
-            window_size: window_size.unwrap_or_default(),
-            maybe_saved_offscreen_buffer: Default::default(),
-            main_thread_channel_sender: sender,
-            state: Default::default(),
-        }
-    }
-
-    pub fn make_editor_engine_with_bounds(size: Size) -> EditorEngine {
-        let flex_box = FlexBox {
-            style_adjusted_bounds_size: size,
-            style_adjusted_origin_pos: position!( col_index: 0, row_index: 0 ),
-            ..Default::default()
-        };
-        let current_box: PartialFlexBox = (&flex_box).into();
-        EditorEngine {
-            current_box,
-            ..Default::default()
-        }
-    }
-
-    pub fn make_editor_engine() -> EditorEngine {
-        let flex_box = FlexBox {
-            style_adjusted_bounds_size: size!( col_count: 10, row_count: 10 ),
-            style_adjusted_origin_pos: position!( col_index: 0, row_index: 0 ),
-            ..Default::default()
-        };
-        let current_box: PartialFlexBox = (&flex_box).into();
-        EditorEngine {
-            current_box,
-            ..Default::default()
-        }
-    }
-}
-
-#[cfg(test)]
-pub mod assert {
-    use r3bl_rs_utils_core::*;
-
-    use crate::*;
-
-    pub fn none_is_at_caret(buffer: &EditorBuffer, engine: &EditorEngine) {
-        assert_eq2!(
-            EditorEngineInternalApi::string_at_caret(buffer, engine),
-            None
-        );
-    }
-
-    pub fn str_is_at_caret(
-        editor_buffer: &EditorBuffer,
-        engine: &EditorEngine,
-        expected: &str,
-    ) {
-        match EditorEngineInternalApi::string_at_caret(editor_buffer, engine) {
-            Some(UnicodeStringSegmentSliceResult {
-                unicode_string_seg: s,
-                ..
-            }) => assert_eq2!(s.string, expected),
-            None => panic!("Expected string at caret, but got None."),
-        }
-    }
-
-    pub fn line_at_caret(
-        editor_buffer: &EditorBuffer,
-        engine: &EditorEngine,
-        expected: &str,
-    ) {
-        assert_eq2!(
-            EditorEngineInternalApi::line_at_caret_to_string(editor_buffer, engine)
-                .unwrap()
-                .string,
-            expected
-        );
-    }
-}
-
 #[cfg(test)]
 mod selection_tests {
     use std::collections::HashMap;
 
-    use r3bl_rs_utils_core::*;
+    use r3bl_core::{assert_eq2, ch, SelectionRange};
 
-    use super::*;
-    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
-                *};
+    use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
+                test_fixtures::mock_real_objects_for_editor,
+                CaretDirection,
+                EditorBuffer,
+                EditorEvent,
+                SelectionAction,
+                DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]
     fn test_text_selection() {
@@ -1954,12 +1881,15 @@ mod selection_tests {
 
 #[cfg(test)]
 mod clipboard_tests {
+    use r3bl_core::{assert_eq2, UnicodeString};
 
-    use r3bl_rs_utils_core::*;
-
-    use super::*;
-    use crate::{editor_buffer_clipboard_support::test_clipboard_service_provider::TestClipboard,
-                *};
+    use crate::{system_clipboard_service_provider::test_fixtures::TestClipboard,
+                test_fixtures::mock_real_objects_for_editor,
+                CaretDirection,
+                EditorBuffer,
+                EditorEvent,
+                SelectionAction,
+                DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]
     fn test_copy() {

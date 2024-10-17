@@ -21,11 +21,8 @@ use branch_checkout_formatting::{add_spaces_to_end_of_string,
                                  display_correct_message_after_user_tried_to_checkout,
                                  get_formatted_modified_files};
 use r3bl_ansi_color::{AnsiStyledText, Style};
-use r3bl_rs_utils_core::{ch, ChUnit, CommonResult, UnicodeString};
-use r3bl_tuify::{get_terminal_width,
-                 select_from_list_with_multi_line_header,
-                 SelectionMode,
-                 StyleSheet};
+use r3bl_core::{ch, get_terminal_width, CommonResult, UnicodeString};
+use r3bl_tuify::{select_from_list_with_multi_line_header, SelectionMode, StyleSheet};
 
 use super::{get_branches, try_get_current_branch};
 use crate::{color_constants::DefaultColors::{FrozenBlue,
@@ -38,8 +35,17 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
             giti::{clap_config::BranchSubcommand,
                    report_unknown_error_and_propagate,
                    single_select_instruction_header,
-                   ui_strings::UIStrings::*,
+                   ui_strings::UIStrings::{AlreadyOnCurrentBranch,
+                                           BranchDoesNotExist,
+                                           FailedToSwitchToBranch,
+                                           ModifiedFileOnCurrentBranch,
+                                           ModifiedFilesOnCurrentBranch,
+                                           NoBranchGotCheckedOut,
+                                           PleaseCommitChangesBeforeSwitchingBranches,
+                                           SelectBranchToSwitchTo,
+                                           SwitchedToBranch},
                    CommandSuccessfulResponse}};
+
 pub fn try_checkout_branch(
     maybe_branch_name: Option<String>,
 ) -> CommonResult<CommandSuccessfulResponse> {

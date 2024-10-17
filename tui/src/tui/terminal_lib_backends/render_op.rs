@@ -16,13 +16,16 @@
  */
 
 use std::{fmt::{Debug, Formatter, Result},
-          ops::{Deref, DerefMut}};
+          ops::{AddAssign, Deref, DerefMut}};
 
-use r3bl_rs_utils_core::*;
+use r3bl_core::{LockedOutputDevice, Position, Size, TuiColor, TuiStyle};
 use serde::{Deserialize, Serialize};
 
 use super::TERMINAL_LIB_BACKEND;
-use crate::*;
+use crate::{CrosstermDebugFormatRenderOp,
+            PaintRenderOp,
+            RenderOpImplCrossterm,
+            TerminalLibBackend};
 
 /// Here's an example. Refer to [RenderOps] for more details.
 ///
@@ -40,7 +43,7 @@ use crate::*;
 macro_rules! render_ops {
   // Empty.
   () => {
-    RenderOps::default()
+    $crate::RenderOps::default()
   };
 
   // @new: Create a RenderOps. If any ($arg_render_op)* are passed, then add it to its list. Finally
@@ -56,7 +59,7 @@ macro_rules! render_ops {
   ) => {
     /* Enclose the expansion in a block so that we can use multiple statements. */
     {
-      let mut render_ops = RenderOps::default();
+      let mut render_ops = $crate::RenderOps::default();
       /* Start a repetition. */
       $(
         /* Each repeat will contain the following statement, with $arg_render_op replaced. */
@@ -105,7 +108,7 @@ macro_rules! render_ops {
       /* Start a repetition. */
       $(
         /* Each repeat will contain the following statement, with $arg_render_op replaced. */
-        $arg_styled_texts.render_into(&mut $arg_render_ops);
+        $crate::render_tui_styled_texts_into(&$arg_styled_texts, &mut $arg_render_ops);
       )*
     }
   };
@@ -113,23 +116,23 @@ macro_rules! render_ops {
 
 /// For ease of use, please use the [render_ops!] macro.
 ///
-/// It is a collection of *atomic* paint operations (aka [`RenderOps`] at various [`ZOrder`]s); each
-/// [`RenderOps`] is made up of a [vec] of [`RenderOp`]. It contains `Map<ZOrder, Vec<RenderOps>>`,
-/// eg:
-/// - [`ZOrder::Normal`] => vec![[`RenderOp::ResetColor`], [`RenderOp::MoveCursorPositionAbs(..)`],
-///   [`RenderOp::PrintTextWithAttributes(..)`]]
-/// - [`ZOrder::Glass`] => vec![[`RenderOp::ResetColor`], [`RenderOp::MoveCursorPositionAbs(..)`],
-///   [`RenderOp::PrintTextWithAttributes(..)`]]
+/// It is a collection of *atomic* paint operations (aka [`RenderOps`] at various
+/// [`super::ZOrder`]s); each [`RenderOps`] is made up of a [vec] of [`RenderOp`]. It
+/// contains `Map<ZOrder, Vec<RenderOps>>`, eg:
+/// - [`super::ZOrder::Normal`] => vec![[`RenderOp::ResetColor`],
+///   [`RenderOp::MoveCursorPositionAbs`], [`RenderOp::PaintTextWithAttributes`]]
+/// - [`super::ZOrder::Glass`] => vec![[`RenderOp::ResetColor`],
+///   [`RenderOp::MoveCursorPositionAbs`], [`RenderOp::PaintTextWithAttributes`]]
 /// - etc.
 ///
 /// # What is an atomic paint operation?
 /// 1. It moves the cursor using:
 ///     1. [`RenderOp::MoveCursorPositionAbs`]
 ///     2. [`RenderOp::MoveCursorPositionRelTo`]
-/// 2.  And it does not assume that the cursor is in the correct position from some other previously
-///     executed operation!
-/// 3. So there are no side effects when re-ordering or omitting painting an atomic paint operation
-///    (eg in the case where it has already been painted before).
+/// 2.  And it does not assume that the cursor is in the correct position from some other
+///     previously executed operation!
+/// 3. So there are no side effects when re-ordering or omitting painting an atomic paint
+///    operation (eg in the case where it has already been painted before).
 ///
 /// Here's an example. Consider using the macro for convenience (see [render_ops!]).
 ///
@@ -144,9 +147,9 @@ macro_rules! render_ops {
 /// ```
 ///
 /// # Paint optimization
-/// Due to the compositor [OffscreenBuffer], there is no need to optimize the individual paint
-/// operations. You don't have to manage your own whitespace or doing clear before paint! 🎉 The
-/// compositor takes care of that for you!
+/// Due to the compositor [super::OffscreenBuffer], there is no need to optimize the
+/// individual paint operations. You don't have to manage your own whitespace or doing
+/// clear before paint! 🎉 The compositor takes care of that for you!
 #[derive(
     Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, size_of::SizeOf,
 )]
@@ -160,12 +163,16 @@ pub struct RenderOpsLocalData {
 }
 
 pub mod render_ops_impl {
-    use std::ops::AddAssign;
-
     use super::*;
 
     impl RenderOps {
-        pub fn execute_all(&self, skip_flush: &mut bool, window_size: Size) {
+        pub fn execute_all(
+            &self,
+            skip_flush: &mut bool,
+            window_size: Size,
+            locked_output_device: LockedOutputDevice<'_>,
+            is_mock: bool,
+        ) {
             let mut local_data = RenderOpsLocalData::default();
             for render_op in self.list.iter() {
                 RenderOps::route_paint_render_op_to_backend(
@@ -173,6 +180,8 @@ pub mod render_ops_impl {
                     skip_flush,
                     render_op,
                     window_size,
+                    locked_output_device,
+                    is_mock,
                 );
             }
         }
@@ -182,6 +191,8 @@ pub mod render_ops_impl {
             skip_flush: &mut bool,
             render_op: &RenderOp,
             window_size: Size,
+            locked_output_device: LockedOutputDevice<'_>,
+            is_mock: bool,
         ) {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
@@ -190,6 +201,8 @@ pub mod render_ops_impl {
                         render_op,
                         window_size,
                         local_data,
+                        locked_output_device,
+                        is_mock,
                     );
                 }
                 TerminalLibBackend::Termion => todo!(), // FUTURE: implement PaintRenderOp trait for termion
@@ -237,9 +250,9 @@ pub enum RenderOp {
 
     ExitRawMode,
 
-    /// This is always painted on top. [Position] is the absolute column and row on the terminal
-    /// screen. This uses [sanitize_and_save_abs_position] to clean up the given
-    /// [Position].
+    /// This is always painted on top. [Position] is the absolute column and row on the
+    /// terminal screen. This uses [super::sanitize_and_save_abs_position] to clean up the
+    /// given [Position].
     MoveCursorPositionAbs(/* absolute position */ Position),
 
     /// This is always painted on top. 1st [Position] is the origin column and row, and the 2nd
@@ -265,8 +278,8 @@ pub enum RenderOp {
     /// apply attributes, use [RenderOp::PaintTextWithAttributes] instead.
     ApplyColors(Option<TuiStyle>),
 
-    /// Translate [TuiStyle] into *only* attributes for crossterm (bold, italic, underline,
-    /// strikethrough, etc) and not colors. If you need to apply color, use
+    /// Translate [TuiStyle] into *only* attributes for crossterm (bold, italic,
+    /// underline, strikethrough, etc) and not colors. If you need to apply color, use
     /// [RenderOp::ApplyColors] instead.
     ///
     /// 1. If the [String] argument is plain text (no ANSI sequences) then it will be
@@ -278,10 +291,11 @@ pub enum RenderOp {
     PaintTextWithAttributes(String, Option<TuiStyle>),
 
     /// This is **not** meant for use directly by apps. It is to be used only by the
-    /// [OffscreenBuffer]. This operation skips the checks for content width padding & clipping, and
-    /// window bounds clipping. These are not needed when the compositor is painting an offscreen
-    /// buffer, since when the offscreen buffer was created the two render ops above were used which
-    /// already handle the clipping and padding.
+    /// [super::OffscreenBuffer]. This operation skips the checks for content width
+    /// padding & clipping, and window bounds clipping. These are not needed when the
+    /// compositor is painting an offscreen buffer, since when the offscreen buffer was
+    /// created the two render ops above were used which already handle the clipping and
+    /// padding.
     CompositorNoClipTruncPaintTextWithAttributes(String, Option<TuiStyle>),
 
     /// For [Default] impl.
@@ -296,8 +310,9 @@ mod render_op_impl {
     }
 
     impl Debug for RenderOp {
-        /// When [RenderPipeline] is printed as debug, each [RenderOp] is printed using this method. Also
-        /// [exec_render_op!] does not use this; it has its own way of logging output.
+        /// When [crate::RenderPipeline] is printed as debug, each [RenderOp] is printed
+        /// using this method. Also [crate::queue_render_op!] does not use this; it has its
+        /// own way of logging output.
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
@@ -313,19 +328,19 @@ mod render_op_impl_trait_flush {
     use super::*;
 
     impl Flush for RenderOp {
-        fn flush(&mut self) {
+        fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    RenderOpImplCrossterm {}.flush();
+                    RenderOpImplCrossterm {}.flush(locked_output_device);
                 }
                 TerminalLibBackend::Termion => todo!(), // FUTURE: implement flush for termion
             }
         }
 
-        fn clear_before_flush(&mut self) {
+        fn clear_before_flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    RenderOpImplCrossterm {}.clear_before_flush();
+                    RenderOpImplCrossterm {}.clear_before_flush(locked_output_device);
                 }
                 TerminalLibBackend::Termion => todo!(), // FUTURE: implement clear_before_flush for termion
             }
@@ -340,8 +355,9 @@ pub enum FlushKind {
 }
 
 pub trait Flush {
-    fn flush(&mut self);
-    fn clear_before_flush(&mut self);
+    fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>);
+
+    fn clear_before_flush(&mut self, locked_output_device: LockedOutputDevice<'_>);
 }
 
 pub trait DebugFormatRenderOp {

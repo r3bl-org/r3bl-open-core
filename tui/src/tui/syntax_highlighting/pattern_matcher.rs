@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::{ch, ChUnit, UnicodeString};
+use r3bl_core::{ch, ChUnit, UnicodeString};
 
 #[derive(Debug)]
 pub enum CharacterMatchResult {
@@ -97,7 +97,7 @@ impl<'a> PatternMatcherStateMachine<'a> {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::{assert_eq2, ch};
+    use r3bl_core::{assert_eq2, ch};
 
     use super::*;
 

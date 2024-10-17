@@ -17,7 +17,7 @@
 
 use std::io::{BufReader, Cursor};
 
-use syntect::highlighting::*;
+use syntect::highlighting::{Theme, ThemeSet};
 
 pub fn try_load_r3bl_theme() -> std::io::Result<Theme> {
     // Load bytes from file asset.
@@ -43,4 +43,21 @@ pub fn try_load_r3bl_theme() -> std::io::Result<Theme> {
 pub fn load_default_theme() -> Theme {
     let theme_set = ThemeSet::load_defaults();
     theme_set.themes["base16-ocean.dark"].clone()
+}
+
+#[cfg(test)]
+mod tests {
+    use r3bl_core::throws;
+
+    use crate::try_load_r3bl_theme;
+
+    /// Use a [std::io::Cursor] as a fake [std::fs::File]:
+    /// <https://stackoverflow.com/a/41069910/2085356>
+    #[test]
+    fn load_theme() -> std::io::Result<()> {
+        throws!({
+            let theme = try_load_r3bl_theme()?;
+            dbg!(&theme);
+        });
+    }
 }

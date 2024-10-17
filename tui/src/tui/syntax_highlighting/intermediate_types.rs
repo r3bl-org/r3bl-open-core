@@ -15,24 +15,33 @@
  *   limitations under the License.
  */
 
-//! This module contains the intermediate types that are used in the process of converting source to
-//! syntax highlighted text.
+//! This module contains the intermediate types that are used in the process of converting
+//! source to syntax highlighted text.
 //!
 //! These types are used for both:
 //! 1. Syntect parser.
-//! 2. md_parser_syn_hi, which is a custom R3BL highlighter for md_parser (custom R3BL Markdown
-//!    parser).
+//! 2. md_parser_syn_hi, which is a custom R3BL highlighter for md_parser (custom R3BL
+//!    Markdown parser).
 //!
 //! In both cases:
-//! 1. The source document comes from an [crate::editor] component which is a [Vec] of [US] (unicode
-//!    strings).
-//! 2. This intermediate type is [clipped](StyleUSSpanLine::clip) to the visible area of the editor
-//!    component (based on scroll state in viewport). And finally that is converted to a
-//!    [crate::TuiStyledTexts].
+//! 1. The source document comes from an [crate::editor] component which is a [Vec] of
+//!    [US] (unicode strings).
+//! 2. This intermediate type is [clipped](StyleUSSpanLine::clip) to the visible area of
+//!    the editor component (based on scroll state in viewport). And finally that is
+//!    converted to a [r3bl_core::TuiStyledTexts].
 
-use r3bl_rs_utils_core::*;
+use r3bl_core::{ch, tui_styled_text, ChUnit, TuiStyle, TuiStyledTexts};
 
-use crate::{constants::*, *};
+use crate::{constants::{COLON, COMMA, SPACE},
+            get_foreground_dim_style,
+            get_metadata_tags_marker_style,
+            get_metadata_tags_values_style,
+            get_metadata_title_marker_style,
+            get_metadata_title_value_style,
+            CharacterMatchResult,
+            List,
+            PatternMatcherStateMachine,
+            US};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple spans in a
 /// line of text.
@@ -42,18 +51,8 @@ pub struct StyleUSSpan {
     pub text: US,
 }
 
-mod style_us_span_impl {
-    use super::*;
-
-    impl StyleUSSpan {
-        pub fn new(style: TuiStyle, text: US) -> Self { Self { style, text } }
-    }
-
-    impl From<(&TuiStyle, &US)> for StyleUSSpan {
-        fn from((style, text): (&TuiStyle, &US)) -> Self {
-            Self::new(*style, text.clone())
-        }
-    }
+impl StyleUSSpan {
+    pub fn new(style: TuiStyle, text: US) -> Self { Self { style, text } }
 }
 
 /// A line of text is made up of multiple [StyleUSSpan]s.
@@ -230,12 +229,388 @@ impl StyleUSSpanLine {
     }
 }
 
-impl From<StyleUSSpanLine> for TuiStyledTexts {
-    fn from(styles: StyleUSSpanLine) -> Self {
-        let mut acc = TuiStyledTexts::default();
-        for StyleUSSpan { style, text } in styles.iter() {
-            acc += tui_styled_text!(@style: *style, @text: text.string.clone());
+mod convert {
+    use super::*;
+
+    impl From<(&TuiStyle, &US)> for StyleUSSpan {
+        fn from((style, text): (&TuiStyle, &US)) -> Self {
+            Self::new(*style, text.clone())
         }
-        acc
+    }
+
+    impl From<StyleUSSpanLine> for TuiStyledTexts {
+        fn from(styles: StyleUSSpanLine) -> Self {
+            let mut acc = TuiStyledTexts::default();
+            for StyleUSSpan { style, text } in styles.iter() {
+                acc += tui_styled_text!(@style: *style, @text: text.string.clone());
+            }
+            acc
+        }
+    }
+}
+
+/// Make sure that the code to clip styled text to a range [ start_col .. end_col ] works. The
+/// list of styled unicode string represents a single line of text in an editor component.
+#[cfg(test)]
+mod tests_clip_styled_texts {
+    use r3bl_core::{assert_eq2, ConvertToPlainText, RgbValue, TuiColor, UnicodeString};
+    use r3bl_macro::tui_style;
+
+    use super::*;
+    use crate::{list, List};
+
+    mod fixtures {
+        use super::*;
+
+        pub fn get_s1() -> TuiStyle {
+            tui_style! {
+              id: 1
+              color_bg: TuiColor::Rgb (RgbValue{ red: 1, green: 1, blue: 1 })
+            }
+        }
+
+        pub fn get_s2() -> TuiStyle {
+            tui_style! {
+              id: 2
+              color_bg: TuiColor::Rgb(RgbValue{ red: 2, green: 2, blue: 2 })
+            }
+        }
+
+        /// ```ignore
+        /// <span style="s1">first</span>
+        /// <span style="s1"> </span>
+        /// <span style="s2">second</span>
+        /// ```
+        pub fn get_list() -> List<StyleUSSpan> {
+            list! {
+                StyleUSSpan::new(get_s1(), UnicodeString::from("first")),
+                StyleUSSpan::new(get_s1(), UnicodeString::from(" ")),
+                StyleUSSpan::new(get_s2(), UnicodeString::from("second"))
+            }
+        }
+    }
+
+    /// ```text
+    /// BEFORE:
+    ///    ┌→s1
+    ///    │    ┌→s2
+    ///    │    │┌→s3
+    ///    ▒▒▒▒▒█▒▒▒▒▒▒
+    /// R ┌────────────┐
+    /// 0 │first second│
+    ///   └────────────┘
+    ///   C012345678901
+    ///
+    /// AFTER: Cut [ 2 .. 5 ].
+    ///      ┌→s1
+    ///      │  ┌→s2
+    ///      │  │┌→s3
+    /// R   ┌─────┐
+    /// 0 fi│rst s│econd
+    ///     └─────┘
+    ///     C01234 5678901
+    /// ```
+    #[test]
+    fn list_1_range_2_5() {
+        use fixtures::*;
+
+        assert_eq2!(get_list().len(), 3);
+
+        let scroll_offset_col_index = ch!(2);
+        let max_display_col_count = ch!(5);
+        let expected_clipped_string = "rst s";
+
+        // Equivalent no highlight version.
+        {
+            let line = TuiStyledTexts::from(get_list()).to_plain_text_us().string;
+            let line = UnicodeString::from(line);
+            let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+            let truncated_line = UnicodeString::from(truncated_line);
+            let truncated_line =
+                truncated_line.truncate_end_to_fit_width(max_display_col_count);
+            assert_eq2!(truncated_line, expected_clipped_string);
+        }
+
+        // clip version.
+        {
+            let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
+            // println!("{}", clipped.pretty_print_debug());
+            assert_eq2!(clipped.len(), 3);
+            let lhs = clipped.to_plain_text_us().string;
+            assert_eq2!(lhs, expected_clipped_string);
+        }
+    }
+
+    /// ```text
+    /// BEFORE:
+    ///    ┌→s1
+    ///    │    ┌→s2
+    ///    │    │┌→s3
+    ///    ▒▒▒▒▒█▒▒▒▒▒▒
+    /// R ┌────────────┐
+    /// 0 │first second│
+    ///   └────────────┘
+    ///   C012345678901
+    ///
+    /// AFTER: Cut [ 0 .. 3 ].
+    ///    ┌→s1
+    ///    │     ┌→s2
+    ///    │     │┌→s3
+    /// R ┌───┐
+    /// 0 │fir│st second
+    ///   └───┘
+    ///   C012 345678901
+    /// ```
+    #[test]
+    fn list_1_range_0_3() {
+        use fixtures::*;
+
+        assert_eq2!(get_list().len(), 3);
+
+        let scroll_offset_col_index = ch!(0);
+        let max_display_col_count = ch!(3);
+        let expected_clipped_string = "fir";
+
+        // Equivalent no highlight version.
+        {
+            let line = TuiStyledTexts::from(fixtures::get_list())
+                .to_plain_text_us()
+                .string;
+            let line = UnicodeString::from(line);
+            let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+            let truncated_line = UnicodeString::from(truncated_line);
+            let truncated_line =
+                truncated_line.truncate_end_to_fit_width(max_display_col_count);
+            assert_eq2!(truncated_line, expected_clipped_string);
+        }
+
+        // clip version.
+        {
+            let clipped =
+                fixtures::get_list().clip(scroll_offset_col_index, max_display_col_count);
+            // println!("{}", clipped.pretty_print_debug());
+            assert_eq2!(clipped.len(), 1);
+            let left = clipped.to_plain_text_us().string;
+            let right = expected_clipped_string;
+            assert_eq2!(left, right);
+        }
+    }
+
+    /// ```text
+    /// BEFORE:
+    ///    ┌→s1
+    ///    │    ┌→s2
+    ///    │    │┌→s3
+    ///    ▒▒▒▒▒█▒▒▒▒▒▒
+    /// R ┌────────────┐
+    /// 0 │first second│
+    ///   └────────────┘
+    ///   C012345678901
+    ///
+    /// AFTER: Cut [ 0 .. 5 ].
+    ///    ┌→s1
+    ///    │     ┌→s2
+    ///    │     │┌→s3
+    /// R ┌─────┐
+    /// 0 │first│ second
+    ///   └─────┘
+    ///   C01234 5678901
+    /// ```
+    #[test]
+    fn list_1_range_0_5() {
+        use fixtures::*;
+
+        assert_eq2!(get_list().len(), 3);
+
+        let scroll_offset_col_index = ch!(0);
+        let max_display_col_count = ch!(5);
+        let expected_clipped_string = "first";
+
+        // Equivalent no highlight version.
+        {
+            let line = TuiStyledTexts::from(fixtures::get_list())
+                .to_plain_text_us()
+                .string;
+            let line = UnicodeString::from(line);
+            let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+            let truncated_line = UnicodeString::from(truncated_line);
+            let truncated_line =
+                truncated_line.truncate_end_to_fit_width(max_display_col_count);
+            assert_eq2!(truncated_line, expected_clipped_string);
+        }
+
+        // clip version.
+        {
+            let clipped =
+                fixtures::get_list().clip(scroll_offset_col_index, max_display_col_count);
+            // println!("{}", clipped.pretty_print_debug());
+            assert_eq2!(clipped.len(), 1);
+            let lhs = clipped.to_plain_text_us().string;
+            let rhs = expected_clipped_string;
+            assert_eq2!(lhs, rhs);
+        }
+    }
+
+    /// ```text
+    /// BEFORE:
+    ///    ┌→s1
+    ///    │    ┌→s2
+    ///    │    │┌→s3
+    ///    ▒▒▒▒▒█▒▒▒▒▒▒
+    /// R ┌────────────┐
+    /// 0 │first second│
+    ///   └────────────┘
+    ///   C012345678901
+    ///
+    /// AFTER: Cut [ 2 .. 8 ].
+    ///      ┌→s1
+    ///      │  ┌→s2
+    ///      │  │┌→s3
+    /// R   ┌────────┐
+    /// 0 fi│rst seco│nd
+    ///     └────────┘
+    ///     C01234567 8901
+    /// ```
+    #[test]
+    fn list_1_range_2_8() {
+        use fixtures::*;
+
+        assert_eq2!(get_list().len(), 3);
+
+        let scroll_offset_col_index = ch!(2);
+        let max_display_col_count = ch!(8);
+        let expected_clipped_string = "rst seco";
+
+        // Expected no highlight version.
+        {
+            let line = TuiStyledTexts::from(fixtures::get_list())
+                .to_plain_text_us()
+                .string;
+            let line = UnicodeString::from(line);
+            let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+            let truncated_line = UnicodeString::from(truncated_line);
+            let truncated_line =
+                truncated_line.truncate_end_to_fit_width(max_display_col_count);
+            assert_eq2!(truncated_line, expected_clipped_string);
+        }
+
+        // clip version.
+        {
+            let clipped =
+                fixtures::get_list().clip(scroll_offset_col_index, max_display_col_count);
+            // println!("{}", clipped.pretty_print_debug());
+            assert_eq2!(clipped.len(), 3);
+            let left = clipped.to_plain_text_us().string;
+            let right = expected_clipped_string;
+            assert_eq2!(left, right);
+        }
+    }
+
+    #[test]
+    fn list_2() {
+        use fixtures::*;
+
+        fn get_list() -> List<StyleUSSpan> {
+            list! {
+                StyleUSSpan::new(
+                    get_s1(),
+                    UnicodeString::from(
+                        "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234",
+                    ),
+                )
+            }
+        }
+
+        let scroll_offset_col_index = ch!(1);
+        let max_display_col_count = ch!(77);
+        let expected_clipped_string =
+                "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234";
+
+        // BEFORE:
+        // ┌→0                                                                              │
+        // │                                                                           ┌→77 │
+        // .............................................................................    │ viewport
+        // 01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234
+        //
+        // AFTER:
+        // ┌→0                                                                              │
+        // │                                                                           ┌→77 │
+        // .............................................................................    │ viewport
+        // 1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234
+
+        // Expected no highlight version.
+        {
+            let line = TuiStyledTexts::from(get_list()).to_plain_text_us().string;
+            let line = UnicodeString::from(line);
+            let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+            let truncated_line = UnicodeString::from(truncated_line);
+            let truncated_line =
+                truncated_line.truncate_end_to_fit_width(max_display_col_count);
+            assert_eq2!(truncated_line, expected_clipped_string);
+        }
+
+        // clip version.
+        {
+            let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
+            // println!("{}", clipped.pretty_print_debug());
+            assert_eq2!(clipped.len(), 1);
+            let lhs = clipped.to_plain_text_us().string;
+            let rhs = expected_clipped_string;
+            assert_eq2!(lhs, rhs);
+        }
+    }
+
+    #[test]
+    fn list_3() {
+        use fixtures::*;
+
+        fn get_list() -> List<StyleUSSpan> {
+            list! {
+                StyleUSSpan::new(
+                    get_s1(),
+                    UnicodeString::from(
+                        "01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 0123456",
+                    ),
+                )
+            }
+        }
+
+        let scroll_offset_col_index = ch!(1);
+        let max_display_col_count = ch!(77);
+        let expected_clipped_string =
+                "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 012345";
+
+        // BEFORE:
+        // ┌→0                                                                              │
+        // │                                                                           ┌→77 │
+        // .............................................................................    │ viewport
+        // 01234567890 01234567890 01234567890 01234567890 01234567890 01234567890 0123456
+        //
+        // AFTER:
+        // ┌→0                                                                              │
+        // │                                                                           ┌→77 │
+        // .............................................................................    │ viewport
+        // 1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 012345
+
+        // Expected no highlight version.
+        {
+            let line = TuiStyledTexts::from(get_list()).to_plain_text_us().string;
+            let line = UnicodeString::from(line);
+            let truncated_line = line.truncate_start_by_n_col(scroll_offset_col_index);
+            let truncated_line = UnicodeString::from(truncated_line);
+            let truncated_line =
+                truncated_line.truncate_end_to_fit_width(max_display_col_count);
+            assert_eq2!(truncated_line, expected_clipped_string);
+        }
+
+        // clip version.
+        {
+            let clipped = get_list().clip(scroll_offset_col_index, max_display_col_count);
+            // println!("{}", clipped.pretty_print_debug());
+            assert_eq2!(clipped.len(), 1);
+            let left = clipped.to_plain_text_us().string;
+            let right = expected_clipped_string;
+            assert_eq2!(left, right);
+        }
     }
 }

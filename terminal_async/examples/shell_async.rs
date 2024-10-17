@@ -91,17 +91,18 @@
 //! input, pass that to the `stdin` of a `bash` child process, and then display the output
 //! from the child process in the terminal.
 
-use crossterm::style::Stylize;
-use miette::IntoDiagnostic;
-use r3bl_rs_utils_core::ok;
-use r3bl_terminal_async::ReadlineEvent;
-use r3bl_terminal_async::ReadlineEvent::{Eof, Interrupted, Line, Resized};
-use r3bl_terminal_async::{SharedWriter, TerminalAsync};
 use std::io::Write as _;
-use tokio::io::AsyncBufReadExt as _;
-use tokio::io::AsyncWriteExt as _;
+
+use crossterm::style::Stylize as _;
+use miette::IntoDiagnostic as _;
+use r3bl_core::{ok, SharedWriter};
+use r3bl_terminal_async::{ReadlineEvent,
+                          ReadlineEvent::{Eof, Interrupted, Line, Resized},
+                          TerminalAsync};
+use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _};
 
 #[tokio::main]
+#[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
     // Create a broadcast channel for shutdown.
     let (shutdown_sender, _) = tokio::sync::broadcast::channel::<()>(1);
@@ -288,7 +289,8 @@ pub mod terminal_async_constructor {
             format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3)
         };
 
-        let Ok(Some(terminal_async)) = TerminalAsync::try_new(prompt.as_str()).await else {
+        let Ok(Some(terminal_async)) = TerminalAsync::try_new(prompt.as_str()).await
+        else {
             miette::bail!("Failed to create TerminalAsync instance");
         };
 

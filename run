@@ -18,6 +18,7 @@
 #     - coming from bash: https://www.nushell.sh/book/coming_from_bash.html
 #     - thinking in nu: https://www.nushell.sh/book/thinking_in_nu.html
 
+# Make sure to keep this in sync with `Cargo.toml` workspace members.
 let workspace_folders = [
     "core",
     "tui",
@@ -28,9 +29,6 @@ let workspace_folders = [
     "ansi_color",
     "macro",
     "analytics_schema",
-    "simple_logger",
-    "redux",
-    "utils",
 ]
 
 # Main entry point for the script.
@@ -52,6 +50,7 @@ def main [...args: string] {
         "clean" => {clean}
         "install-cargo-tools" => {install-cargo-tools}
         "test" => {test}
+        "watch-all-tests" => {watch-all-tests}
         "docs" => {docs}
         "check" => {check}
         "check-watch" => {check-watch}
@@ -63,6 +62,8 @@ def main [...args: string] {
         "audit-deps" => {audit-deps}
         "unmaintained" => {unmaintained}
         "help" => {print-help all}
+        "ramdisk-create" => {ramdisk-create}
+        "ramdisk-delete" => {ramdisk-delete}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
     }
 }
@@ -82,6 +83,7 @@ def print-help [command: string] {
         print $'    (ansi green)clean(ansi reset)'
         print $'    (ansi green)install-cargo-tools(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
+        print $'    (ansi green)watch-all-tests(ansi reset)'
         print $'    (ansi green)docs(ansi reset)'
         print $'    (ansi green)check(ansi reset)'
         print $'    (ansi green)check-watch(ansi reset)'
@@ -92,28 +94,66 @@ def print-help [command: string] {
         print $'    (ansi green)serve-docs(ansi reset)'
         print $'    (ansi green)audit-deps(ansi reset)'
         print $'    (ansi green)unmaintained(ansi reset)'
+        print $'    (ansi green)ramdisk-create(ansi reset)'
+        print $'    (ansi green)ramdisk-delete(ansi reset)'
         print $'    (ansi green)help(ansi reset)'
     } else {
         print $'Unknown command: (ansi red_bold)($command)(ansi reset)'
     }
 }
 
+def watch-all-tests [] {
+    cargo watch -x 'test --workspace --quiet --color always -- --test-threads 4' -c -q --delay 2
+    # cargo watch -x 'test --workspace' -c -q --delay 2
+    # cargo watch --exec check --exec 'test --quiet --color always -- --test-threads 4' --clear --quiet --delay 2
+}
+
+# https://thelinuxcode.com/create-ramdisk-linux/
+def ramdisk-create [] {
+    # Use findmnt -t tmpfs target_foo to check if the ramdisk is mounted.
+    if (findmnt -t tmpfs target | is-empty) {
+        print $'(ansi green_bold)Ramdisk is not mounted. Creating ramdisk...(ansi reset)'
+    } else {
+        print $'(ansi blue_bold)Ramdisk is already mounted.(ansi reset)'
+        return
+    }
+
+    rm -rf target/
+    sudo mkdir -p target/
+    sudo mount -t tmpfs -o size=8g,noatime,nodiratime tmpfs target/
+}
+
+# https://thelinuxcode.com/create-ramdisk-linux/
+def ramdisk-delete [] {
+    if (findmnt -t tmpfs target | is-empty) {
+        print $'(ansi blue_bold)Ramdisk is not mounted. Nothing to do...(ansi reset)'
+        return
+    } else {
+        print $'(ansi green_bold)Ramdisk is mounted. Deleting it...(ansi reset)'
+    }
+
+    sudo umount target/
+    sudo rmdir target/
+}
+
 def install-cargo-tools [] {
     cargo install bacon
     cargo install cargo-workspaces
     cargo install cargo-cache
-    cargo install cargo-watch
+    cargo install cargo-watch # cargo-watch is no longer maintained (as of Oct 2024). Move away from this.
     cargo install flamegraph
     cargo install cargo-outdated
     cargo install cargo-update
     cargo install cargo-deny
     cargo install cargo-unmaintained
     cargo install cargo-expand
+    cargo install cargo-readme
 }
 
 def all [] {
     cargo install cargo-deny
     cargo install cargo-unmaintained
+    cargo install cargo-readme
     build
     test
     clippy
@@ -127,6 +167,7 @@ def all [] {
 def all-cicd [] {
     # cargo install cargo-deny
     # cargo install cargo-unmaintained
+    cargo install cargo-readme
     build
     test
     clippy
@@ -217,12 +258,13 @@ def upgrade-deps [] {
 }
 
 def rustfmt [] {
-    for folder in $workspace_folders {
-        cd $folder
-        print $'(ansi magenta)≡ Running cargo fmt --all in ($folder) .. ≡(ansi reset)'
-        cargo fmt --all
-        cd ..
-    }
+    cargo fmt --all
+    # for folder in $workspace_folders {
+    #     cd $folder
+    #     print $'(ansi magenta)≡ Running cargo fmt --all in ($folder) .. ≡(ansi reset)'
+    #     cargo fmt --all
+    #     cd ..
+    # }
 }
 
 # More info: https://github.com/EmbarkStudios/cargo-deny

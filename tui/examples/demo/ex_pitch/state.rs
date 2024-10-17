@@ -17,7 +17,10 @@
 use std::{collections::HashMap,
           fmt::{Debug, Display, Formatter, Result}};
 
-use r3bl_tui::*;
+use r3bl_tui::{editor_buffer::EditorBuffer,
+               FlexBoxId,
+               HasEditorBuffers,
+               DEFAULT_SYN_HI_FILE_EXT};
 
 use crate::ex_pitch::Id;
 

@@ -15,20 +15,13 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
-use r3bl_tui::*;
+use r3bl_core::{throws, CommonResult};
+use r3bl_tui::{keypress, InputEvent, ModifierKeysMask, TerminalWindow};
 
-use super::*;
+use super::{AppMain, State};
 
 pub async fn run_app() -> CommonResult<()> {
     throws!({
-        // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok
-        if DEBUG_TUI_MOD {
-            try_to_set_log_level(log::LevelFilter::Debug).ok();
-        } else {
-            try_to_set_log_level(log::LevelFilter::Off).ok();
-        }
-
         // Create an App (renders & responds to user input).
         let app = AppMain::new_boxed();
 
@@ -38,6 +31,6 @@ pub async fn run_app() -> CommonResult<()> {
         )];
 
         // Create a window.
-        TerminalWindow::main_event_loop(app, exit_keys, State::default()).await?;
+        _ = TerminalWindow::main_event_loop(app, exit_keys, State::default()).await?;
     });
 }

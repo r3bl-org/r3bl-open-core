@@ -21,19 +21,24 @@
 use clap::Parser;
 use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_cmdr::{color_constants::DefaultColors::{FrozenBlue, GuardsRed, MoonlightBlue},
-                giti::{clap_config::*, *},
+                giti::{get_giti_command_subcommand_names,
+                       giti_ui_templates,
+                       single_select_instruction_header,
+                       try_checkout_branch,
+                       try_delete_branch,
+                       try_make_new_branch,
+                       BranchSubcommand,
+                       CLIArg,
+                       CLICommand,
+                       CommandSuccessfulResponse},
                 report_analytics,
                 upgrade_check,
                 AnalyticsAction};
-use r3bl_rs_utils_core::{call_if_true,
-                         log_debug,
-                         log_error,
-                         throws,
-                         try_to_set_log_level,
-                         CommonResult};
+use r3bl_core::{call_if_true, throws, try_initialize_global_logging, CommonResult};
 use r3bl_tuify::{select_from_list_with_multi_line_header, SelectionMode, StyleSheet};
 
 #[tokio::main]
+#[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
     throws!({
         // If no args are passed, the following line will fail, and help will be printed
@@ -42,9 +47,8 @@ async fn main() -> CommonResult<()> {
 
         let enable_logging = cli_arg.global_options.enable_logging;
         call_if_true!(enable_logging, {
-            try_to_set_log_level(log::LevelFilter::Debug).ok();
-            log_debug("Start logging...".to_string());
-            log_debug(format!("cli_args {:?}", cli_arg));
+            try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
+            tracing::debug!("Start logging... cli_args {:?}", cli_arg);
         });
 
         // Check analytics reporting.
@@ -61,9 +65,9 @@ async fn main() -> CommonResult<()> {
         launch_giti(cli_arg);
 
         call_if_true!(enable_logging, {
-            log_debug("Stop logging...".to_string());
+            tracing::debug!("Stop logging...");
         });
-    });
+    })
 }
 
 pub fn launch_giti(cli_arg: CLIArg) {
@@ -100,7 +104,7 @@ pub fn launch_giti(cli_arg: CLIArg) {
                 " Could not run giti due to the following problem.\n{:#?}",
                 error
             );
-            log_error(err_msg.clone());
+            tracing::error!(err_msg);
             AnsiStyledText {
                 text: &err_msg.to_string(),
                 style: &[Style::Foreground(GuardsRed.as_ansi_color())],

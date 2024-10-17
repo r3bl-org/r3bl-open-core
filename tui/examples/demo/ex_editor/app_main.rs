@@ -15,11 +15,75 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::tui_style;
-use r3bl_tui::*;
+use r3bl_core::{call_if_true,
+                ch,
+                get_tui_style,
+                get_tui_styles,
+                position,
+                requested_size_percent,
+                send_signal,
+                size,
+                throws,
+                throws_with_return,
+                tui_styled_text,
+                tui_styled_texts,
+                tui_stylesheet,
+                ANSIBasicColor,
+                ChUnit,
+                CommonError,
+                CommonResult,
+                Position,
+                Size,
+                TuiColor,
+                TuiStylesheet};
+use r3bl_macro::tui_style;
+use r3bl_tui::{box_end,
+               box_props,
+               box_start,
+               render_component_in_current_box,
+               render_component_in_given_box,
+               render_ops,
+               render_tui_styled_texts_into,
+               surface,
+               App,
+               BoxedSafeApp,
+               ComponentRegistry,
+               ComponentRegistryMap,
+               DialogBuffer,
+               DialogChoice,
+               DialogComponent,
+               DialogEngineConfigOptions,
+               DialogEngineMode,
+               EditMode,
+               EditorBuffer,
+               EditorComponent,
+               EditorEngineConfig,
+               EventPropagation,
+               FlexBox,
+               FlexBoxId,
+               GlobalData,
+               HasEditorBuffers,
+               HasFocus,
+               InputEvent,
+               Key,
+               KeyPress,
+               LayoutDirection,
+               LayoutManagement,
+               LineMode,
+               ModifierKeysMask,
+               PerformPositioningAndSizing,
+               RenderOp,
+               RenderPipeline,
+               Surface,
+               SurfaceProps,
+               SurfaceRender,
+               SyntaxHighlightMode,
+               TerminalWindowMainThreadSignal,
+               ZOrder,
+               DEBUG_TUI_MOD};
+use tokio::sync::mpsc::Sender;
 
-use super::*;
+use super::{AppSignal, State};
 
 /// Constants for the ids.
 #[repr(u8)]
@@ -55,8 +119,7 @@ mod constructor {
     impl Default for AppMain {
         fn default() -> Self {
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("🪙 {}", "construct ex_rc::AppMain");
-                log_debug(msg);
+                tracing::debug!("🪙 construct ex_rc::AppMain");
             });
             Self
         }
@@ -265,11 +328,11 @@ mod modal_dialogs {
                 Ok(_) => ModalActivateResult::Yes,
                 Err(err) => {
                     if let Some(CommonError {
-                        err_type: _,
-                        err_msg: msg,
+                        error_type: _,
+                        error_message: msg,
                     }) = err.downcast_ref::<CommonError>()
                     {
-                        log_error(format!("📣 Error activating simple modal: {msg:?}"));
+                        tracing::error!("📣 Error activating simple modal: {msg:?}");
                     }
                     ModalActivateResult::No
                 }
@@ -294,13 +357,13 @@ mod modal_dialogs {
                 Ok(_) => ModalActivateResult::Yes,
                 Err(err) => {
                     if let Some(CommonError {
-                        err_type: _,
-                        err_msg: msg,
+                        error_type: _,
+                        error_message: msg,
                     }) = err.downcast_ref::<CommonError>()
                     {
-                        log_error(format!(
+                        tracing::error!(
                             "📣 Error activating autocomplete modal: {msg:?}"
-                        ));
+                        );
                     }
                     ModalActivateResult::No
                 }
@@ -375,8 +438,7 @@ mod modal_dialogs {
             );
 
             call_if_true!(DEBUG_TUI_MOD, {
-                let msg = format!("📣 activate modal simple: {:?}", has_focus);
-                log_debug(msg);
+                tracing::debug!("📣 activate modal simple: {:?}", has_focus);
             });
         });
     }
@@ -412,8 +474,7 @@ mod modal_dialogs {
         );
 
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!("📣 activate modal autocomplete: {:?}", has_focus);
-            log_debug(msg);
+            tracing::debug!("📣 activate modal autocomplete: {:?}", has_focus);
         });
 
         Ok(())
@@ -486,8 +547,6 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use tokio::sync::mpsc::Sender;
-
     use super::*;
 
     pub fn create_components(
@@ -503,10 +562,7 @@ mod populate_component_registry {
         has_focus.set_id(id);
 
         call_if_true!(DEBUG_TUI_MOD, {
-            {
-                let msg = format!("🪙 {} = {:?}", "init has_focus", has_focus.get_id());
-                log_debug(msg);
-            }
+            tracing::debug!("🪙 init has_focus = {:?}", has_focus.get_id());
         });
     }
 
@@ -535,8 +591,7 @@ mod populate_component_registry {
         ComponentRegistry::put(component_registry_map, id, boxed_editor_component);
 
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!("🪙 {}", "construct EditorComponent { on_buffer_change }");
-            log_debug(msg);
+            tracing::debug!("🪙 construct EditorComponent [ on_buffer_change ]");
         });
     }
 
@@ -619,11 +674,7 @@ mod populate_component_registry {
         );
 
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!(
-                "🪙 {}",
-                "construct DialogComponent (simple) { on_dialog_press }"
-            );
-            log_debug(msg);
+            tracing::debug!("🪙 construct DialogComponent (simple) [ on_dialog_press ]");
         });
     }
 
@@ -706,11 +757,9 @@ mod populate_component_registry {
         );
 
         call_if_true!(DEBUG_TUI_MOD, {
-            let msg = format!(
-                "🪙 {}",
-                "construct DialogComponent (autocomplete) { on_dialog_press }"
+            tracing::debug!(
+                "🪙 construct DialogComponent (autocomplete) [ on_dialog_press ]"
             );
-            log_debug(msg);
         });
     }
 }
@@ -783,7 +832,7 @@ mod status_bar {
 
         let mut render_ops = render_ops!();
         render_ops.push(RenderOp::MoveCursorPositionAbs(center));
-        styled_texts.render_into(&mut render_ops);
+        render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }
 }

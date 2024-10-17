@@ -15,17 +15,29 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
+use r3bl_core::{call_if_true,
+                ch,
+                ChUnit,
+                CommonError,
+                CommonErrorType,
+                CommonResult,
+                GraphemeClusterSegment,
+                Position,
+                Size,
+                TuiStyle,
+                UnicodeString,
+                UnicodeStringExt,
+                SPACER};
 
-use super::*;
-use crate::*;
+use super::{sanitize_and_save_abs_position, OffscreenBuffer, RenderOp, RenderPipeline};
+use crate::{PixelChar, RenderOpsLocalData, ZOrder, DEBUG_TUI_COMPOSITOR};
 
 impl RenderPipeline {
     /// Convert the render pipeline to an offscreen buffer.
     /// 1. This does not require any specific implementation of crossterm or termion.
     /// 2. This is the intermediate representation (IR) of a [RenderPipeline]. In order to turn
     ///    this IR into actual paint commands for the terminal, you must use the
-    ///    [OffscreenBufferPaint] trait implementations.
+    ///    [super::OffscreenBufferPaint] trait implementations.
     pub fn convert(&self, window_size: Size) -> OffscreenBuffer {
         let mut my_offscreen_buffer =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
@@ -48,8 +60,7 @@ impl RenderPipeline {
         }
 
         call_if_true!(DEBUG_TUI_COMPOSITOR, {
-            let msg = format!("offscreen_buffer: \n🌟🌟🌟\n{my_offscreen_buffer:#?}");
-            log_debug(msg);
+            tracing::debug!("offscreen_buffer: \n🌟🌟🌟\n{my_offscreen_buffer:#?}");
         });
 
         my_offscreen_buffer
@@ -162,7 +173,7 @@ pub fn print_plain_text(
     }
 
     call_if_true!(DEBUG_TUI_COMPOSITOR, {
-        let msg = format!(
+        tracing::debug!(
             "\n🚀🚀🚀 print_plain_text():
             insertion at: display_row_index: {}, display_col_index: {}, window_size: {:?},
             text: '{}',
@@ -173,14 +184,15 @@ pub fn print_plain_text(
             text.string,
             text.display_width
         );
-        log_debug(msg);
     });
 
     // Try to get the line at `row_index`.
     let mut line_copy = {
         if my_offscreen_buffer.buffer.get(display_row_index).is_none() {
             // Clip vertically.
-            CommonError::new_err_with_only_type(CommonErrorType::DisplaySizeTooSmall)
+            CommonError::new_error_result_with_only_type(
+                CommonErrorType::DisplaySizeTooSmall,
+            )
         } else {
             let line_copy = my_offscreen_buffer
                 .buffer
@@ -220,15 +232,13 @@ pub fn print_plain_text(
     call_if_true!(
         DEBUG_TUI_COMPOSITOR,
         if maybe_style.is_some() {
-            let msg = format!(
+            tracing::debug!(
                 "\n🔴🔴🔴\n[row: {display_row_index}, col: {display_col_index}] - style: {maybe_style:?}",
             );
-            log_debug(msg);
         } else {
-            let msg = format!(
+            tracing::debug!(
                 "\n🟣🟣🟣\n[row: {display_row_index}, col: {display_col_index}] - style: None",
             );
-            log_debug(msg);
         }
     );
 
@@ -348,9 +358,11 @@ pub fn print_text_with_attributes(
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_macro::tui_style;
+    use r3bl_core::{assert_eq2, color, position, size, ANSIBasicColor};
+    use r3bl_macro::tui_style;
 
     use super::*;
+    use crate::render_pipeline;
 
     #[test]
     fn test_print_plain_text_render_path_reuse_buffer() {
@@ -373,7 +385,7 @@ mod tests {
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
             let maybe_max_display_col_count = Some(10.into());
 
-            render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            print_text_with_attributes(
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
@@ -436,7 +448,7 @@ mod tests {
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
             let maybe_max_display_col_count = Some(10.into());
 
-            render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            print_text_with_attributes(
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
@@ -498,7 +510,7 @@ mod tests {
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
             let maybe_max_display_col_count = Some(10.into());
 
-            render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            print_text_with_attributes(
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
@@ -563,7 +575,7 @@ mod tests {
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
             let maybe_max_display_col_count = Some(10.into());
 
-            render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            print_text_with_attributes(
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
@@ -618,7 +630,7 @@ mod tests {
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
             let maybe_max_display_col_count = Some(10.into());
 
-            render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            print_text_with_attributes(
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,
@@ -682,7 +694,7 @@ mod tests {
             my_offscreen_buffer.my_bg_color = Some(color!(@blue));
             let maybe_max_display_col_count = Some(10.into());
 
-            render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+            print_text_with_attributes(
                 text,
                 &maybe_style,
                 &mut my_offscreen_buffer,

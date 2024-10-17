@@ -20,7 +20,7 @@ use std::{fmt::{Debug, Display, Formatter},
 
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use crate::{add_unsigned, mul_unsigned, sub_unsigned};
 
 /// The backing field that is used to represent a [ChUnit] in memory.
 pub type ChUnitPrimitiveType = u16;
@@ -31,7 +31,7 @@ pub type ChUnitPrimitiveType = u16;
 ///   character in a monospace font.
 /// - The terminal displaying the Rust binary build using the tui library will ultimately
 ///   determine the actual width and height of a character.
-/// - In order to create amounts of ch units, use the [ch!] macro.
+/// - In order to create amounts of ch units, use the [crate::ch!] macro.
 #[derive(
     Copy,
     Clone,
@@ -56,7 +56,7 @@ impl ChUnit {
 /// Creates a new [ChUnit] amount.
 ///
 /// ```rust
-/// use r3bl_rs_utils_core::*;
+/// use r3bl_core::*;
 /// let width_col = ch!(10);
 /// let height_row = ch!(5, @inc);
 /// let height_row = ch!(5, @inc);
@@ -65,7 +65,7 @@ impl ChUnit {
 /// You can also convert a [ChUnit] amount into a [usize] primitive.
 ///
 /// ```rust
-/// use r3bl_rs_utils_core::*;
+/// use r3bl_core::*;
 /// let width_col = ch!(10);
 /// let width_col_usize: usize = ch!(@to_usize width_col);
 /// let width_col_usize: usize = ch!(@to_usize width_col, @inc);
@@ -75,18 +75,18 @@ impl ChUnit {
 macro_rules! ch {
     // Returns ChUnit.
     ($arg: expr) => {{
-        let ch_value: ChUnit = $arg.into();
+        let ch_value: $crate::ChUnit = $arg.into();
         ch_value
     }};
     // Returns ChUnit +=1.
     ($arg: expr, @inc) => {{
-        let mut ch_value: ChUnit = $arg.into();
+        let mut ch_value: $crate::ChUnit = $arg.into();
         ch_value += 1;
         ch_value
     }};
     // Returns ChUnit -=1.
     ($arg: expr, @dec) => {{
-        let mut ch_value: ChUnit = $arg.into();
+        let mut ch_value: $crate::ChUnit = $arg.into();
         ch_value -= 1;
         ch_value
     }};

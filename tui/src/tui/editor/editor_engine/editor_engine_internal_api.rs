@@ -15,12 +15,27 @@
  *   limitations under the License.
  */
 
-use std::{cmp::Ordering, mem::replace};
+use std::{cmp::Ordering, collections::HashMap, mem::replace};
 
-use r3bl_rs_utils_core::*;
+use r3bl_core::{ch,
+                position,
+                ChUnit,
+                Position,
+                UnicodeString,
+                UnicodeStringSegmentSliceResult};
 use serde::{Deserialize, Serialize};
 
-use crate::{editor_buffer_clipboard_support::ClipboardService, *};
+use crate::{editor_buffer_clipboard_support,
+            editor_buffer_clipboard_support::ClipboardService,
+            CaretDirection,
+            CaretKind,
+            EditorArgs,
+            EditorArgsMut,
+            EditorBuffer,
+            EditorBufferApi,
+            EditorEngine,
+            LineMode,
+            ScrollOffset};
 
 /// Functions that implement the editor engine.
 pub struct EditorEngineInternalApi;
@@ -1082,8 +1097,6 @@ mod content_get {
 }
 
 mod content_mut {
-    use std::collections::HashMap;
-
     use super::*;
 
     pub fn insert_str_at_caret(args: EditorArgsMut<'_>, chunk: &str) {

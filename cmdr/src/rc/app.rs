@@ -19,12 +19,13 @@ use std::{env::{args, Args},
           path::PathBuf};
 
 use clap::{CommandFactory, Parser};
-use r3bl_rs_utils_core::*;
-use r3bl_tui::*;
+use miette::IntoDiagnostic as _;
+use r3bl_core::{call_if_true, throws, CommonResult};
+use r3bl_tui::ArgsToStrings as _;
 use serde_json::json;
 use tokio::io::{stdin, AsyncBufReadExt, AsyncRead, BufReader};
 
-use crate::*;
+use crate::DEVELOPMENT_MODE;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -126,7 +127,7 @@ pub async fn words_in_buf_reader<R: AsyncRead + Unpin>(
 ) -> CommonResult<usize> {
     let mut lines = buf_reader.lines();
     let mut count = 0;
-    while let Some(line) = lines.next_line().await? {
+    while let Some(line) = lines.next_line().await.into_diagnostic()? {
         count += line.split(' ').count();
     }
     Ok(count)

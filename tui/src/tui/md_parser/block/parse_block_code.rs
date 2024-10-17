@@ -15,10 +15,16 @@
  *   limitations under the License.
  */
 
-use constants::*;
-use nom::{branch::*, bytes::complete::*, combinator::*, sequence::*, IResult};
+use nom::{branch::alt,
+          bytes::complete::{is_not, tag, take_until},
+          combinator::{map, opt},
+          sequence::{preceded, terminated, tuple},
+          IResult};
 
-use crate::*;
+use crate::{constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE},
+            CodeBlockLine,
+            CodeBlockLineContent,
+            List};
 
 /// Sample inputs:
 ///
@@ -43,7 +49,7 @@ pub fn parse_block_code(input: &str) -> IResult<&str, List<CodeBlockLine<'_>>> {
 
     let acc = split_by_new_line(code);
 
-    return Ok((remainder, convert_into_code_block_lines(lang, acc)));
+    Ok((remainder, convert_into_code_block_lines(lang, acc)))
 }
 
 #[rustfmt::skip]
@@ -132,9 +138,10 @@ pub fn convert_into_code_block_lines<'input>(
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::assert_eq2;
+    use r3bl_core::assert_eq2;
 
     use super::*;
+    use crate::list;
 
     #[test]
     fn test_parse_codeblock_trailing_extra() {

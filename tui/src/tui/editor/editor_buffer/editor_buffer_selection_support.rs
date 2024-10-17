@@ -18,10 +18,17 @@
 use std::cmp;
 
 use crossterm::style::Stylize;
-use r3bl_rs_utils_core::*;
+use r3bl_core::{call_if_true,
+                ch,
+                position,
+                CaretLocationInRange,
+                CaretMovementDirection,
+                ChUnit,
+                Position,
+                SelectionRange};
 
-use self::selection_map_impl::{DirectionChangeResult, RowLocationInSelectionMap::*};
-use crate::*;
+use super::{selection_map::RowLocationInSelectionMap, EditorBuffer};
+use crate::{DirectionChangeResult, DEBUG_TUI_COPY_PASTE};
 
 pub struct EditorBufferApi;
 impl EditorBufferApi {
@@ -51,10 +58,9 @@ impl EditorBufferApi {
                     ),
                 );
 
-                call_if_true!(
-                    DEBUG_TUI_COPY_PASTE,
-                    log_debug(format!("\n🍕🍕🍕 new selection: \n\t{}", new_range))
-                );
+                call_if_true!(DEBUG_TUI_COPY_PASTE, {
+                    tracing::debug!("\n🍕🍕🍕 new selection: \n\t{}", new_range);
+                });
 
                 return;
             };
@@ -67,33 +73,32 @@ impl EditorBufferApi {
             end_display_col_index: range_end,
         } = range;
 
-        call_if_true!(
-            DEBUG_TUI_COPY_PASTE,
-            log_debug(format!(
-                "\n🍕🍕🍕 {0}:\n\t{1}: {2}, {3}: {4}\n\t{5}: {6}, {7}: {8}\n\t{9}: {10}, {11}: {12}, {13}: {14}",
-                /* 0 */ "modify_existing_range_at_row_index",
-                /* 1 */ "range_start",
-                /* 2 */ range_start,
-                /* 3 */ "range_end",
-                /* 4 */ range_end,
-                /* 5 */ "previous",
-                /* 6 */ previous,
-                /* 7 */ "current",
-                /* 8 */ current,
-                /* 9 */ "previous",
-                /* 10 */ format!("{:?}", range.locate_column(previous)).black().on_dark_yellow(),
-                /* 11 */ "current",
-                /* 12 */ format!("{:?}", range.locate_column(current)).black().on_dark_cyan(),
-                /* 13 */ "direction",
-                /* 14 */
-                format!(
-                    "{:?}",
-                    SelectionRange::caret_movement_direction_left_right(previous, current)
+        call_if_true!(DEBUG_TUI_COPY_PASTE, {
+            tracing::debug!(
+                    "\n🍕🍕🍕 {0}:\n\t{1}: {2}, {3}: {4}\n\t{5}: {6}, {7}: {8}\n\t{9}: {10}, {11}: {12}, {13}: {14}",
+                    /* 0 */ "modify_existing_range_at_row_index",
+                    /* 1 */ "range_start",
+                    /* 2 */ range_start,
+                    /* 3 */ "range_end",
+                    /* 4 */ range_end,
+                    /* 5 */ "previous",
+                    /* 6 */ previous,
+                    /* 7 */ "current",
+                    /* 8 */ current,
+                    /* 9 */ "previous",
+                    /* 10 */ format!("{:?}", range.locate_column(previous)).black().on_dark_yellow(),
+                    /* 11 */ "current",
+                    /* 12 */ format!("{:?}", range.locate_column(current)).black().on_dark_cyan(),
+                    /* 13 */ "direction",
+                    /* 14 */
+                    format!(
+                        "{:?}",
+                        SelectionRange::caret_movement_direction_left_right(previous, current)
+                    )
+                    .black()
+                    .on_dark_green(),
                 )
-                .black()
-                .on_dark_green(),
-            ))
-        );
+        });
 
         // BOOKM: For reference, algo for left, right selection
         // Handle the movement of the caret and apply the appropriate changes to the range.
@@ -223,7 +228,7 @@ impl EditorBufferApi {
             .has_caret_movement_direction_changed(caret_vertical_movement_direction);
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
-            log_debug(format!(
+            tracing::debug!(
                 "\n📜📜📜 {0}\n\t{1}, {2}\n\t{3}\n\t{4}\n\t{5}\n\t{6}\n\t{7}",
                 /* 0: heading */
                 "handle multiline caret movement"
@@ -260,7 +265,7 @@ impl EditorBufferApi {
                 )
                 .yellow()
                 .on_dark_grey(),
-            ));
+            )
         });
 
         match (
@@ -272,8 +277,8 @@ impl EditorBufferApi {
             // DirectionIsTheSame: No selection, then Shift+Down.
             // DirectionHasChanged: No selection -> Shift+Down -> Shift+Up -> Shift+Down.
             (
-                /* previous_caret */ Overflow,
-                /* current_caret */ Overflow,
+                /* previous_caret */ RowLocationInSelectionMap::Overflow,
+                /* current_caret */ RowLocationInSelectionMap::Overflow,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -285,8 +290,8 @@ impl EditorBufferApi {
             ),
             // DirectionHasChanged: No selection -> Shift+Up -> Shift+Down -> Shift+Up.
             (
-                /* previous_caret */ Overflow,
-                /* current_caret */ Overflow,
+                /* previous_caret */ RowLocationInSelectionMap::Overflow,
+                /* current_caret  */ RowLocationInSelectionMap::Overflow,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -299,8 +304,8 @@ impl EditorBufferApi {
             // DirectionIsTheSame: Previous selection with Shift+Down, then Shift+Down.
             // DirectionHasChanged: No selection -> Shift+Left/Right -> Shift+Down.
             (
-                /* previous_caret */ Contained,
-                /* current_caret */ Overflow,
+                /* previous_caret */ RowLocationInSelectionMap::Contained,
+                /* current_caret  */ RowLocationInSelectionMap::Overflow,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -312,8 +317,8 @@ impl EditorBufferApi {
             ),
             // Position caret below empty line, Shift+Up, Shift+Up, Shift+Up, Shift+Down.
             (
-                /* previous_caret */ Overflow,
-                /* current_caret */ Contained,
+                /* previous_caret */ RowLocationInSelectionMap::Overflow,
+                /* current_caret  */ RowLocationInSelectionMap::Contained,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame,
             ) => multiline_select_helpers::continue_select_down(
@@ -325,8 +330,8 @@ impl EditorBufferApi {
             // DirectionIsTheSame: Previous selection with Shift+Up, then Shift+Up.
             // DirectionHasChanged: // No selection -> Shift+Left/Right -> Shift+Up.
             (
-                /* previous_caret */ Contained,
-                /* current_caret */ Overflow,
+                /* previous_caret */ RowLocationInSelectionMap::Contained,
+                /* current_caret  */ RowLocationInSelectionMap::Overflow,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
@@ -338,8 +343,8 @@ impl EditorBufferApi {
             ),
             // Position caret above empty line, Shift+Down, Shift+Down, Shift+Down, Shift+Up.
             (
-                /* previous_caret */ Overflow,
-                /* current_caret */ Contained,
+                /* previous_caret */ RowLocationInSelectionMap::Overflow,
+                /* current_caret  */ RowLocationInSelectionMap::Contained,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame,
             ) => multiline_select_helpers::continue_select_up(
@@ -351,8 +356,8 @@ impl EditorBufferApi {
             // DirectionHasChanged: Previous selection with Shift+Down, then Shift+Up.
             // DirectionIsTheSame: Previous selection with Shift+Down, then Shift+Up, then Shift+Up.
             (
-                /* previous_caret */ Contained,
-                /* current_caret */ Contained,
+                /* previous_caret */ RowLocationInSelectionMap::Contained,
+                /* current_caret  */ RowLocationInSelectionMap::Contained,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionHasChanged
                 | DirectionChangeResult::DirectionIsTheSame,
@@ -365,8 +370,8 @@ impl EditorBufferApi {
             // DirectionHasChanged: Previous selection with Shift+Up, then Shift+Up, then Shift+Down.
             // DirectionIsTheSame: Previous selection with Shift+Up, then Shift+Down, then Shift+Down.
             (
-                /* previous_caret */ Contained,
-                /* current_caret */ Contained,
+                /* previous_caret */ RowLocationInSelectionMap::Contained,
+                /* current_caret  */ RowLocationInSelectionMap::Contained,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionHasChanged
                 | DirectionChangeResult::DirectionIsTheSame,
@@ -378,9 +383,8 @@ impl EditorBufferApi {
             ),
             // Catchall.
             _ => {
-                call_if_true!(
-                    DEBUG_TUI_COPY_PASTE,
-                    log_debug(format!(
+                call_if_true!(DEBUG_TUI_COPY_PASTE, {
+                    tracing::debug!(
                         "\n📜📜📜⚾⚾⚾ {0}",
                         /* 0: heading */
                         "handle multiline caret movement Catchall"
@@ -388,8 +392,8 @@ impl EditorBufferApi {
                             .bold()
                             .yellow()
                             .on_dark_green(),
-                    ))
-                );
+                    )
+                });
             }
         }
     }
@@ -477,7 +481,7 @@ impl EditorBufferApi {
         let (lines, _, _, selection_map) = editor_buffer.get_mut();
 
         call_if_true!(DEBUG_TUI_COPY_PASTE, {
-            log_debug(format!(
+            tracing::debug!(
                 "\n📜🔼🔽 {0}\n\t{1}, {2}, {3}, {4}",
                 /* 0 */
                 "handle multiline caret movement hit top or bottom of document"
@@ -492,7 +496,7 @@ impl EditorBufferApi {
                 format!("row_index: {}", row_index).green().on_dark_grey(),
                 /* 4 */
                 format!("{:?}", selection_map).magenta().on_dark_grey(),
-            ))
+            )
         });
 
         match current.col_index.cmp(&previous.col_index) {

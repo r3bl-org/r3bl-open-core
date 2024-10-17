@@ -17,16 +17,71 @@
 
 //! This module is responsible for converting a [MdDocument] into a [StyleUSSpanLines].
 
-use r3bl_rs_utils_core::*;
-use r3bl_rs_utils_macro::tui_style;
-use syntect::{highlighting::Theme, parsing::SyntaxSet};
+use r3bl_core::{CommonError,
+                CommonErrorType,
+                CommonResult,
+                GradientGenerationPolicy,
+                PrettyPrintDebug,
+                TextColorizationPolicy,
+                TuiStyle,
+                TuiStyledTexts,
+                UnicodeString};
+use r3bl_macro::tui_style;
+use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 
-use crate::{constants::*, *};
+use super::create_color_wheel_from_heading_data;
+use crate::{constants::{AUTHORS,
+                        BACK_TICK,
+                        CHECKED_OUTPUT,
+                        CODE_BLOCK_START_PARTIAL,
+                        DATE,
+                        LEFT_BRACKET,
+                        LEFT_IMAGE,
+                        LEFT_PARENTHESIS,
+                        RIGHT_BRACKET,
+                        RIGHT_IMAGE,
+                        RIGHT_PARENTHESIS,
+                        STAR,
+                        TAGS,
+                        TITLE,
+                        UNCHECKED_OUTPUT,
+                        UNDERSCORE},
+            convert_syntect_to_styled_text,
+            generate_ordered_list_item_bullet,
+            generate_unordered_list_item_bullet,
+            get_bold_style,
+            get_checkbox_checked_style,
+            get_checkbox_unchecked_style,
+            get_code_block_content_style,
+            get_code_block_lang_style,
+            get_foreground_dim_style,
+            get_foreground_style,
+            get_inline_code_style,
+            get_italic_style,
+            get_link_text_style,
+            get_link_url_style,
+            get_list_bullet_style,
+            parse_markdown,
+            try_get_syntax_ref,
+            CodeBlockLineContent,
+            CodeBlockLines,
+            FragmentsInOneLine,
+            HeadingData,
+            HyperlinkData,
+            Lines,
+            List,
+            MdBlock,
+            MdDocument,
+            MdLineFragment,
+            StyleUSSpan,
+            StyleUSSpanLine,
+            StyleUSSpanLines,
+            US};
 
-/// This is the main function that the [editor] uses this in order to display the markdown to the
-/// user.It is responsible for converting:
-/// - from a &[Vec] of [US] which comes from the [editor],
-/// - into a [StyleUSSpanLines], which the [editor] will clip & render.
+/// This is the main function that the [crate::editor] uses this in order to display the
+/// markdown to the user.It is responsible for converting:
+/// - from a &[Vec] of [US] which comes from the [crate::editor],
+/// - into a [StyleUSSpanLines], which the [crate::editor] will clip & render.
 ///
 /// # Arguments
 /// - `editor_text` - The text that the user has typed into the editor.
@@ -54,13 +109,16 @@ pub fn try_parse_and_highlight(
             maybe_current_box_computed_style,
             maybe_syntect_tuple,
         )),
-        Err(_) => CommonError::new_err_with_only_type(CommonErrorType::ParsingError),
+        Err(_) => {
+            CommonError::new_error_result_with_only_type(CommonErrorType::ParsingError)
+        }
     }
 }
 
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
     use crossterm::style::Stylize;
+    use r3bl_core::{assert_eq2, throws, ANSIBasicColor, TuiColor};
 
     use super::*;
 
@@ -155,8 +213,6 @@ impl StyleUSSpanLines {
         maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
     ) -> Self {
         mod inner {
-            use syntect::easy::HighlightLines;
-
             use super::*;
 
             pub fn try_use_syntect(
@@ -193,7 +249,7 @@ impl StyleUSSpanLines {
                                 .ok()?;
 
                             let line_converted_to_tui: List<StyleUSSpan> =
-                                syntect_to_styled_text_conversion::from_syntect_to_tui(
+                                convert_syntect_to_styled_text::convert_highlighted_line_from_syntect_to_tui(
                                     syntect_highlighted_line,
                                 );
 
@@ -607,7 +663,7 @@ impl StyleUSSpanLine {
         heading_data: &HeadingData<'_>,
         maybe_current_box_computed_style: &Option<TuiStyle>,
     ) -> Self {
-        let mut color_wheel = ColorWheel::from_heading_data(heading_data);
+        let mut color_wheel = create_color_wheel_from_heading_data(heading_data);
         let mut line = StyleUSSpanLine::default();
 
         let heading_level_span: StyleUSSpan = {
@@ -655,9 +711,19 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
-    use r3bl_rs_utils_macro::tui_style;
+    use crossterm::style::Stylize as _;
+    use miette::IntoDiagnostic as _;
+    use r3bl_core::{assert_eq2, throws, ANSIBasicColor, TuiColor};
+    use r3bl_macro::tui_style;
 
     use super::*;
+    use crate::{get_metadata_tags_marker_style,
+                get_metadata_tags_values_style,
+                get_metadata_title_marker_style,
+                get_metadata_title_value_style,
+                list,
+                CodeBlockLine,
+                HeadingLevel};
 
     /// Test each [MdLineFragment] variant is converted by
     /// [StyleUSSpan::from_fragment](StyleUSSpan::from_fragment).
@@ -975,8 +1041,6 @@ mod tests_style_us_span_lines_from {
     /// Test each variant of [MdBlockElement] is converted by
     /// [StyleUSSpanLines::from_block](StyleUSSpanLines::from_block).
     mod from_block {
-        use crossterm::style::Stylize;
-
         use super::*;
 
         #[test]
@@ -1129,7 +1193,8 @@ mod tests_style_us_span_lines_from {
                 let style = tui_style! {
                     color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                 };
-                let (remainder, doc) = parse_markdown("100. Foo\n200. Bar\n")?;
+                let (remainder, doc) =
+                    parse_markdown("100. Foo\n200. Bar\n").into_diagnostic()?;
                 assert_eq2!(remainder, "");
 
                 let ol_block_1 = &doc[0];
@@ -1182,7 +1247,7 @@ mod tests_style_us_span_lines_from {
                 let style = tui_style! {
                     color_bg: TuiColor::Basic(ANSIBasicColor::Red)
                 };
-                let (_, doc) = parse_markdown("- Foo\n- Bar\n")?;
+                let (_, doc) = parse_markdown("- Foo\n- Bar\n").into_diagnostic()?;
                 println!("{}", format!("{:#?}", doc).cyan());
 
                 // First smart list.

@@ -17,7 +17,7 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::*;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize)]
@@ -26,9 +26,7 @@ pub struct AnalyticsRecord {
 }
 
 impl Default for AnalyticsRecord {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
 
 impl AnalyticsRecord {

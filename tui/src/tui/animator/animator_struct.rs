@@ -17,7 +17,7 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::{throws, CommonResult};
+use r3bl_core::{throws, CommonResult};
 use tokio::sync::mpsc::Sender;
 
 use crate::TerminalWindowMainThreadSignal;

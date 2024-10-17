@@ -17,11 +17,13 @@
 
 use std::fmt::{Display, Formatter};
 
-use crossterm::event::{Event::*, *};
-use r3bl_rs_utils_core::*;
-use serde::*;
+use crossterm::event::{Event::{self, FocusGained, FocusLost, Key, Mouse, Resize},
+                       KeyEvent,
+                       MouseEvent};
+use r3bl_core::{size, Size};
+use serde::{Deserialize, Serialize};
 
-use crate::*;
+use super::{KeyPress, MouseInput};
 
 /// Please see [KeyPress] for more information about handling keyboard input.
 #[non_exhaustive]

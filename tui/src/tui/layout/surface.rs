@@ -15,10 +15,23 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
+use r3bl_core::{size,
+                throws,
+                CommonResult,
+                Position,
+                RequestedSizePercent,
+                Size,
+                TuiStyle,
+                TuiStylesheet};
 use serde::{Deserialize, Serialize};
 
-use crate::*;
+use super::{FlexBox,
+            FlexBoxProps,
+            LayoutDirection,
+            LayoutManagement,
+            PerformPositioningAndSizing,
+            SurfaceProps};
+use crate::{unwrap_or_err, LayoutError, LayoutErrorType, RenderPipeline};
 
 /// Represents a rectangular area of the terminal screen, and not necessarily the full terminal
 /// screen.
@@ -55,7 +68,7 @@ macro_rules! surface {
     (
         stylesheet: $arg_stylesheet : expr
     ) => {
-        Surface {
+        $crate::Surface {
             stylesheet: $arg_stylesheet,
             ..Default::default()
         }
@@ -66,7 +79,7 @@ macro_rules! surface {
         box_size:   $arg_box_size   : expr,
         stylesheet: $arg_stylesheet : expr
     ) => {
-        Surface {
+        $crate::Surface {
             origin_pos: $arg_origin_pos,
             box_size: $arg_box_size,
             stylesheet: $arg_stylesheet,
@@ -83,7 +96,7 @@ impl LayoutManagement for Surface {
         throws!({
             // Expect stack to be empty!
             if !self.no_boxes_added() {
-                LayoutError::new_err_with_msg(
+                LayoutError::new_error_result(
                     LayoutErrorType::MismatchedSurfaceStart,
                     LayoutError::format_msg_with_stack_len(
                         &self.stack_of_boxes,
@@ -100,7 +113,7 @@ impl LayoutManagement for Surface {
         throws!({
             // Expect stack to be empty!
             if !self.no_boxes_added() {
-                LayoutError::new_err_with_msg(
+                LayoutError::new_error_result(
                     LayoutErrorType::MismatchedSurfaceEnd,
                     LayoutError::format_msg_with_stack_len(
                         &self.stack_of_boxes,
@@ -124,7 +137,7 @@ impl LayoutManagement for Surface {
         throws!({
             // Expect stack not to be empty!
             if self.no_boxes_added() {
-                LayoutError::new_err_with_msg(
+                LayoutError::new_error_result(
                     LayoutErrorType::MismatchedBoxEnd,
                     LayoutError::format_msg_with_stack_len(
                         &self.stack_of_boxes,
@@ -142,12 +155,16 @@ impl PerformPositioningAndSizing for Surface {
     fn current_box(&mut self) -> CommonResult<&mut FlexBox> {
         // Expect stack of boxes not to be empty!
         if self.no_boxes_added() {
-            LayoutError::new_err(LayoutErrorType::StackOfBoxesShouldNotBeEmpty)?
+            LayoutError::new_error_result_with_only_type(
+                LayoutErrorType::StackOfBoxesShouldNotBeEmpty,
+            )?
         }
         if let Some(it) = self.stack_of_boxes.last_mut() {
             Ok(it)
         } else {
-            LayoutError::new_err(LayoutErrorType::StackOfBoxesShouldNotBeEmpty)?
+            LayoutError::new_error_result_with_only_type(
+                LayoutErrorType::StackOfBoxesShouldNotBeEmpty,
+            )?
         }
     }
 

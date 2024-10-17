@@ -18,18 +18,22 @@
 use std::env::var;
 
 use clap::Parser;
+use r3bl_ansi_color::{AnsiStyledText, Style};
 use r3bl_cmdr::{edi::launcher, report_analytics, upgrade_check, AnalyticsAction};
-use r3bl_rs_utils_core::{call_if_true,
-                         log_debug,
-                         throws,
-                         try_to_set_log_level,
-                         CommonResult,
-                         UnicodeString};
-use r3bl_tui::{ColorWheel, GradientGenerationPolicy, TextColorizationPolicy};
+use r3bl_core::{call_if_true,
+                throws,
+                try_initialize_global_logging,
+                ColorWheel,
+                CommonResult,
+                GradientGenerationPolicy,
+                TextColorizationPolicy,
+                UnicodeString};
+use r3bl_tuify::{select_from_list, SelectionMode, StyleSheet, LIZARD_GREEN, SLATE_GRAY};
 
 use crate::clap_config::CLIArg;
 
 #[tokio::main]
+#[allow(clippy::needless_return)]
 async fn main() -> CommonResult<()> {
     throws!({
         // Parse CLI args.
@@ -38,9 +42,8 @@ async fn main() -> CommonResult<()> {
         // Start logging.
         let enable_logging = cli_arg.global_options.enable_logging;
         call_if_true!(enable_logging, {
-            try_to_set_log_level(log::LevelFilter::Debug).ok();
-            log_debug("Start logging...".to_string());
-            log_debug(format!("cli_args {:?}", cli_arg));
+            try_initialize_global_logging(tracing_core::LevelFilter::DEBUG).ok();
+            tracing::debug!("Start logging... cli_args {:?}", cli_arg);
         });
 
         // Check analytics reporting.
@@ -85,7 +88,7 @@ async fn main() -> CommonResult<()> {
 
         // Stop logging.
         call_if_true!(enable_logging, {
-            log_debug("Stop logging...".to_string());
+            tracing::debug!("Stop logging...");
         });
 
         // Exit message.
@@ -94,13 +97,6 @@ async fn main() -> CommonResult<()> {
 }
 
 pub mod edi_ui_templates {
-    use r3bl_ansi_color::{AnsiStyledText, Style};
-    use r3bl_tuify::{select_from_list,
-                     SelectionMode,
-                     StyleSheet,
-                     LIZARD_GREEN,
-                     SLATE_GRAY};
-
     use super::*;
 
     pub fn handle_multiple_files_not_supported_yet(cli_arg: CLIArg) -> Option<String> {
@@ -192,7 +188,7 @@ mod clap_config {
     #[command(arg_required_else_help(false))]
     /// More info: <https://docs.rs/clap/latest/clap/struct.Command.html#method.help_template>
     #[command(
-         /* cspell: disable-next-line */
+         /* cspell:disable-next-line */
          help_template = "{about}\nVersion: {bin} {version} 💻\n\nProvide file paths, separated by spaces, to edit in edi. Or no arguments to edit a new file.\nUSAGE 📓:\n  edi [\x1b[32mfile paths\x1b[0m] [\x1b[34moptions\x1b[0m]\n\n[options]\n{options}",
          subcommand_help_heading("Command")
      )]

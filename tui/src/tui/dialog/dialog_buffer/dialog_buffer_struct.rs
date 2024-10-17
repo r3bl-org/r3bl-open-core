@@ -17,10 +17,10 @@
 
 use std::fmt::{Debug, Formatter, Result};
 
-use r3bl_rs_utils_core::{ch, ChUnit};
-use serde::*;
+use r3bl_core::{ch, ChUnit};
+use serde::{Deserialize, Serialize};
 
-use crate::*;
+use crate::{format_option, EditorBuffer, DEFAULT_SYN_HI_FILE_EXT};
 
 /// Please do not construct this struct directly and use [new_empty](DialogBuffer::new_empty)
 /// instead.

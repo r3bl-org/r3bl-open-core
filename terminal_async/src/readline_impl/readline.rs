@@ -15,22 +15,29 @@
  *   limitations under the License.
  */
 
-use crate::{
-    CrosstermEventResult, History, LineState, PauseBuffer, PinnedInputStream, SafeHistory,
-    SafeLineState, SafePauseBuffer, SafeRawTerminal, SharedWriter, StdMutex, Text,
-    CHANNEL_CAPACITY,
-};
-use crossterm::{
-    terminal::{self, disable_raw_mode, Clear},
-    QueueableCommand,
-};
-use futures_util::StreamExt;
-use std::{
-    io::{self, Write},
-    sync::Arc,
-};
+use std::{io::{self, Write},
+          sync::Arc};
+
+use crossterm::{terminal::{self, disable_raw_mode, Clear},
+                QueueableCommand};
+use r3bl_core::{output_device_as_mut,
+                InputDevice,
+                LineStateControlSignal,
+                OutputDevice,
+                SendRawTerminal,
+                SharedWriter};
 use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+
+use crate::{History,
+            LineState,
+            LineStateLiveness,
+            PauseBuffer,
+            SafeHistory,
+            SafeLineState,
+            SafePauseBuffer,
+            StdMutex,
+            CHANNEL_CAPACITY};
 
 const CTRL_C: crossterm::event::Event =
     crossterm::event::Event::Key(crossterm::event::KeyEvent::new(
@@ -74,18 +81,20 @@ const CTRL_D: crossterm::event::Event =
 /// input or `Interrupted` or `Eof` signal.
 ///
 /// When creating a new [`crate::TerminalAsync`] instance, you can use this repeatedly
-/// before dropping it. This is because the [`crate::SharedWriter`] is cloned, and the
+/// before dropping it. This is because the [`r3bl_core::SharedWriter`] is cloned, and the
 /// terminal is kept in raw mode until the associated [`crate::Readline`] is dropped.
 ///
 /// # Inputs and dependency injection
 ///
 /// There are 2 main resources that must be passed into [`Self::new()`]:
-/// 1. [`PinnedInputStream`] - This trait represents an async stream of events. It is
-///    typically implemented by
+/// 1. [`InputDevice`] which contains a resource that implements
+///    [`r3bl_core::PinnedInputStream`] - This trait represents an async stream of events.
+///    It is typically implemented by
 ///    [`crossterm::event::EventStream`](https://docs.rs/crossterm/latest/crossterm/event/struct.EventStream.html).
 ///    This is used to get input from the user. However for testing you can provide your
 ///    own implementation of this trait.
-/// 2. [`SafeRawTerminal`] - This trait represents a raw terminal. It is typically
+/// 2. [`OutputDevice`] which contains a resources that implements
+///    [`crate::SafeRawTerminal`] - This trait represents a raw terminal. It is typically
 ///    implemented by [`std::io::Stdout`]. This is used to write to the terminal. However
 ///    for testing you can provide your own implementation of this trait.
 ///
@@ -124,12 +133,12 @@ const CTRL_D: crossterm::event::Event =
 /// [`PauseBuffer`] (if there are any messages in it, and prints them out) so nothing is
 /// lost!
 ///
-/// See the [`crate::LineState`] for more information on exactly how the terminal is paused
-/// and resumed, when it comes to accepting or rejecting user input, and rendering output
-/// or not.
+/// See the [`crate::LineState`] for more information on exactly how the terminal is
+/// paused and resumed, when it comes to accepting or rejecting user input, and rendering
+/// output or not.
 ///
-/// See the [`crate::TerminalAsync`] module docs for more information on the mental mode and
-/// architecture of this.
+/// See the [`crate::TerminalAsync`] module docs for more information on the mental mode
+/// and architecture of this.
 ///
 /// # Usage details
 ///
@@ -145,17 +154,17 @@ const CTRL_D: crossterm::event::Event =
 /// 1. While retrieving input with [`readline()`][Readline::readline].
 /// 2. By calling [`manage_shared_writer_output::flush_internal()`].
 ///
-/// You can provide your own implementation of [`SafeRawTerminal`], via [dependency
-/// injection](https://developerlife.com/category/DI/), so that you can mock terminal
-/// output for testing. You can also extend this struct to adapt your own terminal output
-/// using this mechanism. Essentially anything that complies with `dyn std::io::Write +
-/// Send` trait bounds can be used.
+/// You can provide your own implementation of [`crate::SafeRawTerminal`], like
+/// [`OutputDevice`], via [dependency injection](https://developerlife.com/category/DI/),
+/// so that you can mock terminal output for testing. You can also extend this struct to
+/// adapt your own terminal output using this mechanism. Essentially anything that
+/// compiles with `dyn std::io::Write + Send` trait bounds can be used.
 pub struct Readline {
-    /// Raw terminal implementation, you can supply this via dependency injection.
-    pub safe_raw_terminal: SafeRawTerminal,
+    /// Device used to write rendered display output to (usually `stdout`).
+    pub output_device: OutputDevice,
 
-    /// Stream of events.
-    pub pinned_input_stream: PinnedInputStream<CrosstermEventResult>,
+    /// Device used to get stream of events from user (usually `stdin`).
+    pub input_device: InputDevice,
 
     /// Current line.
     pub safe_line_state: SafeLineState,
@@ -209,17 +218,6 @@ pub enum ReadlineEvent {
     Resized,
 }
 
-/// Signals that can be sent to the `line` channel, which is monitored by the task.
-#[derive(Debug, Clone)]
-pub enum LineStateControlSignal {
-    Line(Text),
-    Flush,
-    Pause,
-    Resume,
-    SpinnerActive(tokio::sync::broadcast::Sender<()>),
-    SpinnerInactive,
-}
-
 /// Internal control flow for the `readline` method. This is used primarily to make testing
 /// easier.
 #[derive(Debug, PartialEq, Clone)]
@@ -261,14 +259,14 @@ pub enum ControlFlowLimited<E> {
 /// written to the terminal.
 pub mod manage_shared_writer_output {
     use super::*;
-    use crate::{LineStateLiveness, SendRawTerminal};
 
     /// - Receiver end of the channel, which does the actual writing to the terminal.
     /// - The sender end of the channel is in [`SharedWriter`].
     pub fn spawn_task_to_monitor_line_state_signals(
-        /* Move */ mut line_control_channel_receiver: mpsc::Receiver<LineStateControlSignal>,
+        /* Move */
+        mut line_control_channel_receiver: mpsc::Receiver<LineStateControlSignal>,
         safe_line_state: SafeLineState,
-        safe_raw_terminal: SafeRawTerminal,
+        output_device: OutputDevice,
         safe_is_paused_buffer: SafePauseBuffer,
         safe_spinner_is_active: Arc<StdMutex<Option<tokio::sync::broadcast::Sender<()>>>>,
     ) -> tokio::task::JoinHandle<()> {
@@ -284,7 +282,7 @@ pub mod manage_shared_writer_output {
                         maybe_line_control_signal,
                         safe_is_paused_buffer.clone(),
                         safe_line_state.clone(),
-                        safe_raw_terminal.clone(),
+                        output_device.clone(),
                         safe_spinner_is_active.clone(),
                     );
                     match control_flow {
@@ -312,8 +310,10 @@ pub mod manage_shared_writer_output {
         line_control_signal: LineStateControlSignal,
         self_safe_is_paused_buffer: SafePauseBuffer,
         self_safe_line_state: SafeLineState,
-        self_safe_raw_terminal: SafeRawTerminal,
-        self_safe_spinner_is_active: Arc<StdMutex<Option<tokio::sync::broadcast::Sender<()>>>>,
+        output_device: OutputDevice,
+        self_safe_spinner_is_active: Arc<
+            StdMutex<Option<tokio::sync::broadcast::Sender<()>>>,
+        >,
     ) -> ControlFlowLimited<ReadlineError> {
         match line_control_signal {
             // Handle a line of text from user input w/ support for pause & resume.
@@ -328,7 +328,7 @@ pub mod manage_shared_writer_output {
                 }
 
                 // Print the line to the terminal.
-                let term = &mut *self_safe_raw_terminal.lock().unwrap();
+                let term = output_device_as_mut!(output_device);
                 if let Err(err) = line_state.print_data_and_flush(&buf, term) {
                     return ControlFlowLimited::ReturnError(err);
                 }
@@ -340,21 +340,25 @@ pub mod manage_shared_writer_output {
             // Handle a flush signal.
             LineStateControlSignal::Flush => {
                 let is_paused = self_safe_line_state.lock().unwrap().is_paused;
-                let term = &mut *self_safe_raw_terminal.lock().unwrap();
+                let term = output_device_as_mut!(output_device);
                 let line_state = self_safe_line_state.lock().unwrap();
-                let _ = flush_internal(self_safe_is_paused_buffer, is_paused, line_state, term);
+                let _ = flush_internal(
+                    self_safe_is_paused_buffer,
+                    is_paused,
+                    line_state,
+                    term,
+                );
             }
 
             // Pause the terminal.
             LineStateControlSignal::Pause => {
                 let new_value = LineStateLiveness::Paused;
-                let term = &mut *self_safe_raw_terminal.lock().unwrap();
+                let term = output_device_as_mut!(output_device);
                 let mut line_state = self_safe_line_state.lock().unwrap();
                 if line_state.set_paused(new_value, term).is_err() {
-                    return ControlFlowLimited::ReturnError(ReadlineError::IO(io::Error::new(
-                        io::ErrorKind::Other,
-                        "failed to pause terminal",
-                    )));
+                    return ControlFlowLimited::ReturnError(ReadlineError::IO(
+                        io::Error::new(io::ErrorKind::Other, "failed to pause terminal"),
+                    ));
                 };
             }
 
@@ -362,15 +366,19 @@ pub mod manage_shared_writer_output {
             LineStateControlSignal::Resume => {
                 let new_value = LineStateLiveness::NotPaused;
                 let mut line_state = self_safe_line_state.lock().unwrap();
-                let term = &mut *self_safe_raw_terminal.lock().unwrap();
+                let term = output_device_as_mut!(output_device);
                 // Resume the terminal.
                 if line_state.set_paused(new_value, term).is_err() {
-                    return ControlFlowLimited::ReturnError(ReadlineError::IO(io::Error::new(
-                        io::ErrorKind::Other,
-                        "failed to resume terminal",
-                    )));
+                    return ControlFlowLimited::ReturnError(ReadlineError::IO(
+                        io::Error::new(io::ErrorKind::Other, "failed to resume terminal"),
+                    ));
                 };
-                let _ = flush_internal(self_safe_is_paused_buffer, new_value, line_state, term);
+                let _ = flush_internal(
+                    self_safe_is_paused_buffer,
+                    new_value,
+                    line_state,
+                    term,
+                );
             }
             LineStateControlSignal::SpinnerActive(spinner_shutdown_sender) => {
                 // Handle spinner active signal & register the spinner shutdown sender.
@@ -422,7 +430,7 @@ pub mod manage_shared_writer_output {
 
 impl Drop for Readline {
     fn drop(&mut self) {
-        let term = &mut *self.safe_raw_terminal.lock().unwrap();
+        let term = output_device_as_mut!(self.output_device);
         _ = self.safe_line_state.lock().unwrap().exit(term);
         _ = disable_raw_mode();
     }
@@ -435,12 +443,13 @@ impl Readline {
     /// - [Self::set_max_history]
     pub fn new(
         prompt: String,
-        safe_raw_terminal: SafeRawTerminal,
-        /* move */ pinned_input_stream: PinnedInputStream<CrosstermEventResult>,
+        output_device: OutputDevice,
+        /* move */ input_device: InputDevice,
     ) -> Result<(Self, SharedWriter), ReadlineError> {
         // Line control channel - signals are send to this channel to control `LineState`.
         // A task is spawned to monitor this channel.
-        let line_state_control_channel = mpsc::channel::<LineStateControlSignal>(CHANNEL_CAPACITY);
+        let line_state_control_channel =
+            mpsc::channel::<LineStateControlSignal>(CHANNEL_CAPACITY);
         let (line_control_channel_sender, line_state_control_channel_receiver) =
             line_state_control_channel;
 
@@ -465,15 +474,15 @@ impl Readline {
         manage_shared_writer_output::spawn_task_to_monitor_line_state_signals(
             line_state_control_channel_receiver,
             safe_line_state.clone(),
-            safe_raw_terminal.clone(),
+            output_device.clone(),
             safe_is_paused_buffer.clone(),
             safe_spinner_is_active.clone(),
         );
 
         // Create the instance with all the supplied components.
         let readline = Readline {
-            safe_raw_terminal: safe_raw_terminal.clone(),
-            pinned_input_stream,
+            output_device: output_device.clone(),
+            input_device,
             safe_line_state: safe_line_state.clone(),
             history_sender,
             history_receiver,
@@ -483,17 +492,14 @@ impl Readline {
         };
 
         // Print the prompt.
+        let term = output_device_as_mut!(output_device);
         readline
             .safe_line_state
             .lock()
             .unwrap()
-            .render_and_flush(&mut *readline.safe_raw_terminal.lock().unwrap())?;
-        readline
-            .safe_raw_terminal
-            .lock()
-            .unwrap()
-            .queue(terminal::EnableLineWrap)?;
-        readline.safe_raw_terminal.lock().unwrap().flush()?;
+            .render_and_flush(term)?;
+        term.queue(terminal::EnableLineWrap)?;
+        term.flush()?;
 
         // Create the shared writer.
         let shared_writer = SharedWriter::new(line_control_channel_sender);
@@ -504,24 +510,23 @@ impl Readline {
 
     /// Change the prompt.
     pub fn update_prompt(&mut self, prompt: &str) -> Result<(), ReadlineError> {
+        let term = output_device_as_mut!(self.output_device);
         self.safe_line_state
             .lock()
             .unwrap()
-            .update_prompt(prompt, &mut *self.safe_raw_terminal.lock().unwrap())?;
+            .update_prompt(prompt, term)?;
         Ok(())
     }
 
     /// Clear the screen.
     pub fn clear(&mut self) -> Result<(), ReadlineError> {
-        self.safe_raw_terminal
-            .lock()
-            .unwrap()
-            .queue(Clear(terminal::ClearType::All))?;
+        let term = output_device_as_mut!(self.output_device);
+        term.queue(Clear(terminal::ClearType::All))?;
         self.safe_line_state
             .lock()
             .unwrap()
-            .clear_and_render_and_flush(&mut *self.safe_raw_terminal.lock().unwrap())?;
-        self.safe_raw_terminal.lock().unwrap().flush()?;
+            .clear_and_render_and_flush(term)?;
+        term.flush()?;
         Ok(())
     }
 
@@ -552,8 +557,8 @@ impl Readline {
     ///
     /// Note that this function can be called repeatedly in a loop. It will return each
     /// line of input as it is entered (and return / exit). The [crate::TerminalAsync] can
-    /// be re-used, since the [crate::SharedWriter] is cloned and the terminal is kept in
-    /// raw mode until the associated [crate::Readline] is dropped.
+    /// be re-used, since the [r3bl_core::SharedWriter] is cloned and the terminal is kept
+    /// in raw mode until the associated [crate::Readline] is dropped.
     ///
     /// Polling function for [`Self::readline`], manages all input and output. Returns
     /// either an [ReadlineEvent] or an [ReadlineError].
@@ -566,23 +571,21 @@ impl Readline {
                 // - All the state comes from other variables (self.*).
                 // - So if this future is dropped, then the item in the
                 //   pinned_input_stream isn't used and the state isn't modified.
-                maybe_result_crossterm_event = self.pinned_input_stream.next() => {
-                    if let Some(result_crossterm_event) = maybe_result_crossterm_event {
-                        match readline_internal::apply_event_to_line_state_and_render(
-                            result_crossterm_event,
-                            self.safe_line_state.clone(),
-                            &mut *self.safe_raw_terminal.lock().unwrap(),
-                            self.safe_history.clone(),
-                            self.safe_spinner_is_active.clone(),
-                        ) {
-                            ControlFlowExtended::ReturnOk(ok_value) => {
-                                return Ok(ok_value);
-                            },
-                            ControlFlowExtended::ReturnError(err_value) => {
-                                return Err(err_value);
-                            },
-                            ControlFlowExtended::Continue => {}
-                        }
+                result_crossterm_event = self.input_device.next() => {
+                    match readline_internal::apply_event_to_line_state_and_render(
+                        result_crossterm_event,
+                        self.safe_line_state.clone(),
+                        output_device_as_mut!(self.output_device),
+                        self.safe_history.clone(),
+                        self.safe_spinner_is_active.clone(),
+                    ) {
+                        ControlFlowExtended::ReturnOk(ok_value) => {
+                            return Ok(ok_value);
+                        },
+                        ControlFlowExtended::ReturnError(err_value) => {
+                            return Err(err_value);
+                        },
+                        ControlFlowExtended::Continue => {}
                     }
                 },
 
@@ -603,12 +606,15 @@ impl Readline {
 
 pub mod readline_internal {
     use super::*;
+
     pub fn apply_event_to_line_state_and_render(
-        result_crossterm_event: CrosstermEventResult,
+        result_crossterm_event: miette::Result<crossterm::event::Event>,
         self_line_state: SafeLineState,
-        self_raw_terminal: &mut dyn Write,
+        term: &mut dyn Write,
         self_safe_history: SafeHistory,
-        self_safe_is_spinner_active: Arc<StdMutex<Option<tokio::sync::broadcast::Sender<()>>>>,
+        self_safe_is_spinner_active: Arc<
+            StdMutex<Option<tokio::sync::broadcast::Sender<()>>>,
+        >,
     ) -> ControlFlowExtended<ReadlineEvent, ReadlineError> {
         match result_crossterm_event {
             Ok(crossterm_event) => {
@@ -616,7 +622,8 @@ pub mod readline_internal {
 
                 // Intercept Ctrl+C or Ctrl+D here and send a signal to spinner (if it is
                 // active). And early return!
-                let is_spinner_active = self_safe_is_spinner_active.lock().unwrap().take();
+                let is_spinner_active =
+                    self_safe_is_spinner_active.lock().unwrap().take();
                 if crossterm_event == CTRL_C || crossterm_event == CTRL_D {
                     if let Some(spinner_shutdown_sender) = is_spinner_active {
                         // Send signal to SharedWriter spinner shutdown channel.
@@ -628,7 +635,7 @@ pub mod readline_internal {
                 // Regular readline event handling.
                 let result_maybe_readline_event = line_state.apply_event_and_render(
                     crossterm_event,
-                    self_raw_terminal,
+                    term,
                     self_safe_history,
                 );
 
@@ -642,7 +649,11 @@ pub mod readline_internal {
                 }
             }
 
-            Err(e) => return ControlFlowExtended::ReturnError(e.into()),
+            Err(report) => {
+                return ControlFlowExtended::ReturnError(ReadlineError::IO(
+                    io::Error::new(io::ErrorKind::Other, format!("{report}")),
+                ));
+            }
         }
 
         ControlFlowExtended::Continue
@@ -651,8 +662,8 @@ pub mod readline_internal {
 
 #[cfg(test)]
 pub mod test_fixtures {
-    use super::*;
     use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+    use r3bl_core::CrosstermEventResult;
 
     pub(super) fn get_input_vec() -> Vec<CrosstermEventResult> {
         vec![
@@ -682,20 +693,21 @@ pub mod test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use super::*;
-    use crate::{LineStateLiveness, StdMutex};
-    use r3bl_test_fixtures::{gen_input_stream, StdoutMock};
-    use r3bl_tuify::{is_fully_uninteractive_terminal, TTYResult};
+    use r3bl_ansi_color::{is_fully_uninteractive_terminal, TTYResult};
+    use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _,
+                             InputDeviceExt as _};
     use test_fixtures::get_input_vec;
 
+    use super::*;
+    use crate::{LineStateLiveness, StdMutex};
+
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_readline_internal_process_event_and_terminal_output() {
         let vec = get_input_vec();
         let mut iter = vec.iter();
 
         let prompt_str = "> ";
-
-        let stdout_mock = StdoutMock::default();
 
         // This is for CI/CD.
         if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
@@ -703,10 +715,12 @@ mod test_readline {
         }
 
         // We will get the `line_state` out of this to test.
+        let (output_device, stdout_mock) = OutputDevice::new_mock();
+        let input_device = InputDevice::new_mock(get_input_vec());
         let (readline, _) = Readline::new(
             prompt_str.into(),
-            Arc::new(StdMutex::new(stdout_mock.clone())),
-            gen_input_stream(get_input_vec()),
+            output_device.clone(),
+            /* move */ input_device,
         )
         .unwrap();
 
@@ -722,7 +736,7 @@ mod test_readline {
         let control_flow = readline_internal::apply_event_to_line_state_and_render(
             Ok(event.clone()),
             readline.safe_line_state.clone(),
-            &mut *readline.safe_raw_terminal.lock().unwrap(),
+            output_device_as_mut!(output_device),
             safe_history.clone(),
             safe_is_spinner_active.clone(),
         );
@@ -736,10 +750,9 @@ mod test_readline {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_readline() {
         let prompt_str = "> ";
-
-        let stdout_mock = StdoutMock::default();
 
         // This is for CI/CD.
         if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
@@ -747,16 +760,21 @@ mod test_readline {
         }
 
         // We will get the `line_state` out of this to test.
+        let (output_device, stdout_mock) = OutputDevice::new_mock();
+        let input_device = InputDevice::new_mock(get_input_vec());
         let (mut readline, _) = Readline::new(
             prompt_str.into(),
-            Arc::new(StdMutex::new(stdout_mock.clone())),
-            gen_input_stream(get_input_vec()),
+            output_device.clone(),
+            /* move */ input_device,
         )
         .unwrap();
 
         let result = readline.readline().await;
         assert!(matches!(result, Ok(ReadlineEvent::Line(_))));
-        pretty_assertions::assert_eq!(result.unwrap(), ReadlineEvent::Line("abc".to_string()));
+        pretty_assertions::assert_eq!(
+            result.unwrap(),
+            ReadlineEvent::Line("abc".to_string())
+        );
         pretty_assertions::assert_eq!(readline.safe_line_state.lock().unwrap().line, "");
 
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
@@ -765,10 +783,9 @@ mod test_readline {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_pause_resume() {
         let prompt_str = "> ";
-
-        let stdout_mock = StdoutMock::default();
 
         // This is for CI/CD.
         if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
@@ -776,10 +793,12 @@ mod test_readline {
         }
 
         // We will get the `line_state` out of this to test.
+        let (output_device, _) = OutputDevice::new_mock();
+        let input_device = InputDevice::new_mock(get_input_vec());
         let (readline, shared_writer) = Readline::new(
             prompt_str.into(),
-            Arc::new(StdMutex::new(stdout_mock.clone())),
-            gen_input_stream(get_input_vec()),
+            output_device.clone(),
+            /* move */ input_device,
         )
         .unwrap();
 
@@ -809,10 +828,9 @@ mod test_readline {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_pause_resume_with_output() {
         let prompt_str = "> ";
-
-        let stdout_mock = StdoutMock::default();
 
         // This is for CI/CD.
         if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
@@ -820,10 +838,12 @@ mod test_readline {
         }
 
         // We will get the `line_state` out of this to test.
+        let (output_device, _) = OutputDevice::new_mock();
+        let input_device = InputDevice::new_mock(get_input_vec());
         let (readline, shared_writer) = Readline::new(
             prompt_str.into(),
-            Arc::new(StdMutex::new(stdout_mock.clone())),
-            gen_input_stream(get_input_vec()),
+            output_device.clone(),
+            /* move */ input_device,
         )
         .unwrap();
 
@@ -866,11 +886,13 @@ mod test_readline {
 
 #[cfg(test)]
 mod test_streams {
-    use super::*;
     use r3bl_test_fixtures::gen_input_stream;
     use test_streams::test_fixtures::get_input_vec;
 
+    use super::*;
+
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_generate_event_stream_pinned() {
         use futures_util::StreamExt;
 
@@ -887,16 +909,19 @@ mod test_streams {
 
 #[cfg(test)]
 mod test_pause_and_resume_support {
-    use super::*;
-    use crate::LineStateLiveness;
+    use std::{collections::VecDeque, sync::Mutex};
+
     use manage_shared_writer_output::flush_internal;
     use r3bl_test_fixtures::StdoutMock;
-    use std::{collections::VecDeque, sync::Mutex};
+
+    use super::*;
+    use crate::LineStateLiveness;
 
     #[test]
     fn test_flush_internal_paused() {
         // Create a mock `LineState` with initial data
-        let safe_line_state = Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
+        let safe_line_state =
+            Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
 
         // Create a mock `SafePauseBuffer` with some paused lines
         let mut pause_buffer = VecDeque::new();
@@ -928,7 +953,8 @@ mod test_pause_and_resume_support {
     #[test]
     fn test_flush_internal_not_paused() {
         // Create a mock `LineState` with initial data
-        let safe_line_state = Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
+        let safe_line_state =
+            Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
 
         // Create a mock `SafePauseBuffer` with some paused lines
         let mut pause_buffer = VecDeque::new();

@@ -15,25 +15,40 @@
  *   limitations under the License.
  */
 
+#[cfg(test)]
 pub mod mock_real_objects_for_dialog {
     use std::{collections::HashMap, fmt::Debug};
 
-    use r3bl_rs_utils_core::Size;
+    use r3bl_core::{OutputDevice, Size};
+    use r3bl_test_fixtures::{output_device_ext::OutputDeviceExt as _, StdoutMock};
     use tokio::sync::mpsc;
 
-    use crate::{test_editor::mock_real_objects_for_editor, *};
+    use crate::{test_fixtures::mock_real_objects_for_editor,
+                DialogBuffer,
+                DialogEngine,
+                FlexBoxId,
+                GlobalData,
+                HasDialogBuffers,
+                CHANNEL_WIDTH};
 
-    pub fn make_global_data(window_size: Option<Size>) -> GlobalData<State, ()> {
+    pub fn make_global_data(
+        window_size: Option<Size>,
+    ) -> (GlobalData<State, ()>, StdoutMock) {
         let (main_thread_channel_sender, _) = mpsc::channel::<_>(CHANNEL_WIDTH);
         let state = create_state();
         let window_size = window_size.unwrap_or_default();
         let maybe_saved_offscreen_buffer = Default::default();
-        GlobalData {
+        let (output_device, stdout_mock) = OutputDevice::new_mock();
+
+        let global_data = GlobalData {
             state,
             window_size,
             maybe_saved_offscreen_buffer,
             main_thread_channel_sender,
-        }
+            output_device,
+        };
+
+        (global_data, stdout_mock)
     }
 
     #[derive(Clone, PartialEq, Default, Debug)]

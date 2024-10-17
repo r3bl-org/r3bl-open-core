@@ -15,16 +15,17 @@
  *   limitations under the License.
  */
 
-use crate::{ReadlineError, ReadlineEvent, SafeHistory};
-use crossterm::{
-    cursor,
-    event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
-    terminal::{Clear, ClearType::*},
-    QueueableCommand,
-};
-use r3bl_rs_utils_core::{ok, MemoizedLenMap, StringLength};
 use std::io::{self, Write};
+
+use crossterm::{cursor,
+                event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
+                terminal::{Clear,
+                           ClearType::{All, FromCursorDown}},
+                QueueableCommand};
+use r3bl_core::{ok, MemoizedLenMap, StringLength};
 use unicode_segmentation::UnicodeSegmentation;
+
+use crate::{ReadlineError, ReadlineEvent, SafeHistory};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LineStateLiveness {
@@ -33,9 +34,7 @@ pub enum LineStateLiveness {
 }
 
 impl LineStateLiveness {
-    pub fn is_paused(&self) -> bool {
-        matches!(self, LineStateLiveness::Paused)
-    }
+    pub fn is_paused(&self) -> bool { matches!(self, LineStateLiveness::Paused) }
 }
 
 /// This struct actually handles the line editing, and rendering. This works hand in hand
@@ -111,13 +110,14 @@ impl LineState {
     }
 
     /// Update the paused state which affects the following:
-    /// - Rendering the output from multiple [crate::SharedWriter]s. When paused nothing
-    ///   is rendered from them, and things like the [crate::Spinner] can be active.
+    /// - Rendering the output from multiple [r3bl_core::SharedWriter]s. When
+    ///   paused nothing is rendered from them, and things like the [crate::Spinner] can
+    ///   be active.
     /// - Handling user input while the [crate::Readline::readline] is awaiting user input
     ///   (which is equivalent to awaiting [crate::TerminalAsync::get_readline_event]).
     ///
     /// This should not be called directly. Instead use the mechanism provided by the
-    /// [crate::SharedWriter::line_state_control_channel_sender]
+    /// [r3bl_core::SharedWriter::line_state_control_channel_sender]
     /// [tokio::sync::mpsc::channel].
     pub fn set_paused(
         &mut self,
@@ -136,9 +136,7 @@ impl LineState {
     }
 
     /// Gets the number of lines wrapped
-    fn line_height(&self, pos: u16) -> u16 {
-        pos / self.term_size.0
-    }
+    fn line_height(&self, pos: u16) -> u16 { pos / self.term_size.0 }
 
     /// Move from a position on the line to the start.
     fn move_to_beginning(&self, term: &mut dyn Write, from: u16) -> io::Result<()> {
@@ -179,8 +177,8 @@ impl LineState {
         let prompt_len =
             StringLength::StripAnsi.calculate(&self.prompt, &mut self.memoized_len_map);
 
-        let line_len =
-            StringLength::Unicode.calculate(&self.line[0..pos], &mut self.memoized_len_map);
+        let line_len = StringLength::Unicode
+            .calculate(&self.line[0..pos], &mut self.memoized_len_map);
 
         self.current_column = prompt_len + line_len;
 
@@ -233,7 +231,8 @@ impl LineState {
         let prompt_len =
             StringLength::StripAnsi.calculate(&self.prompt, &mut self.memoized_len_map);
 
-        let line_len = StringLength::Unicode.calculate(&self.line, &mut self.memoized_len_map);
+        let line_len =
+            StringLength::Unicode.calculate(&self.line, &mut self.memoized_len_map);
 
         let total_line_len = prompt_len + line_len;
 
@@ -366,8 +365,12 @@ impl LineState {
                 }
                 // End of text (CTRL-C)
                 KeyCode::Char('c') => {
-                    if self.should_print_line_on_control_c && !self.is_paused.is_paused() {
-                        self.print_and_flush(&format!("{}{}", self.prompt, self.line), term)?;
+                    if self.should_print_line_on_control_c && !self.is_paused.is_paused()
+                    {
+                        self.print_and_flush(
+                            &format!("{}{}", self.prompt, self.line),
+                            term,
+                        )?;
                     }
                     self.exit(term)?;
                     return Ok(Some(ReadlineEvent::Interrupted));
@@ -402,7 +405,9 @@ impl LineState {
                         .rev()
                         .skip(skip_count)
                         .skip_while(|(_, str)| *str == " ")
-                        .find_map(|(pos, str)| if str == " " { Some(pos + 1) } else { None })
+                        .find_map(
+                            |(pos, str)| if str == " " { Some(pos + 1) } else { None },
+                        )
                         .unwrap_or(0);
                     let end = self
                         .line
@@ -503,8 +508,12 @@ impl LineState {
                 match code {
                     KeyCode::Enter => {
                         // Print line so you can see what commands you've typed.
-                        if self.should_print_line_on_enter && !self.is_paused.is_paused() {
-                            self.print_and_flush(&format!("{}{}\n", self.prompt, self.line), term)?;
+                        if self.should_print_line_on_enter && !self.is_paused.is_paused()
+                        {
+                            self.print_and_flush(
+                                &format!("{}{}\n", self.prompt, self.line),
+                                term,
+                            )?;
                         }
 
                         // Take line
@@ -570,7 +579,8 @@ impl LineState {
                     }
                     KeyCode::Down => {
                         // search for next history item, replace line if found.
-                        if let Some(line) = safe_history.lock().unwrap().search_previous() {
+                        if let Some(line) = safe_history.lock().unwrap().search_previous()
+                        {
                             self.line.clear();
                             self.line += line;
                             self.clear(term)?;
@@ -624,12 +634,15 @@ impl LineState {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{History, StdMutex};
-    use r3bl_test_fixtures::StdoutMock;
     use std::sync::Arc;
 
+    use r3bl_test_fixtures::StdoutMock;
+
+    use super::*;
+    use crate::{History, StdMutex};
+
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_add_char() {
         let mut line = LineState::new("foo".into(), (100, 100));
 
@@ -654,6 +667,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_move_cursor() {
         let mut line = LineState::new("foo".into(), (100, 100));
 
@@ -678,6 +692,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::needless_return)]
     async fn test_search_next() {
         let mut line = LineState::new("foo".into(), (100, 100));
 

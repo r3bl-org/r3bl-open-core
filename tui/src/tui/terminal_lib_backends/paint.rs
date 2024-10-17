@@ -17,22 +17,45 @@
 
 use std::fmt::Debug;
 
-pub use paint_exports::*;
-use r3bl_rs_utils_core::*;
+use r3bl_core::{call_if_true, LockedOutputDevice, Position, Size};
 
-use super::*;
-use crate::*;
+use super::{FlushKind, RenderOp, RenderOpsLocalData, RenderPipeline};
+use crate::{GlobalData,
+            OffscreenBuffer,
+            OffscreenBufferDiffResult,
+            OffscreenBufferPaint,
+            OffscreenBufferPaintImplCrossterm,
+            PixelCharDiffChunks,
+            TerminalLibBackend,
+            DEBUG_TUI_MOD,
+            DEBUG_TUI_SHOW_PIPELINE_EXPANDED,
+            TERMINAL_LIB_BACKEND};
 
-/// Paint the render pipeline. The render pipeline contains a list of [RenderOps] for each [ZOrder].
-/// This function is responsible for:
-/// 1. Actually executing those [RenderOps] in the correct order.
-/// 2. And routing the execution to the correct backend specified in [TERMINAL_LIB_BACKEND].
+pub trait PaintRenderOp {
+    fn paint(
+        &mut self,
+        skip_flush: &mut bool,
+        render_op: &RenderOp,
+        window_size: Size,
+        local_data: &mut RenderOpsLocalData,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    );
+}
+
+/// Paint the render pipeline. The render pipeline contains a list of [crate::RenderOps]
+/// for each [crate::ZOrder]. This function is responsible for:
+/// 1. Actually executing those [crate::RenderOps] in the correct order.
+/// 2. And routing the execution to the correct backend specified in
+///    [TERMINAL_LIB_BACKEND].
 ///
-/// See [RenderOps] for more details of "atomic paint operations".
+/// See [crate::RenderOps] for more details of "atomic paint operations".
 pub fn paint<S, AS>(
     pipeline: &RenderPipeline,
     flush_kind: FlushKind,
     global_data: &mut GlobalData<S, AS>,
+    locked_output_device: LockedOutputDevice<'_>,
+    is_mock: bool,
 ) where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
@@ -45,16 +68,33 @@ pub fn paint<S, AS>(
 
     match maybe_saved_offscreen_buffer {
         None => {
-            perform_full_paint(&offscreen_buffer, flush_kind, window_size);
+            perform_full_paint(
+                &offscreen_buffer,
+                flush_kind,
+                window_size,
+                locked_output_device,
+                is_mock,
+            );
         }
         Some(saved_offscreen_buffer) => {
             // Compare offscreen buffers & paint only the diff.
             match saved_offscreen_buffer.diff(&offscreen_buffer) {
                 OffscreenBufferDiffResult::NotComparable => {
-                    perform_full_paint(&offscreen_buffer, flush_kind, window_size);
+                    perform_full_paint(
+                        &offscreen_buffer,
+                        flush_kind,
+                        window_size,
+                        locked_output_device,
+                        is_mock,
+                    );
                 }
                 OffscreenBufferDiffResult::Comparable(ref diff_chunks) => {
-                    perform_diff_paint(diff_chunks, window_size);
+                    perform_diff_paint(
+                        diff_chunks,
+                        window_size,
+                        locked_output_device,
+                        is_mock,
+                    );
                 }
             }
         }
@@ -62,12 +102,22 @@ pub fn paint<S, AS>(
 
     global_data.maybe_saved_offscreen_buffer = Some(offscreen_buffer);
 
-    fn perform_diff_paint(diff_chunks: &PixelCharDiffChunks, window_size: Size) {
+    fn perform_diff_paint(
+        diff_chunks: &PixelCharDiffChunks,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    ) {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
                 let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
                 let render_ops = crossterm_impl.render_diff(diff_chunks);
-                crossterm_impl.paint_diff(render_ops, window_size);
+                crossterm_impl.paint_diff(
+                    render_ops,
+                    window_size,
+                    locked_output_device,
+                    is_mock,
+                );
             }
             TerminalLibBackend::Termion => todo!(), // FUTURE: implement OffscreenBufferPaint trait for termion
         }
@@ -77,12 +127,20 @@ pub fn paint<S, AS>(
         offscreen_buffer: &OffscreenBuffer,
         flush_kind: FlushKind,
         window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
     ) {
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
                 let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
                 let render_ops = crossterm_impl.render(offscreen_buffer);
-                crossterm_impl.paint(render_ops, flush_kind, window_size);
+                crossterm_impl.paint(
+                    render_ops,
+                    flush_kind,
+                    window_size,
+                    locked_output_device,
+                    is_mock,
+                );
             }
             TerminalLibBackend::Termion => todo!(), // FUTURE: implement OffscreenBufferPaint trait for termion
         }
@@ -124,34 +182,18 @@ pub fn sanitize_and_save_abs_position(
     fn debug(orig_pos: Position, sanitized_pos: Position) {
         call_if_true!(DEBUG_TUI_MOD, {
             if sanitized_pos != orig_pos {
-                let msg = format!(
+                tracing::info!(
                     "pipeline : 📍🗜️ Attempt to set cursor position {orig_pos:?} \
                     outside of terminal window; clamping to nearest edge of window {sanitized_pos:?}"
                 );
-                log_info(msg);
             }
         });
 
         call_if_true!(DEBUG_TUI_SHOW_PIPELINE_EXPANDED, {
-            let msg = format!(
+            tracing::info!(
                 "pipeline : 📍 Save the cursor position {sanitized_pos:?} \
                 to SharedGlobalData"
             );
-            log_info(msg);
         });
-    }
-}
-
-pub mod paint_exports {
-    use super::*;
-
-    pub trait PaintRenderOp {
-        fn paint(
-            &mut self,
-            skip_flush: &mut bool,
-            render_op: &RenderOp,
-            window_size: Size,
-            local_data: &mut RenderOpsLocalData,
-        );
     }
 }

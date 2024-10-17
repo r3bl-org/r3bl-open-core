@@ -15,17 +15,29 @@
  *   limitations under the License.
  */
 
-use crossterm::style::Stylize;
-use miette::IntoDiagnostic;
-use r3bl_terminal_async::{tracing_setup, DisplayPreference, StdMutex, TracingConfig};
-use r3bl_terminal_async::{Readline, ReadlineEvent, SharedWriter, TerminalAsync};
-use r3bl_terminal_async::{Spinner, SpinnerStyle};
-use std::{io::stderr, sync::Arc};
-use std::{io::Write, ops::ControlFlow, time::Duration};
+use std::{fs,
+          io::{stderr, Write},
+          ops::ControlFlow,
+          path::{self, PathBuf},
+          str::FromStr as _,
+          sync::Arc,
+          time::Duration};
+
+use crossterm::style::Stylize as _;
+use miette::{miette, IntoDiagnostic as _};
+use r3bl_core::{tracing_logging::tracing_config::TracingConfig,
+                DisplayPreference,
+                SendRawTerminal,
+                SharedWriter,
+                StdMutex};
+use r3bl_terminal_async::{Readline,
+                          ReadlineEvent,
+                          Spinner,
+                          SpinnerStyle,
+                          TerminalAsync};
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
-use tokio::select;
-use tokio::time::interval;
+use tokio::{select, time::interval};
 use tracing::info;
 
 /// More info:
@@ -122,6 +134,7 @@ impl Default for State {
 }
 
 #[tokio::main]
+#[allow(clippy::needless_return)]
 async fn main() -> miette::Result<()> {
     let prompt = {
         let prompt_seg_1 = "╭>╮".magenta().on_dark_grey().to_string();
@@ -144,9 +157,11 @@ async fn main() -> miette::Result<()> {
     }
 
     // Initialize tracing w/ the "async stdout" (SharedWriter), and file writer.
-    let display_preference = DisplayPreference::SharedWriter(terminal_async.shared_writer.clone());
-    let config = TracingConfig::new(display_preference);
-    tracing_setup::init(config)?;
+    TracingConfig::new_file_and_display(
+        None,
+        DisplayPreference::SharedWriter(terminal_async.clone_shared_writer()),
+    )
+    .install_global()?;
 
     // Start tasks.
     let mut state = State::default();
@@ -243,7 +258,6 @@ mod task_2 {
 
 mod process_input_event {
     use super::*;
-    use std::str::FromStr;
 
     pub fn process(
         user_input: String,
@@ -299,7 +313,8 @@ mod process_input_event {
                     readline.should_print_line_on(false, false);
                 }
                 Command::Info => {
-                    writeln!(shared_writer, "{}", get_info_message()).into_diagnostic()?;
+                    writeln!(shared_writer, "{}", get_info_message())
+                        .into_diagnostic()?;
                 }
                 Command::Spinner => {
                     writeln!(shared_writer, "Spinner started! Pausing terminal...")
@@ -317,8 +332,12 @@ mod process_input_event {
                         let mut_shared_writer = &mut shared_writer_clone;
                         match file_walker::get_current_working_directory() {
                             Ok((root_path, _)) => {
-                                match file_walker::display_tree(root_path, mut_shared_writer, true)
-                                    .await
+                                match file_walker::display_tree(
+                                    root_path,
+                                    mut_shared_writer,
+                                    true,
+                                )
+                                .await
                                 {
                                     Ok(_) => {}
                                     Err(_) => todo!(),
@@ -411,12 +430,6 @@ mod long_running_task {
 
 pub mod file_walker {
     use super::*;
-    use miette::miette;
-    use r3bl_terminal_async::SendRawTerminal;
-    use std::{
-        fs,
-        path::{self, PathBuf},
-    };
 
     pub const FOLDER_DELIM: &str = std::path::MAIN_SEPARATOR_STR;
     pub const SPACE_CHAR: &str = " ";
@@ -426,7 +439,8 @@ pub mod file_walker {
     ///   `/home/nazmul/github/r3bl_terminal_async`.
     /// - Returns a tuple of `(path, name)`. Eg:
     ///   (`/home/nazmul/github/r3bl_terminal_async`, `r3bl_terminal_async`).
-    pub fn get_current_working_directory() -> miette::Result<(/*path*/ String, /*name*/ String)> {
+    pub fn get_current_working_directory(
+    ) -> miette::Result<(/*path*/ String, /*name*/ String)> {
         let path = std::env::current_dir().into_diagnostic()?;
 
         let name = path
@@ -455,9 +469,9 @@ pub mod file_walker {
 
         // Get the folder name.
         let folder = PathBuf::from(&root_path);
-        let name = folder
-            .file_name()
-            .ok_or_else(|| miette!("The root's full path is not a directory: {}", root_path))?;
+        let name = folder.file_name().ok_or_else(|| {
+            miette!("The root's full path is not a directory: {}", root_path)
+        })?;
 
         Ok(Folder {
             name: name.to_string_lossy().to_string(),
@@ -470,7 +484,8 @@ pub mod file_walker {
         parent_node: &mut Folder,
         child_name: String,
     ) -> miette::Result<Folder> {
-        let child_full_path = format!("{}{FOLDER_DELIM}{child_name}", parent_node.full_path);
+        let child_full_path =
+            format!("{}{FOLDER_DELIM}{child_name}", parent_node.full_path);
 
         // Validate that child's new full path is a directory.
         let metadata = fs::metadata(&child_full_path).into_diagnostic()?;
@@ -560,7 +575,9 @@ pub mod file_walker {
             // Add each sub-folder (contained in the current node) to the stack. And add
             // it to the current node's children.
             for sub_folder_name in vec_folder_name {
-                stack.push(create_child_and_add_to(&mut current_node, sub_folder_name).await?);
+                stack.push(
+                    create_child_and_add_to(&mut current_node, sub_folder_name).await?,
+                );
             }
         }
 

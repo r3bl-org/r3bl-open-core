@@ -18,15 +18,20 @@
 use std::{env::var, process::Command};
 
 use r3bl_ansi_color::{AnsiStyledText, Color, Style};
-use r3bl_rs_utils_core::{log_error,
-                         CommonError,
-                         CommonErrorType,
-                         CommonResult,
-                         UnicodeString};
-use r3bl_tui::{ColorWheel, GradientGenerationPolicy, TextColorizationPolicy};
+use r3bl_core::{ColorWheel,
+                CommonError,
+                CommonErrorType,
+                CommonResult,
+                GradientGenerationPolicy,
+                TextColorizationPolicy,
+                UnicodeString};
 use r3bl_tuify::SLATE_GRAY;
 
-use crate::{giti::ui_strings::UIStrings::*, upgrade_check};
+use crate::{giti::ui_strings::UIStrings::{ErrorExecutingCommand,
+                                          GoodbyeThanksForUsingGiti,
+                                          GoodbyeThanksForUsingGitiUsername,
+                                          PleaseStarUs},
+            upgrade_check};
 
 pub fn multi_select_instruction_header() -> Vec<Vec<AnsiStyledText<'static>>> {
     let up_and_down = AnsiStyledText {
@@ -148,6 +153,6 @@ pub fn report_unknown_error_and_propagate<T>(
     }
     .to_string();
 
-    log_error(error_msg.clone());
-    CommonError::new::<T>(CommonErrorType::CommandExecutionError, &error_msg)
+    tracing::error!(error_msg);
+    CommonError::new_error_result::<T>(CommonErrorType::CommandExecutionError, &error_msg)
 }

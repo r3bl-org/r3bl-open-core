@@ -17,27 +17,29 @@
 
 use std::fmt::Debug;
 
-use r3bl_rs_utils_core::*;
+use r3bl_core::{throws, CommonError, CommonResult};
 
-use crate::*;
+use crate::{FlexBox, FlexBoxId};
 
-/// This is a global (scoped to an [App]) struct that is used to store the `id` of the [FlexBox]
-/// that has keyboard focus.
+/// This is a global (scoped to an [crate::App]) struct that is used to store the `id` of
+/// the [FlexBox] that has keyboard focus.
 ///
 /// There are 2 types of keyboard focus:
-/// 1. Non modal focus - This is just a single `id` that is stored. To change focus a new `id` is
-///    set in its place. Internally a `Vec` of capacity 2 is used to store this and the modal `id`.
-/// 2. Modal focus - There can only be one modal at a time. When a modal is active, the `id` of the
-///    [FlexBox] that had focus before the modal was activated is saved. When the modal is closed,
-///    the `id` of the [FlexBox] that had focus before the modal was activated is restored.
+/// 1. Non modal focus - This is just a single `id` that is stored. To change focus a new
+///    `id` is set in its place. Internally a `Vec` of capacity 2 is used to store this
+///    and the modal `id`.
+/// 2. Modal focus - There can only be one modal at a time. When a modal is active, the
+///    `id` of the [FlexBox] that had focus before the modal was activated is saved. When
+///    the modal is closed, the `id` of the [FlexBox] that had focus before the modal was
+///    activated is restored.
 ///
 /// # Modal `id`, which is used by modal dialog box
 ///
 /// 1. Only one modal can be active at any time.
-/// 2. When a modal is active, the `id` of the [FlexBox] that had focus before the modal was
-///    activated is saved.
-/// 3. When the modal is closed, the `id` of the [FlexBox] that had focus before the modal was
-///    activated is restored.
+/// 2. When a modal is active, the `id` of the [FlexBox] that had focus before the modal
+///    was activated is saved.
+/// 3. When the modal is closed, the `id` of the [FlexBox] that had focus before the modal
+///    was activated is restored.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct HasFocus {
     /// This `id` has keyboard focus. This is global.
@@ -96,7 +98,7 @@ impl HasFocus {
             // Must have a non modal id already set.
             if !self.is_set() {
                 let msg = "Modal id can only be set if id is already set. id is not set.";
-                return CommonError::new_err_with_only_msg(msg);
+                return CommonError::new_error_result_with_only_msg(msg);
             }
 
             // Must not have a modal id already set.
@@ -109,7 +111,7 @@ impl HasFocus {
                     },
                     id
                 );
-                return CommonError::new_err_with_only_msg(&msg);
+                return CommonError::new_error_result_with_only_msg(&msg);
             }
 
             // Ok to set modal id.
@@ -136,6 +138,8 @@ impl HasFocus {
 
 #[cfg(test)]
 mod has_focus_tests {
+    use r3bl_core::assert_eq2;
+
     use super::*;
 
     #[test]
@@ -182,7 +186,9 @@ mod has_focus_tests {
         assert_eq2!(my_err_box.is::<CommonError>(), true);
 
         let my_err = my_err_box.downcast_ref::<CommonError>().unwrap();
-        let CommonError { err_msg: msg, .. } = my_err;
+        let CommonError {
+            error_message: msg, ..
+        } = my_err;
         assert_eq2!(
             msg.as_ref().unwrap(),
             "Modal id can only be set if id is already set. id is not set."

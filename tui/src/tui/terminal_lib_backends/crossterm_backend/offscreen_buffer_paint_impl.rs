@@ -15,54 +15,93 @@
  *   limitations under the License.
  */
 
-use r3bl_rs_utils_core::*;
+use r3bl_core::{call_if_true,
+                ch,
+                position,
+                ChUnit,
+                LockedOutputDevice,
+                Size,
+                TuiStyle,
+                UnicodeString,
+                SPACER};
 
-use crate::*;
+use crate::{render_ops,
+            Flush as _,
+            FlushKind,
+            OffscreenBuffer,
+            OffscreenBufferPaint,
+            PixelChar,
+            PixelCharDiffChunks,
+            RenderOp,
+            RenderOps,
+            DEBUG_TUI_COMPOSITOR,
+            DEBUG_TUI_SHOW_PIPELINE};
 
 pub struct OffscreenBufferPaintImplCrossterm;
 
 impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
-    fn paint(&mut self, render_ops: RenderOps, flush_kind: FlushKind, window_size: Size) {
+    fn paint(
+        &mut self,
+        render_ops: RenderOps,
+        flush_kind: FlushKind,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    ) {
         let mut skip_flush = false;
 
         if let FlushKind::ClearBeforeFlush = flush_kind {
-            RenderOp::default().clear_before_flush();
+            RenderOp::default().clear_before_flush(locked_output_device);
         }
 
         // Execute each RenderOp.
-        render_ops.execute_all(&mut skip_flush, window_size);
+        render_ops.execute_all(
+            &mut skip_flush,
+            window_size,
+            locked_output_device,
+            is_mock,
+        );
 
         // Flush everything to the terminal.
         if !skip_flush {
-            RenderOp::default().flush()
+            RenderOp::default().flush(locked_output_device)
         };
 
         // Debug output.
         call_if_true!(DEBUG_TUI_SHOW_PIPELINE, {
-            let msg = format!(
+            tracing::info!(
                 "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok ✅: render_ops: \n{render_ops:?}",
             );
-            log_info(msg);
         });
     }
 
-    fn paint_diff(&mut self, render_ops: RenderOps, window_size: Size) {
+    fn paint_diff(
+        &mut self,
+        render_ops: RenderOps,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    ) {
         let mut skip_flush = false;
 
         // Execute each RenderOp.
-        render_ops.execute_all(&mut skip_flush, window_size);
+        render_ops.execute_all(
+            &mut skip_flush,
+            window_size,
+            locked_output_device,
+            is_mock,
+        );
 
         // Flush everything to the terminal.
         if !skip_flush {
-            RenderOp::default().flush()
+            RenderOp::default().flush(locked_output_device)
         };
 
         // Debug output.
         call_if_true!(DEBUG_TUI_SHOW_PIPELINE, {
-            let msg = format!(
+            tracing::info!(
                 "🎨 offscreen_buffer_paint_impl_crossterm::paint() ok ✅: render_ops: \n{render_ops:?}"
             );
-            log_info(msg);
         });
     }
 
@@ -157,9 +196,10 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
     fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOps {
         call_if_true!(DEBUG_TUI_COMPOSITOR, {
-            let msg = format!("🎨 offscreen_buffer_paint_impl_crossterm::render_diff() ok ✅: \ndiff_chunks: \n{}",
-            diff_chunks.pretty_print());
-            log_info(msg);
+            tracing::info!(
+                "🎨 offscreen_buffer_paint_impl_crossterm::render_diff() ok ✅: \ndiff_chunks: \n{}",
+                diff_chunks.pretty_print()
+            );
         });
 
         let mut it = render_ops!();
@@ -285,10 +325,11 @@ mod render_helpers {
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::*;
-    use r3bl_rs_utils_macro::*;
+    use r3bl_core::{assert_eq2, color, size, ANSIBasicColor};
+    use r3bl_macro::tui_style;
 
     use super::*;
+    use crate::render_pipeline_to_offscreen_buffer::print_text_with_attributes;
 
     /// Helper function to make an `OffscreenBuffer`.
     fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
@@ -309,7 +350,7 @@ mod tests {
         my_offscreen_buffer.my_fg_color = Some(color!(@green));
         my_offscreen_buffer.my_bg_color = Some(color!(@blue));
         let maybe_max_display_col_count: Option<ChUnit> = Some(10.into());
-        render_pipeline_to_offscreen_buffer::print_text_with_attributes(
+        print_text_with_attributes(
             text,
             &maybe_style,
             &mut my_offscreen_buffer,

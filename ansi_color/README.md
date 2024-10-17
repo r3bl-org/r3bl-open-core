@@ -203,7 +203,7 @@ The following commands will watch for changes in the source folder and re-run:
   support truecolor and only supports ANSI 256 color.
 
 Here are some relevant links:
-
+<!-- cspell:disable -->
 1. [Issue 47: `concolor`](https://github.com/rust-cli/concolor/issues/47)
 1. [`anstream` documentation](https://docs.rs/anstream/latest/anstream/)
 1. [`colorchoice` documentation](https://docs.rs/colorchoice/latest/colorchoice/)
@@ -213,5 +213,6 @@ Here are some relevant links:
 1. [`supports-color` documentation](https://docs.rs/supports-color/2.0.0/supports_color/)
 1. [`r3bl_ansi_color` crate](https://crates.io/crates/r3bl_ansi_color) (the source in `ansi_color` folder is this crate)
 1. [`colored` crate](https://crates.io/crates/colored)
+<!-- cspell:enable -->
 
 License: Apache-2.0

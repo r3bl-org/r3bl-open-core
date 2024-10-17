@@ -27,3 +27,4 @@ pub use editor_engine::*;
 
 // Tests.
 pub mod test_editor;
+pub mod test_fixtures;

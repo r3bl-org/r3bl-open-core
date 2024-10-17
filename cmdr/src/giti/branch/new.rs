@@ -18,7 +18,7 @@
 use std::process::Command;
 
 use r3bl_ansi_color::{AnsiStyledText, Style};
-use r3bl_rs_utils_core::CommonResult;
+use r3bl_core::CommonResult;
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 
 use crate::{color_constants::DefaultColors::{FrozenBlue,
@@ -30,7 +30,11 @@ use crate::{color_constants::DefaultColors::{FrozenBlue,
                    clap_config::BranchSubcommand,
                    report_unknown_error_and_propagate,
                    CommandSuccessfulResponse,
-                   UIStrings::*}};
+                   UIStrings::{BranchAlreadyExists,
+                               CreatedAndSwitchedToNewBranch,
+                               EnterBranchNameYouWantToCreate,
+                               FailedToCreateAndSwitchToBranch,
+                               NoNewBranchWasCreated}}};
 
 pub fn try_make_new_branch(
     maybe_branch_name: Option<String>,

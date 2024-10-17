@@ -17,9 +17,16 @@
 
 #[cfg(test)]
 mod tests {
-    use r3bl_rs_utils_core::*;
+    use r3bl_core::{assert_eq2,
+                    position,
+                    size,
+                    ANSIBasicColor,
+                    Position,
+                    RgbValue,
+                    Size,
+                    TuiColor};
 
-    use crate::*;
+    use crate::{render_pipeline, RenderOp, RenderPipeline, ZOrder};
 
     #[test]
     fn test_serde_tui_color_simple() {
